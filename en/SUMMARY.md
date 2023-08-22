@@ -33,6 +33,7 @@
 
 ## Explore
 
+* [Discovery](explore/app.md)
 * [Chat](explore/chat.md)
 
 ## Advanced
