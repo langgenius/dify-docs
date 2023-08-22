@@ -33,6 +33,7 @@
 
 ## 探索 <a href="#explore" id="explore"></a>
 
+* [发现](explore/chat.md)
 * [智聊](explore/chat.md)
 
 ## 进阶使用 <a href="#advanced" id="advanced"></a>
