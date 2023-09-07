@@ -39,7 +39,6 @@ curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
 --header 'Content-Type: application/json' \
 --data-raw '{
     "inputs": {},
-    "query": "Hi",
     "response_mode": "streaming",
     "user": "abc-123"
 }'
