@@ -47,7 +47,7 @@ Once the integration is created, you can update its settings as needed under the
 
 Copy it and back to the Dify source code , in the **.env** file configuration related environment variables, environment variables as follows:
 
-**NOTION\_INTEGRATION\_TYPE** = public
+**NOTION\_INTEGRATION\_TYPE** = internal
 
 **NOTION\_INTERNAL\_SECRET**=you-internal-secret
 
