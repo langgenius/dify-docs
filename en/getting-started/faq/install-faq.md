@@ -133,7 +133,7 @@ The database, configured storage, and vector database data need to be backed up.
 
 `127.0.0.1` is the internal address of the container, and the server address configured by Dify requires the host LAN IP address.
 
-### 11. How to solve the size and quantity limitations for uploading dataset documents in the local deployment version？
+### 11. How to solve the size and quantity limitations for uploading knowledge documents in the local deployment version？
 
 You can refer to the official website environment variable description document to configure:&#x20;
 

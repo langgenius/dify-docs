@@ -74,7 +74,7 @@ Enjoy your coffee while waiting for the training process to complete.
 
 #### 5. Create Your AI application[​](https://wsyfin.com/notion-dify#5-create-your-ai-application) <a href="#5-create-your-own-ai-application" id="5-create-your-own-ai-application"></a>
 
-You must create an AI application and link it with the dataset you've recently created.
+You must create an AI application and link it with the knowledge you've recently created.
 
 Return to the dashboard, and click the "Create new APP" button. It's recommended to use the Chat App directly.
 

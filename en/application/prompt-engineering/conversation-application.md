@@ -48,7 +48,7 @@ And then edit the opening remarks:
 
 **2.2 Adding Context**
 
-If an application wants to generate content based on private contextual conversations, it can use our [dataset](../../advanced/datasets/) feature. Click the "Add" button in the context to add a dataset.
+If an application wants to generate content based on private contextual conversations, it can use our [knowledge](../../advanced/datasets/) feature. Click the "Add" button in the context to add a knowledge.
 
 ![](<../../.gitbook/assets/image (9).png>)
 

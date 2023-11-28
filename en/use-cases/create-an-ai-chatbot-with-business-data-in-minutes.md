@@ -14,9 +14,9 @@ Dify provides free message call usage quotas for OpenAI GPT series (200 times) a
 
 ### Upload your product documentation or knowledge base.
 
-If you want to build an AI Chatbot based on the company's existing knowledge base and product documents, then you need to upload as many product-related documents as possible to Dify's dataset. Dify helps you **complete segmentation and cleaning of the data.** The Dify dataset supports two indexing modes: high quality and economical. We recommend using the high quality mode, which consumes tokens but provides higher accuracy.
+If you want to build an AI Chatbot based on the company's existing knowledge base and product documents, then you need to upload as many product-related documents as possible to Dify's knowledge. Dify helps you **complete segmentation and cleaning of the data.** The Dify knowledge supports two indexing modes: high quality and economical. We recommend using the high quality mode, which consumes tokens but provides higher accuracy.
 
-1. Create a new dataset
+1. Create a new knowledge
 2. upload your business data (support batch uploading multiple texts)
 3. select the cleaning method
 4. Click \[Save and Process], and it will take only a few seconds to complete the processing.
@@ -28,7 +28,7 @@ If you want to build an AI Chatbot based on the company's existing knowledge bas
 Create a conversational app on the \[Build App] page. Then start setting up the prompt and its front-end user experience interactions.
 
 1. Give the AI instruction: Click on the "Pre Prompt" on the left to edit your Prompt, so that it can play the role of customer service and communicate with users. You can specify its tone, style, and limit it to answer or not answer certain questions.
-2. Let AI possess your business knowledge: add the target dataset you just uploaded in the \[context].
+2. Let AI possess your business knowledge: add the target knowledge you just uploaded in the \[context].
 3. Set up the opening remarks: click "Add Feature" to turn on the feature. The purpose is to add an opening line for AI applications, so that when the user opens the customer service window, it will greet the user first and increase affinity.
 4. Set up the "Next Question Suggestion": turn on this feature to "Add Feature". The purpose is to give users a direction for their next question after they have asked one.
 5. Choose a suitable model and adjust the parameters: different models can be selected in the upper right corner of the page. The performance and token price consumed by different models are different. In this example, we use the GPT3.5 model.

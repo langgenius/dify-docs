@@ -10,7 +10,7 @@
 
 Because in natural language processing, longer text outputs usually require longer computation time and more computing resources. Therefore, limiting the length of the output text can reduce the computational cost and time to some extent. For example, set: max\_tokens=500, which means that only the first 500 tokens of the output text are considered, and the part exceeding this length will be discarded. The purpose of doing so is to ensure that the length of the output text does not exceed the acceptable range of the LLM, while making full use of computing resources to improve the efficiency of the model. On the other hand, more often limiting max\_tokens can increase the length of the prompt, such as the limit of gpt-3.5-turbo is 4097 tokens, if you set max\_tokens=4000, then only 97 tokens are left for the prompt, and an error will be reported if exceeded.
 
-### 3. How to split long text data in the dataset reasonably?
+### 3. How to split long text data in the knowledge reasonably?
 
 In some natural language processing applications, text is often split into paragraphs or sentences for better processing and understanding of semantic and structural information in the text. The minimum splitting unit depends on the specific task and technical implementation. For example:
 
@@ -20,7 +20,7 @@ In some natural language processing applications, text is often split into parag
 
 Finally, experiments and evaluations are still needed to determine the most suitable embedding technology and splitting unit. The performance of different technologies and splitting units can be compared on the test set to select the optimal scheme.
 
-### 4. What distance function did we use when getting dataset segmentation?
+### 4. What distance function did we use when getting knowledge segmentation?
 
 We use [cosine similarity](https://en.wikipedia.org/wiki/Cosine\_similarity). The choice of distance function is usually irrelevant. OpenAI embeddings are normalized to length 1, which means:
 
@@ -76,7 +76,7 @@ You can lower the value of "Max token" in the parameter settings of the Prompt E
 
 A: The default models can be configured under **Settings - Model Provider.** Currently supported text generation LLMs include OpenAI, Azure OpenAl, Anthropic, etc. At the same time, open-source LLMs hosted on Hugging Face, Replicate, xinference, etc. can also be integrated.
 
-### 11. The dataset in Community Edition gets stuck in "Queued" when Q\&A segmentation mode is enabled.
+### 11. The knowledge in Community Edition gets stuck in "Queued" when Q\&A segmentation mode is enabled.
 
 Please check if the rate limit has been reached for the Embedding model API key used.
 
@@ -87,7 +87,7 @@ There are two potential solutions if the error "Invalid token" appears:
 * Clear the browser cache (cookies, session storage, and local storage) or the app cache on mobile. Then, revisit the app.
 * Regenerate the app URL and access the app again with the new URL. This should resolve the "Invalid token" error.
 
-### 13. What are the size limits for uploading dataset documents?
+### 13. What are the size limits for uploading knowledge documents?
 
 The maximum size for a single document upload is currently 15MB. There is also a limit of 100 total documents. These limits can be adjusted if you are using a local deployment. Refer to the [documentation](install-faq.md#11.-how-to-solve-the-size-and-quantity-limitations-for-uploading-dataset-documents-in-the-local-depl) for details on changing the limits.
 
@@ -95,11 +95,11 @@ The maximum size for a single document upload is currently 15MB. There is also a
 
 The Claude model does not have its own embedding model. Therefore, the embedding process and other dialog generation like next question suggestions default to using OpenAI keys. This means OpenAI credits are still consumed. You can set different default inference and embedding models under **Settings > Model Provider.**
 
-### 15. Is there any way to control the greater use of dataset data rather than the model's own generation capabilities?
+### 15. Is there any way to control the greater use of knowledge data rather than the model's own generation capabilities?
 
-Whether to use a dataset is related to the description of the dataset. Please write the dataset description clearly as much as possible. Please refer to the [documentation](https://docs.dify.ai/advanced/datasets) for details.
+Whether to use a knowledge is related to the description of the knowledge. Please write the knowledge description clearly as much as possible. Please refer to the [documentation](https://docs.dify.ai/advanced/datasets) for details.
 
-### 16. How to better segment the uploaded dataset document in Excel?
+### 16. How to better segment the uploaded knowledge document in Excel?
 
 Set the header in the first row, and display the content in each subsequent row. Do not have any additional header settings or complex formatted table content.
 

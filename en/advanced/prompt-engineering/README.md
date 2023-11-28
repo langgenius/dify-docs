@@ -38,7 +38,7 @@ Well, before you try the new mode, you should be aware of some essential element
 
     <img src="../../.gitbook/assets/Context.png" alt="" data-size="line">
 
-    When users input a query, the app processes the query as search criteria for the dataset. The organized results from the search then replace the variable `Context`, allowing the LLM to reference the content for its response.
+    When users input a query, the app processes the query as search criteria for the knowledge. The organized results from the search then replace the variable `Context`, allowing the LLM to reference the content for its response.
 
 
 

@@ -2,7 +2,7 @@
 
 Most language models use outdated training data and have length limitations for the context of each request. For example, GPT-3.5 is trained on corpora from 2021 and has a limit of approximately 4k tokens per request. This means that developers who want their AI applications to be based on the latest and private context conversations must use techniques like embedding.
 
-Dify' dataset feature allows developers (and even non-technical users) to easily manage datasets and automatically integrate them into AI applications. All you need to do is prepare text content, such as:
+Dify' knowledge feature allows developers (and even non-technical users) to easily manage datasets and automatically integrate them into AI applications. All you need to do is prepare text content, such as:
 
 * Long text content (TXT, Markdown, DOCX, HTML, JSONL, or even PDF files)
 * Structured data (CSV, Excel, etc.)
@@ -15,12 +15,12 @@ Additionally, we are gradually supporting syncing data from various data sources
 * ...
 
 {% hint style="info" %}
-**Practice**: If your company wants to build an AI customer service assistant based on existing knowledge bases and product documentation, you can upload the documents to a dataset in Dify and create a conversational application. This might have taken you several weeks in the past and been difficult to maintain continuously.
+**Practice**: If your company wants to build an AI customer service assistant based on existing knowledge bases and product documentation, you can upload the documents to a knowledge in Dify and create a conversational application. This might have taken you several weeks in the past and been difficult to maintain continuously.
 {% endhint %}
 
 ### Knowledge and Documents
 
-In Dify, datasets (Knowledge) are collections of documents (Documents). A dataset can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
+In Dify, datasets (Knowledge) are collections of documents (Documents). A knowledge can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
 
 **Steps to upload a document:**
 
@@ -30,19 +30,19 @@ In Dify, datasets (Knowledge) are collections of documents (Documents). A datase
 4. Set metadata for the document
 5. Ready to use in the application!
 
-#### How to write a good dataset description
+#### How to write a good knowledge description
 
-When multiple datasets are referenced in an application, AI uses the description of the datasets and the user's question to determine which dataset to use to answer the user's question. Therefore, a well-written dataset description can improve the accuracy of AI in selecting datasets.
+When multiple datasets are referenced in an application, AI uses the description of the datasets and the user's question to determine which knowledge to use to answer the user's question. Therefore, a well-written knowledge description can improve the accuracy of AI in selecting datasets.
 
-The key to writing a good dataset description is to clearly describe the content and characteristics of the dataset. **It is recommended that the dataset description begin with this: `Useful only when the question you want to answer is about the following: specific description`**. Here is an example of a real estate dataset description:
+The key to writing a good knowledge description is to clearly describe the content and characteristics of the knowledge. **It is recommended that the knowledge description begin with this: `Useful only when the question you want to answer is about the following: specific description`**. Here is an example of a real estate knowledge description:
 
-> Useful only when the question you want to answer is about the following: global real estate market data from 2010 to 2020. This data includes information such as the average housing price, property sales volume, and housing types for each city. In addition, this dataset also includes some economic indicators such as GDP and unemployment rate, as well as some social indicators such as population and education level. These indicators can help analyze the trends and influencing factors of the real estate market. With this data, we can understand the development trends of the global real estate market, analyze the changes in housing prices in various cities, and understand the impact of economic and social factors on the real estate market.
+> Useful only when the question you want to answer is about the following: global real estate market data from 2010 to 2020. This data includes information such as the average housing price, property sales volume, and housing types for each city. In addition, this knowledge also includes some economic indicators such as GDP and unemployment rate, as well as some social indicators such as population and education level. These indicators can help analyze the trends and influencing factors of the real estate market. With this data, we can understand the development trends of the global real estate market, analyze the changes in housing prices in various cities, and understand the impact of economic and social factors on the real estate market.
 
-### Create a dataset
+### Create a knowledge
 
 1. Click on datasets in the main navigation bar of Dify. On this page, you can see the existing datasets. Click on "Create Knowledge" to enter the creation wizard.
 2. If you have already prepared your files, you can start by uploading the files.
-3. If you haven't prepared your documents yet, you can create an empty dataset first.
+3. If you haven't prepared your documents yet, you can create an empty knowledge first.
 
 ### Uploading Documents By upload file
 
@@ -55,7 +55,7 @@ The key to writing a good dataset description is to clearly describe the content
 
 Text Preprocessing and cleaning refers to Dify automatically segmenting and vectorizing your data documents so that user's questions (input) can match relevant paragraphs (Q to P), and generate results.
 
-When uploading a dataset, you need to select a **indexing mode** to specify how data is matched. This affects the accuracy of AI replies.
+When uploading a knowledge, you need to select a **indexing mode** to specify how data is matched. This affects the accuracy of AI replies.
 
 In **High Quality mode**, OpenAI's embedding API is used for higher accuracy in user queries.
 
@@ -76,7 +76,7 @@ Modify Documents For technical reasons, if developers make the following changes
 1. Adjust segmentation and cleaning settings
 2. Re-upload the file
 
-Dify support customizing the segmented and cleaned text by adding, deleting, and editing paragraphs. You can dynamically adjust your segmentation to make your dataset more accurate. Click **Document --> paragraph --> Edit** in the dataset to modify paragraphs content and custom keywords. Click **Document --> paragraph --> Add  segment --> Add a segment** to manually add new paragraph. Or click **Document --> paragraph --> Add  segment --> Batch add** to batch add new paragraph.
+Dify support customizing the segmented and cleaned text by adding, deleting, and editing paragraphs. You can dynamically adjust your segmentation to make your knowledge more accurate. Click **Document --> paragraph --> Edit** in the knowledge to modify paragraphs content and custom keywords. Click **Document --> paragraph --> Add  segment --> Add a segment** to manually add new paragraph. Or click **Document --> paragraph --> Add  segment --> Batch add** to batch add new paragraph.
 
 <figure><img src="../../.gitbook/assets/image (3) (1).png" alt=""><figcaption><p>Edit</p></figcaption></figure>
 
@@ -84,8 +84,8 @@ Dify support customizing the segmented and cleaned text by adding, deleting, and
 
 ### Disabling and Archiving of Documents
 
-* **Disable, cancel disable**: The dataset supports disabling documents or chunks that you temporarily do not want indexed. In the dataset's document list, click the Disable button and the document will be disabled. You can also click the Disable button in the document details to disable the entire document or a segment. Disabled documents will not be indexed. To cancel the disable, click Enable on a disabled document.
-* **Archive, Unarchive:** Some unused old document data can be archived if you don't want to delete it. After archiving, the data can only be viewed or deleted, not edited. In the document list of the dataset, click the Archive button to archive the document. Documents can also be archived in the document details page. Archived documents will not be indexed. Archived documents can also be unarchived by clicking the Unarchive button.
+* **Disable, cancel disable**: The knowledge supports disabling documents or chunks that you temporarily do not want indexed. In the knowledge's document list, click the Disable button and the document will be disabled. You can also click the Disable button in the document details to disable the entire document or a segment. Disabled documents will not be indexed. To cancel the disable, click Enable on a disabled document.
+* **Archive, Unarchive:** Some unused old document data can be archived if you don't want to delete it. After archiving, the data can only be viewed or deleted, not edited. In the document list of the knowledge, click the Archive button to archive the document. Documents can also be archived in the document details page. Archived documents will not be indexed. Archived documents can also be unarchived by clicking the Unarchive button.
 
 ### Maintain Knowledge via API
 
@@ -93,21 +93,21 @@ TODO
 
 ### Knowledge Settings
 
-Click **Settings** in the left navigation of the dataset. You can change the following settings for the dataset:
+Click **Settings** in the left navigation of the knowledge. You can change the following settings for the knowledge:
 
-* Knowledge **name** for identifying a dataset
-* Knowledge **description** to allow AI to better use the dataset appropriately. If the description is empty, Dify's automatic indexing strategy will be used.
-* **Permissions** can be set to Only Me or All Team Members. Those without permissions cannot view and edit the dataset.
+* Knowledge **name** for identifying a knowledge
+* Knowledge **description** to allow AI to better use the knowledge appropriately. If the description is empty, Dify's automatic indexing strategy will be used.
+* **Permissions** can be set to Only Me or All Team Members. Those without permissions cannot view and edit the knowledge.
 * **Indexing mode**: In High Quality mode, OpenAI's embedding interface will be called to process and provide higher accuracy when users query. In Economic mode, offline vector engines, keyword indexing, etc. will be used to reduce accuracy without consuming tokens.
 
 Note: Upgrading the indexing mode from Economic to High Quality will incur additional token consumption. Downgrading from High Quality to Economic will not consume tokens.
 
 ### Integrate into Applications
 
-Once the dataset is ready, it needs to be integrated into the application. When the AI application processes will automatically use the associated dataset content as a reference context.
+Once the knowledge is ready, it needs to be integrated into the application. When the AI application processes will automatically use the associated knowledge content as a reference context.
 
 1. Go to the application - Prompt Arrangement page
-2. In the context options, select the dataset you want to integrate
+2. In the context options, select the knowledge you want to integrate
 3. Save the settings to complete the integration
 
 ### Q\&A
@@ -116,11 +116,11 @@ Once the dataset is ready, it needs to be integrated into the application. When 
 
 A: If your PDF parsing appears garbled under certain formatted contents, you could consider converting the PDF to Markdown format, which currently offers higher accuracy, or you could reduce the use of images, tables, and other formatted content in the PDF. We are researching ways to optimize the experience of using PDFs.
 
-**Q: How does the consumption mechanism of context work?** A: With a dataset added, each query will consume segmented content (currently embedding two chunks) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
+**Q: How does the consumption mechanism of context work?** A: With a knowledge added, each query will consume segmented content (currently embedding two chunks) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
 
-**Q: Where does the embedded dataset appear when asking questions?** A: It will be embedded as context before the question.
+**Q: Where does the embedded knowledge appear when asking questions?** A: It will be embedded as context before the question.
 
-**Q: Is there any priority between the added dataset and OpenAI's answers?** A: The dataset serves as context and is used together with questions for LLM to understand and answer; there is no priority relationship.
+**Q: Is there any priority between the added knowledge and OpenAI's answers?** A: The knowledge serves as context and is used together with questions for LLM to understand and answer; there is no priority relationship.
 
 **Q: Why can I hit in test but not in application?** A: You can troubleshoot issues by following these steps:
 
@@ -131,4 +131,4 @@ A: If your PDF parsing appears garbled under certain formatted contents, you cou
 
 **Q: Will APIs related to hit testing be opened up so that dify can access knowledge bases and implement dialogue generation using custom models?** A: We plan to open up Webhooks later on; however, there are no current plans for this feature. You can achieve your requirements by connecting to any vector database.
 
-**Q: How do I add multiple datasets?** A: Due to short-term performance considerations, we currently only support one dataset. If you have multiple sets of data, you can upload them within the same dataset for use.
+**Q: How do I add multiple datasets?** A: Due to short-term performance considerations, we currently only support one knowledge. If you have multiple sets of data, you can upload them within the same knowledge for use.
