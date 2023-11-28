@@ -127,7 +127,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 curl 'https://api.dify.ai/v1/datasets/aac47674-31a8-4f12-aab2-9603964c4789/documents/2034e0c1-1b75-4532-849e-24e72666595b/segment' \
   --header 'Authorization: Bearer {api_key}' \
   --header 'Content-Type: application/json' \
-  --data-raw $'"segments":[
+  --data-raw $'"chunks":[
   {"content":"Dify means Do it for you",
   "keywords":["Dify","Do"]
   }

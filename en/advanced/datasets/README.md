@@ -84,7 +84,7 @@ Dify support customizing the segmented and cleaned text by adding, deleting, and
 
 ### Disabling and Archiving of Documents
 
-* **Disable, cancel disable**: The dataset supports disabling documents or segments that you temporarily do not want indexed. In the dataset's document list, click the Disable button and the document will be disabled. You can also click the Disable button in the document details to disable the entire document or a segment. Disabled documents will not be indexed. To cancel the disable, click Enable on a disabled document.
+* **Disable, cancel disable**: The dataset supports disabling documents or chunks that you temporarily do not want indexed. In the dataset's document list, click the Disable button and the document will be disabled. You can also click the Disable button in the document details to disable the entire document or a segment. Disabled documents will not be indexed. To cancel the disable, click Enable on a disabled document.
 * **Archive, Unarchive:** Some unused old document data can be archived if you don't want to delete it. After archiving, the data can only be viewed or deleted, not edited. In the document list of the dataset, click the Archive button to archive the document. Documents can also be archived in the document details page. Archived documents will not be indexed. Archived documents can also be unarchived by clicking the Unarchive button.
 
 ### Maintain Datasets via API
@@ -116,7 +116,7 @@ Once the dataset is ready, it needs to be integrated into the application. When 
 
 A: If your PDF parsing appears garbled under certain formatted contents, you could consider converting the PDF to Markdown format, which currently offers higher accuracy, or you could reduce the use of images, tables, and other formatted content in the PDF. We are researching ways to optimize the experience of using PDFs.
 
-**Q: How does the consumption mechanism of context work?** A: With a dataset added, each query will consume segmented content (currently embedding two segments) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
+**Q: How does the consumption mechanism of context work?** A: With a dataset added, each query will consume segmented content (currently embedding two chunks) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
 
 **Q: Where does the embedded dataset appear when asking questions?** A: It will be embedded as context before the question.
 

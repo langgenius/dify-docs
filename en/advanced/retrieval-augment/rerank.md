@@ -12,9 +12,9 @@ In most cases, there is an initial search before rerank because calculating the 
 
 However, rerank is not only applicable to merging results from different search systems. Even in a single search mode, introducing a rerank step can effectively improve the recall of documents, such as adding semantic rerank after keyword search.
 
-In practice, apart from normalizing results from multiple queries, we usually limit the number of text segments passed to the large model before providing the relevant text segments (i.e., TopK, which can be set in the rerank model parameters). This is done because the input window of the large model has size limitations (generally 4K, 8K, 16K, 128K Token counts), and you need to select an appropriate segmentation strategy and TopK value based on the size limitation of the chosen model's input window.
+In practice, apart from normalizing results from multiple queries, we usually limit the number of text chunks passed to the large model before providing the relevant text chunks (i.e., TopK, which can be set in the rerank model parameters). This is done because the input window of the large model has size limitations (generally 4K, 8K, 16K, 128K Token counts), and you need to select an appropriate segmentation strategy and TopK value based on the size limitation of the chosen model's input window.
 
-It should be noted that even if the model's context window is sufficiently large, too many recalled segments may introduce content with lower relevance, thus degrading the quality of the answer. Therefore, the TopK parameter for rerank is not necessarily better when larger.
+It should be noted that even if the model's context window is sufficiently large, too many recalled chunks may introduce content with lower relevance, thus degrading the quality of the answer. Therefore, the TopK parameter for rerank is not necessarily better when larger.
 
 Rerank is not a substitute for search technology but an auxiliary tool to enhance existing search systems. **Its greatest advantage is that it not only offers a simple and low-complexity method to improve search results but also allows users to integrate semantic relevance into existing search systems without the need for significant infrastructure modifications.**
 

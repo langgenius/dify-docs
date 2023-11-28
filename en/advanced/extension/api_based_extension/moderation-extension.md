@@ -8,7 +8,7 @@ Please read [.](./ "mention") to complete the development and integration of bas
 
 `app.moderation.input`: End-user input content review extension point. It is used to review the content of variables passed in by end-users and the input content of dialogues in conversational applications.
 
-`app.moderation.output`: LLM output content review extension point. It is used to review the content output by LLM. When the LLM output is streaming, the content will be requested by the API in segments of 100 characters to avoid delays in review when the output content is lengthy.
+`app.moderation.output`: LLM output content review extension point. It is used to review the content output by LLM. When the LLM output is streaming, the content will be requested by the API in chunks of 100 characters to avoid delays in review when the output content is lengthy.
 
 ### `app.moderation.input`
 
