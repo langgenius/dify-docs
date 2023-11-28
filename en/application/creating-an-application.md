@@ -26,7 +26,7 @@ We provide some templates in the application creation interface, and you can cli
 
 ### Creating from a Configuration File
 
-If you have obtained a template from the community or someone else, you can click to create from an application configuration file. Uploading the file will load most of the settings from the other party's application (but not the datasets at present).
+If you have obtained a template from the community or someone else, you can click to create from an application configuration file. Uploading the file will load most of the settings from the other party's application (but not the knowledge at present).
 
 ### Your Application
 

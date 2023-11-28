@@ -1,6 +1,6 @@
 # External-data-tool
 
-Previously, [datasets](../../advanced/datasets/ "mention") allowed developers to directly upload long texts in various formats and structured data to build datasets, enabling AI applications to converse based on the latest context uploaded by users. With this update, the external data tool empowers developers to use their own search capabilities or external data such as internal knowledge bases as the context for LLMs. This is achieved by extending APIs to fetch external data and embedding it into Prompts. Compared to uploading datasets to the cloud, using external data tools offers significant advantages in ensuring the security of private data, customizing searches, and obtaining real-time data.
+Previously, [knowledge](../../advanced/datasets/ "mention") allowed developers to directly upload long texts in various formats and structured data to build knowledge, enabling AI applications to converse based on the latest context uploaded by users. With this update, the external data tool empowers developers to use their own search capabilities or external data such as internal knowledge bases as the context for LLMs. This is achieved by extending APIs to fetch external data and embedding it into Prompts. Compared to uploading knowledge to the cloud, using external data tools offers significant advantages in ensuring the security of private data, customizing searches, and obtaining real-time data.
 
 ## What does it do?
 

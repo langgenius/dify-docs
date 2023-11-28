@@ -37,5 +37,5 @@ With the introduction of an LLMOps platform like Dify, the process of developing
 
     Additionally, Dify will provide AI plugin development and integration features, enabling developers to easily create and deploy LLM-based plugins for various applications, further enhancing development efficiency and application value.
 
-**Dify** is an easy-to-use LLMOps platform designed to empower more people to create sustainable, AI-native applications. With visual orchestration for various application types, Dify offers out-of-the-box, ready-to-use applications that can also serve as Backend-as-a-Service APIs. Unify your development process with one API for plugins and datasets integration, and streamline your operations using a single interface for prompt engineering, visual analytics, and continuous improvement.
+**Dify** is an easy-to-use LLMOps platform designed to empower more people to create sustainable, AI-native applications. With visual orchestration for various application types, Dify offers out-of-the-box, ready-to-use applications that can also serve as Backend-as-a-Service APIs. Unify your development process with one API for plugins and knowledge integration, and streamline your operations using a single interface for prompt engineering, visual analytics, and continuous improvement.
 

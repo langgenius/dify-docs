@@ -9,7 +9,7 @@ Dify offers a "Backend-as-a-Service" API, providing numerous benefits to AI appl
 * Well-encapsulated original LLM APIs
 * Effortlessly switch between LLM providers and centrally manage API keys
 * Operate applications visually, including log analysis, annotation, and user activity observation
-* Continuously provide more tools, plugins, and datasets
+* Continuously provide more tools, plugins, and knowledge
 
 ### How to use
 
@@ -17,7 +17,7 @@ Choose an application, and find the API Access in the left-side navigation of th
 
 <figure><img src="../.gitbook/assets/API Access.png" alt=""><figcaption><p>API document</p></figcaption></figure>
 
-You can create multiple access credentials for an application to deliver to different users or developers. This means that API users can use the AI capabilities provided by the application developer, but the underlying Prompt engineering, datasets, and tool capabilities are encapsulated.
+You can create multiple access credentials for an application to deliver to different users or developers. This means that API users can use the AI capabilities provided by the application developer, but the underlying Prompt engineering, knowledge, and tool capabilities are encapsulated.
 
 {% hint style="warning" %}
 In best practices, API keys should be called through the backend, rather than being directly exposed in plaintext within frontend code or requests. This helps prevent your application from being abused or attacked.

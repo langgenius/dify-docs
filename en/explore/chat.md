@@ -6,7 +6,7 @@ When we talk to large natural language models, we often encounter situations whe
 
 <figure><img src="../.gitbook/assets/image (61).png" alt=""><figcaption></figcaption></figure>
 
-Chat supports the use of plugins and datasets.
+Chat supports the use of plugins and knowledge.
 
 ### Use plugins
 
@@ -42,16 +42,16 @@ Configured entry:
 
 <figure><img src="../.gitbook/assets/image (18).png" alt=""><figcaption></figcaption></figure>
 
-### Use datasets
+### Use knowledge
 
-Chat supports datasets. After selecting the datasets, the questions asked by the user are related to the content of the data set, and the model will find the answer from the data set.
+Chat supports knowledge. After selecting the knowledge, the questions asked by the user are related to the content of the data set, and the model will find the answer from the data set.
 
-We can select the datasets needed for this conversation before the conversation starts.
+We can select the knowledge needed for this conversation before the conversation starts.
 
 <figure><img src="../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
 
 ### The process of thinking
 
-The thinking process refers to the process of the model using plugins and datasets. We can see the thought process in each answer.
+The thinking process refers to the process of the model using plugins and knowledge. We can see the thought process in each answer.
 
 <figure><img src="../.gitbook/assets/image (23).png" alt=""><figcaption></figcaption></figure>

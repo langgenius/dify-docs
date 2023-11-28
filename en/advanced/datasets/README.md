@@ -2,12 +2,12 @@
 
 Most language models use outdated training data and have length limitations for the context of each request. For example, GPT-3.5 is trained on corpora from 2021 and has a limit of approximately 4k tokens per request. This means that developers who want their AI applications to be based on the latest and private context conversations must use techniques like embedding.
 
-Dify' knowledge feature allows developers (and even non-technical users) to easily manage datasets and automatically integrate them into AI applications. All you need to do is prepare text content, such as:
+Dify' knowledge feature allows developers (and even non-technical users) to easily manage knowledge and automatically integrate them into AI applications. All you need to do is prepare text content, such as:
 
 * Long text content (TXT, Markdown, DOCX, HTML, JSONL, or even PDF files)
 * Structured data (CSV, Excel, etc.)
 
-Additionally, we are gradually supporting syncing data from various data sources to datasets, including:
+Additionally, we are gradually supporting syncing data from various data sources to knowledge, including:
 
 * GitHub
 * Databases
@@ -20,7 +20,7 @@ Additionally, we are gradually supporting syncing data from various data sources
 
 ### Knowledge and Documents
 
-In Dify, datasets (Knowledge) are collections of documents (Documents). A knowledge can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
+In Dify, knowledge (Knowledge) are collections of documents (Documents). A knowledge can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
 
 **Steps to upload a document:**
 
@@ -32,7 +32,7 @@ In Dify, datasets (Knowledge) are collections of documents (Documents). A knowle
 
 #### How to write a good knowledge description
 
-When multiple datasets are referenced in an application, AI uses the description of the datasets and the user's question to determine which knowledge to use to answer the user's question. Therefore, a well-written knowledge description can improve the accuracy of AI in selecting datasets.
+When multiple knowledge are referenced in an application, AI uses the description of the knowledge and the user's question to determine which knowledge to use to answer the user's question. Therefore, a well-written knowledge description can improve the accuracy of AI in selecting knowledge.
 
 The key to writing a good knowledge description is to clearly describe the content and characteristics of the knowledge. **It is recommended that the knowledge description begin with this: `Useful only when the question you want to answer is about the following: specific description`**. Here is an example of a real estate knowledge description:
 
@@ -40,7 +40,7 @@ The key to writing a good knowledge description is to clearly describe the conte
 
 ### Create a knowledge
 
-1. Click on datasets in the main navigation bar of Dify. On this page, you can see the existing datasets. Click on "Create Knowledge" to enter the creation wizard.
+1. Click on knowledge in the main navigation bar of Dify. On this page, you can see the existing knowledge. Click on "Create Knowledge" to enter the creation wizard.
 2. If you have already prepared your files, you can start by uploading the files.
 3. If you haven't prepared your documents yet, you can create an empty knowledge first.
 
@@ -131,4 +131,4 @@ A: If your PDF parsing appears garbled under certain formatted contents, you cou
 
 **Q: Will APIs related to hit testing be opened up so that dify can access knowledge bases and implement dialogue generation using custom models?** A: We plan to open up Webhooks later on; however, there are no current plans for this feature. You can achieve your requirements by connecting to any vector database.
 
-**Q: How do I add multiple datasets?** A: Due to short-term performance considerations, we currently only support one knowledge. If you have multiple sets of data, you can upload them within the same knowledge for use.
+**Q: How do I add multiple knowledge?** A: Due to short-term performance considerations, we currently only support one knowledge. If you have multiple sets of data, you can upload them within the same knowledge for use.

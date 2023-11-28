@@ -1,9 +1,9 @@
 # Maintain Knowledge via API
 
-> Authentication, invocation method and application Service API remain consistent. The difference is that a knowledge API token can operate on all datasets.
+> Authentication, invocation method and application Service API remain consistent. The difference is that a knowledge API token can operate on all knowledge.
 
 ### Benefits of Using the Knowledge API
-* Sync your data systems to Dify datasets to create powerful workflows.
+* Sync your data systems to Dify knowledge to create powerful workflows.
 * Provide knowledge list and document list APIs as well as detail query interfaces, to facilitate building your own data management page.
 * Support both plain text and file uploads/updates documents, as well as batch additions and modifications, to simplify your sync process.
 * Reduce manual document handling and syncing time, improving visibility of Dify's software and services.
