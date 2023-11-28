@@ -36,7 +36,7 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 #### 2.创建新的数据集  <a href="#2-create-a-new-datasets" id="2-create-a-new-datasets"></a>
 
-点击顶部侧边栏的 "Datasets" 按钮，然后点击 "Create Dataset" 按钮。
+点击顶部侧边栏的 "Knowledge" 按钮，然后点击 "Create Knowledge" 按钮。
 
 ![login-2](https://pan.wsyfin.com/f/G6ziA/login-2.png)
 

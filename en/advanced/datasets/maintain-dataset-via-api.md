@@ -1,8 +1,8 @@
-# Maintain Datasets via API
+# Maintain Knowledge via API
 
 > Authentication, invocation method and application Service API remain consistent. The difference is that a dataset API token can operate on all datasets.
 
-### Benefits of Using the Dataset API
+### Benefits of Using the Knowledge API
 * Sync your data systems to Dify datasets to create powerful workflows.
 * Provide dataset list and document list APIs as well as detail query interfaces, to facilitate building your own data management page.
 * Support both plain text and file uploads/updates documents, as well as batch additions and modifications, to simplify your sync process.
@@ -10,11 +10,11 @@
 
 ### How to use
 
-Please go to the dataset page, you can switch tap to the API page in the navigation on the left side. On this page, you can view the API documentation provided by Dify and manage credentials for accessing the Dataset API.
+Please go to the dataset page, you can switch tap to the API page in the navigation on the left side. On this page, you can view the API documentation provided by Dify and manage credentials for accessing the Knowledge API.
 
-<figure><img src="../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>Dataset API Document</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
-## **Create Empty Dataset**
+## **Create Empty Knowledge**
 
 **`POST /datasets`**
 
@@ -30,7 +30,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets' \
 
 ```
 
-#### **List of Datasets**
+#### **List of Knowledge**
 
 
 ```

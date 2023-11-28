@@ -36,11 +36,11 @@ Click [here](https://dify.ai/) to login to Dify. You can conveniently log in usi
 
 #### 2. Create new datasets[​](https://wsyfin.com/notion-dify#2-create-a-new-datasets)[​](https://wsyfin.com/notion-dify#2-create-a-new-datasets)
 
-Click the `Datasets` button on the top side bar, followed by the `Create Dataset` button.
+Click the `Knowledge` button on the top side bar, followed by the `Create Knowledge` button.
 
 ![login-2](https://pan.wsyfin.com/f/G6ziA/login-2.png)
 
-#### 3. Connect with Notion and Your Datasets[​](https://wsyfin.com/notion-dify#3-connect-with-notion-and-datasets)
+#### 3. Connect with Notion and Your Knowledge[​](https://wsyfin.com/notion-dify#3-connect-with-notion-and-datasets)
 
 Select "Sync from Notion" and then click the "Connect" button..
 

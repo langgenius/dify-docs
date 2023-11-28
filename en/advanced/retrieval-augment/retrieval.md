@@ -10,7 +10,7 @@ When users build knowledge base Q\&A AI applications, if multiple datasets are a
 
 Based on user intent and dataset description, the Agent independently determines and selects the most matching single dataset for querying relevant text. This mode is suitable for applications with distinct datasets and a smaller number of datasets. N-to-1 retrieval relies on the model's inference capability to choose the most relevant dataset based on user intent. When inferring the dataset, the dataset serves as a tool for the Agent, chosen through intent inference; the tool description is essentially the dataset description.
 
-When users upload datasets, the system automatically creates a summary description of each dataset. To achieve the best retrieval results in this mode, you can view the system-generated summary description under “Datasets -> Settings -> Dataset Description” and check if this content clearly summarizes the dataset's content.
+When users upload datasets, the system automatically creates a summary description of each dataset. To achieve the best retrieval results in this mode, you can view the system-generated summary description under “Knowledge -> Settings -> Knowledge Description” and check if this content clearly summarizes the dataset's content.
 
 Here is the technical flowchart for N-to-1 retrieval:
 

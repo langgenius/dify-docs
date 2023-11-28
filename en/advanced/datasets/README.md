@@ -1,4 +1,4 @@
-# Datasets\&Index
+# Knowledge\&Index
 
 Most language models use outdated training data and have length limitations for the context of each request. For example, GPT-3.5 is trained on corpora from 2021 and has a limit of approximately 4k tokens per request. This means that developers who want their AI applications to be based on the latest and private context conversations must use techniques like embedding.
 
@@ -18,9 +18,9 @@ Additionally, we are gradually supporting syncing data from various data sources
 **Practice**: If your company wants to build an AI customer service assistant based on existing knowledge bases and product documentation, you can upload the documents to a dataset in Dify and create a conversational application. This might have taken you several weeks in the past and been difficult to maintain continuously.
 {% endhint %}
 
-### Datasets and Documents
+### Knowledge and Documents
 
-In Dify, datasets (Datasets) are collections of documents (Documents). A dataset can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
+In Dify, datasets (Knowledge) are collections of documents (Documents). A dataset can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
 
 **Steps to upload a document:**
 
@@ -40,7 +40,7 @@ The key to writing a good dataset description is to clearly describe the content
 
 ### Create a dataset
 
-1. Click on datasets in the main navigation bar of Dify. On this page, you can see the existing datasets. Click on "Create Dataset" to enter the creation wizard.
+1. Click on datasets in the main navigation bar of Dify. On this page, you can see the existing datasets. Click on "Create Knowledge" to enter the creation wizard.
 2. If you have already prepared your files, you can start by uploading the files.
 3. If you haven't prepared your documents yet, you can create an empty dataset first.
 
@@ -87,16 +87,16 @@ Dify support customizing the segmented and cleaned text by adding, deleting, and
 * **Disable, cancel disable**: The dataset supports disabling documents or chunks that you temporarily do not want indexed. In the dataset's document list, click the Disable button and the document will be disabled. You can also click the Disable button in the document details to disable the entire document or a segment. Disabled documents will not be indexed. To cancel the disable, click Enable on a disabled document.
 * **Archive, Unarchive:** Some unused old document data can be archived if you don't want to delete it. After archiving, the data can only be viewed or deleted, not edited. In the document list of the dataset, click the Archive button to archive the document. Documents can also be archived in the document details page. Archived documents will not be indexed. Archived documents can also be unarchived by clicking the Unarchive button.
 
-### Maintain Datasets via API
+### Maintain Knowledge via API
 
 TODO
 
-### Dataset Settings
+### Knowledge Settings
 
 Click **Settings** in the left navigation of the dataset. You can change the following settings for the dataset:
 
-* Dataset **name** for identifying a dataset
-* Dataset **description** to allow AI to better use the dataset appropriately. If the description is empty, Dify's automatic indexing strategy will be used.
+* Knowledge **name** for identifying a dataset
+* Knowledge **description** to allow AI to better use the dataset appropriately. If the description is empty, Dify's automatic indexing strategy will be used.
 * **Permissions** can be set to Only Me or All Team Members. Those without permissions cannot view and edit the dataset.
 * **Indexing mode**: In High Quality mode, OpenAI's embedding interface will be called to process and provide higher accuracy when users query. In Economic mode, offline vector engines, keyword indexing, etc. will be used to reduce accuracy without consuming tokens.
 

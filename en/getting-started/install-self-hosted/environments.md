@@ -259,7 +259,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
     Whether Milvus uses SSL connection, default is false.
 
-#### Dataset Configuration
+#### Knowledge Configuration
 
 * UPLOAD_FILE_SIZE_LIMIT: 
 

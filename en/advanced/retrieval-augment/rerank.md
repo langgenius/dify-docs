@@ -22,11 +22,11 @@ Rerank is not a substitute for search technology but an auxiliary tool to enhanc
 
 Visit [https://cohere.com/rerank](https://cohere.com/rerank), register on the page, and apply for usage rights for the Rerank model to obtain the API key.
 
-## Setting the Rerank Model in Dataset Search Mode&#x20;
+## Setting the Rerank Model in Knowledge Search Mode&#x20;
 
-Access the Rerank settings by navigating to “Datasets -> Create Dataset -> Retrieval Settings”. Besides setting Rerank during dataset creation, you can also modify the Rerank configuration in the settings of an already created dataset, and change the Rerank configuration in the dataset recall mode settings of application arrangement.
+Access the Rerank settings by navigating to “Knowledge -> Create Knowledge -> Retrieval Settings”. Besides setting Rerank during dataset creation, you can also modify the Rerank configuration in the settings of an already created dataset, and change the Rerank configuration in the dataset recall mode settings of application arrangement.
 
-<figure><img src="../../.gitbook/assets/screenshot-20231119-191016.png" alt=""><figcaption><p>Setting the Rerank Model in Dataset Search Mode </p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20231119-191016.png" alt=""><figcaption><p>Setting the Rerank Model in Knowledge Search Mode </p></figcaption></figure>
 
 **TopK:** Used to set the number of relevant documents returned after Rerank.&#x20;
 

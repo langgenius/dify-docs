@@ -67,14 +67,14 @@ Hybrid Search operates by concurrently executing Full-Text Search and Vector Sea
 
 **Rerank Model:** After configuring the Rerank model's API key on the "Model Supplier" page, you can enable the "Rerank Model" in the search settings. The system will perform a semantic re-ranking of the document results retrieved through hybrid search, thereby optimizing the order of these results. Once the Rerank model is set up, the TopK and any Score threshold settings are only applicable during the Rerank step.
 
-## Setting the Search Mode When Creating a Dataset&#x20;
+## Setting the Search Mode When Creating a Knowledge&#x20;
 
-To set the search mode when creating a dataset, navigate to the "Datasets -> Create Dataset" page. There, you can configure different search modes in the retrieval settings section.
+To set the search mode when creating a dataset, navigate to the "Knowledge -> Create Knowledge" page. There, you can configure different search modes in the retrieval settings section.
 
-<figure><img src="../../.gitbook/assets/screenshot-20231119-175958.png" alt=""><figcaption><p>Setting the Search Mode When Creating a Dataset</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20231119-175958.png" alt=""><figcaption><p>Setting the Search Mode When Creating a Knowledge</p></figcaption></figure>
 
 ## Modifying the Search Mode in Prompt Engineering
 
-You can modify the search mode during application creation by navigating to the "Prompt Engineering -> Context -> Select Dataset -> Settings" page. This allows for adjustments to different search modes within the prompt arrangement phase.
+You can modify the search mode during application creation by navigating to the "Prompt Engineering -> Context -> Select Knowledge -> Settings" page. This allows for adjustments to different search modes within the prompt arrangement phase.
 
 <figure><img src="../../.gitbook/assets/screenshot-20231119-182704.png" alt=""><figcaption><p>Modifying the Search Mode in Prompt Engineering</p></figcaption></figure>
