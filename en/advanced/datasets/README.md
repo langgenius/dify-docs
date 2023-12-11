@@ -116,7 +116,7 @@ Once the knowledge base is ready, it needs to be integrated into the application
 
 A: If your PDF parsing appears garbled under certain formatted contents, you could consider converting the PDF to Markdown format, which currently offers higher accuracy, or you could reduce the use of images, tables, and other formatted content in the PDF. We are researching ways to optimize the experience of using PDFs.
 
-**Q: How does the consumption mechanism of context work?** A: With a knowledge added, each query will consume segmented content (currently embedding two chunks) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
+**Q: How does the consumption mechanism of context work?** A: With a knowledge base added, each query will consume segmented content (currently embedding two chunks) + question + prompt + chat history combined. However, it will not exceed model limitations, such as 4096.
 
 **Q: Where does the embedded knowledge appear when asking questions?** A: It will be embedded as context before the question.
 
