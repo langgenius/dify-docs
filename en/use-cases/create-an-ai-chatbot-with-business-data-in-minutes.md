@@ -16,7 +16,7 @@ Dify provides free message call usage quotas for OpenAI GPT series (200 times) a
 
 If you want to build an AI Chatbot based on the company's existing knowledge base and product documents, then you need to upload as many product-related documents as possible to Dify's knowledge. Dify helps you **complete segmentation and cleaning of the data.** The Dify knowledge supports two indexing modes: high quality and economical. We recommend using the high quality mode, which consumes tokens but provides higher accuracy.
 
-1. Create a new knowledge
+1. Create a new knowledge base
 2. upload your business data (support batch uploading multiple texts)
 3. select the cleaning method
 4. Click \[Save and Process], and it will take only a few seconds to complete the processing.
