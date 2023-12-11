@@ -36,7 +36,7 @@ The prompt we are filling in here is: `Translate the content to: {{language}}. T
 
 **2.2 Adding Context**
 
-If the application wants to generate content based on private contextual conversations, our [knowledge](../../advanced/datasets/) feature can be used. Click the "Add" button in the context to add a knowledge.
+If the application wants to generate content based on private contextual conversations, our [knowledge](../../advanced/datasets/) feature can be used. Click the "Add" button in the context to add a knowledge base.
 
 ![](<../../.gitbook/assets/image (12).png>)
 
