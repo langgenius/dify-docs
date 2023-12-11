@@ -97,7 +97,7 @@ The Claude model does not have its own embedding model. Therefore, the embedding
 
 ### 15. Is there any way to control the greater use of knowledge data rather than the model's own generation capabilities?
 
-Whether to use a knowledge is related to the description of the knowledge. Please write the knowledge description clearly as much as possible. Please refer to the [documentation](https://docs.dify.ai/advanced/datasets) for details.
+Whether to use a knowledge base is related to the description of the knowledge. Please write the knowledge description clearly as much as possible. Please refer to the [documentation](https://docs.dify.ai/advanced/datasets) for details.
 
 ### 16. How to better segment the uploaded knowledge document in Excel?
 
