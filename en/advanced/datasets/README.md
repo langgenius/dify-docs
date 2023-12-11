@@ -55,7 +55,7 @@ The key to writing a good knowledge description is to clearly describe the conte
 
 Text Preprocessing and cleaning refers to Dify automatically segmenting and vectorizing your data documents so that user's questions (input) can match relevant paragraphs (Q to P), and generate results.
 
-When uploading a knowledge, you need to select a **indexing mode** to specify how data is matched. This affects the accuracy of AI replies.
+When uploading a knowledge base, you need to select a **indexing mode** to specify how data is matched. This affects the accuracy of AI replies.
 
 In **High Quality mode**, OpenAI's embedding API is used for higher accuracy in user queries.
 
