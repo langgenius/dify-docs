@@ -71,7 +71,7 @@ Hybrid Search operates by concurrently executing Full-Text Search and Vector Sea
 
 To set the search mode when creating a knowledge base, navigate to the "Knowledge -> Create Knowledge" page. There, you can configure different search modes in the retrieval settings section.
 
-<figure><img src="../../.gitbook/assets/screenshot-20231119-175958.png" alt=""><figcaption><p>Setting the Search Mode When Creating a Knowledge</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20231119-175958.png" alt=""><figcaption><p>Setting the Search Mode When Creating a Knowledge base</p></figcaption></figure>
 
 ## Modifying the Search Mode in Prompt Engineering
 
