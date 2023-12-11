@@ -30,4 +30,4 @@ Here is the technical flowchart for Multi-path retrieval:&#x20;
 
 <figure><img src="../../.gitbook/assets/spaces_CdDIVDY6AtAz028MFT4d_uploads_xfMNnsyD506TOoynHdgU_image.webp" alt=""><figcaption><p>Multi-path retrieval</p></figcaption></figure>
 
-As Multi-path retrieval does not rely on the model's inferencing capability or knowledge descriptions, this mode can achieve higher quality recall results in multi-knowledge searches. Additionally, incorporating the Rerank step can effectively improve document recall. Therefore, when creating a knowledge base Q\&A application associated with multiple knowledge, we recommend configuring the retrieval mode as Multi-path retrieval.
+As Multi-path retrieval does not rely on the model's inferencing capability or knowledge descriptions, this mode can achieve higher quality recall results in multi-knowledge searches. Additionally, incorporating the Rerank step can effectively improve document recall. Therefore, when creating a knowledge base Q\&A application associated with multiple knowledge bases, we recommend configuring the retrieval mode as Multi-path retrieval.
