@@ -42,7 +42,7 @@ The key to writing a good knowledge description is to clearly describe the conte
 
 1. Click on knowledge in the main navigation bar of Dify. On this page, you can see the existing knowledge bases. Click on "Create Knowledge" to enter the creation wizard.
 2. If you have already prepared your files, you can start by uploading the files.
-3. If you haven't prepared your documents yet, you can create an empty knowledge first.
+3. If you haven't prepared your documents yet, you can create an empty knowledge base first.
 
 ### Uploading Documents By upload file
 
