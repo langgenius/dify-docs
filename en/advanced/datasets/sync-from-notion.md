@@ -4,7 +4,7 @@ Dify knowledge supports importing from Notion and setting up **Sync** so that da
 
 ### Authorization verification
 
-1. When creating a knowledge, select the data source, click **Sync from Notion--Go to connect**, and complete the authorization verification according to the prompt.
+1. When creating a knowledge base, select the data source, click **Sync from Notion--Go to connect**, and complete the authorization verification according to the prompt.
 2. You can also: click **Settings--Data Sources--Add a Data Source**, click Notion Source **Connect** to complete authorization verification.
 
 <figure><img src="../../.gitbook/assets/notion-connect.png" alt=""><figcaption><p>Connect Notion</p></figcaption></figure>
