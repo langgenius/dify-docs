@@ -95,7 +95,7 @@ TODO
 
 Click **Settings** in the left navigation of the knowledge. You can change the following settings for the knowledge:
 
-* Knowledge **name** for identifying a knowledge
+* Knowledge **name** for identifying a knowledge base
 * Knowledge **description** to allow AI to better use the knowledge appropriately. If the description is empty, Dify's automatic indexing strategy will be used.
 * **Permissions** can be set to Only Me or All Team Members. Those without permissions cannot view and edit the knowledge.
 * **Indexing mode**: In High Quality mode, OpenAI's embedding interface will be called to process and provide higher accuracy when users query. In Economic mode, offline vector engines, keyword indexing, etc. will be used to reduce accuracy without consuming tokens.
