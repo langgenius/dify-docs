@@ -22,7 +22,7 @@ Tip: OpenAI Function Call already supports multiple tool calls, and Dify plans t
 
 ### Multi-path Retrieval
 
-Based on user intent, this mode matches all knowledge simultaneously, queries relevant text chunks from multiple knowledge, and after a re-ranking step, selects the best results matching the user's question from the multi-path query results. Configuring the Rerank model API is required. In Multi-path retrieval mode, the search engine retrieves text content related to the user's query from all knowledge associated with the application, merges the results from multi-path recall, and re-ranks the retrieved documents semantically using the Rerank model.
+Based on user intent, this mode matches all knowledge bases simultaneously, queries relevant text chunks from multiple knowledge bases, and after a re-ranking step, selects the best results matching the user's question from the multi-path query results. Configuring the Rerank model API is required. In Multi-path retrieval mode, the search engine retrieves text content related to the user's query from all knowledge bases associated with the application, merges the results from multi-path recall, and re-ranks the retrieved documents semantically using the Rerank model.
 
 In Multi-path retrieval mode, configuring the Rerank model is necessary. How to configure the Rerank model: 🔗
 
