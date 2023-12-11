@@ -131,4 +131,4 @@ A: If your PDF parsing appears garbled under certain formatted contents, you cou
 
 **Q: Will APIs related to hit testing be opened up so that dify can access knowledge bases and implement dialogue generation using custom models?** A: We plan to open up Webhooks later on; however, there are no current plans for this feature. You can achieve your requirements by connecting to any vector database.
 
-**Q: How do I add multiple knowledge?** A: Due to short-term performance considerations, we currently only support one knowledge. If you have multiple sets of data, you can upload them within the same knowledge for use.
+**Q: How do I add multiple knowledge bases?** A: Due to short-term performance considerations, we currently only support one knowledge base. If you have multiple sets of data, you can upload them within the same knowledge base for use.
