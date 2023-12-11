@@ -15,7 +15,7 @@ Additionally, we are gradually supporting syncing data from various data sources
 * ...
 
 {% hint style="info" %}
-**Practice**: If your company wants to build an AI customer service assistant based on existing knowledge bases and product documentation, you can upload the documents to a knowledge in Dify and create a conversational application. This might have taken you several weeks in the past and been difficult to maintain continuously.
+**Practice**: If your company wants to build an AI customer service assistant based on existing knowledge bases and product documentation, you can upload the documents to a knowledge base in Dify and create a conversational application. This might have taken you several weeks in the past and been difficult to maintain continuously.
 {% endhint %}
 
 ### Knowledge and Documents
