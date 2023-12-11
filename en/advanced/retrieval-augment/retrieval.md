@@ -16,7 +16,7 @@ Here is the technical flowchart for N-to-1 retrieval:
 
 <figure><img src="../../.gitbook/assets/spaces_CdDIVDY6AtAz028MFT4d_uploads_LgAOVtxy9kQ0B8e2qaQl_image.webp" alt=""><figcaption><p>N-to-1 Retrieval </p></figcaption></figure>
 
-Therefore, this mode's recall effectiveness can be impacted when there are too many knowledge or when the knowledge descriptions lack sufficient distinction. This mode is more suitable for applications with fewer knowledge.&#x20;
+Therefore, this mode's recall effectiveness can be impacted when there are too many knowledge bases or when the knowledge descriptions lack sufficient distinction. This mode is more suitable for applications with fewer knowledge bases.&#x20;
 
 Tip: OpenAI Function Call already supports multiple tool calls, and Dify plans to upgrade this mode to "N-to-M retrieval" in future versions.
 
