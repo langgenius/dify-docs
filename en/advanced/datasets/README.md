@@ -20,7 +20,7 @@ Additionally, we are gradually supporting syncing data from various data sources
 
 ### Knowledge and Documents
 
-In Dify, knowledge (Knowledge) are collections of documents (Documents). A knowledge can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
+In Dify, knowledge bases are collections of documents. A knowledge base can be integrated as a whole into an application to be used as context. Documents can be uploaded by developers or operations staff, or synced from other data sources (typically corresponding to a file unit in the data source).
 
 **Steps to upload a document:**
 
