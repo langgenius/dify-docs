@@ -104,7 +104,7 @@ Note: Upgrading the indexing mode from Economic to High Quality will incur addit
 
 ### Integrate into Applications
 
-Once the knowledge is ready, it needs to be integrated into the application. When the AI application processes will automatically use the associated knowledge content as a reference context.
+Once the knowledge base is ready, it needs to be integrated into the application. When the AI application processes will automatically use the associated knowledge content as a reference context.
 
 1. Go to the application - Prompt Arrangement page
 2. In the context options, select the knowledge you want to integrate
