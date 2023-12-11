@@ -32,7 +32,7 @@ In Dify, knowledge bases are collections of documents. A knowledge base can be i
 
 #### How to write a good knowledge description
 
-When multiple knowledge are referenced in an application, AI uses the description of the knowledge and the user's question to determine which knowledge to use to answer the user's question. Therefore, a well-written knowledge description can improve the accuracy of AI in selecting knowledge.
+When multiple knowledge bases are referenced in an application, AI uses the description of the knowledge and the user's question to determine which knowledge base to use to answer the user's question. Therefore, a well-written knowledge description can improve the accuracy of AI in selecting knowledge.
 
 The key to writing a good knowledge description is to clearly describe the content and characteristics of the knowledge. **It is recommended that the knowledge description begin with this: `Useful only when the question you want to answer is about the following: specific description`**. Here is an example of a real estate knowledge description:
 
