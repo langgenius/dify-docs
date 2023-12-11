@@ -45,6 +45,8 @@ Notion集成分为**内部集成**（internal integration）和**外部集成**�
 
 复制后回到 Dify 源代码下，在 **.env** 文件里配置相关环境变量，环境变量如下：
 
+**NOTION\_INTEGRATION\_TYPE** = internal
+or
 **NOTION\_INTEGRATION\_TYPE** = public
 
 **NOTION\_INTERNAL\_SECRET**=you-internal-secret

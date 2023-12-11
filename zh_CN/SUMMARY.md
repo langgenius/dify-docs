@@ -81,7 +81,7 @@
 * [开源协议](community/open-source.md)
 * [数据安全](community/data-security.md)
 
-## 用户协议
+## 用户协议 <a href="#user-agreement" id="user-agreement"></a>
 
 * [服务协议](user-agreement/terms-of-service.md)
 * [隐私协议](user-agreement/privacy-policy.md)

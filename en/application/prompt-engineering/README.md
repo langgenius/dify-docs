@@ -33,8 +33,7 @@ Prompt Engineering has developed into a field with tremendous potential, worthy 
 
 ### Extended Reading
 
-1. [Learn Prompting](https://learnprompting.org/zh-Hans/)
+1. [Learn Prompting](https://learnprompting.org/)
 2. [ChatGPT Prompt Engineering for Developers](https://www.deeplearning.ai/short-courses/chatgpt-prompt-engineering-for-developers/)
 3. [Awesome ChatGPT Prompts](https://github.com/f/awesome-chatgpt-prompts)
-
 

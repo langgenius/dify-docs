@@ -1,19 +1,27 @@
+---
+description: 了解 Dify 支持的不同模型
+---
+
 # 模型配置
 
-Dify 目前已支持主流的模型供应商，例如 OpenAI 的 GPT 系列。以下是我们目前支持的模型供应商：
+Dify 目前已支持主流的模型供应商，例如 OpenAI 的 GPT 系列、Anthropic 的 Claude 系列等。不同模型的能力表现、参数类型会不一样，你可以根据不同情景的应用需求选择你喜欢的模型供应商。**你在 Dify 应用以下模型能力前，应该前往不同的模型厂商官方网站获得他们的 API key 。**
 
-* OpenAI
-* Azure OpenAI Service
-* Anthropic
-* Hugging Face Hub
-* Replicate
-* Xinference
-* OpenLLM
-* 讯飞星火
-* 文心一言
-* 通义千问
-* Minimax
-* ChatGLM
+### 模型类型
+
+在 Dify 中，我们按模型的使用场景将模型分为以下 4 类：
+
+1.  **系统推理模型。**在创建的应用中，用的是该类型的模型。智聊、对话名称生成、下一步问题建议用的也是推理模型。
+
+    > 已支持的系统推理模型供应商：[OpenAI](https://platform.openai.com/account/api-keys)、[Azure OpenAI Service](https://azure.microsoft.com/en-us/products/ai-services/openai-service/)、[Anthropic](https://console.anthropic.com/account/keys)、Hugging Face Hub、Replicate、Xinference、OpenLLM、[讯飞星火](https://www.xfyun.cn/solutions/xinghuoAPI)、[文心一言](https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application)、[通义千问](https://dashscope.console.aliyun.com/api-key\_management?spm=a2c4g.11186623.0.0.3bbc424dxZms9k)、[Minimax](https://api.minimax.chat/user-center/basic-information/interface-key)、ZHIPU(ChatGLM)
+2.  **Embedding 模型。**在数据集中，将分段过的文档做 Embedding 用的是该类型的模型。在使用了数据集的应用中，将用户的提问做 Embedding 处理也是用的该类型的模型。
+
+    > 已支持的 Embedding 模型供应商：OpenAI、ZHIPU(ChatGLM)、JinaAI
+3.  [**Rerank 模型**](https://docs.dify.ai/v/zh-hans/advanced/retrieval-augment/rerank)**。Rerank 模型用于增强检索能力，改善 LLM 的搜索结果。**
+
+    > 已支持的 Rerank 模型供应商：Cohere
+4.  **语音转文字模型。**将对话型应用中，将语音转文字用的是该类型的模型。
+
+    > 已支持的语音转文字模型供应商：OpenAI
 
 根据技术变化和用户需求，我们将陆续支持更多 LLM 供应商。
 
@@ -21,15 +29,7 @@ Dify 目前已支持主流的模型供应商，例如 OpenAI 的 GPT 系列。�
 
 我们为 Dify 云服务的用户提供了不同模型的试用额度，请在该额度耗尽前设置你自己的模型供应商，否则将会影响应用的正常使用。
 
-* \*\*OpenAI 托管模型试用：\*\*我们提供 500 次调用次数供你试用体验，可用于 GPT3.5-turbo、GPT3.5-turbo-16k、text-davinci-003 模型。
-
-### 模型类型
-
-在 Dify 中，我们按模型的使用场景将模型分为以下 3 类：
-
-1. 系统推理模型。在创建的应用中，用的是该类型的模型。智聊、对话名称生成、下一步问题建议用的也是推理模型。
-2. Embedding 模型。在数据集中，将分段过的文档做 Embedding 用的是该类型的模型。在使用了数据集的应用中，将用户的提问做 Embedding 处理也是用的该类型的模型。
-3. 语音转文字 模型。将对话型应用中，将语音转文字用的是该类型的模型。
+* **OpenAI 托管模型试用：**  我们提供 200 次调用次数供你试用体验，可用于 GPT3.5-turbo、GPT3.5-turbo-16k、text-davinci-003 模型。
 
 ### 设置默认模型
 
@@ -54,15 +54,7 @@ Dify 在需要模型时，会根据使用场景来选择设置过的默认模型
 
 接入自有模型的供应商后，Dify 会自动接入该供应商下的所有模型。
 
-在 Dify 中设置对应模型供应商的 API key，即可接入该模型供应商。获取模型供应商的 API 地址如下：
-
-* OpenAI： [https://platform.openai.com/account/api-keys](https://platform.openai.com/account/api-keys)
-* Anthropic：[https://console.anthropic.com/account/keys](https://console.anthropic.com/account/keys)
-* 讯飞星火：[https://www.xfyun.cn/solutions/xinghuoAPI](https://www.xfyun.cn/solutions/xinghuoAPI)
-* Minimax：[https://api.minimax.chat/user-center/basic-information/interface-key](https://api.minimax.chat/user-center/basic-information/interface-key)
-* 文心一言：[https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application](https://console.bce.baidu.com/qianfan/ais/console/applicationConsole/application)
-* 通义千问：[https://dashscope.console.aliyun.com/api-key\_management?spm=a2c4g.11186623.0.0.3bbc424dxZms9k](https://dashscope.console.aliyun.com/api-key\_management?spm=a2c4g.11186623.0.0.3bbc424dxZms9k)
-* ChatGLM：该模型供应商并未提供官方的服务。但支持自部署([部署文档](https://github.com/THUDM/ChatGLM2-6B#%E7%8E%AF%E5%A2%83%E5%AE%89%E8%A3%85))。
+在 Dify 中设置对应模型供应商的 API key，即可接入该模型供应商。
 
 {% hint style="info" %}
 Dify 使用了 [PKCS1\_OAEP](https://pycryptodome.readthedocs.io/en/latest/src/cipher/oaep.html) 来加密存储用户托管的 API 密钥，每个租户均使用了独立的密钥对进行加密，确保你的 API 密钥不被泄漏。

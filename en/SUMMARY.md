@@ -64,6 +64,10 @@
     * [Moderation Extension](advanced/extension/api\_based\_extension/moderation-extension.md)
   * [Code-based Extension](advanced/extension/code-based-extension.md)
 
+## workspace
+
+* [Billing](workspace/billing.md)
+
 ## use cases
 
 * [How to Build an Notion AI Assistant Based on Your Own Notes?](use-cases/build-an-notion-ai-assistant.md)
