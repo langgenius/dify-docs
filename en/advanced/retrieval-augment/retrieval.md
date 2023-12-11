@@ -8,7 +8,7 @@ When users build knowledge base Q\&A AI applications, if multiple knowledge base
 
 ### **N-to-1 Retrieval**&#x20;
 
-Based on user intent and knowledge description, the Agent independently determines and selects the most matching single knowledge for querying relevant text. This mode is suitable for applications with distinct knowledge and a smaller number of knowledge. N-to-1 retrieval relies on the model's inference capability to choose the most relevant knowledge based on user intent. When inferring the knowledge, the knowledge serves as a tool for the Agent, chosen through intent inference; the tool description is essentially the knowledge description.
+Based on user intent and knowledge description, the Agent independently determines and selects the most matching single knowledge base for querying relevant text. This mode is suitable for applications with distinct knowledge and a smaller number of knowledge bases. N-to-1 retrieval relies on the model's inference capability to choose the most relevant knowledge base based on user intent. When inferring the knowledge, the knowledge serves as a tool for the Agent, chosen through intent inference; the tool description is essentially the knowledge description.
 
 When users upload knowledge, the system automatically creates a summary description of each knowledge. To achieve the best retrieval results in this mode, you can view the system-generated summary description under “Knowledge -> Settings -> Knowledge Description” and check if this content clearly summarizes the knowledge's content.
 
