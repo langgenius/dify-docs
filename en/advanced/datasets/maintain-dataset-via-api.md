@@ -1,6 +1,6 @@
 # Maintain Knowledge via API
 
-> Authentication, invocation method and application Service API remain consistent. The difference is that a knowledge API token can operate on all knowledge.
+> Authentication, invocation method and application Service API remain consistent. The difference is that a knowledge API token can operate on all knowledge bases.
 
 ### Benefits of Using the Knowledge API
 * Sync your data systems to Dify knowledge to create powerful workflows.
