@@ -1,6 +1,6 @@
 # Retrieval
 
-When users build knowledge base Q\&A AI applications, if multiple knowledge are associated within the application, Dify supports two retrieval modes: N-to-1 retrieval and Multi-path retrieval.
+When users build knowledge base Q\&A AI applications, if multiple knowledge bases are associated within the application, Dify supports two retrieval modes: N-to-1 retrieval and Multi-path retrieval.
 
 <figure><img src="../../.gitbook/assets/screenshot-20231119-191531.png" alt=""><figcaption><p>Retrieval Settings</p></figcaption></figure>
 
