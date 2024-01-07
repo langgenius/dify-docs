@@ -255,3 +255,10 @@ API 返回为：
 * 按照上述的范例，我们把本地已经启动的服务端点暴露出去，将代码范例接口：`http://127.0.0.1:8000/api/dify/receive` 替换为 `https://177e-159-223-41-52.ngrok-free.app/api/dify/receive`
 
 此 API 端点即可公网访问。至此，我们即可在 Dify 配置该 API 端点进行本地调试代码，配置步骤请参考 [external\_data\_tool.md](../../../knowledge-base/external\_data\_tool.md "mention")。
+
+
+### 使用 Cloudflare Workers 部署 API 扩展
+
+我们推荐你使用 Cloudflare Workers 来部署你的 API 扩展，因为 Cloudflare Workers 可以方便的提供一个公网地址，而且可以免费使用。
+
+[cloudflare_workers.md](./cloudflare_workers.md "mention")。

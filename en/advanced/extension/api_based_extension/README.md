@@ -259,3 +259,9 @@ Upon successful startup, you'll see something like the following:
 * For example, to expose your locally running service, replace the example URL `http://127.0.0.1:8000/api/dify/receive` with `https://177e-159-223-41-52.ngrok-free.app/api/dify/receive`.
 
 Now, this API endpoint is accessible publicly. You can configure this endpoint in Dify for local debugging. For the configuration steps, consult the appropriate documentation or guide.
+
+### Deploy API extension with Cloudflare Workers
+
+We recommend that you use Cloudflare Workers to deploy your API extension, because Cloudflare Workers can easily provide a public address and can be used for free.
+
+[cloudflare_workers.md](./cloudflare_workers.md "mention")
