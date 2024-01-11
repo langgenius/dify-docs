@@ -12,7 +12,7 @@
 
 Clone Dify 源代码至本地
 
-```Shell
+```bash
 git clone https://github.com/langgenius/dify.git
 ```
 
@@ -42,13 +42,13 @@ docker compose up -d
 
 最后检查是否所有容器都正常运行：
 
-```Shell
+```bash
 docker compose ps
 ```
 
 包括 3 个业务服务 `api / worker / web`，以及 4 个基础组件 `weaviate / db / redis / nginx`。
 
-```Shell
+```bash
 NAME                IMAGE                              COMMAND                  SERVICE             CREATED             STATUS              PORTS
 docker-api-1        langgenius/dify-api:0.3.2          "/entrypoint.sh"         api                 4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
 docker-db-1         postgres:15-alpine                 "docker-entrypoint.s…"   db                  4 seconds ago       Up 2 seconds        0.0.0.0:5432->5432/tcp
@@ -57,4 +57,16 @@ docker-redis-1      redis:6-alpine                     "docker-entrypoint.s…" 
 docker-weaviate-1   semitechnologies/weaviate:1.18.4   "/bin/weaviate --hos…"   weaviate            4 seconds ago       Up 3 seconds        
 docker-web-1        langgenius/dify-web:0.3.2          "/entrypoint.sh"         web                 4 seconds ago       Up 3 seconds        80/tcp, 3000/tcp
 docker-worker-1     langgenius/dify-api:0.3.2          "/entrypoint.sh"         worker              4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
+```
+
+### Upgrade Dify
+
+进入 dify 源代码的 docker 目录，按顺序执行以下命令：
+
+```bash
+cd dify/docker
+git pull origin main
+docker compose down
+docker compose pull
+docker compose up -d
 ```

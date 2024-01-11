@@ -12,7 +12,7 @@
 
 Clone the Dify source code to your local machine:
 
-```Shell
+```bash
 git clone https://github.com/langgenius/dify.git
 ```
 
@@ -20,7 +20,7 @@ git clone https://github.com/langgenius/dify.git
 
 Navigate to the docker directory in the Dify source code and execute the following command to start Dify:
 
-```Shell
+```bash
 cd dify/docker
 docker compose up -d
 ```
@@ -29,7 +29,7 @@ docker compose up -d
 
 Deployment Results:
 
-```Shell
+```bash
 [+] Running 7/7
  ✔ Container docker-web-1       Started                                                                                                                                                                                       1.0s 
  ✔ Container docker-redis-1     Started                                                                                                                                                                                       1.1s 
@@ -42,13 +42,13 @@ Deployment Results:
 
 Finally, check if all containers are running successfully:
 
-```Shell
+```bash
 docker compose ps
 ```
 
 This includes 3 business services: api / worker / web, and 4 underlying components: weaviate / db / redis / nginx.
 
-```Shell
+```bash
 NAME                IMAGE                              COMMAND                  SERVICE             CREATED             STATUS              PORTS
 docker-api-1        langgenius/dify-api:0.3.2          "/entrypoint.sh"         api                 4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
 docker-db-1         postgres:15-alpine                 "docker-entrypoint.s…"   db                  4 seconds ago       Up 2 seconds        0.0.0.0:5432->5432/tcp
@@ -57,4 +57,16 @@ docker-redis-1      redis:6-alpine                     "docker-entrypoint.s…" 
 docker-weaviate-1   semitechnologies/weaviate:1.18.4   "/bin/weaviate --hos…"   weaviate            4 seconds ago       Up 3 seconds        
 docker-web-1        langgenius/dify-web:0.3.2          "/entrypoint.sh"         web                 4 seconds ago       Up 3 seconds        80/tcp, 3000/tcp
 docker-worker-1     langgenius/dify-api:0.3.2          "/entrypoint.sh"         worker              4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
+```
+
+### Upgrade Dify
+
+Enter the docker directory of the dify source code and execute the following commands:
+
+```bash
+cd dify/docker
+git pull origin main
+docker compose down
+docker compose pull
+docker compose up -d
 ```
