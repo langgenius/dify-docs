@@ -311,6 +311,9 @@ Notion 集成配置，变量可通过申请 Notion integration 获取：[https:/
 *   RESEND\_API\_KEY
 
     Resend 邮件提供商 API-Key，可前往 [API-Key](https://resend.com/api-keys) 获取。
+*   RESEND\_API\_URL
+
+    Resend 邮件提供商提供的 API endpoint，不配置此 Key 时默认值为 'https://api.resend.com', 配置上此 Key 请不要设置为空字符串值。
 
 #### 第三方授权设置
 

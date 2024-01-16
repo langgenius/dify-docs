@@ -315,6 +315,9 @@ Notion integration configuration, variables can be obtained by applying for Noti
 *   RESEND_API_KEY
 
     API-Key for the Resend email provider, can be obtained from API-Key.
+*   RESEND_API_URL
+
+    Resend API endpoint provided by the email provider, the default value is 'https://api.resend.com' when this Key is not configured. Please do not set it as an empty string value when configuring this Key.
 
 #### Third-Party Authorization Settings
 
