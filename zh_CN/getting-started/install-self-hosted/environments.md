@@ -247,7 +247,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 *   MILVUS\_PASSWORD
 
     Milvus 密码配置，默认为空。
-*   MILVUS\_USE\_SECURE
+*   MILVUS_SECURE
 
     Milvus 是否使用 SSL 连接，默认 false。
 
