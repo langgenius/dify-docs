@@ -49,6 +49,13 @@ Dify 目前已支持：
 
 <figure><img src="../.gitbook/assets/image (150).png" alt=""><figcaption><p>已添加自定义工具</p></figcaption></figure>
 
+#### Cloudflare Workers
+
+您也可以使用 [dify-tools-worker](https://github.com/crazywoola/dify-tools-worker) 来快速部署自定义工具。该工具提供了：
+
+- 可以导入 Dify 的路由 `https://difytoolsworker.yourname.workers.dev/doc`, 提供了 OpenAPI 兼容的接口文档
+- API 的实现代码，可以直接部署到 Cloudflare Workers
+
 ### 如何在应用内使用工具
 
 目前，您可以在“工作室”中创建**智能助手型应用**时，将已配置好凭据的工具在其中使用。
