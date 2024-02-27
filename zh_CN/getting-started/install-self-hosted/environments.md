@@ -309,19 +309,25 @@ Notion 集成配置，变量可通过申请 Notion integration 获取：[https:/
 * NOTION\_CLIENT\_SECRET
 
 #### 邮件相关配置
-
-*   MAIL\_TYPE
-
-    邮件提供商类型，当前仅支持：`resend`（[https://resend.com](https://resend.com)），留空则不发送邮件。
-*   MAIL\_DEFAULT\_SEND\_FROM
-
-    发件人邮箱名称，如：`no-reply <no-reply@dify.ai>`，非必填。
-*   RESEND\_API\_KEY
-
-    Resend 邮件提供商 API-Key，可前往 [API-Key](https://resend.com/api-keys) 获取。
-*   RESEND\_API\_URL
-
-    Resend 邮件提供商提供的 API endpoint，不配置此 Key 时默认值为 'https://api.resend.com', 配置上此 Key 请不要设置为空字符串值。
+*   MAIL_TYPE
+    * resend
+        *   MAIL_DEFAULT_SEND_FROM  
+          发件人的电子邮件名称，例如：no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai)，非必需。
+        *   RESEND_API_KEY  
+          用于 Resend 邮件提供程序的 API 密钥，可以从 API 密钥获取。
+    * smtp
+        *   SMTP_SERVER  
+          SMTP 服务器地址
+        *   SMTP_PORT  
+            SMTP 服务器端口号
+        *   SMTP_USERNAME  
+            SMTP 用户名
+        *   SMTP_PASSWORD  
+            SMTP 密码
+        *   SMTP_USE_TLS  
+            是否使用 TLS，默认为 false
+        *   MAIL_DEFAULT_SEND_FROM  
+            发件人的电子邮件名称，例如：no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai)，非必需。
 
 #### 第三方授权设置
 

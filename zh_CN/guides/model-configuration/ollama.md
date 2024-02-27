@@ -64,3 +64,46 @@ Dify 支持接入 Ollama 部署的大型语言模型推理和 embedding 能力�
    进入需要配置的 App 提示词编排页面，选择 Ollama 供应商下的 `llava` 模型，配置模型参数后即可使用。
 
 如需获取 Ollama 更多信息，请参考：[https://github.com/jmorganca/ollama](https://github.com/jmorganca/ollama)
+
+以下是上述内容的中文翻译：
+
+### 在Linux上设置环境变量
+
+如果Ollama作为systemd服务运行，应该使用`systemctl`设置环境变量：
+
+1. 通过调用`systemctl edit ollama.service`编辑systemd服务。这将打开一个编辑器。
+
+2. 对于每个环境变量，在`[Service]`部分下添加一行`Environment`：
+
+    ```ini
+    [Service]
+    Environment="OLLAMA_HOST=0.0.0.0"
+    ```
+
+3. 保存并退出。
+
+4. 重载`systemd`并重启Ollama：
+
+   ```bash
+   systemctl daemon-reload
+   systemctl restart ollama
+   ```
+
+### 在Windows上设置环境变量
+
+在Windows上，Ollama继承了您的用户和系统环境变量。
+
+1. 首先通过任务栏点击Ollama退出程序
+
+2. 从控制面板编辑系统环境变量
+
+3. 为您的用户账户编辑或新建变量，比如`OLLAMA_HOST`、`OLLAMA_MODELS`等。
+
+4. 点击OK/应用保存
+
+5. 在一个新的终端窗口运行`ollama`
+
+
+## 如何在我的网络上暴露Ollama？
+
+Ollama默认绑定127.0.0.1端口11434。通过`OLLAMA_HOST`环境变量更改绑定地址。

@@ -68,6 +68,8 @@
 
 ## Tutorials
 
+* [Quick Tool Integration](tutorials/quick-tool-integration.md)
+* [Advanced Tool Integration](tutorials/advanced-tool-integration.md)
 * [Expose API Extension on public Internet using Cloudflare Workers](tutorials/cloudflare\_workers.md)
 * [Connecting with Different Models](tutorials/model-configuration/README.md)
   * [Hugging Face](tutorials/model-configuration/hugging-face.md)
@@ -84,7 +86,5 @@
 
 ## User Agreement
 
-* [Terms of Service](user-agreement/terms-of-service.md)
 * [Open-Source License](user-agreement/open-source.md)
 * [Data Security](user-agreement/data-security.md)
-* [Privacy Policy](user-agreement/privacy-policy.md)

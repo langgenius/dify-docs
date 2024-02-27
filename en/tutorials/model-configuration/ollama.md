@@ -64,3 +64,60 @@ Dify supports integrating LLM and Text Embedding capabilities of large language 
     Enter `Prompt Eng.` page of the App that needs to be configured, select the `llava` model under the Ollama provider, and use it after configuring the model parameters.
 
 For more information on Ollama, please refer to: [https://github.com/jmorganca/ollama](https://github.com/jmorganca/ollama)
+
+## FAQ
+
+For more information on Ollama, please refer to: [Ollama FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.md)
+
+### Setting environment variables on Mac
+
+If Ollama is run as a macOS application, environment variables should be set using `launchctl`:
+
+1. For each environment variable, call `launchctl setenv`.
+
+    ```bash
+    launchctl setenv OLLAMA_HOST "0.0.0.0"
+    ```
+
+2. Restart Ollama application.
+
+### Setting environment variables on Linux
+
+If Ollama is run as a systemd service, environment variables should be set using `systemctl`:
+
+1. Edit the systemd service by calling `systemctl edit ollama.service`. This will open an editor.
+
+2. For each environment variable, add a line `Environment` under section `[Service]`:
+
+    ```ini
+    [Service]
+    Environment="OLLAMA_HOST=0.0.0.0"
+    ```
+
+3. Save and exit.
+
+4. Reload `systemd` and restart Ollama:
+
+   ```bash
+   systemctl daemon-reload
+   systemctl restart ollama
+   ```
+
+### Setting environment variables on Windows
+
+On windows, Ollama inherits your user and system environment variables.
+
+1. First Quit Ollama by clicking on it in the task bar
+
+2. Edit system environment variables from the control panel
+
+3. Edit or create New variable(s) for your user account for `OLLAMA_HOST`, `OLLAMA_MODELS`, etc.
+
+4. Click OK/Apply to save 
+
+5. Run `ollama` from a new terminal window 
+
+
+## How can I expose Ollama on my network?
+
+Ollama binds 127.0.0.1 port 11434 by default. Change the bind address with the `OLLAMA_HOST` environment variable.

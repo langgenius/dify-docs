@@ -316,18 +316,30 @@ Notion integration configuration, variables can be obtained by applying for Noti
 
 #### Mail related configuration
 
-*   MAIL\_TYPE
+*   MAIL_TYPE
+    * resend
+        *   MAIL_DEFAULT_SEND_FROM  
+          The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
+        *   RESEND_API_KEY  
+          API-Key for the Resend email provider, can be obtained from API-Key.
+    * smtp
+        *   SMTP_SERVER  
+          SMTP server address
+        *   SMTP_PORT  
+            SMTP server port number
+        *   SMTP_USERNAME  
+            SMTP username
+        *   SMTP_PASSWORD  
+            SMTP password
+        *   SMTP_USE_TLS  
+            Whether to use TLS, default is false
+        *   MAIL_DEFAULT_SEND_FROM  
+            The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
 
-    The type of mail provider, currently only supports: resend (https://resend.com). If left empty, no mail will be sent.
-*   MAIL\_DEFAULT\_SEND\_FROM
+    
 
-    The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
-*   RESEND\_API\_KEY
 
-    API-Key for the Resend email provider, can be obtained from API-Key.
-*   RESEND_API_URL
-
-    Resend API endpoint provided by the email provider, the default value is 'https://api.resend.com' when this Key is not configured. Please do not set it as an empty string value when configuring this Key.
+   
 
 #### Third-Party Authorization Settings
 

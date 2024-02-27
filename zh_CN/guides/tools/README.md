@@ -13,7 +13,7 @@
 
 ### 如何配置第一方工具
 
-<figure><img src="../.gitbook/assets/image (131).png" alt=""><figcaption><p>第一方工具列表</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (131).png" alt=""><figcaption><p>第一方工具列表</p></figcaption></figure>
 
 Dify 目前已支持：
 
@@ -27,11 +27,11 @@ Dify 目前已支持：
 
 若你需要直接使用 Dify 生态提供的第一方内置工具，你需要在使用前配置相应的凭据。
 
-<figure><img src="../.gitbook/assets/image (134).png" alt=""><figcaption><p>配置第一方工具凭据</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (134).png" alt=""><figcaption><p>配置第一方工具凭据</p></figcaption></figure>
 
 凭据校验成功后工具会显示“已授权”状态。配置凭据后，工作区中的所有成员都可以在编排应用程序时使用此工具。
 
-<figure><img src="../.gitbook/assets/image (136).png" alt=""><figcaption><p>第一方工具已授权</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (136).png" alt=""><figcaption><p>第一方工具已授权</p></figcaption></figure>
 
 ### 如何创建自定义工具
 
@@ -39,32 +39,29 @@ Dify 目前已支持：
 
 工具目前支持两种鉴权方式：无鉴权 和 API Key。
 
-<figure><img src="../.gitbook/assets/image (147).png" alt=""><figcaption><p>创建自定义工具</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (147).png" alt=""><figcaption><p>创建自定义工具</p></figcaption></figure>
 
 在导入 Schema 内容后系统会主动解析文件内的参数，并可预览工具具体的参数、 方法、路径。您也可以在此对工具参数进行测试。
 
-<figure><img src="../.gitbook/assets/image (148).png" alt=""><figcaption><p>自定义工具参数测试</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (148).png" alt=""><figcaption><p>自定义工具参数测试</p></figcaption></figure>
 
 完成自定义工具创建之后，工作区中的所有成员都可以在“工作室”内编排应用程序时使用此工具。
 
-<figure><img src="../.gitbook/assets/image (150).png" alt=""><figcaption><p>已添加自定义工具</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (150).png" alt=""><figcaption><p>已添加自定义工具</p></figcaption></figure>
 
 #### Cloudflare Workers
 
 您也可以使用 [dify-tools-worker](https://github.com/crazywoola/dify-tools-worker) 来快速部署自定义工具。该工具提供了：
 
-- 可以导入 Dify 的路由 `https://difytoolsworker.yourname.workers.dev/doc`, 提供了 OpenAPI 兼容的接口文档
-- API 的实现代码，可以直接部署到 Cloudflare Workers
+* 可以导入 Dify 的路由 `https://difytoolsworker.yourname.workers.dev/doc`, 提供了 OpenAPI 兼容的接口文档
+* API 的实现代码，可以直接部署到 Cloudflare Workers
 
 ### 如何在应用内使用工具
 
 目前，您可以在“工作室”中创建**智能助手型应用**时，将已配置好凭据的工具在其中使用。
 
-<figure><img src="../.gitbook/assets/image (139).png" alt=""><figcaption><p>创建智能助手型应用时添加工具</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (139).png" alt=""><figcaption><p>创建智能助手型应用时添加工具</p></figcaption></figure>
 
 以下图为例，在财务分析应用内添加工具后，智能助手将在需要时自主调用工具，从工具中查询财务报告数据，并将数据分析后完成与用户之间的对话。
 
-<figure><img src="../.gitbook/assets/image (144).png" alt=""><figcaption><p>智能助手在对话中完成工具调用回复问题</p></figcaption></figure>
-
-
-
+<figure><img src="../../.gitbook/assets/image (144).png" alt=""><figcaption><p>智能助手在对话中完成工具调用回复问题</p></figcaption></figure>
