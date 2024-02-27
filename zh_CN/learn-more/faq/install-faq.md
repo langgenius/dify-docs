@@ -211,7 +211,7 @@ cd dify/docker
 docker compose up -d
 ```
 
-### 17 Migrate Vector Database to Qdrant or Milvus
+### 17. Migrate Vector Database to Qdrant or Milvus
 
 如果您想将向量数据库从 Weaviate 迁移到 Qdrant 或 Milvus，您需要迁移向量数据库中的数据。以下是迁移方法：
 

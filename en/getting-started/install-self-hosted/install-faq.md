@@ -184,7 +184,7 @@ Since OpenAI TTS has implemented audio stream segmentation, ffmpeg needs to be i
 3. Install FFmpeg with Homebrew, enter: `brew install ffmpeg`&#x20;
 4. Enter "ffmpeg -version" to check if it has been successfully installed.
 
-### 15 Migrate Vector Database to Qdrant or Milvus
+### 15. Migrate Vector Database to Qdrant or Milvus
 
 If you want to migrate the vector database from weaviate to qdrant or milvus, you need to migrate the data in the vector database. The following is the migration method:
 
