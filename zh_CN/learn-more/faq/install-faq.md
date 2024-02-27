@@ -210,3 +210,21 @@ git clone https://github.com/langgenius/dify.git
 cd dify/docker
 docker compose up -d
 ```
+
+### 17 Migrate Vector Database to Qdrant or Milvus
+
+如果您想将向量数据库从 Weaviate 迁移到 Qdrant 或 Milvus，您需要迁移向量数据库中的数据。以下是迁移方法：
+
+步骤：
+1. 如果您从本地源代码开始，请将 `.env` 文件中的环境变量修改为您要迁移到的向量数据库。
+例如：`VECTOR_STORE=qdrant`
+2. 如果您从 docker-compose 开始，请将 `docker-compose.yaml` 文件中的环境变量修改为您要迁移到的向量数据库，api 和 worker 都需要修改。
+例如：
+```
+# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`.
+VECTOR_STORE: weaviate
+```
+3. 执行以下命令
+```
+flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrarte
+```

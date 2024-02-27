@@ -183,3 +183,22 @@ Since OpenAI TTS has implemented audio stream segmentation, ffmpeg needs to be i
 2. If you haven't installed Homebrew yet, you can install it by entering the following command in the terminal: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`&#x20;
 3. Install FFmpeg with Homebrew, enter: `brew install ffmpeg`&#x20;
 4. Enter "ffmpeg -version" to check if it has been successfully installed.
+
+### 15 Migrate Vector Database to Qdrant or Milvus
+
+If you want to migrate the vector database from weaviate to qdrant or milvus, you need to migrate the data in the vector database. The following is the migration method:
+
+Step:
+1.  If you are starting from local source code, modify the environment variable in the `.env` file to the vector database you want to migrate to. 
+etc: `VECTOR_STORE=qdrant`
+2.  If you are starting from docker-compose, modify the environment variable in the `docker-compose.yaml` file to the vector database you want to migrate to, both api and worker are all needed.
+etc: 
+```
+# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`.
+VECTOR_STORE: weaviate
+```
+3. run the below command in your terminal or docker container
+
+```
+flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrarte
+```
