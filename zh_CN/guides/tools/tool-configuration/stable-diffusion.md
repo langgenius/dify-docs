@@ -20,13 +20,13 @@ git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
 #### Windows
 ```bash
 cd stable-diffusion-webui
-./webui.bash --api --listen
+./webui.bat --api --listen
 ```
 
 #### Linux
 ```bash
 cd stable-diffusion-webui
-./webui.bat --api --listen
+./webui.sh --api --listen
 ```
 
 ### 2.3. 准备模型
