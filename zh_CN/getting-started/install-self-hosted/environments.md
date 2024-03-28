@@ -120,10 +120,10 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     Celery worker 数量，默认为 1，按需设置。
 *   HTTP\_PROXY
 
-    HTTP 代理地址，用于解决国内无法访问 OpenAI、HuggingFace 的问题。
+    HTTP 代理地址，用于解决国内无法访问 OpenAI、HuggingFace 的问题。注意，若代理部署在宿主机(例如```http://127.0.0.1:7890```)，此处代理地址应当和接入本地模型时一样，使用docker容器内部的宿主机地址（例如```http://192.168.1.100:7890```或```http://172.17.0.1:7890```）。
 *   HTTPS\_PROXY
 
-    HTTPS 代理地址，用于解决国内无法访问 OpenAI、HuggingFace 的问题。
+    HTTPS 代理地址，用于解决国内无法访问 OpenAI、HuggingFace 的问题。同上。
 
 #### 数据库配置
 
