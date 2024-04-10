@@ -4,9 +4,12 @@
 
 ## 概述
 
-微信作为最热门即时通信软件，拥有巨大的流量。
+微信作为最热门的即时通信软件，拥有巨大的流量。
+
 微信友好的聊天窗口是天然的AI应用LUI(Language User Interface)/CUI(Command User Interface)。
+
 微信不仅有个人微信，同时提供了公众号、企业微信、企业微信应用、企业微信客服等对话渠道，拥有良好的微信生态。
+
 把Dify应用接入微信生态，就能打造一个功能强大的智能客服，大大降低客服成本，同时也能够提升客户体验。本篇教程就是手摸手地教你如何利用[Dify on WeChat](https://github.com/hanfangyuan4396/dify-on-wechat)项目，把Dify应用接入微信生态。
 
 ## Dify接入个人微信
