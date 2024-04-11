@@ -89,7 +89,7 @@ Dify support customizing the segmented and cleaned text by adding, deleting, and
 
 ### Maintain Knowledge via API
 
-TODO
+Head to [maintain-dataset-via-api.md](maintain-dataset-via-api.md "mention").
 
 ### Knowledge Settings
 

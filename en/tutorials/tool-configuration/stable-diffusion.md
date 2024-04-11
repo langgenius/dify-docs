@@ -20,13 +20,13 @@ After cloning the repository, you should change directory to the cloned reposito
 #### Windows
 ```bash
 cd stable-diffusion-webui
-./webui.bash --api --listen
+./webui.bat --api --listen
 ```
 
 #### Linux
 ```bash
 cd stable-diffusion-webui
-./webui.bat --api --listen
+./webui.sh --api --listen
 ```
 
 ### 2.3. Prepare Models
