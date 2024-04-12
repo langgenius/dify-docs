@@ -31,7 +31,10 @@ In workflows, it's often necessary to deal with unstructured data processing, su
 def main(http_response: str) -> str:
     import json
     data = json.loads(http_response)
-    return data['data']['name']
+    return {
+        # do not forget to declare 'result' in the output variables
+        'result': data['data']['name']
+    }
 ```
 
 ### Mathematical Calculations
@@ -40,19 +43,27 @@ When complex mathematical calculations are needed in workflows, the code node ca
 
 ```python
 def main(x: list) -> float:
-    return sum([(i - sum(x) / len(x)) ** 2 for i in x]) / len(x)
+    return {
+        # do not forget to declare 'result' in the output variables
+        'result': sum([(i - sum(x) / len(x)) ** 2 for i in x]) / len(x)
+    }
 ```
 
 ### Data Concatenation
 
+Sometimes, you may need to concatenate multiple data sources, such as multiple knowledge retrievals, data searches, API calls, etc. The code node can help you integrate these data sources. Here's a simple example that merges data from two knowledge bases:
+
 ```python
 def main(knowledge1: list, knowledge2: list) -> list:
-    return knowledge1 + knowledge2
+    return {
+        # do not forget to declare 'result' in the output variables
+        'result': knowledge1 + knowledge2
+    }
 ```
 
 ## Local Deployment
 
-f you are a user deploying locally, you need to start a sandbox service, which ensures that malicious code is not executed. Also, launching this service requires Docker, and you can find specific information about the Sandbox service [here](https://github.com/langgenius/dify/tree/main/docker/docker-compose.middleware.yaml). You can also directly start the service using docker-compose
+If you are a user deploying locally, you need to start a sandbox service, which ensures that malicious code is not executed. Also, launching this service requires Docker, and you can find specific information about the Sandbox service [here](https://github.com/langgenius/dify/tree/main/docker/docker-compose.middleware.yaml). You can also directly start the service using docker-compose
 
 ```bash
 docker-compose -f docker-compose.middleware.yaml up -d

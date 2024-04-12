@@ -27,7 +27,10 @@
 def main(http_response: str) -> str:
     import json
     data = json.loads(http_response)
-    return data['data']['name']
+    return {
+        # 注意在输出变量中声明result
+        'result': data['data']['name'] 
+    }
 ```
 
 ### 数学计算
@@ -35,7 +38,10 @@ def main(http_response: str) -> str:
 
 ```python
 def main(x: list) -> float:
-    return sum([(i - sum(x) / len(x)) ** 2 for i in x]) / len(x)
+    return {
+        # 注意在输出变量中声明result
+        'result' : sum([(i - sum(x) / len(x)) ** 2 for i in x]) / len(x)
+    }
 ```
 
 ### 拼接数据
@@ -43,7 +49,10 @@ def main(x: list) -> float:
 
 ```python
 def main(knowledge1: list, knowledge2: list) -> list:
-    return knowledge1 + knowledge2
+    return {
+        # 注意在输出变量中声明result
+        'result': knowledge1 + knowledge2
+    }
 ```
 
 ## 本地部署
