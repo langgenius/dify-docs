@@ -212,7 +212,7 @@ docker logs -f dify-on-wechat  # 查看二维码并登录
 接下来选择LLM节点，点击设置上下文，我们选择result变量，该变量存有知识检索的结果。
 
 
-<figure><img src="../../.gitbook/assets/dify-on-wechatcreate-workflow-chatbot-5.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/dify-on-wechat/create-workflow-chatbot-5.jpg" alt=""><figcaption></figcaption></figure>
 
 设置完LLM节点后，我们点击预览进行测试，输入问题：请介绍一下dify工作流。可以看到最终输出了Dify工作流的正确介绍。测试正常后，我们返回编辑模式。
 
