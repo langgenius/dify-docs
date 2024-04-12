@@ -82,6 +82,7 @@
   * [高级接入工具](guides/tools/advanced-tool-integration.md)
   * [工具配置](guides/tools/tool-configuration/README.md)
     * [StableDiffusion](guides/tools/tool-configuration/stable-diffusion.md)
+    * [SearXNG](guides/tools/tool-configuration/searxng.md)
 * [日志与标注](guides/logs.md)
 * [团队协同](guides/workspace/README.md)
   * [邀请与管理成员](guides/workspace/invite-and-manage-members.md)
