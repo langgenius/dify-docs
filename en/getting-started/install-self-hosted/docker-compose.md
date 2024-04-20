@@ -73,4 +73,4 @@ docker compose up -d
 
 ### Access Dify
 
-Finally, access [http://loacalhost/install](http://loacalhost/install) to use the deployed Dify.
+Finally, access [http://localhost/install](http://localhost/install) to use the deployed Dify.
