@@ -101,7 +101,7 @@ httpconnectionpool(host=localhost, port=11434): max retries exceeded with url:/c
 
 1. 通过调用`systemctl edit ollama.service`编辑systemd服务。这将打开一个编辑器。
 
-2. 对于每个环境变量，在`[Service]`部分下添加一行`Environment`
+2. 对于每个环境变量，在`[Service]`部分下添加一行`Environment`：
 
     ```ini
     [Service]
