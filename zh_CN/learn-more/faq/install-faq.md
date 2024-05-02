@@ -189,6 +189,24 @@ flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrarte
 
 Sandbox 基于`Seccomp`进行沙箱隔离，而Docker也是基于`Seccomp`进行资源隔离，并且，在Docker中，Linux Seccomp BPF是被默认禁用的，导致无法在容器中使用`Seccomp`，因此，需要SYS\_ADMIN权限来启用`Seccomp`。
 
+### 19. 我如何将我自己创建的应用设置为应用模板？
+
+目前还不支持将你自己创建的应用设置为模板。现有的模板是由Dify官方为云版本用户参考提供的。如果你正在使用云版本，你可以将应用添加到你的工作空间或者在修改后定制它们以创建你自己的应用。如果你正在使用社区版本并且需要为你的团队创建更多的应用模板，你可以咨询我们的商务团队以获得付费技术支持：[business@dify.ai](mailto:business@dify.ai)
+
+### 20.502 Bad Gateway
+
+这是因为Nginx将服务转发到了错误的位置导致的，首先确保容器正在运行，然后以Root权限运行以下命令：
+```
+docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+```
+在输出内容中找到这两行：
+```
+/docker-web-1: 172.19.0.5
+/docker-api-1: 172.19.0.7
+```
+记住后面的IP地址。然后打开你存放dify源代码的地方，打开`dify/docker/nginx/conf.d`,将`http://api:5001`替换为`http://172.19.0.7:5001`,将`http://web:3000`替换为`http://172.19.0.5:3000`，随后重启Nginx容器或者重载配置。
+你可能在重新启动相关容器时需要再次根据IP进行配置。
+
 #### 安全性问题
 
 至于安全性问题，我们禁用了Sandbox中所有进程的文件、网络、IPC、PID、用户、mount、UTS、系统访问等能力，以确保恶意代码不会被执行，同时，我们还额外隔离了容器中的文件和网络，以确保在即使代码被执行，也无法对系统造成危害。
