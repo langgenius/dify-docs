@@ -121,3 +121,22 @@ Dify supports using the listed providers as an Embedding model provider, simply 
 ### 19. How can I set my own created app as an app template?
 
 The ability to set your own created app as a template is currently not supported. The existing templates are provided by Dify officially for cloud version users' reference. If you are using the cloud version, you can add apps to your workspace or customize them to make your own after modifications. If you are using the community version and need to create more app templates for your team, you may consult our business team to obtain paid technical support: [business@dify.ai](mailto:business@dify.ai)
+
+
+### 20.502 Bad Gateway
+
+This is caused by Nginx forwarding the service to the wrong location. First, make sure the container is running, then run the following command with root privileges:
+```
+docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+```
+Find these two lines in the output:
+```
+/docker-web-1: 172.19.0.5
+/docker-api-1: 172.19.0.7
+```
+Remember the IP addresses at the end. Then, open the location where you stored the dify source code, open dify/docker/nginx/conf.d, replace http://api:5001 with http://172.19.0.7:5001, and replace http://web:3000 with http://172.19.0.5:3000. Afterward, restart the Nginx container or reload the configuration. 
+You may need to reconfigure based on the IP when restarting related containers.
+
+
+#### Security Issues
+As for security issues, we have disabled all processes in the Sandbox with file, network, IPC, PID, user, mount, UTS, system access, and other capabilities to ensure that malicious code cannot be executed. At the same time, we have additionally isolated the files and network in the container to ensure that even if the code is executed, it cannot cause harm to the system.
