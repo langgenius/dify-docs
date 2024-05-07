@@ -87,6 +87,15 @@ If Ollama is run as a macOS application, environment variables should be set usi
 
 2. Restart Ollama application.
 
+3. If the above steps are ineffective, you can use the following method:
+
+    The issue lies within Docker itself, and to access the Docker host.  
+    you should connect to `host.docker.internal`. Therefore, replacing `localhost` with `host.docker.internal` in the service will make it work effectively.
+
+    ```bash
+    http://host.docker.internal:11434
+    ```
+
 ### Setting environment variables on Linux
 
 If Ollama is run as a systemd service, environment variables should be set using `systemctl`:

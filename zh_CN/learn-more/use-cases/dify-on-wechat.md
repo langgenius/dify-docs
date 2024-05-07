@@ -100,8 +100,7 @@ pip3 install -r requirements-optional.txt # 国内可以在该命令末尾添加
 
 ##### （3）填写配置文件
 
-我们在项目根目录创建名为config.json的文件，文件内容如下，我们在**2.1.1小节（4）**
-最后保存了**API密钥**与**API服务器地址**，请把**dify_api_base**配置为**API服务器地址**；**dify_api_key**配置为**API密钥。**其他配置保持不变
+我们在项目根目录创建名为config.json的文件，文件内容如下，我们在**2.1.1小节（4）**最后保存了**API密钥**与**API服务器地址**，请把**dify_api_base**配置为**API服务器地址**；**dify_api_key**配置为**API密钥**其他配置保持不变
 
 ```bash
 { 
@@ -224,11 +223,11 @@ docker logs -f dify-on-wechat  # 查看二维码并登录
 
 #### 2.3.3. 生成工作流编排聊天助手API密钥
 
-在跳转到API管理页面后，我们参照**2.1.1小节（4）**获取"知识库+聊天机器人"应用的**API密钥**与**API服务器地址**
+在跳转到API管理页面后，我们参照**2.1.1小节(4)**获取"知识库+聊天机器人"应用的**API密钥**与**API服务器地址**
 
 #### 2.3.4. 接入微信
 
-与**2.1.2小节（3）**类似，我们在项目根目录创建名为config.json的文件，文件内容如下，同样把**dify_api_base**配置为**"知识库+聊天机器人"应用**的API服务器地址；**dify_api_key**配置为**"知识库+聊天机器人"应用**的API密钥**。**其他配置保持不变
+与**2.1.2小节（3）**类似，我们在项目根目录创建名为config.json的文件，文件内容如下，同样把**dify_api_base**配置为**知识库+聊天机器人**应用的API服务器地址, **dify_api_key**配置为**知识库+聊天机器人**应用的API密钥，其他配置保持不变
 
 ```bash
 { 
@@ -275,11 +274,11 @@ docker logs -f dify-on-wechat  # 查看二维码并登录
 
 #### 2.4.2. 生成Agent API密钥
 
-我们继续参照**2.1.1小节（4）**获取"**智能助手**"应用的**API密钥**与**API服务器地址**
+我们继续参照**2.1.1小节（4）**获取**智能助手**应用的**API密钥**与**API服务器地址**
 
 #### 2.4.3. 接入微信
 
-我们在项目根目录创建名为config.json的文件，文件内容如下，同样把**dify_api_base**配置为**"智能助手"**应用的API服务器地址；**dify_api_key**配置为**"智能助手"**应用的API密钥**，**注意该应用为**智能助手**类型应用，还需要把**dify_app_type**设置为**agent**，其他配置保持不变
+我们在项目根目录创建名为config.json的文件，文件内容如下，同样把**dify_api_base**配置为**智能助手**应用的API服务器地址；**dify_api_key**配置为**智能助手**应用的API密钥，注意该应用为**智能助手**类型应用，还需要把**dify_app_type**设置为**agent**，其他配置保持不变
 
 ```bash
   {
@@ -305,27 +304,139 @@ docker logs -f dify-on-wechat  # 查看二维码并登录
 
 #### 2.5.1. 创建工作流应用
 
+<figure><img src="../../.gitbook/assets/dify-on-wechat/create-workflow.jpg" alt=""><figcaption></figcaption></figure>
+
+首先你需要提前下载好我预先创建的DSL文件，[点击此处下载](https://github.com/hanfangyuan4396/dify-on-wechat/blob/master/dsl/chat-workflow.yml)。下载完成后，进入工作室页面，点击导入DSL文件，上传提前下载好的文件，最后点击创建。
+
+<figure><img src="../../.gitbook/assets/dify-on-wechat/test-workflow.jpg" alt=""><figcaption></figcaption></figure>
+
+创建完成后，按照上图步骤进行测试。点击运行，输入你好，确保该工作流能正常输出结果。
+
+你可以在此工作流的基础上进行修改，但是对于**工作流类型**的应用，它的输入变量名称十分灵活，，为了更方便地接入微信机器人，[Dify on WeChat](https://github.com/hanfangyuan4396/dify-on-wechat)项目约定**工作流类型**的应用**输入变量命名为`query`**，**输出变量命名为`text`**。
+
+<figure><img src="../../.gitbook/assets/dify-on-wechat/publish-workflow.jpg" alt=""><figcaption></figcaption></figure>
+
+测试没有问题后，按照上图步骤发布应用，依次点击发布、更新、访问API。
+
+#### 2.5.2. 生成工作流API密钥
+
+我们同样参照**2.1.1小节（4）**获取**工作流**应用的**API密钥**与**API服务器地址**。
+
+#### 2.5.3. 接入微信
+
+我们在项目根目录创建名为config.json的文件，文件内容如下，同样把**dify_api_base**配置为**工作流**应用的API服务器地址；**dify_api_key**配置为**工作流**应用的API密钥，注意该应用为**工作流**类型应用，还需要把**dify_app_type**设置为**workflow**，其他配置保持不变
+
+```bash
+  {
+    "dify_api_base": "https://api.dify.ai/v1",
+    "dify_api_key": "app-xxx",
+    "dify_app_type": "workflow",
+    "channel_type": "wx",
+    "model": "dify",
+    "single_chat_prefix": [""],
+    "single_chat_reply_prefix": "",
+    "group_chat_prefix": ["@bot"],
+    "group_name_white_list": ["ALL_GROUP"]
+ }
+
+```
+
+同样参照**2.2.1小节**启动程序并扫码登录，然后给微信机器人发送消息，进行测试。
+
+<figure><img src="../../.gitbook/assets/dify-on-wechat/workflow-on-wechat.jpg" alt=""><figcaption></figcaption></figure>
+
+可以看到机器人成功接通了工作流api并进行了回复，至此我们已经完全掌握了如何创建Dify所有类型的应用：基础聊天助手、工作流聊天助手、智能助手、工作流，我们也学会了如何把上述应用发布为API，并接入微信。
+
+接下来我将会介绍如何把应用接入到微信的其他通道，如公众号、企业微信应用、企业微信客服等。
+
+## 3. Dify接入企业微信个人号（仅限windows环境）
+
+> 1. 有**封号风险**，请使用企业微信**小号**测试
+> 2. 在登录旧版本的企业微信时可能会出现企业微信版本过低，无法登录情况，参考[issue1525](https://github.com/zhayujie/chatgpt-on-wechat/issues/1525)，请尝试更换其他企业微信号重试
+
+### 3.1. 下载安装企业微信
+
+确保你有一台windows系统的电脑，然后在此电脑下载安装特定版本的企业微信，[官方下载链接](https://dldir1.qq.com/wework/work_weixin/WeCom_4.0.8.6027.exe)，[备用下载链接](https://www.alipan.com/s/UxQHrZ5WoxS)。
+
+### 3.2. 创建Dify应用
+
+我们已经在前面的**2.1.1**、**2.3.2**、**2.4.1**与**2.5.1**小节分别介绍了创建基础聊天助手、工作流聊天助手、智能助手、工作流这4种不同的Dify应用，你可以根据上面的教程任意创建一种应用。
+
+### 3.3. 下载安装Dify on WeChat
+
+根据 **2.1.2(2)** 步骤，下载代码并安装依赖，为了后续能按照ntwork依赖，**请确保你安装的python版本为3.8、3.9或3.10**。
+
+### 3.4. 安装ntwork依赖
+
+由于ntwork的安装源不是很稳定，可以下载对应的whl文件，使用whl文件离线安装ntwork
+
+首先需要查看你的python版本，在命令行中输入python查看版本信息，然后在[ntwork-whl](https://github.com/hanfangyuan4396/ntwork-bin-backup/tree/main/ntwork-whl)目录下找到对应的whl文件，运行`pip install xx.whl`安装ntwork依赖，注意"xx.whl"更换为whl文件的**实际路径**。
+
+例如我的python版本信息为
+
+"Python 3.8.5 (default, Sep  3 2020, 21:29:08) [MSC v.1916 64 bit (AMD64)]"
+
+可以看到python版本是**3.8.5**，并且是**AMD64**，所以对应的whl文件为**ntwork-0.1.3-cp38-cp38-win_amd64.whl**，需要执行如下命令安装
+```sh
+pip install your-path/ntwork-0.1.3-cp38-cp38-win_amd64.whl
+```
+
+### 3.5. 填写配置文件
+
+我们在Dify on WeChat项目根目录创建名为config.json的文件，下面是以Dify智能助手应用作为示例的配置文件，请正确填写你刚刚创建应用的dify_api_base、dify_api_key、dify_app_type信息，请注意channel_type填写为 **wework**
+
+```json
+{ 
+  "dify_api_base": "https://api.dify.ai/v1",
+  "dify_api_key": "app-xxx",
+  "dify_app_type": "agent",
+  "channel_type": "wework",
+  "model": "dify",
+  "single_chat_prefix": [""],
+  "single_chat_reply_prefix": "",
+  "group_chat_prefix": ["@bot"],
+  "group_name_white_list": ["ALL_GROUP"]
+}
+```
+
+### 3.6. 登录企业微信
+
+务必提前在电脑扫码登录企业微信
+
+### 3.7. 启动微信个人号机器人
+
+运行如下命令启动机器人
+```sh
+cd dify-on-wechat
+python app.py
+```
+
+我们可以看到终端输出如下信息，**等待wework程序初始化完成**，最后启动成功~
+```
+[INFO][2024-04-30 21:16:04][wework_channel.py:185] - 等待登录······
+[INFO][2024-04-30 21:16:05][wework_channel.py:190] - 登录信息:>>>user_id:xxx>>>>>>>>name:
+[INFO][2024-04-30 21:16:05][wework_channel.py:191] - 静默延迟60s，等待客户端刷新数据，请勿进行任何操作······
+[INFO][2024-04-30 21:17:05][wework_channel.py:224] - wework程序初始化完成········
+```
+
+<figure><img src="../../.gitbook/assets/dify-on-wechat/agent-on-wework.jpg" alt=""><figcaption></figcaption></figure>
+
+
+现在我们给机器人发送消息，可以看到接入成功！
+
+
+## 4. Dify接入公众号
+
 待更新~
 
-#### 2.5.2. 接入微信
+## 5. Dify接入企业微信应用
 
 待更新~
 
-## 3. Dify接入公众号
+## 6. Dify接入企业微信客服
 
 待更新~
 
-## 4. Dify接入企业微信应用
-
-待更新~
-
-## 5. Dify接入微信其他渠道
-
-Dify on WeChat项目后续会逐步支持Dify接入微信的其他渠道，包括企业微信客服、企业微信个人号。
-
-
-
-## 6. 后记
+## 7. 后记
 
 我是社畜打工人，精力实在有限，只能晚上下班还有周末空闲时间维护[Dify on WeChat](https://github.com/hanfangyuan4396/dify-on-wechat)项目，单靠我个人开发项目进度十分缓慢，希望大家能一起参与进来这个项目，多多提PR，让Dify的生态变得更好~
-

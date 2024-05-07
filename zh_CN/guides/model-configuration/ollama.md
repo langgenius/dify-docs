@@ -65,7 +65,7 @@ Dify 支持接入 Ollama 部署的大型语言模型推理和 embedding 能力�
 
 ## FAQ
 
-### ⚠️ If you are using docker to deploy Dify and Ollama, you may encounter the following error:
+### ⚠️ 如果您使用Docker部署Dify和Ollama，您可能会遇到以下错误:
 
 ```
 httpconnectionpool(host=127.0.0.1, port=11434): max retries exceeded with url:/cpi/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8562812c20>: fail to establish a new connection:[Errno 111] Connection refused'))
@@ -74,6 +74,26 @@ httpconnectionpool(host=localhost, port=11434): max retries exceeded with url:/c
 ```
 
 这个错误是因为 Docker 容器无法访问 Ollama 服务。localhost 通常指的是容器本身，而不是主机或其他容器。要解决此问题，您需要将 Ollama 服务暴露给网络。
+
+### 在Mac上设置环境变量
+
+如果 `Ollama` 作为 `macOS` 应用程序运行，则应使用以下命令设置环境变量`launchctl`：
+
+1. 通过调用`launchctl setenv`设置环境变量：
+
+    ```bash
+    launchctl setenv OLLAMA_HOST "0.0.0.0"
+    ```
+
+2. 重启Ollama应用程序。
+
+3. 如果以上步骤无效，可以使用以下方法：
+
+    问题是在docker内部，你应该连接到`host.docker.internal`，才能访问docker的主机，所以将`localhost`替换为`host.docker.internal`服务就可以生效了：
+
+    ```bash
+    http://host.docker.internal:11434
+    ```
 
 ### 在Linux上设置环境变量
 
