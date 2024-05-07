@@ -138,5 +138,3 @@ Remember the IP addresses at the end. Then, open the location where you stored t
 You may need to reconfigure based on the IP when restarting related containers.
 
 
-#### Security Issues
-As for security issues, we have disabled all processes in the Sandbox with file, network, IPC, PID, user, mount, UTS, system access, and other capabilities to ensure that malicious code cannot be executed. At the same time, we have additionally isolated the files and network in the container to ensure that even if the code is executed, it cannot cause harm to the system.
