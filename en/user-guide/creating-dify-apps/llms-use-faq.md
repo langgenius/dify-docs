@@ -135,6 +135,7 @@ Find these two lines in the output:
 /docker-api-1: 172.19.0.7
 ```
 Remember the IP addresses at the end. Then, open the location where you stored the dify source code, open dify/docker/nginx/conf.d, replace http://api:5001 with http://172.19.0.7:5001, and replace http://web:3000 with http://172.19.0.5:3000. Afterward, restart the Nginx container or reload the configuration. 
+These IP addresses are***exemplary***, you must execute the command to obtain your own IP address, do not fill it in directly.
 You may need to reconfigure based on the IP when restarting related containers.
 
 
