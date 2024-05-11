@@ -10,9 +10,8 @@ Dify 为所有人提供了[云服务](http://cloud.dify.ai)，你无需自己部
 2. 配置你的模型供应商，或使用我们提供的托管模型供应商
 3. 可以[创建应用](../guides/application-design/creating-an-application.md)了！
 
-目前我们没有收费计划，如果你喜欢请将这款 LLMOps 产品介绍给身边的朋友😄。
 
-###常见问题
+### 常见问题
 
 **Q： 使用Dify Cloud时，我的数据是如何处理和存储的？**
 
