@@ -1,19 +1,19 @@
-# Support
+# サポート
 
-If you still have questions or suggestions about using the product while reading this documentation, please try the following ways to seek support. Our team and community will do their best to help you.
+このドキュメントを読んでいる間、製品の使用に関する質問や提案がまだある場合は、以下の方法でサポートを求めてください。私たちのチームとコミュニティは、あなたをサポートするために最善を尽くします。
 
-### Community Support
+### コミュニティサポート
 
 {% hint style="info" %}
-Please do not share your Dify account information or other sensitive information with the community. Our support staff will not ask for your account information.
+Dify アカウント情報やその他の機密情報をコミュニティと共有しないでください。 当社のサポートスタッフがあなたのアカウント情報を尋ねることはありません。
 {% endhint %}
 
-* Submit an Issue on [GitHub](https://github.com/langgenius/dify)
-* Join the [Discord community](https://discord.gg/8Tpq4AcN9c)
-* Email [support@dify.ai](mailto:support@dify.ai)
+* [GitHub](https://github.com/langgenius/dify)にissueを提出してください
+* [Discord community](https://discord.gg/8Tpq4AcN9c)に参加してください
+* [support@dify.ai](mailto:support@dify.ai)にメールを送信してください
 
-### Contact Us
+### 連絡
 
-For matters other than product support.
+プロダクト以外のサポート
 
-* Email [hello@dify.ai](mailto:hello@dify.ai)
+* [hello@dify.ai](mailto:hello@dify.ai)にメールを送信してください
