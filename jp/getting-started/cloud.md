@@ -1,33 +1,33 @@
-# Using Dify Cloud
+# Dify Cloudを使う
 
 {% hint style="info" %}
-Note: Dify is currently in the Beta testing phase. If there are inconsistencies between the documentation and the product, please refer to the actual product experience.
+注: Dify は現在ベータ テスト段階にあります。 ドキュメントと製品の間に不一致がある場合は、実際のプロダクトの動作を参照してください。
 {% endhint %}
 
-Dify offers a [cloud service](http://cloud.dify.ai) for everyone, so you can use the full functionality of Dify without deploying it yourself. Explore the flexible [Plans and Pricing](https://dify.ai/pricing) and select the plan that best suits your needs and requirements. 
+Difyはみなさまに [cloud service](http://cloud.dify.ai)を提供し、自分でデプロイをしなくても全ての機能をご利用できます。cloud serviceを使うには、Github Accountまたは Google Accountをご用意ください。  柔軟な [Plans and Pricing](https://dify.ai/pricing) を調べて、ニーズと要件に最適なプランを選択してください。
 
-Get started now with the [Sandbox plan](http://cloud.dify.ai), which includes a free trial of 200 OpenAI calls, no credit card required. To use the Sandbox plan of the cloud version, you will need a GitHub or Google account, as well as an OpenAI API key. Here's how you can get started:
+[Sandbox plan](http://cloud.dify.ai) を今すぐ始めましょう。これには 200 回の OpenAI 呼び出しの無料トライアルが含まれており、クレジット カードは必要ありません。 クラウド版のサンドボックスプランを利用するには、GitHubまたはGoogleアカウントと、OpenAI APIキーが必要です。 開始方法は次のとおりです：
 
-1. Sign up to [Dify Cloud](https://cloud.dify.ai) and create a new Workspace or join an existing one.
-2. Configure your model provider or use our hosted model provider.
-3. You can [create an application](../user-guide/creating-dify-apps/creating-an-application.md) now!
+1. [Dify Cloud](https://cloud.dify.ai) にサインアップして、新しいワークスペースを作成するか、既存のワークスペースに参加してください。
+2. モデル プロバイダーを構成するか、ホストされているモデル プロバイダーを使用してください。
+3. 今すぐ [アプリケーションを作成](../user-guide/creating-dify-apps/creating-an-application.md) できます。
 
 
 
 ### FAQs
 
-**Q: How is my data handled and stored when using Dify Cloud?** 
+**Q: Dify Cloud を使用する場合、データはどのように処理および保存されますか？** 
 
-A: When you use Dify Cloud, your user data is securely stored on AWS servers located in the US-East region. This includes both the data you actively input and any generated data from your applications. We prioritize your data's security and integrity, ensuring that it is managed with the highest standards of cloud storage solutions.
+A: Dify Cloud を使用すると、ユーザーデータは米国東部リージョンにある AWS サーバーに安全に保存されます。 入力されたデータとアプリケーションから生成されたデータの両方が含まれます。 当社はお客様のデータのセキュリティと整合性を優先し、最高水準のクラウド ストレージ ソリューションでデータが管理されることを保証します。
 
-**Q: What measures are in place to protect my API keys and other sensitive information?** 
+**Q: API キーやその他の機密情報を保護するためにどのような対策が講じられていますか？** 
 
-A: At Dify, we understand the importance of protecting your API keys and other secrets. These are encrypted at rest, which means Dify cannot view them and that only you, the rightful owner, have access to your secrets.
+A: Dify では、API キーやその他の秘密を保護することの重要性を理解しています。 これらは保存時に暗号化されます。つまり、Dify はそれらを閲覧できず、正当な所有者であるあなただけがあなたのシークレットにアクセスできます。
 
-**Q: Can you explain how application data is anonymized in Dify Cloud?** 
+**Q: Dify Cloud でアプリケーション データがどのように匿名化されるか説明していただけますか？** 
 
-A: In Dify Cloud, we anonymize application data to ensure privacy and reduce encryption and decryption overheads. This means that the data used by applications is not directly associated with identifiable user accounts. By anonymizing the data, we enhance privacy while maintaining the performance of our cloud services.
+A: Dify Cloud では、アプリケーション データを匿名化してプライバシーを確保し、暗号化と復号化のオーバーヘッドを削減します アプリケーションで使用されるデータが、識別可能なユーザーアカウントに直接関連付けられていないことを意味します。 データを匿名化することで、クラウドサービスのパフォーマンスを維持しながらプライバシーを強化します。
 
-**Q: What is the process for deleting my account and all associated data from Dify Cloud?** 
+**Q: 私のアカウントとすべての関連データを Dify Cloud から削除するプロセスは何ですか？** 
 
-A: If you decide to delete your account and remove all associated data from Dify Cloud, you can simply send a request to our support team at support@dify.ai. We are committed to respecting your privacy and data rights, and upon request, we will erase all your data from our systems, adhering to data protection regulations.
+A: アカウントを削除し、関連するすべてのデータを Dify Cloud から削除したい場合は、サポートチーム (support@dify.ai) にリクエストを送信してください。 当社はお客様のプライバシーとデータの権利を尊重することに尽力しており、ご要望に応じて、データ保護規制に従って当社のシステムからお客様のすべてのデータを消去します。

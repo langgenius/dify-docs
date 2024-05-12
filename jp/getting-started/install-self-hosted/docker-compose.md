@@ -72,4 +72,4 @@ docker compose up -d
 
 ### Access Dify
 
-ブラウザにて [http://localhost/install](http://localhost/install) を開きましょう.
+ブラウザにて [http://localhost/install](http://localhost/install) を開きましょう。
