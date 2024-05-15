@@ -26,5 +26,5 @@ VECTOR_STORE: qdrant
 3. run the below command in your terminal or docker container
 
 ```
-flask vdb-migrarte
+flask vdb-migrate
 ```
