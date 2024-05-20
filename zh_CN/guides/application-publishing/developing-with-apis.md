@@ -47,7 +47,7 @@ curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
 {% endtab %}
 
 {% tab title="Python" %} 
-```
+```python
 import requests
 import json
 
@@ -97,7 +97,7 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
 {% endtab %}
 
 {% tab title="Python" %} 
-```
+```python
 import requests
 import json
 
