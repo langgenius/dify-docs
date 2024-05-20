@@ -32,7 +32,8 @@ Dify 基于“**后端即服务**”理念为所有应用提供了 API，为 AI 
 你可以在**应用 -> 访问 API** 中找到该应用的 API 文档与范例请求。
 
 例如，创建文本补全信息的 API 的调用示例：
-
+{% tabs %}
+{% tab title="cURL" %} 
 ```
 curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
 --header 'Authorization: Bearer ENTER-YOUR-SECRET-KEY' \
@@ -42,8 +43,34 @@ curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
     "response_mode": "streaming",
     "user": "abc-123"
 }'
-
 ```
+{% endtab %}
+
+{% tab title="Python" %} 
+```
+import requests
+import json
+
+url = "https://api.dify.ai/v1/completion-messages"
+
+headers = {
+    'Authorization': 'Bearer ENTER-YOUR-SECRET-KEY',
+    'Content-Type': 'application/json',
+}
+
+data = {
+    "inputs": {"text": 'Hello, how are you?'},
+    "response_mode": "streaming",
+    "user": "abc-123"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.text)
+```
+{% endtab %}
+{% endtabs %}
+
 
 ### 对话型应用
 
@@ -52,7 +79,8 @@ curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
 你可以在**应用 -> 访问 API** 中找到该应用的 API 文档与范例请求。
 
 例如，发送对话信息的 API的调用示例：
-
+{% tabs %}
+{% tab title="cURL" %} 
 ```
 curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
 --header 'Authorization: Bearer ENTER-YOUR-SECRET-KEY' \
@@ -66,3 +94,29 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
 }'
 
 ```
+{% endtab %}
+
+{% tab title="Python" %} 
+```
+import requests
+import json
+
+url = 'https://api.dify.ai/v1/chat-messages'
+headers = {
+    'Authorization': 'Bearer ENTER-YOUR-SECRET-KEY',
+    'Content-Type': 'application/json',
+}
+data = {
+    "inputs": {},
+    "query": "eh",
+    "response_mode": "streaming",
+    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
+    "user": "abc-123"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.json())
+```
+{% endtab %}
+{% endtabs %}
