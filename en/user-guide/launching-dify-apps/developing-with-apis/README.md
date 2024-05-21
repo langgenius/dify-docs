@@ -33,6 +33,8 @@ You can find the API documentation and example requests for this application in 
 
 For example, here is a sample call an API for text generation:
 
+{% tabs %}
+{% tab title="cURL" %} 
 ```
 curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
 --header 'Authorization: Bearer ENTER-YOUR-SECRET-KEY' \
@@ -43,6 +45,32 @@ curl --location --request POST 'https://api.dify.ai/v1/completion-messages' \
     "user": "abc-123"
 }'
 ```
+{% endtab %}
+
+{% tab title="Python" %} 
+```python
+import requests
+import json
+
+url = "https://api.dify.ai/v1/completion-messages"
+
+headers = {
+    'Authorization': 'Bearer ENTER-YOUR-SECRET-KEY',
+    'Content-Type': 'application/json',
+}
+
+data = {
+    "inputs": {"text": 'Hello, how are you?'},
+    "response_mode": "streaming",
+    "user": "abc-123"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.text)
+```
+{% endtab %}
+{% endtabs %}
 
 ### Conversational applications
 
@@ -52,6 +80,8 @@ You can find the API documentation and example requests for this application in 
 
 For example, here is a sample call an API for chat-messages:
 
+{% tabs %}
+{% tab title="cURL" %} 
 ```
 curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
 --header 'Authorization: Bearer ENTER-YOUR-SECRET-KEY' \
@@ -63,4 +93,31 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
     "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276"
     "user": "abc-123"
 }'
+
 ```
+{% endtab %}
+
+{% tab title="Python" %} 
+```python
+import requests
+import json
+
+url = 'https://api.dify.ai/v1/chat-messages'
+headers = {
+    'Authorization': 'Bearer ENTER-YOUR-SECRET-KEY',
+    'Content-Type': 'application/json',
+}
+data = {
+    "inputs": {},
+    "query": "eh",
+    "response_mode": "streaming",
+    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
+    "user": "abc-123"
+}
+
+response = requests.post(url, headers=headers, data=json.dumps(data))
+
+print(response.json())
+```
+{% endtab %}
+{% endtabs %}
