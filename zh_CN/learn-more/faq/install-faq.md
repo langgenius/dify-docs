@@ -183,12 +183,14 @@ VECTOR_STORE: weaviate
 flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrarte
 ```
 
-### 18. 为什么需要SSRF_PROXY？
+### 18. 为什么需要SSRF\_PROXY？
+
 在社区版的`docker-compose.yaml`中你可能注意到了一些服务配置有`SSRF_PROXY`和`HTTP_PROXY`等环境变量，并且他们都指向了一个`ssrf_proxy`容器，这是因为为了避免SSRF攻击，关于SSRF攻击，你可以查看[这篇](https://portswigger.net/web-security/ssrf)文章。
 
 为了避免不必要的风险，我们给所有可能造成SSRF攻击的服务都配置了一个代理，并强制如Sandbox等服务只能通过代理访问外部网络，从而确保你的数据安全和服务安全，默认的，这个代理不会拦截任何本地的请求，但是你可以通过修改`squid`的配置文件来自定义代理的行为。
 
 #### 如何自定义代理的行为？
+
 在`docker/volumes/ssrf_proxy/squid.conf`中，你可以找到`squid`的配置文件，你可以在这里自定义代理的行为，比如你可以添加一些ACL规则来限制代理的访问，或者添加一些`http_access`规则来限制代理的访问，例如，您的本地可以访问`192.168.101.0/24`这个网段，但是其中的`192.168.101.19`这个IP具有敏感数据，你不希望使用你本地部署的dify的用户访问到这个IP，但是想要其他的IP可以访问，你可以在`squid.conf`中添加如下规则：
 
 ```
@@ -203,19 +205,24 @@ http_access deny all
 当然，这只是一个简单的例子，你可以根据你的需求来自定义代理的行为，如果您的业务更加复杂，比如说需要给代理配置上游代理，或者需要配置缓存等，你可以查看[squid的配置文档](http://www.squid-cache.org/Doc/config/)来了解更多。
 
 ### 19. 如何将自己创建的应用设置为模板？
+
 目前还不支持将你自己创建的应用设置为模板。现有的模板是由Dify官方为云版本用户参考提供的。如果你正在使用云版本，你可以将应用添加到你的工作空间或者在修改后定制它们以创建你自己的应用。如果你正在使用社区版本并且需要为你的团队创建更多的应用模板，你可以咨询我们的商务团队以获得付费技术支持：[business@dify.ai](mailto:business@dify.ai)
 
 ### 20.502 Bad Gateway
 
 这是因为Nginx将服务转发到了错误的位置导致的，首先确保容器正在运行，然后以Root权限运行以下命令：
+
 ```
 docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
 ```
+
 在输出内容中找到这两行：
+
 ```
 /docker-web-1: 172.19.0.5
 /docker-api-1: 172.19.0.7
 ```
-记住后面的IP地址。然后打开你存放dify源代码的地方，打开`dify/docker/nginx/conf.d`,将`http://api:5001`替换为`http://172.19.0.7:5001`,将`http://web:3000`替换为`http://172.19.0.5:3000`，随后重启Nginx容器或者重载配置。  
-这些IP地址是***示例性*** 的，你必须执行命令获取你自己的IP地址，不要直接填入。  
+
+记住后面的IP地址。然后打开你存放dify源代码的地方，打开`dify/docker/nginx/conf.d`,将`http://api:5001`替换为`http://172.19.0.7:5001`,将`http://web:3000`替换为`http://172.19.0.5:3000`，随后重启Nginx容器或者重载配置。\
+这些IP地址是_**示例性**_ 的，你必须执行命令获取你自己的IP地址，不要直接填入。\
 你可能在重新启动相关容器时需要再次根据IP进行配置。

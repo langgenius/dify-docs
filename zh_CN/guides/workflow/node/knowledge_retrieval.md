@@ -1,29 +1,48 @@
 # 知识检索
 
-知识库检索节点用于从 Dify 知识库中查询与用户问题相关的文本内容，可作为后续 LLM 的上下文进行回答。
+### 1 定义
 
-<figure><img src="../../../.gitbook/assets/output (3) (2).png" alt=""><figcaption></figcaption></figure>
+从知识库中检索与用户问题相关的文本内容，可作为下游 LLM 节点的上下文来使用。
 
-配置知识库检索节点主要包含三个部分：
+***
 
-1. 选择查询变量
-2. 选择查询的知识库
-3. 配置检索策略
+### 2 场景
 
-**选择查询变量**
+常见情景：构建基于外部数据/知识的 AI 问答系统（RAG）。了解更多关于 RAG 的[基本概念](../../../learn-more/extended-reading/retrieval-augment/)。
 
-在知识库检索场景中，用于知识库检索的查询变量一般为用户输入的问题，在对话型应用的「开始」节点中，系统预设了「sys.query」作为用户输入变量，你可以使用该变量用于查询知识库内与用户问题最相近的文本分段结果。
+下图为一个最基础的知识库问答应用示例，该流程的执行逻辑为：知识库检索作为 LLM 节点的前置步骤，在用户问题传递至 LLM 节点之前，先在知识检索节点内将匹配用户问题最相关的文本内容并召回，随后在 LLM 节点内将用户问题与检索到的上下文一同作为输入，让 LLM 根据检索内容来回复问题。
 
-**选择查询知识库**
+<figure><img src="../../../.gitbook/assets/image (193).png" alt=""><figcaption><p>知识库问答应用示例</p></figcaption></figure>
 
-在知识库检索节点中你可以添加一个 Dify 内已有的知识库，如何在 Dify 内创建知识库请参考[知识库帮助文档](https://docs.dify.ai/v/zh-hans/guides/knowledge-base)。
+***
 
-**配置检索策略**
+### 3 如何配置
 
-可以在节点内修改单个知识库的索引策略和检索模式。关于该设置的具体原理请参考[知识库帮助文档](https://docs.dify.ai/v/zh-hans/learn-more/extended-reading/retrieval-augment/hybrid-search)。
+<figure><img src="../../../.gitbook/assets/image (2).png" alt=""><figcaption><p>知识检索配置</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/output (4) (1).png" alt=""><figcaption></figcaption></figure>
+**配置流程：**
 
-Dify 针对多知识库的不同检索场景提供了两种召回策略：「N选1召回」和「多路召回」，在 N 选 1 模式下，知识库查询通过工具函数调用（Function Calling）来实现，需要选择系统推理模型。在多路召回模式下，需要配置 Rerank 模型用于结果重排。关于两种召回策略的具体原理请参考帮助文档中的[召回模式说明](https://docs.dify.ai/v/zh-hans/learn-more/extended-reading/retrieval-augment/retrieval)。
+1. 选择查询变量，用于作为输入来检索知识库中的相关文本分段，在常见的对话类应用中一般将开始节点的 `sys.query` 作为查询变量；
+2. 选择需要查询的知识库，可选知识库需要在 Dify 知识库内预先[创建](../../knowledge-base/create\_knowledge\_and\_upload\_documents.md#id-1-chuang-jian-zhi-shi-ku)；
+3. 配置[召回模式](../../../learn-more/extended-reading/retrieval-augment/retrieval.md)和[知识库设置](../../knowledge-base/knowledge\_and\_documents\_maintenance.md#id-8-zhi-shi-ku-she-zhi)；
+4. 连接并配置下游节点，一般为 LLM 节点；
 
-<figure><img src="../../../.gitbook/assets/output (5) (1).png" alt=""><figcaption></figcaption></figure>
+**输出变量**
+
+<figure><img src="../../../.gitbook/assets/image (199).png" alt="" width="272"><figcaption><p>输出变量</p></figcaption></figure>
+
+知识检索的输出变量 `result` 为从知识库中检索到的相关文本分段。其变量数据结构中包含了分段内容、标题、链接、图标、元数据信息。
+
+**配置下游节点**
+
+在常见的对话类应用中，知识库检索的下游节点一般为 LLM 节点，知识检索的**输出变量** `result` 需要配置在 LLM 节点中的 **上下文变量** 内关联赋值。关联后你可以在提示词的合适位置插入 **上下文变量**。
+
+{% hint style="info" %}
+上下文变量是 LLM 节点内定义的特殊变量类型，用于在提示词内插入外部检索的文本内容。
+{% endhint %}
+
+当用户提问时，若在知识检索中召回了相关文本，文本内容会作为上下文变量中的值填入提示词，提供 LLM 回复问题；若未在知识库检索中召回相关的文本，上下文变量值为空，LLM 则会直接回复用户问题。
+
+<figure><img src="../../../.gitbook/assets/image (3).png" alt=""><figcaption><p>配置下游 LLM 节点</p></figcaption></figure>
+
+该变量除了可以作为 LLM 回复问题时的提示词上下文作为外部知识参考引用，另外由于其数据结构中包含了分段引用信息，同时可以支持应用端的 [**引用与归属**](../../knowledge-base/retrieval\_test\_and\_citation.md#id-2-yin-yong-yu-gui-shu) 功能。

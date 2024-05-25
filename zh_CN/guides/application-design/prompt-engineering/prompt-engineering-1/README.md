@@ -1,6 +1,6 @@
-# 提示词编排专家模式
+# 提示词专家模式（已下线）
 
-在 Dify 创建应用的编排默认为**简易模式**，这很适合想要快速创建应用的非技术人员，比如你想创建一个企业知识库 Chatbot 或者文章摘要生成器，利用**简易模式**编排对话前提示词，添加变量，添加上下文等简易步骤即可发布一个完整的应用（可参考👉[conversation-application.md](../conversation-application.md "mention")[text-generation-application.md](../text-generation-application.md "mention")）。
+在 Dify 创建应用的编排默认为**简易模式**，这很适合想要快速创建应用的非技术人员，比如你想创建一个企业知识库 Chatbot 或者文章摘要生成器，利用**简易模式**编排对话前提示词，添加变量，添加上下文等简易步骤即可发布一个完整的应用（可参考👉[conversation-application.md](../../conversation-application.md "mention")[text-generation-application.md](../../text-generation-application.md "mention")）。
 
 而如果你是一个熟练掌握使用 **OpenAI** 的 **Playground** 的技术人员，正想创建一个学习导师应用，需要在提示词中针对不同的教学模块位置嵌入不同的上下文和变量，就可以选择**专家模式。在此模式下你可以自由地编写完整的提示词，包括修改内置的提示词，调整上下文和聊天历史内容在提示词中的位置，设定必要参数等。如果你对 Chat 和 Complete 两种模型不陌生，现在专家模式**可以快速切换 Chat 和Complete 模型以满足你的需要，并且都适用于对话型应用和文本生成型应用。
 
@@ -143,7 +143,7 @@ And answer according to the language English.
 
 ### 6. 调试日志
 
-编排调试时不仅可以查看用户的输入和 LLM 的回复。在**专家模式**下，点击发送消息左上角图标，可以看到完整的提示词，方便开发者确认输入变量内容、上下文、聊天记录和查询内容是否符合预期。日志列表的相关说明请查看日志文档 👉 ： [logs.md](../../../logs.md "mention")
+编排调试时不仅可以查看用户的输入和 LLM 的回复。在**专家模式**下，点击发送消息左上角图标，可以看到完整的提示词，方便开发者确认输入变量内容、上下文、聊天记录和查询内容是否符合预期。日志列表的相关说明请查看日志文档 👉 ： [logs.md](../../../biao-zhu/logs.md "mention")
 
 #### 6.1 **查看调试日志**
 
