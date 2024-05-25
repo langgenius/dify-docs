@@ -17,6 +17,44 @@
 ## 配置
 如果您需要在代码节点中使用其他节点的变量，您需要在`输入变量`中定义变量名，并引用这些变量，可以参考[变量引用](../key_concept.md#变量)。
 
+您可以在高级依赖中在添加一些预加载需要消耗较多时间，或不是默认内置的依赖包，为了安全性考虑，目前仅支持下面这些依赖包 (截止2024年6月)。
+
+| 模块名称 | 模块功能 |
+| -------- | -------- |
+| jinja2   | 一个为Python设计的现代模板语言，其原型来自Django的模板。 |
+| httpx    | 为Python 3提供的全功能HTTP客户端，提供同步和异步API。 |
+| requests | Python中一个简单的HTTP库。 |
+
+在代码框中，您可以选择运行 Python 或 JavaScript，这里的代码块必须使用下面的格式：
+
+{% tabs %}
+{% tab title="Python" %} 
+```python
+
+def main(arg1: DataType, arg2: DataType) -> dict:
+    result = statements(arg1, arg2)
+    return {
+        "result": result,
+    }
+
+```
+{% endtab %}
+
+{% tab title="JavaScript" %} 
+```JavaScript
+function main({arg1, arg2}) {
+    statements; 
+    return {
+        result: arg1 + arg2
+    }
+}
+
+```
+{% endtab %}
+{% endtabs %}
+
+这一段代码块的输出变量必须在处于一个字典中，并且必须在代码块的下方定义变量名和数据类型，支持的数据类型有：字符串 String, 数字 Number, 数组 Array[Number], 数组 Array[String], 数组 Array[Object], 和 对象 Object。
+
 ## 使用场景
 使用代码节点，您可以完成以下常见的操作：
 
