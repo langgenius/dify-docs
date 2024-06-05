@@ -18,7 +18,7 @@
 
 ### 3 如何配置
 
-<figure><img src="../../../.gitbook/assets/image (2).png" alt=""><figcaption><p>知识检索配置</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (2) (1).png" alt=""><figcaption><p>知识检索配置</p></figcaption></figure>
 
 **配置流程：**
 
@@ -43,6 +43,6 @@
 
 当用户提问时，若在知识检索中召回了相关文本，文本内容会作为上下文变量中的值填入提示词，提供 LLM 回复问题；若未在知识库检索中召回相关的文本，上下文变量值为空，LLM 则会直接回复用户问题。
 
-<figure><img src="../../../.gitbook/assets/image (3).png" alt=""><figcaption><p>配置下游 LLM 节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (3) (1).png" alt=""><figcaption><p>配置下游 LLM 节点</p></figcaption></figure>
 
 该变量除了可以作为 LLM 回复问题时的提示词上下文作为外部知识参考引用，另外由于其数据结构中包含了分段引用信息，同时可以支持应用端的 [**引用与归属**](../../knowledge-base/retrieval\_test\_and\_citation.md#id-2-yin-yong-yu-gui-shu) 功能。

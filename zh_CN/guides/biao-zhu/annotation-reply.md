@@ -53,7 +53,7 @@
 
 通过进入“应用构建->日志与标注->标注”开启标注回复开关：
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
 
 ### 在标注后台设置标注回复参数
 
@@ -63,7 +63,7 @@
 
 **Embedding 模型**：用于对标注文本进行向量化，切换模型时会重新生成嵌入。
 
-<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
 
 ### 批量导入标注问答对
 

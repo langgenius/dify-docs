@@ -4,7 +4,7 @@
 
 调用大语言模型回答问题或者对自然语言进行处理。
 
-<figure><img src="../../../.gitbook/assets/image (1).png" alt=""><figcaption><p>LLM 节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>LLM 节点</p></figcaption></figure>
 
 ***
 

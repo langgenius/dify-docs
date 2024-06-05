@@ -180,7 +180,7 @@ VECTOR_STORE: weaviate
 3. 执行以下命令
 
 ```
-flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrarte
+flask vdb-migrarte # or docker exec -it docker-api-1 flask vdb-migrate
 ```
 
 ### 18. 为什么需要SSRF\_PROXY？

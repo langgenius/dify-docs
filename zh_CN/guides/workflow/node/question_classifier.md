@@ -14,7 +14,7 @@
 
 下图为产品客服场景的示例工作流模板：
 
-<figure><img src="../../../.gitbook/assets/image (2) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 在该场景中我们设置了 3 个分类标签/描述：
 
@@ -32,7 +32,7 @@
 
 ### 3 如何配置
 
-<figure><img src="../../../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (3) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 **配置步骤：**
 

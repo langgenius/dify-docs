@@ -7,7 +7,7 @@ Nodes are the key components of a workflow. By connecting nodes with different f
 * Basic Nodes：Start, End, Answer, LLM, Knowledge Retrieval, Applications (coming soon)
 * Question Understand：Quesition Classifier，Question Rewriting (coming soon), Sub-question Splitting (coming soon)
 * Logic Processing：IF/ELSE, Merge (coming soon), Loop (coming soon)
-* Transformation：Code, Template， Variable Assigner, Function Extraction (coming soon)
+* Transformation：Code, Template，Variable Assigner, Function Extraction (coming soon)
 * Others：HTTP Request
 * Tools：Built-in Tools, Custom Tools
 

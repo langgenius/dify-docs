@@ -125,7 +125,7 @@ Query or prefix prompt is too long, you can reduce the preix prompt, or shrink t
 
 如下方表格示例，仅需保留第二行的表头，首行（表格1）为多余表头，需删掉。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### 20 买了 ChatGPT plus，为什么在 dify 里还不能使用 GPT4？
 

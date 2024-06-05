@@ -74,3 +74,13 @@ docker compose up -d
 ### Access Dify
 
 Finally, access [http://localhost/install](http://localhost/install) to use the deployed Dify.
+
+### Customize Dify
+
+The full set of environment variables can be found under docker/dotenvs. To change their values, delete the `.example` suffix from the corresponding `.env.example` file name and edit the values in file directly. Then, restart Dify with:
+
+```
+docker compose down
+docker compose up -d
+```
+
