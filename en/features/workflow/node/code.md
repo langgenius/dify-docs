@@ -19,6 +19,44 @@ This node significantly enhances developers' flexibility, allowing them to embed
 
 If you need to use variables from other nodes within the code node, you need to define the variable names in `input variables` and reference these variables, see [Variable Reference](../key\_concept.md#variable) for details.
 
+In the Advanced Dependencies section, you can add some preloaded dependencies that take more time to load or are not built-in by default. For security reasons, currently only the following dependencies are supported (as of June 2024).
+
+| Module Name | Module Function |
+| ----------- | ----------------|
+| jinja2      | A modern template language for Python, inspired by Django's templates. |
+| httpx       | A fully featured HTTP client for Python 3, providing both sync and async APIs. |
+| requests    | A simple HTTP library for Python. |
+
+In the code block, you can choose to run Python or JavaScript. The code block must use the following format:
+
+{% tabs %}
+{% tab title="Python" %}
+```python
+
+def main(arg1: DataType, arg2: DataType) -> dict:
+    result = statements(arg1, arg2)
+    return {
+        "result": result,
+    }
+
+```
+{% endtab %}
+
+{% tab title="JavaScript" %}
+```JavaScript
+function main({arg1, arg2}) {
+    statements; 
+    return {
+        result: arg1 + arg2
+    }
+}
+
+```
+{% endtab %}
+{% endtabs %}
+
+The output variable of this code block must be in a dictionary, and the variable name and data type must be defined below the code block. Supported data types include: String, Number, Array[Number], Array[String], Array[Object], and Object.
+
 ## Use Cases
 
 With the code node, you can perform the following common operations:
