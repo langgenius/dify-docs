@@ -209,6 +209,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     * `milvus`
     * `zilliz` (share the same configuration as `milvus`)
     * `pinecone` (not yet open)
+    * `tidb_vector`
 *   WEAVIATE\_ENDPOINT
 
     Weaviate endpoint address, such as: `http://weaviate:8080`.
@@ -250,6 +251,22 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 *   MILVUS\_SECURE
 
     Whether Milvus uses SSL connection, default is false.
+
+* TIDB\_VECTOR\_HOST
+
+  TiDB Vector host configuration, such as: `xxx.eu-central-1.xxx.tidbcloud.com`
+* TIDB\_VECTOR\_PORT
+
+  TiDB Vector port configuration, such as: `4000`
+* TIDB\_VECTOR\_USER
+
+  TiDB Vector user configuration, such as: `xxxxxx.root`
+* TIDB\_VECTOR\_PASSWORD
+
+  TiDB Vector password configuration
+* TIDB\_VECTOR\_DATABAS
+
+  TiDB Vector database configuration
 
 #### Knowledge Configuration
 

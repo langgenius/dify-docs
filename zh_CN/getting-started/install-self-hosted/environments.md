@@ -201,6 +201,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     * `milvus`
     * `zilliz` 与 `milvus` 一致
     * `pinecone` (暂未开放)
+    * `tidb_vector`
 *   WEAVIATE\_ENDPOINT
 
     Weaviate 端点地址，如：`http://weaviate:8080`。
@@ -240,6 +241,22 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 *   MILVUS\_SECURE
 
     Milvus 是否使用 SSL 连接，默认 false。
+
+* TIDB\_VECTOR\_HOST
+
+  TiDB Vector host 配置，如：`xxx.eu-central-1.xxx.tidbcloud.com`
+* TIDB\_VECTOR\_PORT
+
+  TiDB Vector 端口号配置，如：`4000`
+* TIDB\_VECTOR\_USER
+
+  TiDB Vector 用户配置，如：`xxxxxx.root`
+* TIDB\_VECTOR\_PASSWORD
+
+  TiDB Vector 密码配置
+* TIDB\_VECTOR\_DATABASE
+
+  TiDB Vector 数据库配置，如：`dify`
 
 #### 知识库配置
 
