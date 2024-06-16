@@ -64,6 +64,7 @@ Specific integration methods are not detailed here.
 * [Replicate](https://docs.dify.ai/advanced/model-configuration/replicate)
 * [Xinference](https://docs.dify.ai/advanced/model-configuration/xinference)
 * [OpenLLM](https://docs.dify.ai/advanced/model-configuration/openllm)
+* [IPEX-LLM](https://docs.dify.ai/advanced/model-configuration/ipex-llm)
 
 ## Using Models
 
