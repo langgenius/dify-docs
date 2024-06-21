@@ -1,4 +1,4 @@
-# Hugging Face 上のオープンソースモデルの接続
+# Hugging Faceのオープンソースモデルを統合
 
 Difyはテキスト生成（Text-Generation）と埋め込み（Embeddings）をサポートしており、以下はそれに対応するHugging Faceモデルの種類です：
 

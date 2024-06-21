@@ -1,4 +1,4 @@
-# Replicate上のオープンソースモデルの接続
+# Replicateのオープンソースモデルを統合
 
 DifyはReplicate上の[言語モデル](https://replicate.com/collections/language-models)と[埋め込みモデル](https://replicate.com/collections/embedding-models)に接続することができます。言語モデルはDifyの推論モデルに対応し、埋め込みモデルはDifyの埋め込みモデルに対応します。
 

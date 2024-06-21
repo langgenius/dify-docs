@@ -1,4 +1,4 @@
-# Difyへようこそ
+# ようこそ、Difyへ
 
 **Dify**は、オープンソースの大規模言語モデル（LLM）アプリケーション開発プラットフォームです。Backend as Serviceと[LLMOps](learn-more/extended-reading/what-is-llmops.md)の理念を融合し、開発者が迅速に生成AIアプリケーションを構築できるようにします。技術者でなくても、AIアプリケーションの定義やデータ運用に参加することができます。
 
