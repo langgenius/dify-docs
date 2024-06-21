@@ -1,4 +1,4 @@
-# Docker Compose デプロイメント
+# Docker Compose 配備
 
 ### 前提条件
 

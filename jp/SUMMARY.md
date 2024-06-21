@@ -7,7 +7,7 @@
   * [モデルプロバイダーリスト](getting-started/readme/model-providers.md)
 * [クラウドサービス](getting-started/cloud.md)
 * [コミュニティ版](getting-started/install-self-hosted/README.md)
-  * [Docker Compose 部署](getting-started/install-self-hosted/docker-compose.md)
+  * [Docker Compose 配備](getting-started/install-self-hosted/docker-compose.md)
   * [ローカルソースコード起動](getting-started/install-self-hosted/local-source-code.md)
   * [フロントエンドDockerコンテナを単独起動](getting-started/install-self-hosted/start-the-frontend-docker-container.md)
   * [環境変数説明](getting-started/install-self-hosted/environments.md)
