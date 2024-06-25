@@ -2,29 +2,29 @@
 
 ### 公共変数
 
-#### CONSOLE_API_URL
+#### CONSOLE\_API\_URL
 
-コンソールAPIバックエンドのURL。認証コールバックを組み合わせるために使用され、空の場合は同じドメインになります。例：`https://api.console.dify.ai`。
+コンソールAPIのバックエンドのURLです。認証コールバックを組み合わせるために使用され、空の場合は同じドメインになります。例：`https://api.console.dify.ai`。
 
-#### CONSOLE_WEB_URL
+#### CONSOLE\_WEB\_URL
 
-コンソールのウェブ**フロントエンド**URL。フロントエンドアドレスの一部を組み合わせたり、CORS設定に使用されます。空の場合は同じドメインになります。例：`https://console.dify.ai`
+コンソールウェブの**フロントエンド**のURLです。フロントエンドアドレスの一部を組み合わせたり、CORS設定に使用されます。空の場合は同じドメインになります。例：`https://console.dify.ai`
 
-#### SERVICE_API_URL
+#### SERVICE\_API\_URL
 
-サービスAPIのURL。**フロントエンド**にサービスAPIのベースURLを表示するために使用されます。空の場合は同じドメインになります。例：`https://api.dify.ai`
+サービスAPIのURLです。**フロントエンド**にサービスAPIのベースURLを表示するために使用されます。空の場合は同じドメインになります。例：`https://api.dify.ai`
 
-#### APP_API_URL
+#### APP\_API\_URL
 
-WebアプリAPIのバックエンドURL。**フロントエンド**APIのバックエンドアドレスを宣言するために使用されます。空の場合は同じドメインになります。例：`https://app.dify.ai`
+WebアプリAPIのバックエンドURLです。**フロントエンド**APIのバックエンドアドレスを宣言するために使用されます。空の場合は同じドメインになります。例：`https://app.dify.ai`
 
-#### APP_WEB_URL
+#### APP\_WEB\_URL
 
-WebアプリのURL。**フロントエンド**にWebアプリAPIのベースURLを表示するために使用されます。空の場合は同じドメインになります。例：`https://api.app.dify.ai`
+WebアプリのURLです。**フロントエンド**にWebアプリAPIのベースURLを表示するために使用されます。空の場合は同じドメインになります。例：`https://api.app.dify.ai`
 
-#### FILES_URL
+#### FILES\_URL
 
-ファイルプレビューまたはダウンロード用のURLプレフィックス。ファイルプレビューやダウンロードURLをフロントエンドに表示したり、マルチモーダルモデルの入力として使用します。他人による偽造を防ぐため、画像プレビューURLは署名付きで、5分の有効期限があります。
+ファイルプレビューまたはダウンロード用のURLプレフィックスです。ファイルプレビューやダウンロードURLをフロントエンドに表示したり、マルチモーダルモデルの入力として使用します。他人による偽造を防ぐため、画像プレビューURLは署名付きで、5分の有効期限があります。
 
 ***
 
@@ -32,7 +32,7 @@ WebアプリのURL。**フロントエンド**にWebアプリAPIのベースURL�
 
 #### MODE
 
-起動モード。dockerによる起動時にのみ有効で、ソースコード起動では無効です。
+起動モードです。dockerによる起動時にのみ有効で、ソースコード起動では無効です。
 
 *   api
 
@@ -45,11 +45,11 @@ WebアプリのURL。**フロントエンド**にWebアプリAPIのベースURL�
 
 デバッグモード。デフォルトはfalse。ローカル開発時にはこの設定をオンにすることをお勧めします。これにより、モンキーパッチによって発生する問題を防ぐことができます。
 
-#### FLASK_DEBUG
+#### FLASK\_DEBUG
 
 Flaskのデバッグモード。オンにすると、インターフェースでトレース情報が出力され、デバッグが容易になります。
 
-#### SECRET_KEY
+#### SECRET\_KEY
 
 セッションクッキーを安全に署名し、データベース上の機密情報を暗号化するためのキー。初回起動時にこの変数を設定する必要があります。`openssl rand -base64 42`を使用して強力なキーを生成できます。
 
@@ -64,15 +64,15 @@ Flaskのデバッグモード。オンにすると、インターフェースで
 
     テスト環境。フロントエンドページにはテスト環境を示す明確な色の識別が表示されます。
 
-#### LOG_LEVEL
+#### LOG\_LEVEL
 
 ログ出力レベル。デフォルトはINFO。プロダクション環境ではERRORに設定することをお勧めします。
 
-#### MIGRATION_ENABLED
+#### MIGRATION\_ENABLED
 
 trueに設定した場合、コンテナ起動時に自動的にデータベースのマイグレーションが実行されます。dockerによる起動時にのみ有効で、ソースコード起動では無効です。ソースコード起動の場合、apiディレクトリで手動で`flask db upgrade`を実行する必要があります。
 
-#### CHECK_UPDATE_URL
+#### CHECK\_UPDATE\_URL
 
 バージョンチェックポリシーを有効にするかどうか。falseに設定した場合、`https://updates.dify.ai`を呼び出してバージョンチェックを行いません。現在、国内から直接CloudFlare Workerのバージョンインターフェースにアクセスできないため、この変数を空に設定すると、このインターフェースの呼び出しをブロックできます。
 
@@ -80,31 +80,31 @@ trueに設定した場合、コンテナ起動時に自動的にデータベー�
 
 dockerイメージまたはdocker-composeによる起動時にのみ有効です。
 
-*   DIFY_BIND_ADDRESS
+*   DIFY\_BIND\_ADDRESS
 
     APIサービスのバインドアドレス。デフォルト：0.0.0.0、すべてのアドレスからアクセス可能にします。
-*   DIFY_PORT
+*   DIFY\_PORT
 
     APIサービスのバインドポート番号。デフォルト5001。
-*   SERVER_WORKER_AMOUNT
+*   SERVER\_WORKER\_AMOUNT
 
     APIサービスのServer worker数。すなわちgevent workerの数。公式：`CPUのコア数 x 2 + 1`。詳細はこちら：https://docs.gunicorn.org/en/stable/design.html#how-many-workers
-*   SERVER_WORKER_CLASS
+*   SERVER\_WORKER\_CLASS
 
     デフォルトはgevent。Windowsの場合、syncまたはsoloに切り替えることができます。
 *   GUNICORN_TIMEOUT
 
     リクエスト処理のタイムアウト時間。デフォルト200。360に設定することをお勧めします。これにより、長時間のSSE接続をサポートできます。
-*   CELERY_WORKER_CLASS
+*   CELERY\_WORKER\_CLASS
 
     `SERVER_WORKER_CLASS`と同様に、デフォルトはgevent。Windowsの場合、syncまたはsoloに切り替えることができます。
-*   CELERY_WORKER_AMOUNT
+*   CELERY\_WORKER\_AMOUNT
 
     Celery workerの数。デフォルトは1。必要に応じて設定します。
-*   HTTP_PROXY
+*   HTTP\_PROXY
 
     HTTPプロキシのアドレス。国内からOpenAIやHuggingFaceにアクセスできない問題を解決するために使用されます。注意：プロキシがホストマシンにデプロイされている場合（例：`http://127.0.0.1:7890`）、このプロキシアドレスはローカルモデルに接続する場合と同様に、dockerコンテナ内のホストマシンアドレスを使用する必要があります（例：`http://192.168.1.100:7890`または`http://172.17.0.1:7890`）。
-*   HTTPS_PROXY
+*   HTTPS\_PROXY
 
     HTTPSプロキシのアドレス。国内からOpenAIやHuggingFaceにアクセスできない問題を解決するために使用されます。HTTPプロキシと同様に設定します。
 
@@ -112,29 +112,29 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 データベースにはPostgreSQLを使用します。public schemaを使用してください。
 
-* DB_USERNAME：ユーザー名
-* DB_PASSWORD：パスワード
-* DB_HOST：データベースホスト
-* DB_PORT：データベースポート番号。デフォルト5432
-* DB_DATABASE：データベース名
-* SQLALCHEMY_POOL_SIZE：データベース接続プールのサイズ。デフォルトは30接続。必要に応じて増やせます。
-* SQLALCHEMY_POOL_RECYCLE：データベース接続プールのリサイクル時間。デフォルト3600秒。
-* SQLALCHEMY_ECHO：SQLを出力するかどうか。デフォルトはfalse。
+* DB\_USERNAME：ユーザー名
+* DB\_PASSWORD：パスワード
+* DB\_HOST：データベースホスト
+* DB\_PORT：データベースポート番号。デフォルト5432
+* DB\_DATABASE：データベース名
+* SQLALCHEMY\_POOL\_SIZE：データベース接続プールのサイズ。デフォルトは30接続。必要に応じて増やせます。
+* SQLALCHEMY\_POOL\_RECYCLE：データベース接続プールのリサイクル時間。デフォルト3600秒。
+* SQLALCHEMY\_ECHO：SQLを出力するかどうか。デフォルトはfalse。
 
 #### Redis 設定
 
 このRedis設定はキャッシュおよび対話時のpub/subに使用されます。
 
-* REDIS_HOST：Redisホスト
-* REDIS_PORT：Redisポート。デフォルト6379
-* REDIS_DB：Redisデータベース。デフォルトは0。セッションRedisおよびCeleryブローカーとは異なるデータベースを使用してください。
-* REDIS_USERNAME：Redisユーザー名。デフォルトは空
-* REDIS_PASSWORD：Redisパスワード。デフォルトは空。パスワードを設定することを強くお勧めします。
-* REDIS_USE_SSL：SSLプロトコルを使用して接続するかどうか。デフォルトはfalse
+* REDIS\_HOST：Redisホスト
+* REDIS\_PORT：Redisポート。デフォルト6379
+* REDIS\_DB：Redisデータベース。デフォルトは0。セッションRedisおよびCeleryブローカーとは異なるデータベースを使用してください。
+* REDIS\_USERNAME：Redisユーザー名。デフォルトは空
+* REDIS\_PASSWORD：Redisパスワード。デフォルトは空。パスワードを設定することを強くお勧めします。
+* REDIS\_USE\_SSL：SSLプロトコルを使用して接続するかどうか。デフォルトはfalse
 
 #### Celery 設定
 
-*   CELERY_BROKER_URL
+*   CELERY\_BROKER\_URL
 
     フォーマットは以下の通りです。
 
@@ -143,7 +143,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     </strong></code></pre>
 
     例：`redis://:difyai123456@redis:6379/1`
-*   BROKER_USE_SSL
+*   BROKER\_USE\_SSL
 
     trueに設定した場合、SSLプロトコルを使用して接続します。デフォルトはfalse。
 
@@ -151,10 +151,10 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 フロントエンドのクロスオリジンアクセスポリシーを設定するために使用します。
 
-*   CONSOLE_CORS_ALLOW_ORIGINS
+*   CONSOLE\_CORS\_ALLOW\_ORIGINS
 
     コンソールのCORSクロスオリジンポリシー。デフォルトは`*`、すべてのドメインがアクセス可能です。
-*   WEB_API_CORS_ALLOW_ORIGINS
+*   WEB\_API\_CORS\_ALLOW\_ORIGINS
 
     WebアプリのCORSクロスオリジンポリシー。デフォルトは`*`、すべてのドメインがアクセス可能です。
 
@@ -164,35 +164,35 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 データセットのアップロードファイル、チーム/テナントの暗号化キーなどのファイルを保存するために使用します。
 
-*   STORAGE_TYPE
+*   STORAGE\_TYPE
 
     ストレージ施設のタイプ
 
     *   local（デフォルト）
 
-        ローカルファイルストレージ。この場合、以下の`STORAGE_LOCAL_PATH`設定を設定する必要があります。
+        ローカルファイルストレージ。この場合、以下の`STORAGE\_LOCAL\_PATH`設定を設定する必要があります。
     *   s3
 
-        S3オブジェクトストレージ。この場合、以下のS3_プレフィックスの設定を設定する必要があります。
+        S3オブジェクトストレージ。この場合、以下のS3\_プレフィックスの設定を設定する必要があります。
     *   azure-blob
 
-        Azure Blobストレージ。この場合、以下のAZURE_BLOB_プレフィックスの設定を設定する必要があります。
-*   STORAGE_LOCAL_PATH
+        Azure Blobストレージ。この場合、以下のAZURE\_BLOB\_プレフィックスの設定を設定する必要があります。
+*   STORAGE\_LOCAL\_PATH
 
     デフォルトはstorage、すなわち現在のディレクトリのstorageディレクトリに保存します。dockerまたはdocker-composeでデプロイする場合、2つのコンテナにある`/app/api/storage`ディレクトリを同じローカルディレクトリにマウントする必要があります。そうしないと、ファイルが見つからないエラーが発生する可能性があります。
-* S3_ENDPOINT：S3エンドポイントアドレス
-* S3_BUCKET_NAME：S3バケット名
-* S3_ACCESS_KEY：S3アクセスキー
-* S3_SECRET_KEY：S3シークレットキー
-* S3_REGION：S3リージョン情報（例：us-east-1）
-* AZURE_BLOB_ACCOUNT_NAME: アカウント名（例：'difyai'）
-* AZURE_BLOB_ACCOUNT_KEY: アカウントキー（例：'difyai'）
-* AZURE_BLOB_CONTAINER_NAME: コンテナ名（例：'difyai-container'）
-* AZURE_BLOB_ACCOUNT_URL: 'https://\\<your_account_name>.blob.core.windows.net'
+* S3\_ENDPOINT：S3エンドポイントアドレス
+* S3\_BUCKET\_NAME：S3バケット名
+* S3\_ACCESS\_KEY：S3アクセスキー
+* S3\_SECRET\_KEY：S3シークレットキー
+* S3\_REGION：S3リージョン情報（例：us-east-1）
+* AZURE\_BLOB\_ACCOUNT_NAME: アカウント名（例：'difyai'）
+* AZURE\_BLOB\_ACCOUNT_KEY: アカウントキー（例：'difyai'）
+* AZURE\_BLOB\_CONTAINER_NAME: コンテナ名（例：'difyai-container'）
+* AZURE\_BLOB\_ACCOUNT\_URL: 'https://\<your_account_name>.blob.core.windows.net'
 
 #### ベクトルデータベース設定
 
-*   VECTOR_STORE
+*   VECTOR\_STORE
 
     **使用可能な列挙型は以下を含みます：**
 
@@ -202,71 +202,71 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `zilliz`（`milvus`と同じ）
     * `pinecone`（現在未公開）
     * `tidb_vector`
-*   WEAVIATE_ENDPOINT
+*   WEAVIATE\_ENDPOINT
 
     Weaviateエンドポイントアドレス（例：`http://weaviate:8080`）。
-*   WEAVIATE_API_KEY
+*   WEAVIATE\_API\_KEY
 
     Weaviateに接続するために使用するapi-keyの資格情報。
-*   WEAVIATE_BATCH_SIZE
+*   WEAVIATE\_BATCH\_SIZE
 
     Weaviateでオブジェクトのバッチ作成数。デフォルトは100。詳細はこちらのドキュメントを参照してください：https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters
-*   WEAVIATE_GRPC_ENABLED
+*   WEAVIATE\_GRPC\_ENABLED
 
     Weaviateとの通信にgRPC方式を使用するかどうか。オンにすると性能が大幅に向上しますが、ローカルでは使用できない可能性があります。デフォルトはtrueです。
-*   QDRANT_URL
+*   QDRANT\_URL
 
     Qdrantエンドポイントアドレス（例：`https://your-qdrant-cluster-url.qdrant.tech/`）。
-*   QDRANT_API_KEY
+*   QDRANT\_API\_KEY
 
     Qdrantに接続するために使用するapi-keyの資格情報。
-*   PINECONE_API_KEY
+*   PINECONE\_API\_KEY
 
     Pineconeに接続するために使用するapi-keyの資格情報。
-*   PINECONE_ENVIRONMENT
+*   PINECONE\_ENVIRONMENT
 
     Pineconeの環境（例：`us-east4-gcp`）。
-*   MILVUS_HOST
+*   MILVUS\_HOST
 
     Milvusホストの設定。
-*   MILVUS_PORT
+*   MILVUS\_PORT
 
     Milvusポートの設定。
-*   MILVUS_USER
+*   MILVUS\_USER
 
     Milvusユーザーの設定。デフォルトは空。
-*   MILVUS_PASSWORD
+*   MILVUS\_PASSWORD
 
     Milvusパスワードの設定。デフォルトは空。
-*   MILVUS_SECURE
+*   MILVUS\_SECURE
 
     MilvusがSSL接続を使用するかどうか。デフォルトはfalse。
 
-* TIDB_VECTOR_HOST
+* TIDB\_VECTOR\_HOST
 
   TiDB Vectorホスト設定（例：`xxx.eu-central-1.xxx.tidbcloud.com`）
-* TIDB_VECTOR_PORT
+* TIDB\_VECTOR\_PORT
 
   TiDB Vectorポート番号設定（例：`4000`）
-* TIDB_VECTOR_USER
+* TIDB\_VECTOR\_USER
 
   TiDB Vectorユーザー設定（例：`xxxxxx.root`）
-* TIDB_VECTOR_PASSWORD
+* TIDB\_VECTOR\_PASSWORD
 
   TiDB Vectorパスワード設定
-* TIDB_VECTOR_DATABASE
+* TIDB\_VECTOR\_DATABASE
 
   TiDB Vectorデータベース設定（例：`dify`）
 
 #### ナレッジベース設定
 
-*   UPLOAD_FILE_SIZE_LIMIT
+*   UPLOAD\_FILE\_SIZE\_LIMIT
 
     アップロードファイルのサイズ制限。デフォルトは15M。
-*   UPLOAD_FILE_BATCH_LIMIT
+*   UPLOAD\_FILE\_BATCH\_LIMIT
 
     一度にアップロードできるファイル数の上限。デフォルトは5個。
-*   ETL_TYPE
+*   ETL\_TYPE
 
     **使用可能な列挙型は以下を含みます：**
 
@@ -276,18 +276,18 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     *   Unstructured
 
         Unstructured.ioのファイル抽出ソリューション
-*   UNSTRUCTURED_API_URL
+*   UNSTRUCTURED\_API\_URL
 
-    ETL_TYPEがUnstructuredの場合、Unstructured APIパスの設定が必要です。
+    ETL\_TYPEがUnstructuredの場合、Unstructured APIパスの設定が必要です。
 
     例：`http://unstructured:8000/general/v0/general`
 
 #### マルチモーダルモデル設定
 
-*   MULTIMODAL_SEND_IMAGE_FORMAT
+*   MULTIMODAL\_SEND\_IMAGE\_FORMAT
 
-    マルチモーダルモデルの入力時に画像を送信する形式。デフォルトは`base64`、オプションで`url`。`url`モードでは呼び出しの遅延が`base64`モードよりも少なく、一般的には互換性が高い`base64`モードをお勧めします。`url`に設定する場合、`FILES_URL`を外部からアクセス可能なアドレスに設定する必要があります。これにより、マルチモーダルモデルが画像にアクセスできるようになります。
-*   UPLOAD_IMAGE_FILE_SIZE_LIMIT
+    マルチモーダルモデルの入力時に画像を送信する形式。デフォルトは`base64`、オプションで`url`。`url`モードでは呼び出しの遅延が`base64`モードよりも少なく、一般的には互換性が高い`base64`モードをお勧めします。`url`に設定する場合、`FILES\_URL`を外部からアクセス可能なアドレスに設定する必要があります。これにより、マルチモーダルモデルが画像にアクセスできるようになります。
+*   UPLOAD\_IMAGE\_FILE\_SIZE\_LIMIT
 
     アップロード画像ファイルのサイズ制限。デフォルトは10M。
 
@@ -295,13 +295,13 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 アプリケーションの監視およびエラーログトラッキングに使用されます。
 
-*   SENTRY_DSN
+*   SENTRY\_DSN
 
     Sentry DSNアドレス。デフォルトは空。空の場合、すべての監視情報はSentryに報告されません。
-*   SENTRY_TRACES_SAMPLE_RATE
+*   SENTRY\_TRACES\_SAMPLE\_RATE
 
     Sentryイベントの報告割合。例えば、0.01に設定すると1%となります。
-*   SENTRY_PROFILES_SAMPLE_RATE
+*   SENTRY\_PROFILES\_SAMPLE\_RATE
 
     Sentryプロファイルの報告割合。例えば、0.01に設定すると1%となります。
 
@@ -309,36 +309,36 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 Notion統合設定。変数はNotion integrationを申請することで取得できます：[https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
 
-* NOTION_CLIENT_ID
-* NOTION_CLIENT_SECRET
+* NOTION\_CLIENT\_ID
+* NOTION\_CLIENT\_SECRET
 
 #### メール関連設定
 
-* MAIL_TYPE
+* MAIL\_TYPE
   * resend
-    * MAIL_DEFAULT_SEND_FROM\\
+    * MAIL\_DEFAULT\_SEND\_FROM\\
       送信者のメール名（例：no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai)）、必須ではありません。
-    * RESEND_API_KEY\\
+    * RESEND\_API\_KEY\\
       ResendメールプロバイダーのAPIキー。APIキーから取得できます。
   * smtp
-    * SMTP_SERVER\\
+    * SMTP\_SERVER\\
       SMTPサーバーアドレス
-    * SMTP_PORT\\
+    * SMTP\_PORT\\
       SMTPサーバ ，用于验证接口身份。
 
-* SESSION_タイプ： セッションコンポーネントのタイプ
+* SESSION\_タイプ： セッションコンポーネントのタイプ
   *   redis（デフォルト）
 
       これを選択した場合、下記の SESSION_REDIS_ で始まる環境変数を設定する必要があります。
   *   sqlalchemy
 
       これを選択した場合、現在のデータベース接続を使用し、sessions テーブルを使用してセッションレコードを読み書きします。
-* SESSION_REDIS_HOST：Redis ホスト
-* SESSION_REDIS_PORT：Redis ポート、デフォルトは 6379
-* SESSION_REDIS_DB：Redis データベース、デフォルトは 0、Redis および Celery ブローカーとは異なるデータベースを使用してください。
-* SESSION_REDIS_ユーザー名：Redis ユーザー名、デフォルトは空
-* SESSION_REDIS_パスワード：Redis パスワード、デフォルトは空、パスワードの設定を強く推奨します。
-* SESSION_REDIS_USE_SSL：SSL プロトコルを使用して接続するかどうか、デフォルトは false
+* SESSION\_REDIS\_HOST：Redis ホスト
+* SESSION\_REDIS\_PORT：Redis ポート、デフォルトは 6379
+* SESSION\_REDIS\_DB：Redis データベース、デフォルトは 0、Redis および Celery ブローカーとは異なるデータベースを使用してください。
+* SESSION\_REDIS\_ユーザー名：Redis ユーザー名、デフォルトは空
+* SESSION\_REDIS\_パスワード：Redis パスワード、デフォルトは空、パスワードの設定を強く推奨します。
+* SESSION\_REDIS\_USE\_SSL：SSL プロトコルを使用して接続するかどうか、デフォルトは false
 
 #### クッキー戦略の設定
 
@@ -346,14 +346,12 @@ Notion統合設定。変数はNotion integrationを申請することで取得�
 
 セッションクッキーのブラウザ戦略を設定するために使用されます。
 
-*   COOKIE_HTTPONLY
+*   COOKIE\_HTTPONLY
 
     クッキーの HttpOnly 設定、デフォルトは true。
-*   COOKIE_SAMESITE
+*   COOKIE\_SAMESITE
 
     クッキーの SameSite 設定、デフォルトは Lax。
-*   COOKIE_SECURE
+*   COOKIE\_SECURE
 
     クッキーの Secure 設定、デフォルトは false。
-
-

@@ -1,11 +1,11 @@
-# 本地源码启动
+# ローカルソースコード起動
 
-### 前置条件
+### 前提条件
 
 | 操作系统                       | ソフトウェア                                                         | 説明                                                                                                                                                                                   |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| macOS 10.14以降            | Docker Desktop                                                 | Docker 仮想マシン（VM）を少なくとも2つの仮想CPU（vCPU）と8GBの初期メモリを使用するように設定してください。そうでないと、インストールが失敗する可能性があります。詳細は[MacにDocker Desktopをインストールする](https://docs.docker.com/desktop/mac/install/)を参照してください。                                   |
-| Linux プラットフォーム      | <p>Docker 19.03以降<br>Docker Compose 1.25.1以降</p>          | 詳細は[Dockerをインストールする](https://docs.docker.com/engine/install/)および[Docker Composeをインストールする](https://docs.docker.com/compose/install/)を参照してください。                                                      |
+| macOS 10.14またはそれ以降     | Docker Desktop                                                 | Docker 仮想マシン（VM）を少なくとも2つの仮想CPU（vCPU）と8GBの初期メモリを使用するように設定してください。そうでないと、インストールが失敗する可能性があります。詳細は[MacにDocker Desktopをインストールする](https://docs.docker.com/desktop/mac/install/)を参照してください。                                   |
+| Linux プラットフォーム      | <p>Docker 19.03またはそれ以降<br>Docker Compose 1.25.1またはそれ以降</p>| 詳細は[Dockerをインストールする](https://docs.docker.com/engine/install/)および[Docker Composeをインストールする](https://docs.docker.com/compose/install/)を参照してください。                                                      |
 | WSL 2が有効なWindows       | Docker Desktop                                                 | ソースコードや他のデータをLinuxコンテナにバインドする際、WindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細は[WSL 2バックエンドを使用してWindowsにDocker Desktopをインストールする](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
 > OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq#id-15.-wen-ben-zhuan-yu-yin-yu-dao-zhe-ge-cuo-wu-zen-me-ban)を参照してください。

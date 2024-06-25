@@ -62,7 +62,7 @@
   * [リコールテスト/引用帰属](guides/knowledge-base/retrieval\_test\_and\_citation.md)
   * [Notion からデータをインポート](guides/knowledge-base/sync-from-notion.md)
   * [ウェブサイトからデータをインポート](guides/knowledge-base/sync\_from\_website.md)
-  * [API 経由でナレッジベースをメンテナンス](guides/knowledge-base/maintain-dataset-via-api.md)
+  * [APIによるデータセットの維持](guides/knowledge-base/maintain-dataset-via-api.md)
   * [外部データツール](guides/knowledge-base/external\_data\_tool.md)
 * [ツール](guides/gong-ju.md)
   * [クイック統合ツール](guides/tools/quick-tool-integration.md)
@@ -100,7 +100,7 @@
 ## コミュニティ <a href="#community" id="community"></a>
 
 * [サポートの求め](community/support.md)
-* [コントリビューターになる](community/contribution.md)
+* [貢献者ガイド](community/contribution.md)
 
 ## もっと読む <a href="#learn-more" id="learn-more"></a>
 
