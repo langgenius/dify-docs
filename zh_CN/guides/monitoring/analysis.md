@@ -2,7 +2,7 @@
 
 **概览 -- 数据分析** 内显示了用量、活跃用户数和 LLM 调用消耗等，这使你可以持续改进应用运营的效果、活跃度、经济性。我们将逐步提供更多有用的可视化能力，请告诉我们你想要的。
 
-<figure><img src="../../.gitbook/assets/image (6) (1).png" alt=""><figcaption><p>概览—数据分析</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (6) (1) (1).png" alt=""><figcaption><p>概览—数据分析</p></figcaption></figure>
 
 ***
 

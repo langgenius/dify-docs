@@ -15,7 +15,7 @@
 
 你可以通过配置 HTTP 请求的包括 URL、请求头、查询参数、请求体内容以及认证信息等。&#x20;
 
-<figure><img src="../../../.gitbook/assets/image (2).png" alt="" width="332"><figcaption><p>HTTP 请求配置</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (2) (1) (1).png" alt="" width="332"><figcaption><p>HTTP 请求配置</p></figcaption></figure>
 
 ***
 
@@ -23,6 +23,6 @@
 
 这个节点的一个实用特性是能够根据场景需要，在请求的不同部分动态插入变量。比如在处理客户评价请求时，你可以将用户名或客户ID、评价内容等变量嵌入到请求中，以定制化自动回复信息或获取特定客户信息并发送相关资源至特定的服务器。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>客户评价分类</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption><p>客户评价分类</p></figcaption></figure>
 
 HTTP 请求的返回值包括响应体、状态码、响应头和文件。值得注意的是，如果响应中包含了文件（目前仅支持图片类型），这个节点能够自动将文件保存下来，供流程后续步骤使用。这样的设计不仅提高了处理效率，也使得处理带有文件的响应变得简单直接。

@@ -23,7 +23,7 @@
 
 通过进入“应用构建->添加功能”开启标注回复开关：
 
-<figure><img src="../../.gitbook/assets/image (9) (1).png" alt=""><figcaption><p>提示词编排中开启标注回复</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (9) (1) (1).png" alt=""><figcaption><p>提示词编排中开启标注回复</p></figcaption></figure>
 
 开启时需要先设置标注回复的参数，可设置参数包括：Score 阈值 和 Embedding 模型
 
@@ -33,27 +33,27 @@
 
 点击保存并启用时，该设置会立即生效，系统将对所有已保存的标注利用 Embedding 模型生成嵌入保存。
 
-<figure><img src="../../.gitbook/assets/image (11) (1).png" alt=""><figcaption><p>标注回复参数设置</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (11) (1) (1).png" alt=""><figcaption><p>标注回复参数设置</p></figcaption></figure>
 
 ### 在会话调试页添加标注
 
 你可以在调试与预览页面直接在模型回复信息上添加或编辑标注。
 
-<figure><img src="../../.gitbook/assets/image (13) (1).png" alt=""><figcaption><p>添加标注回复</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (13) (1) (1).png" alt=""><figcaption><p>添加标注回复</p></figcaption></figure>
 
 编辑成你需要的高质量回复并保存。
 
-<figure><img src="../../.gitbook/assets/image (14) (1).png" alt=""><figcaption><p>编辑标注回复</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (14) (1) (1).png" alt=""><figcaption><p>编辑标注回复</p></figcaption></figure>
 
 再次输入同样的用户问题，系统将使用已保存的标注直接回复用户问题。
 
-<figure><img src="../../.gitbook/assets/image (15).png" alt=""><figcaption><p>通过已保存的标注回复用户问题</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (15) (1).png" alt=""><figcaption><p>通过已保存的标注回复用户问题</p></figcaption></figure>
 
 ### 日志与标注中开启标注回复
 
 通过进入“应用构建->日志与标注->标注”开启标注回复开关：
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
 
 ### 在标注后台设置标注回复参数
 
@@ -63,22 +63,22 @@
 
 **Embedding 模型**：用于对标注文本进行向量化，切换模型时会重新生成嵌入。
 
-<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
 
 ### 批量导入标注问答对
 
 在批量导入功能内，你可以下载标注导入模板，按模版格式编辑标注问答对，编辑好后在此批量导入。
 
-<figure><img src="../../.gitbook/assets/image (5) (1) (1) (1).png" alt=""><figcaption><p>批量导入标注问答对</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (5) (1) (1) (1) (1).png" alt=""><figcaption><p>批量导入标注问答对</p></figcaption></figure>
 
 ### 批量导出标注问答对
 
 通过标注批量导出功能，你可以一次性导出系统内已保存的所有标注问答对。
 
-<figure><img src="../../.gitbook/assets/image (6) (1) (1) (1).png" alt=""><figcaption><p>批量导出标注问答对</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (6) (1) (1) (1) (1).png" alt=""><figcaption><p>批量导出标注问答对</p></figcaption></figure>
 
 ### 查看标注回复命中历史
 
 在标注命中历史功能内，你可以查看所有命中该条标注的编辑历史、命中的用户问题、回复答案、命中来源、匹配相似分数、命中时间等信息，你可以根据这些系统信息持续改进你的标注内容。
 
-<figure><img src="../../.gitbook/assets/image (8) (1) (1).png" alt=""><figcaption><p>查看标注回复命中历史</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (8) (1) (1) (1).png" alt=""><figcaption><p>查看标注回复命中历史</p></figcaption></figure>

@@ -64,7 +64,7 @@
 
 #### **示例 2：长文章迭代生成器（另一种编排方式）**
 
-<figure><img src="../../../.gitbook/assets/image (2) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 * 在 **开始节点** 内输入故事标题和大纲
 * 使用 **LLM 节点** 生成文章小标题，以及小标题对应的内容
@@ -138,7 +138,7 @@
 
 **使用代码节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1).png" alt="" width="334"><figcaption><p>代码节点转换</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1).png" alt="" width="334"><figcaption><p>代码节点转换</p></figcaption></figure>
 
 ```python
 def main(articleSections: list):
@@ -150,7 +150,7 @@ def main(articleSections: list):
 
 **使用模板节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (3) (1).png" alt="" width="332"><figcaption><p>模板节点转换</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1).png" alt="" width="332"><figcaption><p>模板节点转换</p></figcaption></figure>
 
 ```django
 {{ articleSections | join("\n") }}

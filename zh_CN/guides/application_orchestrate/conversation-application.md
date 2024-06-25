@@ -22,7 +22,7 @@
 
 应用成功后会自动跳转到应用概览页。点击左侧菜单 **编排** 来编排应用。
 
-<figure><img src="../../.gitbook/assets/image (10).png" alt=""><figcaption><p>应用编排</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (10) (1).png" alt=""><figcaption><p>应用编排</p></figcaption></figure>
 
 **填写提示词**
 
