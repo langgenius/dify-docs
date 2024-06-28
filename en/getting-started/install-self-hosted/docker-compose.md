@@ -8,6 +8,12 @@
 | Linux platforms            | <p>Docker 19.03 or later<br>Docker Compose 1.25.1 or later</p> | Please refer to the [Docker installation guide](https://docs.docker.com/engine/install/) and [the Docker Compose installation guide](https://docs.docker.com/compose/install/) for more information on how to install Docker and Docker Compose, respectively.                                                                            |
 | Windows with WSL 2 enabled | Docker Desktop                                                 | We recommend storing the source code and other data that is bound to Linux containers in the Linux file system rather than the Windows file system. For more information, please refer to the [Docker Desktop installation guide for using the WSL 2 backend on Windows.](https://docs.docker.com/desktop/windows/install/#wsl-2-backend) |
 
+> [!IMPORTANT]
+>
+> Dify 0.6.12 has introduced significant enhancements to Docker Compose deployment, designed to improve your setup and update experience. For more information, read our [release log](https://github.com/langgenius/dify/releases/tag/0.6.12).
+
+
+
 ### Clone Dify
 
 Clone the Dify source code to your local machine:
@@ -22,6 +28,7 @@ Navigate to the docker directory in the Dify source code and execute the followi
 
 ```bash
 cd dify/docker
+cp .env.example .env
 docker compose up -d
 ```
 
@@ -46,7 +53,7 @@ Finally, check if all containers are running successfully:
 docker compose ps
 ```
 
-This includes 3 business services: api / worker / web, and 4 underlying components: weaviate / db / redis / nginx.
+This includes 3 core services: api / worker / web, and 4 dependent components: weaviate / db / redis / nginx.
 
 ```bash
 NAME                IMAGE                              COMMAND                  SERVICE             CREATED             STATUS              PORTS
@@ -77,10 +84,11 @@ Finally, access [http://localhost/install](http://localhost/install) to use the 
 
 ### Customize Dify
 
-The full set of environment variables can be found under docker/dotenvs. To change their values, delete the `.example` suffix from the corresponding `.env.example` file name and edit the values in file directly. Then, restart Dify with:
+Edit the environment variable values in your `.env` file directly. Then, restart Dify with:
 
 ```
 docker compose down
 docker compose up -d
 ```
 
+The full set of annotated environment variables along can be found under docker/.env.example. 

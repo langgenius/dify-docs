@@ -20,6 +20,7 @@ Before enabling business services, we need to first deploy PostgresSQL / Redis /
 
 ```Bash
 cd docker
+cp middleware.env.example middleware.env
 docker compose -f docker-compose.middleware.yaml up -d
 ```
 
@@ -123,7 +124,7 @@ conda activate dify
                     .> dataset          exchange=dataset(direct) key=dataset
                     .> generation       exchange=generation(direct) key=generation
                     .> mail             exchange=mail(direct) key=mail
-
+    
     [tasks]
       . tasks.add_document_to_index_task.add_document_to_index_task
       . tasks.clean_dataset_task.clean_dataset_task
@@ -141,7 +142,7 @@ conda activate dify
       . tasks.remove_segment_from_index_task.remove_segment_from_index_task
       . tasks.update_segment_index_task.update_segment_index_task
       . tasks.update_segment_keyword_index_task.update_segment_keyword_index_task
-
+    
     [2023-07-31 12:58:08,831: INFO/MainProcess] Connected to redis://:**@localhost:6379/1
     [2023-07-31 12:58:08,840: INFO/MainProcess] mingle: searching for neighbors
     [2023-07-31 12:58:09,873: INFO/MainProcess] mingle: all alone
@@ -190,7 +191,7 @@ Please visit [https://nodejs.org/en/download](https://nodejs.org/en/download) an
     # console or api domain.
     # example: http://udify.app/api
     NEXT_PUBLIC_PUBLIC_API_PREFIX=http://localhost:5001/api
-
+    
     # SENTRY
     NEXT_PUBLIC_SENTRY_DSN=
     NEXT_PUBLIC_SENTRY_ORG=
