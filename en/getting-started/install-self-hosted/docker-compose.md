@@ -10,7 +10,7 @@
 
 > [!IMPORTANT]
 >
-> Dify 0.6.12 has introduced significant enhancements to Docker Compose deployment, designed to improve your setup and update experience. For more information, read our [release log](https://github.com/langgenius/dify/releases/tag/0.6.12).
+> Dify 0.6.12 has introduced significant enhancements to Docker Compose deployment, designed to improve your setup and update experience. For more information, read the [README.md](https://github.com/langgenius/dify/blob/main/docker/README.md).
 
 
 
