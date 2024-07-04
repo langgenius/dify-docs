@@ -88,8 +88,6 @@ docker compose up -d
 编辑 `.env` 文件中的环境变量值。然后，重新启动 Dify：
 
 ```bash
-
-```
 docker compose down
 docker compose up -d
 ```
