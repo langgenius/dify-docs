@@ -200,6 +200,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     * `qdrant`
     * `milvus`
     * `zilliz` 与 `milvus` 一致
+    * `myscale`
     * `pinecone` (暂未开放)
     * `tidb_vector`
 *   WEAVIATE\_ENDPOINT
@@ -241,6 +242,24 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 *   MILVUS\_SECURE
 
     Milvus 是否使用 SSL 连接，默认 false。
+*   MYSCALE\_HOST
+
+    MyScale host 配置。
+*   MYSCALE\_PORT
+
+    MyScale port 配置。
+*   MYSCALE\_USER
+
+    MyScale 用户名配置，默认为 `default`。
+*   MYSCALE\_PASSWORD
+
+    MyScale 密码配置，默认为空。
+*   MYSCALE\_DATABASE
+
+    MyScale 数据库配置，默认为 `default`。
+*   MYSCALE\_FTS\_PARAMS
+
+    MyScale 全文搜索配置, 如需多语言支持，请参考 [MyScale 文档](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters)，默认为空（仅支持英语）。
 
 * TIDB\_VECTOR\_HOST
 

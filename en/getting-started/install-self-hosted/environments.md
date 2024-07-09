@@ -208,6 +208,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     * `qdrant`
     * `milvus`
     * `zilliz` (share the same configuration as `milvus`)
+    * `myscale`
     * `pinecone` (not yet open)
 *   WEAVIATE\_ENDPOINT
 
@@ -250,6 +251,24 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 *   MILVUS\_SECURE
 
     Whether Milvus uses SSL connection, default is false.
+*   MYSCALE\_HOST
+
+    MyScale host configuration.
+*   MYSCALE\_PORT
+
+    MyScale port configuration.
+*   MYSCALE\_USER
+
+    MyScale user configuration, default is `default`.
+*   MYSCALE\_PASSWORD
+
+    MyScale password configuration, default is empty.
+*   MYSCALE\_DATABASE
+
+    MyScale database configuration, default is `default`.
+*   MYSCALE\_FTS\_PARAMS
+
+    MyScale text-search params, check [MyScale docs](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters) for multi-language support, default is empty.
 
 #### Knowledge Configuration
 
