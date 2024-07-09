@@ -31,9 +31,9 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 
 <figure><img src="../../../.gitbook/assets/image (252).png" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
 
-复制并保存 **Secret Key** ，**Public Key，Host**
+**Secret Key** と **Public Key，Host** をコピーし、保存します。
 
-<figure><img src="../../../.gitbook/assets/image (254).png" alt=""><figcaption><p>获取 API Key 配置</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (254).png" alt=""><figcaption><p>APIキーの設定を取得する</p></figcaption></figure>
 
 4\. Dify アプリの中に Langfuse を設定します
 監視用のアプリのサイトメニューの**監視**ボタンをクリックし，**設定**をクリックします。
