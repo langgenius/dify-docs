@@ -9,7 +9,7 @@
 
 これらのテンプレートはGitHubで見つけることができます:
 
-* [会話型アプリ](https://github.com/langgenius/webapp-conversation)
+* [対話型アプリ](https://github.com/langgenius/webapp-conversation)
 * [テキスト生成アプリ](https://github.com/langgenius/webapp-text-generator)
 
 ウェブアプリテンプレートを使用する最も迅速な方法は、GitHubの上にある "**Use this template**" をクリックすることです。これにより、新しいリポジトリが派生されます。その後、DifyアプリケーションIDとAPIキーを設定する必要があります。例として:

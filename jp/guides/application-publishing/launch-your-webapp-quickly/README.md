@@ -16,7 +16,7 @@ Difyを使ってAIアプリを作成するメリットの一つは、数分で�
 以下の2種類のアプリには、きれいなWebアプリのインターフェースを提供しています：
 
 * テキスト生成型（[前往预览](text-generator.md)）
-* 会話型（[前往预览](conversation-application.md)）
+* 対話型（[前往预览](conversation-application.md)）
 
 ***
 
