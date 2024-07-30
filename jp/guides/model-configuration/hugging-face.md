@@ -60,7 +60,7 @@ APIトークンは記事の冒頭で設定したAPIキーです。モデル名�
 
 `設定 > モデルプロバイダー > Hugging Face > モデルタイプ`のエンドポイントタイプでInference Endpointsを選択します。以下の図のように設定します：
 
-<figure><img src="../../.gitbook/assets/image (105).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/jp-hugging-face-t2t.png" alt=""><figcaption></figcaption></figure>
 
 APIトークンは記事の冒頭で設定したAPIキーです。`テキスト生成モデルの名前は任意に設定可能ですが、埋め込みモデルの名前はHugging Faceの名前と一致する必要があります。`エンドポイントURLは前のステップでデプロイしたモデルのエンドポイントURLを入力します。
 

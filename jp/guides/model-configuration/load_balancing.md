@@ -6,7 +6,7 @@
 
 **モデルプロバイダー -- モデルリスト -- 設定モデルロードバランシング** でこの機能を有効にし、同じモデルに複数の資格情報（APIキー）を追加することができます。
 
-<figure><img src="../../.gitbook/assets/image (2) (1) (1).png" alt="" width="563"><figcaption><p>モデルロードバランシング</p></figcaption></figure>
+<figure><img src="../../../img/jp-load_balancing_1.png" alt="" width="563"><figcaption><p>モデルロードバランシング</p></figcaption></figure>
 
 {% hint style="info" %}
 モデルロードバランシングは有料機能です。[SaaS有料サービスのサブスクリプション](../../getting-started/cloud.md#ding-yue-ji-hua)または企業版の購入を通じてこの機能を有効にすることができます。
@@ -14,7 +14,7 @@
 
 デフォルト設定では、APIキーは初回設定時にモデルプロバイダーに追加された資格情報です。**設定の追加** をクリックして、同じモデルの異なるAPIキーを追加することで、ロードバランシング機能を正常に使用できます。
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1).png" alt="" width="563"><figcaption><p>ロードバランシングの設定</p></figcaption></figure>
+<figure><img src="../../img/jp-load_balancing_2.png" alt="" width="563"><figcaption><p>ロードバランシングの設定</p></figcaption></figure>
 
 **少なくとも1つの追加モデル資格情報**を追加することで、保存しロードバランシングを有効にできます。
 
@@ -24,7 +24,7 @@
 
 設定完了後、モデルリスト内にすべての有効なロードバランシングモデルが表示されます。
 
-<figure><img src="../../.gitbook/assets/image (6).png" alt="" width="563"><figcaption><p>ロードバランシングの有効化</p></figcaption></figure>
+<figure><img src="../../img/jp-load_balancing_3.png" alt="" width="563"><figcaption><p>ロードバランシングの有効化</p></figcaption></figure>
 
 {% hint style="info" %}
 デフォルトでは、ロードバランシングはラウンドロビン戦略を使用します。レート制限を超えた場合、1分間のクールダウンタイムが適用されます。

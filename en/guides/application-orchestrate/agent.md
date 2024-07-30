@@ -10,10 +10,6 @@ To facilitate quick learning and use, application templates for the Agent Assist
 
 <figure><img src="/en/.gitbook/assets/guides/application_orchestrate/agent/docs-1.png" alt=""><figcaption><p>Explore-Agent Assistant Application Template</p></figcaption></figure>
 
-After entering 'Studio-Assistant', you can begin orchestrating by choosing the Agent Assistant.
-
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/agent/docs-2.png" alt=""><figcaption><p>Studio-Create Agent Assistant</p></figcaption></figure>
-
 The task completion ability of the Agent Assistant depends on the inference capabilities of the model selected. We recommend using a more powerful model series like GPT-4 when employing Agent Assistant to achieve more stable task completion results.
 
 <figure><img src="/en/.gitbook/assets/guides/application_orchestrate/agent/docs-3.png" alt=""><figcaption><p>Selecting the Reasoning Model for Agent Assistant</p></figcaption></figure>

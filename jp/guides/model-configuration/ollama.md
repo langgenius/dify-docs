@@ -27,7 +27,7 @@ Dify は、Ollama でデプロイした大型言語モデルの推論および�
 
    `設定 > モデル供給元 > Ollama` に以下を入力します：
 
-   ![](../../.gitbook/assets/ollama-config-zh.png)
+   ![](../../../img/jp-ollama-config.png)
 
    - モデル名称：`llava`
    
@@ -59,7 +59,7 @@ Dify は、Ollama でデプロイした大型言語モデルの推論および�
 
 4. Ollama モデルの使用
 
-   ![](../../.gitbook/assets/ollama-use-model.png)
+   ![](../../.gitbook/assets/jp-ollama-use-model.png)
 
    設定が必要なアプリのプロンプト編成ページに移動し、Ollama 供給元の `llava` モデルを選択し、モデルパラメーターを設定した後に使用できます。
 

@@ -4,31 +4,35 @@
 
 アプリケーションツールボックスは、Difyの[アプリケーション](../#application\_type)に対して様々な付加機能を提供します。
 
-<figure><img src="../../../.gitbook/assets/image (237).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-app-toolkits-1.png" alt=""><figcaption><p>アプリケーションツールボックスはチャットの場いに</p></figcaption></figure>
+
+<figure><img src="../../../../img/jp-app-toolkits-4.png" alt=""><figcaption><p>アプリケーションツールボックスはワックフローの場いに</p></figcaption></figure>
 
 ### 会話のオープニング
 
 対話型アプリケーションでは、AIが最初の発言や質問を行います。開場のメッセージや質問を編集することで、ユーザーに質問を促し、アプリの背景を説明し、対話のハードルを下げることができます。
 
-<figure><img src="../../../.gitbook/assets/image (240).png" alt=""><figcaption><p>会話のオープニング</p></figcaption></figure>
+<figure><img src="../../../../img/jp-app-toolkits-2.png" alt=""><figcaption><p>会話のオープニング</p></figcaption></figure>
 
 ### 次の質問の提案
 
 次の質問の提案を設定すると、AIが前回の対話内容に基づいて3つの質問を生成し、次の対話を誘導します。
 
-<figure><img src="../../../.gitbook/assets/image (241).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-app-toolkits-3.png" alt=""><figcaption></figcaption></figure>
 
 ### テキストから音声への変換
 
 この機能をオンにすると、AIの返信内容を自然な音声に変換できます。
+アプリケーションツールボックスに「テキストから音声へ」のボタンを押すと、この機能を使えます。
 
-<figure><img src="../../../.gitbook/assets/image (242).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-app-toolkits-5.png" alt=""><figcaption></figcaption></figure>
 
 ### 音声からテキストへの変換
 
 この機能をオンにすると、アプリ内で録音し、その音声を自動的にテキストに変換できます。
+アプリケーションツールボックスに「音声からテキストへ」のボタンを押すと、この機能を使えます。
 
-<figure><img src="../../../.gitbook/assets/image (243).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-app-toolkits-6.png" alt=""><figcaption></figcaption></figure>
 
 ### 引用と帰属
 
