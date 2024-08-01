@@ -13,92 +13,125 @@ Taking a chat assistant as an example, the process is as follows:
 5. In **Debug and Preview**, input user questions related to the knowledge base for debugging
 6. After debugging, **Save and Publish** as an AI knowledge base Q&A application
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/image (187).png" alt=""><figcaption><p>Associating a knowledge base within the application</p></figcaption></figure>
-
 ***
 
-### 2. Recall Modes
+### Connecting Knowledge Bases and Specifying Recall Modes
 
-Enter **Context -- Parameter Settings -- Recall Settings** to choose the recall mode for the knowledge base.
+In applications that utilize multiple knowledge bases, it is essential to configure the recall mode to enhance the precision of retrieved content. To set the recall mode for the knowledge bases, go to **Context -- Parameter Settings -- Recall Settings**.
 
-**N-Choose-1 Recall**: Based on user intent and knowledge base description, the LLM autonomously selects the most relevant single knowledge base to query for related text.
+#### N-to-1 Recall (Legacy)
 
-**Multi-Path Recall**: Matches all knowledge bases simultaneously based on user intent, querying related text fragments from multiple knowledge bases. After a re-ranking step, the best result matching the user question is selected from the multi-path query results. Requires configuration of the Rerank model API.
+The N-to-1 recall method operates through Function Call/ReAct, where each linked knowledge base serves as a functional tool. The LLM autonomously selects the most relevant knowledge base that aligns with the user's query for the search, based on the **semantic similarity between the user's question and the knowledge base description**.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/image (189).png" alt=""><figcaption></figcaption></figure>
+The following diagram illustrates this principle:
 
-**How to Choose a Recall Mode**
+<figure><img src="../../../zh_CN/.gitbook/assets/image (190).png" alt=""><figcaption></figcaption></figure>
 
-N-Choose-1 Recall is driven by Function Call/ReAct, where each associated knowledge base acts as a tool function. The LLM autonomously selects the most relevant knowledge base to query based on the semantic match between the user question and the knowledge base description.
+For instance, in application A, if there are three associated knowledge bases K1, K2, and K3, when a user submits a question, the LLM will evaluate the descriptions of these knowledge bases, identify the best match, and utilize that content for the search.
 
-The effectiveness of the N-Choose-1 mode is influenced by three main factors:
+![](../../../img/en-n-to-1.png)
 
-* **The reasoning capability of the system model:** Some models have unstable adherence to Function Call/ReAct instructions.
-* **Clarity of the knowledge base description:** The description content affects the LLM's reasoning about the user question and the related knowledge base.
-* **Number of knowledge bases:** Too many knowledge bases can affect the LLM's reasoning accuracy and may exceed the context window length of the reasoning model.
+Although this method does not require the configuration of a [Rerank](https://docs.dify.ai/learn-more/extended-reading/retrieval-augment/rerank) model, it only identifies one knowledge base. The effectiveness of this retrieval strategy relies heavily on the LLM's interpretation of the knowledge base description. This may lead to suboptimal judgments during the retrieval process, potentially resulting in incomplete or inaccurate answers, thereby impacting the quality of query outcomes.
 
-**Recommended Configuration for N-Choose-1 Mode:** Choose a system reasoning model with better performance, associate as few knowledge bases as possible, and provide precise knowledge base descriptions.
+Starting in September, this approach will be automatically transitioned to **multi-route recall**, so please prepare accordingly.
 
-When users upload a knowledge base, the system reasoning model automatically generates a summary description for the knowledge base. To achieve the best recall effect in this mode, you can check the system-generated summary description in "Knowledge Base -> Settings -> Knowledge Base Description" to ensure it clearly summarizes the content of the knowledge base.
+In N-to-1 mode, the effectiveness of retrieval is influenced by three primary factors:
 
-Below is the technical flowchart for the N-Choose-1 Recall mode:
+* **The capability of the system inference model** Some models may inconsistently follow Function Call/ReAct instructions.
+* **Clarity of the knowledge base description** A clear description significantly affects the LLM's reasoning regarding the user's question and the relevant knowledge bases.
+* **The number of knowledge bases** An excessive number of knowledge bases can impair the accuracy of the LLM's reasoning and may exceed the context window limit of the inference model.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/image (190).png" alt=""><figcaption></figcaption></figure>
+**Strategies to enhance retrieval effectiveness in N-to-1 mode:**
 
-{% hint style="info" %}
-N-Choose-1 Recall relies on the reasoning capability of the model and has many usage restrictions. The recall strategy for this mode is planned to be adjusted in Q3 2024.
-{% endhint %}
+- Opt for a more effective system inference model, limit the number of associated knowledge bases, and provide clear descriptions for each knowledge base.
 
-#### Multi-Path Recall Mode (Recommended)
+- When uploading content to a knowledge base, the system inference model will automatically generate a summary description. To achieve the best retrieval results in this mode, review the system-generated summary in “Knowledge Base -> Settings -> Knowledge Base Description” to ensure it effectively summarizes the content of the knowledge base.
 
-In Multi-Path Recall mode, the retriever searches for text content related to the user question across all knowledge bases associated with the application. The results of the multi-path recall are merged, and a subsequent re-ranking (Rerank) step reorders the retrieved documents semantically.
+#### Multi-route Recall (Recommended)
 
-Below is the technical flowchart for the Multi-Path Recall mode:
+In the multi-route recall mode, the retriever scans all knowledge bases linked to the application for text content relevant to the user's question. The results are then consolidated. Below is the technical flowchart for the multi-route recall mode:
 
-<figure><img src="https://docs.dify.ai/~gitbook/image?url=https%3A%2F%2F1288284732-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FCdDIVDY6AtAz028MFT4d%252Fuploads%252Fgit-blob-9bb237ea9a2b4cc09637e951e696d5b52eb31033%252Fimage.png%3Falt%3Dmedia&#x26;width=768&#x26;dpr=4&#x26;quality=100&#x26;sign=0790e257848b5e6c45ce226109aa1c2f5d54bae1c04d1e14dec9fa6a46bdee17" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/rerank-flow-chart.png" alt=""><figcaption></figcaption></figure>
 
-{% hint style="info" %}
-Multi-Path Recall mode requires the configuration of a Rerank model.
-{% endhint %}
+This method simultaneously queries all knowledge bases listed in **"Context"**, seeking relevant text snippets across multiple knowledge bases, collecting all content that aligns with the user's question, and ultimately applying the Rerank strategy to identify the most appropriate content to respond to the user. This retrieval approach is more scientifically robust.
 
-The Multi-Path Recall mode does not depend on the reasoning capability of the model or the knowledge base description. This mode can achieve higher quality recall effects when retrieving from multiple knowledge bases. Therefore, it is **recommended to set the recall mode to Multi-Path Recall**.
+<figure><img src="../../../img/en-rag-multiple.png" alt=""><figcaption></figcaption></figure>
 
-***
+For example, in application A, with three knowledge bases K1, K2, and K3, when a user poses a question, multiple relevant pieces of content will be retrieved and combined from these knowledge bases. To ensure the most pertinent content is identified, the Rerank strategy is employed to find the content that best relates to the user's query, enhancing the precision and reliability of the results.
 
-### 3. Re-Ranking (Rerank)
+In practical Q&A scenarios, the sources of content and retrieval methods for each knowledge base may differ. To manage the mixed content returned from retrieval, the [Rerank strategy](https://docs.dify.ai/learn-more/extended-reading/retrieval-augment/rerank) acts as a refined sorting mechanism. It ensures that the candidate content aligns well with the user's question, optimizing the ranking of results across multiple knowledge bases to identify the most suitable content, thereby improving answer quality and overall user experience.
 
-The re-ranking model improves the results of semantic sorting by reordering the candidate document list based on the semantic match between the user question and the documents. It calculates the relevance score between the user question and each candidate document and returns a list of documents sorted by relevance from high to low.
+Considering the costs associated with using Rerank and the needs of the business, the multi-recall mode provides two Rerank settings:
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/image (128).png" alt=""><figcaption><p>Hybrid Retrieval + Re-Ranking</p></figcaption></figure>
+##### Weight Settings
 
-{% hint style="info" %}
-For more information about Rerank, please refer to the extended reading [Re-Ranking](integrate\_knowledge\_within\_application.md#zhong-pai-xu-rerank).
-{% endhint %}
+This setting does not require the configuration of an external Rerank model, meaning that reordering content incurs **no extra costs**. You can select the most appropriate content matching strategy by adjusting the weight ratio sliders for semantics or keywords.
 
-#### How to Configure the Rerank Model?
+- **Semantic Value of 1**
 
-Dify currently supports the Cohere Rerank model. Enter the "Model Provider -> Cohere" page and fill in the Rerank model's API key:
+  This mode activates semantic retrieval only. By utilizing the Embedding model, the search depth can be enhanced even if the exact words from the query do not appear in the knowledge base, as it calculates vector distances to return the relevant content. Furthermore, when dealing with multilingual content, semantic retrieval can capture meanings across different languages, yielding more accurate cross-language search results.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/image (112).png" alt=""><figcaption><p>Configuring the Cohere Rerank model in the model provider</p></figcaption></figure>
+- **Keyword Value of 1**
 
-How to obtain the Cohere Rerank model?
+  This mode activates keyword retrieval only. It matches the user's input text against the full text of the knowledge base, making it ideal for scenarios where the user knows the exact information or terminology. This method is resource-efficient, making it suitable for quickly retrieving information from large document repositories.
 
-Log in to [https://cohere.com/rerank](https://cohere.com/rerank), register on the page, apply for the usage qualification of the Rerank model, and obtain the API key.
+- **Custom Keyword and Semantic Weights**
 
-{% hint style="info" %}
-Besides supporting the Cohere Rerank API, you can also use local inference frameworks like Ollama and Xinference to deploy local Rerank models such as bge-reranker.
-{% endhint %}
+  In addition to enabling only semantic or keyword retrieval modes, we offer flexible custom weight settings. You can determine the best weight ratio for your business scenario by continuously adjusting the weights of both.
 
-#### Setting the Rerank Model
+##### Rerank Model
 
-Go to the "Dataset -> Create Dataset -> Retrieval Settings" page and add the Rerank settings. In addition to setting Rerank when creating a dataset, you can also change the Rerank configuration in the settings of an already created dataset. Change the Rerank configuration in the recall mode settings of the application orchestration dataset.
+The Rerank model is an external scoring system that calculates the relevance score between the user's question and each candidate document provided, improving the results of semantic ranking and returning a list of documents sorted by relevance from high to low.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/setting-rerank-retrieval.png" alt="" width="563"><figcaption><p>Setting the Rerank model in the dataset retrieval mode</p></figcaption></figure>
+While this method incurs some additional costs, it is more adept at handling complex knowledge base content, such as content that combines semantic queries and keyword matches, or cases involving multilingual returned content.
 
-**TopK**: Used to set the number of relevant documents returned after Rerank.
+Click here to learn more about the [reordering](https://docs.dify.ai/learn-more/extended-reading/retrieval-augment/rerank) mechanism.
 
-**Score Threshold**: Used to set the minimum score of relevant documents returned after Rerank. After setting the Rerank model, the TopK and Score Threshold settings only take effect in the Rerank step.
+Dify currently supports multiple Rerank models. Enter the API Key for the Rerank model (such as Cohere, Jina, etc.) on the "Model Provider" page.
 
-When setting the recall mode to Multi-Path Recall in the "Prompt Orchestration -> Context -> Settings" page, you need to enable the Rerank model.
+<figure><img src="../../../img/en-rerank-model-api.png" alt=""><figcaption><p>Configuring the Rerank model in the Model Provider</p></figcaption></figure>
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/setting-rerank-multipath.png" alt=""><figcaption><p>Setting the Rerank model in the dataset multi-path recall mode</p></figcaption></figure>
+##### Adjustable Parameters
+
+- **TopK**
+
+  This parameter filters the text segments that are most similar to the user's question. The system dynamically adjusts the number of segments based on the context window size of the selected model. A higher value results in more text segments being recalled.
+
+- **Score Threshold**
+
+  This parameter establishes the similarity threshold for filtering text segments. Only those segments with a vector retrieval similarity score exceeding the set threshold will be recalled. A higher threshold value results in fewer texts being recalled.
+
+The multi-recall mode can achieve higher quality recall results when retrieving from multiple knowledge bases; therefore, it is **recommended to set the recall mode to multi-recall**.
+
+### Frequently Asked Questions
+
+1. **How should I choose Rerank settings in multi-recall mode?**
+
+If users know the exact information or terminology, and keyword retrieval can accurately deliver matching results, it is advised to use the **keyword priority mode** in the "Weight Settings".
+
+If the exact vocabulary does not appear in the knowledge base, or if there are cross-language queries, it is recommended to use the **semantic priority** mode in the "Weight Settings".
+
+If business personnel are familiar with the actual questioning scenarios of users and wish to actively adjust the ratio of semantics or keywords, it is advisable to use the **custom mode** in the "Weight Settings".
+
+If the content in the knowledge base is complex and cannot be matched by simple conditions such as semantics or keywords, while requiring precise answers, and if you are willing to incur additional costs, it is recommended to utilize the **Rerank model** for content retrieval.
+
+2. **What should I do if I encounter issues finding the “Weight Settings” or the requirement to configure a Rerank model?**
+
+Here’s how the retrieval method of the knowledge base affects multi-recall:
+
+| Knowledge Base Index Mode | Knowledge Base Retrieval Settings | Embedding Model | Multi-recall Page Prompt | Reason |
+| --- | --- | --- | --- | --- |
+| Economy Type | Inverted Index | None | Weight configuration unavailable, Rerank model can be enabled | - |
+| High Quality Type | 1. All knowledge bases use vector retrieval | Same Embedding model | Defaults to "Weight Settings," semantic value of 1 | Rerank settings align with knowledge base retrieval settings
+| High Quality Type | 2. All knowledge bases use full-text retrieval | Same Embedding model | Defaults to "Weight Settings," keyword value of 1 | Rerank settings align with knowledge base retrieval settings |
+| High Quality Type | 3. A mix of both | Same Embedding model | Defaults to "Weight Settings" custom configuration, ratio of semantic:keyword = 0.7:0.3 | Knowledge base content combines semantics and keywords, allowing customization of weight settings |
+| Both Economy and High Quality | Different retrieval settings used | Different Embedding models | Rerank model needs to be enabled | Content sources are complex; enabling Rerank model is recommended to ensure quality of content return |
+| High Quality | Same/different retrieval settings used | Different Embedding models | Rerank model needs to be enabled | ontent sources are not uniform, making it impossible to sort by the same standard. Configuring the Rerank model is necessary to enhance retrieval accuracy. |
+
+3. **What should I do if I cannot adjust the “Weight Settings” when referencing multiple knowledge bases and an error message appears?**
+
+This issue occurs because the embedding models used in the multiple referenced knowledge bases are inconsistent, prompting this notification to avoid conflicts in retrieval content. It is advisable to set and enable the Rerank model in the "Model Provider" or unify the retrieval settings of the knowledge bases.
+
+4. **Why can't I find the “Weight Settings” option in multi-recall mode, and only see the Rerank model?**
+
+Please check whether your knowledge base is using the “Economy” index mode. If so, switch it to the “High Quality” index mode.

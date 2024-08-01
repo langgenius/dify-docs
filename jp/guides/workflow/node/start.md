@@ -6,7 +6,7 @@
 
 開始ノードでは、ワークフローの入力変数をカスタマイズすることができます。すべてのワークフローには開始ノードが必要です。
 
-<figure><img src="../../../.gitbook/assets/image (236).png" alt="" width="375"><figcaption><p>ワークフロー開始ノード</p></figcaption></figure>
+<figure><img src="../../../../img/jp-workflow-start.png" alt="" width="375"><figcaption><p>ワークフロー開始ノード</p></figcaption></figure>
 
 開始ノード内で定義できる入力変数は、次の4種類です：
 
