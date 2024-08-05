@@ -14,7 +14,7 @@
 
 以下の図は製品カスタマーサービスシナリオのサンプルワークフローテンプレートです：
 
-<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-question.png" alt=""><figcaption></figcaption></figure>
 
 このシナリオでは、3つの分類ラベル/説明を設定しています：
 
@@ -32,7 +32,7 @@
 
 ### 3 どうやって設定するか
 
-<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-question-setting.png" alt=""><figcaption></figcaption></figure>
 
 **設定手順：**
 

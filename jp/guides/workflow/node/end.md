@@ -9,7 +9,7 @@
 終了ノードは1つ以上の出力変数を宣言する必要があります。この宣言の際、任意の上流ノードの出力変数を参照することができます。
 
 {% hint style="info" %}
-Chatflow 内では終了ノードはサポートされていません
+Chatflow の場いは終了ノードはサポートされていません
 {% endhint %}
 
 ***
@@ -18,12 +18,12 @@ Chatflow 内では終了ノードはサポートされていません
 
 以下の[長編ストーリー生成ワークフロー](iteration.md#shi-li-2-chang-wen-zhang-die-dai-sheng-cheng-qi-ling-yi-zhong-bian-pai-fang-shi)では、終了ノードで宣言された変数 `Output` は上流のコードノードの出力です。つまり、このワークフローはCode3ノードが実行された後に終了し、Code3の実行結果を出力します。
 
-<figure><img src="../../../.gitbook/assets/image (233).png" alt=""><figcaption><p>終了ノード-長編ストーリー生成の例</p></figcaption></figure>
+<figure><img src="../../../../img/jp-end-setting.png" alt=""><figcaption><p>終了ノード-長編ストーリー生成の例</p></figcaption></figure>
 
 **単一ルートの実行例：**
 
-<figure><img src="../../../.gitbook/assets/output (5).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-end-result.png" alt=""><figcaption></figcaption></figure>
 
 **複数ルートの実行例：**
 
-<figure><img src="../../../.gitbook/assets/output (1) (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-end-double-result.png" alt=""><figcaption></figcaption></figure>

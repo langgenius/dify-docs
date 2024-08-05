@@ -10,17 +10,17 @@
 
 開始ノード内で定義できる入力変数は、次の4種類です：
 
-* テキスト
+* 短文
 * 段落
-* ドロップダウンオプション
+* ドロップダウンオプション(選択)
 * 数字
 * ファイル（近日対応予定）
 
-<figure><img src="../../../.gitbook/assets/output (2) (1).png" alt=""><figcaption><p>開始ノード変数の設定</p></figcaption></figure>
+<figure><img src="../../../../img/jp-start-setting.png" alt=""><figcaption><p>開始ノード変数の設定</p></figcaption></figure>
 
 設定が完了すると、ワークフロー実行時に開始ノードで定義された変数値の入力が求められます。
 
-<figure><img src="../../../.gitbook/assets/output (3) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-start-setup.png" alt=""><figcaption></figcaption></figure>
 
 {% hint style="info" %}
 ヒント：チャットフローでは、開始ノードがシステム組み込み変数 `sys.query` と `sys.files` を提供します。

@@ -14,11 +14,11 @@
 
 **例1：** 純テキストを出力
 
-<figure><img src="../../../.gitbook/assets/output (2) (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-answer-demo.png" alt=""><figcaption></figcaption></figure>
 
 **例2：** 画像+LLMの返信を出力
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-answer-with-image.png" alt=""><figcaption></figcaption></figure>
 
 <figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="275"><figcaption></figcaption></figure>
 

@@ -18,7 +18,7 @@ Jinja2のPythonテンプレート言語を使って、データ変換やテキ�
 
 **例1：**複数の入力（記事のタイトル、紹介、内容）を一つの完全なテキストに結合する
 
-<figure><img src="../../../.gitbook/assets/image (158).png" alt="" width="375"><figcaption><p>テキストの結合</p></figcaption></figure>
+<figure><img src="../../../../img/jp-template.png" alt="" width="375"><figcaption><p>テキストの結合</p></figcaption></figure>
 
 **例2：**ナレッジリトリーバルノードで取得した情報およびその関連メタデータを、構造化されたMarkdown形式にまとめる
 
@@ -26,7 +26,7 @@ Jinja2のPythonテンプレート言語を使って、データ変換やテキ�
 ```Plain
 {% raw %}
 {% for item in chunks %}
-### Chunk {{ loop.index }}.
+### Chunk {{ loop.index }}. 
 ### Similarity: {{ item.metadata.score | default('N/A') }}
 
 #### {{ item.title }}

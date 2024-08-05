@@ -12,7 +12,7 @@
 
 このノードは開発者の柔軟性を大幅に向上させ、ワークフロー内にカスタムPythonまたはJavascriptスクリプトを埋め込んで、事前設定されたノードでは達成できない方法で変数を操作することができます。設定オプションを使用して、必要な入力変数と出力変数を指定し、対応する実行コードを記述できます。
 
-<figure><img src="../../../.gitbook/assets/image (157).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-code.png" alt="" width="375"><figcaption></figcaption></figure>
 
 ## 設定
 他のノードの変数をコードノードで使用する必要がある場合は、`入力変数`で変数名を定義し、これらの変数を参照する必要があります。[変数参照](../key_concept.md#変数)を参考にしてください。
