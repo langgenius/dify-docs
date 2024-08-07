@@ -22,34 +22,34 @@ Difyに貢献したいと思っていることには素晴らしいと思いま�
 
 提案された機能が属する領域に応じて、異なるチームメンバーと連携する必要があります。以下は、各チームメンバーが現在取り組んでいる分野の概要です：
 
-  | メンバー                                                 | 分野                                              |
-  | -------------------------------------------------------- | ------------------------------------------------- |
-  | [@yeuoly](https://github.com/Yeuoly)                     | エージェントの設計                                |
-  | [@jyong](https://github.com/JohnJyong)                   | RAGパイプライン設計                               |
-  | [@GarfieldDai](https://github.com/GarfieldDai)           | ワークフローオーケストレーションの構築            |
-  | [@iamjoel](https://github.com/iamjoel) & [@zxhlyh](https://github.com/zxhlyh) | フロントエンドの使いやすさ向上                    |
-  | [@guchenhe](https://github.com/guchenhe) & [@crazywoola](https://github.com/crazywoola) | 開発者体験、何でも相談窓口                        |
-  | [@takatost](https://github.com/takatost)                 | 全体的なプロダクト方向性とアーキテクチャ          |
+  | Member                                                       | Scope                                                |
+  | ------------------------------------------------------------ | ---------------------------------------------------- |
+  | [@yeuoly](https://github.com/Yeuoly)                         | Architecting Agents                                  |
+  | [@jyong](https://github.com/JohnJyong)                       | RAG pipeline design                                  |
+  | [@GarfieldDai](https://github.com/GarfieldDai)               | Building workflow orchestrations                     |
+  | [@iamjoel](https://github.com/iamjoel) & [@zxhlyh](https://github.com/zxhlyh) | Making our frontend a breeze to use                  |
+  | [@guchenhe](https://github.com/guchenhe) & [@crazywoola](https://github.com/crazywoola) | Developer experience, points of contact for anything |
+  | [@takatost](https://github.com/takatost)                     | Overall product direction and architecture           |
 
-  優先順位の付け方：
+  優先順位の判定ルール：
 
-| 機能タイプ                                                 | 優先度          |
-| --------------------------------------------------------- | --------------- |
-| チームメンバーが高優先度としてラベル付けした機能         | 高優先度        |
-| [コミュニティフィードバックボード](https://github.com/langgenius/dify/discussions/categories/ideas)からの人気のある機能リクエスト | 中優先度        |
-| コア機能でないものや小さな改善                           | 低優先度        |
-| 価値はあるが即時でないもの                               | 将来の機能      |
+| Feature Type                                                 | Priority        |
+| ------------------------------------------------------------ | --------------- |
+| High-Priority Features as being labeled by a team member     | High Priority   |
+| Popular feature requests from our [community feedback board](https://github.com/langgenius/dify/discussions/categories/ideas) | Medium Priority |
+| Non-core features and minor enhancements                     | Low Priority    |
+| Valuable but not immediate                                   | Future-Feature  |
 
 ### その他（例えばバグ報告、パフォーマンス向上、タイポ修正）：
 * すぐにコーディングを開始してください。
 
-  優先順位の付け方：
+  優先順位の判定ルール：
 
-  | イシュータイプ                                             | 優先度          |
-  | --------------------------------------------------------- | --------------- |
-  | コア機能のバグ（ログインできない、アプリケーションが動作しない、セキュリティホール） | クリティカル    |
-  | 非クリティカルなバグ、パフォーマンス向上                    | 中優先度        |
-  | 小さな修正（タイポ、混乱するが動作するUI）                  | 低優先度        |
+  | Issue Type                                                   | Priority        |
+  | ------------------------------------------------------------ | --------------- |
+  | Bugs in core functions (cannot login, applications not working, security loopholes) | Critical        |
+  | Non-critical bugs, performance boosts                        | Medium Priority |
+  | Minor fixes (typos, confusing but working UI)                | Low Priority    |
 
 
 ## インストール
@@ -78,9 +78,9 @@ Difyは以下のツールとライブラリに依存しています：
 
 ### 4. インストール
 
-Difyはバックエンドとフロントエンドで構成されています。`cd api/`を使ってバックエンドディレクトリに移動し、次は[バックエンドREADME](api/README.md)に従ってインストールして下さい。別のターミナルで`cd web/`を使ってフロントエンドディレクトリに移動し、そして[フロントエンドREADME](web/README.md)に従ってインストールして下さい。
+Difyはバックエンドとフロントエンドで構成されています。`cd api/`を使ってバックエンドディレクトリに移動し、次は[バックエンドREADME](https://github.com/langgenius/dify/blob/main/api/README.md)に従ってインストールして下さい。別のターミナルで`cd web/`を使ってフロントエンドディレクトリに移動し、そして[フロントエンドREADME](https://github.com/langgenius/dify/blob/main/web/README.md)に従ってインストールして下さい。
 
-一般的な問題とトラブルシューティングの手順については[インストールFAQ](https://docs.dify.ai/getting-started/faq/install-faq)を参照してください。
+一般的な問題とトラブルシューティングの手順については[インストールFAQ](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq)を参照してください。
 
 ### 5. ブラウザでDifyにアクセスする
 
@@ -150,7 +150,7 @@ DifyのバックエンドはPythonで書かれており、[Flask](https://flask.
 
 最後に、私たちのリポジトリにプルリクエスト（PR）を提出する時が来ました。重要な機能の場合、最初に `deploy/dev` ブランチにマージしてテストを行い、その後 `main` ブランチにマージします。マージコンフリクトが発生した場合や、プルリクエストの提出方法が分からない場合は、[GitHubのプルリクエストチュートリアル](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests)を参照してください。
 
-これで完了です！あなたのPRがマージされると、あなたは私たちの[README](https://github.com/langgenius/dify/blob/main/README.md)に貢献者として掲載されます。
+これで完了です！あなたのPRがマージされると、あなたは私たちの[README](https://github.com/langgenius/dify/blob/main/README_JA.md)に貢献者として掲載されます。
 
 ## ヘルプを求める
 

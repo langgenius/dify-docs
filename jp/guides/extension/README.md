@@ -4,5 +4,10 @@ AIアプリケーションを作成する過程で、開発者は絶えず変化
 
 Difyは以下の2つの拡張方法を提供しています：
 
-* API拡張
-* コード拡張
+{% content-ref url="api-based-extension/" %}
+[API拡張](api-based-extension/)
+{% endcontent-ref %}
+
+{% content-ref url="code-based-extension/" %}
+[コード拡張](code-based-extension/)
+{% endcontent-ref %}

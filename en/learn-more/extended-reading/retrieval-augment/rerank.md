@@ -6,7 +6,7 @@ Hybrid search can leverage the strengths of different retrieval technologies to 
 
 **The re-rank model calculates the semantic match between the list of candidate documents and the user query, reordering them based on semantic match to improve the results of semantic sorting.** The principle is to compute a relevance score between the user query and each candidate document and return a list of documents sorted by relevance from high to low. Common re-rank models include Cohere rerank, bge-reranker, etc.
 
-<figure><img src="../../../.gitbook/assets/image (128).png" alt=""><figcaption><p>Hybrid Search + Re-ranking</p></figcaption></figure>
+<figure><img src="../../../../zh_CN/.gitbook/assets/image (128).png" alt=""><figcaption><p>Hybrid Search + Re-ranking</p></figcaption></figure>
 
 In most cases, there is a preliminary retrieval before re-ranking because calculating the relevance score between a query and millions of documents would be highly inefficient. Therefore, **re-ranking is typically placed at the final stage of the search process and is ideal for merging and sorting results from different retrieval systems.**
 
@@ -24,7 +24,7 @@ For example, with Cohere Rerank, you only need to register an account and apply 
 
 Dify currently supports the Cohere Rerank model. You can enter the "Model Providers -> Cohere" page and fill in the API key for the Re-rank model:
 
-<figure><img src="../../../.gitbook/assets/image (112).png" alt=""><figcaption><p>Configure Cohere Rerank Model in Model Providers</p></figcaption></figure>
+<figure><img src="../../../../zh_CN/.gitbook/assets/image (112).png" alt=""><figcaption><p>Configure Cohere Rerank Model in Model Providers</p></figcaption></figure>
 
 ### How to Obtain the Cohere Rerank Model?
 
@@ -34,7 +34,7 @@ Visit: [https://cohere.com/rerank](https://cohere.com/rerank), register on the p
 
 Enter the "Dataset -> Create Dataset -> Retrieval Settings" page to add the Re-rank settings. Besides setting the Re-rank model when creating a dataset, you can also change the Re-rank configuration in the settings of an existing dataset and in the dataset recall mode settings in application orchestration.
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="563"><figcaption><p>Setting the Re-rank Model in Dataset Retrieval Mode</p></figcaption></figure>
+<figure><img src="../../../../zh_CN/.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="563"><figcaption><p>Setting the Re-rank Model in Dataset Retrieval Mode</p></figcaption></figure>
 
 **TopK:** Used to set the number of relevant documents returned after re-ranking.
 
@@ -46,4 +46,4 @@ Enter the "Prompt Arrangement -> Context -> Settings" page to enable the Re-rank
 
 Explanation about multi-path recall mode: 🔗
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Setting the Re-rank Model in Multi-Path Recall Mode for Datasets</p></figcaption></figure>
+<figure><img src="../../../../zh_CN/.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Setting the Re-rank Model in Multi-Path Recall Mode for Datasets</p></figcaption></figure>

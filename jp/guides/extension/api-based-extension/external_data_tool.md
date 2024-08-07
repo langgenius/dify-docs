@@ -1,6 +1,6 @@
 # 外部データツール
 
-AIアプリケーションを作成する際、開発者はAPI拡張を通じて外部ツールを利用し、追加データを取得してPromptに組み込むことができます。具体的な手順については[external\_data\_tool.md](../../knowledge-base/external\_data\_tool.md "mention")を参照してください。
+AIアプリを作成する際、開発者はAPI拡張を通じて外部ツールを利用し、追加データを取得してPromptに組み込むことができます。具体的な手順については[external-data-tool.md](../../knowledge-base/external-data-tool.md "mention")を参照してください。
 
 ### 前提条件
 

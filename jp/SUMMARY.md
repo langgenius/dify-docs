@@ -89,16 +89,18 @@
     * [LangSmithを統合](guides/monitoring/integrate\_external\_ops\_tools/integrate\_langsmith.md)
     * [LangFuseを統合](guides/monitoring/integrate\_external\_ops\_tools/integrate\_langfuse.md)
 * [拡張](guides/extension/README.md)
-  * [API 拡張](guides/extension/api\_based\_extension/README.md)
-    * [外部データツール](guides/extension/api\_based\_extension/external\_data\_tool.md)
-    * [Cloudflare Workers を使用した API ツールのデプロイ](guides/extension/api\_based\_extension/cloudflare\_workers.md)
-    * [コンテンツモデレーション](guides/extension/api\_based\_extension/moderation.md)
+  * [API 拡張](guides/extension/api-based-extension/README.md)
+    * [外部データツール](guides/extension/api-based-extension/external\_data\_tool.md)
+    * [Cloudflare Workers を使用した API ツールのデプロイ](guides/extension/api-based-extension/cloudflare\_workers.md)
+    * [コンテンツモデレーション](guides/extension/api-based-extension/moderation.md)
   * [コード拡張](guides/extension/code\_based\_extension/README.md)
     * [外部データツール](guides/extension/code\_based\_extension/external\_data\_tool.md)
     * [コンテンツモデレーション](guides/extension/code\_based\_extension/moderation.md)
 * [コラボレーション](guides/workspace/README.md)
   * [発見](guides/workspace/app/README.md)
   * [メンバーの招待と管理](guides/workspace/invite-and-manage-members.md)
+* [アプリの管理](guides/management/README.md)
+  * [アプリの管理](guides/management/manage-app.md)
 
 ## コミュニティ <a href="#community" id="community"></a>
 
@@ -113,19 +115,19 @@
 
 ## もっと読む <a href="#learn-more" id="learn-more"></a>
 
-* [アプリケーションケース](learn-more/use-cases/README.md)
+* [ユースケース](learn-more/use-cases/README.md)
   * [あなた専用のQAチャットボットのトレーニング方法](learn-more/use-cases/train-a-qa-chatbot-that-belongs-to-you.md)
   * [コードなしでMidjourney プロンプトボットを作成する方法](learn-more/use-cases/create-a-midjoureny-prompt-word-robot-with-zero-code.md)
   * [Notion AI アシスタントを構築する](learn-more/use-cases/build-an-notion-ai-assistant.md)
   * [数分で業務データを持つ公式サイトのAIチャットボットを作成する方法](learn-more/use-cases/create-an-ai-chatbot-with-business-data-in-minutes.md)
-  * [フルセットのオープンソースツールを使用したLLMアプリケーションの実践：DifyでBaichuanオープンソースモデル機能を呼び出す](learn-more/use-cases/practical-implementation-of-building-llm-applications-using-a-full-set-of-open-source-tools.md)
-  * [DifyをWeChatエコシステムに統合する方法](learn-more/use-cases/dify-on-wechat.md)
+  <!-- * [フルセットのオープンソースツールを使用したLLMアプリの実践：DifyでBaichuanオープンソースモデル機能を呼び出す](learn-more/use-cases/practical-implementation-of-building-llm-applications-using-a-full-set-of-open-source-tools.md)
+  * [DifyをWeChatエコシステムに統合する方法](learn-more/use-cases/dify-on-wechat.md) -->
 * [拡張読書](learn-more/extended-reading/README.md)
   * [LLMOpsとは何ですか？](learn-more/extended-reading/what-is-llmops.md)
   * [検索強化生成（RAG）](learn-more/extended-reading/retrieval-augment/README.md)
-    * [ハイブリッド検索](learn-more/extended-reading/retrieval-augment/haiburiddo.md)
+    * [ハイブリッド検索](learn-more/extended-reading/retrieval-augment/hybrid-search.md)
     * [リランク](learn-more/extended-reading/retrieval-augment/rerank.md)
-    * [リトリーバルモード](learn-more/extended-reading/retrieval-augment/ritorbarumdo.md)
+    * [リトリーバルモード](learn-more/extended-reading/retrieval-augment/retrieval.md)
   * [プロンプトエンジニアリング](learn-more/extended-reading/prompt-engineering/README.md)
     * [プロンプト専門モード（廃止）](learn-more/extended-reading/prompt-engineering/prompt-engineering-1/README.md)
       * [プロンプト初期テンプレート参考](learn-more/extended-reading/prompt-engineering/prompt-engineering-1/prompt-engineering-template.md)

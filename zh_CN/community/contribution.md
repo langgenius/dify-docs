@@ -31,7 +31,7 @@
   | [@guchenhe](https://github.com/guchenhe) & [@crazywoola](https://github.com/crazywoola) | Developer experience, points of contact for anything |
   | [@takatost](https://github.com/takatost)                     | Overall product direction and architecture           |
 
-  How we prioritize:
+  优先级的评判标准:
 
 | Feature Type                                                 | Priority        |
 | ------------------------------------------------------------ | --------------- |
@@ -43,7 +43,7 @@
 ### 其他任何事情（例如bug报告、性能优化、拼写错误更正）：
 * 立即开始编码。
 
-  How we prioritize:
+  优先级的评判标准:
 
   | Issue Type                                                   | Priority        |
   | ------------------------------------------------------------ | --------------- |
@@ -80,7 +80,7 @@ Dify 依赖以下工具和库：
 
 Dify由后端和前端组成。通过`cd api/`导航到后端目录，然后按照[后端README](https://github.com/langgenius/dify/blob/main/api/README.md)进行安装。在另一个终端中，通过`cd web/`导航到前端目录，然后按照[前端README](https://github.com/langgenius/dify/blob/main/web/README.md)进行安装。
 
-查看[安装常见问题解答](https://docs.dify.ai/getting-started/faq/install-faq)以获取常见问题列表和故障排除步骤。
+查看[安装常见问题解答](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq)以获取常见问题列表和故障排除步骤。
 
 ### 5. 在浏览器中访问Dify
 
@@ -90,7 +90,7 @@ Dify由后端和前端组成。通过`cd api/`导航到后端目录，然后按�
 
 如果您要添加模型提供程序，请参考[此指南](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/README.md)。
 
-如果您要向Agent或Workflow添加工具提供程序，请参考[此指南](https://github.com/langgenius/dify/blob/main/api/core/tools/README.md)。
+如果您要向Agent或Workflow添加工具提供程序，请参考[此指南](https://github.com/langgenius/dify/blob/main/api/core/tools/README_CN.md)。
 
 为了帮助您快速了解您的贡献在哪个部分，以下是Dify后端和前端的简要注释大纲：
 
@@ -150,7 +150,7 @@ Dify的后端使用Python编写，使用[Flask](https://flask.palletsprojects.co
 
 最后，是时候向我们的仓库提交一个拉取请求（PR）了。对于重要的功能，我们首先将它们合并到 `deploy/dev` 分支进行测试，然后再合并到 `main` 分支。如果你遇到合并冲突或者不知道如何提交拉取请求的问题，请查看 [GitHub 的拉取请求教程](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests)。
 
-就是这样！一旦你的 PR 被合并，你将成为我们 [README](https://github.com/langgenius/dify/blob/main/README.md) 中的贡献者。
+就是这样！一旦你的 PR 被合并，你将成为我们 [README](https://github.com/langgenius/dify/blob/main/README_CN.md) 中的贡献者。
 
 ## 获取帮助
 

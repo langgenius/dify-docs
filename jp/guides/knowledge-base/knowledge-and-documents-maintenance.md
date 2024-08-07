@@ -96,11 +96,11 @@
 
 **表示権限**、「自分のみ」または「全チームメンバー」を選択できます。権限を持たない人はデータセットを閲覧および編集することができません。
 
-**インデックスモード**、[参考文献](create\_knowledge\_and\_upload\_documents.md#suo-yin-fang-shi)
+**インデックスモード**、[参考文献](create-knowledge-and-upload-documents.md#suo-yin-fang-shi)
 
 **エンベディングモデル**、ナレッジベースのエンベディングモデルを変更します。エンベディングモデルを変更すると、ナレッジベース内の全てのドキュメントが再度エンベディングされ、以前のエンベディングは削除されます。
 
-**検索設定**、[参考文献](create\_knowledge\_and\_upload\_documents.md#jian-suo-she-zhi)
+**検索設定**、[参考文献](create-knowledge-and-upload-documents.md#jian-suo-she-zhi)
 
 ***
 

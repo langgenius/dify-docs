@@ -96,11 +96,11 @@
 
 **可见权限**，可选择 「 只有我 」 或 「 所有团队成员 」，不具有权限的人将无法查阅和编辑数据集。
 
-**索引模式**，[参考文档](broken-reference)
+**索引模式**，[参考文档](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-5-suo-yin-fang-shi)
 
 **Embedding 模型，**修改知识库的嵌入模型，修改 Embedding 模型将对知识库内的所有文档重新嵌入，原先的嵌入将会被删除。
 
-**检索设置**，[参考文档](broken-reference)
+**检索设置**，[参考文档](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-6-jian-suo-she-zhi)
 
 ***
 

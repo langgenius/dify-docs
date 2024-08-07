@@ -46,7 +46,7 @@ And then edit the opening remarks:
 
 **2.2 Adding Context**
 
-If an application wants to generate content based on private contextual conversations, it can use our [knowledge](broken-reference) feature. Click the "Add" button in the context to add a knowledge base.
+If an application wants to generate content based on private contextual conversations, it can use our [knowledge](../knowledge-base/) feature. Click the "Add" button in the context to add a knowledge base.
 
 ![](../../../img/context.png)
 

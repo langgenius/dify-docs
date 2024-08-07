@@ -8,10 +8,10 @@
 [嵌入网站.md](embedding-in-websites.md)
 {% endcontent-ref %}
 
-{% content-ref url="broken-reference" %}
-[基于 APIs 开发](developing-with-apis.md)
+{% content-ref url="developing-with-apis" %}
+[基于 APIs 开发](developing-with-apis)
 {% endcontent-ref %}
 
 {% content-ref url="based-on-frontend-templates.md" %}
-[based-on-frontend-templates.md](based-on-frontend-templates.md)
+[基于前端组件再开发.md](based-on-frontend-templates.md)
 {% endcontent-ref %}
