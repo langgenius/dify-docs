@@ -117,16 +117,10 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 #### **添加新的片段**
 
 ```
-curl 'https://api.dify.ai/v1/datasets/aac47674-31a8-4f12-aab2-9603964c4789/documents/2034e0c1-1b75-4532-849e-24e72666595b/segment' \
-  --header 'Authorization: Bearer {api_key}' \
-  --header 'Content-Type: application/json' \
-  --data-raw $'"segments":[
-  {"content":"Dify means Do it for you",
-  "keywords":["Dify","Do"]
-  }
-  ]'
-  --compressed
-
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/documents/{document_id}/segments' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data '{"segments": [{"content": "1","answer": "1","keywords": ["a"]}]}'
 ```
 
 
