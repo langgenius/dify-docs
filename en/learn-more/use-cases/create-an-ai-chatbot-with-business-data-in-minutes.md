@@ -21,7 +21,7 @@ If you want to build an AI Chatbot based on the company's existing knowledge bas
 3. select the cleaning method
 4. Click \[Save and Process], and it will take only a few seconds to complete the processing.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (41).png" alt=""><figcaption></figcaption></figure>
+![](../../../img/ai-chatbot-knowledge-base.png)
 
 ### Create an AI application and give it instructions
 
@@ -37,32 +37,26 @@ In this case, we assign a role to the AI:
 
 > Pre prompt：You are Bob, the AI customer service for Dify, specializing in answering questions about Dify's products, team, or LLMOps for users.Please note, refuse to answer when users ask "inappropriate questions", i.e., content beyond the scope of this document.
 
-> Opening remarks：Hey \{{username\}}, I'm Bob☀️, the first AI member of Dify. You can discuss with me any questions related to Dify products, team, and even LLMOps.
+> Opening remarks：Hey \{{User_name\}}, I'm Bob☀️, the first AI member of Dify. You can discuss with me any questions related to Dify products, team, and even LLMOps.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (53).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/app-pre-prompt-opening-remarks.png" alt=""><figcaption></figcaption></figure>
 
 ### Debug the performance of AI Chatbot and publish.
 
 After completing the setup, you can send messages to it on the right side of the current page to debug whether its performance meets expectations. Then click "Publish". And then you get an AI chatbot.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (56).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/debug-ai-chatbot-publish.png" alt=""><figcaption></figcaption></figure>
 
 ### Embed AI Chatbot application into your front-end page.
 
 This step is to embed the prepared AI chatbot into your official website . Click \[Overview] -> \[Embedded], select the script tag method, and copy the script code into the \<head> or \<body> tag of your website. If you are not a technical person, you can ask the developer responsible for the official website to paste and update the page.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (34).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/ai-chatbot-embedded.png" alt=""><figcaption></figcaption></figure>
 
 1. Paste the copied code into the target location on your website.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (26).png" alt=""><figcaption></figcaption></figure>
-
-1. Update your official website and you can get an AI intelligent customer service with your business data. Try it out to see the effect.
-
-<figure><img src="/en/.gitbook/assets/learn-more/image (19).png" alt=""><figcaption></figcaption></figure>
+2. Update your official website and you can get an AI intelligent customer service with your business data. Try it out to see the effect.
 
 Above is an example of how to embed Dify into the official website through the AI chatbot Bob of Dify official website. Of course, you can also use more features provided by Dify to enhance the performance of the chatbot, such as adding some variable settings, so that users can fill in necessary judgment information before interaction, such as name, specific product used and so on.
 
 Welcome to explore in Dify together!
-
-<figure><img src="/en/.gitbook/assets/learn-more/image (25).png" alt=""><figcaption></figcaption></figure>

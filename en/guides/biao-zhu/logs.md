@@ -22,8 +22,7 @@ The logs currently do not include interaction records from the Prompt debugging 
 These annotations will be used for model fine-tuning in future versions of Dify to improve model accuracy and response style. The current preview version only supports annotations.
 {% endhint %}
 
-<!-- TODO CNEN PROBLEM -->
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/logs/app-log.png" alt=""><figcaption><p>Mark logs to improve your app</p></figcaption></figure>
+<figure><img src="../../../img/app-logs-ann.png" alt=""><figcaption><p>Mark logs to improve your app</p></figcaption></figure>
 
 Clicking on a log entry will open the log details panel on the right side of the interface. In this panel, operators can annotate an interaction:
 

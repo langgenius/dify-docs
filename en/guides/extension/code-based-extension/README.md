@@ -2,8 +2,8 @@
 
 For developers deploying Dify locally, if you want to implement extension capabilities without rewriting an API service, you can use code extensions. This allows you to extend or enhance the functionality of the program in code form (i.e., plugin capability) without disrupting the original code logic of Dify. It follows certain interfaces or specifications to achieve compatibility and plug-and-play capability with the main program. Currently, Dify offers two types of code extensions:
 
-* Adding a new type of external data tool [external_data_tool.md](external_data_tool.md "mention")
-* Extending sensitive content moderation strategies [moderation.md](moderation.md "mention")
+* Adding a new type of external data tool [External Data Tool](https://docs.dify.ai/guides/extension/api-based-extension/external-data-tool)
+* Extending sensitive content moderation strategies [Moderation](https://docs.dify.ai/guides/extension/api-based-extension/moderation)
 
 Based on the above functionalities, you can achieve horizontal expansion by following the code-level interface specifications. If you are willing to contribute your extensions to us, we warmly welcome you to submit a PR to Dify.
 

@@ -1,9 +1,9 @@
 # Application Toolbox
 
-In **Studio -- Application Orchestration**, click **Add Feature** to open the application toolbox.
+In **Application Orchestration**, click **Add Feature** to open the application toolbox.
 
 The application toolbox provides various additional features for Dify's [applications](../#application_type):
-<!-- TODO CN IMG -->
+
 <figure><img src="../../../../img/content_moderation.png" alt=""><figcaption></figcaption></figure>
 
 ### Conversation Opening

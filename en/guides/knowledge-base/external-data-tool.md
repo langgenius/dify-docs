@@ -12,7 +12,7 @@ When an end-user makes a request to the dialogue system, the platform's backend 
 
 ## Operating Instructions
 
-1. Before using the external data tool, you need to prepare an API and an API Key for authentication. Please read [external\_data\_tool.md](../extension/api-based-extension/external-data-tool.md "mention")
+1. Before using the external data tool, you need to prepare an API and an API Key for authentication. Please read [External Data Tool](https://docs.dify.ai/guides/extension/api-based-extension/external-data-tool)
 2. Dify provides centralized API management. After adding the API extension configuration in the settings interface, it can be used directly in various applications on Dify.
 
 <figure><img src="/en/.gitbook/assets/guides/knowledge-base/api_based.png" alt=""><figcaption><p>API-based Extension</p></figcaption></figure>

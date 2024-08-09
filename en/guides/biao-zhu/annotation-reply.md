@@ -21,9 +21,9 @@ The annotated replies feature essentially provides another set of retrieval-enha
 
 ### Enabling Annotated Replies in Prompt Orchestration
 
-Enable the annotated replies switch by navigating to “Application Building -> Add Features”:
+Enable the annotated replies switch by navigating to **“Orchestrate -> Add Features”**:
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (9) (1) (1).png" alt=""><figcaption><p>Enabling Annotated Replies in Prompt Orchestration</p></figcaption></figure>
+<figure><img src="../../../img/annotated-replies.png" alt=""><figcaption><p>Enabling Annotated Replies in Prompt Orchestration</p></figcaption></figure>
 
 When enabling, you need to set the parameters for annotated replies, which include: Score Threshold and Embedding Model.
 
@@ -33,27 +33,27 @@ When enabling, you need to set the parameters for annotated replies, which inclu
 
 Click save and enable, and the settings will take effect immediately. The system will generate embeddings for all saved annotations using the embedding model.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (11) (1) (1).png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
+<figure><img src="../../../img/setting-parameters-for-annotated-replies.png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
 
 ### Adding Annotations in the Conversation Debug Page
 
 You can directly add or edit annotations on the model response information in the debug and preview pages.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (13) (1) (1).png" alt=""><figcaption><p>Adding Annotated Replies</p></figcaption></figure>
+<figure><img src="../../../img/add-annotation-reply.png" alt=""><figcaption><p>Adding Annotated Replies</p></figcaption></figure>
 
 Edit the response to the high-quality reply you need and save it.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (14) (1) (1).png" alt=""><figcaption><p>Editing Annotated Replies</p></figcaption></figure>
+<figure><img src="../../../img/editing-annotated-replies.png" alt=""><figcaption><p>Editing Annotated Replies</p></figcaption></figure>
 
 Re-enter the same user question, and the system will use the saved annotation to reply to the user's question directly.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (15) (1).png" alt=""><figcaption><p>Replying to User Questions with Saved Annotations</p></figcaption></figure>
+<figure><img src="../../../img/annotaiton-reply.png" alt=""><figcaption><p>Replying to User Questions with Saved Annotations</p></figcaption></figure>
 
 ### Enabling Annotated Replies in Logs and Annotations
 
-Enable the annotated replies switch by navigating to “Application Building -> Logs and Annotations -> Annotations”:
+Enable the annotated replies switch by navigating to “Logs & Ann. -> Annotations”:
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (3).png" alt=""><figcaption><p>Enabling Annotated Replies in Logs and Annotations</p></figcaption></figure>
+<figure><img src="../../../img/logs-annotation-switch.png" alt=""><figcaption><p>Enabling Annotated Replies in Logs and Annotations</p></figcaption></figure>
 
 ### Setting Parameters for Annotated Replies in the Annotation Backend
 
@@ -63,22 +63,22 @@ The parameters that can be set for annotated replies include: Score Threshold an
 
 **Embedding Model:** This is used to vectorize the annotated text. Changing the model will regenerate the embeddings.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (4) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
+<figure><img src="../../../img/annotated-replies-initial.png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
 
 ### Bulk Import of Annotated Q&A Pairs
 
 In the bulk import feature, you can download the annotation import template, edit the annotated Q&A pairs according to the template format, and then import them in bulk.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (5) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Bulk Import of Annotated Q&A Pairs</p></figcaption></figure>
+<figure><img src="../../../img/bulk-import-annotated.png" alt=""><figcaption><p>Bulk Import of Annotated Q&A Pairs</p></figcaption></figure>
 
 ### Bulk Export of Annotated Q&A Pairs
 
 Through the bulk export feature, you can export all saved annotated Q&A pairs in the system at once.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (6) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Bulk Export of Annotated Q&A Pairs</p></figcaption></figure>
+<figure><img src="../../../img/bulk-export-annotations.png" alt=""><figcaption><p>Bulk Export of Annotated Q&A Pairs</p></figcaption></figure>
 
 ### Viewing Annotation Hit History
 
 In the annotation hit history feature, you can view the edit history of all hits on the annotation, the user's hit questions, the response answers, the source of the hits, the matching similarity scores, the hit time, and other information. You can use this information to continuously improve your annotated content.
 
-<figure><img src="/en/.gitbook/assets/guides/biao-zhu/annotation-reply/image (8) (1) (1) (1) (1).png" alt=""><figcaption><p>Viewing Annotation Hit History</p></figcaption></figure>
+<figure><img src="../../../img/view-annotation-hit-history.png" alt=""><figcaption><p>Viewing Annotation Hit History</p></figcaption></figure>

@@ -1,19 +1,19 @@
-# Maintaining Datasets via API
+# Maintaining Knowledge Base via API
 
-> Authentication and invocation methods are consistent with the application Service API. The difference is that a single dataset API token can operate on all datasets.
+> Authentication and invocation methods are consistent with the application Service API. The difference is that a single knowledge base API token can operate on all knowledge bases.
 
-### Advantages of Using Dataset API
+### Advantages of Using Knowledge Base API
 
-* Synchronize your data system with Dify datasets to create powerful workflows.
-* Provide dataset list, document list, and detail queries to facilitate building your own data management page.
+* Synchronize your data system with Dify knowledge bases to create powerful workflows.
+* Provide knowledge base list, document list, and detail queries to facilitate building your own data management page.
 * Support both plain text and file uploads and updates for documents, and support batch addition and modification at the segment level to streamline your synchronization process.
 * Reduce the time spent on manual document processing and synchronization, enhancing your visibility into Dify's software and services.
 
 ### How to Use
 
-Navigate to the dataset page, and you can switch to the **API** page from the left navigation. On this page, you can view the dataset API documentation provided by Dify and manage the credentials for accessing the dataset API in **API Keys**.
+Navigate to the knowledge base page, and you can switch to the **API ACCESS** page from the left navigation. On this page, you can view the dataset API documentation provided by Dify and manage the credentials for accessing the dataset API in **API Keys**.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/dataset-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
+<figure><img src="../../../img/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
 ### API Call Examples
 

@@ -44,13 +44,13 @@ Copy and save the created API key.
 
 #### 4. Integrating LangSmith with Dify
 
-Configure LangSmith in the Dify application. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Configure** on the page.
+Configure LangSmith in the Dify application. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/integrate_external_ops_tools/integrate-langsmith/image (11).png" alt=""><figcaption><p>Configure LangSmith</p></figcaption></figure>
+<figure><img src="../../../../img/tracing-app-performance.png" alt=""><figcaption><p>Tracing app performance</p></figcaption></figure>
 
 After clicking configure, paste the **API Key** and **project name** created in LangSmith into the configuration and save.
 
-<figure><img src="../../../.gitbook/assets/image (12).png" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
+<figure><img src="../../../../img/config-langsmith.png" alt=""><figcaption><p>Configure LangSmith</p></figcaption></figure>
 
 {% hint style="info" %}
 The configured project name needs to match the project set in LangSmith. If the project names do not match, LangSmith will automatically create a new project during data synchronization.
@@ -58,13 +58,13 @@ The configured project name needs to match the project set in LangSmith. If the 
 
 Once successfully saved, you can view the monitoring status on the current page.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/integrate_external_ops_tools/integrate-langsmith/image (15).png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+<figure><img src="../../../../img/integrate-with-langsmith.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
 
 ### Viewing Monitoring Data in LangSmith
 
 Once configured, the debug or production data from applications within Dify can be monitored in LangSmith.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/integrate_external_ops_tools/integrate-langsmith/image (17).png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
+<figure><img src="../../../../img/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
 
 When you switch to LangSmith, you can view detailed operation logs of Dify applications in the dashboard.
 
@@ -72,7 +72,7 @@ When you switch to LangSmith, you can view detailed operation logs of Dify appli
 
 Detailed LLM operation logs through LangSmith will help you optimize the performance of your Dify application.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/integrate_external_ops_tools/integrate-langsmith/image (18).png" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
+<figure><img src="../../../../img/viewing-app-data-in-langsmith.png" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
 
 ### Monitoring Data List
 

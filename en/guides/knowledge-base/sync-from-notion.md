@@ -7,9 +7,7 @@ Dify datasets support importing from Notion and setting up **synchronization** s
 1. When creating a dataset and selecting the data source, click **Sync from Notion Content -- Bind Now** and follow the prompts to complete the authorization verification.
 2. Alternatively, you can go to **Settings -- Data Sources -- Add Data Source**, click on the Notion source **Bind**, and complete the authorization verification.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/binding-notion.png" alt=""><figcaption><p>Binding Notion</p></figcaption></figure>
-
-<!-- TODO -->
+<figure><img src="../../../img/binding-notion.png" alt=""><figcaption><p>Binding Notion</p></figcaption></figure>
 
 ### Importing Notion Data
 
@@ -25,7 +23,7 @@ _**Please note: Images and files are not currently supported for import, and tab
 
 If your Notion content is modified, you can directly click **Sync** in the Dify dataset **Document List Page** to perform a one-click data synchronization. This step requires token consumption.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/sync-notion.png" alt=""><figcaption><p>Sync Notion Content</p></figcaption></figure>
+<figure><img src="../../../img/sync-notion.png" alt=""><figcaption><p>Sync Notion Content</p></figcaption></figure>
 
 ### Integration Configuration Method for Community Edition Notion
 
@@ -65,10 +63,10 @@ After successfully making the integration public on the integration settings pag
 
 Go back to the Dify source code, and configure the relevant environment variables in the **.env** file. The environment variables are as follows:
 
-**NOTION\_INTEGRATION\_TYPE**=public
+- **NOTION\_INTEGRATION\_TYPE**=public
 
-**NOTION\_CLIENT\_SECRET**=your-client-secret
+- **NOTION\_CLIENT\_SECRET**=your-client-secret
 
-**NOTION\_CLIENT\_ID**=your-client-id
+- **NOTION\_CLIENT\_ID**=your-client-id
 
 After configuration, you can operate the Notion data import and synchronization functions in the dataset.

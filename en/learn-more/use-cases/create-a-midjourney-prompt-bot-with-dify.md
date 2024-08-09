@@ -10,7 +10,7 @@ Dify offers two types of applications: conversational applications similar to Ch
 
 You can access Dify here: https://dify.ai/
 
-<figure><img src="/en/.gitbook/assets/learn-more/create-app.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/mj-prompt-bot-with-dify.png" alt=""><figcaption></figcaption></figure>
 
 Once you've created your application, the dashboard page will display some data monitoring and application settings. Click on "Prompt Engineering" on the left, which is the main working page.
 

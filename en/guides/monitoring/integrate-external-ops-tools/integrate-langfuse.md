@@ -33,17 +33,17 @@ Copy and save the **Secret Key**, **Public Key**, and **Host**.
 
 <figure><img src="/en/.gitbook/assets/guides/monitoring/image (254).png" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
 
-4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Configure** on the page.
+4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (255).png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="../../../../img/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (256).png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="../../../../img/config-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 Once successfully saved, you can view the status on the current page. If it shows as started, it is being monitored.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (257).png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+<figure><img src="../../../../img/monitored-by-langfuse.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
 
 ***
 
@@ -51,11 +51,9 @@ Once successfully saved, you can view the status on the current page. If it show
 
 After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (259).png" alt=""><figcaption><p>Debugging applications in Dify</p></figcaption></figure>
+<figure><img src="../../../../img/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (258).png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
-
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
+<figure><img src="../../../../img/view-traces-in-langfuse.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
 
 ***
 
@@ -74,12 +72,12 @@ After configuration, debugging or production data of the application in Dify can
 | end\_time                                | end\_time               |
 | inputs                                   | input                   |
 | outputs                                  | output                  |
-| 模型token消耗相关                          | usage                   |
+| Model token consumption                  | usage                   |
 | metadata                                 | metadata                |
 | error                                    | level                   |
 | error                                    | status\_message         |
 | \[workflow]                              | tags                    |
-| conversation\_id/workflow时无             | session\_id             |
+| \["message", conversation\_mode]             | session\_id             |
 | conversion\_id                           | parent\_observation\_id |
 
 **Workflow Trace Info**
@@ -128,7 +126,7 @@ After configuration, debugging or production data of the application in Dify can
 | end\_time                        | end\_time                 |
 | inputs                           | input                     |
 | outputs                          | output                    |
-| 模型token消耗相关                  | usage                     |
+| Model token consumption                  | usage                     |
 | metadata                         | metadata                  |
 | error                            | level                     |
 | error                            | status\_message           |
@@ -167,7 +165,7 @@ After configuration, debugging or production data of the application in Dify can
 
 #### Moderation Trace Information
 
-**用于追踪对话审查**
+**Used to track conversation moderation**
 
 | Moderation    | LangFuse Generation/Trace |
 | ------------- | ------------------------- |
@@ -200,7 +198,7 @@ After configuration, debugging or production data of the application in Dify can
 
 #### Suggested Question Trace Information
 
-**用于追踪建议问题**
+**Used to track suggested questions**
 
 | Suggested Question     | LangFuse Generation/Trace |
 | ---------------------- | ------------------------- |
@@ -243,9 +241,9 @@ After configuration, debugging or production data of the application in Dify can
   * workflow\_run\_id - Workflow ID of this runtime
   * from\_source - Message source
 
-#### Dataset Retrieval Trace信息
+#### Dataset Retrieval Trace Information
 
-**用于追踪知识库检索**
+**Used to track knowledge base retrieval**
 
 | Dataset Retrieval     | LangFuse Generation/Trace |
 | --------------------- | ------------------------- |
@@ -278,9 +276,9 @@ After configuration, debugging or production data of the application in Dify can
   * workflow\_run\_id - Workflow ID of this runtime
   * from\_source - Message Source
 
-#### Tool Trace信息
+#### Tool Trace Information
 
-**用于追踪工具调用**
+**Used to track tool invocation**
 
 | Tool                  | LangFuse Generation/Trace |
 | --------------------- | ------------------------- |
@@ -323,9 +321,9 @@ After configuration, debugging or production data of the application in Dify can
   * created\_by\_role - Created by role
   * created\_user\_id - Created user ID
 
-#### Generate Name Trace信息
+#### Generate Name Trace
 
-**用于追踪会话标题生成**
+**Used to track conversation title generation**
 
 | Generate Name     | LangFuse Generation/Trace |
 | ----------------- | ------------------------- |

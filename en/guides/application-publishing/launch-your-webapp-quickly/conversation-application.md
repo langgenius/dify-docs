@@ -13,33 +13,29 @@ Conversational applications engage in continuous dialogue with users in a questi
 
 If you have set variable filling requirements during application orchestration, you will need to fill out the prompted information before entering the conversation window:
 
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (63).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="../../../../img/conversation-chatbot.png" alt="" width="375"><figcaption></figcaption></figure>
 
-Fill in the necessary details and click the "Start Conversation" button to begin chatting.
+Fill in the necessary details and click the "Start Conversation" button to begin chatting. Hover over the AI's response to copy the conversation content, and provide "like" or "dislike" feedback.
 
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (94).png" alt=""><figcaption></figcaption></figure>
-
-Hover over the AI's response to copy the conversation content, and provide "like" or "dislike" feedback.
-
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (26).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/conversation-chatbot-2.png" alt=""><figcaption></figcaption></figure>
 
 ### Creation, Pinning, and Deletion of Conversations
 
 Click the "New Conversation" button to start a new conversation. Hover over a conversation to pin or delete it.
 
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (47).png" alt="" width="242"><figcaption></figcaption></figure>
+<figure><img src="../../../../img/pin-delete-chat.png" alt="" width="242"><figcaption></figcaption></figure>
 
-### Conversation Opening Statements
+### Conversation Opener
 
-If the "Conversation Opening Statement" feature is enabled during application orchestration, the AI application will automatically initiate the first line of dialogue when a new conversation is created:
+If the "Conversation Opener" feature is enabled on the application orchestration page, the AI application will automatically initiate the first line of dialogue when a new conversation is created.
 
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (51).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/conversation-opener.png" alt=""><figcaption></figcaption></figure>
 
-### Next Step Question Suggestions
+### Follow Up
 
-If the "Next Step Question Suggestions" feature is enabled during application orchestration, the system will automatically generate 3 relevant question suggestions after the conversation:
+If the "Follow-up" feature is enabled on the application orchestration page, the system will automatically generate 3 relevant question suggestions after the conversation:
 
-<figure><img src="/en/.gitbook/assets/guides/application-publishing/launch-your-webapp-quickly/conversation-application/image (77).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/conversation-follow-up.png" alt=""><figcaption></figcaption></figure>
 
 ### Speech-to-Text
 
