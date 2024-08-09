@@ -125,6 +125,7 @@
   * [使用全套开源工具构建 LLM 应用实战：在 Dify 调用 Baichuan 开源模型能力](learn-more/use-cases/practical-implementation-of-building-llm-applications-using-a-full-set-of-open-source-tools.md)
   * [手摸手教你把 Dify 接入微信生态](learn-more/use-cases/dify-on-wechat.md)
   * [使用Dify 和Twilio构建WhatsApp机器人](learn-more/use-cases/dify-on-whatsapp.md)
+  * [使用Dify 和Azure Bot Framework构建Microsoft Teams机器人](learn-more/use-cases/dify-on-teams.md)
 * [扩展阅读](learn-more/extended-reading/README.md)
   * [什么是 LLMOps？](learn-more/extended-reading/what-is-llmops.md)
   * [检索增强生成（RAG）](learn-more/extended-reading/retrieval-augment/README.md)
