@@ -24,6 +24,7 @@
   * [Schema](guides/model-configuration/schema.md)
   * [Integrate Open Source Models from Hugging Face](guides/model-configuration/hugging-face.md)
   * [Integrate Open Source Models from Replicate](guides/model-configuration/replicate.md)
+  * [Integrate 100+ LLMs using LiteLLM Proxy](guides/model-configuration/litellm.md)
   * [Integrate Local Models Deployed by Xinference](guides/model-configuration/xinference.md)
   * [Integrate Local Models Deployed by OpenLLM](guides/model-configuration/openllm.md)
   * [Integrate Local Models Deployed by LocalAI](guides/model-configuration/localai.md)
