@@ -50,6 +50,7 @@
     * [パラメータ抽出](guides/workflow/node/parameter\_extractor.md)
     * [HTTPリクエスト](guides/workflow/node/http\_request.md)
     * [ツール](guides/workflow/node/tools.md)
+    * [変数代入](guides/workflow/node/variable\_assigner-1.md)
   * [プレビューとデバッグ](guides/workflow/debug\_and\_preview/README.md)
     * [プレビューと実行](guides/workflow/debug\_and\_preview/yu-lan-yu-yun-hang.md)
     * [ステップデバッグ](guides/workflow/debug\_and\_preview/step\_run.md)
