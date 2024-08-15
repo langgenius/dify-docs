@@ -22,7 +22,7 @@ You can write the **context during the conversation, the file uploaded to the ch
 
 **Scenario 1**
 
-Automatically judge and extract content, store memories in the conversation, record important user information through the session variable array within the conversation, and use these memories to personalize responses in subsequent chats.
+**Automatically judge and extract content**, store history in the conversation, record important user information through the session variable array within the conversation, and use this history content to personalize responses in subsequent chats.
 
 Example: After the conversation starts, LLM will automatically determine whether the user's input contains facts, preferences, or chat history that need to be remembered. If it has, LLM will first extract and store those information, then use it as context to respond. If there is no new information to remember, LLM will directly use the previously relevant memories to answer questions.
 
