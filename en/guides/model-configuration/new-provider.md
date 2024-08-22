@@ -34,7 +34,7 @@ Adding a new provider mainly involves several steps. Here is a brief outline to 
 * Create provider code and implement a `class`.
 * Create corresponding model type `modules` under the provider `module`, such as `llm` or `text_embedding`.
 * Create same-named code files under the corresponding model `module`, such as `llm.py`, and implement a `class`.
-* If there are predefined models, create same-named YAML files under the model `module`, such as `claude-2.1.yaml`, and write them according to the [AI Model Entity](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md).
+* If there are predefined models, create same-named YAML files under the model `module`, such as `claude-2.1.yaml`, and write them according to the [AI Model Entity](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md#aimodelentity).
 * Write test code to ensure functionality is available.
 
 #### Let's Get Started

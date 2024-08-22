@@ -24,7 +24,7 @@ For example, with Cohere Rerank, you only need to register an account and apply 
 
 Dify currently supports the Cohere Rerank model. You can enter the "Model Providers -> Cohere" page and fill in the API key for the Re-rank model:
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (112).png" alt=""><figcaption><p>Configure Cohere Rerank Model in Model Providers</p></figcaption></figure>
+<figure><img src="../../../../img/en-rerank-cohere.png" alt=""><figcaption><p>Configure Cohere Rerank Model in Model Providers</p></figcaption></figure>
 
 ### How to Obtain the Cohere Rerank Model?
 
@@ -34,7 +34,7 @@ Visit: [https://cohere.com/rerank](https://cohere.com/rerank), register on the p
 
 Enter the "Dataset -> Create Dataset -> Retrieval Settings" page to add the Re-rank settings. Besides setting the Re-rank model when creating a dataset, you can also change the Re-rank configuration in the settings of an existing dataset and in the dataset recall mode settings in application orchestration.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="563"><figcaption><p>Setting the Re-rank Model in Dataset Retrieval Mode</p></figcaption></figure>
+<figure><img src="../../../../img/en-rerank-explore.png" alt="" width="563"><figcaption><p>Setting the Re-rank Model in Dataset Retrieval Mode</p></figcaption></figure>
 
 **TopK:** Used to set the number of relevant documents returned after re-ranking.
 
@@ -44,6 +44,6 @@ Enter the "Dataset -> Create Dataset -> Retrieval Settings" page to add the Re-r
 
 Enter the "Prompt Arrangement -> Context -> Settings" page to enable the Re-rank model when setting to multi-path recall mode.
 
-Explanation about multi-path recall mode: 🔗
+Explanation about multi-path recall mode: 🔗Please check the section [Multi-path Retrieval](https://docs.dify.ai/guides/knowledge-base/integrate-knowledge-within-application#multi-path-retrieval-recommended)
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Setting the Re-rank Model in Multi-Path Recall Mode for Datasets</p></figcaption></figure>
+<figure><img src="../../../../img/en-rerank-setting.png" alt=""><figcaption><p>Setting the Re-rank Model in Multi-Path Recall Mode for Datasets</p></figcaption></figure>

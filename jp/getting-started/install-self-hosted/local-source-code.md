@@ -8,7 +8,7 @@
 | Linux プラットフォーム      | <p>Docker 19.03またはそれ以降<br>Docker Compose 1.25.1またはそれ以降</p>| 詳細は[Dockerをインストールする](https://docs.docker.com/engine/install/)および[Docker Composeをインストールする](https://docs.docker.com/compose/install/)を参照してください。                                                      |
 | WSL 2が有効なWindows       | Docker Desktop                                                 | ソースコードや他のデータをLinuxコンテナにバインドする際、WindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細は[WSL 2バックエンドを使用してWindowsにDocker Desktopをインストールする](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
-> OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq#id-15.-wen-ben-zhuan-yu-yin-yu-dao-zhe-ge-cuo-wu-zen-me-ban)を参照してください。
+> OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq#id-15-tekisutomigeniopenai-error-ffmpeg-is-not-installedtoiuergashitano)を参照してください。
 
 Dify コードをクローン：
 

@@ -70,7 +70,7 @@ AIの対話範囲を[ナレッジベース](../knowledge-base/)内に制限し�
 
 ![](../../../img/jp-multiple-models-2.png)
 
-> ⚠️ 複数モデルでデバッグ機能を使用する際に、一部の大きなモデルしか表示されない場合は、他の大きなモデルのキーが追加されていないためです。["新しいプロバイダーの追加"](https://docs.dify.ai/v/zh-hans/guides/model-configuration/new-provider)で、複数のモデルのキーを手動で追加できます。
+> ⚠️ 複数モデルでデバッグ機能を使用する際に、一部の大きなモデルしか表示されない場合は、他の大きなモデルのキーが追加されていないためです。["新しいプロバイダーの追加"](https://docs.dify.ai/v/ja-jp/guides/model-configuration/new-provider)で、複数のモデルのキーを手動で追加できます。
 
 #### アプリケーションの公開
 

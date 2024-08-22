@@ -115,7 +115,7 @@ Query or prefix prompt is too long, you can reduce the preix prompt, or shrink t
 
 ### 16. データセットドキュメントのアップロードサイズ制限は何ですか？
 
-現在、データセットドキュメントのアップロードは1つのドキュメントで最大15MB、ドキュメントの総数は100個に制限されています。ローカルデプロイ版でこの制限を調整する必要がある場合は、[ドキュメント](https://docs.dify.ai/v/zh-hans/getting-started/faq/install-faq#11.-ben-di-bu-shu-ban-ru-he-jie-jue-shu-ju-ji-wen-dang-shang-chuan-de-da-xiao-xian-zhi-he-shu-liang)を参照してください。
+現在、データセットドキュメントのアップロードは1つのドキュメントで最大15MB、ドキュメントの総数は100個に制限されています。ローカルデプロイ版でこの制限を調整する必要がある場合は、[ドキュメント](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq#id-11-rkarubjonnodtasettodedokyumentowoappurdosurunosaizutowosuruha)を参照してください。
 
 ### 17. Claudeモデルを選択しているのに、なぜOpenAIの費用がかかるのですか？
 
@@ -123,7 +123,7 @@ Claudeは埋め込みモデルをサポートしていないため、埋め込�
 
 ### 18. データを使ってモデルの生成能力をより多く活用する方法はありますか？
 
-データセットの使用はデータセットの説明に関係します。データセットの説明を明確に記述するようにします。具体的には[こちらのドキュメント](https://docs.dify.ai/v/zh-hans/advanced/datasets)を参照してください。
+データセットの使用はデータセットの説明に関係します。データセットの説明を明確に記述するようにします。具体的には[こちらのドキュメント](https://docs.dify.ai/v/ja-jp/guides/knowledge-base)を参照してください。
 
 ### 19. データセットドキュメントがExcelの場合、どのように分割するのが良いですか？
 

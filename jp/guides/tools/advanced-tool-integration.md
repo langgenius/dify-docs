@@ -1,6 +1,6 @@
 # 高度接続ツール
 
-高度接続を始める前に、[クイック接続](https://docs.dify.ai/v/zh-hans/guides/tools/quick-tool-integration)を読んで、Difyのツール接続プロセスについて基本的な理解を持っていることを確認してください。
+高度接続を始める前に、[クイック接続](https://docs.dify.ai/v/ja-jp/guides/tools/quick-tool-integration)を読んで、Difyのツール接続プロセスについて基本的な理解を持っていることを確認してください。
 
 ### ツールインターフェース
 
