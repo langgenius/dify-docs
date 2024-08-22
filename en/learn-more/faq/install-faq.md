@@ -55,7 +55,11 @@ This might be due to switching the domain/URL, causing cross-domain issues betwe
 
 This might be due to switching the domain/URL, causing cross-domain issues between the frontend and backend. Update the following configuration items in `docker-compose.yml` to the new domain:
 
-`CONSOLE_API_URL:` Backend URL for the console API. `CONSOLE_WEB_URL:` Frontend URL for the console web. `SERVICE_API_URL:` URL for the service API. `APP_API_URL:` Backend URL for the WebApp API. `APP_WEB_URL:` URL for the WebApp.
+`CONSOLE_API_URL:` Backend URL for the console API.
+`CONSOLE_WEB_URL:` Frontend URL for the console web.
+`SERVICE_API_URL:` URL for the service API.
+`APP_API_URL:` Backend URL for the WebApp API.
+`APP_WEB_URL:` URL for the WebApp.
 
 For more information, please refer to: [Environment Variables](../../getting-started/install-self-hosted/environments.md)
 

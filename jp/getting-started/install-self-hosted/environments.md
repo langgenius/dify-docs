@@ -158,7 +158,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
     WebアプリのCORSクロスオリジンポリシー。デフォルトは`*`、すべてのドメインがアクセス可能です。
 
-詳細な設定については、次のガイドを参照してください：[クロスオリジン/認証関連ガイド](https://docs.dify.ai/learn-more/faq/self-host-faq#id-3.-unable-to-log-in-after-installation-or-receiving-a-401-error-on-subsequent-interfaces-after-a-suc)
+詳細な設定については、次のガイドを参照してください：[クロスオリジン/認証関連ガイド](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq)
 
 #### ファイルストレージ設定
 

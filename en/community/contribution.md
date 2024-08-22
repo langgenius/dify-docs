@@ -79,7 +79,7 @@ Dify requires the following dependencies to build, make sure they're installed o
 
 Dify is composed of a backend and a frontend. Navigate to the backend directory by `cd api/`, then follow the  [Backend README](https://github.com/langgenius/dify/blob/main/api/README.md) to install it. In a separate terminal, navigate to the frontend directory by `cd web/`, then follow the [Frontend README](https://github.com/langgenius/dify/blob/main/web/README.md) to install.
 
-Check the [installation FAQ](https://docs.dify.ai/learn-more/faq/self-host-faq) for a list of common issues and steps to troubleshoot.
+Check the [installation FAQ](https://docs.dify.ai/learn-more/faq/install-faq) for a list of common issues and steps to troubleshoot.
 
 #### 5. Visit dify in your browser
 

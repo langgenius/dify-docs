@@ -55,7 +55,11 @@ FileNotFoundError: File not found
 
 这可能是由于切换了域名/网址，导致前端和服务端跨域，请将 `docker-compose.yml` 中所有的以下配置项改为新的域名：
 
-`CONSOLE_API_URL:` 控制台 API 的后端 URL。 `CONSOLE_WEB_URL:` 控制台网页的前端 URL。 `SERVICE_API_URL:` 服务 API 的 URL。 `APP_API_URL:` WebApp API 的后端 URL。 `APP_WEB_URL:` WebApp 的 URL。
+`CONSOLE_API_URL:` 控制台 API 的后端 URL。
+`CONSOLE_WEB_URL:` 控制台网页的前端 URL。
+`SERVICE_API_URL:` 服务 API 的 URL。
+`APP_API_URL:` WebApp API 的后端 URL。
+`APP_WEB_URL:` WebApp 的 URL。
 
 更多信息，请查看：[环境变量](../../getting-started/install-self-hosted/environments.md)
 
