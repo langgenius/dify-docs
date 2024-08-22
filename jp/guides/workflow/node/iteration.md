@@ -12,7 +12,7 @@
 
 #### **例1：長文反復生成器**
 
-<figure><img src="../../../.gitbook/assets/image (207).png" alt=""><figcaption><p>長文生成器</p></figcaption></figure>
+<figure><img src="../../../../img/long-article-iteration-generator.png" alt=""><figcaption><p>長文生成器</p></figcaption></figure>
 
 1. **開始ノード** 内にタイトルとアウトラインを入力
 2. **コードノード** を使用してユーザー入力から完全な内容を抽出
@@ -24,15 +24,15 @@
 
 1. **開始ノード** にタイトル（title）とアウトライン（outline）を設定；
 
-<figure><img src="../../../.gitbook/assets/image (211).png" alt="" width="375"><figcaption><p>開始ノードの設定</p></figcaption></figure>
+<figure><img src="../../../../img/jp-iteration-start.png" alt="" width="375"><figcaption><p>開始ノードの設定</p></figcaption></figure>
 
 2. **Jinja-2 テンプレートノード** を使用してタイトルとアウトラインを完全なテキストに変換；
 
-<figure><img src="../../../.gitbook/assets/image (209).png" alt="" width="375"><figcaption><p>テンプレートノード</p></figcaption></figure>
+<figure><img src="../../../../img/jp-iteration-outline.png" alt="" width="375"><figcaption><p>テンプレートノード</p></figcaption></figure>
 
 3. **パラメータ抽出ノード** を使用して、ストーリーテキストを配列（Array）構造に変換。抽出パラメータは `sections`、パラメータタイプは `Array[Object]`
 
-<figure><img src="../../../.gitbook/assets/image (210).png" alt="" width="375"><figcaption><p>パラメータ抽出</p></figcaption></figure>
+<figure><img src="../../../../img/workflow-extract-subtitles-and-outlines.png" alt="" width="375"><figcaption><p>パラメータ抽出</p></figcaption></figure>
 
 {% hint style="info" %}
 パラメータ抽出の効果はモデル推論能力と指示に影響されます。推論能力が高いモデルを使用し、**指示** 内に例を追加することでパラメータ抽出の効果を向上させることができます。
@@ -40,11 +40,11 @@
 
 4. ストーリーアウトラインの配列形式を反復ノードの入力として使用し、反復ノード内で **LLM ノード** を使用して処理
 
-<figure><img src="../../../.gitbook/assets/image (220).png" alt="" width="375"><figcaption><p>反復ノードの設定</p></figcaption></figure>
+<figure><img src="../../../../img/workflow-iteration-node.png" alt="" width="375"><figcaption><p>反復ノードの設定</p></figcaption></figure>
 
 LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/item` を設定
 
-<figure><img src="../../../.gitbook/assets/image (221).png" alt="" width="375"><figcaption><p>LLM ノードの設定</p></figcaption></figure>
+<figure><img src="../../../../img/workflow-iteration-llm-node.png" alt="" width="375"><figcaption><p>LLM ノードの設定</p></figcaption></figure>
 
 {% hint style="info" %}
 反復の組み込み変数：`items[object]` と `index[number]`
@@ -56,11 +56,11 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 5. 反復ノード内に **直接応答ノード** を設定して、各反復生成の後にストリーム出力を実現。
 
-<figure><img src="../../../.gitbook/assets/image (223).png" alt="" width="375"><figcaption><p>Answer ノードの設定</p></figcaption></figure>
+<figure><img src="../../../../img/workflow-configure-anwer-node.png" alt="" width="375"><figcaption><p>Answer ノードの設定</p></figcaption></figure>
 
 6. 完全なデバッグとプレビュー
 
-<figure><img src="../../../.gitbook/assets/image (222).png" alt=""><figcaption><p>ストーリー章ごとの多段反復生成</p></figcaption></figure>
+<figure><img src="/en/.gitbook/assets/guides//workflow/node/iteration/image (222).png" alt=""><figcaption><p>ストーリー章ごとの多段反復生成</p></figcaption></figure>
 
 #### **例2：長文反復生成器（別の編成方法）**
 

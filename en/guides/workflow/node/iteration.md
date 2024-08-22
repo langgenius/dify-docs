@@ -64,7 +64,7 @@ Built-in variables for iteration: `items[object]` and `index[number]`.
 
 #### **Example 2: Long Article Iteration Generator (Another Arrangement)**
 
-<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../zh_CN/.gitbook/assets/image (2) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
 * Enter the story title and outline in the **Start Node**.
 * Use an **LLM Node** to generate subheadings and corresponding content for the article.

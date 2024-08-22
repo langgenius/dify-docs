@@ -4,7 +4,7 @@
 
 大規模言語モデル（LLM）を利用して自然言語から推論し、構造化パラメータを抽出し、ツール呼び出しやHTTPリクエストに用いる。
 
-Difyワークフロー内には豊富な[ツール](../../gong-ju.md)が用意されており、その多くは構造化パラメータを入力として要求します。パラメータ抽出器は、ユーザーの自然言語をツールが認識できるパラメータに変換し、ツールの呼び出しを容易にします。
+Difyワークフロー内には豊富な[ツール](../../tools.md)が用意されており、その多くは構造化パラメータを入力として要求します。パラメータ抽出器は、ユーザーの自然言語をツールが認識できるパラメータに変換し、ツールの呼び出しを容易にします。
 
 ワークフロー内の一部のノードは特定のデータ形式を入力として要求します。例えば[イテレーション](iteration.md#ding-yi)ノードの入力は配列形式である必要があり、パラメータ抽出器は[構造化パラメータの変換](iteration.md#shi-li-1-chang-wen-zhang-die-dai-sheng-cheng-qi)を容易に実現します。
 
@@ -16,19 +16,19 @@ Difyワークフロー内には豊富な[ツール](../../gong-ju.md)が用意�
 
 この例では、Arxiv論文検索ツールの入力パラメータとして「論文の著者」または「論文番号」が要求されます。パラメータ抽出器は「この論文の内容は何ですか：2405.10739」という質問から論文番号**2405.10739**を抽出し、ツールのパラメータとして正確に検索します。
 
-<figure><img src="../../../.gitbook/assets/image (8).png" alt=""><figcaption><p>Arxiv論文検索ツール</p></figcaption></figure>
+<figure><img src="../../../../img/jp-parameter-extractor1.png" alt=""><figcaption><p>Arxiv論文検索ツール</p></figcaption></figure>
 
-2. **テキストを構造化データに変換する**例として、長い物語のイテレーション生成アプリの前工程として、テキスト形式の章内容を配列形式に変換し、イテレーションノードでのマルチラウンド生成処理を容易にします。
+2. **テキストを構造化データに変換する**例として、長い物語のイテレーション生成アプリの前工程として、テキスト形式の章内容を配列形式に変換し、[イテレーションノード](iteration.md)でのマルチラウンド生成処理を容易にします。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-parameter-extractor2.png" alt=""><figcaption></figcaption></figure>
 
-3. **構造化データを抽出してHTTPリクエストを使用する**ことで、任意のアクセス可能なURLにリクエストを送信し、外部検索結果の取得やウェブフック、画像生成などのシナリオに適用できます。
+3. **構造化データを抽出して[HTTPリクエスト](https://docs.dify.ai/v/ja-jp/guides/workflow/node/http_request)を使用する**ことで、任意のアクセス可能なURLにリクエストを送信し、外部検索結果の取得やウェブフック、画像生成などのシナリオに適用できます。
 
 ***
 
 ### 3 設定方法
 
-<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-parameter-extractor-setting.png" alt="" width="375"><figcaption></figcaption></figure>
 
 **設定ステップ**
 

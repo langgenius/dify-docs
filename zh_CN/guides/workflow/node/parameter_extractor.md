@@ -4,9 +4,9 @@
 
 利用 LLM 从自然语言推理并提取结构化参数，用于后置的工具调用或 HTTP 请求。
 
-Dify 工作流内提供了丰富的[工具](../../gong-ju.md)选择，其中大多数工具的输入为结构化参数，参数提取器可以将用户的自然语言转换为工具可识别的参数，方便工具调用。
+Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guides/tools)选择，其中大多数工具的输入为结构化参数，参数提取器可以将用户的自然语言转换为工具可识别的参数，方便工具调用。
 
-工作流内的部分节点有特定的数据格式传入要求，如[迭代](iteration.md#ding-yi)节点的输入要求为数组格式，参数提取器可以方便的实现[结构化参数的转换](iteration.md#shi-li-1-chang-wen-zhang-die-dai-sheng-cheng-qi)。
+工作流内的部分节点有特定的数据格式传入要求，如[迭代](iteration.md#id-1-ding-yi)节点的输入要求为数组格式，参数提取器可以方便的实现[结构化参数的转换](iteration.md#id-2-chang-jing)。
 
 ***
 

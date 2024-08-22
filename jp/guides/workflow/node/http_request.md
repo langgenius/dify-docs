@@ -15,7 +15,7 @@ HTTP プロトコルを介してサーバーにリクエストを送信するこ
 
 HTTPリクエストのURL、リクエストヘッダー、クエリパラメータ、リクエストボディの内容、および認証情報などを設定することができます。&#x20;
 
-<figure><img src="../../../.gitbook/assets/image (2).png" alt="" width="332"><figcaption><p>HTTP リクエスト設定</p></figcaption></figure>
+<figure><img src="../../../../img/jp-http-request.png" alt="" width="332"><figcaption><p>HTTP リクエスト設定</p></figcaption></figure>
 
 ***
 
@@ -23,6 +23,6 @@ HTTPリクエストのURL、リクエストヘッダー、クエリパラメー�
 
 このノードの便利な特性の一つは、シナリオに応じてリクエストの異なる部分に動的に変数を挿入できることです。例えば、カスタマーレビュープロセスを処理する際に、ユーザー名や顧客ID、レビュー内容などの変数をリクエストに埋め込むことで、カスタマイズされた自動返信情報を作成したり、特定の顧客情報を取得して関連リソースを特定のサーバーに送信したりすることができます。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>カスタマーレビューの分類</p></figcaption></figure>
+<figure><img src="../../../../img/customer-feedback-classification.png" alt=""><figcaption><p>カスタマーレビューの分類</p></figcaption></figure>
 
 HTTPリクエストの戻り値には、レスポンスボディ、ステータスコード、レスポンスヘッダー、ファイルが含まれます。特に、レスポンスにファイル（現在は画像タイプのみ）が含まれている場合、このノードはファイルを自動的に保存し、後続のプロセスで使用できるようにします。この設計により、処理効率が向上し、ファイルを含むレスポンスの処理がシンプルで直接的になります。

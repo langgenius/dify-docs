@@ -69,7 +69,7 @@
   * [从网页导入数据](guides/knowledge-base/sync\_from\_website.md)
   * [通过 API 维护知识库](guides/knowledge-base/maintain-dataset-via-api.md)
   * [外部数据工具](guides/knowledge-base/wai-bu-shu-ju-gong-ju.md)
-* [工具](guides/gong-ju.md)
+* [工具](guides/tools/README.md)
   * [快速接入工具](guides/tools/quick-tool-integration.md)
   * [高级接入工具](guides/tools/advanced-tool-integration.md)
   * [工具配置](guides/tools/tool-configuration/README.md)
