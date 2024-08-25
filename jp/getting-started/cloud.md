@@ -8,7 +8,7 @@ Difyはすべてのユーザーに[クラウドサービス](http://cloud.dify.a
 
 1. [Difyクラウドサービス](https://cloud.dify.ai)にログインし、新しいワークスペースを作成するか、既存のワークスペースに参加します。
 2. モデルプロバイダーを設定するか、提供されているホスト型モデルプロバイダーを使用します。
-3. [アプリケーションを作成](../guides/application_orchestrate/creating-an-application.md)しましょう！
+3. [アプリケーションを作成](../guides/application-orchestrate/creating-an-application.md)しましょう！
 
 ### サブスクリプションプラン
 

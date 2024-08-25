@@ -1,33 +1,33 @@
-# Code Based Extensions
+# 代码扩展
 
-For developers deploying Dify locally, if you want to implement extension capabilities without rewriting an API service, you can use code extensions. This allows you to extend or enhance the functionality of the program in code form (i.e., plugin capability) without disrupting the original code logic of Dify. It follows certain interfaces or specifications to achieve compatibility and plug-and-play capability with the main program. Currently, Dify offers two types of code extensions:
+对于在本地部署 Dify 的开发人员来说，代码扩展可以在不重写 API 服务的情况下实现功能的扩展。您可以在不破坏 Dify 原始代码逻辑的情况下，以代码形式扩展或增强程序的功能（即插件功能）。它遵循一定的接口或规范，以实现与主程序的兼容性和即插即用功能。目前，Dify 提供两种代码扩展：
 
-* Adding a new type of external data tool [external_data_tool.md](external_data_tool.md "mention")
-* Extending sensitive content moderation strategies [moderation.md](moderation.md "mention")
+* [外部数据工具](external-data-tool.md "mention")
+* [敏感内容审核](moderation.md "mention")
 
-Based on the above functionalities, you can achieve horizontal expansion by following the code-level interface specifications. If you are willing to contribute your extensions to us, we warmly welcome you to submit a PR to Dify.
+基于上述功能，您可以按照代码级接口规范实现横向扩展。如果您愿意为我们贡献您的扩展功能，我们非常欢迎您为 Dify 提交 PR。
 
-## Frontend Component Specification Definition
+## 前端组件规范定义
 
-The frontend styles of code extensions are defined through `schema.json`:
+代码扩展的前端样式通过 `schema.json` 进行定义：
 
-* label: Custom type name, supporting system language switching
-* form_schema: List of form contents
-  * type: Component type
-    * select: Dropdown options
-    * text-input: Text
-    * paragraph: Paragraph
-  * label: Component name, supporting system language switching
-  * variable: Variable name
-  * required: Whether it is required
-  * default: Default value
-  * placeholder: Component hint content
-  * options: Exclusive property for the "select" component, defining the dropdown contents
-    * label: Dropdown name, supporting system language switching
-    * value: Dropdown option value
-  * max_length: Exclusive property for the "text-input" component, maximum length
+* label: 自定义类型名称，支持系统语言切换
+* form_schema: 表单内容列表
+  * type: 组件类型
+    * select: 下拉选项
+    * text-input: 文本
+    * paragraph: 段落
+  * label: 组件名称，支持系统语言切换
+  * variable: 变量名
+  * required: 是否为必填
+  * default：默认值
+  * placeholder: 组件提示内容
+  * options: 组件的专属属性，定义下拉内容
+    * label：下拉菜单名称，支持系统语言切换
+    * value：下拉选项值
+  * max_length：专属属性
 
-### Template Example
+### 模板示例
 
 ```json
 {

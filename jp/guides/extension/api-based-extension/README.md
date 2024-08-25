@@ -260,4 +260,4 @@ Difyクラウド版は内網APIサービスにアクセスできないため、�
 
 Cloudflare Workersを使用してAPIエクステンションをデプロイすることをお勧めします。Cloudflare Workersは簡単にパブリックアドレスを提供でき、無料で使用できます。
 
-[cloudflare\_workers.md](cloudflare\_workers.md "mention")。
+[cloudflare-workers.md](cloudflare-workers.md "mention")。

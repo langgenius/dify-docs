@@ -53,4 +53,4 @@ _请注意确保你使用的设备环境已经授权使用麦克风。_
 
 开启该功能后，当 LLM 回复问题来自知识库的内容时，可以在回复内容下面查看到具体的引用段落信息，包括原始分段文本、分段序号、匹配度等。
 
-详细说明请参考[《引用与归属》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/retrieval_test_and_citation#id-2-yin-yong-yu-gui-shu)。
+详细说明请参考[《引用与归属》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/retrieval-test-and-citation#id-2-yin-yong-yu-gui-shu)。

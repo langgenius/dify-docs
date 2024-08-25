@@ -15,7 +15,7 @@ This node significantly enhances the flexibility for developers, allowing them t
 <figure><img src="/en/.gitbook/assets/guides/workflow/node/code/image (157).png" alt="" width="375"><figcaption></figcaption></figure>
 
 ## Configuration
-If you need to use variables from other nodes in the code node, you must define the variable names in the `input variables` and reference these variables. You can refer to [Variable References](../key_concept.md#variables).
+If you need to use variables from other nodes in the code node, you must define the variable names in the `input variables` and reference these variables. You can refer to [Variable References](../key-concept.md#variables).
 
 ## Usage Scenarios
 Using the code node, you can perform the following common operations:

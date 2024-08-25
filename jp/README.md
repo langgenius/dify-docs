@@ -28,7 +28,7 @@ Difyという言葉は、Define + Modifyから来ており、あなたのAIア�
 
 ### 次のステップ
 
-* [**クイックスタート**](guides/application\_orchestrate/creating-an-application.md)を読んで、Difyのアプリケーション構築プロセスを速覧
+* [**クイックスタート**](guides/application-orchestrate/creating-an-application.md)を読んで、Difyのアプリケーション構築プロセスを速覧
 * [**Difyをサーバーに自分でデプロイ**](getting-started/install-self-hosted/)する方法と[**オープンソースモデルを接続**](guides/model-configuration/)する方法を学ぶ
 * Difyの[**特性仕様**](getting-started/readme/features-and-specifications.md)と**ロードマップ**を理解
 * [**GitHub**](https://github.com/langgenius/dify)で私たちにスターを付け、**コントリビューションガイド**を読む

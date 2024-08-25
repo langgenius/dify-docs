@@ -12,7 +12,7 @@
 
 ## 操作说明
 
-1. 在使用外部数据工具之前，你需要准备一个 API 和用于鉴权的 API Key，请阅读[external\_data\_tool.md](../extension/api-based-extension/external\_data\_tool.md "mention")
+1. 在使用外部数据工具之前，你需要准备一个 API 和用于鉴权的 API Key，请阅读[external-data-tool.md](../extension/api-based-extension/external-data-tool.md "mention")
 2. Dify 提供了集中式的 API 管理，在设置界面统一添加 API 扩展配置后，即可在 Dify 上的各类应用中直接使用。
 
 <figure><img src="../../.gitbook/assets/api_based.png" alt=""><figcaption><p>API-based Extension</p></figcaption></figure>

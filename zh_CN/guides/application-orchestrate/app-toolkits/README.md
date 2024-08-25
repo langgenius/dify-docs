@@ -2,7 +2,7 @@
 
 在 **工作室 -- 应用编排** 内点击 **添加功能**，打开应用工具箱
 
-应用工具箱为 Dify 的[应用](../#application\_type)提供了不同的附加功能：
+应用工具箱为 Dify 的[应用](../#application_type)提供了不同的附加功能：
 
 <figure><img src="../../../.gitbook/assets/image (237).png" alt=""><figcaption></figcaption></figure>
 
@@ -38,7 +38,7 @@
 
 开启功能后，当 LLM 引用知识库内容来回答问题时，可以在回复内容下面查看到具体的引用段落信息，包括原始分段文本、分段序号、匹配度等。
 
-具体介绍请查看[引用与归属](../../knowledge-base/retrieval\_test\_and\_citation.md#id-2-yin-yong-yu-gui-shu)。
+具体介绍请查看[引用与归属](../../knowledge-base/retrieval-test-and-citation.md#id-2-yin-yong-yu-gui-shu)。
 
 ### 内容审查
 

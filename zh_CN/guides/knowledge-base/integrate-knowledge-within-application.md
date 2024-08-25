@@ -2,7 +2,7 @@
 
 ### 在应用内引用知识库
 
-知识库可以作为外部知识提供给大语言模型用于精确回复用户问题，你可以在 Dify 的[所有应用类型](../application\_orchestrate/#application\_type)内关联已创建的知识库。
+知识库可以作为外部知识提供给大语言模型用于精确回复用户问题，你可以在 Dify 的[所有应用类型](../application-orchestrate/#application_type)内关联已创建的知识库。
 
 以聊天助手为例，使用流程如下：
 

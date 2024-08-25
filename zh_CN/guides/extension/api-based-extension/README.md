@@ -260,4 +260,4 @@ API 返回为：
 
 我们推荐你使用 Cloudflare Workers 来部署你的 API 扩展，因为 Cloudflare Workers 可以方便的提供一个公网地址，而且可以免费使用。
 
-[cloudflare\_workers.md](cloudflare\_workers.md "mention")。
+[cloudflare-workers.md](cloudflare-workers.md "mention")。

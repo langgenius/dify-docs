@@ -8,7 +8,7 @@ Dify 为所有人提供了[云服务](http://cloud.dify.ai)，你无需自己部
 
 1. 登录 [Dify 云服务](https://cloud.dify.ai)，创建一个或加入已有的 Workspace
 2. 配置你的模型供应商，或使用我们提供的托管模型供应商
-3. 可以[创建应用](../guides/application\_orchestrate/creating-an-application.md)了！
+3. 可以[创建应用](../guides/application-orchestrate/creating-an-application.md)了！
 
 ### 订阅计划
 

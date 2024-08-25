@@ -22,7 +22,7 @@ Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guide
 
 <figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
 
-3. **提取结构化数据并使用** [**HTTP 请求**](http\_request.md) ，可请求任意可访问的 URL ，适用于获取外部检索结果、webhook、生成图片等情景。
+3. **提取结构化数据并使用** [**HTTP 请求**](http-request.md) ，可请求任意可访问的 URL ，适用于获取外部检索结果、webhook、生成图片等情景。
 
 ***
 

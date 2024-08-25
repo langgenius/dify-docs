@@ -48,6 +48,6 @@ Dify 目前已支持 Cohere Rerank 模型，进入“模型供应商-> Cohere”
 
 进入“提示词编排->上下文->设置”页面中设置为多路召回模式时需开启 Rerank 模型。
 
-查看更多关于多路召回模式的说明，[《多路召回》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/integrate_knowledge_within_application#duo-lu-zhao-hui-tui-jian)。
+查看更多关于多路召回模式的说明，[《多路召回》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/integrate-knowledge-within-application#duo-lu-zhao-hui-tui-jian)。
 
 <figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>数据集多路召回模式中设置 Rerank 模型</p></figcaption></figure>

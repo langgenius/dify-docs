@@ -2,7 +2,7 @@
 
 **スタジオ -- アプリケーションオーケストレーション**内で**機能を追加する**をクリックし、アプリケーションツールボックスを開きます。
 
-アプリケーションツールボックスは、Difyの[アプリケーション](../#application\_type)に対して様々な付加機能を提供します。
+アプリケーションツールボックスは、Difyの[アプリケーション](../#application_type)に対して様々な付加機能を提供します。
 
 <figure><img src="../../../../img/jp-app-toolkits-1.png" alt=""><figcaption><p>アプリケーションツールボックスはチャットの場いに</p></figcaption></figure>
 
@@ -38,7 +38,7 @@
 
 この機能をオンにすると、大規模言語モデルがナレッジベースからの内容を引用して回答する際に、返信内容の下に具体的な引用段落情報（元の段落テキスト、段落番号、マッチ度など）を表示できます。
 
-詳しい説明は[引用と帰属](../../knowledge-base/retrieval\_test\_and\_citation.md#id-2-yin-yong-yu-gui-shu)をご覧ください。
+詳しい説明は[引用と帰属](../../knowledge-base/retrieval-test-and-citation.md#id-2-yin-yong-yu-gui-shu)をご覧ください。
 
 ### コンテンツレビュー
 

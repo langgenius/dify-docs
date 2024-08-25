@@ -6,7 +6,7 @@ Dify 知识库内提供了文本召回测试的功能，用于调试不同检索
 
 <figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>召回测试</p></figcaption></figure>
 
-点击源文本输入框右上角的图标可以更换当前知识库的检索方式和具体参数，**保存之后仅在召回测试的调试过程中生效**。在召回测试完成调试并确认更改知识库的检索参数时，需要在  [知识库设置 > 检索设置](retrieval\_test\_and\_citation.md#zhi-shi-ku-she-zhi) 中进行更改。
+点击源文本输入框右上角的图标可以更换当前知识库的检索方式和具体参数，**保存之后仅在召回测试的调试过程中生效**。在召回测试完成调试并确认更改知识库的检索参数时，需要在  [知识库设置 > 检索设置](retrieval-test-and-citation.md#zhi-shi-ku-she-zhi) 中进行更改。
 
 <figure><img src="../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>召回测试-检索设置</p></figcaption></figure>
 
