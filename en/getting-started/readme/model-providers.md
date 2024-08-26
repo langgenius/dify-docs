@@ -370,9 +370,8 @@ Dify supports the below model providers out-of-box:
     </tbody>
 </table>
 
+where (🛠️) ︎ denotes "function calling" and (👓) denotes "support for vision".
 
-where (🛠️) ︎ denotes Function Calling and (👓) denotes support for vision.
-
-***
+---
 
 This table is continuously updated. We also keep track of model providers requested by community members [here](https://github.com/langgenius/dify/discussions/categories/ideas). If you'd like to see a model provider not listed above, please consider contributing by making a PR. To learn more, check out our [contribution.md](../../community/contribution.md "mention") Guide.
