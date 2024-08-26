@@ -35,6 +35,7 @@
     * [コンテンツモデレーション](guides/application-orchestrate/app-toolkits/moderation-tool.md)
 * [ワークフロー](guides/workflow/README.md)
   * [キーコンセプト](guides/workflow/key-concept.md)
+  * [変数](guides/workflow/variables.md)
   * [ノード説明](guides/workflow/node/README.md)
     * [開始](guides/workflow/node/start.md)
     * [終了](guides/workflow/node/end.md)

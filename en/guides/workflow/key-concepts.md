@@ -10,7 +10,7 @@ For core workflow nodes, please refer to [Node Description](node/).
 
 ### Variables
 
-**Variables are used to link the input and output of nodes within a workflow**, enabling complex processing logic throughout the process. Fore more details, please take refer to [Variables](key-concepts.md#variables).
+**Variables are used to link the input and output of nodes within a workflow**, enabling complex processing logic throughout the process. Fore more details, please take refer to [Variables](variables.md).
 
 ***
 
