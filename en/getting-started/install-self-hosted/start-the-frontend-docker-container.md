@@ -10,15 +10,17 @@ docker run -it -p 3000:3000 -e CONSOLE_URL=http://127.0.0.1:5001 -e APP_URL=http
 
 #### Build Docker Image from Source Code
 
-1.  Build the frontend image：
+1.  Build the frontend image
 
     ```
     cd web && docker build . -t dify-web
     ```
+
 2.  Start the frontend image
 
     ```
     docker run -it -p 3000:3000 -e CONSOLE_URL=http://127.0.0.1:5001 -e APP_URL=http://127.0.0.1:5001 dify-web
     ```
-3. When the console domain and web app domain are different, you can set the CONSOLE\_URL and APP\_URL separately.
-4. To access it locally, you can visit [http://127.0.0.1:3000](http://127.0.0.1:3000/).
+
+3.  When the console domain and web app domain are different, you can set the CONSOLE_URL and APP_URL separately
+4.  To access it locally, you can visit [http://127.0.0.1:3000](http://127.0.0.1:3000/)

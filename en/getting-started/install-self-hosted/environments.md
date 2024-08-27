@@ -2,89 +2,89 @@
 
 ### Common Variables
 
-#### CONSOLE\_API\_URL
+#### CONSOLE_API_URL
 
-The backend URL of the console API, used to concatenate the authorization callback. If empty, it is the same domain. Example: `https://api.console.dify.ai`
+The backend URL for the console API. This is used to construct the authorization callback. If left empty, it defaults to the same domain as the application. Example: `https://api.console.dify.ai`
 
-#### CONSOLE\_WEB\_URL
+#### CONSOLE_WEB_URL
 
-The front-end URL of the console web, used to concatenate some front-end addresses and for CORS configuration use. If empty, it is the same domain. Example: `https://console.dify.ai`
+The front-end URL of the console web interface. This is used to construct front-end addresses and for CORS configuration. If left empty, it defaults to the same domain as the application. Example: `https://console.dify.ai`
 
-#### SERVICE\_API\_URL
+#### SERVICE_API_URL
 
-Service API Url, used to display Service API Base Url to the front-end. If empty, it is the same domain. Example: `https://api.dify.ai`
+The Service API URL, used to display Service API Base URL in the front-end. If left empty, it defaults to the same domain as the application. Example: `https://api.dify.ai`
 
-#### APP\_API\_URL
+#### APP_API_URL
 
-WebApp API backend Url, used to declare the back-end URL for the front-end API. If empty, it is the same domain. Example: `https://app.dify.ai`
+The WebApp API backend URL, used to specify the backend URL for the front-end API. If left empty, it defaults to the same domain as the application. Example: `https://app.dify.ai`
 
-#### APP\_WEB\_URL
+#### APP_WEB_URL
 
-WebApp Url, used to display WebAPP API Base Url to the front-end. If empty, it is the same domain. Example: `https://api.app.dify.ai`
+The WebApp URL, used to display WebAPP API Base URL in the front-end. If left empty, it defaults to the same domain as the application. Example: `https://api.app.dify.ai`
 
-#### FILES\_URL
+#### FILES_URL
 
-File preview or download URL prefix, used to display the file preview or download URL to the front-end or as a multi-modal model input; In order to prevent others from forging, the image preview URL is signed and has a 5-minute expiration time.
+The prefix for file preview or download URLs, used to display these URLs in the front-end and provide them as input for multi-modal models. To prevent forgery, image preview URLs are signed and expire after 5 minutes.
 
 ### Server
 
 #### MODE
 
-Startup mode, only available when starting with docker, not effective when starting from source code.
+Startup mode: This is only available when launched using docker. It is not applicable when running from source code.
 
-*   api
+- api
 
-    Start API Server.
-*   worker
+  Start API Server.
 
-    Start asynchronous queue worker.
+- worker
+
+  Start asynchronous queue worker.
 
 #### DEBUG
 
-Debug mode, default is false. It is recommended to turn on this configuration for local development to prevent some problems caused by monkey patch.
+Debug mode: Disabled by default. It's recommended to enable this setting during local development to prevent issues caused by monkey patching.
 
-#### FLASK\_DEBUG
+#### FLASK_DEBUG
 
-Flask debug mode, it can output trace information at the interface when turned on, which is convenient for debugging.
+Flask debug mode: When enabled, it outputs trace information in the API responses, facilitating easier debugging.
 
-#### SECRET\_KEY
+#### SECRET_KEY
 
-A key used to securely sign session cookies and encrypt sensitive information in the database.
+A secret key used for securely signing session cookies and encrypting sensitive information in the database.
 
-This variable needs to be set when starting for the first time.
+This variable must be set before the first launch.
 
-You can use `openssl rand -base64 42` to generate a strong key.
+You can generate a strong key using `openssl rand -base64 42`.
 
-#### DEPLOY\_ENV
+#### DEPLOY_ENV
 
-Deployment environment.
+Deployment environment:
 
-*   PRODUCTION (default)
+- PRODUCTION (default)
 
-    Production environment.
-*   TESTING
+  Production environment.
 
-    Testing environment. There will be a distinct color label on the front-end page, indicating that this environment is a testing environment.
+- TESTING
 
-#### LOG\_LEVEL
+  Testing environment. There will be a distinct color label on the front-end page, indicating that this environment is a testing environment.
 
-Log output level, default is INFO.
+#### LOG_LEVEL
 
-It is recommended to set it to ERROR for production.
+The log output level. Default is INFO. For production environments, it's recommended to set this to ERROR.
 
-#### MIGRATION\_ENABLED
+#### MIGRATION_ENABLED
 
-When set to true, the database migration will be automatically executed when the container starts, only available when starting with docker, not effective when starting from source code.
+When set to true, database migrations are automatically executed on container startup. This is only available when launched using docker and does not apply when running from source code.
 
-You need to manually execute `flask db upgrade` in the api directory when starting from source code.
+For source code launches, you need to manually run `flask db upgrade` in the api directory.
 
-#### CHECK\_UPDATE\_URL
+#### CHECK_UPDATE_URL
 
-Whether to enable the version check policy. If set to false, `https://updates.dify.ai` will not be called for version check.
+Controls the version checking policy. If set to false, the system will not call `https://updates.dify.ai` to check for updates.
 
-Since the version interface based on CloudFlare Worker cannot be directly accessed in China at present, setting this variable to empty can shield this interface call.
+Currently, the version check interface based on CloudFlare Worker is not directly accessible in China. Setting this variable to an empty value will disable this API call.
 
-#### OPENAI\_API\_BASE
+#### OPENAI_API_BASE
 
 Used to change the OpenAI base address, default is [https://api.openai.com/v1](https://api.openai.com/v1).
 
@@ -94,258 +94,295 @@ When OpenAI cannot be accessed in China, replace it with a domestic mirror addre
 
 Only effective when starting with docker image or docker-compose.
 
-*   DIFY\_BIND\_ADDRESS
+- DIFY_BIND_ADDRESS
 
-    API service binding address, default: 0.0.0.0, i.e., all addresses can be accessed.
-*   DIFY\_PORT
+  API service binding address, default: 0.0.0.0, i.e., all addresses can be accessed.
 
-    API service binding port number, default 5001.
-*   SERVER\_WORKER\_AMOUNT
+- DIFY_PORT
 
-    The number of API server workers, i.e., the number of gevent workers. Formula: `number of cpu cores x 2 + 1`
+  API service binding port number, default to 5001.
 
-    Reference: [https://docs.gunicorn.org/en/stable/design.html#how-many-workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)
-*   SERVER\_WORKER\_CLASS
+- SERVER_WORKER_AMOUNT
 
-    Defaults to gevent. If using windows, it can be switched to sync or solo.
-*   GUNICORN\_TIMEOUT
+  The number of API server workers, i.e., the number of gevent workers. Formula: `number of cpu cores x 2 + 1`
 
-    Request handling timeout. The default is 200, it is recommended to set it to 360 to support a longer sse connection time.
-*   CELERY\_WORKER\_CLASS
+  Reference: [https://docs.gunicorn.org/en/stable/design.html#how-many-workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)
 
-    Similar to `SERVER_WORKER_CLASS`. Default is gevent. If using windows, it can be switched to sync or solo.
-*   CELERY\_WORKER\_AMOUNT
+- SERVER_WORKER_CLASS
 
-    The number of Celery workers. The default is 1, and can be set as needed.
+  Defaults to gevent. If using windows, it can be switched to sync or solo.
+
+- GUNICORN_TIMEOUT
+
+  Request handling timeout. Default is 200. Recommended value is 360 to support longer SSE (Server-Sent Events) connection times.
+
+- CELERY_WORKER_CLASS
+
+  Similar to `SERVER_WORKER_CLASS`. Default is gevent. If using windows, it can be switched to sync or solo.
+
+- CELERY_WORKER_AMOUNT
+
+  The number of Celery workers. The default is 1, and can be set as needed.
 
 #### Database Configuration
 
 The database uses PostgreSQL. Please use the public schema.
 
-* DB\_USERNAME: username
-* DB\_PASSWORD: password
-* DB\_HOST: database host
-* DB\_PORT: database port number, default is 5432
-* DB\_DATABASE: database name
-* SQLALCHEMY\_POOL\_SIZE: The size of the database connection pool. The default is 30 connections, which can be appropriately increased.
-* SQLALCHEMY\_POOL\_RECYCLE: Database connection pool recycling time, the default is 3600 seconds.
-* SQLALCHEMY\_ECHO: Whether to print SQL, default is false.
+- DB_USERNAME: username
+- DB_PASSWORD: password
+- DB_HOST: database host
+- DB_PORT: database port number, default is 5432
+- DB_DATABASE: database name
+- SQLALCHEMY_POOL_SIZE: The size of the database connection pool. The default is 30 connections, which can be appropriately increased.
+- SQLALCHEMY_POOL_RECYCLE: Database connection pool recycling time, the default is 3600 seconds.
+- SQLALCHEMY_ECHO: Whether to print SQL, default is false.
 
 #### Redis Configuration
 
 This Redis configuration is used for caching and for pub/sub during conversation.
 
-* REDIS\_HOST: Redis host
-* REDIS\_PORT: Redis port, default is 6379
-* REDIS\_DB: Redis Database, default is 0. Please use a different Database from Session Redis and Celery Broker.
-* REDIS\_USERNAME: Redis username, default is empty
-* REDIS\_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
-* REDIS\_USE\_SSL: Whether to use SSL protocol for connection, default is false
+- REDIS_HOST: Redis host
+- REDIS_PORT: Redis port, default is 6379
+- REDIS_DB: Redis Database, default is 0. Please use a different Database from Session Redis and Celery Broker.
+- REDIS_USERNAME: Redis username, default is empty
+- REDIS_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
+- REDIS_USE_SSL: Whether to use SSL protocol for connection, default is false
 
 #### Celery Configuration
 
-*   CELERY\_BROKER\_URL
+- CELERY_BROKER_URL
 
-    Format as follows:
+  Format as follows:
 
-    ```
-    redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
-    ```
+  ```
+  redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
+  ```
 
-    Example: `redis://:difyai123456@redis:6379/1`
-*   BROKER\_USE\_SSL
+  Example: `redis://:difyai123456@redis:6379/1`
 
-    If set to true, use SSL protocol for connection, default is false
+- BROKER_USE_SSL
+
+  If set to true, use SSL protocol for connection, default is false
 
 #### CORS Configuration
 
 Used to set the front-end cross-domain access policy.
 
-*   CONSOLE\_CORS\_ALLOW\_ORIGINS
+- CONSOLE_CORS_ALLOW_ORIGINS
 
-    Console CORS cross-domain policy, default is `*`, that is, all domains can access.
-*   WEB\_API\_CORS\_ALLOW\_ORIGINS
+  Console CORS cross-domain policy, default is `*`, that is, all domains can access.
 
-    WebAPP CORS cross-domain policy, default is `*`, that is, all domains can access.
+- WEB_API_CORS_ALLOW_ORIGINS
+
+  WebAPP CORS cross-domain policy, default is `*`, that is, all domains can access.
 
 #### File Storage Configuration
 
 Used to store uploaded data set files, team/tenant encryption keys, and other files.
 
-*   STORAGE\_TYPE
+- STORAGE_TYPE
 
-    Type of storage facility
+  Type of storage facility
 
-    *   local (default)
+  - local (default)
 
-        Local file storage, if this option is selected, the following `STORAGE_LOCAL_PATH` configuration needs to be set.
-    *   s3
+    Local file storage, if this option is selected, the following `STORAGE_LOCAL_PATH` configuration needs to be set.
 
-        S3 object storage, if this option is selected, the following S3\_ prefixed configurations need to be set.
-    *   azure-blob
+  - s3
 
-        Azure Blob object storage, if this option is selected, the following AZURE\_BLOB\_ prefixed configurations need to be set.
-*   STORAGE\_LOCAL\_PATH
+    S3 object storage, if this option is selected, the following S3\_ prefixed configurations need to be set.
 
-    Default is storage, that is, it is stored in the storage directory of the current directory.
+  - azure-blob
 
-    If you are deploying with docker or docker-compose, be sure to mount the `/app/api/storage` directory in both containers to the same local directory, otherwise, you may encounter file not found errors.
-* S3\_ENDPOINT: S3 endpoint address
-* S3\_BUCKET\_NAME: S3 bucket name
-* S3\_ACCESS\_KEY: S3 Access Key
-* S3\_SECRET\_KEY: S3 Secret Key
-* S3\_REGION: S3 region information, such as: us-east-1
-* AZURE\_BLOB\_ACCOUNT\_NAME: your-account-name eg, 'difyai'
-* AZURE\_BLOB\_ACCOUNT\_KEY: your-account-key eg, 'difyai'
-* AZURE\_BLOB\_CONTAINER\_NAME: your-container-name eg, 'difyai-container'
-* AZURE\_BLOB\_ACCOUNT\_URL: 'https://\<your\_account\_name>.blob.core.windows.net'
+    Azure Blob object storage, if this option is selected, the following AZURE_BLOB\_ prefixed configurations need to be set.
+
+- STORAGE_LOCAL_PATH
+
+  Default is storage, that is, it is stored in the storage directory of the current directory.
+
+  If you are deploying with docker or docker-compose, be sure to mount the `/app/api/storage` directory in both containers to the same local directory, otherwise, you may encounter file not found errors.
+
+- S3_ENDPOINT: S3 endpoint address
+- S3_BUCKET_NAME: S3 bucket name
+- S3_ACCESS_KEY: S3 Access Key
+- S3_SECRET_KEY: S3 Secret Key
+- S3_REGION: S3 region information, such as: us-east-1
+- AZURE_BLOB_ACCOUNT_NAME: your-account-name eg, 'difyai'
+- AZURE_BLOB_ACCOUNT_KEY: your-account-key eg, 'difyai'
+- AZURE_BLOB_CONTAINER_NAME: your-container-name eg, 'difyai-container'
+- AZURE_BLOB_ACCOUNT_URL: 'https://\<your_account_name>.blob.core.windows.net'
 
 #### Vector Database Configuration
 
-* VECTOR\_STORE
-  * **Available enumeration types include：**
-    * `weaviate`
-    * `qdrant`
-    * `milvus`
-    * `zilliz` (share the same configuration as `milvus`)
-    * `myscale`
-    * `pinecone` (not yet open)
-*   WEAVIATE\_ENDPOINT
+- VECTOR_STORE
+  - **Available enumeration types include：**
+    - `weaviate`
+    - `qdrant`
+    - `milvus`
+    - `zilliz` (share the same configuration as `milvus`)
+    - `myscale`
+    - `pinecone` (not yet open)
+- WEAVIATE_ENDPOINT
 
-    Weaviate endpoint address, such as: `http://weaviate:8080`.
-*   WEAVIATE\_API\_KEY
+  Weaviate endpoint address, such as: `http://weaviate:8080`.
 
-    The api-key credential used to connect to Weaviate.
-*   WEAVIATE\_BATCH\_SIZE
+- WEAVIATE_API_KEY
 
-    The number of index Objects created in batches in Weaviate, default is 100.
+  The api-key credential used to connect to Weaviate.
 
-    Refer to this document: [https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters](https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters)
-*   WEAVIATE\_GRPC\_ENABLED
+- WEAVIATE_BATCH_SIZE
 
-    Whether to use the gRPC method to interact with Weaviate, performance will greatly increase when enabled, may not be usable locally, default is true.
-*   QDRANT\_URL
+  The number of index Objects created in batches in Weaviate, default is 100.
 
-    Qdrant endpoint address, such as: `https://your-qdrant-cluster-url.qdrant.tech/`
-*   QDRANT\_API\_KEY
+  Refer to this document: [https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters](https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters)
 
-    The api-key credential used to connect to Qdrant.
-*   PINECONE\_API\_KEY
+- WEAVIATE_GRPC_ENABLED
 
-    The api-key credential used to connect to Pinecone.
-*   PINECONE\_ENVIRONMENT
+  Whether to use the gRPC method to interact with Weaviate, performance will greatly increase when enabled, may not be usable locally, default is true.
 
-    The environment where Pinecone is located, such as: `us-east4-gcp`
-*   MILVUS\_HOST
+- QDRANT_URL
 
-    Milvus host configuration.
-*   MILVUS\_PORT
+  Qdrant endpoint address, such as: `https://your-qdrant-cluster-url.qdrant.tech/`
 
-    Milvus port configuration.
-*   MILVUS\_USER
+- QDRANT_API_KEY
 
-    Milvus user configuration, default is empty.
-*   MILVUS\_PASSWORD
+  The api-key credential used to connect to Qdrant.
 
-    Milvus password configuration, default is empty.
-*   MILVUS\_SECURE
+- PINECONE_API_KEY
 
-    Whether Milvus uses SSL connection, default is false.
-*   MYSCALE\_HOST
+  The api-key credential used to connect to Pinecone.
 
-    MyScale host configuration.
-*   MYSCALE\_PORT
+- PINECONE_ENVIRONMENT
 
-    MyScale port configuration.
-*   MYSCALE\_USER
+  The environment where Pinecone is located, such as: `us-east4-gcp`
 
-    MyScale user configuration, default is `default`.
-*   MYSCALE\_PASSWORD
+- MILVUS_HOST
 
-    MyScale password configuration, default is empty.
-*   MYSCALE\_DATABASE
+  Milvus host configuration.
 
-    MyScale database configuration, default is `default`.
-*   MYSCALE\_FTS\_PARAMS
+- MILVUS_PORT
 
-    MyScale text-search params, check [MyScale docs](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters) for multi-language support, default is empty.
+  Milvus port configuration.
+
+- MILVUS_USER
+
+  Milvus user configuration, default is empty.
+
+- MILVUS_PASSWORD
+
+  Milvus password configuration, default is empty.
+
+- MILVUS_SECURE
+
+  Whether Milvus uses SSL connection, default is false.
+
+- MYSCALE_HOST
+
+  MyScale host configuration.
+
+- MYSCALE_PORT
+
+  MyScale port configuration.
+
+- MYSCALE_USER
+
+  MyScale user configuration, default is `default`.
+
+- MYSCALE_PASSWORD
+
+  MyScale password configuration, default is empty.
+
+- MYSCALE_DATABASE
+
+  MyScale database configuration, default is `default`.
+
+- MYSCALE_FTS_PARAMS
+
+  MyScale text-search params, check [MyScale docs](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters) for multi-language support, default is empty.
 
 #### Knowledge Configuration
 
-*   UPLOAD\_FILE\_SIZE\_LIMIT:
+- UPLOAD_FILE_SIZE_LIMIT:
 
-    Upload file size limit, default 15M.
-*   UPLOAD\_FILE\_BATCH\_LIMIT
+  Upload file size limit, default 15M.
 
-    The maximum number of files that can be uploaded at a time, default 5.
-*   ETL\_TYPE
+- UPLOAD_FILE_BATCH_LIMIT
 
-    **Available enumeration types include:**
+  The maximum number of files that can be uploaded at a time, default 5.
 
-    *   dify
+- ETL_TYPE
 
-        Dify's proprietary file extraction scheme
-    *   Unstructured
+  **Available enumeration types include:**
 
-        Unstructured.io file extraction scheme
-*   UNSTRUCTURED\_API\_URL
+  - dify
 
-    Unstructured API path, needs to be configured when ETL\_TYPE is Unstructured.
+    Dify's proprietary file extraction scheme
 
-    For example: `http://unstructured:8000/general/v0/general`
+  - Unstructured
+
+    Unstructured.io file extraction scheme
+
+- UNSTRUCTURED_API_URL
+
+  Unstructured API path, needs to be configured when ETL_TYPE is Unstructured.
+
+  For example: `http://unstructured:8000/general/v0/general`
 
 #### Multi-modal Configuration
 
-*   MULTIMODAL\_SEND\_IMAGE\_FORMAT
+- MULTIMODAL_SEND_IMAGE_FORMAT
 
-    The format of the image sent when the multi-modal model is input, the default is `base64`, optional `url`. The delay of the call in `url` mode will be lower than that in `base64` mode. It is generally recommended to use the more compatible `base64` mode. If configured as `url`, you need to configure `FILES_URL` as an externally accessible address so that the multi-modal model can access the image.
-*   UPLOAD\_IMAGE\_FILE\_SIZE\_LIMIT
+  The format of the image sent when the multi-modal model is input, the default is `base64`, optional `url`. The delay of the call in `url` mode will be lower than that in `base64` mode. It is generally recommended to use the more compatible `base64` mode. If configured as `url`, you need to configure `FILES_URL` as an externally accessible address so that the multi-modal model can access the image.
 
-    Upload image file size limit, default 10M.
+- UPLOAD_IMAGE_FILE_SIZE_LIMIT
+
+  Upload image file size limit, default 10M.
 
 #### Sentry Configuration
 
 Used for application monitoring and error log tracking.
 
-*   SENTRY\_DSN
+- SENTRY_DSN
 
-    Sentry DSN address, default is empty, when empty, all monitoring information is not reported to Sentry.
-*   SENTRY\_TRACES\_SAMPLE\_RATE
+  Sentry DSN address, default is empty, when empty, all monitoring information is not reported to Sentry.
 
-    The reporting ratio of Sentry events, if it is 0.01, it is 1%.
-*   SENTRY\_PROFILES\_SAMPLE\_RATE
+- SENTRY_TRACES_SAMPLE_RATE
 
-    The reporting ratio of Sentry profiles, if it is 0.01, it is 1%.
+  The reporting ratio of Sentry events, if it is 0.01, it is 1%.
+
+- SENTRY_PROFILES_SAMPLE_RATE
+
+  The reporting ratio of Sentry profiles, if it is 0.01, it is 1%.
 
 #### Notion Integration Configuration
 
 Notion integration configuration variables can be obtained by applying for Notion integration: [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
 
-* NOTION\_INTEGRATION\_TYPE: Configure as "public" or "internal". Since Notion's OAuth redirect URL only supports HTTPS, if deploying locally, please use Notion's internal integration.
-* NOTION\_CLIENT\_SECRET: Notion OAuth client secret (used for public integration type)
-* NOTION\_CLIENT\_ID: OAuth client ID (used for public integration type)
-* NOTION\_INTERNAL\_SECRET: Notion internal integration secret. If the value of `NOTION_INTEGRATION_TYPE` is "internal", you need to configure this variable.
+- NOTION_INTEGRATION_TYPE: Configure as "public" or "internal". Since Notion's OAuth redirect URL only supports HTTPS, if deploying locally, please use Notion's internal integration.
+- NOTION_CLIENT_SECRET: Notion OAuth client secret (used for public integration type)
+- NOTION_CLIENT_ID: OAuth client ID (used for public integration type)
+- NOTION_INTERNAL_SECRET: Notion internal integration secret. If the value of `NOTION_INTEGRATION_TYPE` is "internal", you need to configure this variable.
 
 #### Mail related configuration
 
-* MAIL\_TYPE
-  * resend
-    * MAIL\_DEFAULT\_SEND\_FROM\
+- MAIL_TYPE
+  - resend
+    - MAIL_DEFAULT_SEND_FROM\
       The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
-    * RESEND\_API\_KEY\
+    - RESEND_API_KEY\
       API-Key for the Resend email provider, can be obtained from API-Key.
-  * smtp
-    * SMTP\_SERVER\
+  - smtp
+    - SMTP_SERVER\
       SMTP server address
-    * SMTP\_PORT\
+    - SMTP_PORT\
       SMTP server port number
-    * SMTP\_USERNAME\
+    - SMTP_USERNAME\
       SMTP username
-    * SMTP\_PASSWORD\
+    - SMTP_PASSWORD\
       SMTP password
-    * SMTP\_USE\_TLS\
+    - SMTP_USE_TLS\
       Whether to use TLS, default is false
-    * MAIL\_DEFAULT\_SEND\_FROM\
+    - MAIL_DEFAULT_SEND_FROM\
       The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
 
 #### ModelProvider & Tool Position Configuration
@@ -354,69 +391,69 @@ Used to specify the model providers and tools that can be used in the app. These
 
 For a list of available [tools](https://github.com/langgenius/dify/blob/main/api/core/tools/provider/_position.yaml) and [model providers](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/model_providers/_position.yaml), please refer to the provided links.
 
-* POSITION_TOOL_PINS
+- POSITION_TOOL_PINS
 
-    Pin specific tools to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
+  Pin specific tools to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_TOOL_PINS=bing,google`
+  Example: `POSITION_TOOL_PINS=bing,google`
 
-* POSITION_TOOL_INCLUDES
+- POSITION_TOOL_INCLUDES
 
-    Specify the tools to be included in the app. Only the tools listed here will be available for use. If not set, all tools will be included unless specified in POSITION_TOOL_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
+  Specify the tools to be included in the app. Only the tools listed here will be available for use. If not set, all tools will be included unless specified in POSITION_TOOL_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_TOOL_INCLUDES=bing,google`
+  Example: `POSITION_TOOL_INCLUDES=bing,google`
 
-* POSITION_TOOL_EXCLUDES
+- POSITION_TOOL_EXCLUDES
 
-    Exclude specific tools from being displayed or used in the app. Tools listed here will be omitted from the available options, except for pinned tools. (Use comma-separated values with **no spaces** between items.)
+  Exclude specific tools from being displayed or used in the app. Tools listed here will be omitted from the available options, except for pinned tools. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_TOOL_EXCLUDES=yahoo,wolframalpha`
+  Example: `POSITION_TOOL_EXCLUDES=yahoo,wolframalpha`
 
-* POSITION_PROVIDER_PINS
+- POSITION_PROVIDER_PINS
 
-    Pin specific model providers to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
+  Pin specific model providers to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_PROVIDER_PINS=openai,openllm`
+  Example: `POSITION_PROVIDER_PINS=openai,openllm`
 
-* POSITION_PROVIDER_INCLUDES
+- POSITION_PROVIDER_INCLUDES
 
-    Specify the model providers to be included in the app. Only the providers listed here will be available for use. If not set, all providers will be included unless specified in POSITION_PROVIDER_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
+  Specify the model providers to be included in the app. Only the providers listed here will be available for use. If not set, all providers will be included unless specified in POSITION_PROVIDER_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_PROVIDER_INCLUDES=cohere,upstage`
+  Example: `POSITION_PROVIDER_INCLUDES=cohere,upstage`
 
-* POSITION_PROVIDER_EXCLUDES
+- POSITION_PROVIDER_EXCLUDES
 
-    Exclude specific model providers from being displayed or used in the app. Providers listed here will be omitted from the available options, except for pinned providers. (Use comma-separated values with **no spaces** between items.)
+  Exclude specific model providers from being displayed or used in the app. Providers listed here will be omitted from the available options, except for pinned providers. (Use comma-separated values with **no spaces** between items.)
 
-    Example: `POSITION_PROVIDER_EXCLUDES=openrouter,ollama`
+  Example: `POSITION_PROVIDER_EXCLUDES=openrouter,ollama`
 
 #### Others
 
-* INVITE\_EXPIRY\_HOURS: Member invitation link valid time (hours), Default: 72.
+- INVITE_EXPIRY_HOURS: Member invitation link valid time (hours), Default: 72.
 
-***
+---
 
 ### Web Frontend
 
-#### SENTRY\_DSN
+#### SENTRY_DSN
 
 Sentry DSN address, default is empty, when empty, all monitoring information is not reported to Sentry.
 
 ## Deprecated
 
-#### CONSOLE\_URL
+#### CONSOLE_URL
 
 > ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by: `CONSOLE_API_URL` and `CONSOLE_WEB_URL`.
 
 Console URL, used to concatenate the authorization callback, console front-end address, and CORS configuration use. If empty, it is the same domain. Example: `https://console.dify.ai`.
 
-#### API\_URL
+#### API_URL
 
 > ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by `SERVICE_API_URL`.
 
 API URL, used to display Service API Base URL to the front-end. If empty, it is the same domain. Example: `https://api.dify.ai`
 
-#### APP\_URL
+#### APP_URL
 
 > ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by `APP_API_URL` and `APP_WEB_URL`.
 
@@ -428,22 +465,24 @@ WebApp Url, used to display WebAPP API Base Url to the front-end. If empty, it i
 
 Only used by the API service for interface identity verification.
 
-*   SESSION\_TYPE：
+- SESSION_TYPE：
 
-    Session component type
+  Session component type
 
-    *   redis (default)
+  - redis (default)
 
-        If you choose this, you need to set the environment variables starting with SESSION\_REDIS\_ below.
-    *   sqlalchemy
+    If you choose this, you need to set the environment variables starting with SESSION_REDIS\_ below.
 
-        If you choose this, the current database connection will be used and the sessions table will be used to read and write session records.
-* SESSION\_REDIS\_HOST: Redis host
-* SESSION\_REDIS\_PORT: Redis port, default is 6379
-* SESSION\_REDIS\_DB: Redis Database, default is 0. Please use a different Database from Redis and Celery Broker.
-* SESSION\_REDIS\_USERNAME: Redis username, default is empty
-* SESSION\_REDIS\_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
-* SESSION\_REDIS\_USE\_SSL: Whether to use SSL protocol for connection, default is false
+  - sqlalchemy
+
+    If you choose this, the current database connection will be used and the sessions table will be used to read and write session records.
+
+- SESSION_REDIS_HOST: Redis host
+- SESSION_REDIS_PORT: Redis port, default is 6379
+- SESSION_REDIS_DB: Redis Database, default is 0. Please use a different Database from Redis and Celery Broker.
+- SESSION_REDIS_USERNAME: Redis username, default is empty
+- SESSION_REDIS_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
+- SESSION_REDIS_USE_SSL: Whether to use SSL protocol for connection, default is false
 
 #### Cookie Policy Configuration
 
@@ -451,12 +490,14 @@ Only used by the API service for interface identity verification.
 
 Used to set the browser policy for session cookies used for identity verification.
 
-*   COOKIE\_HTTPONLY
+- COOKIE_HTTPONLY
 
-    Cookie HttpOnly configuration, default is true.
-*   COOKIE\_SAMESITE
+  Cookie HttpOnly configuration, default is true.
 
-    Cookie SameSite configuration, default is Lax.
-*   COOKIE\_SECURE
+- COOKIE_SAMESITE
 
-    Cookie Secure configuration, default is false.
+  Cookie SameSite configuration, default is Lax.
+
+- COOKIE_SECURE
+
+  Cookie Secure configuration, default is false.

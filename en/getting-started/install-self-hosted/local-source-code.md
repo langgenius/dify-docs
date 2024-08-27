@@ -24,12 +24,12 @@ cp middleware.env.example middleware.env
 docker compose -f docker-compose.middleware.yaml up -d
 ```
 
-***
+---
 
 ### Server Deployment
 
-* API Interface Service
-* Worker Asynchronous Queue Consumption Service
+- API Interface Service
+- Worker Asynchronous Queue Consumption Service
 
 #### Installation of the basic environment:
 
@@ -60,7 +60,8 @@ pyenv global 3.10
     ```
     cp .env.example .env
     ```
-3.  Generate a random secret key and replace the value of SECRET\_KEY in the .env file:
+
+3.  Generate a random secret key and replace the value of SECRET_KEY in the .env file:
 
     ```
     openssl rand -base64 42
@@ -76,7 +77,7 @@ pyenv global 3.10
     poetry install
     ```
 
-5.  Perform the database migration
+5.  Perform the database migration:
 
     Perform database migration to the latest version:
 
@@ -103,7 +104,8 @@ pyenv global 3.10
     WARNING:werkzeug: * Debugger is active!
     INFO:werkzeug: * Debugger PIN: 695-801-919
     ```
-7.  start the Worker service
+
+7.  Start the Worker service
 
     To consume asynchronous tasks from the queue, such as dataset file import and dataset document updates, follow these steps to start the Worker service on Linux or macOS:
 
@@ -121,21 +123,21 @@ pyenv global 3.10
 
     ```
      -------------- celery@TAKATOST.lan v5.2.7 (dawn-chorus)
-    --- ***** ----- 
+    --- ***** -----
     -- ******* ---- macOS-10.16-x86_64-i386-64bit 2023-07-31 12:58:08
-    - *** --- * --- 
+    - *** --- * ---
     - ** ---------- [config]
     - ** ---------- .> app:         app:0x7fb568572a10
     - ** ---------- .> transport:   redis://:**@localhost:6379/1
     - ** ---------- .> results:     postgresql://postgres:**@localhost:5432/dify
     - *** --- * --- .> concurrency: 1 (gevent)
     -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
-    --- ***** ----- 
+    --- ***** -----
      -------------- [queues]
                     .> dataset          exchange=dataset(direct) key=dataset
                     .> generation       exchange=generation(direct) key=generation
                     .> mail             exchange=mail(direct) key=mail
-    
+
     [tasks]
       . tasks.add_document_to_index_task.add_document_to_index_task
       . tasks.clean_dataset_task.clean_dataset_task
@@ -153,7 +155,7 @@ pyenv global 3.10
       . tasks.remove_segment_from_index_task.remove_segment_from_index_task
       . tasks.update_segment_index_task.update_segment_index_task
       . tasks.update_segment_keyword_index_task.update_segment_keyword_index_task
-    
+
     [2023-07-31 12:58:08,831: INFO/MainProcess] Connected to redis://:**@localhost:6379/1
     [2023-07-31 12:58:08,840: INFO/MainProcess] mingle: searching for neighbors
     [2023-07-31 12:58:09,873: INFO/MainProcess] mingle: all alone
@@ -161,7 +163,7 @@ pyenv global 3.10
     [2023-07-31 12:58:09,890: INFO/MainProcess] celery@TAKATOST.lan ready.
     ```
 
-***
+---
 
 ## Deploy the frontend page
 
@@ -171,7 +173,7 @@ Start the web frontend client page service
 
 To start the web frontend service, you will need [Node.js v18.x (LTS)](http://nodejs.org/) and [NPM version 8.x.x](https://www.npmjs.com/) or [Yarn](https://yarnpkg.com/).
 
-* Install NodeJS + NPM
+- Install NodeJS + NPM
 
 Please visit [https://nodejs.org/en/download](https://nodejs.org/en/download) and choose the installation package for your respective operating system that is v18.x or higher. It is recommended to download the stable version, which includes NPM by default.
 
@@ -182,11 +184,13 @@ Please visit [https://nodejs.org/en/download](https://nodejs.org/en/download) an
     ```
     cd web
     ```
+
 2.  Install the dependencies.
 
     ```
     npm install
     ```
+
 3.  Configure the environment variables. Create a file named .env.local in the current directory and copy the contents from .env.example. Modify the values of these environment variables according to your requirements:
 
     ```
@@ -202,18 +206,20 @@ Please visit [https://nodejs.org/en/download](https://nodejs.org/en/download) an
     # console or api domain.
     # example: http://udify.app/api
     NEXT_PUBLIC_PUBLIC_API_PREFIX=http://localhost:5001/api
-    
+
     # SENTRY
     NEXT_PUBLIC_SENTRY_DSN=
     NEXT_PUBLIC_SENTRY_ORG=
     NEXT_PUBLIC_SENTRY_PROJECT=
     ```
+
 4.  Build the code
 
     ```
     npm run build
     ```
-5.  Start the web service:
+
+5.  Start the web service
 
     ```
     npm run start
