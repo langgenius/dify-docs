@@ -12,7 +12,7 @@
 
 ## 操作説明
 
-1. 外部データツールを使用する前に、APIと認証用のAPIキーを準備してください。[external-data-tool.md](../extension//api-based-extension/external_data_tool.md "mention")を参照してください。
+1. 外部データツールを使用する前に、APIと認証用のAPIキーを準備してください。[external-data-tool.md](../extension/api-based-extension/external_data_tool.md "mention")を参照してください。
 2. Difyは集中式のAPI管理を提供しており、設定画面でAPI拡張設定を統一して追加することで、Dify上の各種アプリケーションで直接使用できるようになります。
 
 <figure><img src="../../.gitbook/assets/api_based.png" alt=""><figcaption><p>APIベースの拡張</p></figcaption></figure>

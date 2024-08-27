@@ -4,7 +4,7 @@ Dify にはシステムに内蔵された内容審査タイプの他に、ユー
 
 ## クイックスタート
 
-ここでは、`クラウドサービス` 内容審査拡張を例にとって、以下の手順を説明します：
+ここでは、`Cloud Service` 内容審査拡張を例にとって、以下の手順を説明します：
 
 1. ディレクトリの初期化
 2. フロントエンドコンポーネント定義ファイルの追加
@@ -14,7 +14,7 @@ Dify にはシステムに内蔵された内容審査タイプの他に、ユー
 
 ### 1. ディレクトリの初期化
 
-新しいカスタムタイプ `クラウドサービス` を追加するには、`api/core/moderation` ディレクトリ内に関連するディレクトリとファイルを新規作成します。
+新しいカスタムタイプ `Cloud Service` を追加するには、`api/core/moderation` ディレクトリ内に関連するディレクトリとファイルを新規作成します。
 
 ```Plain
 .
@@ -210,27 +210,72 @@ image todo -->
 
 ### 4. 拡張機能のデバッグ
 
-ここまでで、Dify のアプリケーションオーケストレーション画面でカスタム `クラウドサービス` 内容審査拡張タイプを選択してデバッグすることができます。 ```python
-param {テキスト}: {大規模言語モデル}応答の{テキスト}
-        :return: {モデレーション}結果
-        """
-        {フラグ付き} = False
-        {プリセット応答} = ""
-        
-        # ここに独自の{ロジック}を実装してください
+ここまでで、Dify のアプリケーションオーケストレーション画面でカスタム `クラウドサービス` 内容審査拡張タイプを選択してデバッグすることができます。 
 
-        # return {モデレーション出力結果}({フラグ付き}={フラグ付き}, {アクション}={モデレーションアクション}.{上書き}, {テキスト}={テキスト})
-        return {モデレーション出力結果}({フラグ付き}={フラグ付き}, {アクション}={モデレーションアクション}.{直接出力}, {プリセット応答}={プリセット応答})
+## 実装クラステンプレート
+
+```python
+from core.moderation.base import Moderation, ModerationAction, ModerationInputsResult, ModerationOutputsResult
+
+class CloudServiceModeration(Moderation):
+    """
+    The name of custom type must be unique, keep the same with directory and file name.
+    """
+    name: str = "cloud_service"
+
+    @classmethod
+    def validate_config(cls, tenant_id: str, config: dict) -> None:
+        """
+        schema.json validation. It will be called when user saves the config.
+        
+        :param tenant_id: the id of workspace
+        :param config: the variables of form config
+        :return:
+        """
+        cls._validate_inputs_and_outputs_config(config, True)
+        
+        # implement your own logic here
+
+    def moderation_for_inputs(self, inputs: dict, query: str = "") -> ModerationInputsResult:
+        """
+        Moderation for inputs.
+
+        :param inputs: user inputs
+        :param query: the query of chat app, there is empty if is completion app
+        :return: the moderation result
+        """
+        flagged = False
+        preset_response = ""
+        
+        # implement your own logic here
+        
+        # return ModerationInputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, inputs=inputs, query=query)
+        return ModerationInputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
+
+    def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
+        """
+        Moderation for outputs.
+
+        :param text: the text of LLM response
+        :return: the moderation result
+        """
+        flagged = False
+        preset_response = ""
+        
+        # implement your own logic here
+
+        # return ModerationOutputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, text=text)
+        return ModerationOutputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
 ```
 
 ## 実装クラスの詳細説明
 
-### def {設定検証}
+### def validate\_config
 
-`{スキーマ}.json` フォーム検証方法、ユーザーが「公開」をクリックして設定を保存するときに呼び出される
+`schema.json` フォーム検証方法、ユーザーが「公開」をクリックして設定を保存するときに呼び出される
 
-* `{設定}` フォームパラメータ
-  * `{変数名}` フォームカスタム変数
+* `config` フォームパラメータ
+  * `{{variable}}` フォームカスタム変数
   * `inputs_config` 入力検証プリセット応答
     * `enabled` 有効化
     * `preset_response` 入力プリセット応答
@@ -238,13 +283,13 @@ param {テキスト}: {大規模言語モデル}応答の{テキスト}
     * `enabled` 有効化
     * `preset_response` 出力プリセット応答
 
-### def {入力検証}
+### def moderation\_for\_inputs
 
 入力検証関数
 
 * `inputs` ：エンドユーザーによって渡された変数値
 * `query` ：エンドユーザーが現在入力している内容、対話型アプリケーションの固定パラメータ。
-* `モデレーション入力結果`
+* `ModerationInputsResult`
   * `flagged` 検証ルールに違反しているかどうか
   * `action` 実行動作
     * `direct_output` プリセット応答を直接出力
@@ -253,18 +298,18 @@ param {テキスト}: {大規模言語モデル}応答の{テキスト}
   * `inputs` エンドユーザーによって渡された変数値、キーは変数名、値は変数値（action=overridedの場合のみ返される）
   * `query` 上書きされたエンドユーザーの現在の入力内容、対話型アプリケーションの固定パラメータ（action=overridedの場合のみ返される）
 
-### def {出力検証}
+### def moderation\_for\_outputs
 
 出力検証関数
 
-* `{テキスト}` ：{モデル出力}内容
-* `{モデレーション出力}` ：出力検証関数
-  * `{テキスト}` ：{大規模言語モデル}回答内容。{大規模言語モデル}の出力が{ストリーミング出力}の場合、これは100文字ごとの分割内容である。
-  * `{モデレーション出力結果}`
+* `text`：{モデル出力}内容
+* `moderation_for_outputs`：出力検証関数
+  * `text`：LLM回答内容。LLMの出力が{ストリーミング出力}の場合、これは100文字ごとの分割内容である。
+  * `ModerationOutputsResult`
     * `flagged` 検証ルールに違反しているかどうか
     * `action` 実行動作
       * `direct_output` プリセット応答を直接出力
       * `overrided` 渡された変数値を上書き
     * `preset_response` プリセット応答（action=direct_outputの場合のみ返される）
-    * `text` 上書きされた{大規模言語モデル}回答内容（action=overridedの場合のみ返される）
+    * `text` 上書きされたLLM回答内容（action=overridedの場合のみ返される）
 ```

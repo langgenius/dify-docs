@@ -4,7 +4,7 @@
 
 アプリを作成した後に、アプリ名や説明を変更したい場合は、アプリの左上隅にある「情報の編集」をクリックしてください。これにより、アプリのアイコン、名前、または説明を修正できます。
 
-<figure><img src="../../.gitbook/assets/image (1).png" alt=""><figcaption><p>アプリ情報の編集</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>アプリ情報の編集</p></figcaption></figure>
 
 ### アプリの複製
 

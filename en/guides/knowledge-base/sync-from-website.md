@@ -38,5 +38,5 @@ The configuration options include: Whether to crawl sub-pages, Page crawling lim
 
 After importing the parsed text from the webpage, it is stored in the knowledge base documents. View the import results and click **Add URL** to continue importing new web pages.
 
-<figure><img src="/en/.gitbook/assets/guides/knowledge-base/sync-from-website/image (5).png" alt=""><figcaption><p>Importing parsed web text into the knowledge base</p></figcaption></figure>
+<figure><img src="../../../jp/.gitbook/assets/image (5).png" alt=""><figcaption><p>Importing parsed web text into the knowledge base</p></figcaption></figure>
 

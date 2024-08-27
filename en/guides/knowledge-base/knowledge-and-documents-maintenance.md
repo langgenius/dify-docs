@@ -68,6 +68,8 @@ In "Knowledge Base > Document List," click "Add File" to upload new documents or
 
 A knowledge base (Knowledge) is a collection of documents (Documents). Documents can be uploaded by developers or operators, or synchronized from other data sources (usually corresponding to a file unit in the data source).
 
+<figure><img src="../../../img/en-knowledge-add-document.png" alt=""><figcaption><p>Upload new document at Knowledge base</p></figcaption></figure>
+
 ***
 
 ### 7. Document Disable and Archive

@@ -4,7 +4,7 @@
 
 ナレッジベースにアップロードされた各ドキュメントは、テキストチャンクの形式で保存されます。チャンクリストで各チャンクの具体的なテキスト内容を確認できます。
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>アップロード済みのドキュメントチャンクを確認する</p></figcaption></figure>
+<figure><img src="../../../img/viewing-uploaded-document-segments.png" alt=""><figcaption><p>アップロード済みのドキュメントチャンクを確認する</p></figcaption></figure>
 
 ***
 
@@ -18,15 +18,15 @@
 
 * **短すぎるチャンク**、意味が不足する可能性がある；
 
-<figure><img src="../../.gitbook/assets/image (183).png" alt="" width="373"><figcaption><p>短すぎるチャンク</p></figcaption></figure>
+<figure><img src="../../../img/short-text-segments.png" alt="" width="373"><figcaption><p>短すぎるチャンク</p></figcaption></figure>
 
 * **長すぎるチャンク**、ノイズが多すぎるためマッチングの精度が低下する可能性がある；
 
-<figure><img src="../../.gitbook/assets/image (186).png" alt="" width="375"><figcaption><p>長すぎるチャンク</p></figcaption></figure>
+<figure><img src="../../../img/long-text-segments.png" alt="" width="375"><figcaption><p>長すぎるチャンク</p></figcaption></figure>
 
 * **明らかなセマンティックカットオフ**、最大チャンク長制限を使用すると強制的なセマンティックカットオフが発生し、リコール時に内容が失われる；
 
-<figure><img src="../../.gitbook/assets/image (185).png" alt="" width="357"><figcaption><p>明らかなセマンティックカットオフ</p></figcaption></figure>
+<figure><img src="../../../img/semantic-truncation.png" alt="" width="357"><figcaption><p>明らかなセマンティックカットオフ</p></figcaption></figure>
 
 ***
 
@@ -34,11 +34,11 @@
 
 チャンクリスト内で「チャンクを追加」をクリックすると、ドキュメント内にカスタムチャンクを1つまたは複数追加することができます。
 
-<figure><img src="../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../img/add-a-chunk.png" alt=""><figcaption></figcaption></figure>
 
 複数のチャンクを追加する場合は、まずCSV形式のチャンクアップロードテンプレートをダウンロードし、テンプレートに従ってExcelで全てのチャンク内容を編集し、CSVファイルを保存してからアップロードします。
 
-<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>カスタムチャンクを一括追加する</p></figcaption></figure>
+<figure><img src="../../../img/bulk-add-custom-segment.png" alt=""><figcaption><p>カスタムチャンクを一括追加する</p></figcaption></figure>
 
 ***
 
@@ -46,7 +46,7 @@
 
 チャンクリスト内で追加したチャンク内容を直接編集・修正することができます。テキスト内容やキーワードを含めます。
 
-<figure><img src="../../.gitbook/assets/image (5) (1).png" alt=""><figcaption><p>ドキュメントチャンクの編集</p></figcaption></figure>
+<figure><img src="../../../img/edit-segment.png" alt=""><figcaption><p>ドキュメントチャンクの編集</p></figcaption></figure>
 
 ***
 
@@ -58,7 +58,7 @@
 メタデータフィルタリングと参照元機能は現在のバージョンではサポートされていません。
 {% endhint %}
 
-<figure><img src="../../.gitbook/assets/image (179).png" alt=""><figcaption><p>メタデータ管理</p></figcaption></figure>
+<figure><img src="../../../img/metadata.png" alt=""><figcaption><p>メタデータ管理</p></figcaption></figure>
 
 ***
 
@@ -68,7 +68,7 @@
 
 ナレッジベース（Knowledge）はいくつかのドキュメント（Documents）の集合体です。ドキュメントは開発者や運営者がアップロードするか、他のデータソースから同期されます（通常、対応するデータソースの1つのファイル単位）。
 
-<figure><img src="../../.gitbook/assets/image (181).png" alt=""><figcaption><p>ナレッジベースに新しいドキュメントをアップロードする</p></figcaption></figure>
+<figure><img src="../../../img/en-knowledge-add-document.png" alt=""><figcaption><p>ナレッジベースに新しいドキュメントをアップロードする</p></figcaption></figure>
 
 ***
 
@@ -84,7 +84,7 @@
 
 ナレッジベースの左側ナビゲーションで**設定**をクリックすると、以下の設定項目を変更することができます：
 
-<figure><img src="../../.gitbook/assets/image (182).png" alt=""><figcaption><p>ナレッジベースの設定</p></figcaption></figure>
+<figure><img src="../../../img/modify-knowledge-base-settings.png" alt=""><figcaption><p>ナレッジベースの設定</p></figcaption></figure>
 
 **ナレッジベース名**、ナレッジベースを識別するための名前を定義します。
 
@@ -108,4 +108,4 @@
 
 Difyナレッジベースは標準的なAPIセットを提供しています。開発者はAPI呼び出しを通じて、ナレッジベース内のドキュメントやチャンクのCRUD操作を行うことができます。詳細は[ナレッジベースAPIドキュメント](maintain-dataset-via-api.md)を参照してください。
 
-<figure><img src="../../.gitbook/assets/image (180).png" alt=""><figcaption><p>ナレッジベースAPI管理</p></figcaption></figure>
+<figure><img src="../../../img/knowledge-base-api.png" alt=""><figcaption><p>ナレッジベースAPI管理</p></figcaption></figure>

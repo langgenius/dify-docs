@@ -4,11 +4,11 @@
 
 Difyナレッジベースには、異なる検索方法とパラメータ設定におけるリコール効果をデバッグするためのリコールテスト機能が提供されています。**ソーステキスト**入力欄に一般的なユーザーの質問を入力し、**テスト**をクリックして右側の**リコールパラグラフ**でリコール結果を確認できます。**最近のクエリ**では、過去のクエリ履歴を確認でき、ナレッジベースがアプリケーション内に関連付けられている場合、アプリケーション内からトリガーされたナレッジベースクエリもここで確認できます。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>リコールテスト</p></figcaption></figure>
+<figure><img src="../../../img/Retrieval-testing.png" alt=""><figcaption><p>リコールテスト</p></figcaption></figure>
 
-ソーステキスト入力欄の右上のアイコンをクリックすると、現在のナレッジベースの検索方法と具体的なパラメータを変更できます。**保存後はリコールテストのデバッグ中のみ有効です**。リコールテストを完了し、ナレッジベースの検索パラメータの変更を確認する際には、[ナレッジベース設定 > 検索設定](retrieval-test-and-citation.md#zhi-shi-ku-she-zhi)で変更を行う必要があります。
+ソーステキスト入力欄の右上のアイコンをクリックすると、現在のナレッジベースの検索方法と具体的なパラメータを変更できます。**保存後はリコールテストのデバッグ中のみ有効です**。リコールテストを完了し、ナレッジベースの検索パラメータの変更を確認する際には、[ナレッジベース設定 > 検索設定](create-knowledge-and-upload-documents#id-6-jian-suo-she-ding)で変更を行う必要があります。
 
-<figure><img src="../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>リコールテスト-検索設定</p></figcaption></figure>
+<figure><img src="../../../img/Retrieval-testing-setting.png" alt=""><figcaption><p>リコールテスト-検索設定</p></figcaption></figure>
 
 **リコールテストの推奨ステップ：**
 
@@ -27,8 +27,8 @@ Difyナレッジベースには、異なる検索方法とパラメータ設定�
 
 アプリケーション内でナレッジベースの効果をテストする際、**スタジオ -- 機能追加 -- 引用と帰属**に進み、引用と帰属機能を有効にします。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>引用と帰属機能を有効にする</p></figcaption></figure>
+<figure><img src="../../../img/citation-and-attribution.png" alt=""><figcaption><p>引用と帰属機能を有効にする</p></figcaption></figure>
 
 機能を有効にすると、大規模言語モデルが質問に回答する際にナレッジベースからの内容を引用した場合、返信内容の下に具体的な引用段落情報を確認できます。これには**元のパラグラフテキスト、パラグラフ番号、マッチ度**などが含まれます。引用段落上部の**ナレッジベースにジャンプ**をクリックすると、開発者がデバッグ編集を行いやすいように、そのパラグラフが含まれるナレッジベースのパラグラフリストに簡単にアクセスできます。
 
-<figure><img src="../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>返信内容の引用情報を確認する</p></figcaption></figure>
+<figure><img src="../../../img/view-citation-informatio.png" alt=""><figcaption><p>返信内容の引用情報を確認する</p></figcaption></figure>

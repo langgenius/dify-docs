@@ -13,7 +13,7 @@
 
 データセットページに入り、左側のナビゲーションから **API** ページに切り替えることができます。このページでは、Difyが提供するデータセットAPIドキュメントを確認し、 **APIキー** でデータセットAPIにアクセスできる資格情報を管理できます。
 
-<figure><img src="../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>Knowledge API ドキュメント</p></figcaption></figure>
+<figure><img src="../../../img/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API ドキュメント</p></figcaption></figure>
 
 ### API呼び出しの例
 

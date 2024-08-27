@@ -7,7 +7,7 @@ DifyデータセットはNotionからのインポートをサポートし、**�
 1. データセットを作成し、データソースを選択する際に、**Notion内容から同期-- バインドへ進み、指示に従って認証確認を完了してください。**
 2. または、**設定 -- データソース -- データソースを追加**に進み、Notionソースで**バインド**をクリックして認証確認を完了することもできます。
 
-<figure><img src="../../.gitbook/assets/image (46).png" alt=""><figcaption><p>Notionをバインド</p></figcaption></figure>
+<figure><img src="../../../img/binding-notion.png" alt=""><figcaption><p>Notionをバインド</p></figcaption></figure>
 
 ### Notionデータのインポート
 
@@ -23,7 +23,7 @@ _**注意：画像やファイルのインポートは現在サポートされ�
 
 Notionの内容に変更があった場合、Difyデータセットの**文書リストページ**で**同期**をクリックするだけで、データを一括で同期できます。このステップでもトークンが消費されます。
 
-<figure><img src="../../.gitbook/assets/sync-notion.png" alt=""><figcaption><p>Notion内容を同期</p></figcaption></figure>
+<figure><img src="../../../img/sync-notion.png" alt=""><figcaption><p>Notion内容を同期</p></figcaption></figure>
 
 ### コミュニティ版Notionの統合設定方法
 
@@ -37,11 +37,11 @@ Notionの統合は、**インターナル統合**（internal integration）と**
 
 **New integration**ボタンをクリックし、タイプはデフォルトで**インターナル**（変更不可）です。関連付けるスペースを選択し、統合名を入力しロゴをアップロードした後、**Submit**をクリックして統合を作成します。
 
-<figure><img src="../../.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/guides/knowledge-base/integrate-notion-1.png" alt=""><figcaption></figcaption></figure>
 
 統合を作成したら、必要に応じてCapabilitiesタブで設定を更新し、Secretsタブで**Show**ボタンをクリックしてSecretsをコピーします。
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/guides/knowledge-base/notion-secret.png" alt=""><figcaption></figcaption></figure>
 
 コピーした後、Difyのソースコードに戻り、**.env**ファイルに関連する環境変数を設定します。環境変数は以下の通りです：
 
@@ -53,11 +53,11 @@ Notionの統合は、**インターナル統合**（internal integration）と**
 
 **インターナル統合をパブリック統合にアップグレードする必要があります**。統合の配布ページに移動し、スイッチを切り替えて統合を公開します。スイッチをパブリック設定に切り替えるには、以下の組織情報フォームに会社名、ウェブサイト、リダイレクトURLなどの情報を入力し、**Submit**ボタンをクリックします。
 
-<figure><img src="../../.gitbook/assets/image (6) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/guides/knowledge-base/public-integration.png" alt=""><figcaption></figcaption></figure>
 
 統合の設定ページで公開に成功すると、密鍵タブで統合の密鍵にアクセスできるようになります：
 
-<figure><img src="../../.gitbook/assets/image (17).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/guides/knowledge-base/notion-public-secret.png" alt=""><figcaption></figcaption></figure>
 
 Difyのソースコードに戻り、**.env**ファイルに関連する環境変数を設定します。環境変数は以下の通りです：
 
