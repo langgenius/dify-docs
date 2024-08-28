@@ -96,8 +96,8 @@ Finally, access [http://localhost/install](http://localhost/install) to use the 
 Edit the environment variable values in your `.env` file directly. Then, restart Dify with:
 
 ```
-docker compose down
-docker compose up -d
+docker-compose down
+docker-compose up -d
 ```
 
 The full set of annotated environment variables along can be found under docker/.env.example.
