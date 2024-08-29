@@ -108,6 +108,7 @@
 
 * [サポートの求め](community/support.md)
 * [貢献者ガイド](community/contribution.md)
+* [ドキュメントへの貢献](community/docs-contribution.md)
 
 ## 開発 <a href="#development" id="development"></a>
 
