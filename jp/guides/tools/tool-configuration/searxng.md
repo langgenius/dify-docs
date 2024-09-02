@@ -1,4 +1,6 @@
 # SearXNG
+
+> ツール作者 @Junytang。
 SearXNGは、様々な検索サービスの結果を統合する無料のインターネットメタサーチエンジンです。 DifyはSearXNGにアクセスするためのインターフェイスを実装しており、Difyから直接利用することができます。 以下では、Dockerを使用してSearXNGをDifyに統合する手順を説明します。他の方法でSearXNGをインストールしたい場合は、[こちら](https://docs.searxng.org/admin/installation.html)を参照してください。
 
 ## 1. Dockerを使用してSearXNGコンテナをインストールする

@@ -2,6 +2,10 @@
 
 ### 前提条件
 
+> Dify インストール前に, ぜひマシンが最小インストール要件を満たしていることを確認してください：
+> - CPU >= 2 Core
+> - RAM >= 4GB
+
 | オペレーティング·システム      | ソフトウェア                                                             | 説明                                                                                                                                                                                     |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | macOS 10.14またはそれ以降    | Docker Desktop                                                 | Docker仮想マシン (VM) を少なくとも2つの仮想CPU (vCPU) と8 GBの初期メモリを使用するように設定してください。そうしないと、インストールが失敗する可能性があります。詳細については[MacにDocker Desktopをインストール](https://docs.docker.com/desktop/mac/install/)を参照してください。 |
@@ -16,29 +20,51 @@ Difyのソースコードをローカルにクローンします
 git clone https://github.com/langgenius/dify.git
 ```
 
-### Difyの開始
+### Difyの起動
 
-difyソースコードのdockerディレクトリに移動し、次のコマンドを実行してdifyを起動する：
+1. difyソースコードのdockerディレクトリに移動し、次のコマンドを実行してdifyを起動する：
+
+    ```bash
+    cd dify/docker
+    ```
+
+2. 環境配置ファイルをコッピする
+
+    ```bash
+    cp .env.example .env
+    ```
+
+3. Docker コンテナを起動する
+
+    システムにインストールしたDocker Composeのバージョンをベースに，相応しい命令を使ってコンテナを起動します。你可以通过 `$ docker compose version`を通してdockerのバージョンをチェックできます，詳しくは [Docker ドキュメント](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command)を参考してください：
+
+    - Docker Compose V2を使用する場合，以下の命令を入力する：
+  
+    ```bash
+    docker compose up -d
+    ```
+
+    - Docker Compose V1を使用する場合，以下の命令を入力する：
+
+    ```bash
+    docker-compose up -d
+    ```
+
+运行命令后，你应该会看到类似以下的输出，显示所有容器的状态和端口映射：
 
 ```Shell
-cd dify/docker
-cp .env.example .env
-docker compose up -d
-```
-
-> システムにDocker Compose V2をインストールされている場合は、`docker-compose`ではなく`docker compose`を使用してください。`$ docker compose version`を使っで確認できます。詳細については[こちら](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command)を参照してください。
-
-デプロイメント結果：
-
-```Shell
-[+] Running 7/7
- ✔ Container docker-web-1       Started                                                                                                                                                                                       1.0s 
- ✔ Container docker-redis-1     Started                                                                                                                                                                                       1.1s 
- ✔ Container docker-weaviate-1  Started                                                                                                                                                                                       0.9s 
- ✔ Container docker-db-1        Started                                                                                                                                                                                       0.0s 
- ✔ Container docker-worker-1    Started                                                                                                                                                                                       0.7s 
- ✔ Container docker-api-1       Started                                                                                                                                                                                       0.8s 
- ✔ Container docker-nginx-1     Started
+[+] Running 11/11
+ ✔ Network docker_ssrf_proxy_network  Created                                                                 0.1s 
+ ✔ Network docker_default             Created                                                                 0.0s 
+ ✔ Container docker-redis-1           Started                                                                 2.4s 
+ ✔ Container docker-ssrf_proxy-1      Started                                                                 2.8s 
+ ✔ Container docker-sandbox-1         Started                                                                 2.7s 
+ ✔ Container docker-web-1             Started                                                                 2.7s 
+ ✔ Container docker-weaviate-1        Started                                                                 2.4s 
+ ✔ Container docker-db-1              Started                                                                 2.7s 
+ ✔ Container docker-api-1             Started                                                                 6.5s 
+ ✔ Container docker-worker-1          Started                                                                 6.4s 
+ ✔ Container docker-nginx-1           Started                                                                 7.1s
 ```
 
 最後に、すべてのコンテナが正常に稼働しているか確認：
@@ -59,6 +85,8 @@ docker-weaviate-1   semitechnologies/weaviate:1.18.4   "/bin/weaviate --hos…" 
 docker-web-1        langgenius/dify-web:0.3.2          "/entrypoint.sh"         web                 4 seconds ago       Up 3 seconds        80/tcp, 3000/tcp
 docker-worker-1     langgenius/dify-api:0.3.2          "/entrypoint.sh"         worker              4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
 ```
+
+これらの手順を通うしで、Difyをローカルでインストールでくます。
 
 ### Difyの更新
 

@@ -26,6 +26,8 @@ The WebApp URL, used to display WebAPP API Base URL in the front-end. If left em
 
 The prefix for file preview or download URLs, used to display these URLs in the front-end and provide them as input for multi-modal models. To prevent forgery, image preview URLs are signed and expire after 5 minutes.
 
+***
+
 ### Server
 
 #### MODE

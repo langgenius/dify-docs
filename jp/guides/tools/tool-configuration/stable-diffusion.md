@@ -1,23 +1,25 @@
 # ステーブルディフュージョン
+
+> 工具作者 @Dify。
 ステーブルディフュージョンは、テキストプロンプトを基に画像を生成するツールです。DifyではステーブルディフュージョンWebUI APIへのアクセスを実現しているため、Dify内で直接利用することができます。以下にDifyにステーブルディフュージョンを統合する手順を説明します。
 
-## 1. GPUを搭載したマシンを用意する
+## 1. ローカル環境の初期化
 ステーブルディフュージョンは、GPUを搭載したマシンを用いることで最適に画像を生成できます。しかし、必須ではなく、CPUのみでも画像を生成することは可能ですが、速度が非常に遅くなるかもしれません。
 
-## 2. ステーブルディフュージョンWebUIを起動する
+## 2. インストールし、ステーブルディフュージョンWebUIを起動する
 ローカルマシンまたはサーバー上でステーブルディフュージョンWebUIを起動します。
 
-### 2.1. ステーブルディフュージョンWebUIリポジトリをクローンする
-[公式リポジトリ](https://github.com/AUTOMATIC1111/stable-diffusion-webui)からステーブルディフュージョンWebUIリポジトリをクローンします。
+1. [公式リポジトリ](https://github.com/AUTOMATIC1111/stable-diffusion-webui)からステーブルディフュージョンWebUIリポジトリをクローンします。
 
 ```bash
 git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui
 ```
 
-### 2.2. ローカルでの起動
+2. コマンドを実行してStable Diffusion WebUIを起動する
 リポジトリをクローンした後、クローンしたリポジトリのディレクトリに移動し、以下のコマンドを実行してステーブルディフュージョンWebUIを起動します。
 
 #### Windows
+
 ```bash
 cd stable-diffusion-webui
 ./webui.bat --api --listen
@@ -29,7 +31,7 @@ cd stable-diffusion-webui
 ./webui.sh --api --listen
 ```
 
-### 2.3. モデルの準備
+3. モデルの準備
 ターミナルに表示されたアドレスをブラウザでアクセスすることでステーブルディフュージョンWebUIにアクセスできますが、モデルはまだ利用できません。HuggingFaceまたは他のソースからモデルをダウンロードし、ステーブルディフュージョンWebUIの`models`ディレクトリに配置する必要があります。
 
 例えば、[pastel-mix](https://huggingface.co/JamesFlare/pastel-mix)をモデルとして使用する場合、`git lfs`を使ってモデルをダウンロードし、`stable-diffusion-webui`の`models`ディレクトリに配置します。
@@ -38,7 +40,7 @@ cd stable-diffusion-webui
 git clone https://huggingface.co/JamesFlare/pastel-mix
 ```
 
-### 2.4 モデル名の取得
+4 モデル名の取得
 モデルリストに`pastel-mix`が表示されますが、モデル名を取得する必要があります。`http://your_id:port/sdapi/v1/sd-models`にアクセスすると、以下のようなモデル名が表示されます。
 
 ```json
@@ -61,4 +63,10 @@ git clone https://huggingface.co/JamesFlare/pastel-mix
 
 ## 4. 完了
 
-Difyで試してみましょう！
+- **チャットフロー/ワークフローアプリ**
+
+チャットフローとワークフロー アプリは、`Stable Diffusion`ノードの追加をサポートしています。追加後、ノード内の「変数の入力→プロンプトワード」に[変数](https://docs.dify.ai/v/ja-jp/guides/workflow/variables)を入力して引用する必要があります。ユーザーが入力したプロンプトの単語、または前のノードによって生成されたコンテンツ。最後に、「end」ノード内の変数を使用して、`Stable Diffusion`によって出力された画像を参照します。
+
+- **エージェントアプリ**
+
+エージェント アプリケーションに`Stable Diffusion`ツールを追加し、ダイアログ ボックスで画像の説明を送信し、ツールを呼び出して AI 画像を生成します。
