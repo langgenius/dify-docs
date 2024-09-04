@@ -54,7 +54,7 @@
 
 <figure><img src="../../../img/conversation-var.png" alt=""><figcaption></figcaption></figure>
 
-以下の6種類のデータ型をサポートされています：
+以下の6種類のデータ型をサポートしています：
 
 * 文字列
 * 数値

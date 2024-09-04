@@ -86,7 +86,7 @@ docker-web-1        langgenius/dify-web:0.3.2          "/entrypoint.sh"         
 docker-worker-1     langgenius/dify-api:0.3.2          "/entrypoint.sh"         worker              4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
 ```
 
-これらの手順を通うしで、Difyをローカルでインストールでくます。
+これらの手順を通して、Difyをローカルでインストールできます。
 
 ### Difyの更新
 
