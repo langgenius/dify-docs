@@ -14,7 +14,7 @@
   * [よくある質問](getting-started/install-self-hosted/faq.md)
 * [Dify Premium](getting-started/dify-premium.md)
 
-## 手冊 <a href="#guides" id="guides"></a>
+## マニュアル <a href="#guides" id="guides"></a>
 
 * [モデル](guides/model-configuration/README.md)
   * [新しいプロバイダーの追加](guides/model-configuration/new-provider.md)
