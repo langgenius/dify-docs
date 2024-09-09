@@ -1,4 +1,4 @@
-# Xinferenceが配置したローカルモデルを統合
+# Xinferenceでデプロイしたローカルモデルを統合
 
 [Xorbits推論](https://github.com/xorbitsai/inference)は、大型言語モデル、音声認識モデル、マルチモーダルモデルにサービスを提供するための強力で汎用的な分散推論フレームワークであり、ノートパソコンでも使用可能です。chatglm、baichuan、whisper、vicuna、orcaなど、GGML互換の多くのモデルをサポートしています。Difyは、ローカルにデプロイされたXinferenceの大型言語モデル推論および埋め込み機能を接続することができます。
 

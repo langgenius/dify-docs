@@ -223,6 +223,10 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
         Azure Blobストレージ。この場合、以下のAZURE_BLOB\_ プレフィックスの設定を設定する必要があります。
 
+    *   huawei-obs
+
+        Huawei OBS オブジェクト ストレージ。このオプションが選択されている場合は、次の HUAWEI_OBS\_ という接頭辞が付いた構成を設定する必要があります。
+
 *   STORAGE\_LOCAL\_PATH
 
     デフォルトはstorage、すなわち現在のディレクトリのstorageディレクトリに保存します。
@@ -245,6 +249,10 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 * ALIYUN_OSS_REGION: ap-southeast-1 # reference: https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
 * ALIYUN_OSS_AUTH_VERSION: v4
 * ALIYUN_OSS_PATH: your-path # Don't start with '/'. OSS doesn't support leading slash in object names. reference: https://www.alibabacloud.com/help/en/oss/support/0016-00000005
+* HUAWEI_OBS_BUCKET_NAME: your-bucket-name（例：'difyai'）
+* HUAWEI_OBS_SECRET_KEY: your-secret-key（例：'difyai'）
+* HUAWEI_OBS_ACCESS_KEY: your-access-key（例：'difyai'）
+* HUAWEI_OBS_SERVER: your-server-url # 参考文献: https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html
 
 #### ベクトルデータベース設定
 
