@@ -97,7 +97,7 @@ After configuration, debugging or production data of the application in Dify can
 * error - Error Message
 * query - Queries used at runtime
 * workflow\_app\_log\_id - Workflow Application Log ID
-* message\_id - Relavent Message ID
+* message\_id - Relevant Message ID
 * start\_time - Start time of this runtime
 * end\_time - End time of this runtime
 * workflow node executions - Workflow node runtime information
@@ -149,7 +149,7 @@ After configuration, debugging or production data of the application in Dify can
 * file\_list - List of files processed
 * start\_time - Start time
 * end\_time - End time
-* message\_file\_data - Message of relavent file data
+* message\_file\_data - Message of relevant file data
 * conversation\_mode - Conversation mode
 * Metadata
   * conversation\_id - Conversation ID
@@ -185,7 +185,7 @@ After configuration, debugging or production data of the application in Dify can
 * user\_id - user ID
 * workflow\_app\_log\_id workflow\_app\_log\_id
 * inputs - Input data for review
-* message\_data - Meesage Data
+* message\_data - Message Data
 * flagged - Whether it is flagged for attention
 * action - Specific actions to implement
 * preset\_response - Preset response
@@ -260,7 +260,7 @@ After configuration, debugging or production data of the application in Dify can
 **Dataset Retrieval Trace Info**
 
 * message\_id - Message ID
-* inputs - Input Meesage
+* inputs - Input Message
 * documents - Document data
 * start\_time - Start time
 * end\_time - End time
@@ -307,7 +307,7 @@ After configuration, debugging or production data of the application in Dify can
 * tool\_config - Tool config
 * time\_cost - Time cost
 * tool\_parameters - Tool Parameters
-* file\_url - URL of relavent files
+* file\_url - URL of relevant files
 * Metadata
   * message\_id - Message ID
   * tool\_name - Tool Name

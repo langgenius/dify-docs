@@ -18,7 +18,7 @@ Using the variable assigner node, you can write context from the conversation pr
 
 **Scenario 1**
 
-You can write the **context during the conversation, the file uploaded to the chatting box (coming soon), the preference information entered by the user,etc.** into the conversation variable using **Variale Assigner** node. These stored information can be referenced in subsequent chats to guide different processing flows or provide reponses.
+You can write the **context during the conversation, the file uploaded to the chatting box (coming soon), the preference information entered by the user,etc.** into the conversation variable using **Variale Assigner** node. These stored information can be referenced in subsequent chats to guide different processing flows or provide responses.
 
 **Scenario 1**
 

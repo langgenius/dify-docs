@@ -2,7 +2,7 @@
 
 ユーザーが知識ベースのQ&A用AIアプリケーションを構築する際に、Difyはアプリケーション内で複数のデータセットが関連付けられている場合に、検索時に2つの検索モードをサポートします：N-of-1検索モードとMulti-Path検索モードです。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (125).png" alt=""><figcaption><p>検索モード設定</p></figcaption></figure>
+<figure><img src="../../../../img/en-n-to-1.png" alt=""><figcaption><p>検索モード設定</p></figcaption></figure>
 
 ### N-To-1検索モード
 
@@ -26,6 +26,6 @@ Multi-Path検索モードでは、再ランキングモデルを設定する必�
 
 以下は、Multi-Path検索モードの技術フローチャートです：
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Multi-Path検索</p></figcaption></figure>
+<figure><img src="../../../../img/rerank-flow-chart.png" alt=""><figcaption><p>Multi-Path検索</p></figcaption></figure>
 
 Multi-Path検索モードはモデルの推論能力やデータセットの説明に依存しないため、複数のデータセットを跨いで高品質な検索結果を得ることができます。さらに、再ランキングステップを組み込むことで文書の検索効果を効果的に向上させることができます。したがって、複数のデータセットに関連付けられた知識ベースのQ&Aアプリケーションを作成する際には、検索モードをMulti-Path検索に設定することをお勧めします。

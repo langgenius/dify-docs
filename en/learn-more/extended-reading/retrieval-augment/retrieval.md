@@ -2,7 +2,7 @@
 
 When users build AI applications for knowledge base Q&A, Dify supports two retrieval modes during retrieval if multiple datasets are associated within the application: N-of-1 retrieval Mode and Multi-Path retrieval Mode.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (125).png" alt=""><figcaption><p>retrieval Mode Settings</p></figcaption></figure>
+<figure><img src="../../../../img/en-n-to-1.png" alt=""><figcaption><p>retrieval Mode Settings</p></figcaption></figure>
 
 ### N-of-1 retrieval Mode
 
@@ -26,6 +26,6 @@ In multi-path retrieval mode, you need to configure the Rerank model. For how to
 
 Below is the technical flowchart for the multi-path retrieval mode:
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (2) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>Multi-Path retrieval</p></figcaption></figure>
+<figure><img src="../../../../img/rerank-flow-chart.png" alt=""><figcaption><p>Multi-Path retrieval</p></figcaption></figure>
 
 Since multi-path retrieval mode does not rely on the model's inference capability or dataset descriptions, it can achieve higher-quality retrieval results when retrieving across multiple datasets. Additionally, incorporating a re-ranking step can effectively improve document retrieval effectiveness. Therefore, when creating knowledge base Q&A applications associated with multiple datasets, we recommend configuring the retrieval mode as multi-path retrieval.

@@ -149,12 +149,19 @@ This Redis configuration is used for caching and for pub/sub during conversation
 - REDIS_USERNAME: Redis username, default is empty
 - REDIS_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
 - REDIS_USE_SSL: Whether to use SSL protocol for connection, default is false
+- REDIS_USE_SENTINEL: Use Redis Sentinel to connect to Redis servers
+- REDIS_SENTINELS: Sentinel nodes, format: `<sentinel1_ip>:<sentinel1_port>,<sentinel2_ip>:<sentinel2_port>,<sentinel3_ip>:<sentinel3_port>`
+- REDIS_SENTINEL_SERVICE_NAME: Sentinel service name, same as Master Name
+- REDIS_SENTINEL_USERNAME: Username for Sentinel
+- REDIS_SENTINEL_PASSWORD: Password for Sentinel
+- REDIS_SENTINEL_SOCKET_TIMEOUT: Sentinel timeout, default value: 0.1, unit: seconds
+
 
 #### Celery Configuration
 
 - CELERY_BROKER_URL
 
-  Format as follows:
+  Format as follows(direct connection mode):
 
   ```
   redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
@@ -162,9 +169,29 @@ This Redis configuration is used for caching and for pub/sub during conversation
 
   Example: `redis://:difyai123456@redis:6379/1`
 
+  Sentinel mode:
+
+  ```
+  sentinel://<sentinel_username>:<sentinel_password>@<sentinel_host>:<sentinel_port>/<redis_database>
+  ```
+
+  Example: `sentinel://localhost:26379/1;sentinel://localhost:26380/1;sentinel://localhost:26381/1`
+
 - BROKER_USE_SSL
 
   If set to true, use SSL protocol for connection, default is false
+
+- CELERY_USE_SENTINEL
+
+  If set to true, Sentinel mode will be enabled, default is false
+
+- CELERY_SENTINEL_MASTER_NAME
+
+  The service name of Sentinel, i.e., Master Name
+
+- CELERY_SENTINEL_SOCKET_TIMEOUT
+
+  Timeout for connecting to Sentinel, default value: 0.1, unit: seconds
 
 #### CORS Configuration
 
@@ -198,6 +225,14 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
     Azure Blob object storage, if this option is selected, the following AZURE_BLOB\_ prefixed configurations need to be set.
 
+  - huawei-obs
+
+    Huawei OBS object storage, if this option is selected, the following HUAWEI_OBS\_ prefixed configurations need to be set.
+
+  - volcengine-tos
+
+    Volcengine TOS object storage, if this option is selected, the following VOLCENGINE_TOS\_ prefixed configurations need to be set.
+
 - STORAGE_LOCAL_PATH
 
   Default is storage, that is, it is stored in the storage directory of the current directory.
@@ -220,6 +255,15 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - ALIYUN_OSS_REGION: ap-southeast-1 # reference: https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
 - ALIYUN_OSS_AUTH_VERSION: v4
 - ALIYUN_OSS_PATH: your-path # Don't start with '/'. OSS doesn't support leading slash in object names. reference: https://www.alibabacloud.com/help/en/oss/support/0016-00000005
+- HUAWEI_OBS_BUCKET_NAME: your-bucket-name eg, 'difyai'
+- HUAWEI_OBS_SECRET_KEY: your-secret-key eg, 'difyai'
+- HUAWEI_OBS_ACCESS_KEY: your-access-key eg, 'difyai'
+- HUAWEI_OBS_SERVER: your-server-url # reference: https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html
+- VOLCENGINE_TOS_BUCKET_NAME: your-bucket-name eg, 'difyai'
+- VOLCENGINE_TOS_SECRET_KEY: your-secret-key eg, 'difyai'
+- VOLCENGINE_TOS_ACCESS_KEY: your-access-key eg, 'difyai'
+- VOLCENGINE_TOS_REGION: your-region eg, 'cn-guangzhou' # reference: https://www.volcengine.com/docs/6349/107356
+- VOLCENGINE_TOS_ENDPOINT: your-endpoint eg, 'tos-cn-guangzhou.volces.com' # reference: https://www.volcengine.com/docs/6349/107356
 
 #### Vector Database Configuration
 
@@ -265,13 +309,13 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
   The environment where Pinecone is located, such as: `us-east4-gcp`
 
-- MILVUS_HOST
+- MILVUS_URI
 
-  Milvus host configuration.
+  Milvus uri configuration. e.g.http://localhost:19530. For Zilliz Cloud, adjust the uri and token to the [Public Endpoint and Api key](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details).
 
-- MILVUS_PORT
+- MILVUS_TOKEN
 
-  Milvus port configuration.
+  Milvus token configuration, default is empty.
 
 - MILVUS_USER
 
@@ -280,10 +324,6 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - MILVUS_PASSWORD
 
   Milvus password configuration, default is empty.
-
-- MILVUS_SECURE
-
-  Whether Milvus uses SSL connection, default is false.
 
 - MYSCALE_HOST
 

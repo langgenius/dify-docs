@@ -1,4 +1,4 @@
-# Ollamaが配置したローカルモデルを統合
+# Ollamaでデプロイしたローカルモデルを統合
 
 ![ollama](../../.gitbook/assets/ollama.png)
 
