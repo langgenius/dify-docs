@@ -133,6 +133,7 @@
   * [数分で業務データを持つ公式サイトのAIチャットボットを作成する方法](learn-more/use-cases/create-an-ai-chatbot-with-business-data-in-minutes.md)
   <!-- * [フルセットのオープンソースツールを使用したLLMアプリの実践：DifyでBaichuanオープンソースモデル機能を呼び出す](learn-more/use-cases/practical-implementation-of-building-llm-applications-using-a-full-set-of-open-source-tools.md)
   * [DifyをWeChatエコシステムに統合する方法](learn-more/use-cases/dify-on-wechat.md) -->
+  * [DifyチャットボットをWixサイトに統合する方法](learn-more/use-cases/how-to-integrate-dify-chatbot-to-your-wix-website.md)
 * [拡張読書](learn-more/extended-reading/README.md)
   * [LLMOpsとは何ですか？](learn-more/extended-reading/what-is-llmops.md)
   * [検索強化生成（RAG）](learn-more/extended-reading/retrieval-augment/README.md)
