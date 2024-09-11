@@ -11,7 +11,7 @@ Difyでは、製品の仕様に関する透明性の高いポリシーを採用�
 
 ### プロジェクトの基本情報
 
-<table data-header-hidden data-full-width="false"><thead><tr><th width="156"></th><th></th></tr></thead><tbody><tr><td>プロジェクト設立</td><td>2023年3月</td></tr><tr><td>オープンソースライセンス</td><td><a href="../../policies/open-source.md">Apache License 2.0（商用ライセンスあり）</a></td></tr><tr><td>公式開発チーム</td><td>10名以上のフルタイム従業員</td></tr><tr><td>コミュニティ貢献者</td><td><a href="https://ossinsight.io/analyze/langgenius/dify">290人以上(2024年Q2時点)</a></td></tr><tr><td>バックエンド技術</td><td>Python / Flask / PostgreSQL</td></tr><tr><td>フロントエンド技術</td><td>Next.js</td></tr><tr><td>コードベースサイズ</td><td>13万行以上</td></tr><tr><td>リリース頻度</td><td>平均週1回</td></tr></tbody></table>
+<table data-header-hidden data-full-width="false"><thead><tr><th width="156"></th><th></th></tr></thead><tbody><tr><td>プロジェクト設立</td><td>2023年3月</td></tr><tr><td>オープンソースライセンス</td><td><a href="../../policies/open-source.md">Apache License 2.0（商用ライセンスあり）</a></td></tr><tr><td>公式開発チーム</td><td>15名以上のフルタイム従業員</td></tr><tr><td>コミュニティ貢献者</td><td><a href="https://ossinsight.io/analyze/langgenius/dify">290人以上(2024年Q2時点)</a></td></tr><tr><td>バックエンド技術</td><td>Python / Flask / PostgreSQL</td></tr><tr><td>フロントエンド技術</td><td>Next.js</td></tr><tr><td>コードベースサイズ</td><td>13万行以上</td></tr><tr><td>リリース頻度</td><td>平均週1回</td></tr></tbody></table>
 
 ### 技術特徴
 

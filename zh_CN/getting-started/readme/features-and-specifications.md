@@ -10,7 +10,7 @@ description: 对于已经熟悉 LLM 应用技术栈的技术人士来说，这�
 
 ### 项目基础信息
 
-<table data-header-hidden data-full-width="false"><thead><tr><th width="156"></th><th></th></tr></thead><tbody><tr><td>项目设立</td><td>2023 年 3 月</td></tr><tr><td>开源协议</td><td><a href="../../policies/open-source.md">基于 Apache License 2.0 有限商业许可</a></td></tr><tr><td>官方研发团队</td><td>超过 20 名全职员工</td></tr><tr><td>社区贡献者</td><td><a href="https://ossinsight.io/analyze/langgenius/dify">超过 290 人</a> （截止 2024 Q2）</td></tr><tr><td>后端技术</td><td>Python/Flask/PostgreSQL</td></tr><tr><td>前端技术</td><td>Next.js</td></tr><tr><td>代码行数</td><td>超过 13 万行</td></tr><tr><td>发版周期</td><td>平均每周一次</td></tr></tbody></table>
+<table data-header-hidden data-full-width="false"><thead><tr><th width="156"></th><th></th></tr></thead><tbody><tr><td>项目设立</td><td>2023 年 3 月</td></tr><tr><td>开源协议</td><td><a href="../../policies/open-source.md">基于 Apache License 2.0 有限商业许可</a></td></tr><tr><td>官方研发团队</td><td>超过 15 名全职员工</td></tr><tr><td>社区贡献者</td><td><a href="https://ossinsight.io/analyze/langgenius/dify">超过 290 人</a> （截止 2024 Q2）</td></tr><tr><td>后端技术</td><td>Python/Flask/PostgreSQL</td></tr><tr><td>前端技术</td><td>Next.js</td></tr><tr><td>代码行数</td><td>超过 13 万行</td></tr><tr><td>发版周期</td><td>平均每周一次</td></tr></tbody></table>
 
 ### 技术特性
 

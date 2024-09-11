@@ -10,7 +10,7 @@ We adopt transparent policies around product specifications to ensure decisions 
 
 ### Project Basics
 
-<table data-header-hidden><thead><tr><th width="341"></th><th></th></tr></thead><tbody><tr><td>Established</td><td>March 2023</td></tr><tr><td>Open Source License</td><td><a href="../../policies/open-source.md">Apache License 2.0 with commercial licensing</a></td></tr><tr><td>Official R&#x26;D Team</td><td>Over 10 full-time employees</td></tr><tr><td>Community Contributors</td><td>Over <a href="https://ossinsight.io/analyze/langgenius/dify#overview">290</a> people(As of Q2 2024)</td></tr><tr><td>Backend Technology</td><td>Python/Flask/PostgreSQL</td></tr><tr><td>Frontend Technology</td><td>Next.js</td></tr><tr><td>Codebase Size</td><td>Over 130,000 lines</td></tr><tr><td>Release Frequency</td><td>Average once per week</td></tr></tbody></table>
+<table data-header-hidden><thead><tr><th width="341"></th><th></th></tr></thead><tbody><tr><td>Established</td><td>March 2023</td></tr><tr><td>Open Source License</td><td><a href="../../policies/open-source.md">Apache License 2.0 with commercial licensing</a></td></tr><tr><td>Official R&#x26;D Team</td><td>Over 15 full-time employees</td></tr><tr><td>Community Contributors</td><td>Over <a href="https://ossinsight.io/analyze/langgenius/dify#overview">290</a> people(As of Q2 2024)</td></tr><tr><td>Backend Technology</td><td>Python/Flask/PostgreSQL</td></tr><tr><td>Frontend Technology</td><td>Next.js</td></tr><tr><td>Codebase Size</td><td>Over 130,000 lines</td></tr><tr><td>Release Frequency</td><td>Average once per week</td></tr></tbody></table>
 
 ### Technical Features
 
