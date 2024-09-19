@@ -140,6 +140,8 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 <figure><img src="../../../../img/iteration-code-node-convert.png" alt="" width="334"><figcaption><p>コードノード変換</p></figcaption></figure>
 
+コード例：
+
 ```python
 def main(articleSections: list):
     data = articleSections
@@ -151,6 +153,8 @@ def main(articleSections: list):
 **テンプレートノードを使用した変換**
 
 <figure><img src="../../../../img/workflow-template-node.png" alt="" width="332"><figcaption><p>テンプレートノード変換</p></figcaption></figure>
+
+コード例：
 
 ```django
 {{ articleSections | join("\n") }}

@@ -108,9 +108,27 @@ docker compose up -d
 
 ### Difyへのアクセス
 
-`http://localhost`にアクセスして、Difyを使用します。
+管理者初期化ページにアクセスして管理者アカウントを設定する:
 
-### Difyのカスタマイズ
+```bash
+# ローカル環境
+http://localhost/install
+
+# サーバー環境
+http://your_server_ip/install
+```
+
+Dify web interface address:
+
+```bash
+# ローカル環境
+http://localhost
+
+# サーバー環境
+http://your_server_ip
+```
+
+### Difyのカスタマイズ化
 
 環境変数は docker/dotenvs にあります。もし変数を変更するには、対応する`.env.example` ファイル名の接尾辞 `.example` を削除し、ファイル中の変数を直接編集してください。その後、以下のコマンドを順に実行：
 
@@ -118,3 +136,5 @@ docker compose up -d
 docker compose down
 docker compose up -d
 ```
+
+すべでの環境変数セットは `docker/.env.example` にあります。

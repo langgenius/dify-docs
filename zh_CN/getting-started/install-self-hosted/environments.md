@@ -20,7 +20,7 @@ WebApp API 后端 URL，用于声明**前端** API 后端地址，传空则为�
 
 #### APP\_WEB\_URL
 
-WebApp URL，用于**给前端**展示 WebAPP API Base URL，传空则为同域。范例：`https://api.app.dify.ai`
+WebApp URL，用于预览文件、**给前端**展示下载用的 URL，以及作为多模型输入接口，传空则为同域。范例：`https://udify.app/`
 
 #### FILES\_URL
 

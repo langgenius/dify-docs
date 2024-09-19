@@ -142,8 +142,6 @@ The output variable of the iteration node is in array format and cannot be direc
 
 CODE Example:
 
-CODE Example:
-
 ```python
 def main(articleSections: list):
     data = articleSections
