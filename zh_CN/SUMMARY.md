@@ -119,13 +119,13 @@
 * [后端](development/backend/README.md)
   * [DifySandbox](development/backend/sandbox/README.md)
     * [贡献指南](development/backend/sandbox/contribution.md)
-* [模型接入](development/mo-xing-jie-ru/README.md)
-  * [接入 Hugging Face 上的开源模型](development/mo-xing-jie-ru/hugging-face.md)
-  * [接入 Replicate 上的开源模型](development/mo-xing-jie-ru/replicate.md)
-  * [接入 Xinference 部署的本地模型](development/mo-xing-jie-ru/xinference.md)
-  * [接入 OpenLLM 部署的本地模型](development/mo-xing-jie-ru/openllm.md)
-  * [接入 LocalAI 部署的本地模型](development/mo-xing-jie-ru/localai.md)
-  * [接入 Ollama 部署的本地模型](development/mo-xing-jie-ru/ollama.md)
+* [模型接入](development/models-integration/README.md)
+  * [接入 Hugging Face 上的开源模型](development/models-integration/hugging-face.md)
+  * [接入 Replicate 上的开源模型](development/models-integration/replicate.md)
+  * [接入 Xinference 部署的本地模型](development/models-integration/xinference.md)
+  * [接入 OpenLLM 部署的本地模型](development/models-integration/openllm.md)
+  * [接入 LocalAI 部署的本地模型](development/models-integration/localai.md)
+  * [接入 Ollama 部署的本地模型](development/models-integration/ollama.md)
 
 ## 阅读更多 <a href="#learn-more" id="learn-more"></a>
 

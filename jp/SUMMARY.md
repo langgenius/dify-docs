@@ -20,12 +20,6 @@
   * [新しいプロバイダーの追加](guides/model-configuration/new-provider.md)
   * [事前定義モデルの追加](guides/model-configuration/predefined-model.md)
   * [カスタムモデルの追加](guides/model-configuration/customizable-model.md)
-  * [Hugging Faceのオープンソースモデルを統合](guides/model-configuration/hugging-face.md)
-  * [Replicateのオープンソースモデルを統合](guides/model-configuration/replicate.md)
-  * [Xinferenceでデプロイしたローカルモデルを統合](guides/model-configuration/xinference.md)
-  * [OpenLLMでデプロイしたローカルモデルを統合](guides/model-configuration/openllm.md)
-  * [LocalAIでデプロイしたローカルモデルを統合](guides/model-configuration/localai.md)
-  * [Ollamaでデプロイしたローカルモデルを統合](guides/model-configuration/ollama.md)
   * [負荷分散](guides/model-configuration/load-balancing.md)
 * [アプリケーション](guides/application-orchestrate/README.md)
   * [アプリ作成](guides/application-orchestrate/creating-an-application.md)
@@ -123,6 +117,13 @@
 * [バックエンド](development/backend/README.md)
   * [DifySandbox](development/backend/sandbox/README.md)
     * [貢献ガイド](development/backend/sandbox/contribution.md)
+* [モデルの統合](development/models-integration/README.md)
+  * [Hugging Faceのオープンソースモデルを統合](development/models-integration/hugging-face.md)
+  * [Replicateのオープンソースモデルを統合](development/models-integration/replicate.md)
+  * [Xinferenceでデプロイしたローカルモデルを統合](development/models-integration/xinference.md)
+  * [OpenLLMでデプロイしたローカルモデルを統合](development/models-integration/openllm.md)
+  * [LocalAIでデプロイしたローカルモデルを統合](development/models-integration/localai.md)
+  * [Ollamaでデプロイしたローカルモデルを統合](development/models-integration/ollama.md)
 
 ## もっと読む <a href="#learn-more" id="learn-more"></a>
 
