@@ -152,6 +152,6 @@
 ## ポリシー <a href="#policies" id="policies"></a>
 
 * [オープンソースライセンス](policies/open-source.md)
-* [ユーザー契約](policies/yz/README.md)
+* [ユーザ規約](policies/agreement/README.md)
   * [利用規約](https://dify.ai/terms)
   * [プライバシーポリシー](https://dify.ai/privacy)
