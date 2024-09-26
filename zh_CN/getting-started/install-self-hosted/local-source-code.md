@@ -67,8 +67,7 @@ pyenv global 3.10
 3.  生成随机密钥，并替换 `.env` 中 `SECRET_KEY` 的值
 
     ```
-    openssl rand -base64 42
-    sed -i 's/SECRET_KEY=.*/SECRET_KEY=<your_value>/' .env
+    awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
 4.  安装依赖包
 

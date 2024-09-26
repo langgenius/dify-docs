@@ -68,8 +68,7 @@ pyenv global 3.10
 3.  Generate a random secret key and replace the value of SECRET_KEY in the .env file:
 
     ```
-    openssl rand -base64 42
-    sed -i 's/SECRET_KEY=.*/SECRET_KEY=<your_value>/' .env
+    awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
 
 4.  Install the required dependencies:

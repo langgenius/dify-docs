@@ -56,7 +56,7 @@ A secret key used for securely signing session cookies and encrypting sensitive 
 
 This variable must be set before the first launch.
 
-You can generate a strong key using `openssl rand -base64 42`.
+Run `openssl rand -base64 42` to generate a strong key for it.
 
 #### DEPLOY_ENV
 
