@@ -9,7 +9,7 @@
 | オペレーティング·システム      | ソフトウェア                                                             | 説明                                                                                                                                                                                     |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | macOS 10.14またはそれ以降    | Docker Desktop                                                 | Docker仮想マシン (VM) を少なくとも2つの仮想CPU (vCPU) と8 GBの初期メモリを使用するように設定してください。そうしないと、インストールが失敗する可能性があります。詳細については[MacにDocker Desktopをインストール](https://docs.docker.com/desktop/mac/install/)を参照してください。 |
-| Linuxプラットフォーム       | <p>Docker 19.03以降<br>Docker Compose 1.25.1以降</p>          | 詳細については[Dockerのインストール](https://docs.docker.com/engine/install/)および[Docker Composeのインストール](https://docs.docker.com/compose/install/)を参照してください。 |
+| Linuxプラットフォーム       | <p>Docker 19.03以降<br>Docker Compose 1.28以降</p>          | 詳細については[Dockerのインストール](https://docs.docker.com/engine/install/)および[Docker Composeのインストール](https://docs.docker.com/compose/install/)を参照してください。 |
 | WSL 2を有効にしたWindows | <p>Docker Desktop<br></p>                                      | ソースコードやその他のデータをLinuxコンテナにバインドする際には、それらをWindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細については[WSL 2バックエンドを使用してWindowsにDocker Desktopをインストール](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
 ### Difyのクローン
