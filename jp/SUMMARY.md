@@ -76,6 +76,7 @@
     * [Dall-e](guides/tools/tool-configuration/dall-e.md)
     * [Serper](guides/tools/tool-configuration/serper.md)
     * [SearXNG](guides/tools/tool-configuration/searxng.md)
+    * [SiliconFlow（Flux AI サポート）](guides/tools/tool-configuration/siliconflow.md)
 * [アプリ公開](guides/application-publishing/README.md)
   * [シングルページWebアプリとして公開](guides/application-publishing/launch-your-webapp-quickly/README.md)
     * [Web アプリの設定](guides/application-publishing/launch-your-webapp-quickly/web-app-settings.md)
