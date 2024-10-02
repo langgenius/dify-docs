@@ -256,6 +256,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     * `myscale`
     * `pinecone` (暂未开放)
     * `tidb_vector`
+    * `analyticdb`
 *   WEAVIATE\_ENDPOINT
 
     Weaviate 端点地址，如：`http://weaviate:8080`。
@@ -326,6 +327,38 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 * TIDB\_VECTOR\_DATABASE
 
   TiDB Vector 数据库配置，如：`dify`
+
+*   ANALYTICDB_KEY_ID
+
+    用于阿里云OpenAPI认证的访问密钥ID。请阅读 [Analyticdb 文档](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair) 来创建您的AccessKey。
+
+*   ANALYTICDB_KEY_SECRET
+
+    用于阿里云OpenAPI认证的访问密钥秘密。
+
+*   ANALYTICDB_INSTANCE_ID
+
+    您的AnalyticDB实例的唯一标识符，例如 `gp-xxxxxx`。请阅读 [Analyticdb 文档](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1) 来创建您的实例。
+
+*   ANALYTICDB_REGION_ID
+
+    AnalyticDB实例所在区域的标识符，例如 `cn-hangzhou`。
+
+*   ANALYTICDB_ACCOUNT
+
+    用于连接AnalyticDB实例的账户名称。请阅读 [Analyticdb 文档](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account) 来创建账户。
+
+*   ANALYTICDB_PASSWORD
+
+    用于连接AnalyticDB实例的账户密码。
+
+*   ANALYTICDB_NAMESPACE
+
+    在AnalyticDB实例内要操作的命名空间(schema)，例如 `dify`。如果此命名空间不存在，将自动创建。
+
+*   ANALYTICDB_NAMESPACE_PASSWORD
+
+    命名空间(schema)的密码。如果命名空间不存在，将使用此密码进行创建。
 
 #### 知识库配置
 

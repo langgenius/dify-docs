@@ -270,6 +270,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `zilliz`（`milvus`と同じ）
     * `pinecone`（現在未公開）
     * `tidb_vector`
+    * `analyticdb`
 *   WEAVIATE\_ENDPOINT
 
     Weaviateエンドポイントアドレス（例：`http://weaviate:8080`）。
@@ -336,6 +337,38 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 *   TIDB\_VECTOR\_DATABASE
 
     TiDB Vectorデータベース設定（例：`dify`）
+    
+*   ANALYTICDB\_KEY\_ID
+
+    Aliyun OpenAPI認証に使用されるアクセスキーIDです。[ドキュメンテーション](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair) を参照してAccessKeyを作成します。
+
+*   ANALYTICDB\_KEY\_SECRET
+
+    Aliyun OpenAPI認証に使用されるアクセスキーシークレットです。
+
+*   ANALYTICDB\_INSTANCE\_ID
+
+    あなたのAnalyticDBインスタンスのユニークな識別子で、例えば `gp-xxxxxx` です。[ドキュメンテーション](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1) を参照してインスタンスを作成します。
+
+*   ANALYTICDB\_REGION\_ID
+
+    AnalyticDBインスタンスが位置するリージョンの識別子で、例えば `cn-hangzhou` です。
+
+*   ANALYTICDB\_ACCOUNT
+
+    AnalyticDBインスタンスに接続するために使用するアカウント名です。[ドキュメンテーション](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account) を参照してアカウントを作成します。
+
+*   ANALYTICDB\_PASSWORD
+
+    AnalyticDBインスタンスに接続するために使用するアカウントのパスワードです。
+
+*   ANALYTICDB\_NAMESPACE
+
+    AnalyticDBインスタンス内で操作したいnamespace(schema)です。例えば `dify` です。このnamespaceが存在しない場合、自動的に作成されます。
+
+*   ANALYTICDB\_NAMESPACE\_PASSWORD
+
+    namespace(schema)のパスワードです。このnamespaceが存在しない場合、このパスワードで作成されます。
 
 #### ナレッジベース設定
 

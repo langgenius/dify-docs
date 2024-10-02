@@ -279,6 +279,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `zilliz` (share the same configuration as `milvus`)
     - `myscale`
     - `pinecone` (not yet open)
+    - `analyticdb`
 - WEAVIATE_ENDPOINT
 
   Weaviate endpoint address, such as: `http://weaviate:8080`.
@@ -352,6 +353,38 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - MYSCALE_FTS_PARAMS
 
   MyScale text-search params, check [MyScale docs](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters) for multi-language support, default is empty.
+  
+- ANALYTICDB_KEY_ID
+
+  The access key ID used for Aliyun OpenAPI authentication. Read the  [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair) to create your AccessKey.
+
+- ANALYTICDB_KEY_SECRET
+
+  The access key secret used for Aliyun OpenAPI authentication.
+
+- ANALYTICDB_INSTANCE_ID
+
+  The unique identifier for your AnalyticDB instance, such as : `gp-xxxxxx`. Read the [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1) to create your instance.
+
+- ANALYTICDB_REGION_ID
+
+  The region identifier where the AnalyticDB instance is located, such as: `cn-hangzhou`.
+
+- ANALYTICDB_ACCOUNT
+
+  The account name used to connect to the AnalyticDB instance. Read the [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account) to create an account.
+
+- ANALYTICDB_PASSWORD
+
+  The password for the account used to connect to the AnalyticDB instance.
+
+- ANALYTICDB_NAMESPACE
+
+  The namespace(schema) within the AnalyticDB instance that you wish to interact with, such as `dify`. If this namespace does not exist, it will be created automatically.
+
+- ANALYTICDB_NAMESPACE_PASSWORD
+
+  The password for the namespace(schema). If the namespace does not exist, it will be created with this password.
 
 #### Knowledge Configuration
 
