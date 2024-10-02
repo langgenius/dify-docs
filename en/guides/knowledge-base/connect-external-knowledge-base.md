@@ -1,4 +1,4 @@
-# Connect External Knowledge Base
+# Connect to an External Knowledge Base
 
 To enhance content retrieval accuracy, some teams opt to develop their own retrieval algorithms or host knowledge bases on cloud service providers (such as [AWS Bedrock](https://aws.amazon.com/bedrock/)). As a neutral LLM application development platform, Dify is committed to empowering developers with greater flexibility in choosing knowledge bases.
 
