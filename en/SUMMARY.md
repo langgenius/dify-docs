@@ -65,6 +65,7 @@
   * [Sync Data from Website](guides/knowledge-base/sync-from-website.md)
   * [Maintain Knowledge Base via API](guides/knowledge-base/maintain-dataset-via-api.md)
   * [External Data Tool](guides/knowledge-base/external-data-tool.md)
+  * [Connect External Knowledge Base](guides/knowledge-base/connect-external-knowledge-base.md)
   * [External Knowledge API](guides/knowledge-base/external-knowledge-api.md)
 * [Tools](guides/tools/README.md)
   * [Quick Tool Integration](guides/tools/quick-tool-integration.md)
