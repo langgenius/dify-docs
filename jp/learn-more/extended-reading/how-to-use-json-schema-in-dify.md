@@ -202,4 +202,14 @@ LLMによって生成されたコンテンツは、次の形式で出力をサ�
 
 ## ヒント
 
-* アプリケーションのPromptに、ユーザー入力によって有効なJSON Schemaを自動生成する機能を組み込むと、より効率的に運用できます。
+* アプリのプロンプトに、ユーザー入力が有効な応答を生成しない状況の処理方法に関する指示が含まれていることを確認してください。
+* モデルは常に指定されたパターンに従おうとするため、入力が指定されたパターンとまったく無関係である場合、LLM が幻覚を引き起こす可能性があります。
+* LLM が入力がタスクと互換性がないことを検出した場合、プロンプトに言語を含めて、空のパラメーターまたは特定の文が返されるように指定できます。
+* すべてのフィールドは`required`である必要があります。詳細については、[こちら](https://platform.openai.com/docs/guides/structural-outputs/supported-schemas) を参照してください。
+* [AdditionalProperties: false](https://platform.openai.com/docs/guides/structurd-outputs/Additionalproperties-false-must-always-be-set-in-objects) は常にオブジェクトに設定する必要があります
+* スキーマのルートレベルのオブジェクトはオブジェクトである必要があります
+
+## 参考資料
+
+* [Introduction to Structured Outputs](https://cookbook.openai.com/examples/structured\_outputs\_intro)
+* [Structured Output](https://platform.openai.com/docs/guides/structured-outputs/json-mode?context=without\_parse)
