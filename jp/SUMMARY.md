@@ -112,6 +112,13 @@
   * [個人アカウントの管理](guides/management/personal-account-management.md)
   * [サブスクリプション管理](guides/management/subscription-management.md)
 
+## ハンドオン工房 <a href="workshop" id="workshop"></a>
+
+* [初級編](workshop/basic/README.md)
+  * [ゼロからAI画像生成アプリを作る](workshop/basic/build-ai-image-generation-app.md)
+* [中級編](workshop/intermediate/README.md)
+  * [チャットストリームエージェントを使用して Twitter アカウントを分析する](workshop/intermediate/twitter-chatflow.md)
+
 ## コミュニティ <a href="#community" id="community"></a>
 
 * [サポートの求め](community/support.md)
