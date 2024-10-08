@@ -1,5 +1,5 @@
 ---
-cover: ../../.gitbook/assets/%E7%94%BB%E6%9D%BF_1.png
+cover: ../../../en/.gitbook/assets/%E7%94%BB%E6%9D%BF_1.png
 coverY: 0
 ---
 
@@ -57,7 +57,7 @@ docker compose up -d
 
 アカウント設定にて、モデルプロバイダーを設定してください：
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.51.29.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.51.29.png" alt=""><figcaption></figcaption></figure>
 
 ## チャットフローの作成
 
@@ -65,15 +65,15 @@ docker compose up -d
 
 `空白から作成`をクリックして、新しいフローの作成を開始します：
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_20.37.09.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_20.37.09.png" alt=""><figcaption></figcaption></figure>
 
 初期化されたチャットフローは以下のようになります：
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.44.44.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.44.44.png" alt=""><figcaption></figcaption></figure>
 
 ## チャットフローにノードを追加
 
-<figure><img src="../../.gitbook/assets/image (114).png" alt=""><figcaption><p>最終的なチャットフローはこのようになります</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/image (114).png" alt=""><figcaption><p>最終的なチャットフローはこのようになります</p></figcaption></figure>
 
 ### 開始ノード
 
@@ -81,7 +81,7 @@ docker compose up -d
 
 開始ノードをクリックして、新しい変数を追加します：
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.42.10.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.42.10.png" alt=""><figcaption></figcaption></figure>
 
 ### コードノード
 
@@ -98,27 +98,27 @@ def main(id: str) -> dict:
 
 コードノードを追加し、Pythonを選択した後、入力および出力の変数名を設定してください：
 
-<figure><img src="../../.gitbook/assets/7d5de1cce4426f70f448402d7812bd040d681c225e49a2de66b59cbde66ba834.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/7d5de1cce4426f70f448402d7812bd040d681c225e49a2de66b59cbde66ba834.png" alt=""><figcaption></figcaption></figure>
 
 ### HTTPリクエストノード
 
 [Crawlbaseのドキュメント](https://crawlbase.com/docs/crawling-api/scrapers/#twitter-profile)によると、TwitterユーザーのプロフィールをHTTP形式でスクレイピングするには、以下の形式でHTTPリクエストノードを設定する必要があります：
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21 (1).png" alt=""><figcaption></figcaption></figure>
 
 セキュリティ上の観点から、トークン値を平文で直接入力することは避けるべきです。これは推奨されるベストプラクティスではありません。実際、Difyの最新バージョンでは、トークン値を**環境変数**に設定できるようになっています。`env`をクリックして`Add Variable`を選択し、トークン値を設定すると、ノードに平文が表示されなくなります。
 
 あなたのCrawlbase APIキーについては、[こちら](https://crawlbase.com/dashboard/account/docs)で確認できます。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.55.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.55.20.png" alt=""><figcaption></figcaption></figure>
 
 `/`を入力することで、APIキーを簡単に変数として挿入できます。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.02.04.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.02.04.png" alt=""><figcaption></figcaption></figure>
 
 このノードが正しく動作するか確認するために、ノードの開始ボタンをタップしてください：
 
-<figure><img src="../../.gitbook/assets/CleanShot 2024-10-07 at 21.44.50@2x.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/CleanShot 2024-10-07 at 21.44.50@2x.png" alt=""><figcaption></figcaption></figure>
 
 ### LLMノード
 
@@ -128,17 +128,17 @@ def main(id: str) -> dict:
 
 以下はサンプルのシステムプロンプトです。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.35.38.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.35.38.png" alt=""><figcaption></figcaption></figure>
 
 ## テスト実行
 
 `プレビュー`をクリックしてテスト実行を開始し、`id`にTwitterユーザーIDを入力してください。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
 
 例えば、Elon Muskのツイートを分析し、彼の口調で地球温暖化についてのツイートを書きたいと思います。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.47.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.47.20.png" alt=""><figcaption></figcaption></figure>
 
 これはElonらしいですか？笑
 
