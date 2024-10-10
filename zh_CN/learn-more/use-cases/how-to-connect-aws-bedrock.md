@@ -156,7 +156,7 @@ class ExternalDatasetService:
 
 设置完成后即可建立与外部知识库 API 的连接。
 
-### 6. 测试外部知识库连接与召回 <a href="#id-4.-ce-shi-wai-bu-zhi-shi-ku-lian-jie-yu-zhao-hui" id="id-4.-ce-shi-wai-bu-zhi-shi-ku-lian-jie-yu-zhao-hui"></a>
+### 6. 测试外部知识库连接与召回
 
 建立与外部知识库的连接后，开发者可以在 **“召回测试”** 中模拟可能的问题关键词，预览从 AWS Bedrock Knowledge Base 召回的文本分段。
 

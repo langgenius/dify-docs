@@ -154,7 +154,7 @@
   * [使用 Dify 和 Azure Bot Framework 构建 Microsoft Teams 机器人](learn-more/use-cases/dify-on-teams.md)
   * [如何让 LLM 应用提供循序渐进的聊天体验？](learn-more/use-cases/how-to-make-llm-app-provide-a-progressive-chat-experience.md)
   * [如何将 Dify Chatbot 集成至 Wix 网站？](learn-more/use-cases/how-to-integrate-dify-chatbot-to-your-wix-website.md)
-  * [如何连接 AWS Bedrock 知识库？](learn-more/use-cases/how-to-connect-aws-bderock.md)
+  * [如何连接 AWS Bedrock 知识库？](learn-more/use-cases/how-to-connect-aws-bedrock.md)
 * [扩展阅读](learn-more/extended-reading/README.md)
   * [什么是 LLMOps？](learn-more/extended-reading/what-is-llmops.md)
   * [检索增强生成（RAG）](learn-more/extended-reading/retrieval-augment/README.md)

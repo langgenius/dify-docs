@@ -146,6 +146,7 @@
   * [Notion AI アシスタントを構築する](learn-more/use-cases/build-an-notion-ai-assistant.md)
   * [数分で業務データを持つ公式サイトのAIチャットボットを作成する方法](learn-more/use-cases/create-an-ai-chatbot-with-business-data-in-minutes.md)
   * [DifyチャットボットをWixサイトに統合する方法](learn-more/use-cases/how-to-integrate-dify-chatbot-to-your-wix-website.md)
+  * [AWS Bedrockのナレッジベースに統合する方法](learn-more/use-cases/how-to-connect-aws-bedrock.md)
 * [追加情報](learn-more/extended-reading/README.md)
   * [LLMOpsとは何ですか？](learn-more/extended-reading/what-is-llmops.md)
   * [検索拡張生成（RAG）](learn-more/extended-reading/retrieval-augment/README.md)

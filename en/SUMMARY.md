@@ -147,6 +147,7 @@
   * [Create a MidJourney Prompt Bot with Dify](learn-more/use-cases/create-a-midjourney-prompt-bot-with-dify.md)
   * [Create an AI Chatbot with Business Data in Minutes](learn-more/use-cases/create-an-ai-chatbot-with-business-data-in-minutes.md)
   * [Integrating Dify Chatbot into Your Wix Website](learn-more/use-cases/how-to-integrate-dify-chatbot-to-your-wix-website.md)
+  * [How to connect with AWS Bedrock Knowledge Base？](learn-more/use-cases/how-to-connect-aws-bedrock.md)
 * [Extended Reading](learn-more/extended-reading/README.md)
   * [What is LLMOps?](learn-more/extended-reading/what-is-llmops.md)
   * [Retrieval-Augmented Generation (RAG)](learn-more/extended-reading/retrieval-augment/README.md)

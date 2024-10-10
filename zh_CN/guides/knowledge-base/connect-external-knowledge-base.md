@@ -52,9 +52,9 @@ description: 作者： Allen。 Dify Technical Writer。
 * **知识库名称与描述**
 * **外部知识库 API** 选择在第二步中关联的外部知识库 API；Dify 将通过 API 连接的方式，调用存储在外部知识库的文本内容；
 * **外部知识库 ID** 指定需要被关联的特定的外部知识库 ID，详细说明请参考外部知识库 API 定义。
-*   **调整召回设置**&#x20;
+*   **调整召回设置**
 
-    **Top K：**用户发起提问时，将请求外部知识 API 获取相关性较高的内容分段。该参数用于筛选与用户问题相似度较高的文本片段。默认值为 3，数值越高，召回存在相关性的文本分段也就越多。&#x20;
+    **Top K：**用户发起提问时，将请求外部知识 API 获取相关性较高的内容分段。该参数用于筛选与用户问题相似度较高的文本片段。默认值为 3，数值越高，召回存在相关性的文本分段也就越多。
 
     **Score 阈值：**文本片段筛选的相似度阈值，只召回超过设置分数的文本片段，默认值为 0.5。数值越高说明对于文本与问题要求的相似度越高，预期被召回的文本数量也越少，结果也会相对而言更加精准。
 
@@ -68,14 +68,14 @@ description: 作者： Allen。 Dify Technical Writer。
 
 ### 5. 在应用内集成外部知识库
 
-*   Chatbot / Agent 类型应用&#x20;
+*   Chatbot / Agent 类型应用
 
-    在 Chatbot / Agent 类型应用内的编排页中的 **“上下文”** 内，选中带有 `EXTERNAL` 标签的外部知识库。&#x20;
+    在 Chatbot / Agent 类型应用内的编排页中的 **“上下文”** 内，选中带有 `EXTERNAL` 标签的外部知识库。
 
     <figure><img src="../../.gitbook/assets/image (357).png" alt=""><figcaption></figcaption></figure>
 *   Chatflow / Workflow 类型应用
 
-    在 Chatflow / Workflow 类型应用内添加 **“知识检索”** 节点，选中带有 `EXTERNAL` 标签的外部知识库。&#x20;
+    在 Chatflow / Workflow 类型应用内添加 **“知识检索”** 节点，选中带有 `EXTERNAL` 标签的外部知识库。
 
     <figure><img src="../../.gitbook/assets/image (358).png" alt=""><figcaption></figcaption></figure>
 
@@ -85,9 +85,9 @@ description: 作者： Allen。 Dify Technical Writer。
 
 * **知识库名称和描述**
 * **可见范围** 提供 「 只有我 」 、 「 所有团队成员 」 和 「部分团队成员」 三种权限范围。不具有权限的人将无法访问该知识库。若选择将知识库公开至其它成员，则意味着其它成员同样具备该知识库的查看、编辑和删除权限。
-*   **召回设置**&#x20;
+*   **召回设置**
 
-    **Top K:** 用户发起提问时，将请求外部知识 API 获取相关性较高的内容分段。该参数用于筛选与用户问题相似度较高的文本片段。默认值为 3，数值越高，召回存在相关性的文本分段也就越多。&#x20;
+    **Top K:** 用户发起提问时，将请求外部知识 API 获取相关性较高的内容分段。该参数用于筛选与用户问题相似度较高的文本片段。默认值为 3，数值越高，召回存在相关性的文本分段也就越多。
 
     **Score 阈值：**文本片段筛选的相似度阈值，只召回超过设置分数的文本片段，默认值为 0.5。数值越高说明对于文本与问题要求的相似度越高，预期被召回的文本数量也越少，结果也会相对而言更加精准。
 
@@ -95,7 +95,7 @@ description: 作者： Allen。 Dify Technical Writer。
 
 ### 连接示例
 
-[how-to-connect-aws-bderock.md](../../learn-more/use-cases/how-to-connect-aws-bderock.md "mention")
+[如何连接 AWS Bedrock 知识库？](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
 
 ### 常见问题
 

@@ -1,5 +1,23 @@
 # Connect to an External Knowledge Base
 
+> To make a distinction, knowledge bases independent of the Dify platform are collectively referred to as **"external knowledge bases"** in this article.
+
+## Functional Introduction
+
+For advanced developers who have higher requirements for content retrieval, the built-in knowledge base function and text retrieval and recall mechanism of the Dify platform are limited, and the text recall results cannot be easily changed. **
+
+Due to the pursuit of higher accuracy of text retrieval and recall, as well as the need to manage internal materials, some teams choose to independently develop RAG algorithms and independently maintain text recall systems, or uniformly host content to cloud vendors' knowledge base services (such as [AWS Bedrock](https://aws.amazon.com/bedrock/)).
+
+As a neutral LLM application development platform, Dify is committed to giving developers more choices.
+
+The **Connect to external knowledge base** function can connect the Dify platform with external knowledge bases. Through API services, AI applications can obtain more information sources. This means:
+
+* The Dify platform can directly obtain the text content hosted in the cloud service provider's knowledge base, so that developers do not need to repeatedly move the content to the knowledge base in Dify;
+
+* The Dify platform can directly obtain the text content processed by algorithms in the self-built knowledge base. Developers only need to focus on the information retrieval mechanism of the self-built knowledge base and continuously optimize and improve the accuracy of information recall.
+
+<figure><img src="../../../zh_CN/.gitbook/assets/image (1).png" alt=""><figcaption><p>Principle of external knowledge base connection</p></figcaption></figure>
+
 To enhance content retrieval accuracy, some teams opt to develop their own retrieval algorithms or host knowledge bases on cloud service providers (such as [AWS Bedrock](https://aws.amazon.com/bedrock/)). As a neutral LLM application development platform, Dify is committed to empowering developers with greater flexibility in choosing knowledge bases.
 
 Dify offers functionality to connect to external knowledge bases via API, providing developers with diverse options for knowledge base selection and content expansion. Text resources from external knowledge bases can be seamlessly integrated into Dify's AI application ecosystem, enhancing the breadth and depth of application knowledge.
@@ -82,6 +100,10 @@ Navigate to the **"Knowledge"** page, external knowledge base cards will list an
 The **"External Knowledge API"** and **"External Knowledge ID"** associated with the external knowledge base do not support modification. If modification is needed, please associate a new **"External Knowledge API"** and reset it.
 
 <figure><img src="../../../img/connect-kb-7-en.webp" alt=""><figcaption></figcaption></figure>
+
+### Connection Example
+
+[How to connect with AWS Bedrock Knowledge Base？](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
 
 ## FAQ
 
