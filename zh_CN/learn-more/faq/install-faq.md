@@ -167,9 +167,9 @@ cd dify/docker
 docker compose up -d
 ```
 
-### 17. Migrate Vector Database to Qdrant or Milvus
+### 17. 迁移 Weaviate 向量数据到其他向量数据库
 
-如果您想将向量数据库从 Weaviate 迁移到 Qdrant 或 Milvus，您需要迁移向量数据库中的数据。以下是迁移方法：
+如果您想将向量数据库从 Weaviate 迁移到 其他向量数据库，您需要迁移向量数据库中的数据。以下是迁移方法：
 
 步骤：
 
@@ -177,7 +177,7 @@ docker compose up -d
 2. 如果您从 docker-compose 开始，请将 `docker-compose.yaml` 文件中的环境变量修改为您要迁移到的向量数据库，api 和 worker 都需要修改。 例如：
 
 ```
-# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`.
+# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`, `analyticdb`.
 VECTOR_STORE: weaviate
 ```
 
@@ -186,6 +186,12 @@ VECTOR_STORE: weaviate
 ```
 flask vdb-migrate # or docker exec -it docker-api-1 flask vdb-migrate
 ```
+
+**经过测试的目标数据库：**
+
+- qdrant
+- milvus
+- analyticdb
 
 ### 18. 为什么需要SSRF\_PROXY？
 

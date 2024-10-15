@@ -167,23 +167,31 @@ cd dify/docker
 docker compose up -d
 ```
 
-### 17. Migrate Vector Database to Qdrant or Milvus
+### 17. Migrate vector database from weaviate to another vector database.
 
-If you want to migrate the vector database from Weaviate to Qdrant or Milvus, you need to migrate the data in the vector database. Here are the steps:
+If you want to migrate the vector database from weaviate to another vector database, you need to migrate the data in the vector database. The following is the migration method:
 
-1. If you start from local source code, modify the environment variables in the `.env` file to the vector database you want to migrate to. For example: `VECTOR_STORE=qdrant`
-2. If you start from docker-compose, modify the environment variables in the `docker-compose.yaml` file to the vector database you want to migrate to, both api and worker need to be modified. For example:
+Step:
+
+1. If you are starting from local source code, modify the environment variable in the `.env` file to the vector database you want to migrate to. etc: `VECTOR_STORE=qdrant`
+2. If you are starting from docker-compose, modify the environment variable in the `docker-compose.yaml` file to the vector database you want to migrate to, both api and worker are all needed. etc:
 
 ```
-# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`.
+# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`, `analyticdb`.
 VECTOR_STORE: weaviate
 ```
 
-3. Execute the following command
+3. run the below command in your terminal or docker container
 
 ```
 flask vdb-migrate # or docker exec -it docker-api-1 flask vdb-migrate
 ```
+
+**Tested target database:**
+
+- qdrant
+- milvus
+- analyticdb
 
 ### 18. Why is SSRF_PROXY needed?
 
