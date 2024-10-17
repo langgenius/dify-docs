@@ -31,5 +31,5 @@ Just like self-hosted deploy, you may modify the environment variables under `.e
 
 ```
 docker-compose down
-ocker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
 ```
