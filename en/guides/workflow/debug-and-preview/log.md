@@ -4,4 +4,4 @@ Clicking **"Run History - View Log — Details"** allows you to see a comprehens
 
 This detailed information enables you to review various aspects of each node throughout the complete execution process of the workflow. You can examine inputs and outputs, analyze token consumption, evaluate runtime duration, and assess other pertinent metrics.
 
-<figure><img src="../../../../img/conversation-logs.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/conversation-logs.png" alt=""><figcaption></figcaption></figure>

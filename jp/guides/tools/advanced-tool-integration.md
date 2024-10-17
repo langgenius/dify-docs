@@ -1,6 +1,6 @@
 # 高度接続ツール
 
-高度接続を始める前に、[クイック接続](https://docs.dify.ai/v/zh-hans/guides/tools/quick-tool-integration)を読んで、Difyのツール接続プロセスについて基本的な理解を持っていることを確認してください。
+高度接続を始める前に、[クイック接続](https://docs.dify.ai/v/ja-jp/guides/tools/quick-tool-integration)を読んで、Difyのツール接続プロセスについて基本的な理解を持っていることを確認してください。
 
 ### ツールインターフェース
 
@@ -131,7 +131,7 @@ from openai import OpenAI
 class DallE3Tool(BuiltinTool):
     def _invoke(self, 
                 user_id: str, 
-               tool_paramters: Dict[str, Any], 
+               tool_Parameters: Dict[str, Any], 
         ) -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
             ツールを呼び出す
@@ -141,7 +141,7 @@ class DallE3Tool(BuiltinTool):
         )
 
         # プロンプト
-        prompt = tool_paramters.get('prompt', '')
+        prompt = tool_Parameters.get('prompt', '')
         if not prompt:
             return self.create_text_message('プロンプトを入力してください')
 
@@ -170,7 +170,7 @@ class DallE3Tool(BuiltinTool):
 
 ```python
 from core.tools.tool.builtin_tool import BuiltinTool
-from core.tools.entities.tool_entities import ToolInvokeMessage, ToolParamter
+from core.tools.entities.tool_entities import ToolInvokeMessage, ToolParameter
 from core.tools.errors import ToolProviderCredentialValidationError
 
 from typing import Any, Dict, List, Union
@@ -178,20 +178,20 @@ from httpx import post
 from base64 import b64decode
 
 class VectorizerTool(BuiltinTool):
-    def _invoke(self, user_id: str, tool_paramters: Dict[str, Any]) \
+    def _invoke(self, user_id: str, tool_Parameters: Dict[str, Any]) \
         -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
         ツールを呼び出す。画像変数名はここで渡す必要があるため、変数プールから画像を取得できます。
         """
         
     
-    def get_runtime_parameters(self) -> List[ToolParamter]:
+    def get_runtime_parameters(self) -> List[ToolParameter]:
         """
         ツールパラメータリストをオーバーライドします。ここでは、変数プールの実際の状況に基づいてパラメータリストを動的に生成し、それに基づいてLLMがフォームを生成できます。
         """
         
     
-    def is_tool_avaliable(self) -> bool:
+    def is_tool_available(self) -> bool:
         """
         現在のツールが使用可能かどうかを確認します。変数プールに画像がない場合、LLMがこのツールを表示する必要はありません。ここでFalseを返します。
         """     
@@ -201,7 +201,7 @@ class VectorizerTool(BuiltinTool):
 
 ```python
 from core.tools.tool.builtin_tool import BuiltinTool
-from core.tools.entities.tool_entities import ToolInvokeMessage, ToolParamter
+from core.tools.entities.tool_entities import ToolInvokeMessage, ToolParameter
 from core.tools.errors import ToolProviderCredentialValidationError
 
 from typing import Any, Dict, List, Union
@@ -209,7 +209,7 @@ from httpx import post
 from base64 import b64decode
 
 class VectorizerTool(BuiltinTool):
-    def _invoke(self, user_id: str, tool_paramters: Dict[str, Any]) \
+    def _invoke(self, user_id: str, tool_Parameters: Dict[str, Any]) \
         -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
             ツールを呼び出す
@@ -221,7 +221,7 @@ class VectorizerTool(BuiltinTool):
             raise ToolProviderCredentialValidationError('APIキー名と値を入力してください')
 
         # 画像IDを取得、画像IDの定義はget_runtime_parametersで確認できます。
-        image_id = tool_paramters.get('image_id', '')
+        image_id = tool_Parameters.get('image_id', '')
         if not image_id:
             return self.create_text_message('画像IDを入力してください')
 
@@ -248,22 +248,22 @@ class VectorizerTool(BuiltinTool):
                                     meta={'mime_type': 'image/svg+xml'})
         ]
     
-    def get_runtime_parameters(self) -> List[ToolParamter]:
+    def get_runtime_parameters(self) -> List[ToolParameter]:
         """
         実行時パラメータをオーバーライド
         """
         # ここでは、ツールパラメータリストをオーバーライドし、image_idを定義し、そのオプションリストを現在の変数プール内のすべての画像に設定しました。ここでの設定はyamlの設定と一致しています。
         return [
-            ToolParamter.get_simple_instance(
+            ToolParameter.get_simple_instance(
                 name='image_id',
                 llm_description=f'ベクター化する画像ID。画像IDは{[i.name for i in self.list_default_image_variables()]}の中から指定してください。',
-                type=ToolParamter.ToolParameterType.SELECT,
+                type=ToolParameter.ToolParameterType.SELECT,
                 required=True,
                 options=[i.name for i in self.list_default_image_variables()]
             )
         ]
     
-    def is_tool_avaliable(self) -> bool:
+    def is_tool_available(self) -> bool:
         # 変数プールに画像がある場合のみ、LLMがこのツールを使用する必要があります。
         return len(self.list_default_image_variables()) > 0
 ```

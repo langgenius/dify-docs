@@ -1,7 +1,7 @@
 # Conversation Assistant
 
 Conversation applications use a one-question-one-answer mode to have a continuous conversation with the user.
-<!-- TODO CN IMG -->
+
 ### Applicable scenarios
 
 Conversation applications can be used in fields such as customer service, online education, healthcare, financial services, etc. These applications can help organizations improve work efficiency, reduce labor costs, and provide a better user experience.
@@ -16,13 +16,13 @@ Here, we use a interviewer application as an example to introduce the way to com
 
 Click the "Create Application" button on the homepage to create an application. Fill in the application name, and select **"Chat App"** as the application type.
 
-<figure><img src="../../../img/chat-app.png" alt=""><figcaption><p>Create Application</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/chat-app.png" alt=""><figcaption><p>Create Application</p></figcaption></figure>
 
 #### Step 2: Compose the Application
 
 After the application is successfully created, it will automatically redirect to the application overview page. Click on the button on the left menu: **"Orchestrate"** to compose the application.
 
-<figure><img src="../../../img/compose-the-app.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/compose-the-app.png" alt=""><figcaption></figcaption></figure>
 
 **2.1 Fill in Prompts**
 
@@ -38,11 +38,11 @@ For a better experience, we will add an opening dialogue: `"Hello, {{name}}. I'm
 
 To add the opening dialogue, click the "Add Feature" button in the upper left corner, and enable the "Conversation remarkers" feature:
 
-<figure><img src="../../../img/conversation-remarkers.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/conversation-remarkers.png" alt=""><figcaption></figcaption></figure>
 
 And then edit the opening remarks:
 
-![](../../../img/conversation-options.png)
+![](../../.gitbook/assets/conversation-options.png)
 
 **2.2 Adding Context**
 
@@ -54,21 +54,21 @@ If an application wants to generate content based on private contextual conversa
 
 Enter user inputs on the right side and check the respond content.
 
-![](../../../img/debug.png)
+![](../../.gitbook/assets/debug.png)
 
 If the results are not satisfactory, you can adjust the prompts and model parameters. Click on the model name in the upper right corner to set the parameters of the model:
 
-![](../../../img/adjust-model-parameters.png)
+![](../../.gitbook/assets/adjust-model-parameters.png)
 
 **Debugging with multiple models:**
 
 If debugging with a single model feels inefficient, you can utilize the **Debug as Multiple Models** feature to batch-test the models’ response effectiveness.
 
-![](../../../img/multiple-models.png)
+![](../../.gitbook/assets/multiple-models.png)
 
 Supports adding up to 4 LLMs at the same time.
 
-![](../../../img/multiple-models-2.png)
+![](../../.gitbook/assets/multiple-models-2.png)
 
 > ⚠️ When using the multi-model debugging feature, if only some large models are visible, it is because other large models’ keys have not been added yet. You can manually add multiple models’ keys in [“Add New Provider”](https://docs.dify.ai/guides/model-configuration/new-provider).
 

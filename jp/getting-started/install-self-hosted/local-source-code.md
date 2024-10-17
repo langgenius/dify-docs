@@ -2,13 +2,17 @@
 
 ### 前提条件
 
+> Dify インストール前に, ぜひマシンが最小インストール要件を満たしていることを確認してください：
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
+
 | 操作系统                       | ソフトウェア                                                         | 説明                                                                                                                                                                                   |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | macOS 10.14またはそれ以降     | Docker Desktop                                                 | Docker 仮想マシン（VM）を少なくとも2つの仮想CPU（vCPU）と8GBの初期メモリを使用するように設定してください。そうでないと、インストールが失敗する可能性があります。詳細は[MacにDocker Desktopをインストールする](https://docs.docker.com/desktop/mac/install/)を参照してください。                                   |
 | Linux プラットフォーム      | <p>Docker 19.03またはそれ以降<br>Docker Compose 1.25.1またはそれ以降</p>| 詳細は[Dockerをインストールする](https://docs.docker.com/engine/install/)および[Docker Composeをインストールする](https://docs.docker.com/compose/install/)を参照してください。                                                      |
 | WSL 2が有効なWindows       | Docker Desktop                                                 | ソースコードや他のデータをLinuxコンテナにバインドする際、WindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細は[WSL 2バックエンドを使用してWindowsにDocker Desktopをインストールする](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
-> OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq#id-15.-wen-ben-zhuan-yu-yin-yu-dao-zhe-ge-cuo-wu-zen-me-ban)を参照してください。
+> OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq#id-15-tekisutomigeniopenai-error-ffmpeg-is-not-installedtoiuergashitano)を参照してください。
 
 Dify コードをクローン：
 
@@ -62,8 +66,7 @@ pyenv global 3.10
 3.  ランダムキーを生成し、`.env`の`SECRET_KEY`の値を置き換え
 
     ```
-    openssl rand -base64 42
-    sed -i 's/SECRET_KEY=.*/SECRET_KEY=<your_value>/' .env
+    awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
 4.  依存関係をインストール
 

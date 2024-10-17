@@ -1,4 +1,4 @@
-# コードを使わずに数分で Midjourney 提示ワードロボットを作成する方法
+# コードなしでMidjourney プロンプトボットを作成する方法
 
 _著者：歸藏の AI ツールボックス_
 
@@ -14,44 +14,44 @@ Dify はこちらでアクセスできます：https://dify.ai/
 
 名前を入力して作成が完了すると、ダッシュボードページが表示され、データモニタリングやアプリケーション設定が行えます。まずは左側のプロンプトオーケストレーションをクリックします。ここが主な作業ページです。
 
-<figure><img src="/en/.gitbook/assets/learn-more/screenshot-20230802-114025.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20230802-114025.png" alt=""><figcaption></figcaption></figure>
 
 このページの左側にはプロンプト設定とその他の機能があり、右側では作成した内容をリアルタイムでプレビューおよび使用できます。プレフィックスプロンプトは、ユーザーが毎回入力する内容に応じてトリガーされるプロンプトです。これは、GPT が毎回プレフィックスプロンプトの内容に基づいてユーザー入力を処理するということです。
 
-<figure><img src="/en/.gitbook/assets/learn-more/WechatIMG38.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/WechatIMG38.jpg" alt=""><figcaption></figcaption></figure>
 
 私のプレフィックスプロンプトの構造を見てみましょう。主に2つの部分から成り立っています。最初は、GPT に以下の英語の構造に従って写真の説明を出力するよう指示する部分です。英語の構造はプロンプトのテンプレートで、主に「テーマのカラフルな写真、複雑なパターン、鮮明なコントラスト、環境の説明、カメラモデル、入力内容に関連するレンズ焦点距離の説明、入力内容に関連する構図の説明、4人の写真家の名前」となります。これがプロンプトの主な内容です。理論的には、右側のプレビュー領域に保存して、生成したいテーマを入力すると、対応するプロンプトが生成されるはずです。
 
-<figure><img src="/en/.gitbook/assets/learn-more/pre-prompt.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/pre-prompt.png" alt=""><figcaption></figcaption></figure>
 
 さて、後ろにある \{{proportion\}} と \{{version\}} は何でしょうか。右側を見ると、ユーザーが画像比率とモデルバージョンを選択する必要があります。これらの変数はユーザーの選択情報を伝達するためのものです。設定方法を見てみましょう。
 
-<figure><img src="/en/.gitbook/assets/learn-more/screenshot-20230802-145326.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20230802-145326.png" alt=""><figcaption></figcaption></figure>
 
 私たちの機能は、ユーザーが選択した情報をプロンプトの最後に自動的に挿入し、ユーザーがコマンドを再入力する手間を省くことです。ここで変数機能を使用します。
 
 変数の役割は、ユーザーがフォームに入力または選択した内容を動的にプロンプトに組み込むことです。例えば、ここでは画像比率を表す変数とモデルバージョンを表す変数を作成しました。追加ボタンをクリックして変数を作成します。
 
-<figure><img src="/en/.gitbook/assets/learn-more/WechatIMG157.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/WechatIMG157.jpg" alt=""><figcaption></figcaption></figure>
 
 作成後、まず変数キーとフィールド名を入力する必要があります。変数キーは英語で入力します。オプションを有効にすると、このフィールドは選択必須ではなくなります。その後、操作バーの設定をクリックして変数内容を設定します。
 
-<figure><img src="/en/.gitbook/assets/learn-more/WechatIMG158.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/WechatIMG158.jpg" alt=""><figcaption></figcaption></figure>
 
 変数には2種類あり、テキスト変数とドロップダウンオプションがあります。テキスト変数はユーザーが手動で入力するもので、ドロップダウンオプションは選択するものです。ここではユーザーにコマンドを手打ちさせたくないので、ドロップダウンオプションを選択します。必要なオプションを追加します。
 
-<figure><img src="/en/.gitbook/assets/learn-more/app-variables.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/app-variables.png" alt=""><figcaption></figcaption></figure>
 
 次に変数を使用します。変数キーを二重の {} で囲んでプレフィックスプロンプトに入力します。ここでは、GPT にユーザーが選んだ内容をそのまま出力させたいので、「如実に変数内容を出力」というプロンプトを追加しました。
 
-<figure><img src="/en/.gitbook/assets/learn-more/WechatIMG160.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/WechatIMG160.jpg" alt=""><figcaption></figcaption></figure>
 
 しかし、GPT が変数内容を変更してしまう可能性があります。その対策として、右側のモデル選択で多様性を低く設定します。これにより創造的な出力が減り、変数内容が変更されにくくなります。他のパラメータの意味は小さな感嘆符をクリックして確認できます。
 
-<figure><img src="/en/.gitbook/assets/learn-more/screenshot-20230802-141913.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20230802-141913.png" alt=""><figcaption></figcaption></figure>
 
 これでアプリケーションが完成し、テスト出力に問題がなければ、右上の公開ボタンをクリックしてアプリケーションを公開します。公開アクセス URL からアプリケーションにアクセスできます。設定でアプリケーション名や概要、アイコンなどの内容を設定することもできます。
 
-<figure><img src="/en/.gitbook/assets/learn-more/screenshot-20230802-142407.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/screenshot-20230802-142407.png" alt=""><figcaption></figcaption></figure>
 
 これが Dify を使ってシンプルな AI アプリケーションを作成する手順です。また、生成された API を使って他のプラットフォームにアプリケーションをデプロイしたり、UI を変更したりすることもできます。Dify は独自のデータをアップロードすることもサポートしており、例えば製品に関する質問に答えるカスタマーサポートロボットを作成することもできます。以上でチュートリアルは終了です。@goocarlos に感謝します。

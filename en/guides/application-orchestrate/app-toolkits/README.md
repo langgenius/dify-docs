@@ -1,22 +1,22 @@
-# Application Toolbox
+# Application Toolkits
 
 In **Application Orchestration**, click **Add Feature** to open the application toolbox.
 
-The application toolbox provides various additional features for Dify's [applications](../#application_type):
+The application toolbox provides various additional features for Dify's [applications](../#application\_type):
 
-<figure><img src="../../../../img/content_moderation.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/content_moderation (1).png" alt=""><figcaption></figcaption></figure>
 
 ### Conversation Opening
 
 In conversational applications, the AI will proactively say the first sentence or ask a question. You can edit the content of the opening, including the initial question. Using conversation openings can guide users to ask questions, explain the application background, and lower the barrier for initiating a conversation.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/app_toolkits/image (240).png" alt=""><figcaption><p>Conversation Opening</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (240).png" alt=""><figcaption><p>Conversation Opening</p></figcaption></figure>
 
 ### Next Step Question Suggestions
 
 Setting next step question suggestions allows the AI to generate 3 follow-up questions based on the previous conversation, guiding the next round of interaction.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/app_toolkits/image (241).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (241).png" alt=""><figcaption></figcaption></figure>
 
 ### Citation and Attribution
 
@@ -30,6 +30,6 @@ During interactions with AI applications, we often have stringent requirements r
 
 ### Annotated Replies
 
-The annotated replies feature allows for customizable high-quality Q&A responses through manual editing and annotation.
+The annotated replies feature allows for customizable high-quality Q\&A responses through manual editing and annotation.
 
 See [Annotated Replies](../../biao-zhu/annotation-reply.md).

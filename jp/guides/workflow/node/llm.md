@@ -1,10 +1,10 @@
-# 大規模言語モデル（LLM）
+# LLM
 
 ### 定義
 
 大規模言語モデルを活用して質問に回答したり、自然言語を処理したりします。
 
-<figure><img src="../../../../img/jp-llm-detail.png" alt=""><figcaption><p>LLM ノード</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-detail.png" alt=""><figcaption><p>LLM ノード</p></figcaption></figure>
 
 ***
 
@@ -26,7 +26,7 @@ LLM は Chatflow/Workflow の中心的なノードであり、大規模言語モ
 
 ### 設定方法
 
-<figure><img src="../../../../img/jp-llm-model.png" alt=""><figcaption><p>LLM ノード設定 - モデル選択</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-model.png" alt=""><figcaption><p>LLM ノード設定 - モデル選択</p></figcaption></figure>
 
 **設定手順：**
 
@@ -43,17 +43,17 @@ LLM は Chatflow/Workflow の中心的なノードであり、大規模言語モ
 
 LLM ノード内で、モデル入力指示をカスタマイズできます。会話モデル（Chat model）を選択した場合、システム指示（SYSTEM）/ユーザー（USER）/アシスタント（ASSISTANT）の3部分をカスタマイズできます。
 
-<figure><img src="../../../../img/jp-llm-customize.png" alt="" width="352"><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-customize.png" alt="" width="352"><figcaption></figcaption></figure>
 
 #### **プロンプトジェネレーター**
 
 システムプロンプトワード（SYSTEM）の作成時に良いアイデアがない場合は、プロンプトジェネレーター機能を使用して、AI 機能を利用して実際のビジネスシナリオに適したプロンプトワードを迅速に生成することもできます。
 
-![](../../../../img/jp-node-llm-prompt-generator.png)
+![](../../../.gitbook/assets/jp-node-llm-prompt-generator.png)
 
 指示エディター内で、**“/”** または **“{”** を入力すると **変数挿入メニュー** が呼び出され、**特殊変数ブロック**や**上流ノード変数**を指示に挿入してコンテキスト内容として使用できます。
 
-<figure><img src="../../../../img/jp-llm-variable.png" alt="" width="366"><figcaption><p>変数挿入メニューの呼び出し</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-variable.png" alt="" width="366"><figcaption><p>変数挿入メニューの呼び出し</p></figcaption></figure>
 
 ***
 
@@ -63,7 +63,7 @@ LLM ノード内で、モデル入力指示をカスタマイズできます。�
 
 コンテキスト変数は LLM ノード内で定義された特殊な変数タイプで、外部から取得したテキスト内容を指示内に挿入するために使用されます。
 
-<figure><img src="../../../../img/jp-llm-kb.png" alt=""><figcaption><p>コンテキスト変数</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-kb.png" alt=""><figcaption><p>コンテキスト変数</p></figcaption></figure>
 
 一般的なナレッジベースの質問応答アプリケーションでは、ナレッジベースの検索ノードの下流ノードは通常 LLM ノードです。知識検索の**出力変数** `result` は LLM ノード内の**コンテキスト変数**に関連付けて割り当てる必要があります。関連付けた後、指示の適切な位置に**コンテキスト変数**を挿入することで、外部から取得した知識を指示に挿入できます。
 
@@ -81,7 +81,7 @@ LLM ノード内で、モデル入力指示をカスタマイズできます。�
 会話履歴変数の使用は広範ではなく、Chatflow 内でテキスト補完モデルを選択した場合にのみ使用できます。
 {% endhint %}
 
-<figure><img src="../../../../img/jp-llm-with-histories.png" alt=""><figcaption><p>会話履歴変数の挿入</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-with-histories.png" alt=""><figcaption><p>会話履歴変数の挿入</p></figcaption></figure>
 
 ***
 

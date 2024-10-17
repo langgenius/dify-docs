@@ -29,7 +29,7 @@ For most text search scenarios, the primary goal is to ensure that the most rele
 
 In hybrid search, you need to establish vector indexes and keyword indexes in the database in advance. When a user query is input, the most relevant texts are retrieved from the documents using both retrieval methods.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (127).png" alt="" width="563"><figcaption><p>Hybrid Search</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (127).png" alt="" width="563"><figcaption><p>Hybrid Search</p></figcaption></figure>
 
 "Hybrid search" does not have a precise definition. This article uses the combination of vector search and keyword search as an example. If we use other combinations of search algorithms, it can also be called "hybrid search." For instance, we can combine knowledge graph techniques for retrieving entity relationships with vector search techniques.
 
@@ -39,7 +39,7 @@ Different retrieval systems excel at finding various subtle relationships betwee
 
 Definition: Generating query embeddings and querying the text segments most similar to their vector representations.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (116).png" alt="" width="563"><figcaption><p>Vector Search Settings</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (116).png" alt="" width="563"><figcaption><p>Vector Search Settings</p></figcaption></figure>
 
 **TopK:** Used to filter the text fragments most similar to the user's query. The system will dynamically adjust the number of fragments based on the context window size of the selected model. The default value is 3.
 
@@ -51,7 +51,7 @@ Definition: Generating query embeddings and querying the text segments most simi
 
 Definition: Indexing all words in the document, allowing users to query any word and return text fragments containing those words.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (122).png" alt="" width="563"><figcaption><p>Full-Text Search Settings</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (122).png" alt="" width="563"><figcaption><p>Full-Text Search Settings</p></figcaption></figure>
 
 **TopK:** Used to filter the text fragments most similar to the user's query. The system will dynamically adjust the number of fragments based on the context window size of the selected model. The default value is 3.
 
@@ -61,7 +61,7 @@ Definition: Indexing all words in the document, allowing users to query any word
 
 Simultaneously performs full-text search and vector search, applying a re-ranking step to select the best results matching the user's query from both types of query results. Requires configuring the Rerank model API.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (118).png" alt="" width="563"><figcaption><p>Hybrid Search Settings</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (118).png" alt="" width="563"><figcaption><p>Hybrid Search Settings</p></figcaption></figure>
 
 **TopK:** Used to filter the text fragments most similar to the user's query. The system will dynamically adjust the number of fragments based on the context window size of the selected model. The default value is 3.
 
@@ -71,16 +71,16 @@ Simultaneously performs full-text search and vector search, applying a re-rankin
 
 Set different retrieval modes by entering the "Dataset -> Create Dataset" page and configuring the retrieval settings.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (119).png" alt="" width="563"><figcaption><p>Setting Retrieval Mode When Creating a Dataset</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (119).png" alt="" width="563"><figcaption><p>Setting Retrieval Mode When Creating a Dataset</p></figcaption></figure>
 
 ### Modifying Retrieval Mode in Dataset Settings
 
 Modify the retrieval mode of an existing dataset by entering the "Dataset -> Select Dataset -> Settings" page.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (120).png" alt="" width="563"><figcaption><p>Modifying Retrieval Mode in Dataset Settings</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (120).png" alt="" width="563"><figcaption><p>Modifying Retrieval Mode in Dataset Settings</p></figcaption></figure>
 
 ### Modifying Retrieval Mode in Prompt Arrangement
 
 Modify the retrieval mode when creating an application by entering the "Prompt Arrangement -> Context -> Select Dataset -> Settings" page.
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (121).png" alt=""><figcaption><p>Modifying Retrieval Mode in Prompt Arrangement</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (121).png" alt=""><figcaption><p>Modifying Retrieval Mode in Prompt Arrangement</p></figcaption></figure>

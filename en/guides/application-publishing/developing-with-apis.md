@@ -72,13 +72,19 @@ print(response.text)
 {% endtab %}
 {% endtabs %}
 
-### Conversational applications
+### Conversational Applications
 
-Suitable for most scenarios, conversational applications engage in continuous dialogue with users in a question-and-answer format. To start a conversation, call the chat-messages API and maintain the session by continuously passing in the returned conversation\_id.
+Conversational applications facilitate ongoing dialogue with users through a question-and-answer format. To initiate a conversation, you will call the `chat-messages` API. A `conversation_id` is generated for each session and must be included in subsequent API calls to maintain the conversation flow. 
 
-You can find the API documentation and example requests for this application in **Applications -> Access API**.
+#### Key Considerations for `conversation_id`:
 
-For example, here is a sample call an API for chat-messages:
+- **Generating the `conversation_id`:** When starting a new conversation, leave the `conversation_id` field empty. The system will generate and return a new `conversation_id`, which you will use in future interactions to continue the dialogue.
+- **Handling `conversation_id` in Existing Sessions:** Once a `conversation_id` is generated, future calls to the API should include this `conversation_id` to ensure the conversation continuity with the Dify bot. When a previous `conversation_id` is passed, any new `inputs` will be ignored. Only the `query` is processed for the ongoing conversation.
+- **Managing Dynamic Variables:** If there is a need to modify logic or variables during the session, you can use conversation variables (session-specific variables) to adjust the bot's behavior or responses.
+
+You can access the API documentation and example requests for this application in **Applications -> Access API**.
+
+Here is an example of calling the `chat-messages` API:
 
 {% tabs %}
 {% tab title="cURL" %}
@@ -90,10 +96,9 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
     "inputs": {},
     "query": "eh",
     "response_mode": "streaming",
-    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276"
+    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
     "user": "abc-123"
 }'
-
 ```
 {% endtab %}
 

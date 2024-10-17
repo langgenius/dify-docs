@@ -49,14 +49,14 @@
 ```
 {
     "flagged": bool,  // 検証ルールに違反しているかどうか
-    "action": string, // アクション。direct_output 予設回答の直接出力; overrided 送信された変数値の上書き
+    "action": string, // アクション。direct_output 予設回答の直接出力; overridden 送信された変数値の上書き
     "preset_response": string,  // 予設回答（actionがdirect_outputの場合のみ返される）
-    "inputs": {  // 端末ユーザーが送信した変数の値。key は変数名、value は変数の値（actionがoverridedの場合のみ返される）
+    "inputs": {  // 端末ユーザーが送信した変数の値。key は変数名、value は変数の値（actionがoverriddenの場合のみ返される）
         "var_1": "value_1",
         "var_2": "value_2",
         ...
     },
-    "query": string | null  // 上書きされた端末ユーザーの現在の対話入力内容。対話型アプリケーションの固定パラメータ。（actionがoverridedの場合のみ返される）
+    "query": string | null  // 上書きされた端末ユーザーの現在の対話入力内容。対話型アプリケーションの固定パラメータ。（actionがoverriddenの場合のみ返される）
 }
 ```
 
@@ -69,11 +69,11 @@
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "inputs": {
               "var_1": "I will *** you.",
               "var_2": "I will *** you."
@@ -112,9 +112,9 @@
 ```
 {
     "flagged": bool,  // 検証ルールに違反しているかどうか
-    "action": string, // アクション。direct_output 予設回答の直接出力; overrided 送信された変数値の上書き
+    "action": string, // アクション。direct_output 予設回答の直接出力; overridden 送信された変数値の上書き
     "preset_response": string,  // 予設回答（actionがdirect_outputの場合のみ返される）
-    "text": string  // 上書きされたLLMの回答内容。（actionがoverridedの場合のみ返される）
+    "text": string  // 上書きされたLLMの回答内容。（actionがoverriddenの場合のみ返される）
 }
 ```
 
@@ -127,11 +127,11 @@
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "text": "I will *** you."
       }
       ```

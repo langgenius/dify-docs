@@ -6,10 +6,10 @@
 
 在当下开源大语言模型火热的背景下，有很大一部分开发者希望本地部署开源 LLM，用于研究 LLM 或者是基于开源 LLM 构建自己的 LLM 应用。笔者也正在尝试通过开源社区的一系列相关优秀项目，通过本地化部署服务来构建自己的 LLM 应用。那么本地部署一个开源 LLM 来构建一个聊天应用需要哪些准备呢？
 
-1. **本地环境的准备：**因为我们需要在本地部署一个开源的大模型，所以你需要准备一个相当硬核的本地环境。硬件上需要一台拥有高性能、大显存的 NVDIA 显卡，大容量高速内存以及大容量固态硬盘，软件上则需要安装显卡驱动、CUDA、Python 环境。笔者这次选择跑 Baichuan-13B-Chat 模型为例，基本配置是 CPU i9-13900K、GTX3090 24GB 双卡、64GB 内存和 2TB 固态硬盘。
-2. **一个大型语言模型（LLM）：**这是我们构建 LLM 应用的基础。不同的 LLM 根据预训练的数据和目标任务的不同，其模型结构和学到的知识也不相同。基于不同模型构建出来的 AI 应用表现也会不一样。你可以通过火热的 AI 社区 [Hugging Face](https://huggingface.co/) 上找自己感兴趣的开源 LLMs 来进行尝试和能力对比 。
-3. **一个本地部署 LLM 的推理服务：**推理服务可以将预训练好的 LLM 模型加载到本地服务器，并提供模型预测接口，这样就可以本地化使用 LLM 模型进行各种 NLP 任务，而不需要依赖云服务。你可以使用一些优秀的 GitHub 开源项目，这些项目对热门的开源 LLM 都做了推理服务的一键部署。知名度比较高的有 [LocalAI](https://github.com/go-skynet/LocalAI)、[openLLM](https://github.com/bentoml/OpenLLM) 等。
-4. **一个简单易用的“ LLM 操作系统 ” Dify.AI：**如果要基于 LLM 的能力构建一个聊天应用，你可能需要学习研究全套的 LLM 技术栈，比如：不同模型的 API 调用、向量数据库选型、Embedding 技术研究等等。如果你使用开源项目 [Dify.AI](https://github.com/langgenius/dify)，则可以省掉这些研究学习工作，**帮助你通过可视化的界面即可快速创建基于不同 LLM 能力的** **AI** **应用。** Dify 最近的版本新增了对开源 LLMs 的支持，对托管在 HuggingFace 和 Replicate 上所有的模型都能快速调用和切换使用，同时支持本地部署方式能够基于 [OpenLLM](https://github.com/bentoml/OpenLLM) 和 [Xorbits inference](https://github.com/xorbitsai/inference) 推理服务来实现 AI 应用的构建。
+1. \*\*本地环境的准备：\*\*因为我们需要在本地部署一个开源的大模型，所以你需要准备一个相当硬核的本地环境。硬件上需要一台拥有高性能、大显存的 NVDIA 显卡，大容量高速内存以及大容量固态硬盘，软件上则需要安装显卡驱动、CUDA、Python 环境。笔者这次选择跑 Baichuan-13B-Chat 模型为例，基本配置是 CPU i9-13900K、GTX3090 24 GB 双卡、64GB 内存和 2TB 固态硬盘。
+2. \*\*一个大型语言模型（LLM）：\*\*这是我们构建 LLM 应用的基础。不同的 LLM 根据预训练的数据和目标任务的不同，其模型结构和学到的知识也不相同。基于不同模型构建出来的 AI 应用表现也会不一样。你可以通过火热的 AI 社区 [Hugging Face](https://huggingface.co/) 上找自己感兴趣的开源 LLMs 来进行尝试和能力对比 。
+3. \*\*一个本地部署 LLM 的推理服务：\*\*推理服务可以将预训练好的 LLM 模型加载到本地服务器，并提供模型预测接口，这样就可以本地化使用 LLM 模型进行各种 NLP 任务，而不需要依赖云服务。你可以使用一些优秀的 GitHub 开源项目，这些项目对热门的开源 LLM 都做了推理服务的一键部署。知名度比较高的有 [LocalAI](https://github.com/go-skynet/LocalAI)、[openLLM](https://github.com/bentoml/OpenLLM) 等。
+4. \*\*一个简单易用的“ LLM 操作系统 ” Dify.AI：\*\*如果要基于 LLM 的能力构建一个聊天应用，你可能需要学习研究全套的 LLM 技术栈，比如：不同模型的 API 调用、向量数据库选型、Embedding 技术研究等等。如果你使用开源项目 [Dify.AI](https://github.com/langgenius/dify)，则可以省掉这些研究学习工作，**帮助你通过可视化的界面即可快速创建基于不同 LLM 能力的** **AI** **应用。** Dify 最近的版本新增了对开源 LLMs 的支持，对托管在 HuggingFace 和 Replicate 上所有的模型都能快速调用和切换使用，同时支持本地部署方式能够基于 [OpenLLM](https://github.com/bentoml/OpenLLM) 和 [Xorbits inference](https://github.com/xorbitsai/inference) 推理服务来实现 AI 应用的构建。
 
 笔者将尝试使用**开源的 LLMOps 平台 Dify.AI + 开源的推理服务** **Xinference** **+** **开源模型 Baichuan-13B-Chat** 为例，手把手实操教你在 windows 环境下，使用全套开源工具产品来构建一个 LLM 聊天应用。
 
@@ -40,15 +40,13 @@ conda activate python-3-11
 
 由于 Dify 的 docker 部署推荐使用 WSL2 环境。所以现在先安装 WSL2 。参考[微软官方指引](https://learn.microsoft.com/en-us/windows/wsl/install)。
 
-
-
 **第一步，管理员身份运行** **CMD** **：**
 
 1. Win + R
 2. Input CMD
 3. Ctrl + Shift + Enter
 
-<figure><img src="../../.gitbook/assets/image (21).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (144).png" alt=""><figcaption></figcaption></figure>
 
 **第二步，在** **CMD** **中用指令安装**
 
@@ -88,8 +86,6 @@ wsl --install -d Ubuntu
 
 之后就可以在 CMD 中使用 `wsl`命令进入Ubuntu 了。
 
-
-
 **第三步，安装 Docker Desktop**
 
 去 Docker [官方文档](https://docs.docker.com/desktop/install/windows-install/#wsl-2-backend)下载 Docker Desktop。安装时注意勾上 `Use WSL 2 instead of Hyper-V` 选项。安装完成后重启电脑。通过 CMD 查看是否正常安装好。
@@ -104,8 +100,6 @@ wsl -l --verbose
 ```
 
 可以看到 WSL 中 Ubuntu 和 Docker 都运行起来了，并且确认是 WSL2 版本。
-
-
 
 **第四步，为 WSL 配置代理**
 
@@ -184,19 +178,15 @@ alias proxy="source /path/to/proxy.sh"
 
 详细可以参考了该[博客](https://www.cnblogs.com/tuilk/p/16287472.html)。
 
-
-
 **第五步，进入 Ubuntu 安装 conda 配置 python**
 
 和前面的环境准备一样，参照官方文档安装 conda 配置 python，不过是安装 linux 版本。
 
-
-
 **第六步，安装 WSL 的 CUDA**
 
-进入官网，选择 WSL-Ubuntu 版本，按照指引使用命令行安装。 &#x20;
+进入官网，选择 WSL-Ubuntu 版本，按照指引使用命令行安装。
 
-<figure><img src="../../.gitbook/assets/image (45).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (146).png" alt=""><figcaption></figcaption></figure>
 
 修改`~/.bashrc`将 CUDA 添加至环境变量：
 
@@ -205,13 +195,11 @@ export LD_LIBRARY_PATH=/usr/local/cuda-12.2/lib64
 export PATH=$PATH:/usr/local/cuda-12.2/lib64
 ```
 
-
-
 **第七步，安装 PyTorch**
 
 进入 PyTorch [官网](https://pytorch.org/)，按照环境安装 PyTorch。
 
-<figure><img src="../../.gitbook/assets/image (48).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (147).png" alt=""><figcaption></figcaption></figure>
 
 这样环境准备就完成了。
 
@@ -255,7 +243,7 @@ Xinference 默认会在本地启动一个 worker，端点为：`http://127.0.0.1
 
 在浏览器中打开: [http://localhost:9997](http://localhost:9997)，选择 baichuan-chat，pytorch，13B，4bit，点击 create 部署。
 
-<figure><img src="../../.gitbook/assets/image (49).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (148).png" alt=""><figcaption></figcaption></figure>
 
 或者使用 CLI 部署:
 
@@ -340,7 +328,7 @@ docker-worker-1     langgenius/dify-api:0.3.16         "/bin/bash /entrypoi…" 
 
 Docker 启动成功后，在浏览器中访问：http://127.0.0.1/。设置过密码后登陆，会进入应用列表页。
 
-<figure><img src="../../.gitbook/assets/image (72).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (153).png" alt=""><figcaption></figcaption></figure>
 
 至此，成功使用 Docker 部署了 Dify 社区版。
 
@@ -363,13 +351,13 @@ hostname -I
 172.22.195.4
 ```
 
-<figure><img src="../../.gitbook/assets/image (55).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (150).png" alt=""><figcaption></figcaption></figure>
 
-#### 使用 Baichuan-13B-Chat&#x20;
+#### 使用 Baichuan-13B-Chat
 
 创建应用，就可以在应用中使用上一步配置的 Baichuan-13B-Chat 模型了。在 Dify 的提示词编排界面，选择 baichuan-chat 模型，设计你的应用提示词（prompt），即可发布一个可访问的 AI 应用。
 
-<figure><img src="../../.gitbook/assets/image (66).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (151).png" alt=""><figcaption></figcaption></figure>
 
 以上，就是本地部署 Dify 接入 Xinference 部署的 baichuan-chat 的全过程。 至此，我们基于 Baichuan-13B-Chat 的一个基本的聊天应用就基本完成了。
 

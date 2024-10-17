@@ -26,7 +26,7 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 5.创建自己的AI应用程序。
 
-#### 1. 登录 Dify[​](https://wsyfin.com/notion-dify#1-login-to-dify) <a href="#1-login-to-dify" id="1-login-to-dify"></a>
+#### 1. 登录 Dify[​](https://wsyfin.com/notion-dify#1-login-to-dify) <a href="#id-1-login-to-dify" id="id-1-login-to-dify"></a>
 
 点击这里登录到 Dify。你可以使用你的 GitHub 或 Google 账户方便地登录。
 
@@ -34,13 +34,13 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 ![login-1](https://pan.wsyfin.com/f/ERGcp/login-1.png)
 
-#### 2.创建新的数据集 <a href="#2-create-a-new-datasets" id="2-create-a-new-datasets"></a>
+#### 2.创建新的数据集 <a href="#id-2-create-a-new-datasets" id="id-2-create-a-new-datasets"></a>
 
 点击顶部侧边栏的 "Knowledge" 按钮，然后点击 "Create Knowledge" 按钮。
 
 ![login-2](https://pan.wsyfin.com/f/G6ziA/login-2.png)
 
-#### 3. 与 Notion 和您的数据集进行连接 <a href="#3-connect-with-notion-and-datasets" id="3-connect-with-notion-and-datasets"></a>
+#### 3. 与 Notion 和您的数据集进行连接 <a href="#id-3-connect-with-notion-and-datasets" id="id-3-connect-with-notion-and-datasets"></a>
 
 选择 "Sync from Notion"，然后点击 "Connect" 按钮。
 
@@ -58,7 +58,7 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 ![connect-with-notion-4](https://pan.wsyfin.com/f/M8Xtz/connect-with-notion-4.png)
 
-#### 4. 开始训练 <a href="#4-start-training" id="4-start-training"></a>
+#### 4. 开始训练 <a href="#id-4-start-training" id="id-4-start-training"></a>
 
 指定需要让 AI 学习的页面，使其能够理解 Notion 中这个部分的内容。然后点击 "下一步" 按钮。
 
@@ -72,7 +72,7 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 ![train-3](https://pan.wsyfin.com/f/PN9F3/train-3.png)
 
-#### 5. 创建你自己的 AI 应用程序[​](https://wsyfin.com/notion-dify#5-create-your-own-ai-application) <a href="#5-create-your-own-ai-application" id="5-create-your-own-ai-application"></a>
+#### 5. 创建你自己的 AI 应用程序[​](https://wsyfin.com/notion-dify#5-create-your-own-ai-application) <a href="#id-5-create-your-own-ai-application" id="id-5-create-your-own-ai-application"></a>
 
 你需要创建一个AI应用，然后连接刚刚创建的数据集。返回到仪表板，然后点击“创建新应用”按钮。建议直接使用聊天应用。
 
@@ -88,15 +88,15 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 > 我希望你能在我的 Notion 工作区中扮演一个 IT 专家的角色，利用你对计算机科学、网络基础设施、Notion 笔记和 IT 安全的知识来解决问题。
 
-<figure><img src="../../.gitbook/assets/image (34).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (34) (1).png" alt=""><figcaption></figcaption></figure>
 
 建议初始时启用 AI 主动提供用户一个起始句子，给出可以询问的线索。此外，激活「语音转文字」功能可以让用户通过语音与你的 AI 助手进行互动。
 
-<figure><img src="../../.gitbook/assets/image (42).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (42) (1).png" alt=""><figcaption></figcaption></figure>
 
 现在您可以在“概览”中单击公共 URL 聊天与您自己的 AI 助手！
 
-<figure><img src="../../.gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (27) (1).png" alt=""><figcaption></figcaption></figure>
 
 ### 通过API集成到您的项目中​
 
@@ -108,19 +108,19 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 ![using-api-1](https://pan.wsyfin.com/f/wp0Cy/using-api-1.png)
 
-#### 1. 生成 API 密钥 <a href="#1-generate-api-secret-key" id="1-generate-api-secret-key"></a>
+#### 1. 生成 API 密钥 <a href="#id-1-generate-api-secret-key" id="id-1-generate-api-secret-key"></a>
 
 为了安全起见，建议生成 API 密钥以访问您的 AI 应用。
 
 ![using-api-2](https://pan.wsyfin.com/f/xk2Fx/using-api-2.png)
 
-#### 2.检索会话ID <a href="#2-retrieve-conversation-id" id="2-retrieve-conversation-id"></a>
+#### 2.检索会话ID <a href="#id-2-retrieve-conversation-id" id="id-2-retrieve-conversation-id"></a>
 
 与 AI 应用程序聊天后，您可以从“Logs & Ann.”页面检索会话 ID。
 
 ![using-api-3](https://pan.wsyfin.com/f/yPXHL/using-api-3.png)
 
-#### 3. 调用API <a href="#3-invoke-api" id="3-invoke-api"></a>
+#### 3. 调用API <a href="#id-3-invoke-api" id="id-3-invoke-api"></a>
 
 您可以在API文档上运行示例请求代码来调用终端中的AI应用程序。
 

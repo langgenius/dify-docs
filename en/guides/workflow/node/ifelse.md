@@ -1,4 +1,4 @@
-# IF/ELSE
+# Conditional Branch IF/ELSE
 
 ### Definition
 
@@ -27,7 +27,7 @@ A conditional branching node has three parts:
 
 ### Scenario
 
-<figure><img src="../../../../img/if-else-elif.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/if-else-elif.png" alt=""><figcaption></figcaption></figure>
 
 Taking the above **Text Summary Workflow** as an example:
 
@@ -41,4 +41,4 @@ Taking the above **Text Summary Workflow** as an example:
 
 For complex condition judgments, you can set multiple condition judgments and configure **AND** or **OR** between conditions to take the **intersection** or **union** of the conditions, respectively.
 
-<figure><img src="../../../../img/mutliple-judgement.png" alt="" width="369"><figcaption><p>Multiple Condition Judgments</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/mutliple-judgement (1).png" alt="" width="369"><figcaption><p>Multiple Condition Judgments</p></figcaption></figure>

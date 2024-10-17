@@ -8,15 +8,15 @@
 
 ***
 
-### 场景&#x20;
+### 场景
 
 #### **示例1：长文章迭代生成器**
 
-<figure><img src="../../../.gitbook/assets/image (207).png" alt=""><figcaption><p>长故事生成器</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/iteration-story-generator.png" alt=""><figcaption><p>长故事生成器</p></figcaption></figure>
 
 1. 在 **开始节点** 内输入故事标题和大纲
-2. 使用 **代码节点** 从用户输入中提取出完整内容
-3. 使用 **参数提取节点** 将完整内容转换成数组格式
+2. 使用 **LLM 节点=** 基于用户输入的故事标题和大纲，让 LLM 开始编写内容
+3. 使用 **参数提取节点** 将 LLM 输出的完整内容转换成数组格式
 4. 通过 **迭代节点** 包裹的 **LLM 节点** 循环多次生成各章节内容
 5. 将 **直接回复** 节点添加在迭代节点内部，实现在每轮迭代生成之后流式输出
 
@@ -24,15 +24,15 @@
 
 1. 在 **开始节点** 配置故事标题（title）和大纲（outline）；
 
-<figure><img src="../../../.gitbook/assets/image (211).png" alt="" width="375"><figcaption><p>开始节点配置</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (262).png" alt="" width="375"><figcaption><p>开始节点配置</p></figcaption></figure>
 
-1. 通过 **Jinja-2 模板节点** 将故事标题与大纲转换为完整文本；
+2. 选择 **LLM 节点** 基于用户输入的故事标题和大纲，让 LLM 开始编写文本；
 
-<figure><img src="../../../.gitbook/assets/image (209).png" alt="" width="375"><figcaption><p>模板节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/iteration-llm-node.png" alt="" width="375"><figcaption><p>模板节点</p></figcaption></figure>
 
-3. 通过 **参数提取节点**，将故事文本转换成为数组（Array）结构。提取参数为 `sections` ，参数类型为 `Array[Object]`
+3. 选择 **参数提取节点**，将故事文本转换成为数组（Array）结构。提取参数为 `sections` ，参数类型为 `Array[Object]`
 
-<figure><img src="../../../.gitbook/assets/image (210).png" alt="" width="375"><figcaption><p>参数提取</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/zh-iteration-extract-node.png" alt="" width="375"><figcaption><p>参数提取</p></figcaption></figure>
 
 {% hint style="info" %}
 参数提取效果受模型推理能力和指令影响，使用推理能力更强的模型，在**指令**内增加示例可以提高参数提取的效果。
@@ -40,11 +40,11 @@
 
 4. 将数组格式的故事大纲作为迭代节点的输入，在迭代节点内部使用 **LLM 节点** 进行处理
 
-<figure><img src="../../../.gitbook/assets/image (220).png" alt="" width="375"><figcaption><p>配置迭代节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (271).png" alt="" width="375"><figcaption><p>配置迭代节点</p></figcaption></figure>
 
 在 LLM 节点内配置输入变量 `GenerateOverallOutline/output` 和 `Iteration/item`
 
-<figure><img src="../../../.gitbook/assets/image (221).png" alt="" width="375"><figcaption><p>配置 LLM 节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (272).png" alt="" width="375"><figcaption><p>配置 LLM 节点</p></figcaption></figure>
 
 {% hint style="info" %}
 迭代的内置变量：`items[object]` 和 `index[number]`
@@ -56,15 +56,15 @@
 
 5. 在迭代节点内部配置 **直接回复节点** ，可以实现在每轮迭代生成之后流式输出。
 
-<figure><img src="../../../.gitbook/assets/image (223).png" alt="" width="375"><figcaption><p>配置 Answer 节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (274).png" alt="" width="375"><figcaption><p>配置 Answer 节点</p></figcaption></figure>
 
 6. 完整调试和预览
 
-<figure><img src="../../../.gitbook/assets/image (222).png" alt=""><figcaption><p>按故事章节多轮迭代生成</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (273).png" alt=""><figcaption><p>按故事章节多轮迭代生成</p></figcaption></figure>
 
 #### **示例 2：长文章迭代生成器（另一种编排方式）**
 
-<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (55).png" alt=""><figcaption></figcaption></figure>
 
 * 在 **开始节点** 内输入故事标题和大纲
 * 使用 **LLM 节点** 生成文章小标题，以及小标题对应的内容
@@ -126,11 +126,11 @@
 
 **使用 CODE 节点返回**
 
-<figure><img src="../../../.gitbook/assets/image (213).png" alt="" width="375"><figcaption><p>code 节点输出 array</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (264).png" alt="" width="375"><figcaption><p>code 节点输出 array</p></figcaption></figure>
 
 **使用 参数提取 节点返回**
 
-<figure><img src="../../../.gitbook/assets/image (214).png" alt="" width="375"><figcaption><p>参数提取节点输出 array</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (265).png" alt="" width="375"><figcaption><p>参数提取节点输出 array</p></figcaption></figure>
 
 ### 如何将数组转换为文本
 
@@ -138,7 +138,9 @@
 
 **使用代码节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="334"><figcaption><p>代码节点转换</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (54).png" alt="" width="334"><figcaption><p>代码节点转换</p></figcaption></figure>
+
+代码示例：
 
 ```python
 def main(articleSections: list):
@@ -150,7 +152,9 @@ def main(articleSections: list):
 
 **使用模板节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1) (1) (1).png" alt="" width="332"><figcaption><p>模板节点转换</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (56).png" alt="" width="332"><figcaption><p>模板节点转换</p></figcaption></figure>
+
+代码示例：
 
 ```django
 {{ articleSections | join("\n") }}

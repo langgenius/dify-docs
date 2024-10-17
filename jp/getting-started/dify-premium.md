@@ -4,10 +4,10 @@ description: プレミアムPremium
 
 # Dify Premium
 
-Dify Premiumは[AWS AMI](https://docs.aws.amazon.com/zh\_cn/AWSEC2/latest/UserGuide/ec2-instances-and-amis.html)製品であります。これにより、ブランドのカスタマイズが可能で、AWS EC2にワンクリックで展開できます。[AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6)から購読し、次のようなシナリオに最適です：
+Dify Premiumは[AWS AMI](https://docs.aws.amazon.com/ja_jp/AWSEC2/latest/UserGuide/ec2-instances-and-amis.html)製品であります。これにより、ブランドのカスタマイズが可能で、AWS EC2にワンクリックで展開できます。[AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6)から購読し、次のようなシナリオに最適です：
 
 * 中小企業が1つ以上のアプリケーションをサーバーに構築し、データのプライバシーに関心がある場合。
-* [Dify Cloud](https://docs.dify.ai/v/zh-hans/getting-started/cloud)のサブスクリプションプランに関心があり、しかし、ユースケースが[プラン](https://dify.ai/pricing)で提供されるリソースを超える場合。
+* [Dify Cloud](https://docs.dify.ai/v/ja-jp/getting-started/cloud)のサブスクリプションプランに関心があり、しかし、ユースケースが[プラン](https://dify.ai/pricing)で提供されるリソースを超える場合。
 * Dify Enterpriseを組織内で導入する前に、POC検証を行いたい場合。
 
 ### セットアップ

@@ -2,13 +2,13 @@
 
 The **Overview -- Data Analysis** section displays metrics such as usage, active users, and LLM (Language Learning Model) invocation costs. This allows you to continuously improve the effectiveness, engagement, and cost-efficiency of your application operations. We will gradually provide more useful visualization capabilities, so please let us know what you need.
 
-<figure><img src="../../../img/overview-data-analysis.png" alt=""><figcaption><p>Overview—Data Analysis</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/overview-data-analysis.png" alt=""><figcaption><p>Overview—Data Analysis</p></figcaption></figure>
 
 ***
 
 **Total Messages**
 
-Reflects the total number of interactions AI has each day, with each user question answered counted as one message. Prompt orchestration and debugging sessions are not included.
+Reflects the total number of daily interactions between users and AI. Each time the AI answers a user's question, it counts as one message. Prompt orchestration and debugging sessions are not included.
 
 **Active Users**
 
@@ -29,3 +29,7 @@ The number of likes per 1,000 messages, reflecting the proportion of users who a
 **Token Usage**
 
 Reflects the daily token expenditure for language model requests by the application, useful for cost control.
+
+**Total Conversations**
+
+Daily AI conversation count; each new conversation session counts as one. A single conversation session may contain multiple message exchanges; messages related to prompt engineering and debugging are not included.

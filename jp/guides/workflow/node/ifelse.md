@@ -41,4 +41,4 @@ if/else 条件に基づいてワークフローを2つの分岐に分けるこ�
 
 複雑な条件判断が必要な場合、複数条件を設定し、条件間に **AND** または **OR** を設定することができます。これは条件間に**交集**または**并集**を取ることを意味します。
 
-<figure><img src="../../../../img/jp-ifelse-setting.png" alt="" width="369"><figcaption><p>複数条件の判断</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-ifelse-setting.png" alt="" width="369"><figcaption><p>複数条件の判断</p></figcaption></figure>

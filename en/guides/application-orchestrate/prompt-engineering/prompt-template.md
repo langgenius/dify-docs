@@ -27,7 +27,7 @@ And answer according to the language of the user's question.
 {{Query}} //Enter the Query variables here.
 ```
 
-* **ASSITANT**
+* **ASSISTANT**
 
 ```
 ""
@@ -64,7 +64,7 @@ And answer according to the language of the user's question.
 {{Query}} //Enter the Query variables here.
 ```
 
-* **ASSITANT**
+* **ASSISTANT**
 
 ```
 ""

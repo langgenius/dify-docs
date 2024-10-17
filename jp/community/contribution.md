@@ -92,6 +92,8 @@ Difyはバックエンドとフロントエンドで構成されています。`
 
 エージェントやワークフローにツールを追加提供する場合は、[このガイド](https://github.com/langgenius/dify/blob/main/api/core/tools/README.md)を参照してください。
 
+> 注意：新しいツールを提供したい場合は、必ずツールの YAML 説明ページに連絡先を残し、ドキュメント[Dify-docs](https://github.com/langgenius/dify-docs/tree/main/en/guides/tools/tool-configuration) のコードリポジトリに対応するPRを提出してください。
+
 貢献する部分を迅速に理解できるように、以下にDifyのバックエンドとフロントエンドの簡単な注釈付きアウトラインを示します：
 
 ### バックエンド

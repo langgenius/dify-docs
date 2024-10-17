@@ -1,4 +1,4 @@
-# 問題分類
+# 質問分類
 
 ### 1 **定義**
 
@@ -14,7 +14,7 @@
 
 以下の図は製品カスタマーサービスシナリオのサンプルワークフローテンプレートです：
 
-<figure><img src="../../../../img/jp-question.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-question.png" alt=""><figcaption></figcaption></figure>
 
 このシナリオでは、3つの分類ラベル/説明を設定しています：
 
@@ -32,7 +32,7 @@
 
 ### 3 どうやって設定するか
 
-<figure><img src="../../../../img/jp-question-setting.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-question-setting.png" alt=""><figcaption></figcaption></figure>
 
 **設定手順：**
 

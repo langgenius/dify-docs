@@ -1,4 +1,4 @@
-# カスタマイズ可能モデルの追加
+# カスタムモデルの追加
 
 ### イントロダクション
 
@@ -28,24 +28,24 @@
 `Xinference`は`LLM`、`Text Embedding`、`Rerank`をサポートしているため、`xinference.yaml`を作成します。
 
 ```yaml
-provider: xinference # ベンダー識別子
-label: # ベンダー表示名、en_US 英語、zh_Hans 中国語の両方の言語で設定可能、zh_Hans が設定されていない場合は en_US がデフォルト
+provider: xinference # Specify vendor identifier
+label: # Vendor display name, can be set in en_US (English) and zh_Hans (Simplified Chinese). If zh_Hans is not set, en_US will be used by default.
   en_US: Xorbits Inference
-icon_small: # 小アイコン、他のベンダーのアイコンを参考にし、対応するベンダー実装ディレクトリの _assets ディレクトリに保存
+icon_small: # Small icon, refer to other vendors' icons, stored in the _assets directory under the corresponding vendor implementation directory. Language strategy is the same as label.
   en_US: icon_s_en.svg
-icon_large: # 大アイコン
+icon_large: # Large icon
   en_US: icon_l_en.svg
-help: # ヘルプ
+help: # Help
   title:
     en_US: How to deploy Xinference
     zh_Hans: 如何部署 Xinference
   url:
     en_US: https://github.com/xorbitsai/inference
-supported_model_types: # サポートされるモデルタイプ、XinferenceはLLM/Text Embedding/Rerankをサポート
+supported_model_types: # Supported model types. Xinference supports LLM/Text Embedding/Rerank
 - llm
 - text-embedding
 - rerank
-configurate_methods: # Xinferenceはローカルデプロイのベンダーであり、事前定義モデルがないため、必要なモデルを自分でデプロイする必要があるので、ここではカスタムモデルのみサポート
+configurate_methods: # Since Xinference is a locally deployed vendor and does not have predefined models, you need to deploy the required models according to Xinference's documentation. Therefore, only custom models are supported here.
 - customizable-model
 provider_credential_schema:
   credential_form_schemas:
@@ -84,7 +84,7 @@ provider_credential_schema:
     type: text-input
     label:
       en_US: Model name
-      zh_Hans: モデル名
+      zh_Hans: 模型名称
     required: true
     placeholder:
       zh_Hans: 填写模型名称
@@ -276,7 +276,7 @@ provider_credential_schema:
 
     モデル呼び出し時にエラーが発生した場合、Runtimeが指定する`InvokeError`タイプにマッピングする必要があります。これにより、Difyは異なるエラーに対して異なる後続処理を行うことができます。
 
-    Runtime エラー：
+    Runtime Errors：
 
     * `InvokeConnectionError` 呼び出し接続エラー
     * `InvokeServerUnavailableError` 呼び出しサービスが利用不可
@@ -284,21 +284,18 @@ provider_credential_schema:
     * `InvokeAuthorizationError` 認証エラー
     * `InvokeBadRequestError` 不正なリクエストパラメータ
 
-    ````python
-    @property
-    def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
-        """
-        Map model invoke error to uni ```
-    ````
+  ```python
+  @property
+  def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+      """
+      Map model invoke error to unified error
+      The key is the error type thrown to the caller
+      The value is the error type thrown by the model,
+      which needs to be converted into a unified error type for the caller.
 
-\-> dict\[type\[呼び出しエラー], list\[type\[例外]]]: """ モデル呼び出しエラーを統一エラーにマッピングする キーは呼び出し元に投げられるエラータイプ バリューはモデルが投げるエラータイプであり、 呼び出し元に対して統一エラータイプに変換する必要があります。
-
-```
-    :return: 呼び出しエラーのマッピング
-    """
-```
-
-```
+      :return: Invoke error mapping
+      """
+  ```
 
 インターフェース方法の詳細については：[インターフェース](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/interfaces.md)をご覧ください。具体的な実装例については、[llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model_providers/anthropic/llm/llm.py)を参照してください。
 ```

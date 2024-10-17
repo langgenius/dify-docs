@@ -1,29 +1,16 @@
 # SearXNG
-SearXNGは無料のインターネットメタ検索エンジンで、さまざまな検索サービスの結果を統合します。ユーザーは追跡されず、解析されることもありません。DifyはすでにSearXNGへのインターフェースを実装しているため、Dify内で直接利用することができます。以下はSearXNGをDifyに統合する手順です：
+
+> ツール作者 @Junytang。
+SearXNGは、様々な検索サービスの結果を統合する無料のインターネットメタサーチエンジンです。 DifyはSearXNGにアクセスするためのインターフェイスを実装しており、Difyから直接利用することができます。 以下では、Dockerを使用してSearXNGをDifyに統合する手順を説明します。他の方法でSearXNGをインストールしたい場合は、[こちら](https://docs.searxng.org/admin/installation.html)を参照してください。
 
 ## 1. Dockerを使用してSearXNGコンテナをインストールする
-```
-docker run --rm \
-             -d -p 8080:8080 \
-             -v "${PWD}/searxng:/etc/searxng" \
-             -e "BASE_URL=http://0.0.0.0:8080/" \
-             -e "INSTANCE_NAME=searxng" \
-             searxng/searxng
-```
-他の方法でSearXNGをインストールしたい場合は、[こちら](https://docs.searxng.org/admin/installation.html)を参照してください。
+設定ファイルは `dify/api/core/tools/provider/builtin/searxng/docker/settings.yml` にあり、[こちら](https://docs.searxng.org/admin/installation.html)を参照してください。
 
-## 2. settings.ymlを修正する
-SearXNGをインストールすると、デフォルトの出力形式はHTML形式になっています。JSON形式を有効にする必要があります。以下の行をsettings.ymlファイルに追加してください。前述の例のように、settings.ymlファイルは${PWD}/searxng/settings.ymlにあります。
+## 2. DifyのルートディレクトリでDockerコンテナを起動する
 ```
-  # アクセスを拒否する形式を削除し、小文字を使用します。
-  # formats: [html, csv, json, rss]
-  formats:
-    - html
-    - json    # <-- この行を追加
+cd dify
+docker run --rm -d -p 8081:8080 -v "${PWD}/api/core/tools/provider/builtin/searxng/docker:/etc/searxng" searxng/searxng
 ```
 
 ## 3. DifyにSearXNGを統合する
-`ツール > SearXNG > 認証へ行く` でアクセスアドレスを入力します。例えば：http://x.x.x.x:8080
-
-## 4. 完了
-使用を開始しましょう！
+`ツール > SearXNG > 認証へ行く` でアクセスアドレスを入力します。Dockerを使用してDifyを展開する場合、アドレスは一般的に`http://host.docker.internal:8081`となります。

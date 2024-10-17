@@ -6,7 +6,7 @@
 
 **重排序模型会计算候选文档列表与用户问题的语义匹配度，根据语义匹配度重新进行排序，从而改进语义排序的结果**。其原理是计算用户问题与给定的每个候选文档之间的相关性分数，并返回按相关性从高到低排序的文档列表。常见的 Rerank 模型如：Cohere rerank、bge-reranker 等。
 
-<figure><img src="../../../.gitbook/assets/image (128).png" alt=""><figcaption><p>混合检索+重排序</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (179).png" alt=""><figcaption><p>混合检索+重排序</p></figcaption></figure>
 
 在大多数情况下，在重排序之前会有一次前置检索，这是由于计算查询与数百万个文档之间的相关性得分将会非常低效。所以，**重排序一般都放在搜索流程的最后阶段，非常适合用于合并和排序来自不同检索系统的结果**。
 
@@ -24,7 +24,7 @@
 
 Dify 目前已支持 Cohere Rerank 模型，进入“模型供应商-> Cohere”页面填入 Rerank 模型的 API 秘钥：
 
-<figure><img src="../../../.gitbook/assets/image (112).png" alt=""><figcaption><p>在模型供应商内配置 Cohere Rerank 模型</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (163).png" alt=""><figcaption><p>在模型供应商内配置 Cohere Rerank 模型</p></figcaption></figure>
 
 ###
 
@@ -38,16 +38,16 @@ Dify 目前已支持 Cohere Rerank 模型，进入“模型供应商-> Cohere”
 
 进入“数据集->创建数据集->检索设置”页面并在添加 Rerank 设置。除了在创建数据集可以设置 Rerank ，你也可以在已创建的数据集设置内更改 Rerank 配置，在应用编排的数据集召回模式设置中更改 Rerank 配置。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="563"><figcaption><p>数据集检索模式中设置 Rerank 模型</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (132).png" alt="" width="563"><figcaption><p>数据集检索模式中设置 Rerank 模型</p></figcaption></figure>
 
-\*\*TopK：\*\* 用于设置 Rerank 后返回相关文档的数量。
+**TopK：** 用于设置 Rerank 后返回相关文档的数量。
 
-\*\*Score 阈值：\*\* 用于设置 Rerank 后返回相关文档的最低分值。设置 Rerank 模型后，TopK 和 Score 阈值设置仅在 Rerank 步骤生效。
+**Score 阈值：** 用于设置 Rerank 后返回相关文档的最低分值。设置 Rerank 模型后，TopK 和 Score 阈值设置仅在 Rerank 步骤生效。
 
 ### 数据集多路召回模式中设置 Rerank 模型
 
 进入“提示词编排->上下文->设置”页面中设置为多路召回模式时需开启 Rerank 模型。
 
-查看更多关于多路召回模式的说明，[《多路召回》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/integrate\_knowledge\_within\_application#duo-lu-zhao-hui-tui-jian)。
+查看更多关于多路召回模式的说明，[《多路召回》](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/integrate-knowledge-within-application#duo-lu-zhao-hui-tui-jian)。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>数据集多路召回模式中设置 Rerank 模型</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (133).png" alt=""><figcaption><p>数据集多路召回模式中设置 Rerank 模型</p></figcaption></figure>

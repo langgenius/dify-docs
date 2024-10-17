@@ -1,4 +1,4 @@
-# Issue Classification
+# Question Classifier
 
 ### 1. Definition
 
@@ -10,11 +10,11 @@ By defining classification descriptions, the issue classifier can infer and matc
 
 Common use cases include **customer service conversation intent classification, product review classification, and bulk email classification**.
 
-In a typical product customer service Q&A scenario, the issue classifier can serve as a preliminary step before knowledge base retrieval. It classifies the user's input question, directing it to different downstream knowledge base queries to accurately respond to the user's question.
+In a typical product customer service Q\&A scenario, the issue classifier can serve as a preliminary step before knowledge base retrieval. It classifies the user's input question, directing it to different downstream knowledge base queries to accurately respond to the user's question.
 
 The following diagram is an example workflow template for a product customer service scenario:
 
-<figure><img src="../../../../img/question-classifier-scenarios.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/question-classifier-scenarios.png" alt=""><figcaption></figcaption></figure>
 
 In this scenario, we set up three classification labels/descriptions:
 
@@ -32,11 +32,11 @@ When users input different questions, the issue classifier will automatically cl
 
 ### 3. How to Configure
 
-<figure><img src="../../../../img/question-classifier-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/question-classifier-1.png" alt=""><figcaption></figcaption></figure>
 
 **Configuration Steps:**
 
-1. **Select Input Variable**: This refers to the content to be classified, usually the user's question in a customer service Q&A scenario, e.g., `sys.query`.
+1. **Select Input Variable**: This refers to the content to be classified, usually the user's question in a customer service Q\&A scenario, e.g., `sys.query`.
 2. **Choose Inference Model**: The issue classifier leverages the natural language classification and inference capabilities of large language models. Selecting an appropriate model can enhance classification effectiveness.
 3. **Write Classification Labels/Descriptions**: You can manually add multiple classifications by writing keywords or descriptive statements for each category, helping the large language model better understand the classification criteria.
 4. **Choose Corresponding Downstream Nodes**: After classification, the issue classification node can direct the flow to different paths based on the relationship between the classification and downstream nodes.

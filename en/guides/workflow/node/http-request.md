@@ -15,7 +15,7 @@ This node supports common HTTP request methods:
 
 You can configure various aspects of the HTTP request, including URL, request headers, query parameters, request body content, and authentication information.
 
-<figure><img src="../../../../img/workflow-http-request-node.png" alt="" width="332"><figcaption><p>HTTP Request Configuration</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/workflow-http-request-node.png" alt="" width="332"><figcaption><p>HTTP Request Configuration</p></figcaption></figure>
 
 ***
 
@@ -23,6 +23,6 @@ You can configure various aspects of the HTTP request, including URL, request he
 
 One practical feature of this node is the ability to dynamically insert variables into different parts of the request based on the scenario. For example, when handling customer feedback requests, you can embed variables such as username or customer ID, feedback content, etc., into the request to customize automated reply messages or fetch specific customer information and send related resources to a designated server.
 
-<figure><img src="../../../../img/customer-feedback-classification.png" alt=""><figcaption><p>Customer Feedback Classification</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/customer-feedback-classification.png" alt=""><figcaption><p>Customer Feedback Classification</p></figcaption></figure>
 
 The return values of an HTTP request include the response body, status code, response headers, and files. Notably, if the response contains a file (currently only image types are supported), this node can automatically save the file for use in subsequent steps of the workflow. This design not only improves processing efficiency but also makes handling responses with files straightforward and direct.

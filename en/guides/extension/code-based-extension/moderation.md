@@ -171,7 +171,7 @@ class CloudServiceModeration(Moderation):
                 inputs['query__'] = query
             flagged = self._is_violated(inputs)
 
-        # return ModerationInputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, inputs=inputs, query=query)
+        # return ModerationInputsResult(flagged=flagged, action=ModerationAction.overridden, inputs=inputs, query=query)
         return ModerationInputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
 
     def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
@@ -189,7 +189,7 @@ class CloudServiceModeration(Moderation):
 
             flagged = self._is_violated({'text': text})
 
-        # return ModerationOutputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, text=text)
+        # return ModerationOutputsResult(flagged=flagged, action=ModerationAction.overridden, text=text)
         return ModerationOutputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
 
     def _is_violated(self, inputs: dict):
@@ -249,7 +249,7 @@ class CloudServiceModeration(Moderation):
         
         # implement your own logic here
         
-        # return ModerationInputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, inputs=inputs, query=query)
+        # return ModerationInputsResult(flagged=flagged, action=ModerationAction.overridden, inputs=inputs, query=query)
         return ModerationInputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
 
     def moderation_for_outputs(self, text: str) -> ModerationOutputsResult:
@@ -264,7 +264,7 @@ class CloudServiceModeration(Moderation):
         
         # implement your own logic here
 
-        # return ModerationOutputsResult(flagged=flagged, action=ModerationAction.OVERRIDED, text=text)
+        # return ModerationOutputsResult(flagged=flagged, action=ModerationAction.overridden, text=text)
         return ModerationOutputsResult(flagged=flagged, action=ModerationAction.DIRECT_OUTPUT, preset_response=preset_response)
 ```
 
@@ -293,10 +293,10 @@ Input validation function
   * `flagged`: whether it violates the moderation rules
   * `action`: action to be taken
     * `direct_output`: directly output the preset response
-    * `overrided`: override the passed variable values
+    * `overridden`: override the passed variable values
   * `preset_response`: preset response (returned only when action=direct_output)
-  * `inputs`: values passed by the end user, with key as the variable name and value as the variable value (returned only when action=overrided)
-  * `query`: overridden current input content of the end user in a conversation, a fixed parameter for conversational applications (returned only when action=overrided)
+  * `inputs`: values passed by the end user, with key as the variable name and value as the variable value (returned only when action=overridden)
+  * `query`: overridden current input content of the end user in a conversation, a fixed parameter for conversational applications (returned only when action=overridden)
 
 ### def moderation\_for\_outputs
 
@@ -309,6 +309,6 @@ Output validation function
     * `flagged`: whether it violates the moderation rules
     * `action`: action to be taken
       * `direct_output`: directly output the preset response
-      * `overrided`: override the passed variable values
+      * `overridden`: override the passed variable values
     * `preset_response`: preset response (returned only when action=direct_output)
-    * `text`: overridden content of the LLM response (returned only when action=overrided).
+    * `text`: overridden content of the LLM response (returned only when action=overridden).

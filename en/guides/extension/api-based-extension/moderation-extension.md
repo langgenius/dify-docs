@@ -72,12 +72,12 @@ Please read [.](./ "mention") to complete the development and integration of bas
 }
 ```
 
-`action=overrided`
+`action=overridden`
 
 ```
 {
     "flagged": true,
-    "action": "overrided",
+    "action": "overridden",
     "inputs": {
         "var_1": "I will *** you.",
         "var_2": "I will *** you."
@@ -136,12 +136,12 @@ Please read [.](./ "mention") to complete the development and integration of bas
   }
   ```
 
-`action=overrided`
+`action=overridden`
 
 * ```JSON
   {
       "flagged": true,
-      "action": "overrided",
+      "action": "overridden",
       "text": "I will *** you."
   }
   ```

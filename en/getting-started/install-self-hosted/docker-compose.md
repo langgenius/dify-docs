@@ -2,10 +2,14 @@
 
 ## Prerequisites
 
+> Before installing Dify, make sure your machine meets the following minimum system requirements:
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
+
 | Operating System           | Software                                                       | Explanation                                                                                                                                                                                                                                                                                                                               |
 | -------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | macOS 10.14 or later       | Docker Desktop                                                 | Set the Docker virtual machine (VM) to use a minimum of 2 virtual CPUs (vCPUs) and 8 GB of initial memory. Otherwise, the installation may fail. For more information, please refer to the [Docker Desktop installation guide for Mac](https://docs.docker.com/desktop/mac/install/).                                                     |
-| Linux platforms            | <p>Docker 19.03 or later<br>Docker Compose 1.25.1 or later</p> | Please refer to the [Docker installation guide](https://docs.docker.com/engine/install/) and [the Docker Compose installation guide](https://docs.docker.com/compose/install/) for more information on how to install Docker and Docker Compose, respectively.                                                                            |
+| Linux platforms            | <p>Docker 19.03 or later<br>Docker Compose 1.28 or later</p> | Please refer to the [Docker installation guide](https://docs.docker.com/engine/install/) and [the Docker Compose installation guide](https://docs.docker.com/compose/install/) for more information on how to install Docker and Docker Compose, respectively.                                                                            |
 | Windows with WSL 2 enabled | Docker Desktop                                                 | We recommend storing the source code and other data that is bound to Linux containers in the Linux file system rather than the Windows file system. For more information, please refer to the [Docker Desktop installation guide for using the WSL 2 backend on Windows.](https://docs.docker.com/desktop/windows/install/#wsl-2-backend) |
 
 > \[!IMPORTANT]
@@ -20,19 +24,37 @@ Clone the Dify source code to your local machine:
 git clone https://github.com/langgenius/dify.git
 ```
 
-### Start Dify
+### Starting Dify
 
-Navigate to the docker directory in the Dify source code and execute the following command to start Dify:
+1. Navigate to the Docker directory in the Dify source code
 
-```bash
-cd dify/docker
-cp .env.example .env
-docker compose up -d
-```
+   ```bash
+   cd dify/docker
+   ```
 
-> If your system has Docker Compose V2 installed instead of V1, use `docker compose` instead of `docker-compose`. Check if this is the case by running `$ docker compose version`. [Read more information here](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command).
+2. Copy the environment configuration file
 
-Deployment Results:
+    ```bash
+   cp .env.example .env
+   ```
+
+3. Start the Docker containers
+
+    Choose the appropriate command to start the containers based on the Docker Compose version on your system. You can use the `$ docker compose version` command to check the version, and refer to the [Docker documentation](https://docs.docker.com/compose/install/) for more information:
+
+    - If you have Docker Compose V2, use the following command:
+  
+    ```bash
+    docker compose up -d
+    ```
+
+    - If you have Docker Compose V1, use the following command:
+
+    ```bash
+    docker-compose up -d
+    ```
+
+After executing the command, you should see output similar to the following, showing the status and port mappings of all containers:
 
 ```bash
 [+] Running 11/11
@@ -70,6 +92,8 @@ docker-web-1          langgenius/dify-web:0.6.13         "/bin/sh ./entrypoin…
 docker-worker-1       langgenius/dify-api:0.6.13         "/bin/bash /entrypoi…"   worker       About a minute ago   Up About a minute             5001/tcp
 ```
 
+With these steps, you should be able to install Dify successfully.
+
 ### Upgrade Dify
 
 Enter the docker directory of the dify source code and execute the following commands:
@@ -82,14 +106,32 @@ docker compose pull
 docker compose up -d
 ```
 
-<!-- #### Sync Environment Variable Configuration (Important)
+#### Sync Environment Variable Configuration (Important)
 
 * If the `.env.example` file has been updated, be sure to modify your local `.env` file accordingly.
-* Check and modify the configuration items in the `.env` file as needed to ensure they match your actual environment. You may need to add any new variables from `.env.example` to your `.env` file, and update any values that have changed. -->
+* Check and modify the configuration items in the `.env` file as needed to ensure they match your actual environment. You may need to add any new variables from `.env.example` to your `.env` file, and update any values that have changed.
 
 ### Access Dify
 
-Finally, access [http://localhost/install](http://localhost/install) to use the deployed Dify.
+Access administrator initialization page to set up the admin account:
+
+```bash
+# Local environment
+http://localhost/install
+
+# Server environment
+http://your_server_ip/install
+```
+
+Dify web interface address:
+
+```bash
+# Local environment
+http://localhost
+
+# Server environment
+http://your_server_ip
+```
 
 ### Customize Dify
 

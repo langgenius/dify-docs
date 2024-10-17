@@ -6,7 +6,7 @@
 
 在开始节点中，您可以自定义启动工作流的输入变量。每个工作流都需要一个开始节点。
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/start/image (236).png" alt="" width="375"><figcaption><p>工作流开始节点</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (236) (1).png" alt="" width="375"><figcaption><p>工作流开始节点</p></figcaption></figure>
 
 开始节点支持定义四种类型输入变量：
 
@@ -16,7 +16,7 @@
 * 数字
 * 文件（即将推出）
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/start/output (2) (1).png" alt=""><figcaption><p>配置开始节点的变量</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/output (2) (1) (1).png" alt=""><figcaption><p>配置开始节点的变量</p></figcaption></figure>
 
 配置完成后，工作流在执行时将提示您提供开始节点中定义的变量值。
 

@@ -97,7 +97,7 @@
 
 ### LLMMode
 
-- `complete` Text completion
+- `completion` Text completion
 - `chat` Dialogue
 
 ### ParameterRule

@@ -12,3 +12,7 @@ docker compose up -d
 ```
 
 如果依然没能收到邮件，请检查邮件服务是否正常，以及邮件是否进入了垃圾邮件列表。
+
+### 2. 如果 workflow 太复杂超出节点上限如何处理？
+
+在社区版您可以在`web/app/components/workflow/constants.ts` 手动调整MAX\_TREE\_DEPTH 单条分支深度的上限，我们的默认值是 50，在这里要提醒自部署的情况下过深的分支可能会影响性能。

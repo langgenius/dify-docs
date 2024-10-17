@@ -7,16 +7,15 @@ Dify 支持将你的 AI 应用嵌入到业务网站中，你可以使用该能�
 *   **iframe 标签方式**
 
     将 iframe 代码复制到你网站用于显示 AI 应用的标签中，如 `<div>`、`<section>` 等标签。
-
 *   **script 标签方式**
 
     将 script 代码复制到你网站 `<head>` 或 `<body>` 标签中。
 
-    <figure><img src="../../.gitbook/assets/image (69).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="../../.gitbook/assets/image (69) (1).png" alt=""><figcaption></figcaption></figure>
 
     如果将 script 代码粘贴到官网的 `<body>` 处，你将得到一个官网 AI 机器人：
 
-    <figure><img src="../../.gitbook/assets/image (40).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="../../.gitbook/assets/image (40) (1).png" alt=""><figcaption></figcaption></figure>
 
 ## 自定义 Dify 聊天机器人气泡按钮
 
@@ -147,5 +146,4 @@ window.difyChatbotConfig = {
 
 注意：使用 embed.js 脚本创建 iframe 时，每个输入值将被处理——使用 GZIP 压缩并以 base64 编码——然后附加到 URL 上。
 
-例如，处理后的输入值 URL 将如下所示：
-`http://localhost/chatbot/{token}?name=H4sIAKUlmWYA%2FwWAIQ0AAACDsl7gLuiv2PQEUNAuqQUAAAA%3D`
+例如，处理后的输入值 URL 将如下所示： `http://localhost/chatbot/{token}?name=H4sIAKUlmWYA%2FwWAIQ0AAACDsl7gLuiv2PQEUNAuqQUAAAA%3D`

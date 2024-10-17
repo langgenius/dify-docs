@@ -1,35 +1,46 @@
 # Welcome to Dify
 
-Dify is an open-source large language model (LLM) application development platform. It combines the concepts of Backend-as-a-Service and LLMOps to enable developers to quickly build production-grade generative AI applications. Even non-technical personnel can participate in the definition and data operations of AI applications.
+Dify is an open-source platform for building AI applications. We combine Backend-as-a-Service and LLMOps to streamline the development of generative AI solutions, making it accessible to both developers and non-technical innovators.
 
-By integrating the key technology stacks required for building LLM applications, including support for hundreds of models, an intuitive Prompt orchestration interface, high-quality RAG engines, and a flexible Agent framework, while providing a set of easy-to-use interfaces and APIs, Dify saves developers a lot of time reinventing the wheel, allowing them to focus on innovation and business needs.
+Our platform integrates:
 
-### Why Use Dify?
+- Support for mainstream LLMs
+- An intuitive Prompt orchestration interface
+- High-quality RAG engines
+- A flexible AI Agent framework
+- An Intuitive Low-code Workflow
+- Easy-to-use interfaces and APIs
 
-You can think of libraries like LangChain as toolboxes with hammers, nails, etc. In comparison, Dify provides a more production-ready, complete solution - think of Dify as a scaffolding system with refined engineering design and software testing.
+With Dify, you can skip the complexity and focus on what matters most - creating innovative AI applications that solve real-world problems.
 
-Importantly, Dify is **open source**, co-created by a professional full-time team and community. You can self-deploy capabilities similar to Assistants API and GPTs based on any model, maintaining full control over your data with flexible security, all on an easy-to-use interface.
+### The Advantage of Dify
 
-> Our community users summarize their evaluation of Dify's products as simple, restrained, and rapid iteration.
->
-> \- Lu Yu, Dify.AI CEO
+While many AI development tools offer individual components, Dify provides a comprehensive, production-ready solution. Think of Dify as a well-designed scaffolding system, not just a toolbox.
 
-We hope the above information and this guide can help you understand this product. We believe Dify is made for you.
+As an open-source platform, Dify is co-created by a dedicated professional team and a vibrant community. This collaboration ensures rapid iteration, robust features, and a user-friendly interface.
 
-### What Can Dify Do?
+With Dify, you can:
 
-{% hint style="info" %}
-The name Dify comes from Define + Modify, referring to defining and continuously improving your AI applications. It's made for you.
-{% endhint %}
+- Deploy capabilities similar to Assistants API and GPTs using any model
+- Maintain full control over your data with flexible security options
+- Leverage an intuitive interface for easy management and deployment
 
-* **Startups** - Quickly turn your AI ideas into reality, accelerating both success and failure. In the real world, dozens of teams have already built MVPs to get funding or win customer orders through Dify.
-* **Integrate LLMs into existing businesses** - Enhance capabilities of current apps by introducing LLMs. Access Dify’s RESTful APIs to decouple Prompts from business logic. Use Dify’s management interface to track data, costs and usage while continuously improving performance.
-* **Enterprise LLM infrastructure** - Some banks and internet companies are deploying Dify as an internal LLM gateway, accelerating the adoption of GenAI technologies while enabling centralized governance.
-* **Explore LLM capabilities** - Even as a tech enthusiast, you can easily practice Prompt engineering and Agent technologies through Dify. Over 60,000 developers have built their first app on Dify even before GPTs came out.
+### Dify
+
+{% hint style="info" %} The name Dify comes from "Define + Modify", referring to defining and continuously improving your AI applications. It's made for you. {% endhint %}
+
+Here's how various groups are leveraging Dify:
+
+1. **Startups**: Rapidly prototype and iterate on AI ideas, accelerating both successes and failures. Numerous teams have used Dify to build MVPs, secure funding, and win customer contracts.
+2. **Established Businesses**: Enhance existing applications with LLM capabilities. Use Dify's RESTful APIs to separate prompts from business logic, while utilizing our management interface to track data, costs, and usage.
+3. **Enterprise AI infrastructure**: Banks and tech companies are deploying Dify as an internal LLM gateway, facilitating GenAI adoption with centralized governance.
+4. **AI Enthusiasts and Learners**: Practice prompt engineering and explore agent technologies with ease. Over 60,000 developers built their first AI app on Dify even before GPTs were introduced. Since then, our community has grown significantly, now boasting over 180,000 developers and supporting 59,000+ end users.
+
+Whether you're a startup founder, an enterprise developer, or an AI enthusiast, Dify is designed to meet your needs and accelerate your AI journey!
 
 ### Next Steps
 
-* Read [**Quick Start**](https://docs.dify.ai/application/creating-an-application) for an overview of Dify’s application building workflow.
-* Learn how to [**self-deploy Dify** ](https://docs.dify.ai/getting-started/install-self-hosted)to your servers and [**integrate open source models**](https://docs.dify.ai/advanced/model-configuration)**.**
-* Understand Dify’s [**specifications and roadmap**](getting-started/readme/features-and-specifications.md)**.**
-* [**Star us on GitHub**](https://github.com/langgenius/dify) and read our **Contributor Guidelines.**
+- Read [**Quick Start**](https://docs.dify.ai/application/creating-an-application) for an overview of Dify’s application building workflow.
+- Learn how to [**self-deploy Dify** ](https://docs.dify.ai/getting-started/install-self-hosted)to your servers and [**integrate open source models**](https://docs.dify.ai/advanced/model-configuration)**.**
+- Understand Dify’s [**specifications and roadmap**](https://docs.dify.ai/getting-started/readme/features-and-specifications)**.**
+- [**Star us on GitHub**](https://github.com/langgenius/dify) and read our **Contributor Guidelines.**

@@ -52,11 +52,11 @@ Rate limit reached for default-gpt-3.5-turboin organization org-wDrZCxxxxxxxxxis
 
 Please check if the official interface call rate limit has been reached. Please refer to the [official documentation](https://platform.openai.com/docs/guides/rate-limits) for details.
 
-### 7. After local deployment, Explore-Chat returns an error "Unrecognized request argument supplied: functions". How can this be resolved?
+### 6. After local deployment, Explore-Chat returns an error "Unrecognized request argument supplied: functions". How can this be resolved?
 
 First, please check that the frontend and backend versions are up-to-date and consistent with each other. This error can also occur if an Azure OpenAI key is being used without successfully deploying the model. Verify that the Azure OpenAI resource has a deployed model - the gpt-3.5-turbo model version must be 0613 or later, as earlier versions do not support the function calling capabilities required by Explore-Chat.
 
-### 8. When switching models in the app, the following error is encountered:
+### 7. When switching models in the app, the following error is encountered:
 
 ```JSON
 Anthropic: Error code: 400 - f'error': f'type': "invalid request error, 'message': 'temperature: range: -1 or 0..1)
@@ -64,7 +64,7 @@ Anthropic: Error code: 400 - f'error': f'type': "invalid request error, 'message
 
 This error occurs because each model has different valid ranges for its parameters. Make sure to configure the parameter value according to the allowed range for the current model.
 
-### 9. How to solve the following error prompt?
+### 8. How to solve the following error prompt?
 
 ```JSON
 Query or prefix prompt is too long, you can reduce the preix prompt, or shrink the max token, or switch to a llm with a larger token limit size
@@ -72,42 +72,42 @@ Query or prefix prompt is too long, you can reduce the preix prompt, or shrink t
 
 You can lower the value of "Max token" in the parameter settings of the Prompt Eng.
 
-### 10. What are the default models in Dify, and can open-source LLMs be used?
+### 9. What are the default models in Dify, and can open-source LLMs be used?
 
 A: The default models can be configured under **Settings - Model Provider.** Currently supported text generation LLMs include OpenAI, Azure OpenAl, Anthropic, etc. At the same time, open-source LLMs hosted on Hugging Face, Replicate, xinference, etc. can also be integrated.
 
-### 11. The knowledge in Community Edition gets stuck in "Queued" when Q\&A segmentation mode is enabled.
+### 10. The knowledge in Community Edition gets stuck in "Queued" when Q\&A segmentation mode is enabled.
 
 Please check if the rate limit has been reached for the Embedding model API key used.
 
-### 12. The error "Invalid token" appears when using the app.
+### 11. The error "Invalid token" appears when using the app.
 
 There are two potential solutions if the error "Invalid token" appears:
 
 * Clear the browser cache (cookies, session storage, and local storage) or the app cache on mobile. Then, revisit the app.
 * Regenerate the app URL and access the app again with the new URL. This should resolve the "Invalid token" error.
 
-### 13. What are the size limits for uploading knowledge documents?
+### 12. What are the size limits for uploading knowledge documents?
 
 The maximum size for a single document upload is currently 15MB. There is also a limit of 100 total documents. These limits can be adjusted if you are using a local deployment. Refer to the [documentation](../../getting-started/install-self-hosted/install-faq.md#11.-how-to-solve-the-size-and-quantity-limitations-for-uploading-dataset-documents-in-the-local-depl) for details on changing the limits.
 
-### 14. Why does Claude still consume OpenAI credits when using the Claude model?
+### 13. Why does Claude still consume OpenAI credits when using the Claude model?
 
 The Claude model does not have its own embedding model. Therefore, the embedding process and other dialog generation like next question suggestions default to using OpenAI keys. This means OpenAI credits are still consumed. You can set different default inference and embedding models under **Settings > Model Provider.**
 
-### 15. Is there any way to control the greater use of knowledge data rather than the model's own generation capabilities?
+### 14. Is there any way to control the greater use of knowledge data rather than the model's own generation capabilities?
 
 Whether to use a knowledge base is related to the description of the knowledge. Please write the knowledge description clearly as much as possible. Please refer to the [documentation](https://docs.dify.ai/advanced/datasets) for details.
 
-### 16. How to better segment the uploaded knowledge document in Excel?
+### 15. How to better segment the uploaded knowledge document in Excel?
 
 Set the header in the first row, and display the content in each subsequent row. Do not have any additional header settings or complex formatted table content.
 
-### 17. I have already purchased ChatGPT plus, why can't I still use GPT4 in Dify?
+### 16. I have already purchased ChatGPT plus, why can't I still use GPT4 in Dify?
 
 ChatGPT Plus and OpenAI's GPT-4 model API are two separate products with separate pricing. The model APIs have their own pricing structure, see [OpenAI's pricing documentation](https://openai.com/pricing) for details. To get access to the GPT-4 model API, you need to pay for a billing cycle - simply having a payment method on file and access to GPT-3.5 via ChatGPT Plus is not sufficient. Please refer to [OpenAI's official documentation](https://platform.openai.com/account/billing/overview) for complete details on gaining access to GPT-4.
 
-### 18. How to add other embedding models?
+### 17. How to add other embedding models?
 
 Dify supports using the listed providers as an Embedding model provider, simply select the `Embedding` type in the configuration box.
 
@@ -118,12 +118,12 @@ Dify supports using the listed providers as an Embedding model provider, simply 
 * Replicate
 * XInference
 
-### 19. How can I set my own created app as an app template?
+### 18. How can I set my own created app as an app template?
 
 The ability to set your own created app as a template is currently not supported. The existing templates are provided by Dify officially for cloud version users' reference. If you are using the cloud version, you can add apps to your workspace or customize them to make your own after modifications. If you are using the community version and need to create more app templates for your team, you may consult our business team to obtain paid technical support: [business@dify.ai](mailto:business@dify.ai)
 
 
-### 20.502 Bad Gateway
+### 19. 502 Bad Gateway
 
 This is caused by Nginx forwarding the service to the wrong location. First, make sure the container is running, then run the following command with root privileges:
 ```
@@ -137,5 +137,3 @@ Find these two lines in the output:
 Remember the IP addresses at the end. Then, open the location where you stored the dify source code, open dify/docker/nginx/conf.d, replace http://api:5001 with http://172.19.0.7:5001, and replace http://web:3000 with http://172.19.0.5:3000. Afterward, restart the Nginx container or reload the configuration.  
 These IP addresses are ***exemplary***, you must execute the command to obtain your own IP address, do not fill it in directly.  
 You may need to reconfigure based on the IP when restarting related containers.
-
-

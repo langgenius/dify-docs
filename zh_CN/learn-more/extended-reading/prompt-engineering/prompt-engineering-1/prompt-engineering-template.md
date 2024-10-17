@@ -27,7 +27,7 @@ And answer according to the language of the user's question.
 {{Query}} //这里输入查询的变量
 ```
 
-* **ASSITANT**
+* **ASSISTANT**
 
 ```Python
 "" 
@@ -64,7 +64,7 @@ And answer according to the language of the user's question.
 {{Query}} //这里输入查询的变量，常用的是输入段落形式的变量
 ```
 
-* **ASSITANT**
+* **ASSISTANT**
 
 ```Python
 "" 

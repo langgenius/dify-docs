@@ -27,7 +27,7 @@
 
 ### 场景
 
-<figure><img src="../../../../img/zh-if-else-elif.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/zh-if-else-elif.png" alt=""><figcaption></figcaption></figure>
 
 以**文本总结工作流**作为示例说明各个条件：
 
@@ -41,4 +41,4 @@
 
 涉及复杂的条件判断时，可以设置多重条件判断，在条件之间设置**AND**或者**OR**，即在条件之间取**交集**或者**并集**。
 
-<figure><img src="../../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt="" width="369"><figcaption><p>多重条件判断</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (73).png" alt="" width="369"><figcaption><p>多重条件判断</p></figcaption></figure>

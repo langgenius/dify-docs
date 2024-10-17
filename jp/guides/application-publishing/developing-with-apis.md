@@ -76,9 +76,15 @@ print(response.text)
 
 大部分のシーンで使用できる対話型アプリケーションは、一問一答形式でユーザーと継続的に対話します。対話を開始するにはchat-messagesエンドポイントを呼び出し、返されたconversation\_idを引き続き提供することで会話を継続することができます。
 
+#### `conversation_id` に関する重要事項:
+
+- **`conversation_id` の生成:** 新しい会話を開始するときは、`conversation_id` フィールドを空のままにしておきます。システムは新しい `conversation_id` を生成して返します。この新しい `conversation_id` は、今後のやり取りで使用して対話を続行します。
+- **既存のセッションでの `conversation_id` の処理:** `conversation_id` が生成されると、Dify ボットとの会話の継続性を確保するために、今後の API 呼び出しにこの `conversation_id` を含める必要があります。以前の `conversation_id` が渡されると、新しい `inputs` は無視されます。進行中の会話では `query` のみが処理されます。
+- **動的変数の管理:** セッション中にロジックまたは変数を変更する必要がある場合は、会話変数 (セッション固有の変数) を使用してボットの動作または応答を調整できます。
+
 **アプリケーション -> APIアクセス**でそのアプリケーションのAPIドキュメントとサンプルリクエストを見つけることができます。
 
-例えば、対話情報のAPIの呼び出し例：
+以下は`chat-messages`のAPIの呼び出し例：
 
 {% tabs %}
 {% tab title="cURL" %}
@@ -90,7 +96,7 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
     "inputs": {},
     "query": "eh",
     "response_mode": "streaming",
-    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276"
+    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
     "user": "abc-123"
 }'
 

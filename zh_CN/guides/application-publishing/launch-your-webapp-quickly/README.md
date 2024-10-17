@@ -3,7 +3,7 @@
 使用 Dify 创建 AI 应用的一个好处在于，你可以在几分钟内就发布一个可供用户在互联网上公开访问的 Web 应用，该应用将根据你的 Prompt 和编排设置进行工作。
 
 * 如果你使用的是自部署的开源版，该应用将运行在你的服务器上
-* 如果你使用的是云服务，该应用将托管至网址 <https://udify.app/>
+* 如果你使用的是云服务，该应用将托管至网址 [https://udify.app/](https://udify.app/)
 
 ***
 
@@ -11,7 +11,7 @@
 
 在应用监测页中，你可以找到 WebApp 的管理卡片。打开访问开关后，你可以得到一个能够在互联网上公开分享的网址。
 
-<figure><img src="../../../../img/public-web-app.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/public-web-app.png" alt=""><figcaption></figcaption></figure>
 
 我们对以下两种应用类型均预置了漂亮的 WebApp 界面：
 
@@ -24,7 +24,7 @@
 
 点击 WebApp 卡片上的**设置**按钮，为 AI 站点配置一些选项，它们都会被最终用户所见：
 
-![](../../../../img/web-app-settings.png)
+![](../../../.gitbook/assets/web-app-settings.png)
 
 {% hint style="info" %}
 界面语言目前已支持：英文，中文，繁体中文，葡萄牙语，德语，日本语，韩语，乌克兰语，越南语。如果您需要增加更多语言，可以在 GitHub 内提交 Issue[ 寻求支持](../../../community/support.md)或者提交 PR 贡献代码。

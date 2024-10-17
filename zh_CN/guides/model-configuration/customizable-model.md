@@ -297,4 +297,4 @@ provider_credential_schema:
         """
     ```
 
-接口方法说明见：[Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/interfaces.md)，具体实现可参考：[llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model\_providers/anthropic/llm/llm.py)。
+接口方法说明见：[Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/interfaces.md)，具体实现可参考：[llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model_providers/anthropic/llm/llm.py)。

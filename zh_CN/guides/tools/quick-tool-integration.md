@@ -176,13 +176,13 @@ from typing import Any, Dict, List, Union
 class GoogleSearchTool(BuiltinTool):
     def _invoke(self, 
                 user_id: str,
-               tool_paramters: Dict[str, Any], 
+               tool_Parameters: Dict[str, Any], 
         ) -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
             invoke tools
         """
-        query = tool_paramters['query']
-        result_type = tool_paramters['result_type']
+        query = tool_Parameters['query']
+        result_type = tool_Parameters['result_type']
         api_key = self.runtime.credentials['serpapi_api_key']
         # TODO: search with serpapi
         result = SerpAPI(api_key).run(query, result_type=result_type)
@@ -194,7 +194,7 @@ class GoogleSearchTool(BuiltinTool):
 
 #### 参数
 
-工具的整体逻辑都在`_invoke`方法中，这个方法接收两个参数：`user_id`和`tool_paramters`，分别表示用户 ID 和工具参数
+工具的整体逻辑都在`_invoke`方法中，这个方法接收两个参数：`user_id`和`tool_Parameters`，分别表示用户 ID 和工具参数
 
 #### 返回数据
 
@@ -228,7 +228,7 @@ class GoogleProvider(BuiltinToolProviderController):
                 }
             ).invoke(
                 user_id='',
-                tool_paramters={
+                tool_Parameters={
                     "query": "test",
                     "result_type": "link"
                 },

@@ -10,7 +10,7 @@ Dify 可以选择两种应用一种是对话型应用类似于 ChatGPT 那种，
 
 你可以在这里访问 Dify：https://dify.ai/
 
-<figure><img src="../../.gitbook/assets/image (99).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (99) (1).png" alt=""><figcaption></figcaption></figure>
 
 我们输入名称创建完成之后看到的页面就是我们的看板页面里面有一些数据监控和应用设置。我们先点击左侧的提示词编排，这里就是主要的工作页面了。
 

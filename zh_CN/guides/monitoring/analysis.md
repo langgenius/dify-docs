@@ -2,13 +2,13 @@
 
 **概览 -- 数据分析** 内显示了用量、活跃用户数和 LLM 调用消耗等，这使你可以持续改进应用运营的效果、活跃度、经济性。我们将逐步提供更多有用的可视化能力，请告诉我们你想要的。
 
-<figure><img src="../../.gitbook/assets/image (6) (1) (1) (1) (1).png" alt=""><figcaption><p>概览—数据分析</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (94).png" alt=""><figcaption><p>概览—数据分析</p></figcaption></figure>
 
 ***
 
 **全部消息数（Total Messages）**
 
-反映 AI 每天的互动总次数，每回答用户一个问题算一条 Message。提示词编排和调试的会话不计入。
+反映用户与 AI 每天的互动总次数，每回答用户一个问题即计数一次。提示词编排和调试的会话不计入。
 
 **活跃用户数（Active Users）**
 
@@ -16,7 +16,7 @@
 
 **平均会话互动数（Average Session Interactions）**
 
-反映每个会话用户的持续沟通次数，如果用户与 AI 问答了 10 轮，即为 10。该指标反映了用户粘性。仅在对话型应用提供。
+反映每个会话用户的持续沟通次数。如果用户与 AI 问答了 10 轮，即为 10。该指标反映了用户粘性。仅在对话型应用提供。
 
 **Token 输出速度（Token Output Speed）**
 
@@ -29,3 +29,7 @@
 **Token 消耗（Token Usage）**
 
 反映每日该应用请求语言模型的 Tokens 花费，用于成本控制。
+
+**全部会话数（Total Conversations）**
+
+反映该 AI 应用**每天**的会话总次数，发起一次新的会话即计数一次，一个会话内可能包含多条消息的往来。提示词编排和调试的消息不计入。

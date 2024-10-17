@@ -2,6 +2,10 @@
 
 ### 前置条件
 
+> 安装 Dify 之前, 请确保你的机器已满足最低安装要求：
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
+
 | 操作系统                       | 软件                                                             | 说明                                                                                                                                                                                   |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | macOS 10.14 or later       | Docker Desktop                                                 | 将 Docker 虚拟机（VM）设置为使用至少 2 个虚拟 CPU（vCPU）和 8 GB 的初始内存。否则，安装可能会失败。有关更多信息，请参阅[在 Mac 上安装 Docker Desktop](https://docs.docker.com/desktop/mac/install/)。                                   |
@@ -63,8 +67,7 @@ pyenv global 3.10
 3.  生成随机密钥，并替换 `.env` 中 `SECRET_KEY` 的值
 
     ```
-    openssl rand -base64 42
-    sed -i 's/SECRET_KEY=.*/SECRET_KEY=<your_value>/' .env
+    awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
 4.  安装依赖包
 

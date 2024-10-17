@@ -49,14 +49,14 @@ This module is used to review the content input by end-users and the output cont
 ```
 {
     "flagged": bool,  // Whether it violates the moderation rules
-    "action": string, // Action to take, direct_output for directly outputting a preset response; overrided for overriding the input variable values
+    "action": string, // Action to take, direct_output for directly outputting a preset response; overridden for overriding the input variable values
     "preset_response": string,  // Preset response (returned only when action=direct_output)
-    "inputs": {  // Variable values passed in by end-users, key is the variable name, value is the variable value (returned only when action=overrided)
+    "inputs": {  // Variable values passed in by end-users, key is the variable name, value is the variable value (returned only when action=overridden)
         "var_1": "value_1",
         "var_2": "value_2",
         ...
     },
-    "query": string | null  // Overridden current dialogue input content from the end-user, fixed parameter for conversational applications. (returned only when action=overrided)
+    "query": string | null  // Overridden current dialogue input content from the end-user, fixed parameter for conversational applications. (returned only when action=overridden)
 }
 ```
 
@@ -69,11 +69,11 @@ This module is used to review the content input by end-users and the output cont
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "inputs": {
               "var_1": "I will *** you.",
               "var_2": "I will *** you."
@@ -112,9 +112,9 @@ This module is used to review the content input by end-users and the output cont
 ```
 {
     "flagged": bool,  // Whether it violates the moderation rules
-    "action": string, // Action to take, direct_output for directly outputting a preset response; overrided for overriding the input variable values
+    "action": string, // Action to take, direct_output for directly outputting a preset response; overridden for overriding the input variable values
     "preset_response": string,  // Preset response (returned only when action=direct_output)
-    "text": string  // Overridden LLM response content (returned only when action=overrided)
+    "text": string  // Overridden LLM response content (returned only when action=overridden)
 }
 ```
 
@@ -127,11 +127,11 @@ This module is used to review the content input by end-users and the output cont
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "text": "I will *** you."
       }
       ```

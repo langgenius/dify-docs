@@ -1,4 +1,4 @@
-# Integrate LangFuse
+# Integrate Langfuse
 
 ### 1. What is Langfuse
 
@@ -15,35 +15,35 @@ Introduction to Langfuse: [https://langfuse.com/](https://langfuse.com/)
 1. Register and log in to Langfuse on the [official website](https://langfuse.com/)
 2. Create a project in Langfuse. After logging in, click **New** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (249).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (249) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
 
 Edit a name for the project.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (251).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (251) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
 
 3. Create project API credentials. In the left sidebar of the project, click **Settings** to open the settings.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (253).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (253) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
 
 In Settings, click **Create API Keys** to create project API credentials.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (252).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (252) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
 
 Copy and save the **Secret Key**, **Public Key**, and **Host**.
 
-<figure><img src="/en/.gitbook/assets/guides/monitoring/image (254).png" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (254) (1).png" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
 
 4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="../../../../img/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save.
 
-<figure><img src="../../../../img/config-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/config-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 Once successfully saved, you can view the status on the current page. If it shows as started, it is being monitored.
 
-<figure><img src="../../../../img/monitored-by-langfuse.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/monitored-by-langfuse.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
 
 ***
 
@@ -51,15 +51,15 @@ Once successfully saved, you can view the status on the current page. If it show
 
 After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
 
-<figure><img src="../../../../img/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
 
-<figure><img src="../../../../img/view-traces-in-langfuse.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/view-traces-in-langfuse.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
 
 ***
 
 ### 4 List of monitoring data
 
-#### Trace the information of Workflow and Chatflow 
+#### Trace the information of Workflow and Chatflow
 
 **Tracing workflow and chatflow**
 
@@ -77,7 +77,7 @@ After configuration, debugging or production data of the application in Dify can
 | error                                    | level                   |
 | error                                    | status\_message         |
 | \[workflow]                              | tags                    |
-| \["message", conversation\_mode]             | session\_id             |
+| \["message", conversation\_mode]         | session\_id             |
 | conversion\_id                           | parent\_observation\_id |
 
 **Workflow Trace Info**
@@ -97,7 +97,7 @@ After configuration, debugging or production data of the application in Dify can
 * error - Error Message
 * query - Queries used at runtime
 * workflow\_app\_log\_id - Workflow Application Log ID
-* message\_id - Relavent Message ID
+* message\_id - Relevant Message ID
 * start\_time - Start time of this runtime
 * end\_time - End time of this runtime
 * workflow node executions - Workflow node runtime information
@@ -126,7 +126,7 @@ After configuration, debugging or production data of the application in Dify can
 | end\_time                        | end\_time                 |
 | inputs                           | input                     |
 | outputs                          | output                    |
-| Model token consumption                  | usage                     |
+| Model token consumption          | usage                     |
 | metadata                         | metadata                  |
 | error                            | level                     |
 | error                            | status\_message           |
@@ -149,7 +149,7 @@ After configuration, debugging or production data of the application in Dify can
 * file\_list - List of files processed
 * start\_time - Start time
 * end\_time - End time
-* message\_file\_data - Message of relavent file data
+* message\_file\_data - Message of relevant file data
 * conversation\_mode - Conversation mode
 * Metadata
   * conversation\_id - Conversation ID
@@ -185,7 +185,7 @@ After configuration, debugging or production data of the application in Dify can
 * user\_id - user ID
 * workflow\_app\_log\_id workflow\_app\_log\_id
 * inputs - Input data for review
-* message\_data - Meesage Data
+* message\_data - Message Data
 * flagged - Whether it is flagged for attention
 * action - Specific actions to implement
 * preset\_response - Preset response
@@ -260,7 +260,7 @@ After configuration, debugging or production data of the application in Dify can
 **Dataset Retrieval Trace Info**
 
 * message\_id - Message ID
-* inputs - Input Meesage
+* inputs - Input Message
 * documents - Document data
 * start\_time - Start time
 * end\_time - End time
@@ -307,7 +307,7 @@ After configuration, debugging or production data of the application in Dify can
 * tool\_config - Tool config
 * time\_cost - Time cost
 * tool\_parameters - Tool Parameters
-* file\_url - URL of relavent files
+* file\_url - URL of relevant files
 * Metadata
   * message\_id - Message ID
   * tool\_name - Tool Name

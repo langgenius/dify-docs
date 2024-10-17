@@ -15,7 +15,7 @@ Let's introduce them separately.
 
 Enter the query content, click the run button, and the result will be generated on the right, as shown in the following figure:
 
-<figure><img src="../../../../img/text-generator.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/text-generator.png" alt=""><figcaption></figcaption></figure>
 
 In the generated results section, click the "Copy" button to copy the content to the clipboard. Click the "Save" button to save the content. You can see the saved content in the "Saved" tab. You can also "like" and "dislike" the generated content.
 
@@ -29,7 +29,7 @@ In the above scenario, the batch operation function is used, which is convenient
 
 Click the "Run Batch" tab to enter the batch run page.
 
-<figure><img src="../../../../img/text-generator-batch.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/text-generator-batch.png" alt=""><figcaption></figcaption></figure>
 
 #### Step 2 Download the template and fill in the content
 
@@ -37,7 +37,7 @@ Click the **"Download the template here"** button to obtain the template file. E
 
 #### Step 3 Upload the file and run
 
-<figure><img src="../../../../img/batch-run.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/batch-run.png" alt=""><figcaption></figcaption></figure>
 
 If you need to export the generated content, you can click the download "button" in the upper right corner to export as a `csv` file.
 
@@ -47,10 +47,10 @@ If you need to export the generated content, you can click the download "button"
 
 Click the "Save" button below the generated results to save the running results. In the "Saved" tab, you can see all saved content.
 
-<figure><img src="../../../../img/text-generator-saved.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/text-generator-saved.png" alt=""><figcaption></figcaption></figure>
 
 ### Generate more similar results
 
 If the "More like this" function is turned on the App's Orchestrate page,clicking the "More like this" button in the web application generates content similar to the current result. As shown below:
 
-<figure><img src="../../../../img/text-generator-more-like-this.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/text-generator-more-like-this.png" alt=""><figcaption></figcaption></figure>

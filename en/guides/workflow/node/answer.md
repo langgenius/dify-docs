@@ -14,10 +14,10 @@ Answer node can be seamlessly integrated at any point to dynamically deliver con
 
 Example 1: Output plain text.
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/answer/answer-plain-text.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/answer-plain-text.png" alt=""><figcaption></figcaption></figure>
 
 Example 2: Output image and LLM reply.
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/answer/answer-img-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/answer-img-1.png" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/answer/answer-img-2.png" alt="" width="275"><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/answer-img-2.png" alt="" width="275"><figcaption></figcaption></figure>

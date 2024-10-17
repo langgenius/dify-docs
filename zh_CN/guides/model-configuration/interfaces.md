@@ -91,7 +91,7 @@ class XinferenceProvider(Provider):
       """
   ```
 
-  也可以直接抛出对应Erros，并做如下定义，这样在之后的调用中可以直接抛出`InvokeConnectionError`等异常。
+  也可以直接抛出对应 Errors，并做如下定义，这样在之后的调用中可以直接抛出`InvokeConnectionError`等异常。
   
     ```python
     @property
@@ -221,7 +221,7 @@ class XinferenceProvider(Provider):
 
 ​当供应商支持增加自定义 LLM 时，可实现此方法让自定义模型可获取模型规则，默认返回 None。
 
-对于`OpenAI`供应商下的大部分微调模型，可以通过其微调模型名称获取到其基类模型，如`gpt-3.5-turbo-1106`，然后返回基类模型的预定义参数规则，参考[openai](https://github.com/langgenius/dify/blob/feat/model-runtime/api/core/model_runtime/model_providers/openai/llm/llm.py#L801)
+对于`OpenAI`供应商下的大部分微调模型，可以通过其微调模型名称获取到其基类模型，如`gpt-3.5-turbo-1106`，然后返回基类模型的预定义参数规则，参考[openai](https://github.com/langgenius/dify-runtime/blob/main/lib/model_providers/anthropic/llm/llm.py)
 的具体实现
 
 ### TextEmbedding

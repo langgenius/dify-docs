@@ -30,11 +30,11 @@
 
 新しいプロバイダーを追加するには主にいくつかのステップがあります。ここでは簡単に列挙し、具体的な手順は以下で詳しく説明します。
 
-* プロバイダーのYAMLファイルを作成し、[プロバイダースキーマ](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/schema.md)に基づいて記述します。
+* プロバイダーのYAMLファイルを作成し、[プロバイダースキーマ](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md)に基づいて記述します。
 * プロバイダーのコードを作成し、`class`を実装します。
 * モデルタイプに応じて、プロバイダーの`モジュール`内に対応するモデルタイプの`モジュール`を作成します。例えば`llm`や`text_embedding`。
 * モデルタイプに応じて、対応するモデル`モジュール`内に同名のコードファイルを作成し、例えば`llm.py`、`class`を実装します。
-* 事前定義モデルがある場合、モデル名と同名のyamlファイルをモデル`モジュール`内に作成し、[AIモデルエンティティ](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/schema.md)に基づいて記述します。
+* 事前定義モデルがある場合、モデル名と同名のyamlファイルをモデル`モジュール`内に作成し、[AIモデルエンティティ](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md#aimodelentity)に基づいて記述します。
 * テストコードを記述し、機能の有用性を確認します。
 
 #### 始めましょう
@@ -79,7 +79,7 @@ provider_credential_schema:  # プロバイダーのクレデンシャルルー�
       en_US: Enter your API URL
 ```
 
-カスタマイズ可能なモデルを提供するプロバイダー、例えば`OpenAI`が微調整モデルを提供する場合、[`モデルクレデンシャルスキーマ`](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/schema.md)を追加する必要があります。以下は`OpenAI`を例にしたものです：
+カスタマイズ可能なモデルを提供するプロバイダー、例えば`OpenAI`が微調整モデルを提供する場合、[`モデルクレデンシャルスキーマ`](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md)を追加する必要があります。以下は`OpenAI`を例にしたものです：
 
 ```yaml
 model_credential_schema:
@@ -119,7 +119,7 @@ model_credential_schema:
       en_US: Enter your API Base
 ```
 
-`model_providers`ディレクトリ内の他のプロバイダーディレクトリの[YAML設定情報](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/zh\_Hans/schema.md)も参考にできます。
+`model_providers`ディレクトリ内の他のプロバイダーディレクトリの[YAML設定情報](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/schema.md)も参考にできます。
 
 **プロバイダーコードの実装**
 
@@ -137,7 +137,7 @@ class XinferenceProvider(Provider):
 
 **事前定義モデルプロバイダー**
 
-プロバイダーは`__base.model_provider.ModelProvider`基クラスを継承し、`validate_provider_credentials`プロバイダーの統一クレデンシャル検証メソッドを実装するだけで済みます。[AnthropicProvider](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/model\_providers/anthropic/anthropic.py)を参考にできます。
+プロバイダーは`__base.model_provider.ModelProvider`基クラスを継承し、`validate_provider_credentials`プロバイダーの統一クレデンシャル検証メソッドを実装するだけで済みます。[AnthropicProvider](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/model_providers/anthropic/anthropic.py)を参考にできます。
 
 ```python
 def validate_provider_credentials(self, credentials: dict) -> None:

@@ -176,13 +176,13 @@ from typing import Any, Dict, List, Union
 class GoogleSearchTool(BuiltinTool):
     def _invoke(self, 
                 user_id: str,
-               tool_paramters: Dict[str, Any], 
+               tool_Parameters: Dict[str, Any], 
         ) -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
             invoke tools
         """
-        query = tool_paramters['query']
-        result_type = tool_paramters['result_type']
+        query = tool_Parameters['query']
+        result_type = tool_Parameters['result_type']
         api_key = self.runtime.credentials['serpapi_api_key']
         # TODO: search with serpapi
         result = SerpAPI(api_key).run(query, result_type=result_type)
@@ -194,7 +194,7 @@ class GoogleSearchTool(BuiltinTool):
 
 #### パラメーター
 
-ツールの全体のロジックは`_invoke`メソッド内にあります。このメソッドは`user_id`と`tool_paramters`の2つのパラメーターを受け取ります。これらはそれぞれユーザーIDとツールパラメーターを表します。
+ツールの全体のロジックは`_invoke`メソッド内にあります。このメソッドは`user_id`と`tool_Parameters`の2つのパラメーターを受け取ります。これらはそれぞれユーザーIDとツールパラメーターを表します。
 
 #### 返却データ
 
@@ -227,21 +227,14 @@ class GoogleProvider(BuiltinToolProviderController):
                     "credentials": credentials,
                 }
             ).invoke(
-                user_id=''
-``` <Translated Text>
-
-```
-"credentials": 資格情報,
-}
-).invoke(
-user_id='',
-tool_paramters={
-"query": "test",
-"result_type": "link"
-},
-)
-except 例外 as e:
-raise ツールプロバイダ資格情報検証エラー(str(e))
+                user_id='',
+                tool_parameters={
+                    "query": "test",
+                    "result_type": "link"
+                },
+            )
+        except Exception as e:
+            raise ToolProviderCredentialValidationError(str(e))
 ```
 
 ### 完成

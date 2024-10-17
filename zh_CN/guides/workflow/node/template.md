@@ -18,7 +18,7 @@
 
 **示例1：**将多个输入（文章标题、介绍、内容）拼接为完整文本
 
-<figure><img src="../../../.gitbook/assets/image (158).png" alt="" width="375"><figcaption><p>拼接文本</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (209).png" alt="" width="375"><figcaption><p>拼接文本</p></figcaption></figure>
 
 **示例2：**将知识检索节点获取的信息及其相关的元数据，整理成一个结构化的 Markdown 格式
 
@@ -40,6 +40,6 @@
 ```
 {% endcode %}
 
-<figure><img src="../../../.gitbook/assets/image (159).png" alt=""><figcaption><p>知识检索节点输出转换为 Markdown</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (210).png" alt=""><figcaption><p>知识检索节点输出转换为 Markdown</p></figcaption></figure>
 
 你可以参考 Jinja 的[官方文档](https://jinja.palletsprojects.com/en/3.1.x/templates/)，创建更为复杂的模板来执行各种任务。

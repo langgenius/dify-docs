@@ -1,6 +1,6 @@
 # External Data Tools
 
-External data tools are used to fetch additional data from external sources after the end user submits data, and then assemble this data into prompts as additional context information for the LLM. Dify provides a default tool for external API calls, check [External Data Tool](https://docs.dify.ai/guides/knowledge-base/external-data-tool) for details.
+External data tools are used to fetch additional data from external sources after the end user submits data, and then assemble this data into prompts as additional context information for the LLM. Dify provides a default tool for external API calls, check [api-based-extension](../api-based-extension/ "mention") for details.
 
 For developers deploying Dify locally, to meet more customized needs or to avoid developing an additional API Server, you can directly insert custom external data tool logic in the form of a plugin based on the Dify service. After extending custom tools, your custom tool options will be added to the dropdown list of tool types, and team members can use these custom tools to fetch external data.
 

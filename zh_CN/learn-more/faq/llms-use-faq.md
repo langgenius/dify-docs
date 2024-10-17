@@ -34,21 +34,11 @@ Dify 支持 OpenAI 的自定义 API 域名能力，支持任何兼容 OpenAI 的
 
 当嵌入向量被归一化为长度 1 后，计算两个向量之间的余弦相似度可以简化为它们的点积。因为归一化后的向量长度都为 1，点积的结果就等同于余弦相似度的结果。由于点积运算相对于其他相似度度量（如欧几里德距离）的计算速度更快，因此使用归一化的向量进行点积计算可以稍微提高计算效率。
 
-### 6. 如何免费申领智谱·AI、讯飞星火、MiniMax 模型的体验额度？
-
-我们联合大模型厂商向中国用户提供一定的 token 体验额度。通过 Dify \*\*设置 --> 模型供应商 --> 显示更多模型供应商。\*\*在智谱·AI、讯飞星火或 MiniMax 图标处点击【免费获取】，如果你在英文界面看不到领取入口，请将产品语言切换成为中文：
-
-* \*\*智谱·AI： 免费领取 1000 万 token，\*\*点击【免费领取】，只需输入手机号及验证码，即可到账额度，不限制是否注册过智谱·AI。
-* **讯飞星火 （V1.5 模型、V2.0 模型）：免费领取 600 万token，V1.5 模型、V2.0 模型各 300 万 token，额度不互通**，需要从 Dify 的入口进入，完成讯飞星火开放平台的注册（仅限未注册过讯飞星火的手机号），返回 Dify 静候 5 分钟，刷新页面即可在 Dify 页面体现可用额度。
-* **MiniMax：免费领取 100 万 token**，只需点击【免费领取】即可到账额度，无需手动注册流程，不限制是否注册过 MiniMax 账号。
-
-体验额度到账后，在应用内 **提示词编排 --> 模型及参数 --> 语言模型** 处选择需使用的模型即可。
-
-### 7. 填写 OpenAI key，校验失败报错提示：“**校验失败： You exceeded your current quota， please check your plan and billing details。**”是什么原因？
+### 6. 填写 OpenAI key，校验失败报错提示：“**校验失败： You exceeded your current quota， please check your plan and billing details。**”是什么原因？
 
 说明你的 OpenAI key 的账号没费用了，请前往 OpenAI 充值。
 
-### 8. 使用 OpenAI 的 key 在应用里对话，有如下报错提示，是什么原因？
+### 7. 使用 OpenAI 的 key 在应用里对话，有如下报错提示，是什么原因？
 
 报错一：
 
@@ -64,11 +54,11 @@ Rate limit reached for default-gpt-3.5-turboin organization org-wDrZCxxxxxxxxxis
 
 请检查是否达到了官方接口调用速率限制。具体请参考 [OpenAI 官方文档说明](https://platform.openai.com/docs/guides/rate-limits)。
 
-### 9. 用户自部署后，智聊不可使用，报错如下：**Unrecognized request argument supplied:functions**，该怎么解决？
+### 8. 用户自部署后，智聊不可使用，报错如下：**Unrecognized request argument supplied:functions**，该怎么解决？
 
 首先请检查前后端版本是否是最新版且前后端版本保持一致；其次，该错误有可能是因为您使用了 Azure OpenAI 的 key，但没有成功部署模型，请检查您使用的 Azure OpenAI 里是否部署了模型；其中 gpt-3.5-turbo 模型版本必须是 0613 以上版本。（因为 0613 之前的版本不支持 智聊 所使用的 function call 能力，所以无法使用）
 
-### 10. 设置 OpenAI Key 时，报错如下，是什么原因？
+### 9. 设置 OpenAI Key 时，报错如下，是什么原因？
 
 ```JSON
 Error communicating with OpenAl: HTTPSConnectionPool(host='api.openai.com', port=443): Max retriesexceeded with url: /v1/chat/completions (Caused byNewConnectionError( <urllib3.connection.HTTPSConnection object at 0x7f0462ed7af0>; Failed toestablish a new connection: [Errno -3] Temporary failure in name resolution'))
@@ -76,7 +66,7 @@ Error communicating with OpenAl: HTTPSConnectionPool(host='api.openai.com', port
 
 通常情况下是由于您的环境设置了代理，请检查是否设置代理。
 
-### 11. 应用里切换模型使用时遇到如下报错，该怎么解决？
+### 10. 应用里切换模型使用时遇到如下报错，该怎么解决？
 
 ```JSON
 Anthropic: Error code: 400 - f'error': f'type': "invalid request error, 'message': 'temperature: range: -1 or 0..1)
@@ -84,7 +74,7 @@ Anthropic: Error code: 400 - f'error': f'type': "invalid request error, 'message
 
 由于每个模型的参数取值不同，需要按照当前模型的该参数值范围设置。
 
-### 12. 遇到如下报错提示，该如何解决？
+### 11. 遇到如下报错提示，该如何解决？
 
 ```JSON
 Query or prefix prompt is too long, you can reduce the preix prompt, or shrink the max token, or switch to a llm with a larger token limit size
@@ -92,46 +82,46 @@ Query or prefix prompt is too long, you can reduce the preix prompt, or shrink t
 
 在编排页参数设置里，调小“最大 token”的值即可。
 
-### 13. Dify 里面默认的模型是什么，可否使用开源的模型？
+### 12. Dify 里面默认的模型是什么，可否使用开源的模型？
 
 默认的模型可以在 **设置 - 模型供应商** 处配置，目前支持 OpenAI / Azure OpenAl / Anthropic 等模型厂商的文本生成型模型，同时支持 Hugging Face/ Replicate / xinference 上托管的开源模型的接入。
 
-### 14. 在社区版中，数据集开启 **Q\&A 分段模式**一直显示排队中，是什么原因？
+### 13. 在社区版中，数据集开启 **Q\&A 分段模式**一直显示排队中，是什么原因？
 
 请检查您所使用的 Embedding 模型 api-key 是否达到了速率限制。
 
-### 15. 用户在使用应用时遇到报错“Invalid token”，该怎么解决？
+### 14. 用户在使用应用时遇到报错“Invalid token”，该怎么解决？
 
 如果遇到报错为 “Invalid token”，你可尝试如下两种解决办法：
 
 * 浏览器清除缓存（Cookies、Session Storage 和 Local Storage），如果是手机里使用则清除对应 APP 的缓存，重新访问；
 * 二是重新生成一个 App 网址，重新网址进入即可。
 
-### 16. 数据集文档上传的大小限制有哪些？
+### 15. 数据集文档上传的大小限制有哪些？
 
 目前数据集文档上传单个文档最大是 15MB，总文档数量限制 100 个。如您本地部署版本需要调整修改该限制，请参考[文档](https://docs.dify.ai/v/zh-hans/getting-started/faq/install-faq#11.-ben-di-bu-shu-ban-ru-he-jie-jue-shu-ju-ji-wen-dang-shang-chuan-de-da-xiao-xian-zhi-he-shu-liang)。
 
-### 17. 为什么选择了 Claude 模型，还是会消耗 OpenAI 的费用？
+### 16. 为什么选择了 Claude 模型，还是会消耗 OpenAI 的费用？
 
 因为 Claude 不支持 Embedding 模型，因此 Embedding 过程以及其他对话生成，下一个问题建议等默认都是用的 OpenAI 的 key，因此还是会消耗 OpenAI 的额度。也可以在**设置-模型供应商**里设置其他默认推理模型和 Embedding 模型。
 
-### 18. 有什么方式能控制更多地使用上下文数据而不是模型自身生成能力吗？
+### 17. 有什么方式能控制更多地使用上下文数据而不是模型自身生成能力吗？
 
 是否使用数据集，会和数据集的描述有关系，尽可能把数据集描述写清楚，具体可参考[此文档编写技巧](https://docs.dify.ai/v/zh-hans/advanced/datasets)。
 
-### 19. 上传数据集文档是 Excel，该如何更好地分段？
+### 18. 上传数据集文档是 Excel，该如何更好地分段？
 
 首行设置表头，后面每行显示内容，不要有其他多余的表头设置，不要设置复杂格式的表格内容。
 
 如下方表格示例，仅需保留第二行的表头，首行（表格1）为多余表头，需删掉。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (135).png" alt=""><figcaption></figcaption></figure>
 
-### 20 买了 ChatGPT plus，为什么在 dify 里还不能使用 GPT4？
+### 19. 买了 ChatGPT plus，为什么在 dify 里还不能使用 GPT4？
 
-OpenAI 的 GPT4 模型 API 和 ChatGPT Plus 是两个产品，分开收费的，模型的 API 有自己的定价，具体参考 [OpenAI 定价文档](https://openai.com/pricing) 。付费申请要先绑卡，绑了卡会有 GPT3.5 的权限，但没有 GPT4 的权限，GPT4 的权限得有一次支付的账单，具体参考 [OpenAI 官方文档](https://platform.openai.com/account/billing/overview)。
+OpenAI 的 GPT4 模型 API 和 ChatGPT Plus 是两个产品。模型的 API 有自己的定价，具体参考 [OpenAI 定价文档](https://openai.com/pricing) 。付费申请要先绑卡，绑了卡会有 GPT3.5 的权限，但没有 GPT4 的权限，GPT4 的权限得有一次支付的账单，具体参考 [OpenAI 官方文档](https://platform.openai.com/account/billing/overview)。
 
-### 21. 如何增加其他的 Embedding Model？
+### 20. 如何增加其他的 Embedding Model？
 
 Dify 支持以下作为 Embedding 模型使用，只需在配置框中选择 `Embeddings` 类型即可。
 
@@ -142,10 +132,6 @@ Dify 支持以下作为 Embedding 模型使用，只需在配置框中选择 `Em
 * Replicate
 * XInference
 
-### 22. 如何把自己创建的应用设置成应用模板？
+### 21. 如何把自己创建的应用设置成应用模板？
 
 该功能为 Dify 官方提供的应用模板供云端版用户参考使用，暂未支持将自己创建的应用设置成应用模板。如您使用云端版，可 **添加到工作区** 或 **自定义** 修改后成为你自己的应用。如您使用社区版，需要为团队内创建更多的应用模板，您可咨询我们商业化团队获得付费的技术支持：`business@dify.ai`
-
-###
-
-###

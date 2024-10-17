@@ -1,4 +1,4 @@
-# Logs & Annotations
+# Logs and Annotation
 
 {% hint style="warning" %}
 Please ensure that your application complies with local regulations when collecting user data. The common practice is to publish a privacy policy and obtain user consent.
@@ -22,7 +22,7 @@ The logs currently do not include interaction records from the Prompt debugging 
 These annotations will be used for model fine-tuning in future versions of Dify to improve model accuracy and response style. The current preview version only supports annotations.
 {% endhint %}
 
-<figure><img src="../../../img/app-logs-ann.png" alt=""><figcaption><p>Mark logs to improve your app</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/app-logs-ann.png" alt=""><figcaption><p>Mark logs to improve your app</p></figcaption></figure>
 
 Clicking on a log entry will open the log details panel on the right side of the interface. In this panel, operators can annotate an interaction:
 
@@ -31,4 +31,3 @@ Clicking on a log entry will open the log details panel on the right side of the
 * Mark improved responses for improvement, which represents the text you expect AI to reply with
 
 Please note that if multiple administrators in the team annotate the same log entry, the last annotation will overwrite the previous ones.
-

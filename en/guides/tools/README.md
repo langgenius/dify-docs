@@ -13,7 +13,7 @@ You can directly use the first-party built-in tools provided by the Dify ecosyst
 
 ### How to Configure First-party Tools
 
-<figure><img src="../../../img/first-party-tools.png" alt=""><figcaption><p>First-party Tools List</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/first-party-tools.png" alt=""><figcaption><p>First-party Tools List</p></figcaption></figure>
 
 Dify currently supports:
 
@@ -27,7 +27,7 @@ We welcome you to contribute your developed tools to Dify. For detailed methods 
 
 If you need to use the first-party built-in tools provided by the Dify ecosystem, you need to configure the corresponding credentials before using them.
 
-<figure><img src="../../../img/configure-first-party-tool-api.png" alt=""><figcaption><p>Configure First-party Tool Credentials</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/configure-first-party-tool-api.png" alt=""><figcaption><p>Configure First-party Tool Credentials</p></figcaption></figure>
 
 Once the credentials are successfully verified, the tool will display an "Authorized" status. After configuring the credentials, all members in the workspace can use this tool when arranging applications.
 
@@ -37,15 +37,15 @@ You can import custom API tools in the "Tools - Custom Tools" section, currently
 
 Currently, tools support two authentication methods: No Authentication and API Key.
 
-<figure><img src="/en/.gitbook/assets/guides/tools/image (147).png" alt=""><figcaption><p>Create Custom Tools</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (147).png" alt=""><figcaption><p>Create Custom Tools</p></figcaption></figure>
 
 After importing the schema content, the system will automatically parse the parameters in the file, and you can preview the specific parameters, methods, and paths of the tool. You can also test the tool parameters here.
 
-<figure><img src="/en/.gitbook/assets/guides/tools/image (148).png" alt=""><figcaption><p>Custom Tool Parameter Testing</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (148).png" alt=""><figcaption><p>Custom Tool Parameter Testing</p></figcaption></figure>
 
 Once the custom tool is created, all members in the workspace can use this tool when arranging applications in the "Studio."
 
-<figure><img src="/en/.gitbook/assets/guides/tools/image (150).png" alt=""><figcaption><p>Custom Tool Added</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (150).png" alt=""><figcaption><p>Custom Tool Added</p></figcaption></figure>
 
 #### Cloudflare Workers
 
@@ -58,8 +58,8 @@ You can also use [dify-tools-worker](https://github.com/crazywoola/dify-tools-wo
 
 Currently, you can use the configured tools when creating **intelligent assistant applications** in the "Studio."
 
-<figure><img src="../../../img/use-tools-in-app.png" alt=""><figcaption><p>Add Tools When Creating Intelligent Assistant Applications</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/use-tools-in-app.png" alt=""><figcaption><p>Add Tools When Creating Intelligent Assistant Applications</p></figcaption></figure>
 
 For example, after adding tools in a financial analysis application, the intelligent assistant will autonomously invoke tools when needed to query financial report data, analyze the data, and complete the conversation with the user.
 
-<figure><img src="../../../img/ai-using-tools-during-conversation.png" alt=""><figcaption><p>Intelligent Assistant Using Tools to Answer Questions During Conversation</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/ai-using-tools-during-conversation.png" alt=""><figcaption><p>Intelligent Assistant Using Tools to Answer Questions During Conversation</p></figcaption></figure>

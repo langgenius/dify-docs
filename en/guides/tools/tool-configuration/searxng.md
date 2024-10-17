@@ -1,15 +1,23 @@
 # SearXNG
-SearXNG is a free internet metasearch engine which aggregates results from various search services and databases. Users are neither tracked nor profiled. Dify has implemented the interface to access the SearXNG, so you can use it directly in Dify. Below are the steps for integrating SearXNG with Dify using Docker. If you wish to install SearXNG through other methods, please refer to [here](https://docs.searxng.org/admin/installation.html).
+SearXNG is a free internet metasearch engine which aggregates results from various search services and databases. Users are neither tracked nor profiled. Now you can use this tool directly in Dify.
 
-## 1. Modify the configuration as needed, or you can use the default settings.   
+Below are the steps for integrating SearXNG into Dify using Docker in the [Community Edition](https://docs.dify.ai/getting-started/install-self-hosted/docker-compose).
+
+> If you want to use SearXNG within the Dify cloud service, please refer to the [SearXNG installation documentation](https://docs.searxng.org/admin/installation.html) to set up your own service, then return to Dify and fill in the service's Base URL in the "Tools > SearXNG > Authenticate" page.
+
+## 1. Modify Dify Configuration File
+
 The configuration file is located at `dify/api/core/tools/provider/builtin/searxng/docker/settings.yml`, and you can refer to the config documentation [here](https://docs.searxng.org/admin/settings/index.html).
 
+## 2. Start the Service
 
-## 2. Start the Docker container in the dify root directory.
-```
+Start the Docker container in the dify root directory.
+
+```bash
 cd dify
 docker run --rm -d -p 8081:8080 -v "${PWD}/api/core/tools/provider/builtin/searxng/docker:/etc/searxng" searxng/searxng
 ```
 
-## 3. Integrate SearXNG in Dify  
-In `Tools > SearXNG > To Authorize`, enter the access address. If you are using Dify deployed with docker, this address is usually `http://host.docker.internal:8081`.
+## 3. Use SearXNG
+
+Fill in the access address in "Tools > SearXNG > Authenticate" to establish a connection between the Dify service and the SearXNG service. The Docker internal address for SearXNG is usually `http://host.docker.internal:8081`.

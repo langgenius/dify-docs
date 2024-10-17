@@ -2,10 +2,14 @@
 
 ### 前提条件
 
+> Dify インストール前に, マシンが最小インストール要件を満たしていることを確認してください：
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
+
 | オペレーティング·システム      | ソフトウェア                                                             | 説明                                                                                                                                                                                     |
 | -------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | macOS 10.14またはそれ以降    | Docker Desktop                                                 | Docker仮想マシン (VM) を少なくとも2つの仮想CPU (vCPU) と8 GBの初期メモリを使用するように設定してください。そうしないと、インストールが失敗する可能性があります。詳細については[MacにDocker Desktopをインストール](https://docs.docker.com/desktop/mac/install/)を参照してください。 |
-| Linuxプラットフォーム       | <p>Docker 19.03以降<br>Docker Compose 1.25.1以降</p>          | 詳細については[Dockerのインストール](https://docs.docker.com/engine/install/)および[Docker Composeのインストール](https://docs.docker.com/compose/install/)を参照してください。 |
+| Linuxプラットフォーム       | <p>Docker 19.03以降<br>Docker Compose 1.28以降</p>          | 詳細については[Dockerのインストール](https://docs.docker.com/engine/install/)および[Docker Composeのインストール](https://docs.docker.com/compose/install/)を参照してください。 |
 | WSL 2を有効にしたWindows | <p>Docker Desktop<br></p>                                      | ソースコードやその他のデータをLinuxコンテナにバインドする際には、それらをWindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細については[WSL 2バックエンドを使用してWindowsにDocker Desktopをインストール](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
 ### Difyのクローン
@@ -16,29 +20,51 @@ Difyのソースコードをローカルにクローンします
 git clone https://github.com/langgenius/dify.git
 ```
 
-### Difyの開始
+### Difyの起動
 
-difyソースコードのdockerディレクトリに移動し、次のコマンドを実行してdifyを起動する：
+1. difyソースコードのdockerディレクトリに移動し、次のコマンドを実行してdifyを起動する：
+
+    ```bash
+    cd dify/docker
+    ```
+
+2. 環境配置ファイルをコピーする
+
+    ```bash
+    cp .env.example .env
+    ```
+
+3. Docker コンテナを起動する
+
+    システムにインストールしたDocker Composeのバージョンをベースに，相応しい命令を使ってコンテナを起動します。 `$ docker compose version`を通してdockerのバージョンをチェックできます，詳しくは [Docker ドキュメント](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command)を参考してください：
+
+    - Docker Compose V2を使用する場合，以下の命令を入力する：
+  
+    ```bash
+    docker compose up -d
+    ```
+
+    - Docker Compose V1を使用する場合，以下の命令を入力する：
+
+    ```bash
+    docker-compose up -d
+    ```
+
+上記のコマンドを実行すると、すべてのコンテナの状態とポートマッピングを表示する以下のような出力が表示されるはずです：
 
 ```Shell
-cd dify/docker
-cp .env.example .env
-docker compose up -d
-```
-
-> システムにDocker Compose V2をインストールされている場合は、`docker-compose`ではなく`docker compose`を使用してください。`$ docker compose version`を使っで確認できます。詳細については[こちら](https://docs.docker.com/compose/#compose-v2-and-the-new-docker-compose-command)を参照してください。
-
-デプロイメント結果：
-
-```Shell
-[+] Running 7/7
- ✔ Container docker-web-1       Started                                                                                                                                                                                       1.0s 
- ✔ Container docker-redis-1     Started                                                                                                                                                                                       1.1s 
- ✔ Container docker-weaviate-1  Started                                                                                                                                                                                       0.9s 
- ✔ Container docker-db-1        Started                                                                                                                                                                                       0.0s 
- ✔ Container docker-worker-1    Started                                                                                                                                                                                       0.7s 
- ✔ Container docker-api-1       Started                                                                                                                                                                                       0.8s 
- ✔ Container docker-nginx-1     Started
+[+] Running 11/11
+ ✔ Network docker_ssrf_proxy_network  Created                                                                 0.1s 
+ ✔ Network docker_default             Created                                                                 0.0s 
+ ✔ Container docker-redis-1           Started                                                                 2.4s 
+ ✔ Container docker-ssrf_proxy-1      Started                                                                 2.8s 
+ ✔ Container docker-sandbox-1         Started                                                                 2.7s 
+ ✔ Container docker-web-1             Started                                                                 2.7s 
+ ✔ Container docker-weaviate-1        Started                                                                 2.4s 
+ ✔ Container docker-db-1              Started                                                                 2.7s 
+ ✔ Container docker-api-1             Started                                                                 6.5s 
+ ✔ Container docker-worker-1          Started                                                                 6.4s 
+ ✔ Container docker-nginx-1           Started                                                                 7.1s
 ```
 
 最後に、すべてのコンテナが正常に稼働しているか確認：
@@ -60,6 +86,8 @@ docker-web-1        langgenius/dify-web:0.3.2          "/entrypoint.sh"         
 docker-worker-1     langgenius/dify-api:0.3.2          "/entrypoint.sh"         worker              4 seconds ago       Up 2 seconds        80/tcp, 5001/tcp
 ```
 
+これらの手順を通して、Difyをローカルでインストールできます。
+
 ### Difyの更新
 
 difyソースコードのdockerディレクトリに入り、以下のコマンドを順に実行：
@@ -80,9 +108,27 @@ docker compose up -d
 
 ### Difyへのアクセス
 
-`http://localhost`にアクセスして、Difyを使用します。
+管理者初期化ページにアクセスして管理者アカウントを設定する:
 
-### Difyのカスタマイズ
+```bash
+# ローカル環境
+http://localhost/install
+
+# サーバー環境
+http://your_server_ip/install
+```
+
+Dify web interface address:
+
+```bash
+# ローカル環境
+http://localhost
+
+# サーバー環境
+http://your_server_ip
+```
+
+### Difyのカスタマイズ化
 
 環境変数は docker/dotenvs にあります。もし変数を変更するには、対応する`.env.example` ファイル名の接尾辞 `.example` を削除し、ファイル中の変数を直接編集してください。その後、以下のコマンドを順に実行：
 
@@ -90,3 +136,5 @@ docker compose up -d
 docker compose down
 docker compose up -d
 ```
+
+すべての環境変数は `docker/.env.example` にあります。

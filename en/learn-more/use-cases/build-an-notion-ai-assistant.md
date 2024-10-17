@@ -36,39 +36,39 @@ Click [here](https://dify.ai/) to login to Dify. You can conveniently log in usi
 
 Click the `Knowledge` button on the top side bar, followed by the `Create Knowledge` button.
 
-![login-2](../../../img/notion-ai-assistant/login-2.png)
+![login-2](../../.gitbook/assets/login-2.png)
 
 #### 3. Connect with Notion and Your Knowledge[​](https://wsyfin.com/notion-dify#3-connect-with-notion-and-datasets)
 
 Select "Sync from Notion" and then click the "Connect" button..
 
-![connect-with-notion-1](../../../img/notion-ai-assistant/connect-with-notion-1.png)
+![connect-with-notion-1](../../.gitbook/assets/connect-with-notion-1.png)
 
 Afterward, you'll be redirected to the Notion login page. Log in with your Notion account.
 
-<figure><img src="../../../img/notion-ai-assistant/connect-with-notion-2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/connect-with-notion-2.png" alt=""><figcaption></figcaption></figure>
 
 Check the permissions needed by Dify, and then click the "Select pages" button.
 
-<figure><img src="../../../img/notion-ai-assistant/connect-with-notion-3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/connect-with-notion-3.png" alt=""><figcaption></figcaption></figure>
 
 Select the pages you want to synchronize with Dify, and press the "Allow access" button.
 
-<figure><img src="../../../img/notion-ai-assistant/connect-with-notion-4.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/connect-with-notion-4.png" alt=""><figcaption></figcaption></figure>
 
 #### 4. Start training[​](https://wsyfin.com/notion-dify#4-start-training) <a href="#id-4-start-training" id="id-4-start-training"></a>
 
 Specifying the pages for AI need to study, enabling it to comprehend the content within this section of Notion. Then click the "next" button.
 
-![train-1](../../../img/notion-ai-assistant/train-1.png)
+![train-1](../../.gitbook/assets/train-1.png)
 
 We suggest selecting the "Automatic" and "High Quality" options to train your AI assistant. Then click the "Save & Process" button.
 
-![train-2](../../../img/notion-ai-assistant/train-2.png)
+![train-2](../../.gitbook/assets/train-2.png)
 
 Enjoy your coffee while waiting for the training process to complete.
 
-![train-3](../../../img/notion-ai-assistant/train-3.png)
+![train-3](../../.gitbook/assets/train-3.png)
 
 #### 5. Create Your AI application[​](https://wsyfin.com/notion-dify#5-create-your-ai-application) <a href="#id-5-create-your-own-ai-application" id="id-5-create-your-own-ai-application"></a>
 
@@ -76,11 +76,11 @@ You must create an AI application and link it with the knowledge you've recently
 
 Return to the dashboard, and click the "Create new APP" button. It's recommended to use the Chat App directly.
 
-![create-app-1](../../../img/notion-ai-assistant/create-app-1.png)
+![create-app-1](../../.gitbook/assets/create-app-1.png)
 
 Select the "Prompt Eng." and link your notion datasets in the "context".
 
-![create-app-2](../../../img/notion-ai-assistant/create-app-2.png)
+![create-app-2](../../.gitbook/assets/create-app-2.png)
 
 I recommend adding a 'Pre Prompt' to your AI application. Just like spells are essential to Harry Potter, similarly, certain tools or features can greatly enhance the ability of AI application.
 
@@ -88,15 +88,15 @@ For example, if your Notion notes focus on problem-solving in software developme
 
 _I want you to act as an IT Expert in my Notion workspace, using your knowledge of computer science, network infrastructure, Notion notes, and IT security to solve the problems_.
 
-<figure><img src="/en/.gitbook/assets/learn-more/image (40).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/image (40) (2).png" alt=""><figcaption></figcaption></figure>
 
 It's recommended to initially enable the AI to actively furnish the users with a starter sentence, providing a clue as to what they can ask. Furthermore, activating the 'Speech to Text' feature can allow users to interact with your AI assistant using their voice.
 
-<figure><img src="../../../img/notion-ai-assistant/notion-speech-to-text.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../.gitbook/assets/notion-speech-to-text.png" alt=""><figcaption></figcaption></figure>
 
 Finally, Click the "Publish" button on the top right of the page. Now you can click the public URL in the "Monitoring" section to converse with your personalized AI assistant!
 
-![create-app-4](../../../img/notion-ai-assistant/app-url.png)
+![create-app-4](../../.gitbook/assets/app-url.png)
 
 ### Utilizing API to Integrate With Your Project <a href="#utilizing-api-to-integrate-with-your-project" id="utilizing-api-to-integrate-with-your-project"></a>
 
@@ -106,19 +106,19 @@ With effortless API integration, you can conveniently invoke your Notion AI appl
 
 Click the "API Reference" button on the page of Overview page. You can refer to it as your App's API document.
 
-![using-api-1](../../../img/notion-ai-assistant/api-reference.png)
+![using-api-1](../../.gitbook/assets/api-reference.png)
 
 #### 1. Generate API Secret Key[​](https://wsyfin.com/notion-dify#1-generate-api-secret-key) <a href="#id-1-generate-api-secret-key" id="id-1-generate-api-secret-key"></a>
 
-For sercurity reason, it's recommened to create new API secret key to access your AI application.
+For security reasons, it's recommended to create a new API secret key to access your AI application.
 
-![using-api-2](../../../img/notion-ai-assistant/using-api-2.png)
+![using-api-2](../../.gitbook/assets/using-api-2.png)
 
 #### 2. Retrieve Conversation ID[​](https://wsyfin.com/notion-dify#2-retrieve-conversation-id) <a href="#id-2-retrieve-conversation-id" id="id-2-retrieve-conversation-id"></a>
 
 After chatting with your AI application, you can retrieve the session ID from the "Logs & Ann." pages.
 
-![using-api-3](../../../img/notion-ai-assistant/using-api-3.png)
+![using-api-3](../../.gitbook/assets/using-api-3.png)
 
 #### 3. Invoke API[​](https://wsyfin.com/notion-dify#3-invoke-api) <a href="#id-3-invoke-api" id="id-3-invoke-api"></a>
 
@@ -143,19 +143,19 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
 
 Sending request in terminal and you will get a successful response.
 
-![using-api-4](../../../img/notion-ai-assistant/using-api-4.png)
+![using-api-4](../../.gitbook/assets/using-api-4.png)
 
 If you want to continue this chat, go to replace the `conversation_id` of the request code to the `conversation_id` you get from the response.
 
 And you can check all the conversation history on the "Logs & Ann." page.
 
-![using-api-5](../../../img/notion-ai-assistant/using-api-5.png)
+![using-api-5](../../.gitbook/assets/using-api-5.png)
 
 ### Sync with notion periodically[​](https://wsyfin.com/notion-dify#sync-with-notion-periodically) <a href="#sync-with-notion-periodically" id="sync-with-notion-periodically"></a>
 
 If your Notion's pages have updated, you can sync with Dify periodically to keep your AI assistant up-to-date. Your AI assistant will learn from the new content.
 
-![create-app-5](../../../img/notion-ai-assistant/create-app-5.png)
+![create-app-5](../../.gitbook/assets/create-app-5.png)
 
 ### Summary[​](https://wsyfin.com/notion-dify#summary) <a href="#summary" id="summary"></a>
 

@@ -8,7 +8,7 @@
 
 如果要使用某个模版应用，点击模版的“添加到工作区”按钮。在左侧的工作区中，可以使用该应用。
 
-<figure><img src="../../../explore/images/creat-customize-app.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/zh-create-customize-app.png" alt=""><figcaption></figcaption></figure>
 
 如果要修改某个模版来创建一个新的应用，点击模版的“自定义”按钮。
 

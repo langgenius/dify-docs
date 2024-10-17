@@ -49,14 +49,14 @@
 ```
 {
     "flagged": bool,  // 是否违反校验规则
-    "action": string, // 动作，direct_output 直接输出预设回答; overrided 覆写传入变量值
+    "action": string, // 动作，direct_output 直接输出预设回答; overridden 覆写传入变量值
     "preset_response": string,  // 预设回答（仅当 action=direct_output 返回）
-    "inputs": {  // 终端用户传入变量值，key 为变量名，value 为变量值（仅当 action=overrided 返回）
+    "inputs": {  // 终端用户传入变量值，key 为变量名，value 为变量值（仅当 action=overridden 返回）
         "var_1": "value_1",
         "var_2": "value_2",
         ...
     },
-    "query": string | null  // 覆写的终端用户当前对话输入内容，对话型应用固定参数。（仅当 action=overrided 返回）
+    "query": string | null  // 覆写的终端用户当前对话输入内容，对话型应用固定参数。（仅当 action=overridden 返回）
 }
 ```
 
@@ -69,11 +69,11 @@
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "inputs": {
               "var_1": "I will *** you.",
               "var_2": "I will *** you."
@@ -112,9 +112,9 @@
 ```
 {
     "flagged": bool,  // 是否违反校验规则
-    "action": string, // 动作，direct_output 直接输出预设回答; overrided 覆写传入变量值
+    "action": string, // 动作，direct_output 直接输出预设回答; overridden 覆写传入变量值
     "preset_response": string,  // 预设回答（仅当 action=direct_output 返回）
-    "text": string  // 覆写的 LLM 回答内容。（仅当 action=overrided 返回）
+    "text": string  // 覆写的 LLM 回答内容。（仅当 action=overridden 返回）
 }
 ```
 
@@ -127,11 +127,11 @@
           "preset_response": "Your content violates our usage policy."
       }
       ```
-  * `action=overrided`
+  * `action=overridden`
     * ```
       {
           "flagged": true,
-          "action": "overrided",
+          "action": "overridden",
           "text": "I will *** you."
       }
       ```

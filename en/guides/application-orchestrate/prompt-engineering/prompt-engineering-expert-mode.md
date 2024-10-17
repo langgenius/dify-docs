@@ -164,7 +164,7 @@ In the debugging preview interface, after engaging in a conversation with the AI
 In the Prompt Log, we can clearly see:
 
 1. Complete built-in prompts.
-2. Relevant text snippets referenced in the current session.
+2. Relevant text chucks referenced in the current session.
 3. Historical session records.
 
 <figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/log1.png" alt=""><figcaption><p>Prompt Log</p></figcaption></figure>

@@ -6,15 +6,15 @@
 
 这份指南，就像 Dify 本身一样，是一个不断改进的工作。如果有时它落后于实际项目，我们非常感谢你的理解，并欢迎任何反馈以供我们改进。
 
-在许可方面，请花一分钟阅读我们简短的[许可证和贡献者协议](https://github.com/langgenius/dify/blob/main/LICENSE)。社区还遵守[行为准则](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)。
+在许可方面，请花一分钟阅读我们简短的 [许可证和贡献者协议](https://github.com/langgenius/dify/blob/main/LICENSE)。社区还遵守 [行为准则](https://github.com/langgenius/.github/blob/main/CODE_OF_CONDUCT.md)。
 
 ## 在开始之前
 
-[查找](https://github.com/langgenius/dify/issues?q=is:issue+is:closed)现有问题，或[创建](https://github.com/langgenius/dify/issues/new/choose)一个新问题。我们将问题分为两类：
+[查找](https://github.com/langgenius/dify/issues?q=is:issue+is:closed) 现有问题，或 [创建](https://github.com/langgenius/dify/issues/new/choose) 一个新问题。我们将问题分为两类：
 
 ### 功能请求：
 
-* 如果您要提出新的功能请求，请解释所提议的功能的目标，并尽可能提供详细的上下文。[@perzeusss](https://github.com/perzeuss)制作了一个很好的[功能请求助手](https://udify.app/chat/MK2kVSnw1gakVwMX)，可以帮助您起草需求。随时尝试一下。
+* 如果您要提出新的功能请求，请解释所提议的功能的目标，并尽可能提供详细的上下文。[@perzeusss](https://github.com/perzeuss) 制作了一个很好的 [功能请求助手](https://udify.app/chat/MK2kVSnw1gakVwMX)，可以帮助您起草需求。随时尝试一下。
 
 * 如果您想从现有问题中选择一个，请在其下方留下评论表示您的意愿。
 
@@ -40,7 +40,7 @@
 | Non-core features and minor enhancements                     | Low Priority    |
 | Valuable but not immediate                                   | Future-Feature  |
 
-### 其他任何事情（例如bug报告、性能优化、拼写错误更正）：
+### 其他任何事情（例如 bug 报告、性能优化、拼写错误更正）：
 * 立即开始编码。
 
   优先级的评判标准:
@@ -54,13 +54,13 @@
 
 ## 安装
 
-以下是设置Dify进行开发的步骤：
+以下是设置 Dify 进行开发的步骤：
 
-### 1. Fork该仓库
+### 1. Fork 该仓库
 
 ### 2. 克隆仓库
 
-从终端克隆fork的仓库：
+从终端克隆 fork 的仓库：
 
 ```
 git clone git@github.com:<github_username>/dify.git
@@ -78,25 +78,27 @@ Dify 依赖以下工具和库：
 
 ### 4. 安装
 
-Dify由后端和前端组成。通过`cd api/`导航到后端目录，然后按照[后端README](https://github.com/langgenius/dify/blob/main/api/README.md)进行安装。在另一个终端中，通过`cd web/`导航到前端目录，然后按照[前端README](https://github.com/langgenius/dify/blob/main/web/README.md)进行安装。
+Dify 由后端和前端组成。通过 `cd api/` 导航到后端目录，然后按照 [后端 README](https://github.com/langgenius/dify/blob/main/api/README.md) 进行安装。在另一个终端中，通过 `cd web/` 导航到前端目录，然后按照 [前端 README](https://github.com/langgenius/dify/blob/main/web/README.md) 进行安装。
 
-查看[安装常见问题解答](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq)以获取常见问题列表和故障排除步骤。
+查看 [安装常见问题解答](https://docs.dify.ai/v/zh-hans/learn-more/faq/install-faq) 以获取常见问题列表和故障排除步骤。
 
-### 5. 在浏览器中访问Dify
+### 5. 在浏览器中访问 Dify
 
-为了验证您的设置，打开浏览器并访问[http://localhost:3000](http://localhost:3000)（默认或您自定义的URL和端口）。现在您应该看到Dify正在运行。
+为了验证您的设置，打开浏览器并访问 [http://localhost:3000](http://localhost:3000)（默认或您自定义的 URL 和端口）。现在您应该看到 Dify 正在运行。
 
 ## 开发
 
-如果您要添加模型提供程序，请参考[此指南](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/README.md)。
+如果您要添加模型提供程序，请参考 [此指南](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/README.md)。
 
-如果您要向Agent或Workflow添加工具提供程序，请参考[此指南](https://github.com/langgenius/dify/blob/main/api/core/tools/README_CN.md)。
+如果您要向 Agent 或 Workflow 添加工具提供程序，请参考 [此指南](https://github.com/langgenius/dify/blob/main/api/core/tools/README_CN.md)。
 
-为了帮助您快速了解您的贡献在哪个部分，以下是Dify后端和前端的简要注释大纲：
+> **注意**：如果你想要贡献新的工具，请确保已在工具的 `YAML` 文件内留下了你的联系方式，并且在 [Dify-docs](https://github.com/langgenius/dify-docs/tree/main/en/guides/tools/tool-configuration) 帮助文档代码仓库中提交了对应的文档 PR。
+
+为了帮助您快速了解您的贡献在哪个部分，以下是 Dify 后端和前端的简要注释大纲：
 
 ### 后端
 
-Dify的后端使用Python编写，使用[Flask](https://flask.palletsprojects.com/en/3.0.x/)框架。它使用[SQLAlchemy](https://www.sqlalchemy.org/)作为ORM，使用[Celery](https://docs.celeryq.dev/en/stable/getting-started/introduction.html)作为任务队列。授权逻辑通过Flask-login进行处理。
+Dify 的后端使用 Python 编写，使用 [Flask](https://flask.palletsprojects.com/en/3.0.x/) 框架。它使用 [SQLAlchemy](https://www.sqlalchemy.org/) 作为 ORM，使用 [Celery](https://docs.celeryq.dev/en/stable/getting-started/introduction.html) 作为任务队列。授权逻辑通过 Flask-login 进行处理。
 
 ```
 [api/]
@@ -106,7 +108,7 @@ Dify的后端使用Python编写，使用[Flask](https://flask.palletsprojects.co
 ├── docker                // Docker & containerization related configurations.
 ├── events                // Event handling and processing
 ├── extensions            // Extensions with 3rd party frameworks/platforms.
-├── fields                // field definitions for serialization/marshalling.
+├── fields                //field definitions for serialization/marshalling.
 ├── libs                  // Reusable libraries and helpers.
 ├── migrations            // Scripts for database migration.
 ├── models                // Database models & schema definitions.
@@ -118,31 +120,31 @@ Dify的后端使用Python编写，使用[Flask](https://flask.palletsprojects.co
 
 ### 前端
 
-该网站使用基于Typescript的[Next.js](https://nextjs.org/)模板进行引导，并使用[Tailwind CSS](https://tailwindcss.com/)进行样式设计。[React-i18next](https://react.i18next.com/)用于国际化。
+该网站使用基于 Typescript 的 [Next.js](https://nextjs.org/) 模板进行引导，并使用 [Tailwind CSS](https://tailwindcss.com/) 进行样式设计。[React-i18next](https://react.i18next.com/) 用于国际化。
 
 ```
 [web/]
-├── app                   // layouts, pages, and components
-│   ├── (commonLayout)    // common layout used throughout the app
-│   ├── (shareLayout)     // layouts specifically shared across token-specific sessions 
-│   ├── activate          // activate page
-│   ├── components        // shared by pages and layouts
-│   ├── install           // install page
-│   ├── signin            // signin page
-│   └── styles            // globally shared styles
+├── app                   //layouts, pages, and components
+│   ├── (commonLayout)    //common layout used throughout the app
+│   ├── (shareLayout)     //layouts specifically shared across token-specific sessions 
+│   ├── activate          //activate page
+│   ├── components        //shared by pages and layouts
+│   ├── install           //install page
+│   ├── signin            //signin page
+│   └── styles            //globally shared styles
 ├── assets                // Static assets
-├── bin                   // scripts ran at build step
-├── config                // adjustable settings and options 
-├── context               // shared contexts used by different portions of the app
+├── bin                   //scripts ran at build step
+├── config                //adjustable settings and options 
+├── context               //shared contexts used by different portions of the app
 ├── dictionaries          // Language-specific translate files 
-├── docker                // container configurations
+├── docker                //container configurations
 ├── hooks                 // Reusable hooks
 ├── i18n                  // Internationalization configuration
-├── models                // describes data models & shapes of API responses
-├── public                // meta assets like favicon
-├── service               // specifies shapes of API actions
+├── models                //describes data models & shapes of API responses
+├── public                //meta assets like favicon
+├── service               //specifies shapes of API actions
 ├── test                  
-├── types                 // descriptions of function params and return values
+├── types                 //descriptions of function params and return values
 └── utils                 // Shared utility functions
 ```
 

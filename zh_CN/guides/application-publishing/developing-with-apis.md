@@ -72,11 +72,17 @@ print(response.text)
 
 #### 对话型应用
 
-可用于大部分场景的对话型应用，采用一问一答模式与用户持续对话。要开始一个对话请调用 chat-messages 接口，通过继续传入返回的 conversation\_id 可持续保持该会话。
+可用于大部分场景的对话型应用，采用一问一答模式与用户持续对话。要开始一个对话请调用 `chat-messages` 接口，每次对话开始都会产生出新的 `conversation\_id`，通过该`conversation\_id` 传回接口就可继续保持该会话。
+
+#### `conversation_id` 的注意事项：
+
+- **生成 `conversation_id`：**开始新对话时，请将 `conversation_id` 字段留空。系统将生成并返回一个新的 `conversation_id`，未来的交互中会使用该 `conversation_id` 继续对话。
+- **处理现有会话中的 `conversation_id`：**生成 `conversation_id` 后，对 API 的未来调用应包含此 `conversation_id`，以确保与 Dify 机器人的对话连续性。传递上一个 `conversation_id` 时，将忽略任何新的 `inputs`，仅处理正在进行的对话的 `query`。
+- **管理动态变量：**如果在会话期间需要修改逻辑或变量，您可以使用会话变量（特定于会话的变量）来调整bot的行为或回应。
 
 你可以在**应用 -> 访问 API** 中找到该应用的 API 文档与范例请求。
 
-例如，发送对话信息的 API的调用示例：
+例如，发送对话信息的 `chat-messages` API的调用示例：
 
 {% tabs %}
 {% tab title="cURL" %}
@@ -88,7 +94,7 @@ curl --location --request POST 'https://api.dify.ai/v1/chat-messages' \
     "inputs": {},
     "query": "eh",
     "response_mode": "streaming",
-    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276"
+    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
     "user": "abc-123"
 }'
 

@@ -4,7 +4,7 @@
 
 Invoke large language models to answer questions or process natural language.
 
-<figure><img src="../../../../img/llm-node-1.png" alt=""><figcaption><p>LLM Node</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/llm-node-1.png" alt=""><figcaption><p>LLM Node</p></figcaption></figure>
 
 ***
 
@@ -17,7 +17,7 @@ LLM is the core node of Chatflow/Workflow, utilizing the conversational/generati
 * **Content Classification**: In email batch processing scenarios, automatically categorizing emails, such as inquiries/complaints/spam.
 * **Text Conversion**: In translation scenarios, translating user-provided text into a specified language.
 * **Code Generation**: In programming assistance scenarios, generating specific business code or writing test cases based on user requirements.
-* **RAG**: In knowledge base Q&A scenarios, reorganizing retrieved relevant knowledge to respond to user questions.
+* **RAG**: In knowledge base Q\&A scenarios, reorganizing retrieved relevant knowledge to respond to user questions.
 * **Image Understanding**: Using multimodal models with vision capabilities to understand and answer questions about the information within images.
 
 By selecting the appropriate model and writing prompts, you can build powerful and reliable solutions within Chatflow/Workflow.
@@ -26,7 +26,7 @@ By selecting the appropriate model and writing prompts, you can build powerful a
 
 ### How to Configure
 
-<figure><img src="../../../../img/llm-node-2.png" alt=""><figcaption><p>LLM Node Configuration - Model Selection</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/llm-node-2.png" alt=""><figcaption><p>LLM Node Configuration - Model Selection</p></figcaption></figure>
 
 **Configuration Steps:**
 
@@ -47,11 +47,11 @@ In the LLM node, you can customize the model input prompts. If you select a chat
 
 If you're struggling to come up with effective system prompts (SYSTEM), you can use the Prompt Generator to quickly create prompts suitable for your specific business scenarios, leveraging AI capabilities.
 
-<figure><img src="../../../../img/en-prompt-generator.png" alt="" width="352"><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/en-prompt-generator.png" alt="" width="352"><figcaption></figcaption></figure>
 
 In the prompt editor, you can call out the **variable insertion menu** by typing **"/"** or **"{"** to insert **special variable blocks** or **upstream node variables** into the prompt as context content.
 
-<figure><img src="../../../../img/llm-node-3.png" alt="" width="366"><figcaption><p>Calling Out the Variable Insertion Menu</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/llm-node-3.png" alt="" width="366"><figcaption><p>Calling Out the Variable Insertion Menu</p></figcaption></figure>
 
 ***
 
@@ -61,9 +61,9 @@ In the prompt editor, you can call out the **variable insertion menu** by typing
 
 Context variables are a special type of variable defined within the LLM node, used to insert externally retrieved text content into the prompt.
 
-<figure><img src="../../../../img/llm-node-4.png" alt=""><figcaption><p>Context Variables</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/llm-node-4.png" alt=""><figcaption><p>Context Variables</p></figcaption></figure>
 
-In common knowledge base Q&A applications, the downstream node of knowledge retrieval is typically the LLM node. The **output variable** `result` of knowledge retrieval needs to be configured in the **context variable** within the LLM node for association and assignment. After association, inserting the **context variable** at the appropriate position in the prompt can incorporate the externally retrieved knowledge into the prompt.
+In common knowledge base Q\&A applications, the downstream node of knowledge retrieval is typically the LLM node. The **output variable** `result` of knowledge retrieval needs to be configured in the **context variable** within the LLM node for association and assignment. After association, inserting the **context variable** at the appropriate position in the prompt can incorporate the externally retrieved knowledge into the prompt.
 
 This variable can be used not only as external knowledge introduced into the prompt context for LLM responses but also supports the application's [**citation and attribution**](../../knowledge-base/retrieval\_test\_and\_citation.md#id-2-yin-yong-yu-gui-shu) feature due to its data structure containing segment reference information.
 
@@ -79,7 +79,7 @@ To achieve conversational memory in text completion models (e.g., gpt-3.5-turbo-
 The conversation history variable is not widely used and can only be inserted when selecting text completion models in Chatflow.
 {% endhint %}
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/node/llm/image (204).png" alt=""><figcaption><p>Inserting Conversation History Variable</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (204).png" alt=""><figcaption><p>Inserting Conversation History Variable</p></figcaption></figure>
 
 ***
 

@@ -8,7 +8,7 @@ It is important to note that for custom models, each model integration requires 
 
 Unlike predefined models, custom vendor integration will always have the following two parameters, which do not need to be defined in the vendor YAML file.
 
-![](../../../img/customizable-model.png)
+![](../../.gitbook/assets/customizable-model.png)
 
 In the previous section, we have learned that vendors do not need to implement `validate_provider_credential`. The Runtime will automatically call the corresponding model layer's `validate_credentials` based on the model type and model name selected by the user for validation.
 
@@ -127,178 +127,174 @@ Next, we will take the `llm` type as an example and write `xinference.llm.llm.py
 
 In `llm.py`, create a Xinference LLM class, which we will name `XinferenceAILargeLanguageModel` (arbitrary name), inheriting from the `__base.large_language_model.LargeLanguageModel` base class. Implement the following methods:
 
-* LLM Invocation
+*   LLM Invocation
 
-  Implement the core method for LLM invocation, which can support both streaming and synchronous returns.
+    Implement the core method for LLM invocation, which can support both streaming and synchronous returns.
 
-  ```python
-  def _invoke(self, model: str, credentials: dict,
-              prompt_messages: list[PromptMessage], model_parameters: dict,
-              tools: Optional[list[PromptMessageTool]] = None, stop: Optional[List[str]] = None,
-              stream: bool = True, user: Optional[str] = None) \
-          -> Union[LLMResult, Generator]:
+    ```python
+    def _invoke(self, model: str, credentials: dict,
+                prompt_messages: list[PromptMessage], model_parameters: dict,
+                tools: Optional[list[PromptMessageTool]] = None, stop: Optional[List[str]] = None,
+                stream: bool = True, user: Optional[str] = None) \
+            -> Union[LLMResult, Generator]:
+        """
+        Invoke large language model
+
+        :param model: model name
+        :param credentials: model credentials
+        :param prompt_messages: prompt messages
+        :param model_parameters: model parameters
+        :param tools: tools for tool calling
+        :param stop: stop words
+        :param stream: is stream response
+        :param user: unique user id
+        :return: full response or stream response chunk generator result
+        """
+    ```
+
+    When implementing, note that you need to use two functions to return data, one for handling synchronous returns and one for streaming returns. This is because Python identifies functions containing the `yield` keyword as generator functions, and the return data type is fixed as `Generator`. Therefore, synchronous and streaming returns need to be implemented separately, as shown below (note that the example uses simplified parameters; the actual implementation should follow the parameter list above):
+
+    ```python
+    def _invoke(self, stream: bool, **kwargs) \
+            -> Union[LLMResult, Generator]:
+        if stream:
+              return self._handle_stream_response(**kwargs)
+        return self._handle_sync_response(**kwargs)
+
+    def _handle_stream_response(self, **kwargs) -> Generator:
+        for chunk in response:
+              yield chunk
+    def _handle_sync_response(self, **kwargs) -> LLMResult:
+        return LLMResult(**response)
+    ```
+*   Precompute Input Tokens
+
+    If the model does not provide a precompute tokens interface, it can directly return 0.
+
+    ```python
+    def get_num_tokens(self, model: str, credentials: dict, prompt_messages: list[PromptMessage],
+                     tools: Optional[list[PromptMessageTool]] = None) -> int:
       """
-      Invoke large language model
+      Get number of tokens for given prompt messages
 
       :param model: model name
       :param credentials: model credentials
       :param prompt_messages: prompt messages
-      :param model_parameters: model parameters
       :param tools: tools for tool calling
-      :param stop: stop words
-      :param stream: is stream response
-      :param user: unique user id
-      :return: full response or stream response chunk generator result
-      """
-  ```
-
-  When implementing, note that you need to use two functions to return data, one for handling synchronous returns and one for streaming returns. This is because Python identifies functions containing the `yield` keyword as generator functions, and the return data type is fixed as `Generator`. Therefore, synchronous and streaming returns need to be implemented separately, as shown below (note that the example uses simplified parameters; the actual implementation should follow the parameter list above):
-
-  ```python
-  def _invoke(self, stream: bool, **kwargs) \
-          -> Union[LLMResult, Generator]:
-      if stream:
-            return self._handle_stream_response(**kwargs)
-      return self._handle_sync_response(**kwargs)
-
-  def _handle_stream_response(self, **kwargs) -> Generator:
-      for chunk in response:
-            yield chunk
-  def _handle_sync_response(self, **kwargs) -> LLMResult:
-      return LLMResult(**response)
-  ```
-
-* Precompute Input Tokens
-
-  If the model does not provide a precompute tokens interface, it can directly return 0.
-
-  ```python
-  def get_num_tokens(self, model: str, credentials: dict, prompt_messages: list[PromptMessage],
-                   tools: Optional[list[PromptMessageTool]] = None) -> int:
-    """
-    Get number of tokens for given prompt messages
-
-    :param model: model name
-    :param credentials: model credentials
-    :param prompt_messages: prompt messages
-    :param tools: tools for tool calling
-    :return:
-    """
-  ```
-
-  Sometimes, you may not want to directly return 0, so you can use `self._get_num_tokens_by_gpt2(text: str)` to get precomputed tokens. This method is located in the `AIModel` base class and uses GPT2's Tokenizer for calculation. However, it can only be used as an alternative method and is not completely accurate.
-
-* Model Credential Validation
-
-  Similar to vendor credential validation, this is for validating individual model credentials.
-
-  ```python
-  def validate_credentials(self, model: str, credentials: dict) -> None:
-      """
-      Validate model credentials
-
-      :param model: model name
-      :param credentials: model credentials
       :return:
       """
-  ```
+    ```
 
-* Model Parameter Schema
+    Sometimes, you may not want to directly return 0, so you can use `self._get_num_tokens_by_gpt2(text: str)` to get precomputed tokens. This method is located in the `AIModel` base class and uses GPT2's Tokenizer for calculation. However, it can only be used as an alternative method and is not completely accurate.
+*   Model Credential Validation
 
-  Unlike custom types, since a model's supported parameters are not defined in the YAML file, we need to dynamically generate the model parameter schema.
+    Similar to vendor credential validation, this is for validating individual model credentials.
 
-  For example, Xinference supports the `max_tokens`, `temperature`, and `top_p` parameters.
+    ```python
+    def validate_credentials(self, model: str, credentials: dict) -> None:
+        """
+        Validate model credentials
 
-  However, some vendors support different parameters depending on the model. For instance, the vendor `OpenLLM` supports `top_k`, but not all models provided by this vendor support `top_k`. Here, we illustrate that Model A supports `top_k`, while Model B does not. Therefore, we need to dynamically generate the model parameter schema, as shown below:
+        :param model: model name
+        :param credentials: model credentials
+        :return:
+        """
+    ```
+*   Model Parameter Schema
 
-  ```python
-  def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
-      """
-          Used to define customizable model schema
-      """
-      rules = [
-          ParameterRule(
-              name='temperature', type=ParameterType.FLOAT,
-              use_template='temperature',
-              label=I18nObject(
-                  zh_Hans='温度', en_US='Temperature'
-              )
-          ),
-          ParameterRule(
-              name='top_p', type=ParameterType.FLOAT,
-              use_template='top_p',
-              label=I18nObject(
-                  zh_Hans='Top P', en_US='Top P'
-              )
-          ),
-          ParameterRule(
-              name='max_tokens', type=ParameterType.INT,
-              use_template='max_tokens',
-              min=1,
-              default=512,
-              label=I18nObject(
-                  zh_Hans='最大生成长度', en_US='Max Tokens'
-              )
-          )
-      ]
+    Unlike custom types, since a model's supported parameters are not defined in the YAML file, we need to dynamically generate the model parameter schema.
 
-      # if model is A, add top_k to rules
-      if model == 'A':
-          rules.append(
-              ParameterRule(
-                  name='top_k', type=ParameterType.INT,
-                  use_template='top_k',
-                  min=1,
-                  default=50,
-                  label=I18nObject(
-                      zh_Hans='Top K', en_US='Top K'
-                  )
-              )
-          )
+    For example, Xinference supports the `max_tokens`, `temperature`, and `top_p` parameters.
 
-      """
-          some NOT IMPORTANT code here
-      """
+    However, some vendors support different parameters depending on the model. For instance, the vendor `OpenLLM` supports `top_k`, but not all models provided by this vendor support `top_k`. Here, we illustrate that Model A supports `top_k`, while Model B does not. Therefore, we need to dynamically generate the model parameter schema, as shown below:
 
-      entity = AIModelEntity(
-          model=model,
-          label=I18nObject(
-              en_US=model
-          ),
-          fetch_from=FetchFrom.CUSTOMIZABLE_MODEL,
-          model_type=model_type,
-          model_properties={ 
-              ModelPropertyKey.MODE:  ModelType.LLM,
-          },
-          parameter_rules=rules
-      )
+    ```python
+    def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
+        """
+            Used to define customizable model schema
+        """
+        rules = [
+            ParameterRule(
+                name='temperature', type=ParameterType.FLOAT,
+                use_template='temperature',
+                label=I18nObject(
+                    zh_Hans='温度', en_US='Temperature'
+                )
+            ),
+            ParameterRule(
+                name='top_p', type=ParameterType.FLOAT,
+                use_template='top_p',
+                label=I18nObject(
+                    zh_Hans='Top P', en_US='Top P'
+                )
+            ),
+            ParameterRule(
+                name='max_tokens', type=ParameterType.INT,
+                use_template='max_tokens',
+                min=1,
+                default=512,
+                label=I18nObject(
+                    zh_Hans='最大生成长度', en_US='Max Tokens'
+                )
+            )
+        ]
 
-      return entity
-  ```
+        # if model is A, add top_k to rules
+        if model == 'A':
+            rules.append(
+                ParameterRule(
+                    name='top_k', type=ParameterType.INT,
+                    use_template='top_k',
+                    min=1,
+                    default=50,
+                    label=I18nObject(
+                        zh_Hans='Top K', en_US='Top K'
+                    )
+                )
+            )
 
-* Invocation Error Mapping Table
+        """
+            some NOT IMPORTANT code here
+        """
 
-  When a model invocation error occurs, it needs to be mapped to the Runtime-specified `InvokeError` type to facilitate Dify's different subsequent processing for different errors.
+        entity = AIModelEntity(
+            model=model,
+            label=I18nObject(
+                en_US=model
+            ),
+            fetch_from=FetchFrom.CUSTOMIZABLE_MODEL,
+            model_type=model_type,
+            model_properties={ 
+                ModelPropertyKey.MODE:  ModelType.LLM,
+            },
+            parameter_rules=rules
+        )
 
-  Runtime Errors:
+        return entity
+    ```
+*   Invocation Error Mapping Table
 
-  * `InvokeConnectionError` Invocation connection error
-  * `InvokeServerUnavailableError` Invocation server unavailable
-  * `InvokeRateLimitError` Invocation rate limit reached
-  * `InvokeAuthorizationError` Invocation authorization failed
-  * `InvokeBadRequestError` Invocation parameter error
+    When a model invocation error occurs, it needs to be mapped to the Runtime-specified `InvokeError` type to facilitate Dify's different subsequent processing for different errors.
 
-  ```python
-  @property
-  def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
-      """
-      Map model invoke error to unified error
-      The key is the error type thrown to the caller
-      The value is the error type thrown by the model,
-      which needs to be converted into a unified error type for the caller.
+    Runtime Errors:
 
-      :return: Invoke error mapping
-      """
-  ```
+    * `InvokeConnectionError` Invocation connection error
+    * `InvokeServerUnavailableError` Invocation server unavailable
+    * `InvokeRateLimitError` Invocation rate limit reached
+    * `InvokeAuthorizationError` Invocation authorization failed
+    * `InvokeBadRequestError` Invocation parameter error
 
-For an explanation of interface methods, see: [Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/docs/en_US/interfaces.md). For specific implementations, refer to: [llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model_providers/anthropic/llm/llm.py).
+    ```python
+    @property
+    def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+        """
+        Map model invoke error to unified error
+        The key is the error type thrown to the caller
+        The value is the error type thrown by the model,
+        which needs to be converted into a unified error type for the caller.
+
+        :return: Invoke error mapping
+        """
+    ```
+
+For an explanation of interface methods, see: [Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/en\_US/interfaces.md). For specific implementations, refer to: [llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model\_providers/anthropic/llm/llm.py).
