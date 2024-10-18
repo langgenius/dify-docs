@@ -1,6 +1,6 @@
 ## Data Security
 
-We highly value your data security and are in the process of obtaining SOC2 and ISO27001 certifications.
+Dify highly values your data security. Dify gets the SOC 2 Type 1 certified and in the window period of SOC 2 Type 1. Besides that, we are still in the process of getting ISO 27001 and GDPR certified.
 
 For comprehensive information on Dify's security measures and protocols, please consult our official Security Policy at [Dify Trust Center](https://security.dify.ai/). Dify Trust Center should be considered the primary and authoritative source for security-related information.
 
