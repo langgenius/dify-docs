@@ -35,6 +35,8 @@ Click the "Run Batch" tab to enter the batch run page.
 
 Click the **"Download the template here"** button to obtain the template file. Edit the file and fill in the required content, then save it as a `.csv` file. Finally, upload the completed file back to Dify.
 
+<figure><img src="../../../.gitbook/assets/text-generator-batch-download.png" alt=""><figcaption></figcaption></figure>
+
 #### Step 3 Upload the file and run
 
 <figure><img src="../../../.gitbook/assets/batch-run.png" alt=""><figcaption></figcaption></figure>

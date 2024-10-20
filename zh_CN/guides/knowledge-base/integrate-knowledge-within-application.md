@@ -1,7 +1,5 @@
 # 在应用内集成知识库
 
-### 在应用内引用知识库
-
 知识库可以作为外部知识提供给大语言模型用于精确回复用户问题，你可以在 Dify 的[所有应用类型](../application-orchestrate/#application\_type)内关联已创建的知识库。
 
 以聊天助手为例，使用流程如下：
@@ -90,7 +88,7 @@ Dify 目前支持多个 Rerank 模型，进入 “模型供应商” 页填入 R
 
 以下是知识库检索方式对文本召回的影响情况：
 
-<figure><img src="broken-reference" alt=""><figcaption></figcaption></figure>
+![](../../../img/zh-integrate-knowledge-within-app.png)
 
 3. **引用多个知识库时，无法调整 “权重设置”，提示错误应如何处理？**
 

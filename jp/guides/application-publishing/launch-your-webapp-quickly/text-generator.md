@@ -15,7 +15,7 @@
 
 クエリ内容を入力し、実行ボタンをクリックすると、右側に結果が生成されます。以下の図の通りです：
 
-<figure><img src="../../../.gitbook/assets/image (58).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/text-generator.png" alt=""><figcaption></figcaption></figure>
 
 生成された結果部分では、「コピー」ボタンをクリックすると内容をクリップボードにコピーできます。「保存」ボタンをクリックすると内容を保存できます。「保存済み」タブで保存した内容を見ることができます。また、生成された内容には「いいね」や「バッド」をつけることもできます。
 
@@ -29,17 +29,17 @@
 
 「バッチ実行」タブをクリックすると、バッチ実行ページに入ります。
 
-<figure><img src="../../../.gitbook/assets/image (73).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/text-generator-batch.png" alt=""><figcaption></figcaption></figure>
 
 #### 第2歩 テンプレートをダウンロードして内容を入力する
 
 「テンプレートダウンロード」ボタンをクリックし、テンプレートをダウンロードします。テンプレートを編集し、内容を入力して `.csv` 形式のファイルとして保存します。
 
-<figure><img src="../../../.gitbook/assets/image (36).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/text-generator-batch-download.png" alt=""><figcaption></figcaption></figure>
 
 #### 第3歩 ファイルをアップロードして実行
 
-<figure><img src="../../../.gitbook/assets/image (70).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/batch-run.png" alt=""><figcaption></figcaption></figure>
 
 生成された内容をエクスポートする必要がある場合は、右上の「ダウンロードボタン」をクリックして `csv` ファイルとしてエクスポートできます。
 
@@ -49,10 +49,10 @@
 
 生成結果の下にある「保存」ボタンをクリックすると、実行結果を保存できます。「保存済み」タブで、すべての保存された内容を見ることができます。
 
-<figure><img src="../../../.gitbook/assets/image (57).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/text-generator-saved.png" alt=""><figcaption></figcaption></figure>
 
 ### より類似した結果の生成
 
 アプリケーションのオーケストレーションで「より類似した」機能を有効にしている場合、Webアプリケーションで「より類似した」ボタンをクリックすると、現在の結果と似た内容を生成できます。以下の図の通りです：
 
-<figure><img src="../../../.gitbook/assets/image (39).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/text-generator-more-like-this.png" alt=""><figcaption></figcaption></figure>

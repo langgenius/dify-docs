@@ -15,6 +15,8 @@ Dify 基于“**后端即服务**”理念为所有应用提供了 API，为 AI 
 
 选择一个应用，在应用（Apps）左侧导航中可以找到**访问 API（API Access）**。在该页面中你可以查看 Dify 提供的 API 文档，并管理可访问 API 的凭据。
 
+<figure><img src="../../.gitbook/assets/api-access.png" alt=""><figcaption><p>访问 API</p></figcaption></figure>
+
 例如你是一个咨询公司的开发部分，你可以基于公司的私有数据库提供 AI 能力给终端用户或开发者，但开发者无法掌握你的数据和 AI 逻辑设计，从而使得服务可以安全、可持续的交付并满足商业目的。
 
 {% hint style="warning" %}
