@@ -228,3 +228,29 @@ Find these two lines in the output:
 Remember the IP addresses. Then open the directory where you store the Dify source code, open `dify/docker/nginx/conf.d`, replace `http://api:5001` with `http://172.19.0.7:5001`, and replace `http://web:3000` with `http://172.19.0.5:3000`, then restart the Nginx container or reload the configuration.
 
 These IP addresses are _**examples**_, you must execute the command to get your own IP addresses, do not fill them in directly. You might need to reconfigure the IP addresses when restarting the relevant containers.
+
+### 21. Switching from local storage to cloud storage, such as Amazon S3 or Alibaba Cloud OSS.
+
+If you want to migrate files from local storage to cloud storage, such as Alibaba Cloud OSS, you need to migrate data from the 'upload_files' and 'privkeys' folders within your local storage directory. 
+
+Here are the steps:
+
+1. Modify environment variables
+
+    - If you start from local source code, modify the environment variables in the `.env` file to the cloud storage you want to migrate to. For example: `STORAGE_TYPE=aliyun-oss`，then configure the `Alibaba Cloud OSS storage settings`.
+
+    - If you start from docker-compose, modify the environment variables in the `docker-compose.yaml` file to the cloud storage you want to migrate to, For example: `STORAGE_TYPE: aliyun-oss`，then configure the `Alibaba Cloud OSS storage settings`.
+
+
+2. Execute the following command
+    start from local source code：
+    ```
+    flask upload-private-key-file-to-cloud-storage
+    flask upload-local-files-to-cloud-storage
+   ```
+   
+   start from docker-compose: 
+    ```
+    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
+    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
+    ```
