@@ -4,14 +4,14 @@ Compared to chat text, document files can contain vast amounts of information, s
 
 The file upload feature addresses this limitation by allowing files to be uploaded, parsed, referenced, and downloaded as File variables within workflow applications. **This empowers developers to easily construct complex workflows capable of understanding and processing various media types, including images, audio, and video.**
 
-#### Application Scenarios
+## Application Scenarios
 
 1. **Document Analysis**: Upload academic research reports for LLMs to quickly summarize key points and answer related questions based on the file content.
 2. **Code Review**: Developers can upload code files to receive optimization suggestions and bug detection.
 3. **Learning Assistance**: Students can upload assignments or study materials for personalized explanations and guidance.
 4. **Legal Aid**: Upload complete contract texts for LLMs to assist in reviewing clauses and identifying potential risks.
 
-#### Difference Between File Upload and Knowledge Base
+## Difference Between File Upload and Knowledge Base
 
 Both file upload and knowledge base provide additional contextual information for LLMs, but they differ significantly in usage scenarios and functionality:
 
@@ -31,7 +31,7 @@ Both file upload and knowledge base provide additional contextual information fo
    * File Upload: Typically for temporary use, not stored long-term in the system.
    * Knowledge Base: Exists as a long-term part of the application, can be continuously updated and maintained.
 
-#### Quick Start
+## Quick Start
 
 Dify supports file uploads in both [ChatFlow](key-concepts.md) and [WorkFlow](key-concepts.md#chatflow-and-workflow) type applications, processing them through variables for LLMs. Application developers can refer to the following methods to enable file upload functionality:
 
@@ -82,10 +82,10 @@ Add input fields in the application's "Start" node, choosing either **"Single Fi
 {% @arcade/embed flowId="73XlnhFQELlPKUWO6xZs" url="https://app.arcade.software/share/73XlnhFQELlPKUWO6xZs" %}
 
 
-
 *   **Single File**
 
     Allows the application user to upload only one file.
+
 *   **File List**
 
     Allows the application user to batch upload multiple files at once.
@@ -139,6 +139,6 @@ Placing file variables in answer nodes or end nodes will provide a file download
 
 <figure><img src="../../.gitbook/assets/image (7).png" alt=""><figcaption><p>file download</p></figcaption></figure>
 
-#### Advanced Usage
+## Advanced Usage
 
 If you want the application to support uploading multiple types of files, such as allowing users to upload document files, images, and audio/video files simultaneously, you need to add a "File List" variable in the "Start Node" and use the "List Operation" node to process different file types. For detailed instructions, please refer to the List Operation node.
