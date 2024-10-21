@@ -59,6 +59,7 @@
     * [チェックリスト](guides/workflow/debug-and-preview/checklist.md)
     * [実行履歴](guides/workflow/debug-and-preview/history.md)
   * [アプリ公開](guides/workflow/publish.md)
+  * [変更通知：画像アップロード機能がファイルアップロード機能に統合されました](guides/workflow/bulletin.md)
 * [ナレッジベース](guides/knowledge-base/README.md)
   * [ナレッジベース作成＆ドキュメントアップロード](guides/knowledge-base/create-knowledge-and-upload-documents.md)
   * [ナレッジベースとドキュメントの管理](guides/knowledge-base/knowledge-and-documents-maintenance.md)
