@@ -1,3 +1,7 @@
+---
+description: Authors: Steven, Allen, Evan
+---
+
 # File Upload
 
 Compared to chat text, document files can contain vast amounts of information, such as academic reports and legal contracts. However, Large Language Models (LLMs) are inherently limited to processing only text or images, making it challenging to extract the rich contextual information within these files. As a result, application users often resort to manually copying and pasting large amounts of information to converse with LLMs, significantly increasing unnecessary operational overhead.
