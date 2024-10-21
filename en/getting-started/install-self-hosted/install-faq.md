@@ -138,9 +138,9 @@ Since OpenAI TTS has implemented audio stream segmentation, ffmpeg needs to be i
 3. Install FFmpeg with Homebrew, enter: `brew install ffmpeg`
 4. Enter "ffmpeg -version" to check if it has been successfully installed.
 
-### 15. Migrate Vector Database to Qdrant or Milvus
+### 15. Migrate vector database from weaviate to another vector database.
 
-If you want to migrate the vector database from weaviate to qdrant or milvus, you need to migrate the data in the vector database. The following is the migration method:
+If you want to migrate the vector database from weaviate to another vector database, you need to migrate the data in the vector database. The following is the migration method:
 
 Step:
 
@@ -148,7 +148,7 @@ Step:
 2. If you are starting from docker-compose, modify the environment variable in the `docker-compose.yaml` file to the vector database you want to migrate to, both api and worker are all needed. etc:
 
 ```
-# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`.
+# The type of vector store to use. Supported values are `weaviate`, `qdrant`, `milvus`, `analyticdb`.
 VECTOR_STORE: weaviate
 ```
 
@@ -157,6 +157,12 @@ VECTOR_STORE: weaviate
 ```
 flask vdb-migrate # or docker exec -it docker-api-1 flask vdb-migrate
 ```
+
+**Tested target database:**
+
+- qdrant
+- milvus
+- analyticdb
 
 ### 16. Why is SSRF_PROXY Needed?
 
