@@ -100,10 +100,3 @@ After the application user uploads both document files and images, document file
 * **Audio and Video Files**
 
 LLMs do not yet support direct reading of audio and video files, and the Dify platform has not yet built-in related file processing tools. Application developers can refer to [External Data Tools](../extension/api-based-extension/external-data-tool.md) to integrate tools for processing file information themselves.
-
-
-
-
-
-
-
