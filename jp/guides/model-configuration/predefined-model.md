@@ -1,23 +1,23 @@
-# 事前定義モデル接続
+# 事前定義されたモデルの追加
 
 プロバイダー統合完了後、次にプロバイダーへのモデルの接続を行います。
 
-まず、接続するモデルのタイプを決定し、対応するプロバイダーのディレクトリ内に対応するモデルタイプの`モジュール`を作成する必要があります。
+まず、接続するモデルのタイプを決定し、対応するプロバイダーのディレクトリ内に対応するモデルタイプの`module`を作成する必要があります。
 
 現在サポートされているモデルタイプは以下の通りです：
 
 * `LLM` テキスト生成モデル
-* `text_embedding` テキスト埋め込み
-* `rerank` ランク再評価モデル
-* `speech2text` 音声からテキスト
-* `TTS` テキストから音声
+* `text_embedding` テキスト埋め込みモデル
+* `rerank` ランク付けモデル
+* `speech2text` 音声からテキストへの変換モデル
+* `TTS` テキストから音声への変換モデル
 * `moderation` 審査
 
-ここでは`Anthropic`を例に取ります。`Anthropic`はLLMのみをサポートしているため、`model_providers.anthropic`に`llm`という名前の`モジュール`を作成します。
+ここでは`Anthropic`を例に挙げると、`Anthropic`はLLMのみをサポートしているため、`model_providers.anthropic`に`llm`という名前の`module`を作成します。
 
-事前定義のモデルの場合、まず`llm`モジュール内にモデル名をファイル名とするYAMLファイルを作成する必要があります。例：`claude-2.1.yaml`
+事前に定義されたモデルについては、`llm` `module` の下に、モデル名をファイル名とするYAMLファイルを作成する必要があります、例えば、`claude-2.1.yaml`。
 
-#### モデルYAMLの準備
+#### モデルのYAMLファイルのサンプル
 
 ```yaml
 model: claude-2.1  # モデル識別子
@@ -25,7 +25,7 @@ model: claude-2.1  # モデル識別子
 # ラベルを設定しない場合、モデル識別子が使用されます。
 label:
   en_US: claude-2.1
-model_type: llm  # モデルタイプ、claude-2.1はLLM
+model_type: llm  # モデルタイプ、claude-2.1はLLMです
 features:  # サポートする機能、agent-thoughtはエージェント推論、visionは画像理解をサポート
 - agent-thought
 model_properties:  # モデルプロパティ
@@ -60,19 +60,19 @@ pricing:  # 価格情報
   currency: USD  # 価格通貨
 ```
 
-すべてのモデル設定を準備完了後にモデルコードの実装を開始することをお勧めします。
+すべてのモデル構成が完了した後に、モデルコードの実装を開始することをお勧めします。
 
-同様に、他のプロバイダーの対応モデルタイプディレクトリ内のYAML設定情報を参照することもできます。完全なYAMLルールについては、Schema[^1]をご覧ください。
+同様に、`model_providers`ディレクトリ内の他のサプライヤーの対応するモデル タイプ ディレクトリにあるYAML構成情報を参照することもできます。全てのYAMLルールについては、「Schema[^1]」をご覧ください。
 
 #### モデル呼び出しコードの実装
 
-次に、`llm`モジュール内に同名のPythonファイル`llm.py`を作成し、コード実装を行います。
+次に、`llm` `module`内に同名のPythonファイル`llm.py`を作成し、コード実装を行います。
 
-`llm.py`内にAnthropic LLMクラスを作成し、`AnthropicLargeLanguageModel`（任意の名前）と名付け、基底クラス`__base.large_language_model.LargeLanguageModel`を継承し、以下のメソッドを実装します：
+`llm.py`内にAnthropic LLMクラスを作成し、`AnthropicLargeLanguageModel`(任意な名前)という名前を付けます。このクラスは`__base.large_language_model.LargeLanguageModel`基底クラスを継承し、以下のメソッドを実装します：
 
 *   LLM呼び出し
 
-    LLM呼び出しのコアメソッドを実装し、ストリーミングと同期返答の両方をサポートします。
+    LLM呼び出しの中核メソッドを実装し、ストリーミングと同期返り値の両方をサポートするメソッドを実装します。
 
     ```python
     def _invoke(self, model: str, credentials: dict,
@@ -81,17 +81,17 @@ pricing:  # 価格情報
                 stream: bool = True, user: Optional[str] = None) \
             -> Union[LLMResult, Generator]:
         """
-        LLMを呼び出す
+        Invoke large language model
 
-        :param model: モデル名
-        :param credentials: モデル認証情報
-        :param prompt_messages: プロンプトメッセージ
-        :param model_parameters: モデルパラメータ
-        :param tools: ツール呼び出し用ツール
-        :param stop: 停止ワード
-        :param stream: ストリーム応答かどうか
-        :param user: ユーザーID
-        :return: 完全な応答またはストリーミング応答チャンク生成結果
+        :param model: model name
+        :param credentials: model credentials
+        :param prompt_messages: prompt messages
+        :param model_parameters: model parameters
+        :param tools: tools for tool calling
+        :param stop: stop words
+        :param stream: is stream response
+        :param user: unique user id
+        :return: full response or stream response chunk generator result
         """
     ```
 
@@ -118,12 +118,12 @@ pricing:  # 価格情報
     def get_num_tokens(self, model: str, credentials: dict, prompt_messages: list[PromptMessage],
                        tools: Optional[list[PromptMessageTool]] = None) -> int:
         """
-        指定されたプロンプトメッセージのトークン数を取得
+        Get number of tokens for given prompt messages
 
-        :param model: モデル名
-        :param credentials: モデル認証情報
-        :param prompt_messages: プロンプトメッセージ
-        :param tools: ツール
+        :param model: model name
+        :param credentials: model credentials
+        :param prompt_messages: prompt messages
+        :param tools: tools for tool calling
         :return:
         """
     ```
@@ -134,18 +134,18 @@ pricing:  # 価格情報
     ```python
     def validate_credentials(self, model: str, credentials: dict) -> None:
         """
-        モデル認証情報を検証
+        Validate model credentials
 
-        :param model: モデル名
-        :param credentials: モデル認証情報
+        :param model: model name
+        :param credentials: model credentials
         :return:
         """
     ```
 *   呼び出し異常エラーのマッピングテーブル
 
-    モデル呼び出し異常時に、ランタイム指定の`InvokeError`タイプにマッピングする必要があります。これにより、Difyは異なるエラーに対して異なる後続処理を行うことができます。
+    モデル呼び出し異常時に、Runtime時に指定の`InvokeError`タイプにマッピングする必要があります。これにより、Difyは異なるエラーに対して異なる後続処理を行うことができます。
 
-    ランタイムエラー：
+    ランタイムエラー(Runtime Errors)：
 
     * `InvokeConnectionError` 呼び出し接続エラー
     * `InvokeServerUnavailableError` 呼び出しサーバー利用不可エラー
@@ -157,12 +157,12 @@ pricing:  # 価格情報
     @property
     def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
         """
-        モデル呼び出しエラーを統一エラーにマッピング
-        キーは呼び出し元にスローされるエラータイプ
-        値はモデルによってスローされるエラータイプで、
-        呼び出し元の統一エラータイプに変換する必要があります。
+        Map model invoke error to unified error
+        The key is the error type thrown to the caller
+        The value is the error type thrown by the model,
+        which needs to be converted into a unified error type for the caller.
 
-        :return: 呼び出しエラーマッピング
+        :return: Invoke error mapping
         """
     ```
 
