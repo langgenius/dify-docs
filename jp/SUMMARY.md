@@ -18,8 +18,10 @@
 
 * [モデル](guides/model-configuration/README.md)
   * [新しいプロバイダーの追加](guides/model-configuration/new-provider.md)
-  * [事前定義モデルの追加](guides/model-configuration/predefined-model.md)
+  * [事前定義されたモデルの追加](guides/model-configuration/predefined-model.md)
   * [カスタムモデルの追加](guides/model-configuration/customizable-model.md)
+  * [インタフェース](guides/model-configuration/interfaces.md)
+  * [配置ルール](guides/model-configuration/schema.md)
   * [負荷分散](guides/model-configuration/load-balancing.md)
 * [アプリケーション](guides/application-orchestrate/README.md)
   * [アプリ作成](guides/application-orchestrate/creating-an-application.md)

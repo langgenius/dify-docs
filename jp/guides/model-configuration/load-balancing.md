@@ -14,7 +14,7 @@
 
 デフォルト設定では、APIキーは初回設定時にモデルプロバイダーに追加された資格情報です。**設定の追加** をクリックして、同じモデルの異なるAPIキーを追加することで、負荷分散機能を正常に使用できます。
 
-<figure><img src="../../img/jp-load_balancing_2.png" alt="" width="563"><figcaption><p>負荷分散の設定</p></figcaption></figure>
+<figure><img src="../../../img/jp-load_balancing_2.png" alt="" width="563"><figcaption><p>負荷分散の設定</p></figcaption></figure>
 
 **少なくとも1つの追加モデル資格情報**を追加することで、保存し負荷分散を有効にできます。
 
@@ -24,7 +24,7 @@
 
 設定完了後、モデルリスト内にすべての有効な負荷分散モデルが表示されます。
 
-<figure><img src="../../img/jp-load_balancing_3.png" alt="" width="563"><figcaption><p>負荷分散の有効化</p></figcaption></figure>
+<figure><img src="../../../img/jp-load_balancing_3.png" alt="" width="563"><figcaption><p>負荷分散の有効化</p></figcaption></figure>
 
 {% hint style="info" %}
 デフォルトでは、負荷分散はラウンドロビン戦略を使用します。レート制限を超えた場合、1分間のクールダウンタイムが適用されます。
