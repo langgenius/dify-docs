@@ -5,7 +5,7 @@
 请参考其[官方文档](https://docs.comfy.org/get_started/gettingstarted)，确保 ComfyUI 可以正常运行并生成图片。
 
 ## 2. 提示词设置
-如果你不需要dify传入提示词，可以跳过此步。如果你的提示词节点连接到了 ComfyUI 中唯一的 `KSampler` 节点，那么你可以跳过此步。  
+如果你不需要通过dify传入提示词，可以跳过此步。如果你的提示词节点连接到了 ComfyUI 中唯一的 `KSampler` 节点，那么你可以跳过此步。  
 否则，请使用字符串 `{{positive_prompt}}` 替换掉正向提示词内容，`{{negative_prompt}}` 替换掉负向提示词内容。
 <figure><img src="../../../.gitbook/assets/comfyui_prompt.png" alt=""><figcaption></figcaption></figure>
 
