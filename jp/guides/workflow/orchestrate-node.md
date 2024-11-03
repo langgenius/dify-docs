@@ -52,7 +52,7 @@
 **方法4**\
 キャンバスベースの方法に加えて、ノードの右側パネルの「Next Step」セクションからノードを追加することで、パラレル構造を生成することもできます。このアプローチにより、自動的にパラレル構成が作成されます。
 
-![](../../../img/orchestrate-node-parallel-design-method-4.jpeg)
+![](../../../img/orchestrate-node-parallel-design-method-4.png)
 
 **注意:**
 
