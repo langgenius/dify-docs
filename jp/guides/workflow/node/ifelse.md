@@ -20,8 +20,8 @@ if/else 条件に基づいてチャットフローとワークフローを2つ�
 
 * 含む（Contains）
 * 含まない（Not contains）
-* 始まる（Start with）
-* 終わる（End with）
+* ..から始まる（Start with）
+* ..から終わる（End with）
 * である（Is）
 * ではない（Is not）
 * 空である（Is empty）
@@ -31,7 +31,7 @@ if/else 条件に基づいてチャットフローとワークフローを2つ�
 
 ### シナリオ
 
-<figure><img src="../../../../img/jp-ifelse.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="../../../../img/jp-ifelse.png" alt=""><figcaption></figcaption></figure>
 
 **テキスト要約ワークフロー**を例に、各条件を説明します。
 

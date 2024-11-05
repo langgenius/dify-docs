@@ -97,4 +97,4 @@ wrangler tail
 
 * [Cloudflare Workers](https://workers.cloudflare.com/)
 * [Cloudflare Workers CLI](https://developers.cloudflare.com/workers/cli-wrangler/install-update)
-* [Example GitHub レポジトリ](https://github.com/crazywoola/dify-extension-workers)
+* [Example GitHub Repository](https://github.com/crazywoola/dify-extension-workers)

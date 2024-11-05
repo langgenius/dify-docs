@@ -16,15 +16,15 @@ Difyのツールページで、`SiliconCloud > To Authorize`をクリックし�
 
 ## 3. ツールの使用
 
-* **Chatflow/Workflowアプリケーション**
+* **チャットフロー / ワークフロー アプリ**
 
 ChatflowおよびWorkflowアプリケーションでは、`SiliconFlow`ツールノードを追加できます。ユーザーの入力内容を[変数](https://docs.dify.ai/v/ja-jp/guides/workflow/variables)を通じてSiliconFlowツールノードの「prompt」や「negative prompt」ボックスに渡し、必要に応じて内蔵パラメータを調整します。最後に、「end」ノードの返信ボックスでSiliconFlowツールノードの出力内容（テキスト、画像など）を選択します。
 
 <figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.17.40.png" alt=""><figcaption></figcaption></figure>
 
-* **Agentアプリケーション**
+* **エージェントアプリ**
 
-Agentアプリケーションでは、`Stable Diffusion`または`Flux`ツールを追加し、対話ボックスで画像の説明を送信することで、そのツールを呼び出して画像を生成します。
+エージェントアプリでは、`Stable Diffusion`または`Flux`ツールを追加し、対話ボックスで画像の説明を送信することで、そのツールを呼び出して画像を生成します。
 
 <figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.14.16.png" alt=""><figcaption></figcaption></figure>
 

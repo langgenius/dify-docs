@@ -10,7 +10,7 @@ POST <your-endpoint>/retrieval
 
 ## ヘッダー
 
-このAPIは、Difyとは独立して開発者が維持管理する知識ベースに接続するために使用されます。詳細については、[外部知識ベースへの接続](https://docs.dify.ai/guides/knowledge-base/connect-external-knowledge-base)を参照してください。`Authorization` HTTPヘッダーで `API-Key` を使用して権限を検証できます。認証ロジックは、以下のように検索APIで定義します：
+このAPIは、Difyとは独立して開発者が維持管理するナレッジベースに接続するために使用されます。詳細については、[外部ナレッジベースへの接続](https://docs.dify.ai/guides/knowledge-base/connect-external-knowledge-base)を参照してください。`Authorization` HTTPヘッダーで `API-Key` を使用して権限を検証できます。認証ロジックは、以下のように検索APIで定義します：
 
 ```
 Authorization: Bearer {API_KEY}
@@ -22,7 +22,7 @@ Authorization: Bearer {API_KEY}
 
 | プロパティ | 必須 | 型 | 説明 | 例値 |
 |------------|------|-----|------|------|
-| knowledge_id | TRUE | string | 知識ベースの一意ID | AAA-BBB-CCC |
+| knowledge_id | TRUE | string | ナレッジベースの一意ID | AAA-BBB-CCC |
 | query | TRUE | string | ユーザーのクエリ | Difyとは何ですか？ |
 | retrieval_setting | TRUE | object | 知識の検索パラメータ | 以下参照 |
 
@@ -59,13 +59,13 @@ Authorization: Bearer your-api-key
 
 | プロパティ | 必須 | 型 | 説明 | 例値 |
 |------------|------|-----|------|------|
-| records | TRUE | List[Object] | 知識ベースのクエリ結果のレコードリスト | 以下参照 |
+| records | TRUE | List[Object] | ナレッジベースのクエリ結果のレコードリスト | 以下参照 |
 
 `records` プロパティは以下のキーを含むリストオブジェクトです：
 
 | プロパティ | 必須 | 型 | 説明 | 例値 |
 |------------|------|-----|------|------|
-| content | TRUE | string | 知識ベースのデータソースからのテキストチャンクを含む | Dify：GenAIアプリケーションのイノベーションエンジン |
+| content | TRUE | string | ナレッジベースのデータソースからのテキストチャンクを含む | Dify：GenAIアプリケーションのイノベーションエンジン |
 | score | TRUE | float | クエリに対する結果の関連性スコア、範囲：0〜1 | 0.5 |
 | title | TRUE | string | ドキュメントタイトル | Dify紹介 |
 | metadata | FALSE | json | データソース内のドキュメントのメタデータ属性とその値を含む | 例参照 |

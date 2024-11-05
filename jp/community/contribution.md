@@ -120,7 +120,7 @@ DifyのバックエンドはPythonで書かれており、[Flask](https://flask.
 
 ### フロントエンド
 
-このウェブサイトは[Next.js](https://nextjs.org/)テンプレートを使用しており、スタイリングには[Tailwind CSS](https://tailwindcss.com/)を使用しています。[React-i18next](https://react.i18next.com/)を国際化に使用しています。
+このWebサイトは[Next.js](https://nextjs.org/)テンプレートを使用しており、スタイリングには[Tailwind CSS](https://tailwindcss.com/)を使用しています。[React-i18next](https://react.i18next.com/)を国際化に使用しています。
 
 ```
 [web/]

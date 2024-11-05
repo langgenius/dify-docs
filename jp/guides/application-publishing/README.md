@@ -5,7 +5,7 @@
 {% endcontent-ref %}
 
 {% content-ref url="embedding-in-websites.md" %}
-[ウェブサイトへの埋め込み](embedding-in-websites.md)
+[Webサイトへの埋め込み](embedding-in-websites.md)
 {% endcontent-ref %}
 
 {% content-ref url="developing-with-apis.md" %}

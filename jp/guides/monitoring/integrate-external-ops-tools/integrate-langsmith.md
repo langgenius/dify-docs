@@ -14,11 +14,11 @@ LangSmithの公式サイト：[https://www.langchain.com/langsmith](https://www.
 
 #### 1. LangSmithの[公式サイト](https://www.langchain.com/langsmith)から登録し、ログインする。
 
-#### 2. LangSmithからプロジェクトを作成します\
+#### 2. LangSmithからプロジェクトを作成します
 
 ログイン後、ホームページの **New Project** をクリックし、新たな**プロジェクト**を作成します。このプロジェクトは、Dify内の**アプリ**と連動したデータモニタリングに使用されます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1).png" alt=""><figcaption><p>新たなプロジェクトを作成します。</p></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1) (1).png" alt=""><figcaption><p>新たなプロジェクトを作成します。</p></figcaption></figure>
 
 作成する後、プロジェクトの中にチェクできます。
 
@@ -32,11 +32,11 @@ LangSmithの公式サイト：[https://www.langchain.com/langsmith](https://www.
 
 **Create API Key**をクリックし，新たな認証情報を作ります。
 
-<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1) (1).png" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1) (1) (2).png" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
 
 **Personal Access Token** を選び，のちほとのAPI身分証明の時使えます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (5) (1) (1).png" alt=""><figcaption><p>Personal Access Tokenを選択します</p></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/image (5) (1) (1) (1).png" alt=""><figcaption><p>Personal Access Tokenを選択します</p></figcaption></figure>
 
 新たなAPI keyをコピーし、保存します。
 
@@ -68,7 +68,7 @@ Dify内のアプリケーションからデバッグや製品データを設定�
 
 LangSmithに切り替えると、ダッシュボード上でDifyアプリケーションの詳細な操作ログを見ることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (2) (1) (1).png" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
 
 LangSmithを通じて得られる詳細な大規模言語モデル（LLM）の操作ログは、Difyアプリケーションのパフォーマンスを最適化するために役立ちます。
 

@@ -1,6 +1,6 @@
 # AlphaVantage 株式分析ツール
 
-> [@zhuhao](https://github.com/hwzhuhao) が開発したツールです。
+> ツール作者 [@zhuhao](https://github.com/hwzhuhao)。
 
 AlphaVantageは、金融市場のデータとAPIを提供する包括的なオンラインプラットフォームであり、個人投資家や開発者が株価、テクニカル指標、そして詳細な株式分析に簡単にアクセスできるようにします。DifyはAlphaVantageツールを統合しており、以下示されましたの手順フォローし、AlphaVantageツールを設定する。
 

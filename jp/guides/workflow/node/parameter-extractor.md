@@ -30,7 +30,7 @@ Difyワークフロー内には豊富な[ツール](../../tools.md)が用意さ�
 
 <figure><img src="../../../.gitbook/assets/jp-parameter-extractor-setting.png" alt="" width="375"><figcaption></figcaption></figure>
 
-**設定ステップ**
+**設定手順**
 
 1. 入力変数を選択。通常はパラメータ抽出のための変数入力を選びます。ファイルタイプもサポートします。
 2. モデルを選択。パラメータ抽出器の抽出はLLMの推論と構造化生成能力に依存します。

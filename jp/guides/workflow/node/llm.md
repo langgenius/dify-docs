@@ -52,7 +52,7 @@ Difyを初めて使用する場合は、LLMノードでモデルを選択する�
 
 プロンプトエディターでは、**“/”** または **“{”** を入力することで **変数挿入メニュー**を呼び出し、**特殊変数ブロック**や **上流ノードの変数**をプロンプトに挿入してコンテキスト内容として使用できます。
 
-<figure><img src="../../../.gitbook/assets/image (253).png" alt="" width="366"><figcaption><p>変数挿入メニューを呼び出す</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-variable.png" alt="" width="366"><figcaption><p>変数挿入メニューを呼び出す</p></figcaption></figure>
 
 5. **上級的な設定**：メモリ機能をオンにしたり、メモリウィンドウを設定したり、ビジョン機能を有効にしたり、Jinja-2テンプレート言語を使ってより複雑なプロンプトを作成したりできます。
 
@@ -84,7 +84,7 @@ Difyを初めて使用する場合は、LLMノードでモデルを選択する�
 
 モデルのパラメータはモデルの出力に影響を与えます。異なるモデルには異なるパラメータがあります。以下の図は`gpt-4`のパラメータリストです。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.55.53.png" alt="" width="363"><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-model-provider-1.png" alt="" width="363"><figcaption></figcaption></figure>
 
 主要なパラメータ用語は以下のように説明されています：
 
@@ -98,7 +98,7 @@ Difyを初めて使用する場合は、LLMノードでモデルを選択する�
 
 これらのパラメータが何であるか理解できない場合は、プリセットを読み込んで、「クリエイティブ」、「バランス」、「正確」の3つのプリセットから選択することができます。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.58.11.png" alt="" width="367"><figcaption></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/jp-llm-model-provider-2.png" alt="" width="367"><figcaption></figcaption></figure>
 
 ***
 
@@ -116,21 +116,25 @@ Difyを初めて使用する場合は、LLMノードでモデルを選択する�
 
 ### ユースケース
 
-* **知識ベースの内容を検索する**
+* **ナレッジベースの内容を検索する**
 
-ワークフローアプリケーションが[「知識ベース」](../../knowledge-base/)の内容を検索できるようにしたい場合、例えばインテリジェントカスタマーサービスアプリケーションを構築する場合は、以下の手順を参考にしてください。
+ワークフローアプリケーションが[「ナレッジベース」](../../knowledge-base/)の内容を検索できるようにしたい場合、例えばインテリジェントカスタマーサービスアプリケーションを構築する場合は、以下の手順を参考にしてください。
 
 1. LLMノードの上流に知識検索ノードを追加します；
 2. 知識検索ノードの **出力変数** `result` をLLMノードの **コンテキスト変数** に入力します；
-3. **コンテキスト変数** をアプリケーションのプロンプトに挿入し、LLMが知識ベース内のテキスト内容を読み取れるようにします。
+3. **コンテキスト変数** をアプリケーションのプロンプトに挿入し、LLMがナレッジベース内のテキスト内容を読み取れるようにします。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (256).png" alt=""><figcaption><p>コンテキスト変数</p></figcaption></figure>
+<figure><img src="../../../../en/.gitbook/assets/image (135).png" alt=""><figcaption><p>コンテキスト変数</p></figcaption></figure>
 
 [知識検索ノード](knowledge-retrieval.md) の出力変数 `result` には引用情報も含まれており、[**引用と帰属**](../../knowledge-base/retrieval-test-and-citation.md#id-2-yin-yong-yu-gui-shu) 機能を使用して情報の出所を確認できます。
 
 {% hint style="info" %}
 通常のノードの変数もコンテキスト変数に入力可能ですが、例えば開始ノードの文字列型変数など、**引用と帰属** 機能は機能しません。
 {% endhint %}
+
+* **文書ファイルの読み取り**
+
+ChatPDF アプリケーションの構築など、ワークフロー アプリケーションにドキュメントのコンテンツを読み取る機能を提供する場合は、次を参照してください。
 
 <!-- * **文書内容を抽出する**
 

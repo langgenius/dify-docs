@@ -1,10 +1,12 @@
 # SearchApi
 
-> ツールの作者：@SearchApi。 SearchApiは、Google検索、Google Jobs、YouTube、Googleニュースなどの検索エンジンから構造化データを提供する強力なリアルタイムのSERP APIです。以下示されましたの手順フォローし、SearchApiツールを設定する。
+> ツールの作者：@SearchApi。
+
+SearchApiは、Google検索、Google Jobs、YouTube、Googleニュースなどの検索エンジンから構造化データを提供する強力なリアルタイムのSERP APIです。以下示されましたの手順フォローし、SearchApiツールを設定する。
 
 ## 1. SearchのAPIキーを申請する
 
-[SearchApi](https://www.searchapi.io/)のウェブサイトでAPIキーを申請してください。
+[SearchApi](https://www.searchapi.io/)のWebサイトでAPIキーを申請してください。
 
 ## 2. Dify内での設定
 

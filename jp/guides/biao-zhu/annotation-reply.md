@@ -23,7 +23,7 @@
 
 「アプリケーション構築->機能追加」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../.gitbook/assets/image (9) (1).png" alt=""><figcaption><p>提示詞編成でアノテーションリプライを有効にする</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/annotated-replies.png" alt=""><figcaption><p>提示詞編成でアノテーションリプライを有効にする</p></figcaption></figure>
 
 有効にする際には、まずアノテーションリプライのパラメータを設定する必要があります。設定可能なパラメータには次のものがあります：スコア閾値と埋め込みモデル
 
@@ -33,27 +33,27 @@
 
 保存して有効にすると、この設定は直ちに有効となり、システムはすべての保存されたアノテーションに対して埋め込みモデルを利用して埋め込みを生成し保存します。
 
-<figure><img src="../../.gitbook/assets/image (11) (1).png" alt=""><figcaption><p>アノテーションリプライのパラメータ設定</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/setting-parameters-for-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライのパラメータ設定</p></figcaption></figure>
 
-### 対話デバッグページでアノテーションを追加する
+### 会話デバッグページでアノテーションを追加する
 
 デバッグおよびプレビューページでモデルのリプライ情報に直接アノテーションを追加または編集できます。
 
-<figure><img src="../../.gitbook/assets/image (13) (1).png" alt=""><figcaption><p>アノテーションリプライを追加する</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/add-annotation-reply.png" alt=""><figcaption><p>アノテーションリプライを追加する</p></figcaption></figure>
 
 必要な高品質リプライに編集して保存します。
 
-<figure><img src="../../.gitbook/assets/image (14) (1).png" alt=""><figcaption><p>アノテーションリプライを編集する</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/editing-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライを編集する</p></figcaption></figure>
 
 同じユーザー質問を再度入力すると、システムは既に保存されたアノテーションを使用してユーザー質問に直接リプライします。
 
-<figure><img src="../../.gitbook/assets/image (15).png" alt=""><figcaption><p>保存されたアノテーションを通じてユーザー質問にリプライする</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/annotaiton-reply.png" alt=""><figcaption><p>保存されたアノテーションを通じてユーザー質問にリプライする</p></figcaption></figure>
 
 ### ログとアノテーションでアノテーションリプライを有効にする
 
 「アプリケーション構築->ログとアノテーション->アノテーション」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../.gitbook/assets/image (3) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>ログとアノテーションでアノテーションリプライを有効にする</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/logs-annotation-switch.png" alt=""><figcaption><p>ログとアノテーションでアノテーションリプライを有効にする</p></figcaption></figure>
 
 ### アノテーションバックエンドでアノテーションリプライのパラメータを設定する
 
@@ -63,22 +63,22 @@
 
 **埋め込みモデル**：アノテーションテキストをベクトル化するために使用され、モデルの切り替え時には再度埋め込みが生成されます。
 
-<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>アノテーションリプライのパラメータを設定する</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/annotated-replies-initial.png" alt=""><figcaption><p>アノテーションリプライのパラメータを設定する</p></figcaption></figure>
 
 ### アノテーションQ&Aペアを一括インポートする
 
 一括インポート機能内で、アノテーションインポートテンプレートをダウンロードし、テンプレート形式に従ってアノテーションQ&Aペアを編集します。編集が完了したら、一括インポートします。
 
-<figure><img src="../../.gitbook/assets/image (5) (1) (1) (1).png" alt=""><figcaption><p>アノテーションQ&Aペアを一括インポートする</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括インポートする</p></figcaption></figure>
 
 ### アノテーションQ&Aペアを一括エクスポートする
 
 アノテーション一括エクスポート機能を通じて、システム内に保存されたすべてのアノテーションQ&Aペアを一度にエクスポートできます。
 
-<figure><img src="../../.gitbook/assets/image (6) (1) (1) (1).png" alt=""><figcaption><p>アノテーションQ&Aペアを一括エクスポートする</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括エクスポートする</p></figcaption></figure>
 
 ### アノテーションリプライのヒット履歴を確認する
 
 アノテーションヒット履歴機能内で、すべてのヒットしたアノテーションの編集履歴、ヒットしたユーザー質問、リプライ回答、ヒットソース、マッチング類似度スコア、ヒット時間などの情報を確認できます。これらのシステム情報に基づいて、アノテーション内容を継続的に改善することができます。
 
-<figure><img src="../../.gitbook/assets/image (8) (1) (1).png" alt=""><figcaption><p>アノテーションリプライのヒット履歴を確認する</p></figcaption></figure>
+<figure><img src="../../../en/.gitbook/assets/view-annotation-hit-history.png" alt=""><figcaption><p>アノテーションリプライのヒット履歴を確認する</p></figcaption></figure>

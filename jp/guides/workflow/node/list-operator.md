@@ -20,9 +20,9 @@
 
 リスト操作ノードは以下のデータ構造変数のみを受け入れます：
 
-- Array\[string]
-- Array\[number]
-- Array\[file]
+- Array[string]
+- Array[number]
+- Array[file]
 
 #### フィルタ条件
 

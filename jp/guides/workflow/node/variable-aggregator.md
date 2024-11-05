@@ -24,7 +24,7 @@
 
 **IF/ELSE 条件ブランチ後のマルチ集約**
 
-<figure><img src="../../../.gitbook/assets/image (226).png" alt=""><figcaption><p>問題分類後のマルチ集約</p></figcaption></figure>
+<figure><img src="../../../.gitbook/assets/image (226).png" alt=""><figcaption><p>IF/ELSE　問題分類後のマルチ集約</p></figcaption></figure>
 
 ### フォーマット要求
 

@@ -2,7 +2,7 @@
 
 #### Definition
 
-The **“Start”** node is a critical preset node in the [Chatflow / Workflow](../) application. It provides essential initial information, such as user input and uploaded files, to support the normal flow of the application and subsequent workflow nodes.
+The **“Start”** node is a critical preset node in the Chatflow / Workflow application. It provides essential initial information, such as user input and [uploaded files](../file-upload.md), to support the normal flow of the application and subsequent workflow nodes.
 
 #### Configuring the Node
 

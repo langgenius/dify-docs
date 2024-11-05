@@ -134,7 +134,7 @@ class DallE3Tool(BuiltinTool):
                tool_Parameters: Dict[str, Any], 
         ) -> Union[ToolInvokeMessage, List[ToolInvokeMessage]]:
         """
-            ツールを呼び出す
+            invoke tools
         """
         client = OpenAI(
             api_key=self.runtime.credentials['openai_api_key'],
@@ -268,4 +268,4 @@ class VectorizerTool(BuiltinTool):
         return len(self.list_default_image_variables()) > 0
 ```
 
-ここで注意すべきは、実際には`image_id`を使用していないことです。このツールを呼び出すときに、デフォルトの変数プールに必ず画像があると仮定しているため、直接`image_binary = self.get_variable_file(self.VARIABLE`を使用しています。 mage_id`、私たちはこのツールを呼び出す際には必ず変数プールに画像が存在すると仮定しましたので、`画像バイナリ = self.get_variable_file(self.変数キー.画像)`を直接使用して画像を取得しました。モデルの能力が弱い場合、開発者の皆さんもこの方法を用いることをお勧めします。これにより、モデルが誤ったパラメータを渡すことを防ぎ、エラー許容率を効果的に向上させることができます。
+ここで注意すべきは、実際には`image_id`を使用していないことです。このツールを呼び出すときに、デフォルトの変数プールに必ず画像があると仮定しているため、直接`image_binary = self.get_variable_file(self.VARIABLE`を使用しています。 `mage_id`、私たちはこのツールを呼び出す際には必ず変数プールに画像が存在すると仮定しましたので、`画像バイナリ = self.get_variable_file(self.変数キー.画像)`を直接使用して画像を取得しました。モデルの能力が弱い場合、開発者の皆さんもこの方法を用いることをお勧めします。これにより、モデルが誤ったパラメータを渡すことを防ぎ、エラー許容率を効果的に向上させることができます。

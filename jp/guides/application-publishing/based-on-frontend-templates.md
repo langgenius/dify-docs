@@ -9,7 +9,7 @@ WebAppテンプレートはMITライセンスに基づいてオープンソー�
 
 これらのテンプレートはGitHubで見つけることができます：
 
-* [対話型アプリケーション](https://github.com/langgenius/webapp-conversation)
+* [会話型アプリケーション](https://github.com/langgenius/webapp-conversation)
 * [テキスト生成型アプリケーション](https://github.com/langgenius/webapp-text-generator)
 
 WebAppテンプレートを使用する最も簡単な方法は、GitHubで「このテンプレートを使用」をクリックすることです。これにより、新しいリポジトリがフォークされます。その後、DifyのアプリIDとAPIキーを以下のように設定する必要があります：

@@ -17,7 +17,7 @@
 
 <figure><img src="../../.gitbook/assets/personal-account-management-01.png" alt=""><figcaption></figcaption></figure>
 
-### 統合
+### ログインをバインドする方法
 
 GitHubやGoogleアカウントのアカウントを利用しDifyチームにログインができます。これらを設定するには、Difyチームのホームページで右上隅のアバターをクリックし、\*\*「統合」\*\*を選択してください。
 

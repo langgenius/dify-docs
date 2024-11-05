@@ -1,8 +1,8 @@
-# ウェブサイトへの埋め込み
+# Webサイトへの埋め込み
 
-Dify Apps は iframe を使用してウェブサイトに埋め込むことができます。これにより、Dify App をウェブサイト、ブログ、またはその他のウェブページに統合できます。
+Dify Apps は iframe を使用してWebサイトに埋め込むことができます。これにより、Dify App をWebサイト、ブログ、またはその他のウェブページに統合できます。
 
-Dify Chatbot Bubble Button をウェブサイトに埋め込む際に、ボタンのスタイル、位置、その他の設定をカスタマイズできます。
+Dify Chatbot Bubble Button をWebサイトに埋め込む際に、ボタンのスタイル、位置、その他の設定をカスタマイズできます。
 
 ## Dify Chatbot Bubble Button のカスタマイズ
 
@@ -99,7 +99,16 @@ window.difyChatbotConfig = {
 };
 ```
 
-`className` 属性を使用して CSS クラスを適用します。
+`className` 属性を使用して CSS クラスを適用します:
+
+```javascript
+window.difyChatbotConfig = {
+    // ... 他の設定
+    containerProps: {
+        className: 'dify-chatbot-bubble-button-custom my-custom-class',
+    },
+};
+```
 
 ### 3. `inputs` の渡し方
 

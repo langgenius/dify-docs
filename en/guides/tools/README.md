@@ -37,15 +37,15 @@ You can import custom API tools in the "Tools - Custom Tools" section, currently
 
 Currently, tools support two authentication methods: No Authentication and API Key.
 
-<figure><img src="../../.gitbook/assets/image (147).png" alt=""><figcaption><p>Create Custom Tools</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-1.png" alt=""><figcaption><p>Create Custom Tools</p></figcaption></figure>
 
 After importing the schema content, the system will automatically parse the parameters in the file, and you can preview the specific parameters, methods, and paths of the tool. You can also test the tool parameters here.
 
-<figure><img src="../../.gitbook/assets/image (148).png" alt=""><figcaption><p>Custom Tool Parameter Testing</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-2.png" alt=""><figcaption><p>Custom Tool Parameter Testing</p></figcaption></figure>
 
 Once the custom tool is created, all members in the workspace can use this tool when arranging applications in the "Studio."
 
-<figure><img src="../../.gitbook/assets/image (150).png" alt=""><figcaption><p>Custom Tool Added</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-3.png" alt=""><figcaption><p>Custom Tool Added</p></figcaption></figure>
 
 #### Cloudflare Workers
 
