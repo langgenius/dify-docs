@@ -78,9 +78,9 @@ print(response.text)
 
 #### `conversation_id` 的注意事项：
 
-- **生成 `conversation_id`：**开始新对话时，请将 `conversation_id` 字段留空。系统将生成并返回一个新的 `conversation_id`，未来的交互中会使用该 `conversation_id` 继续对话。
-- **处理现有会话中的 `conversation_id`：**生成 `conversation_id` 后，对 API 的未来调用应包含此 `conversation_id`，以确保与 Dify 机器人的对话连续性。传递上一个 `conversation_id` 时，将忽略任何新的 `inputs`，仅处理正在进行的对话的 `query`。
-- **管理动态变量：**如果在会话期间需要修改逻辑或变量，您可以使用会话变量（特定于会话的变量）来调整bot的行为或回应。
+- **生成 `conversation_id`：** 开始新对话时，请将 `conversation_id` 字段留空。系统将生成并返回一个新的 `conversation_id`，未来的交互中会使用该 `conversation_id` 继续对话。
+- **处理现有会话中的 `conversation_id`：** 生成 `conversation_id` 后，对 API 的未来调用应包含此 `conversation_id`，以确保与 Dify 机器人的对话连续性。传递上一个 `conversation_id` 时，将忽略任何新的 `inputs`，仅处理正在进行的对话的 `query`。
+- **管理动态变量：** 如果在会话期间需要修改逻辑或变量，您可以使用会话变量（特定于会话的变量）来调整bot的行为或回应。
 
 你可以在**应用 -> 访问 API** 中找到该应用的 API 文档与范例请求。
 
@@ -123,7 +123,7 @@ data = {
 
 response = requests.post(url, headers=headers, data=json.dumps(data))
 
-print(response.json())
+print(response.text)
 ```
 {% endtab %}
 {% endtabs %}
