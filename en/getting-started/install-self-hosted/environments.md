@@ -280,6 +280,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `myscale`
     - `pinecone` (not yet open)
     - `analyticdb`
+    - `couchbase`
 - WEAVIATE_ENDPOINT
 
   Weaviate endpoint address, such as: `http://weaviate:8080`.
@@ -385,6 +386,26 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - ANALYTICDB_NAMESPACE_PASSWORD
 
   The password for the namespace(schema). If the namespace does not exist, it will be created with this password.
+
+- COUCHBASE_CONNECTION_STRING
+
+  The connection string for the Couchbase cluster.
+
+- COUCHBASE_USER
+
+  The username for the database user.
+
+- COUCHBASE_PASSWORD
+    
+  The password for the database user.
+
+- COUCHBASE_BUCKET_NAME
+
+  The name of the bucket to use.
+
+- COUCHBASE_SCOPE_NAME
+    
+  The name of the scope to use.
 
 #### Knowledge Configuration
 
