@@ -84,7 +84,6 @@
     * [Dall-e](guides/tools/tool-configuration/dall-e.md)
     * [Perplexity Search](guides/tools/tool-configuration/perplexity.md)
     * [AlphaVantage](guides/tools/tool-configuration/alphavantage.md)
-    * [Youtube](guides/tools/tool-configuration/youtube.md)
     * [SearXNG](guides/tools/tool-configuration/searxng.md)
     * [Serper](guides/tools/tool-configuration/serper.md)
     * [SiliconFlow (Flux AI Supported)](guides/tools/tool-configuration/siliconflow.md)

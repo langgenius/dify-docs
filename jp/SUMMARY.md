@@ -85,7 +85,6 @@
     * [Perplexity Search](guides/tools/tool-configuration/perplexity-search.md)
     * [AlphaVantage 株式分析](guides/tools/tool-configuration/alphavantage.md)
     * [Dall-e](guides/tools/tool-configuration/dall-e.md)
-    * [Youtube](guides/tools/tool-configuration/youtube.md)
     * [Serper](guides/tools/tool-configuration/serper.md)
     * [SearXNG](guides/tools/tool-configuration/searxng.md)
     * [SiliconFlow（Flux AI サポート）](guides/tools/tool-configuration/siliconflow.md)
