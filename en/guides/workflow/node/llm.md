@@ -19,6 +19,7 @@ LLM is the core node of Chatflow/Workflow, utilizing the conversational/generati
 * **Code Generation**: In programming assistance scenarios, generating specific business code or writing test cases based on user requirements.
 * **RAG**: In knowledge base Q\&A scenarios, reorganizing retrieved relevant knowledge to respond to user questions.
 * **Image Understanding**: Using multimodal models with vision capabilities to understand and answer questions about the information within images.
+* **File Analysis**: In file processing scenarios, use LLMs to recognize and analyze the information contained within files.
 
 By selecting the appropriate model and writing prompts, you can build powerful and reliable solutions within Chatflow/Workflow.
 
@@ -70,6 +71,14 @@ This variable can be used not only as external knowledge introduced into the pro
 {% hint style="info" %}
 If the context variable is associated with a common variable from an upstream node, such as a string type variable from the start node, the context variable can still be used as external knowledge, but the **citation and attribution** feature will be disabled.
 {% endhint %}
+
+**File Variables**
+
+Some LLMs, such as [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support), now support direct processing of file content, enabling the use of file variables in prompts. To prevent potential issues, application developers should verify the supported file types on the LLM's official website before utilizing the file variable.
+
+![](https://assets-docs.dify.ai/2024/11/05b3d4a78038bc7afbb157078e3b2b26.png)
+
+> Refer to [File Upload](https://docs.dify.ai/guides/workflow/file-upload) for guidance on building a Chatflow/Workflow application with file upload functionality.
 
 **Conversation History**
 

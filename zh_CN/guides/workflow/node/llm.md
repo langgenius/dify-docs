@@ -19,7 +19,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 * **代码生成**，在辅助编程情景中，根据用户的要求生成指定的业务代码，编写测试用例。
 * **RAG**，在知识库问答情景中，将检索到的相关知识和用户问题重新组织回复问题。
 * **图片理解**，使用具备 vision 能力的 LLM，理解与问答图像内的信息。
-* **文件分析**，在文件处理场景中，使用 LLM 识别并分析文件中的文本内容。
+* **文件分析**，在文件处理场景中，使用 LLM 识别并分析文件包含的信息。
 
 选择合适的模型，编写提示词，你可以在 Chatflow/Workflow 中构建出强大、可靠的解决方案。
 
@@ -72,7 +72,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 **文件变量**
 
-部分 LLM（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此提示词已允许输入文件变量。为了避免潜在异常，应用开发者在使用该文件变量前需前往 LLM 官网确认 LLM 支持何种文件类型。
+部分 LLMs（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此系统提示词已允许输入文件变量。为了避免潜在异常，应用开发者在使用该文件变量前需前往 LLM 官网确认 LLM 支持何种文件类型。
 
 ![](https://assets-docs.dify.ai/2024/11/05b3d4a78038bc7afbb157078e3b2b26.png)
 

@@ -52,9 +52,9 @@
 
 ### 添加文件上传
 
-部分多模态 LLM 已支持原生处理文件，例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) 或 [Gemini 1.5 Pro](https://ai.google.dev/api/files)。你可以在 LLM 的官方网站了解文件上传能力的支持情况。
+部分多模态 LLM 已原生支持处理文件，例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) 或 [Gemini 1.5 Pro](https://ai.google.dev/api/files)。你可以在 LLM 的官方网站了解文件上传能力的支持情况。
 
-选择具备读取文件的 LLM，开启 “文件上传” 功能。无需复杂配置即可让当前 Chatbot 具备文件识别能力。
+选择具备读取文件的 LLM，开启 “文档” 功能。无需复杂配置即可让当前 Chatbot 具备文件识别能力。
 
 ![](https://assets-docs.dify.ai/2024/11/9f0b7a3c67b58c0bd7926501284cbb7d.png)
 

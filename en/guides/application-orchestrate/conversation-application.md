@@ -50,7 +50,16 @@ If an application wants to generate content based on private contextual conversa
 
 ![](../../../img/context.png)
 
-**2.3 Debugging**
+**2.3 Uploading Documentation File**
+
+Some LLMs now natively support file processing, such as [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) and [Gemini 1.5 Pro](https://ai.google.dev/api/files). You can check the LLMs' websites for details on their file upload capabilities.
+
+Select an LLM that supports file reading and enable the "Documentation" feature. This enables the Chatbot to recognize files without complex configurations.
+
+![](https://assets-docs.dify.ai/2024/11/823399d85e8ced5068dc9da4f693170e.png)
+
+
+**2.4 Debugging**
 
 Enter user inputs on the right side and check the respond content.
 

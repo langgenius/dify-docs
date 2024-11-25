@@ -56,7 +56,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 #### 方法一：使用具备识别文件的 LLM 
 
-部分 LLM（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此 LLM 节点的提示词已允许输入文件变量。
+部分 LLMs（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此 LLM 节点的提示词已允许输入文件变量。
 
 > 为了避免潜在异常，应用开发者在使用该文件变量前需前往 LLM 官网确认 LLM 支持何种文件类型。
 

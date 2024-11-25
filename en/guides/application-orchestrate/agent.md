@@ -50,6 +50,14 @@ You can set up a conversation opener and initial questions for your Agent Assist
 
 <figure><img src="../../.gitbook/assets/docs-8.png" alt=""><figcaption><p>Configuring the Conversation Opener and Initial Questions</p></figcaption></figure>
 
+### Uploading Documentation File
+
+Some LLMs now natively support file processing, such as [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) and [Gemini 1.5 Pro](https://ai.google.dev/api/files). You can check the LLMs' websites for details on their file upload capabilities.
+
+Select an LLM that supports file reading and enable the "Documentation" feature. This enables the Chatbot to recognize files without complex configurations.
+
+![](https://assets-docs.dify.ai/2024/11/9f0b7a3c67b58c0bd7926501284cbb7d.png)
+
 ## Debugging and Preview
 
 After orchestrating your Agent Assistant, you have the option to debug and preview it before publishing it as an application. This allows you to assess the effectiveness of the agent in completing tasks.

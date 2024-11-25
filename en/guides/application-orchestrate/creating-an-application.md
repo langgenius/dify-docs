@@ -49,3 +49,5 @@ https://example.com/your_dsl.yml
 ```
 
 <figure><img src="../../.gitbook/assets/en-import-dsl-file-via-url.png" alt=""><figcaption><p>Create an application by importing a DSL file</p></figcaption></figure>
+
+> When importing a DSL file, the version will be checked. Significant discrepancies between DSL versions may lead to compatibility issues. For more details, please refer to [Application Management: Import](https://docs.dify.ai/guides/management/app-management#importing-application).

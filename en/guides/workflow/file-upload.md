@@ -31,7 +31,7 @@ Both file upload and knowledge base provide additional contextual information fo
    * File Upload: Typically for temporary use, not stored long-term in the system.
    * Knowledge Base: Exists as a long-term part of the application, can be continuously updated and maintained.
 
-## Quick Start
+## Quick Start: Building a Chatflow / Workflow Application with File Upload Feature
 
 Dify supports file uploads in both [ChatFlow](key-concepts.md) and [WorkFlow](key-concepts.md#chatflow-and-workflow) type applications, processing them through variables for LLMs. Application developers can refer to the following methods to enable file upload functionality:
 
@@ -50,7 +50,21 @@ These two methods provide flexible file upload options for applications to meet 
 
 <table data-header-hidden><thead><tr><th width="227"></th><th></th></tr></thead><tbody><tr><td>File Type</td><td>Supported Formats</td></tr><tr><td>Documents</td><td>TXT, MARKDOWN, PDF, HTML, XLSX, XLS, DOCX, CSV, EML, MSG, PPTX, PPT, XML, EPUB.</td></tr><tr><td>Images</td><td>JPG, JPEG, PNG, GIF, WEBP, SVG.</td></tr><tr><td>Audio</td><td>MP3, M4A, WAV, WEBM, AMR.</td></tr><tr><td>Video</td><td>MP4, MOV, MPEG, MPGA.</td></tr><tr><td>Others</td><td>Custom file extension support</td></tr></tbody></table>
 
-**Method 1: Enable File Upload in Application Chat Box (Chatflow Only)**
+#### Method 1: Using an LLM with File Processing Capabilities
+
+Some LLMs, such as [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support), now support direct processing and analysis of file content, enabling the use of file variables in the LLM node's prompts.
+
+> To prevent potential issues, application developers should verify the supported file types on the LLM's official website before utilizing the file variable.
+
+1. Click to create a Chatflow or Workflow application.
+2. Add an LLM node and select an LLM with file processing capabilities.
+3. Add a file variable in the start node.
+4. Enter the file variable in the system prompt of the LLM node.
+5. Complete the setup.
+
+![](https://assets-docs.dify.ai/2024/11/a7154e8966d979dcba13eac0a172ef89.png)
+
+**Method 2: Enable File Upload in Application Chat Box (Chatflow Only)**
 
 1. Click the **"Features"** button in the upper right corner of the Chatflow application to add more functionality to the application. After enabling this feature, application users can upload and update files at any time during the application dialogue. A maximum of 10 files can be uploaded simultaneously, with a size limit of 15MB per file.
 
@@ -71,9 +85,9 @@ Once enabled, users can upload files and engage in conversations in the dialogue
 
 <figure><img src="../../.gitbook/assets/image (3) (3).png" alt=""><figcaption></figcaption></figure>
 
-If you want the LLM to remember file contents during conversations, please refer to Method 2.
+If you want the LLM to remember file contents during conversations, please refer to Method 3.
 
-**Method 2: Enable File Upload by Adding File Variables**
+**Method 3: Enable File Upload by Adding File Variables**
 
 **1. Add File Variables in the "Start" Node**
 
@@ -129,7 +143,7 @@ Below is an example configuration:
 
 <figure><img src="../../.gitbook/assets/image (6).png" alt=""><figcaption><p>Using file variables directly in LLM node</p></figcaption></figure>
 
-It's important to note that when directly using file variables in LLM node, the developers need to ensure that the file variable contains only image files; otherwise, errors may occur. If users might upload different types of files, we need to use list operations for filtering.
+It's important to note that when directly using file variables in LLM node, the developers need to ensure that the file variable contains only image files; otherwise, errors may occur. If users might upload different types of files, we need to use list operator node for filtering files.
 
 **File Download**
 

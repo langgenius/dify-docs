@@ -29,6 +29,15 @@ If the environment variables contain variables of the `Secret` type, a prompt wi
 Dify DSL is an AI application engineering file standard defined by Dify.AI in v0.6 and later. The file format is YML. This standard covers the basic description of the application, model parameters, orchestration configuration, and other information.
 {% endhint %}
 
+### Importing Application
+
+To import a Dify application, upload the DSL file to the Dify platform. A version check will be conducted during the import process, and a warning will be issued if a lower version of the DSL file is detected.
+
+- For SaaS users, the DSL file exported from the SaaS platform will always be the latest version.
+- For Community users, it is recommended to consult [Upgrade Dify](https://docs.dify.ai/getting-started/install-self-hosted/docker-compose#upgrade-dify) to update the Community Edition and export an updated version of the DSL file, thus avoiding potential compatibility issues.
+
+![](https://assets-docs.dify.ai/2024/11/487d2c1cc8b86666feb35ea8a346c053.png)
+
 ### Deleting Application
 
 If you want to remove an application, you can click "Delete" in the upper left corner of the application.
