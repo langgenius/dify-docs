@@ -50,6 +50,14 @@
 
 <figure><img src="../../.gitbook/assets/image (101).png" alt=""><figcaption><p>配置会话开场白和开场问题</p></figcaption></figure>
 
+### 添加文件上传
+
+部分多模态 LLM 已支持原生处理文件，例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support) 或 [Gemini 1.5 Pro](https://ai.google.dev/api/files)。你可以在 LLM 的官方网站了解文件上传能力的支持情况。
+
+选择具备读取文件的 LLM，开启 “文件上传” 功能。无需复杂配置即可让当前 Chatbot 具备文件识别能力。
+
+![](https://assets-docs.dify.ai/2024/11/9f0b7a3c67b58c0bd7926501284cbb7d.png)
+
 ### 调试与预览
 
 编排完智能助手之后，你可以在发布成应用之前进行调试与预览，查看助手的任务完成效果。

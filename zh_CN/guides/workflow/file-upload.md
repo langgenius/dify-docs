@@ -35,7 +35,7 @@ description: 作者：Steven, Allen, Evan
    * 文件上传：通常为临时使用，不会长期存储在系统中。
    * 知识库：作为应用的一部分长期存在，可以持续更新和维护。
 
-### 快速开始
+### 快速开始：搭建具备文件上传功能的工作流应用
 
 Dify 支持在 [ChatFlow](key-concept.md#chatflow-he-workflow) 和 [WorkFlow](key-concept.md#chatflow-he-workflow) 类型应用中上传文件，并通过[变量](variables.md)交由 LLM 处理。应用开发者可以参考以下方法为应用开启文件上传功能：
 
@@ -54,7 +54,21 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 <table data-header-hidden><thead><tr><th width="227"></th><th></th></tr></thead><tbody><tr><td>文件类型</td><td>支持格式</td></tr><tr><td>文档</td><td>TXT, MARKDOWN, PDF, HTML, XLSX, XLS, DOCX, CSV, EML, MSG, PPTX, PPT, XML, EPUB.</td></tr><tr><td>图片</td><td>JPG, JPEG, PNG, GIF, WEBP, SVG.</td></tr><tr><td>音频</td><td>MP3, M4A, WAV, WEBM, AMR.</td></tr><tr><td>视频</td><td>MP4, MOV, MPEG, MPGA.</td></tr><tr><td>其他</td><td>自定义后缀名支持</td></tr></tbody></table>
 
-#### 方法一：在应用聊天框中开启文件上传（仅适用于 Chatflow）
+#### 方法一：使用具备识别文件的 LLM 
+
+部分 LLM（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此 LLM 节点的提示词已允许输入文件变量。
+
+> 为了避免潜在异常，应用开发者在使用该文件变量前需前往 LLM 官网确认 LLM 支持何种文件类型。
+
+1. 点击创建 Chatflow / Workflow 应用。
+2. 添加 LLM 节点，选择具备文件分析能力的 LLM。
+3. 在开始节点添加文件变量
+4. 在 LLM 的系统提示词内输入文件变量。
+5. 完成创建。
+
+![](https://assets-docs.dify.ai/2024/11/a7154e8966d979dcba13eac0a172ef89.png)
+
+#### 方法二：在应用聊天框中开启文件上传（仅适用于 Chatflow）
 
 1.  点击 Chatflow 应用右上角的 **“功能”** 按钮即可为应用添加更多功能。
 
@@ -64,7 +78,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 开启该功能并不意味着赋予 LLM 直接读取文件的能力，还需要配备[**文档提取器**](node/doc-extractor.md)将文档解析为文本供 LLM 理解。
 
-* 对于音频文件，可以使用 gpt-4o-audio-preview 等支持多模态输入的模型直接处理音频，无需额外的提取器。
+* 对于音频文件，可以使用 `gpt-4o-audio-preview` 等支持多模态输入的模型直接处理音频，无需额外的提取器。
 * 对于视频和其他文件类型，暂无对应的提取器，需要应用开发者接入[外部工具](../tools/advanced-tool-integration.md)进行处理
 
 2. 添加[文档提取器](node/doc-extractor.md)节点，在输入变量中选中 `sys.files` 变量。
@@ -77,9 +91,9 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 <figure><img src="../../.gitbook/assets/image (381).png" alt=""><figcaption></figcaption></figure>
 
-若希望 LLM 能够在对话中记忆文件内容，请参考方法二。
+若希望 LLM 能够在对话中记忆文件内容，请参考下文。
 
-#### 方法二：通过添加文件变量开启文件上传功能
+#### 方法三：通过添加文件变量开启文件上传功能
 
 #### 1. 在“开始”节点添加文件变量
 
@@ -139,7 +153,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 <figure><img src="../../../img/file-upload-qs-1.avif" alt=""><figcaption><p>在LLM节点中直接使用文件变量</p></figcaption></figure>
 
-需要注意的是，直接在 LLM 节点中使用文件变量时，我们需要确保文件变量仅包含图片文件，否则可能会导致错误。如果用户可能上传不同类型的文件，我们需要使用列表操作来进行过滤。
+需要注意的是，直接在 LLM 节点中使用文件变量时，我们需要确保文件变量仅包含图片文件，否则可能会导致错误。如果用户可能上传不同类型的文件，我们需要使用列表操作节点过滤不同类型的文件。
 
 #### 文件下载
 

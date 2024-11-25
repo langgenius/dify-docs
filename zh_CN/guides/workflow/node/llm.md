@@ -18,7 +18,8 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 * **文本转换**，在文本翻译情景中，将用户提供的文本内容翻译成指定语言。
 * **代码生成**，在辅助编程情景中，根据用户的要求生成指定的业务代码，编写测试用例。
 * **RAG**，在知识库问答情景中，将检索到的相关知识和用户问题重新组织回复问题。
-* **图片理解**，使用 vision 能力的多模态模型，能对图像内的信息进行理解和问答。
+* **图片理解**，使用具备 vision 能力的 LLM，理解与问答图像内的信息。
+* **文件分析**，在文件处理场景中，使用 LLM 识别并分析文件中的文本内容。
 
 选择合适的模型，编写提示词，你可以在 Chatflow/Workflow 中构建出强大、可靠的解决方案。
 
@@ -39,7 +40,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 {% endhint %}
 
 2. **配置模型参数**，模型参数用于控制模型的生成结果，例如温度、TopP，最大标记、回复格式等，为了方便选择系统同时提供了 3 套预设参数：创意，平衡和精确。如果你对以上参数并不熟悉，建议选择默认设置。若希望应用具备图片分析能力，请选择具备视觉能力的模型。
-3. \*\*填写上下文（可选），\*\*上下文可以理解为向 LLM 提供的背景信息，常用于填写[知识检索](knowledge-retrieval.md)的输出变量。
+3. **填写上下文（可选），** 上下文可以理解为向 LLM 提供的背景信息，常用于填写[知识检索](knowledge-retrieval.md)的输出变量。
 4. **编写提示词**，LLM 节点提供了一个易用的提示词编排页面，选择聊天模型或补全模型，会显示不同的提示词编排结构。如果选择聊天模型（Chat model），你可以自定义系统提示词（SYSTEM）/用户（USER）/ 助手（ASSISTANT）三部分内容。
 
 <figure><img src="../../../.gitbook/assets/zh-node-llm.png" alt="" width="352"><figcaption><p>编写提示词</p></figcaption></figure>
@@ -62,11 +63,20 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 上下文变量是一种特殊变量类型，用于向 LLM 提供背景信息，常用于在知识检索场景下使用。详细说明请参考[知识检索节点](knowledge-retrieval.md)。
 
-**图片文件变量**
+**图片变量**
 
 具备视觉能力的 LLM 可以通过变量读取应用使用者所上传的图片。开启 VISION 后，选择图片文件的输出变量完成设置。
 
 <figure><img src="../../../.gitbook/assets/image (371).png" alt=""><figcaption><p>视觉上传功能</p></figcaption></figure>
+
+
+**文件变量**
+
+部分 LLM（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此提示词已允许输入文件变量。为了避免潜在异常，应用开发者在使用该文件变量前需前往 LLM 官网确认 LLM 支持何种文件类型。
+
+![](https://assets-docs.dify.ai/2024/11/05b3d4a78038bc7afbb157078e3b2b26.png)
+
+> 阅读[文件上传](https://docs.dify.ai/zh-hans/guides/workflow/file-upload)了解如何搭建具备文件上传功能的 Chatflow/Workflow 应用。
 
 **会话历史**
 
