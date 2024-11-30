@@ -137,6 +137,11 @@
 * [Become a Contributor](community/contribution.md)
 * [Contributing to Dify Documentation](community/docs-contribution.md)
 
+## Plugins
+
+* [Introduction](plugins/introduction.md)
+
+
 ## Development
 
 * [Backend](development/backend/README.md)
