@@ -64,4 +64,5 @@ EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
-#### 他のデプロイに関する質問は[ここに](../../learn-more/faq/install-faq.md)います。
+
+他のデプロイに関する質問は[ここに](../../learn-more/faq/install-faq.md)います。

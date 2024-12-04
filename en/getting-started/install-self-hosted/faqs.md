@@ -64,4 +64,5 @@ EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
-#### Other self-host issue please check this document [Self-Host Related](../../learn-more/faq/install-faq.md)います。
+
+Other self-host issue please check this document [Self-Host Related](../../learn-more/faq/install-faq.md)います。
