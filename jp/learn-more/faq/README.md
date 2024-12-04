@@ -1,5 +1,9 @@
 # よくある質問
 
-[ローカルデプロイに関するよくある質問](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq)
+* [ローカルデプロイに関するよくある質問](./install-faq)
+* [LLMの設定と使用に関するよくある質問](./llms-use-faq)
 
-[LLMの設定と使用に関するよくある質問](https://docs.dify.ai/v/ja-jp/learn-more/faq/llms-use-faq)
+### 1. どうして日本語のテンプレートを見えない？
+
+一度他の言語に変えで、もう一回日本語の設定すると見えます。
+まだ見えないの場合は、cookiesを削除し、もう一回登録しでください。
