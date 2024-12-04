@@ -64,3 +64,5 @@ EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
+
+其他相关的部署问题请参考[本地部署相关](../../learn-more/faq/install-faq.md)。
