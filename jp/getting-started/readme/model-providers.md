@@ -152,6 +152,14 @@ Difyは以下のモデルプロバイダーをサポートしています：
             <td align="center"></td>
         </tr>
         <tr>
+            <td align="center">ModelScope</td>
+            <td align="center">✔️</td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
             <td align="center">Xorbits inference</td>
             <td align="center">✔️</td>
             <td align="center">✔️</td>
