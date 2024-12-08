@@ -62,9 +62,9 @@ APIキーを貼り付けて保存します。
 
 ## 3. エイジェントを作る
 
-**Dify - スタジオ**に戻り、**空白から作成**を選択します。
+**Dify - スタジオ**に戻り、**最初から作成**を選択します。
 
-![](../../../img/workshop/build-ai-image-generation-app-6-en.png)
+![](../../../img/workshop/build-ai-image-generation-app-6-ja.png)
 
 この実験では、エージェントの基本的な使用方法を理解するだけで十分です。
 
