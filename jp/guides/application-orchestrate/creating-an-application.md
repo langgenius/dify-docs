@@ -3,7 +3,7 @@
 Difyスタジオでは、アプリケーションを作成するにあたり以下の3つの方法があります：
 
 * アプリケーションテンプレートを使用（初心者におすすめ）
-* 空白のアプリケーションからスタート
+* 最初からアプリケーションを作成
 * DSLファイルをインポートして作成(ローカル・オンライン)
 
 ### テンプレートを使ってアプリケーションを作成
@@ -20,7 +20,7 @@ Difyを初めて使う場合、アプリケーション制作に不慣れなこ�
 
 ### 新しいアプリケーションの作成
 
-空白のアプリケーションをDifyで作成する場合、ナビゲーションメニューから「スタジオ」を選び、「空白から作成」をアプリケーションリストで選択します。
+Difyで最初からアプリケーションを作成する場合、ナビゲーションメニューから「スタジオ」を選び、「最初から作成」をアプリケーションリストで選択します。
 
 <figure><img src="../../.gitbook/assets/jp-create-blank-application.png" alt=""><figcaption></figcaption></figure>
 
@@ -28,7 +28,7 @@ Difyで初めてアプリケーションを作成する際は、チャットボ�
 
 アプリケーションを作成する際には、名前を付け、適切なアイコンを選択し、このアプリケーションの目的を簡潔に説明することで、チーム内での使用を容易にします。
 
-<figure><img src="../../.gitbook/assets/jp-create-blank-application2.png" alt=""><figcaption><p>空白アプリケーションを作成</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/jp-create-blank-application2.png" alt=""><figcaption><p>アプリケーションを最初から作成</p></figcaption></figure>
 
 ### DSLファイルから作成
 
