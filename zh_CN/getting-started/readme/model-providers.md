@@ -152,6 +152,14 @@ Dify 为以下模型提供商提供原生支持：
             <td align="center"></td>
         </tr>
         <tr>
+            <td align="center">魔搭社区</td>
+            <td align="center">✔️</td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
             <td align="center">Xorbits inference</td>
             <td align="center">✔️</td>
             <td align="center">✔️</td>
