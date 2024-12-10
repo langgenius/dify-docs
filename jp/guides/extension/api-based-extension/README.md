@@ -23,8 +23,8 @@ POST {Your-API-Endpoint}
 
 | Header     | Value           | Desc                                                        |
 | ---------- | --------------- | ----------------------------------------------------------- |
-| `コンテンツタイプ` | アプリケーション/JSON   | リクエスト内容はJSON形式です。                                           |
-| `認証`       | ベアラー {api\_key} | APIキーはトークン形式で送信されます。`api_key`を解析し、提供されたAPIキーと一致するか確認してください。 |
+| `Content-Type` | application/json   | リクエスト内容はJSON形式です。                                           |
+| `Authorization`       | Bearer {api\_key} | APIキーはトークン形式で送信されます。`api_key`を解析し、提供されたAPIキーと一致するか確認してください。 |
 
 #### リクエストボディ <a href="#user-content-request-body" id="user-content-request-body"></a>
 
@@ -54,8 +54,8 @@ APIエンドポイントが`point=ping`を受信した場合、インターフ�
 #### ヘッダー <a href="#user-content-header-1" id="user-content-header-1"></a>
 
 ```
-コンテンツタイプ: アプリケーション/JSON
-認証: ベアラー {api_key}
+Content-Type: application/json
+Authorization: Bearer {api_key}
 ```
 
 #### リクエストボディ <a href="#user-content-request-body-1" id="user-content-request-body-1"></a>
@@ -87,8 +87,8 @@ POST https://fake-domain.com/api/dify/receive
 **ヘッダー**
 
 ```
-コンテンツタイプ: アプリケーション/JSON
-認証: ベアラー 123456
+Content-Type: application/json
+Authorization: Bearer 123456
 ```
 
 **リクエストボディ**
