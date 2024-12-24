@@ -14,11 +14,11 @@
 
 **可见权限**，提供 **「 只有我 」** 、 **「 所有团队成员 」** 和 **「部分团队成员」** 三种权限范围。不具有权限的人将无法访问该知识库。若选择将知识库公开至其它成员，则意味着其它成员同样具备该知识库的查看、编辑和删除权限。
 
-**索引模式**，详细说明请[参考文档](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-5-suo-yin-fang-shi)。
+**索引模式**，详细说明请[参考文档](https://docs.dify.ai/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-3-suo-yin-fang-shi)。
 
 **Embedding 模型**， 修改知识库的嵌入模型，修改 Embedding 模型将对知识库内的所有文档重新嵌入，原先的嵌入将会被删除。
 
-**检索设置**，详细说明请[参考文档](https://docs.dify.ai/v/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-6-jian-suo-she-zhi)。
+**检索设置**，详细说明请[参考文档](https://docs.dify.ai/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents#id-4-jian-suo-she-zhi)。
 
 ***
 
