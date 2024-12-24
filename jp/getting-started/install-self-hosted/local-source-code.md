@@ -70,7 +70,7 @@ pyenv global 3.11
     ```
 4.  依存関係をインストール
 
-    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。環境を有効にするには、`poetry shell`を実行できます。
+    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。現在、Poetryのバージョン1.8.4をサポートしています。互換性の問題を避けるために、このバージョンがインストールされていることを確認してください。環境を有効にするには、`poetry shell`を実行できます。
 
     ```
     poetry env use 3.11
