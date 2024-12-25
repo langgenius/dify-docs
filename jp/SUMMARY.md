@@ -55,7 +55,7 @@
   * [オーケストレートノード](guides/workflow/orchestrate-node.md)
   * [ファイルアップロード](guides/workflow/file-upload.md)
   * [エラー処理](guides/workflow/error-handling/README.md)
-    * [事前定義されたエラー処理ロジック](guides/workflow/error-handling/saretaerrojikku.md)
+    * [事前定義されたエラー処理ロジック](guides/workflow/error-handling/predefined-nodes-failure-logic.md)
     * [エラータイプの概要](guides/workflow/error-handling/error-type.md)
   * [追加機能](guides/workflow/additional-features.md)
   * [プレビューとデバッグ](guides/workflow/debug-and-preview/README.md)
