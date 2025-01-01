@@ -26,7 +26,7 @@ APIを利用してナレッジベースを管理することで、データ処�
 入力例：
 
 ```json
-curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_text' \
+curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create-by-text' \
 --header 'Authorization: Bearer {api_key}' \
 --header 'Content-Type: application/json' \
 --data-raw '{"name": "text","text": "text","indexing_technique": "high_quality","process_rule": {"mode": "automatic"}}'

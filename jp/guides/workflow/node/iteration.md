@@ -14,11 +14,11 @@
 
 イテレーションノードの構造には、通常、入力変数、イテレーションワークフロー、出力変数の3つの機能ユニットが含まれています。
 
-* **入力変数**：Array配列変数タイプのデータのみを受け入れます。配列変数が何であるかわからない場合は、[拡張読み物「配列変数」](../../../learn-more/extended-reading/what-is-array-variable.md)をお読みください。
+* **入力変数**：Array配列変数タイプのデータのみを受け入れます。配列変数が何であるかわからない場合は、[さらに読む「配列変数」](../../../learn-more/extended-reading/what-is-array-variable.md)をお読みください。
   
 * **イテレーションワークフロー**：イテレーションノード内で複数のワークフローノードを使用し、さまざまなタスクステップを編成できます。
   
-* **出力変数**：出力はArray[List]配列変数のみをサポートしています。他の変数形式を出力したい場合は、[拡張読み物「配列をテキストに変換する方法」](../../../learn-more/extended-reading/what-is-array-variable.md)をお読みください。
+* **出力変数**：出力はArray[List]配列変数のみをサポートしています。他の変数形式を出力したい場合は、[さらに読む「配列をテキストに変換する方法」](../../../learn-more/extended-reading/what-is-array-variable.md)をお読みください。
 
 <figure><img src="../../../../img/en-iteration-scenario.jpeg" alt="" ></figure>
 
@@ -121,7 +121,7 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
     **エラー出力を削除する**オプションを選択した場合、出力には例外変数が含まれません、例：[result-1, result-3]。
 
-#### 拡張読み物
+#### さらに読む
 
 [配列変数とは何ですか？](../../../learn-more/extended-reading/what-is-array-variable.md)
 

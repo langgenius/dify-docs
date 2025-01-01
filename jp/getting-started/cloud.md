@@ -19,4 +19,4 @@ Difyはすべてのユーザーに[クラウドサービス](http://cloud.dify.a
 * チーム版
 * エンタープライズ版
 
-各バージョンの価格設定については、[https://dify.ai/pricing](https://dify.ai/pricing)をご参照ください。
+各バージョンの価格設定については、[ここ](https://dify.ai/pricing)をご参照ください。

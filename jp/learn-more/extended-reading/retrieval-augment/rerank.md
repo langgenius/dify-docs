@@ -40,10 +40,10 @@ Difyは現在、Cohere Rerankモデルをサポートしており、「モデル
 
 **スコア閾値：** Rerank後に返される関連ドキュメントの最低スコアを設定します。Rerankモデルを設定した後、TopKとスコア閾値の設定はRerankステップでのみ有効です。
 
-### データセットの複数召回モードでの Rerank モデルの設定
+### データセットの複数リコールモードでの Rerank モデルの設定
 
-「キーワード編成->コンテキスト->設定」ページに進み、複数召回モードに設定されている場合はRerankモデルをオンにしてください。
+「キーワード編成->コンテキスト->設定」ページに進み、複数リコールモードに設定されている場合はRerankモデルをオンにしてください。
 
-複数の召回モードについての詳細は、[複数リコール](https://docs.dify.ai/v/ja-jp/guides/knowledge-base/integrate-knowledge-within-application#rikru)を参照してください。
+複数のリコールモードについての詳細は、[複数リコール](https://docs.dify.ai/v/ja-jp/guides/knowledge-base/integrate-knowledge-within-application#rikru)を参照してください。
 
 <figure><img src="../../../.gitbook/assets/jp-rerank-setting.png" alt=""><figcaption><p>データセットのマルチウェイリコールモードでRerankモデルを設定します</p></figcaption></figure>
