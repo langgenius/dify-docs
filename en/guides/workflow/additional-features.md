@@ -4,7 +4,7 @@ Both Workflow and Chatflow applications support enabling additional features to 
 
 Click the **"Features"** button in the upper right corner of the application to add more functionality.
 
-{% @arcade/embed flowId="a0tbwuEIT5I3y5RdHsJp" url="https://app.arcade.software/share/a0tbwuEIT5I3y5RdHsJp" %}
+{% embed url="https://www.motionshot.app/walkthrough/6773d34ad27e58127b913945/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
 
 #### Workflow
 
@@ -12,7 +12,9 @@ Click the **"Features"** button in the upper right corner of the application to 
 
 Workflow type applications only support the **"Image Upload"** feature. When enabled, an image upload entry will appear on the usage page of the Workflow application.
 
-{% @arcade/embed flowId="DqlK9RV79K25ElxMq1BJ" url="https://app.arcade.software/share/DqlK9RV79K25ElxMq1BJ" %}
+{% embed url="https://www.motionshot.app/walkthrough/6773d3d86a0c3ed534f24da9/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
+
+
 
 **Usage:**
 

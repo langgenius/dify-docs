@@ -54,7 +54,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 <table data-header-hidden><thead><tr><th width="227"></th><th></th></tr></thead><tbody><tr><td>文件类型</td><td>支持格式</td></tr><tr><td>文档</td><td>TXT, MARKDOWN, PDF, HTML, XLSX, XLS, DOCX, CSV, EML, MSG, PPTX, PPT, XML, EPUB.</td></tr><tr><td>图片</td><td>JPG, JPEG, PNG, GIF, WEBP, SVG.</td></tr><tr><td>音频</td><td>MP3, M4A, WAV, WEBM, AMR.</td></tr><tr><td>视频</td><td>MP4, MOV, MPEG, MPGA.</td></tr><tr><td>其他</td><td>自定义后缀名支持</td></tr></tbody></table>
 
-#### 方法一：使用具备识别文件的 LLM 
+#### 方法一：使用具备识别文件的 LLM
 
 部分 LLMs（例如 [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-with-claude/pdf-support)）已支持直接处理并分析文件内容，因此 LLM 节点的提示词已允许输入文件变量。
 
@@ -99,7 +99,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 在应用的[“开始”](node/start.md)节点内添加输入字段，选择 **“单文件”** 或 **“文件列表”** 字段类型的变量。
 
-{% @arcade/embed flowId="TiLAgL3vgozVhuLBmob9" url="https://app.arcade.software/share/TiLAgL3vgozVhuLBmob9" %}
+{% embed url="https://www.motionshot.app/walkthrough/6772ae35d65f37064a5d28d3/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
 
 
 

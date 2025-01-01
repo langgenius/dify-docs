@@ -28,6 +28,8 @@
 
 创建应用时，你需要给应用起一个名字、选择合适的图标，或者上传喜爱的图片用作图标、使用简介清晰的文字来描述此应用的用途，以方便后续应用在团队内的使用。
 
+{% embed url="https://www.motionshot.app/walkthrough/6765339bcf1efee248025520/embed?fullscreen=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
+
 ![](https://assets-docs.dify.ai/2024/12/572b246b74431dd550c5b61d9215dbaa.png)
 
 ### 通过 DSL 文件创建应用

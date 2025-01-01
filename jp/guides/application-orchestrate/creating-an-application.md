@@ -44,7 +44,7 @@ Dify DSLは、Dify.AIが定めるAIアプリケーション開発のための標
 
 以下の形式を使用して、URL経由でDSLファイルをインポートすることができます：
 
-```URL
+```url
 https://example.com/your_dsl.yml
 ```
 

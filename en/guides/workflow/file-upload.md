@@ -93,7 +93,9 @@ If you want the LLM to remember file contents during conversations, please refer
 
 Add input fields in the application's "Start" node, choosing either **"Single File"** or **"File List"** as the field type for the variable.
 
-{% @arcade/embed flowid="73XlnhFQELlPKUWO6xZs" url="https://app.arcade.software/share/73XlnhFQELlPKUWO6xZs" %}
+{% embed url="https://www.motionshot.app/walkthrough/6773d0e0d27e58127b913943/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
+
+
 
 *   **Single File**
 

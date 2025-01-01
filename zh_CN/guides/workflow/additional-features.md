@@ -4,7 +4,9 @@ Workflow 和 Chatflow 应用均支持开启附加功能以增强使用者的交�
 
 点击应用右上角的 **“功能”** 按钮即可为应用添加更多功能。
 
-{% @arcade/embed flowid="a0tbwuEIT5I3y5RdHsJp" url="https://app.arcade.software/share/a0tbwuEIT5I3y5RdHsJp" %}
+{% embed url="https://www.motionshot.app/walkthrough/6772b3cb721a6ff7774e7fa1/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
+
+
 
 ### Workflow
 
@@ -12,7 +14,7 @@ Workflow 和 Chatflow 应用均支持开启附加功能以增强使用者的交�
 
 Workflow 类型应用仅支持 **“图片上传”** 功能。开启后，Workflow 应用的使用页将出现图片上传入口。
 
-{% @arcade/embed flowid="DqlK9RV79K25ElxMq1BJ" url="https://app.arcade.software/share/DqlK9RV79K25ElxMq1BJ" %}
+{% embed url="https://www.motionshot.app/walkthrough/6772b489721a6ff7774e7fa2/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
 
 **用法：**
 
