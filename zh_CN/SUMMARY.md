@@ -103,6 +103,7 @@
 * [标注](guides/annotation/README.md)
   * [日志与标注](guides/annotation/logs.md)
   * [标注回复](guides/annotation/annotation-reply.md)
+  * [通过 API 维护标注](guides/annotation/maintain-annotation-via-api.md)
 * [监测](guides/monitoring/README.md)
   * [集成外部 Ops 工具](guides/monitoring/integrate-external-ops-tools/README.md)
     * [集成 LangSmith](guides/monitoring/integrate-external-ops-tools/integrate-langsmith.md)

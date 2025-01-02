@@ -103,6 +103,7 @@
 * [Annotation](guides/annotation/README.md)
   * [Logs and Annotation](guides/annotation/logs.md)
   * [Annotation Reply](guides/annotation/annotation-reply.md)
+  * [Maintain Annotation via API](guides/annotation/maintain-annotation-via-api.md)
 * [Monitoring](guides/monitoring/README.md)
   * [Data Analysis](guides/monitoring/analysis.md)
   * [Integrate External Ops Tools](guides/monitoring/integrate-external-ops-tools/README.md)

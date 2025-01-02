@@ -27,7 +27,7 @@
 
 输入示例：
 
-```json
+```bash
 curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_text' \
 --header 'Authorization: Bearer {api_key}' \
 --header 'Content-Type: application/json' \
@@ -72,7 +72,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 输入示例：
 
-```json
+```bash
 curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_file' \
 --header 'Authorization: Bearer {api_key}' \
 --form 'data="{"indexing_technique":"high_quality","process_rule":{"rules":{"pre_processing_rules":[{"id":"remove_extra_spaces","enabled":true},{"id":"remove_urls_emails","enabled":true}],"segmentation":{"separator":"###","max_tokens":500}},"mode":"custom"}}";type=text/plain' \
@@ -166,41 +166,201 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets?page=1&limit=20' 
 {
   "data": [
     {
-      "id": "",
-      "name": "知识库名称",
-      "description": "描述信息",
+      "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+      "name": "Test Knowledge Base",
+      "description": "",
+      "provider": "vendor",
       "permission": "only_me",
-      "data_source_type": "upload_file",
-      "indexing_technique": "",
-      "app_count": 2,
-      "document_count": 10,
-      "word_count": 1200,
-      "created_by": "",
-      "created_at": "",
-      "updated_by": "",
-      "updated_at": ""
-    },
-    ...
+      "data_source_type": null,
+      "indexing_technique": null,
+      "app_count": 0,
+      "document_count": 0,
+      "word_count": 0,
+      "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+      "created_at": 1735620612,
+      "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+      "updated_at": 1735620612,
+      "embedding_model": null,
+      "embedding_model_provider": null,
+      "embedding_available": true,
+      "retrieval_model_dict": {
+        "search_method": "semantic_search",
+        "reranking_enable": false,
+        "reranking_mode": null,
+        "reranking_model": {
+          "reranking_provider_name": "",
+          "reranking_model_name": ""
+        },
+        "weights": null,
+        "top_k": 2,
+        "score_threshold_enabled": false,
+        "score_threshold": null
+      },
+      "tags": [],
+      "doc_form": null,
+      "external_knowledge_info": {
+        "external_knowledge_id": null,
+        "external_knowledge_api_id": null,
+        "external_knowledge_api_name": null,
+        "external_knowledge_api_endpoint": null
+      },
+      "external_retrieval_model": {
+        "top_k": 2,
+        "score_threshold": 0.0,
+        "score_threshold_enabled": null
+      }
+    }
   ],
-  "has_more": true,
+  "has_more": false,
   "limit": 20,
-  "total": 50,
+  "total": 1,
   "page": 1
 }
 ```
 
-### 删除知识库
+### **获取知识库详情**
+通过知识库ID查看知识库详情
 
-输入示例：
-
-```json
-curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}' \
+```bash
+curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}' \
 --header 'Authorization: Bearer {api_key}'
 ```
 
 输出示例：
 
 ```json
+{
+  "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+  "name": "Test Knowledge Base",
+  "description": "",
+  "provider": "vendor",
+  "permission": "only_me",
+  "data_source_type": null,
+  "indexing_technique": null,
+  "app_count": 0,
+  "document_count": 0,
+  "word_count": 0,
+  "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+  "created_at": 1735620612,
+  "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+  "updated_at": 1735620612,
+  "embedding_model": null,
+  "embedding_model_provider": null,
+  "embedding_available": true,
+  "retrieval_model_dict": {
+    "search_method": "semantic_search",
+    "reranking_enable": false,
+    "reranking_mode": null,
+    "reranking_model": {
+      "reranking_provider_name": "",
+      "reranking_model_name": ""
+    },
+    "weights": null,
+    "top_k": 2,
+    "score_threshold_enabled": false,
+    "score_threshold": null
+  },
+  "tags": [],
+  "doc_form": null,
+  "external_knowledge_info": {
+    "external_knowledge_id": null,
+    "external_knowledge_api_id": null,
+    "external_knowledge_api_name": null,
+    "external_knowledge_api_endpoint": null
+  },
+  "external_retrieval_model": {
+    "top_k": 2,
+    "score_threshold": 0.0,
+    "score_threshold_enabled": null
+  }
+}
+```
+
+### **修改知识库**
+通过知识库ID修改知识库信息
+
+```bash
+curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{"name": "Test Knowledge Base", "indexing_technique": "high_quality", "permission": "only_me",'\
+  "embedding_model_provider": "zhipuai", "embedding_model": "embedding-3", "retrieval_model": "", "partial_member_list": []}'
+```
+
+入参选项：
+- `indexing_technique`: high_quality, economy, None
+- `permission`: only_me, all_team_members, partial_members (此partial_members选项是指定团队成员)
+- `embedding_model_provider`: 指定的嵌入模型提供商, 必须先在系统内设定好接入的模型，对应的是provider字段
+- `embedding_model`: 指定的嵌入模型，对应的是model字段
+- `retrieval_model`: 指定的检索模型，对应的是model字段
+
+嵌入模型的提供商和模型名称可以通过以下接口获取：`v1/workspaces/current/models/model-types/text-embedding`，具体说明见后文。
+使用的Authorization是Dataset的API Token
+
+输出示例
+：
+```json
+{
+    "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+    "name": "Test Knowledge Base",
+    "description": "",
+    "provider": "vendor",
+    "permission": "only_me",
+    "data_source_type": null,
+    "indexing_technique": "high_quality",
+    "app_count": 0,
+    "document_count": 0,
+    "word_count": 0,
+    "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+    "created_at": 1735620612,
+    "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+    "updated_at": 1735622679,
+    "embedding_model": "embedding-3",
+    "embedding_model_provider": "zhipuai",
+    "embedding_available": null,
+    "retrieval_model_dict": {
+        "search_method": "semantic_search",
+        "reranking_enable": false,
+        "reranking_mode": null,
+        "reranking_model": {
+            "reranking_provider_name": "",
+            "reranking_model_name": ""
+        },
+        "weights": null,
+        "top_k": 2,
+        "score_threshold_enabled": false,
+        "score_threshold": null
+    },
+    "tags": [],
+    "doc_form": null,
+    "external_knowledge_info": {
+        "external_knowledge_id": null,
+        "external_knowledge_api_id": null,
+        "external_knowledge_api_name": null,
+        "external_knowledge_api_endpoint": null
+    },
+    "external_retrieval_model": {
+        "top_k": 2,
+        "score_threshold": 0.0,
+        "score_threshold_enabled": null
+    },
+    "partial_member_list": []
+}
+```
+
+
+### 删除知识库
+
+输入示例：
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+输出示例：
+
+```
 204 No Content
 ```
 
@@ -328,7 +488,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
       "disabled_at": null,
       "disabled_by": null,
       "archived": false
-    },
+    }
   ],
   "has_more": false,
   "limit": 20,
@@ -511,6 +671,8 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/retr
     }'
 ```
 
+输出示例：
+
 ```bash
 {
   "query": {
@@ -562,6 +724,89 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/retr
       "tsne_position": null
     }
   ]
+}
+```
+
+### 获取嵌入模型列表
+
+```bash
+curl --location --request GET 'http://localhost:5001/v1/workspaces/current/models/model-types/text-embedding' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json'
+```
+
+输出示例：
+
+```json
+{
+    "data": [
+        {
+            "provider": "zhipuai",
+            "label": {
+                "zh_Hans": "智谱 AI",
+                "en_US": "ZHIPU AI"
+            },
+            "icon_small": {
+                "zh_Hans": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_small/zh_Hans",
+                "en_US": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_small/en_US"
+            },
+            "icon_large": {
+                "zh_Hans": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_large/zh_Hans",
+                "en_US": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_large/en_US"
+            },
+            "status": "active",
+            "models": [
+                {
+                    "model": "embedding-3",
+                    "label": {
+                        "zh_Hans": "embedding-3",
+                        "en_US": "embedding-3"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 8192
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                },
+                {
+                    "model": "embedding-2",
+                    "label": {
+                        "zh_Hans": "embedding-2",
+                        "en_US": "embedding-2"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 8192
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                },
+                {
+                    "model": "text_embedding",
+                    "label": {
+                        "zh_Hans": "text_embedding",
+                        "en_US": "text_embedding"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 512
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                }
+            ]
+        }
+    ]
 }
 ```
 

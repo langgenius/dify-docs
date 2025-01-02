@@ -27,7 +27,7 @@ This api is based on an existing Knowledge and creates a new document through te
 
 Request example:
 
-```json
+```bash
 curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_text' \
 --header 'Authorization: Bearer {api_key}' \
 --header 'Content-Type: application/json' \
@@ -77,7 +77,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 --data-raw '{"name": "text","text": "text","indexing_technique": "high_quality","process_rule": {"mode": "automatic"}}'
 ```
 
-```bash
+```json
 {
   "document": {
     "id": "",
@@ -113,7 +113,7 @@ This api is based on an existing Knowledge and creates a new document through a 
 
 Request example:
 
-```json
+```bash
 curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_file' \
 --header 'Authorization: Bearer {api_key}' \
 --form 'data="{"indexing_technique":"high_quality","process_rule":{"rules":{"pre_processing_rules":[{"id":"remove_extra_spaces","enabled":true},{"id":"remove_urls_emails","enabled":true}],"segmentation":{"separator":"###","max_tokens":500}},"mode":"custom"}}";type=text/plain' \
@@ -207,26 +207,188 @@ Response example:
 {
   "data": [
     {
-      "id": "",
-      "name": "name",
-      "description": "desc",
+      "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+      "name": "Test Knowledge Base",
+      "description": "",
+      "provider": "vendor",
       "permission": "only_me",
-      "data_source_type": "upload_file",
-      "indexing_technique": "",
-      "app_count": 2,
-      "document_count": 10,
-      "word_count": 1200,
-      "created_by": "",
-      "created_at": "",
-      "updated_by": "",
-      "updated_at": ""
-    },
-    ...
+      "data_source_type": null,
+      "indexing_technique": null,
+      "app_count": 0,
+      "document_count": 0,
+      "word_count": 0,
+      "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+      "created_at": 1735620612,
+      "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+      "updated_at": 1735620612,
+      "embedding_model": null,
+      "embedding_model_provider": null,
+      "embedding_available": true,
+      "retrieval_model_dict": {
+        "search_method": "semantic_search",
+        "reranking_enable": false,
+        "reranking_mode": null,
+        "reranking_model": {
+          "reranking_provider_name": "",
+          "reranking_model_name": ""
+        },
+        "weights": null,
+        "top_k": 2,
+        "score_threshold_enabled": false,
+        "score_threshold": null
+      },
+      "tags": [],
+      "doc_form": null,
+      "external_knowledge_info": {
+        "external_knowledge_id": null,
+        "external_knowledge_api_id": null,
+        "external_knowledge_api_name": null,
+        "external_knowledge_api_endpoint": null
+      },
+      "external_retrieval_model": {
+        "top_k": 2,
+        "score_threshold": 0.0,
+        "score_threshold_enabled": null
+      }
+    }
   ],
-  "has_more": true,
+  "has_more": false,
   "limit": 20,
-  "total": 50,
+  "total": 1,
   "page": 1
+}
+```
+
+### **View Knowledge Base**
+Get knowledge base details by knowledge base ID
+
+```bash
+curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+Response example:
+
+输出示例：
+
+```json
+{
+  "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+  "name": "Test Knowledge Base",
+  "description": "",
+  "provider": "vendor",
+  "permission": "only_me",
+  "data_source_type": null,
+  "indexing_technique": null,
+  "app_count": 0,
+  "document_count": 0,
+  "word_count": 0,
+  "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+  "created_at": 1735620612,
+  "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+  "updated_at": 1735620612,
+  "embedding_model": null,
+  "embedding_model_provider": null,
+  "embedding_available": true,
+  "retrieval_model_dict": {
+    "search_method": "semantic_search",
+    "reranking_enable": false,
+    "reranking_mode": null,
+    "reranking_model": {
+      "reranking_provider_name": "",
+      "reranking_model_name": ""
+    },
+    "weights": null,
+    "top_k": 2,
+    "score_threshold_enabled": false,
+    "score_threshold": null
+  },
+  "tags": [],
+  "doc_form": null,
+  "external_knowledge_info": {
+    "external_knowledge_id": null,
+    "external_knowledge_api_id": null,
+    "external_knowledge_api_name": null,
+    "external_knowledge_api_endpoint": null
+  },
+  "external_retrieval_model": {
+    "top_k": 2,
+    "score_threshold": 0.0,
+    "score_threshold_enabled": null
+  }
+}
+```
+
+### **Update Knowledge Base**
+Update a knowledge base by knowledge base ID
+
+```bash
+curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{"name": "Test Knowledge Base", "indexing_technique": "high_quality", "permission": "only_me",'\
+  "embedding_model_provider": "zhipuai", "embedding_model": "embedding-3", "retrieval_model": "", "partial_member_list": []}'
+```
+
+Parameters:
+- indexing_technique: high_quality, economy, None
+- permission: only_me, all_team_members, partial_members (this partial_members option specifies team members)
+- embedding_model_provider: specified embedding model provider, must be set up in the system first, corresponding to the provider field
+- embedding_model: specified embedding model, corresponding to the model field
+- retrieval_model: specified retrieval model, corresponding to the model field
+
+The provider and model name of the embedding model can be obtained through the following interface: 
+v1/workspaces/current/models/model-types/text-embedding. For specific instructions, see the following text. 
+The Authorization used is the Dataset API Token.
+
+Response example:
+
+```json
+{
+    "id": "eaedb485-95ac-4ffd-ab1e-18da6d676a2f",
+    "name": "Test Knowledge Base",
+    "description": "",
+    "provider": "vendor",
+    "permission": "only_me",
+    "data_source_type": null,
+    "indexing_technique": "high_quality",
+    "app_count": 0,
+    "document_count": 0,
+    "word_count": 0,
+    "created_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+    "created_at": 1735620612,
+    "updated_by": "e99a1635-f725-4951-a99a-1daaaa76cfc6",
+    "updated_at": 1735622679,
+    "embedding_model": "embedding-3",
+    "embedding_model_provider": "zhipuai",
+    "embedding_available": null,
+    "retrieval_model_dict": {
+        "search_method": "semantic_search",
+        "reranking_enable": false,
+        "reranking_mode": null,
+        "reranking_model": {
+            "reranking_provider_name": "",
+            "reranking_model_name": ""
+        },
+        "weights": null,
+        "top_k": 2,
+        "score_threshold_enabled": false,
+        "score_threshold": null
+    },
+    "tags": [],
+    "doc_form": null,
+    "external_knowledge_info": {
+        "external_knowledge_id": null,
+        "external_knowledge_api_id": null,
+        "external_knowledge_api_name": null,
+        "external_knowledge_api_endpoint": null
+    },
+    "external_retrieval_model": {
+        "top_k": 2,
+        "score_threshold": 0.0,
+        "score_threshold_enabled": null
+    },
+    "partial_member_list": []
 }
 ```
 
@@ -234,14 +396,14 @@ Response example:
 
 Request example:
 
-```json
+```bash
 curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}' \
 --header 'Authorization: Bearer {api_key}'
 ```
 
 Response example:
 
-```json
+```
 204 No Content
 ```
 
@@ -413,7 +575,7 @@ Response example:
       "disabled_at": null,
       "disabled_by": null,
       "archived": false
-    },
+    }
   ],
   "has_more": false,
   "limit": 20,
@@ -651,6 +813,89 @@ Response example:
       "tsne_position": null
     }
   ]
+}
+```
+
+### Get available embedding models
+
+```bash
+curl --location --request GET 'http://localhost:5001/v1/workspaces/current/models/model-types/text-embedding' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json'
+```
+
+Response example:
+
+```json
+{
+    "data": [
+        {
+            "provider": "zhipuai",
+            "label": {
+                "zh_Hans": "智谱 AI",
+                "en_US": "ZHIPU AI"
+            },
+            "icon_small": {
+                "zh_Hans": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_small/zh_Hans",
+                "en_US": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_small/en_US"
+            },
+            "icon_large": {
+                "zh_Hans": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_large/zh_Hans",
+                "en_US": "http://127.0.0.1:5001/console/api/workspaces/current/model-providers/zhipuai/icon_large/en_US"
+            },
+            "status": "active",
+            "models": [
+                {
+                    "model": "embedding-3",
+                    "label": {
+                        "zh_Hans": "embedding-3",
+                        "en_US": "embedding-3"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 8192
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                },
+                {
+                    "model": "embedding-2",
+                    "label": {
+                        "zh_Hans": "embedding-2",
+                        "en_US": "embedding-2"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 8192
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                },
+                {
+                    "model": "text_embedding",
+                    "label": {
+                        "zh_Hans": "text_embedding",
+                        "en_US": "text_embedding"
+                    },
+                    "model_type": "text-embedding",
+                    "features": null,
+                    "fetch_from": "predefined-model",
+                    "model_properties": {
+                        "context_size": 512
+                    },
+                    "deprecated": false,
+                    "status": "active",
+                    "load_balancing_enabled": false
+                }
+            ]
+        }
+    ]
 }
 ```
 
