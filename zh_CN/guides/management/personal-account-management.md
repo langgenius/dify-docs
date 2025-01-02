@@ -26,9 +26,9 @@ Dify 不同版本支持的登录方式如下：
 
 <figure><img src="../../../img/zh-personal-account-2.png" alt=""><figcaption></figcaption></figure>
 
-### 绑定登录方式
+### 登录方式
 
-支持绑定 GitHub 与 Google 账号作为 Dify 团队的登录方式。请点击 Dify 团队首页右上角头像，轻点 **“集成”** 进行绑定。
+支持通过邮箱+验证码、Google 授权和 Github 授权三种方式登录 Dify 平台。同一个 Dify 账户，可通过邮箱+验证码登录，或使用绑定相同邮箱的 Google/Github 账户授权登录，无需额外绑定操作。
 
 ### 切换界面语言
 
@@ -49,12 +49,16 @@ Dify 不同版本支持的登录方式如下：
 
 Dify 欢迎更多社区志愿者一同参与贡献更多语言版本，前往[ Github 代码仓库](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md)进行贡献！
 
+### 查看账号关联的数据
+
+
+
 ### 删除个人账号
 
-出于团队数据安全考虑，暂不支持在线自助删除个人账号信息。如需彻底删除账号，请在邮件中填写以下信息并手发送至 support@dify.ai。
+⚠️ 危险操作，请谨慎处理。
 
-```
-删除账号：your-email
-```
+如需确认删除 Dify SaaS 服务账号，请点击右上角的头像，轻点下拉框中的“账号”，点击“删除账号”按钮。删除账号操作不可逆，相同的邮箱地址在 30 天内无法重新注册。当前账号所拥有的工作空间也会一并删除，并被自动移除出所有已加入的工作空间。
 
-<figure><img src="../../../img/zh-personal-account-3.png" alt=""><figcaption><p>删除个人账户</p></figcaption></figure>
+输入需要删除的邮箱，输入确认验证码后，系统将彻底删除账号的所有信息。
+
+<figure><img src="https://assets-docs.dify.ai/2024/12/ded326f27886b5884969c220ead998d7.png" alt=""><figcaption><p>删除个人账户</p></figcaption></figure>

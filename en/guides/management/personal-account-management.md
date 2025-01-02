@@ -29,9 +29,9 @@ You can modify the following details:
 
 <figure><img src="../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
 
-### Integrations
+### Login Methods
 
-You can link your GitHub and Google accounts as login methods for your Dify team. Click on your avatar in the upper right corner of the Dify team homepage, then click **"Integrations"** to set up these links.
+Supports 3 login methods: email + verification code, Google authentication, and GitHub authentication. The same Dify account can log in directly using email + verification code or through Google/GitHub authentication linked to the same email, without the need for additional binding.
 
 ### Changing Display Language
 
@@ -52,12 +52,14 @@ To change the display language, click on your avatar in the upper right corner o
 
 Dify welcomes community volunteers to contribute additional language versions. Visit the [GitHub repository](https://github.com/langgenius/dify/blob/main/CONTRIBUTING.md) to contribute!
 
-### Deleting Personal Account
+### Delete Personal Account
 
-For team data security considerations, self-service online deletion of personal account information is not currently supported. If you need to completely delete your account, please include the following information in an email and send it to support@dify.ai.
+⚠️ Dangerous Operation. Please proceed with caution.
 
-```
-Delete account: your-email
-```
+To confirm the deletion of your Dify SaaS account, click on your avatar in the top right corner, select **“Account”** from the dropdown menu, and then click the **“Delete Account”** button. 
 
-<figure><img src="../../.gitbook/assets/image (2).png" alt=""><figcaption><p>Delete personal account</p></figcaption></figure>
+Deleting your account is irreversible, and the same email address cannot be re-registered within 30 days. All workspaces owned by the account will also be deleted, and it will be automatically removed from all shared workspaces.
+
+Enter the email address you want to delete and the confirmation verification code. Afterward, the system will permanently delete all information related to the account.
+
+<figure><img src="https://assets-docs.dify.ai/2024/12/ded326f27886b5884969c220ead998d7.png" alt=""><figcaption><p>Delete Personal Account</p></figcaption></figure>
