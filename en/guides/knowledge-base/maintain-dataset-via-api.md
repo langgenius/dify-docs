@@ -21,51 +21,6 @@ Navigate to the knowledge base page, and you can switch to the **API ACCESS** pa
 
 ### API Requesting Examples
 
-**Create a document from text**
-
-This api is based on an existing Knowledge and creates a new document through text based on this Knowledge.
-
-Request example:
-
-```json
-curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/document/create_by_text' \
---header 'Authorization: Bearer {api_key}' \
---header 'Content-Type: application/json' \
---data-raw '{"name": "text","text": "text","indexing_technique": "high_quality","process_rule": {"mode": "automatic"}}'
-```
-
-Response example:
-
-```json
-{
-  "document": {
-    "id": "",
-    "position": 1,
-    "data_source_type": "upload_file",
-    "data_source_info": {
-        "upload_file_id": ""
-    },
-    "dataset_process_rule_id": "",
-    "name": "text.txt",
-    "created_from": "api",
-    "created_by": "",
-    "created_at": 1695690280,
-    "tokens": 0,
-    "indexing_status": "waiting",
-    "error": null,
-    "enabled": true,
-    "disabled_at": null,
-    "disabled_by": null,
-    "archived": false,
-    "display_status": "queuing",
-    "word_count": 0,
-    "hit_count": 0,
-    "doc_form": "text_model"
-  },
-  "batch": ""
-}
-```
-
 ### Create a Document from Text
 
 This API is based on an existing knowledge and creates a new document through text based on this knowledge.
