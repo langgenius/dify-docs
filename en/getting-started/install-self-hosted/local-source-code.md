@@ -73,7 +73,7 @@ pyenv global 3.11
 
 4.  Install the required dependencies:
 
-    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies. You can execute `poetry shell` to activate the environment.
+    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies. Currently, it supports Poetry version 1.8.4. Please ensure you have this version installed to avoid compatibility issues.You can execute `poetry shell` to activate the environment.
 
     ```
     poetry env use 3.11
