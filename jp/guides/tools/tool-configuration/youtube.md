@@ -1,6 +1,6 @@
 # Youtube
 
-> 工具作者 @Dify
+> ツール作者 @Dify
 
 [Youtube](https://www.youtube.com/) は、最大のオンライン動画共有プラットフォームです。現在、Dify.ai には関連する2つのツール「Video Statistics」と「Free YouTube Transcript API」があり、URLまたはキーワードを入力することで動画情報を分析することができます。
 
