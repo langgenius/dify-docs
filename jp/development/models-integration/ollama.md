@@ -10,7 +10,7 @@
 
 1.  Ollama をダウンロード
 
-    [https://ollama.ai/download](https://ollama.ai/download) にアクセスし、対応するシステムの Ollama クライアントをダウンロードします。
+    [https://ollama.com/download](https://ollama.com/download) にアクセスし、対応するシステムの Ollama クライアントをダウンロードします。
 2.  Ollama を実行して Llava とチャット
 
     ```bash
@@ -19,7 +19,7 @@
 
     起動に成功すると、ollama はローカルの 11434 ポートで API サービスを開始し、`http://localhost:11434` でアクセスできます。
 
-    その他のモデルについては [Ollama Models](https://ollama.ai/library) を参照してください。
+    その他のモデルについては [Ollama Models](https://ollama.com/library) を参照してください。
 3.  Dify に Ollama を接続
 
     `設定 > モデル供給元 > Ollama` に以下を入力します：

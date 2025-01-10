@@ -2,7 +2,7 @@
 
 ![ollama](<../../.gitbook/assets/ollama (1).png>)
 
-[Ollama](https://github.com/jmorganca/ollama) is a local inference framework client that allows one-click deployment of LLMs such as Llama 2, Mistral, Llava, etc. Dify supports integrating LLM and Text Embedding capabilities of large language models deployed with Ollama.
+[Ollama](https://github.com/jmorganca/ollama) is a cross-platform inference framework client (MacOS, Windows, Linux) designed for seamless deployment of large language models (LLMs) such as Llama 2, Mistral, Llava, and more. With its one-click setup, Ollama enables local execution of LLMs, providing enhanced data privacy and security by keeping your data on your own machine.
 
 ## Quick Integration
 
@@ -10,26 +10,28 @@
 
 1.  Download Ollama
 
-    Visit [https://ollama.ai/download](https://ollama.ai/download) to download the Ollama client for your system.
-2.  Run Ollama and Chat with Llava
+    Visit [https://ollama.com/download](https://ollama.com/download) to download the Ollama client for your system.
+
+2.  Run Ollama and Chat with Llama3.2
 
     ```bash
-    ollama run llava
+    ollama run llama3.2
     ```
 
     After successful launch, Ollama starts an API service on local port 11434, which can be accessed at `http://localhost:11434`.
 
-    For other models, visit [Ollama Models](https://ollama.ai/library) for more details.
+    For other models, visit [Ollama Models](https://ollama.com/library) for more details.
+
 3.  Integrate Ollama in Dify
 
     In `Settings > Model Providers > Ollama`, fill in:
 
     ![](../../.gitbook/assets/ollama-config-en.png)
 
-    * Model Name: `llava`
+    * Model Name: `llama3.2`
     *   Base URL: `http://<your-ollama-endpoint-domain>:11434`
 
-        Enter the base URL where the Ollama service is accessible.
+        Enter the base URL where the Ollama service is accessible. If filling in a public URL still results in an error, please refer to the [FAQ](#faq) and modify environment variables to make Ollama service accessible from all IPs
 
         If Dify is deployed using Docker, consider using the local network IP address, e.g., `http://192.168.1.100:11434` or `http://host.docker.internal:11434` to access the service.
 
@@ -48,7 +50,7 @@
     Click "Save" to use the model in the application after verifying that there are no errors.
 
     The integration method for Embedding models is similar to LLM, just change the model type to Text Embedding.
-4.  Use Ollama Models
+1.  Use Ollama Models
 
     ![](../../.gitbook/assets/ollama-use-model-en.png)
 
@@ -58,13 +60,15 @@
 
 ### ⚠️ If you are using docker to deploy Dify and Ollama, you may encounter the following error:
 
-```
+```bash
 httpconnectionpool(host=127.0.0.1, port=11434): max retries exceeded with url:/cpi/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8562812c20>: fail to establish a new connection:[Errno 111] Connection refused'))
 
 httpconnectionpool(host=localhost, port=11434): max retries exceeded with url:/cpi/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8562812c20>: fail to establish a new connection:[Errno 111] Connection refused'))
 ```
 
-This error occurs because the Ollama service is not accessible from the docker container. `localhost` usually refers to the container itself, not the host machine or other containers. To resolve this issue, you need to expose the Ollama service to the network.
+This error occurs because the Ollama service is not accessible from the docker container. `localhost` usually refers to the container itself, not the host machine or other containers. 
+
+You need to expose the Ollama service to the network to resolve this issue.
 
 ### Setting environment variables on Mac
 
