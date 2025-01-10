@@ -41,6 +41,6 @@ When submitting a pull request, please use the format `Docs: Add xxx` for the ti
 
 ## Getting Help
 
-If you ever get stuck or got a burning question while contributing, simply shoot your queries our way via the related GitHub issue, or hop onto our [Discord](https://discord.gg/AhzKf7dNgk) for a quick chat.
+If you ever get stuck or got a burning question while contributing, simply shoot your queries our way via the related GitHub issue, or hop onto our [Discord](https://discord.com/invite/8Tpq4AcN9c) for a quick chat.
 
 We appreciate your efforts in improving Dify's documentation!
