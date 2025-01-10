@@ -1,6 +1,6 @@
 # SearchApi
 
-> ツールの作者：@SearchApi。
+> ツールの作者：@SearchApi
 
 SearchApiは、Google検索、Google Jobs、YouTube、Googleニュースなどの検索エンジンから構造化データを提供する強力なリアルタイムのSERP APIです。以下示されましたの手順フォローし、SearchApiツールを設定する。
 
