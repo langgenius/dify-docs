@@ -411,7 +411,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
 - UPLOAD_FILE_SIZE_LIMIT:
 
-  Upload file size limit, default 15M.
+  Upload file size limit, default 15M.<mark>Note：After modifying the UPLOAD_FILE_SIZE_LIMIT, you also need to synchronously update the value of NGINX_CLIENT_MAX_BODY_SIZE; otherwise, it will not take effect, and the front-end interface will display an "Upload Failed" message in the upper right corner.</mark>
 
 - UPLOAD_FILE_BATCH_LIMIT
 
