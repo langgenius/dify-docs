@@ -71,7 +71,7 @@ pyenv global 3.11
     ```
 4.  安装依赖包
 
-    Dify API 服务使用 [Poetry](https://python-poetry.org/docs/) 来管理依赖。你可以执行 `poetry shell` 来激活环境。
+    Dify API 服务使用 [Poetry](https://python-poetry.org/docs/) 来管理依赖。目前支持 Poetry 版本 1.8.4。请确保已安装此版本，以避免兼容性问题。你可以执行 `poetry shell` 来激活环境。
 
     ```
     poetry env use 3.11
