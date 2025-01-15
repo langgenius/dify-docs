@@ -1,6 +1,6 @@
 # Stable Diffusion
 
-> ツール作者 @Dify
+> 工具作者 @Dify。
 
 Stable Diffusionは、テキストプロンプトを基に画像を生成するツールです。DifyではStable DiffusionWebUI APIへのアクセスを実現しているため、Dify内で直接利用することができます。以下にDifyにStable Diffusionを統合する手順を説明します。
 

@@ -1,6 +1,6 @@
 # SiliconFlow（Flux AI サポート）
 
-> ツール作者 @hjlarry
+> ツール制作者 @hjlarry。
 
 SiliconFlowは、優れたオープンソースの基盤モデルをもとに、高品質なGenAIサービスを提供します。Difyを通じて、SiliconFlowを利用してFluxやStable Diffusionなどの画像生成モデルを呼び出し、自分自身のAI画像生成アプリケーションを構築できます。
 
