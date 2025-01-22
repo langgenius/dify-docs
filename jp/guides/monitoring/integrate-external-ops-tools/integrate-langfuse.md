@@ -1,6 +1,6 @@
 # LangFuseとの統合
 
-### 1 Langfuseとは
+### Langfuseとは
 
 LangfuseはLLMアプリケーションの開発者がデバッグ、分析、イテレーション等を使用してアプリケーションのパフォーマンスを向上させるためのツールです。
 
@@ -10,7 +10,7 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 2 Langfuseの使い方
+### Langfuseの使い方
 
 1. Langfuseの[公式サイト](https://langfuse.com/)から登録し、ログインする。
 2. Langfuseからプロジェクトを作成します
@@ -48,7 +48,7 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 3 Langfuse ページで監視データをチェックします
+### Langfuse ページで監視データをチェックします
 
 設定した後， Difyのアプリや生産データは Langfuse の中にチェクをできます。
 
@@ -58,7 +58,7 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 4 監視データのリスト
+### 監視データのリスト
 
 #### ワークフローとチャットフローの情報を追跡
 
