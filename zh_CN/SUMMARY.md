@@ -112,6 +112,7 @@
   * [集成外部 Ops 工具](guides/monitoring/integrate-external-ops-tools/README.md)
     * [集成 LangSmith](guides/monitoring/integrate-external-ops-tools/integrate-langsmith.md)
     * [集成 Langfuse](guides/monitoring/integrate-external-ops-tools/integrate-langfuse.md)
+    * [集成 Opik](guides/monitoring/integrate-external-ops-tools/integrate-opik.md)
   * [数据分析](guides/monitoring/analysis.md)
 * [扩展](guides/extension/README.md)
   * [API 扩展](guides/extension/api-based-extension/README.md)

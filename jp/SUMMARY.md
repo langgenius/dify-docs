@@ -113,6 +113,7 @@
   * [外部Opsツール統合](guides/monitoring/integrate-external-ops-tools/README.md)
     * [LangSmithを統合](guides/monitoring/integrate-external-ops-tools/integrate-langsmith.md)
     * [LangFuseを統合](guides/monitoring/integrate-external-ops-tools/integrate-langfuse.md)
+    * [Opikを統合](guides/monitoring/integrate-external-ops-tools/integrate-opik.md)
 * [拡張](guides/extension/README.md)
   * [API 拡張](guides/extension/api-based-extension/README.md)
     * [Cloudflare Workers を使用した API ツールのデプロイ](guides/extension/api-based-extension/cloudflare-workers.md)
