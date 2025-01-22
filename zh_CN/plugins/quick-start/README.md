@@ -18,32 +18,28 @@
 
 参考各类型插件的开发示例，快速了解插件的基本结构和开发流程。
 
-{% content-ref url="developing-plugins/tool-type-plugin.md" %}
-[tool-type-plugin.md](developing-plugins/tool-type-plugin.md)
+{% content-ref url="develop-plugins/tool-type-plugin.md" %}
+[tool-type-plugin.md](develop-plugins/tool-type-plugin.md)
 {% endcontent-ref %}
 
-{% content-ref url="developing-plugins/model/" %}
-[model](developing-plugins/model/)
+{% content-ref url="develop-plugins/model/" %}
+[model](develop-plugins/model/)
 {% endcontent-ref %}
 
-{% content-ref url="developing-plugins/extension.md" %}
-[extension.md](developing-plugins/extension.md)
+{% content-ref url="develop-plugins/extension-plugin.md" %}
+[extension.md](develop-plugins/extension-plugin.md)
 {% endcontent-ref %}
 
-{% content-ref url="developing-plugins/extension.md" %}
-[extension.md](developing-plugins/extension.md)
-{% endcontent-ref %}
-
-{% content-ref url="developing-plugins/bundle.md" %}
-[bundle.md](developing-plugins/bundle.md)
+{% content-ref url="develop-plugins/bundle.md" %}
+[bundle.md](develop-plugins/bundle.md)
 {% endcontent-ref %}
 
 #### 2. 进阶开发
 
 阅读**接口定义文档**，深入了解插件开发过程中的**关键接口**和**实现细节**。
 
-{% content-ref url="../api-documentation/" %}
-[api-documentation](../api-documentation/)
+{% content-ref url="../schema-definition/" %}
+[api-documentation](../schema-definition/)
 {% endcontent-ref %}
 
 你可以根据自身需求，有针对性地学习和掌握插件的使用或开发，高效达成目标。

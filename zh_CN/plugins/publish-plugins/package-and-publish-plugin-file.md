@@ -13,7 +13,7 @@
 
 ### 前置准备
 
-* **Dify 插件开发工具**，详细说明请参考[初始化开发工具](../quick-start/developing-plugins/tool-initialization.md)。
+* **Dify 插件开发工具**，详细说明请参考[初始化开发工具](../quick-start/develop-plugins/initialize-development-tools.md)。
 
 配置完成后，在终端输入 `dify -v` 命令，检查是否输出版本号信息以确认已安装必要的开发工具。
 
@@ -21,7 +21,7 @@
 
 > 打包插件前，请确保插件的 `manifest.yaml` 文件中的 author 字段与 GitHub id 保持一致。
 
-插件项目开发完成后，请确保已完成[远程连接测试](../quick-start/developing-plugins/extension.md#tiao-shi-cha-jian)。需前往插件项目的上一级目录，运行以下插件打包命令：
+插件项目开发完成后，请确保已完成[远程连接测试](../quick-start/develop-plugins/extension-plugin.md#tiao-shi-cha-jian)。需前往插件项目的上一级目录，运行以下插件打包命令：
 
 ```bash
 dify plugin package ./your_plugin_project

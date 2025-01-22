@@ -20,8 +20,8 @@
 
 详细说明请参考：
 
-{% content-ref url="publish-plugin-to-dify-marketplace.md" %}
-[publish-plugin-to-dify-marketplace.md](publish-plugin-to-dify-marketplace.md)
+{% content-ref url="publish-to-dify-marketplace.md" %}
+[publish-to-dify-marketplace.md](publish-to-dify-marketplace.md)
 {% endcontent-ref %}
 
 #### 2. **GitHub 仓库**

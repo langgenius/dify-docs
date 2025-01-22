@@ -28,21 +28,21 @@ description: 'Author: Yeuoly, Allen'
 
 *   **Models（模型）**
 
-    各类 AI 模型的接入插件，包含主流模型服务商和自定义模型，支持配置和调用。专注于请求 LLM API 服务。关于模型插件的开发详情，请参考[快速开始： Model 类型插件](quick-start/developing-plugins/model/)。
+    各类 AI 模型的接入插件，包含主流模型服务商和自定义模型，支持配置和调用。专注于请求 LLM API 服务。关于模型插件的开发详情，请参考[快速开始： Model 类型插件](quick-start/develop-plugins/model/)。
 *   **Tools（工具）**
 
     能够被 Chatflow / Workflow / Agent 应用类型所使用的外部工具，提供完整的工具集和 API 实现能力。不仅可以调用各类工具，还能构建自定义端点。
 
-    例如在开发 Discord Bot 时，既可以使用现有工具，又能实现收发消息的专用端点。关于工具插件的开发详情，请参考[快速开始：Tool 类型插件](quick-start/developing-plugins/tool-type-plugin.md)。
+    例如在开发 Discord Bot 时，既可以使用现有工具，又能实现收发消息的专用端点。关于工具插件的开发详情，请参考[快速开始：Tool 类型插件](quick-start/develop-plugins/tool-type-plugin.md)。
 *   **Agent 策略**
 
-    Agent 策略插件能够定义 Agent 节点内部的推理和决策逻辑，包括工具选择、调用和结果处理。详细说明请参考[快速开始： Agent 策略插件](quick-start/developing-plugins/agent-strategy.md)。
+    Agent 策略插件能够定义 Agent 节点内部的推理和决策逻辑，包括工具选择、调用和结果处理。详细说明请参考[快速开始： Agent 策略插件](quick-start/develop-plugins/agent-strategy.md)。
 *   **Extensions（扩展）**
 
-    仅提供 endpoint 能力，为简单场景设计的轻量级方案，通过 HTTP 服务快速实现功能扩展。适用于只需要基础 API 调用的简单集成场景。关于扩展插件的开发详情，请参考[快速开始：Extension 类型插件](quick-start/developing-plugins/extension.md)。
+    仅提供 endpoint 能力，为简单场景设计的轻量级方案，通过 HTTP 服务快速实现功能扩展。适用于只需要基础 API 调用的简单集成场景。关于扩展插件的开发详情，请参考[快速开始：Extension 类型插件](quick-start/develop-plugins/extension-plugin.md)。
 *   **Bundle（插件包）**
 
-    插件包是一系列插件的组合。通过安装插件集可以批量安装预选插件，告别手动逐个安装插件的繁琐过程。关于插件包的开发详情，请参考[插件开发：Bundle 类型插件](quick-start/developing-plugins/bundle.md)。
+    插件包是一系列插件的组合。通过安装插件集可以批量安装预选插件，告别手动逐个安装插件的繁琐过程。关于插件包的开发详情，请参考[插件开发：Bundle 类型插件](quick-start/develop-plugins/bundle.md)。
 
 ### 插件有哪些新特性？
 
@@ -96,16 +96,16 @@ description: 'Author: Yeuoly, Allen'
 
 如果你想要上手插件开发，请参考以下内容：
 
-{% content-ref url="quick-start/developing-plugins/" %}
-[developing-plugins](quick-start/developing-plugins/)
+{% content-ref url="quick-start/develop-plugins/" %}
+[develop-plugins](quick-start/develop-plugins/)
 {% endcontent-ref %}
 
 **发布插件**
 
 如果想要将插件发布至 [Dify Marketplace](https://marketplace.dify.ai/)，请根据指引填写完整插件信息和相关使用文档。将插件代码投稿至 [GitHub 仓库](https://github.com/langgenius/dify-official-plugins)，审核通过后将在插件市场中上线。
 
-{% content-ref url="publish-plugins/publish-plugin-to-dify-marketplace.md" %}
-[publish-plugin-to-dify-marketplace.md](publish-plugins/publish-plugin-to-dify-marketplace.md)
+{% content-ref url="publish-plugins/publish-to-dify-marketplace.md" %}
+[publish-to-dify-marketplace.md](publish-plugins/publish-to-dify-marketplace.md)
 {% endcontent-ref %}
 
 除了将插件发布至 Dify 官方插件市场以外，你也可以发布至个人 GitHub 项目内或打包为文件包，以文件的形式分享。

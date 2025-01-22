@@ -36,7 +36,7 @@ After importing the parsed text from the webpage, it is stored in the knowledge 
 
 ### Jina Reader
 
-#### 1. Configuring Jina Reader Credentials&#x20;
+#### 1. Configuring Jina Reader Credentials;
 
 Click on the avatar in the upper right corner, then go to the **DataSource** page, and click the **Configure** button next to Jina Reader.
 
@@ -44,7 +44,7 @@ Click on the avatar in the upper right corner, then go to the **DataSource** pag
 
 Log in to the [Jina Reader website](https://jina.ai/reader/), complete registration, obtain the API Key, then fill it in and save.
 
-#### 2. Using Jina Reader to Crawl Web Content&#x20;
+#### 2. Using Jina Reader to Crawl Web Content;
 
 On the knowledge base creation page, select **Sync from website**, choose Jina Reader as the provider, and enter the target URL to be crawled.
 

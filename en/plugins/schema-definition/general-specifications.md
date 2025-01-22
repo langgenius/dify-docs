@@ -2,18 +2,18 @@
 
 This article will briefly introduce common structures in plugin development.
 
-### **Path Specifications**&#x20;
+### **Path Specifications**;
 
 When specifying file paths in Manifest or any yaml files, follow these two rules based on file types:
 
 * For multimedia files like images or videos (e.g., plugin `icon`), place them in the `_assets` folder under the plugin root directory.
 * For regular text files like `.py` or `.yaml`, use the absolute path within the plugin project.
 
-### **Common Structures**&#x20;
+### **Common Structures**;
 
 When defining plugins, some data structures can be shared among tools, models, and Endpoints. Here are these shared structures.
 
-#### **I18nObject**&#x20;
+#### **I18nObject**;
 
 `I18nObject` is an internationalization structure compliant with IETF BCP 47 standard, currently supporting four languages:
 
@@ -22,7 +22,7 @@ When defining plugins, some data structures can be shared among tools, models, a
 * ja\_Jp
 * pt\_BR
 
-#### **ProviderConfig**&#x20;
+#### **ProviderConfig**;
 
 `ProviderConfig` is a common provider form structure, applicable to both `Tool` and `Endpoint`
 

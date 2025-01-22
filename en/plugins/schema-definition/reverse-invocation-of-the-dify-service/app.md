@@ -34,7 +34,7 @@ def invoke(
 
 When `response_mode` is `streaming`, the interface returns `Generator[dict]`, otherwise returns `dict`. For specific interface fields, refer to `ServiceApi` return results.
 
-#### **Example**&#x20;
+#### **Example**;
 
 We can request a Chat type App in an `Endpoint` and directly return the results:
 

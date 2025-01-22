@@ -1,10 +1,10 @@
 # Manifest
 
-**Manifest File** A Manifest is a YAML-compliant file that defines the most basic information about a **plugin**, including but not limited to the plugin name, author, included tools, models, and other information.&#x20;
+**Manifest File** A Manifest is a YAML-compliant file that defines the most basic information about a **plugin**, including but not limited to the plugin name, author, included tools, models, and other information.;
 
 If this file's format is incorrect, both the plugin parsing and packaging processes will fail.
 
-### **Code Example**&#x20;
+### **Code Example**;
 
 Below is a simple example of a Manifest file. The meaning and function of each data element will be explained below. For reference to other plugin codes, please check the [Github repository](https://github.com/langgenius/dify-plugin-sdks/tree/main/python/examples).
 

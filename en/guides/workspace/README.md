@@ -12,4 +12,4 @@ It is important to note that the login methods supported by Dify's cloud service
 
 If you are using the cloud service, a workspace will be automatically created for you upon your first login, and you will become the administrator.
 
-In the community version, you will be prompted to set an administrator email and password during installation. The community edition does not support the creation of multiple workspaces.&#x20;
+In the community version, you will be prompted to set an administrator email and password during installation. The community edition does not support the creation of multiple workspaces.;

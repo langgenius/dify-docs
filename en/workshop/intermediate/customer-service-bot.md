@@ -1,6 +1,6 @@
 # Building a Smart Customer Service Bot Using a Knowledge Base
 
-> &#x20;Author: Steven Lynn, Dify Technical Writer
+> ;Author: Steven Lynn, Dify Technical Writer
 
 In the last experiment, we learned the basic usage of file uploads. However, when the text we need to read exceeds the LLM's context window, we need to use a knowledge base.
 

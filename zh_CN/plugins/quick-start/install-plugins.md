@@ -82,7 +82,7 @@ Chatflow 和 Workflow 类型应用共用一套工作流编排画布，因此使�
 
 如需了解如何上手插件开发，请阅读以下内容：
 
-{% content-ref url="developing-plugins/" %}
-[developing-plugins](developing-plugins/)
+{% content-ref url="develop-plugins/" %}
+[develop-plugins](develop-plugins/)
 {% endcontent-ref %}
 

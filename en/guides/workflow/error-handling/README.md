@@ -45,9 +45,9 @@ If an error is still reported after retrying the node, the next process will be 
 
 The error handling feature provides the following three options:
 
-• **None**: Do not handle the exception, directly throw the node's error message and interrupt the entire process.&#x20;
+• **None**: Do not handle the exception, directly throw the node's error message and interrupt the entire process.;
 
-• **Default Value**: Allows developers to predefine exception messages. After an exception occurs, use the predefined value to replace the original built-in error output message of the node.&#x20;
+• **Default Value**: Allows developers to predefine exception messages. After an exception occurs, use the predefined value to replace the original built-in error output message of the node.;
 
 • **Fail Branch**: Execute the pre-arranged fail branch after an exception occurs.
 
@@ -61,13 +61,13 @@ Scenario: Enabling Error-handling feature for Workflow Application
 
 Error Handling feature for Code Output in Workflow Applications The following example demonstrates how to implement error handling feature within a workflow application, using fail branch to handle node exceptions.
 
-The idea of the workflow design: An LLM node generates JSON code content (either correctly or incorrectly formatted) based on user's input instructions, which is then executed and output through Code Node A.&#x20;
+The idea of the workflow design: An LLM node generates JSON code content (either correctly or incorrectly formatted) based on user's input instructions, which is then executed and output through Code Node A.;
 
 If Code Node A receives incorrectly formatted JSON content, it follows the predefined error handling design, executing the backup path while continuing the main process.
 
-1. **Creating a JSON Code Generation Node**&#x20;
+1. **Creating a JSON Code Generation Node**;
 
-Create a new Workflow application and add both LLM and Code nodes. Use a Prompt to instruct the LLM to generate either correctly or incorrectly formatted JSON content, which will then be validated through Code Node A.&#x20;
+Create a new Workflow application and add both LLM and Code nodes. Use a Prompt to instruct the LLM to generate either correctly or incorrectly formatted JSON content, which will then be validated through Code Node A.;
 
 **The Prompt reference of LLM node:**
 
@@ -85,7 +85,7 @@ def main(json_str: str) -> dict:
 
 2. **Enable Error Handling Feature for Node A**
 
-Node A is responsible for validating JSON content. If it receives incorrectly formatted JSON content, the error handling feature will be triggered and execute th backup path, allowing the subsequent LLM node to fix the incorrect content and revalidate the JSON, thereby continuing the main process.&#x20;
+Node A is responsible for validating JSON content. If it receives incorrectly formatted JSON content, the error handling feature will be triggered and execute th backup path, allowing the subsequent LLM node to fix the incorrect content and revalidate the JSON, thereby continuing the main process.;
 
 In the "Error Handling" tab of Node A, select "Fail Branch" and create a new LLM node.
 

@@ -11,7 +11,7 @@ In this experiment, we will build the article reader as a case study. This assis
 * File upload usage
 * Basic usage of Chatflow
 * Prompt writing skill
-* Iteration node usage&#x20;
+* Iteration node usage;
 * Doc extractor and list operator usage
 
 ## **Prerequisites**
@@ -117,7 +117,7 @@ Read the following article content and perform the task
 - **Quantity**: As many as possible, but each question should be meaningful and valuable.
 ```
 
-## **Question 1: Handling Multiple Uploaded Files**&#x20;
+## **Question 1: Handling Multiple Uploaded Files**;
 
 To handle multiple uploaded files, an iterative node is needed.
 
