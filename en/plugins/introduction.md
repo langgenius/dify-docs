@@ -51,7 +51,7 @@ Compared to existing tools or models, the plugin system introduces the following
 
     The plugin system offers robust development and debugging support:
 
-    * Compatible with mainstream IDEs and debugging tools, requiring minimal environment variable configuration for remote connection to a Dify instance.;
+    * Compatible with mainstream IDEs and debugging tools, requiring minimal environment variable configuration for remote connection to a Dify instance.
     * Supports integration with Dify’s SaaS service, forwarding all plugin-related operations performed in Dify directly to your local environment.
 *   **Persistent Data Storage**
 

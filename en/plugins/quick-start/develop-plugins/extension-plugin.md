@@ -25,7 +25,7 @@ dify plugin init
 
 ### **Fill Plugin Information**
 
-Follow the prompts to configure the plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.;
+Follow the prompts to configure the plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.
 
 > The plugin name must be 1-128 characters long and can only contain letters, numbers, hyphens, and underscores.
 
@@ -102,7 +102,7 @@ This code defines the plugin's entry path as `/neko`, with a GET request method.
 
 #### **2. Write Plugin Functionality**
 
-Plugin functionality: Request the plugin service to output a cat.;
+Plugin functionality: Request the plugin service to output a cat.
 
 Write the plugin's implementation code in the `endpoints/test_plugin.py` file, referring to the following example code:
 
@@ -217,7 +217,7 @@ Dify provides remote debugging method, go to "Plugin Management" page to get the
 
 ![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
-Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.;
+Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.
 
 The `.env` file:
 

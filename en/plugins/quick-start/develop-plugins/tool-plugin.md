@@ -305,7 +305,7 @@ Dify provides remote debugging method, go to "Plugin Management" page to get the
 
 ![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
-Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.;
+Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.
 
 The `.env` file:
 

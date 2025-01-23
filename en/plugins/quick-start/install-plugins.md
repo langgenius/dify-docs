@@ -30,7 +30,7 @@ After [packaging a plugin](../publish-plugins/package-and-publish-plugin-file.md
 
 ### **Plugin Authorization**
 
-Some third-party service plugins may require API Keys or other forms of authorization. After installation, manual authorization is needed for normal use.;
+Some third-party service plugins may require API Keys or other forms of authorization. After installation, manual authorization is needed for normal use.
 
 > API Keys are sensitive information, and authorization is only valid for the current user. Other team members will need to manually enter their authorization keys when using the plugin.
 
@@ -48,13 +48,13 @@ Authorization allows you to select and use this large language model within all 
 
 ### **Tool Type Plugins**
 
-Tool type plugins can be used in Chatflow, Workflow, and Agent application types. This section will demonstrate usage in these application types using the `Google` tool plugin as an example.;
+Tool type plugins can be used in Chatflow, Workflow, and Agent application types. This section will demonstrate usage in these application types using the `Google` tool plugin as an example.
 
 > Some tool plugins require API Key authorization before use, so you can configure them after installation for subsequent use.
 
 #### **Agent**
 
-After creating an Agent application, find the **"Tools"** option at the bottom of the application orchestration page. Select the installed tool plugin.;
+After creating an Agent application, find the **"Tools"** option at the bottom of the application orchestration page. Select the installed tool plugin.
 
 When using the application, input tool usage instructions. For example, entering "today's news" will invoke the plugin to use Google search engine for online content retrieval.
 
@@ -62,7 +62,7 @@ When using the application, input tool usage instructions. For example, entering
 
 #### **Chatflow / Workflow**
 
-Chatflow and Workflow type applications share the same workflow orchestration canvas, so the method for using tool type plugins is consistent.;
+Chatflow and Workflow type applications share the same workflow orchestration canvas, so the method for using tool type plugins is consistent.
 
 You can click the + sign at the end of a node, select the installed Google plugin tool, and connect it to upstream nodes.
 
@@ -76,9 +76,9 @@ Different tool plugins have different usage methods. Please refer to each plugin
 
 ### **Extension Type Plugins**
 
-Extension type plugins are highly customizable applications with independent request endpoints, generally not requiring integration with Dify applications.;
+Extension type plugins are highly customizable applications with independent request endpoints, generally not requiring integration with Dify applications.
 
-Different extension type plugins vary greatly in functionality; please refer to each plugin's instructions for detailed usage methods.;
+Different extension type plugins vary greatly in functionality; please refer to each plugin's instructions for detailed usage methods.
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/d12c7d40f2a20ebae1d4a441e46689a7.png" alt=""><figcaption><p>Extension plugins usage</p></figcaption></figure>
 

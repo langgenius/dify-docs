@@ -31,7 +31,7 @@ Integrating LLM services with popular real-time chat platforms (IM) has always b
 
 #### **Apply for Telegram Bot**
 
-Follow [@BotFather's](https://t.me/BotFather) guide to create a new bot. For detailed creation process, refer to [Telegram's official documentation](https://core.telegram.org/bots/tutorial).;
+Follow [@BotFather's](https://t.me/BotFather) guide to create a new bot. For detailed creation process, refer to [Telegram's official documentation](https://core.telegram.org/bots/tutorial).
 
 After creation, you'll receive an HTTP API Token for use in subsequent steps.
 
@@ -169,7 +169,7 @@ Dify provides remote debugging method, go to "Plugin Management" page to get the
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
 
-Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.;
+Go back to the plugin project, copy the `.env.example` file and rename it to .env. Fill it with the remote server address and debugging key.
 
 The `.env` file:
 
@@ -192,7 +192,7 @@ Find the auto-installed test plugin in Dify's plugin management page, create a n
 
 ![Debugging Plugin](https://assets-docs.dify.ai/2024/12/93f1bc3d52635ff5bf177331caaf7afa.png)
 
-Copy the URL from the plugin and combine it with the following command to form a test request command.;
+Copy the URL from the plugin and combine it with the following command to form a test request command.
 
 Where `<hook_url>` is filled in with the address you just copied, and `<bot_token>` is filled in with the Telegram HTTP API Token obtained in the [prep](developing-a-plugin-that-integrated-with-telegram-bot.md#prerequisites).
 
@@ -262,7 +262,7 @@ class TelegramWebhook(Endpoint):
             )
 ```
 
-The code uses `self.session.app.chat.invoke` to call an App within the Dify platform, passing information such as `app_id` and `query`, and finally returns the response content to the Telegram Bot.;
+The code uses `self.session.app.chat.invoke` to call an App within the Dify platform, passing information such as `app_id` and `query`, and finally returns the response content to the Telegram Bot.
 
 After restarting the plugin and debugging again, it can be found that the Telegram Bot has correctly output the reply message from the Dify App.
 
@@ -284,7 +284,7 @@ You can now publish your plugin by uploading it to the [Dify Plugins code reposi
 
 ### Reference
 
-If you want to see the full project code for the Dify plugin, head over to the [Github code repository](https://github.com/langgenius/dify-official-plugins). In addition to that, you can see the full code of other plugins with specific details.;
+If you want to see the full project code for the Dify plugin, head over to the [Github code repository](https://github.com/langgenius/dify-official-plugins). In addition to that, you can see the full code of other plugins with specific details.
 
 If you want to know more about the plugin, please refer to the following content.
 

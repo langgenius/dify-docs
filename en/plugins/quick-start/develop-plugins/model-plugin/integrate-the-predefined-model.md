@@ -114,7 +114,7 @@ def _invoke(self, model: str, credentials: dict,
     """
 ```
 
-In the implementation, you need to be careful to use two functions to handle synchronized returns and streaming returns separately. This is because functions in Python that contain the yield keyword are recognized as generator functions, and their return type is fixed to Generator. synchronized return and streaming return need to be implemented independently in order to ensure that the logic is clear and to accommodate different return requirements.;
+In the implementation, you need to be careful to use two functions to handle synchronized returns and streaming returns separately. This is because functions in Python that contain the yield keyword are recognized as generator functions, and their return type is fixed to Generator. synchronized return and streaming return need to be implemented independently in order to ensure that the logic is clear and to accommodate different return requirements.
 
 Here's the sample code (the parameters are simplified in the example, so please follow the full parameter list in the actual implementation):
 
@@ -182,7 +182,7 @@ See the [Github code repository](https://github.com/langgenius/dify-official-plu
 
 ### **3.** Add Predefined Model Configurations
 
-If the provides predefined models, create YAML files for each model with the same name as the model name (e.g. claude-3.5.yaml). Write the contents of the file according to the AIModelEntity specification, describing the parameters and functionality of the model.;
+If the provides predefined models, create YAML files for each model with the same name as the model name (e.g. claude-3.5.yaml). Write the contents of the file according to the AIModelEntity specification, describing the parameters and functionality of the model.
 
 `claude-3-5-sonnet-20240620` Model example code:
 

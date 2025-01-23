@@ -25,7 +25,7 @@ In the current path, run the scaffolding command-line tool to create a new plugi
 
 #### **1. Enter Plugin Information**
 
-Follow the prompts to configure plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.;
+Follow the prompts to configure plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.
 
 > The name must be 1-128 characters long and can only contain letters, numbers, hyphens, and underscores.
 

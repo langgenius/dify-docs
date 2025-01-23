@@ -34,7 +34,7 @@ By simply uploading files to the **Knowledge Base**, data processing is handled 
 
 ### **Use Case**
 
-If you want to create an AI customer support assistant based on your existing knowledge base and product documentation, you can simply upload those files to the Knowledge Base in Dify, then set up a conversational application.
+If you want to create an AI customer support assistant based on your existing knowledge base and product documentation, you can simply upload those files to the Knowledge Base in Dify and then set up a conversational application.
 
 Traditionally, going from raw text training to a fully developed AI customer support chatbot could take weeks, plus it’s challenging to maintain and iterate effectively.
 

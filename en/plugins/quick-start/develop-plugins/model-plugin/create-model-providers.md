@@ -117,7 +117,7 @@ extra:
      - "models/llm/llm.py"
 ```
 
-If the accessing vendor provides a custom model, such as `OpenAI` provides a fine-tuned model, you need to add the `model_credential_schema` field.;
+If the accessing vendor provides a custom model, such as `OpenAI` provides a fine-tuned model, you need to add the `model_credential_schema` field.
 
 The following is sample code for the `OpenAI` family of models:
 
@@ -209,7 +209,7 @@ For custom model providers like `Xinference`, you can skip the full implementati
 
 **Detailed Explanation:**
 
-• `XinferenceProvider` is a placeholder class used to identify custom model providers.;
+• `XinferenceProvider` is a placeholder class used to identify custom model providers.
 
 • While the `validate_provider_credentials` method won't be actually called, it must exist because its parent class is abstract and requires all child classes to implement this method. By providing an empty implementation, we can avoid instantiation errors that would occur from not implementing the abstract method.
 
