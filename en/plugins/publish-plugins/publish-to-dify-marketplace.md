@@ -6,7 +6,7 @@ Whether you're a developer submitting a plugin for the first time or an experien
 
 We look forward to building a more open and innovative plugin ecosystem with you!
 
-### **Plugin Review Process**;
+### **Plugin Review Process**
 
 The plugin publishing process refers to developers submitting Pull Requests (PRs) to the Dify Marketplace repository on Github. After review and approval, the new plugin code will be merged and automatically published to Dify Marketplace.
 
@@ -52,17 +52,17 @@ Here is the general plugin review process:
     * If the plugin implements significant functional changes (like optimizing batch processing or improving error handling), it can be submitted as a new plugin
     * Not sure? Include a brief explanation in your PR describing why a new plugin is needed
 
-**Example:**;
+**Example:**
 
-Taking the Google search plugin as an example, it accepts a single input query and outputs a list of Google search results using the Google Search API.;
+Taking the Google search plugin as an example, it accepts a single input query and outputs a list of Google search results using the Google Search API.
 
-If you provide a new Google search plugin with similar underlying implementation but minor input adjustments (e.g., adding new language parameters), we recommend extending the existing plugin.;
+If you provide a new Google search plugin with similar underlying implementation but minor input adjustments (e.g., adding new language parameters), we recommend extending the existing plugin.
 
 On the other hand, if you've implemented the plugin with optimized batch search and error handling capabilities in a new way, it can be reviewed as a separate plugin.
 
 ***
 
-**During Pull Request (PR) Review**;
+**During Pull Request (PR) Review**
 
 Actively respond to reviewers' questions and feedback:
 
@@ -71,7 +71,7 @@ Actively respond to reviewers' questions and feedback:
 
 ***
 
-**After Pull Request (PR) Approval**;
+**After Pull Request (PR) Approval**
 
 **1. Ongoing Maintenance**
 
@@ -86,7 +86,7 @@ Actively respond to reviewers' questions and feedback:
 
 ***
 
-**Review Process**;
+**Review Process**
 
 **1. Review Order**
 
@@ -108,15 +108,15 @@ Dify.ai reserves the right to accept or reject plugin submissions.
 
 **Frequently Asked Questions**
 
-1. **How to determine if a plugin is unique?**;
+1. **How to determine if a plugin is unique?**
 
 Example: A Google search plugin that only adds language parameters should probably be submitted as an extension to an existing plugin. However, if the plugin implements significant functional improvements (like optimized batch processing or error handling), it can be submitted as a new plugin.
 
-2. **What if my PR is marked as stale or closed?**;
+2. **What if my PR is marked as stale or closed?**
 
 Stale PRs can be reopened after addressing feedback. Closed PRs (over 30 days) require creating a new PR.
 
-3. **Can plugins be updated during the Beta testing phase?**;
+3. **Can plugins be updated during the Beta testing phase?**
 
 Yes, but breaking changes should be avoided.
 

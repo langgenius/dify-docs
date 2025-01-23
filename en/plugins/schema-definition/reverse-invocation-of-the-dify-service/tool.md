@@ -10,7 +10,7 @@ In these cases, you need to request other implemented tools within the plugin. T
 
 The above requirements can be achieved by using the plugin's `self.session.tool` field.
 
-### **Request Installed Tools**;
+### **Request Installed Tools**
 
 Allows plugins to request various tools installed in the current Workspace, including other tool-type plugins.
 
@@ -31,7 +31,7 @@ def invoke_builtin_tool(
 
 Where `provider` is the plugin ID plus tool provider name, formatted like `langgenius/google/google`, `tool_name` is the specific tool name, and `parameters` are the parameters passed to that tool.
 
-### **Request Workflow as Tool**;
+### **Request Workflow as Tool**
 
 For more information about Workflow as Tool, please refer to this documentation.
 
@@ -52,7 +52,7 @@ def invoke_workflow_tool(
 
 Here, `provider` is the tool's ID, and `tool_name` is required when creating the tool.
 
-**Request Custom Tool**;
+**Request Custom Tool**
 
 **Entry**:
 

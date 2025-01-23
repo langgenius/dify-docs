@@ -11,7 +11,7 @@ Drag and drop or select files to upload. The number of files allowed for **batch
 **Limitations for uploading documents:**
 
 * The upload size limit for a single document is 15MB;
-* Different [subscription plans](https://dify.ai/pricing) for the SaaS version limit **batch upload numbers, total document uploads, and vector storage**;
+* Different [subscription plans](https://dify.ai/pricing) for the SaaS version limit **batch upload numbers, total document uploads, and vector storage**
 
 <figure><img src="https://assets-docs.dify.ai/2025/01/22064cb61356e4c005c4072d5d066cf6.png" alt=""><figcaption><p>Create knowledge</p></figcaption></figure>
 

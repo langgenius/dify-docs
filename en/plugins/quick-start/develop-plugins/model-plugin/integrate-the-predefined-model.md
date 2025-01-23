@@ -2,16 +2,16 @@
 
 Before accessing a predefined model, make sure you have created a [model provider](create-model-providers.md). Accessing predefined models is roughly divided into the following steps:
 
-1.  **Create Module Structures by Model Type**;
+1.  **Create Module Structures by Model Type**
 
     Create corresponding sub-modules under the provider module based on model types (such as `llm` or `text_embedding`). Ensure each model type has its own logical layer for easy maintenance and extension.
-2.  **Write Model Request Code**;
+2.  **Write Model Request Code**
 
     Create a Python file with the same name as the model type (e.g., llm.py) under the corresponding model type module. Define a class that implements specific model logic and complies with the system's model interface specifications.
-3.  **Add Predefined Model Configuration**;
+3.  **Add Predefined Model Configuration**
 
     If the provider offers predefined models, create `YAML` files named after each model (e.g., `claude-3.5.yaml`). Write file content according to [AIModelEntity](../../schema-definition/model/model-designing-rules.md#modeltype) specifications, describing model parameters and functionality.
-4.  **Test Plugin**;
+4.  **Test Plugin**
 
     Write unit tests and integration tests for newly added provider functionality to ensure all function modules meet expectations and operate normally.
 
@@ -89,7 +89,7 @@ Next, you need to create an `llm.py` code file under the `/models` path. Taking 
 
 Here's example code for some functionality:
 
-*   **LLM Request**;
+*   **LLM Request**
 
     The core method for requesting LLM, supporting both streaming and synchronous returns.
 

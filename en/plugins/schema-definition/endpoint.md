@@ -2,7 +2,7 @@
 
 In this article, we will use the [Quick Start: Rainbow Cat project](../develop-plugins/extension-plugin.md) as an example to illustrate the structure of Endpoint within the plugin. For the complete plugin code, please refer to the [Github repository](https://github.com/langgenius/dify-plugin-sdks/tree/main/python/examples/neko).
 
-### **Group Definition**;
+### **Group Definition**
 
 An `Endpoint` group is a collection of multiple `Endpoints`. When creating a new `Endpoint` in a `Dify` plugin, you may need to fill in the following configurations.
 
@@ -51,7 +51,7 @@ extra:
     source: "endpoints/duck.py"
 ```
 
-### **Endpoint Implementation**;
+### **Endpoint Implementation**
 
 Must implement a subclass inheriting from `dify_plugin.Enterpoint` and implement the `_invoke` method.
 

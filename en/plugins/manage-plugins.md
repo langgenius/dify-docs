@@ -2,18 +2,18 @@
 
 This document will guide Workspace owners and administrators in configuring and managing plugin permission settings. Plugin permission controls determine which users can perform plugin-related operations.
 
-### **Adjusting Plugin Permissions**;
+### **Adjusting Plugin Permissions**
 
 Team owners and administrators can control the following plugin permissions on the **"Plugins"** page in the top right corner of the Dify platform homepage:
 
-*   **Install and Manage Plugin Permissions**;
+*   **Install and Manage Plugin Permissions**
 
     This permission controls who can install and manage plugins in the system. Options:
 
     * **Everyone**: Allows all users in the Workspace to install and manage plugins
     * **Admins**: Only Workspace administrators can install and manage plugins
     * **No one**: No one is allowed to install and manage plugins
-*   **Plugin Debug Permissions**;
+*   **Plugin Debug Permissions**
 
     This permission controls who can perform plugin debugging work. Options:
 
@@ -23,7 +23,7 @@ Team owners and administrators can control the following plugin permissions on t
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/a2bca75a7757b7cafae2cb4ba0ad9fff.png" alt=""><figcaption><p>Plugins permission</p></figcaption></figure>
 
-### **Upgrading Plugins**;
+### **Upgrading Plugins**
 
 Click the "Plugins" button in the top right corner of the Dify platform, select the plugin that needs updating, and click the **"Upgrade"** button next to the plugin title.
 

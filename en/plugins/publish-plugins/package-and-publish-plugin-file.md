@@ -2,7 +2,7 @@
 
 After completing plugin development, you can package your plugin project as a local file and share it with others. Once the plugin file is obtained, it can be installed into a Dify Workspace. This guide will show you how to package a plugin project as a local file and how to install plugins using local files.
 
-### **Prerequisites**;
+### **Prerequisites**
 
 You'll need the Dify plugin development scaffolding tool for packaging plugins. Visit the Github project page to select and download the version for your operating system.
 

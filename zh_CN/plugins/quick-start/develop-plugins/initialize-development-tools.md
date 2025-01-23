@@ -26,7 +26,7 @@ chmod +x dify-plugin-darwin-arm64
 运行命令后，终端若返回类似 `v0.0.1-beta.15` 的版本号信息，则说明安装成功。
 
 {% hint style="info" %}
-**Tips:**;
+**Tips:**
 
 如果想要在系统全局使用 `dify` 命令运行脚手架工具，建议将该二进制文件重命名为 `dify` 并拷贝至 `/usr/local/bin` 系统路径内。
 

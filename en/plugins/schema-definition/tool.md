@@ -4,7 +4,7 @@ Before reading the detailed interface documentation, make sure you have read [Qu
 
 ### **Data Structures**
 
-#### **Message Returns**;
+#### **Message Returns**
 
 Dify supports multiple message types including `text`, `links`, `images`, `file BLOBs`, and `JSON`. You can return different types of messages through various interfaces.
 
@@ -12,7 +12,7 @@ By default, a tool's output in a `workflow` contains three fixed variables: `fil
 
 For example, use `create_image_message` to return images. Tools also support custom output variables for easier reference in `workflow`.
 
-#### **Image URL**;
+#### **Image URL**
 
 Simply pass the image URL, and Dify will automatically download and return the image to users.
 
@@ -21,7 +21,7 @@ def create_image_message(self, image: str) -> ToolInvokeMessage:
     pass
 ```
 
-#### **Links**;
+#### **Links**
 
 Use this interface to return a link:
 
@@ -30,7 +30,7 @@ def create_link_message(self, link: str) -> ToolInvokeMessage:
     pass
 ```
 
-#### **Text**;
+#### **Text**
 
 Use this interface to return a text message:
 
@@ -39,7 +39,7 @@ def create_text_message(self, text: str) -> ToolInvokeMessage:
     pass
 ```
 
-#### **Files**;
+#### **Files**
 
 Use this interface to return raw file data (images, audio, video, PPT, Word, Excel, etc.):
 
@@ -60,7 +60,7 @@ def create_json_message(self, json: dict) -> ToolInvokeMessage:
     pass
 ```
 
-#### **Variables**;
+#### **Variables**
 
 For non-streaming output variables, use this interface. Later values override earlier ones:
 
@@ -69,7 +69,7 @@ def create_variable_message(self, variable_name: str, variable_value: Any) -> To
     pass
 ```
 
-#### **Streaming Variables**;
+#### **Streaming Variables**
 
 For typewriter-effect text output, use streaming variables. If you reference this variable in a chatflow application's answer node, text will display with a typewriter effect. Currently only supports string data:
 
@@ -79,7 +79,7 @@ def create_stream_variable_message(
 ) -> ToolInvokeMessage:
 ```
 
-#### **Return Variable Definitions**;
+#### **Return Variable Definitions**
 
 To reference tool output variables in workflow applications, you need to define possible output variables beforehand. Dify plugins support `json_schema` format output variable definitions. Here's a simple example:
 

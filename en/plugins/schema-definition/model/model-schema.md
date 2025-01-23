@@ -164,7 +164,7 @@ def get_customizable_model_schema(self, model: str, credentials: dict) -> Option
     """
 ```
 
-When the vendor supports adding custom LLMs, this method can be implemented to make the model rules available to the custom model, returning None by default.;
+When the vendor supports adding custom LLMs, this method can be implemented to make the model rules available to the custom model, returning None by default.
 
 For most of the fine-tuned models under OpenAI vendor, you can get their base model by their fine-tuned model name, such as gpt-3.5-turbo-1106, and then return the predefined parameter rules of the base model, refer to the implementation of [OpenAI](https://github.com/langgenius/dify-official-plugins/tree/main/models/openai).
 

@@ -1,10 +1,10 @@
 # Agent
 
-**Agent Strategy Overview**;
+**Agent Strategy Overview**
 
 An Agent Strategy is an extensible template that defines standard input content and output formats. By developing specific Agent strategy interface functionality, you can implement various Agent strategies such as CoT (Chain of Thought) / ToT (Tree of Thought) / GoT (Graph of Thought) / BoT (Backbone of Thought), and achieve complex strategies like [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/).
 
-### **Adding Fields in Manifest**;
+### **Adding Fields in Manifest**
 
 To add Agent strategies in a plugin, add the `plugins.agent_strategies` field in the manifest.yaml file and define the Agent provider. Example code:
 
@@ -20,7 +20,7 @@ plugins:
 
 Some unrelated fields in the manifest file are omitted. For detailed Manifest format, refer to [Manifest](manifest.md).
 
-### **Defining the Agent Provider**;
+### **Defining the Agent Provider**
 
 Create an agent.yaml file with basic Agent provider information:
 
@@ -43,7 +43,7 @@ strategies:
 
 ### **Defining and Implementing Agent Strategy**
 
-#### **Definition**;
+#### **Definition**
 
 Create a function\_calling.yaml file to define the Agent strategy code:
 

@@ -24,11 +24,11 @@ To upload a new document to an existing knowledge base, go to **Knowledge Base**
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/5e0e64859a1ac51602d167ec55ef9350.png" alt=""><figcaption><p>Batch file Operations</p></figcaption></figure>
 
-**Note:**;
+**Note:**
 
-If there are some documents in your knowledge base that haven’t been updated or retrieved for a while, the system will disable inactive documents to ensure optimal performance.;
+If there are some documents in your knowledge base that haven’t been updated or retrieved for a while, the system will disable inactive documents to ensure optimal performance.
 
-* For Sandbox users, the "inactive document disable period" is **after 7 days**.;
+* For Sandbox users, the "inactive document disable period" is **after 7 days**.
 * For Professional and Team users, it is **after 30 days**. You can revert these documents and continue using them at any time by clicking the "Enable" button in the knowledge base.
 
 You can revert these disable documents and continue using them at any time by clicking the "Enable" button in the knowledge base. Paid users are provided with **one-click revert** function.

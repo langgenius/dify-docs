@@ -2,7 +2,7 @@
 
 Model type plugins enable the Dify platform to request models from specific model providers. For example, after installing the OpenAI model plugin, the Dify platform can request models like GPT-4, GPT-4o-2024-05-13, etc., provided by OpenAI.
 
-### **Model Plugin Structure**;
+### **Model Plugin Structure**
 
 To better understand the concepts involved in developing plugin models, here's an example structure within model type plugins:
 
@@ -59,7 +59,7 @@ Taking OpenAI as an example, which supports multiple model types:
 │ └── tts
 ```
 
-### **Getting Started with Creating Model Plugins**;
+### **Getting Started with Creating Model Plugins**
 
 Please follow these steps to create a model plugin, click the document titles for specific creation guides:
 

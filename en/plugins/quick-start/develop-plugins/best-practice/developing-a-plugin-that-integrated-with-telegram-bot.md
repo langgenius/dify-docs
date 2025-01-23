@@ -1,6 +1,6 @@
 # Developing a Plugin that Integrated with Telegram Bot
 
-### **Project Background**;
+### **Project Background**
 
 Integrating LLM services with popular real-time chat platforms (IM) has always been a hot topic for best practices. The Dify plugin ecosystem is dedicated to supporting simpler, more user-friendly integration methods. This article will use Telegram as an example to detail how to develop a plugin that connects to a Telegram Bot.
 
@@ -10,10 +10,10 @@ Integrating LLM services with popular real-time chat platforms (IM) has always b
 
 **Integration Map:**
 
-1.  **User uses Telegram Bot**;
+1.  **User uses Telegram Bot**
 
     When a user sends a message in Telegram, Telegram sends an HTTP request to the Dify plugin.
-2.  **Message forwarded to Telegram Bot Plugin**;
+2.  **Message forwarded to Telegram Bot Plugin**
 
     Like an email system needing a recipient's address, when using a Telegram bot, messages need to be forwarded back to the Dify application for processing. This can be done by configuring a Telegram Webhook address through Telegram's API and entering it into the plugin for connection.
 3.  **Plugin receives message and returns to a Dify application**
@@ -29,7 +29,7 @@ Integrating LLM services with popular real-time chat platforms (IM) has always b
 * Dify plugin scaffolding tool
 * Python environment, version ≥ 3.10
 
-#### **Apply for Telegram Bot**;
+#### **Apply for Telegram Bot**
 
 Follow [@BotFather's](https://t.me/BotFather) guide to create a new bot. For detailed creation process, refer to [Telegram's official documentation](https://core.telegram.org/bots/tutorial).;
 
@@ -37,11 +37,11 @@ After creation, you'll receive an HTTP API Token for use in subsequent steps.
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/668783d0362200257b2cb5385ecbacff.png" alt="" width="375"><figcaption></figcaption></figure>
 
-**Install Dify Plugin Scaffolding Tool**;
+**Install Dify Plugin Scaffolding Tool**
 
 For more details, please take refer to [initialize-development-tools.md](../initialize-development-tools.md "mention")
 
-**Initializing the Python Environment**;
+**Initializing the Python Environment**
 
 See the [Python Installation Tutorial](https://pythontest.com/python/installing-python-3-11/) for detailed instructions, or ask LLM for a complete installation tutorial.
 
@@ -49,7 +49,7 @@ See the [Python Installation Tutorial](https://pythontest.com/python/installing-
 
 Now let's begin the actual plugin coding work. Before starting, make sure you've read [Quick Start: Developing Extension Type Plugin](../extension-plugin.md), or have previously developed a Dify plugin.
 
-#### **Initialize Project**;
+#### **Initialize Project**
 
 Run the following command to initialize the plugin development project:
 
@@ -63,7 +63,7 @@ For more information about plugins making reverse request to Dify platform capab
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/d89a6282c5584fc43a9cadeddf09c0de.png" alt=""><figcaption><p>Plugins permission</p></figcaption></figure>
 
-#### **1. Edit Configuration Form**;
+#### **1. Edit Configuration Form**
 
 In this plugin, you need to specify which Dify App to use for replies, and you'll need the Telegram bot token when replying, so these two fields need to be added to the plugin form.
 

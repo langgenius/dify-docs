@@ -9,7 +9,7 @@ This guide will help you quickly develop an Extension type plugin and understand
 
 For detailed instructions on preparing the plugin development scaffolding tool, please refer to [Initializing Development Tools](initialize-development-tools.md).
 
-### **Create New Project**;
+### **Create New Project**
 
 In the current path, run the CLI tool to create a new dify plugin project:
 
@@ -23,7 +23,7 @@ If you have renamed the binary file to `dify` and copied it to the `/usr/local/b
 dify plugin init
 ```
 
-### **Fill Plugin Information**;
+### **Fill Plugin Information**
 
 Follow the prompts to configure the plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.;
 
@@ -35,13 +35,13 @@ Once filled out, select Python in the Plugin Development Language section.
 
 <figure><img src="https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png" alt=""><figcaption><p>Plugins development: Python</p></figcaption></figure>
 
-### **3. Select Plugin Type and Initialize Project Template**;
+### **3. Select Plugin Type and Initialize Project Template**
 
 All templates in the scaffolding tool provide complete code projects. For demonstration purposes, this guide will use the `Extension` type plugin template as an example. For developers already familiar with plugin development, templates are not necessary, and you can refer to the interface documentation to complete different types of plugin development.
 
 <figure><img src="https://assets-docs.dify.ai/2024/11/ff08f77b928494e10197b456fc4e2d5b.png" alt=""><figcaption><p>Extension</p></figcaption></figure>
 
-#### **Configure Plugin Permissions**;
+#### **Configure Plugin Permissions**
 
 The plugin needs permissions to access the Dify main platform for proper connection. The following permissions need to be granted for this example plugin:
 
@@ -86,7 +86,7 @@ The base file structure of the plugin contains the following:
 
 ### Developing Plugins
 
-#### **1. Define Plugin's Request Endpoint**;
+#### **1. Define Plugin's Request Endpoint**
 
 Edit `endpoints/test_plugin.yaml`, modifying it according to the following code:
 

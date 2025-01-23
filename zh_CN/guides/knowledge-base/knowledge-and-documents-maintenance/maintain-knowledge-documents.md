@@ -131,7 +131,7 @@
 
 ![通用模式 - 添加分段](https://assets-docs.dify.ai/2024/12/552ff4ab9e77130ad09aaef878b19cc9.png)
 
-手动添加文本分段时，你可以选择添加正文和关键词。内容填写后，勾选尾部&#x7684;**“连续新增”**&#x6309;钮后，可以继续添加文本。
+手动添加文本分段时，你可以选择添加正文和关键词。内容填写后，勾选尾部 **“连续新增”** 钮后，可以继续添加文本。
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/cd769622bc1d85c037277ef6fa5247c9.png" alt=""><figcaption><p>通用模式 - 添加文本分段</p></figcaption></figure>
 
@@ -147,7 +147,7 @@
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/ed4be3bf178e3a41d53bcc10255ad3b2.png" alt=""><figcaption><p>父子模式 — 添加区块</p></figcaption></figure>
 
-填写内容后，勾选尾部&#x7684;**“连续新增”**&#x6309;钮后，可以继续添加文本。
+填写内容后，勾选尾部 **“连续新增”** 钮后，可以继续添加文本。
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/ba64232eea364b68f2e38341eb9cf5c1.png" alt=""><figcaption><p>父子模式 - 添加内容区块</p></figcaption></figure>
 

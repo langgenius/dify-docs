@@ -6,7 +6,7 @@ Note that requesting models requires passing a ModelConfig type parameter. Its s
 
 For example, for LLM type models, it needs to include `completion_params` and `mode` parameters. You can manually build this structure or use `model-selector` type parameters or configuration.
 
-### **Request LLM**;
+### **Request LLM**
 
 #### Entry
 
@@ -30,7 +30,7 @@ def invoke(
 
 Note: If the model you're requesting doesn't have tool\_call capability, the tools passed here won't take effect.
 
-#### **Example**;
+#### **Example**
 
 If you want to request OpenAI's gpt-4o-mini model in a Tool, refer to the following example code:
 
@@ -71,7 +71,7 @@ class LLMTool(Tool):
 
 Notice that the `query` parameter from `tool_parameters` is passed in the code.
 
-### **Best Practices**;
+### **Best Practices**
 
 It's not recommended to manually build `LLMModelConfig`. Instead, allow users to select their desired model in the UI. In this case, you can modify the tool's parameter list by adding a `model` parameter according to the following configuration:
 
@@ -154,7 +154,7 @@ class LLMTool(Tool):
                 yield self.create_text_message(text=chunk.delta.message.content)
 ```
 
-### **Request Summary**;
+### **Request Summary**
 
 You can request this endpoint to summarize a text. It will use the system model in your current workspace to summarize the text.
 
@@ -175,7 +175,7 @@ def invoke(
 ) -> str:
 ```
 
-**Request TextEmbedding**;
+**Request TextEmbedding**
 
 **Entry**
 
@@ -192,7 +192,7 @@ def invoke(
     pass
 ```
 
-### **Request Rerank**;
+### **Request Rerank**
 
 #### Entry
 
@@ -209,7 +209,7 @@ def invoke(
     pass
 ```
 
-### **Request TTS**;
+### **Request TTS**
 
 #### Entry
 
@@ -228,7 +228,7 @@ def invoke(
 
 Note: The bytes stream returned by the TTS endpoint is an mp3 audio byte stream, with each iteration returning a complete audio. If you want to perform more in-depth processing tasks, please select an appropriate library.
 
-### **Request Speech2Text**;
+### **Request Speech2Text**
 
 **Entry**:
 
@@ -247,7 +247,7 @@ def invoke(
 
 Where file is an mp3-encoded audio file.
 
-### **Request Moderation**;
+### **Request Moderation**
 
 **Entry**:
 

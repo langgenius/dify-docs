@@ -15,7 +15,7 @@ You can package multiple plugins into a Bundle using the Dify CLI tool. Bundle p
 
 For detailed instructions on preparing the plugin development scaffolding tool, please refer to [Initializing Development Tools](initialize-development-tools.md).
 
-### **Create Bundle Project**;
+### **Create Bundle Project**
 
 In the current path, run the scaffolding command-line tool to create a new plugin package project:
 
@@ -23,7 +23,7 @@ In the current path, run the scaffolding command-line tool to create a new plugi
 ./dify-plugin-darwin-arm64 bundle init
 ```
 
-#### **1. Enter Plugin Information**;
+#### **1. Enter Plugin Information**
 
 Follow the prompts to configure plugin name, author information, and plugin description. If you're working in a team, you can also enter an organization name as the author.;
 
@@ -37,7 +37,7 @@ Fill in the information and hit enter, the Bundle plugin project directory will 
 
 #### **2. Add Dependencies**
 
-* **Marketplace**;
+* **Marketplace**
 
 Execute the following command:
 
@@ -47,7 +47,7 @@ dify-plugin bundle append marketplace . --marketplace_pattern=langgenius/openai:
 
 Where marketplace\_pattern is the plugin reference in the marketplace, format: organization-name/plugin-name:version
 
-* **Github**;
+* **Github**
 
 Execute the following command:
 
@@ -57,7 +57,7 @@ dify-plugin bundle append github . --repo_pattern=langgenius/openai:0.0.1/openai
 
 Where repo\_pattern is the plugin reference in github, format: `organization-name/repository-name:release/attachment-name`
 
-* **Package**;
+* **Package**
 
 Execute the following command:
 
@@ -67,7 +67,7 @@ dify-plugin bundle append package . --package_path=./openai.difypkg
 
 Where package\_path is the plugin package directory.
 
-### **Package Bundle Project**;
+### **Package Bundle Project**
 
 Run the following command to package the Bundle plugin:
 

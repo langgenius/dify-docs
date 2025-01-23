@@ -9,7 +9,7 @@ Creating a Model Type Plugin The first step in creating a Model type plugin is t
 
 For detailed instructions on preparing the plugin development scaffolding tool, please refer to [Initializing Development Tools](../initialize-development-tools.md).
 
-### **Create New Project**;
+### **Create New Project**
 
 In the current path, run the CLI tool to create a new dify plugin project:
 
@@ -23,13 +23,13 @@ If you have renamed the binary file to `dify` and copied it to the `/usr/local/b
 dify plugin init
 ```
 
-### **Choose Model Plugin Template**;
+### **Choose Model Plugin Template**
 
 Plugins are divided into three types: tools, models, and extensions. All templates in the scaffolding tool provide complete code projects. This example will use an `LLM` type plugin.
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/8efe646e9174164b9edbf658b5934b86.png" alt=""><figcaption><p>Plugin type: llm</p></figcaption></figure>
 
-#### **Configure Plugin Permissions**;
+#### **Configure Plugin Permissions**
 
 Configure the following permissions for this LLM plugin:
 
@@ -39,7 +39,7 @@ Configure the following permissions for this LLM plugin:
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/10f3b3ee6c03a1215309f13d712455d4.png" alt=""><figcaption><p>Model Plugin Permission</p></figcaption></figure>
 
-#### **Model Type Configuration**;
+#### **Model Type Configuration**
 
 Model providers support three configuration methods:
 
@@ -48,14 +48,14 @@ Model providers support three configuration methods:
 
 These configuration methods can coexist, meaning a provider can support predefined-model + customizable-model or predefined-model + fetch-from-remote combinations.
 
-### **Adding a New Model Provider**;
+### **Adding a New Model Provider**
 
 Here are the main steps to add a new model provider:
 
-1.  **Create Model Provider Configuration YAML File**;
+1.  **Create Model Provider Configuration YAML File**
 
     Add a YAML file in the provider directory to describe the provider's basic information and parameter configuration. Write content according to ProviderSchema requirements to ensure consistency with system specifications.
-2.  **Write Model Provider Code**;
+2.  **Write Model Provider Code**
 
     Create provider class code, implementing a Python class that meets system interface requirements for connecting with the provider's API and implementing core functionality.
 
@@ -63,7 +63,7 @@ Here are the main steps to add a new model provider:
 
 Here are the full details of how to do each step.
 
-#### **1. Create Model Provider Configuration File**;
+#### **1. Create Model Provider Configuration File**
 
 Manifest is a YAML format file that declares the model provider's basic information, supported model types, configuration methods, and credential rules. The plugin project template will automatically generate configuration files under the `/providers` path.
 
@@ -207,7 +207,7 @@ Of course, it is also possible to reserve the `validate_provider_credentials` im
 
 For custom model providers like `Xinference`, you can skip the full implementation step. Simply create an empty class called `XinferenceProvider` and implement an empty `validate_provider_credentials` method in it.
 
-**Detailed Explanation:**;
+**Detailed Explanation:**
 
 • `XinferenceProvider` is a placeholder class used to identify custom model providers.;
 

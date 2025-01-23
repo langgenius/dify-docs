@@ -23,7 +23,7 @@ This article uses `GoogleSearch` as an example of how to quickly develop a tool 
 
 For detailed instructions on how to prepare scaffolding tools for plugin development, see [Initializing Development Tools](initialize-development-tools.md).
 
-### **Create New Project**;
+### **Create New Project**
 
 In the current path, run the CLI tool to create a new dify plugin project:
 

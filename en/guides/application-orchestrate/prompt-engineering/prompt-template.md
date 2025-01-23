@@ -141,7 +141,7 @@ And answer according to the language of the user's question.
 Dify has collaborated with some model providers for joint deep optimization of system prompts, and the initial templates for some models may differ from the examples provided above.
 {% endhint %}
 
-### **Parameter Definitions**;
+### **Parameter Definitions**
 
 * **Context**: Used to insert related text from the knowledge as context into the complete prompts.;
 * **Pre-prompt**: Pre-prompts arranged in the **Basic Mode** are inserted into the complete prompts.;

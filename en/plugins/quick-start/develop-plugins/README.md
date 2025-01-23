@@ -1,6 +1,6 @@
 # Develop Plugins
 
-### **Quick Start**;
+### **Quick Start**
 
 You can quickly understand how to develop different types of plugins and master the functional components involved in plugin development through these development examples:
 
@@ -8,7 +8,7 @@ You can quickly understand how to develop different types of plugins and master 
 2. [Quick Start: Develop a Google Search tool plugin](tool-plugin.md)
 3. [Quick Start: Package multiple plugins as a Bundle type plugin](bundle.md)
 
-### **Endpoints Documentation**;
+### **Endpoints Documentation**
 
 If you want to read detailed interface documentation for plugin projects, you can refer to these standard specification documents:
 
@@ -25,7 +25,7 @@ If you want to read detailed interface documentation for plugin projects, you ca
    4. [Reverse Invoking Tools](../schema-definition/reverse-invocation-of-the-dify-service/tool.md)
 8. [Plugin Persistence Storage Capabilities](../schema-definition/persistent-storage.md)
 
-### **Contribution Guidelines**;
+### **Contribution Guidelines**
 
 Want to contribute code and features to Dify Plugin? Or want to contribute code to official plugins?;
 

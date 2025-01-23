@@ -1,7 +1,7 @@
 # Model Designing Rules
 
-* Model provider rules are based on the [Provider](model-designing-rules.md#provider) entity.;
-* Model rules are based on the [AIModelEntity](model-designing-rules.md#provider) entity.;
+* Model provider rules are based on the [Provider](model-designing-rules.md#provider) entity.
+* Model rules are based on the [AIModelEntity](model-designing-rules.md#provider) entity.
 
 > All entities below are based on Pydantic BaseModel and can be found in the entities module.
 

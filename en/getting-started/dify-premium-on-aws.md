@@ -12,9 +12,9 @@ If this is your first time accessing Dify, enter the Admin initialization passwo
 
 After the AMI is deployed, access Dify via the instance's public IP found in th EC2 console (HTTP port 80 is used by default).
 
-### Upgrading;
+### Upgrading
 
-In the EC2 instance, run the following commands:;
+In the EC2 instance, run the following commands:
 
 ```
 git clone https://github.com/langgenius/dify.git /tmp/dify
