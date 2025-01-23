@@ -36,7 +36,7 @@ description: 'Author: Allen'
 
 ### 使用插件
 
-将[插件安装](install-plugins.md)至 Workspace 后即可在 Dify 应用内进行使用。下文将简要介绍不同类型的插件对应不同的使用方法。
+将插件安装至 Workspace 后即可在 Dify 应用内进行使用。下文将简要介绍不同类型的插件对应不同的使用方法。
 
 #### 模型插件
 

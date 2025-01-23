@@ -28,7 +28,7 @@ After [packaging a plugin](../publish-plugins/package-and-publish-plugin-file.md
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/8c31c4025a070f23455799f942b91a57.png" alt=""><figcaption></figcaption></figure>
 
-### **Plugin Authorization**
+#### Plugin Authorization
 
 Some third-party service plugins may require API Keys or other forms of authorization. After installation, manual authorization is needed for normal use.
 
@@ -36,23 +36,27 @@ Some third-party service plugins may require API Keys or other forms of authoriz
 
 <figure><img src="https://assets-docs.dify.ai/2024/11/972de4c9fa00f792a1ab734b080aafdc.png" alt=""><figcaption><p>Plugin <strong>Authorization</strong></p></figcaption></figure>
 
-After [installing a plugin](install-and-use-plugins.md) to your Workspace, you can use it within Dify applications. Below is a brief introduction to different usage methods for each type of plugin.
+### Use Plugins
 
-### **Use Plugins**
+After installing the plug-in to the Workspace, you can use it in the Dify application. The following will briefly introduce the different usage methods of different types of plug-ins.
 
-Taking `OpenAI` as an example, after installing a model type plugin, click on **Profile Picture → Settings → Model Providers** in the top right corner, and configure the API Key to activate the model provider. After authorization, you can select and use this large language model in all application types.
+#### Model Type Plugins
+
+Taking `OpenAI` as an example, after installing a model type plugin, click on **Profile Picture → Settings → Model Providers** in the top right corner, and configure the API Key to activate the model provider.
+
+<figure><img src="https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png" alt=""><figcaption><p>Authorize OpenAI API Key</p></figcaption></figure>
 
 Authorization allows you to select and use this large language model within all application types.
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/4a38b1ea534ca68515839c518c250d2f.png" alt=""><figcaption><p>Using model type plugins</p></figcaption></figure>
 
-### **Tool Type Plugins**
+#### Tool Type Plugins
 
 Tool type plugins can be used in Chatflow, Workflow, and Agent application types. This section will demonstrate usage in these application types using the `Google` tool plugin as an example.
 
 > Some tool plugins require API Key authorization before use, so you can configure them after installation for subsequent use.
 
-#### **Agent**
+#### Agent
 
 After creating an Agent application, find the **"Tools"** option at the bottom of the application orchestration page. Select the installed tool plugin.
 
@@ -74,15 +78,13 @@ In the plugin's input variables, fill in the user's input query variable or othe
 
 Different tool plugins have different usage methods. Please refer to each plugin's introduction page for specific parameter configuration methods.
 
-### **Extension Type Plugins**
+<figure><img src="https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png" alt=""><figcaption><p>Use Plugins</p></figcaption></figure>
 
-Extension type plugins are highly customizable applications with independent request endpoints, generally not requiring integration with Dify applications.
+### Read more
 
-Different extension type plugins vary greatly in functionality; please refer to each plugin's instructions for detailed usage methods.
+To learn how to get started with plugin development, you can read the following article:
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/d12c7d40f2a20ebae1d4a441e46689a7.png" alt=""><figcaption><p>Extension plugins usage</p></figcaption></figure>
-
-### **Bundles Type Plugins**
-
-Bundles plugins are mainly used for batch installation of multiple plugins simultaneously. A bundle may contain model, tool, and extension type plugins. Specific usage methods should follow each plugin's instructions.
+{% content-ref url="develop-plugins/" %}
+[develop-plugins](develop-plugins/)
+{% endcontent-ref %}
 
