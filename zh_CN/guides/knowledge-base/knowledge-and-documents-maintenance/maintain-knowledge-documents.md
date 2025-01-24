@@ -222,9 +222,9 @@
 你可以访问 **分段设置**，点击 **保存并处理** 按钮以保存对分段设置的修改，并重新触发当前文档的分段流程。
 当你保存设置并完成嵌入处理后，文档的分段列表将自动更新，无需手动刷新页面。
 
-![Chunk Settings](https://assets-docs.dify.ai/2025/01/35c287a11a7db4f7f1974e9080d86169.png)
+![Chunk Settings](https://assets-docs.dify.ai/2025/01/36cb20be8aae1f368ebf501c0d579051.png)
 
-![Save & Process](https://assets-docs.dify.ai/2025/01/43a05344a425123f0db1c31a9c92bed6.png)
+<img src="https://assets-docs.dify.ai/2025/01/a47b890c575a7693c40303d3d7cb4952.png" width="400" alt="Save & Process">
 
 ***
 
