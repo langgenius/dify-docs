@@ -230,9 +230,9 @@ Knowledge Base supports reconfiguring document segmentation.
 Go to **Chunk Settings**, adjust the settings, and click **Save & Process** to save changes and reprocess the document.
 The chunk list will update automatically once processing is complete—no page refresh needed.
 
-![Chunk Settings](https://assets-docs.dify.ai/2025/01/35c287a11a7db4f7f1974e9080d86169.png)
+![Chunk Settings](https://assets-docs.dify.ai/2025/01/36cb20be8aae1f368ebf501c0d579051.png)
 
-![Save & Process](https://assets-docs.dify.ai/2025/01/43a05344a425123f0db1c31a9c92bed6.png)
+<img src="https://assets-docs.dify.ai/2025/01/a47b890c575a7693c40303d3d7cb4952.png" width="400" alt="Save & Process">
 
 ***
 
