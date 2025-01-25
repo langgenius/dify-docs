@@ -61,7 +61,7 @@ class ParameterExtractorTool(Tool):
         yield self.create_text_message(response.outputs["name"])
 ```
 
-### **質問分類ノードのリクエスト**&#x20;
+### **質問分類ノードのリクエスト**
 
 #### **エントリー**
 

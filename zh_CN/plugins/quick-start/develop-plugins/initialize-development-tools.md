@@ -43,25 +43,22 @@ chmod +x dify-plugin-darwin-arm64
 
 请参考以下内容查看不同类型的插件开发示例。
 
-{% content-ref url="tool-type-plugin.md" %}
-[tool-type-plugin.md](tool-type-plugin.md)
+{% content-ref url="tool-plugin.md" %}
+[tool-plugin.md](tool-plugin.md)
 {% endcontent-ref %}
 
-{% content-ref url="model/" %}
-[model](model/)
+{% content-ref url="model-plugin/" %}
+[model-plugin](model-plugin/)
 {% endcontent-ref %}
 
 {% content-ref url="agent-strategy.md" %}
 [agent-strategy.md](agent-strategy.md)
 {% endcontent-ref %}
 
-{% content-ref url="extension.md" %}
-[extension.md](extension.md)
+{% content-ref url="extension-plugin.md" %}
+[extension.md](extension-plugin.md)
 {% endcontent-ref %}
 
 {% content-ref url="bundle.md" %}
 [bundle.md](bundle.md)
 {% endcontent-ref %}
-
-
-

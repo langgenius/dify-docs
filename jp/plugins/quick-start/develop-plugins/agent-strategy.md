@@ -1,40 +1,40 @@
-# Agent 策略插件
+## エージェント戦略プラグイン
 
-Agent 策略插件能够帮助 LLM 执行推理或决策逻辑，包括工具选择、调用和结果处理，以更加自动化的方式处理问题。
+エージェント戦略プラグインは、LLMが推論や意思決定ロジックを実行するのを支援します。具体的には、ツール選択、呼び出し、結果処理といった一連の動作をより自動化された方法で実行し、問題を解決します。
 
-本文将演示如何创建一个具备工具调用（Function Calling）能力，自动获取当前准确时间的插件。
+この記事では、ツール呼び出し（Function Calling）機能を備え、現在の正確な時刻を自動的に取得するプラグインの作成方法を説明します。
 
-### 前置准备
+### 事前準備
 
-* Dify 插件脚手架工具
-* Python 环境，版本号 ≥ 3.12
+* Difyプラグインの足場ツール
+* Python環境（バージョン3.12以上）
 
-关于如何准备插件开发的脚手架工具，详细说明请参考[初始化开发工具](initialize-development-tools.md)。
+プラグイン開発の足場ツールを準備する方法については、[開発ツールの初期化](initialize-development-tools.md)を参照してください。
 
 {% hint style="info" %}
-**Tips**：在终端运行 `dify version` 命令，检查是否出现版本号以确认成功安装脚手架工具。
+**ヒント**：ターミナルで `dify version` コマンドを実行し、バージョン番号が表示されることを確認することで、足場ツールが正常にインストールされたことを確認できます。
 {% endhint %}
 
-### 1. 初始化插件模板
+### 1. プラグインテンプレートの初期化
 
-运行以下命令，初始化 Agent 插件开发模板。
+以下のコマンドを実行して、Agentプラグイン開発テンプレートを初期化します。
 
 ```
 dify plugin init
 ```
 
-按照页面提示，填写对应信息。参考以下代码中的备注信息，进行设置。
+表示される指示に従い、必要な情報を入力します。以下のコードのコメントを参考に設定してください。
 
 ```
 ➜  Dify Plugins Developing dify plugin init
 Edit profile of the plugin
-Plugin name (press Enter to next step): # 填写插件的名称
-Author (press Enter to next step): Author name # 填写插件作者
-Description (press Enter to next step): Description # 填写插件的描述
+Plugin name (press Enter to next step): # プラグインの名前を入力
+Author (press Enter to next step): Author name # プラグインの作者を入力
+Description (press Enter to next step): Description # プラグインの説明を入力
 ---
 Select the language you want to use for plugin development, and press Enter to con
 BTW, you need Python 3.12+ to develop the Plugin if you choose Python.
--> python # 选择 Python 环境
+-> python # Python環境を選択
   go (not supported yet)
 ---
 Based on the ability you want to extend, we have divided the Plugin into four type
@@ -46,91 +46,86 @@ Based on the ability you want to extend, we have divided the Plugin into four ty
 
 What's more, we have provided the template for you, you can choose one of them b
   tool
--> agent-strategy # 选择 Agent 策略模板
+-> agent-strategy # エージェント戦略テンプレートを選択
   llm
   text-embedding
 ---
 Configure the permissions of the plugin, use up and down to navigate, tab to sel
 Backwards Invocation:
 Tools:
-    Enabled: [✔]  You can invoke tools inside Dify if it's enabled # 默认开启
+    Enabled: [✔]  You can invoke tools inside Dify if it's enabled # デフォルトで有効
 Models:
-    Enabled: [✔]  You can invoke models inside Dify if it's enabled # 默认开启
-    LLM: [✔]  You can invoke LLM models inside Dify if it's enabled # 默认开启
+    Enabled: [✔]  You can invoke models inside Dify if it's enabled # デフォルトで有効
+    LLM: [✔]  You can invoke LLM models inside Dify if it's enabled # デフォルトで有効
     Text Embedding: [✘]  You can invoke text embedding models inside Dify if it'
     Rerank: [✘]  You can invoke rerank models inside Dify if it's enabled
 ...
 ```
 
-初始化插件模板后将生成一个代码文件夹，包含插件开发过程中所需的完整资源。熟悉 Agent 策略插件的整体代码结构有助于插件的开发过程。
+プラグインテンプレートを初期化すると、プラグインの開発に必要なすべてのリソースを含むコードフォルダが生成されます。エージェント戦略プラグインのコード構造を理解することで、開発プロセスがスムーズになります。
 
 ```
-├── GUIDE.md               # User guide and documentation
-├── PRIVACY.md            # Privacy policy and data handling guidelines
-├── README.md             # Project overview and setup instructions
-├── _assets/             # Static assets directory
-│   └── icon.svg         # Agent strategy provider icon/logo
-├── main.py              # Main application entry point
-├── manifest.yaml        # Basic plugin configuration
-├── provider/           # Provider configurations directory
-│   └── basic_agent.yaml # Your agent provider settings
-├── requirements.txt    # Python dependencies list
-└── strategies/         # Strategy implementation directory
-    ├── basic_agent.py  # Basic agent strategy implementation
-    └── basic_agent.yaml # Basic agent strategy configuration
+├── GUIDE.md               # ユーザーガイドとドキュメント
+├── PRIVACY.md            # プライバシーポリシーとデータ処理ガイドライン
+├── README.md             # プロジェクト概要と設定手順
+├── _assets/             # 静的アセットディレクトリ
+│   └── icon.svg         # エージェント戦略プロバイダーのアイコン/ロゴ
+├── main.py              # メインアプリケーションのエントリーポイント
+├── manifest.yaml        # 基本的なプラグイン構成
+├── provider/           # プロバイダー構成ディレクトリ
+│   └── basic_agent.yaml # Agentプロバイダーの設定
+├── requirements.txt    # Python依存関係リスト
+└── strategies/         # 戦略実装ディレクトリ
+    ├── basic_agent.py  # 基本的なエージェント戦略の実装
+    └── basic_agent.yaml # 基本的なエージェント戦略の構成
 ```
 
-插件的功能代码集中在 `strategies/` 目录内。
+プラグインの機能コードは、`strategies/` ディレクトリにまとめられています。
 
-### 2. 开发插件功能
+### 2. プラグイン機能の開発
 
-Agent 策略插件的开发主要围绕以下两个文件展开：
+エージェントプラグインの開発は、主に以下の2つのファイルを中心に行います。
 
-* 插件声明文件：`strategies/basic_agent.yaml`
-* 插件功能代码：`strategies/basic_agent.py`
+* プラグイン定義ファイル：`strategies/basic_agent.yaml`
+* プラグイン機能コード：`strategies/basic_agent.py`
 
-#### 2.1 定义参数
+#### 2.1 パラメータの定義
 
-要创建一个 Agent 插件，首先需要在 `strategies/basic_agent.yaml` 文件中定义插件所需的参数。这些参数决定了插件的核心功能，例如调用 LLM 模型和使用工具的能力。
+Agentプラグインを作成するには、まず `strategies/basic_agent.yaml` ファイルでプラグインに必要なパラメータを定義します。これらのパラメータは、LLMモデルの呼び出しやツールの使用など、プラグインの核となる機能を決定します。
 
-建议优先配置以下四个基础参数：
+次の4つの基本パラメータを優先的に設定することをお勧めします。
 
-1\. **model**：指定要调用的大语言模型（LLM），如 GPT-4、GPT-4o-mini 等。
-
-2\. **tools**：定义插件可以使用的工具列表，增强插件功能。
-
-3\. **query**：设置与模型交互的提示词或输入内容。
-
-4\. **maximum\_iterations**：限制插件执行的最大迭代次数，避免过度计算。
-
-示例代码：
+1.  **model**：呼び出すLLM（GPT-4、GPT-4o-miniなど）を指定します。
+2.  **tools**：プラグインが使用できるツールリストを定義し、プラグインの機能を拡張します。
+3.  **query**：モデルとの対話に使用するプロンプトまたは入力内容を設定します。
+4.  **maximum\_iterations**：プラグインの最大反復回数を制限し、過剰な計算を避けます。
 
 ```yaml
 identity:
-  name: basic_agent # the name of the agent_strategy
-  author: novice # the author of the agent_strategy
+  name: basic_agent # agent_strategyの名前
+  author: novice # agent_strategyの作者
   label:
-    en_US: BasicAgent # the engilish label of the agent_strategy
+    en_US: BasicAgent # agent_strategyの英語ラベル
 description:
-  en_US: BasicAgent # the english description of the agent_strategy
+  en_US: BasicAgent # agent_strategyの英語説明
 parameters:
-  - name: model # the name of the model parameter
+  - name: model # modelパラメータの名前
     type: model-selector # model-type
-    scope: tool-call&llm # the scope of the parameter
+    scope: tool-call&llm # パラメータのスコープ
     required: true
     label:
       en_US: Model
       zh_Hans: 模型
       pt_BR: Model
-  - name: tools # the name of the tools parameter
-    type: array[tools] # the type of tool parameter
+  - name: tools # toolsパラメータの名前
+    type: array[tools] # toolパラメータの型
     required: true
     label:
       en_US: Tools list
       zh_Hans: 工具列表
       pt_BR: Tools list
-  - name: query # the name of the query parameter
-    type: string # the type of query parameter
+  - name: query # queryパラメータの名前
+    type: string # queryパラメータの型
     required: true
     label:
       en_US: Query
@@ -144,7 +139,7 @@ parameters:
       en_US: Maxium Iterations
       zh_Hans: 最大迭代次数
       pt_BR: Maxium Iterations
-    max: 50 # if you set the max and min value, the display of the parameter will be a slider
+    max: 50 # maxとminの値を設定すると、パラメータ表示がスライダーになります
     min: 1
 extra:
   python:
@@ -152,15 +147,15 @@ extra:
 
 ```
 
-完成参数配置后，插件将在自动生成相应的设置的使用页面，方便你进行直观、便捷的调整和使用。
+パラメータ設定が完了すると、プラグインは対応する設定ページを自動的に生成し、直感的かつ使いやすく調整や利用ができます。
 
-![Agent 策略插件的使用页面](https://assets-docs.dify.ai/2025/01/d011e2eba4c37f07a9564067ba787df8.png)
+![エージェント戦略プラグインの使用ページ](https://assets-docs.dify.ai/2025/01/d011e2eba4c37f07a9564067ba787df8.png)
 
-#### 2.2 获取参数并执行
+#### 2.2 パラメータの取得と実行
 
-当使用者在插件的使用页面完成基础的信息填写后，插件需要处理已填写的传入参数。因此需要先在 `strategies/basic_agent.py` 文件内定义 Agent 参数类供后续使用。
+ユーザーがプラグインの設定ページで基本情報を入力すると、プラグインは入力されたパラメータを処理する必要があります。そのため、まず `strategies/basic_agent.py` ファイル内で、後で使用するためのAgentパラメータクラスを定義します。
 
-校验传入参数：
+入力パラメータの検証：
 
 ```python
 from dify_plugin.entities.agent import AgentInvokeMessage
@@ -175,7 +170,7 @@ class BasicParams(BaseModel):
 
 ```
 
-获取参数后，执行具体的业务逻辑：
+パラメータを取得した後、具体的な処理ロジックを実行します。
 
 ```python
 class BasicAgentAgentStrategy(AgentStrategy):
@@ -183,21 +178,21 @@ class BasicAgentAgentStrategy(AgentStrategy):
         params = BasicParams(**parameters)
 ```
 
-#### 3. 调用模型
+#### 3. モデルの呼び出し
 
-在 Agent 策略插件中，**调用模型**是核心执行逻辑之一。可以通过 SDK 提供的 `session.model.llm.invoke()` 方法高效地调用 LLM 模型，实现文本生成、对话处理等功能。
+エージェント戦略プラグインでは、**モデルの呼び出し**が中心的な処理ロジックの1つです。SDKが提供する `session.model.llm.invoke()` メソッドを使用すると、LLMモデルを効率的に呼び出して、テキスト生成や対話処理などの機能を実現できます。
 
-如果希望模型具备**调用工具**的能力，首先需要确保模型能够输出符合工具调用格式的输入参数。也就是说，模型需要根据用户指令生成符合工具接口要求的参数。
+モデルに**ツール呼び出し**機能を持たせたい場合は、まず、モデルがツール呼び出し形式に沿ったパラメータを出力できることを確認する必要があります。つまり、モデルはユーザーの指示に従って、ツールインターフェースの要件を満たすパラメータを生成する必要があります。
 
-构造以下参数：
+以下のパラメータを構築します。
 
-* model：模型信息
-* prompt\_messages：提示词
-* tools：工具信息（Function Calling 相关）
-* stop：停止符
-* stream：是否支持流式输出
+* model：モデル情報
+* prompt\_messages：プロンプト
+* tools：ツール情報（Function Calling関連）
+* stop：停止記号
+* stream：ストリーミング出力をサポートするかどうか
 
-方法定义示例代码：
+メソッド定義のサンプルコード：
 
 ```python
 def invoke(
@@ -210,23 +205,23 @@ def invoke(
     ) -> Generator[LLMResultChunk, None, None] | LLMResult:...
 ```
 
-要查看完整的功能实现，请参考模型调用[示例代码](agent-strategy.md#diao-yong-gong-ju-1)。
+完全な実装については、モデル呼び出しの[サンプルコード](agent-strategy.md#diao-yong-gong-ju-1)を参照してください。
 
-该代码实现了以下功能：用户输入指令后，Agent 策略插件会自动调用 LLM，根据生成结果构建并传递工具调用所需的参数，使模型能够灵活调度已接入的工具，高效完成复杂任务。
+このコードでは、ユーザーが指示を入力すると、エージェント戦略プラグインが自動的にLLMを呼び出し、その結果に基づいてツールの呼び出しに必要なパラメータを構築し、渡します。これにより、モデルは連携されたツールを柔軟に活用し、複雑なタスクを効率的に完了できます。
 
-![生成工具的请求参数](https://assets-docs.dify.ai/2025/01/01e32c2d77150213c7c929b3cceb4dae.png)
+![生成されたツールのリクエストパラメータ](https://assets-docs.dify.ai/2025/01/01e32c2d77150213c7c929b3cceb4dae.png)
 
-#### 4. 调用工具
+#### 4. ツールの呼び出し
 
-填写工具参数后，需赋予 Agent 策略插件实际调用工具的能力。可以通过 SDK 中的`session.tool.invoke()` 函数进行工具调用。
+ツールパラメータを設定した後、エージェント戦略プラグインに実際にツールを呼び出す機能を追加する必要があります。これは、SDKの `session.tool.invoke()` 関数を使用して行えます。
 
-构造以下参数：
+以下のパラメータを構築します。
 
-* provider：工具提供商
-* tool\_name：工具名称
-* parameters：输入参数
+* provider：ツール提供者
+* tool\_name：ツール名
+* parameters：入力パラメータ
 
-方法定义示例代码：
+メソッド定義のサンプルコード：
 
 ```python
  def invoke(
@@ -238,7 +233,7 @@ def invoke(
     ) -> Generator[ToolInvokeMessage, None, None]:...
 ```
 
-若希望通过 LLM 直接生成参数完成工具调用，请参考以下工具调用的示例代码：
+LLMで直接パラメータを生成してツールを呼び出したい場合は、以下のツール呼び出しのサンプルコードを参照してください。
 
 ```python
 tool_instances = (
@@ -254,22 +249,22 @@ for tool_call_id, tool_call_name, tool_call_args in tool_calls:
     )
 ```
 
-如需查看完整的功能代码，请阅读调用工具[示例代码](agent-strategy.md#diao-yong-gong-ju-1)。
+完全な機能コードについては、ツール呼び出しの[サンプルコード](agent-strategy.md#diao-yong-gong-ju-1)を参照してください。
 
-实现这部分的功能代码后，Agent 策略插件将具备自动 Function Calling 的能力，例如自动获取当前时间：
+この機能コードを実装すると、エージェント戦略プラグインは自動的にFunction Callingを実行できるようになります。例えば、現在の時刻を自動的に取得するなどが可能です。
 
-![工具调用](https://assets-docs.dify.ai/2025/01/80e5de8acc2b0ed00524e490fd611ff5.png)
+![ツール呼び出し](https://assets-docs.dify.ai/2025/01/80e5de8acc2b0ed00524e490fd611ff5.png)
 
-#### 5. 日志创建
+#### 5. ログの作成
 
-在 **Agent 策略插件**中，通常需要执行多轮操作才能完成复杂任务。记录每轮操作的执行结果对于开发者来说非常重要，有助于追踪 Agent 的执行过程、分析每一步的决策依据，从而更好地评估和优化策略效果。
+**エージェント戦略プラグイン**では、複雑なタスクを完了するために、通常、複数回の操作が必要です。各操作の実行結果を記録することは、開発者にとって非常に重要です。Agentの実行プロセスを追跡し、各ステップの意思決定の根拠を分析することで、戦略の効果をより適切に評価し、最適化できます。
 
-为了实现这一功能，可以利用 SDK 中的 `create_log_message` 和 `finish_log_message` 方法记录日志。这种方式不仅可以在模型调用前后实时记录操作状态，还能帮助开发者快速定位问题。
+この機能を実装するために、SDKの `create_log_message` と `finish_log_message` メソッドを利用してログを記録できます。この方法では、モデル呼び出しの前後に操作状態をリアルタイムで記録できるだけでなく、開発者が問題を迅速に特定するのに役立ちます。
 
-场景示例：
+シナリオ例：
 
-* 在模型调用之前，记录一条“开始调用模型”的日志，帮助开发者明确任务执行进度。
-* 在模型调用成功后，记录一条“调用成功”的日志，方便追踪模型响应的完整性。
+* モデルを呼び出す前に、「モデルの呼び出しを開始」というログを記録することで、開発者はタスクの実行状況を明確に把握できます。
+* モデル呼び出しが成功した後、「呼び出し成功」というログを記録することで、モデルの応答の完全性を追跡できます。
 
 ```python
 model_log = self.create_log_message(
@@ -296,13 +291,13 @@ yield self.finish_log_message(
 )
 ```
 
-设置完成后，工作流日志将输出执行结果：
+設定が完了すると、ワークフローログに実行結果が出力されます。
 
-![Agent 输出执行结果](https://assets-docs.dify.ai/2025/01/96516388a4fb1da9cea85fc1804ff377.png)
+![Agentの実行結果の出力](https://assets-docs.dify.ai/2025/01/96516388a4fb1da9cea85fc1804ff377.png)
 
-在 Agent 执行的过程中，有可能会产生多轮日志。若日志能具备层级结构将有助于开发者查看。通过在日志记录时传入 parent 参数，不同轮次的日志可以形成上下级关系，使日志展示更加清晰、易于追踪。
+Agentの実行中には、複数ラウンドのログが生成される場合があります。ログに階層構造を持たせることで、開発者がログを確認しやすくなります。ログを記録する際に `parent` パラメータを渡すことで、異なるラウンドのログ間に親子関係が形成され、ログの表示がより明確になり、追跡が容易になります。
 
-**引用方法：**
+**使用方法：**
 
 ```python
 function_call_round_log = self.create_log_message(
@@ -317,19 +312,19 @@ model_log = self.create_log_message(
     data={},
     metadata={"start_at": model_started_at, "provider": params.model.provider},
     status=ToolInvokeMessage.LogMessage.LogStatus.START,
-    # add parent log
+    # 親ログを追加
     parent=function_call_round_log,
 )
 yield model_log
 ```
 
-#### 插件功能示例代码
+プラグイン機能のサンプルコード：
 
 {% tabs %}
-{% tab title="调用模型" %}
-#### 调用模型
+{% tab title="モデルの呼び出し" %}
+#### モデルの呼び出し
 
-以下代码将演示如何赋予 Agent 策略插件调用模型的能力：
+以下のコードは、エージェント戦略プラグインにモデルを呼び出す機能を追加する方法を示しています。
 
 ```python
 import json
@@ -376,7 +371,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
         )
 
         for chunk in chunks:
-            # check if there is any tool call
+            # ツール呼び出しがあるか確認
             if self.check_tool_calls(chunk):
                 tool_calls = self.extract_tool_calls(chunk)
                 tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
@@ -386,7 +381,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                         ensure_ascii=False,
                     )
                 except json.JSONDecodeError:
-                    # ensure ascii to avoid encoding error
+                    # エンコードエラーを避けるため、asciiを保証
                     tool_call_inputs = json.dumps(
                         {tool_call[1]: tool_call[2] for tool_call in tool_calls}
                     )
@@ -401,7 +396,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     print(str(chunk.delta.message.content), end="", flush=True)
 
             if chunk.delta.usage:
-                # usage of the model
+                # モデルを使用する
                 usage = chunk.delta.usage
 
         yield self.create_text_message(
@@ -423,7 +418,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     "tool_response": f"there is not a tool named {tool_call_name}",
                 }
             else:
-                # invoke tool
+                # ツールを呼び出す
                 tool_invoke_responses = self.session.tool.invoke(
                     provider_type=ToolProviderType.BUILT_IN,
                     provider=tool_instance.identity.provider,
@@ -553,10 +548,11 @@ class BasicAgentAgentStrategy(AgentStrategy):
 ```
 {% endtab %}
 
-{% tab title="调用工具" %}
-#### 调用工具
+{% tab title="ツールの呼び出し" %}
 
-以下代码展示了如何为 Agent 策略插件实现模型调用并向工具发送规范化请求。
+#### ツールの呼び出し
+
+次のコードは、エージェント戦略プラグインのモデル呼び出しを実装し、正規化されたリクエストをツールに送信する方法を示しています。
 
 ```python
 import json
@@ -603,7 +599,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
         )
 
         for chunk in chunks:
-            # check if there is any tool call
+            # ツール呼び出しがあるか確認
             if self.check_tool_calls(chunk):
                 tool_calls = self.extract_tool_calls(chunk)
                 tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
@@ -613,7 +609,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                         ensure_ascii=False,
                     )
                 except json.JSONDecodeError:
-                    # ensure ascii to avoid encoding error
+                    # エンコードエラーを避けるため、asciiを保証
                     tool_call_inputs = json.dumps(
                         {tool_call[1]: tool_call[2] for tool_call in tool_calls}
                     )
@@ -628,7 +624,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     print(str(chunk.delta.message.content), end="", flush=True)
 
             if chunk.delta.usage:
-                # usage of the model
+                # モデルを使用する
                 usage = chunk.delta.usage
 
         yield self.create_text_message(
@@ -650,7 +646,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     "tool_response": f"there is not a tool named {tool_call_name}",
                 }
             else:
-                # invoke tool
+                # ツールを呼び出す
                 tool_invoke_responses = self.session.tool.invoke(
                     provider_type=ToolProviderType.BUILT_IN,
                     provider=tool_instance.identity.provider,
@@ -780,10 +776,10 @@ class BasicAgentAgentStrategy(AgentStrategy):
 ```
 {% endtab %}
 
-{% tab title="完整功能代码示例" %}
-#### 完整功能代码示例
+{% tab title="完全な機能コード例" %}
+#### 完全な機能コード例
 
-包含**调用模型、调用工具**以及**输出多轮日志功能**的完整插件代码示例：
+**モデルの呼び出し**、**ツールの呼び出し**、および**複数ターンのログ出力機能**を含む、完全なプラグインコードの例：
 
 ```python
 import json
@@ -847,7 +843,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
         tool_call_names = ""
         tool_call_inputs = ""
         for chunk in chunks:
-            # check if there is any tool call
+            # ツール呼び出しがあるか確認
             if self.check_tool_calls(chunk):
                 tool_calls = self.extract_tool_calls(chunk)
                 tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
@@ -857,7 +853,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                         ensure_ascii=False,
                     )
                 except json.JSONDecodeError:
-                    # ensure ascii to avoid encoding error
+                    # エンコードエラーを避けるため、asciiを保証
                     tool_call_inputs = json.dumps(
                         {tool_call[1]: tool_call[2] for tool_call in tool_calls}
                     )
@@ -872,7 +868,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     print(str(chunk.delta.message.content), end="", flush=True)
 
             if chunk.delta.usage:
-                # usage of the model
+                # モデルを使用する
                 usage = chunk.delta.usage
 
         yield self.finish_log_message(
@@ -908,7 +904,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
                     "tool_response": f"there is not a tool named {tool_call_name}",
                 }
             else:
-                # invoke tool
+                # ツールを呼び出す
                 tool_invoke_responses = self.session.tool.invoke(
                     provider_type=ToolProviderType.BUILT_IN,
                     provider=tool_instance.identity.provider,
@@ -1039,13 +1035,13 @@ class BasicAgentAgentStrategy(AgentStrategy):
 {% endtab %}
 {% endtabs %}
 
-### 3. 调试插件
+### 3. プラグインのデバッグ
 
-配置插件的声明文件与功能代码后，在插件的目录内运行 `python -m main` 命令重启插件。接下来需测试插件是否可以正常运行。Dify 提供远程调试方式，前往[“插件管理”](https://console-plugin.dify.dev/plugins)获取调试 Key 和远程服务器地址。
+プラグインの設定ファイルと機能コードを記述したら、プラグインのディレクトリ内で `python -m main` コマンドを実行してプラグインを再起動します。次に、プラグインが正常に動作するかどうかをテストする必要があります。Difyのリモートデバッグ機能を利用するには、[「プラグイン管理」](https://cloud.dify.aij/plugins)にアクセスしてデバッグキーとリモートサーバーのアドレスを取得してください。
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
 
-回到插件项目，拷贝 `.env.example` 文件并重命名为 `.env`，将获取的远程服务器地址和调试 Key 等信息填入至 `REMOTE_INSTALL_HOST` 与 `REMOTE_INSTALL_KEY` 参数内。
+プラグインプロジェクトに戻り、`.env.example` ファイルをコピーして `.env` にリネームします。そして、取得したリモートサーバーのアドレスとデバッグキーを、`.env`ファイルの `REMOTE_INSTALL_HOST` および `REMOTE_INSTALL_KEY` パラメータにそれぞれ入力します。
 
 ```bash
 INSTALL_METHOD=remote
@@ -1054,26 +1050,26 @@ REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
 
-运行 `python -m main` 命令启动插件。在插件页即可看到该插件已被安装至 Workspace 内。其他团队成员也可以访问该插件。
+`python -m main` コマンドを実行してプラグインを起動します。プラグインページで、プラグインがワークスペースにインストールされたことを確認できます。このプラグインは、他のチームメンバーも利用可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png" alt=""><figcaption><p>访问插件</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png" alt=""><figcaption><p>プラグインへのアクセス</p></figcaption></figure>
 
-### 打包插件（可选）
+### プラグインのパッケージ化（オプション）
 
-确认插件能够正常运行后，可以通过以下命令行工具打包并命名插件。运行以后你可以在当前文件夹发现 `google.difypkg` 文件，该文件为最终的插件包。
+プラグインが正常に動作することを確認したら、以下のコマンドラインツールを使用してプラグインをパッケージ化し、名前を付けることができます。実行後、現在のフォルダに `google.difypkg` ファイルが生成されます。これが最終的なプラグインパッケージです。
 
 ```
 dify plugin package ./basic_agent/
 ```
 
-恭喜，你已完成一个工具类型插件的完整开发、调试与打包过程！
+おめでとうございます！これで、ツールタイプのプラグインの開発、デバッグ、パッケージ化の全プロセスが完了しました。
 
-### 发布插件（可选）
+### プラグインの公開（オプション）
 
-现在可以将它上传至 [Dify Plugins 代码仓库](https://github.com/langgenius/dify-plugins)来发布你的插件了！上传前，请确保插件已遵循[插件发布规范](https://docs.dify.ai/zh-hans/plugins/publish-plugins/publish-to-dify-marketplace)。审核通过后，代码将合并至主分支并自动上线至 [Dify Marketplace](https://marketplace.dify.ai/)。
+作成したプラグインは、[Dify Plugins コードリポジトリ](https://github.com/langgenius/dify-plugins)にアップロードして公開できます。アップロードする前に、プラグインが[プラグイン公開規約](../../publish-plugins/publish-to-dify-marketplace.md)に準拠していることをご確認ください。審査に合格すると、コードはメインブランチにマージされ、[Dify Marketplace](https://marketplace.dify.ai/)に自動的に公開されます。
 
-### 探索更多
+### さらに詳しく
 
-复杂任务往往需要多轮思考和多次工具调用。为了实现更智能的任务处理，通常采用循环执行的策略：**模型调用 → 工具调用**，直到任务完成或达到设定的最大迭代次数。
+複雑なタスクでは、複数回の思考とツール呼び出しが必要になることがよくあります。より高度なタスク処理を実現するために、通常は反復実行戦略が採用されます。つまり、「**モデル呼び出し → ツール呼び出し**」という流れを、タスクが完了するか、設定された最大反復回数に達するまで繰り返します。
 
-在这个过程中，提示词（Prompt）管理变得尤为重要。为了高效地组织和动态调整模型输入，建议参考插件内 Function Calling 功能的[完整实现代码](https://github.com/langgenius/dify-official-plugins/blob/main/agent-strategies/cot_agent/strategies/function_calling.py)，了解如何通过标准化的方式来让模型调用外部工具并处理返回结果。
+このプロセスにおいて、プロンプト管理は非常に重要です。モデル入力を効率的に整理し、動的に調整するために、プラグイン内のFunction Calling機能の[実装コード](https://github.com/langgenius/dify-official-plugins/blob/main/agent-strategies/cot_agent/strategies/function_calling.py)を参照し、標準化された方法でモデルが外部ツールを呼び出し、その結果を処理する方法を理解することを推奨します。

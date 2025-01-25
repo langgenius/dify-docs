@@ -126,38 +126,38 @@ The full code is below:
 
 ```yaml
 identity:
- author: Dify
-name: google
-label:
-en_US: Google
-zh_Hans: Google
-pt_BR: Google
-description:
-en_US: Google
-zh_Hans: GoogleSearch
-pt_BR: Google
-icon: icon.svg
-tags:
-- search
+  author: Dify
+  name: google
+  label:
+    en_US: Google
+    zh_Hans: Google
+    pt_BR: Google
+  description:
+    en_US: Google
+    zh_Hans: GoogleSearch
+    pt_BR: Google
+  icon: icon.svg
+  tags:
+    - search
 credentials_for_provider: #Add credentials_for_provider field
-serpapi_api_key:
-type: secret-input
-required: true
-label:
-en_US: SerpApi API key
-zh_Hans: SerpApi API key
-placeholder:
-en_US: Please input your SerpApi API key
-zh_Hans: Please enter your SerpApi API key
-help:
-en_US: Get your SerpApi API key from SerpApi
-zh_Hans: Get your SerpApi API key from SerpApi
-url: https://serpapi.com/manage-api-key
+  serpapi_api_key:
+    type: secret-input
+    required: true
+    label:
+      en_US: SerpApi API key
+      zh_Hans: SerpApi API key
+    placeholder:
+      en_US: Please input your SerpApi API key
+      zh_Hans: 请输入你的 SerpApi API key
+    help:
+      en_US: Get your SerpApi API key from SerpApi
+      zh_Hans: 从 SerpApi 获取您的 SerpApi API key
+    url: https://serpapi.com/manage-api-key
 tools:
-- tools/google_search.yaml
+  - tools/google_search.yaml
 extra:
-python:
-source: google.py
+  python:
+    source: google.py
 ```
 
 * where the `credentials_for_provider` sub-level structure needs to satisfy the [ProviderConfig](../schema-definition/general-specifications.md#providerconfig) specification.

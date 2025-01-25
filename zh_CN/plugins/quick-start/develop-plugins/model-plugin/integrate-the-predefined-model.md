@@ -263,7 +263,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 **快速开始：**
 
 * [开发 Extension 类型插件](../extension-plugin.md)
-* [开发 Model 类型插件](broken-reference)
+* [开发 Model 类型插件](README.md)
 * [Bundle 类型插件：将多个插件打包](../bundle.md)
 
 **插件接口文档：**

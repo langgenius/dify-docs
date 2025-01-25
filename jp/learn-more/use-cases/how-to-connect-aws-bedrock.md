@@ -127,7 +127,7 @@ Difyプラットフォームの**"ナレッジベース"**ページに移動し�
 
 - ナレッジベースの名称（カスタマイズ可能で、Difyプラットフォーム内の異なる外部知識APIを区別するために使用）
 - APIエンドポイント（外部ナレッジベースへの接続アドレス、ステップ2でカスタマイズ可能）。例：`api-endpoint/retrieval`
-- APIキー（外部ナレッジベースへの接続キー、ステップ2でカスタマイズ可能）
+- API Key（外部ナレッジベースへの接続キー、ステップ2でカスタマイズ可能）
 
 <figure><img src="../../../zh_CN/.gitbook/assets/image (362).png" alt=""><figcaption></figcaption></figure>
 
@@ -166,4 +166,4 @@ Difyプラットフォームの**"ナレッジベース"**ページに移動し�
 
 検索結果に満足できない場合は、検索設定を変更したり、AWS Bedrock Knowledge Baseの検索設定を調整したりすることができます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (367).png" alt=""><figcaption><p>调整 AWS Bedrock Knowledge Base の検索設定を調整</p></figcaption></figure>
+<figure><img src="../../../zh_CN/.gitbook/assets/image (367).png" alt=""><figcaption><p>AWS Bedrock Knowledge Base の検索設定を調整</p></figcaption></figure>

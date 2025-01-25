@@ -92,11 +92,13 @@ identity:
   label:
     en_US: label
     zh_Hans: 标签
+    ja_JP: レベル
     pt_BR: etiqueta
 description:
   human:
     en_US: description
     zh_Hans: 描述
+    ja_JP: 説明
     pt_BR: descrição
   llm: description
 output_schema:

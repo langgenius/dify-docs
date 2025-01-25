@@ -311,7 +311,7 @@ dify plugin package ./slack_bot
 **快速开始：**
 
 * [开发 Extension 插件](../extension-plugin.md)
-* [开发 Model 插件](../model/)
+* [开发 Model 插件](../model-plugin/)
 * [Bundle 类型插件：将多个插件打包](../bundle.md)
 
 **插件接口文档：**

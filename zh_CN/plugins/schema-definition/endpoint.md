@@ -25,11 +25,13 @@ settings:
     label:
       en_US: API key
       zh_Hans: API key
+      ja_Jp: API key
       pt_BR: API key
     placeholder:
       en_US: Please input your API key
       zh_Hans: 请输入你的 API key
-      pt_BR: Please input your API key
+      ja_Jp: あなたの API key を入れてください
+      pt_BR: Por favor, insira sua chave API
 endpoints:
   - endpoints/duck.yaml
   - endpoints/neko.yaml

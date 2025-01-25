@@ -21,9 +21,13 @@ identity: # ツールプロバイダーの基本情報
   label: # ラベル、前端表示用
     en_US: Google # 英語ラベル
     zh_Hans: Google # 中国語ラベル
+    ja_JP: : Google # 日本語ラベル
+    pt_BR: : : Google # プルトガル語ラベル
   description: # 説明、前端表示用
     en_US: Google # 英語説明
     zh_Hans: Google # 中国語説明
+    ja_JP: : Google # 日本語説明
+    pt_BR: : Google # プルトガル語説明
   icon: icon.svg # アイコン、現在のモジュールの_assetsフォルダーに配置する必要があります
 
 ```
@@ -51,11 +55,13 @@ identity:
   label:
     en_US: Wikipedia
     zh_Hans: 维基百科
+    ja_JP: Wikipedia
     pt_BR: Wikipedia
   description:
     en_US: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
     zh_Hans: 维基百科是一个由全世界的志愿者创建和编辑的免费在线百科全书。
-    pt_BR: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
+    ja_JP: Wikipediaは、世界中のボランティアによって作成、編集されている無料のオンライン百科事典です。
+    pt_BR: A Wikipédia é uma enciclopédia online gratuita, criada e editada por voluntários ao redor do mundo.
   icon: icon.svg
 credentials_for_provider:
 ```
@@ -69,9 +75,13 @@ identity:
   label:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   description:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   icon: icon.svg
 credentials_for_provider: # 認証情報フィールド
   serpapi_api_key: # 認証情報フィールド名
@@ -80,12 +90,18 @@ credentials_for_provider: # 認証情報フィールド
     label: # 認証情報フィールドラベル
       en_US: SerpApi API key # 英語ラベル
       zh_Hans: SerpApi API key # 中国語ラベル
+      ja_JP: SerpApi API key # 日本語ラベル
+      pt_BR: chave de API SerpApi # プルトガル語ラベル
     placeholder: # 認証情報フィールドプレースホルダー
       en_US: Please input your SerpApi API key # 英語プレースホルダー
       zh_Hans: 请输入你的 SerpApi API key # 中国語プレースホルダー
+      ja_JP: SerpApi API keyを入力してください # 日本語プレースホルダー
+      pt_BR: Por favor, insira sua chave de API SerpApi # プルトガル語プレースホルダー
     help: # 認証情報フィールドヘルプテキスト
       en_US: Get your SerpApi API key from SerpApi # 英語ヘルプテキスト
       zh_Hans: 从 SerpApi 获取你的 SerpApi API key # 中国語ヘルプテキスト
+      ja_JP: SerpApiからSerpApi APIキーを取得する # 日本語ヘルプテキスト
+      pt_BR: Obtenha sua chave de API SerpApi da SerpApi # プルトガル語ヘルプテキスト
     url: https://serpapi.com/manage-api-key # 認証情報フィールドヘルプリンク
 
 ```
@@ -105,10 +121,14 @@ identity: # ツールの基本情報
   label: # ラベル、前端表示用
     en_US: GoogleSearch # 英語ラベル
     zh_Hans: 谷歌搜索 # 中国語ラベル
+    ja_JP: Google検索 # 日本語ラベル
+    pt_BR: Pesquisa Google # プルトガル語ラベル
 description: # 説明、前端表示用
   human: # 前端表示用の紹介文、複数言語対応
     en_US: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query.
     zh_Hans: 一个用于执行 Google SERP 搜索并提取片段和网页的工具。输入应该是一个搜索查询。
+    ja_JP: Google SERP 検索を実行し、スニペットと Web ページを抽出するためのツール。入力は検索クエリである必要があります。
+    pt_BR: Uma ferramenta para realizar pesquisas no Google SERP e extrair snippets e páginas da web. A entrada deve ser uma consulta de pesquisa.
   llm: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query. # LLMに渡す紹介文。LLMがこのツールをよりよく理解して使用できるように、ここにはできるだけ詳細な情報を書いておくことをお勧めします。
 parameters: # パラメーターリスト
   - name: query # パラメーター名
@@ -117,9 +137,13 @@ parameters: # パラメーターリスト
     label: # パラメーターラベル
       en_US: Query string # 英語ラベル
       zh_Hans: 查询语句 # 中国語ラベル
+      ja_JP: クエリステートメント # 日本語ラベル
+      pt_BR: Declaração de consulta # プルトガル語ラベル
     human_description: # 前端表示用の紹介文、複数言語対応
       en_US: used for searching
       zh_Hans: 用于搜索网页内容
+      ja_JP: ネットの検索に使用する
+      pt_BR: usado para pesquisar
     llm_description: key words for searching # LLMに渡す紹介文。同上、LLMがこのパラメーターをよりよく理解できるように、できるだけ詳細な情報を書いておくことをお勧めします。
     form: llm # フォームタイプ。llmはこのパラメーターがエージェントによって推論されるべきであることを示します。前端はこのパラメーターを表示しません。
   - name: result_type
@@ -130,17 +154,25 @@ parameters: # パラメーターリスト
         label:
           en_US: text
           zh_Hans: 文本
+          ja_JP: テキスト
+          pt_BR: texto
       - value: link
         label:
           en_US: link
           zh_Hans: 链接
+          ja_JP: リンク
+          pt_BR: link
     default: link
     label:
       en_US: Result type
       zh_Hans: 结果类型
+      ja_JP: 結果タイプ
+      pt_BR: tipo de resultado
     human_description:
       en_US: used for selecting the result type, text or link
       zh_Hans: 用于选择结果类型，使用文本还是链接进行展示
+      ja_JP: 結果の種類、テキスト、リンクを選択するために使用されます
+      pt_BR: usado para selecionar o tipo de resultado, texto ou link
     form: form # フォームタイプ。formはこのパラメーターが対話開始前にユーザーによって前端で入力されるべきであることを示します。
 
 ```

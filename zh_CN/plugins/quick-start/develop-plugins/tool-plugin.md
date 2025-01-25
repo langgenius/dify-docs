@@ -23,11 +23,11 @@ Tool 工具插件是能够被 Chatflow / Workflow / Agent 应用类型所引用�
 
 关于如何准备插件开发的脚手架工具，详细说明请参考[初始化开发工具](initialize-development-tools.md)。
 
-### 创建新项目 <a href="#chuang-jian-xin-xiang-mu" id="chuang-jian-xin-xiang-mu"></a>
+### 创建新项目
 
 在当前路径下，运行脚手架命令行工具，创建一个新的 dify 插件项目。
 
-```
+```bash
 ./dify-plugin-darwin-arm64 plugin init
 ```
 
@@ -336,8 +336,8 @@ dify plugin package ./google
 
 **快速开始：**
 
-* [开发 Extension 类型插件](extension.md)
-* [开发 Model 类型插件](model/)
+* [开发 Extension 类型插件](extension-plugin.md)
+* [开发 Model 类型插件](model-plugin/)
 * [Bundle 类型插件：将多个插件打包](bundle.md)
 
 **插件接口文档：**
@@ -348,7 +348,3 @@ dify plugin package ./google
 * [工具](../../schema-definition/tool.md)
 * [模型](../../schema-definition/model/)
 * [扩展 Agent 策略](../../schema-definition/agent.md)
-
-
-
-#### ;

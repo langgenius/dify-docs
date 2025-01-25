@@ -82,4 +82,3 @@ dify-plugin bundle package ./bundle
 ```
 
 执行命令后，当前目录下将自动创建 `bundle.difybndl` 文件，该文件即为最后的打包结果。
-

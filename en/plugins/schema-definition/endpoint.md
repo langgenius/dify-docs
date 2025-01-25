@@ -25,11 +25,13 @@ settings:
     label:
       en_US: API key
       zh_Hans: API key
+      ja_Jp: API key
       pt_BR: API key
     placeholder:
       en_US: Please input your API key
       zh_Hans: 请输入你的 API key
-      pt_BR: Please input your API key
+      ja_Jp: あなたの API key を入れてください
+      pt_BR: Por favor, insira sua chave API
 endpoints:
   - endpoints/duck.yaml
   - endpoints/neko.yaml
@@ -55,16 +57,13 @@ extra:
 
 Must implement a subclass inheriting from `dify_plugin.Enterpoint` and implement the `_invoke` method.
 
-**Input Parameters**
-
-* `r` (Request): Request object from werkzeug
-* `values` (Mapping): Path parameters parsed from the path
-* `settings` (Mapping): Configuration information for this Endpoint
-
-**Return**
-
-* Response object from werkzeug, supports streaming return
-* Does not support direct string return
+* **Input Parameters**
+  * `r` (Request): Request object from werkzeug
+  * `values` (Mapping): Path parameters parsed from the path
+  * `settings` (Mapping): Configuration information for this Endpoint
+* **Return**
+  * Response object from werkzeug, supports streaming return
+  * Does not support direct string return
 
 **Example Code:**
 

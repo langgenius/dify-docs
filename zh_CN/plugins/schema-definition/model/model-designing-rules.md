@@ -81,7 +81,7 @@
 
 * `fetch-from-remote` 从远程获取
 
-与 `predefined-model` 配置方式一致，只需要配置统一的供应商凭据即可，模型通过凭据信息从供应商获取。\
+与 `predefined-model` 配置方式一致，只需要配置统一的供应商凭据即可，模型通过凭据信息从供应商获取。
 
 
 ### ModelFeature
@@ -173,9 +173,6 @@
 * `max_length` (int) 表单项为`text-input`专有属性，定义输入最大长度，0 为不限制。
 * `show_on` (array\[[FormShowOnObject](model-designing-rules.md#formshowonobject)]) 当其他表单项值符合条件时显示，为空则始终显示。
 
-\
-
-
 #### FormType
 
 * `text-input` 文本输入组件
@@ -183,9 +180,6 @@
 * `select` 单选下拉
 * `radio` Radio 组件
 * `switch` 开关组件，仅支持 `true` 和 `false`
-
-\
-
 
 #### FormOption
 
@@ -199,5 +193,3 @@
 
 * `variable` (string) 其他表单项变量名
 * `value` (string) 其他表单项变量值
-
-\

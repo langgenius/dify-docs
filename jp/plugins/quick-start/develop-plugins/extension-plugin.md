@@ -1,63 +1,63 @@
-# Extension 插件
+# 拡張機能型プラグイン
 
-本文将引导你快速开发一个 Extension 类型的插件，以帮助你了解插件开发的基础流程。
+このドキュメントでは、Extensionタイプのプラグインを迅速に開発し、プラグイン開発の基本的な流れを理解するのに役立つように解説します。
 
-### 前置准备
+### 事前準備
 
-* Dify 插件脚手架工具
-* Python 环境，版本号 ≥ 3.12
+*   Difyプラグインの足場ツール
+*   Python環境、バージョン番号 ≥ 3.12
 
-关于如何准备插件开发的脚手架工具，详细说明请参考[初始化开发工具](initialize-development-tools.md)。
+プラグイン開発の足場ツールの準備方法については、[開発ツールの初期化](initialize-development-tools.md)を参照してください。
 
-### 创建新项目 <a href="#chuang-jian-xin-xiang-mu" id="chuang-jian-xin-xiang-mu"></a>
+### 新規プロジェクトの作成 <a href="#chuang-jian-xin-xiang-mu" id="chuang-jian-xin-xiang-mu"></a>
 
-在当前路径下，运行脚手架命令行工具，创建一个新的 dify 插件项目。
+現在のパスで、足場コマンドラインツールを実行し、新しいDifyプラグインプロジェクトを作成します。
 
 ```
 ./dify-plugin-darwin-arm64 plugin init
 ```
 
-如果你已将该二进制文件重命名为了 `dify` 并拷贝到了 `/usr/local/bin` 路径下，可以运行以下命令创建新的插件项目：
+このバイナリファイルを`dify`にリネームし、`/usr/local/bin`パスにコピーした場合、以下のコマンドを実行して新しいプラグインプロジェクトを作成できます。
 
 ```bash
 dify plugin init
 ```
 
-### **填写插件信息**
+### **プラグイン情報の入力**
 
-按照提示配置插件名称、作者信息与插件描述。如果你是团队协作，也可以将作者填写为组织名。
+表示される指示に従って、プラグイン名、作者情報、プラグインの説明を設定してください。チームで共同作業する場合は、作者を組織名にすることも可能です。
 
-> 插件名称长度必须为 1-128 个字符，并且只能包含字母、数字、破折号和下划线。
+> プラグイン名の長さは1〜128文字で、文字、数字、ダッシュ、アンダースコアのみを使用できます。
 
 ![Plugins details](https://assets-docs.dify.ai/2024/12/75cfccb11fe31c56c16429b3998f2eb0.png)
 
-填写完成后，在插件开发语言环节中选择 Python。
+入力が完了したら、プラグイン開発言語の選択でPythonを選択してください。
 
 <figure><img src="https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png" alt=""><figcaption><p>Plugins development: Python</p></figcaption></figure>
 
-### 3. 选择插件类型并初始化项目模板
+### 3. プラグインタイプの選択とプロジェクトテンプレートの初期化
 
-脚手架工具内的所有模板均已提供完整的代码项目。出于演示说明，本文将以 `Extension` 类型插件模板作为示例。对于已熟悉插件的开发者而言，无需借助模板，可参考[接口文档](../../schema-definition/)指引完成不同类型的插件开发。
+足場ツール内のすべてのテンプレートには、完全なコードプロジェクトが用意されています。このドキュメントでは、例として`Extension`タイプのプラグインテンプレートを使用します。プラグインに精通している開発者であれば、テンプレートを使用せずに、[APIドキュメント](../../schema-definition/)を参照して様々なタイプのプラグイン開発を進めることができます。
 
-![Extension](https://assets-docs.dify.ai/2024/11/ff08f77b928494e10197b456fc4e2d5b.png)
+![拡張機能](https://assets-docs.dify.ai/2024/11/ff08f77b928494e10197b456fc4e2d5b.png)
 
-#### 配置插件权限
+#### プラグイン権限の設定
 
-插件还需要读取 Dify 主平台的权限才能正常连接。需要为该示例插件授予以下权限：
+プラグインがDifyメインプラットフォームに正常に接続するためには、Difyメインプラットフォームの権限を読み取る必要があります。このサンプルプラグインには、以下の権限を付与してください。
 
-* Tools
-* LLMs
-* Apps
-* 启用持久化储存 Storage，分配默认大小存储
-* 允许注册 Endpoint
+*   ツール
+*   LLM
+*   アプリ
+*   永続ストレージを有効にし、デフォルトサイズのストレージを割り当てる
+*   エンドポイントの登録を許可する
 
-> 在终端内使用方向键选择权限，使用 “Tab” 按钮授予权限。
+> ターミナル内で方向キーを使って権限を選択し、「Tab」キーで権限を付与します。
 
-勾选所有权限项后，轻点回车完成插件的创建。系统将自动生成插件项目代码。
+すべての権限項目をチェックした後、Enterキーを押してプラグインの作成を完了します。システムが自動的にプラグインのプロジェクトコードを生成します。
 
-![Plugins permissions](https://assets-docs.dify.ai/2024/11/5518ca1e425a7135f18f499e55d16bdd.png)
+![プラグインの権限](https://assets-docs.dify.ai/2024/11/5518ca1e425a7135f18f499e55d16bdd.png)
 
-插件的基础文件结构包含以下内容：
+プラグインの基本ファイル構造は以下の通りです。
 
 ```
 .
@@ -75,20 +75,20 @@ dify plugin init
 └── requirements.txt
 ```
 
-* `GUIDE.md` 一个简短的引导教程，带领你完成插件的编写流程。
-* `README.md` 关于当前插件的简介信息，你需要把有关该插件的介绍和使用方法填写至该文件内。
-* `_assets` 存储所有与当前插件相关的多媒体文件。
-* `endpoints` 按照 cli 中的引导创建的一个 `Extension` 类型插件模板，该目录存放所有 Endpoint 的功能实现代码。
-* `group` 指定密钥类型、多语言设置以及 API 定义的文件路径。
-* `main.py` 整个项目的入口文件。
-* `manifest.yaml` 整个插件的基础配置文件，包含该插件需要什么权限、是什么类型的扩展等配置信息。
-* `requirements.txt` 存放 Python 环境的依赖项。
+*   `GUIDE.md`: プラグインの作成プロセスを説明する簡単なチュートリアルです。
+*   `README.md`: 現在のプラグインに関する情報です。このプラグインの概要や使用方法をこのファイルに記述する必要があります。
+*   `_assets`: 現在のプラグインに関連するすべてのマルチメディアファイルを保存します。
+*   `endpoints`: CLIのガイドに従って作成される`Extension`タイプのプラグインテンプレートです。このディレクトリには、すべてのエンドポイントの機能実装コードが格納されています。
+*   `group`: 秘密鍵のタイプ、多言語設定、API定義ファイルのパスを指定します。
+*   `main.py`: プロジェクト全体のエントリポイントとなるファイルです。
+*  `manifest.yaml`: プラグインの基本設定ファイルです。このプラグインに必要な権限、拡張機能の種類などの設定情報が含まれています。
+*   `requirements.txt`: Python環境の依存関係を記述します。
 
-### 开发插件
+### プラグインの開発
 
-#### ;1. 定义插件的请求入口 Endpoint
+#### 1. プラグインのリクエストエンドポイントの定義
 
-编辑 `endpoints/test_plugin.yaml` ，参考以下代码进行修改：
+`endpoints/test_plugin.yaml`を編集し、以下のコードを参考に変更してください。
 
 ```yaml
 path: "/neko"
@@ -98,13 +98,13 @@ extra:
     source: "endpoints/test_plugin.py"
 ```
 
-该代码的意图是定义该插件的入口路径为 `/neko`，请求方法为 GET 类型。插件的功能实现代码为 `endpoints/test_plugin.py` 文件。
+このコードは、プラグインのエントリパスを`/neko`、リクエストメソッドをGETタイプとして定義するものです。プラグインの機能実装コードは、`endpoints/test_plugin.py`ファイルに記述します。
 
-#### 2. 编写插件功能
+#### 2. プラグイン機能の作成
 
-插件功能：请求插件服务，输出一只猫。
+プラグインの機能：プラグインサービスをリクエストし、猫の情報を出力します。
 
-编写插件的功能实现代码 `endpoints/test_plugin.py` 文件，参考以下示例代码：
+プラグインの機能実装コードを`endpoints/test_plugin.py`ファイルに記述します。以下のサンプルコードを参考にしてください。
 
 ```python
 from typing import Mapping
@@ -203,7 +203,7 @@ class NekoEndpoint(Endpoint):
         ''', ascii_art_lines=ascii_art_lines), status=200, content_type="text/html")
 ```
 
-运行此代码需要先安装以下 Python 依赖包：
+このコードを実行する前に、まず以下のPythonの依存パッケージをインストールする必要があります。
 
 ```python
 pip install werkzeug
@@ -211,15 +211,15 @@ pip install flask
 pip install dify-plugin
 ```
 
-### 调试插件
+### プラグインのデバッグ
 
-接下来需测试插件是否可以正常运行。Dify 提供远程调试方式，前往“插件管理”页获取调试 Key 和远程服务器地址。
+次に、プラグインが正常に動作するかどうかをテストします。Difyはリモートデバッグ機能を提供しており、「プラグイン管理」ページでデバッグキーとリモートサーバーのアドレスを取得できます。
 
 ![](https://assets-docs.dify.ai/2024/11/1cf15bc59ea10eb67513c8bdca557111.png)
 
-回到插件项目，拷贝 `.env.example` 文件并重命名为 `.env`，将获取的远程服务器地址和调试 Key 等信息填入其中。
+プラグインのプロジェクトに戻り、`.env.example`ファイルをコピーして`.env`にリネームします。そして、取得したリモートサーバーのアドレスやデバッグキーなどの情報を`.env`ファイルに記入してください。
 
-`.env` 文件
+`.env`ファイルの内容：
 
 ```bash
 INSTALL_METHOD=remote
@@ -228,45 +228,45 @@ REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
 
-运行 `python -m main` 命令启动插件。在插件页即可看到该插件已被安装至 Workspace 内。其他团队成员也可以访问该插件。
+`python -m main`コマンドを実行してプラグインを起動します。プラグインページで、このプラグインがワークスペースにインストールされたことを確認できます。他のチームメンバーもこのプラグインにアクセス可能です。
 
 ![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
 
-在插件内新增 Endpoint，随意填写名称和 `api_key` 等信息。访问自动生成的 URL，即可看到由插件提供的网页服务。
+プラグイン内に新しいエンドポイントを追加し、名前や`api_key`などの情報を任意で入力します。自動生成されたURLにアクセスすると、プラグインが提供するウェブサービスが表示されます。
 
 ![](https://assets-docs.dify.ai/2024/11/c76375b8df2449d0d8c31a7c2a337579.png)
 
-### 打包插件
+### プラグインのパッケージ化
 
-确认插件能够正常运行后，可以通过以下命令行工具打包并命名插件。运行以后你可以在当前文件夹发现 `neko.difypkg` 文件，该文件为最终的插件包。
+プラグインが正常に動作することを確認したら、以下のコマンドラインツールを使用してプラグインをパッケージ化し、名前を付けることができます。実行後、現在のフォルダに`neko.difypkg`というファイルが生成されます。このファイルが最終的なプラグインパッケージです。
 
 ```bash
 dify-plugin package ./neko
 ```
 
-恭喜，你已完成一个插件的完整开发、测试打包过程！
+おめでとうございます！これで、プラグインの開発、テスト、パッケージ化の全工程が完了しました。
 
-### 发布插件
+### プラグインの公開
 
-现在可以将它上传至 [Dify Plugins 代码仓库](https://github.com/langgenius/dify-plugins) 来发布你的插件了！上传前，请确保你的插件遵循了[插件发布规范](https://docs.dify.ai/zh-hans/plugins/publish-plugins/publish-to-dify-marketplace)。审核通过后，代码将合并至主分支并自动上线至 [Dify Marketplace](https://marketplace.dify.ai/)。
+作成したプラグインは、[Dify Plugins コードリポジトリ](https://github.com/langgenius/dify-plugins)にアップロードして公開できます。アップロードする前に、プラグインが[プラグイン公開仕様](../publish-plugins/publish-to-dify-marketplace)に準拠していることを確認してください。審査に合格すると、コードはメインブランチにマージされ、[Dify Marketplace](https://marketplace.dify.ai/)に自動的に公開されます。
 
-### 探索更多
+### さらに詳しく
 
-**快速开始：**
+**クイックスタート：**
 
-* [Bundle 类型插件：将多个插件打包](bundle.md)
-* [Tool 类型插件：Google Search](tool-type-plugin.md)
-* [Model 类型插件](model/)
+*   [バンドルタイププラグイン：複数のプラグインをまとめる](bundle.md)
+*   [ツールタイププラグイン：Google検索](tool-type-plugin.md)
+*   [モデルタイププラグイン](model/)
 
-**插件接口文档：**
+**プラグインインターフェースドキュメント：**
 
-* [Manifest](../../schema-definition/manifest.md) 结构
-* [Endpoint](../../schema-definition/endpoint.md) 详细定义
-* [反向调用 Dify 能力](../../schema-definition/reverse-invocation-of-the-dify-service/)
-* [工具](../../schema-definition/tool.md)
-* [模型](../../schema-definition/model/)
-* [扩展 Agent 策略](../../schema-definition/agent.md)
+*   [マニフェスト](../../schema-definition/manifest.md)構造
+*   [エンドポイント](../../schema-definition/endpoint.md)詳細定義
+*   [Dify機能の逆呼び出し](../../schema-definition/reverse-invocation-of-the-dify-service/)
+*   [ツール](../../schema-definition/tool.md)
+*   [モデル](../../schema-definition/model/)
+*   [拡張エージェント戦略](../../schema-definition/agent.md)
 
-**最佳实践：**
+**ベストプラクティス：**
 
-[开发 Telegram Bot 插件](best-practice/develop-slack-bot.md)
+[Telegram Botプラグインの開発](best-practice/develop-slack-bot.md)

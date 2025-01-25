@@ -345,11 +345,9 @@ def _invoke(self, model: str, credentials: dict, content_text: str, streaming: b
 \- `user` (string) \[optional] 用户的唯一标识符\
 可以帮助供应商监控和检测滥用行为。
 
-
-
 * 返回：
 
-文本转换后的语音流。\
+文本转换后的语音流。
 
 
 #### Moderation
@@ -681,4 +679,3 @@ class RerankDocument(BaseModel):
     text: str  # 分段文本内容
     score: float  # 分数
 ```
-

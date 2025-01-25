@@ -20,7 +20,7 @@
 
 詳細については以下をご参照ください：
 
-[Dify Marketplaceへの公開](https://docs.dify.ai/ja-jp/plugins/publish-plugins/publish-plugin-to-dify-marketplace)
+[Dify Marketplaceへの公開](https://docs.dify.ai/ja-jp/plugins/publish-plugins/publish-to-dify-marketplace)
 
 ### GitHubリポジトリ
 

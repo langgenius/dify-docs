@@ -21,9 +21,13 @@ identity: # 工具供应商的基本信息
   label: # 标签，用于前端展示
     en_US: Google # 英文标签
     zh_Hans: Google # 中文标签
+    ja_JP: : Google # 日文标签
+    pt_BR: : : Google # 葡萄牙文标签
   description: # 描述，用于前端展示
     en_US: Google # 英文描述
     zh_Hans: Google # 中文描述
+    ja_JP: : Google # 日文描述
+    pt_BR: : Google # 葡萄牙文描述
   icon: icon.svg # 图标，需要放置在当前模块的_assets文件夹下
 
 ```
@@ -51,11 +55,13 @@ identity:
   label:
     en_US: Wikipedia
     zh_Hans: 维基百科
+    ja_JP: Wikipedia
     pt_BR: Wikipedia
   description:
     en_US: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
     zh_Hans: 维基百科是一个由全世界的志愿者创建和编辑的免费在线百科全书。
-    pt_BR: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
+    ja_JP: Wikipediaは、世界中のボランティアによって作成、編集されている無料のオンライン百科事典です。
+    pt_BR: A Wikipédia é uma enciclopédia online gratuita, criada e editada por voluntários ao redor do mundo.
   icon: icon.svg
 credentials_for_provider:
 ```
@@ -69,9 +75,13 @@ identity:
   label:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   description:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   icon: icon.svg
 credentials_for_provider: # 凭据字段
   serpapi_api_key: # 凭据字段名称
@@ -80,12 +90,18 @@ credentials_for_provider: # 凭据字段
     label: # 凭据字段标签
       en_US: SerpApi API key # 英文标签
       zh_Hans: SerpApi API key # 中文标签
+      ja_JP: SerpApi API key # 日文标签
+      pt_BR: chave de API SerpApi # 葡萄牙文标签
     placeholder: # 凭据字段占位符
       en_US: Please input your SerpApi API key # 英文占位符
       zh_Hans: 请输入你的 SerpApi API key # 中文占位符
+      ja_JP: SerpApi API keyを入力してください # 日文占位符
+      pt_BR: Por favor, insira sua chave de API SerpApi # 葡萄牙文占位符
     help: # 凭据字段帮助文本
       en_US: Get your SerpApi API key from SerpApi # 英文帮助文本
       zh_Hans: 从 SerpApi 获取你的 SerpApi API key # 中文帮助文本
+      ja_JP: SerpApiからSerpApi APIキーを取得する # 日文帮助文本
+      pt_BR: Obtenha sua chave de API SerpApi da SerpApi # 葡萄牙文帮助文本
     url: https://serpapi.com/manage-api-key # 凭据字段帮助链接
 
 ```
@@ -105,10 +121,14 @@ identity: # 工具的基本信息
   label: # 标签，用于前端展示
     en_US: GoogleSearch # 英文标签
     zh_Hans: 谷歌搜索 # 中文标签
+    ja_JP: Google検索 # 日文标签
+    pt_BR: Pesquisa Google # 葡萄牙文标签
 description: # 描述，用于前端展示
   human: # 用于前端展示的介绍，支持多语言
     en_US: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query.
     zh_Hans: 一个用于执行 Google SERP 搜索并提取片段和网页的工具。输入应该是一个搜索查询。
+    ja_JP: Google SERP 検索を実行し、スニペットと Web ページを抽出するためのツール。入力は検索クエリである必要があります。
+    pt_BR: Uma ferramenta para realizar pesquisas no Google SERP e extrair snippets e páginas da web. A entrada deve ser uma consulta de pesquisa.
   llm: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query. # 传递给 LLM 的介绍，为了使得LLM更好理解这个工具，我们建议在这里写上关于这个工具尽可能详细的信息，让 LLM 能够理解并使用这个工具
 parameters: # 参数列表
   - name: query # 参数名称
@@ -117,9 +137,13 @@ parameters: # 参数列表
     label: # 参数标签
       en_US: Query string # 英文标签
       zh_Hans: 查询语句 # 中文标签
+      ja_JP: クエリステートメント # 日文标签
+      pt_BR: Declaração de consulta # 葡萄牙文标签
     human_description: # 用于前端展示的介绍，支持多语言
       en_US: used for searching
       zh_Hans: 用于搜索网页内容
+      ja_JP: ネットの検索に使用する
+      pt_BR: usado para pesquisar
     llm_description: key words for searching # 传递给LLM的介绍，同上，为了使得LLM更好理解这个参数，我们建议在这里写上关于这个参数尽可能详细的信息，让LLM能够理解这个参数
     form: llm # 表单类型，llm表示这个参数需要由Agent自行推理出来，前端将不会展示这个参数
   - name: result_type
@@ -130,17 +154,25 @@ parameters: # 参数列表
         label:
           en_US: text
           zh_Hans: 文本
+          ja_JP: テキスト
+          pt_BR: texto
       - value: link
         label:
           en_US: link
           zh_Hans: 链接
+          ja_JP: リンク
+          pt_BR: link
     default: link
     label:
       en_US: Result type
       zh_Hans: 结果类型
+      ja_JP: 結果タイプ
+      pt_BR: tipo de resultado
     human_description:
       en_US: used for selecting the result type, text or link
       zh_Hans: 用于选择结果类型，使用文本还是链接进行展示
+      ja_JP: 結果の種類、テキスト、リンクを選択するために使用されます
+      pt_BR: usado para selecionar o tipo de resultado, texto ou link
     form: form # 表单类型，form表示这个参数需要由用户在对话开始前在前端填写
 
 ```

@@ -29,7 +29,8 @@ Whether you’re looking to integrate a new model or add a specialized tool to e
 *   **Tools**
 
     Designed for Chatflow, Workflow, or Agent application types, these plugins provide a complete set of external tools and APIs. They can invoke all sorts of utilities or host custom endpoints.
-For example, when developing a Discord Bot, you can use existing tools while also setting up specialized endpoints to handle message sending and receiving. See [Quick Start: Tool Plugin](https://docs.dify.ai/plugins/quick-start/develop-plugins/tool-plugin) to learn more about building a tool plugin.
+    
+    For example, when developing a Discord Bot, you can use existing tools while also setting up specialized endpoints to handle message sending and receiving. See [Quick Start: Tool Plugin](https://docs.dify.ai/plugins/quick-start/develop-plugins/tool-plugin) to learn more about building a tool plugin.
 
 *   **Agent Strategy**
 

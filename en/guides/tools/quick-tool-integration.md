@@ -21,9 +21,13 @@ identity: # Basic information of the tool provider
   label: # Label for frontend display
     en_US: Google # English label
     zh_Hans: Google # Chinese label
+    ja_JP: Google # Japanese label
+    pt_BR: Google # Portuguese label
   description: # Description for frontend display
     en_US: Google # English description
     zh_Hans: Google # Chinese description
+    ja_JP: Google # Japanese description
+    pt_BR: Google # Portuguese description
   icon: icon.svg # Icon, needs to be placed in the _assets folder of the current module
 
 ```
@@ -51,11 +55,13 @@ identity:
   label:
     en_US: Wikipedia
     zh_Hans: 维基百科
+    ja_JP: Wikipedia
     pt_BR: Wikipedia
   description:
     en_US: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
     zh_Hans: 维基百科是一个由全世界的志愿者创建和编辑的免费在线百科全书。
-    pt_BR: Wikipedia is a free online encyclopedia, created and edited by volunteers around the world.
+    ja_JP: Wikipediaは、世界中のボランティアによって作成、編集されている無料のオンライン百科事典です。
+    pt_BR: A Wikipédia é uma enciclopédia online gratuita, criada e editada por voluntários ao redor do mundo.
   icon: icon.svg
 credentials_for_provider:
 ```
@@ -69,9 +75,13 @@ identity:
   label:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   description:
     en_US: Google
     zh_Hans: Google
+    ja_JP: Google
+    pt_BR: Google
   icon: icon.svg
 credentials_for_provider: # Credential field
   serpapi_api_key: # Credential field name
@@ -80,12 +90,18 @@ credentials_for_provider: # Credential field
     label: # Credential field label
       en_US: SerpApi API key # English label
       zh_Hans: SerpApi API key # Chinese label
+      ja_JP: SerpApi API key # Japanese label
+      pt_BR: chave de API SerpApi # Portuguese label
     placeholder: # Credential field placeholder
       en_US: Please input your SerpApi API key # English placeholder
       zh_Hans: 请输入你的 SerpApi API key # Chinese placeholder
+      ja_JP: SerpApi API keyを入力してください # Japanese placeholder
+      pt_BR: Por favor, insira sua chave de API SerpApi # Portuguese placeholder
     help: # Credential field help text
       en_US: Get your SerpApi API key from SerpApi # English help text
       zh_Hans: 从 SerpApi 获取你的 SerpApi API key # Chinese help text
+      ja_JP: SerpApiからSerpApi APIキーを取得する # Japanese help text
+      pt_BR: Obtenha sua chave de API SerpApi da SerpApi # Portuguese help text
     url: https://serpapi.com/manage-api-key # Credential field help link
 
 ```
@@ -105,10 +121,14 @@ identity: # Basic information of the tool
   label: # Label for frontend display
     en_US: GoogleSearch # English label
     zh_Hans: 谷歌搜索 # Chinese label
+    ja_JP: Google検索 # Japanese label
+    pt_BR: Pesquisa Google # Portuguese label
 description: # Description for frontend display
   human: # Introduction for frontend display, supports multiple languages
     en_US: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query.
     zh_Hans: 一个用于执行 Google SERP 搜索并提取片段和网页的工具。输入应该是一个搜索查询。
+    ja_JP: Google SERP 検索を実行し、スニペットと Web ページを抽出するためのツール。入力は検索クエリである必要があります。
+    pt_BR: Uma ferramenta para realizar pesquisas no Google SERP e extrair snippets e páginas da web. A entrada deve ser uma consulta de pesquisa.
   llm: A tool for performing a Google SERP search and extracting snippets and webpages.Input should be a search query. # Introduction passed to LLM, in order to make LLM better understand this tool, we suggest to write as detailed information about this tool as possible here, so that LLM can understand and use this tool
 parameters: # Parameter list
   - name: query # Parameter name
@@ -117,9 +137,13 @@ parameters: # Parameter list
     label: # Parameter label
       en_US: Query string # English label
       zh_Hans: 查询语句 # Chinese label
+      ja_JP: クエリステートメント # Japanese label
+      pt_BR: Declaração de consulta # Portuguese label
     human_description: # Introduction for frontend display, supports multiple languages
       en_US: used for searching
       zh_Hans: 用于搜索网页内容
+      ja_JP: ネットの検索に使用する
+      pt_BR: usado para pesquisar
     llm_description: key words for searching # Introduction passed to LLM, similarly, in order to make LLM better understand this parameter, we suggest to write as detailed information about this parameter as possible here, so that LLM can understand this parameter
     form: llm # Form type, llm means this parameter needs to be inferred by Agent, the frontend will not display this parameter
   - name: result_type
@@ -130,17 +154,25 @@ parameters: # Parameter list
         label:
           en_US: text
           zh_Hans: 文本
+          ja_JP: テキスト
+          pt_BR: texto
       - value: link
         label:
           en_US: link
           zh_Hans: 链接
+          ja_JP: リンク
+          pt_BR: link
     default: link
     label:
       en_US: Result type
       zh_Hans: 结果类型
+      ja_JP: 結果タイプ
+      pt_BR: tipo de resultado
     human_description:
       en_US: used for selecting the result type, text or link
       zh_Hans: 用于选择结果类型，使用文本还是链接进行展示
+      ja_JP: 結果の種類、テキスト、リンクを選択するために使用されます
+      pt_BR: usado para selecionar o tipo de resultado, texto ou link
     form: form # Form type, form means this parameter needs to be filled in by the user on the frontend before the conversation starts
 
 ```

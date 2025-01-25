@@ -95,7 +95,7 @@ Manifestファイルのフォーマット規格への準拠と有効な作者連
 
 **プラグインの機能性と関連性**
 
-* [提供された設定手順](https://docs.dify.ai/ja-jp/plugins/quick-start/developing-plugins)に基づくプラグインのテスト。
+* [提供された設定手順](../quick-start/develop-plugins)に基づくプラグインのテスト。
 * Difyエコシステムにおけるプラグインの妥当性の確認。
 
 [Dify.ai](https://dify.ai/)はプラグイン提出の承認または却下の権利を有します。
