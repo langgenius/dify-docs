@@ -205,6 +205,8 @@
 ## 阅读更多 <a href="#learn-more" id="learn-more"></a>
 
 * [应用案例](learn-more/use-cases/README.md)
+  * [DeepSeek 与 Dify 集成指南：打造具备多轮思考的 AI 应用](learn-more/use-cases/integrate-deepseek-to-build-an-ai-app.md)
+  * [本地私有化部署 DeepSeek + Dify，构建你的专属私人 AI 助手](learn-more/use-cases/private-ai-deepseek-dify.md)
   * [如何训练出专属于“你”的问答机器人？](learn-more/use-cases/train-a-qa-chatbot-that-belongs-to-you.md)
   * [教你十几分钟不用代码创建 Midjourney 提示词机器人](learn-more/use-cases/create-a-midjoureny-prompt-word-robot-with-zero-code.md)
   * [构建一个 Notion AI 助手](learn-more/use-cases/build-an-notion-ai-assistant.md)

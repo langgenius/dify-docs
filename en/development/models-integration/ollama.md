@@ -121,10 +121,3 @@ On windows, Ollama inherits your user and system environment variables.
 ## How can I expose Ollama on my network?
 
 Ollama binds 127.0.0.1 port 11434 by default. Change the bind address with the `OLLAMA_HOST` environment variable.
-
-## More Information
-
-For more information on Ollama, please refer to:
-
-* [Ollama](https://github.com/jmorganca/ollama)
-* [Ollama FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.md)
