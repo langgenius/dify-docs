@@ -317,7 +317,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
 - MILVUS_URI
 
-  Milvus uri configuration. e.g.http://localhost:19530. For Zilliz Cloud, adjust the uri and token to the [Public Endpoint and Api key](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details).
+  Milvus uri configuration. e.g. `http://host.docker.internal:19530`. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), adjust the uri and token to the Public Endpoint and API Key.
 
 - MILVUS_TOKEN
 

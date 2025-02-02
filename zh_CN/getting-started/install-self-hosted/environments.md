@@ -292,13 +292,13 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     Pinecone 所在的额环境，如：`us-east4-gcp`
 *   MILVUS\_URI
 
-    Milvus 的 URI 配置。例如：http://localhost:19530。对于 Zilliz Cloud，请将 URI 和令牌调整为 [Public Endpoint and Api key](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details) 。
+    Milvus 的 URI 配置。例如：`http://host.docker.internal:19530`。对于 [Zilliz Cloud](https://docs.zilliz.com.cn/docs/free-trials)，请将 URI 和 TOKEN 分别设置为 Public Endpoint 和 API Key。
 *   MILVUS\_TOKEN
 
-    Milvus token 配置，默认为空。
+    Milvus TOKEN 配置，默认为空。
 *   MILVUS\_USER
 
-    Milvus user 配置，默认为空。
+    Milvus 用户名配置，默认为空。
 *   MILVUS\_PASSWORD
 
     Milvus 密码配置，默认为空。

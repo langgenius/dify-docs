@@ -314,7 +314,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 *   MILVUS\_URI
 
-    MilvusのURI設定。例：http://localhost:19530 。Zilliz Cloudの場合は、URIとトークンを [パブリックエンドポイントとAPIキー](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details) に調整してください。
+    MilvusのURI設定。例：`http://host.docker.internal:19530`。[Zilliz Cloud](https://zilliz.com/jp/cloud)の場合は、URIとトークンを パブリックエンドポイントとAPIキーに調整してください。
 
 *   MILVUS\_TOKEN
 
