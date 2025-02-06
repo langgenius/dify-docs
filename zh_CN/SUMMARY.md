@@ -201,6 +201,7 @@
   * [接入 Ollama 部署的本地模型](development/models-integration/ollama.md)
   * [接入 LiteLLM 代理的模型](development/models-integration/litellm.md)
   * [接入 GPUStack 进行本地模型部署](development/models-integration/gpustack.md)
+  * [接入 AWS Bedrock 上的模型（DeepSeek）](development/models-integration/aws-bedrock-deepseek.md)
 
 ## 阅读更多 <a href="#learn-more" id="learn-more"></a>
 

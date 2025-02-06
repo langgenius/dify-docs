@@ -200,6 +200,7 @@
   * [Integrate Local Models Deployed by Ollama](development/models-integration/ollama.md)
   * [Integrate Models on LiteLLM Proxy](development/models-integration/litellm.md)
   * [Integrating with GPUStack for Local Model Deployment](development/models-integration/gpustack.md)
+  * [Integrating AWS Bedrock Models (DeepSeek)](development/models-integration/aws-bedrock-deepseek.md)
 
 ## Learn More
 

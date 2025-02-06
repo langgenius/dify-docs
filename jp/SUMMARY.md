@@ -201,6 +201,7 @@
   * [Ollamaでデプロイしたローカルモデルを統合](development/models-integration/ollama.md)
   * [LiteLLM Proxyを使用してモデルを統合する](development/models-integration/litellm.md)
   * [GPUStackとの統合によるローカルモデルのデプロイ](development/models-integration/gpustack.md)
+  * [AWS Bedrock上のモデル（DeepSeek）の接続](development/models-integration/aws-bedrock-deepseek.md)
 
 ## もっと読む <a href="#learn-more" id="learn-more"></a>
 
