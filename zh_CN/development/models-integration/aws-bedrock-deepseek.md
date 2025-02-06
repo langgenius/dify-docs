@@ -2,7 +2,7 @@
 
 ## 功能介绍
 
-**AWS Bedrock Marketplace** 是一个综合的 LLM 部署平台，开发人员可以在该平台发现、测试和使用 100 多种常用的新兴专业基础模型（FM）并轻松部署与访问。
+[AWS Bedrock Marketplace](https://aws.amazon.com/bedrock/marketplace/) 是一个综合的 LLM 部署平台，开发人员可以在该平台发现、测试和使用 100 多种常用的新兴专业基础模型（FM）并轻松部署与访问。
 
 本文将为你介绍如何在 Bedrock Marketplace 平台内部署 DeepSeek 模型并集成至 Dify 平台，帮助你快速搭建基于 DeepSeek 模型的 AI 应用。
 
@@ -25,9 +25,7 @@
 
 ![](https://assets-docs.dify.ai/2025/02/613497e3473d9b6eaa7cb5611decee0c.png)
 
-1.3 部署完成后，你可以在 **Marketplace Deployments** 页查看自动生成的 **Endpoint**，该参数将用于后续 Dify 平台的连接。
-
-该 Endpoint 与 SageMaker Endpoint 相同。
+1.3 部署完成后，你可以在 **Marketplace Deployments** 页查看自动生成的 **Endpoint**，该参数与 **SageMaker Endpoint** 参数相同，将用于后续 Dify 平台的连接。
 
 ![Endpoint 查看](https://assets-docs.dify.ai/2025/02/82a1d6406662b83386b86ec511ab20be.png)
 
@@ -50,19 +48,13 @@
 
 ### 3. 运行模型
 
-**Chatflow / Workflow 类型应用**
-
 配置完成后，你可以在 Dify 平台内测试 DeepSeek 模型是否能够正常运行。轻点 Dify 平台首页左侧的"创建空白应用"，选择 「Chatflow 或 Workflow」类型应用并添加 LLM 节点。
 
 参考以下截图，在应用预览页测试模型是否能够正常给出答复。
 
 ![模型运行](https://assets-docs.dify.ai/2025/02/e7fb06888101662ecb970401fdba63b5.png)
 
-**Chatbot 类型应用**
-
-你可以在构建应用时使用 DeepSeek 模型，它将助力你的应用提升推理速度和处理复杂任务的能力。
-
-![使用场景](https://assets-docs.dify.ai/2025/02/6f55a1d12ad020517c2bcda0a5b3aee8.png)
+除了使用 Chatflow / Workflow 应用类型进行测试以外，你还可以创建 Chatbot 类型应用进行测试。
 
 ## 常见问题
 

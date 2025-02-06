@@ -2,7 +2,7 @@
 
 ## Overview
 
-**AWS Bedrock Marketplace** is a comprehensive LLM deployment platform that enables developers to discover, evaluate, and utilize over 100 emerging foundational models (FMs) with ease. 
+[AWS Bedrock Marketplace](https://aws.amazon.com/bedrock/marketplace/) is a comprehensive LLM deployment platform that enables developers to discover, evaluate, and utilize over 100 emerging foundational models (FMs) with ease. 
 
 This document explains how to deploy the DeepSeek model on the Bedrock Marketplace and integrate it with the Dify platform, facilitating the rapid development of AI applications powered by DeepSeek.
 
@@ -57,11 +57,7 @@ Refer to the screenshot below to verify that the model is generating responses c
 
 ![Model Running](https://assets-docs.dify.ai/2025/02/e7fb06888101662ecb970401fdba63b5.png)
 
-**For Chatbot Applications:**
-
-DeepSeek can also be integrated into chatbot applications to enhance inference speed and support complex task processing.
-
-![Usage Scenario](https://assets-docs.dify.ai/2025/02/6f55a1d12ad020517c2bcda0a5b3aee8.png)
+In addition to testing with the Chatflow / Workflow app, you can also create Chatbot app for testing.
 
 ## FAQ
 
