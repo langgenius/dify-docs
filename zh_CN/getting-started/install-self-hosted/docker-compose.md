@@ -115,7 +115,6 @@ docker compose up -d
 http://localhost/install
 
 # 服务器环境
-
 http://your_server_ip/install
 ```
 
