@@ -20,7 +20,7 @@ Using the variable assigner node, you can write context from the conversation pr
 
 You can write the **context during the conversation, the file uploaded to the chatting box (coming soon), the preference information entered by the user,etc.** into the conversation variable using **Variable Assigner** node. These stored information can be referenced in subsequent chats to guide different processing flows or provide responses.
 
-**Scenario 1**
+**Scenario 2**
 
 **Automatically judge and extract content**, store history in the conversation, record important user information through the session variable array within the conversation, and use this history content to personalize responses in subsequent chats.
 
@@ -106,7 +106,7 @@ def main(arg1: list) -> str:
         }
 ```
 
-**Scenario 2**
+**Scenario 3**
 
 **Recording initial user preferences input**: Remember the user's language preference input during the conversation and continue to use this language for responses in subsequent chatting.
 
@@ -122,7 +122,7 @@ Example: Before the chatting, the user specifies "English" in the `language` inp
 
 **Variable reading**: In subsequent conversation rounds, the `language` variable has stored the user's language preference. The LLM node references the language variable to respond using the user's preferred language type.
 
-**Scenario 3**
+**Scenario 4**
 
 **Assisting with Checklist checks**: Record user inputs within the conversation using conversation variables, update the contents of the Checklist, and check for missing items in subsequent conversations.
 
