@@ -27,7 +27,7 @@ For development examples, refer to the following content:
 
 Extension plugins enable developers to package business code as plugins and automatically provide an Endpoint request entry, functioning akin to an API service hosted on the Dify platform. For more details and development examples, see the following:
 
-{% content-ref url="extension.md" %}
+{% content-ref url="extension-plugin.md" %}
 [extension.md](extension-plugin.md)
 {% endcontent-ref %}
 
