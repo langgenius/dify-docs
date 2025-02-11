@@ -19,11 +19,11 @@ If you plan to develop plugins yourself, follow these steps to progressively div
 Explore development examples for various plugin types to grasp the basic structure and development process quickly.
 
 {% content-ref url="develop-plugins/tool-type-plugin.md" %}
-[tool-type-plugin.md](develop-plugins/tool-plugin.md)
+[tool-plugin.md](develop-plugins/tool-plugin.md)
 {% endcontent-ref %}
 
 {% content-ref url="develop-plugins/model/" %}
-[model](develop-plugins/model/)
+[model](develop-plugins/model-plugin/)
 {% endcontent-ref %}
 
 {% content-ref url="develop-plugins/extension-plugin.md" %}

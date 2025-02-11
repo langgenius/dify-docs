@@ -7,6 +7,8 @@
 
 ### **1. 安装 Dify 插件开发脚手架工具**
 
+> Dify 插件开发脚手架工具又称为 `dify-plugin-daemon`，可以被视作**插件开发 SDK**。
+
 访问脚手架工具的 [GitHub 项目地址](https://github.com/langgenius/dify-plugin-daemon/releases)，推荐下载并安装最新版本号和对应操作系统的工具。
 
 本文**以装载 M 系列芯片的 macOS** 为例。下载 `dify-plugin-darwin-arm64` 文件后，赋予其执行权限。

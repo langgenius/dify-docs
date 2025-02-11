@@ -5,7 +5,9 @@ Before start to develop Dify plugins please prepare the following prerequisites:
 * Dify plugin scaffolding tool
 * Python environment, version ≥ 3.12
 
-### **1. Installing the Dify Plugin Scaffolding Tool**
+### **1. Installing the Dify Plugin Development Scaffolding Tool**
+
+> The Dify plugin development scaffolding tool, also known as `dify-plugin-daemon`, can be regarded as a plugin development SDK.
 
 Visit the [Dify plugin GitHub page](https://github.com/langgenius/dify-plugin-daemon/releases) and select and download the version suitable for your operating system.
 
