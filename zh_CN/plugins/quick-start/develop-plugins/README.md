@@ -15,7 +15,7 @@ description: 'Author: Yeuoly, Allen'
 以 **GoogleSearch** 工具为例，介绍如何开发工具类插件。开发示例请参考以下内容：
 
 {% content-ref url="tool-plugin.md" %}
-[tool-plugin.md](tool-plugin.md)
+[tool-plugin.md](https://docs.dify.ai/zh-hans/plugins/quick-start/develop-plugins/tool-plugin)
 {% endcontent-ref %}
 
 以 **Anthropic** 和 **Xinference** 模型为例，分别介绍如何开发预定义模型和自定义模型插件。
@@ -25,14 +25,14 @@ description: 'Author: Yeuoly, Allen'
 
 开发示例请参考以下内容：
 
-{% content-ref url="model/" %}
-[model](model/)
+{% content-ref url="model-plugin/" %}
+[model](model-plugin/)
 {% endcontent-ref %}
 
 Extension 插件允许开发者将业务代码封装为插件，并自动提供 Endpoint 请求入口，可以被理解为托管在 Dify 平台内的 API 服务。开发示例请参考以下内容：
 
-{% content-ref url="extension.md" %}
-[extension.md](extension.md)
+{% content-ref url="extension-plugin.md" %}
+[extension.md](extension-plugin.md)
 {% endcontent-ref %}
 
 ### 接口文档

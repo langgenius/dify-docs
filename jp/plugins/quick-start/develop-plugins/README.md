@@ -22,12 +22,12 @@
 具体的な開発例は以下を参照してください：
 
 {% content-ref url="model/" %}
-[model](model/)
+[model](model-plugin/)
 {% endcontent-ref %}
 
 Extensionプラグインにより、開発者はビジネスロジックをプラグインとしてパッケージ化し、Difyプラットフォーム上でAPIサービスとして公開できます。詳細は以下をご覧ください：
 
-{% content-ref url="extension.md" %}
+{% content-ref url="extension-plugin.md" %}
 [extension-plugin.md](extension-plugin.md)
 {% endcontent-ref %}
 

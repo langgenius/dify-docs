@@ -21,14 +21,14 @@ By examining the **Anthropic** and **Xinference** models, we present separate gu
 
 For development examples, refer to the following content:
 
-{% content-ref url="model/" %}
-[model](model/)
+{% content-ref url="model-plugin/" %}
+[model](model-plugin/)
 {% endcontent-ref %}
 
 Extension plugins enable developers to package business code as plugins and automatically provide an Endpoint request entry, functioning akin to an API service hosted on the Dify platform. For more details and development examples, see the following:
 
 {% content-ref url="extension.md" %}
-[extension.md](extension.md)
+[extension.md](extension-plugin.md)
 {% endcontent-ref %}
 
 ### **Endpoints Documentation**
