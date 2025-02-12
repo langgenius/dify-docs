@@ -58,7 +58,7 @@ pyenv global 3.11
     ```
     cd api
     ```
-2. MacOS only: install libmagic with `brew install libmagic`
+> MacOS only: install libmagic with `brew install libmagic`
 
 2.  Copy the environment variable configuration file:
 
