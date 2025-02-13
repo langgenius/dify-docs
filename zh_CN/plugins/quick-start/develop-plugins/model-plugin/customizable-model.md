@@ -119,7 +119,7 @@ Xinference 模型需要使用者输入模型的本地部署地址，插件内需
 
 ### 2. 编写模型代码
 
-Xinference 模型供应商的模型类型包含 llm、rerank、speech2text、tts 类型，因此需要在 /models 路径下为每个模型类型创建独立的分组，并创建对于的功能代码文件。
+Xinference 模型供应商的模型类型包含 llm、rerank、speech2text、tts 类型，因此需要在 /models 路径下为每个模型类型创建独立的分组，并创建对应的功能代码文件。
 
 下文将以 llm 类型为例，说明如何创建 `llm.py` 代码文件。创建代码时需创建一个 Xinference LLM 类，可以取名为 `XinferenceAILargeLanguageModel`，继承 `__base.large_language_model.LargeLanguageModel` 基类，实现以下几个方法：
 
@@ -267,7 +267,7 @@ def validate_credentials(self, model: str, credentials: dict) -> None:
           ),
           fetch_from=FetchFrom.CUSTOMIZABLE_MODEL,
           model_type=model_type,
-          model_properties={ 
+          model_properties={
               ModelPropertyKey.MODE:  ModelType.LLM,
           },
           parameter_rules=rules

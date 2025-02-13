@@ -242,4 +242,4 @@ class XinferenceProvider(Provider):
 初始化模型供应商后，接下来需要接入供应商所提供的具体 llm 模型。详细说明请参考以下内容：
 
 * [接入预定义模型](../../../../guides/model-configuration/predefined-model.md)
-* [接入自定义模型](../../../../guides/model-configuration/customizable-model.md)\
+* [接入自定义模型](../../../../guides/model-configuration/customizable-model.md)
