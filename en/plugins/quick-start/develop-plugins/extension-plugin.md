@@ -263,7 +263,6 @@ You can now publish your plugin by uploading it to the [Dify Plugins code reposi
 * [Models](../schema-definition/model/model-schema.md)
 * [Extend Agent Strategy](../schema-definition/agent.md)
 
+**Best Practices:**
 
-
-
-
+[Develop a Slack Bot Plugin](../../best-practice/develop-a-slack-bot-plugin.md)
