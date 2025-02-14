@@ -269,4 +269,4 @@ dify-plugin package ./neko
 
 **最佳实践：**
 
-[开发 Slack Bot 插件](best-practice/develop-slack-bot.md)
+[开发 Slack Bot 插件](../../best-practice/develop-a-slack-bot-plugin.md)
