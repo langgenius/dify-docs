@@ -18,6 +18,6 @@ Dify.AIは、以下の認証を取得していました：
 
 上記のコンプライアンス証明書のダウンロード方法および詳細については、以下のドキュメントをご覧ください。
 
-{% content-ref url="reptono.md" %}
-[reptono.md](reptono.md)
+{% content-ref url="get-compliance-report.md" %}
+[合規性レポートの入手方法](get-compliance-report.md)
 {% endcontent-ref %}

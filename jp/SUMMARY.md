@@ -235,4 +235,4 @@
 * [ユーザ規約](policies/agreement/README.md)
   * [利用規約](https://dify.ai/terms)
   * [プライバシーポリシー](https://dify.ai/privacy)
-  * [合規性レポートの入手方法](policies/agreement/get-repo.md)
+  * [合規性レポートの入手方法](policies/agreement/get-compliance-report.md)

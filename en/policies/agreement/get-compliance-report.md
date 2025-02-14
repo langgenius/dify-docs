@@ -43,7 +43,6 @@ Only team owners can download Dify's SOC 2 Type I report via **Top-right → Com
 
 <figure><img src="https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png" alt=""><figcaption><p>SOC 2 Type <strong>II</strong> Report</p></figcaption></figure>
 
-\
 **ISO 27001: 2022 Certificate**
 
 The **ISO 27001:2022** certificate is an internationally recognized standard for **information security management systems (ISMS)**. It is part of the **ISO/IEC 27000 family of standards**, which focuses on protecting sensitive information through a comprehensive set of security controls. The ISO 27001:2022 standard is designed to help organizations establish, implement, maintain, and continually improve their information security management system. The **2022** version of the standard reflects the latest updates and best practices in information security, aligning with current security challenges and technological advancements. It provides a systematic approach to managing sensitive company information, ensuring its confidentiality, integrity, and availability through the implementation of risk management and security controls.
