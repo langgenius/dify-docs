@@ -48,7 +48,7 @@ dify plugin init
 * Tools
 * LLMs
 * Apps
-* 启用持久化储存 Storage，分配默认大小存储
+* 启用持久化存储 Storage，分配默认大小存储
 * 允许注册 Endpoint
 
 > 在终端内使用方向键选择权限，使用 “Tab” 按钮授予权限。

@@ -80,7 +80,7 @@ privacy: "./privacy.md"
       * `enabled`(bool)
     * `app`(object)：反向调用`app`的权限
       * `enabled`(bool)
-    * `storage`(object)：申请持久化储存的权限
+    * `storage`(object)：申请持久化存储的权限
       * `enabled`(bool)
       * `size`(int64)：最大允许多大的持久化内存，单位字节
 * `plugins`(object, required)：插件扩展的具体能力的`yaml`文件列表，插件包内的绝对路径，如需要扩展模型，则需要定义一个类似于 `openai.yaml`的文件，并将该文件路径填写在此处，且该路径上的文件必须真实存在，否则打包将失败。
