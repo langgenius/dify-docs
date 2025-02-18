@@ -156,4 +156,4 @@ Dify 的后端使用 Python 编写，使用 [Flask](https://flask.palletsproject
 
 ## 获取帮助
 
-如果你在贡献过程中遇到困难或者有任何问题，可以通过相关的 GitHub 问题提出你的疑问，或者加入我们的 [Discord](https://discord.gg/AhzKf7dNgk) 进行快速交流。
+如果你在贡献过程中遇到困难或者有任何问题，可以通过相关的 GitHub 问题提出你的疑问，或者加入我们的 [Discord](https://discord.com/invite/8Tpq4AcN9c) 进行快速交流。

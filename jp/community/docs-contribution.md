@@ -41,4 +41,4 @@ pull request を提供する時、`Docs: add xxx` のタイトルで説明欄に
 
 ## ヘルプを受ける
 
-貢献の過程で困難に直面したり、疑問がある場合は、関連する GitHub の issue に質問を投稿するか、[Discord](https://discord.gg/AhzKf7dNgk) に参加して迅速にコミュニケーションを取ることができます。
+貢献の過程で困難に直面したり、疑問がある場合は、関連する GitHub の issue に質問を投稿するか、[Discord](https://discord.com/invite/8Tpq4AcN9c) に参加して迅速にコミュニケーションを取ることができます。
