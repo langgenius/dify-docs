@@ -22,7 +22,8 @@
 Clone the Dify source code to your local machine:
 
 ```bash
-git clone https://github.com/langgenius/dify.git
+# Assuming current latest version is 0.15.3
+git clone https://github.com/langgenius/dify.git --branch 0.15.3
 ```
 
 ### Starting Dify
