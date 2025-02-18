@@ -202,7 +202,7 @@ provider_credential_schema:
     ```
 *   模型参数 Schema
 
-    与自定义类型不同，由于没有在 yaml 文件中定义一个模型支持哪些参数，因此，我们需要动态时间模型参数的Schema。
+    与自定义类型不同，由于没有在 yaml 文件中定义一个模型支持哪些参数，因此，我们需要动态实现模型参数的Schema。
 
     如Xinference支持`max_tokens` `temperature` `top_p` 这三个模型参数。
 
