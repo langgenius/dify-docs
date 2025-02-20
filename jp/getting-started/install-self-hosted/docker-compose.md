@@ -18,7 +18,8 @@
 Difyのソースコードをローカルにクローンします
 
 ```bash
-git clone https://github.com/langgenius/dify.git
+# 現在の最新バージョンは0.15.3だと仮定すると
+git clone https://github.com/langgenius/dify.git --branch 0.15.3
 ```
 
 ### Difyの起動
