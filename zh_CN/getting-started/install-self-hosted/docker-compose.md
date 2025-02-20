@@ -18,7 +18,8 @@
 克隆 Dify 源代码至本地环境。
 
 ```bash
-git clone https://github.com/langgenius/dify.git
+# 假设当前最新版本为 0.15.3
+git clone https://github.com/langgenius/dify.git --branch 0.15.3
 ```
 
 ### 启动 Dify
