@@ -94,4 +94,4 @@
 
 **如何在创建聊天助手应用时，使用元数据功能筛选知识库内文档？**
 
-如需了解如何使用元数据功能筛选文档，请参阅[在应用内集成知识库]（https://docs.dify.ai/zh-hans/guides/knowledge-base/integrate-knowledge-within-application）中的“**使用元数据筛选知识 > 聊天助手**”章节。
+如需了解如何使用元数据功能筛选文档，请参阅 [在应用内集成知识库](https://docs.dify.ai/zh-hans/guides/knowledge-base/integrate-knowledge-within-application)中的“**使用元数据筛选知识 > 聊天助手**”章节。
