@@ -38,14 +38,42 @@ const result = await fetch(url).then(res => res.text())
 这个仓库简化了除了业务逻辑之外所有的配置，你可以直接使用 `npm` 命令来部署你的 API 扩展。
 
 ```bash
+npm install
 npm run deploy
 ```
 
-部署成功之后，你会得到一个公网地址，你可以在 Dify 中添加这个地址作为 API Endpoint。请注意不要遗漏 `endpoint` 这个路径。
+部署成功之后，你会得到一个公网地址，你可以在 Dify 中添加这个地址作为 API Endpoint。请注意不要遗漏 `endpoint` 这个路径，此路径的具体定义在 `src/index.ts` 中可以查看。
 
 <figure><img src="../../../.gitbook/assets/api_extension_edit.png" alt=""><figcaption><p>在 Dify 中添加 API Endpoint</p></figcaption></figure>
 
 <figure><img src="../../../.gitbook/assets/app_tools_edit.png" alt=""><figcaption><p>在 App 编辑页面中添加上 API Tool</p></figcaption></figure>
+
+
+另外，也可以直接使用 `npm run dev` 命令来部署到本地进行测试。
+
+```bash
+npm install
+npm run dev
+```
+
+相关输出：
+
+```bash
+$ npm run dev
+> dev
+> wrangler dev src/index.ts
+
+ ⛅️ wrangler 3.99.0
+-------------------
+
+Your worker has access to the following bindings:
+- Vars:
+  - TOKEN: "ban****ool"
+⎔ Starting local server...
+[wrangler:inf] Ready on http://localhost:58445
+```
+
+之后就可以使用 Postman 等工具进行本地接口调试。
 
 ## 其他逻辑 TL;DR
 
