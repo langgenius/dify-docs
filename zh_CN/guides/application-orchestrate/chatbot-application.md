@@ -77,3 +77,7 @@
 **如何在聊天助手内添加第三方工具？**
 
 聊天助手类型应用不支持添加第三方工具，你可以在 [Agent 类型](https://docs.dify.ai/v/zh-hans/guides/application-orchestrate/agent)应用内添加第三方工具。
+
+**如何在创建聊天助手应用时，使用元数据功能筛选知识库内文档？**
+
+如需了解如何使用元数据功能筛选文档，请参阅 [在应用内集成知识库](https://docs.dify.ai/zh-hans/guides/knowledge-base/integrate-knowledge-within-application) 中的“**使用元数据筛选知识 > 聊天助手**”章节。

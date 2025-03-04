@@ -230,6 +230,4 @@
 
 ### 元数据管理
 
-除了用于标记不同来源文档的元数据信息，例如网页数据的标题、网址、关键词、描述等。元数据将被用于知识库的分段召回过程中，作为结构化字段参与召回过滤或者显示引用来源。
-
-<figure><img src="https://assets-docs.dify.ai/2024/12/f3b1ff4b559ebc40f18b8980b3719fe8.png" alt=""><figcaption><p>元数据管理</p></figcaption></figure>
+如需了解元数据的相关信息与管理方法，请参阅 [元数据](https://docs.dify.ai/zh-hans/guides/knowledge-base/metadata)。

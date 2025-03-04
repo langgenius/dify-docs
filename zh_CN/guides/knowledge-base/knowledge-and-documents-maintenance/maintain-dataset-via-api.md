@@ -112,7 +112,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### **创建空知识库**
+#### 创建空知识库
 
 {% hint style="warning" %}
 仅用来创建空知识库
@@ -151,7 +151,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets' \
 }
 ```
 
-#### **知识库列表**
+#### 知识库列表
 
 输入示例：
 
@@ -296,7 +296,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### **获取文档嵌入状态（进度）**
+#### 获取文档嵌入状态（进度）
 
 输入示例：
 
@@ -326,7 +326,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **删除文档**
+#### 删除文档
 
 输入示例：
 
@@ -343,7 +343,7 @@ curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/d
 }
 ```
 
-#### **知识库文档列表**
+#### 知识库文档列表
 
 输入示例：
 
@@ -383,7 +383,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **新增分段**
+#### 新增分段
 
 输入示例：
 
@@ -637,3 +637,141 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/ret
 | document\_already\_finished   | 400 | 文档已处理完成。请刷新页面或查看文档详情                                                                       |
 | document\_indexing            | 400 | 文档正在处理中，无法编辑                                                                               |
 | invalid\_metadata             | 400 | 元数据内容不正确。请检查并验证                                                                            |
+
+#### 新增知识库元数据字段
+
+**`POST /console/api/datasets/{dataset_id}/metadata`**
+
+##### Body
+
+-   `type` (string) metadata 字段类型 (string, number, time)
+-   `name` (string) metadata 字段名称
+
+##### ResponseBody
+
+-   `id` (uuid) metadata 字段名称
+-   `type` (string) metadata 字段类型 (string, number, time)
+-   `name` (string) metadata 字段名称
+
+##### Response Example
+
+```
+{
+    "total_segments": 1,
+    "preview": [
+        {
+            "content": "dify",
+            "child_chunks": ["dify","ai"]
+        }
+    ],
+    "qa_preview": null
+}
+```
+
+#### 修改知识库元数据字段
+
+**`PATCH /console/api/datasets/{dataset_id}/metadata/{metadata_id}`**
+
+##### Path
+
+-   `dataset_id` (uuid) 数据集 ID
+-   `metadata_id` (uuid) 元数据 ID
+
+##### Body
+
+-   `type` (string) metadata 字段类型 (string, number, time)
+-   `name` (string) metadata 字段名称
+
+##### ResponseBody
+
+-   `id` (uuid) metadata 字段名称
+-   `type` (string) metadata 字段类型 (string, number, time)
+-   `name` (string) metadata 字段名称
+
+##### Response Example
+
+```
+{
+    "total_segments": 1,
+    "preview": [
+        {
+            "content": "dify",
+            "child_chunks": ["dify","ai"]
+        }
+    ],
+    "qa_preview": null
+}
+```
+
+#### 删除知识库元数据字段
+
+**`DELETE /console/api/datasets/{dataset_id}/document/metadata/{metadata_id}`**
+
+##### Path
+
+-   `dataset_id` (uuid) 数据集 ID
+-   `metadata_id` (uuid) 元数据 ID
+
+##### Response Example
+
+-   200 成功
+
+#### 启用/禁用知识库元数据中的内置字段
+
+`GET /console/api/datasets/{dataset_id}/metadata/built-in/{action}`
+
+##### Path
+
+-   `dataset_id` (uuid) 数据集 ID
+-   `action` (uuid) 操作类型 disable/enable
+
+##### Response Example
+
+-   200 成功
+
+#### 获取知识库元数据中的内置字段
+
+**`POST /console/api/metadata/built-in`**
+
+##### Response Example
+
+-   `fields` (list object) 内置的 built-in 字段
+
+    -   `type` (string) metadata 字段类型 (string, number, time)
+    -   `name` (string) metadata 字段名称
+
+##### 修改文档的元数据（赋值）
+
+**`POST /console/api/datasets/{dataset_id}/documents/metadata`**
+
+##### Body
+
+-   operation_data (list object)
+
+    -   `document_id`(uuid) metadata 绑定的文档 id
+    -   `metadata_list` (list object)
+
+        -   `id` (string) metadata 字段 Id
+        -   `name` (string) metadata 字段名称
+        -   `value` (string/int) metadata 字段值
+
+##### ResponseBody
+
+-   200 成功
+
+#### 数据集的元数据列表
+
+**`GET /console/api/datasets/{dataset_id}/metadata`**
+
+##### Path
+
+-   `dataset_id` (uuid) 数据集 ID
+
+##### ResponseBody
+
+-   data (list object)
+
+    -   `id` (uuid) metadata 字段名称
+    -   `type` (string) metadata 字段类型 (string, number, time)
+    -   `name` (string) metadata 字段名称
+    -   `use_count` (int) 使用数量
