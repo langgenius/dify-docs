@@ -393,7 +393,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 
 *   UPLOAD\_FILE\_SIZE\_LIMIT
 
-    上传文件大小限制，默认 15M。
+    上传文件大小限制，默认 15M。<mark>Note：修改完UPLOAD_FILE_SIZE_LIMIT后还要同步修改NGINX_CLIENT_MAX_BODY_SIZE的值，才能使得生效。否则前端界面右上角会提升"上传失败"。</mark>
 *   UPLOAD\_FILE\_BATCH\_LIMIT
 
     每次上传文件数上限，默认 5 个。
