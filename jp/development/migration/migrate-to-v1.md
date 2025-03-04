@@ -35,8 +35,10 @@ tar -cvf volumes-$(date +%s).tgz volumes
 `v1.0.0` は Docker Compose を使用してデプロイできます。`cd` コマンドで Dify プロジェクトのパスに移動し、以下のコマンドで Dify のバージョンをアップグレードします：
 
 ```bash
+git fetch origin
 git checkout 1.0.0 # 1.0.0 ブランチに切り替える
 cd docker
+nano .env # .env.example ファイルと同期するように環境構成ファイルを変更する
 docker compose -f docker-compose.yaml up -d
 ```
 

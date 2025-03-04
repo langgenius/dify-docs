@@ -35,8 +35,10 @@ tar -cvf volumes-$(date +%s).tgz volumes
 `v1.0.0` 支持通过 Docker Compose 部署。运行 `cd` 命令至你的 Dify 项目路径，运行以下命令升级 Dify 版本：
 
 ```bash
+git fetch origin
 git checkout 1.0.0 # 切换至 1.0.0 分支
 cd docker
+nano .env # 修改环境配置文件同步 .env.example 文件
 docker compose -f docker-compose.yaml up -d
 ```
 
