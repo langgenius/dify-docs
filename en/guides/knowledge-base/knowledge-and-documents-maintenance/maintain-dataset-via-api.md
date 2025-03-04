@@ -17,7 +17,7 @@ Key advantages include:
 
 Navigate to the knowledge base page, and you can switch to the **API ACCESS** page from the left navigation. On this page, you can view the dataset API documentation provided by Dify and manage the credentials for accessing the dataset API in **API Keys**.
 
-<figure><img src="../../../.gitbook/assets/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/knowledge-and-documents-maintenance/bf01e303742558c8ffb4d5fa91b308eb.webp" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
 ### API Requesting Examples
 

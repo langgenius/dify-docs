@@ -12,7 +12,7 @@ Please apply for an API Key at [OpenAI Platform](https://platform.openai.com/), 
 
 In the Dify navigation page, click `Tools > DALL-E > Authorize` and fill in the API Key.
 
-![](../../../.gitbook/assets/tools-dalle.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/3fe0eb51cfc75f0b6facb518d5e789a5.webp)
 
 ## 3. Use the tool
 

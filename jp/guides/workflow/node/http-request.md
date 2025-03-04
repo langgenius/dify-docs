@@ -15,7 +15,7 @@ HTTP プロトコルを介してサーバーにリクエストを送信するこ
 
 HTTPリクエストのURL、リクエストヘッダー、クエリパラメータ、リクエストボディの内容、および認証情報などを設定することができます。
 
-<figure><img src="../../../.gitbook/assets/jp-http-request.png" alt="" width="332"><figcaption><p>HTTP リクエスト設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/c1600a6ede365dc135c769a8da80b05e.webp" alt="" width="332"><figcaption><p>HTTP リクエスト設定</p></figcaption></figure>
 
 ***
 
@@ -25,7 +25,7 @@ HTTPリクエストのURL、リクエストヘッダー、クエリパラメー�
 
 HTTPリクエストにおいて、ユーザー名や顧客ID、フィードバック内容など、様々な動的な変数を挿入することが可能です。たとえば、顧客のフィードバックを扱う際に、これらの変数を使用して自動返信メッセージをパーソナライズしたり、特定の顧客データを取得してそれに関連する情報を特定のサーバーに送信したりすることができます。
 
-<figure><img src="../../../.gitbook/assets/customer-feedback-classification.png" alt=""><figcaption><p>顧客のフィードバック分類</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/6fd7767fcb3123e72dcb69746e4f9514.webp" alt=""><figcaption><p>顧客のフィードバック分類</p></figcaption></figure>
 
 HTTPリクエストのレスポンスには、レスポンスボディ、ステータスコード、レスポンスヘッダー、そしてファイルが含まれることがあります。特にレスポンスにファイルが含まれる場合、この機能は自動的にファイルを保存し、後のプロセスステップでの利用を可能にします。これにより、処理効率が向上し、ファイルを含むレスポンスをより直接的かつ容易に扱えるようになります。
 
@@ -37,7 +37,7 @@ HTTP PUTリクエストを利用して、アプリケーション内のファイ
 
 設定の一例は以下のとおりです：
 
-<figure><img src="../../../../en/.gitbook/assets/image (145).png" alt=""><figcaption><p>HTTP機能を使ってファイルを送信する方法</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/3ff1415b8333effed1b449813f962460.webp" alt=""><figcaption><p>HTTP機能を使ってファイルを送信する方法</p></figcaption></figure>
 
 <最初の翻訳の問題点の改善ポイント>
 この再翻訳では、日本語の表現习慣に合わせ、より自然で明瞭な表現を心がけました。具体的な専門用語やプロセスの説明も、より分かりやすく説明するよう努めています。このように、原文の意味を正確に伝えつつ、読みやすさも重視した翻訳を目指しました。

@@ -59,7 +59,7 @@ docker compose up -d
 
 Configure Model Provider in account setting:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.51.29.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/19e05ce9a7929c53aab8cf003273ad23.webp" alt=""><figcaption></figcaption></figure>
 
 ## Create a chatflow
 
@@ -67,15 +67,15 @@ Now, let's get started on the chatflow.
 
 Click on `Create from Blank` to start:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_20.37.09.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/aa528b783dece180036e783f6bf653c9.webp" alt=""><figcaption></figcaption></figure>
 
 The initialized chatflow should be like:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.44.44.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/05d50d65ec1afbdda6512c92a558bca0.webp" alt=""><figcaption></figcaption></figure>
 
 ## Add nodes to chatflow
 
-<figure><img src="../../.gitbook/assets/image (114).png" alt=""><figcaption><p>The final chatflow looks like this</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/7e199ed86b86c24cca8903737e0d208d.webp" alt=""><figcaption><p>The final chatflow looks like this</p></figcaption></figure>
 
 ### Start node
 
@@ -83,7 +83,7 @@ In start node, we can add some system variables at the beginning of a chat. In t
 
 Click on Start node and add a new variable:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.42.10.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/72b447ae1577155940b76fb3c2d7f45b.webp" alt=""><figcaption></figcaption></figure>
 
 ### Code node
 
@@ -100,27 +100,27 @@ def main(id: str) -> dict:
 
 Add a code node and select python, and set input and output variable names:
 
-<figure><img src="../../.gitbook/assets/7d5de1cce4426f70f448402d7812bd040d681c225e49a2de66b59cbde66ba834.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/4094f8ec4b9d2987a6ccc8a8ad64076a.webp" alt=""><figcaption></figcaption></figure>
 
 ### HTTP request node
 
 Based on the [Crawlbase docs](https://crawlbase.com/docs/crawling-api/scrapers/#twitter-profile), to scrape a Twitter user’s profile in http format, we need to complete HTTP request node in the following format:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/7607140220496c77e0cb84bb65871383.webp" alt=""><figcaption></figcaption></figure>
 
 Importantly, it is best not to directly enter the token value as plain text for security reasons, as this is not a good practice. Actually, in the latest version of Dify, we can set token values in **`Environment Variables`**. Click `env` - `Add Variable` to set the token value, so plain text will not appear in the node.
 
 Check [https://crawlbase.com/dashboard/account/docs](https://crawlbase.com/dashboard/account/docs) for your crawlbase API Key.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.55.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/c9fd5578db8952438a5b31b4ed47e603.webp" alt=""><figcaption></figcaption></figure>
 
 By typing `/` , you can easily insert the API Key as a variable.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.02.04.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/90e9b7f78989d62daabe0c4f68445099.webp" alt=""><figcaption></figcaption></figure>
 
 Tap the start button of this node to check whether it works correctly:
 
-<figure><img src="../../.gitbook/assets/CleanShot 2024-10-07 at 21.44.50@2x.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/15d737eca4cceaf55fbb4da8e5adba3c.webp" alt=""><figcaption></figcaption></figure>
 
 ### LLM node
 
@@ -130,17 +130,17 @@ The value `context` should be `body` from HTTP Request node.
 
 The following is a sample system prompt.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.35.38.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/f41daaa1d86651cd33552920730ba8b3.webp" alt=""><figcaption></figcaption></figure>
 
 ## Test run
 
 Click `Preview` to start a test run and input twitter user id in `id`
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/8bd435ac17949825813fc2239b39fe4f.webp" alt=""><figcaption></figcaption></figure>
 
 For example, I want to analyze Elon Musk's tweets and write a tweet about global warming in his tone.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.47.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/intermediate/34b19b1bb72c99acf84f550ef4e2a9bf.webp" alt=""><figcaption></figcaption></figure>
 
 Does this sound like Elon? lol
 

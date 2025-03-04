@@ -6,7 +6,7 @@
 
 本記事では、Difyを使用してAI画像生成アプリを開発する方法について学びます。
 
-![](../../../img/workshop/build-ai-image-generation-app-12-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/fd446c9062b3aaa962d4f6535c60d12f.webp)
 
 ## 今回の学ぶポイント
 
@@ -24,7 +24,7 @@
 
 管理ページに入ったら、キーをコピーするために`コピー`をクリックします。
 
-![](../../../img/workshop/build-ai-image-generation-app-1.png)
+![](https://assets-docs.dify.ai//img/jp/basic/68007f69cdf208ccdb4130a5176b4984.webp)
 
 次に、[Dify - ツール - Stability](https://cloud.dify.ai/tools) にキーを入力する必要があります。以下の手順に従ってください：
 
@@ -32,7 +32,7 @@
 - ツールに入る
 - ステイビリティを選択する
 - 承認をクリック
-![](../../../img/workshop/build-ai-image-generation-app-2-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/096a6de7c057b04e799446ec491899fc.webp)
 - キーを入力して保存
 
 ## 2. モデルプロバイダの設定
@@ -44,7 +44,7 @@ Difyの無料版では、200回の無料のOpenAIメッセージクレジット�
 メッセージクレジットが不足している場合は、以下の手順に従って他のモデルプロバイダをカスタマイズできます：
 
 **あなたのアバター - 設定 - モデルプロバイダ**の順にクリックします。
-![](../../../img/workshop/build-ai-image-generation-app-3-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/19e05ce9a7929c53aab8cf003273ad23.webp)
 
 適切なモデルプロバイダが見つからない場合は、groqプラットフォームがLlamaなどのLLM用に無料のコールクレジットを提供しています。
 
@@ -54,17 +54,17 @@ Difyの無料版では、200回の無料のOpenAIメッセージクレジット�
 
 **Dify - モデルプロバイダ**に戻り、**groqcloud**を選択し、**設定**をクリックします。
 
-![](../../../img/workshop/build-ai-image-generation-app-4-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/daba9ae3c1a9179490dc0c3ba127bc45.webp)
 
 API Keyを貼り付けて保存します。
 
-![](../../../img/workshop/build-ai-image-generation-app-5-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/9f4d86396b83179c521cd60e717c0a42.webp)
 
 ## 3. エイジェントを作る
 
 **Dify - スタジオ**に戻り、**最初から作成**を選択します。
 
-![](../../../img/workshop/build-ai-image-generation-app-6-ja.png)
+![](https://assets-docs.dify.ai//img/jp/basic/e52db26dfd44c226310867cbd3465361.webp)
 
 この実験では、エージェントの基本的な使用方法を理解するだけで十分です。
 
@@ -76,21 +76,21 @@ API Keyを貼り付けて保存します。
 
 **エージェント**を選択し、名前を入力します。
 
-![](../../../img/workshop/build-ai-image-generation-app-7-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/309aa808354a326a0fc5b873878bb32c.webp)
 
 以下のようにエージェントのオーケストレーションインターフェースに入ります。
 
-![](../../../img/workshop/build-ai-image-generation-app-8-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/492a3f517dffcc8d08940baab0167e99.webp)
 
 LLMを選択します。このチュートリアルでは、groqが提供するLlama-3.1-70Bを例にします：
 
-![](../../../img/workshop/build-ai-image-generation-app-9-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/758709593a19635fa48772900dfb235c.webp)
 
 **ツール**でステイビリティを選択します：
 
-![](../../../img/workshop/build-ai-image-generation-app-10-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/51f63fa4e2f25a605cad065076367ee9.webp)
 
-![](../../../img/workshop/build-ai-image-generation-app-11-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/d28376231bfcad199cbd0371ff3e4c8a.webp)
 
 ### プロンプトの書き方
 
@@ -110,17 +110,17 @@ LLMを選択します。このチュートリアルでは、groqが提供するL
 
 例：女の子が開いた本を持っているのを描く。
 
-![](../../../img/workshop/build-ai-image-generation-app-12-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/fd446c9062b3aaa962d4f6535c60d12f.webp)
 
 ### プロンプトを書くのかしなくても可能ですか？もちろん可能です！
 
 プロンプトの上部にある**自動**をクリックしてください。
 
-![](../../../img/workshop/prompt-gen-1-jp.png)
+![](https://assets-docs.dify.ai//img/jp/basic/83d7b22a28eeedc25af39a80562c4494.webp)
 
 **指示**に要件を入力し、**自動**をクリックします。右側に生成されたプロンプトがAIによって作成されます。
 
-![](../../../img/workshop/prompt-gen-2-jp.png)
+![](https://assets-docs.dify.ai//img/jp/basic/153f55d3acd0310b616ca9c72fdd0199.webp)
 
 ただし、プロンプトについての理解を深めるためには、初期段階ではこの機能に頼るべきではありません。
 
@@ -128,7 +128,7 @@ LLMを選択します。このチュートリアルでは、groqが提供するL
 
 右上の公開ボタンをクリックし、公開後に**Run**を選択して、オンラインで実行されるエージェント用のWebページを取得します。
 
-![](../../../img/workshop/build-ai-image-generation-app-13-jp.png)
+![](https://assets-docs.dify.ai//img/jp/basic/605b94d76d6bc32ffabd5e341e43b0fe.webp)
 
 このWebページのURLをコピーして、友人と共有することができます。
 
@@ -136,7 +136,7 @@ LLMを選択します。このチュートリアルでは、groqが提供するL
 
 ユーザーの入力コマンドにスタイル指示を追加することができます。例えば：「アニメスタイルで、女の子が開いた本を描いてください。」
 
-![](../../../img/workshop/build-ai-image-generation-app-14-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/5b77b0b3c3f11d5736208a1d313536c1.webp)
 
 ただし、デフォルトのスタイルをアニメスタイルに設定したい場合は、システムプロンプトにその旨を追加することができます。なぜなら、システムプロンプトはユーザーコマンドが実行されるたびに認識され、優先されるからです。
 
@@ -161,10 +161,10 @@ LLMを選択します。このチュートリアルでは、groqが提供するL
 ```
 
 例えば、今夜の夕食は何ですか？と聞いてみましょう。
-![](../../../img/workshop/build-ai-image-generation-app-15-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/f45fb871f867ce4a2688e5c47e3966af.webp)
 
 よりフォーマルなビジネスシナリオでは、感情的な単語ライブラリを使用してユーザーのリクエストを拒否することができます。
 
 **Add Feature - Content Moderation**にキーワード「dinner」を追加します。ユーザーがそのキーワードを入力すると、エージェントアプリは「申し訳ありませんが、その内容は理解できません。」と出力します。
 
-![](../../../img/workshop/build-ai-image-generation-app-16-en.png)
+![](https://assets-docs.dify.ai//img/jp/basic/a082bf01b81bca0a8e1ae6cb0838f02f.webp)

@@ -60,8 +60,8 @@ Difyのナレッジベースでは、テキストによる検索テスト機能�
 
 アプリケーション内でナレッジベースの効果をテストする際、**スタジオ -- 機能追加 -- 引用と帰属**に進み、引用と帰属機能を有効にします。
 
-<figure><img src="../../.gitbook/assets/citation-and-attribution.png" alt=""><figcaption><p>引用と帰属機能を有効にする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/ce727a0267ceaefaf7c0191bf97ea621.webp" alt=""><figcaption><p>引用と帰属機能を有効にする</p></figcaption></figure>
 
 機能を有効にすると、大規模言語モデルが質問に回答する際にナレッジベースからの内容を引用した場合、返信内容の下に具体的な引用段落情報を確認できます。これには**元のパラグラフテキスト、パラグラフ番号、マッチ度**などが含まれます。引用段落上部の**ナレッジベースにジャンプ**をクリックすると、開発者がデバッグ編集を行いやすいように、そのパラグラフが含まれるナレッジベースのパラグラフリストに簡単にアクセスできます。
 
-<figure><img src="../../../img/view-citation-information.png" alt=""><figcaption><p>返信内容の引用情報を確認する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/3fa3eea6a68378361fac64927b5f95c6.webp" alt=""><figcaption><p>返信内容の引用情報を確認する</p></figcaption></figure>

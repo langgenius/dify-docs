@@ -12,7 +12,7 @@ Please apply for an API Key on the [Azure platform](https://www.microsoft.com/en
 
 In the Dify navigation page, click `Tools > Azure > Authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tools-bing.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/6a4dfdcb1871100bc810ae5f4c05f808.webp)
 
 ## 3. Use the tool
 

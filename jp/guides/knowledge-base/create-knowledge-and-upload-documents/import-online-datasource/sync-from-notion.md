@@ -41,11 +41,11 @@ Notionの統合は、**インターナル統合**（internal integration）と**
 
 **New integration**ボタンをクリックし、タイプはデフォルトで**インターナル**（変更不可）です。関連付けるスペースを選択し、統合名を入力しロゴをアップロードした後、**Submit**をクリックして統合を作成します。
 
-<figure><img src="../../../../.gitbook/assets/integrate-notion-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/import-online-datasource/a560c828fea533e89ad7338ec32d5cb3.webp" alt=""><figcaption></figcaption></figure>
 
 統合を作成したら、必要に応じてCapabilitiesタブで設定を更新し、Secretsタブで**Show**ボタンをクリックしてSecretsをコピーします。
 
-<figure><img src="../../../../.gitbook/assets/notion-secret.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/import-online-datasource/47e9610ca2036a0569a3e1e9a7a7eb5d.webp" alt=""><figcaption></figcaption></figure>
 
 コピーした後、Difyのソースコードに戻り、**.env**ファイルに関連する環境変数を設定します。環境変数は以下の通りです：
 
@@ -57,11 +57,11 @@ Notionの統合は、**インターナル統合**（internal integration）と**
 
 **インターナル統合をパブリック統合にアップグレードする必要があります**。統合の配布ページに移動し、スイッチを切り替えて統合を公開します。スイッチをパブリック設定に切り替えるには、以下の組織情報フォームに会社名、Webサイト、リダイレクトURLなどの情報を入力し、**Submit**ボタンをクリックします。
 
-<figure><img src="../../../../.gitbook/assets/public-integration.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/import-online-datasource/65818ad8198396626d23791397ede90e.webp" alt=""><figcaption></figcaption></figure>
 
 統合の設定ページで公開に成功すると、密鍵タブで統合の密鍵にアクセスできるようになります：
 
-<figure><img src="../../../../.gitbook/assets/notion-public-secret.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/import-online-datasource/b7aacbaddbfb61ca799ac37557444422.webp" alt=""><figcaption></figcaption></figure>
 
 Difyのソースコードに戻り、**.env**ファイルに関連する環境変数を設定します。環境変数は以下の通りです：
 

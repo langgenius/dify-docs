@@ -22,7 +22,7 @@ Using the variable assigner node, you can write context from the conversation pr
 
 Example: After the conversation starts, LLM will automatically determine whether the user's input contains facts, preferences, or chat history that need to be remembered. If it has, LLM will first extract and store those information, then use it as context to respond. If there is no new information to remember, LLM will directly use the previously relevant memories to answer questions.
 
-![](../../../.gitbook/assets/conversation-variables-scenario-1.png)
+![](https://assets-docs.dify.ai//img/en/node/1f41330dd5e9569b8e2b745daa0ed686.webp)
 
 **Configuration process:**
 
@@ -108,7 +108,7 @@ def main(arg1: list) -> str:
 
 Example: Before the chatting, the user specifies "English" in the `language` input box. This language will be written to the conversation variable, and the LLM will reference this information when responding, continuing to use "English" in subsequent conversations.
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/c001f13aa2bf7ac71a728453ab939d18.webp" alt=""><figcaption></figcaption></figure>
 
 **Configuration Guide:**
 
@@ -124,7 +124,7 @@ Example: Before the chatting, the user specifies "English" in the `language` inp
 
 Example: After starting the conversation, the LLM will ask the user to input items related to the Checklist in the chatting box. Once the user mentions content from the Checklist, it will be updated and stored in the Conversation Variable. The LLM will remind the user to continue supplementing missing items after each round of dialogue.
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-2-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/fb86247c12b427552e16ac2d2e085ff7.webp" alt=""><figcaption></figcaption></figure>
 
 **Configuration Process:**
 

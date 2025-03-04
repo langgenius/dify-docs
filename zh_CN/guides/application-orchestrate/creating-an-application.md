@@ -12,7 +12,7 @@
 
 你可以从导航选择 「工作室 」，在应用列表内选择 「从模版创建」。
 
-<figure><img src="../../.gitbook/assets/image (219).png" alt=""><figcaption><p>从模板创建应用</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/application-orchestrate/4b1add0e1ee1cba45a91d88b4e09ab2a.webp" alt=""><figcaption><p>从模板创建应用</p></figcaption></figure>
 
 任意选择某个模板，并将其添加至工作区。
 
@@ -40,7 +40,7 @@ Dify DSL 是由 Dify.AI 所定义的 AI 应用工程文件标准，文件格式�
 
 如果你从社区或其它人那里获得了一个应用模版（DSL 文件），可以从工作室选择 「 导入DSL 文件 」。DSL 文件导入后将直接加载原应用的所有配置信息。
 
-<figure><img src="../../.gitbook/assets/import-dsl-file.png" alt=""><figcaption><p>导入 DSL 文件创建应用</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/application-orchestrate/f582fa78c9c3ef9be0575cdbc7c036b7.webp" alt=""><figcaption><p>导入 DSL 文件创建应用</p></figcaption></figure>
 
 #### URL 导入
 
@@ -50,6 +50,6 @@ Dify DSL 是由 Dify.AI 所定义的 AI 应用工程文件标准，文件格式�
 https://example.com/your_dsl.yml
 ```
 
-<figure><img src="../../.gitbook/assets/import-dsl-from-url.jpeg" alt=""><figcaption><p>通过 URL 导入 DSL 文件</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/application-orchestrate/a5ab84ec20faf225db2fc403569d1deb.webp" alt=""><figcaption><p>通过 URL 导入 DSL 文件</p></figcaption></figure>
 
 > 导入 DSL 文件时将校对文件版本号。如果 DSL 版本号差异较大，有可能会出现兼容性问题。详细说明请参考 [应用管理：导入](https://docs.dify.ai/zh-hans/guides/management/app-management#dao-ru-ying-yong)。

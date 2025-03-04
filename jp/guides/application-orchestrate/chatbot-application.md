@@ -16,13 +16,13 @@
 
 ホームページで「最初から作成」をクリックしてアプリを作成します。アプリ名を入力し、アプリタイプは**チャットボット**を選択します。
 
-<figure><img src="../../.gitbook/assets/jp-create-chatbox.png" alt=""><figcaption><p>チャットボットの作成</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/application-orchestrate/08697025dd7176cdc50ff0c0bf3ad90b.webp" alt=""><figcaption><p>チャットボットの作成</p></figcaption></figure>
 
 #### アプリの編成
 
 アプリを作成すると、自動的にアプリの概要ページに移動します。左側のメニューから編成をクリックしてアプリを編成します。
 
-<figure><img src="../../.gitbook/assets/jp-create-prompt.png" alt=""><figcaption><p>アプリの編成</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/application-orchestrate/72b58f4207dfeea6abb5b65aea3be45e.webp" alt=""><figcaption><p>アプリの編成</p></figcaption></figure>
 
 **プロンプトの記入**
 
@@ -38,17 +38,17 @@
 
 オープニングダイアログを追加する方法は、底の「機能を追加」ボタンをクリックして、「会話の開始」機能を開きます：
 
-<figure><img src="../../.gitbook/assets/jp-conversation-remarkers.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/application-orchestrate/e6956c649c9db22edebd7b03d6fedac8.webp" alt=""><figcaption></figcaption></figure>
 
 オープニングステートメントを編集する際に、いくつかのオープニング質問を追加することもできます：
 
-![](../../.gitbook/assets/jp-conversation-options.png)
+![](https://assets-docs.dify.ai//img/jp/application-orchestrate/47692893b656f29e1f2b7b72ac644870.webp)
 
 #### コンテキストの追加
 
 AIの対話範囲を[ナレッジベース](../knowledge-base/)内に制限したい場合、企業内のカスタマーサービス用語規準などを「コンテキスト」で参照することができます。
 
-![](../../.gitbook/assets/jp-context.png)
+![](https://assets-docs.dify.ai//img/jp/application-orchestrate/3f135004de6416229d71ea8d68955554.webp)
 
 ### ファイルのアップロード
 
@@ -62,11 +62,11 @@ AIの対話範囲を[ナレッジベース](../knowledge-base/)内に制限し�
 
 右側にユーザー入力項目を入力し、内容を入力してデバッグします。
 
-![](../../.gitbook/assets/jp-conversation-debug.png)
+![](https://assets-docs.dify.ai//img/jp/application-orchestrate/9e1f448224130626ae1b7b5acf0f8622.webp)
 
 回答結果が望ましくない場合は、プロンプトやモデルを調整することができます。また、複数のモデルを同期してデバッグすることもでき、適切な構成を組み合わせることができます。
 
-![](../../.gitbook/assets/jp-modify-model.png)
+![](https://assets-docs.dify.ai//img/jp/application-orchestrate/5738f1cdddd5ce3e003c3d683d88ecfb.webp)
 
 単一モデルでのデバッグが効率的ではない場合、[**「複数のモデルでのデバッグ」**](./multiple-llms-debugging.md)機能を使用して、複数のモデルの回答効果を一括確認することもできます。
 

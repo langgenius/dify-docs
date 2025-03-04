@@ -4,11 +4,11 @@ The image upload feature has been integrated into the more comprehensive [File U
 
 * The image upload option in Chatflow’s “Features” has been removed and replaced by the new “File Upload” feature. Within the “File Upload” feature, you can select the image file type. Additionally, the image upload icon in the application dialog has been replaced with a file upload icon.
 
-<figure><img src="../../.gitbook/assets/image (138).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/workflow/06d0eb625c41d9016544c4978977874d.webp" alt=""><figcaption></figcaption></figure>
 
 * The image upload option in Workflow’s “Features” and the `sys.files` [variable](variables.md) will be deprecated in the future. Both have been marked as `LEGACY`, and developers are encouraged to use custom file variables to add file upload functionality to Workflow applications.
 
-<figure><img src="../../.gitbook/assets/image (140).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/workflow/fa75202395a42dd2c42acf83d5a3e28c.webp" alt=""><figcaption></figcaption></figure>
 
 ### Why Replace the “Image Upload” Feature?
 
@@ -25,7 +25,7 @@ To enhance the information processing capabilities of your applications, we have
 * The file upload feature allows files to be uploaded, parsed, referenced, and downloaded as file variables within Workflow applications.
 * Developers can now easily build applications capable of understanding and processing complex tasks involving images, audio, and video.
 
-<figure><img src="../../.gitbook/assets/image (141).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/workflow/71b3072840a27d02db00aba6db7e7ad9.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 We no longer recommend using the standalone “Image Upload” feature and instead suggest transitioning to the more comprehensive “File Upload” feature to improve the application experience.
 
@@ -38,11 +38,11 @@ We no longer recommend using the standalone “Image Upload” feature and inste
 If you have already created Chatflow applications with the “Image Upload” feature enabled and activated the Vision feature in the LLM node, the system will automatically switch the feature, and it will not affect the application’s image upload capability. If you need to update and republish the application, select the file variable in the Vision variable selection box of the LLM node, clear the item from the checklist, and republish the application.\
 
 
-<figure><img src="../../.gitbook/assets/image (142).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/workflow/a9d0a60fbfd557336197ae638e2aeb52.webp" alt=""><figcaption></figcaption></figure>
 
 If you wish to add the “Image Upload” feature to a Chatflow application, enable “File Upload” in the features and select only the “image” file type. Then enable the Vision feature in the LLM node and specify the sys.files variable. The upload entry will appear as a “paperclip” icon. For detailed instructions, refer to [Additional Features](additional-features.md).
 
-<figure><img src="../../.gitbook/assets/image (143).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/workflow/e14872d53e796eb226a7cee92ecbfe1c.webp" alt=""><figcaption></figcaption></figure>
 
 * **Workflow Applications**
 

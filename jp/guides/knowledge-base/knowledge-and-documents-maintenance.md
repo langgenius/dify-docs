@@ -36,7 +36,7 @@ Difyチームのホームページで、「ナレッジベース」ボタンを�
 
 Difyのナレッジベースは、標準APIの完全なセットを提供しています。開発者はAPI呼び出しを行うことで、ナレッジベース内のドキュメントやチャンクの追加、削除、変更、クエリなどの日常的な管理およびメンテナンス操作を実行できます。詳細については、[ナレッジベースAPIドキュメント](maintain-dataset-via-api.md)を参照してください。
 
-<figure><img src="../../.gitbook/assets/knowledge-base-api.png" alt=""><figcaption><p>ナレッジベースAPIの管理</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/a07a4767059318f569d146c027e49776.webp" alt=""><figcaption><p>ナレッジベースAPIの管理</p></figcaption></figure>
 
 ***
 

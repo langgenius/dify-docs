@@ -12,7 +12,7 @@ Please apply for an API Key at [Perplexity](https://www.perplexity.ai/settings/a
 
 In the Dify navigation page, click on `Tools > Perplexity > Go to authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tools-perplexity.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/001626f39cbf672dc4661ad24fedd122.webp)
 
 ## 3. Using the tool
 
@@ -22,10 +22,10 @@ You can use the Perplexity Search tool in the following application types.
 
 Both Chatflow and Workflow applications support adding Perplexity tool nodes. Pass the user's input content through variables to the "Query" box in the Perplexity tool node, adjust the built-in parameters of the Perplexity tool as needed, and finally select the output content of the Perplexity tool node in the response box of the "End" node.
 
-![](../../../.gitbook/assets/tools-chatflow-perplexity.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/e2f98fdd5be7103f5552eb41d0e62c8b.webp)
 
 * **Agent applications**
 
 Add the `Perplexity Search` tool in the Agent application, then enter relevant commands to invoke this tool.
 
-![](../../../.gitbook/assets/tools-agent-perplexity.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/f7a8a875bedc13091ad297a2b91e3a2b.webp)

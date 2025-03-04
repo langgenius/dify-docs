@@ -68,7 +68,7 @@ Difyは、ファイルアップロードをサポートする[チャットフロ
 
 1. チャットフローアプリの右上にある「機能」ボタンを押すと、新しい機能を追加できます。この機能を使うことで、ユーザーは会話中にファイルのアップロードや更新が可能になります。最大10ファイルまで一度にアップロードでき、一つのファイルは15MBまでのサイズ制限があります。
 
-<figure><img src="../../../en/.gitbook/assets/image (1) (3).png" alt=""><figcaption><p>ファイルアップロード</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/f6899134147db823b800f4246c644bc8.webp" alt=""><figcaption><p>ファイルアップロード</p></figcaption></figure>
 
 ただし、この機能をオンにしても、LLMがファイルを直接読むわけではありません。テキストに変換してLLMが理解できるようにするためには**テキスト抽出ツール**が必要です。
 
@@ -79,11 +79,11 @@ Difyは、ファイルアップロードをサポートする[チャットフロ
 3. LLMノードを追加し、そのシステムプロンプトでテキスト抽出ツールからの出力変数を選びます。
 4. 最後に、「回答」ノードを設置し、LLMノードからの出力変数を入力します。
 
-<figure><img src="../../../en/.gitbook/assets/image (2) (4).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/747dcd231ba78a0b82085f3dcc9eb4d7.webp" alt=""><figcaption></figcaption></figure>
 
 機能を有効にした後は、ユーザーがファイルをアップロードし、ダイアログボックスを通じて会話に参加することが可能になります。ただし、この機能では、LLMアプリケーションがファイル内容を保持することができず、会話のたびにファイルの再アップロードが必要になります。
 
-<figure><img src="../../../en/.gitbook/assets/image (3) (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/7b5edc11126a0ddd2308ae4ea5f77c7c.webp" alt=""><figcaption></figcaption></figure>
 
 会話中にLLMがファイル内容を記録しておく機能を希望する場合は、別の方法として方法3を参照してください。
 
@@ -125,11 +125,11 @@ Difyは、ファイルアップロードをサポートする[チャットフロ
 
 「開始」ノード内のファイル変数を **「テキスト抽出ツール」** ノードの入力変数として使用します。
 
-<figure><img src="../../../en/.gitbook/assets/image (4).png" alt=""><figcaption><p>入力変数の追加</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/90d476521aef40e801cf5877c3e82ae6.webp" alt=""><figcaption><p>入力変数の追加</p></figcaption></figure>
 
 「テキスト抽出ツール」ノードの出力変数をLLMノードのシステムプロンプトに貼り付けます。
 
-<figure><img src="../../../en/.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/74c8ad8ad9014e272af177ca2f79252b.webp" alt=""><figcaption></figcaption></figure>
 
 これらの設定が完了すると、ユーザーはWebApp内でファイルのURLを貼り付けるか、ローカルファイルをアップロードでき、その後、ドキュメントの内容に基づいてLLMとの対話が可能になります。ユーザーは対話の過程でいつでもファイルを置き換えることができ、LLMは常に最新のファイル内容を取得します。
 
@@ -143,7 +143,7 @@ Difyは、ファイルアップロードをサポートする[チャットフロ
 
 以下に設定例を示します：
 
-<figure><img src="../../../en/.gitbook/assets/image (6).png" alt=""><figcaption><p>LLMノードを使用してファイル変数にアクセスする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/98331aac6040cc91b3421f054ffebd89.webp" alt=""><figcaption><p>LLMノードを使用してファイル変数にアクセスする</p></figcaption></figure>
 
 LLMノードを介してファイル変数を利用する際には、開発者がファイル変数に含まれるのが画像ファイルだけであることを確認する必要があります。そうでない場合、エラーが発生する可能性があります。異なるタイプのファイルがアップロードされる可能性がある場合は、ファイルを適切にフィルタリングするためにリストオペレーターノードの使用が必要です。
 
@@ -151,7 +151,7 @@ LLMノードを介してファイル変数を利用する際には、開発者�
 
 応答ノードや終了ノードにファイル変数を設定すると、そのノードがトリガされた際に会話ウィンドウにファイルダウンロードのカードが表示されます。カードをクリックすることで、ファイルをダウンロードできます。
 
-<figure><img src="../../../en/.gitbook/assets/image (7).png" alt=""><figcaption><p>ファイルのダウンロード</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/workflow/12141b808699e14354216e4faa5d1f04.webp" alt=""><figcaption><p>ファイルのダウンロード</p></figcaption></figure>
 
 ### 上級者向けの使用方法
 

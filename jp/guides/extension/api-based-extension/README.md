@@ -9,7 +9,7 @@
 
 対応するモジュール機能を開発するだけでなく、DifyがAPIを正しく呼び出せるよう、以下の仕様にも従う必要があります。
 
-<figure><img src="../../../.gitbook/assets/screenshot-20231128-104353.png" alt=""><figcaption><p>APIに基づくエクステンション</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/a1683dd85bb4f4e78fd0a77296274e89.webp" alt=""><figcaption><p>APIに基づくエクステンション</p></figcaption></figure>
 
 ### API仕様 <a href="#usercontentapi-gui-fan" id="usercontentapi-gui-fan"></a>
 
@@ -194,11 +194,11 @@ Authorization: Bearer 123456
     </strong></code></pre>
 4. DifyにこのAPIを設定します。
 
-<figure><img src="../../../.gitbook/assets/screenshot-20231128-104353.png" alt=""><figcaption><p>APIの設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/a1683dd85bb4f4e78fd0a77296274e89.webp" alt=""><figcaption><p>APIの設定</p></figcaption></figure>
 
 5. アプリでこのAPIエクステンションを選択します。
 
-<figure><img src="../../../.gitbook/assets/screenshot-20231128-104353 (1) (1).png" alt=""><figcaption><p>エクステンションの選択</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/a1683dd85bb4f4e78fd0a77296274e89.webp" alt=""><figcaption><p>エクステンションの選択</p></figcaption></figure>
 
 アプリのデバッグ時、Difyは設定されたAPIにリクエストを送り、以下の内容（例）を送信します：
 
@@ -230,7 +230,7 @@ Difyクラウド版は内網APIサービスにアクセスできないため、�
 
 1.  [https://ngrok.com](https://ngrok.com)の公式サイトにアクセスし、登録してNgrokファイルをダウンロードします。
 
-    <figure><img src="../../../.gitbook/assets/download.png" alt=""><figcaption><p>ダウンロード</p></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/b5c922d1e9fe73bee9d95a29fd7ec509.webp" alt=""><figcaption><p>ダウンロード</p></figcaption></figure>
 2. ダウンロードが完了したら、ダウンロードディレクトリに移動し、以下の説明に従って圧縮ファイルを解凍し、初期化スクリプトを実行します。
    * ```Shell
      $ unzip /path/to/ngrok.zip
@@ -238,7 +238,7 @@ Difyクラウド版は内網APIサービスにアクセスできないため、�
      ```
 3. ローカルAPIサービスのポートを確認します：
 
-<figure><img src="../../../.gitbook/assets/8000.png" alt=""><figcaption><p>ポートの確認</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/5d3cf23074d5411ffd8571de28a07774.webp" alt=""><figcaption><p>ポートの確認</p></figcaption></figure>
 
 次に以下のコマンドを実行して開始します：
 
@@ -248,7 +248,7 @@ Difyクラウド版は内網APIサービスにアクセスできないため、�
 
     成功例は以下の通りです：
 
-<figure><img src="../../../.gitbook/assets/ngrock.png" alt=""><figcaption><p>Ngrokの起動</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/api-based-extension/8c671b5ad9ed883e7095e2481621d01d.webp" alt=""><figcaption><p>Ngrokの起動</p></figcaption></figure>
 
 4. Forwardingで示されるように、上の図では`https://177e-159-223-41-52.ngrok-free.app`（これは例のドメインです。自分のドメインに置き換えてください）がパブリックドメインとなります。
 

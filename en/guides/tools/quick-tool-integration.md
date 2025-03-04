@@ -275,4 +275,4 @@ After the above steps are completed, we can see this tool on the frontend, and i
 
 Of course, because google\_search needs a credential, before using it, you also need to input your credentials on the frontend.
 
-<figure><img src="../../.gitbook/assets/Feb 4, 2024 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/tools/13146d4e1f520c948c22f0825e0cf3be.webp" alt=""><figcaption></figcaption></figure>

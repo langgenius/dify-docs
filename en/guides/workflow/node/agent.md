@@ -10,17 +10,17 @@ An Agent Node is a component in Dify Chatflow/Workflow that enables autonomous t
 
 In the Dify Chatflow/Workflow editor, drag the Agent node from the components panel onto the canvas.
 
-<figure><img src="../../../.gitbook/assets/en-1-9-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/0139565a9a7cba63e6430e60bd0f2cdb.webp" alt=""><figcaption></figcaption></figure>
 
 ### Select an Agent Strategy
 
 In the node configuration panel, click Agent Strategy.
 
-<figure><img src="../../../.gitbook/assets/en-1-9-0.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/620a2f4adb3c6144f05043537e26d361.webp" alt=""><figcaption></figcaption></figure>
 
 From the dropdown menu, select the desired Agent reasoning strategy. Dify provides two built-in strategies, **Function Calling and ReAct**, which can be installed from the **Marketplace → Agent Strategies category**.
 
-<figure><img src="../../../.gitbook/assets/en-1-9-2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/3ef18a7d120e0fc0631cfc824d82b33c.webp" alt=""><figcaption></figcaption></figure>
 
 #### 1. Function Calling
 
@@ -34,7 +34,7 @@ Pros:
 
 **• Structured output:** The model outputs structured information about function calls, facilitating processing by downstream nodes.
 
-<figure><img src="../../../.gitbook/assets/en-agent-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/d7b6f9d3e5c909b4207d4928ba023214.webp" alt=""><figcaption></figcaption></figure>
 
 #### 2. ReAct (Reason + Act)
 
@@ -48,7 +48,7 @@ Pros:
 
 **• Wide applicability:** Suitable for scenarios that require external knowledge or need to perform specific actions, such as Q\&A, information retrieval, and task execution.
 
-<figure><img src="../../../.gitbook/assets/en-agent-2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/01fcdb769fcbb78f27b61ab4b735ed00.webp" alt=""><figcaption></figcaption></figure>
 
 Developers can contribute Agent strategy plugins to the public [repository](https://github.com/langgenius/dify-plugins). After review, these plugins will be listed in the Marketplace for others to install.
 
@@ -66,10 +66,10 @@ After choosing the Agent strategy, the configuration panel will display the rele
 5. **Maximum Iterations:** Set the maximum number of execution steps for the Agent.
 6. **Output Variables:** Indicates the data structure output by the node.
 
-<figure><img src="../../../.gitbook/assets/en-1-9-3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/128c934041c58154cbcfe9a2bfd14e68.webp" alt=""><figcaption></figcaption></figure>
 
 ## Logs
 
 During execution, the Agent node generates detailed logs. You can see overall node execution information—including inputs and outputs, token usage, time spent, and status. Click Details to view the output from each round of Agent strategy execution.
 
-<figure><img src="../../../.gitbook/assets/en-1-9-6.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/2eb2552848c9309f568caeb12087ee62.webp" alt=""><figcaption></figcaption></figure>

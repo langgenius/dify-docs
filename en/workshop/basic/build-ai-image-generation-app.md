@@ -6,7 +6,7 @@ With the rise of image generation, many excellent image generation products have
 
 In this article, you will learn how to develop an AI image generation app using Dify.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-12-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/fd446c9062b3aaa962d4f6535c60d12f.webp)
 
 ## You Will Learn
 
@@ -24,7 +24,7 @@ If you haven't registered yet, you will be asked to register before entering the
 
 After entering the management page, click `copy` to copy the key.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-1.png)
+![](https://assets-docs.dify.ai//img/en/basic/68007f69cdf208ccdb4130a5176b4984.webp)
 
 Next, you need to fill in the key in [Dify - Tools - Stability](https://cloud.dify.ai/tools) by following these steps:
 
@@ -33,7 +33,7 @@ Next, you need to fill in the key in [Dify - Tools - Stability](https://cloud.di
 * Select Stability
 * Click `Authorize`
 
-![](../../.gitbook/assets/build-ai-image-generation-app-2-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/096a6de7c057b04e799446ec491899fc.webp)
 
 * Fill in the key and save
 
@@ -47,7 +47,7 @@ If the message credits are insufficient, you can customize other model providers
 
 Click **Your Avatar - Settings - Model Provider**
 
-<figure><img src="../../.gitbook/assets/build-ai-image-generation-app-3-en.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/basic/19e05ce9a7929c53aab8cf003273ad23.webp" alt=""><figcaption></figcaption></figure>
 
 If you haven't found a suitable model provider, the groq platform provides free call credits for LLMs like Llama.
 
@@ -57,17 +57,17 @@ Click **Create API Key**, set a desired name, and copy the API Key.
 
 Back to **Dify - Model Providers**, select **groqcloud**, and click **Setup**.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-4-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/daba9ae3c1a9179490dc0c3ba127bc45.webp)
 
 Paste the API Key and save.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-5-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/9f4d86396b83179c521cd60e717c0a42.webp)
 
 ## 3. Build an Agent
 
 Back to **Dify - Studio**, select **Create from Blank**.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-6-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/b81842a1376c219767b3bd9699e6d5d7.webp)
 
 In this experiment, we only need to understand the basic usage of Agent.
 
@@ -79,21 +79,21 @@ An Agent is an AI system that simulates human behavior and capabilities. It inte
 
 Select **Agent**, fill in the name.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-7-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/309aa808354a326a0fc5b873878bb32c.webp)
 
 Next, you will enter the Agent orchestration interface as shown below.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-8-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/492a3f517dffcc8d08940baab0167e99.webp)
 
 Select the LLM. Here we use Llama-3.1-70B provided by groq as an example:
 
-![](../../.gitbook/assets/build-ai-image-generation-app-9-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/758709593a19635fa48772900dfb235c.webp)
 
 Select Stability in **Tools**:
 
-![](../../.gitbook/assets/build-ai-image-generation-app-10-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/51f63fa4e2f25a605cad065076367ee9.webp)
 
-![](../../.gitbook/assets/build-ai-image-generation-app-11-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/d28376231bfcad199cbd0371ff3e4c8a.webp)
 
 ### Write Prompts
 
@@ -113,17 +113,17 @@ Each time the user inputs a command, the Agent will know this system-level instr
 
 For example: Draw a girl holding an open book.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-12-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/fd446c9062b3aaa962d4f6535c60d12f.webp)
 
 ### Don't want to write prompts? Of course you can!
 
 Click **Generate** in the upper right corner of Instructions.
 
-![](../../.gitbook/assets/prompt-gen-1-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/fd3a734ef5f8f5d85ce0416fab792e6d.webp)
 
 Enter your requirements in the **Instructions** and click **Generate**. The generated prompts on the right will show AI-generated prompts.
 
-![](../../.gitbook/assets/prompt-gen-2-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/ae5ce947982f500b8dd924c605f297c7.webp)
 
 However, to develop a good understanding of prompts, we should not rely on this feature in the early stages.
 
@@ -131,7 +131,7 @@ However, to develop a good understanding of prompts, we should not rely on this 
 
 Click the publish button in the upper right corner, and after publishing, select **Run App** to get a web page for an online running Agent.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-13-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/3d529a876afa11b800bc8260de33e3e6.webp)
 
 Copy the URL of this web page to share with other friends.
 
@@ -139,7 +139,7 @@ Copy the URL of this web page to share with other friends.
 
 We can add style instructions in the user's input command, for example: Anime style, draw a girl holding an open book.
 
-![](../../.gitbook/assets/build-ai-image-generation-app-14-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/5b77b0b3c3f11d5736208a1d313536c1.webp)
 
 But if we want set the default style to anime style, we can add it to the system prompt because we previously learned that the system prompt is known each time the user command is executed and has a higher priority.
 
@@ -165,10 +165,10 @@ If the user requests content unrelated to drawing, reply: "Sorry, I don't unders
 
 For example, let's ask: What's for dinner tonight?
 
-<figure><img src="../../.gitbook/assets/build-ai-image-generation-app-15-en.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/basic/f45fb871f867ce4a2688e5c47e3966af.webp" alt=""><figcaption></figcaption></figure>
 
 In some more formal business scenarios, we can call a sensitive word library to refuse user requests.
 
 Add the keyword "dinner" in **Add Feature - Content Moderation**. When the user inputs the keyword, the Agent app outputs "Sorry, I don't understand what you're saying."
 
-![](../../.gitbook/assets/build-ai-image-generation-app-16-en.png)
+![](https://assets-docs.dify.ai//img/en/basic/a082bf01b81bca0a8e1ae6cb0838f02f.webp)

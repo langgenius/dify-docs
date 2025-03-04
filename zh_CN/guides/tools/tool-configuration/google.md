@@ -12,7 +12,7 @@ Google 搜索工具能够帮助你在使用 LLM 应用的时候，获取联网�
 
 在 Dify 导航页内轻点 `工具 > Google > 去授权` 填写 API Key。
 
-![](../../../.gitbook/assets/zh-tools-google.png)
+![](https://assets-docs.dify.ai//img/zh_CN/tool-configuration/11576499783c4881c1fcfa6210374c61.webp)
 
 ## 3. 使用工具
 

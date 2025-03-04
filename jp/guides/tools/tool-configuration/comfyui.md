@@ -9,10 +9,10 @@ ComfyUIが正常に動作し、画像が生成されることを確かめるた�
 
 Difyを介してプロンプトを渡す必要がない場合は、この手順をスキップできます。プロンプトノードが ComfyUI の唯一の `KSampler` ノードに接続されている場合は、この手順もスキップできます。
 それ以外の場合は、ポジティブなプロンプトの単語の内容を置き換えるには文字列 `{{positive_prompt}}` を使用し、ネガティヴなプロンプトの単語の内容を置き換えるには `{{negative_prompt}}` を使用してください。
-<figure><img src="../../../../en/.gitbook/assets/guides/tools/comfyui_prompt.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tool-configuration/2ae273f9a6edbc583b3176340f8ae416.webp" alt=""><figcaption></figcaption></figure>
 
 ## 3. ワークフローのAPIファイルをエクスポートします。
-<figure><img src="../../../../en/.gitbook/assets/guides/tools/comfyui.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tool-configuration/d9208896a45c4fedd6b4390cf647f512.webp" alt=""><figcaption></figcaption></figure>
 画像のように、「Save (API Format)」を選択してください。このオプションが表示されない場合は、設定で「Dev Mode」を有効にする必要があります。
 
 ## 4. DifyにComfyUIを統合します。

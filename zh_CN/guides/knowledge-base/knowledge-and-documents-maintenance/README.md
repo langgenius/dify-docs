@@ -43,4 +43,4 @@ Dify 知识库提供整套标准 API ，开发者通过 API 调用对知识库�
 [maintain-dataset-via-api.md](maintain-dataset-via-api.md)
 {% endcontent-ref %}
 
-<figure><img src="../../../.gitbook/assets/image (231).png" alt=""><figcaption><p>通过 API 管理文档</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/knowledge-and-documents-maintenance/aad52cba86e211d5a54337f43faf2ea6.webp" alt=""><figcaption><p>通过 API 管理文档</p></figcaption></figure>

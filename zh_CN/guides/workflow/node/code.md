@@ -13,7 +13,7 @@
 
 该节点极大地增强了开发人员的灵活性，使他们能够在工作流程中嵌入自定义的 Python 或 Javascript 脚本，并以预设节点无法达到的方式操作变量。通过配置选项，你可以指明所需的输入和输出变量，并撰写相应的执行代码：
 
-<figure><img src="../../../.gitbook/assets/image (208).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/316001a7d0dcfef2e571c53279b2da52.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ## 配置
 
@@ -117,4 +117,4 @@ def main() -> dict:
 
 危险代码将会被 Cloudflare WAF 自动拦截，你可以通过 “网页调试工具” 中的 “网络” 查看是否被拦截。
 
-<figure><img src="../../../.gitbook/assets/image (370).png" alt=""><figcaption><p>Cloudflare WAF</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/379d98bbf74c659a2c879a7f747868f5.webp" alt=""><figcaption><p>Cloudflare WAF</p></figcaption></figure>

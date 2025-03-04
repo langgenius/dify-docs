@@ -24,7 +24,7 @@ Workflow 类型应用仅支持 **“图片上传”** 功能。开启后，Workf
 
 最后在 END 节点内选择 LLM 节点的输出变量即可完成设置。
 
-<figure><img src="../../.gitbook/assets/image (7) (2).png" alt=""><figcaption><p>开启视觉分析能力</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/22bdad0ba66a56a3ea87713259e2ad19.webp" alt=""><figcaption><p>开启视觉分析能力</p></figcaption></figure>
 
 ### Chatflow
 
@@ -43,7 +43,7 @@ Chatflow 类型应用支持以下功能：
 
     支持以下文件类型：文档、图片、音频、视频以及其它文件类型。开启此功能后，应用使用者可以在应用对话的过程中随时上传并更新文件。最多支持同时上传 10 个文件，每个文件的大小上限为 15MB。
 
-    <figure><img src="../../.gitbook/assets/image (8) (2).png" alt=""><figcaption><p>文件上传功能</p></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/afff1a9c576e941a1ae3e1202c77d613.webp" alt=""><figcaption><p>文件上传功能</p></figcaption></figure>
 *   **引用和归属**
 
     常用于配合[“知识检索”](node/knowledge-retrieval.md)节点共同使用，显示 LLM 给出答复的参考源文档及归属部分。
@@ -59,7 +59,7 @@ Chatflow 类型应用支持以下功能：
 
 **对于应用使用者而言：** 已开启文件上传功能的 Chatflow 应用将会在对话框右侧出现 “回形针” 标识，点击后即可上传文件并与 LLM 交互。
 
-<figure><img src="../../.gitbook/assets/image (9) (2).png" alt=""><figcaption><p>使用文件上传</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/7b5edc11126a0ddd2308ae4ea5f77c7c.webp" alt=""><figcaption><p>使用文件上传</p></figcaption></figure>
 
 **对于应用开发者而言：**
 
@@ -78,7 +78,7 @@ LLM 并不具备直接读取文档文件的能力，因此需要使用 [文档�
 
 使用此方法搭建出的 Chatflow 应用无法记忆已上传的文件内容。应用使用者每次对话时都需要在聊天框中上传文档文件。如果你希望应用能够记忆已上传的文件，请参考 [《文件上传：在开始节点添加变量》](file-upload.md#fang-fa-er-zai-tian-jia-wen-jian-bian-liang)。
 
-<figure><img src="../../.gitbook/assets/image (372).png" alt=""><figcaption><p>文档文件编排</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/58f1f31d855c9d32cb2b67ad27156155.webp" alt=""><figcaption><p>文档文件编排</p></figcaption></figure>
 
 * **图片文件**
 
@@ -90,7 +90,7 @@ LLM 并不具备直接读取文档文件的能力，因此需要使用 [文档�
 2. 添加 LLM 节点，启 VISION 功能并选择 `sys.files` 变量。
 3. 在末尾添加 “直接回复” 节点，填写 LLM 节点的输出变量。
 
-<figure><img src="../../.gitbook/assets/image (3) (2).png" alt=""><figcaption><p>开启视觉分析能力</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/0f4eabb5d9995bdc3b985234464ad570.webp" alt=""><figcaption><p>开启视觉分析能力</p></figcaption></figure>
 
 * **混合文件类型**
 
@@ -103,7 +103,7 @@ LLM 并不具备直接读取文档文件的能力，因此需要使用 [文档�
 
 应用使用者同时上传文档文件和图片后，文档文件自动分流至文档提取器节点，图片文件自动分流至 LLM 节点以实现对于文件的共同处理。
 
-<figure><img src="../../.gitbook/assets/image (16).png" alt=""><figcaption><p>混合文件处理</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/4310f3817e6012976305a2baa468daf6.webp" alt=""><figcaption><p>混合文件处理</p></figcaption></figure>
 
 * **音视频文件**
 

@@ -23,11 +23,11 @@
 
 複数リコールモードでは、検索器はアプリに関連付けられたすべてのナレッジベースから、ユーザーの問題に関連するテキスト内容を検索します。そして、複数リコールの関連文書結果を統合します。以下は複数リコールモードの技術フローチャートです：
 
-<figure><img src="../../.gitbook/assets/rerank-flow-chart.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/cf9b4d10e65ad7d0e42b9c69045da709.webp" alt=""><figcaption></figcaption></figure>
 
 ユーザーの意図に基づいて、すべての **「コンテキスト」** に追加されたナレッジベースを同時に検索し、関連するテキスト断片を複数のナレッジベースからクエリし、ユーザーの問題に最も一致する内容を選択します。最適なコンテンツをRerank戦略で見つけてユーザーに回答します。この方法はより科学的な検索原理です。
 
-<figure><img src="../../.gitbook/assets/jp-rag-multiple.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/3e86d8edefff2a90e1592c5d4e98be34.webp" alt=""><figcaption></figcaption></figure>
 
 例：アプリAのコンテキストには、K1、K2、K3 の3つのナレッジベースが関連付けられています。ユーザーが問い合わせを入力すると、3つのナレッジベースで検索を行い、複数の内容をまとめます。最適な内容を見つけるためには、Rerank戦略を使用してユーザーの問題に最も関連する内容を特定し、結果をより正確で信頼性の高いものにします。
 
@@ -59,7 +59,7 @@ Rerankモデルは外部のスコアリングシステムで、ユーザーの�
 
 Difyは現在、複数のRerankモデルをサポートしており、"モデルサプライヤー"ページでRerankモデル（例：Cohere、Jina AIなど）のAPIキーを入力することができます。
 
-<figure><img src="../../.gitbook/assets/jp-rerank-model-api.png" alt=""><figcaption><p>モデルサプライヤー内でRerankモデルを設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/2d21c8ddac5ea605708f86678437d53e.webp" alt=""><figcaption><p>モデルサプライヤー内でRerankモデルを設定</p></figcaption></figure>
 
 **調整可能なパラメータ**
 
@@ -94,7 +94,7 @@ Difyは現在、複数のRerankモデルをサポートしており、"モデル
 
 以下は、複数のリコール方法がナレッジベース検索に与える影響を示します：
 
-<figure><img src="../../.gitbook/assets/jp-knowledge-base-table.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/knowledge-base/883032b3ef318a96b7242309a83ec1c0.webp" alt=""><figcaption></figcaption></figure>
 
 3. **複数のナレッジベースを引用する際、「重み設定」を調整できず、エラーが表示される場合はどう対処すれば良いですか？**
 

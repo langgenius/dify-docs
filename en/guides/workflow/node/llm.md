@@ -4,7 +4,7 @@
 
 Invokes the capabilities of large language models to process information input by users in the "Start" node (natural language, uploaded files, or images) and provide effective response information.
 
-<figure><img src="../../../.gitbook/assets/llm-node-1.png" alt=""><figcaption><p>LLM Node</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/12a2e5d2e82788f7c3c28062281580de.webp" alt=""><figcaption><p>LLM Node</p></figcaption></figure>
 
 ***
 
@@ -27,7 +27,7 @@ By selecting the appropriate model and writing prompts, you can build powerful a
 
 ### How to Configure
 
-<figure><img src="../../../.gitbook/assets/llm-node-2.png" alt=""><figcaption><p>LLM Node Configuration - Model Selection</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/16727f75e2e25d39d104505faced4520.webp" alt=""><figcaption><p>LLM Node Configuration - Model Selection</p></figcaption></figure>
 
 **Configuration Steps:**
 
@@ -48,11 +48,11 @@ In the LLM node, you can customize the model input prompts. If you select a chat
 
 If you're struggling to come up with effective system prompts (System), you can use the Prompt Generator to quickly create prompts suitable for your specific business scenarios, leveraging AI capabilities.
 
-<figure><img src="../../../.gitbook/assets/en-prompt-generator.png" alt="" width="563"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/3e53d82c5c1b1158de2ba029dc0e5a4f.webp" alt="" width="563"><figcaption></figcaption></figure>
 
 In the prompt editor, you can call out the **variable insertion menu** by typing `/` or `{` to insert **special variable blocks** or **upstream node variables** into the prompt as context content.
 
-<figure><img src="../../../.gitbook/assets/llm-node-3.png" alt="" width="366"><figcaption><p>Calling Out the Variable Insertion Menu</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/7b951432e13efbd4b83174e2a4e27d00.webp" alt="" width="366"><figcaption><p>Calling Out the Variable Insertion Menu</p></figcaption></figure>
 
 ***
 
@@ -62,7 +62,7 @@ In the prompt editor, you can call out the **variable insertion menu** by typing
 
 Context variables are a special type of variable defined within the LLM node, used to insert externally retrieved text content into the prompt.
 
-<figure><img src="../../../.gitbook/assets/llm-node-4.png" alt=""><figcaption><p>Context Variables</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/c863b8a4bfc535ce0e9cd2ed1efcd779.webp" alt=""><figcaption><p>Context Variables</p></figcaption></figure>
 
 In common knowledge base Q\&A applications, the downstream node of knowledge retrieval is typically the LLM node. The **output variable** `result` of knowledge retrieval needs to be configured in the **context variable** within the LLM node for association and assignment. After association, inserting the **context variable** at the appropriate position in the prompt can incorporate the externally retrieved knowledge into the prompt.
 
@@ -88,13 +88,13 @@ To achieve conversational memory in text completion models (e.g., gpt-3.5-turbo-
 The conversation history variable is not widely used and can only be inserted when selecting text completion models in Chatflow.
 {% endhint %}
 
-<figure><img src="../../../.gitbook/assets/image (204).png" alt=""><figcaption><p>Inserting Conversation History Variable</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/edd43570e47a040564aa95ae0cad01c6.webp" alt=""><figcaption><p>Inserting Conversation History Variable</p></figcaption></figure>
 
 **Model Parameters**
 
 The parameters of the model affect the output of the model. Different models have different parameters. The following figure shows the parameter list for `gpt-4`.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.35.17.png" alt="" width="363"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/a492ac7a36355e7eecc69934314db2f6.webp" alt="" width="363"><figcaption></figcaption></figure>
 
 The main parameter terms are explained as follows:
 
@@ -108,7 +108,7 @@ The main parameter terms are explained as follows:
 
 If you do not understand what these parameters are, you can choose to load presets and select from the three presets: Creative, Balanced, and Precise.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.37.43.png" alt="" width="364"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/6d02741d976789328b878d482ab1904f.webp" alt="" width="364"><figcaption></figcaption></figure>
 
 ***
 
@@ -143,7 +143,7 @@ To enable workflow applications to read "[Knowledge Base](../../knowledge-base/)
 2. Fill in the **output variable** `result` of the knowledge retrieval node into the **context variable** of the LLM node;
 3. Insert the **context variable** into the application prompt to give the LLM the ability to read text within the knowledge base.
 
-<figure><img src="../../../.gitbook/assets/image (135).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/edd43570e47a040564aa95ae0cad01c6.webp" alt=""><figcaption></figcaption></figure>
 
 The `result` variable output by the Knowledge Retrieval Node also includes segmented reference information. You can view the source of information through the **Citation and Attribution** feature.
 
@@ -161,7 +161,7 @@ To enable workflow applications to read document contents, such as building a Ch
 
 For more information, please refer to [File Upload](../file-upload.md).
 
-<figure><img src="../../../.gitbook/assets/image (137).png" alt=""><figcaption><p>input system prompts</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/70bd135616fb22dc1d5c3ad435178271.webp" alt=""><figcaption><p>input system prompts</p></figcaption></figure>
 
 * **Error Handling**
 

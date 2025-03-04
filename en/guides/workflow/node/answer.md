@@ -10,10 +10,10 @@ Answer node can be seamlessly integrated at any point to dynamically deliver con
 
 Example 1: Output plain text.
 
-<figure><img src="../../../.gitbook/assets/answer-plain-text.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/0adeb736f7c607b81117683231ccba69.webp" alt=""><figcaption></figcaption></figure>
 
 Example 2: Output image and LLM reply.
 
-<figure><img src="../../../.gitbook/assets/answer-img-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/6fd28db1d8da09771e403b6cbdd0f23f.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/answer-img-2.png" alt="" width="275"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/node/a37e7aaf6d2be7f14da989914366b76d.webp" alt="" width="275"><figcaption></figcaption></figure>

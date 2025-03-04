@@ -2,7 +2,7 @@
 
 Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽的形式进行编排，支持**串行**和**并行**两种编排设计模式。
 
-<figure><img src="../../.gitbook/assets/image (336).png" alt=""><figcaption><p>上图为串行节点流、下图为并行节点流</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/d953a1833be40d3f3531bc87a318a01f.webp" alt=""><figcaption><p>上图为串行节点流、下图为并行节点流</p></figcaption></figure>
 
 ## 串行设计
 
@@ -14,13 +14,13 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 点击两个节点中间连线的 + 号即可在中间添加一个串行节点；按照顺序将节点依次串线连接，最后将线收拢至 **“结束”节点**（Workflow）/ **“直接回复”节点**（Chatflow）完成设计。
 
-<figure><img src="../../.gitbook/assets/image (337).png" alt=""><figcaption><p>串行结构</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/a8e667db921724003a25ea3e0ff1a6c4.webp" alt=""><figcaption><p>串行结构</p></figcaption></figure>
 
 ### 查看串行结构应用日志
 
 串行结构应用内的日志将按照顺序展示各个节点的运行情况。点击对话框右上角的 「查看日志-追踪」，查看工作流完整运行过程各节点的输入 / 输出、Token 消耗、运行时长等。
 
-<figure><img src="../../.gitbook/assets/image (339).png" alt=""><figcaption><p>串行结构应用日志</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/0304b97be382be96b1e31cdf9dd6daa4.webp" alt=""><figcaption><p>串行结构应用日志</p></figcaption></figure>
 
 ## 并行设计
 
@@ -28,7 +28,7 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 例如，在某个并行设计的翻译工作流应用内，用户输入源文本触发工作流后，位于并行结构内的节点将共同收到前置节点的流转指令，同时开展多语言的翻译任务，缩短任务的处理耗时。
 
-<figure><img src="../../.gitbook/assets/image (335).png" alt=""><figcaption><p>并行设计</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/5a376e874e6161558b88886c00a54e93.webp" alt=""><figcaption><p>并行设计</p></figcaption></figure>
 
 ### 新建并行结构
 
@@ -38,25 +38,25 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 将鼠标 Hover 至某个节点，显示 `+` 按钮，支持新建多个节点，创建后自动形成并行结构。
 
-<figure><img src="../../.gitbook/assets/image (340).png" alt=""><figcaption><p>Type 01</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/69f48f404633be9b9f8179ee7295f6ee.webp" alt=""><figcaption><p>Type 01</p></figcaption></figure>
 
 **方式 2**
 
 拖拽节点末尾的 `+` 按钮，拉出连线形成并行结构。
 
-<figure><img src="../../.gitbook/assets/image (341).png" alt=""><figcaption><p>Type 02</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/827bfab4d27cc9dfc798a74fafb3fe84.webp" alt=""><figcaption><p>Type 02</p></figcaption></figure>
 
 **方式 3**
 
 如果画布存在多个节点，通过可视化拖拽的方式组成并行结构。
 
-<figure><img src="../../.gitbook/assets/image (342).png" alt=""><figcaption><p>Type 03</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/404a67b5e622de1f74325ef3ef3c08bf.webp" alt=""><figcaption><p>Type 03</p></figcaption></figure>
 
 **方式 4**
 
 除了在画布中通过直接添加并行节点或可视化拖拽方式组成并行结构，你也可以在节点右侧清单的“下一步”中添加并行节点，自动生成并行结构。
 
-<figure><img src="../../.gitbook/assets/image (343).png" alt=""><figcaption><p>Type 04</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/5c326dc14a17b352e2e499bde173ce9b.webp" alt=""><figcaption><p>Type 04</p></figcaption></figure>
 
 **Tips：**
 
@@ -66,7 +66,7 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 * Chatflow 类型应用支持添加多个 **“直接回复”** 节点，该类型应用内的所有并行结构在末尾处均需要配置 **“直接回复”** 节点才能正常输出各个并行结构里的内容；
 * 所有的并行结构都会同时运行；并行结构内的节点处理完任务后即输出结果，**输出结果时不存在顺序关系**。并行结构越简单，输出结果的速度越快。
 
-<figure><img src="../../.gitbook/assets/image (344).png" alt=""><figcaption><p>Chatflow 应用中的并行结构</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/806200954e3f6939772bc8b7880b8627.webp" alt=""><figcaption><p>Chatflow 应用中的并行结构</p></figcaption></figure>
 
 ### 设计并行结构应用
 
@@ -78,7 +78,7 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 > 并行分支的上限数为 10 个。
 
-<figure><img src="../../.gitbook/assets/image (345).png" alt=""><figcaption><p>普通并行</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/aa630d80beb586f1e07b9f2e21042461.webp" alt=""><figcaption><p>普通并行</p></figcaption></figure>
 
 2. **嵌套并行**
 
@@ -86,22 +86,22 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 一个工作流内最多支持 3 层嵌套关系。
 
-<figure><img src="../../.gitbook/assets/image (349).png" alt=""><figcaption><p>嵌套并行：2 层嵌套关系</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/437203ffb3bb06835ea922256c1e143d.webp" alt=""><figcaption><p>嵌套并行：2 层嵌套关系</p></figcaption></figure>
 
 3. **条件分支 + 并行**
 
 并行结构也可以和条件分支共同使用。
 
-<figure><img src="../../.gitbook/assets/image (333).png" alt=""><figcaption><p><strong>条件分支 + 并行</strong></p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/7d04ec09025ef6b26644e9e10d37737d.webp" alt=""><figcaption><p><strong>条件分支 + 并行</strong></p></figcaption></figure>
 
 4. **迭代分支 + 并行**
 
 迭代分支内同样支持编排并行结构，加速迭代内各节点的执行效率。
 
-<figure><img src="../../.gitbook/assets/image (350).png" alt=""><figcaption><p>迭代分支+并行</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/73bb4404f5944426349693326b01e4cd.webp" alt=""><figcaption><p>迭代分支+并行</p></figcaption></figure>
 
 ### 查看并行结构应用日志
 
 包含并行结构的应用的运行日志支持以树状结构进行展示，你可以折叠并行节点组以更好地查看各个节点的运行日志。
 
-<figure><img src="../../.gitbook/assets/image (351).png" alt="" width="315"><figcaption><p>并行结构</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/workflow/65a9f4e9a03b31686993b0a701da4a34.webp" alt="" width="315"><figcaption><p>并行结构</p></figcaption></figure>

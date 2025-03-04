@@ -13,7 +13,7 @@ Difyエコシステムが提供するファーストパーティツールを直�
 
 ### ファーストパーティツールの設定方法
 
-<figure><img src="../../../en/.gitbook/assets/first-party-tools.png" alt=""><figcaption><p>ファーストパーティツールリスト</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/66a40572b7950d3b6c53b26d5bb0a6d7.webp" alt=""><figcaption><p>ファーストパーティツールリスト</p></figcaption></figure>
 
 Difyは現在、以下のツールをサポートしています：
 
@@ -27,7 +27,7 @@ Difyに自分で開発したツールを貢献することを歓迎します。�
 
 Difyエコシステムが提供するファーストパーティ・ビルトインツールを直接使用する場合、使用前に適切な認証情報を設定する必要があります。
 
-<figure><img src="../../../en/.gitbook/assets/configure-first-party-tool-api.png" alt=""><figcaption><p>ファーストパーティツール認証情報の設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/80d71bd37aa91bc7a0cf5baebf2f5749.webp" alt=""><figcaption><p>ファーストパーティツール認証情報の設定</p></figcaption></figure>
 
 認証情報の検証が成功すると、ツールは「認証済み」の状態になります。認証情報が設定されると、ワークスペース内のすべてのメンバーがアプリケーションの編成時にこのツールを使用できます。
 
@@ -37,15 +37,15 @@ Difyエコシステムが提供するファーストパーティ・ビルトイ�
 
 ツールは現在、2種類の認証方式をサポートしています：無認証とAPIキー。
 
-<figure><img src="../../../img/en-tools-create-customized-tools-1.png" alt=""><figcaption><p>カスタムツールの作成</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/096e40eadbd0370c3c3ae4c0f10eb53d.webp" alt=""><figcaption><p>カスタムツールの作成</p></figcaption></figure>
 
 スキーマ内容をインポートすると、システムはファイル内のパラメーターを自動的に解析し、ツールの具体的なパラメーター、方法、パスをプレビューできます。ここでツールのパラメーターをテストすることもできます。
 
-<figure><img src="../../../img/en-tools-create-customized-tools-2.png" alt=""><figcaption><p>カスタムツールのパラメータテスト</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/0bc44539a218cf776173c63abba33536.webp" alt=""><figcaption><p>カスタムツールのパラメータテスト</p></figcaption></figure>
 
 カスタムツールの作成が完了すると、ワークスペース内のすべてのメンバーが「スタジオ」内でアプリケーションを編成する際にこのツールを使用できます。
 
-<figure><img src="../../../img/en-tools-create-customized-tools-3.png" alt=""><figcaption><p>カスタムツールが追加されました</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/9868ee1b46b2e3b48d1e9f5a2205026e.webp" alt=""><figcaption><p>カスタムツールが追加されました</p></figcaption></figure>
 
 #### Cloudflare Workers
 
@@ -58,8 +58,8 @@ Difyエコシステムが提供するファーストパーティ・ビルトイ�
 
 現在、「スタジオ」で**エージェント型アプリケーション**を作成する際に、認証情報が設定されたツールを使用できます。
 
-<figure><img src="../../../en/.gitbook/assets/use-tools-in-app.png" alt=""><figcaption><p>エージェント型アプリケーション作成時にツールを追加</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/250500e410610d111b42fdd24bfaa3af.webp" alt=""><figcaption><p>エージェント型アプリケーション作成時にツールを追加</p></figcaption></figure>
 
 以下の図のように、財務分析アプリケーションにツールを追加すると、エージェントは必要に応じてツールを自動的に呼び出し、ツールから財務報告データを取得し、それを解析してユーザーとの対話を完了します。
 
-<figure><img src="../../../en/.gitbook/assets/ai-using-tools-during-conversation.png" alt=""><figcaption><p>エージェントが対話中にツールを呼び出して質問に回答</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/tools/7aa8f7c215bbb3a113ed550900baaefd.webp" alt=""><figcaption><p>エージェントが対話中にツールを呼び出して質問に回答</p></figcaption></figure>

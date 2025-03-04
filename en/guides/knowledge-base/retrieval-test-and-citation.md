@@ -63,11 +63,11 @@ If you want to permanently modify the retrieval method for the knowledge base, g
 
 When testing the knowledge base effect within the application, you can go to **Workspace -- Add Feature -- Citation and Attribution** to enable the citation attribution feature.
 
-<figure><img src="../../.gitbook/assets/citation-and-attribution.png" alt=""><figcaption><p>Enable citation and attribution feature</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/knowledge-base/ce727a0267ceaefaf7c0191bf97ea621.webp" alt=""><figcaption><p>Enable citation and attribution feature</p></figcaption></figure>
 
 After enabling the feature, when the large language model responds to a question by citing content from the knowledge base, you can view specific citation paragraph information below the response content, including **original segment text, segment number, matching degree**, etc. Clicking **Link to Knowledge** above the cited segment allows quick access to the segment list in the knowledge base, facilitating developers in debugging and editing.
 
-<figure><img src="../../../img/view-citation-information.png" alt=""><figcaption><p>View citation information in response content</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/knowledge-base/3fa3eea6a68378361fac64927b5f95c6.webp" alt=""><figcaption><p>View citation information in response content</p></figcaption></figure>
 
 #### View Linked Applications in the Knowledge Base
 

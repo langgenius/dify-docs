@@ -12,7 +12,7 @@ Please apply for an API Key on the [Serper platform](https://serper.dev/signup).
 
 In the Dify navigation page, click `Tools > Serper > Authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tool-serper.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/e4f9d3a9dda467a905e7887d0e2c514b.webp)
 
 ## 3. Using the tool
 

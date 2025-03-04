@@ -4,7 +4,7 @@
 
 调用大语言模型的能力，处理用户在 “开始” 节点中输入的信息（自然语言、上传的文件或图片），给出有效的回应信息。
 
-<figure><img src="../../../.gitbook/assets/image (71).png" alt=""><figcaption><p>LLM 节点</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/eb84bd55dcc0daca9f522377fd26fc28.webp" alt=""><figcaption><p>LLM 节点</p></figcaption></figure>
 
 ***
 
@@ -29,7 +29,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 在应用编辑页中，点击鼠标右键或轻点上一节点末尾的 + 号，添加节点并选择 LLM。
 
-<figure><img src="../../../.gitbook/assets/image (251).png" alt=""><figcaption><p>LLM 节点配置-选择模型</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/1a3320cea4d1ba10a046053c3a7de21c.webp" alt=""><figcaption><p>LLM 节点配置-选择模型</p></figcaption></figure>
 
 **配置步骤：**
 
@@ -43,15 +43,15 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 3. **填写上下文（可选），** 上下文可以理解为向 LLM 提供的背景信息，常用于填写[知识检索](knowledge-retrieval.md)的输出变量。
 4. **编写提示词**，LLM 节点提供了一个易用的提示词编排页面，选择聊天模型或补全模型，会显示不同的提示词编排结构。如果选择聊天模型（Chat model），你可以自定义系统提示词（SYSTEM）/用户（USER）/ 助手（ASSISTANT）三部分内容。
 
-<figure><img src="../../../.gitbook/assets/zh-node-llm.png" alt="" width="352"><figcaption><p>编写提示词</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/99ad121025c3ac162575278fab50d242.webp" alt="" width="352"><figcaption><p>编写提示词</p></figcaption></figure>
 
 如果在编写系统提示词（SYSTEM）时没有好的思路，也可以使用提示生成器功能，借助 AI 能力快速生成适合实际业务场景的提示词。
 
-![提示生成器](../../../.gitbook/assets/zh-node-llm-prompt-generator.png)
+![提示生成器](https://assets-docs.dify.ai//img/zh_CN/node/064191d22b91145d5e268c3a5c61f3f3.webp)
 
 在提示词编辑器中，你可以通过输入 **“/”** 或者 **“{”** 呼出 **变量插入菜单**，将 **特殊变量块** 或者 **上游节点变量** 插入到提示词中作为上下文内容。
 
-<figure><img src="../../../.gitbook/assets/image (253).png" alt="" width="366"><figcaption><p>呼出变量插入菜单</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/bb6464c2529233dd2a6d95cb68fc7e16.webp" alt="" width="366"><figcaption><p>呼出变量插入菜单</p></figcaption></figure>
 
 5. **高级设置**，可以开关记忆功能并设置记忆窗口、开关 Vision 功能或者使用 Jinja-2 模版语言来进行更复杂的提示词等。
 
@@ -67,7 +67,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 具备视觉能力的 LLM 可以通过变量读取应用使用者所上传的图片。开启 VISION 后，选择图片文件的输出变量完成设置。
 
-<figure><img src="../../../.gitbook/assets/image (371).png" alt=""><figcaption><p>视觉上传功能</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/da7d20262907df1cef282574a003e947.webp" alt=""><figcaption><p>视觉上传功能</p></figcaption></figure>
 
 **文件变量**
 
@@ -85,13 +85,13 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 会话历史变量应用并不广泛，仅在 Chatflow 中选择文本补全类模型时可以插入使用。
 {% endhint %}
 
-<figure><img src="../../../.gitbook/assets/image (255).png" alt=""><figcaption><p>插入会话历史变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/edd43570e47a040564aa95ae0cad01c6.webp" alt=""><figcaption><p>插入会话历史变量</p></figcaption></figure>
 
 **模型参数**
 
 模型的参数会影响模型的输出效果。不同模型的参数会有所区别。下图为`gpt-4`的参数列表。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 10.45.17.png" alt="" width="368"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/cbb8c670d1bd66fcfb1fd11e3d50559d.webp" alt="" width="368"><figcaption></figcaption></figure>
 
 主要的参数名词解释如下：
 
@@ -102,7 +102,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 如果你不理解这些参数是什么，可以选择**加载预设**，从创意、平衡、精确三种预设中选择。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.08.59.png" alt="" width="365"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/ecc8cd0adbdf8eb417069531d0b1770b.webp" alt="" width="365"><figcaption></figcaption></figure>
 
 ***
 
@@ -137,7 +137,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 2. 将知识检索节点的 **输出变量** `result` 填写至 LLM 节点中的 **上下文变量** 内；
 3. 将 **上下文变量** 插入至应用提示词内，赋予 LLM 读取知识库内的文本能力。
 
-<figure><img src="../../../.gitbook/assets/image (256).png" alt=""><figcaption><p>上下文变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/2921634b9a288011619949b949a483b2.webp" alt=""><figcaption><p>上下文变量</p></figcaption></figure>
 
 [知识检索节点](knowledge-retrieval.md)输出的变量 `result` 还包含了分段引用信息，你可以通过 [**引用与归属**](../../knowledge-base/retrieval-test-and-citation.md#id-2-yin-yong-yu-gui-shu) 功能查看信息来源。
 
@@ -155,7 +155,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 如需了解更多，请参考[文件上传](../file-upload.md)。
 
-<figure><img src="../../../.gitbook/assets/image (2) (2).png" alt=""><figcaption><p>填写系统提示词</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/node/70bd135616fb22dc1d5c3ad435178271.webp" alt=""><figcaption><p>填写系统提示词</p></figcaption></figure>
 
 * **异常处理**
 

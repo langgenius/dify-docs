@@ -12,7 +12,7 @@ Please apply for an API Key on the [Serp](https://serpapi.com/dashboard).
 
 In the Dify navigation page, click `Tools > Google > Go to authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tools-google.png)
+![](https://assets-docs.dify.ai//img/en/tool-configuration/f626c043fe814f971eaf630cf56442fa.webp)
 
 ## 3. Using the tool
 

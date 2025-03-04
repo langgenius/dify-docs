@@ -12,7 +12,7 @@ Google 検索ツールは、LMS アプリを用いてオンライン検索結果
 
 Dify のナビゲーションページで、`ツール > Google > 認証する` の順にクリックし、API キーを入力してください。
 
-![](../../../.gitbook/assets/tools-google.png)
+![](https://assets-docs.dify.ai//img/jp/tool-configuration/f626c043fe814f971eaf630cf56442fa.webp)
 
 ## 3. ツールの使用方法
 

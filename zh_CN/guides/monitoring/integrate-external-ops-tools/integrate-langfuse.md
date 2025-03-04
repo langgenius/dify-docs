@@ -15,35 +15,35 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 1. 在[官网注册](https://langfuse.com/)并登录 Langfuse
 2. 在 Langfuse 内创建项目，登录后在主页点击 **New** ，创建一个自己的项目，**项目**将用于与 Dify 内的**应用**关联进行数据监测。
 
-<figure><img src="../../../.gitbook/assets/image (300).png" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/4edf95240c0fcd7f51d6ce690247a908.webp" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
 
 为项目编辑一个名称。
 
-<figure><img src="../../../.gitbook/assets/image (302).png" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/d09638b3c72671db7b5377424652fbe8.webp" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
 
 3. 创建项目 API 凭据，在项目内左侧边栏中点击 **Settings** 打开设置
 
-<figure><img src="../../../.gitbook/assets/image (304).png" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/5a195b625c070ce25b70979c054832d4.webp" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
 
 在 Settings 内点击 **Create API Keys** 创建一个项目 API 凭据。
 
-<figure><img src="../../../.gitbook/assets/image (303).png" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/5adb4db877bd73ff93c79d5592c5c89d.webp" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
 
 复制并保存 **Secret Key** ，**Public Key，Host**
 
-<figure><img src="../../../.gitbook/assets/image (305).png" alt=""><figcaption><p>获取 API Key 配置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/cac325166e2aeac6ba193c1a57636313.webp" alt=""><figcaption><p>获取 API Key 配置</p></figcaption></figure>
 
 4. 在 Dify 内配置 Langfuse，打开需要监测的应用，在侧边菜单打开**监测**，在页面中选择**配置。**
 
-<figure><img src="../../../.gitbook/assets/image (306).png" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/4fef52c2c745e128e474fd95b0e44eec.webp" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
 
 点击配置后，将在 Langfuse 内创建的 **Secret Key, Public Key, Host** 粘贴到配置内并保存。
 
-<figure><img src="../../../.gitbook/assets/image (307).png" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/2bb463742bc17efa80f391c8b320dac2.webp" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
 
 成功保存后可以在当前页面查看到状态，显示已启动即正在监测。
 
-<figure><img src="../../../.gitbook/assets/image (308).png" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/8a1681ca99d787cc8a019d53e610c56a.webp" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
 
 ***
 
@@ -51,11 +51,11 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 
 配置完成后， Dify 内应用的调试或生产数据可以在 Langfuse 查看监测数据。
 
-<figure><img src="../../../.gitbook/assets/image (310).png" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/0bc658b7f7e156737ac13ddd85388d13.webp" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/image (309).png" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/14662bce05826eb862edbbcd1fe8900a.webp" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/image (26).png" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/integrate-external-ops-tools/3ee8cc2730683abdaa06a654244609b6.webp" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
 
 ### 监测数据清单
 

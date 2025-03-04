@@ -2,7 +2,7 @@
 
 チャットフローおよびワークフローアプリケーションは、ビジュアルなドラッグアンドドロップ機能を通じてノードのオーケストレーションをサポートしており、シリアルおよびパラレルの2つのオーケストレーションデザインパターンがあります。
 
-![](../../.gitbook/assets/orchestrate-node.jpeg)
+![](https://assets-docs.dify.ai//img/jp/workflow/a2cb01105b3524d13bed116c01638330.webp)
 
 ## シリアルノードのデザインパターン
 
@@ -16,13 +16,13 @@
 2. ノードを順次リンクします。
 3. すべてのパスを「終了」ノード（ワークフロー）/「直接回答」ノード（チャットフロー）に収束させて、ワークフローを最終承認します。
 
-![](../../.gitbook/assets/orchestrate-node-serial-design.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/7cfedf706536a5aa00d692d5f98d9a75.webp)
 
 ### シリアル構造のアプリのログをチェックする
 
 シリアル構造のアプリは、ログが順次ノードの操作を表示します。会話ボックスの右上にある "View Logs - Tracing" を順にクリックすると、各ノードの入力、出力、トークン消費、実行時間を含む完全なワークフロープロセスが表示されます。
 
-![](../../.gitbook/assets/viewing-serial-structure-app-logs.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/2eca3b1fc81157428f16a0cdcca95f8b.webp)
 
 ## パラレルノードのデザインパターン
 
@@ -37,22 +37,22 @@
 **方法1**\
 ノードの上にカーソルを合わせると「+」ボタンが表示されます。クリックすると、複数のノードが追加され、自動的にパラレル構造が形成されます。
 
-![](../../.gitbook/assets/orchestrate-node-parallel-design-method-1.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/7543ad0e11fc976f5808e92525ce20cd.webp)
 
 **方法2**\
 ノードから接続を延長するには、ノードの「+」ボタンをドラッグしてパラレル構造を作成します。
 
-![](../../.gitbook/assets/orchestrate-node-parallel-design-method-2.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/af889d5aeefa736b927bb4761c595f2a.webp)
 
 **方法3**\
 キャンバス上に複数のノードがある場合は、ビジュアルにドラッグしてリンクし、パラレル構造を形成します。
 
-![](../../.gitbook/assets/orchestrate-node-parallel-design-method-3.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/49bf848694b29a718b54db4559c4fff2.webp)
 
 **方法4**\
 キャンバスベースの方法に加えて、ノードの右側パネルの「Next Step」セクションからノードを追加することで、パラレル構造を生成することもできます。このアプローチにより、自動的にパラレル構成が作成されます。
 
-![](../../../img/orchestrate-node-parallel-design-method-4.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/9089ccb078c5a896929384725be2231c.webp)
 
 **注意:**
 
@@ -61,7 +61,7 @@
 * チャットフローアプリケーションでは複数の「answer」ノードがサポートされます。これらのアプリケーションの各パラレル構造は、適切なコンテンツの出力を確保するために「answer」ノードで終了する必要があります。
 * すべてのパラレル構造は同時に実行されます。パラレル構造内のノードは、タスクを完了した後に結果を出力し、出力には順序関係がありません。パラレル構造が単純であればあるほど、結果の出力が速くなります。
 
-![](../../.gitbook/assets/orchestrate-node-chatflow-multi-answer.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/8e8f833a335b596056a0fef5f00b5924.webp)
 
 ### パラレル構造の作り方
 
@@ -73,7 +73,7 @@
 
 パラレルブランチの上限は10です。
 
-![](../../.gitbook/assets/orchestrate-node-simple-parallel.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/34479cacfc98ded5a554b4ab89870b64.webp)
 
 #### 2. ネストされたパラレル
 
@@ -81,22 +81,22 @@
 
 ワークフローは、最大3層までのネスト関係をサポートします。
 
-![](../../.gitbook/assets/orchestrate-node-nested-parallel.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/a283772e65d5f5b60c7eb0fc3ace9a16.webp)
 
 #### 3. 条件分岐 + パラレル
 
 パラレル構造は条件分岐と組み合わせて使用することもできます。
 
-![](../../.gitbook/assets/orchestrate-node-conditional-branch-parallel.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/f6dff2851e1dbbce04d554a23e65d719.webp)
 
 #### 4. イテレーション + パラレル
 
 このパターンは、イテレーションとパラレル構造を組み合わせたものです。
 
-![](../../.gitbook/assets/orchestrate-node-iteration-parallel.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/72f8b4f07d58ecf283507d4839d68586.webp)
 
 ### パラレル構造のアプリのログをチェックする
 
 パラレル構造をもつアプリケーションは、ツリーのような形式でログを生成します。折りたたみ可能なパラレルノード グループにより、個々のノード ログを簡単に表示できます。
 
-![](../../.gitbook/assets/orchestrate-node-parallel-logs.png)
+![](https://assets-docs.dify.ai//img/jp/workflow/65a9f4e9a03b31686993b0a701da4a34.webp)

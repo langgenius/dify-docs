@@ -17,7 +17,7 @@
 
 进入知识库页面，在左侧的导航中切换至 **API** 页面。在该页面中你可以查看 Dify 提供的知识库 API 文档，并可以在 **API 密钥** 中管理可访问知识库 API 的凭据。
 
-<figure><img src="../../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/zh_CN/knowledge-and-documents-maintenance/6f6395c9e3f265df88eab8d6661f0c05.webp" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
 ## API 调用示例
 

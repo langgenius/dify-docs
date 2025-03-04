@@ -11,7 +11,7 @@ Perplexityは、複雑なクエリを理解し、正確で関連性の高いリ�
 
 Difyのナビゲーションページで、`ツール > Perplexity > 認証する`の順にクリックし、APIキーを入力してください。
 
-![](../../../../img/tools-perplexity.png)
+![](https://assets-docs.dify.ai//img/jp/tool-configuration/001626f39cbf672dc4661ad24fedd122.webp)
 
 ## 3. ツールの使用方法
 
@@ -21,10 +21,10 @@ Difyのナビゲーションページで、`ツール > Perplexity > 認証す�
 
 チャットフローとワークフローアプリで、Perplexityツールノードの追加がサポートされています。ユーザーの入力コンテンツは変数を介してPerplexityツールノードの「クエリ」ボックスに渡され、必要に応じてPerplexityツールの組み込みパラメータを調整します。最後に、「終了」ノードの応答ボックスでPerplexityツールノードの出力コンテンツを選択します。
 
-![](../../../../img/tools-chatflow-perplexity.png)
+![](https://assets-docs.dify.ai//img/jp/tool-configuration/e2f98fdd5be7103f5552eb41d0e62c8b.webp)
 
 - **エージェントアプリ**
 
 エージェントアプリに`Perplexity検索`ツールを追加し、関連するコマンドを入力してこのツールを呼び出します。
 
-![](../../../../img/tools-agent-perplexity.png)
+![](https://assets-docs.dify.ai//img/jp/tool-configuration/f7a8a875bedc13091ad297a2b91e3a2b.webp)

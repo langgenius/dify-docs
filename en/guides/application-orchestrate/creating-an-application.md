@@ -12,17 +12,17 @@ When using Dify for the first time, you might be unfamiliar with creating applic
 
 You can select "Studio" from the navigation menu, then choose "Create from Template" in the application list.
 
-<figure><img src="../../.gitbook/assets/create-an-app.png" alt=""><figcaption><p>Create an application from a template</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/application-orchestrate/6162d6bc864d4caf5fedecffd5f9afea.webp" alt=""><figcaption><p>Create an application from a template</p></figcaption></figure>
 
 Select any template and click **Use this template.**
 
-<figure><img src="../../.gitbook/assets/image (169).png" alt=""><figcaption><p>Dify application templates</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/application-orchestrate/a83e36dea1d09e50cfae84f144d33e20.webp" alt=""><figcaption><p>Dify application templates</p></figcaption></figure>
 
 ### Creating a New Application
 
 If you need to create a blank application on Dify, you can select "Studio" from the navigation and then choose "Create from Blank" in the application list.
 
-<figure><img src="../../.gitbook/assets/create-from-blank.png" alt=""><figcaption><p>Create a blank application</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/application-orchestrate/c171570eefe0b42a79db35ebb6f333e5.webp" alt=""><figcaption><p>Create a blank application</p></figcaption></figure>
 
 When creating an application for the first time, you might need to first understand the [basic concepts](./#application_type) of the four different types of applications on Dify: Chatbot, Text Generator, Agent, Chatflow and Workflow.
 
@@ -42,7 +42,7 @@ Dify DSL is an AI application engineering file standard defined by Dify.AI. The 
 
 If you have obtained a template (DSL file) from the community or others, you can choose "Import DSL File" from the studio. After importing, all configuration information of the original application will be loaded directly.
 
-<figure><img src="../../.gitbook/assets/en-import-dsl-file.png" alt=""><figcaption><p>Create an application by importing a DSL file</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/application-orchestrate/ae7546a391878471413b76a7d3748d07.webp" alt=""><figcaption><p>Create an application by importing a DSL file</p></figcaption></figure>
 
 #### Import DSL file from URL
 
@@ -52,6 +52,6 @@ You can also import DSL files via a URL, using the following link format:
 https://example.com/your_dsl.yml
 ```
 
-<figure><img src="../../.gitbook/assets/en-import-dsl-file-via-url.png" alt=""><figcaption><p>Create an application by importing a DSL file</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/application-orchestrate/25dfd8bed59231949157a2496a74a20b.webp" alt=""><figcaption><p>Create an application by importing a DSL file</p></figcaption></figure>
 
 > When importing a DSL file, the version will be checked. Significant discrepancies between DSL versions may lead to compatibility issues. For more details, please refer to [Application Management: Import](https://docs.dify.ai/guides/management/app-management#importing-application).

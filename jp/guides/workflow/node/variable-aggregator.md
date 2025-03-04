@@ -16,15 +16,15 @@
 
 変数集約を追加しない場合、分類1と分類2のブランチは異なるナレッジベース検索を経て、ダウンストリームの大規模言語モデルおよび回答ノードを繰り返し定義する必要があります。
 
-<figure><img src="../../../.gitbook/assets/image (227).png" alt=""><figcaption><p>問題分類（変数集約なし）</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/764e3268c5401e862da6900a140e6b14.webp" alt=""><figcaption><p>問題分類（変数集約なし）</p></figcaption></figure>
 
 変数集約を追加することで、二つのナレッジベース検索ノードの出力を一つの変数に集約できます。
 
-<figure><img src="../../../.gitbook/assets/image (225).png" alt=""><figcaption><p>問題分類後のマルチ集約</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/0417ae2c6d94e911e6c23b9ad6d9d3e1.webp" alt=""><figcaption><p>問題分類後のマルチ集約</p></figcaption></figure>
 
 **IF/ELSE 条件ブランチ後のマルチ集約**
 
-<figure><img src="../../../.gitbook/assets/image (226).png" alt=""><figcaption><p>IF/ELSE　問題分類後のマルチ集約</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/node/62b322c8126e05e2fd5edfc8ecf819e9.webp" alt=""><figcaption><p>IF/ELSE　問題分類後のマルチ集約</p></figcaption></figure>
 
 ### フォーマット要求
 

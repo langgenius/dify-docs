@@ -6,7 +6,7 @@
 
 **再順位付けモデルは、候補ドキュメントのリストとユーザーのクエリの意味的な一致度を計算し、その一致度に基づいて再並べ替えを行うことで、意味的な順位付け結果を向上させます**。その基本的な原理は、ユーザーのクエリと各候補ドキュメントとの関連スコアを算出し、関連性の高い順に並べ替えたドキュメントリストを返すことです。一般的な再順位付けモデルには、Cohere RerankやBGE Rerankerなどがあります。
 
-<figure><img src="../../../.gitbook/assets/image (128).png" alt=""><figcaption><p>混合検索と再順位付け</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/retrieval-augment/26fca463d8948ec474b38bc006778198.webp" alt=""><figcaption><p>混合検索と再順位付け</p></figcaption></figure>
 
 ほとんどの場合、再順位付けの前にプリ検索が行われます。これは、数百万のドキュメントに対して関連性スコアを計算することが非常に非効率だからです。そのため、**再順位付けは通常、検索プロセスの最終段階に設けられ、異なる検索システムからの結果をマージおよびソートするのに非常に適しています**。
 
@@ -24,7 +24,7 @@ Cohere Rerankの例を挙げると、アカウントを登録し、APIを申請�
 
 Difyは現在、Cohere Rerankモデルをサポートしており、「モデルプロバイダー-> Cohere」ページに進んで、RerankモデルのAPIキーを入力してください。
 
-<figure><img src="../../../.gitbook/assets/jp-rerank-cohere.png" alt=""><figcaption><p>Cohere Rerankモデルをモデルプロバイダー内に設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/retrieval-augment/13bae4fe598cc12c0fc91e6ff936017e.webp" alt=""><figcaption><p>Cohere Rerankモデルをモデルプロバイダー内に設定</p></figcaption></figure>
 
 ### Cohere Rerank モデルの取得方法
 
@@ -34,7 +34,7 @@ Difyは現在、Cohere Rerankモデルをサポートしており、「モデル
 
 「データセット->データセットの作成->検索設定」ページに進み、Rerank設定を追加してください。データセットの作成時だけでなく、既存のデータセットの設定内でもRerankの構成を変更し、適用されたデータセットのリコールモード設定でRerankの構成を調整することができます。
 
-<figure><img src="../../../.gitbook/assets/jp-rerank-explore.png" alt="" width="563"><figcaption><p>データセット検索モードでのRerankモデルの設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/retrieval-augment/4a345a77e515db116ca35ab742f85e48.webp" alt="" width="563"><figcaption><p>データセット検索モードでのRerankモデルの設定</p></figcaption></figure>
 
 **TopK：** Rerank後に返される関連ドキュメントの数を設定します。
 
@@ -46,4 +46,4 @@ Difyは現在、Cohere Rerankモデルをサポートしており、「モデル
 
 複数のリコールモードについての詳細は、[複数リコール](https://docs.dify.ai/v/ja-jp/guides/knowledge-base/integrate-knowledge-within-application#rikru)を参照してください。
 
-<figure><img src="../../../.gitbook/assets/jp-rerank-setting.png" alt=""><figcaption><p>データセットのマルチウェイリコールモードでRerankモデルを設定します</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/jp/retrieval-augment/0045c5acb2596eaeea0f388d6e66e1c3.webp" alt=""><figcaption><p>データセットのマルチウェイリコールモードでRerankモデルを設定します</p></figcaption></figure>

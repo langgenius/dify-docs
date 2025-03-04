@@ -12,7 +12,7 @@ Create a new API Key on the [SiliconCloud API management page](https://cloud.sil
 
 In the Dify tool page, click on `SiliconCloud > To Authorize` and fill in the API Key.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.04.16.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/tool-configuration/60148f07cd10c270fad8e49677f97748.webp" alt=""><figcaption></figcaption></figure>
 
 ## 3. Using the Tool
 
@@ -20,12 +20,12 @@ In the Dify tool page, click on `SiliconCloud > To Authorize` and fill in the AP
 
 Chatflow and Workflow applications both support adding `SiliconFlow` tool nodes. You can pass user input content to the SiliconFlow tool node's "prompt" and "negative prompt" boxes through [variables](https://docs.dify.ai/v/zh-hans/guides/workflow/variables), adjust the built-in parameters as needed, and finally select the output content (text, images, etc.) of the SiliconFlow tool node in the "end" node's reply box.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.17.40.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/tool-configuration/df1f7f81b119e6bb2c62010dc5a8dc4a.webp" alt=""><figcaption></figcaption></figure>
 
 * **Agent Application**
 
 In the Agent application, add the `Stable Diffusion` or `Flux` tool, and then send a picture description in the conversation box to call the tool to generate images.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.14.16.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/tool-configuration/ca9d68592cbddf1e25a57284605270b5.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 13.13.06.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai//img/en/tool-configuration/e26ed41f76b6b82ed0e084805e21e245.webp" alt=""><figcaption></figcaption></figure>
