@@ -1,0 +1,232 @@
+## 简介
+
+版本管理是 **Dify 聊天流 / 工作流管理界面** 中的一项核心功能，用于帮助用户高效地管理和发布应用的多个版本。
+
+通过版本管理功能，用户可以清晰地区分应用的**草稿版本** 和**已发布版本**，并在需要时回滚到**历史版本**。该功能可以让应用的迭代和管理更为简便和直观，确保应用的持续更新与稳定性。
+
+## 相关定义
+
+-   **草稿版本（Current Draft）：** 草稿版本是 Dify 聊天流 / 工作流管理界面中**唯一呈现当前工作进度的版本**。用户可在此版本中编辑、修改与预览聊天流 / 工作流。
+
+![]()
+
+-   **已发布版本（Published Version）：** 用户发布到线上的所有版本，即最新发布版本和历史发布版本的统称。每一次发布操作都会生成一个新的已发布版本。
+
+![]()
+
+-   **最新发布版本（Latest Version）：** 用户最近一次发布到线上的版本。Dify 在版本管理界面中将其标记为 `Latest` ，以便与其他历史发布版本区分。
+
+![]()
+
+-   **历史发布版本（Previous Version）：** 用户曾经发布过，但现在已经不再处于当前线上状态的版本。
+
+![]()
+
+-   **版本回滚（Restore）：** 版本管理中的版本回滚功能允许用户将应用恢复到某个历史版本。
+
+![]()
+
+-   **备份草稿（Backup Draft）：** 系统在执行回滚操作时自动保存的当前草稿版本。它确保用户在回滚历史版本时，原有的草稿内容不会丢失，并可以在需要时恢复或继续编辑。
+
+## 功能
+
+-   **查看所有版本：** 在版本管理界面中，你可以查看所有已发布的版本，了解每个版本的详细信息。
+
+-   **查找所需版本：** 你可以使用筛选功能快速查找所需的特定版本。
+
+-   **发布新版本：** 你可以发布一个新的应用版本，并为该版本创建相应的版本名和版本描述。
+
+-   **编辑已发布版本的信息：** 你可以编辑已发布版本的版本名和版本描述。
+
+-   **删除历史版本：** 你可以删除不再需要的历史版本，清理版本列表。
+
+-   **回滚到历史版本：** 通过版本回滚功能，你可以将历史版本的内容加载到草稿中并进行修改。
+
+![]()
+
+## 如何查看所有版本？
+
+1.  点击右上角的 **版本管理功能** 按钮，进入版本管理界面。
+
+![]()
+
+2.  版本管理界面显示了一个按时间倒序排列的版本列表。你可以在列表内查看过往版本的 **版本名、版本信息、发布时间、发布者**。
+
+3.  （可选）如果版本列表超过当前可见的数量，你可以点击 **加载更多** 按钮，加载更多的版本记录。
+
+![]()
+
+## 如何查找我需要的版本？
+
+-   **查找由我发布的版本：** 点击 **筛选** 按钮，弹出筛选框。该筛选框有两个选项：
+
+    -   **所有版本：** 显示所有版本，包括你自己和其他用户发布的版本。
+    -   **由我发布的版本：** 仅显示由你发布的版本。
+
+      你可以根据需要选择合适的筛选项，以查看对应的版本。
+
+-   **查找已命名的版本：** 如果你只想查看已命名的版本，可以点击 **查找已命名的版本** 选项。启用该选项后，只有已命名版本会出现在版本列表中，其他未命名的版本将被隐藏。
+
+![]()
+
+## 如何发布新版本？
+
+1.  在 Dify 聊天流 / 工作流管理界面中完成聊天流 / 工作流创建后，点击面板的右上角的 **发布更新** 按钮，弹出 **命名此版本** 弹窗。
+
+![]()
+
+2.  （可选）在弹窗的 **版本名** 框内输入版本名，在 **版本信息** 框内输入版本信息。
+
+> 如果你不打算填写任何信息，可以直接点击 **发布** 按钮，系统将自动保存默认版本名（Untitled Version）和空白的版本信息。
+
+![]()
+
+3.  点击弹窗内的 **发布** 按钮，发布当前版本。
+
+4.  发布后，此最新发布版本将被标记为 `Latest` 。相关信息会显示在版本管理界面中。
+
+![]()
+
+## 如何编辑已发布版本的信息？
+
+在版本管理界面，找到你需要编辑版本信息的版本，点击该版本右上角的操作菜单。
+
+-   如果你之前以默认名称保存了该版本，可以点击 **命名此版本**，并参考前文的“**如何创建和发布新版本？**”章节进行操作。
+-   如果你已经为该版本填写过版本名，可以点击 **编辑版本信息** 修改版本名与版本信息。
+
+![]()
+
+![]()
+
+## 如何删除历史版本？
+
+1.  在版本管理界面，找到你需要删除的已发布版本，点击该版本右上角的操作菜单。
+
+2.  选择 **删除**，弹出确认操作的弹窗。
+
+3.  点击 **确定**，该版本将从版本管理界面中删除。
+
+{% hint style="warning" %}
+-   **草稿版本**（即 Current Draft）为当前聊天流 / 工作流界面正在编辑的草稿版本，无法删除。
+-   **最新发布版本**（即标记为 Latest 的版本）为用户最近一次发布到线上的版本，无法删除。
+{% endhint %}
+
+![]()
+
+## 如何回滚到某个已发布版本？
+
+1.  在版本管理界面，找到你需要回滚的历史版本，点击该版本右上角的操作菜单。
+
+2.  选择 **回滚**，弹出确认操作的弹窗。
+
+3.  点击 **确定**，当前的草稿版本将回滚为该历史版本。同时，**回滚前的草稿版本将保存为备份草稿（Backup Draft），保存在版本列表中**。
+
+![]()
+
+## 使用场景
+
+以下用一个典型的用户使用场景来说明各版本之间的联系。
+
+> 相同颜色代表相同的版本内容。
+
+### 阶段一
+
+-   系统自动新建 **草稿版本** Version A。
+
+![]()
+
+### 阶段二：首次发布
+
+-   Version A 发布，成为 **最新发布版本**。
+-   系统自动新建 **草稿版本** Version B。
+
+![]()
+
+### 阶段三：再次发布
+
+-   Version B 发布，成为 **最新发布版本**。
+-   Version A 成为 **历史发布版本**。
+-   系统自动新建 **草稿版本** Version C。
+
+![]()
+
+### 阶段四：回滚操作
+
+-   Version A 回滚至 **草稿版本**。
+-   Version B 仍为 **最新发布版本**。
+-   原 **草稿版本** Version C 存为 **备份草稿**。
+
+![]()
+
+### 阶段五：发布回滚
+
+-   Version A（回滚版）发布，成为 **最新发布版本**。
+-   Version A 与 Version B 成为 **历史发布版本**。
+-   Version C 作为 **备份草稿** 储存在版本历史记录中。
+-   系统自动新建 **草稿版本** Version D。
+
+![]()
+
+### 全流程演示
+
+![]()
+
+## FAQ
+
+- **草稿版本、最新发布版本和历史发布版本有什么区别？**
+
+<table style="width: 100%; border-collapse: collapse; background-color: #fff;">
+    <thead>
+        <tr style="background-color: #f9fafb;">
+            <th style="padding: 12px; border: 1px solid #e5e7eb; width: 15%;">定义</th>
+            <th style="padding: 12px; border: 1px solid #e5e7eb; width: 25%;">操作方式</th>
+            <th style="padding: 12px; border: 1px solid #e5e7eb; width: 20%;">是否可以从线上访问</th>
+            <th style="padding: 12px; border: 1px solid #e5e7eb; width: 20%;">是否可以删除</th>
+            <th style="padding: 12px; border: 1px solid #e5e7eb; width: 20%;">是否可以回滚</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">草稿版本</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">当前正在编辑和修改的版本，代表用户的最新工作进度。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">只能通过 发布 (Publish) 操作推送至线上环境。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">不可以从线上访问，必须通过发布操作将其推送为最新发布版本才可以从线上访问。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">无法删除。</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">最新发布版本</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">目前线上生效的版本，是最新的已发布版本。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">是当前线上的版本，不能直接编辑，需通过发布新的草稿版本来更新。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">可以从线上访问和使用。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">可以通过回滚操作恢复到该版本内容。</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">历史发布版本</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">过去已发布并保存的版本，用户可回滚使用，但不再对外生效。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">可以通过 回滚 (Restore) 操作将历史版本加载到草稿版本中，再进行编辑和发布。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">不可以从线上访问，仅保存在版本列表里。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">可以通过回滚操作恢复到该版本内容。</td>
+        </tr>
+        <tr>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">已发布版本</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;">最新发布版本和历史发布版本的统称。</td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;"></td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;"></td>
+            <td style="padding: 12px; border: 1px solid #e5e7eb; vertical-align: top;"></td>
+        </tr>
+    </tbody>
+</table>
+
+- **回滚到历史版本后，当前的草稿版本会丢失吗？**
+
+当你选择回滚到历史版本后，系统会同时执行两项操作：
+
+1.  自动将当前草稿版本保存为备份草稿（Backup Draft）。你编辑过的内容将保存到备份草稿中。
+
+2.  将你选择的历史版本的内容加载到新的草稿版本中。你可以继续在该草稿上进行修改并发布。
+
+因此，回滚到历史版本后，当前的草稿版本不会丢失，你可以在备份草稿中找到它。
+
+- **版本管理功能适用于哪些应用类型？**
+
+目前，版本管理功能仅适用于 **聊天流** 和 **工作流** 应用类型。**聊天助手**、**文本生成应用** 以及 **Agent** 暂不支持此功能。
