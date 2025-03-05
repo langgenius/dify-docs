@@ -8,8 +8,16 @@
 [endpoint.md](endpoint.md)
 {% endcontent-ref %}
 
-{% content-ref url="reverse-invocation-of-the-dify-service/model.md" %}
-[model.md](reverse-invocation-of-the-dify-service/model.md)
+{% content-ref url="tool.md" %}
+[tool.md](tool.md)
+{% endcontent-ref %}
+
+{% content-ref url="agent.md" %}
+[agent.md](agent.md)
+{% endcontent-ref %}
+
+{% content-ref url="model/" %}
+[model](model/)
 {% endcontent-ref %}
 
 {% content-ref url="general-specifications.md" %}
