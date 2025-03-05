@@ -221,5 +221,5 @@ class XinferenceProvider(Provider):
 
 After initializing the model provider, the next step is to integrate specific llm models provided by the provider. For detailed instructions, please refer to:
 
-* [Develop Predefined Models](../../../../guides/model-configuration/predefined-model.md)
-* [Develop Custom Models](../../../../guides/model-configuration/customizable-model.md)
+* [Develop Predefined Models](predefined-model.md)
+* [Develop Custom Models](customizable-model.md)
