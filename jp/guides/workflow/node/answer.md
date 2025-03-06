@@ -14,13 +14,13 @@
 
 **例1：** 純テキストを出力
 
-<figure><img src="https://assets-docs.dify.ai//img/jp/node/0d84004c87c014bc2ef94aee618eb896.webp" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/0d84004c87c014bc2ef94aee618eb896.webp" alt=""><figcaption></figcaption></figure>
 
 **例2：** 画像+LLMの返信を出力
 
-<figure><img src="https://assets-docs.dify.ai//img/jp/node/b93531c9a37ef60cfbaf1a75d758ff8b.webp" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/b93531c9a37ef60cfbaf1a75d758ff8b.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="https://assets-docs.dify.ai//img/jp/node/a37e7aaf6d2be7f14da989914366b76d.webp" alt="" width="275"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/a37e7aaf6d2be7f14da989914366b76d.webp" alt="" width="275"><figcaption></figcaption></figure>
 
 {% hint style="info" %}
 回答ノードは最終的な出力ノードとして使用しないこともでき、プロセスの中間ステップで結果をストリーミング形式で出力することができます。

@@ -2,11 +2,11 @@
 
 聊天助手应用类型支持 **“多个模型进行调试”** 功能，你可以同时批量检视不同模型对于相同问题的回答效果。
 
-![](https://assets-docs.dify.ai//img/zh_CN/application-orchestrate/473784c07975a8795b837c243f5815e5.webp)
+![](https://assets-docs.dify.ai/img/zh_CN/application-orchestrate/473784c07975a8795b837c243f5815e5.webp)
 
 最多支持同时添加 4 个大模型。
 
-![](https://assets-docs.dify.ai//img/zh_CN/application-orchestrate/c60a50d71f66b297fa196ab0dc51311a.webp)
+![](https://assets-docs.dify.ai/img/zh_CN/application-orchestrate/c60a50d71f66b297fa196ab0dc51311a.webp)
 
 调试时如果发现效果较好的模型，点击 **“单一模型进行调试”** 即可进入至当前模型的单独调试页面。
 
