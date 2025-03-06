@@ -266,6 +266,8 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     * `tidb_vector`
     * `analyticdb`
     * `couchbase`
+    * `oceanbase`
+
 *   WEAVIATE\_ENDPOINT
 
     Weaviate 端点地址，如：`http://weaviate:8080`。
@@ -388,6 +390,34 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 -   COUCHBASE_SCOPE_NAME
 
      Scope 名称。
+
+*   OCEANBASE\_VECTOR\_HOST
+
+    OceanBase Vector 数据库的 Host。
+
+*   OCEANBASE\_VECTOR\_PORT
+
+    OceanBase Vector 数据库的端口。
+
+*   OCEANBASE\_VECTOR\_USER
+
+    OceanBase Vector 数据库的用户名。
+
+*   OCEANBASE\_VECTOR\_PASSWORD
+
+    OceanBase Vector 数据库的密码。
+
+*   OCEANBASE\_VECTOR\_DATABASE
+
+    OceanBase Vector 数据库的库名。
+
+*   OCEANBASE\_CLUSTER\_NAME
+
+    OceanBase 集群名，仅用于 Docker 部署。
+
+*   OCEANBASE\_MEMORY\_LIMIT
+
+    OceanBase 内存使用上限，仅用于 Docker 部署。
 
 #### 知识库配置
 
