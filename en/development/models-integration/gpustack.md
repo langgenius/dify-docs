@@ -1,8 +1,8 @@
-# Integrating with GPUStack for Local Model Deployment
+# Integrate Local Models Deployed by GPUStack
 
-[GPUStack](https://github.com/gpustack/gpustack) is an open-source GPU cluster manager for running large language models(LLMs).
+[GPUStack](https://github.com/gpustack/gpustack) is an open-source GPU cluster manager for running AI models.
 
-Dify allows integration with GPUStack for local deployment of large language model inference, embedding and reranking capabilities.
+Dify allows integration with GPUStack for local deployment of large language model inference, embedding, reranking, speech to text and text to speech to capabilities.
 
 ## Deploying GPUStack
 
