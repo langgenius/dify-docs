@@ -216,6 +216,9 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     *   azure-blob
 
         Azure Blob 存储，若选择此项则需要设置下方 AZURE\_BLOB\_ 开头的配置。
+    *   aliyun-oss
+
+        阿里云 OSS 存储，若选择此项则需要设置下方 ALIYUN\_OSS\_ 开头的配置。
     *   huawei-obs
 
         Huawei OBS 存储，若选择此项则需要设置下方 HUAWEI\_OBS\_ 开头的配置。
