@@ -9,10 +9,11 @@ Taking a chat assistant as an example, the process is as follows:
 1. Go to **Knowledge -- Create Knowledge -- Upload file**
 2. Go to **Studio -- Create Application -- Select Chatbot**
 3. Enter **Context**, click **Add**, and select one of the knowledge base created
-4. In **Context Settings -- Retrieval Setting**, configure the **Retrieval Setting**
-5. Enable **Citation and Attribution** in **Add Features**
-6. In **Debug and Preview**, input user questions related to the knowledge base for debugging
-7. After debugging, click **Publish** button to make an AI application based on your own knowledge!
+4. Use **Metadata Filtering** to refine document search in your knowledge base
+5. In **Context Settings -- Retrieval Setting**, configure the **Retrieval Setting**
+6. Enable **Citation and Attribution** in **Add Features**
+7. In **Debug and Preview**, input user questions related to the knowledge base for debugging
+8. After debugging, click **Publish** button to make an AI application based on your own knowledge!
 
 ***
 
@@ -66,6 +67,138 @@ Dify currently supports multiple Rerank models. To use external Rerank models, y
 
 * **TopK**: Determines how many text chunks, deemed most similar to the user’s query, are retrieved. It also automatically adjusts the number of chunks based on the chosen model’s context window. The default value is **3**, and higher numbers will recall more text chunks.
 * **Score Threshold**: Sets the minimum similarity score required for a chunk to be retrieved. Only chunks exceeding this score are retrieved. The default value is **0.5**. Higher thresholds demand greater similarity and thus result in fewer chunks being retrieved.
+
+### Metadata Filtering
+
+#### Chatflow/Workflow
+
+The **Knowledge Retrieval** node allows you to filter documents using metadata fields like tags, categories, and permissions.
+
+#### Steps
+
+1. Select Filter Mode
+    - **Disabled (Default):** No metadata filtering.
+
+    - **Automatic:** Filters auto-configure from query variables in the **Knowledge Retrieval** node.
+    > Note: Automatic Mode requires model selection for document retrieval.
+
+    - **Manual:** Configure filters manually.
+
+2. (Optional) For Manual Mode, follow these steps:
+    1. Click **Conditions** to open the configuration panel.
+
+    2. Click **+Add Condition**:
+        - Select metadata fields within your chosen knowledge base from the dropdown list.
+        > Note: When multiple knowledge bases are selected, only common metadata fields are shown in the list.
+        - Use the search box to find specific fields.
+
+    3. (Optional) Click **+Add Condition** to add more fields.
+
+    4. Configure filter conditions:
+    <table border="1" style="border-collapse: collapse; width: 100%;">
+    <tr style="background-color: #f5f5f5;">
+        <td width="15%">Field Type</td>
+        <td width="20%">Operator</td>
+        <td width="65%">Description and Examples</td>
+    </tr>
+    <tr>
+        <td rowspan="8">String</td>
+        <td>is</td>
+        <td>Exact match required. Example: <code>is "Published"</code> returns only documents marked exactly as “Published”.</td>
+    </tr>
+    <tr>
+        <td>is not</td>
+        <td>Excludes exact matches. Example: <code>is not "Draft"</code> returns all documents except those marked as “Draft”.</td>
+    </tr>
+    <tr>
+        <td>is empty</td>
+        <td>Returns documents where the field has no value.</td>
+    </tr>
+    <tr>
+        <td>is not empty</td>
+        <td>Returns documents where the field has any value.</td>
+    </tr>
+    <tr>
+        <td>contains</td>
+        <td>Matches partial text. Example: <code>contains "Report"</code> returns “Monthly Report”, “Annual Report”, etc.</td>
+    </tr>
+    <tr>
+        <td>not contains</td>
+        <td>Excludes documents containing specified text. Example: <code>not contains "Draft"</code> returns documents without “Draft” in the field.</td>
+    </tr>
+    <tr>
+        <td>starts with</td>
+        <td>Matches text at beginning. Example: <code>starts with "Doc"</code> returns “Doc1”, “Document”, etc.</td>
+    </tr>
+    <tr>
+        <td>ends with</td>
+        <td>Matches text at end. Example: <code>ends with "2024"</code> returns “Report 2024”, “Summary 2024”, etc.</td>
+    </tr>
+    <tr>
+        <td rowspan="6">Number</td>
+        <td>=</td>
+        <td>Exact number match. Example: <code>= 10</code> returns documents marked with exactly 10.</td>
+    </tr>
+    <tr>
+        <td>≠</td>
+        <td>Excludes specific number. Example: <code>≠ 5</code> returns all documents except those marked with 5.</td>
+    </tr>
+    <tr>
+        <td>></td>
+        <td>Greater than. Example: <code>> 100</code> returns documents with values above 100.</td>
+    </tr>
+    <tr>
+        <td><</td>
+        <td>Less than. Example: <code>< 50</code> returns documents with values below 50.</td>
+    </tr>
+    <tr>
+        <td>≥</td>
+        <td>Greater than or equal to. Example: <code>≥ 20</code> returns documents with values 20 or higher.</td>
+    </tr>
+    <tr>
+        <td>≤</td>
+        <td>Less than or equal to. Example: <code>≤ 200</code> returns documents with values 200 or lower.</td>
+    </tr>
+    <tr>
+        <td rowspan="5">Date</td>
+        <td>is</td>
+        <td>Exact date match. Example: <code>is "2024-01-01"</code> returns documents dated January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>before</td>
+        <td>Prior to date. Example: <code>before "2024-01-01"</code> returns documents dated before January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>after</td>
+        <td>After date. Example: <code>after "2024-01-01"</code> returns documents dated after January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>is empty</td>
+        <td>Returns documents with no date value.</td>
+    </tr>
+    <tr>
+        <td>is not empty</td>
+        <td>Returns documents with any date value.</td>
+    </tr>
+</table>
+    
+    5. Add filter values:
+    - **Variable:** Select from existing **Chatflow/Workflow** variables
+    - **Constant:** Enter specific values
+
+    {% hint style="warning" %}
+    Filter values are case-sensitive and require exact matches. Example: a filter `starts with “App”` or `contains “App”` will match “Apple” but not “apple” or “APPLE”.
+    {% endhint %}
+
+    6. Set logic operators:
+    - `AND`: Match all conditions
+    - `OR`: Match any condition
+
+    7. Click outside the panel to save your settings.
+
+#### Chatbot
+
+Access **Metadata Filtering** below **Knowledge** (bottom-left). Configuration steps are the same as in **Chatflow/Workflow**.
 
 ### View Linked Applications in the Knowledge Base
 

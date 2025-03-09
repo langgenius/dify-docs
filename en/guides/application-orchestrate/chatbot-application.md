@@ -84,3 +84,7 @@ If you want to customize the application that you share, you can Fork our open s
 **How ​​to add a third-party tool within the chatbot?**
 
 The chatbot app does not support adding third-party tools. You can add third-party tools within your [agent](../application-orchestrate/agent.md).
+
+**How to use metadata filtering when creating a Chatbot?**
+
+For instructions, see “Metadata Filtering > Chatbot” section in [Integrate Knowledge Base within Application](https://docs.dify.ai/guides/knowledge-base/integrate-knowledge-within-application).
