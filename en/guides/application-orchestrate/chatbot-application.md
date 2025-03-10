@@ -36,7 +36,7 @@ Example:
 
 For a better experience, we will add an opening dialogue: `"Hello, {{name}}. I'm your interviewer, Bob. Are you ready?"`
 
-To add the opening dialogue, click the "Add Feature" button in the upper left corner, and enable the "Conversation remarkers" feature:
+To add the opening dialogue, click the "Add Feature" button in the bottom-right corner, and enable the "Conversation remarkers" feature:
 
 <figure><img src="../../.gitbook/assets/conversation-remarkers.png" alt=""><figcaption></figcaption></figure>
 
