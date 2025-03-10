@@ -280,6 +280,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `tidb_vector`
     * `analyticdb`
     * `couchbase`
+    * `oceanbase`
 *   WEAVIATE\_ENDPOINT
 
     Weaviateエンドポイントアドレス（例：`http://weaviate:8080`）。
@@ -398,6 +399,34 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 *   COUCHBASE_SCOPE_NAME
 
     使用するスコープの名前です。
+
+* OCEANBASE\_VECTOR\_HOST
+
+  OceanBase Vector ホスト。
+
+* OCEANBASE\_VECTOR\_PORT
+
+  OceanBase Vector ポート。
+
+* OCEANBASE\_VECTOR\_USER
+
+  OceanBase Vector ユーザー。
+
+* OCEANBASE\_VECTOR\_PASSWORD
+
+  OceanBase Vector パスワード。
+
+* OCEANBASE\_VECTOR\_DATABASE
+
+  OceanBase Vector データベース。
+
+* OCEANBASE\_CLUSTER\_NAME（オプション）
+
+  OceanBase クラスタ名，OceanBase Docker にのみ有効。
+
+* OCEANBASE\_MEMORY\_LIMIT（オプション）
+
+  OceanBase メモリ使用上限，OceanBase Docker のみに有効。
 
 #### ナレッジベース設定
 
