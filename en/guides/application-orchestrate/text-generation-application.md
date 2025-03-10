@@ -16,13 +16,13 @@ Here, we use a translation application as an example to introduce the way to com
 
 Click the "Create Application" button on the homepage to create an application. Fill in the application name, and select "Text Generator" as the application type.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (28).png" alt=""><figcaption><p>Create Application</p></figcaption></figure>
+![Create Application](/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (28).png)
 
 #### Step 2: Compose the Application
 
 After the application is successfully created, it will automatically redirect to the application overview page. Click on the left-hand menu: “**Prompt Eng.**” to compose the application.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (50).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (50).png)
 
 **2.1 Fill in Prefix Prompts**
 
@@ -42,7 +42,7 @@ If the application wants to generate content based on private contextual convers
 
 Generating more like this allows you to generate multiple texts at once, which you can edit and continue generating from. Click on the "Add Future" button in the upper left corner to enable this feature.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (35).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (35).png)
 
 **2.4 Debugging**
 
@@ -62,6 +62,6 @@ After debugging the application, click the **"Publish"** button in the upper rig
 
 You can find the sharing address of the application on the overview page. Click the "Preview" button to preview the shared application. Click the "Share" button to obtain the sharing link address. Click the "Settings" button to set the information of the shared application.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (52).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/application_orchestrate/text-generation-application/image (52).png)
 
 If you want to customize the application shared outside, you can Fork our open source [WebApp template](https://github.com/langgenius/webapp-text-generator). Based on the template, you can modify the application to meet your specific situation and style requirements.

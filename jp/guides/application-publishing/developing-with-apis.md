@@ -15,7 +15,7 @@ Difyは、「**後端即サービス(Backend as a Service)**」の理念に基�
 
 アプリケーションを選択し、アプリケーション（Apps）の左側ナビゲーションで**APIアクセス（API Access）**を見つけます。このページでDifyが提供するAPIドキュメントを確認し、APIにアクセスするための認証情報を管理できます。
 
-<figure><img src="../../../en/.gitbook/assets/guides\application-publishing\launch-your-webapp-quickly/API Access.png" alt=""><figcaption><p>APIアクセス</p></figcaption></figure>
+![APIアクセス](../../../en/.gitbook/assets/guides\application-publishing\launch-your-webapp-quickly/API Access.png)
 
 例えば、あなたがコンサルティング会社の開発部門であれば、会社のプライベートデータベースに基づいてAI能力をエンドユーザーや開発者に提供できますが、開発者はあなたのデータやAIロジック設計を把握することはできません。これにより、サービスは安全かつ持続可能に提供され、商業目的を満たすことができます。
 

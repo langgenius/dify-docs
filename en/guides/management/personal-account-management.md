@@ -8,7 +8,7 @@ The login methods supported by different versions of Dify are as follows:
 
 > Note: For Dify Cloud Service, if the email associated with a GitHub or Google account is the same as the email used to log in with a verification code, the system will automatically link them as the same account, avoiding the need for manual binding and preventing duplicate registrations.
 
-<figure><img src="../../.gitbook/assets/image (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/management/c4a9bb46f636807f0b59710724fddc40.png)
 
 ## Modifying Personal Information
 
@@ -27,7 +27,7 @@ You can modify the following details:
 
 > Note: The password reset feature is only available in the Community Version.
 
-<figure><img src="../../.gitbook/assets/image (1) (3).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/management/527c6752596356c263262f5e24ef8941.png)
 
 ### Login Methods
 
@@ -66,7 +66,7 @@ Deleting your account is irreversible, and the same email address cannot be re-r
 
 Enter the email address you want to delete and the confirmation verification code. Afterward, the system will permanently delete all information related to the account.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ded326f27886b5884969c220ead998d7.png" alt=""><figcaption><p>Delete Personal Account</p></figcaption></figure>
+![Delete Personal Account](https://assets-docs.dify.ai/2024/12/ded326f27886b5884969c220ead998d7.png)
 
 ### FAQ
 

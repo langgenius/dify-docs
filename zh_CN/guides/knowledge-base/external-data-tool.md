@@ -15,20 +15,20 @@
 1. 在使用外部数据工具之前，你需要准备一个 API 和用于鉴权的 API Key，请阅读[external-data-tool.md](../extension/api-based-extension/external-data-tool.md "mention")
 2. Dify 提供了集中式的 API 管理，在设置界面统一添加 API 扩展配置后，即可在 Dify 上的各类应用中直接使用。
 
-<figure><img src="../../.gitbook/assets/api_based.png" alt=""><figcaption><p>API-based Extension</p></figcaption></figure>
+![API-based Extension](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/37827292396877ca167965ccf3b98ff3.png)
 
 3. 我们以“查询天气”为例，在“新增基于 API 的扩展”对话框输入名字，API 端点，API Key。保存后我们就可以调用 API 了。
 
-<figure><img src="../../.gitbook/assets/weather inquiry.png" alt=""><figcaption><p>Weather Inquiry</p></figcaption></figure>
+![Weather Inquiry](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/905152bc69d94e3e240aef3c513344cb.png)
 
 4. 在提示词编排页面，点击“工具”右侧的“+添加”按钮，在打开的“添加 工具”对话框，填写名称和变量名称（变量名称会被引用到提示词中，请填写英文），以及选择第 2 步中已经添加的基于 API 的扩展。
 
-<figure><img src="../../.gitbook/assets/api_based_extension1.png" alt=""><figcaption><p>External_data_tool</p></figcaption></figure>
+![External_data_tool](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/caaf204151dffef0c86471ac383bd9f8.png)
 
 5. 这样，我们在提示词编排框就可以把查询到的外部数据拼装到提示词中。比如我们要查询今天的伦敦天气，可以添加`location` 变量，输入"London"，结合外部数据工具的扩展变量名称`weather_data`，调试输出如下：
 
-<figure><img src="../../.gitbook/assets/Weather_search_tool.jpeg" alt=""><figcaption><p>Weather_search_tool</p></figcaption></figure>
+![Weather_search_tool](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/754285fd156db8eca54bd60ac8e49fa7.jpeg)
 
 在对话日志中，我们也可以看到 API 返回的实时数据：
 
-<figure><img src="../../.gitbook/assets/log.jpeg" alt="" width="335"><figcaption><p>Prompt Log</p></figcaption></figure>
+![Prompt Log](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/5239291022f6060dc8ace1f623e4eb3d.jpeg)

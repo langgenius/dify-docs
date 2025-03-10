@@ -10,7 +10,7 @@
 
 你可以在账单页查看团队内各项资源的使用情况。
 
-<figure><img src="../../.gitbook/assets/image (5) (1).png" alt=""><figcaption><p>团队账单管理</p></figcaption></figure>
+![团队账单管理](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/management/8a0becb402c9abdb697f8ab6ff67c839.png)
 
 ### 常见问题
 
@@ -21,7 +21,7 @@
 * 从 Professional 升级至 Team 需补足当月差额，立即生效。
 * 从 Team 降级至 Professional 立即生效。
 
-<figure><img src="../../.gitbook/assets/image (6) (1).png" alt=""><figcaption><p>更改付费方案</p></figcaption></figure>
+![更改付费方案](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/management/5f330cc59a9c6646531876ba92b856f8.png)
 
 如果取消订阅方案，**团队将在当月账单周期结束后**自动切换至 Sandbox/Free 版本。已超出的团队人数及团队资源将无法访问。
 

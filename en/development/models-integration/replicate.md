@@ -9,8 +9,8 @@ Specific steps are as follows:
 3. Pick a model. Select the model under [Language models](https://replicate.com/collections/language-models) and [Embedding models](https://replicate.com/collections/embedding-models) .
 4. Add models in Dify's `Settings > Model Provider > Replicate`.
 
-<figure><img src="../../.gitbook/assets/set-up-replicate.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/b11aa84eb58e4457b47696f077389e37.png)
 
 The API key is the API Key set in step 2. Model Name and Model Version can be found on the model details page:
 
-<figure><img src="../../.gitbook/assets/replicate-version.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/95e2ad371c82ef7ef641192f2bf1a1f8.png)

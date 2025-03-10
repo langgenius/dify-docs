@@ -18,17 +18,17 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 从右上角的用户菜单中获取 Opik API 密钥。点击 **API Key**，然后点击 API Key 进行复制：
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png" alt=""><figcaption><p>Opik API 密钥</p></figcaption></figure>
+![Opik API 密钥](https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png)
 
 ### 3. 集成 Opik 与 Dify
 
 在 Dify 应用程序中配置 Opik。打开需要监控的应用程序，在侧边菜单中打开**监控**，并在页面上选择**追踪应用性能**。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png" alt=""><figcaption><p>追踪应用性能</p></figcaption></figure>
+![追踪应用性能](https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png)
 
 点击配置后，将在 Opik 中创建的 **API Key** 和**项目名称**粘贴到配置中并保存。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png" alt=""><figcaption><p>配置 Opik</p></figcaption></figure>
+![配置 Opik](https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png)
 
 成功保存后，你可以在当前页面查看监控状态。
 
@@ -36,15 +36,15 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 配置完成后，你可以照常调试或使用 Dify 应用程序。所有使用历史都可以在 Opik 中监控。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png" alt=""><figcaption><p>在 Opik 中查看应用数据</p></figcaption></figure>
+![在 Opik 中查看应用数据](https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png)
 
 当你切换到 Opik 时，可以在仪表板中查看 Dify 应用程序的详细操作日志。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png" alt=""><figcaption><p>在 Opik 中查看应用数据</p></figcaption></figure>
+![在 Opik 中查看应用数据](https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png)
 
 通过 Opik 的详细 LLM 操作日志将帮助你优化 Dify 应用程序的性能。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png" alt=""><figcaption><p>在 Opik 中查看应用数据</p></figcaption></figure>
+![在 Opik 中查看应用数据](https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png)
 
 ## 监控数据列表
 

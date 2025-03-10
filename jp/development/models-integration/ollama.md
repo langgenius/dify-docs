@@ -1,6 +1,6 @@
 # Ollamaでデプロイしたローカルモデルを統合
 
-![ollama](../../.gitbook/assets/ollama.png)
+![ollama](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/development/models-integration/4b23476f2be72e5c1acb9a3e5714b191.png)
 
 [Ollama](https://github.com/jmorganca/ollama)は、Llama 2、Mistral、LlavaといったLLMを簡単にデプロイできるように設計された、クロスプラットフォーム対応の推論フレームワーククライアントです（MacOS、Windows、Linuxに対応）。ワンクリックでセットアップできるOllamaを利用すれば、LLMをローカル環境で実行でき、データを手元のマシンに保持することで、データプライバシーとセキュリティを強化できます。
 
@@ -54,7 +54,7 @@
 
 4.  Ollamaモデルの使用
 
-    ![](../../.gitbook/assets/jp-ollama-use-model.png)
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/development/models-integration/aa3207efbcc2121ae5e03b233c90167a.png)
 
     設定が必要なアプリの「プロンプトエンジニアリング」ページを開き、Ollamaプロバイダーの中から`llava`モデルを選択し、モデルパラメーターを設定して使用します。
 

@@ -4,7 +4,7 @@
 
 After creating an application, if you want to modify the application name or description, you can click "Edit info" in the upper left corner of the application to revise the application's icon, name, or description.
 
-<figure><img src="../../.gitbook/assets/image (92).png" alt=""><figcaption><p>Edit App Info</p></figcaption></figure>
+![Edit App Info](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/management/63a449e9a8ae337b9c067165d1674a45.png)
 
 ### Duplicating Application
 
@@ -17,13 +17,13 @@ Applications created in Dify support export in DSL format files, allowing you to
 * Click "Export DSL" in the application menu button on the "Studio" page
 * After entering the application's orchestration page, click "Export DSL" in the upper left corner
 
-![](../../.gitbook/assets/export-dsl.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/management/544c18d770e230db93d6756bba98d8a7.png)
 
 The DSL file does not include authorization information already filled in [Tool](../workflow/node/tools.md) nodes, such as API keys for third-party services.
 
 If the environment variables contain variables of the `Secret` type, a prompt will appear during file export asking whether to allow the export of this sensitive information.
 
-![](../../.gitbook/assets/export-dsl-secret.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/management/25ce002ef7f0392fc6b3b6975ae137ec.png)
 
 {% hint style="info" %}
 Dify DSL is an AI application engineering file standard defined by Dify.AI in v0.6 and later. The file format is YML. This standard covers the basic description of the application, model parameters, orchestration configuration, and other information.

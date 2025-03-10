@@ -8,7 +8,7 @@ description: 'Author: Allen'
 
 点击 Dify 平台右上角的“插件”，前往插件管理页，支持通过 **Marketplace、GitHub、上传本地文件**三种方式安装插件。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a56c40245090d9252557dcc6f4064a14.png" alt=""><figcaption><p>安装插件</p></figcaption></figure>
+![安装插件](https://assets-docs.dify.ai/2025/01/a56c40245090d9252557dcc6f4064a14.png)
 
 #### Marketplace
 
@@ -20,7 +20,7 @@ description: 'Author: Allen'
 
 你可以直接通过 GitHub 代码仓库链接安装插件，使用此方法安装插件时需确保插件满足代码规范。插件代码仓库需创建 Release 并在附件中包含 `.difypkg` 后缀的文件包。详细说明请参考[发布插件：GitHub](../publish-plugins/publish-plugin-on-personal-github-repo.md)。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/4026a12a915e3fe9bd057d8827acfdce.png" alt=""><figcaption><p>通过 GitHub 安装</p></figcaption></figure>
+![通过 GitHub 安装](https://assets-docs.dify.ai/2025/01/4026a12a915e3fe9bd057d8827acfdce.png)
 
 **上传本地文件**
 
@@ -36,7 +36,7 @@ description: 'Author: Allen'
 
 以 `OpenAI` 为例，安装模型插件后，点击右上角的**头像页 → 设置 → 模型供应商**，配置 API Key 即可激活该模型供应商。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png" alt=""><figcaption><p>授权 OpenAI API Key</p></figcaption></figure>
+![授权 OpenAI API Key](https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png)
 
 授权后可以在所有应用类型内选择并使用该大语言模型。
 
@@ -74,7 +74,7 @@ Chatflow 和 Workflow 类型应用共用一套工作流编排画布，因此工�
 
 你已了解如何使用 `Google Search` 工具。如需了解其它插件的使用方法，请参考插件详情页的指导使用插件。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png" alt=""><figcaption><p>使用插件</p></figcaption></figure>
+![使用插件](https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png)
 
 ### 阅读更多
 

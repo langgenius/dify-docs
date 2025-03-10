@@ -16,15 +16,15 @@ Through variable aggregation, you can aggregate multiple outputs, such as from i
 
 Without variable aggregation, the branches of Classification 1 and Classification 2, after different knowledge base retrievals, would require repeated definitions for downstream LLM and direct response nodes.
 
-<figure><img src="../../../.gitbook/assets/image (227).png" alt=""><figcaption><p>Issue Classification (without Variable Aggregation)</p></figcaption></figure>
+![Issue Classification (without Variable Aggregation)](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/7a7c91663c3799ce9d056b013d5df29c.png)
 
 By adding variable aggregation, the outputs of the two knowledge retrieval nodes can be aggregated into a single variable.
 
-<figure><img src="../../../.gitbook/assets/variable-aggregation.png" alt=""><figcaption><p>Multi-Branch Aggregation after Issue Classification</p></figcaption></figure>
+![Multi-Branch Aggregation after Issue Classification](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/2b1694936fdab4843f5edc3f2fd1e79a.png)
 
 **Multi-Branch Aggregation after IF/ELSE Conditional Branching**
 
-<figure><img src="../../../.gitbook/assets/if-else-conditional.png" alt=""><figcaption><p>Multi-Branch Aggregation after Conditional Branching</p></figcaption></figure>
+![Multi-Branch Aggregation after Conditional Branching](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/ff0e5774a3eccc8a04c310ab9bae25e7.png)
 
 ### 3 Format Requirements
 

@@ -16,7 +16,7 @@ SiliconCloud 基于优秀的开源基础模型，提供高性价比的 GenAI 服
 
 在 Dify 的工具页中点击 `SiliconCloud > 去授权` 填写 API Key。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-26 23.12.01.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/0304594b8cdee83931102b39fd014a75.png)
 
 ### 3. 使用工具
 
@@ -26,12 +26,12 @@ Chatflow 和 Workflow 应用均支持添加 `SiliconFlow` 工具节点。
 
 将用户输入的内容通过[变量](../../workflow/variables.md)传递至 Siliconflow 工具的 Flux 或 Stable Diffusion 节点内的“提示词”“负面提示词”框中，按照需求调整内置参数，最后在“结束”节点的回复框中选中 Siliconflow 工具节点的输出内容（文本、图片等）。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 10.09.34.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/81d0ed042a4a7226aa22dcff0dca2ed3.png)
 
 * **Agent 应用**
 
 在 Agent 应用内添加 `Stable Diffusion` 或 `Flux` 工具，然后在对话框内发送图片描述，调用工具生成 AI 图像。
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 10.18.54.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/b2d005656378c8e7c29f9686c603c7ed.png)
 
-<figure><img src="../../../.gitbook/assets/截屏2024-09-27 10.23.52.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/17b184d96920fd8c6b891e903166be38.png)

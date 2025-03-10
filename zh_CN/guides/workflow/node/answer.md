@@ -14,13 +14,13 @@
 
 **示例1：** 输出纯文本
 
-<figure><img src="../../../.gitbook/assets/output (2) (2).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/1b1fadb8f838963134fc5c9eb14b5632.png)
 
 **示例2：** 输出图片+LLM回复
 
-<figure><img src="../../../.gitbook/assets/image (95).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/16279b70829e308bcc0c1e73aa1c870f.png)
 
-<figure><img src="../../../.gitbook/assets/image (96).png" alt="" width="275"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/19b19eddfb50fdbe880da598e43c24c9.png)
 
 {% hint style="info" %}
 直接回复节点可以不作为最终的输出节点，作为流程过程节点时，可以在中间步骤流式输出结果。

@@ -2,7 +2,7 @@
 
 Tool type plugins are external tools that can be referenced by Chatflow / Workflow / Agent application types to enhance the capabilities of Dify applications. For example, adding online search capabilities, image generation capabilities, etc. to an application. Tool Type Plugins provide a complete set of tools and API implementations.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
 
 In this article, a "Tool Plugin" refers to a complete project that includes the tool provider file, functional code, and other related components. A tool provider may encompass multiple Tools (which can be understood as additional functionalities offered by a single tool), structured as follows:
 
@@ -320,7 +320,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 
 Run the `python -m main` command to launch the plugin. You can see on the plugin page that the plugin has been installed into Workspace. Other team members can also access the plugin.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
 
 ### Packing Plugin
 

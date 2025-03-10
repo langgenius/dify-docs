@@ -14,11 +14,11 @@ The following sections will introduce the usage methods for Firecrawl and Jina R
 
 Click on the avatar in the upper right corner, then go to the **DataSource** page, and click the **Configure** button next to Firecrawl.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/d468cf996f591b4b2bd0ffb5de62bad4.png" alt=""><figcaption><p>Configuring Firecrawl credentials</p></figcaption></figure>
+![Configuring Firecrawl credentials](https://assets-docs.dify.ai/2024/12/d468cf996f591b4b2bd0ffb5de62bad4.png)
 
 Log in to the [Firecrawl website](https://www.firecrawl.dev/) to complete registration, get your API Key, and then enter and save it in Dify.
 
-<figure><img src="https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FRncMhlfeYTrpujwzDIqw%2Fuploads%2FtAwcLoAYT1A2v12pfJC3%2Fimage.png?alt=media&token=3b5b784f-2808-431f-8595-2638d038c190" alt=""><figcaption><p>Get the API Key and save it in Dify</p></figcaption></figure>
+![Get the API Key and save it in Dify](https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FRncMhlfeYTrpujwzDIqw%2Fuploads%2FtAwcLoAYT1A2v12pfJC3%2Fimage.png?alt=media&token=3b5b784f-2808-431f-8595-2638d038c190)
 
 #### 2. Scrape target webpage
 
@@ -26,7 +26,7 @@ On the knowledge base creation page, select **Sync from website**, choose Firecr
 
 The configuration options include: Whether to crawl sub-pages, Page crawling limit, Page scraping max depth, Excluded paths, Include only paths, and Content extraction scope. After completing the configuration, click **Run** to preview the parsed pages.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3e63b4ced9770e21d5132c3aa8e5d2de.png" alt=""><figcaption><p>Execute scraping</p></figcaption></figure>
+![Execute scraping](https://assets-docs.dify.ai/2024/12/3e63b4ced9770e21d5132c3aa8e5d2de.png)
 
 #### 3. Review import results
 
@@ -40,7 +40,7 @@ After importing the parsed text from the webpage, it is stored in the knowledge 
 
 Click on the avatar in the upper right corner, then go to the **DataSource** page, and click the **Configure** button next to Jina Reader.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/28b37f9b36fe808b2d3302c48fce5ea3.png" alt=""><figcaption><p>Configuring Jina Reader</p></figcaption></figure>
+![Configuring Jina Reader](https://assets-docs.dify.ai/2024/12/28b37f9b36fe808b2d3302c48fce5ea3.png)
 
 Log in to the [Jina Reader website](https://jina.ai/reader/), complete registration, obtain the API Key, then fill it in and save.
 
@@ -48,14 +48,14 @@ Log in to the [Jina Reader website](https://jina.ai/reader/), complete registrat
 
 On the knowledge base creation page, select **Sync from website**, choose Jina Reader as the provider, and enter the target URL to be crawled.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/f9170b2a2ab1be94bc85ff3ed3c3e723.png" alt=""><figcaption><p>Web crawling configuration </p></figcaption></figure>
+![Web crawling configuration ](https://assets-docs.dify.ai/2024/12/f9170b2a2ab1be94bc85ff3ed3c3e723.png)
 
 Configuration options include: whether to crawl subpages, maximum number of pages to crawl, and whether to use sitemap for crawling. After completing the configuration, click the **Run** button to preview the page links to be crawled.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a875f21a751551c03109c76308c577ee.png" alt=""><figcaption><p>Executing the crawl process</p></figcaption></figure>
+![Executing the crawl process](https://assets-docs.dify.ai/2024/12/a875f21a751551c03109c76308c577ee.png)
 
 After importing the parsed text from web pages into the knowledge base, you can review the imported results in the documents section. To add more web pages, click the **Add URL** button on the right to continue importing new pages.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/03494dc3c882ac1c74b464ea931e2533.png" alt=""><figcaption><p>Importing parsed web text into the knowledge base</p></figcaption></figure>
+![Importing parsed web text into the knowledge base](https://assets-docs.dify.ai/2024/12/03494dc3c882ac1c74b464ea931e2533.png)
 
 After crawling is complete, the content from the web pages will be incorporated into the knowledge base.

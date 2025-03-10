@@ -18,7 +18,7 @@
 
 新しいモデルを統合したい場合も、Difyの既存機能を拡張するための専用ツールを追加したい場合も、Dify マーケットプレイスには必要なリソースが揃っています。**より多くの開発者の皆様に参加していただき、Difyのエコシステムを共に発展させ、関係者全員に利益をもたらすことを願っています。**
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/83f9566063db7ae4886f6a139f3f81ff.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/83f9566063db7ae4886f6a139f3f81ff.png)
 
 ## **プラグインの種類**
 

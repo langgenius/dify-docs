@@ -33,7 +33,7 @@ dify plugin init
 
 填写完成后，在插件开发语言环节中选择 Python。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png" alt=""><figcaption><p>Plugins development: Python</p></figcaption></figure>
+![Plugins development: Python](https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png)
 
 ### 3. 选择插件类型并初始化项目模板
 

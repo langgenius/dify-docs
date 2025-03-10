@@ -29,11 +29,11 @@ Follow the prompts to configure plugin name, author information, and plugin desc
 
 > The name must be 1-128 characters long and can only contain letters, numbers, hyphens, and underscores.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/03a1c4cdc72213f09523eb1b40832279.png" alt=""><figcaption><p>Bundle basic informatio</p></figcaption></figure>
+![Bundle basic informatio](https://assets-docs.dify.ai/2024/12/03a1c4cdc72213f09523eb1b40832279.png)
 
 Fill in the information and hit enter, the Bundle plugin project directory will be created automatically.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/356d1a8201fac3759bf01ee64e79a52b.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/356d1a8201fac3759bf01ee64e79a52b.png)
 
 #### **2. Add Dependencies**
 

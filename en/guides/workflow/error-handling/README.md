@@ -99,7 +99,7 @@ In the new LLM node, fill in the prompt and reference the exception output from 
 
 Add a variable aggregation node to consolidate the results from both the correct and error branches and output them to the end node, completing the entire process.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/059b5a814514cd9abe10f1f4077ed17f.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/059b5a814514cd9abe10f1f4077ed17f.png)
 
 > Click [here](https://assets-docs.dify.ai/2024/12/087861aa20e06bb4f8a2bef7e7ae0522.yml) to download the Demo DSL file.
 

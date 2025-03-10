@@ -16,7 +16,7 @@ SearchApiは、Google検索、Google Jobs、YouTube、Googleニュースなど�
 
 Difyのナビゲーションページから `ツール > SearchApi > 認証する`の順にクリックし、API キーを入力してください。
 
-![](../../../.gitbook/assets/tool-searchapi.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/b00563dd5a7ea62696bd435e082861e5.png)
 
 ## 3. ツールの使用方法
 
@@ -26,7 +26,7 @@ Difyのナビゲーションページから `ツール > SearchApi > 認証す�
 
 チャットフローとワークフローアプリでは、`SearchApi`のツールノードを追加することで、Google Jobs API、Google News API、Google Search API、YouTube Data APIの4つの異なるツールを使用可能にします。
 
-![](../../../.gitbook/assets/tool-searchapi-flow.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/174ac4e16e4dc60d67aa0ddaa94b1d36.png)
 
 * **エージェントアプリ**
 

@@ -26,7 +26,7 @@
 
     In `Settings > Model Providers > Ollama`, fill in:
 
-    ![](../../.gitbook/assets/ollama-config-en.png)
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/06aa8dca873203e7bd8cc1866fa8f83b.png)
 
     * Model Name: `llama3.2`
     *   Base URL: `http://<your-ollama-endpoint-domain>:11434`
@@ -52,7 +52,7 @@
     The integration method for Embedding models is similar to LLM, just change the model type to Text Embedding.
 1.  Use Ollama Models
 
-    ![](../../.gitbook/assets/ollama-use-model-en.png)
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/f6003949d3fdf670fb4d61fab39d7947.png)
 
     Enter `Prompt Eng.` page of the App that needs to be configured, select the `llava` model under the Ollama provider, and use it after configuring the model parameters.
 

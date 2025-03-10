@@ -17,13 +17,13 @@
 4. マッチング項目が見つからなかった場合、質問は通常プロセスを継続します（LLMやRAGに渡されます）。
 5. アノテーションリプライ機能をオフにすると、システムはアノテーションからのマッチングリプライを継続して行いません。
 
-<figure><img src="../../.gitbook/assets/image (130).png" alt="" width="563"><figcaption><p>アノテーションリプライの流れ</p></figcaption></figure>
+![アノテーションリプライの流れ](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/7bebcf85d52f65d5649956f47ed33d43.png)
 
 ### 提示詞編成でアノテーションリプライを有効にする
 
 「アプリケーション構築->機能追加」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../../en/.gitbook/assets/annotated-replies.png" alt=""><figcaption><p>提示詞編成でアノテーションリプライを有効にする</p></figcaption></figure>
+![提示詞編成でアノテーションリプライを有効にする](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/b467da1fbaa9beb22cfb2a987f51f653.png)
 
 有効にする際には、まずアノテーションリプライのパラメータを設定する必要があります。設定可能なパラメータには次のものがあります：スコア閾値と埋め込みモデル
 
@@ -33,27 +33,27 @@
 
 保存して有効にすると、この設定は直ちに有効となり、システムはすべての保存されたアノテーションに対して埋め込みモデルを利用して埋め込みを生成し保存します。
 
-<figure><img src="../../../en/.gitbook/assets/setting-parameters-for-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライのパラメータ設定</p></figcaption></figure>
+![アノテーションリプライのパラメータ設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/a2c7b82a4f25a96fcdf68c807fb96812.png)
 
 ### 会話デバッグページでアノテーションを追加する
 
 デバッグおよびプレビューページでモデルのリプライ情報に直接アノテーションを追加または編集できます。
 
-<figure><img src="../../../en/.gitbook/assets/add-annotation-reply.png" alt=""><figcaption><p>アノテーションリプライを追加する</p></figcaption></figure>
+![アノテーションリプライを追加する](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/e064e3dcca3f04e16f5269b169820d2d.png)
 
 必要な高品質リプライに編集して保存します。
 
-<figure><img src="../../../en/.gitbook/assets/editing-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライを編集する</p></figcaption></figure>
+![アノテーションリプライを編集する](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/b79aabe6e9b336e26ca409a49526501e.png)
 
 同じユーザー質問を再度入力すると、システムは既に保存されたアノテーションを使用してユーザー質問に直接リプライします。
 
-<figure><img src="../../../en/.gitbook/assets/annotaiton-reply.png" alt=""><figcaption><p>保存されたアノテーションを通じてユーザー質問にリプライする</p></figcaption></figure>
+![保存されたアノテーションを通じてユーザー質問にリプライする](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/810f640d184227f4918ee197ff906203.png)
 
 ### ログとアノテーションでアノテーションリプライを有効にする
 
 「アプリケーション構築->ログとアノテーション->アノテーション」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../../en/.gitbook/assets/logs-annotation-switch.png" alt=""><figcaption><p>ログとアノテーションでアノテーションリプライを有効にする</p></figcaption></figure>
+![ログとアノテーションでアノテーションリプライを有効にする](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/c74951765f078392924da901008eb815.png)
 
 ### アノテーションバックエンドでアノテーションリプライのパラメータを設定する
 
@@ -63,22 +63,22 @@
 
 **埋め込みモデル**：アノテーションテキストをベクトル化するために使用され、モデルの切り替え時には再度埋め込みが生成されます。
 
-<figure><img src="../../../en/.gitbook/assets/annotated-replies-initial.png" alt=""><figcaption><p>アノテーションリプライのパラメータを設定する</p></figcaption></figure>
+![アノテーションリプライのパラメータを設定する](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/5bbd94402452e3f4ecc29eb398591585.png)
 
 ### アノテーションQ&Aペアを一括インポートする
 
 一括インポート機能内で、アノテーションインポートテンプレートをダウンロードし、テンプレート形式に従ってアノテーションQ&Aペアを編集します。編集が完了したら、一括インポートします。
 
-<figure><img src="../../../en/.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括インポートする</p></figcaption></figure>
+![アノテーションQ&Aペアを一括インポートする](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/ad6497dbe8c93fe9988cf76775434a7c.png)
 
 ### アノテーションQ&Aペアを一括エクスポートする
 
 アノテーション一括エクスポート機能を通じて、システム内に保存されたすべてのアノテーションQ&Aペアを一度にエクスポートできます。
 
-<figure><img src="../../../en/.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括エクスポートする</p></figcaption></figure>
+![アノテーションQ&Aペアを一括エクスポートする](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/4d80d0a9b8056711a2dcdf664c19e840.png)
 
 ### アノテーションリプライのヒット履歴を確認する
 
 アノテーションヒット履歴機能内で、すべてのヒットしたアノテーションの編集履歴、ヒットしたユーザー質問、リプライ回答、ヒットソース、マッチング類似度スコア、ヒット時間などの情報を確認できます。これらのシステム情報に基づいて、アノテーション内容を継続的に改善することができます。
 
-<figure><img src="../../../en/.gitbook/assets/view-annotation-hit-history.png" alt=""><figcaption><p>アノテーションリプライのヒット履歴を確認する</p></figcaption></figure>
+![アノテーションリプライのヒット履歴を確認する](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/annotation/26b6c37dcff225201ea5b4fb712b2d4d.png)

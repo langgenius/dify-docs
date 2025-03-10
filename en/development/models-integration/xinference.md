@@ -33,7 +33,7 @@ There are two ways to deploy Xinference, namely [local deployment](https://githu
 
     Visit `http://127.0.0.1:9997`, select the model and specification you need to deploy, as shown below:
 
-    <figure><img src="../../.gitbook/assets/image (16) (1) (1).png" alt=""><figcaption></figcaption></figure>
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/6945f8e7a0ae88d1f67f988d53d420bd.png)
 
     As different models have different compatibility on different hardware platforms, please refer to [Xinference built-in models](https://inference.readthedocs.io/en/latest/models/builtin/index.html) to ensure the created model supports the current hardware platform.
 4.  Obtain the model UID

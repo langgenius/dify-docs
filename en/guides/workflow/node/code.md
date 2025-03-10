@@ -13,7 +13,7 @@ The code node supports running Python/NodeJS code to perform data transformation
 
 This node significantly enhances the flexibility for developers, allowing them to embed custom Python or JavaScript scripts within the workflow and manipulate variables in ways that preset nodes cannot achieve. Through configuration options, you can specify the required input and output variables and write the corresponding execution code:
 
-<figure><img src="../../../.gitbook/assets/image (157).png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/9969aa1bc1912aebe366f5d8f5dde296.png)
 
 ## Configuration
 
@@ -115,5 +115,5 @@ This code snippet has the following issues:
 
 Dangerous code will be automatically blocked by Cloudflare WAF. You can check if it's been blocked by looking at the "Network" tab in your browser's "Web Developer Tools".
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ad4dc065c4c567c150ab7fa7bfd123a3.png" alt=""><figcaption><p>Cloudflare WAF</p></figcaption></figure>
+![Cloudflare WAF](https://assets-docs.dify.ai/2024/12/ad4dc065c4c567c150ab7fa7bfd123a3.png)
 

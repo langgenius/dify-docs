@@ -27,7 +27,7 @@ A conditional branching node has three parts:
 
 ### Scenario
 
-<figure><img src="../../../.gitbook/assets/if-else-elif.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/d26ffff1b2ad0989d46e80d6812cf2e7.png)
 
 Taking the above **Text Summary Workflow** as an example:
 
@@ -41,4 +41,4 @@ Taking the above **Text Summary Workflow** as an example:
 
 For complex condition judgments, you can set multiple condition judgments and configure **AND** or **OR** between conditions to take the **intersection** or **union** of the conditions, respectively.
 
-<figure><img src="../../../.gitbook/assets/mutliple-judgement (1).png" alt="" width="369"><figcaption><p>Multiple Condition Judgments</p></figcaption></figure>
+![Multiple Condition Judgments](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/0b71ee7363e07298348e0c81e63481b0.png)

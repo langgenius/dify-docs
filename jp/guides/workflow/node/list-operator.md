@@ -10,11 +10,11 @@
 
 例えば、あるアプリでは、ユーザーが文書ファイルと画像ファイルの2種類の異なるファイルを同時にアップロードできる機能があります。その際、異なるファイルタイプを仕分けし、それぞれの処理フローに渡すためには**リスト操作ノード**を使用することが必要です。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (15).png" alt=""><figcaption><p>異なるファイルタイプのフロー分岐</p></figcaption></figure>
+![異なるファイルタイプのフロー分岐](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/522a0c932aab93d4f3970168412f759e.png)
 
 リスト操作ノードは通常、配列変数から情報を抽出し、特定の条件を設定して、下流ノードで受け入れ可能な変数タイプに変換します。この構造は、入力変数、フィルタ条件、ソート（オプション）、先頭N項目の取得（オプション）、そして出力変数に分かれています。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (17).png" alt=""><figcaption><p>リスト操作ノード</p></figcaption></figure>
+![リスト操作ノード](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/8c1be5a1270203aeb694872c316cd61e.png)
 
 #### 入力変数
 
@@ -82,6 +82,6 @@
 3. 文章変数を抽出し、「ドキュメントエクストラクタ」ノードに渡し、画像ファイル変数を抽出してLLMノードに渡します。
 4. 最後に「回答」ノードを追加し、LLMノードの出力変数を記入します。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (375).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/ca60c2a982f7a9902c178e4e5503db50.png)
 
 アプリの使用者が文章と画像ファイルを同時にアップロードした場合、文章は自動的にドキュメントエクストラクタノードに、画像ファイルは自動的にLLMノードに分流され、混合ファイルの共通処理が実現されます。

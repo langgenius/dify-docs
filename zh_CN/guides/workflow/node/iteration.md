@@ -20,13 +20,13 @@
 
 **输出变量：** 仅支持输出数组变量 `Array[List]`。如果你想要输出其它变量格式，请阅读 [扩展阅读：如何将数组转换为文本](iteration.md#ru-he-jiang-shu-zu-zhuan-huan-wei-wen-ben)。
 
-<figure><img src="../../../.gitbook/assets/image (3).png" alt=""><figcaption><p>迭代节点原理图</p></figcaption></figure>
+![迭代节点原理图](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/2b26dc5f5b088304b65190e14f58423a.png)
 
 ### 场景
 
 #### **示例1：长文章迭代生成器**
 
-<figure><img src="../../../.gitbook/assets/iteration-story-generator.png" alt=""><figcaption><p>长故事生成器</p></figcaption></figure>
+![长故事生成器](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/91091e9c5297944edb57f509a7294714.png)
 
 1. 在 **开始节点** 内添加输入故事标题、大纲变量，提示用户手动输入初始信息
 2. 使用 **LLM 节点** 基于用户输入的故事标题和大纲，让 LLM 开始编写内容
@@ -38,15 +38,15 @@
 
 1. 在 **开始节点** 配置故事标题（title）和大纲（outline）；
 
-<figure><img src="../../../.gitbook/assets/image (262).png" alt="" width="375"><figcaption><p>开始节点配置</p></figcaption></figure>
+![开始节点配置](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/1b371ec3fc8a97831745e530fe8ad50f.png)
 
 2. 选择 **LLM 节点** 基于用户输入的故事标题和大纲，让 LLM 开始编写文本；
 
-<figure><img src="../../../.gitbook/assets/iteration-llm-node.png" alt="" width="375"><figcaption><p>模板节点</p></figcaption></figure>
+![模板节点](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/55e2b509c4a7b271a71156dc677e6fb8.png)
 
 3. 选择 **参数提取节点**，将故事文本转换成为数组（Array）结构。提取参数为 `sections` ，参数类型为 `Array[Object]`
 
-<figure><img src="../../../.gitbook/assets/zh-iteration-extract-node.png" alt="" width="375"><figcaption><p>参数提取</p></figcaption></figure>
+![参数提取](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/89419f8b96db401014ca399e931e61d0.png)
 
 {% hint style="info" %}
 参数提取效果受模型推理能力和指令影响，使用推理能力更强的模型，在**指令**内增加示例可以提高参数提取的效果。
@@ -54,11 +54,11 @@
 
 4. 将数组格式的故事大纲作为迭代节点的输入，在迭代节点内部使用 **LLM 节点** 进行处理
 
-<figure><img src="../../../.gitbook/assets/image (271).png" alt="" width="375"><figcaption><p>配置迭代节点</p></figcaption></figure>
+![配置迭代节点](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/eb7735d04b1cb6a6ebde76fe7f0da701.png)
 
 在 LLM 节点内配置输入变量 `GenerateOverallOutline/output` 和 `Iteration/item`
 
-<figure><img src="../../../.gitbook/assets/image (272).png" alt="" width="375"><figcaption><p>配置 LLM 节点</p></figcaption></figure>
+![配置 LLM 节点](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/fe17ddf24ec1689be1ab72200804ed0c.png)
 
 {% hint style="info" %}
 迭代的内置变量：`items[object]` 和 `index[number]`
@@ -70,15 +70,15 @@
 
 5. 在迭代节点内部配置 **直接回复节点** ，可以实现在每轮迭代生成之后流式输出。
 
-<figure><img src="../../../.gitbook/assets/image (274).png" alt="" width="375"><figcaption><p>配置 Answer 节点</p></figcaption></figure>
+![配置 Answer 节点](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/17fe8533d1649d541e47390db2d1cf92.png)
 
 6. 完整调试和预览
 
-<figure><img src="../../../.gitbook/assets/image (273).png" alt=""><figcaption><p>按故事章节多轮迭代生成</p></figcaption></figure>
+![按故事章节多轮迭代生成](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/a032a01e49387e7bdc2e0038aa3650b3.png)
 
 #### **示例 2：长文章迭代生成器（另一种编排方式）**
 
-<figure><img src="../../../.gitbook/assets/image (55).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/6378e5eb85ce9760d7ef642ea555b268.png)
 
 * 在 **开始节点** 内输入故事标题和大纲
 * 使用 **LLM 节点** 生成文章小标题，以及小标题对应的内容
@@ -95,11 +95,11 @@
 
 迭代节点支持并行模式，开启后将有效提升迭代节点的整体运行效率。
 
-<figure><img src="../../../.gitbook/assets/image (8).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/d412f5048cd544b90b829662f64f9593.png)
 
 下图是迭代节点开启或关闭并行模式的运行效果对比。
 
-<figure><img src="../../../.gitbook/assets/image (10).png" alt=""><figcaption><p>顺序与并行执行原理图</p></figcaption></figure>
+![顺序与并行执行原理图](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/adbc49bfb14e0de6d1a72ccccc30cdd0.png)
 
 并行模式下的最高并行轮数为 10，这意味着单位时间内最多可以同时运行 10 个任务。如果需要处理超过  10 个任务，前 10 个元素将率先同时运行，前排任务处理完成后将继续处理剩余任务。
 
@@ -133,10 +133,10 @@
 
 *   [代码节点](code.md)
 
-    <figure><img src="../../../.gitbook/assets/image (264).png" alt="" width="375"><figcaption><p>code 节点输出 array</p></figcaption></figure>
+    ![code 节点输出 array](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/2faff6c41d45191307296a52a406b776.png)
 *   [参数提取](parameter-extractor.md)
 
-    <figure><img src="../../../.gitbook/assets/image (265).png" alt="" width="375"><figcaption><p>参数提取节点输出 array</p></figcaption></figure>
+    ![参数提取节点输出 array](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/66ec57db7558ca372fe847834e201a52.png)
 * [知识库检索](knowledge-retrieval.md)
 * [迭代](iteration.md)
 * [工具](tools.md)
@@ -150,7 +150,7 @@
 
 **使用代码节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (54).png" alt="" width="334"><figcaption><p>代码节点转换</p></figcaption></figure>
+![代码节点转换](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/d6a2ca50f2484eedea2ff7ca5efb2bb5.png)
 
 代码示例：
 
@@ -164,7 +164,7 @@ def main(articleSections: list):
 
 **使用模板节点转换**
 
-<figure><img src="../../../.gitbook/assets/image (56).png" alt="" width="332"><figcaption><p>模板节点转换</p></figcaption></figure>
+![模板节点转换](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/ebc414466340c323d2eb1b6c7056360d.png)
 
 代码示例：
 

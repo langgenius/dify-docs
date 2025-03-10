@@ -59,7 +59,7 @@ Let's get your automated workflows up and running in just a few steps!
 
 | WeChat Notification | Email Notification |
 |:------------------:|:------------------:|
-| ![WeChat](../../.gitbook/assets/schedule-chat.png) | ![Email](../../.gitbook/assets/schedule-chat2.png) |
+| ![WeChat](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/29a5c3cecfb51b03a810ff3cfc84824b.png) | ![Email](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/e46b0c8b31e97d9c36c0f1ec260c3a4a.png) |
 
 ## ❓ FAQ
 
@@ -72,8 +72,8 @@ Let's get your automated workflows up and running in just a few steps!
 
 > 💡 Note: Only workflow applications are supported!
 
-![Token Step 1](../../.gitbook/assets/schedule-dify1.png)
-![Token Step 2](../../.gitbook/assets/schedule-dify2.png)
+![Token Step 1](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/3662df1a59acad8c27a716637512fe7b.png)
+![Token Step 2](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/5e67ae283c36aba4bc36fc1187ecaacd.png)
 
 ### 🚫 Connection Issues?
 

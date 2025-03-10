@@ -12,7 +12,7 @@
 
 ナレッジページに移動し、左側のナビゲーションでAPIページに切り替えます。このページでは、difyが提供するAPIドキュメントを表示し、ナレッジAPIにアクセスするための認証情報を管理できます。
 
-<figure><img src="../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>ナレッジAPIドキュメント</p></figcaption></figure>
+![ナレッジAPIドキュメント](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/features/datasets/9c9f592c965ab8cf57ae6160361099bf.png)
 
 ## **空のナレッジを作成する**
 

@@ -18,7 +18,7 @@ To publish your plugin on the Dify Marketplace, follow these steps:
 
 Here is the general plugin review process:
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/05df333acfaf662e99316432db23ba9f.png" alt=""><figcaption><p>The process of uploading plugins</p></figcaption></figure>
+![The process of uploading plugins](https://assets-docs.dify.ai/2025/01/05df333acfaf662e99316432db23ba9f.png)
 
 {% hint style="info" %}
 **Note**:

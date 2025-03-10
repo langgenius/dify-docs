@@ -8,7 +8,7 @@ The **“Start”** node is a critical preset node in the Chatflow / Workflow ap
 
 On the Start node's settings page, you'll find two sections: **"Input Fields"** and preset **System Variables**.
 
-<figure><img src="../../../.gitbook/assets/image (3).png" alt=""><figcaption><p>Chatflow and Workflow</p></figcaption></figure>
+![Chatflow and Workflow](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/c4a9bb46f636807f0b59710724fddc40.png)
 
 #### Input Field
 

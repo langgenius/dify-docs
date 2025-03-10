@@ -22,7 +22,7 @@ Difyプラットフォームのトップメニューより **「ナレッジベ�
 
   * 使用しているSaaS[サブスクリプションプラン](https://dify.ai/pricing)によって、**一括アップロード可能なファイル数、文書の総アップロード数、ベクトルストレージ**の利用可能容量が制限されます。
 
-  <figure><img src="https://assets-docs.dify.ai/2024/12/effc826d2584d5f2983cdcd746099bb6.png" alt=""><figcaption><p>ナレッジベースの作成</p></figcaption></figure>
+  ![ナレッジベースの作成](https://assets-docs.dify.ai/2024/12/effc826d2584d5f2983cdcd746099bb6.png)
 
 * オンラインデータの取り込み：ナレッジベース作成時に[オンラインデータの取り込み](./import-online-datasource/README.md)が可能で、詳細はオンラインデータ取り込みのガイドを参照してください。オンラインデータソースを利用するナレッジベースには、後からローカルの文書を追加したり、ローカルファイルタイプのナレッジベースへ変更したりすることはできません。これは、複数のデータソースが混在すると管理が複雑になるためです。
 
@@ -48,7 +48,7 @@ Difyプラットフォームのトップメニューより **「ナレッジベ�
 
 ナレッジベースを初めて作成する際は、[親子分割モード](./chunking-and-cleaning-text.md)を選択し、デフォルトのオプションを使用してナレッジベースの作成を行うことを推奨します。コンテンツセクションをカスタマイズしたい場合は、[分割ルール](./chunking-and-cleaning-text.md)を参照し、正規表現の文法に従って設定してください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b3052a6aae6e4d0e5701dde3a859e326.png" alt=""><figcaption><p>汎用分割モードと親子分割モード</p></figcaption></figure>
+![汎用分割モードと親子分割モード](https://assets-docs.dify.ai/2024/12/b3052a6aae6e4d0e5701dde3a859e326.png)
 
 {% hint style="info" %}
 **注意**：分割モードを選択し、ナレッジベースの作成を完了した後は、後からモードを変更することはできません。ナレッジベースにドキュメントを新たに追加する場合も、選択したコンテンツ分割戦略に従います。
@@ -74,7 +74,7 @@ Difyプラットフォームのトップメニューより **「ナレッジベ�
 
 **高品質なインデックス設定方法**の利用を推奨します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/d121beab4a688067ff482f2c33b7a1a3.png" alt=""><figcaption><p>インデックス設定方法</p></figcaption></figure>
+![インデックス設定方法](https://assets-docs.dify.ai/2024/12/d121beab4a688067ff482f2c33b7a1a3.png)
 
 ## 4. 検索方法の選定
 
@@ -102,7 +102,7 @@ Difyプラットフォームのトップメニューより **「ナレッジベ�
 
     インバーテッド検索は、ドキュメント内のキーワードを迅速に検索するための索引構造で、オンライン検索エンジンで広く使用されている。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/9b02fc353324221cc91f185a350775b6.png" alt=""><figcaption><p>検索方法の選定後</p></figcaption></figure>
+![検索方法の選定後](https://assets-docs.dify.ai/2024/12/9b02fc353324221cc91f185a350775b6.png)
 
 選んだ検索方式に基づき、[リコールテスト/引用帰属](../retrieval-test-and-citation.md)セクションを参照し、キーワードとコンテンツの一致度をテストできる。
 
@@ -110,7 +110,7 @@ Difyプラットフォームのトップメニューより **「ナレッジベ�
 
 上述した設定を終えて、「保存して処理」ボタンをクリックすることで、ナレッジベースの作成が完了する。アプリ内でナレッジベースを統合する方法については、[ナレッジベースの統合](../integrate-knowledge-within-application.md)セクションを参照。ナレッジベースの更新や管理が必要な場合は、[ナレッジベースの管理と文書のメンテナンス](../knowledge-and-documents-maintenance.md)セクションをご覧ください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a3362a1cd384cb2b539c9858de555518.png" alt=""><figcaption><p>ナレッジベース作成完了</p></figcaption></figure>
+![ナレッジベース作成完了](https://assets-docs.dify.ai/2024/12/a3362a1cd384cb2b539c9858de555518.png)
 
 
 ## 参考文献

@@ -33,7 +33,7 @@ dify plugin init
 
 入力が完了したら、プラグイン開発言語の選択でPythonを選択してください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png" alt=""><figcaption><p>Plugins development: Python</p></figcaption></figure>
+![Plugins development: Python](https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png)
 
 ### 3. プラグインタイプの選択とプロジェクトテンプレートの初期化
 

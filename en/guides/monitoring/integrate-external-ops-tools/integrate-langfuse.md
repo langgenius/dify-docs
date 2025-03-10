@@ -15,35 +15,35 @@ Introduction to Langfuse: [https://langfuse.com/](https://langfuse.com/)
 1. Register and log in to Langfuse on the [official website](https://langfuse.com/)
 2. Create a project in Langfuse. After logging in, click **New** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
 
-<figure><img src="../../../.gitbook/assets/image (249) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+![Create a project in Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/75bed34765ed7d0e933a0069ecb094dd.png)
 
 Edit a name for the project.
 
-<figure><img src="../../../.gitbook/assets/image (251) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+![Create a project in Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/26cfbb94e312a100c39e217fdd0b4406.png)
 
 3. Create project API credentials. In the left sidebar of the project, click **Settings** to open the settings.
 
-<figure><img src="../../../.gitbook/assets/image (253) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+![Create project API credentials](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/2ed72a6761f2977201c29e67e5bc634c.png)
 
 In Settings, click **Create API Keys** to create project API credentials.
 
-<figure><img src="../../../.gitbook/assets/image (252) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+![Create project API credentials](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/3c3fbd5392d37fbccf1f9ef76c54f0bc.png)
 
 Copy and save the **Secret Key**, **Public Key**, and **Host**.
 
-<figure><img src="../../../.gitbook/assets/image (254) (1).png" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
+![Get API Key configuration](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/a2ff67951ce300082d875eae8458c8c7.png)
 
 4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="../../../.gitbook/assets/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 
 After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save.
 
-<figure><img src="../../../.gitbook/assets/config-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
 
 Once successfully saved, you can view the status on the current page. If it shows as started, it is being monitored.
 
-<figure><img src="../../../.gitbook/assets/monitored-by-langfuse.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+![View configuration status](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/1aa086a1aead0e29948e7d6d5815d5d1.png)
 
 ***
 
@@ -51,9 +51,9 @@ Once successfully saved, you can view the status on the current page. If it show
 
 After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
 
-<figure><img src="../../../.gitbook/assets/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
+![Debugging Applications in Dify](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/a1370fdbb79257cba31a565ac6764802.png)
 
-<figure><img src="../../../.gitbook/assets/view-traces-in-langfuse.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
+![Viewing application data in Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/b4fc3474336d5f60dc049c9153454496.png)
 
 ***
 

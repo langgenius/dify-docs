@@ -15,20 +15,20 @@
 1. 外部データツールを使用する前に、APIと認証用のAPIキーを準備してください。[external-data-tool.md](../extension/api-based-extension/external_data_tool.md "mention")を参照してください。
 2. Difyは集中式のAPI管理を提供しており、設定画面でAPI拡張設定を統一して追加することで、Dify上の各種アプリケーションで直接使用できるようになります。
 
-<figure><img src="../../.gitbook/assets/api_based.png" alt=""><figcaption><p>APIベースの拡張</p></figcaption></figure>
+![APIベースの拡張](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/knowledge-base/37827292396877ca167965ccf3b98ff3.png)
 
 3. 例として「天気の問い合わせ」を取り上げ、「APIベースの拡張の追加」ダイアログに名前、APIエンドポイント、APIキーを入力します。保存後、APIを呼び出すことができます。
 
-<figure><img src="../../.gitbook/assets/weather inquiry.png" alt=""><figcaption><p>天気の問い合わせ</p></figcaption></figure>
+![天気の問い合わせ](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/knowledge-base/905152bc69d94e3e240aef3c513344cb.png)
 
 4. プロンプト編成ページで、「ツール」右側の「+追加」ボタンをクリックし、開いた「ツールの追加」ダイアログで名前と変数名（変数名はプロンプトに引用されるため、英語で記入してください）を記入し、ステップ2で追加したAPIベースの拡張を選択します。
 
-<figure><img src="../../.gitbook/assets/api_based_extension1.png" alt=""><figcaption><p>外部データツール</p></figcaption></figure>
+![外部データツール](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/knowledge-base/caaf204151dffef0c86471ac383bd9f8.png)
 
 5. これで、プロンプト編成フレームでクエリされた外部データをプロンプトに組み込むことができます。例えば、今日のロンドンの天気をクエリする場合、「location」変数を追加し、「London」を入力し、外部データツールの拡張変数名「weather_data」と組み合わせると、以下のようなデバッグ出力が得られます：
 
-<figure><img src="../../.gitbook/assets/Weather_search_tool.jpeg" alt=""><figcaption><p>天気検索ツール</p></figcaption></figure>
+![天気検索ツール](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/knowledge-base/754285fd156db8eca54bd60ac8e49fa7.jpeg)
 
 対話ログでも、APIが返したリアルタイムデータを確認できます：
 
-<figure><img src="../../.gitbook/assets/log.jpeg" alt="" width="335"><figcaption><p>プロンプトログ</p></figcaption></figure>
+![プロンプトログ](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/knowledge-base/5239291022f6060dc8ace1f623e4eb3d.jpeg)

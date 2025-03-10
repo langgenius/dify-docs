@@ -24,7 +24,7 @@
 
 最後に、ENDノードでLLMノードの出力変数を選択し、設定を完了させます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (7).png" alt=""><figcaption><p>視覚分析能力の有効化</p></figcaption></figure>
+![視覚分析能力の有効化](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/af39d02a3205a8b24a11558bff8f3a32.png)
 
 ### チャットフロー
 
@@ -43,7 +43,7 @@
 
     ドキュメント、画像、音声、ビデオ、その他のファイル形式をサポートしています。この機能を有効にすると、アプリの使用者は対話の過程でいつでもファイルをアップロードおよび更新できます。最大10個のファイルを同時にアップロードでき、各ファイルのサイズ上限は15MBです。
 
-    <figure><img src="../../../zh_CN/.gitbook/assets/image (8).png" alt=""><figcaption><p>ファイルのアップロード機能</p></figcaption></figure>
+    ![ファイルのアップロード機能](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/d412f5048cd544b90b829662f64f9593.png)
 *   **引用と帰属**
 
     [「知識検索」](node/knowledge-retrieval.md)ノードと組み合わせることで、LLMが応答した際の参照元ドキュメントと帰属部分を表示します。
@@ -59,7 +59,7 @@
 
 **ユーザー向け：** ファイルのアップロード機能が有効化されたチャットフローアプリでは、対話ボックスの右側に「クリップ」アイコンが表示されます。このアイコンをクリックすることでファイルをアップロードし、LLMと対話できます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (9).png" alt=""><figcaption><p>ファイルのアップロードの使用</p></figcaption></figure>
+![ファイルのアップロードの使用](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/cf3823d608dc1707b8166ab223662650.png)
 
 **アプリ開発者向け：**
 

@@ -2,7 +2,7 @@
 
 工具指的是能够被 Chatflow / Workflow / Agent 类型应用所调用的第三方服务，提供完整的 API 实现能力，用于增强 Dify 应用的能力。例如为应用添加在线搜索、图片生成等额外功能。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
 
 在本文中，**“工具插件”** 指的是一个完整的项目，其中包含工具供应商文件、功能代码等结构。一个工具供应商内允许包含多个 Tools（可以理解为单个工具中提供的额外功能），结构如下：
 
@@ -307,7 +307,7 @@ class GoogleProvider(ToolProvider):
 
 前往[“插件管理”](https://cloud.dify.ai/plugins)页获取远程服务器地址和调试 Key。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
 回到插件项目，拷贝 `.env.example` 文件并重命名为 `.env`，将获取的远程服务器地址和调试 Key 等信息填入其中。
 
@@ -322,7 +322,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 
 运行 `python -m main` 命令启动插件。在插件页即可看到该插件已被安装至 Workspace 内，团队中的其他成员也可以访问该插件。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
 
 ### 打包插件（可选）
 

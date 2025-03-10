@@ -279,4 +279,4 @@ After the above steps are completed, we can see this tool on the frontend, and i
 
 Of course, because google\_search needs a credential, before using it, you also need to input your credentials on the frontend.
 
-<figure><img src="../../.gitbook/assets/Feb 4, 2024 (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/c99fed3e1bbe5d724810fd6118012071.png)

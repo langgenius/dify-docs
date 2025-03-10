@@ -13,7 +13,7 @@ Dify 帮助文档是一个[开源项目](https://github.com/langgenius/dify-docs
 
 如果你在阅读某篇文档的时候发现存在内容错误，或者想要修改部分内容，请点击文档页面右侧目录栏内的 **“在 Github 上编辑”** 按钮，使用 Github 内置的在线编辑器修改文件，然后提交 pull request 并简单描述本次修改行为。标题格式请使用 `Fix: Update xxx`，我们将在收到请求后进行 review，无误后将合并你的修改。
 
-![](../.gitbook/assets/zh-docs-contribution.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/community/5558460f6bd4aa9153439595e9603dc7.png)
 
 当然，你也可以在 [Issues 页](https://github.com/langgenius/dify-docs/issues)贴上文档链接，并简单描述需要修改的内容。收到反馈后将尽快处理。
 

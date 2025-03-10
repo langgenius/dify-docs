@@ -32,10 +32,10 @@
 
 Chatflow および Workflow アプリケーションでは、`Video Statistics` ノードを追加することができます。
 
-![](../../../../img/en-youtube-workflow.jpg)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/abaa685d6ffa5fbb8c295869eecfd721.jpeg)
 
 * **Agent アプリケーション**
 
 Agent アプリケーションに `Free YouTube Transcript API` ツールを追加し、関連するコマンドを入力してこのツールを呼び出します。
 
-![](../../../../img/en-youtube-agent.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/a5dc28b46d00cb523268bf51399476b6.png)

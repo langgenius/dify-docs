@@ -30,11 +30,11 @@ conda activate python-3-11
 
 推荐直接从[官网](https://developer.nvidia.com/cuda-downloads?target_os=Windows\&target_arch=x86_64\&target_version=11\&target_type=exe_local)安装。 Windows 11 选择下图版本。
 
-<figure><img src="../../.gitbook/assets/a.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/ef602bb8e4b55fbfb93208396ebfc6d2.png)
 
 根据引导安装完，打开 `NVDIA 控制面板 -> 系统信息` 看到完成了安装。
 
-<figure><img src="../../.gitbook/assets/b2.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/dc6d0b2f73a59c017a5da9582a70bc97.png)
 
 **WSL2 准备**
 
@@ -46,7 +46,7 @@ conda activate python-3-11
 2. Input CMD
 3. Ctrl + Shift + Enter
 
-<figure><img src="../../.gitbook/assets/image (144).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/c9b00fafc4c2c6c414a73011060e0291.png)
 
 **第二步，在** **CMD** **中用指令安装**
 
@@ -186,7 +186,7 @@ alias proxy="source /path/to/proxy.sh"
 
 进入官网，选择 WSL-Ubuntu 版本，按照指引使用命令行安装。
 
-<figure><img src="../../.gitbook/assets/image (146).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/eaeaeee640f22d4d29869922e0e881d4.png)
 
 修改`~/.bashrc`将 CUDA 添加至环境变量：
 
@@ -199,7 +199,7 @@ export PATH=$PATH:/usr/local/cuda-12.2/lib64
 
 进入 PyTorch [官网](https://pytorch.org/)，按照环境安装 PyTorch。
 
-<figure><img src="../../.gitbook/assets/image (147).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/a4ed682cbf002e54f0343a9b47dd9b95.png)
 
 这样环境准备就完成了。
 
@@ -243,7 +243,7 @@ Xinference 默认会在本地启动一个 worker，端点为：`http://127.0.0.1
 
 在浏览器中打开: [http://localhost:9997](http://localhost:9997)，选择 baichuan-chat，pytorch，13B，4bit，点击 create 部署。
 
-<figure><img src="../../.gitbook/assets/image (148).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/ba28b73f87c96b11dbde2421d9ab93e4.png)
 
 或者使用 CLI 部署:
 
@@ -328,7 +328,7 @@ docker-worker-1     langgenius/dify-api:0.3.16         "/bin/bash /entrypoi…" 
 
 Docker 启动成功后，在浏览器中访问：http://127.0.0.1/。设置过密码后登陆，会进入应用列表页。
 
-<figure><img src="../../.gitbook/assets/image (153).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/e08ff7a5c705854ac7a724ff15bb4b19.png)
 
 至此，成功使用 Docker 部署了 Dify 社区版。
 
@@ -351,13 +351,13 @@ hostname -I
 172.22.195.4
 ```
 
-<figure><img src="../../.gitbook/assets/image (150).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/b62a0703801c86c607b41046834f40fe.png)
 
 #### 使用 Baichuan-13B-Chat
 
 创建应用，就可以在应用中使用上一步配置的 Baichuan-13B-Chat 模型了。在 Dify 的提示词编排界面，选择 baichuan-chat 模型，设计你的应用提示词（prompt），即可发布一个可访问的 AI 应用。
 
-<figure><img src="../../.gitbook/assets/image (151).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/756122df2ffe44f58a9cff20cd7ec09e.png)
 
 以上，就是本地部署 Dify 接入 Xinference 部署的 baichuan-chat 的全过程。 至此，我们基于 Baichuan-13B-Chat 的一个基本的聊天应用就基本完成了。
 

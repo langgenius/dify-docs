@@ -4,11 +4,11 @@
 
 **探索 > 発見** では、いくつかの一般的なテンプレートアプリケーションを提供しています。これらのアプリケーションは、翻訳、ライティング、プログラミング、アシスタントなどをカバーしています。
 
-<figure><img src="../explore/images/explore-app.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workspace/0e031be438f3099fdb1680ccc9799a6d.jpeg)
 
 テンプレートアプリケーションを使用したい場合は、テンプレート上の「ワークスペースに追加」ボタンをクリックしてください。これで左側のワークスペースでそのアプリケーションを使用することができます。
 
-<figure><img src="../explore/images/creat-customize-app.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workspace/01216f0ccbd56855c41eddce194cbf48.jpeg)
 
 新しいアプリケーションを作成するためにテンプレートを修正したい場合は、テンプレート上の「カスタマイズ」ボタンをクリックしてください。
 
@@ -16,6 +16,6 @@
 
 ワークスペースはアプリケーションのナビゲーションです。ワークスペースでアプリケーションをクリックすると、そのアプリケーションを直接使用することができます。
 
-<figure><img src="../explore/images/workspace.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workspace/aa95de9ca884480c7c52a6ee7239de1d.jpeg)
 
 ワークスペースには、あなた自身のアプリケーションや他のチームメンバーがワークスペースに追加したアプリケーションが含まれています。

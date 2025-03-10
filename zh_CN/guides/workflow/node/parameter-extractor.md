@@ -16,11 +16,11 @@ Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guide
 
 在该示例中：Arxiv 论文检索工具的输入参数要求为 **论文作者** 或 **论文编号**，参数提取器从问题“这篇论文中讲了什么内容：2405.10739”中提取出论文编号 **2405.10739**，并作为工具参数进行精确查询。
 
-<figure><img src="../../../.gitbook/assets/image (66).png" alt=""><figcaption><p>Arxiv 论文检索工具</p></figcaption></figure>
+![Arxiv 论文检索工具](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/9119e3f40d71ac845ad1e14f7401ee1f.png)
 
 2. **将文本转换为结构化数据**，如长故事迭代生成应用中，作为[迭代节点](iteration.md)的前置步骤，将文本格式的章节内容转换为数组格式，方便迭代节点进行多轮生成处理。
 
-<figure><img src="../../../.gitbook/assets/image (67).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/342d37bfa31c1d9ab26cd8212be7ee7d.png)
 
 3. **提取结构化数据并使用** [**HTTP 请求**](http-request.md) ，可请求任意可访问的 URL ，适用于获取外部检索结果、webhook、生成图片等情景。
 
@@ -28,7 +28,7 @@ Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guide
 
 ### 3 如何配置
 
-<figure><img src="../../../.gitbook/assets/image (69).png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/2171232dfe8a907ebad05cef8b789c9a.png)
 
 **配置步骤**
 

@@ -15,35 +15,35 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 1. 在[官网注册](https://langfuse.com/)并登录 Langfuse
 2. 在 Langfuse 内创建项目，登录后在主页点击 **New** ，创建一个自己的项目，**项目**将用于与 Dify 内的**应用**关联进行数据监测。
 
-<figure><img src="../../../.gitbook/assets/image (300).png" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
+![在 Langfuse 内创建项目](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/75bed34765ed7d0e933a0069ecb094dd.png)
 
 为项目编辑一个名称。
 
-<figure><img src="../../../.gitbook/assets/image (302).png" alt=""><figcaption><p>在 Langfuse 内创建项目</p></figcaption></figure>
+![在 Langfuse 内创建项目](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/26cfbb94e312a100c39e217fdd0b4406.png)
 
 3. 创建项目 API 凭据，在项目内左侧边栏中点击 **Settings** 打开设置
 
-<figure><img src="../../../.gitbook/assets/image (304).png" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
+![创建一个项目 API 凭据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/2ed72a6761f2977201c29e67e5bc634c.png)
 
 在 Settings 内点击 **Create API Keys** 创建一个项目 API 凭据。
 
-<figure><img src="../../../.gitbook/assets/image (303).png" alt=""><figcaption><p>创建一个项目 API 凭据</p></figcaption></figure>
+![创建一个项目 API 凭据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/3c3fbd5392d37fbccf1f9ef76c54f0bc.png)
 
 复制并保存 **Secret Key** ，**Public Key，Host**
 
-<figure><img src="../../../.gitbook/assets/image (305).png" alt=""><figcaption><p>获取 API Key 配置</p></figcaption></figure>
+![获取 API Key 配置](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/a2ff67951ce300082d875eae8458c8c7.png)
 
 4. 在 Dify 内配置 Langfuse，打开需要监测的应用，在侧边菜单打开**监测**，在页面中选择**配置。**
 
-<figure><img src="../../../.gitbook/assets/image (306).png" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
+![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/0eea1c32267c651ea799cbb6ad1f5052.png)
 
 点击配置后，将在 Langfuse 内创建的 **Secret Key, Public Key, Host** 粘贴到配置内并保存。
 
-<figure><img src="../../../.gitbook/assets/image (307).png" alt=""><figcaption><p>配置 Langfuse</p></figcaption></figure>
+![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/fe19c8989b14e80420beb3d704b518db.png)
 
 成功保存后可以在当前页面查看到状态，显示已启动即正在监测。
 
-<figure><img src="../../../.gitbook/assets/image (308).png" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
+![查看配置状态](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/9caa62e2a91f1f8470b4fa13a104251c.png)
 
 ***
 
@@ -51,11 +51,11 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 
 配置完成后， Dify 内应用的调试或生产数据可以在 Langfuse 查看监测数据。
 
-<figure><img src="../../../.gitbook/assets/image (310).png" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
+![在 Dify 内调试应用](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/3021f46e89ea94af506b1436891c1a56.png)
 
-<figure><img src="../../../.gitbook/assets/image (309).png" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
+![在 Langfuse 内查看应用数据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/b5b48b5a3a1a917f137171290e1c3b0c.png)
 
-<figure><img src="../../../.gitbook/assets/image (26).png" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
+![在 Langfuse 内查看应用数据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/de3b4e21db7fd39b4fa4cb4d54d1079e.png)
 
 ### 监测数据清单
 

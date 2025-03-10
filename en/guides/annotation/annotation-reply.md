@@ -17,13 +17,13 @@ The annotated replies feature essentially provides another set of retrieval-enha
 4. If no match is found, the question will continue through the regular process (passing to LLM or RAG).
 5. Once the annotated replies feature is disabled, the system will no longer match responses from annotations.
 
-<figure><img src="../../.gitbook/assets/image (130).png" alt="" width="563"><figcaption><p>Annotated Replies Workflow</p></figcaption></figure>
+![Annotated Replies Workflow](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/7bebcf85d52f65d5649956f47ed33d43.png)
 
 ### Enabling Annotated Replies in Prompt Orchestration
 
 Enable the annotated replies switch by navigating to **“Orchestrate -> Add Features”**:
 
-<figure><img src="../../.gitbook/assets/annotated-replies.png" alt=""><figcaption><p>Enabling Annotated Replies in Prompt Orchestration</p></figcaption></figure>
+![Enabling Annotated Replies in Prompt Orchestration](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/b467da1fbaa9beb22cfb2a987f51f653.png)
 
 When enabling, you need to set the parameters for annotated replies, which include: Score Threshold and Embedding Model.
 
@@ -33,27 +33,27 @@ When enabling, you need to set the parameters for annotated replies, which inclu
 
 Click save and enable, and the settings will take effect immediately. The system will generate embeddings for all saved annotations using the embedding model.
 
-<figure><img src="../../.gitbook/assets/setting-parameters-for-annotated-replies.png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
+![Setting Parameters for Annotated Replies](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/a2c7b82a4f25a96fcdf68c807fb96812.png)
 
 ### Adding Annotations in the Conversation Debug Page
 
 You can directly add or edit annotations on the model response information in the debug and preview pages.
 
-<figure><img src="../../.gitbook/assets/add-annotation-reply.png" alt=""><figcaption><p>Adding Annotated Replies</p></figcaption></figure>
+![Adding Annotated Replies](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/e064e3dcca3f04e16f5269b169820d2d.png)
 
 Edit the response to the high-quality reply you need and save it.
 
-<figure><img src="../../.gitbook/assets/editing-annotated-replies.png" alt=""><figcaption><p>Editing Annotated Replies</p></figcaption></figure>
+![Editing Annotated Replies](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/b79aabe6e9b336e26ca409a49526501e.png)
 
 Re-enter the same user question, and the system will use the saved annotation to reply to the user's question directly.
 
-<figure><img src="../../.gitbook/assets/annotaiton-reply.png" alt=""><figcaption><p>Replying to User Questions with Saved Annotations</p></figcaption></figure>
+![Replying to User Questions with Saved Annotations](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/810f640d184227f4918ee197ff906203.png)
 
 ### Enabling Annotated Replies in Logs and Annotations
 
 Enable the annotated replies switch by navigating to “Logs & Ann. -> Annotations”:
 
-<figure><img src="../../.gitbook/assets/logs-annotation-switch.png" alt=""><figcaption><p>Enabling Annotated Replies in Logs and Annotations</p></figcaption></figure>
+![Enabling Annotated Replies in Logs and Annotations](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/c74951765f078392924da901008eb815.png)
 
 ### Setting Parameters for Annotated Replies in the Annotation Backend
 
@@ -63,22 +63,22 @@ The parameters that can be set for annotated replies include: Score Threshold an
 
 **Embedding Model:** This is used to vectorize the annotated text. Changing the model will regenerate the embeddings.
 
-<figure><img src="../../.gitbook/assets/annotated-replies-initial.png" alt=""><figcaption><p>Setting Parameters for Annotated Replies</p></figcaption></figure>
+![Setting Parameters for Annotated Replies](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/5bbd94402452e3f4ecc29eb398591585.png)
 
 ### Bulk Import of Annotated Q\&A Pairs
 
 In the bulk import feature, you can download the annotation import template, edit the annotated Q\&A pairs according to the template format, and then import them in bulk.
 
-<figure><img src="../../.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>Bulk Import of Annotated Q&A Pairs</p></figcaption></figure>
+![Bulk Import of Annotated Q&A Pairs](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/ad6497dbe8c93fe9988cf76775434a7c.png)
 
 ### Bulk Export of Annotated Q\&A Pairs
 
 Through the bulk export feature, you can export all saved annotated Q\&A pairs in the system at once.
 
-<figure><img src="../../.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>Bulk Export of Annotated Q&A Pairs</p></figcaption></figure>
+![Bulk Export of Annotated Q&A Pairs](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/4d80d0a9b8056711a2dcdf664c19e840.png)
 
 ### Viewing Annotation Hit History
 
 In the annotation hit history feature, you can view the edit history of all hits on the annotation, the user's hit questions, the response answers, the source of the hits, the matching similarity scores, the hit time, and other information. You can use this information to continuously improve your annotated content.
 
-<figure><img src="../../.gitbook/assets/view-annotation-hit-history.png" alt=""><figcaption><p>Viewing Annotation Hit History</p></figcaption></figure>
+![Viewing Annotation Hit History](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/26b6c37dcff225201ea5b4fb712b2d4d.png)

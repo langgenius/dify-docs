@@ -18,12 +18,12 @@ Chatflow 内不支持结束节点
 
 在以下[长故事生成工作流](iteration.md#shi-li-2-chang-wen-zhang-die-dai-sheng-cheng-qi-ling-yi-zhong-bian-pai-fang-shi)中，结束节点声明的变量 `Output` 为上游代码节点的输出，即该工作流会在 Code3 节点执行完成之后结束，并输出 Code3 的执行结果。
 
-<figure><img src="../../../.gitbook/assets/image (284).png" alt=""><figcaption><p>结束节点-长故事生成示例</p></figcaption></figure>
+![结束节点-长故事生成示例](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/50152cf67089446181819755a5fa2dcb.png)
 
 **单路执行示例：**
 
-<figure><img src="../../../.gitbook/assets/output (5).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/04cddaa15398cd7c905275234494ead7.png)
 
 **多路执行示例：**
 
-<figure><img src="../../../.gitbook/assets/output (1) (3).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/3cb3f5fea376265bede0a4ac5bcc1ddc.png)

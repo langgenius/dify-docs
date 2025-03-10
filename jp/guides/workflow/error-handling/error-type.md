@@ -16,7 +16,7 @@
 1. **コードエラー（CodeNodeError）**
    開発者のコード内で例外が発生した場合にこのエラーが起きます。変数が不足している、計算ロジックが間違っている、文字列として扱うべき配列を誤って変数として扱っている場合などがあります。エラーメッセージや具体的な行番号で問題を特定できます。
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/c86b11af7f92368180ea1bac38d77083.png" alt=""><figcaption><p>コードエラー</p></figcaption></figure>
+   ![コードエラー](https://assets-docs.dify.ai/2024/12/c86b11af7f92368180ea1bac38d77083.png)
 
 2. **サンドボックスのネットワーク問題（System Error）**
    ネットワークのトラフィック異常や接続問題によって生じるエラーです。サンドボックスサービスが停止している、プロキシがネットワークをブロックしている場合などです。この問題は次の手順で解決可能です：
@@ -24,17 +24,17 @@
    b. サンドボックスサービスを再起動する
    c. プロキシ設定を見直す
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/d95007adf67c4f232e46ec455c348e2c.PNG" alt=""><figcaption><p>サンドボックスのネットワーク問題</p></figcaption></figure>
+   ![サンドボックスのネットワーク問題](https://assets-docs.dify.ai/2024/12/d95007adf67c4f232e46ec455c348e2c.PNG)
 
 3. **ネスト制限エラー（DepthLimitError）**
    現在のノードは、最大で5層までのネスト構造をサポートしています。これを超えるとエラーが発生します。
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/5649d52a6e80ddd4180b336266701f7b.png" alt=""><figcaption><p>DepthLimitError</p></figcaption></figure>
+   ![DepthLimitError](https://assets-docs.dify.ai/2024/12/5649d52a6e80ddd4180b336266701f7b.png)
 
 4. **出力検証エラー（OutputValidationError）**
    選択した出力変数の型と実際の出力変数の型が一致しない場合に生じるエラーです。開発者は適切な出力変数の型を選択し直すことで、この問題を回避することができます。
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/ab8cae01a590b037017dfe9ea4dbbb8b.png" alt=""><figcaption><p>OutputValidationError</p></figcaption></figure>
+   ![OutputValidationError](https://assets-docs.dify.ai/2024/12/ab8cae01a590b037017dfe9ea4dbbb8b.png)
 
 ## LLMノード
 
@@ -45,7 +45,7 @@
 1. **変数が見つからない（VariableNotFoundError）**
    システムプロンプトやコンテキストで指定された変数がLLMによって見つけられない場合にこのエラーが発生します。開発者は、補足となる変数を設定することで問題を解決できます。
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png" alt=""><figcaption><p>VariableNotFoundError</p></figcaption></figure>
+   ![VariableNotFoundError](https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png)
 
 2. **コンテキスト構造の無効 (InvalidContextStructureError)**
    LLMノードが不正なデータ構造を受け取った場合に報告されます。コンテキストは文字列データ構造のみをサポートします。
@@ -88,7 +88,7 @@
 1. **ツール実行エラー（ToolNodeError）**  
    ツール自体の実行に問題があった場合に報告されるエラーです。たとえば、目指すAPIのリクエスト制限に達した場合などがこれに該当します。
 
-   <figure><img src="https://assets-docs.dify.ai/2024/12/84af0831b7cb23e64159dfbba80e9b28.jpg" alt=""><figcaption></figcaption></figure>
+   ![](https://assets-docs.dify.ai/2024/12/84af0831b7cb23e64159dfbba80e9b28.jpg)
 
 2. **ツールパラメータエラー（ToolParameterError）**  
    ツールノードの設定パラメータに問題がある場合、つまりツールノードが要求するパラメータと異なる値が入力された場合にこのエラーが発生します。

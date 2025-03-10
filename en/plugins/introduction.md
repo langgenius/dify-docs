@@ -18,7 +18,7 @@ Additionally, the plugin system is designed to be easily shared. You can distrib
 
 Whether you’re looking to integrate a new model or add a specialized tool to expand Dify’s existing features, the robust plugin marketplace has the resources you need. **We encourage more developers to join and help shape the Dify ecosystem, benefiting everyone involved.**
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/83f9566063db7ae4886f6a139f3f81ff.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/83f9566063db7ae4886f6a139f3f81ff.png)
 
 ## **What Are the Types of Plugin?**
 

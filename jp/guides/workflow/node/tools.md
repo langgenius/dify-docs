@@ -13,11 +13,11 @@
 1. ツールの認証を行う／カスタムツールを作成する／ワークフローをツールとして公開する
 2. ツールの入力とパラメータを設定する
 
-<figure><img src="../../../.gitbook/assets/workflow-tool.png" alt="" width="258"><figcaption><p>ツールの選択</p></figcaption></figure>
+![ツールの選択](../../../.gitbook/assets/workflow-tool.png)
 
 ツールノードは、他のノードと接続が可能であり、[変数](../variables.md)を介してデータの処理と受け渡しを行います。
 
-<figure><img src="../../../.gitbook/assets/workflow-google-search-tool.png" alt=""><figcaption><p>Google検索ツールを利用して外部情報を検索する例</p></figcaption></figure>
+![Google検索ツールを利用して外部情報を検索する例](../../../.gitbook/assets/workflow-google-search-tool.png)
 
 ### ワークフローアプリをツールとして公開
 

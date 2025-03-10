@@ -9,7 +9,7 @@ One of the benefits of creating AI applications with Dify is that you can publis
 
 Toggle the **"In service / Disabled"** switch, your Web App URL will be effective immediately publicly shared on the internet.
 
-<figure><img src="../../../.gitbook/assets/en-public-web-app.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/7ef249e00d089beb981d4e02e7207a42.png)
 
 We have pre-set Web App UI for the following two types of applications:
 
@@ -29,7 +29,7 @@ We have pre-set Web App UI for the following two types of applications:
 
 You can modify the language, color theme, copyright ownership, privacy policy link, and disclaimer by clicking the "setting" button.
 
-![](../../../.gitbook/assets/en-web-app-settings.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/ad3f17240475d87becafa6acf5b040db.png)
 
 Currently, Web App supports multiple languages: English, Simplified Chinese, Traditional Chinese, Portuguese, German, Japanese, Korean, Ukrainian, and Vietnamese. If you want more languages to be supported, you can submit an Issue on GitHub to seek support or submit a PR to contribute code.
 

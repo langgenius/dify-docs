@@ -23,7 +23,7 @@ Steps to upload documents to create a knowledge base:
 4. Wait for the chunk embeddings to complete.
 5. Once finished, link the knowledge base to your application and start using it. You can then [integrate it into your application](integrate-knowledge-within-application.md) to build an LLM that are capable of Q\&A based on knowledge-bases. If you want to modify and manage the knowledge base further, take refer to [Knowledge Base and Document Maintenance](knowledge-and-documents-maintenance.md).
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a3362a1cd384cb2b539c9858de555518.png" alt=""><figcaption><p>Complete the creation of the knowledge base</p></figcaption></figure>
+![Complete the creation of the knowledge base](https://assets-docs.dify.ai/2024/12/a3362a1cd384cb2b539c9858de555518.png)
 
 ***
 

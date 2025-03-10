@@ -24,7 +24,7 @@ The logs currently do not include interaction records from the Prompt debugging 
 These annotations will be used for model fine-tuning in future versions of Dify to improve model accuracy and response style. The current preview version only supports annotations.
 {% endhint %}
 
-<figure><img src="../../.gitbook/assets/app-logs-ann.png" alt=""><figcaption><p>Mark logs to improve your app</p></figcaption></figure>
+![Mark logs to improve your app](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/annotation/a17d81cd50a6788df3bf6853cc963d0b.png)
 
 Clicking on a log entry will open the log details panel on the right side of the interface. In this panel, operators can annotate an interaction:
 

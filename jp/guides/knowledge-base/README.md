@@ -24,7 +24,7 @@ Difyプラットフォームでは、RAG（検索強化生成）ソリューシ�
 
 > もし既に独自のナレッジベースを持っている場合は、それをDifyに接続することで、外部のナレッジベースとの連携を確立できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/081d73351099a73061fc201194fd2c0a.png" alt=""><figcaption><p>ナレッジベースを作る</p></figcaption></figure>
+![ナレッジベースを作る](https://assets-docs.dify.ai/2024/12/081d73351099a73061fc201194fd2c0a.png)
 
 ### 使用案例
 

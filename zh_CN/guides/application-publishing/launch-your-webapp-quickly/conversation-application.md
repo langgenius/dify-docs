@@ -13,33 +13,33 @@
 
 如你在应用编排时有设置变量的填写要求，则在对话前需要按提示填写信息才可进入对话窗口：
 
-<figure><img src="../../../.gitbook/assets/image (63) (1).png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/ea12b7209fcaad39d92b6c54c296f9cd.png)
 
 填写必要内容，点击 “开始对话” 按钮，开始聊天。
 
-<figure><img src="../../../.gitbook/assets/image (94) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/852c2412400eccbc17fa5be9794b7c47.png)
 
 移动到 AI 的回答上，可以复制会话内容，给回答 “赞” 和 “踩”。
 
-<figure><img src="../../../.gitbook/assets/image (26) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/b3a455772b1e0da2f6088905481a605f.png)
 
 ### 对话的创建、置顶和删除
 
 点击 “新对话” 按钮开始一个新的对话。移动到一个会话上，可以对会话进行 “置顶” 和 “删除” 操作。
 
-<figure><img src="../../../.gitbook/assets/image (47) (1).png" alt="" width="242"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/4cc8ee74dbc85e009897f9724f700f37.png)
 
 ### 对话开场白
 
 若在应用编排时开启了「对话开场白」功能，则在创建一个新对话时 AI 应用会自动发起第一句对话：
 
-<figure><img src="../../../.gitbook/assets/image (51) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/04424010033e55d31ac4b559ab1d7c7a.png)
 
 ### 下一步问题建议
 
 若在应用编排时开启了「下一步问题建议」功能，则在对话后系统自动生成 3 个相关问题建议：
 
-<figure><img src="../../../.gitbook/assets/image (77) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/276c48b41e13ee93056dcc0ccd26f17c.png)
 
 ### 语音转文字
 
@@ -47,7 +47,7 @@
 
 _请注意确保你使用的设备环境已经授权使用麦克风。_
 
-<figure><img src="../../../.gitbook/assets/image (79) (1).png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/3a64c79792f1166301403f6c44cf4c85.png)
 
 ### 引用与归属
 

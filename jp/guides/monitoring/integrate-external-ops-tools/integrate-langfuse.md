@@ -16,35 +16,35 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 2. Langfuseからプロジェクトを作成します
 ログイン後、ホームページの **New** をクリックし、新たな**プロジェクト**を作成します。このプロジェクトは、Dify内の**アプリ**と連動したデータモニタリングに使用されます。
 
-<figure><img src="../../../.gitbook/assets/image (249).png" alt=""><figcaption><p>新たなプロジェクトを作成します。</p></figcaption></figure>
+![新たなプロジェクトを作成します。](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/75bed34765ed7d0e933a0069ecb094dd.png)
 
 プロジェクトの名前を付けます。
 
-<figure><img src="../../../.gitbook/assets/image (251).png" alt=""><figcaption><p>プロジェクトの名前を付けます。</p></figcaption></figure>
+![プロジェクトの名前を付けます。](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/26cfbb94e312a100c39e217fdd0b4406.png)
 
 3. プロジェクト認証情報の作成のために、左のサイドバーでプロジェクト **設定** をクリックする。
 
-<figure><img src="../../../.gitbook/assets/image (253).png" alt=""><figcaption><p>左のサイドバーをクリックします</p></figcaption></figure>
+![左のサイドバーをクリックします](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/2ed72a6761f2977201c29e67e5bc634c.png)
 
 **Create API Key**をクリックし，新たな認証情報を作ります。
 
-<figure><img src="../../../.gitbook/assets/image (252).png" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
+![プロジェクトのAPI Keyを作ります。](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/3c3fbd5392d37fbccf1f9ef76c54f0bc.png)
 
 **Secret Key** と **Public Key，Host** をコピーし、保存します。
 
-<figure><img src="../../../.gitbook/assets/image (254).png" alt=""><figcaption><p>APIキーの設定を取得する</p></figcaption></figure>
+![APIキーの設定を取得する](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/a2ff67951ce300082d875eae8458c8c7.png)
 
 4. Dify アプリの中に Langfuse を設定します。監視用のアプリのサイトメニューの**監視**ボタンをクリックし，**設定**をクリックします。
 
-<figure><img src="../../../../img/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Langfuseを設定します</p></figcaption></figure>
+![Langfuseを設定します](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 
 それから，Langfuse から作った **Secret Key, Public Key** と **Host** を**設定**の中に貼り付け、保存します。
 
-<figure><img src="../../../../img/config-langfuse.png" alt=""><figcaption><p>Langfuseを設定します</p></figcaption></figure>
+![Langfuseを設定します](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
 
 保存に成功すると、現在のページで監視状態を見ることができます。
 
-<figure><img src="../../../../zh_CN/.gitbook/assets/image (26).png" alt=""><figcaption><p>監視状態を見る</p></figcaption></figure>
+![監視状態を見る](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/de3b4e21db7fd39b4fa4cb4d54d1079e.png)
 
 ***
 
@@ -52,9 +52,9 @@ Langfuseの公式サイト：[https://langfuse.com/](https://langfuse.com/)
 
 設定した後， Difyのアプリや生産データは Langfuse の中にチェクをできます。
 
-<figure><img src="../../../../img/debug-app-in-dify.png" alt=""><figcaption><p>Dify 内でのアプリの調整</p></figcaption></figure>
+![Dify 内でのアプリの調整](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/a1370fdbb79257cba31a565ac6764802.png)
 
-<figure><img src="../../../../img/view-traces-in-langfuse.png" alt=""><figcaption><p>Langfuseでアプリデータを見る</p></figcaption></figure>
+![Langfuseでアプリデータを見る](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/integrate-external-ops-tools/b4fc3474336d5f60dc049c9153454496.png)
 
 ***
 

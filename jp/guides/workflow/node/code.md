@@ -13,7 +13,7 @@
 
 このノードは開発者の柔軟性を大幅に向上させ、ワークフロー内にカスタムPythonまたはJavascriptスクリプトを埋め込んで、事前設定されたノードでは達成できない方法で変数を操作することができます。設定オプションを使用して、必要な入力変数と出力変数を指定し、対応する実行コードを記述できます。
 
-<figure><img src="../../../.gitbook/assets/jp-code.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/c7e838ae455c0c6722ec1cfae41640fd.png)
 
 ## 設定
 
@@ -115,4 +115,4 @@ def main() -> dict:
 
 セキュリティリスクがあるコードは Cloudflare WAF により自動的にブロックされます。ブロックされたかどうかは、Webデバッグツールのネットワークタブで確認できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ad4dc065c4c567c150ab7fa7bfd123a3.png" alt=""><figcaption><p>Cloudflare WAF のスクリーンショット</p></figcaption></figure>
+![Cloudflare WAF のスクリーンショット](https://assets-docs.dify.ai/2024/12/ad4dc065c4c567c150ab7fa7bfd123a3.png)

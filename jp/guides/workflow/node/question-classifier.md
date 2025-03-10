@@ -14,7 +14,7 @@
 
 以下の図は製品カスタマーサービスシナリオのサンプルワークフローテンプレートです：
 
-<figure><img src="../../../.gitbook/assets/jp-question.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/5c3032359cb0c99013be446ab187d263.png)
 
 このシナリオでは、3つの分類ラベル/説明を設定しています：
 
@@ -32,7 +32,7 @@
 
 ### 設定方法
 
-<figure><img src="../../../.gitbook/assets/jp-question-setting.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/c9d43eae2810729797456552c20ea481.png)
 
 **設定手順**
 

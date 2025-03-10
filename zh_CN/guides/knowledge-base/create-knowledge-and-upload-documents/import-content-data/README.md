@@ -11,7 +11,7 @@
 * 单文档的上传大小限制为 **15MB**
 *   不同 SaaS 版本的[订阅计划](https://dify.ai/pricing)限定了**批量上传个数、文档上传总数、向量存储空间**
 
-    <figure><img src="https://assets-docs.dify.ai/2025/01/22064cb61356e4c005c4072d5d066cf6.png" alt=""><figcaption><p>创建知识库</p></figcaption></figure>
+    ![创建知识库](https://assets-docs.dify.ai/2025/01/22064cb61356e4c005c4072d5d066cf6.png)
 
 ### **导入在线数据**
 

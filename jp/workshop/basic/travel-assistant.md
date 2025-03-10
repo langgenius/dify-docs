@@ -37,25 +37,25 @@ Difyが提供するGoogleツールはSerpAPIに基づいており、事前にSer
 
 SerpAPIは1か月に100回の無料呼び出しを提供しており、この実験を完了するのに十分です。追加クレジットが必要な場合は、残高を追加するか、他のオープンソースのソリューションを使用できます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (368).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/cf8870ff01bfb944da7ddbd073e9cc41.png)
 
 2. **Dify - ツール - Google**に移動：
 
 `認可`に進むをクリックし、APIキーを入力して保存します。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/e9726a2e68cbe8f957f8394b5ca47049.png)
 
 #### webscraper
 
 この実験では、特定のウェブページからコンテンツを抽出するためのスクレイピングツールが必要ですが、Difyは組み込みのツールを提供しているため、追加の設定は不要です。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-3.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/516c649bc0d8f2d1c81ba8b5bb28638c.png)
 
 #### Wikipedia
 
 目的地の知識を正確に紹介するために、Wikipediaは非常に良い情報源です。Difyにもこのツールが組み込まれており、追加の設定は不要です。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-4.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/53ebce24e49543b83d6c5581525d4e30.png)
 
 ### 3. エージェントの構築
 
@@ -63,7 +63,7 @@ SerpAPIは1か月に100回の無料呼び出しを提供しており、この実
 
 ツールとして`Google`、`webscraper`、`Wikipedia`を追加して有効にします。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-5.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/6799204e6259ab41f22f85e285466c22.png)
 
 ### 4. **サンプル出力**
 
@@ -124,4 +124,4 @@ Difyは現在、`短文`、`段落`、`ドロップダウンオプション`、`
 
 変数を追加した後、ユーザーはアプリ開発者の意図に従って必要な背景情報をアプリに提供できるようになります。その結果は以下のようになります：
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (369).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/basic/927260e8e6198b98f3b9406f856c0240.png)

@@ -1,6 +1,6 @@
 # 接入 Ollama 部署的本地模型
 
-![ollama](../../.gitbook/assets/ollama.png)
+![ollama](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/development/models-integration/4b23476f2be72e5c1acb9a3e5714b191.png)
 
 [Ollama](https://github.com/jmorganca/ollama) 是一款跨平台推理框架客户端（MacOS、Windows、Linux），专为无缝部署大型语言模型（LLM）（如 Llama 2、Mistral、Llava 等）而设计。通过一键式设置，Ollama 可以在本地运行 LLM，将所有交互数据保存在自己的机器上，从而提高数据的私密性和安全性。
 
@@ -26,7 +26,7 @@
 
    在 `设置 > 模型供应商 > Ollama` 中填入：
 
-   ![](../../.gitbook/assets/ollama-config-zh.png)
+   ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/development/models-integration/981679ae2e56d49e5a983e37cc134172.png)
 
    - 模型名称：`llama3.2`
    
@@ -58,7 +58,7 @@
 
 4. 使用 Ollama 模型
 
-   ![](../../.gitbook/assets/ollama-use-model.png)
+   ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/development/models-integration/0561ed1f5c265689b504ff539f5d3edd.png)
 
    进入需要配置的 App 提示词编排页面，选择 Ollama 供应商下的 `llava` 模型，配置模型参数后即可使用。
 

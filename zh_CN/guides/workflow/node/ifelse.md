@@ -31,7 +31,7 @@
 
 ### 场景
 
-<figure><img src="../../../.gitbook/assets/zh-if-else-elif.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/c9655478c988a816a99485f50467049e.png)
 
 以**文本总结工作流**作为示例说明各个条件：
 
@@ -45,4 +45,4 @@
 
 涉及复杂的条件判断时，可以设置多重条件判断，在条件之间设置 **AND** 或者 **OR**，即在条件之间取**交集**或者**并集**。
 
-<figure><img src="../../../.gitbook/assets/image (73).png" alt="" width="369"><figcaption><p>多重条件判断</p></figcaption></figure>
+![多重条件判断](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/c3bf3ebe6bc8709f5bc5099eb1242845.png)

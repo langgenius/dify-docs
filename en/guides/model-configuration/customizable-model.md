@@ -8,7 +8,7 @@ It is important to note that for custom models, each model integration requires 
 
 Unlike predefined models, custom vendor integration will always have the following two parameters, which do not need to be defined in the vendor YAML file.
 
-![](../../.gitbook/assets/customizable-model.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/model-configuration/30f5d554e9f42670c32b6d877dccdff2.png)
 
 In the previous section, we have learned that vendors do not need to implement `validate_provider_credential`. The Runtime will automatically call the corresponding model layer's `validate_credentials` based on the model type and model name selected by the user for validation.
 

@@ -27,13 +27,13 @@ dify plugin package ./your_plugin_project
 
 After running the command, a file with `.difypkg` extension will be generated in the current path.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/98e09c04273eace8fe6e5ac976443cca.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/98e09c04273eace8fe6e5ac976443cca.png)
 
 ### **Installing Plugins**
 
 Visit the Dify plugin management page, click **Install Plugin** → **Install via Local File** in the top right corner, or drag and drop the plugin file to a blank area of the page to install.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8c31c4025a070f23455799f942b91a57.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/8c31c4025a070f23455799f942b91a57.png)
 
 ### **Publishing Plugins**
 

@@ -34,7 +34,7 @@ LLM 收到用户问题后，能否精准地回答出知识库中的内容，取�
 **注意**：原 **“自动分段与清洗”** 模式已自动更新为 **“通用”** 模式。无需进行任何更改，原知识库保持默认设置即可继续使用。选定分段模式并完成知识库的创建后，后续无法变更。知识库内新增的文档也将遵循同样的分段模式。
 {% endhint %}
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b3052a6aae6e4d0e5701dde3a859e326.png" alt=""><figcaption><p>通用模式与父子分段模式</p></figcaption></figure>
+![通用模式与父子分段模式](https://assets-docs.dify.ai/2024/12/b3052a6aae6e4d0e5701dde3a859e326.png)
 
 #### 通用模式
 
@@ -44,7 +44,7 @@ LLM 收到用户问题后，能否精准地回答出知识库中的内容，取�
 
 *   **分段标识符**，默认值为 `\n`，即按照文章段落进行分块。你可以遵循[正则表达式语法](https://regexr.com/)自定义分块规则，系统将在文本出现分段标识符时自动执行分段。例如  的含义是按照句子进行分段。下图是不同语法的文本分段效果：
 
-    <figure><img src="https://assets-docs.dify.ai/2024/12/2c19c1c1a0446c00e3c07d6f4c8968e4.png" alt=""><figcaption><p>不同分段标识符语法的分段效果</p></figcaption></figure>
+    ![不同分段标识符语法的分段效果](https://assets-docs.dify.ai/2024/12/2c19c1c1a0446c00e3c07d6f4c8968e4.png)
 * **分段最大长度**，指定分段内的文本字符数最大上限，超出该长度时将强制分段。默认值为 500 Tokens，分段长度的最大上限为 4000 Tokens；
 * **分段重叠长度**，指的是在对数据进行分段时，段与段之间存在一定的重叠部分。这种重叠可以帮助提高信息的保留和分析的准确性，提升召回效果。建议设置为分段长度 Tokens 数的 10-25%；
 
@@ -57,7 +57,7 @@ LLM 收到用户问题后，能否精准地回答出知识库中的内容，取�
 
 若同时批量上传了多个文档，轻点顶部的文档标题，快速切换并查看其它文档的分段效果。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b3ec2ce860550563234ca22967abdd17.png" alt=""><figcaption><p>通用模式</p></figcaption></figure>
+![通用模式](https://assets-docs.dify.ai/2024/12/b3ec2ce860550563234ca22967abdd17.png)
 
 分段规则设置完成后，接下来需指定索引方式。支持“高质量索引”和“经济索引”，详细说明请参考[设定索引方法](setting-indexing-methods.md)。
 
@@ -119,7 +119,7 @@ LLM 收到用户问题后，能否精准地回答出知识库中的内容，取�
 
 如果重新修改了分段规则，需要重新点击“预览区块”按钮以查看新的内容分段。若同时批量上传了多个文档，轻点顶部的文档标题，快速切换至其它文档并预览内容的分段效果。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/af5c9a68f85120a6ea687bf93ecfb80a.png" alt=""><figcaption><p>父子分段模式</p></figcaption></figure>
+![父子分段模式](https://assets-docs.dify.ai/2024/12/af5c9a68f85120a6ea687bf93ecfb80a.png)
 
 为了确保内容检索的准确性，父子分段模式仅支持使用[“高质量索引”](chunking-and-cleaning-text.md#gao-zhi-liang-suo-yin)。
 

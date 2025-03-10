@@ -11,7 +11,7 @@
 
 在应用监测页中，你可以找到 WebApp 的管理卡片。打开访问开关后，你可以得到一个能够在互联网上公开分享的网址。
 
-<figure><img src="../../../.gitbook/assets/public-web-app.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/d16321015fff38377b45c976257e3f6e.png)
 
 我们对以下两种应用类型均预置了漂亮的 WebApp 界面：
 
@@ -24,7 +24,7 @@
 
 点击 WebApp 卡片上的**设置**按钮，为 AI 站点配置一些选项，它们都会被最终用户所见：
 
-![](../../../.gitbook/assets/web-app-settings.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/ca94e364058430d6266550c6061a97f2.png)
 
 {% hint style="info" %}
 界面语言目前已支持：英文，中文，繁体中文，葡萄牙语，德语，日本语，韩语，乌克兰语，越南语。如果你需要增加更多语言，可以在 GitHub 内提交 Issue[ 寻求支持](../../../community/support.md)或者提交 PR 贡献代码。

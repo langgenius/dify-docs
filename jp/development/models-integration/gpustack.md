@@ -36,7 +36,7 @@ GPUStackにホストされたLLMを使用する方法の例です：
 
 3. モデルを展開するために「Save」をクリックします。
 
-![gpustack-deploy-llm](../../../en/.gitbook/assets/gpustack-deploy-llm.png)
+![gpustack-deploy-llm](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/development/models-integration/35f535a6bb3023aa69a3fdafbdb0c8f3.png)
 
 ## APIキーの作成方法
 
@@ -60,6 +60,6 @@ GPUStackにホストされたLLMを使用する方法の例です：
 
    モデルをアプリケーションで使用するために、「Save」をクリックしてください。
 
-![add-gpustack-llm](../../../en/.gitbook/assets/add-gpustack-llm.png)
+![add-gpustack-llm](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/development/models-integration/8e8851fec5a1515a2284aad68b90ad40.png)
 
 GPUStackに関する詳細情報は、[Github Repo](https://github.com/gpustack/gpustack)を参照してください。

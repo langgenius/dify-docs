@@ -32,10 +32,10 @@
 
 Chatflow 和 Workflow 应用均支持添加 `视频统计` 工具节点。
 
-![](../../../../img/en-youtube-workflow.jpg)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/abaa685d6ffa5fbb8c295869eecfd721.jpeg)
 
 - **Agent 应用**
 
 在 Agent 应用内添加 `免费获取 YouTube 转录` 工具，然后输入在线搜索指令，调用此工具。
 
-![](../../../../img/en-youtube-agent.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/a5dc28b46d00cb523268bf51399476b6.png)

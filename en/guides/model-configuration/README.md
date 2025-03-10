@@ -6,7 +6,7 @@ description: Learn about the Different Models Supported by Dify.
 
 Dify is a development platform for AI application based on LLM Apps, when you are using Dify for the first time, you need to go to **Settings --> Model Providers** to add and configure the LLM you are going to use.
 
-<figure><img src="../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>Settings - Model Provider</p></figcaption></figure>
+![Settings - Model Provider](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/model-configuration/941524058c800a06d39290c48d14673b.png)
 
 Dify supports major model providers like OpenAI's GPT series and Anthropic's Claude series. Each model's capabilities and parameters differ, so select a model provider that suits your application's needs. **Obtain the API key from the model provider's official website before using it in Dify.**
 
@@ -39,13 +39,13 @@ Dify offers trial quotas for cloud service users to experiment with different mo
 
 Dify automatically selects the default model based on usage. Configure this in `Settings > Model Provider`.
 
-<figure><img src="../../.gitbook/assets/image-default-models (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/model-configuration/c5ac5f32deb020a8aae46045d3ee9c8d.png)
 
 ## Model Integration Settings
 
 Choose your model in Dify's `Settings > Model Provider`.
 
-<figure><img src="../../.gitbook/assets/image-20231210143654461 (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/model-configuration/b55cb7d0dcff7ef14cdf6e6aca207790.png)
 
 Model providers fall into two categories:
 
@@ -73,4 +73,4 @@ Specific integration methods are not detailed here.
 
 Once configured, these models are ready for application use.
 
-<figure><img src="../../.gitbook/assets/choice-model-in-app (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/model-configuration/6e74424124cfcfe224d3c083f90b54d2.png)

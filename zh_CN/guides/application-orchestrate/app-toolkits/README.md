@@ -4,31 +4,31 @@
 
 应用工具箱为 Dify 的[应用](../#application_type)提供了不同的附加功能：
 
-<figure><img src="../../../.gitbook/assets/image (288).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/app-toolkits/87ac4bc0e0c2b9a36fba0fc2f0155905.png)
 
 ### 对话开场白
 
 在对话类应用中，AI 会主动说第一句话或者提出问题，你可以编辑开场白的内容包括开场问题。使用对话开场白可以引导用户提问，交代应用背景，降低对话提问的使用门槛。
 
-<figure><img src="../../../.gitbook/assets/image (291).png" alt=""><figcaption><p>对话开场白</p></figcaption></figure>
+![对话开场白](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/app-toolkits/46b849a2cee82c70d54ac8fbca75c85c.png)
 
 ### 下一步问题建议
 
 设置下一步问题建议可以在每次对话交互后，让 AI 根据之前的对话内容继续生成 3 个提问，引导下一轮对话。
 
-<figure><img src="../../../.gitbook/assets/image (292).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/app-toolkits/cff3de9733e586e64a70fcc0ac633119.png)
 
 ### 文字转语音
 
 开启后可以将 AI 回复的内容转换成自然的语音播放。
 
-<figure><img src="../../../.gitbook/assets/image (293).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/app-toolkits/ba6f3ede45ef594a1886ef9182149a73.png)
 
 ### 语音转文字
 
 开启后可以在应用内录音并将语音自动转换成文本。
 
-<figure><img src="../../../.gitbook/assets/image (294).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/app-toolkits/4f8bfc129a68f5da0f96723e80bd72d2.png)
 
 ### 引用与归属
 

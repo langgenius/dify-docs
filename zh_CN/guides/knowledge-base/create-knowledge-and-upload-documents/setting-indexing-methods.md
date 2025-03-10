@@ -24,7 +24,7 @@
 
 > 如需了解更多关于嵌入技术与向量的说明，请参考[《Embedding 技术与 Dify》](https://mp.weixin.qq.com/s/vmY_CUmETo2IpEBf1nEGLQ)。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/51442c8fcd05479616a3dd8279a4853a.png" alt="" width="563"><figcaption><p>高质量模式</p></figcaption></figure>
+![高质量模式](https://assets-docs.dify.ai/2024/12/51442c8fcd05479616a3dd8279a4853a.png)
 
 **启用 Q\&A 模式（可选，仅适用于**[**社区版**](../../../getting-started/install-self-hosted/)**）**
 
@@ -38,7 +38,7 @@
 
 当用户提问时，系统会找出与之最相似的问题，然后返回对应的分段作为答案。这种方式更加精确，因为它直接针对用户问题进行匹配，可以更准确地帮助用户检索真正需要的信息。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8745ccabff56290eae329a9d3592f745.png" alt=""><figcaption><p>Q to P 与 Q to Q 的索引模式区别</p></figcaption></figure>
+![Q to P 与 Q to Q 的索引模式区别](https://assets-docs.dify.ai/2024/12/8745ccabff56290eae329a9d3592f745.png)
 {% endtab %}
 
 {% tab title="经济" %}
@@ -48,7 +48,7 @@
 
 选择经济型索引方式后，若感觉实际的效果不佳，可以在知识库设置页中升级为 **“高质量”索引方式**。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3b86e6b484da39452c164cb6372a7242.png" alt="" width="375"><figcaption><p>经济模式</p></figcaption></figure>
+![经济模式](https://assets-docs.dify.ai/2024/12/3b86e6b484da39452c164cb6372a7242.png)
 {% endtab %}
 {% endtabs %}
 
@@ -66,13 +66,13 @@
 
 在高质量索引方式下，Dify 提供向量检索、全文检索与混合检索设置：
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/9b02fc353324221cc91f185a350775b6.png" alt="" width="563"><figcaption><p>检索设置</p></figcaption></figure>
+![检索设置](https://assets-docs.dify.ai/2024/12/9b02fc353324221cc91f185a350775b6.png)
 
 **向量检索**
 
 **定义：** 向量化用户输入的问题并生成查询文本的数学向量，比较查询向量与知识库内对应的文本向量间的距离，寻找相邻的分段内容。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/620044faa47a5037f85b32a27a56fce5.png" alt="" width="375"><figcaption><p>向量检索</p></figcaption></figure>
+![向量检索](https://assets-docs.dify.ai/2024/12/620044faa47a5037f85b32a27a56fce5.png)
 
 **向量检索设置：**
 
@@ -92,7 +92,7 @@
 
 **定义：** 关键词检索，即索引文档中的所有词汇。用户输入问题后，通过明文关键词匹配知识库内对应的文本片段，返回符合关键词的文本片段；类似搜索引擎中的明文检索。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/513bff1ca38ec746b3246502b0311b39.png" alt="" width="375"><figcaption><p>全文检索</p></figcaption></figure>
+![全文检索](https://assets-docs.dify.ai/2024/12/513bff1ca38ec746b3246502b0311b39.png)
 
 **Rerank 模型：** 默认关闭。开启后将使用第三方 Rerank 模型再一次重排序由全文检索召回的内容分段，以优化排序结果。向 LLM 发送经过重排序的分段，辅助其提升输出的内容质量。开启该选项前，需前往“设置” → “模型供应商”，提前配置 Rerank 模型的 API 秘钥。
 
@@ -110,7 +110,7 @@
 
 **定义：** 同时执行全文检索和向量检索，或 Rerank 模型，从查询结果中选择匹配用户问题的最佳结果。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/bd2621bfe8a1a8e21fca0743ec495a9e.png" alt="" width="375"><figcaption><p>混合检索</p></figcaption></figure>
+![混合检索](https://assets-docs.dify.ai/2024/12/bd2621bfe8a1a8e21fca0743ec495a9e.png)
 
 在混合检索设置内可以选择启用 **“权重设置”** 或 **“Rerank 模型”**。
 
@@ -156,7 +156,7 @@
 
 用于筛选与用户问题相似度最高的文本片段。系统同时会根据选用模型上下文窗口大小动态调整片段数量。系统默认值为 3 。数值越高，预期被召回的文本分段数量越多。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b417cd028131d34779993fbcbb8dbdd7.png" alt="" width="375"><figcaption><p>倒排索引</p></figcaption></figure>
+![倒排索引](https://assets-docs.dify.ai/2024/12/b417cd028131d34779993fbcbb8dbdd7.png)
 {% endtab %}
 {% endtabs %}
 
