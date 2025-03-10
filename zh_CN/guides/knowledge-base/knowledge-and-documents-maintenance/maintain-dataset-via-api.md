@@ -112,7 +112,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### **创建空知识库**
+#### 创建空知识库
 
 {% hint style="warning" %}
 仅用来创建空知识库
@@ -151,7 +151,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets' \
 }
 ```
 
-#### **知识库列表**
+#### 知识库列表
 
 输入示例：
 
@@ -206,7 +206,7 @@ curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}' 
 
 #### 通过文本更新文档
 
-此接口的功能是，在已存在知识库的基础上，通过文本更新文档
+此接口的功能是，在已存在知识库的基础上，通过文本更新文档。
 
 输入示例：
 
@@ -296,7 +296,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### **获取文档嵌入状态（进度）**
+#### 获取文档嵌入状态（进度）
 
 输入示例：
 
@@ -326,7 +326,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **删除文档**
+#### 删除文档
 
 输入示例：
 
@@ -343,7 +343,7 @@ curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/d
 }
 ```
 
-#### **知识库文档列表**
+#### 知识库文档列表
 
 输入示例：
 
@@ -383,7 +383,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **新增分段**
+#### 新增分段
 
 输入示例：
 
@@ -637,3 +637,147 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/ret
 | document\_already\_finished   | 400 | 文档已处理完成。请刷新页面或查看文档详情                                                                       |
 | document\_indexing            | 400 | 文档正在处理中，无法编辑                                                                               |
 | invalid\_metadata             | 400 | 元数据内容不正确。请检查并验证                                                                            |
+
+#### 新增知识库元数据字段
+
+输入示例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "type":"string",
+    "name":"test"
+}'
+```
+
+输出示例：
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+#### 修改知识库元数据字段
+
+输入示例：
+
+```bash
+curl --location --request PATCH 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata/{metadata_id}' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "name":"test"
+}'
+```
+
+输出示例：
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+#### 删除知识库元数据字段
+
+输入示例：
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/{metadata_id}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+输出示例：
+
+```bash
+200 success
+```
+
+#### 启用/禁用知识库元数据中的内置字段
+
+输入示例：
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/built-in/{action}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+输出示例：
+
+```json
+200 success
+```
+
+#### 修改文档的元数据（赋值）
+
+输入示例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/documents/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}'
+--data '{
+    "operation_data":[
+        {
+            "document_id": "3e928bc4-65ea-4201-87c8-cbcc5871f525",
+            "metadata_list": [
+                    {
+                    "id": "1887f5ec-966f-4c93-8c99-5ad386022f46",
+                    "value": "dify",
+                    "name": "test"
+                }
+            ]
+        }
+    ]
+}'
+```
+
+输出示例：
+
+```json
+200 success
+```
+
+#### 数据集的元数据列表
+
+输入示例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+输出示例：
+
+```json
+{
+  "doc_metadata": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string",
+      "name": "title",
+      "use_count": 42
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "type": "number",
+      "name": "price",
+      "use_count": 28
+    },
+    {
+      "id": "7ba7b810-9dad-11d1-80b4-00c04fd430c9",
+      "type": "time",
+      "name": "created_at",
+      "use_count": 35
+    }
+  ],
+  "built_in_field_enabled": true
+}
+```

@@ -4,11 +4,12 @@ The Knowledge Base Retrieval Node is designed to query text content related to u
 
 <figure><img src="../../../.gitbook/assets/knowledge-retrieval.png" alt=""><figcaption></figcaption></figure>
 
-Configuring the Knowledge Base Retrieval Node involves three main steps:
+Configuring the Knowledge Base Retrieval Node involves four main steps:
 
 1. **Selecting the Query Variable**
 2. **Choosing the Knowledge Base for Query**
-3. **Configuring the Retrieval Strategy**
+3. **Applying Metadata Filtering**
+4. **Configuring the Retrieval Strategy**
 
 **Selecting the Query Variable**
 
@@ -17,6 +18,11 @@ In knowledge base retrieval scenarios, the query variable typically represents t
 **Choosing the Knowledge Base for Query**
 
 Within the knowledge base retrieval node, you can add an existing knowledge base from Dify. For instructions on creating a knowledge base within Dify, please refer to the knowledge base [help documentation](https://docs.dify.ai/guides/knowledge-base/create-knowledge-and-upload-documents).
+
+**Applying Metadata Filtering**
+
+Use **Metadata Filtering** to refine document search in your knowledge base. For details, see “Metadata Filtering” in [Integrate Knowledge Base within Application](https://docs.dify.ai/guides/knowledge-base/integrate-knowledge-within-application).
+
 
 **Configuring the Retrieval Strategy**
 

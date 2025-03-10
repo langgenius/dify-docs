@@ -235,10 +235,6 @@ Go to **Chunk Settings**, adjust the settings, and click **Save & Process** to s
 
 ***
 
-### Metadata Management
+### Metadata 
 
-In addition to capturing metadata (e.g., title, URL, keywords, or a web page description) from various source documents, metadata is also used as structured fields during the chunk retrieval process for filtering or displaying citation sources.
-
-<figure><img src="https://assets-docs.dify.ai/2024/12/f3b1ff4b559ebc40f18b8980b3719fe8.png" alt=""><figcaption><p>Metadata management</p></figcaption></figure>
-
-***
+For more details on metadata, see [Metadata](https://docs.dify.ai/guides/knowledge-base/metadata).
