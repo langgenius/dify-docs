@@ -281,6 +281,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `pinecone` (not yet open)
     - `analyticdb`
     - `couchbase`
+    - `oceanbase`
 - WEAVIATE_ENDPOINT
 
   Weaviate endpoint address, such as: `http://weaviate:8080`.
@@ -406,6 +407,34 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - COUCHBASE_SCOPE_NAME
     
   The name of the scope to use.
+
+- OCEANBASE_VECTOR_HOST
+  
+  OceanBase Vector host
+
+- OCEANBASE_VECTOR_PORT
+
+  OceanBase Vector port
+
+- OCEANBASE_VECTOR_USER
+
+  OceanBase Vector user
+
+- OCEANBASE_VECTOR_PASSWORD
+
+  OceanBase Vector password
+
+- OCEANBASE_VECTOR_DATABASE
+
+  OceanBase Vector database
+
+- OCEANBASE_CLUSTER_NAME
+
+  OceanBase cluster name
+
+- OCEANBASE_MEMORY_LIMIT
+
+  OceanBase memory limit
 
 #### Knowledge Configuration
 
