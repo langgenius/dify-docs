@@ -43,9 +43,9 @@ npm run deploy
 
 デプロイが成功すると、公開アドレスが得られます。このアドレスを Dify に API エンドポイントとして追加できます。`endpoint` パスを忘れないようにしてください。
 
-<figure><img src="../../../.gitbook/assets/api_extension_edit.png" alt=""><figcaption><p>Dify に API エンドポイントを追加する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/api-based-extension/661f059c3023f956230f3f00e579e0b6.webp" alt=""><figcaption><p>Dify に API エンドポイントを追加する</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/app_tools_edit.png" alt=""><figcaption><p>アプリ編集ページに API ツールを追加する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/api-based-extension/27c0c056b051fb214a34b12e3b84e645.webp" alt=""><figcaption><p>アプリ編集ページに API ツールを追加する</p></figcaption></figure>
 
 ## その他のロジック TL;DR
 

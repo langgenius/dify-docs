@@ -13,7 +13,7 @@ LLM 自身无法直接读取或解释文档的内容。因此需要将用户上�
 
 文档提取器节点可以理解为一个信息处理中心，通过识别并读取输入变量中的文件，提取信息后并转化为 string 类型输出变量，供下游节点调用。
 
-<figure><img src="../../../.gitbook/assets/image (12).png" alt=""><figcaption><p>文档提取器节点</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/89ed962f405978962c3a2e7c6b7c3f0e.webp" alt=""><figcaption><p>文档提取器节点</p></figcaption></figure>
 
 文档提取器节点结构分为输入变量、输出变量。
 
@@ -41,7 +41,7 @@ LLM 自身无法直接读取或解释文档的内容。因此需要将用户上�
 
 本章节将通过一个典型的 ChatPDF 示例工作流模板，介绍文档提取器节点的使用方法。
 
-<figure><img src="../../../.gitbook/assets/image (373).png" alt=""><figcaption><p>ChatPDF 工作流</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/74c8ad8ad9014e272af177ca2f79252b.webp" alt=""><figcaption><p>ChatPDF 工作流</p></figcaption></figure>
 
 **配置流程：**
 
@@ -49,13 +49,13 @@ LLM 自身无法直接读取或解释文档的内容。因此需要将用户上�
 2. 添加文档提取节点，并在输入变量内选中 `pdf` 变量。
 3. 添加 LLM 节点，在系统提示词内选中文档提取器节点的输出变量。LLM 可以通过该输出变量读取文件中的内容。
 
-<figure><img src="../../../.gitbook/assets/image (14).png" alt=""><figcaption><p>填写文档提取器的输出变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/5cbe3b06ec2101ea3843cc9d259e64e3.webp" alt=""><figcaption><p>填写文档提取器的输出变量</p></figcaption></figure>
 
 4\. 配置结束节点，在结束节点中选择 LLM 节点的输出变量。
 
 配置完成后，应用将具备文件上传功能，使用者可以上传 PDF 文件并展开对话。
 
-<figure><img src="../../../.gitbook/assets/image (4) (2).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/1b77efb9a18e85f9c55836b7067976ae.webp" alt=""><figcaption></figcaption></figure>
 
 {% hint style="info" %}
 如需了解如何在聊天对话中上传文件并与 LLM 互动，请参考 [附加功能](../additional-features.md)。

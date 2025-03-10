@@ -23,7 +23,7 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 
 まず、[Dify公式アプリケーションプラットフォーム](https://cloud.dify.ai/signin)にログインします。GithubまたはGoogleのアカウントでログインすることができます。また、Dify公式チュートリアル[Docker Composeによるデプロイ | 日本語 | Dify](https://docs.dify.ai/v/ja-jp/getting-started/install-self-hosted/docker-compose)を参照して、プライベートデプロイを行うことも可能です。Difyはオープンソースプロジェクトであり、プライベートデプロイをサポートしています。
 
-<figure><img src="../../.gitbook/assets/dify-on-wechat/create-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/c2e6a650e44b5156447fd5fc4405eca6.webp" alt=""><figcaption></figcaption></figure>
 
 ログイン後、Difyのページに移動し、以下のステップに従って基本的なチャットアシスタントアプリケーションを作成します。
 
@@ -34,14 +34,14 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 5. アプリケーションのアイコンを選択し、アプリケーションに「基本編成チャットアシスタント」などの名前を付ける
 6. 作成をクリック
 
-<figure><img src="../../.gitbook/assets/dify-on-wechat/config-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/47e33d27f17146fed6c06da05a2af7e2.webp" alt=""><figcaption></figcaption></figure>
 作成が成功すると、上記のページに移動します。続いてアプリケーションを設定します。
 
 1. モデルの選択（例：gpt-3.5-turbo-0125）
 2. モデルパラメータの設定
 3. アプリケーションのプロンプトを入力
 
-<figure><img src="../../.gitbook/assets/dify-on-wechat/publish-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/8d958456caf503f5d49f9599e71e2c53.webp" alt=""><figcaption></figcaption></figure>
 
 設定が完了したら、右側の対話ボックスでテストを行い、テストが完了したら以下の操作を行います。
 
@@ -50,7 +50,7 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 3. APIのアクセス
 
 ##### （4）基本編成チャットアシスタントのAPIキーの生成
-<figure><img src="../../.gitbook/assets/dify-on-wechat/create-basic-chatbot-apikey.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/c7a94e8c6974ab7c60405d59f903fce6.webp" alt=""><figcaption></figcaption></figure>
 
 「APIのアクセス」をクリックすると、上記のAPI管理ページに移動します。このページで以下の手順に従ってAPIキーを取得します。
 
@@ -66,7 +66,7 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 
 [Twilioコンソール]に移動し、Account SIDとAuth Tokenを取得して保存します。
 
-<figure><img src="../../.gitbook/assets/dify-on-whatsapp/twilio1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/6f3140fb91b91cbb7a16b49ed5706edd.webp" alt=""><figcaption></figcaption></figure>
 
 ## 5. チャットボットの作成
 
@@ -118,7 +118,7 @@ npx localtunnel --port 9000
 
 このコマンドは、ローカルサーバー（9000ポートで実行中）とlocaltunnelが作成するパブリックドメイン間に接続を確立します。localtunnel転送URLを取得すると、クライアントからそのURLへのリクエストはすべて自動的にFastAPIのバックエンドに転送されます。
 
-<figure><img src="../../.gitbook/assets/dify-on-whatsapp/lt1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/8dc8e73bc3db100d710715257ac6a58f.webp" alt=""><figcaption></figcaption></figure>
 
 #### 5.5 コードの説明
 
@@ -192,7 +192,7 @@ TwilioのメッセージAPIを使用して、チャットボットがWhatsAppユ
 
 「試してみる」セクションで「WhatsAppメッセージを送信」をクリックします。デフォルトでサンドボックスタブに移動し、「+14155238886」という電話番号と、隣に参加コード、右側にQRコードが表示されます。
 
-<figure><img src="../../.gitbook/assets/dify-on-whatsapp/twilio2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/fea1911e94dd5c740f504dfc8094fdec.webp" alt=""><figcaption></figcaption></figure>
 
 Twilioのテスト環境を有効にするには、このコードのテキストをWhatsAppメッセージとして表示された電話番号に送信します。Webバージョンを使用している場合、ハイパーリンクをクリックしてWhatsAppチャットに誘導されることができます。
 
@@ -209,13 +209,13 @@ FastAPIアプリケーションで設定したエンドポイントは/message�
 
 設定が完了したら、「保存」ボタンを押します。
 
-<figure><img src="../../.gitbook/assets/dify-on-whatsapp/twilio3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/b3909f45a489bfa0c705b31463a8dd1f.webp" alt=""><figcaption></figcaption></figure>
 
 ## 7. WhatsAppのテスト
 
 6.1のページでQRコードをスキャンしてWhatsAppサンドボックス環境に入り、WhatsAppメッセージを送信してAIチャットボットの応答を待ちます。Difyチャットアシスタントに質問できることをAIチャットボットに試してみてください。
 
-<figure><img src="../../.gitbook/assets/dify-on-whatsapp/whatsapp1.jpg" style="width:300px;" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/33c30a3ebeaa166932eca92bbcf20816.webp" style="width:300px;" alt=""><figcaption></figcaption></figure>
 
 ## 8. 後記
 

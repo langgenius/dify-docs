@@ -10,7 +10,7 @@
 
 你可以在账单页查看团队内各项资源的使用情况。
 
-<figure><img src="../../.gitbook/assets/image (5) (1).png" alt=""><figcaption><p>团队账单管理</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/management/64735e5013db88506a365d0a561d7c79.webp" alt=""><figcaption><p>团队账单管理</p></figcaption></figure>
 
 ### 常见问题
 
@@ -21,7 +21,7 @@
 * 从 Professional 升级至 Team 需补足当月差额，立即生效。
 * 从 Team 降级至 Professional 立即生效。
 
-<figure><img src="../../.gitbook/assets/image (6) (1).png" alt=""><figcaption><p>更改付费方案</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/management/cb843c3e6d5744028f4e96d31b024c75.webp" alt=""><figcaption><p>更改付费方案</p></figcaption></figure>
 
 如果取消订阅方案，**团队将在当月账单周期结束后**自动切换至 Sandbox/Free 版本。已超出的团队人数及团队资源将无法访问。
 

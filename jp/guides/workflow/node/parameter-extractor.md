@@ -16,11 +16,11 @@ Difyワークフロー内には豊富な[ツール](../../tools.md)が用意さ�
 
 この例では、Arxiv論文検索ツールの入力パラメータとして「論文の著者」または「論文番号」が要求されます。パラメータ抽出器は「この論文の内容は何ですか：2405.10739」という質問から論文番号**2405.10739**を抽出し、ツールのパラメータとして正確に検索します。
 
-<figure><img src="../../../.gitbook/assets/jp-parameter-extractor1.png" alt=""><figcaption><p>Arxiv論文検索ツール</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/44b217a5d4769c99b4f67dd7a826eb2c.webp" alt=""><figcaption><p>Arxiv論文検索ツール</p></figcaption></figure>
 
 2. **テキストを構造化データに変換する**例として、長い物語のイテレーション生成アプリの前工程として、テキスト形式の章内容を配列形式に変換し、[イテレーションノード](iteration.md)でのマルチラウンド生成処理を容易にします。
 
-<figure><img src="../../../.gitbook/assets/jp-parameter-extractor2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/0f7d0e43d1b8f281b63a211ab03e150e.webp" alt=""><figcaption></figcaption></figure>
 
 3. **構造化データを抽出して**[**HTTPリクエスト**](https://docs.dify.ai/v/ja-jp/guides/workflow/node/http\_request)**を使用する**ことで、任意のアクセス可能なURLにリクエストを送信し、外部検索結果の取得やウェブフック、画像生成などのシナリオに適用できます。
 
@@ -28,7 +28,7 @@ Difyワークフロー内には豊富な[ツール](../../tools.md)が用意さ�
 
 ### 設定方法
 
-<figure><img src="../../../.gitbook/assets/jp-parameter-extractor-setting.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/e8d77be006fcd197ec1a30c66177f52d.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 **設定手順**
 

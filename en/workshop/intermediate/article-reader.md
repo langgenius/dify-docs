@@ -54,7 +54,7 @@ Please choose the appropriate file upload method according to your business scen
 
 Thus, Dify introduced the **doc extractor**, which can extract text from the file variable and output it as a text variable.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-21 15.21.21.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/intermediate/0778cdd1a9b02c869117abbef92a88f5.webp" alt=""><figcaption></figcaption></figure>
 
 ### **LLM**
 
@@ -123,11 +123,11 @@ To handle multiple uploaded files, an iterative node is needed.
 
 The iterative node is similar to the while loop in many programming languages, except that Dify has no conditional restrictions, and the **input variable can only be of type `array` (list)**. The reason is that Dify will execute all the content in the list until it is done.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 08.56.33.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/intermediate/7aa097b6572c6d48c77b3c2e0e2a15d4.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 Therefore, you need to adjust the file variable in the start node to an `array` type, i.e., a file list.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 09.10.17.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/intermediate/7f1fc664651a226f3498f7be1f5804ef.webp" alt=""><figcaption></figcaption></figure>
 
 ## **Question 2: Handling Specific Files from a File List**
 
@@ -137,4 +137,4 @@ For example, limit the analysis to only document-type files and sort the files t
 
 Before the iterative node, add a list operation, adjust the **filter condiftion** and **order by**, then change the input of the iterative node to the output of the list operation node.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 09.11.28.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/intermediate/ffcdf2c34b2a480f4d715d84471d4007.webp" alt="" width="375"><figcaption></figcaption></figure>

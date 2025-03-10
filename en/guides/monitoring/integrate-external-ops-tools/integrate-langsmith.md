@@ -18,39 +18,39 @@ For more details, please refer to [LangSmith](https://www.langchain.com/langsmit
 
 Create a project in LangSmith. After logging in, click **New Project** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
 
-<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1).png" alt=""><figcaption><p>Create a project in LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/3d1f21ba0e7f50eebea54a1dfe9063ee.webp" alt=""><figcaption><p>Create a project in LangSmith</p></figcaption></figure>
 
 Once created, you can view all created projects in the Projects section.
 
-<figure><img src="../../../.gitbook/assets/image (7) (1) (2).png" alt=""><figcaption><p>View created projects in LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/1fecd0b7a53b6c3df7eee3761b5380ae.webp" alt=""><figcaption><p>View created projects in LangSmith</p></figcaption></figure>
 
 #### 3. Create Project Credentials
 
 Find the project settings **Settings** in the left sidebar.
 
-<figure><img src="../../../.gitbook/assets/image (8) (1) (2).png" alt=""><figcaption><p>Project settings</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/12e626e973f19b342f7f33b29ca489e4.webp" alt=""><figcaption><p>Project settings</p></figcaption></figure>
 
 Click **Create API Key** to create project credentials.
 
-<figure><img src="../../../.gitbook/assets/image (3) (1) (1) (1) (2).png" alt=""><figcaption><p>Create a project API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/4c521bb344e3cd1dbc6cf45afec48a91.webp" alt=""><figcaption><p>Create a project API Key</p></figcaption></figure>
 
 Select **Personal Access Token** for subsequent API authentication.
 
-<figure><img src="../../../.gitbook/assets/image (5) (1) (1) (1).png" alt=""><figcaption><p>Create an API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/c47cce032317a3736f137f98737e3abd.webp" alt=""><figcaption><p>Create an API Key</p></figcaption></figure>
 
 Copy and save the created API key.
 
-<figure><img src="../../../.gitbook/assets/image (9) (2).png" alt=""><figcaption><p>Copy API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/f35f021e715af6286fe3026765f9fc22.webp" alt=""><figcaption><p>Copy API Key</p></figcaption></figure>
 
 #### 4. Integrating LangSmith with Dify
 
 Configure LangSmith in the Dify application. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="../../../.gitbook/assets/tracing-app-performance.png" alt=""><figcaption><p>Tracing app performance</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/ddcf300552c3132d17e8b9a9b8f74ffb.webp" alt=""><figcaption><p>Tracing app performance</p></figcaption></figure>
 
 After clicking configure, paste the **API Key** and **project name** created in LangSmith into the configuration and save.
 
-<figure><img src="../../../.gitbook/assets/config-langsmith.png" alt=""><figcaption><p>Configure LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/895fc4da50916d2bd5a04cc135796acb.webp" alt=""><figcaption><p>Configure LangSmith</p></figcaption></figure>
 
 {% hint style="info" %}
 The configured project name needs to match the project set in LangSmith. If the project names do not match, LangSmith will automatically create a new project during data synchronization.
@@ -58,21 +58,21 @@ The configured project name needs to match the project set in LangSmith. If the 
 
 Once successfully saved, you can view the monitoring status on the current page.
 
-<figure><img src="../../../.gitbook/assets/integrate-with-langsmith.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/78be218d5da6103b00f574546b2f11fc.webp" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
 
 ### Viewing Monitoring Data in LangSmith
 
 Once configured, the debug or production data from applications within Dify can be monitored in LangSmith.
 
-<figure><img src="../../../.gitbook/assets/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/b81b665ed64766afe97fab96312ceabc.webp" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
 
 When you switch to LangSmith, you can view detailed operation logs of Dify applications in the dashboard.
 
-<figure><img src="../../../.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/d4c619de65d201e59f2bf26738515dfd.webp" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
 
 Detailed LLM operation logs through LangSmith will help you optimize the performance of your Dify application.
 
-<figure><img src="../../../.gitbook/assets/viewing-app-data-in-langsmith.png" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/2dae6e2044a6fe5a47c94bb1afa380f4.webp" alt=""><figcaption><p>Viewing application data in LangSmith</p></figcaption></figure>
 
 ### Monitoring Data List
 

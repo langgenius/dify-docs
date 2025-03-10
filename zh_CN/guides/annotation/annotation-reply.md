@@ -17,13 +17,13 @@
 4. 如果没有找到匹配项，则问题继续常规流程（传递至 LLM 或 RAG）；
 5. 关闭标注回复功能后，系统将一直不再继续从标注内匹配回复。
 
-<figure><img src="../../.gitbook/assets/image (181).png" alt="" width="563"><figcaption><p>标注回复流程</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/392c0d2847ce07c31d054f32c1103e4d.webp" alt="" width="563"><figcaption><p>标注回复流程</p></figcaption></figure>
 
 ### 提示词编排中开启标注回复
 
 进入“应用构建->添加功能”开启标注回复开关：
 
-<figure><img src="../../.gitbook/assets/image (124).png" alt=""><figcaption><p>提示词编排中开启标注回复</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/085549abe78dff44303ef954b4c41f55.webp" alt=""><figcaption><p>提示词编排中开启标注回复</p></figcaption></figure>
 
 开启时需要先设置标注回复的参数，可设置参数包括：Score 阈值 和 Embedding 模型
 
@@ -33,27 +33,27 @@
 
 点击保存并启用时，该设置会立即生效，系统将对所有已保存的标注利用 Embedding 模型生成嵌入保存。
 
-<figure><img src="../../.gitbook/assets/image (126).png" alt=""><figcaption><p>标注回复参数设置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/5be1392285c8198a34055015dd94438b.webp" alt=""><figcaption><p>标注回复参数设置</p></figcaption></figure>
 
 ### 在会话调试页添加标注
 
 你可以在调试与预览页面直接在模型回复信息上添加或编辑标注。
 
-<figure><img src="../../.gitbook/assets/image (128).png" alt=""><figcaption><p>添加标注回复</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/f1f15001ef0e425e6bb60df3ae5a4fb9.webp" alt=""><figcaption><p>添加标注回复</p></figcaption></figure>
 
 编辑成你需要的高质量回复并保存。
 
-<figure><img src="../../.gitbook/assets/image (129).png" alt=""><figcaption><p>编辑标注回复</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/b1ff51798b301198dab530e620a7f797.webp" alt=""><figcaption><p>编辑标注回复</p></figcaption></figure>
 
 再次输入同样的用户问题，系统将使用已保存的标注直接回复用户问题。
 
-<figure><img src="../../.gitbook/assets/image (130).png" alt=""><figcaption><p>通过已保存的标注回复用户问题</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/29a1c8d9bc748232a97dd8d73ae942e7.webp" alt=""><figcaption><p>通过已保存的标注回复用户问题</p></figcaption></figure>
 
 ### 日志与标注中开启标注回复
 
 进入“应用构建->日志与标注->标注”开启标注回复开关：
 
-<figure><img src="../../.gitbook/assets/image (118).png" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/e07661c87c4d8377ebb26ae97c983e4a.webp" alt=""><figcaption><p>日志与标注中开启标注回复</p></figcaption></figure>
 
 ### 在标注后台设置标注回复参数
 
@@ -63,22 +63,22 @@
 
 **Embedding 模型**：用于对标注文本进行向量化，切换模型时会重新生成嵌入。
 
-<figure><img src="../../.gitbook/assets/image (119).png" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/9b3de372f417f9fd4accf1b3cee661e3.webp" alt=""><figcaption><p>设置标注回复参数</p></figcaption></figure>
 
 ### 批量导入标注问答对
 
 在批量导入功能内，你可以下载标注导入模板，按模版格式编辑标注问答对，编辑好后在此批量导入。
 
-<figure><img src="../../.gitbook/assets/image (120).png" alt=""><figcaption><p>批量导入标注问答对</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/536305978f8220b1636b1453f4e46205.webp" alt=""><figcaption><p>批量导入标注问答对</p></figcaption></figure>
 
 ### 批量导出标注问答对
 
 通过标注批量导出功能，你可以一次性导出系统内已保存的所有标注问答对。
 
-<figure><img src="../../.gitbook/assets/image (121).png" alt=""><figcaption><p>批量导出标注问答对</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/5c1ab7c5a077b855ac6eb7c147dfd296.webp" alt=""><figcaption><p>批量导出标注问答对</p></figcaption></figure>
 
 ### 查看标注回复命中历史
 
 在标注命中历史功能内，你可以查看所有命中该条标注的编辑历史、命中的用户问题、回复答案、命中来源、匹配相似分数、命中时间等信息，你可以根据这些系统信息持续改进你的标注内容。
 
-<figure><img src="../../.gitbook/assets/image (123).png" alt=""><figcaption><p>查看标注回复命中历史</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/annotation/33b08b95e08796871c19b38e141d4c49.webp" alt=""><figcaption><p>查看标注回复命中历史</p></figcaption></figure>

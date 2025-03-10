@@ -36,7 +36,7 @@ Using a LLM hosted on GPUStack as an example:
 
 3. Click `Save` to deploy the model.
 
-![gpustack-deploy-llm](../../.gitbook/assets/gpustack-deploy-llm.png)
+![gpustack-deploy-llm](https://assets-docs.dify.ai/img/en/models-integration/9ba129b9bae6e6698217b9207c4ec911.webp)
 
 ## Create an API Key
 
@@ -60,6 +60,6 @@ Using a LLM hosted on GPUStack as an example:
 
    Click "Save" to use the model in the application.
 
-![add-gpustack-llm](../../.gitbook/assets/add-gpustack-llm.png)
+![add-gpustack-llm](https://assets-docs.dify.ai/img/en/models-integration/ef6f8cfd721943783d1a3b6122256624.webp)
 
 For more information about GPUStack, please refer to [Github Repo](https://github.com/gpustack/gpustack).

@@ -12,7 +12,7 @@
 
 请转到知识页面，你可以在左侧导航中切换到API页面。在此页面上，你可以查看dify提供的API文档并管理用于访问Knowledge API的凭据.
 
-<figure><img src="../../.gitbook/assets/dataset-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/datasets/6f6395c9e3f265df88eab8d6661f0c05.webp" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
 ## **创建空的 Knowledge**
 

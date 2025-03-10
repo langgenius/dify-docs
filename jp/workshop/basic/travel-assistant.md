@@ -37,25 +37,25 @@ Difyが提供するGoogleツールはSerpAPIに基づいており、事前にSer
 
 SerpAPIは1か月に100回の無料呼び出しを提供しており、この実験を完了するのに十分です。追加クレジットが必要な場合は、残高を追加するか、他のオープンソースのソリューションを使用できます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (368).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/007c065c8c90c33458cd6cb968d7fea4.webp" alt=""><figcaption></figcaption></figure>
 
 2. **Dify - ツール - Google**に移動：
 
 `認可`に進むをクリックし、APIキーを入力して保存します。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/40a7a41ad6bb7c790451e35c51f011cc.webp" alt=""><figcaption></figcaption></figure>
 
 #### webscraper
 
 この実験では、特定のウェブページからコンテンツを抽出するためのスクレイピングツールが必要ですが、Difyは組み込みのツールを提供しているため、追加の設定は不要です。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/9a7febd4fe4be027108ca4dcf2dcbbcf.webp" alt=""><figcaption></figcaption></figure>
 
 #### Wikipedia
 
 目的地の知識を正確に紹介するために、Wikipediaは非常に良い情報源です。Difyにもこのツールが組み込まれており、追加の設定は不要です。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-4.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/73e7cb1d53aa4fa8decc767b3f0bebea.webp" alt=""><figcaption></figcaption></figure>
 
 ### 3. エージェントの構築
 
@@ -63,7 +63,7 @@ SerpAPIは1か月に100回の無料呼び出しを提供しており、この実
 
 ツールとして`Google`、`webscraper`、`Wikipedia`を追加して有効にします。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/travel-assistant-5.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/228dcd40260f67ec7991d71d32e4c38b.webp" alt=""><figcaption></figcaption></figure>
 
 ### 4. **サンプル出力**
 
@@ -124,4 +124,4 @@ Difyは現在、`短文`、`段落`、`ドロップダウンオプション`、`
 
 変数を追加した後、ユーザーはアプリ開発者の意図に従って必要な背景情報をアプリに提供できるようになります。その結果は以下のようになります：
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (369).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/basic/87bfdf9d8c326af9d8b229a738466061.webp" alt=""><figcaption></figcaption></figure>

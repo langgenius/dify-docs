@@ -2,7 +2,7 @@
 
 When users build AI applications with multiple knowledge bases, Dify's retrieval strategy will determine which content will be retrieved.
 
-<figure><img src="../../../.gitbook/assets/en-rag-multiple.png" alt=""><figcaption><p>retrieval Mode Settings</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/retrieval-augment/200496cb1677e73dab28007c74b044a9.webp" alt=""><figcaption><p>retrieval Mode Settings</p></figcaption></figure>
 
 ### Retrieval Setting
 
@@ -12,6 +12,6 @@ In multi-path retrieval mode, it's recommended that the Rerank model be configur
 
 Below is the technical flowchart for the multi-path retrieval mode:
 
-<figure><img src="../../../.gitbook/assets/rerank-flow-chart.png" alt=""><figcaption><p>Multi-Path retrieval</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/retrieval-augment/cf9b4d10e65ad7d0e42b9c69045da709.webp" alt=""><figcaption><p>Multi-Path retrieval</p></figcaption></figure>
 
 Since multi-path retrieval mode does not rely on the model's inference capability or dataset descriptions, it can achieve higher-quality retrieval results when retrieving across multiple datasets. Additionally, incorporating a re-ranking step can effectively improve document retrieval effectiveness. Therefore, when creating knowledge base Q\&A applications associated with multiple datasets, we recommend configuring the retrieval mode as multi-path retrieval.

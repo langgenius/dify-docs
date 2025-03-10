@@ -6,10 +6,10 @@
 
 在你开始尝试新模式前，你需要知道**专家模式**下的必要元素：
 
-*   **文本补全模型** ![](../../../../.gitbook/assets/screenshot-20231017-092613.png)
+*   **文本补全模型** ![](https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/22eb2f8f25741ced31c7f22504bf3f49.webp)
 
     在选择模型的时候，模型名字的右侧显示 COMPLETE 的即为文本补全模型，该类模型接受名为“提示词”的自由格式文本字符串，模型将生成一个文本补全，试图匹配你给它的任何上下文或模式。例如，如果你给的提示词：“正如笛卡尔所说，我思故”，它将高概率返回“我在”作为补全。
-*   **聊天模型** <img src="../../../../.gitbook/assets/screenshot-20231017-092957.png" alt="" data-size="line">
+*   **聊天模型** <img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/60865cd8d0aa2bc493eec77ea937cec6.webp" alt="" data-size="line">
 
     在选择模型的时候，模型名字的右侧显示 CHAT 的即为聊天模型，该类模型将消息列表作为输入，并返回模型生成的消息作为输出。尽管聊天格式旨在简化多轮对话，但它对于没有任何对话的单轮任务同样有用。聊天模型使用的是聊天消息作为输入和输出，包含 SYSTEM / USER / ASSISTANT 三种消息类型：
 
@@ -23,13 +23,13 @@
 
     是指特定的单词、短语或字符，用于向 LLM 发出停止生成文本的信号。
 * **专家模式提示词中的内容块**
-  *   <img src="../../../../.gitbook/assets/3.png" alt="" data-size="line">
+  *   <img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/21d126ee1d07729ad9579cf4c884e98d.webp" alt="" data-size="line">
 
       用户在配置了知识库的 App 中，输入查询内容，App 会将查询内容作为知识库的检索条件，检索的结果在组织之后会作为上下文内容替换 `上下文` 变量，使 LLM 能够参考上下文的内容进行回答。
-  *   <img src="../../../../.gitbook/assets/4.png" alt="" data-size="line">
+  *   <img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/fc506733f2510009202284ba394ba428.webp" alt="" data-size="line">
 
       查询内容仅在对话型应用的文本补全模型中可用，对话中用户输入的内容将替换该变量，以触发每轮新的对话。
-  *   <img src="../../../../.gitbook/assets/5.png" alt="" data-size="line">
+  *   <img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/02eeaf76bf52114080a04344c94525b2.webp" alt="" data-size="line">
 
       会话历史仅在对话型应用的文本补全模型中可用。在对话型应用中多次对话时，Dify 会将历史的对话记录根据内置规则进行组装拼接，并替换 `会话历史` 变量。其中 Human 和 Assistant 前缀可点击 `会话历史` 后的`...` 进行修改。
 *   **初始模版**
@@ -48,7 +48,7 @@
 
 创建应用后，在提示词编排页可以切换至**专家模式**，在此模式下可以编辑完整的应用提示词。
 
-<figure><img src="../../../../.gitbook/assets/专家模式.png" alt=""><figcaption><p>专家模式入口</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/f18dafe1b988c5b1312a7a39f9239477.webp" alt=""><figcaption><p>专家模式入口</p></figcaption></figure>
 
 {% hint style="warning" %}
 在**专家模式**下修改提示词并发布应用后，将无法返回至**简易模式**。
@@ -62,7 +62,7 @@
 需要注意的是，我们只有先上传了上下文，在**专家模式**下才会呈现包含 \{{#context#\}} 的内置提示词
 {% endhint %}
 
-<figure><img src="../../../../.gitbook/assets/参数设置.png" alt=""><figcaption><p>上下文参数设置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/2d1dbd3ffaad36f1867bdfdbda7d1f4d.webp" alt=""><figcaption><p>上下文参数设置</p></figcaption></figure>
 
 **TopK：值范围为整数 1～10**
 
@@ -106,7 +106,7 @@ Assistant1: 土是黄色的
 
 在**专家模式**下，你可以在文本编辑器中输入“`/`”，快捷调出内容块来插入提示词中。内容块分为：`上下文`、`变量`、`会话历史`、`查询内容`。你也可以通过输入“`{`”，快捷插入已创建过的变量列表。\\
 
-<figure><img src="../../../../.gitbook/assets/快捷键.png" alt=""><figcaption><p>快捷键 “/”</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/6d2c5ce474761b53b1e00414907bdd33.webp" alt=""><figcaption><p>快捷键 “/”</p></figcaption></figure>
 
 {% hint style="warning" %}
 除“`变量`”以外的其他内容块不可重复插入。在不同应用和模型下，可插入的内容块会根据不同的提示词模板结构有所区别，`会话历史`、`查询内容` 仅在对话型应用的文本补全模型中可用。
@@ -149,7 +149,7 @@ And answer according to the language English.
 
 在调试预览界面，用户与 AI 产生对话之后，将鼠标指针移动到任意的用户会话，即可在左上角看到“日志”标志按钮，点击即可查看提示词日志。
 
-<figure><img src="../../../../.gitbook/assets/日志.png" alt=""><figcaption><p>调试日志入口</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/ca64d8bb5b0599124cb37f5a9b5cdbb6.webp" alt=""><figcaption><p>调试日志入口</p></figcaption></figure>
 
 在日志中，我们可以清晰的查看到：
 
@@ -157,7 +157,7 @@ And answer according to the language English.
 * 当前会话引用的相关文本片段
 * 历史会话记录
 
-<figure><img src="../../../../.gitbook/assets/11.png" alt=""><figcaption><p>调试预览界面查看提示词日志</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/7d291c4e02a2cec5dd9e0615d3980785.webp" alt=""><figcaption><p>调试预览界面查看提示词日志</p></figcaption></figure>
 
 从日志中，我们可以查看经过系统拼装后最终发送至 LLM 的完整提示词，并根据调试结果持续改进提示词输入。
 
@@ -165,4 +165,4 @@ And answer according to the language English.
 
 在初始的构建应用主界面，左侧导航栏可以看到“日志与标注”，点击进去即可查看完整的日志。 在日志与标注的主界面，点击任意一个会话日志条目，在弹出的右侧对话框中同样鼠标指针移动到会话上即可点开“日志”按钮查看提示词日志。
 
-<figure><img src="../../../../.gitbook/assets/12.png" alt=""><figcaption><p>日志与标注界面查看提示词日志</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/prompt-engineering-1/25db482ea5ab9c7260f1b89949fc2a57.webp" alt=""><figcaption><p>日志与标注界面查看提示词日志</p></figcaption></figure>

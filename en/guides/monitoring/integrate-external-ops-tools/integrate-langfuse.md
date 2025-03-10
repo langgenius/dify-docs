@@ -15,35 +15,35 @@ Introduction to Langfuse: [https://langfuse.com/](https://langfuse.com/)
 1. Register and log in to Langfuse on the [official website](https://langfuse.com/)
 2. Create a project in Langfuse. After logging in, click **New** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
 
-<figure><img src="../../../.gitbook/assets/image (249) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/4edf95240c0fcd7f51d6ce690247a908.webp" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
 
 Edit a name for the project.
 
-<figure><img src="../../../.gitbook/assets/image (251) (1).png" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/d09638b3c72671db7b5377424652fbe8.webp" alt=""><figcaption><p>Create a project in Langfuse</p></figcaption></figure>
 
 3. Create project API credentials. In the left sidebar of the project, click **Settings** to open the settings.
 
-<figure><img src="../../../.gitbook/assets/image (253) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/5a195b625c070ce25b70979c054832d4.webp" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
 
 In Settings, click **Create API Keys** to create project API credentials.
 
-<figure><img src="../../../.gitbook/assets/image (252) (1).png" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/5adb4db877bd73ff93c79d5592c5c89d.webp" alt=""><figcaption><p>Create project API credentials</p></figcaption></figure>
 
 Copy and save the **Secret Key**, **Public Key**, and **Host**.
 
-<figure><img src="../../../.gitbook/assets/image (254) (1).png" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/cac325166e2aeac6ba193c1a57636313.webp" alt=""><figcaption><p>Get API Key configuration</p></figcaption></figure>
 
 4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="../../../.gitbook/assets/tracing-app-performance-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/ee9c09e2f90960e415ff510df4abb578.webp" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save.
 
-<figure><img src="../../../.gitbook/assets/config-langfuse.png" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/781a8d75ce3ad0910725478449a965c0.webp" alt=""><figcaption><p>Configure Langfuse</p></figcaption></figure>
 
 Once successfully saved, you can view the status on the current page. If it shows as started, it is being monitored.
 
-<figure><img src="../../../.gitbook/assets/monitored-by-langfuse.png" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/84ec933bbb7ae541c96e8e240a8419d1.webp" alt=""><figcaption><p>View configuration status</p></figcaption></figure>
 
 ***
 
@@ -51,9 +51,9 @@ Once successfully saved, you can view the status on the current page. If it show
 
 After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
 
-<figure><img src="../../../.gitbook/assets/debug-app-in-dify.png" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/b81b665ed64766afe97fab96312ceabc.webp" alt=""><figcaption><p>Debugging Applications in Dify</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/view-traces-in-langfuse.png" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/integrate-external-ops-tools/aad629c7c4c8f04cfc6ff4614b334e1e.webp" alt=""><figcaption><p>Viewing application data in Langfuse</p></figcaption></figure>
 
 ***
 

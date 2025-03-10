@@ -32,7 +32,7 @@
 
 本次实验中需要涉及使用 embedding 模型，目前支持 embedding 的模型提供商中有 OpenAI、Cohere 等，在 Dify 的模型供应商中有标注 `TEXT EMBEDDING` ，请确保至少添加了一个并且有充足余额。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-05 09.43.27.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/2e8fb241072f4c37ae433cceb34ed295.webp" alt=""><figcaption></figcaption></figure>
 
 > **什么是 embedding？**
 >
@@ -56,7 +56,7 @@ Dify 支持三种数据源：上传文本文件、Notion、网页。
 
 上传文档后，会进入以下页面：
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-05 11.38.25.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/9cb0b943ff5ada89441658e9f424d716.webp" alt=""><figcaption></figcaption></figure>
 
 可以看到右侧有分段预览。当前默认选择的是自动分段与清洗，Dify 会根据文本内容的不同自动将文章切分为许多个段落。你也可以在自定义中设置其他的切分规则。
 
@@ -78,11 +78,11 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 
 混合检索中可以设置权重或者使用重新排序（Rerank）模型。使用权重设置时，可以设置检索更侧重语义还是关键词，例如下图中语义占 70% 的权重，关键词占30%的权重。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-05 13.18.22.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/c4029cc94d756e1e3273101006065984.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 点击**保存并处理**将会处理文档，完成处理后文档就可以在应用中使用了。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-05 13.41.43.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/449b86c578bac676a3c67f07058ddbfb.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ### 同步自 Web 站点
 
@@ -90,7 +90,7 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 
 目前 Dify 支持最多 50 个页面的处理，请注意限制数量的设置。如果超出，可以再创建新的知识库。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-06 14.32.36.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/4ba86eea8d7019d412a2f5821813edad.webp" alt=""><figcaption></figcaption></figure>
 
 ### 调整知识库内容
 
@@ -106,7 +106,7 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 
 在知识库的文档页，左侧边栏中点击召回测试，可以输入关键词来测试检索结果的准确性。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 11.37.27.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/9713c9893b0faff7e3682def600cedbc.webp" alt=""><figcaption></figcaption></figure>
 
 ## 添加节点
 
@@ -125,7 +125,7 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 * 用户请求对技术名词的解释
 * 用户询问社群加入方式
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 10.38.50.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/93a07a94a0a232edbf0161d5a17540dd.webp" alt=""><figcaption></figcaption></figure>
 
 ### 直接回复节点
 
@@ -141,7 +141,7 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 
 Dify 支持 Markdown 格式的文本的输出。你可以在输出中用 Makrdown 来丰富文本的格式。甚至可以用 Markdown 格式在文中插入图片，效果如下：
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 11.13.50.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/e195ced9c9403f2e4bcaa433e1acf439.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ### 知识检索节点
 
@@ -165,13 +165,13 @@ LLM 需要根据用户的提问，调整回复，使得回复内容更加得体�
 
 此外，你可以打开 LLM 记忆让用户的对话体验更加连贯。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 13.51.15.png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/334281e518d0d099490988d1cbfc1c0c.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ## 思考题 1: 如何连接外部知识库
 
 在知识库功能中，你可以通过外部知识库 API 来连接外部知识库，例如 AWS Bedrock 知识库。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 14.08.07.png" alt="" width="352"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/20fb4e3d49f047c986256862304cf291.webp" alt="" width="352"><figcaption></figcaption></figure>
 
 有关 AWS Bedrock 知识库的最佳实践，请阅读：[如何连接 AWS Bedrock 知识库？](../../learn-more/use-cases/how-to-connect-aws-bedrock.md)
 
@@ -181,7 +181,7 @@ LLM 需要根据用户的提问，调整回复，使得回复内容更加得体�
 
 在搭载知识库的实例中，进入 **知识库 -> API**，并且创建 API 密钥。请妥善保管 API 密钥。
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-07 14.11.53.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/70058c70854a3efb1e19401774334f54.webp" alt=""><figcaption></figcaption></figure>
 
 ## 思考题 3: 如何将客服机器人嵌入网页
 

@@ -18,7 +18,7 @@ Workflow type application provides the system variables below:
 
 <table><thead><tr><th>Variables name</th><th>Data Type</th><th width="267">Description</th><th>Remark</th></tr></thead><tbody><tr><td><p><code>sys.files</code></p><p><code>[LEGACY]</code></p></td><td>Array[File]</td><td>File Parameter: Stores images uploaded by users</td><td>The image upload function needs to be enabled in the 'Features' section in the upper right corner of the application orchestration page</td></tr><tr><td><code>sys.user_id</code></td><td>String</td><td>User ID: A unique identifier automatically assigned by the system to each user when they use a workflow application. It is used to distinguish different users</td><td></td></tr><tr><td><code>sys.app_id</code></td><td>String</td><td>App ID: A unique identifier automatically assigned by the system to each App. This parameter is used to record the basic information of the current application. </td><td>This parameter is used to differentiate and locate distinct Workflow applications for users with development capabilities</td></tr><tr><td><code>sys.workflow_id</code></td><td>String</td><td>Workflow ID: This parameter records information about all nodes information in the current Workflow application.</td><td>This parameter can be used by users with development capabilities to track and record information about the nodes contained within a Workflow</td></tr><tr><td><code>sys.workflow_run_id</code></td><td>String</td><td>Workflow Run ID: Used to record the runtime status and execution logs of a Workflow application.</td><td>This parameter can be used by users with development capabilities to track the application's historical execution records</td></tr></tbody></table>
 
-<figure><img src="../../.gitbook/assets/image (15).png" alt=""><figcaption><p>Workflow App System Variables</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workflow/8877045a581f19ff65f8d0975ce9323f.webp" alt=""><figcaption><p>Workflow App System Variables</p></figcaption></figure>
 
 #### Chatflow
 
@@ -26,13 +26,13 @@ Chatflow type application provides the following system variables:
 
 <table><thead><tr><th>Variables name</th><th>Data Type</th><th width="283">Description</th><th>Remark</th></tr></thead><tbody><tr><td><code>sys.query</code></td><td>String</td><td>Content entered by the user in the chatting box.</td><td></td></tr><tr><td><code>sys.files</code></td><td>Array[File]</td><td>File Parameter: Stores images uploaded by users</td><td>The image upload function needs to be enabled in the 'Features' section in the upper right corner of the application orchestration page</td></tr><tr><td><code>sys.dialogue_count</code></td><td>Number</td><td><p>The number of conversations turns during the user's interaction with a Chatflow application. The count automatically increases by one after each chat round and can be combined with if-else nodes to create rich branching logic.<br></p><p>For example, LLM will review the conversation history at the X conversation turn and automatically provide an analysis.</p></td><td></td></tr><tr><td><code>sys.conversation_id</code></td><td>String</td><td>A unique ID for the chatting box interaction session, grouping all related messages into the same conversation, ensuring that the LLM continues the chatting on the same topic and context.</td><td></td></tr><tr><td><code>sys.user_id</code></td><td>String</td><td>A unique ID is assigned for each application user to distinguish different conversation users.</td><td></td></tr><tr><td><code>sys.workflow_id</code></td><td>String</td><td>Workflow ID: This parameter records information about all nodes information in the current Workflow application.</td><td>This parameter can be used by users with development capabilities to track and record information about the nodes contained within a Workflow</td></tr><tr><td><code>sys.workflow_run_id</code></td><td>String</td><td>Workflow Run ID: Used to record the runtime status and execution logs of a Workflow application.</td><td>This parameter can be used by users with development capabilities to track the application's historical execution records</td></tr></tbody></table>
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1).png" alt="chatflow app system variables"><figcaption><p>Chatflow App System Variables</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workflow/51e0302109483be7857816aef3e7b9b4.webp" alt="chatflow app system variables"><figcaption><p>Chatflow App System Variables</p></figcaption></figure>
 
 ### Environment Variables
 
 **Environment variables are used to protect sensitive information involved in workflows**, such as API keys and database passwords used when running workflows. They are stored in the workflow rather than in the code, allowing them to be shared across different environments.
 
-<figure><img src="../../.gitbook/assets/en-env-variable.png" alt="Environment Variables"><figcaption><p>Environment Variables</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workflow/ce96b1b9418386146750fc6c59a881af.webp" alt="Environment Variables"><figcaption><p>Environment Variables</p></figcaption></figure>
 
 Supports the following 3 data types:
 
@@ -56,7 +56,7 @@ Environmental variables have the following characteristics:
 
 For example, you can store the language preference input by the user in the first round of chatting in a conversation variable. The LLM will refer to the information in the conversation variable when answering and use the specified language to reply to the user in subsequent chats.
 
-<figure><img src="../../.gitbook/assets/conversation-var.png" alt=""><figcaption><p>Conversation Variable</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workflow/1cbb9ff75661b026e41e55acb613818e.webp" alt=""><figcaption><p>Conversation Variable</p></figcaption></figure>
 
 **Conversation variables** support the following six data types:
 

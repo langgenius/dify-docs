@@ -2,7 +2,7 @@
 
 Dify 是基于大语言模型的 AI 应用开发平台，初次使用时你需要先在 Dify 的 **设置 -- 模型供应商** 页面内添加并配置所需要的模型。
 
-<figure><img src="../../.gitbook/assets/image (216).png" alt=""><figcaption><p>设置-模型供应商</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/model-configuration/aa7ce35bf3aa1e8cbe91dafa14788d99.webp" alt=""><figcaption><p>设置-模型供应商</p></figcaption></figure>
 
 Dify 目前已支持主流的模型供应商，例如 OpenAI 的 GPT 系列、Anthropic 的 Claude 系列等。不同模型的能力表现、参数类型会不一样，你可以根据不同情景的应用需求选择你喜欢的模型供应商。**你在 Dify 应用以下模型能力前，应该前往不同的模型厂商官方网站获得他们的 API key 。**
 
@@ -35,7 +35,7 @@ Dify 目前已支持主流的模型供应商，例如 OpenAI 的 GPT 系列、An
 
 Dify 在需要模型时，会根据使用场景来选择设置过的默认模型。在 `设置 > 模型供应商` 中设置默认模型。
 
-<figure><img src="../../.gitbook/assets/image (113).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/model-configuration/cf482d742ab9a1ee0eaaf829504d1276.webp" alt=""><figcaption></figcaption></figure>
 
 系统默认推理模型(System Reasoning Model)：设置创建应用使用的默认推理模型,以及对话名称生成、下一步问题建议等功能也会使用该默认推理模型。
 
@@ -43,7 +43,7 @@ Dify 在需要模型时，会根据使用场景来选择设置过的默认模型
 
 在 Dify 的 `设置 > 模型供应商` 中设置要接入的模型。
 
-<figure><img src="../../.gitbook/assets/image-20231210143654461 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/model-configuration/be2e33187ce38cdd79648f7ea78dc9dc.webp" alt=""><figcaption></figcaption></figure>
 
 模型供应商分为两种：
 
@@ -75,4 +75,4 @@ Dify 使用了 [PKCS1\_OAEP](https://pycryptodome.readthedocs.io/en/latest/src/c
 
 配置完模型后，就可以在应用中使用这些模型了：
 
-<figure><img src="../../.gitbook/assets/image (217).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/model-configuration/b82eed9b7705c4f30a0eb1a55ee84483.webp" alt=""><figcaption></figcaption></figure>

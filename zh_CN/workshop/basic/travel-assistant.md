@@ -39,25 +39,25 @@ SerpAPI提供一个月100次的免费调用次数，这足够我们完成本次�
 
 点击复制
 
-<figure><img src="../../.gitbook/assets/image (368).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/007c065c8c90c33458cd6cb968d7fea4.webp" alt=""><figcaption></figcaption></figure>
 
 2. 前往 **Dify - 工具 - Google**：
 
 点击 `去授权` ，填入API Key并保存。
 
-<figure><img src="../../.gitbook/assets/travel-assistant-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/40a7a41ad6bb7c790451e35c51f011cc.webp" alt=""><figcaption></figcaption></figure>
 
 #### webscraper
 
 本次实验中，我们需要一个爬虫工具从指定的网页中抓取内容，Dify 已提供内置工具，无需额外配置。
 
-<figure><img src="../../.gitbook/assets/travel-assistant-3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/9a7febd4fe4be027108ca4dcf2dcbbcf.webp" alt=""><figcaption></figcaption></figure>
 
 #### Wikipedia
 
 我们还希望 Agent 能够准确介绍目的地知识，Wikipedia 是一个比较好知识来源，Dify 也内置了该工具，无需额外配置。
 
-<figure><img src="../../.gitbook/assets/travel-assistant-4.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/73e7cb1d53aa4fa8decc767b3f0bebea.webp" alt=""><figcaption></figcaption></figure>
 
 ### 3. 构建 Agent
 
@@ -65,7 +65,7 @@ SerpAPI提供一个月100次的免费调用次数，这足够我们完成本次�
 
 添加工具：`Google`、`webscraper`和`wikipedia`并启用。
 
-<figure><img src="../../.gitbook/assets/travel-assistant-5.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/228dcd40260f67ec7991d71d32e4c38b.webp" alt=""><figcaption></figcaption></figure>
 
 4. **示例输出**
 
@@ -126,4 +126,4 @@ Dify 目前支持`文本`、`段落`、`下拉选项`、`数字`、`基于 API �
 
 添加变量后，用户可以按照应用开发者的意图向应用提供必要的背景信息，实现的效果如下：
 
-<figure><img src="../../.gitbook/assets/image (369).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/basic/87bfdf9d8c326af9d8b229a738466061.webp" alt=""><figcaption></figcaption></figure>

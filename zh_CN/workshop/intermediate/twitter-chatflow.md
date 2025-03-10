@@ -36,17 +36,17 @@ Free 版本的 Dify 提供了免费 200 条 OpenAI 的消息额度，如果消�
 
 点击**右上角头像 - 设置 - 模型供应商**
 
-<figure><img src="../../.gitbook/assets/build-ai-image-generation-app-3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/9114cc1c14d0dd2eca0ac9d8b7198ef6.webp" alt=""><figcaption></figcaption></figure>
 
 ## 创建 ChatFlow 应用
 
 现在，让我们开始创建 ChatFlow。点击`创建空白应用 - 工作流编排`：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 10.48.27.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/89c3a10fea19906f655a1d78ff26ebfd.webp" alt=""><figcaption></figcaption></figure>
 
 初始化的 Chatflow 应用如下：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 10.54.41.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/c2c5b359b97a8702968c1e79aaa307f5.webp" alt=""><figcaption></figcaption></figure>
 
 ## 添加节点
 
@@ -56,7 +56,7 @@ Free 版本的 Dify 提供了免费 200 条 OpenAI 的消息额度，如果消�
 
 点击开始节点并添加一个新变量：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 11.02.42.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/735dda570982f32619e9140c0aa9895c.webp" alt=""><figcaption></figcaption></figure>
 
 ### 代码节点
 
@@ -73,25 +73,25 @@ def main(id: str) -> dict:
 
 添加一个代码节点并选择 Python ，然后设置输入和输出变量名：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-09 15.05.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/e4960e1b1079d1607755b45b09a4b2b4.webp" alt=""><figcaption></figcaption></figure>
 
 ### HTTP 请求节点
 
 根据 [Crawlbase文档](https://crawlbase.com/docs/crawling-api/scrapers/#twitter-profile)，如果以 HTTP 请求格式抓取 Twitter 用户的个人资料，我们需要按以下格式填写 HTTP 请求节点：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 11.07.54.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/35e6e0fc640ae3880fd2a7a6d5854ad8.webp" alt=""><figcaption></figcaption></figure>
 
 出于安全考虑，最好不要直接将 API Key 作为明文输入。在 Dify 最新版本中，可以在`环境变量`中设置令牌值。点击 `env` - `添加变量`来设置 API Key，这样就不会以明文出现在节点中。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-09 15.02.58.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/ec80b4fbbe1d90c090e528bc34950ba0.webp" alt=""><figcaption></figcaption></figure>
 
 点击[此处](https://crawlbase.com/dashboard/account/docs)获取 Crawlbase API Key。输入 `/`插入为变量。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 11.18.49.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/16528d2e6aa321fead6182c6f5630cfa.webp" alt=""><figcaption></figcaption></figure>
 
 点击此节点的开始按钮，输入Elon Musk 的 URL 进行测试：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-09 15.01.03.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/e84a74533ef948c55440ee077067d318.webp" alt=""><figcaption></figcaption></figure>
 
 ### LLM 节点
 
@@ -101,7 +101,7 @@ def main(id: str) -> dict:
 
 以下是一个提示词示例。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-08 11.34.11.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/10d671077454e519eb8cd68aaf9382b7.webp" alt=""><figcaption></figcaption></figure>
 
 ## 测试运行
 
@@ -109,7 +109,7 @@ def main(id: str) -> dict:
 
 例如，我想分析 Elon Musk 的推文，并以他的语气写一条关于全球变暖的推文。
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.47.20.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/intermediate/34b19b1bb72c99acf84f550ef4e2a9bf.webp" alt=""><figcaption></figcaption></figure>
 
 点击右上角的`发布`，并将其添加到你的网站中。
 

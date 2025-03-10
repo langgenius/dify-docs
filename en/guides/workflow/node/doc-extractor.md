@@ -13,7 +13,7 @@ LLMs cannot directly read or interpret document contents. Therefore, it's necess
 
 The document extractor node can be understood as an information processing center. It recognizes and reads files in the input variables, extracts information, and converts it into string-type output variables for downstream nodes to call.
 
-<figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption><p>doc extractor</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/89ed962f405978962c3a2e7c6b7c3f0e.webp" alt=""><figcaption><p>doc extractor</p></figcaption></figure>
 
 The document extractor node structure is divided into input variables and output variables.
 
@@ -41,7 +41,7 @@ In a typical file interaction Q\&A scenario, the document extractor can serve as
 
 This section will introduce the usage of the document extractor node through a typical ChatPDF example workflow template.
 
-<figure><img src="../../../.gitbook/assets/image (12).png" alt=""><figcaption><p>Chatpdf workflow</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/74c8ad8ad9014e272af177ca2f79252b.webp" alt=""><figcaption><p>Chatpdf workflow</p></figcaption></figure>
 
 **Configuration Process:**
 
@@ -49,11 +49,11 @@ This section will introduce the usage of the document extractor node through a t
 2. Add a document extractor node and select the `pdf` variable in the input variables.
 3. Add an LLM node and select the output variable of the document extractor node in the system prompt. The LLM can read the contents of the file through this output variable.
 
-<figure><img src="../../../.gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/5cbe3b06ec2101ea3843cc9d259e64e3.webp" alt=""><figcaption></figcaption></figure>
 
 Configure the end node by selecting the output variable of the LLM node in the end node.
 
-<figure><img src="../../../.gitbook/assets/image (14).png" alt=""><figcaption><p>chat with pdf</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/1b77efb9a18e85f9c55836b7067976ae.webp" alt=""><figcaption><p>chat with pdf</p></figcaption></figure>
 
 After configuration, the application will have file upload functionality, allowing users to upload PDF files and engage in conversation.
 

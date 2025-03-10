@@ -9,7 +9,7 @@
 
 除了需要开发对应的模块能力，还需要遵照以下规范，以便 Dify 正确调用 API。
 
-<figure><img src="../../../.gitbook/assets/api_based_01.png" alt=""><figcaption><p>基于 API 扩展</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/6d3cd8c9af06abf4ec3dca40e2c403ab.webp" alt=""><figcaption><p>基于 API 扩展</p></figcaption></figure>
 
 ### API 规范 <a href="#usercontentapi-gui-fan" id="usercontentapi-gui-fan"></a>
 
@@ -230,7 +230,7 @@ API 返回为：
 
 1.  进入 [https://ngrok.com](https://ngrok.com) 官网，注册并下载 Ngrok 文件。
 
-    <figure><img src="../../../.gitbook/assets/download.png" alt=""><figcaption><p>Download</p></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/b5c922d1e9fe73bee9d95a29fd7ec509.webp" alt=""><figcaption><p>Download</p></figcaption></figure>
 2. 下载完成后，进入下载目录，根据下方说明解压压缩包，并执行说明中的初始化脚本。
    * ```Shell
      $ unzip /path/to/ngrok.zip
@@ -238,7 +238,7 @@ API 返回为：
      ```
 3. 查看本地 API 服务的端口：
 
-<figure><img src="../../../.gitbook/assets/8000.png" alt=""><figcaption><p>查看端口</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/5d3cf23074d5411ffd8571de28a07774.webp" alt=""><figcaption><p>查看端口</p></figcaption></figure>
 
 并运行以下命令启动：
 
@@ -248,7 +248,7 @@ API 返回为：
 
     启动成功的样例如下：
 
-<figure><img src="../../../.gitbook/assets/ngrock.png" alt=""><figcaption><p>Ngrok 启动</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/8c671b5ad9ed883e7095e2481621d01d.webp" alt=""><figcaption><p>Ngrok 启动</p></figcaption></figure>
 
 4. 我们找到 Forwarding 中，如上图：`https://177e-159-223-41-52.ngrok-free.app`（此为示例域名，请替换为自己的）即为公网域名。
 

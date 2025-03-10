@@ -13,7 +13,7 @@ We categorize documentation issues into two main types:
 
 If you encounter errors while reading a document or wish to suggest modifications, please use the **"Edit on GitHub"** button located in the table of contents on the right side of the document page. Utilize GitHub's built-in online editor to make your changes, then submit a pull request with a concise description of your edits. Please format your pull request title as `Fix: Update xxx`. We'll review your submission and merge the changes if everything looks good.
 
-![](../.gitbook/assets/docs-contribution.png)
+![](https://assets-docs.dify.ai/img/en/community/e9fca78c743762d464eb146fbc3d879d.webp)
 
 Alternatively, you can post the document link on our [Issues page](https://github.com/langgenius/dify-docs/issues) with a brief description of the necessary modifications. We'll address these promptly upon receipt.
 

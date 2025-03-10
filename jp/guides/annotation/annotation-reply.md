@@ -17,13 +17,13 @@
 4. マッチング項目が見つからなかった場合、質問は通常プロセスを継続します（LLMやRAGに渡されます）。
 5. アノテーションリプライ機能をオフにすると、システムはアノテーションからのマッチングリプライを継続して行いません。
 
-<figure><img src="../../.gitbook/assets/image (130).png" alt="" width="563"><figcaption><p>アノテーションリプライの流れ</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/392c0d2847ce07c31d054f32c1103e4d.webp" alt="" width="563"><figcaption><p>アノテーションリプライの流れ</p></figcaption></figure>
 
 ### 提示詞編成でアノテーションリプライを有効にする
 
 「アプリケーション構築->機能追加」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../../en/.gitbook/assets/annotated-replies.png" alt=""><figcaption><p>提示詞編成でアノテーションリプライを有効にする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/11d3c1b21e275834befd34df0d74bfd0.webp" alt=""><figcaption><p>提示詞編成でアノテーションリプライを有効にする</p></figcaption></figure>
 
 有効にする際には、まずアノテーションリプライのパラメータを設定する必要があります。設定可能なパラメータには次のものがあります：スコア閾値と埋め込みモデル
 
@@ -33,27 +33,27 @@
 
 保存して有効にすると、この設定は直ちに有効となり、システムはすべての保存されたアノテーションに対して埋め込みモデルを利用して埋め込みを生成し保存します。
 
-<figure><img src="../../../en/.gitbook/assets/setting-parameters-for-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライのパラメータ設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/483f9e6e1b8a222868ac32e9b0b12350.webp" alt=""><figcaption><p>アノテーションリプライのパラメータ設定</p></figcaption></figure>
 
 ### 会話デバッグページでアノテーションを追加する
 
 デバッグおよびプレビューページでモデルのリプライ情報に直接アノテーションを追加または編集できます。
 
-<figure><img src="../../../en/.gitbook/assets/add-annotation-reply.png" alt=""><figcaption><p>アノテーションリプライを追加する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/c753c1e2babd3cd4e40f349c53d03390.webp" alt=""><figcaption><p>アノテーションリプライを追加する</p></figcaption></figure>
 
 必要な高品質リプライに編集して保存します。
 
-<figure><img src="../../../en/.gitbook/assets/editing-annotated-replies.png" alt=""><figcaption><p>アノテーションリプライを編集する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/1cb0f1a4819287ca89c8e6ce3b56bbff.webp" alt=""><figcaption><p>アノテーションリプライを編集する</p></figcaption></figure>
 
 同じユーザー質問を再度入力すると、システムは既に保存されたアノテーションを使用してユーザー質問に直接リプライします。
 
-<figure><img src="../../../en/.gitbook/assets/annotaiton-reply.png" alt=""><figcaption><p>保存されたアノテーションを通じてユーザー質問にリプライする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/6350513833017c827660c273cd3dcdba.webp" alt=""><figcaption><p>保存されたアノテーションを通じてユーザー質問にリプライする</p></figcaption></figure>
 
 ### ログとアノテーションでアノテーションリプライを有効にする
 
 「アプリケーション構築->ログとアノテーション->アノテーション」からアノテーションリプライのスイッチを有効にします：
 
-<figure><img src="../../../en/.gitbook/assets/logs-annotation-switch.png" alt=""><figcaption><p>ログとアノテーションでアノテーションリプライを有効にする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/07c57ea858385985fa83ac30289cc138.webp" alt=""><figcaption><p>ログとアノテーションでアノテーションリプライを有効にする</p></figcaption></figure>
 
 ### アノテーションバックエンドでアノテーションリプライのパラメータを設定する
 
@@ -63,22 +63,22 @@
 
 **埋め込みモデル**：アノテーションテキストをベクトル化するために使用され、モデルの切り替え時には再度埋め込みが生成されます。
 
-<figure><img src="../../../en/.gitbook/assets/annotated-replies-initial.png" alt=""><figcaption><p>アノテーションリプライのパラメータを設定する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/2eef1ac7dfeae549201c9e5e6ebbcdba.webp" alt=""><figcaption><p>アノテーションリプライのパラメータを設定する</p></figcaption></figure>
 
 ### アノテーションQ&Aペアを一括インポートする
 
 一括インポート機能内で、アノテーションインポートテンプレートをダウンロードし、テンプレート形式に従ってアノテーションQ&Aペアを編集します。編集が完了したら、一括インポートします。
 
-<figure><img src="../../../en/.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括インポートする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/a362886fc1f3f1e05fc0386950bb5a0f.webp" alt=""><figcaption><p>アノテーションQ&Aペアを一括インポートする</p></figcaption></figure>
 
 ### アノテーションQ&Aペアを一括エクスポートする
 
 アノテーション一括エクスポート機能を通じて、システム内に保存されたすべてのアノテーションQ&Aペアを一度にエクスポートできます。
 
-<figure><img src="../../../en/.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>アノテーションQ&Aペアを一括エクスポートする</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/2bd8b91e75d8754d944095d76e295508.webp" alt=""><figcaption><p>アノテーションQ&Aペアを一括エクスポートする</p></figcaption></figure>
 
 ### アノテーションリプライのヒット履歴を確認する
 
 アノテーションヒット履歴機能内で、すべてのヒットしたアノテーションの編集履歴、ヒットしたユーザー質問、リプライ回答、ヒットソース、マッチング類似度スコア、ヒット時間などの情報を確認できます。これらのシステム情報に基づいて、アノテーション内容を継続的に改善することができます。
 
-<figure><img src="../../../en/.gitbook/assets/view-annotation-hit-history.png" alt=""><figcaption><p>アノテーションリプライのヒット履歴を確認する</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/5b04cde5481067b07edbda3083fa9c8b.webp" alt=""><figcaption><p>アノテーションリプライのヒット履歴を確認する</p></figcaption></figure>

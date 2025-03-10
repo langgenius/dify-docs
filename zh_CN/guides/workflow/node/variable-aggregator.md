@@ -16,15 +16,15 @@
 
 未添加变量聚合，分类1 和 分类 2 分支经不同的知识库检索后需要重复定义下游的 LLM 和直接回复节点。
 
-<figure><img src="../../../.gitbook/assets/image (278).png" alt=""><figcaption><p>问题分类（无变量聚合）</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/764e3268c5401e862da6900a140e6b14.webp" alt=""><figcaption><p>问题分类（无变量聚合）</p></figcaption></figure>
 
 添加变量聚合，可以将两个知识检索节点的输出聚合为一个变量。
 
-<figure><img src="../../../.gitbook/assets/image (276).png" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/0417ae2c6d94e911e6c23b9ad6d9d3e1.webp" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
 
 **IF/ELSE 条件分支后的多路聚合**
 
-<figure><img src="../../../.gitbook/assets/image (277).png" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/62b322c8126e05e2fd5edfc8ecf819e9.webp" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
 
 ### 格式要求
 

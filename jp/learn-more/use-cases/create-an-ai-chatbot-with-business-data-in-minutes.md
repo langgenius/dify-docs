@@ -6,7 +6,7 @@
 
 Difyは、オープンソースで非常に簡単に使えるLLMOpsプラットフォームであり、視覚的に迅速にAIアプリケーションを作成および運営するためのツールプラットフォームです。Difyは、視覚的なプロンプトの編成、運営、データセット管理などの機能を提供します。AIに関する技術的な研究や難解な概念の理解は不要です。Difyは、OpenAI、Azure OpenAI、Antropicなどの優れた大規模言語モデル提供者と連携しており、GPTシリーズ、Claudeシリーズのモデルを提供しています。将来的には優れたオープンソースモデルも接続される予定です。これらはすべて設定で切り替えて使用できます。これにより、アプリケーションを作成およびデバッグする際に、異なるモデルの効果を比較して、最適なモデルを選択できます。**Difyを基にすれば、AIインテリジェントカスタマーサービスを簡単に開発できるだけでなく、自分の使用習慣やニーズに合ったテキスト執筆アシスタント、バーチャルリクルートメントHRエキスパート、会議まとめアシスタント、翻訳アシスタントなどのさまざまなテキスト生成型アプリケーションも作成できます。**
 
-<figure><img src="../../.gitbook/assets/image (53).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/922db6803d151c4c5df659167c232ba5.webp" alt=""><figcaption></figcaption></figure>
 
 **前提条件**
 
@@ -22,7 +22,7 @@ AIモデルのメッセージコールにはトークンが消費されます。
 
 会社の既存のナレッジベースや製品ドキュメントに基づいてAIカスタマーサービスを構築し、ユーザーと交流したい場合、製品に関するドキュメントをできるだけ多くDifyのデータセットにアップロードする必要があります。Difyはデータの**セグメント処理とクレンジング**を行います。Difyデータセットは、高品質と経済的な二つのインデックスモードをサポートしており、高品質モードを使用することをお勧めします。トークンを消費しますが、より高い精度を提供します。操作手順： 【データセット】ページで新しいデータセットを作成し、ビジネスデータをアップロードします（複数のテキストの一括アップロードをサポート）。クレンジング方法を選択し、【保存して処理】をクリックするだけで、数秒で処理が完了します。
 
-<figure><img src="../../.gitbook/assets/image (25).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/c644cc527b0b4d72cf3324da8c0d339c.webp" alt=""><figcaption></figcaption></figure>
 
 **AIアプリケーションを作成し、AIに指示を与える**
 
@@ -40,28 +40,28 @@ AIモデルのメッセージコールにはトークンが消費されます。
 
 > オープニング：こんにちは、私はBob☀️、Difyの最初のAIメンバーです。Dify製品、チーム、さらにはLLMOpsに関する質問について何でも話し合うことができます。
 
-<figure><img src="../../.gitbook/assets/image (92).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/b9d2e6459e333f9e88cb293bdc3af891.webp" alt=""><figcaption></figcaption></figure>
 
 **AIインテリジェントカスタマーサービスのパフォーマンスをデバッグし、公開する**
 
 以上の設定が完了したら、現在のページ右側でメッセージを送信してパフォーマンスが期待通りかどうかをデバッグできます。その後、【公開】をクリックします。この時点で、AIインテリジェントカスタマーサービスが完成しています。
 
-<figure><img src="../../.gitbook/assets/image (87).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/e7ac19be02ac75e397f3b27bfb446b22.webp" alt=""><figcaption></figcaption></figure>
 
 **AIカスタマーサービスアプリケーションを前端ページに埋め込む**
 
 このステップでは、準備が整ったAIインテリジェントカスタマーサービスを公式サイトのページに埋め込みます。順に【概観】->【埋め込み】をクリックし、**scriptタグ方式を選択し、**scriptコードを公式サイトの`<head>`または`<body>`タグにコピーします。技術的な知識がない場合は、公式サイトの開発担当者にコードの貼り付けとページの更新を頼んでください。
 
-<figure><img src="../../.gitbook/assets/image (59).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/f8d28b1f61d73337f7742f028c80c1c2.webp" alt=""><figcaption></figcaption></figure>
 
 1. コピーしたコードを公式サイトの目標位置に貼り付けます：
 
-<figure><img src="../../.gitbook/assets/image (93).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/0aa14a6ef80fc1e2587bc41ee5d38a3c.webp" alt=""><figcaption></figcaption></figure>
 
 1. 公式サイトを更新すると、ビジネスデータを持つ公式サイトのAIインテリジェントカスタマーサービスが完成します。効果を試してみてください：
 
-<figure><img src="../../.gitbook/assets/image (100).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/ff645bb4308f1b3144e842533040542f.webp" alt=""><figcaption></figcaption></figure>
 
 以上は、Dify公式サイトのAIカスタマーサービスBobの例を通じて、Difyアプリケーションを公式サイトに埋め込む具体的な手順を示しました。もちろん、Difyが提供するさらに多くの機能を使用してAIカスタマーサービスのパフォーマンスを向上させることも可能です。たとえば、変数設定を追加して、ユーザーがインタラクションを開始する前に名前や使用している具体的な製品などの必要な情報を入力させることができます。ぜひ一緒に探求し、企業のAIインテリジェントカスタマーサービスをカスタマイズしてみてください。
 
-<figure><img src="../../.gitbook/assets/image (85).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/886540aeeaac740faf99ed2006013df3.webp" alt=""><figcaption></figcaption></figure>

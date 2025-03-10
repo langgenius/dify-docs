@@ -12,13 +12,13 @@
 
 访问 [AWS Bedrock](https://aws.amazon.com/bedrock/)，创建 Knowledge Base 服务。
 
-<figure><img src="../../.gitbook/assets/image (360).png" alt=""><figcaption><p>创建 AWS Bedrock Knowledge Base</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/e77cc4ede12f4d0aac63ba8d4976e0f1.webp" alt=""><figcaption><p>创建 AWS Bedrock Knowledge Base</p></figcaption></figure>
 
 ### 2. 构建后端 API 服务
 
 Dify 平台尚不能直接连接 AWS Bedrock Knowledge Base，需要开发团队参考 Dify 关于外部知识库连接的 [API 定义](../../guides/knowledge-base/external-knowledge-api-documentation.md)，手动创建后端 API 服务，建立与 AWS Bedrock 的连接。具体架构示意图请参考：
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption><p>构建后端 API 服务</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/4924a1f8e1fd29d95440bd4b96304380.webp" alt=""><figcaption><p>构建后端 API 服务</p></figcaption></figure>
 
 你可以参考以下 2 个代码文件，构建后端服务 API。
 
@@ -117,7 +117,7 @@ class ExternalDatasetService:
 
 登录 AWS Bedrock Knowledge 后台，获取已创建 Knowledge Base 的 ID。此参数将会在[后续步骤](how-to-connect-aws-bedrock.md#id-5.-lian-jie-wai-bu-zhi-shi-ku)用于与 Dify 平台的连接。
 
-<figure><img src="../../.gitbook/assets/image (359).png" alt=""><figcaption><p>获取 AWS Bedrock Knowledge Base ID</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/8be4da909ca1cd4821f2dfa0774a2096.webp" alt=""><figcaption><p>获取 AWS Bedrock Knowledge Base ID</p></figcaption></figure>
 
 ### 4. 关联外部知识 API
 
@@ -129,13 +129,13 @@ class ExternalDatasetService:
 * API 接口地址，外部知识库的连接地址，可在[第二步](how-to-connect-aws-bedrock.md#id-2.-gou-jian-hou-duan-api-fu-wu)中自定义。示例 `api-endpoint/retrieval`；
 * API Key，外部知识库连接密钥，可在[第二步](how-to-connect-aws-bedrock.md#id-2.-gou-jian-hou-duan-api-fu-wu)中自定义。
 
-<figure><img src="../../.gitbook/assets/image (362).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/b0788d0454bc66bbee848e6124cb7b92.webp" alt=""><figcaption></figcaption></figure>
 
 ### 5. 连接外部知识库
 
 前往 **“知识库”** 页，点击添加知识库卡片下方的 **“连接外部知识库”** 跳转至参数配置页面。
 
-<figure><img src="../../.gitbook/assets/image (363).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/08110adeb319594e7a4220c6da90309e.webp" alt=""><figcaption></figcaption></figure>
 
 填写以下参数：
 
@@ -152,7 +152,7 @@ class ExternalDatasetService:
 
     \*\*Score 阈值：\*\*文本片段筛选的相似度阈值，只召回超过设置分数的文本片段，默认值为 0.5。数值越高说明对于文本与问题要求的相似度越高，预期被召回的文本数量也越少，结果也会相对而言更加精准。
 
-<figure><img src="../../.gitbook/assets/image (364).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/397d7b5ec9356c591d3257405e9f16ec.webp" alt=""><figcaption></figcaption></figure>
 
 设置完成后即可建立与外部知识库 API 的连接。
 
@@ -160,8 +160,8 @@ class ExternalDatasetService:
 
 建立与外部知识库的连接后，开发者可以在 **“召回测试”** 中模拟可能的问题关键词，预览从 AWS Bedrock Knowledge Base 召回的文本分段。
 
-<figure><img src="../../.gitbook/assets/image (366).png" alt=""><figcaption><p>测试外部知识库的连接与召回</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/8e9dff3c5cf41a35e481831af49b88b3.webp" alt=""><figcaption><p>测试外部知识库的连接与召回</p></figcaption></figure>
 
 若对于召回结果不满意，可以尝试修改召回参数或自行调整 AWS Bedrock Knowledge Base 的检索设置。
 
-<figure><img src="../../.gitbook/assets/image (367).png" alt=""><figcaption><p>调整 AWS Bedrock Knowledge Base 文本处理参数</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/1a4bee7c76a45bdeae511fe44ca5052a.webp" alt=""><figcaption><p>调整 AWS Bedrock Knowledge Base 文本处理参数</p></figcaption></figure>

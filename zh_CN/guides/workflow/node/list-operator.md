@@ -10,11 +10,11 @@
 
 例如在一个应用中，允许用户同时上传文档文件和图片文件两种不同类型的文件。需要使用**列表操作节点**进行分拣，将不同的文件类型交由不同流程处理。
 
-<figure><img src="../../../.gitbook/assets/image (15).png" alt=""><figcaption><p>分流不同的文件类型</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/ed82fa38fc0e8ead4ed2ff796331c6f0.webp" alt=""><figcaption><p>分流不同的文件类型</p></figcaption></figure>
 
 列表操作节点一般用于提取数组变量中的信息，通过设置条件将其转化为能够被下游节点所接受的变量类型。它的结构分为**输入变量**、**过滤条件**、**排序（可选）**、**取前 N 项（可选）**、**输出变量**。
 
-<figure><img src="../../../.gitbook/assets/image (17).png" alt=""><figcaption><p>列表操作节点</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/2db45ba13c0137635511ef3e727ae835.webp" alt=""><figcaption><p>列表操作节点</p></figcaption></figure>
 
 #### 输入变量
 
@@ -80,6 +80,6 @@
 3. 提取文档文件变量，传递至 “文档提取器” 节点；提取图片文件变量，传递至 “LLM” 节点。
 4. 在末尾添加 “直接回复” 节点，填写 LLM 节点的输出变量。
 
-<figure><img src="../../../.gitbook/assets/image (375).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/ffa50d6f9b26d22867b7a51880288e1d.webp" alt=""><figcaption></figcaption></figure>
 
 应用使用者同时上传文档文件和图片后，文档文件自动分流至文档提取器节点，图片文件自动分流至 LLM 节点以实现对于混合文件的共同处理。

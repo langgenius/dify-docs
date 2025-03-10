@@ -13,33 +13,33 @@
 
 如你在应用编排时有设置变量的填写要求，则在对话前需要按提示填写信息才可进入对话窗口：
 
-<figure><img src="../../../.gitbook/assets/image (63) (1).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/9adb7e30025ab6882db98bfba694c3d9.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 填写必要内容，点击 “开始对话” 按钮，开始聊天。
 
-<figure><img src="../../../.gitbook/assets/image (94) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/b3eea9cec1ee13ca71ce8c201e0133ef.webp" alt=""><figcaption></figcaption></figure>
 
 移动到 AI 的回答上，可以复制会话内容，给回答 “赞” 和 “踩”。
 
-<figure><img src="../../../.gitbook/assets/image (26) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/402cc2896e30562583d4f523b771b419.webp" alt=""><figcaption></figcaption></figure>
 
 ### 对话的创建、置顶和删除
 
 点击 “新对话” 按钮开始一个新的对话。移动到一个会话上，可以对会话进行 “置顶” 和 “删除” 操作。
 
-<figure><img src="../../../.gitbook/assets/image (47) (1).png" alt="" width="242"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/0762a6759bf36753f4fddf7e30dc227b.webp" alt="" width="242"><figcaption></figcaption></figure>
 
 ### 对话开场白
 
 若在应用编排时开启了「对话开场白」功能，则在创建一个新对话时 AI 应用会自动发起第一句对话：
 
-<figure><img src="../../../.gitbook/assets/image (51) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/b3eea9cec1ee13ca71ce8c201e0133ef.webp" alt=""><figcaption></figcaption></figure>
 
 ### 下一步问题建议
 
 若在应用编排时开启了「下一步问题建议」功能，则在对话后系统自动生成 3 个相关问题建议：
 
-<figure><img src="../../../.gitbook/assets/image (77) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/1e132aa5400b880a2a3ab63663a949cd.webp" alt=""><figcaption></figcaption></figure>
 
 ### 语音转文字
 
@@ -47,7 +47,7 @@
 
 _请注意确保你使用的设备环境已经授权使用麦克风。_
 
-<figure><img src="../../../.gitbook/assets/image (79) (1).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/launch-your-webapp-quickly/6b1981ff57900708b89ac6c813d75358.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ### 引用与归属
 

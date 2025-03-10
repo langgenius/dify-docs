@@ -31,7 +31,7 @@ if/else 条件に基づいてチャットフローとワークフローを2つ�
 
 ### シナリオ
 
-<figure><img src="../../../../img/jp-ifelse.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/20dd293544e86a70979b38bdeb9b6c60.webp" alt=""><figcaption></figcaption></figure>
 
 **テキスト要約ワークフロー**を例に、各条件を説明します。
 
@@ -45,4 +45,4 @@ if/else 条件に基づいてチャットフローとワークフローを2つ�
 
 複雑な条件判断が必要な場合、複数条件を設定し、条件間に **AND** または **OR** を設定することができます。これは条件間に**交集**または**并集**を取ることを意味します。
 
-<figure><img src="../../../.gitbook/assets/jp-ifelse-setting.png" alt="" width="369"><figcaption><p>複数条件の判断</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/0257c553c1b50d40fd2c567a824071b5.webp" alt="" width="369"><figcaption><p>複数条件の判断</p></figcaption></figure>

@@ -15,20 +15,20 @@
 1. 在使用外部数据工具之前，你需要准备一个 API 和用于鉴权的 API Key，请阅读[external-data-tool.md](../extension/api-based-extension/external-data-tool.md "mention")
 2. Dify 提供了集中式的 API 管理，在设置界面统一添加 API 扩展配置后，即可在 Dify 上的各类应用中直接使用。
 
-<figure><img src="../../.gitbook/assets/api_based.png" alt=""><figcaption><p>API-based Extension</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/knowledge-base/84d3295793137ac65a04a33f7845c815.webp" alt=""><figcaption><p>API-based Extension</p></figcaption></figure>
 
 3. 我们以“查询天气”为例，在“新增基于 API 的扩展”对话框输入名字，API 端点，API Key。保存后我们就可以调用 API 了。
 
-<figure><img src="../../.gitbook/assets/weather inquiry.png" alt=""><figcaption><p>Weather Inquiry</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/knowledge-base/1a8fa6ae33699c0410deafeda1328493.webp" alt=""><figcaption><p>Weather Inquiry</p></figcaption></figure>
 
 4. 在提示词编排页面，点击“工具”右侧的“+添加”按钮，在打开的“添加 工具”对话框，填写名称和变量名称（变量名称会被引用到提示词中，请填写英文），以及选择第 2 步中已经添加的基于 API 的扩展。
 
-<figure><img src="../../.gitbook/assets/api_based_extension1.png" alt=""><figcaption><p>External_data_tool</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/knowledge-base/bfdc45c3a32ec6a9459bf91807876425.webp" alt=""><figcaption><p>External_data_tool</p></figcaption></figure>
 
 5. 这样，我们在提示词编排框就可以把查询到的外部数据拼装到提示词中。比如我们要查询今天的伦敦天气，可以添加`location` 变量，输入"London"，结合外部数据工具的扩展变量名称`weather_data`，调试输出如下：
 
-<figure><img src="../../.gitbook/assets/Weather_search_tool.jpeg" alt=""><figcaption><p>Weather_search_tool</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/knowledge-base/c6998108416588b9bad7964c99b9f20b.webp" alt=""><figcaption><p>Weather_search_tool</p></figcaption></figure>
 
 在对话日志中，我们也可以看到 API 返回的实时数据：
 
-<figure><img src="../../.gitbook/assets/log.jpeg" alt="" width="335"><figcaption><p>Prompt Log</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/knowledge-base/7c6cd8b9244fcd50681e1e7622f1b105.webp" alt="" width="335"><figcaption><p>Prompt Log</p></figcaption></figure>

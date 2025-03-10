@@ -16,7 +16,7 @@ _注：CODING DevOps 是腾讯云旗下的一站式研发管理平台及云原�
 
 例如这样 🔽
 
-<figure><img src="../../.gitbook/assets/640.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/b6a8430176ed4a12a3d96a1e28416b40.webp" alt=""><figcaption></figcaption></figure>
 
 这里的“胡言乱语”指的是它会用其他不相关的概念进行回答，并且**你并不能够预期什么问题会有什么回答，这在商业场景下十分致命。在大多数情况下，ChatGPT 对于一些带有公理性质**的知识回答是没有问题的，作为一个可以日常侃大山闲聊的对象依然是合格的，可是你却看着它的强大的学习和理解能力望洋兴叹。
 
@@ -42,7 +42,7 @@ _注：CODING DevOps 是腾讯云旗下的一站式研发管理平台及云原�
 
 但是，它现在也只是一个**通用型聊天机器人**，离商业可用的**专用型问答机器人**还差一个语料的距离。
 
-<figure><img src="../../.gitbook/assets/640-4.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/bb125f804381861db1f5965084a138a9.webp" alt=""><figcaption></figcaption></figure>
 
 ### **准备语料**
 
@@ -60,21 +60,21 @@ _是的没错，你也可以把电子书上传进来，用 AI 帮助你提炼书
 
 在正式开始训练前，我们得先把教材准备好。好在 CODING 之前的所有文档皆以 Git 代码仓库 + Markdown 的形式进行协作，因此我只需要先把文档先拉到本地中。不过我现在碰到了第一个问题，那就是如何把仓库中的这一系列 .md 文档文件合并至同一个文件中？
 
-<figure><img src="../../.gitbook/assets/640-7.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/0105637f87d88e6217a199cca0bca1d7.webp" alt=""><figcaption></figcaption></figure>
 
 不怕，让 AI 给我们写一段 python 吧。
 
-<figure><img src="../../.gitbook/assets/640-8.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/7630a735ae356bcba7b8bc8e6317b819.webp" alt=""><figcaption></figcaption></figure>
 
 试着运行这个脚本，oh，输入路径后就成功生成了一篇总合文档！如果你想了解如何让 AI 给你写代码，不妨阅读[《如何用狗屁通（GPT ）解决一个套娃问题》](http://mp.weixin.qq.com/s?__biz=MzU2Njg1NDA3Mw==\&mid=2247484248\&idx=1\&sn=50809b40f520c767483e1a7b0eefb9c1\&chksm=fca76b8ecbd0e298e627140d63e7b3383d226ab293a2e8fefa04b5a1ee12f187520560ec1579\&scene=21#wechat_redirect)。
 
-<figure><img src="../../.gitbook/assets/640-9.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/b898c791c9e523e226c4bbbb0bd9a0da.webp" alt=""><figcaption></figcaption></figure>
 
 ### **开始训练**
 
 现在要做的事，就是上传这个文件并静待训练成果了。
 
-<figure><img src="../../.gitbook/assets/640.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/c9b5eeccebd379c710de0508999d3968.webp" alt=""><figcaption></figcaption></figure>
 
 数据自动分段与清洗完成后，在刚创建的应用设置中的上下文，关联这一篇文档。为了保证响应速度和成本控制，这里直接用 gpt-4o 模型。
 
@@ -84,17 +84,17 @@ _是的没错，你也可以把电子书上传进来，用 AI 帮助你提炼书
 
 现在再去和这个机器人互动，看看它会回答什么？
 
-<figure><img src="../../.gitbook/assets/640-10.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/3c25c1ec53988c758a1424ffda8a2481.webp" alt=""><figcaption></figcaption></figure>
 
 好了，你已经是个成熟的问答机器人了，可以回答更加复杂的产品问题了。
 
-<figure><img src="../../.gitbook/assets/640-11.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/b62766b87a26b44ce806eab40896acad.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../.gitbook/assets/640-12.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/fbd45604a91a6bffc21f5166aa9359cc.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../.gitbook/assets/640-13.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/46b889e7380e48c51f48317ccd2a79b7.webp" alt=""><figcaption></figcaption></figure>
 
-<figure><img src="../../.gitbook/assets/640-14.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/f887536868970d8c178b0e4aebfc32ef.webp" alt=""><figcaption></figcaption></figure>
 
 这个问答机器人花了多久做出来，成本如何？
 

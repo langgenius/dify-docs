@@ -2,7 +2,7 @@
 
 调试完成之后点击右上角的「发布」可以将该工作流保存并快速发布成为不同类型的应用。
 
-<figure><img src="../../.gitbook/assets/output (4) (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/f8fb533bfc488d3eab087b9aa47280da.webp" alt=""><figcaption></figcaption></figure>
 
 对话型应用支持发布为：
 

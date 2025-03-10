@@ -6,7 +6,7 @@
 
 Dify 是一个开源且非常简单易用的 LLMOps 平台，让你能够可视化快速创建并运营 AI 应用的工具平台。Dify 提供了可视化的 Prompt 编排、运营、知识库管理等功能。你甚至无需具备 AI 相关的技术研究和晦涩概念的理解。Dify 对接了各个出色的大型语言模型供应商，如 OpenAI、Azure OpenAI、Antropic 等，已提供 GPT 系列、Claude 系列模型，未来也将接入优秀的开源模型。这一切都是可以在设置中切换使用。这意味着，你在创建调试应用时，可以对比不同模型的效果，以确定使用最适合你的模型。**基于 Dify，你不仅可以很轻易地开发一个 AI 智能客服，还可以创造符合你使用习惯和需求的文本写作助手、虚拟招聘 HR 专家、会议总结助手、翻译助手等各种文本生成型应用，为你的工作提效。**
 
-<figure><img src="../../.gitbook/assets/image (53) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/922db6803d151c4c5df659167c232ba5.webp" alt=""><figcaption></figcaption></figure>
 
 **前提条件**
 
@@ -22,7 +22,7 @@ Dify 是一个开源产品，你可以在 GitHub (https://github.com/langgenius/
 
 如果你希望能基于公司现有的知识库和产品文档构建人工智能客服，来与用户交流，那么你需要尽可能将你产品有关的文档上传到 Dify 的知识库中。Dify 帮助你完成数据的**分段处理和清洗**。Dify知识库支持高质量和经济两种索引模式，我们推荐使用高质量模式，会消耗 token 但能提供更高的准确性。操作步骤：在 【知识库】页面，新建一个知识库，上传你的业务数据（支持批量上传多个文本），选择清洗方式，【保存并处理】，只需几秒钟即可完成处理。
 
-<figure><img src="../../.gitbook/assets/image (25) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/c644cc527b0b4d72cf3324da8c0d339c.webp" alt=""><figcaption></figcaption></figure>
 
 **创建一个 AI 应用，给 AI 指令**
 
@@ -40,28 +40,28 @@ Dify 是一个开源产品，你可以在 GitHub (https://github.com/langgenius/
 
 > 开场白：你好，我是 Bob☀️, Dify的第一位AI成员。你可以与我讨论任何与Dify产品、团队甚至LLMOps相关的问题。
 
-<figure><img src="../../.gitbook/assets/image (92) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/b9d2e6459e333f9e88cb293bdc3af891.webp" alt=""><figcaption></figcaption></figure>
 
 **调试 AI 智能客服的表现并发布**
 
 完成以上的设置后，你可以在当前的页面右侧给它发送信息调试它的表现是否符合预期。然后点击【发布】。这时候你就已经拥有了一个 AI 智能客服。
 
-<figure><img src="../../.gitbook/assets/image (87) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/e7ac19be02ac75e397f3b27bfb446b22.webp" alt=""><figcaption></figcaption></figure>
 
 **将 AI 客服应用嵌入到你的前端页面**
 
 这一步，是将准备好的 AI 智能客服嵌入到你的官网页面。依次点击【概览】->【嵌入】，选择 \*\*script 标签方式，\*\*将 script 代码复制到你网站 `<head>` 或 `<body>` 标签中。如你是非技术人员，可让负责官网的开发帮忙粘贴并更新页面。
 
-<figure><img src="../../.gitbook/assets/image (59) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/f8d28b1f61d73337f7742f028c80c1c2.webp" alt=""><figcaption></figcaption></figure>
 
 1. 将复制的代码粘贴到你官网的目标位置：
 
-<figure><img src="../../.gitbook/assets/image (93) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/0aa14a6ef80fc1e2587bc41ee5d38a3c.webp" alt=""><figcaption></figcaption></figure>
 
 1. 更新你的官网，即可以得到一个拥有你业务数据的官网 AI智能客服。试一试效果：
 
-<figure><img src="../../.gitbook/assets/image (100) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/ff645bb4308f1b3144e842533040542f.webp" alt=""><figcaption></figcaption></figure>
 
 以上通过 Dify 官网 AI 客服 Bob 的例子演示了如何将 Dify 应用嵌入到官网的具体操作步骤。当然，你还可以通过 Dify 提供的更多特性来增加 AI 客服的表现，例如增加一些变量设置，让用户在互动前填入必要的判断信息，如名字、使用的具体产品等等。 欢迎你一起来探索，定制企业的 AI 智能客服。
 
-<figure><img src="../../.gitbook/assets/image (85) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/886540aeeaac740faf99ed2006013df3.webp" alt=""><figcaption></figcaption></figure>

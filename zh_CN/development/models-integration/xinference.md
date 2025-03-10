@@ -29,7 +29,7 @@
 
     进入 `http://127.0.0.1:9997` 选择需要部署的模型和规格进行部署，如下图所示：
 
-    <figure><img src="../../.gitbook/assets/image (131).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai/img/zh_CN/models-integration/5db924ca8cb21a4916c698818202421c.webp" alt=""><figcaption></figcaption></figure>
 
     由于不同模型在不同硬件平台兼容性不同，请查看 [Xinference 内置模型](https://inference.readthedocs.io/en/latest/models/builtin/index.html) 确定创建的模型是否支持当前硬件平台。
 4.  获取模型 UID

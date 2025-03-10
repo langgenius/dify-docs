@@ -14,7 +14,7 @@
 
 下图为一个最基础的知识库问答应用示例，该流程的执行逻辑为：知识库检索作为 LLM 节点的前置步骤，在用户问题传递至 LLM 节点之前，先在知识检索节点内将匹配用户问题最相关的文本内容并召回，随后在 LLM 节点内将用户问题与检索到的上下文一同作为输入，让 LLM 根据检索内容来回复问题。
 
-<figure><img src="../../../.gitbook/assets/image (244).png" alt=""><figcaption><p>知识库问答应用示例</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/c7931c0fa6a8e7704714d5b99e8589f5.webp" alt=""><figcaption><p>知识库问答应用示例</p></figcaption></figure>
 
 ***
 
@@ -27,11 +27,11 @@
 3. 指定[召回模式](../../../learn-more/extended-reading/retrieval-augment/retrieval.md)。自 9 月 1 日后，知识库的召回模式将自动切换为多路召回，不再建议使用 N 选 1 召回模式；
 4. 连接并配置下游节点，一般为 LLM 节点；
 
-<figure><img src="../../../.gitbook/assets/image (74).png" alt=""><figcaption><p>知识检索配置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/d1136ffa6e63b349f09d3f43bd02d7b1.webp" alt=""><figcaption><p>知识检索配置</p></figcaption></figure>
 
 **输出变量**
 
-<figure><img src="../../../.gitbook/assets/image (250).png" alt="" width="272"><figcaption><p>输出变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/8eb59cea454d41dbe0855687490ee735.webp" alt="" width="272"><figcaption><p>输出变量</p></figcaption></figure>
 
 知识检索的输出变量 `result` 为从知识库中检索到的相关文本分段。其变量数据结构中包含了分段内容、标题、链接、图标、元数据信息。
 
@@ -45,6 +45,6 @@
 
 当用户提问时，若在知识检索中召回了相关文本，文本内容会作为上下文变量中的值填入提示词，提供 LLM 回复问题；若未在知识库检索中召回相关的文本，上下文变量值为空，LLM 则会直接回复用户问题。
 
-<figure><img src="../../../.gitbook/assets/image (77).png" alt=""><figcaption><p>配置下游 LLM 节点</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/e39d496a350885c0e2f336fa7fed4de4.webp" alt=""><figcaption><p>配置下游 LLM 节点</p></figcaption></figure>
 
 该变量除了可以作为 LLM 回复问题时的提示词上下文作为外部知识参考引用，另外由于其数据结构中包含了分段引用信息，同时可以支持应用端的 [**引用与归属**](../../knowledge-base/retrieval-test-and-citation.md#id-2-yin-yong-yu-gui-shu) 功能。

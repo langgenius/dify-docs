@@ -15,7 +15,7 @@
 * Difyプラットフォームは、クラウドサービスプロバイダーがホストするナレッジベース内のテキストコンテンツを直接取得できます。そのため、開発者はDify内のナレッジベースにコンテンツを再度移動させる必要がありません。
 * Difyプラットフォームは、独自に構築したナレッジベース内でアルゴリズムによって処理されたテキストコンテンツを直接取得できます。これにより、開発者は自らのナレッジベースの情報検索メカニズムに注力し、情報のリコール精度を継続的に最適化・向上させることができます。
 
-<figure><img src="../../.gitbook/assets/image (31).png" alt=""><figcaption><p>外部ナレッジベースとの接続の原理</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/c400f720458a25b122fab5637f5200fc.webp" alt=""><figcaption><p>外部ナレッジベースとの接続の原理</p></figcaption></figure>
 
 以下は、外部ナレッジに接続するための詳細な手順です:
 
@@ -33,13 +33,13 @@ APIサービスの設定の前に、適合した外部ナレッジベースAPI�
 * API Endpoint、[外部ナレッジベースAPI](external-knowledge-api-documentation.md)エンドポイントのURL、例：api-endpoint/retrieval；詳しい指示については外部ナレッジAPIを参照してください；
 * APIキー、外部ナレッジへの接続キー、詳しい指示については[外部ナレッジベースAPI](external-knowledge-api-documentation.md)を参照してください。
 
-<figure><img src="../../../img/connect-kb-1-en.png" alt=""><figcaption><p>外部ナレッジAPIの関連付け</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/03751a45dd19d006b056bdf8a9daa564.webp" alt=""><figcaption><p>外部ナレッジAPIの関連付け</p></figcaption></figure>
 
 ## 3. 外部ナレッジベースの接続
 
 **「ナレッジベース」**ページに移動し、**「外部ナレッジベースの接続」**をクリックして、パラメータ設定ページに進みます。
 
-<figure><img src="../../../img/connect-kb-2-en.png" alt=""><figcaption><p>外部ナレッジベースの接続</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/e186cc33ff45f897d85ffe02be2ce703.webp" alt=""><figcaption><p>外部ナレッジベースの接続</p></figcaption></figure>
 
 以下のパラメータを入力してください：
 
@@ -56,13 +56,13 @@ APIサービスの設定の前に、適合した外部ナレッジベースAPI�
 
     **Score 閾値:** テキストセグメントの選択における類似性の閾値を設定します。このスコアを超えるテキストセグメントのみが取得されます。デフォルト値は0.5で、数値が高いほどテキストと問いの類似性が強く、取得されるテキストの数は少なくなります。
 
-<figure><img src="../../../img/connect-kb-3-en.webp" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/2ce4dd7527093f64837d49f8e1d6c808.webp" alt=""><figcaption></figcaption></figure>
 
 ## 4. 外部ナレッジベースのテストと検索結果
 
 外部ナレッジベースとの接続が確立された後、ユーザーは **「検索結果」**で可能なキーワードをシミュレーションし、取得されるテキストセグメントをプレビューできます。リコール結果に満足できない場合は、リコールパラメータを調整したり、**外部ナレッジベースの検索設定**を見直したりすることができます。
 
-<figure><img src="../../../img/connect-kb-4-en.png" alt=""><figcaption><p>外部ナレッジベースのテストと検索結果</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/9c7f3ef164fb50a6ab1134d856f7b7fa.webp" alt=""><figcaption><p>外部ナレッジベースのテストと検索結果</p></figcaption></figure>
 
 ## 5. アプリ内で外部ナレッジベースを統合する
 
@@ -70,13 +70,13 @@ APIサービスの設定の前に、適合した外部ナレッジベースAPI�
 
     構成ページで外部ナレッジベースを関連付けます
 
-<figure><img src="../../../img/connect-kb-5-en.png" alt=""><figcaption><p>チャットボット/エージェント</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/fcc4aebdb524f7c7fb3b47c89edeeca2.webp" alt=""><figcaption><p>チャットボット/エージェント</p></figcaption></figure>
 
 *   **チャットフロー/ワークフロー**タイプのアプリ
 
     **「ナレッジ検索」**ノードを追加し、外部ナレッジベースを選択します
 
-<figure><img src="../../../img/connect-kb-6-en.png" alt=""><figcaption><p>チャットフロー/ワークフロー</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/f806cc6585f099c691d467072047c351.webp" alt=""><figcaption><p>チャットフロー/ワークフロー</p></figcaption></figure>
 
 ## 6. 外部ナレッジベースの管理
 
@@ -94,7 +94,7 @@ APIサービスの設定の前に、適合した外部ナレッジベースAPI�
 
 外部ナレッジベースが関連付けられた **「外部ナレッジベースAPI」** と **「外部ナレッジベースID」** は変更できません。変更が必要な場合は、新しい **「外部ナレッジベースAPI」** を関連付けて再接続してください。
 
-<figure><img src="../../../img/connect-kb-7-en.webp" alt=""><figcaption><p>ナレッジベースの設置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/7662197a2f22bae84c8a2e7e8e0b59bb.webp" alt=""><figcaption><p>ナレッジベースの設置</p></figcaption></figure>
 
 ### 接続示例
 

@@ -19,7 +19,7 @@
 
 首先，登录 [Dify 平台](https://cloud.dify.ai/signin)，使用 Github 登录或者使用 Google 登录。此外，你也可以参考 Dify 官方教程 [Docker Compose 部署](https://docs.dify.ai/v/zh-hans/getting-started/install-self-hosted/docker-compose) 私有部署。
 
-<figure><img src="../../.gitbook/assets/create-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/c2e6a650e44b5156447fd5fc4405eca6.webp" alt=""><figcaption></figcaption></figure>
 
 登录成功后，进入 Dify 页面，我们按照下方步骤创建一个基础编排聊天助手应用
 
@@ -30,7 +30,7 @@
 5. 选择应用图标并为应用填写一个名称，比如基础编排聊天助手
 6. 点击创建
 
-<figure><img src="../../.gitbook/assets/config-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/47e33d27f17146fed6c06da05a2af7e2.webp" alt=""><figcaption></figcaption></figure>
 
 创建成功后会跳转到上图所示页面，此时继续配置应用
 
@@ -38,7 +38,7 @@
 2. 设置模型参数
 3. 填写应用提示词
 
-<figure><img src="../../.gitbook/assets/publish-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/8d958456caf503f5d49f9599e71e2c53.webp" alt=""><figcaption></figcaption></figure>
 
 配置完成后，可以在右侧对话框进行测试。测试完成后，进行如下操作：
 
@@ -48,7 +48,7 @@
 
 接着生成基础编排聊天助手 API 密钥
 
-<figure><img src="../../.gitbook/assets/create-basic-chatbot-apikey.jpg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/c7a94e8c6974ab7c60405d59f903fce6.webp" alt=""><figcaption></figcaption></figure>
 
 点击 "访问 API" 后，会跳转到上图的 API 管理页面，按照如下步骤获取 API 密钥：
 
@@ -64,23 +64,23 @@
 
 转到 [Azure Marketplace](https://portal.azure.com/#view/Microsoft\_Azure\_Marketplace/GalleryItemDetailsBladeNopdl/id/Microsoft.AzureBot/selectionMode\~/false/resourceGroupId//resourceGroupLocation//dontDiscardJourney\~/false/selectedMenuId/home/launchingContext\~/%7B%22galleryItemId%22%3A%22Microsoft.AzureBot%22%2C%22source%22%3A%5B%22GalleryFeaturedMenuItemPart%22%2C%22VirtualizedTileDetails%22%5D%2C%22menuItemId%22%3A%22home%22%2C%22subMenuItemId%22%3A%22Search%20results%22%2C%22telemetryId%22%3A%22a09b3b54-129b-475f-bd39-d7285a272043%22%7D/searchTelemetryId/258b225f-e7d5-4744-bfe4-69fa701d9d5a) 画面应该会直接到 Azure Bot Service 的创建画面。
 
-<figure><img src="../../.gitbook/assets/azure1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/cc8492e0ef639c5d9d56fa19fa598249.webp" alt=""><figcaption></figcaption></figure>
 
 确认所有设置然后创建。
 
-<figure><img src="../../.gitbook/assets/azure2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/7da8cd74f79040c89f755bc37ad79c02.webp" alt=""><figcaption></figcaption></figure>
 
 创建好后转到 Azure Bot 页面，先把 Subscription ID 保存好。
 
-<figure><img src="../../.gitbook/assets/azure3.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/8906e9c44b5a977cad7d55f0ffc44617.webp" alt=""><figcaption></figcaption></figure>
 
 然后选择 Configuration，保存好 Microsoft App ID 然后选择 Manage Password。
 
-<figure><img src="../../.gitbook/assets/azure4.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/884d6fe1a72ea1ee5cca4f8149b64b88.webp" alt=""><figcaption></figcaption></figure>
 
 创建和保存新 client secret。
 
-<figure><img src="../../.gitbook/assets/azure5.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/6cae93ea8848395e52b2ec7334366f8f.webp" alt=""><figcaption></figcaption></figure>
 
 ## 5. 创建你的聊天机器人
 
@@ -148,7 +148,7 @@ npx localtunnel --port 3978
 
 上述命令在你的本地服务器（运行在 3978 端口）和 localtunnel 创建的公共域之间建立了一个连接。一旦你有了 localtunnel 转发 URL，任何来自客户端对该 URL 的请求都会自动被定向到你的 FastAPI 后端。
 
-<figure><img src="../../.gitbook/assets/lt1 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/75c84e5ce115242bf25c4c1da67d2353.webp" alt=""><figcaption></figcaption></figure>
 
 ## 6. 配置你的 Azure Bot
 
@@ -158,23 +158,23 @@ npx localtunnel --port 3978
 
 将 `Message Endpoint` 替换为在第五步中获取的 localtunnel 转发 URL。
 
-<figure><img src="../../.gitbook/assets/azure6.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/836fccffe3eff086c4f31c1cd7a208b2.webp" alt=""><figcaption></figcaption></figure>
 
 #### 6.2 配置 Channels
 
 在左侧面板上选择 Channels，点击 Microsoft Teams。
 
-<figure><img src="../../.gitbook/assets/azure7.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/16276d2f341966c90971bc9ae1a1a6e3.webp" alt=""><figcaption></figcaption></figure>
 
 ## 7. Teams 测试
 
 回到在 6.2 步中创建的 Channels 页面，点击 “Open in Teams”
 
-<figure><img src="../../.gitbook/assets/azure8.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/ddb267c168f5920bae380a21111298f0.webp" alt=""><figcaption></figcaption></figure>
 
 发送 Teams 消息，并等待你的 AI 聊天机器人的回复。尝试向 AI 聊天机器人提问你可以向 Dify 聊天助手提问的任何问题。
 
-<figure><img src="../../.gitbook/assets/teams1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/bd81dd8e325f9cf1114cbac1b634cd5c.webp" alt=""><figcaption></figcaption></figure>
 
 ## 8. 后记
 

@@ -18,39 +18,39 @@ LangSmithの公式サイト：[https://www.langchain.com/langsmith](https://www.
 
 ログイン後、ホームページの **New Project** をクリックし、新たな**プロジェクト**を作成します。このプロジェクトは、Dify内の**アプリ**と連動したデータモニタリングに使用されます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1) (1).png" alt=""><figcaption><p>新たなプロジェクトを作成します。</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/3d1f21ba0e7f50eebea54a1dfe9063ee.webp" alt=""><figcaption><p>新たなプロジェクトを作成します。</p></figcaption></figure>
 
 作成する後、プロジェクトの中にチェクできます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (7) (1) (2).png" alt=""><figcaption><p>LangSmithの中にプロジェクトをチェクします。</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/1fecd0b7a53b6c3df7eee3761b5380ae.webp" alt=""><figcaption><p>LangSmithの中にプロジェクトをチェクします。</p></figcaption></figure>
 
 #### 3. プロジェクト認証情報の作成
 
 左のサイドバーでプロジェクト **設定** を見つける。
 
-<figure><img src="../../../../en/.gitbook/assets/image (8) (1) (2).png" alt=""><figcaption><p>プロジェクトを設定し</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/12e626e973f19b342f7f33b29ca489e4.webp" alt=""><figcaption><p>プロジェクトを設定し</p></figcaption></figure>
 
 **Create API Key**をクリックし，新たな認証情報を作ります。
 
-<figure><img src="../../../../en/.gitbook/assets/image (3) (1) (1) (1) (2).png" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/4c521bb344e3cd1dbc6cf45afec48a91.webp" alt=""><figcaption><p>プロジェクトのAPI Keyを作ります。</p></figcaption></figure>
 
 **Personal Access Token** を選び，のちほとのAPI身分証明の時使えます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (5) (1) (1) (1).png" alt=""><figcaption><p>Personal Access Tokenを選択します</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/c47cce032317a3736f137f98737e3abd.webp" alt=""><figcaption><p>Personal Access Tokenを選択します</p></figcaption></figure>
 
 新たなAPI keyをコピーし、保存します。
 
-<figure><img src="../../../../en/.gitbook/assets/image (9) (2).png" alt=""><figcaption><p>新たなAPI keyをコピーします</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/f35f021e715af6286fe3026765f9fc22.webp" alt=""><figcaption><p>新たなAPI keyをコピーします</p></figcaption></figure>
 
 #### 4. Dify アプリの中に LangSmith を設定します
 
 監視用のアプリのサイトメニューの**監視**ボタンをクリックし，**設定**をクリックします。
 
-<figure><img src="../../../../en/.gitbook/assets/tracing-app-performance.png" alt=""><figcaption><p>LangSmithを設定します</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/ddcf300552c3132d17e8b9a9b8f74ffb.webp" alt=""><figcaption><p>LangSmithを設定します</p></figcaption></figure>
 
 それから，LangSmith から作った **API Key** と**プロジェクト名**を**設定**の中に貼り付け、保存します。
 
-<figure><img src="../../../../en/.gitbook/assets/config-langsmith.png" alt=""><figcaption><p> LangSmithを設定します。</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/895fc4da50916d2bd5a04cc135796acb.webp" alt=""><figcaption><p> LangSmithを設定します。</p></figcaption></figure>
 
 {% hint style="info" %}
 設定したプロジェクト名は LangSmith のいるプロジェクト名と必ず一致します。一致しない場合、データの同期時に LangSmith は自動的に新しいプロジェクトを作成します。
@@ -58,21 +58,21 @@ LangSmithの公式サイト：[https://www.langchain.com/langsmith](https://www.
 
 保存に成功すると、現在のページで監視状態を見ることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/integrate-with-langsmith.png" alt=""><figcaption><p>監視状態を見る</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/78be218d5da6103b00f574546b2f11fc.webp" alt=""><figcaption><p>監視状態を見る</p></figcaption></figure>
 
 ### LangSmithでのモニタリングデータの表示
 
 Dify内のアプリケーションからデバッグや製品データを設定することで、LangSmithにてそのデータをモニタリングすることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/debug-app-in-dify.png" alt=""><figcaption><p>Difyにおけるアプリケーションのデバッグ</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/b81b665ed64766afe97fab96312ceabc.webp" alt=""><figcaption><p>Difyにおけるアプリケーションのデバッグ</p></figcaption></figure>
 
 LangSmithに切り替えると、ダッシュボード上でDifyアプリケーションの詳細な操作ログを見ることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (2) (1) (1) (1).png" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/d4c619de65d201e59f2bf26738515dfd.webp" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
 
 LangSmithを通じて得られる詳細な大規模言語モデル（LLM）の操作ログは、Difyアプリケーションのパフォーマンスを最適化するために役立ちます。
 
-<figure><img src="../../../../en/.gitbook/assets/viewing-app-data-in-langsmith.png" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/integrate-external-ops-tools/2dae6e2044a6fe5a47c94bb1afa380f4.webp" alt=""><figcaption><p>LangSmithでのアプリケーションデータの表示</p></figcaption></figure>
 
 ### モニタリングデータリスト
 

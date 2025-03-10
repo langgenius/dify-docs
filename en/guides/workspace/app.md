@@ -4,11 +4,11 @@
 
 In the **Discover** section, several commonly used template applications are provided. These applications cover areas such as human resources, assistants, translation, programming, and writing.
 
-<figure><img src="../../.gitbook/assets/explore-apps-by-dify.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workspace/7150733a6fada99f969988372f9a1f42.webp" alt=""><figcaption></figcaption></figure>
 
 To use a template application, click the "Add to Workspace" button on the template. You can then use the application in the workspace on the left side.
 
-<figure><img src="../../.gitbook/assets/create-app (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workspace/14f37d5c6e233d88feb49a89b33f52c8.webp" alt=""><figcaption></figcaption></figure>
 
 To modify a template and create a new application, click the "Customize" button on the template.
 
