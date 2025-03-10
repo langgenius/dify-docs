@@ -64,5 +64,5 @@ Taking OpenAI as an example, which supports multiple model types:
 Please follow these steps to create a model plugin, click the document titles for specific creation guides:
 
 1. [Create Model Provider](create-model-providers.md)
-2. Integrate [Predefined](../../../guides/model-configuration/predefined-model.md)/[Custom](../../../guides/model-configuration/customizable-model.md) Models
+2. Integrate [Predefined](predefined-model.md)/[Custom](customizable-model.md) Models
 3. [Debug Plugin](../../debug-plugin.md)

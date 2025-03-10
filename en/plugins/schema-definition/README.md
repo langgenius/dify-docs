@@ -8,6 +8,14 @@
 [endpoint.md](endpoint.md)
 {% endcontent-ref %}
 
+{% content-ref url="tool.md" %}
+[tool.md](tool.md)
+{% endcontent-ref %}
+
+{% content-ref url="agent.md" %}
+[agent.md](agent.md)
+{% endcontent-ref %}
+
 {% content-ref url="model/" %}
 [model](model/)
 {% endcontent-ref %}
