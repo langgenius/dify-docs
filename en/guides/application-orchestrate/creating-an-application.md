@@ -24,7 +24,7 @@ If you need to create a blank application on Dify, you can select "Studio" from 
 
 <figure><img src="../../.gitbook/assets/create-from-blank.png" alt=""><figcaption><p>Create a blank application</p></figcaption></figure>
 
-When creating an application for the first time, you might need to first understand the [basic concepts](./#application_type) of the four different types of applications on Dify: Chatbot, Text Generator, Agent, Chatflow and Workflow.
+When creating an application for the first time, you might need to first understand the [basic concepts](./#application_type) of the five different types of applications on Dify: Chatbot, Text Generator, Agent, Chatflow and Workflow.
 
 {% embed url="https://www.motionshot.app/walkthrough/6773d589d27e58127b913946/embed?fullscreen=1&hideAsSteps=1&hideCopy=1&hideDownload=1&hideSteps=1" %}
 
