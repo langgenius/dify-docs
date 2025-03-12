@@ -76,6 +76,12 @@ poetry run flask install-plugins --workers=2
 
 This command will download and install all necessary plugins into the latest Community Edition. When the terminal shows `Install plugins completed.`, the migration is complete.
 
+Finally, migrate the plugin data. This command will update the `provider name` by appending it with `langgenius/{provider_name}/{provider_name}`.
+
+```bash
+poetry run flask migrate-data-for-plugin
+``` 
+
 ## Verify the Migration
 
 Access the Dify platform and click the **“Plugins”** button in the upper-right corner to check if the previously used tools have been correctly installed. Randomly use one of the plugins to verify if it works properly. If the plugins work well, the version upgrade and data migration have been successfully completed.

@@ -76,6 +76,12 @@ poetry run flask install-plugins --workers=2
 
 此命令将下载并安装所有必要的插件到最新的社区版本中。当终端出现 `Install plugins completed.` 标识时，迁移完成。
 
+最後，遷移插件數據。此命令將更新 `provider name`，並在其後附加 `langgenius/{provider_name}/{provider_name}`
+
+```bash
+poetry run flask migrate-data-for-plugin
+``` 
+
 ## 验证结果
 
 访问 Dify 平台，轻点右上角 **“插件”** 查看此前所使用的工具是否被正确安装。随机使用某个插件，验证是否能够正常运行。如果无误，说明你已完成版本升级和数据迁移。

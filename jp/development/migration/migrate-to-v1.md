@@ -76,6 +76,12 @@ poetry run flask install-plugins --workers=2
 
 このコマンドは、最新のコミュニティ版に必要なすべてのプラグインをダウンロードしてインストールします。ターミナルに `Install plugins completed.` と表示されたら、移行は完了です。
 
+最後に、プラグインのデータを移行します。このコマンドは `provider name` を更新し、`langgenius/{provider_name}/{provider_name}` を追加します
+
+```bash
+poetry run flask migrate-data-for-plugin
+```
+
 ## 移行結果の検証
 
 Dify プラットフォームにアクセスし、右上の「プラグイン」ボタンをクリックして、以前使用していたツールが正しくインストールされているか確認します。ランダムにプラグインを使用して、正常に動作するかを検証します。問題がなければ、バージョンアップとデータ移行が完了したことを示しています。
