@@ -380,8 +380,8 @@ Dify supports the below model providers out-of-box:
             <td align="center">✔️(🛠️)(👓)</td>
             <td align="center">✔️</td>
             <td align="center">✔️</td>
-            <td align="center"></td>
-            <td align="center"></td>
+            <td align="center">✔️</td>
+            <td align="center">✔️</td>
         </tr>
     </tbody>
 </table>
