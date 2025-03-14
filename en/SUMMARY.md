@@ -132,6 +132,7 @@
   * [Team Members Management](guides/management/team-members-management.md)
   * [Personal Account Management](guides/management/personal-account-management.md)
   * [Subscription Management](guides/management/subscription-management.md)
+  * [Version Control](guides/management/version-control.md)
 
 ## Workshop
 

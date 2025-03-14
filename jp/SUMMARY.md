@@ -131,6 +131,7 @@
   * [チームメンバーの管理](guides/management/team-members-management.md)
   * [個人アカウントの管理](guides/management/personal-account-management.md)
   * [サブスクリプション管理](guides/management/subscription-management.md)
+  * [バージョン管理](guides/management/version-control.md)
 
 ## ハンドオン工房 <a href="#workshop" id="workshop"></a>
 

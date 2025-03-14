@@ -131,6 +131,7 @@
   * [团队成员管理](guides/management/team-members-management.md)
   * [个人账号管理](guides/management/personal-account-management.md)
   * [订阅管理](guides/management/subscription-management.md)
+  * [版本管理](guides/management/version-control.md)
 
 ## 动手实验室 <a href="#workshop" id="workshop"></a>
 
