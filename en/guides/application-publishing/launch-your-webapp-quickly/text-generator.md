@@ -15,7 +15,7 @@ Let's introduce them separately.
 
 Enter the query content, click the run button, and the result will be generated on the right, as shown in the following figure:
 
-<figure><img src="../../../.gitbook/assets/text-generator.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/4c5380cf71066d933082f7c30deacb01.png)
 
 In the generated results section, click the "Copy" button to copy the content to the clipboard. Click the "Save" button to save the content. You can see the saved content in the "Saved" tab. You can also "like" and "dislike" the generated content.
 
@@ -29,17 +29,17 @@ In the above scenario, the batch operation function is used, which is convenient
 
 Click the "Run Batch" tab to enter the batch run page.
 
-<figure><img src="../../../.gitbook/assets/text-generator-batch.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/c8381ab7fad14a54c86835dc4b1b6b5d.png)
 
 #### Step 2 Download the template and fill in the content
 
 Click the **"Download the template here"** button to obtain the template file. Edit the file and fill in the required content, then save it as a `.csv` file. Finally, upload the completed file back to Dify.
 
-<figure><img src="../../../.gitbook/assets/text-generator-batch-download.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/bae4859c5cb7404ce901b7979237bb93.png)
 
 #### Step 3 Upload the file and run
 
-<figure><img src="../../../.gitbook/assets/batch-run.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/fc84f62f41c12e14ff85b29e6bf43d27.png)
 
 If you need to export the generated content, you can click the download "button" in the upper right corner to export as a `csv` file.
 
@@ -49,10 +49,10 @@ If you need to export the generated content, you can click the download "button"
 
 Click the "Save" button below the generated results to save the running results. In the "Saved" tab, you can see all saved content.
 
-<figure><img src="../../../.gitbook/assets/text-generator-saved.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/3cdd15e87aa1f1aae9f6abadb0f16d1f.png)
 
 ### Generate more similar results
 
 If the "More like this" function is turned on the App's Orchestrate page,clicking the "More like this" button in the web application generates content similar to the current result. As shown below:
 
-<figure><img src="../../../.gitbook/assets/text-generator-more-like-this.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-publishing/launch-your-webapp-quickly/65fb111d8e89a8f7b761859265e42f0a.png)

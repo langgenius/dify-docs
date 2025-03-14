@@ -28,7 +28,7 @@ Dify 知识库内提供了文本召回测试的功能，用于模拟用户输入
 
 你可以在预览区内查看具体的命中段落内容；匹配后将召回子分段所在父分段的完整上下文，向 AI 应用提供更加完整的信息。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6f0b99f97b138805bf4665d0c5c16f26.png" alt=""><figcaption><p>召回测试 - 父子分段模式</p></figcaption></figure>
+![召回测试 - 父子分段模式](https://assets-docs.dify.ai/2024/12/6f0b99f97b138805bf4665d0c5c16f26.png)
 
 每个内容块底部将展示所引用的文档源，通常是文档中的某个段落或句子。轻点引用源右侧的“打开”按钮即可查看被引用的内容。
 
@@ -44,7 +44,7 @@ Dify 知识库内提供了文本召回测试的功能，用于模拟用户输入
 
 点击源文本输入框右上角的图标即可更换当前知识库的检索方式与具体参数，保存之后仅在当前召回测试的调试过程中生效，你可以借此比较不同检索设置的效果。如果你想要修改当前知识库的检索方式，前往“知识库设置” > “检索设置”中进行设置。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/86b78cb114a843c9dedcba1fe12e3b02.png" alt=""><figcaption><p>召回测试-检索设置</p></figcaption></figure>
+![召回测试-检索设置](https://assets-docs.dify.ai/2024/12/86b78cb114a843c9dedcba1fe12e3b02.png)
 
 **召回测试建议步骤：**
 
@@ -63,11 +63,11 @@ Dify 知识库内提供了文本召回测试的功能，用于模拟用户输入
 
 在应用内的“上下文”添加知识库后，可以在 **“添加功能”** 内开启 **“引用与归属”**。在应用内输入问题后，若涉及已关联的知识库文档，将标注内容的引用来源。你可以通过此方式检查知识库所召回的内容分段是否符合预期。
 
-<figure><img src="../../.gitbook/assets/citation-and-attribution.png" alt=""><figcaption><p>打开引用与归属功能</p></figcaption></figure>
+![打开引用与归属功能](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/c50a37d96be8b631c02483144c226cd7.png)
 
 开启功能后，当 LLM 引用知识库内容来回答问题时，可以在回复内容下面查看到具体的引用段落信息，包括**原始分段文本、分段序号、匹配度**等。点击引用分段上方的 **跳转至知识库**，可以快捷访问该分段所在的知识库分段列表，方便开发者进行调试编辑。
 
-<figure><img src="../../.gitbook/assets/image (84).png" alt=""><figcaption><p>查看回复内容的引用信息</p></figcaption></figure>
+![查看回复内容的引用信息](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/a70595731965d75bf97b637cf067eabd.png)
 
 #### 查看知识库内已关联的应用
 

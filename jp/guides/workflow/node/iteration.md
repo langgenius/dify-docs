@@ -20,7 +20,7 @@
   
 * **出力変数**：出力はArray[List]配列変数のみをサポートしています。他の変数形式を出力したい場合は、[さらに読む「配列をテキストに変換する方法」](../../../learn-more/extended-reading/what-is-array-variable.md)をお読みください。
 
-<figure><img src="../../../../img/en-iteration-scenario.jpeg" alt="" ></figure>
+<figure><img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/754373d760ee3f58386c4181c25865a6.jpeg" alt="" ></figure>
 
 ***
 
@@ -28,7 +28,7 @@
 
 #### **例1：長文イテレーション生成器**
 
-<figure><img src="../../../.gitbook/assets/long-article-iteration-generator.png" alt=""><figcaption><p>長文生成器</p></figcaption></figure>
+![長文生成器](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/3a403551d48b178d0a41ce2a5748dd2d.png)
 
 1. **開始ノード** にストーリーのタイトルと変数を入力して、ユーザーに初期情報を手動で入力するよう求めます。
 2. **LLMノード** を使用してユーザー入力から完全な内容を抽出
@@ -40,15 +40,15 @@
 
 1. **開始ノード** にタイトル（title）とアウトライン（outline）を設定；
 
-<figure><img src="../../../.gitbook/assets/jp-iteration-start.png" alt="" width="375"><figcaption><p>開始ノードの設定</p></figcaption></figure>
+![開始ノードの設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/a5f4c1b7dea3f6d86a9548bd8712eebb.png)
 
 2. **Jinja-2 テンプレートノード** を使用してタイトルとアウトラインを完全なテキストに変換；
 
-<figure><img src="../../../.gitbook/assets/jp-iteration-outline.png" alt="" width="375"><figcaption><p>テンプレートノード</p></figcaption></figure>
+![テンプレートノード](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/52aac7a8678aa2594c52c15f347b385a.png)
 
 3. **パラメータ抽出ノード** を使用して、ストーリーテキストを配列（Array）構造に変換。抽出パラメータは `sections`、パラメータタイプは `Array[Object]`
 
-<figure><img src="../../../.gitbook/assets/workflow-extract-subtitles-and-outlines.png" alt="" width="375"><figcaption><p>パラメータ抽出</p></figcaption></figure>
+![パラメータ抽出](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/d3beee536ff3c35f4e1eb1ab610f35d7.png)
 
 {% hint style="info" %}
 パラメータ抽出の効果はモデル推論能力と指示に影響されます。推論能力が高いモデルを使用し、**指示** 内に例を追加することでパラメータ抽出の効果を向上させることができます。
@@ -56,11 +56,11 @@
 
 4. ストーリーアウトラインの配列形式をイテレーションノードの入力として使用し、イテレーションノード内で **LLM ノード** を使用して処理
 
-<figure><img src="../../../.gitbook/assets/workflow-iteration-node.png" alt="" width="375"><figcaption><p>イテレーションノードの設定</p></figcaption></figure>
+![イテレーションノードの設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/ac91582998868004b298afe2f04e5589.png)
 
 LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/item` を設定
 
-<figure><img src="../../../.gitbook/assets/workflow-iteration-llm-node.png" alt="" width="375"><figcaption><p>LLM ノードの設定</p></figcaption></figure>
+![LLM ノードの設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/d849ff9164482a83ea8a091fde9cb4d1.png)
 
 {% hint style="info" %}
 イテレーションの組み込み変数：`items[object]` と `index[number]`
@@ -72,15 +72,15 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 5. イテレーションノード内に **直接応答ノード** を設定して、各イテレーション生成の後にストリーム出力を実現。
 
-<figure><img src="../../../.gitbook/assets/workflow-configure-anwer-node.png" alt="" width="375"><figcaption><p>回答ノードの設定</p></figcaption></figure>
+![回答ノードの設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/64da09ab904f74c8ec45e098c81f95be.png)
 
 6. 完全なデバッグとプレビュー
 
-<figure><img src="../../../.gitbook/assets/iteration-node-iteration-through-story-chapters.png" alt=""><figcaption><p>ストーリー章ごとの多段イテレーション生成</p></figcaption></figure>
+![ストーリー章ごとの多段イテレーション生成](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/f443508d9ecc6d30094297243f590e6a.png)
 
 #### **例2：長文イテレーション生成器（別の編成方法）**
 
-<figure><img src="../../../.gitbook/assets/iteration-node-iteration-long-article-iteration-generator.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/6e973b52bb3960bf948f92df8ae2f910.png)
 
 * **開始ノード** にタイトルとアウトラインを入力
 * **LLM ノード** を使用して小見出しと対応する内容を生成
@@ -95,11 +95,11 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 イテレーションノードはパラレルモードをサポートしており、有効にするとイテレーションノードの全体的な動作効率が効果的に向上します。
 
-<figure><img src="" alt=""><figcaption></figcaption></figure>
+![]()
 
 次の図は、パラレルモードをオンまたはオフにした場合のイテレーションノードの実行効果を比較しています。
 
-<figure><img src="../../../../img/en-iteration-two-executions.jpeg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/69ca622fa514072893d5358ccf6c2087.jpeg)
 
 パラレルモードの実行ラウンドの最大数は10個です。これは、単位時間あたり最大10個のタスクを同時に実行できることを意味します。 10個を超えるタスクを処理する必要がある場合、最初の10個の要素が最初に同時に実行され、最前列のタスクが処理された後、残りのタスクが引き続き処理されます。
 
@@ -133,11 +133,11 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 * [コードノード](./code.md)
 
-<figure><img src="../../../.gitbook/assets/workflow-extract-subtitles-and-outlines.png" alt="" width="375"><figcaption><p>コードノード出力array</p></figcaption></figure>
+![コードノード出力array](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/d3beee536ff3c35f4e1eb1ab610f35d7.png)
 
 * [パラメータ抽出ノード](./parameter-extractor.md)
 
-<figure><img src="../../../.gitbook/assets/workflow-parameter-extraction-node.png" alt="" width="375"><figcaption><p>パラメータ抽出ノード出力 array</p></figcaption></figure>
+![パラメータ抽出ノード出力 array](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/b5a9d4bee95d7a1331bb7ff7433e47a3.png)
 
 * [ナレッジベース検索](./knowledge-retrieval.md)
 * [イテレーション](./iteration.md)
@@ -152,7 +152,7 @@ LLM ノード内で入力変数 `GenerateOverallOutline/output` と `Iteration/i
 
 **コードノードを使用した変換**
 
-<figure><img src="../../../.gitbook/assets/iteration-code-node-convert.png" alt="" width="334"><figcaption><p>コードノード変換</p></figcaption></figure>
+![コードノード変換](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/8be2372b00a802e981efe6f0ceff815b.png)
 
 コード例：
 
@@ -166,7 +166,7 @@ def main(articleSections: list):
 
 **テンプレートノードを使用した変換**
 
-<figure><img src="../../../.gitbook/assets/workflow-template-node.png" alt="" width="332"><figcaption><p>テンプレートノード変換</p></figcaption></figure>
+![テンプレートノード変換](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/8c0bcc5de453dea2776d2755449bd971.png)
 
 コード例：
 

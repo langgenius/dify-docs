@@ -8,7 +8,7 @@
 
 使用方法：このノードを使用することで、ワークフローの中で変数の値を会話変数に一時的に保存し、後続の会話でその値を参照することができます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/83d0b9ef4c1fad947b124398d472d656.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/83d0b9ef4c1fad947b124398d472d656.png)
 
 ***
 
@@ -22,7 +22,7 @@
 
 例えば：会話が始まると、LLMはユーザーの入力に必要な情報や好み、またはチャット履歴が含まれているかを自動的に判断します。情報が存在する場合、LLMはそれを先に抽出して保存し、コンテキストとして利用して応答します。もし新しい情報を覚える必要がない場合、LLMは以前の関連する記録を用いて個性化な応答を出します。
 
-<figure><img src="../../../.gitbook/assets/conversational-variables-scenario-01.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/8f34c16783cc5a6a032d7c7751a46490.png)
 
 **設定手順：**
 
@@ -107,7 +107,7 @@ def main(arg1: list) -> str:
 
 例：ユーザーが会話を始める前に、`language`入力欄に「日本語」と指定した場合、その言語は会話変数に書き込まれ、LLMは後続の返信時に会話変数の情報を参照し、継続的に「日本語」を使用して返信します。
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/1867d608a7d009431b73377ed65b427b.png)
 
 **設定手順：**
 
@@ -123,7 +123,7 @@ def main(arg1: list) -> str:
 
 例：会話を始める際、LLMはユーザーにチェックリストに関連するアイテムの入力を求めます。ユーザーがチェックリストの内容を一度述べると、その内容は会話変数に更新され、及び保存されます。LLMは各会話の後に、ユーザーに不足しているアイテムの追加を促します。
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-2-1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/c4362b01298b12e7d6fcd9e798f3165a.png)
 
 **配置流程：**
 
@@ -139,7 +139,7 @@ def main(arg1: list) -> str:
 
 右側にある「+」アイコンをクリックし、「変数の代入」ノードを選びます。代入された変数と、その変数に値を提供するソース変数を設定してください。このノードを用いることで、一度に複数の変数へ値を割り当てることが可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/ee15dee864107ba5a93b459ebdfc32cf.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/ee15dee864107ba5a93b459ebdfc32cf.png)
 
 **変数の設定方法:**
 

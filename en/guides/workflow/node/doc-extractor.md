@@ -13,7 +13,7 @@ LLMs cannot directly read or interpret document contents. Therefore, it's necess
 
 The document extractor node can be understood as an information processing center. It recognizes and reads files in the input variables, extracts information, and converts it into string-type output variables for downstream nodes to call.
 
-<figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption><p>doc extractor</p></figcaption></figure>
+![doc extractor](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f3853b40904e275da895711107e9c72f.png)
 
 The document extractor node structure is divided into input variables and output variables.
 
@@ -41,7 +41,7 @@ In a typical file interaction Q\&A scenario, the document extractor can serve as
 
 This section will introduce the usage of the document extractor node through a typical ChatPDF example workflow template.
 
-<figure><img src="../../../.gitbook/assets/image (12).png" alt=""><figcaption><p>Chatpdf workflow</p></figcaption></figure>
+![Chatpdf workflow](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f6ea094b30b240c999a4248d1fc21a1c.png)
 
 **Configuration Process:**
 
@@ -49,11 +49,11 @@ This section will introduce the usage of the document extractor node through a t
 2. Add a document extractor node and select the `pdf` variable in the input variables.
 3. Add an LLM node and select the output variable of the document extractor node in the system prompt. The LLM can read the contents of the file through this output variable.
 
-<figure><img src="../../../.gitbook/assets/image (13).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/83bca46bcde07069660ff649e5c7cf4c.png)
 
 Configure the end node by selecting the output variable of the LLM node in the end node.
 
-<figure><img src="../../../.gitbook/assets/image (14).png" alt=""><figcaption><p>chat with pdf</p></figcaption></figure>
+![chat with pdf](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/d05301438e8aab7393bb5863554f1009.png)
 
 After configuration, the application will have file upload functionality, allowing users to upload PDF files and engage in conversation.
 

@@ -15,7 +15,7 @@
 
 你可以通过配置 HTTP 请求的包括 URL、请求头、查询参数、请求体内容以及认证信息等。
 
-<figure><img src="../../../.gitbook/assets/image (52).png" alt="" width="332"><figcaption><p>HTTP 请求配置</p></figcaption></figure>
+![HTTP 请求配置](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/bf2a990493bf60a0278fea7147900fc6.png)
 
 ***
 
@@ -25,7 +25,7 @@
 
 你可以在 HTTP 请求的不同部分动态插入变量。例如在处理客户评价请求时，可以将用户名或客户 ID、评价内容等变量嵌入到请求中，以定制化自动回复信息或获取特定客户信息并发送相关资源至特定的服务器。
 
-<figure><img src="../../../.gitbook/assets/image (50).png" alt=""><figcaption><p>客户评价分类</p></figcaption></figure>
+![客户评价分类](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/39c7ad0816891caefed1e9446be541bf.png)
 
 HTTP 请求的返回值包括响应体、状态码、响应头和文件。值得注意的是，如果响应中包含了文件，这个节点能够自动保存文件，供流程后续步骤使用。这样不仅能提高处理效率，也可以更加简单直接地处理带有文件的响应。
 
@@ -37,7 +37,7 @@ HTTP 请求的返回值包括响应体、状态码、响应头和文件。值得
 
 配置示例如下：
 
-<figure><img src="../../../.gitbook/assets/image (11).png" alt=""><figcaption><p>通过 HTTP 节点发送文件</p></figcaption></figure>
+![通过 HTTP 节点发送文件](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/7519496a273655476305f26b2fa2321d.png)
 
 ### 高级功能
 

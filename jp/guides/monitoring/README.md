@@ -2,4 +2,4 @@
 
 **概要** で本番環境におけるアプリケーションのパフォーマンスをモニタリングし、データ分析ダッシュボードで本番環境におけるアプリケーションの使用コスト、レイテンシ、ユーザーフィードバック、パフォーマンスなどの指標を分析します。継続デバッグおよびイテレーションを通じてアプリケーションを絶えず改善します。
 
-<figure><img src="../../.gitbook/assets/image (1).png" alt=""><figcaption><p>概要</p></figcaption></figure>
+![概要](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/monitoring/45c8580f167e27c9e26784b5426987d0.png)

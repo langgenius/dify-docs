@@ -6,11 +6,11 @@
 
 `Endpoint`グループは、複数の`Endpoint`をまとめたものです。`Dify`プラグインで新しい`Endpoint`を作成する際には、以下の設定項目を入力する必要があります。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/763dbf86e4319591415dc5a1b6948ccb.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/763dbf86e4319591415dc5a1b6948ccb.png)
 
 「Endpoint Name」の他に、グループ構成情報を記述することで、新しいフォーム項目を追加できます。保存すると、同じ構成情報を使用する複数のインターフェースが表示されるようになります。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/b778b7093b7df0dc80a476c65ddcbe58.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/b778b7093b7df0dc80a476c65ddcbe58.png)
 
 #### **構造**
 

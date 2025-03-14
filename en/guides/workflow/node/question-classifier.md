@@ -14,7 +14,7 @@ In a typical product customer service Q\&A scenario, the issue classifier can se
 
 The following diagram is an example workflow template for a product customer service scenario:
 
-<figure><img src="../../../.gitbook/assets/question-classifier-scenarios.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/2f06ecce149c844c23be70a8fcff09bc.png)
 
 In this scenario, we set up three classification labels/descriptions:
 
@@ -32,7 +32,7 @@ When users input different questions, the issue classifier will automatically cl
 
 ### 3. How to Configure
 
-<figure><img src="../../../.gitbook/assets/question-classifier-1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/2f039c5ff3f095b0eed291101d9bff15.png)
 
 **Configuration Steps:**
 

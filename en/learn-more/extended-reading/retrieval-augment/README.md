@@ -8,7 +8,7 @@ Developers can use this technology to build AI-powered customer service, enterpr
 
 In the diagram below, when a user asks, "Who is the President of the United States?", the system does not directly pass the question to the large model for an answer. Instead, it first performs a vector search in a knowledge base (such as Wikipedia shown in the diagram) to find relevant content through semantic similarity matching (e.g., "Joe Biden is the 46th and current president of the United States..."). Then, the system provides the user's question along with the retrieved relevant knowledge to the large model, allowing it to obtain sufficient information to answer the question reliably.
 
-<figure><img src="../../../.gitbook/assets/image (129).png" alt=""><figcaption><p>Basic RAG Architecture</p></figcaption></figure>
+![Basic RAG Architecture](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/extended-reading/retrieval-augment/19b393464a4d0374498144502f024516.png)
 
 **Why is this necessary?**
 

@@ -15,7 +15,7 @@
 
 • **异常分支**：发生异常后，执行预编排的异常分支。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png" alt=""><figcaption><p>Error handling</p></figcaption></figure>
+![Error handling](https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png)
 
 ### 处理逻辑：无
 

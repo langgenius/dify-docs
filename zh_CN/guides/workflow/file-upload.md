@@ -74,7 +74,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
     开启此功能后，应用使用者可以在应用对话的过程中随时上传并更新文件。最多支持同时上传 10 个文件，每个文件的大小上限为 15MB。
 
-<figure><img src="../../.gitbook/assets/image (379).png" alt=""><figcaption><p>文件上传功能</p></figcaption></figure>
+![文件上传功能](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/20784cfa167417654a69c10e42e8271b.png)
 
 开启该功能并不意味着赋予 LLM 直接读取文件的能力，还需要配备[**文档提取器**](node/doc-extractor.md)将文档解析为文本供 LLM 理解。
 
@@ -85,11 +85,11 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 3. 添加 LLM 节点，在系统提示词中选中文档提取器节点的输出变量。
 4. 在末尾添加 “直接回复” 节点，填写 LLM 节点的输出变量。
 
-<figure><img src="../../.gitbook/assets/image (380).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/bc7faa1f2ec9d26d3257f7bacc4b85d9.png)
 
 开启后，用户可以在对话框中上传文件并进行对话。但通过此方式， LLM 应用并不具备记忆文件内容的能力，每次对话时需要上传文件。
 
-<figure><img src="../../.gitbook/assets/image (381).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/b18af11da3f339c496193d9732906849.png)
 
 若希望 LLM 能够在对话中记忆文件内容，请参考下文。
 
@@ -131,15 +131,15 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 将“开始”节点内的文件变量作为 **“文档提取器”** 节点的输入变量。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-12 15.45.45.png" alt=""><figcaption><p>添加输入变量</p></figcaption></figure>
+![添加输入变量](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/a42d183fa7ba38fa9c9d3bc772c79c29.png)
 
 将“文档提取器”节点的输出变量填写至 LLM 节点的系统提示词内。
 
-<figure><img src="../../.gitbook/assets/image (376).png" alt=""><figcaption><p>粘贴系统提示词</p></figcaption></figure>
+![粘贴系统提示词](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/f6ea094b30b240c999a4248d1fc21a1c.png)
 
 完成上述设置后，应用的使用者可以在 WebApp 内粘贴文件 URL 或上传本地文件，然后就文档内容与 LLM 展开互动。应用使用者可以在对话过程中随时替换文件，LLM 将获取最新的文件内容。
 
-<figure><img src="../../.gitbook/assets/image (5) (2) (1).png" alt=""><figcaption><p>粘贴 URL 进行对话</p></figcaption></figure>
+![粘贴 URL 进行对话](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/f4d9056c2df7f94ce41d4f281b45a94e.png)
 
 **在 LLM 节点中引用文件变量**
 
@@ -151,7 +151,7 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 下面是一个示例配置：
 
-<figure><img src="../../../img/file-upload-qs-1.avif" alt=""><figcaption><p>在LLM节点中直接使用文件变量</p></figcaption></figure>
+![在LLM节点中直接使用文件变量](../../../img/file-upload-qs-1.avif)
 
 需要注意的是，直接在 LLM 节点中使用文件变量时，我们需要确保文件变量仅包含图片文件，否则可能会导致错误。如果用户可能上传不同类型的文件，我们需要使用列表操作节点过滤不同类型的文件。
 
@@ -159,12 +159,12 @@ file variables 和 array\[file] variables 支持以下文件类型与格式：
 
 将文件变量放置到 answer 节点或者 end 节点中，当应用运行到该节点都时候将会在会话框中提供文件下载卡片。点击卡片即可下载文件。
 
-<figure><img src="../../../img/file-upload-qs-2.avif" alt=""><figcaption><p>文件下载</p></figcaption></figure>
+![文件下载](../../../img/file-upload-qs-2.avif)
 
 ### 进阶使用
 
 若希望应用能够支持上传多种文件，例如允许用户同时上传文档文件、图片和音视频文件，此时需要在 “开始节点” 中添加 “文件列表” 变量，并通过“列表操作”节点针对不同的文件类型进行处理。详细说明请参考[列表操作](node/list-operator.md)节点。
 
-<figure><img src="../../.gitbook/assets/image (3) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/812d1b2f167065e17df8392b2cb3cc8a.png)
 
 如需查看更多使用案例，请参考：[动手实验室 - 使用文件上传搭建文章理解助手](../../workshop/intermediate/article-reader.md)

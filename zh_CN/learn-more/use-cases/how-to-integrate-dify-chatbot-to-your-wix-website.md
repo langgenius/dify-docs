@@ -15,16 +15,16 @@ Wix 是一个非常流行的网站创建平台，它允许用户通过拖拽的�
 * 点击右上角的“发布”按钮
 *   在发布页面中，选择 “Embed Into Site” 选项。
 
-    ![](../../.gitbook/assets/best-practice-wix-2.png)
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/238daf21d6632d7d20cc9a6b882194f9.png)
 * 选择合适的样式并复制显示的 iFrame 代码，例如：
 
-![](../../.gitbook/assets/best-practice-wix-3.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/ebab9e1f734d80e793db3675a46099fb.png)
 
 ## 2. 在 Wix 网站中嵌入 iFrame 代码片段
 
 登录 Wix 网站，打开你要编辑的网页。点击网页左侧蓝色的 `+` （Add Elements）按钮，然后选择 **Embed Code**，最后点击 **Embed HTML** 添加一个 HTML iFrame 元素到页面。
 
-![](../../.gitbook/assets/best-practice-add-html-iframe.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/43b79d103da8beb69619e8f122609b89.png)
 
 在 `HTML Settings` 框内选择 `Code` 选项，复制并粘贴你在 Dify 应用中获取的 iFrame 代码片段，然后点击 **Update** 按钮进行保存并进行预览。
 
@@ -34,7 +34,7 @@ Wix 是一个非常流行的网站创建平台，它允许用户通过拖拽的�
 <iframe src="https://udify.app/chatbot/1yS3gohroW1sKyLc" style="width: 100%; height: 100%; min-height: 700px" frameborder="0" allow="microphone"></iframe>
 ```
 
-![](../../.gitbook/assets/best-practice-insert-dify-iframe-code.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/fb257be087645aaa5eb2ae01a4a15d8d.png)
 
 > ⚠️ 请确保 iFrame 代码中的地址以 HTTPS 开头，HTTP 地址将无法正常显示。
 

@@ -48,7 +48,7 @@
 
 * **セグメント分割識別子**：デフォルト値は `\n\n` で、文書内の各段落をセグメントに分割します。[正規表現のルール](https://regexr.com/)に従って、分割ルールをカスタマイズできます。例えば、`\n` は各行をセグメントに分割することを意味します。下記の図は、異なる文法を用いたテキスト分割の効果を示しています：
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/2c19c1c1a0446c00e3c07d6f4c8968e4.png" alt="" width="563"><figcaption><p>さまざまなセグメント識別子の構文によるセグメンテーションの影響</p></figcaption></figure>
+![さまざまなセグメント識別子の構文によるセグメンテーションの影響](https://assets-docs.dify.ai/2024/12/2c19c1c1a0446c00e3c07d6f4c8968e4.png)
 
 * **セグメントの最大長さ**：セグメント内のテキスト文字数の最大値を設定します。この長さを超えると、強制的にセグメントが分割されます。デフォルト値は 500 トークンで、セグメント長の最大値は 4000 トークンです。
 
@@ -63,7 +63,7 @@
 
 複数の文書を一括でアップロードした場合、文書のタイトルをクリックすることで、他の文書のセグメント分割効果を素早く確認できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b3ec2ce860550563234ca22967abdd17.png" alt="" width="563"><figcaption><p>汎用分割</p></figcaption></figure>
+![汎用分割](https://assets-docs.dify.ai/2024/12/b3ec2ce860550563234ca22967abdd17.png)
 
 セグメント分割ルールの設定が完了したら、次にインデックス方式を選択する必要があります。「高品質インデックス」と「経済インデックス」が利用可能で、詳細は[インデックス方法の設定](./setting-indexing-methods)をご覧ください。
 
@@ -80,7 +80,7 @@
   * マッチングしたサブセグメントを含むより大きな単位（段落、章、または文書全体）をメインブロックとして扱い、LLMへと送信します。
   * メインセグメントは、LLMが情報を逃さず、ナレッジベースに基づいた適切な回答を導くための完全な背景情報を提供します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3e6820c10bd7c5f6884930e3a14e7b66.png" alt="" width="563"><figcaption><p>親子分割モード原理</p></figcaption></figure>
+![親子分割モード原理](https://assets-docs.dify.ai/2024/12/3e6820c10bd7c5f6884930e3a14e7b66.png)
   
 このモードでは、文書の形式やシナリオの要求に応じて、手動で階層型セグメンテーションのルールを設定する必要があります。
 
@@ -98,7 +98,7 @@
 * 全文
   段落に分けずに、全文を単一のメインブロックとして扱います。パフォーマンスの観点から、テキスト内の最初の10000トークンの文字のみが保持され、テキスト量が少なく、段落間に関連性があり、全文を完全に検索する必要があるシナリオに適しています。
 
-  <figure><img src="https://assets-docs.dify.ai/2024/12/e3814336710d445a99a9ded3d251622b.png" alt="" width="563"><figcaption><p>親子分割モードでの段落と全文のプレビュー</p></figcaption></figure>
+  ![親子分割モードでの段落と全文のプレビュー](https://assets-docs.dify.ai/2024/12/e3814336710d445a99a9ded3d251622b.png)
 
 **サブセグメント(子セグメント)**：
 
@@ -116,7 +116,7 @@
 
 複数の文書を同時にアップロードした場合、ページ上部の文書タイトルをタップして、他の文書へ素早く切り替えて分割結果をプレビューできます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/af5c9a68f85120a6ea687bf93ecfb80a.png" alt="" width="563"><figcaption><p>親子分割モード</p></figcaption></figure>
+![親子分割モード](https://assets-docs.dify.ai/2024/12/af5c9a68f85120a6ea687bf93ecfb80a.png)
 
 コンテンツ検索の精度を確保するため、親子分割モードは[「高品質インデックス」](../create-knowledge-and-upload-documents/chunking-and-cleaning-text#gao-zhi-liang-suo-yin)の使用のみをサポートしています。
 
@@ -126,7 +126,7 @@
 
 この分割方法の違いが、LLMがナレッジベースを検索する際の効率に大きな影響を与えます。特に、親子検索では、より包括的なコンテキスト情報が提供されるため、精度も向上し、従来の単層の汎用検索方法と比べて格段に優れた性能を発揮します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/0b614c6a07c6ea2151fe17d85ce6a1d1.png" alt="" width="563"><figcaption><p>汎用モードと親子モードの検索効率の比較</p></figcaption></figure>
+![汎用モードと親子モードの検索効率の比較](https://assets-docs.dify.ai/2024/12/0b614c6a07c6ea2151fe17d85ce6a1d1.png)
 
 ### もっと読む
 

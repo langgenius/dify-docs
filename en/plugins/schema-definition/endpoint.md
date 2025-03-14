@@ -6,11 +6,11 @@ In this article, we will use the [Quick Start: Rainbow Cat project](../develop-p
 
 An `Endpoint` group is a collection of multiple `Endpoints`. When creating a new `Endpoint` in a `Dify` plugin, you may need to fill in the following configurations.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/763dbf86e4319591415dc5a1b6948ccb.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/763dbf86e4319591415dc5a1b6948ccb.png)
 
 Besides the `Endpoint Name`, you can add new form items by writing group configuration information. After saving, you'll see multiple interfaces that will use the same configuration information.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/b778b7093b7df0dc80a476c65ddcbe58.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/b778b7093b7df0dc80a476c65ddcbe58.png)
 
 #### **Structure**
 

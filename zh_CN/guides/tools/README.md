@@ -17,7 +17,7 @@
 
 ### 如何配置第一方工具
 
-<figure><img src="../../.gitbook/assets/image (182).png" alt=""><figcaption><p>第一方工具列表</p></figcaption></figure>
+![第一方工具列表](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/3d594f85e8a14c278494abde55656e67.png)
 
 Dify 目前已支持：
 
@@ -31,11 +31,11 @@ Dify 目前已支持：
 
 若你需要直接使用 Dify 生态提供的第一方内置工具，你需要在使用前配置相应的凭据。
 
-<figure><img src="../../.gitbook/assets/image (185).png" alt=""><figcaption><p>配置第一方工具凭据</p></figcaption></figure>
+![配置第一方工具凭据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/113f8bfb041d6c4afb76d0d23c43fbbf.png)
 
 凭据校验成功后工具会显示“已授权”状态。配置凭据后，工作区中的所有成员都可以在编排应用程序时使用此工具。
 
-<figure><img src="../../.gitbook/assets/image (187).png" alt=""><figcaption><p>第一方工具已授权</p></figcaption></figure>
+![第一方工具已授权](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/a8d8a7969f55992e01afa75ce93d03b4.png)
 
 ### 如何创建自定义工具
 
@@ -43,15 +43,15 @@ Dify 目前已支持：
 
 工具目前支持两种鉴权方式：无鉴权 和 API Key。
 
-<figure><img src="../../.gitbook/assets/image (198).png" alt=""><figcaption><p>创建自定义工具</p></figcaption></figure>
+![创建自定义工具](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/fae5960eecf336487a16ce164a61874a.png)
 
 在导入 Schema 内容后系统会主动解析文件内的参数，并可预览工具具体的参数、 方法、路径。你也可以在此对工具参数进行测试。
 
-<figure><img src="../../.gitbook/assets/image (199).png" alt=""><figcaption><p>自定义工具参数测试</p></figcaption></figure>
+![自定义工具参数测试](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/9bfbd3b0b25bd3abfd919ae29ca8fc33.png)
 
 完成自定义工具创建之后，工作区中的所有成员都可以在“工作室”内编排应用程序时使用此工具。
 
-<figure><img src="../../.gitbook/assets/image (201).png" alt=""><figcaption><p>已添加自定义工具</p></figcaption></figure>
+![已添加自定义工具](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/6031ce17cbaacd7e4df0374bada93508.png)
 
 #### Cloudflare Workers
 
@@ -64,8 +64,8 @@ Dify 目前已支持：
 
 目前，你可以在“工作室”中创建**智能助手型应用**时，将已配置好凭据的工具在其中使用。
 
-<figure><img src="../../.gitbook/assets/image (190).png" alt=""><figcaption><p>创建智能助手型应用时添加工具</p></figcaption></figure>
+![创建智能助手型应用时添加工具](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/53864182bd045c29f7d3ffeb927f3faa.png)
 
 以下图为例，在财务分析应用内添加工具后，智能助手将在需要时自主调用工具，从工具中查询财务报告数据，并将数据分析后完成与用户之间的对话。
 
-<figure><img src="../../.gitbook/assets/image (195).png" alt=""><figcaption><p>智能助手在对话中完成工具调用回复问题</p></figcaption></figure>
+![智能助手在对话中完成工具调用回复问题](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/a34f35e9995801d1a351a3d1ff4a2e40.png)

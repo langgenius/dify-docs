@@ -16,7 +16,7 @@ Please apply for an API Key on the [Azure platform](https://www.microsoft.com/en
 
 In the Dify navigation page, click `Tools > Azure > Authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tools-bing.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/tool-configuration/e460fd7a41a47061b6a4b3f0dd0f3cc6.png)
 
 ## 3. Use the tool
 

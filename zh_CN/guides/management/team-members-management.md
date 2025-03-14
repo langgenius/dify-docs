@@ -14,14 +14,14 @@
 
 团队所有者或管理员点击右上角头像，轻点 **“成员”** → **“添加”**，输入邮箱，分配成员权限，添加新成员。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1).png" alt=""><figcaption><p>为团队成员分配权限</p></figcaption></figure>
+![为团队成员分配权限](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/management/764276a102e3264747c64f02dafa5f5d.png)
 
 > 社区版团队需在[环境变量](https://docs.dify.ai/v/zh-hans/getting-started/install-self-hosted/environments)中添加并启用邮件服务，被邀成员才能收到邀请邮件。
 
 - 若被邀请的成员未注册 Dify，将收到一封邀请邮件，点击邮件中的链接即可完成注册。
 - 若被邀请成员已注册 Dify，系统将自动分配权限，**同时不再发送邀请邮件**。被邀成员可以在右上角头像处切换至新的 Workspace。
 
-![](../../../img/switch-workspace.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/management/93a6f055cfaf65dfe138e8ac332f71d1.png)
 
 ### 成员权限
 
@@ -48,7 +48,7 @@
 
 点击 Dify 团队首页右上角头像，前往 **“设置”** → **“成员”** ，选择需要被移除的成员的角色，轻点 **“移除团队”**。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1) (1) (1).png" alt=""><figcaption><p>移除成员</p></figcaption></figure>
+![移除成员](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/management/85c39a391714c110ec9e1769a8c52e06.png)
 
 ### 常见问题
 

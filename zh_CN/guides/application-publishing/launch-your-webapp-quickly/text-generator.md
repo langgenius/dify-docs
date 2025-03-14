@@ -15,7 +15,7 @@
 
 输入查询内容，点击运行按钮，右侧会生成结果，如下图所示：
 
-<figure><img src="../../../.gitbook/assets/image (58) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/c211c29aa03c4985bc5a90d2a6903e59.png)
 
 在生成的结果部分，点 “复制” 按钮可以将内容复制到剪贴板。点 “保存” 按钮可以保存内容。可以在 “已保存” 选项卡中看到保存过的内容。也可以对生成的内容点 “赞” 和 “踩”。
 
@@ -29,17 +29,17 @@
 
 点击 “批量运行” 选项卡，则会进入批量运行页面。
 
-<figure><img src="../../../.gitbook/assets/image (73) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/1983dbeda4308ce4d4ee592db91d264b.png)
 
 #### 第 2 步 下载模版并填写内容
 
 点击下载模版按钮，下载模版。编辑模版，填写内容，并另存为 `.csv` 格式的文件。
 
-<figure><img src="../../../.gitbook/assets/image (36) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/e39c10e8f250ab3446466f2b85601798.png)
 
 #### 第 3 步 上传文件并运行
 
-<figure><img src="../../../.gitbook/assets/image (70) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/2ff10da8d0d9a728531ccdb8edc10ad4.png)
 
 如果需要导出生成的内容，可以点右上角的下载 “按钮” 来导出为 `csv` 文件。
 
@@ -49,10 +49,10 @@
 
 点击生成结果下面的 “保存” 按钮，可以保存运行结果。在 “已保存” 选项卡中，可以看到所有已保存的内容。
 
-<figure><img src="../../../.gitbook/assets/image (57) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/fff0654787d9b26fefc7b38a8b1e1233.png)
 
 ### 生成更多类似结果
 
 如果在应用编排时开启了 “更多类似” 的功能。在 Web 应用中可以点击 “更多类似” 的按钮来生成和当前结果相似的内容。如下图所示：
 
-<figure><img src="../../../.gitbook/assets/image (39) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-publishing/launch-your-webapp-quickly/9436fc90b8af59afd2e654f29f614c6e.png)

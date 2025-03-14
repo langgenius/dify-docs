@@ -27,7 +27,7 @@
 
 在第一个 LLM 节点后新增数个条件分支，判断 `sys.dialogue_count` 值的所处区间，然后分流至不同编程阶段的 LLM 节点。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/27d15ae4fcec99e1d31403efbe8a1b53.png" alt=""><figcaption><p>AI 编程教师</p></figcaption></figure>
+![AI 编程教师](https://assets-docs.dify.ai/2025/01/27d15ae4fcec99e1d31403efbe8a1b53.png)
 
 ### 场景 2：定期回顾对话历史
 
@@ -49,6 +49,6 @@
 
 通过在特定轮数回顾学生过往的学习分析报告，LLM 能够更加像一个专业老师一样重新审视并调整用户的学习计划。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/3b99ffe6ee3425789fc08da0f267afa0.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/3b99ffe6ee3425789fc08da0f267afa0.png)
 
 > 如果还想要了解更多关于工作流的编排技巧，请参考[《工作流》](https://docs.dify.ai/v/zh-hans/guides/workflow)。

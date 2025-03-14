@@ -8,11 +8,11 @@ description: 作者：Evanchen ,  Allen.
 
 * チャットフローの「機能」から画像アップロードオプションを削除し、新たに「ファイルアップロード」機能を追加します。この機能は、画像ファイルタイプを選択できます。また、アプリのダイアログボックス内の画像アップロードアイコンもファイルアップロードアイコンに変更されました。
 
-<figure><img src="../../../img/en-bulletin-1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/90c0e2d9ac9c16b493bb4793b90df548.png)
 
 * **ワークフローの機能および`sys.files`[変数](./variables.md)にあった画像アップロードオプションは、将来的に廃止されます。** 両方とも`LEGACY`としてマークされ、開発者にはワークフローにファイルアップロード機能を追加するためにカスタムファイル変数の使用が推奨されています。
 
-<figure><img src="../../../img/en-bulletin-2.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/befa0580cd0b7ab312c2fe85f6fc2ac7.png)
 
 ### 「画像アップロード」機能を統合する理由
 
@@ -27,7 +27,7 @@ description: 作者：Evanchen ,  Allen.
 * ファイルアップロード機能により、ファイルはワークフロー内でファイル変数としてアップロード、解析、参照、ダウンロードされます。
 * 開発者は、画像、音声、映像を含む複雑なタスクの理解と処理が可能なアプリを簡単に構築できます。
 
-<figure><img src="../../../img/en-bulletin-3.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/f137939601f9d95112e27ad27cb2aa3a.png)
 
 単独の「画像アップロード」機能の使用を推奨せず、アプリ体験を向上させるために包括的な「ファイルアップロード」機能への移行をお勧めします。
 
@@ -39,11 +39,11 @@ description: 作者：Evanchen ,  Allen.
 
 すでに「画像アップロード」機能が有効になっているチャットフローを作成した場合、LLMノードでビジョン機能を有効にすると、システムは機能を自動的に切り替え、アプリの画像アップロード機能に影響を与えません。アプリを更新して再公開する必要がある場合は、LLMノードのビジョン変数選択ボックスでファイル変数を選択し、チェックリストからアイテムをクリアしてアプリを再公開してください。
 
-<figure><img src="../../../img/en-bulletin-4.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/93f533be37a1f936879379fcaabc2b45.png)
 
 チャットフローに「画像アップロード」機能を追加したい場合は、機能で「ファイルアップロード」を有効にし、「画像」ファイルタイプのみを選択してください。その後、LLMノードでビジョン機能を有効にし、sys.files変数を指定してください。アップロードエントリは「ペーパークリップ」アイコンとして表示されます。詳細な手順については、追加機能を参照してください。
 
-<figure><img src="../../../img/en-bulletin-5.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/e64569e7d240bf453308e86ec0573178.png)
 
 * **ワークフロー**
 

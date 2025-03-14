@@ -279,4 +279,4 @@ class GoogleProvider(BuiltinToolProviderController):
 
 もちろん、google検索は資格情報を必要とするため、使用前にフロントエンドで資格情報を設定する必要があります。
 
-<figure><img src="../../.gitbook/assets/Feb 4, 2024.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/c99fed3e1bbe5d724810fd6118012071.png)

@@ -62,7 +62,7 @@ Well, before you try the new mode, you should be aware of some essential element
 
 After creating an application, you can switch to the **Expert Mode** on the prompt design page.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/000.png" alt=""><figcaption><p>Access to the <strong>Expert Mode</strong></p></figcaption></figure>
+![Access to the <strong>Expert Mode</strong>](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/000.png)
 
 {% hint style="warning" %}
 After modifying the prompts in the **Expert Mode** and publishing the application, you will not be able to revert back to the **Basic Mode**.
@@ -72,7 +72,7 @@ After modifying the prompts in the **Expert Mode** and publishing the applicatio
 
 In both two modes, you can modify the parameters for the inserting context, which includes **TopK** and **Score Threshold**.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/Context parameters.png" alt=""><figcaption><p>Context parameters</p></figcaption></figure>
+![Context parameters](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/Context parameters.png)
 
 {% hint style="warning" %}
 Please note that only after uploading the context, the built-in prompts containing <img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/Context.png" alt="" data-size="line"> will be displayed on the prompt design page.
@@ -116,7 +116,7 @@ Because LLM stops generating content before the next `Human1:`.
 
 You can enter "/" in the text editor to quickly bring up Blocks to insert into the prompt.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/shortcut.png" alt=""><figcaption><p>shortcut "/"</p></figcaption></figure>
+![shortcut "/"](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/shortcut.png)
 
 {% hint style="warning" %}
 Except for `Variables`, other Blocks cannot be inserted repeatedly. In different applications and models, the Blocks that can be inserted will vary based on different prompt template structures.
@@ -159,7 +159,7 @@ During debugging, you can not only check the user's input and LLM's responses bu
 
 In the debugging preview interface, after engaging in a conversation with the AI, simply move the mouse pointer over any user session, and you will see the "Log" icon button in the upper-left corner. Click on it to view the Prompt Log.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/Access to the Prompt Log (1).png" alt=""><figcaption><p>Access to the Prompt Log</p></figcaption></figure>
+![Access to the Prompt Log](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/Access to the Prompt Log (1).png)
 
 In the Prompt Log, we can clearly see:
 
@@ -167,7 +167,7 @@ In the Prompt Log, we can clearly see:
 2. Relevant text chucks referenced in the current session.
 3. Historical session records.
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/log1.png" alt=""><figcaption><p>Prompt Log</p></figcaption></figure>
+![Prompt Log](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/log1.png)
 
 From the log, we can view the complete prompts that have been assembled by the system and sent to LLM, and we can continuously improve prompt input based on debugging results.
 
@@ -177,4 +177,4 @@ In the initial application's main interface, you can find "Logs & Ann." in the l
 
 For more head to 👉 [logs.md](../logs.md "mention") .
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/33333.png" alt=""><figcaption><p>Logs & Ann.</p></figcaption></figure>
+![Logs & Ann.](/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/33333.png)

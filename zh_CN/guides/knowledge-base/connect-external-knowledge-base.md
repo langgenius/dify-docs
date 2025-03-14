@@ -19,7 +19,7 @@ description: 作者： Allen。 Dify Technical Writer。
 * Dify 平台能够直接获取托管在云服务提供商知识库内的文本内容，开发者无需将内容重复搬运至 Dify 中的知识库；
 * Dify 平台能够直接获取自建知识库内经算法处理后的文本内容，开发者仅需关注自建知识库的信息检索机制，并不断优化与提升信息召回的准确度。
 
-<figure><img src="../../.gitbook/assets/image (1) (1) (1) (1).png" alt=""><figcaption><p>外部知识库连接原理</p></figcaption></figure>
+![外部知识库连接原理](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/bd85d53161407ca4272a1799bc2ad4d5.png)
 
 以下是连接外部知识的详细步骤：
 
@@ -39,13 +39,13 @@ description: 作者： Allen。 Dify Technical Writer。
 * API 接口地址，外部知识库的连接地址，示例 `api-endpoint/retrieval`；详细说明请参考[外部知识库 API](https://docs.dify.ai/zh-hans/guides/knowledge-base/external-knowledge-api-documentation)；
 * API Key，外部知识库连接密钥，详细说明请参考[外部知识库 API](https://docs.dify.ai/zh-hans/guides/knowledge-base/external-knowledge-api-documentation)；
 
-<figure><img src="../../.gitbook/assets/image (353).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/30a088f3dc4f8cf7d572a3e9cece1d4b.png)
 
 ### 3. 连接外部知识库
 
 前往 **“知识库”** 页，点击添加知识库卡片下方的 **“连接外部知识库”** 跳转至参数配置页面。
 
-<figure><img src="../../.gitbook/assets/image (354).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/2cfb30ee750e6699e168d1dac025383e.png)
 
 填写以下参数：
 
@@ -58,13 +58,13 @@ description: 作者： Allen。 Dify Technical Writer。
 
     **Score 阈值：** 文本片段筛选的相似度阈值，只召回超过设置分数的文本片段，默认值为 0.5。数值越高说明对于文本与问题要求的相似度越高，预期被召回的文本数量也越少，结果也会相对而言更加精准。
 
-<figure><img src="../../.gitbook/assets/image (355).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/5c6add370bb244cc662cc466510e25af.png)
 
 ### 4. 测试外部知识库连接与召回
 
 建立与外部知识库的连接后，开发者可以在 **“召回测试”** 中模拟可能的问题关键词，预览从外部知识库召回的文本分段。若对于召回结果不满意，可以尝试修改召回参数或自行调整外部知识库的检索设置。
 
-<figure><img src="../../.gitbook/assets/image (356).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/67d5250adf1f8c6ebe5c657b8053d332.png)
 
 ### 5. 在应用内集成外部知识库
 
@@ -72,12 +72,12 @@ description: 作者： Allen。 Dify Technical Writer。
 
     在 Chatbot / Agent 类型应用内的编排页中的 **“上下文”** 内，选中带有 `EXTERNAL` 标签的外部知识库。
 
-    <figure><img src="../../.gitbook/assets/image (357).png" alt=""><figcaption></figcaption></figure>
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/0bb82416f70f12d9d502bb31903513aa.png)
 *   Chatflow / Workflow 类型应用
 
     在 Chatflow / Workflow 类型应用内添加 **“知识检索”** 节点，选中带有 `EXTERNAL` 标签的外部知识库。
 
-    <figure><img src="../../.gitbook/assets/image (358).png" alt=""><figcaption></figcaption></figure>
+    ![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/knowledge-base/6c5ae224b1f4a35459cbfdeed137a53a.png)
 
 ### 6. 管理外部知识库
 

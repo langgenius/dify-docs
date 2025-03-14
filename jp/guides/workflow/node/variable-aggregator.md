@@ -16,15 +16,15 @@
 
 変数集約を追加しない場合、分類1と分類2のブランチは異なるナレッジベース検索を経て、ダウンストリームの大規模言語モデルおよび回答ノードを繰り返し定義する必要があります。
 
-<figure><img src="../../../.gitbook/assets/image (227).png" alt=""><figcaption><p>問題分類（変数集約なし）</p></figcaption></figure>
+![問題分類（変数集約なし）](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/7a7c91663c3799ce9d056b013d5df29c.png)
 
 変数集約を追加することで、二つのナレッジベース検索ノードの出力を一つの変数に集約できます。
 
-<figure><img src="../../../.gitbook/assets/image (225).png" alt=""><figcaption><p>問題分類後のマルチ集約</p></figcaption></figure>
+![問題分類後のマルチ集約](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/78e088e16a409cc18552b21bec98bc01.png)
 
 **IF/ELSE 条件ブランチ後のマルチ集約**
 
-<figure><img src="../../../.gitbook/assets/image (226).png" alt=""><figcaption><p>IF/ELSE　問題分類後のマルチ集約</p></figcaption></figure>
+![IF/ELSE　問題分類後のマルチ集約](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/da33064c784fc44c19b532a6d873cfaf.png)
 
 ### フォーマット要求
 

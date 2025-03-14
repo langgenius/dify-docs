@@ -60,7 +60,7 @@
   </tbody>
 </table>
 
-<figure><img src="../../.gitbook/assets/image (30).png" alt=""><figcaption><p>ワークフロー内のシステム変数</p></figcaption></figure>
+![ワークフロー内のシステム変数](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/684db784d35f7b9771ea40bfda64822c.png)
 
 #### チャットフロー
 
@@ -127,13 +127,13 @@
   </tbody>
 </table>
 
-<figure><img src="../../.gitbook/assets/image (1) (2).png" alt="chatflow app system variables"><figcaption><p>チャットフロー内のシステム変数</p></figcaption></figure>
+![チャットフロー内のシステム変数](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/79340d58bf2c202dd6bd4e93fa03272d.png)
 
 ### 環境変数
 
 **環境変数は、APIキーやデータベースのパスワードといった機密性の高い情報を保護する際に、ワークフロー実行時に活用されます。** これらはコードに直接書き込むのではなく、ワークフローに設定され、異なる環境間での共有が可能になっています。
 
-<figure><img src="../../.gitbook/assets/jp-env-variable.png" alt="Environment Variables"><figcaption><p>環境変数</p></figcaption></figure>
+![環境変数](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/6ca7ee432384d6341cd19e650eef66f7.png)
 
 サポートされるデータ型には以下の3つがあります：
 
@@ -155,7 +155,7 @@
 
 **ユーザーは会話変数を使っで、チャットフローの会話内で一時的に特定の情報を保存し、同じワークフロー内の複数のチャットにわたってその情報を参照することができます。** 例えば、コンテキスト、チャットボックスにアップロードされたファイル（近々配布予定）、ユーザーが会話中に入力した設定などが含まれます。この機能は、LLM（大規模言語モデル）に「メモ」を提供するようなもので、メモリエラーによる情報のバイアスを回避できます。
 
-<figure><img src="../../.gitbook/assets/conversation-var.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/c04285fec92f13a20ccbd3e21361a30d.png)
 
 以下の6種類のデータ型をサポートしています：
 

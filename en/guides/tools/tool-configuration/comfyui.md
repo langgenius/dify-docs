@@ -13,10 +13,10 @@ Please refer to its [official documentation](https://docs.comfy.org/get_started/
 ## 2. Prompt setting
 If you don't need dify to pass in the prompt, you can skip this step. If your prompt node is connected to the only `KSampler` node in ComfyUI, you can skip this step.  
 Otherwise, use the string `{{positive_prompt}}` to replace the positive prompt content, and `{{negative_prompt}}` to replace the negative prompt content.
-<figure><img src="/en/.gitbook/assets/guides/tools/comfyui_prompt.png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/tools/comfyui_prompt.png)
 
 ## 3. Export the API file of the workflow. 
-<figure><img src="/en/.gitbook/assets/guides/tools/comfyui.png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/tools/comfyui.png)
 As shown in the figure, select `Save(API Format)`, if there is no such selection, you need to enable `Dev Mode` in the settings.
 
 ## 4. Integrate ComfyUI in Dify  

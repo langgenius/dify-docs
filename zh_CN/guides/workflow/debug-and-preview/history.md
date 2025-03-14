@@ -2,4 +2,4 @@
 
 在「运行历史」中可以查看当前工作流历史调试的运行结果和日志信息。
 
-<figure><img src="../../../.gitbook/assets/output (3) (4).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/debug-and-preview/5ff3e82563c43b41e359c83483fd0f9b.png)

@@ -20,39 +20,39 @@ LangSmith 官网介绍：[https://www.langchain.com/langsmith](https://www.langc
 
 在 LangSmith 内创建项目，登录后在主页点击 **New Project** 创建一个自己的项目，**项目**将用于与 Dify 内的**应用**关联进行数据监测。
 
-<figure><img src="../../../.gitbook/assets/image (29).png" alt=""><figcaption><p>在 LangSmith 内创建项目</p></figcaption></figure>
+![在 LangSmith 内创建项目](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/58e20105fcc0771ca2431e8e5dcc42d3.png)
 
 创建完成之后在 Projects 内可以查看该项目。
 
-<figure><img src="../../../.gitbook/assets/image (36).png" alt=""><figcaption><p>在 LangSmith 内查看已创建项目</p></figcaption></figure>
+![在 LangSmith 内查看已创建项目](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/642c0ff7edfdfe77fba43aa22cc3fa71.png)
 
 #### 3. 创建项目凭据
 
 创建项目凭据，在左侧边栏内找到项目设置 **Settings**。
 
-<figure><img src="../../../.gitbook/assets/image (37).png" alt=""><figcaption><p>项目设置</p></figcaption></figure>
+![项目设置](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/c49a1fc769215193928ff0d880422f89.png)
 
 点击 **Create API Key**，创建一个项目凭据。
 
-<figure><img src="../../../.gitbook/assets/image (32).png" alt=""><figcaption><p>创建一个项目 API Key</p></figcaption></figure>
+![创建一个项目 API Key](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/7082286b0d12af4bc0c84d9a3acf8b1b.png)
 
 选择 **Personal Access Token** ，用于后续的 API 身份校验。
 
-<figure><img src="../../../.gitbook/assets/image (34).png" alt=""><figcaption><p>创建一个 API Key</p></figcaption></figure>
+![创建一个 API Key](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/75a69bd4dd02f0ffc0313589ae12fb36.png)
 
 将创建的 API key 复制保存。
 
-<figure><img src="../../../.gitbook/assets/image (38).png" alt=""><figcaption><p>复制 API Key</p></figcaption></figure>
+![复制 API Key](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/723e96a13e8f722d6df714b11ffd0bb1.png)
 
 #### 4. 将 LangSmith 集成至 Dify 平台
 
 在 Dify 应用内配置 LangSmith。打开需要监测的应用，在左侧边菜单内打开**监测**，点击页面内的**配置。**
 
-<figure><img src="../../../.gitbook/assets/image (40).png" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
+![配置 LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/b6578e410979cdb9da901aedc94a444d.png)
 
 点击配置后，将在 LangSmith 内创建的 **API Key** 和**项目名**粘贴到配置内并保存。
 
-<figure><img src="../../../.gitbook/assets/image (41).png" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
+![配置 LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/27173b2503ca7241b084f7cbd17cdb4c.png)
 
 {% hint style="info" %}
 配置项目名需要与 LangSmith 内设置的项目一致，若项目名不一致，数据同步时 LangSmith 会自动创建一个新的项目。
@@ -60,17 +60,17 @@ LangSmith 官网介绍：[https://www.langchain.com/langsmith](https://www.langc
 
 成功保存后可以在当前页面查看监测状态。
 
-<figure><img src="../../../.gitbook/assets/image (44).png" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
+![查看配置状态](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/a4e9df6427c7914e1eef6af78d71f408.png)
 
 ### 在 LangSmith 内查看监测数据
 
 配置完成后， Dify 内应用的调试或生产数据可以在 LangSmith 查看监测数据。
 
-<figure><img src="../../../.gitbook/assets/image (46).png" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
+![在 Dify 内调试应用](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/a0e7b21d56ecf9313f1bd48913f0a74b.png)
 
-<figure><img src="../../../.gitbook/assets/image (28).png" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
+![在 LangSmith 内查看应用数据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/2833b2ffa20927b5328e9624b065beea.png)
 
-<figure><img src="../../../.gitbook/assets/image (47).png" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
+![在 LangSmith 内查看应用数据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/c40e522f1ffe9fc50411dd7feaf937ed.png)
 
 ### 监测数据清单
 

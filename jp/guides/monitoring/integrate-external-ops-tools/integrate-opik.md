@@ -18,17 +18,17 @@ Opikは、大規模言語モデル（LLM）アプリケーションを評価、�
 
 右上のユーザーメニューから**API Key**を選択し、APIキーを取得・コピーしてください。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png" alt=""><figcaption><p>Opik APIキー</p></figcaption></figure>
+![Opik APIキー](https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png)
 
 ### 3. OpikとDifyを統合
 
 DifyアプリケーションでOpikを設定します。監視するアプリケーションを開き、サイドメニューで**監視**を選択し、ページ上の**アプリケーションパフォーマンスを追跡**をクリックします。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png" alt=""><figcaption><p>アプリケーションパフォーマンスを追跡</p></figcaption></figure>
+![アプリケーションパフォーマンスを追跡](https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png)
 
 設定後、Opikで作成した**API Key**と**プロジェクト名**を設定ページに貼り付けて保存します。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png" alt=""><figcaption><p>Opikの設定</p></figcaption></figure>
+![Opikの設定](https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png)
 
 保存に成功すると、現在のページで監視ステータスを確認できます。
 
@@ -36,15 +36,15 @@ DifyアプリケーションでOpikを設定します。監視するアプリケ
 
 設定が完了すると、Difyアプリケーションを通常通りデバッグまたは使用できます。すべての使用履歴はOpikで監視可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png" alt=""><figcaption><p>Opikでアプリデータを確認</p></figcaption></figure>
+![Opikでアプリデータを確認](https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png)
 
 Opikに切り替えると、ダッシュボードでDifyアプリケーションの詳細な操作ログを確認できます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png" alt=""><figcaption><p>Opikでアプリデータを確認</p></figcaption></figure>
+![Opikでアプリデータを確認](https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png)
 
 Opikの詳細なLLM操作ログにより、Difyアプリケーションのパフォーマンスを最適化できます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png" alt=""><figcaption><p>Opikでアプリデータを確認</p></figcaption></figure>
+![Opikでアプリデータを確認](https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png)
 
 ## モニタリングデータリスト
 

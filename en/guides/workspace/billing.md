@@ -38,7 +38,7 @@ Check out the [pricing page ](https://dify.ai/pricing)to learn more.
 
 You can view capacity usage details on your workspace's Billing page.
 
-<figure><img src="../.gitbook/assets/usage.png" alt=""><figcaption><p>monitor resource usage</p></figcaption></figure>
+![monitor resource usage](../.gitbook/assets/usage.png)
 
 ## FAQ
 

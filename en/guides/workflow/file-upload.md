@@ -68,7 +68,7 @@ Some LLMs, such as [Claude 3.5 Sonnet](https://docs.anthropic.com/en/docs/build-
 
 1. Click the **"Features"** button in the upper right corner of the Chatflow application to add more functionality to the application. After enabling this feature, application users can upload and update files at any time during the application dialogue. A maximum of 10 files can be uploaded simultaneously, with a size limit of 15MB per file.
 
-<figure><img src="../../.gitbook/assets/image (1) (3) (1).png" alt=""><figcaption><p>file upload</p></figcaption></figure>
+![file upload](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/20784cfa167417654a69c10e42e8271b.png)
 
 Enabling this feature does not grant LLMs the ability to directly read files. A **Document Extractor** is still needed to parse documents into text for LLM comprehension.
 
@@ -79,11 +79,11 @@ Enabling this feature does not grant LLMs the ability to directly read files. A 
 3. Add an LLM node and select the output variable of the Document Extractor node in the system prompt.
 4. Add an "Answer" node at the end, filling in the output variable of the LLM node.
 
-<figure><img src="../../.gitbook/assets/image (2) (4).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/6802747ef5de4772ce8d05f6c0a23130.png)
 
 Once enabled, users can upload files and engage in conversations in the dialogue box. However, with this method, the LLM application does not have the ability to remember file contents, and files need to be uploaded for each conversation.
 
-<figure><img src="../../.gitbook/assets/image (3) (3).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/b18af11da3f339c496193d9732906849.png)
 
 If you want the LLM to remember file contents during conversations, please refer to Method 3.
 
@@ -125,11 +125,11 @@ After uploading, files are stored in single file variables, which LLMs cannot di
 
 Use the file variable from the "Start" node as the input variable for the **"Document Extractor"** node.
 
-<figure><img src="../../.gitbook/assets/image (4).png" alt=""><figcaption><p><strong>Document Extractor</strong></p></figcaption></figure>
+![<strong>Document Extractor</strong>](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/8e6a3deaaa5eebeb66f9e1d844dc1ec6.png)
 
 Fill in the output variable of the "Document Extractor" node in the system prompt of the LLM node.
 
-<figure><img src="../../.gitbook/assets/image (5).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/f6ea094b30b240c999a4248d1fc21a1c.png)
 
 After completing these settings, application users can paste file URLs or upload local files in the WebApp, then interact with the LLM about the document content. Users can replace files at any time during the conversation, and the LLM will obtain the latest file content.
 
@@ -143,7 +143,7 @@ For certain file types (such as images), file variables can be directly used wit
 
 Below is an example configuration:
 
-<figure><img src="../../.gitbook/assets/image (6).png" alt=""><figcaption><p>Using file variables directly in LLM node</p></figcaption></figure>
+![Using file variables directly in LLM node](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/f8980732757050049a430eea934511cf.png)
 
 It's important to note that when directly using file variables in LLM node, the developers need to ensure that the file variable contains only image files; otherwise, errors may occur. If users might upload different types of files, we need to use list operator node for filtering files.
 
@@ -151,7 +151,7 @@ It's important to note that when directly using file variables in LLM node, the 
 
 Placing file variables in answer nodes or end nodes will provide a file download card in the conversation box when the application reaches that node. Clicking the card allows for file download.
 
-<figure><img src="../../.gitbook/assets/image (7).png" alt=""><figcaption><p>file download</p></figcaption></figure>
+![file download](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/bc39be7fd4879b3875e6b77daaff5d37.png)
 
 ## Advanced Usage
 

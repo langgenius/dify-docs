@@ -6,7 +6,7 @@ Click the **Knowledge** button at the top of the Dify platform and select the kn
 
 Here, you can modify the knowledge base’s name, description, permissions, indexing method, embedding model and retrieval settings.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/20fc93428f8f20f7acfce665c4ed4ddf.png" alt=""><figcaption><p>Knowledge base settings</p></figcaption></figure>
+![Knowledge base settings](https://assets-docs.dify.ai/2024/12/20fc93428f8f20f7acfce665c4ed4ddf.png)
 
 * **Knowledge Name**: Used to distinguish among different knowledge bases.
 * **Knowledge Description**: Used to describe the information represented by the documents in the knowledge base.
@@ -26,7 +26,7 @@ Here, you can modify the knowledge base’s name, description, permissions, inde
 
 On the left side of the knowledge base, you can see all linked Apps. Hover over the circular icon to view the list of all linked apps. Click the jump button on the right to quickly browser them.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/28899b9b0eba8996f364fb74e5b94c7f.png" alt=""><figcaption><p>Viewing the Linked Apps</p></figcaption></figure>
+![Viewing the Linked Apps](https://assets-docs.dify.ai/2024/12/28899b9b0eba8996f364fb74e5b94c7f.png)
 
 You can manage your knowledge base documents either through a web interface or via an API.
 
@@ -46,4 +46,4 @@ Dify Knowledge Base provides a comprehensive set of standard APIs. Developers ca
 [maintain-dataset-via-api.md](knowledge-and-documents-maintenance/maintain-dataset-via-api.md)
 {% endcontent-ref %}
 
-<figure><img src="../../.gitbook/assets/knowledge-base-api.png" alt=""><figcaption><p>Knowledge base API management</p></figcaption></figure>
+![Knowledge base API management](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/knowledge-base/02cf8bc06990606ff1d60b73ce7a82c8.png)

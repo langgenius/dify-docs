@@ -54,7 +54,7 @@ Please choose the appropriate file upload method according to your business scen
 
 Thus, Dify introduced the **doc extractor**, which can extract text from the file variable and output it as a text variable.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-21 15.21.21.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/bc4b1492bd10ef782457ec6a709997f9.png)
 
 ### **LLM**
 
@@ -123,11 +123,11 @@ To handle multiple uploaded files, an iterative node is needed.
 
 The iterative node is similar to the while loop in many programming languages, except that Dify has no conditional restrictions, and the **input variable can only be of type `array` (list)**. The reason is that Dify will execute all the content in the list until it is done.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 08.56.33.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/cc9cbf8b718b8abbf84cd8649a08c1a3.png)
 
 Therefore, you need to adjust the file variable in the start node to an `array` type, i.e., a file list.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 09.10.17.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/8eff802e3e1e3da466c5dc9ac56c50f2.png)
 
 ## **Question 2: Handling Specific Files from a File List**
 
@@ -137,4 +137,4 @@ For example, limit the analysis to only document-type files and sort the files t
 
 Before the iterative node, add a list operation, adjust the **filter condiftion** and **order by**, then change the input of the iterative node to the output of the list operation node.
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-22 09.11.28.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/287690e1fef87af270c0d5020d25d6cf.png)

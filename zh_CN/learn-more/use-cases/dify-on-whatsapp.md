@@ -23,7 +23,7 @@
 
 首先，登录[Dify官方应用平台](https://cloud.dify.ai/signin)，你可以选择使用Github登录或者使用Google登录。此外，你也可以参考Dify官方教程[Docker Compose 部署 | 中文 | Dify](https://docs.dify.ai/v/zh-hans/getting-started/install-self-hosted/docker-compose) 私有部署，Dify是开源项目，支持私有部署。
 
-<figure><img src="../../.gitbook/assets/create-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/08ece9f6dd15b6ba3c44eb187ea73bdd.jpeg)
 
 登录成功后，进入Dify页面，我们按照下方步骤创建一个基础编排聊天助手应用
 
@@ -34,7 +34,7 @@
 5. 选择应用图标并为应用填写一个名称，比如基础编排聊天助手
 6. 点击创建
 
-<figure><img src="../../.gitbook/assets/config-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/312d1fbcd5c8f58ca41b9f8dc8131286.jpeg)
 
 创建成功后我们会跳转到上图所示页面，我们继续配置应用
 
@@ -42,7 +42,7 @@
 2. 设置模型参数
 3. 填写应用提示词
 
-<figure><img src="../../.gitbook/assets/publish-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/410dc25f76beebf8659294b06c1a4d25.jpeg)
 
 在配置完成后，我们可以在右侧对话框进行测试，在测试完成后，进行如下操作
 
@@ -52,7 +52,7 @@
 
 **（4）生成基础编排聊天助手API密钥**
 
-<figure><img src="../../.gitbook/assets/create-basic-chatbot-apikey.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/de85ada57a6f1a0029486dbdaea62fcf.jpeg)
 
 在点击"访问API"后，我们会跳转到上图的API管理页面，在这个页面我们按照如下步骤获取API密钥：
 
@@ -68,7 +68,7 @@
 
 转到\[Twilio控制台] 畫面應該會直接獲取到Account SID 和Auth Token，保存好這两个东西。
 
-<figure><img src="../../.gitbook/assets/twilio1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/f1586199a94ffefb18ffc4c8456a58d0.png)
 
 ## 5. 创建你的聊天机器人
 
@@ -122,7 +122,7 @@ npx localtunnel --port 9000
 
 上述命令在你的本地服务器（运行在9000端口）和localtunnel创建的公共域之间建立了一个连接。一旦你有了localtunnel转发URL，任何来自客户端对该URL的请求都会自动被定向到你的FastAPI后端。
 
-<figure><img src="../../.gitbook/assets/lt1.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/73f585d06be68fc71c0d37622a5b6f6c.png)
 
 #### 5.5 代码解释
 
@@ -196,7 +196,7 @@ conversation_ids = {}
 
 在“试试看”下，点击“发送WhatsApp消息”。你将默认进入沙盒选项卡，你会看到一个电话号码“+14155238886”，旁边有一个加入的代码，右边有一个二维码。
 
-<figure><img src="../../.gitbook/assets/twilio2.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/1f966b36bd5c213e4006a057b1c70c04.png)
 
 要启用Twilio测试环境，将此代码的文本作为WhatsApp消息发送到显示的电话号码。如果你正在使用网络版本，可以点击超链接将你引导到WhatsApp聊天。
 
@@ -212,13 +212,13 @@ Twilio沙盒webhook 完整的URL应如下所示：https://breezy-humans-help.loc
 
 完成后，按“保存”按钮。
 
-<figure><img src="../../.gitbook/assets/twilio3.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/6f810feee2a1eb07f718fc3f2be00b4b.png)
 
 ## 7. WhatsApp測試
 
 掃6.1 頁面的二維碼進入WhatsApp 沙盒環境，然後发送WhatsApp消息，并等待你的AI聊天机器人的回复。尝试向AI聊天机器人提问你可以向Dify 聊天助手提问的任何问题。
 
-<figure><img src="../../.gitbook/assets/whatsapp1.jpg" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/use-cases/36376da1b4699289e944355282656780.jpeg)
 
 ## 8. 后记
 

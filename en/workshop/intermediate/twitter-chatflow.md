@@ -59,7 +59,7 @@ docker compose up -d
 
 Configure Model Provider in account setting:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.51.29.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/4b4102f9027e2bda3fc520eaa8ea2354.png)
 
 ## Create a chatflow
 
@@ -67,15 +67,15 @@ Now, let's get started on the chatflow.
 
 Click on `Create from Blank` to start:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_20.37.09.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/b2955735f5c122d8a2fc08ef13654239.png)
 
 The initialized chatflow should be like:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.44.44.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/baee341b771d1cd77780fd4845b467b2.png)
 
 ## Add nodes to chatflow
 
-<figure><img src="../../.gitbook/assets/image (114).png" alt=""><figcaption><p>The final chatflow looks like this</p></figcaption></figure>
+![The final chatflow looks like this](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/bad3185d9f2c92994c24de65a5414182.png)
 
 ### Start node
 
@@ -83,7 +83,7 @@ In start node, we can add some system variables at the beginning of a chat. In t
 
 Click on Start node and add a new variable:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.42.10.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/a041be2230364d7e729527f3f7af34d8.png)
 
 ### Code node
 
@@ -100,27 +100,27 @@ def main(id: str) -> dict:
 
 Add a code node and select python, and set input and output variable names:
 
-<figure><img src="../../.gitbook/assets/7d5de1cce4426f70f448402d7812bd040d681c225e49a2de66b59cbde66ba834.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/e5523ba1f801f4009b74e7cf03e2ef2f.png)
 
 ### HTTP request node
 
 Based on the [Crawlbase docs](https://crawlbase.com/docs/crawling-api/scrapers/#twitter-profile), to scrape a Twitter user’s profile in http format, we need to complete HTTP request node in the following format:
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21 (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/13899d88abeb3b3be20c44d40565a5f9.png)
 
 Importantly, it is best not to directly enter the token value as plain text for security reasons, as this is not a good practice. Actually, in the latest version of Dify, we can set token values in **`Environment Variables`**. Click `env` - `Add Variable` to set the token value, so plain text will not appear in the node.
 
 Check [https://crawlbase.com/dashboard/account/docs](https://crawlbase.com/dashboard/account/docs) for your crawlbase API Key.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.55.20.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/c99b66ac8d30289615a8869bae5a6455.png)
 
 By typing `/` , you can easily insert the API Key as a variable.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.02.04.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/51f9350677acb396bad5841fa80c903c.png)
 
 Tap the start button of this node to check whether it works correctly:
 
-<figure><img src="../../.gitbook/assets/CleanShot 2024-10-07 at 21.44.50@2x.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/094b96e513169a47f1749e46e1357893.png)
 
 ### LLM node
 
@@ -130,17 +130,17 @@ The value `context` should be `body` from HTTP Request node.
 
 The following is a sample system prompt.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.35.38.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/46f4e15ac1e9d3ca3f47dc5bb921ff01.png)
 
 ## Test run
 
 Click `Preview` to start a test run and input twitter user id in `id`
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/a25b122dfa14f0c65fcd3498ccf1898e.png)
 
 For example, I want to analyze Elon Musk's tweets and write a tweet about global warming in his tone.
 
-<figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.47.20.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/835a01082e74723138d9f97bee0c6c4b.png)
 
 Does this sound like Elon? lol
 

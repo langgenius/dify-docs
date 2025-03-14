@@ -28,7 +28,7 @@ Difyのクラウド版をサプライヤーの安全評価にご利用の場合�
 
 **チームオーナーのみ**、**右上メニューの「コンプライアンス」** から Dify の SOC 2 Type I レポートをダウンロードできます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png" alt=""><figcaption><p>SOC 2 Type I レポート</p></figcaption></figure>
+![SOC 2 Type I レポート](https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png)
 
 #### SOC 2 Type II レポート
 
@@ -36,7 +36,7 @@ Difyのクラウド版をサプライヤーの安全評価にご利用の場合�
 
 **チームオーナーのみ**、**右上メニューの「コンプライアンス」** から Dify の SOC 2 Type II レポートをダウンロードできます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png" alt=""><figcaption><p><strong>SOC 2 Type II レポート</strong></p></figcaption></figure>
+![<strong>SOC 2 Type II レポート</strong>](https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png)
 
 #### ISO 27001:2022 認証
 
@@ -44,7 +44,7 @@ Difyのクラウド版をサプライヤーの安全評価にご利用の場合�
 
 **チームオーナーのみ**、**右上メニューの「コンプライアンス」** から Dify の ISO 27001:2022 レポートをダウンロードできます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/7aaf7771af28bf7182bf7fda40c7b5bb.png" alt=""><figcaption><p>ISO 27001:2022 認証</p></figcaption></figure>
+![ISO 27001:2022 認証](https://assets-docs.dify.ai/2025/02/7aaf7771af28bf7182bf7fda40c7b5bb.png)
 
 #### GDPR データ処理契約
 
@@ -52,4 +52,4 @@ Difyのクラウド版をサプライヤーの安全評価にご利用の場合�
 
 DifyのDPAは、Dify.AIの公式サイトから **どなたでも** ダウンロードいただけます。
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/291cddb3bf9dfd8c92967eabb87b95a0.png" alt=""><figcaption><p>DPA</p></figcaption></figure>
+![DPA](https://assets-docs.dify.ai/2025/02/291cddb3bf9dfd8c92967eabb87b95a0.png)

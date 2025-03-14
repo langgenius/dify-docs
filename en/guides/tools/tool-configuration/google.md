@@ -16,7 +16,7 @@ Please apply for an API Key on the [Serp](https://serpapi.com/dashboard).
 
 In the Dify navigation page, click `Tools > Google > Go to authorize` to fill in the API Key.
 
-![](../../../.gitbook/assets/tools-google.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/tool-configuration/41f639a04a23817c18bec84834a828ac.png)
 
 ## 3. Using the tool
 

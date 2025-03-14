@@ -32,10 +32,10 @@ You can use the Youtube tool in the following application types.
 
 Both Chatflow and Workflow applications support adding `Video statistics` nodes. 
 
-![](../../../../img/en-youtube-workflow.jpg)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/tool-configuration/abaa685d6ffa5fbb8c295869eecfd721.jpeg)
 
 * **Agent applications**
 
 Add the `Free YouTube Transcript API` tool in the Agent application, then enter relevant commands to invoke this tool.
 
-![](../../../../img/en-youtube-agent.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/tool-configuration/a5dc28b46d00cb523268bf51399476b6.png)
