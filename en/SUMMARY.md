@@ -14,6 +14,7 @@
   * [FAQs](getting-started/install-self-hosted/faqs.md)
 * [Dify Cloud](getting-started/cloud.md)
 * [Dify Premium on AWS](getting-started/dify-premium-on-aws.md)
+* [Dify for Education](getting-started/dify-for-education.md)
 
 ## Guides
 

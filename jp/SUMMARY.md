@@ -14,6 +14,7 @@
   * [環境変数の説明](getting-started/install-self-hosted/environments.md)
   * [よくある質問](getting-started/install-self-hosted/faq.md)
 * [Dify Premium](getting-started/dify-premium.md)
+* [Dify 教育版](getting-started/dify-for-education.md)
 
 ## マニュアル <a href="#guides" id="guides"></a>
 
