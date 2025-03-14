@@ -326,7 +326,7 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 **快速开始：**
 
 * [开发 Extension 插件](../extension-plugin.md)
-* [开发 Tool 插件](../tool-type-plugin.md)
+* [开发 Tool 插件](../tool-plugin.md)
 * [Bundle 插件：将多个插件打包](../bundle.md)
 
 **插件接口文档：**

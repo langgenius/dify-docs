@@ -255,7 +255,7 @@ dify plugin package ./neko
 **クイックスタート：**
 
 *   [バンドルタイププラグイン：複数のプラグインをまとめる](bundle.md)
-*   [ツールタイププラグイン：Google検索](tool-type-plugin.md)
+*   [ツールタイププラグイン：Google検索](tool-plugin.md)
 *   [モデルタイププラグイン](model/)
 
 **プラグインインターフェースドキュメント：**

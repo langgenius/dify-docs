@@ -327,7 +327,7 @@ Publish to Dify Marketplace
 **Quick Start:**
 
 * [Develop Extension Plugin](../extension-plugin.md)
-* [Develop Tool Plugin](../tool-type-plugin.md)
+* [Develop Tool Plugin](../tool-plugin.md)
 * [Bundle Plugins: Package Multiple Plugins](../bundle.md)
 
 **Plugins Endpoint Docs:**

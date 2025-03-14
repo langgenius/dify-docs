@@ -31,7 +31,7 @@ description: 'Author: Yeuoly, Allen'
     各类 AI 模型的接入插件，支持[模型服务商](quick-start/develop-plugins/model-plugin/integrate-the-predefined-model.md)和[自定义模型](quick-start/develop-plugins/model-plugin/customizable-model.md)两种类型，能够极大降低配置和调用 LLM API 的门槛。关于模型插件的开发详情，请参考[快速开始： Model 插件](quick-start/develop-plugins/model-plugin/)。
 *   **Tools（工具）**
 
-    工具指的是能够被 Chatflow / Workflow / Agent 类型应用所调用的第三方服务。提供完整的 API 实现能力，用于增强 Dify 应用的能力。例如开发一个 Google 搜索插件，详情请参考[快速开始：Tool 插件](quick-start/develop-plugins/tool-type-plugin.md)。
+    工具指的是能够被 Chatflow / Workflow / Agent 类型应用所调用的第三方服务。提供完整的 API 实现能力，用于增强 Dify 应用的能力。例如开发一个 Google 搜索插件，详情请参考[快速开始：Tool 插件](quick-start/develop-plugins/tool-plugin.md)。
 *   **Agent 策略**
 
     Agent 策略插件能够定义 [Agent 节点](../guides/workflow/node/agent.md)内部的推理和决策逻辑，包括 LLM 对于工具选择、调用以及对返回结果的处理逻辑。关于更多开发指引，请参考[快速开始： Agent 策略插件](quick-start/develop-plugins/agent-strategy-plugin.md)。
