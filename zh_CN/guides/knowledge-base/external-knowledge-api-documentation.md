@@ -27,6 +27,7 @@ Authorization: Bearer {API_KEY}
 | knowledge_id | 是 | 字符串 | 知识库唯一 ID | AAA-BBB-CCC |
 | query | 是 | 字符串 | 用户的查询 | Dify 是什么？ |
 | retrieval_setting | 是 | 对象 | 知识检索参数 | 见下文 |
+| metadata_condition | 是 | 对象 | 原数组筛选 | 见下文 |
 
 `retrieval_setting` 属性是一个包含以下键的对象：
 
@@ -34,6 +35,40 @@ Authorization: Bearer {API_KEY}
 |------|----------|------|------|--------|
 | top_k | 是 | 整数 | 检索结果的最大数量 | 5 |
 | score_threshold | 是 | 浮点数 | 结果与查询相关性的分数限制，范围：0~1 | 0.5 |
+
+`metadata_condition` 属性是一个包含以下键的对象：
+
+| 属性 | 是否必需 | 类型 | 描述 | 示例值 |
+|------|----------|------|------|--------|
+| logical_operator | 否 | 字符串 | 逻辑操作符，取值为 `and` 或 `or`，默认 `and` | and |
+| conditions | 是 | 数组（对象） | 条件列表 | 见下文 |
+
+`conditions` 数组中的每个对象包含以下键：
+
+| 属性 | 是否必需 | 类型 | 描述 | 示例值 |
+|------|----------|------|------|--------|
+| name | 是 | 数组（字符串） | 需要筛选的 metadata 名称 | `["category", "tag"]` |
+| comparison_operator | 是 | 字符串 | 比较操作符 | `contains` |
+| value | 否 | 字符串 | 对比值，当操作符为 `empty`、`not empty`、`null`、`not null` 时可省略 | `"AI"` |
+
+支持的 `comparison_operator` 操作符：
+
+- `contains`：包含某个值
+- `not contains`：不包含某个值
+- `start with`：以某个值开头
+- `end with`：以某个值结尾
+- `is`：等于某个值
+- `is not`：不等于某个值
+- `empty`：为空
+- `not empty`：不为空
+- `=`：等于
+- `≠`：不等于
+- `>`：大于
+- `<`：小于
+- `≥`：大于等于
+- `≤`：小于等于
+- `before`：在某个日期之前
+- `after`：在某个日期之后
 
 ## 请求语法
 

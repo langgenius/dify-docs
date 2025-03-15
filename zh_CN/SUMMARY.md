@@ -78,6 +78,7 @@
   * [管理知识库](guides/knowledge-base/knowledge-and-documents-maintenance/README.md)
     * [维护知识库内文档](guides/knowledge-base/knowledge-and-documents-maintenance/maintain-knowledge-documents.md)
     * [通过 API 维护知识库](guides/knowledge-base/knowledge-and-documents-maintenance/maintain-dataset-via-api.md)
+  * [元数据](guides/knowledge-base/metadata.md)
   * [在应用内集成知识库](guides/knowledge-base/integrate-knowledge-within-application.md)
   * [召回测试/引用归属](guides/knowledge-base/retrieval-test-and-citation.md)
   * [知识库请求频率限制](guides/knowledge-base/knowledge-request-rate-limit.md)
