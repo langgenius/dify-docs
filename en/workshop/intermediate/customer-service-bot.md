@@ -26,13 +26,13 @@ Before starting the experiment, remember that the core of the knowledge base is 
 
 In Dify, select **Create from Blank - Chatflow.**
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 15.46.30.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/0147e0d6fa1412dcf38ff0b12d30e5fe.png)
 
 #### Add a Model Provider
 
 This experiment involves using embedding models. Currently, supported embedding model providers include OpenAI and Cohere. In Dify's model providers, those with the `TEXT EMBEDDING` label are supported. Ensure you have added at least one and have sufficient balance.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 15.54.59.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/ebfb40e8b80adb8d7e1096ee5da16fad.png)
 
 > **What is embedding?**
 >
@@ -58,7 +58,7 @@ We will start with a uploading local document as an example.
 
 After uploading the document, you will enter the following page:
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 15.57.26.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/0dab2d0a607d9486ae973d897b0c08bd.png)
 
 You can see a segmentation preview on the right. The default selection is automatic segmentation and cleaning. Dify will automatically divide the article into many paragraphs based on the content. You can also set other segmentation rules in the custom settings.
 
@@ -80,11 +80,11 @@ Dify provides three retrieval functions: vector retrieval, full-text retrieval, 
 
 In hybrid retrieval, you can set weights or use a reranking model. When setting weights, you can set whether the retrieval should focus more on semantics or keywords. For example, in the image below, semantics account for 70% of the weight, and keywords account for 30%.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.00.28.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/6a1f2b4a6e1b63febdaee3e01c1d39a4.png)
 
 Clicking **Save and Process** will process the document. After processing, the document can be used in the application.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.02.41.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/fdc20eb804ec39a308726324f6b33f45.png)
 
 #### Syncing from a Website
 
@@ -92,7 +92,7 @@ In many cases, we need to build a smart customer service bot based on help docum
 
 Currently, Dify supports processing up to 50 pages. Please pay attention to the quantity limit. If exceeded, you can create a new knowledge base.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.09.18.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/8936a4f7952c7aefe5f9d58ee730883c.png)
 
 #### Adjusting Knowledge Base Content
 
@@ -127,7 +127,7 @@ Here is a reference classification:
 * User requests explanation of technical terms
 * User asks about joining the community
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.15.45.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/627566df2b28b58ab84e53d3737c6927.png)
 
 #### Direct Reply Node
 
@@ -161,7 +161,7 @@ Context: You need to use the output of the knowledge retrieval node as the conte
 
 System prompt: Based on \{{context\}}, answer \{{user question\}}
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.22.44.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/0052ebf236d55dc0c143c5dbfe5f1e76.png)
 
 You can use `/` or `{` to reference variables in the prompt writing area. In variables, variables starting with `sys.` are system variables. Please refer to the help documentation for details.
 
@@ -171,7 +171,7 @@ In addition, you can enable LLM memory to make the user's conversation experienc
 
 In the knowledge base function, you can connect external knowledge bases through external knowledge base APIs, such as the AWS Bedrock knowledge base.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.23.25.png" alt="" width="346"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/7bcfb95e806966a868885814f0d7dc35.png)
 
 For best practices on AWS Bedrock knowledge bases, please read: [how-to-connect-aws-bedrock.md](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
 
@@ -179,7 +179,7 @@ For best practices on AWS Bedrock knowledge bases, please read: [how-to-connect-
 
 In both the community edition and SaaS version of Dify, you can add, delete, and query the status of knowledge bases through the knowledge base API.
 
-<figure><img src="../../.gitbook/assets/截屏2024-11-18 16.24.18.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/workshop/intermediate/cda4458ccb9be9e1c3ec9821fb5c5f99.png)
 
 In the instance with the knowledge base deployed, go to **Knowledge Base -> API** and create an API key. Please keep the API key safe.
 

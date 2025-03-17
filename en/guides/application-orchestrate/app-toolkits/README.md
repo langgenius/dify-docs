@@ -4,19 +4,19 @@ In **Application Orchestration**, click **Add Feature** to open the application 
 
 The application toolbox provides various additional features for Dify's [applications](../#application_type):
 
-<figure><img src="../../../.gitbook/assets/content_moderation (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-orchestrate/app-toolkits/d74a330f5d7723a8aa8c0ca920d0d49a.png)
 
 ### Conversation Opening
 
 In conversational applications, the AI will proactively say the first sentence or ask a question. You can edit the content of the opening, including the initial question. Using conversation openings can guide users to ask questions, explain the application background, and lower the barrier for initiating a conversation.
 
-<figure><img src="../../../.gitbook/assets/image (240).png" alt=""><figcaption><p>Conversation Opening</p></figcaption></figure>
+![Conversation Opening](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-orchestrate/app-toolkits/e5362d03d059d2837c653bff6fdf9964.png)
 
 ### Next Step Question Suggestions
 
 Setting next step question suggestions allows the AI to generate 3 follow-up questions based on the previous conversation, guiding the next round of interaction.
 
-<figure><img src="../../../.gitbook/assets/image (241).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/application-orchestrate/app-toolkits/cd5b2fab9415165d7b52ca1461055ce2.png)
 
 ### Citation and Attribution
 

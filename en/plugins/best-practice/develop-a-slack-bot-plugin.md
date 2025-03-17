@@ -234,7 +234,7 @@ class SlackEndpoint(Endpoint):
 
 Go to the Dify platform and obtain the remote debugging address and key for your plugin.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png)
 
 Back in your plugin project, copy the `.env.example` file and rename it to `.env`.
 

@@ -18,7 +18,7 @@ The error handling feature provides three predefined options:
 
 • **Fail branch**: When an error occurs, a predefined error-handling branch is executed. This provides flexibility for developers to create alternative paths in the workflow to address the failure scenario.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png)
 
 ### Logic: None
 
@@ -37,7 +37,7 @@ When a node fails to execute, the workflow automatically uses the developer’s 
 
 The predefined default value’s data type must match the node’s output variable type. For example, if the output variable of a code node is set to the data type `array[number]`, the default value must also be of the `array[number]` data type.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/e9e5e757090679243e0c9976093c7e6c.png" alt="" width="375"><figcaption><p>Error handling: default value</p></figcaption></figure>
+![Error handling: default value](https://assets-docs.dify.ai/2024/12/e9e5e757090679243e0c9976093c7e6c.png)
 
 ### Logic: Fail Branch
 
@@ -47,7 +47,7 @@ For instance, you might connect a mail tool node to send error notifications, pr
 
 > The fail branch is highlighted with orange.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/e5ea1af947818bd9e27cab3042c1c4f3.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/e5ea1af947818bd9e27cab3042c1c4f3.png)
 
 A common approach to handling errors is enable fail branch on nodes. These nodes can address issues, and the corrected outputs can be merged back into the main flow by using variable aggregation nodes to ensure consistency in the final results.
 

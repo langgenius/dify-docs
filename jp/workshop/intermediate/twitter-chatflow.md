@@ -61,11 +61,11 @@ docker compose up -d
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-03_08.51.29.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/4b4102f9027e2bda3fc520eaa8ea2354.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_LLM_Providers.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/0cc645cbf984c7ed90b4e4fc639e45a7.webp)
 
 </div>
 
@@ -77,11 +77,11 @@ docker compose up -d
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_20.37.09.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/b2955735f5c122d8a2fc08ef13654239.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_chatflow.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/e35a7a9bcd3c96fbc28c41d9e0bebe7c.webp)
 
 </div>
 
@@ -89,17 +89,17 @@ docker compose up -d
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.44.44.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/baee341b771d1cd77780fd4845b467b2.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_init.webp" alt=""><figcaption></figcaption></figure>
+![](../../.gitbook/assets/twitter_init.webp)
 
 </div>
 
 ## チャットフローにノードを追加
 
-<figure><img src="../../../en/.gitbook/assets/image (114).png" alt=""><figcaption><p>最終的なチャットフローはこのようになります</p></figcaption></figure>
+![最終的なチャットフローはこのようになります](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/bad3185d9f2c92994c24de65a5414182.png)
 
 ### 開始ノード
 
@@ -107,7 +107,7 @@ docker compose up -d
 
 開始ノードをクリックして、新しい変数を追加します：
 
-<figure><img src="../../.gitbook/assets/twitter_add_input.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/0d77379c7c224bd6bd738e54ccc2ec5e.webp)
 
 ### コードノード
 
@@ -124,7 +124,7 @@ def main(id: str) -> dict:
 
 コードノードを追加し、Pythonを選択した後、入力および出力の変数名を設定してください：
 
-<figure><img src="../../../en/.gitbook/assets/7d5de1cce4426f70f448402d7812bd040d681c225e49a2de66b59cbde66ba834.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/e5523ba1f801f4009b74e7cf03e2ef2f.png)
 
 ### HTTPリクエストノード
 
@@ -132,11 +132,11 @@ def main(id: str) -> dict:
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21%20(1).png" alt=""><figcaption></figcaption></figure>
+![](../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_19.43.21%20(1).png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_add_http.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/4524d29962bc9cc3c96e6d87376622da.webp)
 
 </div>
 
@@ -146,11 +146,11 @@ def main(id: str) -> dict:
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_22.55.20.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/c99b66ac8d30289615a8869bae5a6455.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_http_1.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/b022eeb088377ff9b62866c8de03f642.webp)
 
 </div>
 
@@ -158,17 +158,17 @@ def main(id: str) -> dict:
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.02.04.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/51f9350677acb396bad5841fa80c903c.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_http_2.webp" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/bf75a9783dc263df37d08d183d745fa4.webp)
 
 </div>
 
 このノードが正しく動作するか確認するために、ノードの開始ボタンをタップしてください：
 
-<figure><img src="../../../en/.gitbook/assets/CleanShot 2024-10-07 at 21.44.50@2x.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/094b96e513169a47f1749e46e1357893.png)
 
 ### LLMノード
 
@@ -180,11 +180,11 @@ def main(id: str) -> dict:
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.35.38.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/46f4e15ac1e9d3ca3f47dc5bb921ff01.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_llm.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/46f4e15ac1e9d3ca3f47dc5bb921ff01.png)
 
 </div>
 
@@ -194,17 +194,17 @@ def main(id: str) -> dict:
 
 <div>
 
-<figure><img src="../../../en/.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/a25b122dfa14f0c65fcd3498ccf1898e.png)
 
  
 
-<figure><img src="../../.gitbook/assets/twitter_llm_test.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/a019cbc5a970c786e129af8cc987b121.png)
 
 </div>
 
 例えば、Elon Muskのツイートを分析し、彼の口調で地球温暖化についてのツイートを書きたいと思います。
 
-<figure><img src="../../.gitbook/assets/twitter_test_llm.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/workshop/intermediate/835a01082e74723138d9f97bee0c6c4b.png)
 
 これはElonらしいですか？笑
 

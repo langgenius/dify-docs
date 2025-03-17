@@ -11,7 +11,7 @@ The specific steps are as follows:
 2. Set the API key of Hugging Face ([obtain address](https://huggingface.co/settings/tokens)).
 3. Select a model to enter the [Hugging Face model list page](https://huggingface.co/models?pipeline\_tag=text-generation\&sort=trending).
 
-<figure><img src="../../.gitbook/assets/image (14) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/af8a771b1e71152837e0f25b87a4471e.png)
 
 Dify supports accessing models on Hugging Face in two ways:
 
@@ -24,17 +24,17 @@ Dify supports accessing models on Hugging Face in two ways:
 
 Hosted inference API is supported only when there is an area containing Hosted inference API on the right side of the model details page. As shown in the figure below:
 
-<figure><img src="../../.gitbook/assets/check-hosted-api.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/dc5a5584cef16fe76595058d37043546.png)
 
 On the model details page, you can get the name of the model.
 
-<figure><img src="../../.gitbook/assets/get-model-name.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/248a80fb0dac520e690cb122dbe91324.png)
 
 #### 2 Using access models in Dify
 
 Select Hosted Inference API for Endpoint Type in `Settings > Model Provider > Hugging Face > Model Type`. As shown below:
 
-<figure><img src="../../.gitbook/assets/create-model.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/425f762f4b4b88d7ff69f5e3e898e6d0.png)
 
 API Token is the API Key set at the beginning of the article. The model name is the model name obtained in the previous step.
 
@@ -44,26 +44,26 @@ API Token is the API Key set at the beginning of the article. The model name is 
 
 Inference Endpoint is only supported for models with the Inference Endpoints option under the Deploy button on the right side of the model details page. As shown below:
 
-<figure><img src="../../.gitbook/assets/select-model-deploy.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/0821340197577ff126440b2558446890.png)
 
 #### 2 Deployment model
 
 Click the Deploy button for the model and select the Inference Endpoint option. If you have not bound a bank card before, you will need to bind the card. Just follow the process. After binding the card, the following interface will appear: modify the configuration according to the requirements, and click Create Endpoint in the lower left corner to create an Inference Endpoint.
 
-<figure><img src="../../.gitbook/assets/deploy-model.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/f7582adc0937dc4f038e462b578d9c17.png)
 
 After the model is deployed, you can see the Endpoint URL.
 
-<figure><img src="../../.gitbook/assets/endpoint-url.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/30c38995813c0d05c35c42dc0f1d467c.png)
 
 #### 3 Using access models in Dify
 
 Select Inference Endpoints for Endpoint Type in `Settings > Model Provider > Hugging face > Model Type`. As shown below:
 
-<figure><img src="../../.gitbook/assets/use-model-in-dify.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/736421b38ac731e58585487ca2040c8b.png)
 
 The API Token is the API Key set at the beginning of the article. `The name of the Text-Generation model can be arbitrary, but the name of the Embeddings model needs to be consistent with Hugging Face.` The Endpoint URL is the Endpoint URL obtained after the successful deployment of the model in the previous step.
 
-<figure><img src="../../.gitbook/assets/endpoint-url-2.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/development/models-integration/6a8908cace5b287070577bf555d69b0c.png)
 
 > Note: The "User name / Organization Name" for Embeddings needs to be filled in according to your deployment method on Hugging Face's [Inference Endpoints](https://huggingface.co/docs/inference-endpoints/guides/access), with either the ''[User name](https://huggingface.co/settings/account)'' or the "[Organization Name](https://ui.endpoints.huggingface.co/)".

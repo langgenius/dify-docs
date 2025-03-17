@@ -27,7 +27,7 @@ dify plugin init
 
 Plugins are divided into three types: tools, models, and extensions. All templates in the scaffolding tool provide complete code projects. This example will use an `LLM` type plugin.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8efe646e9174164b9edbf658b5934b86.png" alt=""><figcaption><p>Plugin type: llm</p></figcaption></figure>
+![Plugin type: llm](https://assets-docs.dify.ai/2024/12/8efe646e9174164b9edbf658b5934b86.png)
 
 #### **Configure Plugin Permissions**
 
@@ -37,7 +37,7 @@ Configure the following permissions for this LLM plugin:
 * LLM
 * Storage
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/10f3b3ee6c03a1215309f13d712455d4.png" alt=""><figcaption><p>Model Plugin Permission</p></figcaption></figure>
+![Model Plugin Permission](https://assets-docs.dify.ai/2024/12/10f3b3ee6c03a1215309f13d712455d4.png)
 
 #### **Model Type Configuration**
 

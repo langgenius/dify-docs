@@ -33,7 +33,7 @@ A **SOC 2 Type I** report is a third-party audit report that evaluates and confi
 
 Only team owners can download Dify's SOC 2 Type I report via **Top-right → Compliance**.
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/552f4358bea904c4bf12a131a410916c.png" alt=""><figcaption><p>SOC 2 Type I Report</p></figcaption></figure>
+![SOC 2 Type I Report](https://assets-docs.dify.ai/2025/02/552f4358bea904c4bf12a131a410916c.png)
 
 #### **SOC 2 Type II Report**
 
@@ -41,13 +41,13 @@ A **SOC 2 Type II** report is a third-party audit report that evaluates and conf
 
 Only team owners can download Dify's SOC 2 Type I report via **Top-right → Compliance**.
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png" alt=""><figcaption><p>SOC 2 Type <strong>II</strong> Report</p></figcaption></figure>
+![SOC 2 Type <strong>II</strong> Report](https://assets-docs.dify.ai/2025/02/06975e86faba9928a11c962a57aa454f.png)
 
 **ISO 27001: 2022 Certificate**
 
 The **ISO 27001:2022** certificate is an internationally recognized standard for **information security management systems (ISMS)**. It is part of the **ISO/IEC 27000 family of standards**, which focuses on protecting sensitive information through a comprehensive set of security controls. The ISO 27001:2022 standard is designed to help organizations establish, implement, maintain, and continually improve their information security management system. The **2022** version of the standard reflects the latest updates and best practices in information security, aligning with current security challenges and technological advancements. It provides a systematic approach to managing sensitive company information, ensuring its confidentiality, integrity, and availability through the implementation of risk management and security controls.
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/7aaf7771af28bf7182bf7fda40c7b5bb.png" alt=""><figcaption><p><strong>ISO 27001: 2022 Certificate</strong></p></figcaption></figure>
+![<strong>ISO 27001: 2022 Certificate</strong>](https://assets-docs.dify.ai/2025/02/7aaf7771af28bf7182bf7fda40c7b5bb.png)
 
 #### **GDPR Data Protection Agreement**
 
@@ -55,5 +55,5 @@ A **Data Protection Agreement (DPA)** is a legally binding contract between a **
 
 **Everyone** can Download Dify's DPA in our official website.
 
-<figure><img src="https://assets-docs.dify.ai/2025/02/291cddb3bf9dfd8c92967eabb87b95a0.png" alt=""><figcaption><p>DPA</p></figcaption></figure>
+![DPA](https://assets-docs.dify.ai/2025/02/291cddb3bf9dfd8c92967eabb87b95a0.png)
 

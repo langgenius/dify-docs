@@ -16,7 +16,7 @@ Serperは、Google検索エンジンから取得した構造化データを提�
 
 Difyのナビゲーションページから `ツール > Serper > 認証する` をタップし、APIキーを入力してください。
 
-![](../../../.gitbook/assets/tool-serper.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/f2e06162b25b3fa295b7fd392cc3534e.png)
 
 ## 3. ツールの使用方法
 

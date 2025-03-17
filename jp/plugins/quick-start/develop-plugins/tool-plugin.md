@@ -2,7 +2,7 @@
 
 Tool（ツール）プラグインは、チャットフロー、ワークフロー、エージェントといったアプリタイプから参照できる外部ツールであり、Difyアプリの機能を拡張するために使用されます。例えば、アプリにオンライン検索機能や画像生成機能を追加するといったことが可能です。ツールプラグインは、包括的なツールセットとAPI実装機能を提供します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
 
 本篇では、「ツールプラグイン」とは、ツールプロバイダーファイル、機能コード、およびその他の関連コンポーネントを含む、一揃いのプロジェクトを指します。ツールプロバイダーは複数のツール（これは、単一のツールが提供する追加機能と解釈できます）を含むことがあり、以下の構造で構成されます。
 
@@ -321,7 +321,7 @@ class GoogleProvider(ToolProvider):
 
 プラグインが正常に動作するかテストします。Dify はリモートデバッグをサポートしています。「プラグイン管理」ページで、デバッグキーとリモートサーバーアドレスを取得してください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
 プラグインプロジェクトに戻り、`.env.example` ファイルをコピーして `.env` にリネームし、取得したリモートサーバーアドレスとデバッグキーを入力します。
 
@@ -336,7 +336,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 
 `python -m main` コマンドを実行してプラグインを起動します。プラグインページで、プラグインがワークスペースにインストールされていることを確認できます。これで、他のチームメンバーもこのプラグインを使用できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
 
 ### プラグインのパッケージ化
 

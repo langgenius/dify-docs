@@ -55,7 +55,7 @@ This section will mainly introduce the specific usage of the **File Upload** fea
 
 **For application users:** Chatflow applications with file upload enabled will display a "paperclip" icon on the right side of the dialogue box. Click it to upload files and interact with the LLM.
 
-<figure><img src="../../.gitbook/assets/image (8).png" alt=""><figcaption><p>Upload file</p></figcaption></figure>
+![Upload file](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/b18af11da3f339c496193d9732906849.png)
 
 **For application developers:**
 
@@ -84,7 +84,7 @@ The orchestration steps are as follows:
 2. Add an LLM node, enable the VISION feature, and select the `sys.files` variable.
 3. Add a "Answer" node at the end, filling in the output variable of the LLM node.
 
-<figure><img src="../../.gitbook/assets/image (9).png" alt=""><figcaption><p>Enable vision</p></figcaption></figure>
+![Enable vision](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/3a3582bd9bc8ea94bbdbfeefe6a78571.png)
 
 * **Mixed File Types**
 
@@ -97,7 +97,7 @@ If you want the application to have the ability to process both document files a
 
 After the application user uploads both document files and images, document files are automatically diverted to the document extractor node, and image files are automatically diverted to the LLM node to achieve joint processing of files.
 
-<figure><img src="../../.gitbook/assets/image (10).png" alt=""><figcaption><p><strong>Mixed File Types</strong></p></figcaption></figure>
+![<strong>Mixed File Types</strong>](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/66471e8e67b2ede0c94bfa1cffeab834.png)
 
 * **Audio and Video Files**
 

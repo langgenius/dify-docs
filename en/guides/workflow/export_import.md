@@ -4,12 +4,12 @@ You can export/import application templates as YAML-format DSL (Domain Specific 
 
 To import a DSL file in the studio application list:
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/export-import/output (5) (2).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/workflow/export-import/output (5) (2).png)
 
 To export a DSL file from the studio application list:
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/export-import/output (6) (1).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/workflow/export-import/output (6) (1).png)
 
 To export a DSL file from the workflow orchestration page:
 
-<figure><img src="/en/.gitbook/assets/guides/workflow/export-import/output (7) (1).png" alt=""><figcaption></figcaption></figure>
+![](/en/.gitbook/assets/guides/workflow/export-import/output (7) (1).png)

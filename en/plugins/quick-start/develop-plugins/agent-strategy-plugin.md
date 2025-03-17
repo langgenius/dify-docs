@@ -1038,7 +1038,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
 
 After finalizing the plugin’s declaration file and implementation code, run `python -m main` in the plugin directory to restart it. Next, confirm the plugin runs correctly. Dify offers remote debugging—go to [“Plugin Management”](https://console-plugin.dify.dev/plugins) to obtain your debug key and remote server address.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
 Back in your plugin project, copy `.env.example` to `.env` and insert the relevant remote server and debug key info. 
 
@@ -1058,7 +1058,7 @@ python -m main
 
 You’ll see the plugin installed in your Workspace, and team members can also access it.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png" alt=""><figcaption><p>Browser Plugins</p></figcaption></figure>
+![Browser Plugins](https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png)
 
 ### Packaging the Plugin (Optional)
 

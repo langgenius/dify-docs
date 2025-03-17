@@ -2,11 +2,11 @@
 
 聊天助手应用类型支持 **“多个模型进行调试”** 功能，你可以同时批量检视不同模型对于相同问题的回答效果。
 
-![](../../.gitbook/assets/zh-multiple-models.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/d0de3f1edca55af986a6b213876ed3ff.png)
 
 最多支持同时添加 4 个大模型。
 
-![](../../.gitbook/assets/zh-multiple-models-2.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/74003eeacf3f4f8f0d7cb6c3ad20c84a.png)
 
 调试时如果发现效果较好的模型，点击 **“单一模型进行调试”** 即可进入至当前模型的单独调试页面。
 

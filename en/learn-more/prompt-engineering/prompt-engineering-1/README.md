@@ -58,7 +58,7 @@ Before you start experimenting with the new mode, you need to know the essential
 
 After creating an application, you can switch to **Expert Mode** on the prompt orchestration page, where you can edit the complete application prompts.
 
-<figure><img src="../../../../.gitbook/assets/专家模式.png" alt=""><figcaption><p>Expert Mode Entry</p></figcaption></figure>
+![Expert Mode Entry](../../../../.gitbook/assets/专家模式.png)
 
 {% hint style="warning" %}
 After modifying prompts and publishing the application in **Expert Mode**, you cannot return to **Simple Mode**.
@@ -72,7 +72,7 @@ In both **Simple Mode** and **Expert Mode**, you can modify the parameters for t
 Note that the built-in prompt containing \{{#context#\}} will only be displayed in **Expert Mode** after uploading the context.
 {% endhint %}
 
-<figure><img src="../../../../.gitbook/assets/参数设置.png" alt=""><figcaption><p>Context Parameter Settings</p></figcaption></figure>
+![Context Parameter Settings](../../../../.gitbook/assets/参数设置.png)
 
 **TopK: Value range is an integer from 1 to 10**
 
@@ -111,7 +111,7 @@ And will not generate additional dialogue (i.e., the LLM will stop generating co
 
 In **Expert Mode**, you can type "`/`" in the text editor to quickly bring up content blocks to insert into the prompt. Content blocks include: `context`, `variable`, `conversation history`, `query content`. You can also type "`{`" to quickly insert a list of previously created variables.
 
-<figure><img src="../../../../.gitbook/assets/快捷键.png" alt=""><figcaption><p>Shortcut Key “/”</p></figcaption></figure>
+![Shortcut Key “/”](../../../../.gitbook/assets/快捷键.png)
 
 {% hint style="warning" %}
 Content blocks other than "variables" cannot be inserted repeatedly. The available content blocks may vary based on the prompt template structure in different applications and models. `Conversation history` and `query content` are only available in text completion models for conversational applications.
@@ -154,7 +154,7 @@ During orchestration debugging, you can not only view the user's input and the L
 
 In the debug preview interface, after a conversation between the user and the AI, move the mouse pointer to any user session, and you will see the "Log" icon button at the top left. Click it to view the prompt log.
 
-<figure><img src="../../../../.gitbook/assets/日志.png" alt=""><figcaption><p>Debug Log Entry</p></figcaption></figure>
+![Debug Log Entry](../../../../.gitbook/assets/日志.png)
 
 In the log, you can clearly see:
 
@@ -162,7 +162,7 @@ In the log, you can clearly see:
 * Relevant text fragments referenced in the current session
 * Historical conversation records
 
-<figure><img src="../../../../.gitbook/assets/11.png" alt=""><figcaption><p>View Prompt Log in Debug Preview Interface</p></figcaption></figure>
+![View Prompt Log in Debug Preview Interface](../../../../.gitbook/assets/11.png)
 
 From the log, you can see the complete prompt sent to the LLM after system assembly and continuously improve the prompt input based on the debugging results.
 
@@ -170,4 +170,4 @@ From the log, you can see the complete prompt sent to the LLM after system assem
 
 On the main interface for initial app construction, you can see "Logs and Annotations" in the left navigation bar. Click it to view the complete logs. On the main interface of Logs and Annotations, click any conversation log entry, and in the pop-up right dialog box, move the mouse pointer to the conversation to click the "Log" button to view the prompt log.
 
-<figure><img src="../../../../.gitbook/assets/12.png" alt=""><figcaption><p>View Prompt Log in Logs and Annotations Interface</p></figcaption></figure>
+![View Prompt Log in Logs and Annotations Interface](../../../../.gitbook/assets/12.png)

@@ -22,7 +22,7 @@ JSON Schema 是一种用于描述 JSON 数据结构的规范，开发者可以�
 
 将应用中的 LLM 切换至上述支持 JSON Schema 输出的模型，然后在设置表单开启 `JSON Schema` 并填写 JSON Schema 模板；同时开启 `response_format` 栏并切换至 `json_schema` 格式。
 
-![](../../.gitbook/assets/learn-more-json-schema.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/extended-reading/899b0a46e438e50bef731fa45d3e7837.png)
 
 LLM 生成的内容支持以下格式输出：
 
@@ -216,7 +216,7 @@ You are a UI generator AI. Convert the user input into a UI.
 
 **效果示例：**
 
-![](../../.gitbook/assets/best-practice-json-schema-ui-example.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/learn-more/extended-reading/03c1132f714cbd5920f5b0f80287a07d.png)
 
 ## 提示
 

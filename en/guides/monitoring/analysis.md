@@ -2,7 +2,7 @@
 
 The **Overview -- Data Analysis** section displays metrics such as usage, active users, and LLM (Language Learning Model) invocation costs. This allows you to continuously improve the effectiveness, engagement, and cost-efficiency of your application operations. We will gradually provide more useful visualization capabilities, so please let us know what you need.
 
-<figure><img src="../../.gitbook/assets/overview-data-analysis.png" alt=""><figcaption><p>Overview—Data Analysis</p></figcaption></figure>
+![Overview—Data Analysis](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/273fbe372440ad8da870e6524854fa97.png)
 
 ***
 

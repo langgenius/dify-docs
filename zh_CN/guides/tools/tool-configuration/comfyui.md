@@ -12,10 +12,10 @@
 ## 2. 提示词设置
 如果你不需要通过dify传入提示词，可以跳过此步。如果你的提示词节点连接到了 ComfyUI 中唯一的 `KSampler` 节点，那么你可以跳过此步。  
 否则，请使用字符串 `{{positive_prompt}}` 替换掉正向提示词内容，`{{negative_prompt}}` 替换掉负向提示词内容。
-<figure><img src="../../../.gitbook/assets/comfyui_prompt.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/4e937df93709ca5a47c5c17e17498f38.png)
 
 ## 3. 导出工作流的 API 文件
-<figure><img src="../../../.gitbook/assets/comfyui.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/49794b23612f47245fabaf1eae207526.png)
 如图所示，在工具栏中选择 `Save(API Format)`，如果没有该选择，则需要在设置中开启 `Dev Mode`。
 
 ## 4. 在 Dify 中集成 ComfyUI  

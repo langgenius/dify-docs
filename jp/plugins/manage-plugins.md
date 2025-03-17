@@ -22,17 +22,17 @@
     * **Admins（管理者）**: ワークスペースの管理者だけがプラグインをデバッグできる
     * **No one（無人）**: 誰もプラグインをデバッグできない
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a2bca75a7757b7cafae2cb4ba0ad9fff.png" alt=""><figcaption><p>プラグイン権限設定</p></figcaption></figure>
+![プラグイン権限設定](https://assets-docs.dify.ai/2024/12/a2bca75a7757b7cafae2cb4ba0ad9fff.png)
 
 ### **プラグインの更新**
 
 Difyプラットフォームの右上にある「プラグイン」ボタンをクリックし、更新が必要なプラグインを選択。その後、プラグインタイトルの隣にある **「アップグレード」** ボタンをクリックしてください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/83bd5ec12ec914c73d0ea2a5992cd6df.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/83bd5ec12ec914c73d0ea2a5992cd6df.png)
 
 ### **プラグインの削除方法**
 
 Difyプラットフォームの右上にある「プラグイン」ボタンをクリックし、現在ワークスペースにインストールされているプラグイン一覧を表示します。プラグインの詳細ページで、「削除」アイコンまたは「削除」ボタンをクリックして、プラグインを削除してください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6cb1c000d20720c16ae3c0a70df26fd3.png" alt=""><figcaption><p>プラグイン削除方法</p></figcaption></figure>
+![プラグイン削除方法](https://assets-docs.dify.ai/2024/12/6cb1c000d20720c16ae3c0a70df26fd3.png)
 

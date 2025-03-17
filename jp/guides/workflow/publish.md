@@ -2,7 +2,7 @@
 
 デバッグが完了したら、右上の「公開する」をクリックして、このワークフローを保存し、さまざまなタイプのアプリとして素早く公開することができます。
 
-<figure><img src="../../.gitbook/assets/output (4) (3).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/ea40850e9b8cc216b540362a7425ac5c.png)
 
 対話型アプリは以下の形式で公開できます：
 

@@ -14,19 +14,19 @@ Difyプラットフォームの右上角にある「プラグイン」を選択�
 
 Difyのマーケットプレースでは、公式にサポートされているモデルやツール、さらにはコミュニティから提供されるプラグインが見つかります。プラグインの「インストール」ボタンを押すことで、手軽に現在のワークスペースに追加可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/6ae8b661b7fa01b228a954d00ef552f3.png" alt=""><figcaption><p>マーケットプレースからのプラグインインストール</p></figcaption></figure>
+![マーケットプレースからのプラグインインストール](https://assets-docs.dify.ai/2025/01/6ae8b661b7fa01b228a954d00ef552f3.png)
 
 #### **GitHub**
 
 GitHubのリポジトリリンクを使用して、直接プラグインをインストールすることもできます。この方法でインストールする際は、プラグインがコードの基準を満たしているか確認することが大切です。プラグインのリポジトリはリリースを作成し、プラグインのパッケージファイルを添付する必要があります。詳細は、[プラグインの公開：GitHub](../publish-plugins/)をご覧ください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3c2612349c67e6898a1f33a7cc320468.png" alt=""><figcaption><p>GitHubからのインストール</p></figcaption></figure>
+![GitHubからのインストール](https://assets-docs.dify.ai/2024/12/3c2612349c67e6898a1f33a7cc320468.png)
 
 #### **ローカルからのアップロード**
 
 [プラグインをパッケージする](../publish-plugins/package-plugin-file-and-publish.md)際には、`.difypkg`という拡張子のファイルが作成されます。このファイルは、主にオフライン環境やテスト環境で利用され、公式のマーケットプレイス以外からもプラグインをインストールできます。組織は、ローカルからのアップロードを通じて内部プラグインを導入し、機密情報を保護できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8c31c4025a070f23455799f942b91a57.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/8c31c4025a070f23455799f942b91a57.png)
 
 #### **プラグインの認証**
 
@@ -34,7 +34,7 @@ GitHubのリポジトリリンクを使用して、直接プラグインをイ�
 
 > API Keysは重要な情報であり、認証は現在ログインしているユーザーに対してのみ有効となります。そのため、他のチームメンバーがプラグインを利用する際には、それぞれが自身の認証キーを入力する必要があります。
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/972de4c9fa00f792a1ab734b080aafdc.png" alt=""><figcaption><p>プラグインの<strong>認証画面</strong></p></figcaption></figure>
+![プラグインの<strong>認証画面</strong>](https://assets-docs.dify.ai/2024/11/972de4c9fa00f792a1ab734b080aafdc.png)
 
 ***
 
@@ -46,11 +46,11 @@ GitHubのリポジトリリンクを使用して、直接プラグインをイ�
 
 例として`OpenAI`の場合、モデルタイプのプラグインをインストールした後、右上の**プロフィールアイコン → 設定 → モデルプロバイダー**の順に進み、API Keyを入力してモデルプロバイダーを有効化します。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png" alt=""><figcaption><p>OpenAI API Keyを承認する</p></figcaption></figure>
+![OpenAI API Keyを承認する](https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png)
 
 この認証を済ませることで、あらゆるアプリタイプでこの高性能な言語モデルを選択し、活用することが可能になります。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/4a38b1ea534ca68515839c518c250d2f.png" alt=""><figcaption><p>モデルタイププラグインの使用</p></figcaption></figure>
+![モデルタイププラグインの使用](https://assets-docs.dify.ai/2024/12/4a38b1ea534ca68515839c518c250d2f.png)
 
 ### ツールタイプのプラグイン
 
@@ -64,7 +64,7 @@ GitHubのリポジトリリンクを使用して、直接プラグインをイ�
 
 アプリを使用する際には、特定のコマンドを入力してツールを操作します。たとえば、「今日のニュース」と入力することで、Googleの検索エンジンを利用してオンラインで最新のニュース内容を検索できます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/78f833811cb0c3d5cbbb1a941cffc769.png" alt=""><figcaption><p>エージェントツール</p></figcaption></figure>
+![エージェントツール](https://assets-docs.dify.ai/2024/12/78f833811cb0c3d5cbbb1a941cffc769.png)
 
 #### チャットフロー / ワークフロー
 
@@ -72,15 +72,15 @@ GitHubのリポジトリリンクを使用して、直接プラグインをイ�
 
 ノードの末端に表示される「+」アイコンをクリックすると、インストール済みのGoogle関連プラグインツールを選択し、そのノードを別のノードに接続することが可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png" alt=""><figcaption><p>チャットフロー/ワークフロー ツール</p></figcaption></figure>
+![チャットフロー/ワークフロー ツール](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
 
 プラグインには、ユーザーからの問い合わせ内容を含むquery変数や、オンラインで検索が必要なその他の情報を入力します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a67c4cffd8fdf33297d462b2e6d01d27.png" alt=""><figcaption><p>ツールの入力</p></figcaption></figure>
+![ツールの入力](https://assets-docs.dify.ai/2024/12/a67c4cffd8fdf33297d462b2e6d01d27.png)
 
 その他のプラグインの使い方については、各プラグインの詳細ページにある説明をご覧ください。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png" alt=""><figcaption><p>プラグインの使い方</p></figcaption></figure>
+![プラグインの使い方](https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png)
 
 ***
 

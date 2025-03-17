@@ -4,7 +4,7 @@
 
 Invokes the capabilities of large language models to process information input by users in the "Start" node (natural language, uploaded files, or images) and provide effective response information.
 
-<figure><img src="../../../.gitbook/assets/llm-node-1.png" alt=""><figcaption><p>LLM Node</p></figcaption></figure>
+![LLM Node](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/85730fbfa1d441d12d969b89adf2670e.png)
 
 ***
 
@@ -27,7 +27,7 @@ By selecting the appropriate model and writing prompts, you can build powerful a
 
 ### How to Configure
 
-<figure><img src="../../../.gitbook/assets/llm-node-2.png" alt=""><figcaption><p>LLM Node Configuration - Model Selection</p></figcaption></figure>
+![LLM Node Configuration - Model Selection](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/43f81418ea70d4d79e3705505e777b1b.png)
 
 **Configuration Steps:**
 
@@ -48,11 +48,11 @@ In the LLM node, you can customize the model input prompts. If you select a chat
 
 If you're struggling to come up with effective system prompts (System), you can use the Prompt Generator to quickly create prompts suitable for your specific business scenarios, leveraging AI capabilities.
 
-<figure><img src="../../../.gitbook/assets/en-prompt-generator.png" alt="" width="563"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/bec10045f819316f80068c563cf14eb1.png)
 
 In the prompt editor, you can call out the **variable insertion menu** by typing `/` or `{` to insert **special variable blocks** or **upstream node variables** into the prompt as context content.
 
-<figure><img src="../../../.gitbook/assets/llm-node-3.png" alt="" width="366"><figcaption><p>Calling Out the Variable Insertion Menu</p></figcaption></figure>
+![Calling Out the Variable Insertion Menu](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/d8ed0160a7fba0a14dd823ef97610cc4.png)
 
 ***
 
@@ -62,7 +62,7 @@ In the prompt editor, you can call out the **variable insertion menu** by typing
 
 Context variables are a special type of variable defined within the LLM node, used to insert externally retrieved text content into the prompt.
 
-<figure><img src="../../../.gitbook/assets/llm-node-4.png" alt=""><figcaption><p>Context Variables</p></figcaption></figure>
+![Context Variables](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/5aefed96962bd994f8f05bac96b11e22.png)
 
 In common knowledge base Q\&A applications, the downstream node of knowledge retrieval is typically the LLM node. The **output variable** `result` of knowledge retrieval needs to be configured in the **context variable** within the LLM node for association and assignment. After association, inserting the **context variable** at the appropriate position in the prompt can incorporate the externally retrieved knowledge into the prompt.
 
@@ -88,13 +88,13 @@ To achieve conversational memory in text completion models (e.g., gpt-3.5-turbo-
 The conversation history variable is not widely used and can only be inserted when selecting text completion models in Chatflow.
 {% endhint %}
 
-<figure><img src="../../../.gitbook/assets/image (204).png" alt=""><figcaption><p>Inserting Conversation History Variable</p></figcaption></figure>
+![Inserting Conversation History Variable](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/b8642f8c6e3f562fceeefae83628fd68.png)
 
 **Model Parameters**
 
 The parameters of the model affect the output of the model. Different models have different parameters. The following figure shows the parameter list for `gpt-4`.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.35.17.png" alt="" width="363"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/5eaaa3f8082b769544a02ff510b207d8.png)
 
 The main parameter terms are explained as follows:
 
@@ -108,7 +108,7 @@ The main parameter terms are explained as follows:
 
 If you do not understand what these parameters are, you can choose to load presets and select from the three presets: Creative, Balanced, and Precise.
 
-<figure><img src="../../../.gitbook/assets/截屏2024-10-18 11.37.43.png" alt="" width="364"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/b913f9cdf1f9b03e791a49836bc770dd.png)
 
 ***
 
@@ -143,7 +143,7 @@ To enable workflow applications to read "[Knowledge Base](../../knowledge-base/)
 2. Fill in the **output variable** `result` of the knowledge retrieval node into the **context variable** of the LLM node;
 3. Insert the **context variable** into the application prompt to give the LLM the ability to read text within the knowledge base.
 
-<figure><img src="../../../.gitbook/assets/image (135).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/988590f51629f43ac81770396456b372.png)
 
 The `result` variable output by the Knowledge Retrieval Node also includes segmented reference information. You can view the source of information through the **Citation and Attribution** feature.
 
@@ -161,7 +161,7 @@ To enable workflow applications to read document contents, such as building a Ch
 
 For more information, please refer to [File Upload](../file-upload.md).
 
-<figure><img src="../../../.gitbook/assets/image (137).png" alt=""><figcaption><p>input system prompts</p></figcaption></figure>
+![input system prompts](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/373ac80deaf7ef9ed77019a94d31bed5.png)
 
 * **Error Handling**
 
@@ -170,6 +170,6 @@ When processing information, LLM nodes may encounter errors such as input text e
 1. Enable "Error Handling" in the LLM node
 2. Select and configure an error handling strategy
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/f7109ce5e87c0e0a81248bb2672c7667.png" alt=""><figcaption><p>input system prompts</p></figcaption></figure>
+![input system prompts](https://assets-docs.dify.ai/2024/12/f7109ce5e87c0e0a81248bb2672c7667.png)
 
 For more information about exception handling methods, please refer to the [Error Handling](https://docs.dify.ai/guides/workflow/error-handling).

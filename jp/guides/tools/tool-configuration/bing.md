@@ -16,7 +16,7 @@ Bing検索ツールは、LLM（大規模言語モデル）アプリを使用す�
 
 Difyのナビゲーションページで、`ツール > Bing > 認証する`の順にクリックし、API キーを入力してください。
 
-![](../../../.gitbook/assets/tools-bing.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/tools/tool-configuration/e460fd7a41a47061b6a4b3f0dd0f3cc6.png)
 
 ## 3. ツールの使用方法
 

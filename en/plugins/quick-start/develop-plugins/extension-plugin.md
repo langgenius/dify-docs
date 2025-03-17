@@ -29,17 +29,17 @@ Follow the prompts to configure the plugin name, author information, and plugin 
 
 > The plugin name must be 1-128 characters long and can only contain letters, numbers, hyphens, and underscores.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/75cfccb11fe31c56c16429b3998f2eb0.png" alt=""><figcaption><p>Plugins detail</p></figcaption></figure>
+![Plugins detail](https://assets-docs.dify.ai/2024/12/75cfccb11fe31c56c16429b3998f2eb0.png)
 
 Once filled out, select Python in the Plugin Development Language section.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png" alt=""><figcaption><p>Plugins development: Python</p></figcaption></figure>
+![Plugins development: Python](https://assets-docs.dify.ai/2024/11/1129101623ac4c091a3f6f75f4103848.png)
 
 ### **3. Select Plugin Type and Initialize Project Template**
 
 All templates in the scaffolding tool provide complete code projects. For demonstration purposes, this guide will use the `Extension` type plugin template as an example. For developers already familiar with plugin development, templates are not necessary, and you can refer to the interface documentation to complete different types of plugin development.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/ff08f77b928494e10197b456fc4e2d5b.png" alt=""><figcaption><p>Extension</p></figcaption></figure>
+![Extension](https://assets-docs.dify.ai/2024/11/ff08f77b928494e10197b456fc4e2d5b.png)
 
 #### **Configure Plugin Permissions**
 
@@ -55,7 +55,7 @@ The plugin needs permissions to access the Dify main platform for proper connect
 
 After checking all permission items, press Enter to complete the plugin creation. The system will automatically generate the plugin project code.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/5518ca1e425a7135f18f499e55d16bdd.png" alt=""><figcaption><p>Plugins permissions</p></figcaption></figure>
+![Plugins permissions](https://assets-docs.dify.ai/2024/11/5518ca1e425a7135f18f499e55d16bdd.png)
 
 The base file structure of the plugin contains the following:
 
@@ -230,7 +230,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 
 Run the `python -m main` command to launch the plugin. You can see on the plugin page that the plugin has been installed into Workspace. Other team members can also access the plugin.
 
-<figure><img src="https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
 
 ### Packing Plugin
 

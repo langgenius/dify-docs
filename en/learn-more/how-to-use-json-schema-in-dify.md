@@ -211,7 +211,7 @@ You are a UI generator AI. Convert the user input into a UI.
 
 **Example Output:**
 
-![](../../img/best-practice-json-schema-ui-example.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/03c1132f714cbd5920f5b0f80287a07d.png)
 
 ## Tips
 

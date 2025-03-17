@@ -14,11 +14,11 @@ Enter common user questions into the **Source Text field** and click **Test** to
 
 In **General Mode**, each text chunk stands independently. The score shown in the top-right corner of a chunk represents how closely it matches the query keywords. A higher score indicates a stronger alignment between the chunk and the keywords.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/806967bb36e74fc744b34887cd3ebe52.png" alt=""><figcaption><p>General mode - retrieval text chunks</p></figcaption></figure>
+![General mode - retrieval text chunks](https://assets-docs.dify.ai/2024/12/806967bb36e74fc744b34887cd3ebe52.png)
 
 Tap a content chunk to see the details of the referenced content. Each chunk shows its source document information at the bottom, letting you verify whether the text  chunk is appropriate.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/419ac78ad21ea198b08f89c4f5fde485.png" alt=""><figcaption><p>Review the details of text chunks</p></figcaption></figure>
+![Review the details of text chunks](https://assets-docs.dify.ai/2024/12/419ac78ad21ea198b08f89c4f5fde485.png)
 {% endtab %}
 
 {% tab title="Parent-child" %}
@@ -28,11 +28,11 @@ Enter typical user questions into the **Source Text** field and click **Test** t
 
 You can click a child chunk to preview its exact content. After the match, the entire parent chunk is recalled to provide more comprehensive information.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6f0b99f97b138805bf4665d0c5c16f26.png" alt=""><figcaption><p>Retrieval test - Parent-child mode</p></figcaption></figure>
+![Retrieval test - Parent-child mode](https://assets-docs.dify.ai/2024/12/6f0b99f97b138805bf4665d0c5c16f26.png)
 
 Each chunk displays its source document at the bottom—usually a specific paragraph or sentence. Tap the “Open” button on the right side of the source to view the entire referenced content chunk. Since multiple child chunks can be relevant, this allows you to assess whether the current chunk is appropriate.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/22103227f8a25069d147160254f69512.png" alt=""><figcaption><p>Check the details of retrieval chunks</p></figcaption></figure>
+![Check the details of retrieval chunks](https://assets-docs.dify.ai/2024/12/22103227f8a25069d147160254f69512.png)
 {% endtab %}
 {% endtabs %}
 
@@ -44,7 +44,7 @@ Click the icon in the upper-right corner of the Source Text field to change the 
 
 If you want to permanently modify the retrieval method for the knowledge base, go to **“Knowledge Base Settings”** > **“Retrieval Settings”** to make changes.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/86b78cb114a843c9dedcba1fe12e3b02.png" alt=""><figcaption><p>Retrieval settings</p></figcaption></figure>
+![Retrieval settings](https://assets-docs.dify.ai/2024/12/86b78cb114a843c9dedcba1fe12e3b02.png)
 
 **Suggested Steps for Retrieval Testing:**
 
@@ -63,15 +63,15 @@ If you want to permanently modify the retrieval method for the knowledge base, g
 
 When testing the knowledge base effect within the application, you can go to **Workspace -- Add Feature -- Citation and Attribution** to enable the citation attribution feature.
 
-<figure><img src="../../.gitbook/assets/citation-and-attribution.png" alt=""><figcaption><p>Enable citation and attribution feature</p></figcaption></figure>
+![Enable citation and attribution feature](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/knowledge-base/c50a37d96be8b631c02483144c226cd7.png)
 
 After enabling the feature, when the large language model responds to a question by citing content from the knowledge base, you can view specific citation paragraph information below the response content, including **original segment text, segment number, matching degree**, etc. Clicking **Link to Knowledge** above the cited segment allows quick access to the segment list in the knowledge base, facilitating developers in debugging and editing.
 
-<figure><img src="../../../img/view-citation-information.png" alt=""><figcaption><p>View citation information in response content</p></figcaption></figure>
+![View citation information in response content](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/knowledge-base/8eed0be0aa90697a4bfbc0ea84a2dcdb.png)
 
 #### View Linked Applications in the Knowledge Base
 
 On the left side of the knowledge base, you can see all linked Apps. Hover over the circular icon to view the list of all linked apps. Click the jump button on the right to quickly browser them.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/28899b9b0eba8996f364fb74e5b94c7f.png" alt=""><figcaption><p>Viewing the linked Apps</p></figcaption></figure>
+![Viewing the linked Apps](https://assets-docs.dify.ai/2024/12/28899b9b0eba8996f364fb74e5b94c7f.png)
 

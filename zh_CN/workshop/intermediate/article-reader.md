@@ -6,7 +6,7 @@
 
 本次实验中，我们将以文章理解助手为案例。这个文章理解助手将会根据上传的文档进行提问，协助用户带着问题去阅读论文等材料。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-17 13.45.03.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/workshop/intermediate/4bdead58ba499a3fd7df130073533a80.png)
 
 ## 本实验中你将掌握的知识点
 
@@ -54,7 +54,7 @@
 
 将开始节点的文件变量作为输入变量，文档提取器会将文档格式的文件转为文本变量输出。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-17 11.19.21.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/workshop/intermediate/cccd81ef0814ff6218e09c288a2423dd.png)
 
 ### LLM
 
@@ -163,11 +163,11 @@
 
 因此，你需要把开始节点中的文件变量调整为`array`类型，也就是文件列表。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-17 14.57.16.png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/workshop/intermediate/bf8069bff56e6f36b718dc787d2c5cba.png)
 
 在开始节点之后需要加入迭代节点，并且设置输入变量和输出变量。在迭代节点内部，设置每次循环执行的内容，这部分和前文内容完全一致。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-17 14.55.31.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/workshop/intermediate/93a3ea37ac863f037c6f2262081f1c5b.png)
 
 ## 思考题 2 : 针对思考题 1，只处理文件列表的特定文件
 
@@ -177,5 +177,5 @@
 
 在迭代节点前加入列表操作，调整**过滤条件**、**排序**，然后将迭代节点的输入改为列表操作节点的输出。
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-17 15.29.18 (1).png" alt="" width="375"><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/workshop/intermediate/9acd0bf90a2bc40d9214bba00d5e26c2.png)
 

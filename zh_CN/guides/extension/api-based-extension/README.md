@@ -9,7 +9,7 @@
 
 除了需要开发对应的模块能力，还需要遵照以下规范，以便 Dify 正确调用 API。
 
-<figure><img src="../../../.gitbook/assets/api_based_01.png" alt=""><figcaption><p>基于 API 扩展</p></figcaption></figure>
+![基于 API 扩展](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/extension/api-based-extension/10f17984eae28c7854983e7112738fa8.png)
 
 ### API 规范 <a href="#usercontentapi-gui-fan" id="usercontentapi-gui-fan"></a>
 
@@ -194,11 +194,11 @@ Authorization: Bearer 123456
     </strong></code></pre>
 4. 在 Dify 配置该 API。
 
-<figure><img src="https://github.com/langgenius/dify-docs/raw/main/zh_CN/.gitbook/assets/api_based_01.png" alt=""><figcaption><p>配置 API</p></figcaption></figure>
+![配置 API](https://github.com/langgenius/dify-docs/raw/main/zh_CN/.gitbook/assets/api_based_01.png)
 
 5. 在 App 中选择该 API 扩展。
 
-<figure><img src="https://github.com/langgenius/dify-docs/raw/main/zh_CN/.gitbook/assets/api_based_02.png" alt=""><figcaption><p>选择扩展</p></figcaption></figure>
+![选择扩展](https://github.com/langgenius/dify-docs/raw/main/zh_CN/.gitbook/assets/api_based_02.png)
 
 App 调试时，Dify 将请求配置的 API，并发送以下内容（范例）：
 
@@ -230,7 +230,7 @@ API 返回为：
 
 1.  进入 [https://ngrok.com](https://ngrok.com) 官网，注册并下载 Ngrok 文件。
 
-    <figure><img src="../../../.gitbook/assets/download.png" alt=""><figcaption><p>Download</p></figcaption></figure>
+    ![Download](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/extension/api-based-extension/c44d6cc5425508daac8d31bc4af113df.png)
 2. 下载完成后，进入下载目录，根据下方说明解压压缩包，并执行说明中的初始化脚本。
    * ```Shell
      $ unzip /path/to/ngrok.zip
@@ -238,7 +238,7 @@ API 返回为：
      ```
 3. 查看本地 API 服务的端口：
 
-<figure><img src="../../../.gitbook/assets/8000.png" alt=""><figcaption><p>查看端口</p></figcaption></figure>
+![查看端口](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/extension/api-based-extension/7ac8ee0f0955f36255e0261b36499db7.png)
 
 并运行以下命令启动：
 
@@ -248,7 +248,7 @@ API 返回为：
 
     启动成功的样例如下：
 
-<figure><img src="../../../.gitbook/assets/ngrock.png" alt=""><figcaption><p>Ngrok 启动</p></figcaption></figure>
+![Ngrok 启动](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/extension/api-based-extension/2b4adbe0bb1ff203da521ea6eea401f8.png)
 
 4. 我们找到 Forwarding 中，如上图：`https://177e-159-223-41-52.ngrok-free.app`（此为示例域名，请替换为自己的）即为公网域名。
 

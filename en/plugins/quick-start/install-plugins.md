@@ -8,7 +8,7 @@ description: 'Author: Allen'
 
 To install plugins, click **"Plugins"** in the top-right corner of the Dify platform to access the plugin management page. You can install plugins via **Marketplace, GitHub, or Manual Upload**.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a56c40245090d9252557dcc6f4064a14.png" alt=""><figcaption><p>Install Plugins</p></figcaption></figure>
+![Install Plugins](https://assets-docs.dify.ai/2025/01/a56c40245090d9252557dcc6f4064a14.png)
 
 #### Marketplace
 
@@ -20,7 +20,7 @@ Browse and select a plugin from the Marketplace. Click **"Install"** to add it t
 
 Install plugins directly using GitHub repository links. This method requires plugins to meet code standards and include a `.difypkg` file attached to a Release. For more details, see [Publishing Plugins on GitHub](../publish-plugins/publish-plugin-on-personal-github-repo.md).
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/4026a12a915e3fe9bd057d8827acfdce.png" alt=""><figcaption><p>GitHub Installation</p></figcaption></figure>
+![GitHub Installation](https://assets-docs.dify.ai/2025/01/4026a12a915e3fe9bd057d8827acfdce.png)
 
 #### Local Upload
 
@@ -44,7 +44,7 @@ Once installed, plugins can be integrated into your Dify applications. Below are
 
 For example, after installing the `OpenAI` model plugin, click **Profile → Settings → Model Providers** in the top-right corner to configure your API Key and activate the provider.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png" alt=""><figcaption><p>Authorize OpenAI API Key</p></figcaption></figure>
+![Authorize OpenAI API Key](https://assets-docs.dify.ai/2025/01/3bf32d49975931e5924baa749aa7812f.png)
 
 Once authorized, the model can be used in all application types.
 
@@ -78,7 +78,7 @@ In the plugin's input variables, enter the user query or other required informat
 
 For usage methods of other plugin types, refer to their respective plugin detail pages.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png" alt=""><figcaption><p>Using Plugins</p></figcaption></figure>
+![Using Plugins](https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png)
 
 ***
 

@@ -17,7 +17,7 @@ You can directly use the first-party built-in tools provided by the Dify ecosyst
 
 ### How to Configure First-party Tools
 
-<figure><img src="../../.gitbook/assets/first-party-tools.png" alt=""><figcaption><p>First-party Tools List</p></figcaption></figure>
+![First-party Tools List](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/20cffc5ccef7e59ca3f7e7de6fcec302.png)
 
 Dify currently supports:
 
@@ -31,7 +31,7 @@ We welcome you to contribute your developed tools to Dify. For detailed methods 
 
 If you need to use the first-party built-in tools provided by the Dify ecosystem, you need to configure the corresponding credentials before using them.
 
-<figure><img src="../../.gitbook/assets/configure-first-party-tool-api.png" alt=""><figcaption><p>Configure First-party Tool Credentials</p></figcaption></figure>
+![Configure First-party Tool Credentials](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/67643e5b416c155a1e3af54d3c5bb136.png)
 
 Once the credentials are successfully verified, the tool will display an "Authorized" status. After configuring the credentials, all members in the workspace can use this tool when arranging applications.
 
@@ -41,15 +41,15 @@ You can import custom API tools in the "Tools - Custom Tools" section, currently
 
 Currently, tools support two authentication methods: No Authentication and API Key.
 
-<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-1.png" alt=""><figcaption><p>Create Custom Tools</p></figcaption></figure>
+![Create Custom Tools](../../.gitbook/assets/en-tools-create-customized-tools-1.png)
 
 After importing the schema content, the system will automatically parse the parameters in the file, and you can preview the specific parameters, methods, and paths of the tool. You can also test the tool parameters here.
 
-<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-2.png" alt=""><figcaption><p>Custom Tool Parameter Testing</p></figcaption></figure>
+![Custom Tool Parameter Testing](../../.gitbook/assets/en-tools-create-customized-tools-2.png)
 
 Once the custom tool is created, all members in the workspace can use this tool when arranging applications in the "Studio."
 
-<figure><img src="../../.gitbook/assets/en-tools-create-customized-tools-3.png" alt=""><figcaption><p>Custom Tool Added</p></figcaption></figure>
+![Custom Tool Added](../../.gitbook/assets/en-tools-create-customized-tools-3.png)
 
 #### Cloudflare Workers
 
@@ -62,8 +62,8 @@ You can also use [dify-tools-worker](https://github.com/crazywoola/dify-tools-wo
 
 Currently, you can use the configured tools when creating **intelligent assistant applications** in the "Studio."
 
-<figure><img src="../../.gitbook/assets/use-tools-in-app.png" alt=""><figcaption><p>Add Tools When Creating Intelligent Assistant Applications</p></figcaption></figure>
+![Add Tools When Creating Intelligent Assistant Applications](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/34e5fdc6118a42ffc2923d03c4ef6330.png)
 
 For example, after adding tools in a financial analysis application, the intelligent assistant will autonomously invoke tools when needed to query financial report data, analyze the data, and complete the conversation with the user.
 
-<figure><img src="../../.gitbook/assets/ai-using-tools-during-conversation.png" alt=""><figcaption><p>Intelligent Assistant Using Tools to Answer Questions During Conversation</p></figcaption></figure>
+![Intelligent Assistant Using Tools to Answer Questions During Conversation](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/tools/d3845b811075914c1e0b4ac9f509d7ed.png)

@@ -1039,7 +1039,7 @@ class BasicAgentAgentStrategy(AgentStrategy):
 
 プラグインの設定ファイルと機能コードを記述したら、プラグインのディレクトリ内で `python -m main` コマンドを実行してプラグインを再起動します。次に、プラグインが正常に動作するかどうかをテストする必要があります。Difyのリモートデバッグ機能を利用するには、[「プラグイン管理」](https://cloud.dify.aij/plugins)にアクセスしてデバッグキーとリモートサーバーのアドレスを取得してください。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 
 プラグインプロジェクトに戻り、`.env.example` ファイルをコピーして `.env` にリネームします。そして、取得したリモートサーバーのアドレスとデバッグキーを、`.env`ファイルの `REMOTE_INSTALL_HOST` および `REMOTE_INSTALL_KEY` パラメータにそれぞれ入力します。
 
@@ -1052,7 +1052,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 
 `python -m main` コマンドを実行してプラグインを起動します。プラグインページで、プラグインがワークスペースにインストールされたことを確認できます。このプラグインは、他のチームメンバーも利用可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png" alt=""><figcaption><p>プラグインへのアクセス</p></figcaption></figure>
+![プラグインへのアクセス](https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png)
 
 ### プラグインのパッケージ化（オプション）
 

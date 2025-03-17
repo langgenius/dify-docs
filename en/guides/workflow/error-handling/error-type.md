@@ -19,7 +19,7 @@ This article summarizes the potential exceptions and corresponding error types t
 
     This error occurs due to exceptions in developer-written code, such as: missing variables, calculation logic errors, or treating string array inputs as string variables. You can locate the issue using the error message and exact line number.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/c86b11af7f92368180ea1bac38d77083.png" alt=""><figcaption><p>Code Error</p></figcaption></figure>
+![Code Error](https://assets-docs.dify.ai/2024/12/c86b11af7f92368180ea1bac38d77083.png)
 
 2.  **Sandbox Network Issues (System Error)**
 
@@ -29,19 +29,19 @@ This article summarizes the potential exceptions and corresponding error types t
     2. Start the sandbox service
     3. Verify proxy settings
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/d95007adf67c4f232e46ec455c348e2c.PNG" alt="" width="375"><figcaption><p>Sandbox network issues</p></figcaption></figure>
+![Sandbox network issues](https://assets-docs.dify.ai/2024/12/d95007adf67c4f232e46ec455c348e2c.PNG)
 
 3.  **Depth Limit Error (DepthLimitError)**
 
     The current node's default configuration only supports up to 5 levels of nested structures. An error will occur if it exceeds 5 levels.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/5649d52a6e80ddd4180b336266701f7b.png" alt=""><figcaption><p><strong>OutputValidationError</strong></p></figcaption></figure>
+![<strong>OutputValidationError</strong>](https://assets-docs.dify.ai/2024/12/5649d52a6e80ddd4180b336266701f7b.png)
 
 4.  **Output Validation Error (OutputValidationError)**
 
     An error occurs when the actual output variable type doesn't match the selected output variable type. Developers need to change the selected output variable type to avoid this issue.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ab8cae01a590b037017dfe9ea4dbbb8b.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/ab8cae01a590b037017dfe9ea4dbbb8b.png)
 
 ### LLM Node
 
@@ -53,7 +53,7 @@ Here are 6 common runtime errors:
 
     This error occurs when the LLM cannot find system prompts or variables set in the context. Application developers can resolve this by replacing the problematic variables.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png)
 
 2.  **Invalid Context Structure Error (InvalidContextStructureError)**
 
@@ -61,7 +61,7 @@ Here are 6 common runtime errors:
 
     > Context only supports string (String) data structures.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png" alt=""><figcaption><p><strong>InvalidContextStructureError</strong></p></figcaption></figure>
+![<strong>InvalidContextStructureError</strong>](https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png)
 
 3.  **Invalid Variable Type Error (InvalidVariableTypeError)**
 
@@ -76,7 +76,7 @@ Here are 6 common runtime errors:
 
     An error occurs when the LLM node's prompt is empty, as prompts cannot be blank.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/9882f7a5ee544508ba11b51fb469a911.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/9882f7a5ee544508ba11b51fb469a911.png)
 
 ### HTTP
 
@@ -104,7 +104,7 @@ The following 3 errors commonly occur during runtime:
 
 
 
-    <figure><img src="https://assets-docs.dify.ai/2024/12/84af0831b7cb23e64159dfbba80e9b28.jpg" alt="" width="375"><figcaption></figcaption></figure>
+    ![](https://assets-docs.dify.ai/2024/12/84af0831b7cb23e64159dfbba80e9b28.jpg)
 2.  **Tool Parameter Error (ToolParameterError)**
 
     An error occurs when the configured tool node parameters are invalid, such as passing parameters that don't match the tool node's defined parameters.

@@ -16,7 +16,7 @@
 
 高品質モードを選択した場合、後で経済的モードのインデックスモードへのダウングレードはできません。変更を希望する場合は、ナレッジベースを再構築し、インデックス設定を選び直すことをお勧めします。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/51442c8fcd05479616a3dd8279a4853a.png" alt=""><figcaption><p>高品質モード</p></figcaption></figure>
+![高品質モード](https://assets-docs.dify.ai/2024/12/51442c8fcd05479616a3dd8279a4853a.png)
 
 ## Q＆Aモードの有効化（オプション、コミュニティ版限定）
 
@@ -28,11 +28,11 @@
 
 > Q＆Aモードは、英語、日本語、中国語の3言語のみ対応しています。モードを有効にすると、LLMトークンの消費が増加し、経済的モードのインデックス方法は使用できません。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/70960a237d4f5eaed2dbf46a2cca2bf7.png" alt=""><figcaption><p>Q＆Aモード</p></figcaption></figure>
+![Q＆Aモード](https://assets-docs.dify.ai/2024/12/70960a237d4f5eaed2dbf46a2cca2bf7.png)
 
 ユーザーが質問すると、システムは最も類似した質問を見つけ、対応するセグメントを回答として返します。この方法はより精密で、ユーザーの質問に直接一致し、ユーザーが求める情報をより正確に探し出すのに役立ちます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8745ccabff56290eae329a9d3592f745.png" alt=""><figcaption><p>「Q to P」と「Q to Q」の区別</p></figcaption></figure>
+![「Q to P」と「Q to Q」の区別](https://assets-docs.dify.ai/2024/12/8745ccabff56290eae329a9d3592f745.png)
 
 ## 経済的モード
 
@@ -40,7 +40,7 @@
 
 経済的モードのインデックス方式を選択した後、期待した効果が得られない場合は、ナレッジベースの設定ページで高品質のインデックス方式にアップグレードすることが可能です。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3b86e6b484da39452c164cb6372a7242.png" alt=""><figcaption><p>経済的モード</p></figcaption></figure>
+![経済的モード](https://assets-docs.dify.ai/2024/12/3b86e6b484da39452c164cb6372a7242.png)
 
 ## もっと読む
 

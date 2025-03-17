@@ -16,15 +16,15 @@
 
 未添加变量聚合，分类1 和 分类 2 分支经不同的知识库检索后需要重复定义下游的 LLM 和直接回复节点。
 
-<figure><img src="../../../.gitbook/assets/image (278).png" alt=""><figcaption><p>问题分类（无变量聚合）</p></figcaption></figure>
+![问题分类（无变量聚合）](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/7a7c91663c3799ce9d056b013d5df29c.png)
 
 添加变量聚合，可以将两个知识检索节点的输出聚合为一个变量。
 
-<figure><img src="../../../.gitbook/assets/image (276).png" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
+![问题分类后的多路聚合](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/78e088e16a409cc18552b21bec98bc01.png)
 
 **IF/ELSE 条件分支后的多路聚合**
 
-<figure><img src="../../../.gitbook/assets/image (277).png" alt=""><figcaption><p>问题分类后的多路聚合</p></figcaption></figure>
+![问题分类后的多路聚合](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/workflow/node/da33064c784fc44c19b532a6d873cfaf.png)
 
 ### 格式要求
 

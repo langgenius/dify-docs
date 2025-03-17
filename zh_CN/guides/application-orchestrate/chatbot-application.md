@@ -22,7 +22,7 @@
 
 创建应用后会自动跳转到应用概览页。点击左侧菜单 **编排** 来编排应用。
 
-<figure><img src="../../.gitbook/assets/zh-conversation-app.png" alt=""><figcaption><p>应用编排</p></figcaption></figure>
+![应用编排](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/f19f991c1295c2ed3230ef27fc47818e.png)
 
 **填写提示词**
 
@@ -34,15 +34,15 @@
 2. 右侧内容框将自动生成提示词。
 3. 你可以在提示词内插入自定义变量。
 
-![](../../.gitbook/assets/zh-prompt-generator.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/9dbd67eacb701500c64e61978d35b812.png)
 
 为了更好的用户体验，可以加上对话开场白：`你好，{{name}}。我是你的面试官，Bob。你准备好了吗？`。点击页面底部的 “添加功能” 按钮，打开 “对话开场白” 的功能：
 
-<figure><img src="../../.gitbook/assets/image (297).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/9c81c98c4b58f894ed92e06a4b9bcf87.png)
 
 编辑开场白时，还可以添加数个开场问题：
 
-![](../../.gitbook/assets/zh-opening-remarks.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/c74a502465c8f68b0c65d40abb4c71d4.png)
 
 #### 添加上下文
 
@@ -62,7 +62,7 @@
 
 在右侧填写用户输入项，输入内容进行调试。
 
-![](../../.gitbook/assets/zh-conversation-debug.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/application-orchestrate/21640904df527d7487b4ac646738971b.png)
 
 若 LLM 给出的回答结果不理想，你可以调整提示词或切换不同底层模型进行效果对比。如需更进一步，同时查看不同模型对于同一个问题的回答情况，请参考[多模型调试](./multiple-llms-debugging.md)。
 

@@ -13,7 +13,7 @@
 * **デフォルト値**：開発者がエラー情報をあらかじめ定義できるようにします。エラーが発生した場合、定義された値によって元のノードが返すエラー情報を置き換えます。
 * **エラーブランチ**：エラーが発生した場合、あらかじめ設定されたエラー処理のブランチを実行します。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png" alt=""><figcaption><p>エラー処理</p></figcaption></figure>
+![エラー処理](https://assets-docs.dify.ai/2024/12/6e2655949889d4d162945d840d698649.png)
 
 ### 処理ロジック：処理なし
 
@@ -31,7 +31,7 @@
 
 > デフォルト値のデータ構造は、ノードの出力変数と一致します。例えば、コードノードの出力変数をarray[number]データタイプに設定した場合、デフォルト値のデータタイプも同様にarray[number]になります。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/e9e5e757090679243e0c9976093c7e6c.png" alt=""><figcaption><p>エラー処理：デフォルト値</p></figcaption></figure>
+![エラー処理：デフォルト値](https://assets-docs.dify.ai/2024/12/e9e5e757090679243e0c9976093c7e6c.png)
 
 ### 処理ロジック：エラーブランチ
 
@@ -39,7 +39,7 @@
 
 > エラーブランチはオレンジ色の線で示されます。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/e5ea1af947818bd9e27cab3042c1c4f3.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/e5ea1af947818bd9e27cab3042c1c4f3.png)
 
 一般的な戦略としては、エラーブランチ内でエラーに対応するノードを配置し、修正されたデータを変数集約ノードを介して元のフローにリンクし、結果を集約して出力します。例えば、メールツールノードを接続してエラー情報を送信することができます。
 

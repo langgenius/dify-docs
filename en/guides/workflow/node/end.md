@@ -18,12 +18,12 @@ End nodes are not supported within Chatflow.
 
 In the following [long story generation workflow](iteration.md#example-2-long-article-iterative-generation-another-scheduling-method), the variable `Output` declared by the end node is the output of the upstream code node. This means the workflow will end after the Code node completes execution and will output the execution result of Code.
 
-<figure><img src="../../../.gitbook/assets/end-answer.png" alt=""><figcaption><p>End Node - Long Story Generation Example</p></figcaption></figure>
+![End Node - Long Story Generation Example](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/a103792790447c1725c1da1176334cae.png)
 
 **Single Path Execution Example:**
 
-<figure><img src="../../../.gitbook/assets/single-path-execution.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/9e43961344d318e09af8d64464d81774.png)
 
 **Multi-Path Execution Example:**
 
-<figure><img src="../../../.gitbook/assets/output (1) (3).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/3cb3f5fea376265bede0a4ac5bcc1ddc.png)

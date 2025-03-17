@@ -15,7 +15,7 @@ Dify offers a "Backend-as-a-Service" API, providing numerous benefits to AI appl
 
 Choose an application, and find the API Access in the left-side navigation of the Apps section. On this page, you can view the API documentation provided by Dify and manage credentials for accessing the API.
 
-<figure><img src="../../.gitbook/assets/guides\application-publishing\launch-your-webapp-quickly/API Access.png" alt=""><figcaption><p>API document</p></figcaption></figure>
+![API document](../../.gitbook/assets/guides\application-publishing\launch-your-webapp-quickly/API Access.png)
 
 You can create multiple access credentials for an application to deliver to different users or developers. This means that API users can use the AI capabilities provided by the application developer, but the underlying Prompt engineering, knowledge, and tool capabilities are encapsulated.
 

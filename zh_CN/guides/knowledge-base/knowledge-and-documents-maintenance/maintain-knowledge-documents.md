@@ -8,7 +8,7 @@
 
 点击“知识库” → “文档列表” → “添加文件”，在已创建的知识库内上传新的文档。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/424ab491aaebe09b490a36d26c9fa8da.png" alt=""><figcaption><p>在知识库内上传新文档</p></figcaption></figure>
+![在知识库内上传新文档](https://assets-docs.dify.ai/2024/12/424ab491aaebe09b490a36d26c9fa8da.png)
 
 ### 启用 / 禁用 / 归档 / 删除文档
 
@@ -22,7 +22,7 @@
 
 > 以上选项均支持选中多个文档后批量操作。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/5e0e64859a1ac51602d167ec55ef9350.png" alt=""><figcaption><p>禁用或归档文档</p></figcaption></figure>
+![禁用或归档文档](https://assets-docs.dify.ai/2024/12/5e0e64859a1ac51602d167ec55ef9350.png)
 
 **注意：**
 
@@ -45,7 +45,7 @@
 
 每个内容区块展示前 2 行的预览内容。若需要查看更加分段内的完整内容，轻点“展开分段”按钮即可查看。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/86cc80f17fab1eea75aa73ee681e4663.png" alt=""><figcaption><p>展开内容分段</p></figcaption></figure>
+![展开内容分段](https://assets-docs.dify.ai/2024/12/86cc80f17fab1eea75aa73ee681e4663.png)
 
 你可以通过筛选栏快速查看所有已启用 / 未启用的文档。
 
@@ -75,7 +75,7 @@
 
     选择知识库内的文档后，你将会首先看到父分段的内容。父分段存在 **“段落”** 分段与 **“全文”** 分段两种模式，提供更加完整的上下文信息。下图为不同分段模式的文本预览差异。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b3961da2536dc922496ef6646315b9f4.png" alt=""><figcaption><p>段落与全文的预览差异</p></figcaption></figure>
+![段落与全文的预览差异](https://assets-docs.dify.ai/2024/12/b3961da2536dc922496ef6646315b9f4.png)
 
 *   **子分段**
 
@@ -105,15 +105,15 @@
 
 * **过短的文本分段**，导致语义缺失；
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ee081e98c1649aea4a5c2b15b88e11aa.png" alt=""><figcaption><p>过短的文本分段</p></figcaption></figure>
+![过短的文本分段](https://assets-docs.dify.ai/2024/12/ee081e98c1649aea4a5c2b15b88e11aa.png)
 
 * **过长的文本分段**，导致语义噪音影响匹配准确性；
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ac47381ae4be183768dd025c37c049fa.png" alt=""><figcaption><p>过长的文本分段</p></figcaption></figure>
+![过长的文本分段](https://assets-docs.dify.ai/2024/12/ac47381ae4be183768dd025c37c049fa.png)
 
 * **明显的语义截断**，在使用最大分段长度限制时会出现强制性的语义截断，导致召回时缺失内容；
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/b8ab7ac84028b0b16c3948f35015e069.png" alt=""><figcaption><p>明显的语义截断</p></figcaption></figure>
+![明显的语义截断](https://assets-docs.dify.ai/2024/12/b8ab7ac84028b0b16c3948f35015e069.png)
 
 ***
 
@@ -133,11 +133,11 @@
 
 手动添加文本分段时，你可以选择添加正文和关键词。内容填写后，勾选尾部 **“连续新增”** 钮后，可以继续添加文本。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/cd769622bc1d85c037277ef6fa5247c9.png" alt=""><figcaption><p>通用模式 - 添加文本分段</p></figcaption></figure>
+![通用模式 - 添加文本分段](https://assets-docs.dify.ai/2024/12/cd769622bc1d85c037277ef6fa5247c9.png)
 
 批量添加分段时，你需要先下载 CSV 格式的分段上传模板，并按照模板格式在 Excel 内编辑所有的分段内容，再将 CSV 文件保存后上传。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/5e501dd8efba02ff31d2e739417ce864.png" alt=""><figcaption><p>通用模式 - 批量添加自定义分段</p></figcaption></figure>
+![通用模式 - 批量添加自定义分段](https://assets-docs.dify.ai/2024/12/5e501dd8efba02ff31d2e739417ce864.png)
 {% endtab %}
 
 {% tab title="父子模式" %}
@@ -145,15 +145,15 @@
 
 点击分段列表顶部的 「 添加分段 」 按钮，可以在文档内自行添加一个或批量添加多个自定义**父分段。**
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ed4be3bf178e3a41d53bcc10255ad3b2.png" alt=""><figcaption><p>父子模式 — 添加区块</p></figcaption></figure>
+![父子模式 — 添加区块](https://assets-docs.dify.ai/2024/12/ed4be3bf178e3a41d53bcc10255ad3b2.png)
 
 填写内容后，勾选尾部 **“连续新增”** 钮后，可以继续添加文本。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/ba64232eea364b68f2e38341eb9cf5c1.png" alt=""><figcaption><p>父子模式 - 添加内容区块</p></figcaption></figure>
+![父子模式 - 添加内容区块](https://assets-docs.dify.ai/2024/12/ba64232eea364b68f2e38341eb9cf5c1.png)
 
 支持在父分段内单独添加子分段。轻点父分段内子分段右侧的“添加”，即可单独添加子分段。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/23f68a369eb9c1a2cc9022b99a08341d.png" alt=""><figcaption><p>父子模式 — 添加子分段</p></figcaption></figure>
+![父子模式 — 添加子分段](https://assets-docs.dify.ai/2024/12/23f68a369eb9c1a2cc9022b99a08341d.png)
 {% endtab %}
 
 {% tab title="Q&A 模式（仅用于社区版）" %}
@@ -175,7 +175,7 @@
 
 为避免遗忘导致的重复编辑，编辑后内容区块将出现“已编辑”标签提示。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/8220e412e4c5a2bf729fb5dfcc1b7f4c.png" alt=""><figcaption><p>编辑文档分段</p></figcaption></figure>
+![编辑文档分段](https://assets-docs.dify.ai/2024/12/8220e412e4c5a2bf729fb5dfcc1b7f4c.png)
 {% endtab %}
 
 {% tab title="父子模式" %}
@@ -232,4 +232,4 @@
 
 除了用于标记不同来源文档的元数据信息，例如网页数据的标题、网址、关键词、描述等。元数据将被用于知识库的分段召回过程中，作为结构化字段参与召回过滤或者显示引用来源。
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/f3b1ff4b559ebc40f18b8980b3719fe8.png" alt=""><figcaption><p>元数据管理</p></figcaption></figure>
+![元数据管理](https://assets-docs.dify.ai/2024/12/f3b1ff4b559ebc40f18b8980b3719fe8.png)

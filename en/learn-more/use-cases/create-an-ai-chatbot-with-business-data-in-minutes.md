@@ -21,7 +21,7 @@ If you want to build an AI Chatbot based on the company's existing knowledge bas
 3. select the cleaning method
 4. Click \[Save and Process], and it will take only a few seconds to complete the processing.
 
-![](../../.gitbook/assets/ai-chatbot-knowledge-base.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/3ba45ef5b8859d80cded096caf386c1b.png)
 
 ### Create an AI application and give it instructions
 
@@ -39,19 +39,19 @@ In this case, we assign a role to the AI:
 
 > Opening remarks：Hey \{{User\_name\}}, I'm Bob☀️, the first AI member of Dify. You can discuss with me any questions related to Dify products, team, and even LLMOps.
 
-<figure><img src="../../.gitbook/assets/app-pre-prompt-opening-remarks.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/1175a854034f6814b8066852d63bcdf8.png)
 
 ### Debug the performance of AI Chatbot and publish.
 
 After completing the setup, you can send messages to it on the right side of the current page to debug whether its performance meets expectations. Then click "Publish". And then you get an AI chatbot.
 
-<figure><img src="../../.gitbook/assets/debug-ai-chatbot-publish.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/6e917021e11803171d7801af948ffc4c.png)
 
 ### Embed AI Chatbot application into your front-end page.
 
 This step is to embed the prepared AI chatbot into your official website . Click \[Overview] -> \[Embedded], select the script tag method, and copy the script code into the \<head> or \<body> tag of your website. If you are not a technical person, you can ask the developer responsible for the official website to paste and update the page.
 
-<figure><img src="../../.gitbook/assets/ai-chatbot-embedded.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/8945e4cbb2ffbd9c5e2272fd99768be3.png)
 
 1. Paste the copied code into the target location on your website.
 2. Update your official website and you can get an AI intelligent customer service with your business data. Try it out to see the effect.

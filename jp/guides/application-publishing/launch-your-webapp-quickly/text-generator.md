@@ -15,7 +15,7 @@
 
 クエリ内容を入力し、実行ボタンをクリックすると、右側に結果が生成されます。以下の図のように：
 
-<figure><img src="../../../../en/.gitbook/assets/text-generator.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/4c5380cf71066d933082f7c30deacb01.png)
 
 生成された結果部分では、「コピー」ボタンをクリックすると内容をクリップボードにコピーできます。「保存」ボタンをクリックすると内容を保存できます。「保存済み」タブで保存した内容を見ることができます。また、生成された内容には「いいね」や「バッド」をつけることもできます。
 
@@ -29,17 +29,17 @@
 
 「バッチ実行」タブをクリックすると、バッチ実行ページに入ります。
 
-<figure><img src="../../../../en/.gitbook/assets/text-generator-batch.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/c8381ab7fad14a54c86835dc4b1b6b5d.png)
 
 #### 第2歩 テンプレートをダウンロードして内容を入力する
 
 「テンプレートダウンロード」ボタンをクリックし、テンプレートをダウンロードします。テンプレートを編集し、内容を入力して `.csv` 形式のファイルとして保存します。
 
-<figure><img src="../../../../en/.gitbook/assets/text-generator-batch-download.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/bae4859c5cb7404ce901b7979237bb93.png)
 
 #### 第3歩 ファイルをアップロードして実行
 
-<figure><img src="../../../../en/.gitbook/assets/batch-run.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/fc84f62f41c12e14ff85b29e6bf43d27.png)
 
 生成された内容をエクスポートする必要がある場合は、右上の「ダウンロードボタン」をクリックして `csv` ファイルとしてエクスポートできます。
 
@@ -49,10 +49,10 @@
 
 生成結果の下にある「保存」ボタンをクリックすると、実行結果を保存できます。「保存済み」タブで、すべての保存された内容を見ることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/text-generator-saved.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/3cdd15e87aa1f1aae9f6abadb0f16d1f.png)
 
 ### より多くの類似結果の生成
 
 アプリケーションのオーケストレーションで「より類似した」機能を有効にしている場合、Webアプリケーションで「より類似した」ボタンをクリックすると、現在の結果と似た内容を生成できます。以下の図の通りです：
 
-<figure><img src="../../../../en/.gitbook/assets/text-generator-more-like-this.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/application-publishing/launch-your-webapp-quickly/65fb111d8e89a8f7b761859265e42f0a.png)

@@ -43,9 +43,9 @@ npm run deploy
 
 After successful deployment, you will get a public internet address, which you can add in Dify as an API Endpoint. Please note not to miss the `endpoint` path.
 
-<figure><img src="../../../.gitbook/assets/api_extension_edit (1).png" alt=""><figcaption><p>Adding API Endpoint in Dify</p></figcaption></figure>
+![Adding API Endpoint in Dify](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/extension/api-based-extension/9433a486a441713ade6270e9dc6c0544.png)
 
-<figure><img src="../../../.gitbook/assets/app_tools_edit (1).png" alt=""><figcaption><p>Adding API Tool in the App edit page</p></figcaption></figure>
+![Adding API Tool in the App edit page](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/extension/api-based-extension/72c285e58ec136a1a9a66f61b4b41ca1.png)
 
 ## Other Logic TL;DR
 

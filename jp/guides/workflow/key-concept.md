@@ -22,7 +22,7 @@
 
 一般的なインタラクションパス: 指示を与える → コンテンツを生成する → コンテンツについて複数のディスカッションを行う → 結果を再生成する → 終了
 
-<figure><img src="../../.gitbook/assets/jp-create-chatbox-chatflow.png" alt=""><figcaption><p>チャットフロー入口</p></figcaption></figure>
+![チャットフロー入口](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/97d74fb8181659de68ae25db6a382b09.png)
 
 ### ワークフロー
 
@@ -30,7 +30,7 @@
 
 一般的なインタラクションパス: 指示を与える → コンテンツを生成する → 終了
 
-<figure><img src="../../.gitbook/assets/jp-create-workflow.png" alt=""><figcaption><p>ワークフロー入口</p></figcaption></figure>
+![ワークフロー入口](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/e19ef5ad8cca6f0686257c1115394e9a.png)
 
 **利用可能なノードの違い**
 

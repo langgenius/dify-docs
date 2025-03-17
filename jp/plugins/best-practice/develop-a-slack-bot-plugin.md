@@ -240,7 +240,7 @@ class SlackEndpoint(Endpoint):
 
 Difyプラットフォームにアクセスし、Difyプラグインのリモートデバッグに必要な接続アドレスとキーを取得します。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png)
 
 プラグインプロジェクトに戻り、`.env.example`ファイルをコピーして`.env`にリネームします。
 

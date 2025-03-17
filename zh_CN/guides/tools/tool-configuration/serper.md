@@ -16,7 +16,7 @@ Serper 是一个强大的实时搜索引擎工具API，可提供来自 Google �
 
 在 Dify 导航页内轻点 `工具 > Serper > 去授权` 填写 API Key。
 
-![](../../../.gitbook/assets/zh-tool-serper.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/b20b431851781e839033db8230e0b503.png)
 
 ## 3. 使用工具
 

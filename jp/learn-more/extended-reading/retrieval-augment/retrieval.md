@@ -2,7 +2,7 @@
 
 ユーザーがナレッジベースのQ\&A用AIアプリケーションを構築する際に、Difyはアプリケーション内で複数のデータセットが関連付けられている場合に、検索時に2つの検索モードをサポートします：N-of-1検索モードとMulti-Path検索モードです。
 
-<figure><img src="../../../.gitbook/assets/jp-n-to-1.png" alt=""><figcaption><p>検索モード設定</p></figcaption></figure>
+![検索モード設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/learn-more/extended-reading/retrieval-augment/36277c7971c542aad7ff208f555cfc67.png)
 
 ### 検索設定
 
@@ -12,6 +12,6 @@
 
 以下は、マルチパス検索モードの技術フローチャートです：
 
-<figure><img src="../../../.gitbook/assets/rerank-flow-chart.png" alt=""><figcaption><p>マルチパス検索</p></figcaption></figure>
+![マルチパス検索](https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/learn-more/extended-reading/retrieval-augment/64007d543f1c5c3f2e87d606d79d04d3.png)
 
 マルチパス検索モードは、モデルの推論能力やデータセットの説明に依存しないため、複数のデータセットを跨いで高品質な検索結果を得ることができます。さらに、Rerankを組み込むことで文書の検索効果を効果的に向上させることができます。したがって、複数のデータセットに関連付けられたナレッジベースのQ\&Aアプリを作成する際には、検索モードをマルチパス検索に設定することをお勧めします。

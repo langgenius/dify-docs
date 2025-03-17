@@ -74,11 +74,11 @@ git push origin v0.0.1
 
 Go to the Releases page of your GitHub repository and create a new release. Upload plugin files when publishing. For detailed instructions on packaging plugins, please read the packaging plugins documentation.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/5cb4696348cc6903e380287fce8f529d.png" alt=""><figcaption><p>Packaging Plugins</p></figcaption></figure>
+![Packaging Plugins](https://assets-docs.dify.ai/2024/12/5cb4696348cc6903e380287fce8f529d.png)
 
 ### **Installing Plugins via GitHub**
 
 Others can install the plugin using the GitHub repository address. Visit the Dify platform's plugin management page, choose to install via GitHub, enter the repository address, select version number and package file to complete installation.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/3c2612349c67e6898a1f33a7cc320468.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/3c2612349c67e6898a1f33a7cc320468.png)
 

@@ -24,7 +24,7 @@
 这些标记将在 Dify 的后续版本中供模型微调使用，以提升模型的准确性与回复风格，当前预览版仅支持标记。
 {% endhint %}
 
-<figure><img src="../../.gitbook/assets/app-log.png" alt=""><figcaption><p>标记日志以改进</p></figcaption></figure>
+![标记日志以改进](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/annotation/67586ad70a7ae79c18e61f1267cc8d8f.png)
 
 点击一条日志会在界面右侧打开日志详情面板，在该面板中运营人员可以对一次互动进行标注：
 

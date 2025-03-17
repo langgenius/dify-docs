@@ -21,17 +21,17 @@ Team owners and administrators can control the following plugin permissions on t
     * **Admins**: Only Workspace administrators can debug plugins
     * **No one**: No one is allowed to debug plugins
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/a2bca75a7757b7cafae2cb4ba0ad9fff.png" alt=""><figcaption><p>Plugins permission</p></figcaption></figure>
+![Plugins permission](https://assets-docs.dify.ai/2024/12/a2bca75a7757b7cafae2cb4ba0ad9fff.png)
 
 ### **Upgrading Plugins**
 
 Click the "Plugins" button in the top right corner of the Dify platform, select the plugin that needs updating, and click the **"Upgrade"** button next to the plugin title.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/83bd5ec12ec914c73d0ea2a5992cd6df.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2024/12/83bd5ec12ec914c73d0ea2a5992cd6df.png)
 
 ### **Deleting Plugins**
 
 Click the "Plugins" button in the top right corner of the Dify platform to see all installed plugins in the current Workspace. Click the "Delete" icon or the Remove button on the right side of the plugin details page to remove the plugin.
 
-<figure><img src="https://assets-docs.dify.ai/2024/12/6cb1c000d20720c16ae3c0a70df26fd3.png" alt=""><figcaption><p>Remove plugin</p></figcaption></figure>
+![Remove plugin](https://assets-docs.dify.ai/2024/12/6cb1c000d20720c16ae3c0a70df26fd3.png)
 

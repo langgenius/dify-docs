@@ -241,7 +241,7 @@ class SlackEndpoint(Endpoint):
 
 前往 Dify 平台，获取 Dify 插件远程调试的连接地址和密钥。
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png)
 
 回到插件项目，复制 `.env.example` 文件并重命名为 `.env`。
 

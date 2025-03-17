@@ -53,7 +53,7 @@ docker run \
 
 在`设置 > 模型供应商 > OpenAI-API-compatible` 中填写：
 
-<figure><img src="../../.gitbook/assets/截屏2024-10-11 16.07.39.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/development/models-integration/77bffb41849491914f95b05e0f42cd29.png)
 
 * **模型名称**: gpt-4
 * **API endpoint URL**: `http://localhost:4000`

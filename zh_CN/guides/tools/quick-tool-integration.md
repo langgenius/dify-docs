@@ -279,4 +279,4 @@ class GoogleProvider(BuiltinToolProviderController):
 
 当然，因为 google\_search 需要一个凭据，在使用之前，还需要在前端配置它的凭据。
 
-<figure><img src="../../.gitbook/assets/Feb 4, 2024.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/c99fed3e1bbe5d724810fd6118012071.png)

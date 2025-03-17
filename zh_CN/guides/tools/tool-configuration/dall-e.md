@@ -16,7 +16,7 @@ DALL-E 是由 OpenAI 开发的一种基于文本提示生成图像的工具。Di
 
 在 Dify 导航页内轻点 `工具 > DALL-E > 去授权` 填写 API Key。
 
-![](../../../.gitbook/assets/zh-tools-dalle.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/e14d1190c5b8dc6c7e6b9c8d3e9d4eca.png)
 
 ## 3. 使用工具
 
@@ -24,10 +24,10 @@ DALL-E 是由 OpenAI 开发的一种基于文本提示生成图像的工具。Di
 
 Chatflow 和 Workflow 应用均支持添加 `DALL-E 绘图` 工具节点。添加后，需要在节点内的 “输入变量 → 提示词” 内填写[变量](https://docs.dify.ai/v/zh-hans/guides/workflow/variables)引用用户输入的提示词，或者是上一节点生成的内容。最后在 “结束” 节点内使用变量引用 `DALL-E 绘图` 输出的图像。
 
-![](../../../.gitbook/assets/zh-dalle3-node.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/742014125d01f001a3f8e542b53130ce.png)
 
 * **Agent 应用**
 
 在 Agent 应用内添加 `DALL-E` 工具，然后在对话框内发送图片描述，调用工具生成 AI 图像。
 
-![](../../../.gitbook/assets/zh-agent-dalle3.png)
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/tools/tool-configuration/7adb47ad645fb7f1bd95848e78cb6a0f.png)

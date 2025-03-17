@@ -18,17 +18,17 @@ For more details, please refer to [Opik](https://www.comet.com/site/products/opi
 
 Retrieve your Opik API Key from the user menu at the top-right. Click on **API Key**, then on the API Key to copy it:
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png" alt=""><figcaption><p>Opik API Key</p></figcaption></figure>
+![Opik API Key](https://assets-docs.dify.ai/2025/01/a66603f01e4ffaa593a8b78fcf3f8204.png)
 
 #### 3. Integrating Opik with Dify
 
 Configure Opik in the Dify application. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png" alt=""><figcaption><p>Tracing app performance</p></figcaption></figure>
+![Tracing app performance](https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png)
 
 After clicking configure, paste the **API Key** and **project name** created in Opik into the configuration and save.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png" alt=""><figcaption><p>Configure Opik</p></figcaption></figure>
+![Configure Opik](https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png)
 
 Once successfully saved, you can view the monitoring status on the current page.
 
@@ -36,15 +36,15 @@ Once successfully saved, you can view the monitoring status on the current page.
 
 Once configured, you can debug or use the Dify application as usual. All usage history can be monitored in Opik. 
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png" alt=""><figcaption><p>Viewing application data in Opik</p></figcaption></figure>
+![Viewing application data in Opik](https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png)
 
 When you switch to Opik, you can view detailed operation logs of Dify applications in the dashboard.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png" alt=""><figcaption><p>Viewing application data in Opik</p></figcaption></figure>
+![Viewing application data in Opik](https://assets-docs.dify.ai/2025/01/09601d45eaf8ed90a4dfb07c34de36ff.png)
 
 Detailed LLM operation logs through Opik will help you optimize the performance of your Dify application.
 
-<figure><img src="https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png" alt=""><figcaption><p>Viewing application data in Opik</p></figcaption></figure>
+![Viewing application data in Opik](https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png)
 
 ### Monitoring Data List
 

@@ -16,11 +16,11 @@ Some nodes within the workflow require specific data formats as inputs, such as 
 
 In this example: The Arxiv paper retrieval tool requires **paper author** or **paper ID** as input parameters. The parameter extractor extracts the paper ID **2405.10739** from the query "What is the content of this paper: 2405.10739" and uses it as the tool parameter for precise querying.
 
-<figure><img src="../../../.gitbook/assets/precise-query.png" alt=""><figcaption><p>Arxiv Paper Retrieval Tool</p></figcaption></figure>
+![Arxiv Paper Retrieval Tool](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/a8bae4106a015c76ebb0a165f2409458.png)
 
 2. **Converting text to structured data**, such as in the long story iteration generation application, where it serves as a pre-step for the [iteration node](iteration.md), converting chapter content in text format to an array format, facilitating multi-round generation processing by the iteration node.
 
-<figure><img src="../../../.gitbook/assets/convert-chapter-content.png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/71d8e48d842342668f92e6dd84fc03c1.png)
 
 1. **Extracting structured data and using the** [**HTTP Request**](https://docs.dify.ai/guides/workflow/node/http-request), which can request any accessible URL, suitable for obtaining external retrieval results, webhooks, generating images, and other scenarios.
 

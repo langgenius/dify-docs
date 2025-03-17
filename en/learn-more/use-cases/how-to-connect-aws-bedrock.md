@@ -12,13 +12,13 @@ This article will briefly introduce how to connect the Dify platform with the AW
 
 Visit [AWS Bedrock](https://aws.amazon.com/bedrock/) and create the Knowledge Base service.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (360).png" alt=""><figcaption><p>Create AWS Bedrock Knowledge Base</p></figcaption></figure>
+![Create AWS Bedrock Knowledge Base](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/1bf24647a5ffeba4accecd1052011980.png)
 
 ### 2. Build the Backend API Service
 
 The Dify platform cannot directly connect to AWS Bedrock Knowledge Base. The developer needs to refer to Dify's [API definition](../../guides/knowledge-base/external-knowledge-api-documentation.md) on external knowledge base connection, manually create the backend API service, and establish a connection with AWS Bedrock. Please refer to the specific architecture diagram:
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption><p>Build the backend API service</p></figcaption></figure>
+![Build the backend API service](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/c57ce0a77ee668268f53e91497bd5c2b.png)
 
 You can refer to the following 2 demo code.
 
@@ -117,7 +117,7 @@ During the process, you can construct the API endpoint address and the API Key f
 
 After log in to the AWS Bedrock Knowledge backend and get the ID of the created Knowledge Base, you can use this parameter to connect to the Dify platform in the subsequent steps.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (359).png" alt=""><figcaption><p>Get the AWS Bedrock Knowledge Base ID</p></figcaption></figure>
+![Get the AWS Bedrock Knowledge Base ID](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/03fd7e383daf419765bbfd05c3742923.png)
 
 ### 4. Associate the External Knowledge API
 
@@ -129,13 +129,13 @@ Follow the prompts on the page and fill in the following information:
 * API endpoint address, the connection address of the external knowledge base, which can be customized in [Step 2](how-to-connect-aws-bedrock.md#id-2.build-the-backend-api-service). Example: `api-endpoint/retrieval`;
 * API Key, the external knowledge base connection key, which can be customized in [Step 2](how-to-connect-aws-bedrock.md#id-2.build-the-backend-api-service).
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (362).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/4f2ce69f8c59e788beb91303c68db571.png)
 
 ### 5. Connect to External Knowledge Base
 
 Go to the **“Knowledge** page, click **“Connect to an External Knowledge Base”** below the add knowledge base card to jump to the parameter configuration page.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (363).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/c3c30c7ed923ee1d7986e92bb35186c6.png)
 
 Fill in the following parameters:
 
@@ -152,7 +152,7 @@ Fill in the AWS Bedrock knowledge base ID obtained in Step 3.
 
 **Score threshold:** The similarity threshold for text chunk filtering. Only text chunks with a score exceeding the set score will be recalled. The default value is 0.5. The higher the value, the higher the similarity required between the text and the question, the smaller the number of texts expected to be recalled, and the more accurate the result will be.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (364).png" alt=""><figcaption></figcaption></figure>
+![](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/58c324c08c1c5fc23ab31e04967ae449.png)
 
 After the settings are completed, you can establish a connection with the external knowledge base API.
 
@@ -160,8 +160,8 @@ After the settings are completed, you can establish a connection with the extern
 
 After establishing a connection with an external knowledge base, developers can simulate possible user's question keywords in **"Retrieval Test"** and preview the text chunks retrieval from the AWS Bedrock Knowledge Base.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (366).png" alt=""><figcaption><p>Test the connection and retrieval of the external knowledge base</p></figcaption></figure>
+![Test the connection and retrieval of the external knowledge base](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/fbc64f060f9fda83847428439b07c247.png)
 
 If you are not satisfied with the retrieval results, you can try to modify the retrieval parameters or adjust the retrieval settings of AWS Bedrock Knowledge Base.
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (367).png" alt=""><figcaption><p>Adjust the text chunking parameters of AWS Bedrock Knowledge Base</p></figcaption></figure>
+![Adjust the text chunking parameters of AWS Bedrock Knowledge Base](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/learn-more/use-cases/0984a89e4cf2a1150ec3160da14c656e.png)
