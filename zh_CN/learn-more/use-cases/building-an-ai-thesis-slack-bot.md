@@ -116,7 +116,7 @@ a.在发布前 **试运行**，确认工作流程是否跑通后，点击 发布
 
 ![Shiyunxing](https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/018TestInupt.jpg)
 
-b. 如果确认到 Dify 的搜索结果和Slack上的传输内容，恭喜您，跑通了。 
+b. 如果确认到 Dify 的搜索结果和 Slack 上的传输内容，恭喜您，跑通了。 
 
 ![Last P](https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/019LastPTest.jpg)
 
