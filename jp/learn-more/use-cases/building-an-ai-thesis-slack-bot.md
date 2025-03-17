@@ -1,9 +1,6 @@
-### DifyクラウドでAI Thesis Slack Botを構築
+# DifyクラウドでAI Thesis Slack Botを構築
 
-### （ArXiv、LLM、Slackの統合）
-
-著者：Alec Lee
-2025/03/11
+> 著者：Alec Lee。2025/03/11
 
 ## 1. 概要
 
@@ -29,7 +26,7 @@ OpenAIのアカウント設定画面で**モデルを設定** し、**APIキー�
 
 Difyのツール一覧から、**ArXiv検索ツール** と **Slack連携ツール** をインストールします。
 
-![Slack ArXiv](https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/002SlackArXiv.jpg)
+<img src="https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/002SlackArXiv.jpg" alt="Slack ArXiv" width="400"/>
 
 ### 2.3 Slackアカウントの作成
 
@@ -99,7 +96,7 @@ a. Startノード: キーワード検索のパラメータを設定。
 
 b. ArXiv Searchノード: Query String を追加（必要に応じてカスタマイズ可能）。
 
-![ArXiv Search](https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/014ArvPara.jpg)
+<img src="https://raw.githubusercontent.com/aleclee1005/MyPic/refs/heads/img/014ArvPara.jpg" alt="ArXiv Search" width="400"/>
 
 c. LLMノード: モデルの選択, CONTEXTの追加, SYSTEMでPrompt Engineeringを設定（必要に応じて調整）,USERでContextを選択. 
 

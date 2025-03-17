@@ -227,6 +227,7 @@
   * [如何连接 AWS Bedrock 知识库？](learn-more/use-cases/how-to-connect-aws-bedrock.md)
   * [构建 Dify 应用定时任务助手](learn-more/use-cases/dify-schedule.md)
   * [如何在 Dify 内体验大模型“竞技场”？以 DeepSeek R1 VS o1 为例](learn-more/use-cases/dify-model-arena.md)
+  * [在 Dify 云端构建 AI Thesis Slack Bot](learn-more/use-cases/building-an-ai-thesis-slack-bot.md)
 * [扩展阅读](learn-more/extended-reading/README.md)
   * [什么是 LLMOps？](learn-more/extended-reading/what-is-llmops.md)
   * [什么是数组变量？](learn-more/extended-reading/what-is-array-variable.md)
