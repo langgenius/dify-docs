@@ -11,11 +11,11 @@ Dify 支持将你的 AI 应用嵌入到业务网站中，你可以使用该能�
 
     将 script 代码复制到你网站 `<head>` 或 `<body>` 标签中。
 
-    <figure><img src="../../.gitbook/assets/image (69) (1).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai/img/zh_CN/application-publishing/1727828fefce51c99339f1e2d977ce88.webp" alt=""><figcaption></figcaption></figure>
 
     如果将 script 代码粘贴到官网的 `<body>` 处，你将得到一个官网 AI 机器人：
 
-    <figure><img src="../../.gitbook/assets/image (40) (1).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai/img/zh_CN/application-publishing/3323f6d44761d383ef60ff7a1d14e4ac.webp" alt=""><figcaption></figcaption></figure>
 
 ## 自定义 Dify 聊天机器人气泡按钮
 

@@ -10,7 +10,7 @@ After subscribing to Dify's paid services (Professional or Team plan), team owne
 
 On the billing page, you can view the usage statistics for various team resources.
 
-<figure><img src="../../.gitbook/assets/subscription-management-01.png" alt=""><figcaption><p>Team billing management</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/management/8ecee0703bb697cec2fba0f8238a6652.webp" alt=""><figcaption><p>Team billing management</p></figcaption></figure>
 
 ### Frequently Asked Questions
 
@@ -21,7 +21,7 @@ Team owners and administrators can navigate to **Settings** → **Billing**, the
 * Upgrading from Professional to Team plan requires paying the difference for the current month and takes effect immediately.
 * Downgrading from Team to Professional plan takes effect immediately.
 
-<figure><img src="../../.gitbook/assets/subscription-management-02.jpeg" alt=""><figcaption><p>Changing the paid plan</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/management/01343e2c5c3b3eb585adfbb7a6beafa0.webp" alt=""><figcaption><p>Changing the paid plan</p></figcaption></figure>
 
 Upon cancellation of the subscription plan, **the team will automatically transition to the Sandbox/Free plan at the end of the current billing cycle**. Subsequently, any team members and resources exceeding the Sandbox/Free plan limitations will become inaccessible.
 

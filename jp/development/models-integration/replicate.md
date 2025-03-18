@@ -9,8 +9,8 @@ DifyはReplicate上の[言語モデル](https://replicate.com/collections/langua
 3. モデルを選択します。[言語モデル](https://replicate.com/collections/language-models)と[埋め込みモデル](https://replicate.com/collections/embedding-models)からモデルを選びます。
 4. Difyの`設定 > モデルプロバイダ > Replicate`にてモデルを追加します。
 
-<figure><img src="../../.gitbook/assets/jp-replicate-model.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/models-integration/fba40fe2b9487d36d35d1d25df5aee8f.webp" alt=""><figcaption></figcaption></figure>
 
 APIキーは第2ステップで設定したAPIキーです。モデル名とモデルバージョンはモデルの詳細ページで見つけることができます：
 
-<figure><img src="../../.gitbook/assets/image (5) (1) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/models-integration/301090201162d1eba3554ae36b39a355.webp" alt=""><figcaption></figcaption></figure>

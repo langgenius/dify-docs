@@ -22,7 +22,7 @@
 
 例えば：会話が始まると、LLMはユーザーの入力に必要な情報や好み、またはチャット履歴が含まれているかを自動的に判断します。情報が存在する場合、LLMはそれを先に抽出して保存し、コンテキストとして利用して応答します。もし新しい情報を覚える必要がない場合、LLMは以前の関連する記録を用いて個性化な応答を出します。
 
-<figure><img src="../../../.gitbook/assets/conversational-variables-scenario-01.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/df75174da8939873e62be1f2ec881b47.webp" alt=""><figcaption></figcaption></figure>
 
 **設定手順：**
 
@@ -107,7 +107,7 @@ def main(arg1: list) -> str:
 
 例：ユーザーが会話を始める前に、`language`入力欄に「日本語」と指定した場合、その言語は会話変数に書き込まれ、LLMは後続の返信時に会話変数の情報を参照し、継続的に「日本語」を使用して返信します。
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/c001f13aa2bf7ac71a728453ab939d18.webp" alt=""><figcaption></figcaption></figure>
 
 **設定手順：**
 
@@ -123,7 +123,7 @@ def main(arg1: list) -> str:
 
 例：会話を始める際、LLMはユーザーにチェックリストに関連するアイテムの入力を求めます。ユーザーがチェックリストの内容を一度述べると、その内容は会話変数に更新され、及び保存されます。LLMは各会話の後に、ユーザーに不足しているアイテムの追加を促します。
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-2-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/node/fb86247c12b427552e16ac2d2e085ff7.webp" alt=""><figcaption></figcaption></figure>
 
 **配置流程：**
 

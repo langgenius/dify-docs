@@ -4,7 +4,7 @@
 
 アプリを作成した後に、アプリ名や説明を変更したい場合は、アプリの左上隅にある「情報の編集」をクリックしてください。これにより、アプリのアイコン、名前、または説明を修正できます。
 
-<figure><img src="../../../en/.gitbook/assets/image (92).png" alt=""><figcaption><p>アプリ情報の編集</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/management/94be148a3e8d86cc337fc7ad897a1bac.webp" alt=""><figcaption><p>アプリ情報の編集</p></figcaption></figure>
 
 ### アプリの複製
 
@@ -21,14 +21,14 @@ Difyで作成されたアプリはDSL形式でエクスポートをサポート�
 * シナリオページ中のアプリカードの右下隅の"DSLをエクスポート"をクリックする。
 * アプリ内のオーケストレートページに入れるあど、左上隅の"DSLをエクスポート"のボタンをクリックする。
 
-![](../../.gitbook/assets/export-dsl.png)
+![](https://assets-docs.dify.ai/img/jp/management/457a66965cf27bf5960954bba25c96dc.webp)
 
 DSLファイルは以下の機密情報を含まれません:
 
 * APIキーなどの第三者ツールの認証情報
 * 環境変数に`Secret`が含まれる場合、DSLをエクスポートするときに機密情報のエクスポートを許可するかどうかを尋ねるメッセージが表示されます。
 
-![](../../.gitbook/assets/export-dsl-secret.png)
+![](https://assets-docs.dify.ai/img/jp/management/c3b27947ca294bf846af82df0f87ae31.webp)
 
 {% hint style="info" %}
 Dify DSLは、Dify.AIによってv0.6以降で定義されたAIアプリエンジニアリングファイル標準です。ファイル形式はYMLで、アプリの基本的な説明、モデルパラメータ、オーケストレーション構成などをカバーしています。

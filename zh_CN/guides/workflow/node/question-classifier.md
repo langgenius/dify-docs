@@ -14,7 +14,7 @@
 
 下图为产品客服场景的示例工作流模板：
 
-<figure><img src="../../../.gitbook/assets/image (80).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/3bfe1471c22bb6fe656679c451fa9976.webp" alt=""><figcaption></figcaption></figure>
 
 在该场景中我们设置了 3 个分类标签/描述：
 
@@ -32,7 +32,7 @@
 
 ### 如何配置
 
-<figure><img src="../../../.gitbook/assets/image (81).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/b61a702ff3335a238790e0cf217145eb.webp" alt=""><figcaption></figcaption></figure>
 
 **配置步骤：**
 

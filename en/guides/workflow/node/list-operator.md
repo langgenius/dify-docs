@@ -10,11 +10,11 @@ The list operator can filter and extract attributes such as file format type, fi
 
 For example, in an application that allows users to upload both document files and image files simultaneously, different files need to be sorted through the **list operation node**, with different files being handled by different processes.
 
-<figure><img src="../../../.gitbook/assets/image (123).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/ed82fa38fc0e8ead4ed2ff796331c6f0.webp" alt=""><figcaption></figcaption></figure>
 
 List operation nodes are generally used to extract information from array variables, converting them into variable types that can be accepted by downstream nodes through setting conditions. Its structure is divided into input variables, filter conditions, sorting, taking the first N items, and output variables.
 
-<figure><img src="../../../.gitbook/assets/image (132).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/2db45ba13c0137635511ef3e727ae835.webp" alt=""><figcaption></figcaption></figure>
 
 **Input Variables**
 
@@ -72,6 +72,6 @@ In file interaction Q\&A scenarios, application users may upload document files 
 3. Extract document file variables and pass them to the "Doc Extractor" node; extract image file variables and pass them to the "LLM" node.
 4. Add a "Answer" node at the end, filling in the output variable of the LLM node.
 
-<figure><img src="../../../.gitbook/assets/image (133).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/f464aabad3d3893f09020504a50957fd.webp" alt=""><figcaption></figcaption></figure>
 
 After the application user uploads both document files and images, document files are automatically diverted to the doc extractor node, and image files are automatically diverted to the LLM node to achieve joint processing of mixed files.

@@ -20,39 +20,39 @@ LangSmith 官网介绍：[https://www.langchain.com/langsmith](https://www.langc
 
 在 LangSmith 内创建项目，登录后在主页点击 **New Project** 创建一个自己的项目，**项目**将用于与 Dify 内的**应用**关联进行数据监测。
 
-<figure><img src="../../../.gitbook/assets/image (29).png" alt=""><figcaption><p>在 LangSmith 内创建项目</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/3d1f21ba0e7f50eebea54a1dfe9063ee.webp" alt=""><figcaption><p>在 LangSmith 内创建项目</p></figcaption></figure>
 
 创建完成之后在 Projects 内可以查看该项目。
 
-<figure><img src="../../../.gitbook/assets/image (36).png" alt=""><figcaption><p>在 LangSmith 内查看已创建项目</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/1fecd0b7a53b6c3df7eee3761b5380ae.webp" alt=""><figcaption><p>在 LangSmith 内查看已创建项目</p></figcaption></figure>
 
 #### 3. 创建项目凭据
 
 创建项目凭据，在左侧边栏内找到项目设置 **Settings**。
 
-<figure><img src="../../../.gitbook/assets/image (37).png" alt=""><figcaption><p>项目设置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/12e626e973f19b342f7f33b29ca489e4.webp" alt=""><figcaption><p>项目设置</p></figcaption></figure>
 
 点击 **Create API Key**，创建一个项目凭据。
 
-<figure><img src="../../../.gitbook/assets/image (32).png" alt=""><figcaption><p>创建一个项目 API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/4c521bb344e3cd1dbc6cf45afec48a91.webp" alt=""><figcaption><p>创建一个项目 API Key</p></figcaption></figure>
 
 选择 **Personal Access Token** ，用于后续的 API 身份校验。
 
-<figure><img src="../../../.gitbook/assets/image (34).png" alt=""><figcaption><p>创建一个 API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/c47cce032317a3736f137f98737e3abd.webp" alt=""><figcaption><p>创建一个 API Key</p></figcaption></figure>
 
 将创建的 API key 复制保存。
 
-<figure><img src="../../../.gitbook/assets/image (38).png" alt=""><figcaption><p>复制 API Key</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/f35f021e715af6286fe3026765f9fc22.webp" alt=""><figcaption><p>复制 API Key</p></figcaption></figure>
 
 #### 4. 将 LangSmith 集成至 Dify 平台
 
 在 Dify 应用内配置 LangSmith。打开需要监测的应用，在左侧边菜单内打开**监测**，点击页面内的**配置。**
 
-<figure><img src="../../../.gitbook/assets/image (40).png" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/7fca754c7a8d6f4c2fe152e8cf3f4169.webp" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
 
 点击配置后，将在 LangSmith 内创建的 **API Key** 和**项目名**粘贴到配置内并保存。
 
-<figure><img src="../../../.gitbook/assets/image (41).png" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/7d95db8a7584b6e9dd41dbbb9c703b60.webp" alt=""><figcaption><p>配置 LangSmith</p></figcaption></figure>
 
 {% hint style="info" %}
 配置项目名需要与 LangSmith 内设置的项目一致，若项目名不一致，数据同步时 LangSmith 会自动创建一个新的项目。
@@ -60,17 +60,17 @@ LangSmith 官网介绍：[https://www.langchain.com/langsmith](https://www.langc
 
 成功保存后可以在当前页面查看监测状态。
 
-<figure><img src="../../../.gitbook/assets/image (44).png" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/5e3fcb263e9e032e3feab1db169f1fc4.webp" alt=""><figcaption><p>查看配置状态</p></figcaption></figure>
 
 ### 在 LangSmith 内查看监测数据
 
 配置完成后， Dify 内应用的调试或生产数据可以在 LangSmith 查看监测数据。
 
-<figure><img src="../../../.gitbook/assets/image (46).png" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/0bc658b7f7e156737ac13ddd85388d13.webp" alt=""><figcaption><p>在 Dify 内调试应用</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/image (28).png" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/d4c619de65d201e59f2bf26738515dfd.webp" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/image (47).png" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/integrate-external-ops-tools/3a84474481ddf833a6e50ff1c96bf930.webp" alt=""><figcaption><p>在 LangSmith 内查看应用数据</p></figcaption></figure>
 
 ### 监测数据清单
 

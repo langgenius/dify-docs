@@ -79,15 +79,15 @@ AIアプリケーションに「プリセットプロンプト」を追加する
 
 > 私のNotionワークスペース内でITの専門家として振る舞い、コンピュータサイエンス、ネットワークインフラ、Notionノート、ITセキュリティに関する知識を活用して問題を解決してほしい。
 
-<figure><img src="../../.gitbook/assets/image (34).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/f07a52ab7daec11f3c47ecb2ef6bb64e.webp" alt=""><figcaption></figcaption></figure>
 
 初期設定では、AIがユーザーに開始文を提供し、質問の手がかりを与えるようにすることをお勧めします。また、「音声からテキストへの変換」機能を有効にして、ユーザーがAIアシスタントと音声でやり取りできるようにします。
 
-<figure><img src="../../.gitbook/assets/image (42).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/3dec908df9c6978cf4bfb693185f098c.webp" alt=""><figcaption></figcaption></figure>
 
 今や「概要」で公開URLをクリックして、自分のAIアシスタントとチャットできるようになりました！
 
-<figure><img src="../../.gitbook/assets/image (27).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/use-cases/7b251272dad3645a518b9f3fc69b08ed.webp" alt=""><figcaption></figcaption></figure>
 
 ### APIを通じてプロジェクトに統合
 

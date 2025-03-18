@@ -8,7 +8,7 @@
 
 而不同于预定义模型，自定义供应商接入时永远会拥有如下两个参数，不需要在供应商 yaml 中定义。
 
-<figure><img src="../../.gitbook/assets/Feb 4,2.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/model-configuration/4dfbd3ef36e7988f6202ad715f198204.webp" alt=""><figcaption></figcaption></figure>
 
 在前文中，我们已经知道了供应商无需实现`validate_provider_credential`，Runtime会自行根据用户在此选择的模型类型和模型名称调用对应的模型层的`validate_credentials`来进行验证。
 

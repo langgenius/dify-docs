@@ -17,7 +17,7 @@ APIを利用してナレッジベースを管理することで、データ処�
 
 ナレッジベースページにアクセスし、左側のナビゲーションで **API** ページに切り替えます。このページでは、Difyが提供するナレッジベースAPIドキュメントを確認し、 **APIキー** でナレッジベースAPIにアクセスするための資格情報を管理できます。
 
-<figure><img src="../../.gitbook/assets/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API ドキュメント</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/knowledge-base/bf01e303742558c8ffb4d5fa91b308eb.webp" alt=""><figcaption><p>Knowledge API ドキュメント</p></figcaption></figure>
 
 ### API呼び出しの例
 

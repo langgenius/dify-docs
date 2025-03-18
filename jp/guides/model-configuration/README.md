@@ -2,7 +2,7 @@
 
 Difyは大規模言語モデルに基づいたAIアプリケーション開発プラットフォームです。初めて使用する際には、Difyの**設定 -- モデルプロバイダー**ページで必要なモデルを追加および設定してください。
 
-<figure><img src="../../.gitbook/assets/image (21).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/model-configuration/0c8e68a2804bfbfd1ef99a423bff2cb5.webp" alt=""><figcaption></figcaption></figure>
 
 Difyは現在、OpenAIのGPTシリーズやAnthropicのClaudeシリーズなど、主流のモデルプロバイダーをサポートしています。異なるモデルの能力やパラメータの種類が異なるため、アプリケーションのニーズに応じて適切なモデルプロバイダーを選択できます。**Difyで以下のモデル能力を使用する前に、各モデルプロバイダーの公式サイトでAPIキーを取得する必要があります。**
 
@@ -35,7 +35,7 @@ Difyクラウドサービスのユーザーには、異なるモデルの試用�
 
 Difyは使用シーンに応じて設定されたデフォルトモデルを選択します。`設定 > モデルプロバイダー`でデフォルトモデルを設定します。
 
-<figure><img src="../../.gitbook/assets/image (14).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/model-configuration/bdccaf72251b2871e376521fd8abd73f.webp" alt=""><figcaption></figcaption></figure>
 
 システム推論モデル：アプリケーションの作成に使用されるデフォルトの推論モデルを設定し、対話名の生成や次のステップの質問に関する提案などの機能も含まれます。
 
@@ -43,7 +43,7 @@ Difyは使用シーンに応じて設定されたデフォルトモデルを選�
 
 Difyの`設定 > モデルプロバイダー`で接続するモデルを設定します。
 
-<figure><img src="../../.gitbook/assets/image (19).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/model-configuration/88545d79c490cdd2850b8133e0b7a47f.webp" alt=""><figcaption></figcaption></figure>
 
 モデルプロバイダーは2種類に分かれます：
 
@@ -75,4 +75,4 @@ Difyは[PKCS1\_OAEP](https://pycryptodome.readthedocs.io/en/latest/src/cipher/oa
 
 モデルの設定が完了したら、アプリケーションでこれらのモデルを使用できます：
 
-<figure><img src="../../.gitbook/assets/image (22).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/model-configuration/0bf927b48f6461f954236a2816b734d9.webp" alt=""><figcaption></figcaption></figure>

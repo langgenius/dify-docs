@@ -51,7 +51,7 @@ docker run \
 
 `設定 > モデルプロバイダー > OpenAI-API互換` で、以下を入力してください：
 
-<figure><img src="../../../en/.gitbook/assets/image (115).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/models-integration/f69083ad920029a8141ca3f5db031379.webp" alt=""><figcaption></figcaption></figure>
 
 - モデル名: `gpt-4`
 - ベースURL: `http://localhost:4000`

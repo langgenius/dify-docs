@@ -88,15 +88,15 @@ Notion 是一个强大的知识管理工具。它的灵活性和可扩展性使�
 
 > 我希望你能在我的 Notion 工作区中扮演一个 IT 专家的角色，利用你对计算机科学、网络基础设施、Notion 笔记和 IT 安全的知识来解决问题。
 
-<figure><img src="../../.gitbook/assets/image (34) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/f07a52ab7daec11f3c47ecb2ef6bb64e.webp" alt=""><figcaption></figcaption></figure>
 
 建议初始时启用 AI 主动提供用户一个起始句子，给出可以询问的线索。此外，激活「语音转文字」功能可以让用户通过语音与你的 AI 助手进行互动。
 
-<figure><img src="../../.gitbook/assets/image (42) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/3dec908df9c6978cf4bfb693185f098c.webp" alt=""><figcaption></figcaption></figure>
 
 现在你可以在“概览”中单击公共 URL 聊天与你自己的 AI 助手！
 
-<figure><img src="../../.gitbook/assets/image (27) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/use-cases/7b251272dad3645a518b9f3fc69b08ed.webp" alt=""><figcaption></figcaption></figure>
 
 ### 通过API集成到你的项目中​
 

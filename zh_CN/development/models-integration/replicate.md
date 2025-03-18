@@ -9,8 +9,8 @@ Dify 支持接入 Replicate 上的 [Language models](https://replicate.com/colle
 3. 挑选模型。在 [Language models](https://replicate.com/collections/language-models) 和 [Embedding models](https://replicate.com/collections/embedding-models) 下挑选模型。
 4. 在 Dify 的 `设置 > 模型供应商 > Replicate` 中添加模型。
 
-<figure><img src="../../.gitbook/assets/image (4) (1) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/models-integration/6cd6a9e4ae99fdbb87ff96a98a8b36b3.webp" alt=""><figcaption></figcaption></figure>
 
 API key 为第 2 步中设置的 API Key。Model Name 和 Model Version 可以在模型详情页中找到：
 
-<figure><img src="../../.gitbook/assets/image (5) (1) (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/models-integration/301090201162d1eba3554ae36b39a355.webp" alt=""><figcaption></figcaption></figure>

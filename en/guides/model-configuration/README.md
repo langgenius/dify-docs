@@ -6,7 +6,7 @@ description: Learn about the Different Models Supported by Dify.
 
 Dify is a development platform for AI application based on LLM Apps, when you are using Dify for the first time, you need to go to **Settings --> Model Providers** to add and configure the LLM you are going to use.
 
-<figure><img src="../../.gitbook/assets/image (1) (1).png" alt=""><figcaption><p>Settings - Model Provider</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/model-configuration/cd998e4640b12e54673c6a17605199e2.webp" alt=""><figcaption><p>Settings - Model Provider</p></figcaption></figure>
 
 Dify supports major model providers like OpenAI's GPT series and Anthropic's Claude series. Each model's capabilities and parameters differ, so select a model provider that suits your application's needs. **Obtain the API key from the model provider's official website before using it in Dify.**
 
@@ -39,13 +39,13 @@ Dify offers trial quotas for cloud service users to experiment with different mo
 
 Dify automatically selects the default model based on usage. Configure this in `Settings > Model Provider`.
 
-<figure><img src="../../.gitbook/assets/image-default-models (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/model-configuration/cf482d742ab9a1ee0eaaf829504d1276.webp" alt=""><figcaption></figcaption></figure>
 
 ## Model Integration Settings
 
 Choose your model in Dify's `Settings > Model Provider`.
 
-<figure><img src="../../.gitbook/assets/image-20231210143654461 (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/model-configuration/cb045b32ccc6c0ff917d6fb4fc0e0da8.webp" alt=""><figcaption></figcaption></figure>
 
 Model providers fall into two categories:
 
@@ -73,4 +73,4 @@ Specific integration methods are not detailed here.
 
 Once configured, these models are ready for application use.
 
-<figure><img src="../../.gitbook/assets/choice-model-in-app (1).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/model-configuration/cc081f0af79ef6cb47d7069ef31c329b.webp" alt=""><figcaption></figcaption></figure>

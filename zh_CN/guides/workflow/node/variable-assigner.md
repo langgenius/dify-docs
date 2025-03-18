@@ -22,7 +22,7 @@
 
 示例：开始对话后，LLM 会自动判断用户输入是否包含需要记住的事实、偏好或历史记录。如果有，LLM 会先提取并存储这些信息，然后再用这些信息作为上下文来回答。如果没有新的信息需要保存，LLM 会直接使用自身的相关记忆知识来回答问题。
 
-<figure><img src="../../../.gitbook/assets/中文.jpeg" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/ec65d6eea864214ee7f9d9a8f44a8924.webp" alt=""><figcaption></figcaption></figure>
 
 **配置流程：**
 
@@ -107,7 +107,7 @@ def main(arg1: list) -> str:
 
 示例：用户在对话开始前，在 `language` 输入框内指定了 “中文”，该语言将会被写入会话变量，LLM 在后续进行答复时会参考会话变量中的信息，在后续对话中持续使用“中文”进行回复。
 
-<figure><img src="../../../.gitbook/assets/zh-conversation-var-scenario-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/e73514c9b843970d97babd06e56fb642.webp" alt=""><figcaption></figcaption></figure>
 
 **配置流程：**
 
@@ -123,7 +123,7 @@ def main(arg1: list) -> str:
 
 示例：开始对话后，LLM 会要求用户在对话框内输入 Checklist 所涉及的事项，用户一旦提及了 Checklist 中的内容，将会更新并存储至会话变量内。LLM 会在每轮对话后提醒用户继续补充遗漏项。
 
-<figure><img src="../../../.gitbook/assets/conversation-var-scenario-2-1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/node/fb86247c12b427552e16ac2d2e085ff7.webp" alt=""><figcaption></figcaption></figure>
 
 **配置流程：**
 

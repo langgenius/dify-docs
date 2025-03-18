@@ -11,7 +11,7 @@ Difyを使ってAIアプリを作成するメリットの一つは、数分で�
 
 アプリ概要ページで、AIサイト（Webアプリ）に関するカードを見つけることができます。Webアプリのアクセスをオンにするだけで、ユーザーと共有できるリンクが得られます。
 
-<figure><img src="../../../.gitbook/assets/image (244).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/launch-your-webapp-quickly/f3f0401a568778f8663934e518d85ffd.webp" alt=""><figcaption></figcaption></figure>
 
 以下の2種類のアプリには、きれいなWebアプリのインターフェースを提供しています：
 
@@ -49,8 +49,8 @@ Difyは、あなたのAIアプリをビジネスWebサイトに埋め込むこ�
 
     scriptコードを、あなたのWebサイトの`<head>`または`<body>`タグにコピーします。
 
-<figure><img src="../../../.gitbook/assets/image (69).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/launch-your-webapp-quickly/1727828fefce51c99339f1e2d977ce88.webp" alt=""><figcaption></figcaption></figure>
 
 例えば、scriptコードを公式サイトの`<body>`に貼り付けると、公式サイトのAIロボットが得られます：
 
-<figure><img src="../../../.gitbook/assets/image (40).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/launch-your-webapp-quickly/3323f6d44761d383ef60ff7a1d14e4ac.webp" alt=""><figcaption></figcaption></figure>

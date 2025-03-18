@@ -15,10 +15,10 @@ Assuming you've already created a [Dify AI application](https://docs.dify.ai/gui
 3. Click the "Publish" button in the upper right corner
 4.  On the publish page, choose the "Embed Into Site" option
 
-    ![Embed Into Site Option](../../.gitbook/assets/best-practice-wix-2.png)
+    ![Embed Into Site Option](https://assets-docs.dify.ai/img/en/use-cases/69e32259e16113a85efb36a55ff103e9.webp)
 5.  Select an appropriate style and copy the displayed iFrame code. For example:
 
-    ![iFrame Code Example](../../.gitbook/assets/best-practice-wix-3.png)
+    ![iFrame Code Example](https://assets-docs.dify.ai/img/en/use-cases/6de46e88bcfe958365970e58c91e4bdd.webp)
 
 ## 2. Embedding the iFrame Code Snippet in Your Wix Site
 
@@ -26,7 +26,7 @@ Assuming you've already created a [Dify AI application](https://docs.dify.ai/gui
 2. Click the blue `+` (Add Elements) button on the left side of the page
 3.  Select **Embed Code**, then click **Embed HTML** to add an HTML iFrame element to the page
 
-    ![Add HTML iFrame](../../.gitbook/assets/best-practice-add-html-iframe.png)
+    ![Add HTML iFrame](https://assets-docs.dify.ai/img/en/use-cases/f8e96ede33b585b00d0be569e13dee1f.webp)
 4. In the `HTML Settings` box, select the `Code` option
 5. Paste the iFrame code snippet you obtained from your Dify application
 6. Click the **Update** button to save and preview your changes
@@ -37,7 +37,7 @@ Here's an example of an iFrame code snippet for embedding a Dify Chatbot:
 <iframe src="https://udify.app/chatbot/ez1pf83HVV3JgWO4" style="width: 100%; height: 100%; min-height: 700px" frameborder="0" allow="microphone"></iframe>
 ```
 
-![Insert Dify iFrame Code](../../.gitbook/assets/best-practice-insert-dify-iframe-code.png)
+![Insert Dify iFrame Code](https://assets-docs.dify.ai/img/en/use-cases/f89b4bd5893e1d522e5a8bd896bee11f.webp)
 
 > ⚠️ Ensure the address in the iFrame code begins with HTTPS. HTTP addresses will not display correctly.
 

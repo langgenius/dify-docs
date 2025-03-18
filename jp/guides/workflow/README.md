@@ -9,7 +9,7 @@ Difyワークフローには、以下の2種類があります：
 * **チャットフロー**：カスタマーサービス、セマンティック検索、その他の対話型アプリケーションの構築において、複数のステップを含む論理を必要とする対話型シナリオに対応します。
 * **ワークフロー**：自動化とバッチ処理のシナリオに対応し、高品質な翻訳、データ分析、コンテンツ生成、メール自動化などのアプリケーションに適しています。
 
-<figure><img src="../../.gitbook/assets/jp-workflow.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/workflow/774f3a5c6cbc98f9f2a78c204c8c6cd8.webp" alt=""><figcaption></figcaption></figure>
 
 自然言語入力におけるユーザー意図認識の複雑さを解決するために、チャットフローは問題理解ノードを提供します。ワークフローに対してチャットボット特性のサポートを追加し、会話履歴（メモリ）、注釈付き返信、Answerノードなどを含みます。
 

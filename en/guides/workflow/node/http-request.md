@@ -15,7 +15,7 @@ This node supports common HTTP request methods:
 
 You can configure various aspects of the HTTP request, including URL, request headers, query parameters, request body content, and authentication information.
 
-<figure><img src="../../../.gitbook/assets/workflow-http-request-node.png" alt="" width="332"><figcaption><p>HTTP Request Configuration</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/1c27cde70426c719c55a0bc314bfa1b2.webp" alt="" width="332"><figcaption><p>HTTP Request Configuration</p></figcaption></figure>
 
 ***
 
@@ -25,7 +25,7 @@ You can configure various aspects of the HTTP request, including URL, request he
 
 One practical feature of this node is the ability to dynamically insert variables into different parts of the request based on the scenario. For example, when handling customer feedback requests, you can embed variables such as username or customer ID, feedback content, etc., into the request to customize automated reply messages or fetch specific customer information and send related resources to a designated server.
 
-<figure><img src="../../../.gitbook/assets/customer-feedback-classification.png" alt=""><figcaption><p>Customer Feedback Classification</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/6fd7767fcb3123e72dcb69746e4f9514.webp" alt=""><figcaption><p>Customer Feedback Classification</p></figcaption></figure>
 
 The return values of an HTTP request include the response body, status code, response headers, and files. Notably, if the response contains a file, this node can automatically save the file for use in subsequent steps of the workflow. This design not only improves processing efficiency but also makes handling responses with files straightforward and direct.
 
@@ -37,7 +37,7 @@ Example: Suppose you are developing a document management application and need t
 
 Here is a configuration example:
 
-<figure><img src="../../../.gitbook/assets/image (145).png" alt=""><figcaption><p>http-node-send-file</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/3ff1415b8333effed1b449813f962460.webp" alt=""><figcaption><p>http-node-send-file</p></figcaption></figure>
 
 ### Advanced Features
 

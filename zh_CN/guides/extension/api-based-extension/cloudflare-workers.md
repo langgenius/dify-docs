@@ -43,9 +43,9 @@ npm run deploy
 
 部署成功之后，你会得到一个公网地址，你可以在 Dify 中添加这个地址作为 API Endpoint。请注意不要遗漏 `endpoint` 这个路径。
 
-<figure><img src="../../../.gitbook/assets/api_extension_edit.png" alt=""><figcaption><p>在 Dify 中添加 API Endpoint</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/661f059c3023f956230f3f00e579e0b6.webp" alt=""><figcaption><p>在 Dify 中添加 API Endpoint</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/app_tools_edit.png" alt=""><figcaption><p>在 App 编辑页面中添加上 API Tool</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/api-based-extension/27c0c056b051fb214a34b12e3b84e645.webp" alt=""><figcaption><p>在 App 编辑页面中添加上 API Tool</p></figcaption></figure>
 
 ## 其他逻辑 TL;DR
 

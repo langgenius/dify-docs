@@ -121,7 +121,7 @@ Claudeは埋め込みモデルをサポートしていないため、埋め込�
 
 以下の表の例のように、2行目のヘッダだけを保持し、1行目（表1）は余分なヘッダのため削除します。
 
-<figure><img src="../../.gitbook/assets/table_delete_row1.png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/faq/f18b0b59b5bca46ea7100fdb5eaa2529.webp" alt=""><figcaption></figcaption></figure>
 
 ### 19. ChatGPT Plusを購入したのに、なぜdifyでGPT4を使用できないのですか？
 

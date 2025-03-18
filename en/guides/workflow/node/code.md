@@ -13,7 +13,7 @@ The code node supports running Python/NodeJS code to perform data transformation
 
 This node significantly enhances the flexibility for developers, allowing them to embed custom Python or JavaScript scripts within the workflow and manipulate variables in ways that preset nodes cannot achieve. Through configuration options, you can specify the required input and output variables and write the corresponding execution code:
 
-<figure><img src="../../../.gitbook/assets/image (157).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/316001a7d0dcfef2e571c53279b2da52.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 ## Configuration
 

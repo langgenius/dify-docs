@@ -13,7 +13,7 @@ Dify のヘルプドキュメントは、[オープンソースプロジェク�
 
 ドキュメントを読んでいる際に内容の誤りを見つけたり、一部を修正したい場合は、文書ページの右側にある目次内の **“Github に編集”** ボタンをクリックしてください。これにより、GitHub のオンラインエディターを使用してファイルを修正できます。その後、修正内容を簡潔に説明した pull request を作成してください。タイトルは `Fix: Update xxx` の形式を使用してください。リクエストを受け取った後、レビューを行い、問題がなければ修正をマージします。
 
-![](../.gitbook/assets/jp-docs-contribution.png)
+![](https://assets-docs.dify.ai/img/jp/community/62fe833fb2c2e81341219877e07a17bb.webp)
 
 もちろん、[Issues ページ](https://github.com/langgenius/dify-docs/issues)にドキュメントのリンクを貼り付け、修正が必要な内容を簡単に説明していただくことも可能です。フィードバックを受け取った後、迅速に対応いたします。
 

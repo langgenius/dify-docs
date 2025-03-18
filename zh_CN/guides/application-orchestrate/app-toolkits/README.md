@@ -4,31 +4,31 @@
 
 应用工具箱为 Dify 的[应用](../#application_type)提供了不同的附加功能：
 
-<figure><img src="../../../.gitbook/assets/image (288).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/app-toolkits/fb6869e3e098e99f5b587c5836ad20ad.webp" alt=""><figcaption></figcaption></figure>
 
 ### 对话开场白
 
 在对话类应用中，AI 会主动说第一句话或者提出问题，你可以编辑开场白的内容包括开场问题。使用对话开场白可以引导用户提问，交代应用背景，降低对话提问的使用门槛。
 
-<figure><img src="../../../.gitbook/assets/image (291).png" alt=""><figcaption><p>对话开场白</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/app-toolkits/af998b8785ff3e0d91186298704ce357.webp" alt=""><figcaption><p>对话开场白</p></figcaption></figure>
 
 ### 下一步问题建议
 
 设置下一步问题建议可以在每次对话交互后，让 AI 根据之前的对话内容继续生成 3 个提问，引导下一轮对话。
 
-<figure><img src="../../../.gitbook/assets/image (292).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/app-toolkits/d3ccce6c9c15b1c0be40a79036cb4b5d.webp" alt=""><figcaption></figcaption></figure>
 
 ### 文字转语音
 
 开启后可以将 AI 回复的内容转换成自然的语音播放。
 
-<figure><img src="../../../.gitbook/assets/image (293).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/app-toolkits/4f24906aac30726a209ab40d21cec614.webp" alt=""><figcaption></figcaption></figure>
 
 ### 语音转文字
 
 开启后可以在应用内录音并将语音自动转换成文本。
 
-<figure><img src="../../../.gitbook/assets/image (294).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/app-toolkits/13a91d593cf2eed5ef85183c86bfe7c5.webp" alt=""><figcaption></figcaption></figure>
 
 ### 引用与归属
 

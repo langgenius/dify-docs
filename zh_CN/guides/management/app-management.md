@@ -4,7 +4,7 @@
 
 创建应用后，如果你想要修改应用名称或描述，可以点击应用左上角的 「编辑信息」 ，重新修改应用的图标、名称或描述。
 
-<figure><img src="../../.gitbook/assets/image (311).png" alt="zh-Hans-edit-app-info"><figcaption><p>编辑应用信息</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/management/0b0391337f7aa4477c02fe09603dad46.webp" alt="zh-Hans-edit-app-info"><figcaption><p>编辑应用信息</p></figcaption></figure>
 
 ### 复制应用
 
@@ -20,11 +20,11 @@
 * 在 “工作室” 页点击应用菜单按钮中 “导出 DSL”；
 * 进入应用的编排页后，点击左上角 “导出 DSL”。
 
-![](../../.gitbook/assets/export-dsl.png)
+![](https://assets-docs.dify.ai/img/zh_CN/management/457a66965cf27bf5960954bba25c96dc.webp)
 
 DSL 文件不包含自定义工具节点内已填写的授权信息，例如第三方服务的 API Key；如果环境变量中包含 `Secret`类型变量，导出文件时将提示是否允许导出该敏感信息。
 
-![](../../.gitbook/assets/export-dsl-secret.png)
+![](https://assets-docs.dify.ai/img/zh_CN/management/c3b27947ca294bf846af82df0f87ae31.webp)
 
 {% hint style="info" %}
 Dify DSL 格式文件是 Dify.AI 定义的 AI 应用工程文件标准，文件格式为 YML。该标准涵盖应用的基本描述、模型参数、编排配置等信息。

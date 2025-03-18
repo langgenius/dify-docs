@@ -15,7 +15,7 @@ The **Connect to External Knowledge Base** feature enables integration between t
 * The Dify platform can directly obtain the text content hosted in the cloud service provider's knowledge base, so that developers do not need to repeatedly move the content to the knowledge base in Dify;
 * The Dify platform can directly obtain the text content processed by algorithms in the self-built knowledge base. Developers only need to focus on the information retrieval mechanism of the self-built knowledge base and continuously optimize and improve the accuracy of information retrieval.
 
-<figure><img src="../../.gitbook/assets/image (117).png" alt=""><figcaption><p>Principle of external knowledge base connection</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/c400f720458a25b122fab5637f5200fc.webp" alt=""><figcaption><p>Principle of external knowledge base connection</p></figcaption></figure>
 
 Here are the detailed steps for connecting to external knowledge:
 
@@ -33,13 +33,13 @@ Navigate to the **"Knowledge"** page, click **"External Knowledge API"** in the 
 * API Endpoint The URL of the external knowledge base API endpoint, e.g., api-endpoint/retrieval; refer to the [External Knowledge API](external-knowledge-api-documentation.md) for detailed instructions;
 * API Key Connection key for the external knowledge, refer to the [External Knowledge API](external-knowledge-api-documentation.md) for detailed instructions.
 
-<figure><img src="../../../img/connect-kb-1-en.png" alt=""><figcaption><p>Associate External Knowledge API</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/03751a45dd19d006b056bdf8a9daa564.webp" alt=""><figcaption><p>Associate External Knowledge API</p></figcaption></figure>
 
 ## 3. Connect to the External Knowledge Base
 
 Go to the **"Knowledge"** page, click **"Connect to an External Knowledge Base"** under the Add Knowledge Base card to direct to the parameter configuration page.
 
-<figure><img src="../../../img/connect-kb-2-en.png" alt=""><figcaption><p>Connect to the external knowledge base</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/e186cc33ff45f897d85ffe02be2ce703.webp" alt=""><figcaption><p>Connect to the external knowledge base</p></figcaption></figure>
 
 Fill in the following parameters:
 
@@ -56,13 +56,13 @@ Fill in the following parameters:
 
     **Score Threshold:** The similarity threshold for text chunk filtering, only retrievaling text chunks that exceed the set score. The default value is 0.5. A higher value indicates a higher requirement for similarity between the text and the question, expecting fewer retrievaled text chunks, and the results will be relatively more precise.
 
-<figure><img src="../../../img/connect-kb-3-en.webp" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/2ce4dd7527093f64837d49f8e1d6c808.webp" alt=""><figcaption></figcaption></figure>
 
 ## 4. Test External Knowledge Base and Retrieval Results
 
 After connected with the external knowledge base, developers can simulate possible question keywords in the **"Retrieval Testing"** to preview text chunks that might be retrieval. If you are unsatisfied with the retrieval results, try modifying the **External Knowledge Base Settings** or adjusting the retrieval strategy of the external knowledge base.
 
-<figure><img src="../../../img/connect-kb-4-en.png" alt=""><figcaption><p>Test external knowledge base connection and retrieval</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/9c7f3ef164fb50a6ab1134d856f7b7fa.webp" alt=""><figcaption><p>Test external knowledge base connection and retrieval</p></figcaption></figure>
 
 ## 5. Integrating External Knowledge base in Applications
 
@@ -70,13 +70,13 @@ After connected with the external knowledge base, developers can simulate possib
 
     Associate the external knowledge base in the orchestration page within Chatbot / Agent type applications.
 
-<figure><img src="../../../img/connect-kb-5-en.png" alt=""><figcaption><p>Chatbot / Agent</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/fcc4aebdb524f7c7fb3b47c89edeeca2.webp" alt=""><figcaption><p>Chatbot / Agent</p></figcaption></figure>
 
 *   **Chatflow / Workflow** type application
 
     Add a **"Knowledge Retrieval"** node and select the external knowledge base.
 
-<figure><img src="../../../img/connect-kb-6-en.png" alt=""><figcaption><p>Chatflow / Workflow</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/f806cc6585f099c691d467072047c351.webp" alt=""><figcaption><p>Chatflow / Workflow</p></figcaption></figure>
 
 ## 6. Manage External Knowledge
 
@@ -94,7 +94,7 @@ Navigate to the **"Knowledge"** page, external knowledge base cards will list an
 
 The **"External Knowledge API"** and **"External Knowledge ID"** associated with the external knowledge base do not support modification. If modification is needed, please associate a new **"External Knowledge API"** and reset it.
 
-<figure><img src="../../../img/connect-kb-7-en.webp" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/knowledge-base/7662197a2f22bae84c8a2e7e8e0b59bb.webp" alt=""><figcaption></figcaption></figure>
 
 ### Connection Example
 

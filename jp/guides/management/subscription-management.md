@@ -10,7 +10,7 @@ Difyの有料サービス（ProfessionalまたはTeamプラン）に加入後、
 
 請求ページでは、さまざまなチームリソースの利用状況を確認できます。
 
-<figure><img src="../../.gitbook/assets/subscription-management-01.png" alt=""><figcaption><p>チームの請求管理</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/management/8ecee0703bb697cec2fba0f8238a6652.webp" alt=""><figcaption><p>チームの請求管理</p></figcaption></figure>
 
 ### よくある質問
 
@@ -21,7 +21,7 @@ Difyの有料サービス（ProfessionalまたはTeamプラン）に加入後、
 * ProfessionalプランからTeamプランにアップグレードする際は、当月の差額を支払う必要があり、すぐに適用されます。
 * TeamプランからProfessionalプランにダウングレードする場合も、即座に適用されます。
 
-<figure><img src="../../.gitbook/assets/subscription-management-02.jpeg" alt=""><figcaption><p>有料プランの変更</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/management/01343e2c5c3b3eb585adfbb7a6beafa0.webp" alt=""><figcaption><p>有料プランの変更</p></figcaption></figure>
 
 サブスクリプションプランをキャンセルすると、**チームは現在の請求サイクルの終了時に自動的にサンドボックス/無料プランに移行**し、その後はサンドボックス/無料プランの制限に従った利用となります。
 

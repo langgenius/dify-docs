@@ -8,7 +8,7 @@ RAGアーキテクチャは、ベクトル検索を中核としで、大規模�
 
 次の図では、ユーザーが「アメリカ合衆国の大統領は誰ですか？」と尋ねた場合、システムはその質問を直接大規模モデルに渡して回答を得るのではなく、まずナレッジベース（図に示されているWikipediaなど）でベクトル検索を行います。意味的類似性マッチングを通じて関連コンテンツ（例：「ジョー・バイデンはアメリカ合衆国の第46代および現職大統領である…」）を見つけ出します。その後、システムはユーザーの質問と収集した関連知識を大規模モデルに提供し、十分な情報を基に信頼性のある回答を得ることができます。
 
-<figure><img src="../../../../en/.gitbook/assets/image (129).png" alt=""><figcaption><p>基本的なRAGアーキテクチャ</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/retrieval-augment/420f8dd1654465ac8d729ea5a8224289.webp" alt=""><figcaption><p>基本的なRAGアーキテクチャ</p></figcaption></figure>
 
 **なぜこれが必要なのか？**
 

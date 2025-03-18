@@ -14,9 +14,9 @@ If built-in tools do not meet your needs, you can create custom tools in the **D
 
 You can also orchestrate a more complex workflow and publish it as a tool.
 
-<figure><img src="../../../.gitbook/assets/workflow-tool.png" alt="" width="258"><figcaption><p>Tool Selection</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/1abdf412e44dab82cad75f3009676ab6.webp" alt="" width="258"><figcaption><p>Tool Selection</p></figcaption></figure>
 
-<figure><img src="../../../.gitbook/assets/workflow-google-search-tool.png" alt=""><figcaption><p>Configuring Google Search Tool to Retrieve External Knowledge</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/node/680957fc907e2e0be1390c3043bd6d24.webp" alt=""><figcaption><p>Configuring Google Search Tool to Retrieve External Knowledge</p></figcaption></figure>
 
 Configuring a tool node generally involves two steps:
 

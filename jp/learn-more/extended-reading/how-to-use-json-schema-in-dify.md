@@ -13,7 +13,7 @@ JSON Schemaは、JSONデータ構造を記述するための仕様です。開�
 
 アプリケーション内のLLMを、上記で言及したJSON Schema出力をサポートするモデルのいずれかに切り替えます。次に、設定フォームで`JSON Schema`を有効にし、JSON Schemaテンプレートを入力します。同時に、`response_format`列を有効にし、`json_schema`形式に切り替えます。
 
-![](../../.gitbook/assets/learn-more-json-schema.png)
+![](https://assets-docs.dify.ai/img/jp/extended-reading/73e1801819f7ef73cced141459bcac62.webp)
 
 LLMによって生成されたコンテンツは、次の形式で出力をサポートします：
 
@@ -198,7 +198,7 @@ LLMによって生成されたコンテンツは、次の形式で出力をサ�
 
 **例の出力：**
 
-![](../../.gitbook/assets/best-practice-json-schema-ui-example.png)
+![](https://assets-docs.dify.ai/img/jp/extended-reading/724fa883c1c229e74898b2b3bb8e40b3.webp)
 
 ## ヒント
 

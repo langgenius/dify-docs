@@ -24,7 +24,7 @@
 これらのマークは、Dify の後続バージョンでモデルの微調整（モデルの微調整）に使用され、モデルの正確性と返信スタイルを向上させることを目的としています。現在のプレビュー版では、マークのみがサポートされています。
 {% endhint %}
 
-<figure><img src="../../../en/.gitbook/assets/app-logs-ann.png" alt=""><figcaption><p>ログをマークして改良</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/annotation/950c84b05c12f92a8235e3265e42d200.webp" alt=""><figcaption><p>ログをマークして改良</p></figcaption></figure>
 
 ログをクリックすると、画面の右側にログ詳細パネルが開き、このパネルで運用担当者はインタラクションに対してマークを追加できます：
 

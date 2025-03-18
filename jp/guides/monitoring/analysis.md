@@ -2,7 +2,7 @@
 
 **監視 — 分析** では、使用量、アクティブユーザー数、大規模言語モデル (LLM) のコール消費などを表示します。これにより、アプリケーションの運営効果、活性度、経済性を継続的に改善できます。さらに多くの有用な可視化能力を段階的に提供していきますので、ぜひご要望をお知らせください。
 
-<figure><img src="../../../en/.gitbook/assets/overview-data-analysis.png" alt=""><figcaption><p>監視 — 分析</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/monitoring/c5db7ac1dee71e58775964f7c7877d92.webp" alt=""><figcaption><p>監視 — 分析</p></figcaption></figure>
 
 ***
 

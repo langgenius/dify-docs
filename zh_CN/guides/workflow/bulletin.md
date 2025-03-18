@@ -8,11 +8,11 @@ description: 作者：Evanchen ,  Allen.
 
 * 移除 Chatflow 应用“功能”中的图片上传选项，取而代之的是新的“文件上传”功能。你可以在“文件上传”功能内选择图片文件类型。同时，应用对话框中的图片上传 icon 也被替换为文件上传 icon。
 
-<figure><img src="../../.gitbook/assets/image (387).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/06d0eb625c41d9016544c4978977874d.webp" alt=""><figcaption></figcaption></figure>
 
 * 将在未来**停用 Workflow 应用“功能”中的图片上传选项**以及移除 `sys.files` [变量](variables.md)，目前这两项功能已被标记为 `LEGACY`，建议应用开发者改用自定义文件变量为 Workflow 应用添加文件上传功能。
 
-<figure><img src="../../.gitbook/assets/image (385).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/fa75202395a42dd2c42acf83d5a3e28c.webp" alt=""><figcaption></figcaption></figure>
 
 ### 为什么要替换“图片上传”功能？
 
@@ -27,7 +27,7 @@ Dify 此前仅支持上传图片文件。而在最新的版本中，已提供更
 * 文件上传功能允许将文件以 File variables 的形式在工作流应用中上传、解析、引用、和下载。
 * 开发者现可轻松构建能理解和处理图片、音频、视频复杂工作的应用。
 
-<figure><img src="../../.gitbook/assets/image (386).png" alt="" width="375"><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/71b3072840a27d02db00aba6db7e7ad9.webp" alt="" width="375"><figcaption></figcaption></figure>
 
 因此不再建议使用单独的“图片上传”功能，而是改用更为综合全面的“文件上传”功能以增强应用体验。
 
@@ -39,11 +39,11 @@ Dify 此前仅支持上传图片文件。而在最新的版本中，已提供更
 
 如果你已创建 Chatflow 应用并启用了“图片上传”功能，并在 LLM 节点中开启 Vision 功能，系统将自动完成功能切换，不会影响到应用的图片上传能力。如果需要更新并重新发布应用，需要在 LLM 节点中的 Vision 变量选择框指定文件变量后清除 checklist 中的 item，重新发布应用。
 
-<figure><img src="../../.gitbook/assets/image (388).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/a9d0a60fbfd557336197ae638e2aeb52.webp" alt=""><figcaption></figcaption></figure>
 
 如果你希望在 Chatflow 应用中添加“图片上传”功能，请在功能中开启“文件上传”，仅勾选“图片”类型。然后在 LLM 节点中启用 Vision 功能，并在其中填写 `sys.files` 变量。此时输入框将出现“回形针”的上传入口，详细说明请参考 [附加功能](additional-features.md)。
 
-<figure><img src="../../.gitbook/assets/image (389).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/e14872d53e796eb226a7cee92ecbfe1c.webp" alt=""><figcaption></figcaption></figure>
 
 * **Workflow 应用**
 

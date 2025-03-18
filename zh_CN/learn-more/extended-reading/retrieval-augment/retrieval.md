@@ -2,7 +2,7 @@
 
 当用户构建知识库问答类的 AI 应用时，如果在应用内关联了多个知识库，此时需要应用 Dify 的召回策略决定从哪些知识库中检索内容。
 
-<figure><img src="../../../.gitbook/assets/zh-rag-multiple.png" alt=""><figcaption><p>召回模式设置</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/retrieval-augment/dc65227d81c8cee35e1d74d877ff6ddb.webp" alt=""><figcaption><p>召回模式设置</p></figcaption></figure>
 
 ### 召回设置
 
@@ -12,6 +12,6 @@
 
 以下是多路召回模式的技术流程图：
 
-<figure><img src="../../../.gitbook/assets/image (134).png" alt=""><figcaption><p>多路召回</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/retrieval-augment/6316bd868418010c998c3b4753f351c5.webp" alt=""><figcaption><p>多路召回</p></figcaption></figure>
 
 由于多路召回模式不依赖于模型的推理能力或知识库描述，该模式在多知识库检索时能够获得质量更高的召回效果，除此之外加入 Rerank 步骤也能有效改进文档召回效果。因此，当创建的知识库问答应用关联了多个知识库时，我们更推荐将召回模式配置为多路召回。

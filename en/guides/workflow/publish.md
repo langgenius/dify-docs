@@ -2,7 +2,7 @@
 
 After completing debugging, clicking "Publish" in the upper right corner allows you to save and quickly release the workflow as different types of applications.
 
-<figure><img src="../../.gitbook/assets/output (4) (3).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/workflow/f8fb533bfc488d3eab087b9aa47280da.webp" alt=""><figcaption></figcaption></figure>
 
 Conversational applications can be published as:
 

@@ -29,7 +29,7 @@ RAG（Retrieval-Augmented Generation）の検索フェーズにおける主要�
 
 ハイブリッド検索では、データベースに事前にベクトルインデックスとキーワードインデックスを構築しておく必要があります。ユーザーのクエリが入力されると、両方の検索手法を使用して文書から最も関連性の高いテキストが取得されます。
 
-<figure><img src="../../../.gitbook/assets/image (127).png" alt="" width="563"><figcaption><p>ハイブリッド検索</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/retrieval-augment/79e1ed3f4f7339bcf30c8632945c0e8a.webp" alt="" width="563"><figcaption><p>ハイブリッド検索</p></figcaption></figure>
 
 "ハイブリッド検索"には厳密な定義が存在しません。本稿では、ベクトル検索とキーワード検索の組み合わせを例示しています。他の検索アルゴリズムの組み合わせもまた、"ハイブリッド検索"と呼ぶことができます。例えば、エンティティの関係性を検索する際に知識グラフ技術を組み合わせることが可能です。
 
@@ -39,7 +39,7 @@ RAG（Retrieval-Augmented Generation）の検索フェーズにおける主要�
 
 定義：クエリ埋め込みを生成し、そのベクトル表現に最も類似したテキストセグメントを取得します。
 
-<figure><img src="../../../.gitbook/assets/image (116).png" alt="" width="563"><figcaption><p>ベクトル検索の設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/retrieval-augment/9aa51f16d9e1d5fe57d2c9657b60bd51.webp" alt="" width="563"><figcaption><p>ベクトル検索の設定</p></figcaption></figure>
 
 **TopK：** ユーザーのクエリに最も類似したテキストフラグメントを選定する際に使用されます。システムは、選択されたモデルのコンテキストウィンドウサイズに基づいて、フラグメントの数を動的に調整します。デフォルト値は3です。
 

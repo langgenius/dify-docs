@@ -20,7 +20,7 @@ Workflow 类型应用提供以下系统变量：
 
 
 
-<figure><img src="../../.gitbook/assets/image (19).png" alt=""><figcaption><p>Workflow 类型应用系统变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/8877045a581f19ff65f8d0975ce9323f.webp" alt=""><figcaption><p>Workflow 类型应用系统变量</p></figcaption></figure>
 
 #### Chatflow
 
@@ -28,13 +28,13 @@ Chatflow 类型应用提供以下系统变量：
 
 <table><thead><tr><th>变量名称</th><th width="127">数据类型</th><th width="283">说明</th><th>备注</th></tr></thead><tbody><tr><td><code>sys.query</code></td><td>String</td><td>用户在对话框中初始输入的内容</td><td></td></tr><tr><td><code>sys.files</code></td><td>Array[File]</td><td>用户在对话框内上传的图片</td><td>图片上传功能需在应用编排页右上角的 “功能” 处开启</td></tr><tr><td><code>sys.dialogue_count</code></td><td>Number</td><td><p>用户在与 Chatflow 类型应用交互时的对话轮数。每轮对话后自动计数增加 1，可以和 if-else 节点搭配出丰富的分支逻辑。</p><p>例如到第 X 轮对话时，回顾历史对话并给出分析</p></td><td></td></tr><tr><td><code>sys.conversation_id</code></td><td>String</td><td>对话框交互会话的唯一标识符，将所有相关的消息分组到同一个对话中，确保 LLM 针对同一个主题和上下文持续对话</td><td></td></tr><tr><td><code>sys.user_id</code></td><td>String</td><td>分配给每个应用用户的唯一标识符，用以区分不同的对话用户</td><td></td></tr><tr><td><code>sys.app_id</code></td><td>String</td><td> 应用 ID，系统会向每个 Workflow 应用分配一个唯一的标识符，用以区分不同的应用，并通过此参数记录当前应用的基本信息</td><td>面向具备开发能力的用户，通过此参数区分并定位不同的 Workflow 应用</td></tr><tr><td><code>sys.workflow_id</code></td><td>String</td><td>Workflow ID，用于记录当前 Workflow 应用内所包含的所有节点信息</td><td>面向具备开发能力的用户，可以通过此参数追踪并记录 Workflow 内的包含节点信息</td></tr><tr><td><code>sys.workflow_run_id</code></td><td>String</td><td>Workflow 应用运行 ID，用于记录 Workflow 应用中的运行情况</td><td>面向具备开发能力的用户，可以通过此参数追踪应用的历次运行情况</td></tr></tbody></table>
 
-<figure><img src="../../.gitbook/assets/image (6) (2).png" alt=""><figcaption><p>Chatflow 类型应用系统变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/332aa9ed1a84c88b92ce8e2674329275.webp" alt=""><figcaption><p>Chatflow 类型应用系统变量</p></figcaption></figure>
 
 ### 环境变量
 
 **环境变量用于保护工作流内所涉及的敏感信息**，例如运行工作流时所涉及的 API 密钥、数据库密码等。它们被存储在工作流程中，而不是代码中，以便在不同环境中共享。
 
-<figure><img src="../../.gitbook/assets/环境变量.jpeg" alt=""><figcaption><p>环境变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/ba5b4c8b8c26c1f43982587cac8fb409.webp" alt=""><figcaption><p>环境变量</p></figcaption></figure>
 
 支持以下三种数据类型：
 
@@ -56,7 +56,7 @@ Chatflow 类型应用提供以下系统变量：
 
 例如你可以将用户在首轮对话时输入的语言偏好存储至会话变量中，LLM 在回答时将参考会话变量中的信息，并在后续的对话中使用指定的语言回复用户。
 
-<figure><img src="../../.gitbook/assets/会话变量.jpeg" alt=""><figcaption><p>会话变量</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/zh_CN/workflow/a50c823e68f6191485a5e15cb7950b31.webp" alt=""><figcaption><p>会话变量</p></figcaption></figure>
 
 **会话变量**支持以下六种数据类型：
 

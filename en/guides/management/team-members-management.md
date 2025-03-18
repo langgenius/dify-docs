@@ -14,14 +14,14 @@ Only team owners have permission to invite team members.
 
 To add a member, the team owner can click on the avatar in the upper right corner, then select **"Members"** → **"Add"**. Enter the email address and assign member permissions to complete the process.
 
-<figure><img src="../../.gitbook/assets/team-members-management-01.png" alt=""><figcaption><p>Assigning permissions to team members</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/management/b14b8bc4ab04ce66eb1bba41809ec75e.webp" alt=""><figcaption><p>Assigning permissions to team members</p></figcaption></figure>
 
 > For Community Edition, enabling email functionality requires the team owner to configure and activate the email service via system [environment variables](https://docs.dify.ai/getting-started/install-self-hosted/environments).
 
 - If the invited member has not registered with Dify, they will receive an invitation email. They can complete registration by clicking the link in the email.
 - If the invited member is already registered with Dify, permissions will be automatically assigned and **no invitation email will be sent**. The invited member can switch to the new workspace via the menu in the top right corner.
 
-![](../../../img/switch-workspace.png)
+![](https://assets-docs.dify.ai/img/en/management/127c49e4102f75e9acc5d1cf37a51f14.webp)
 
 ### Member Permissions
 
@@ -48,7 +48,7 @@ Only team owners have permission to remove team members.
 
 To remove a member, click on the avatar in the upper right corner of the Dify team homepage, navigate to **"Settings"** → **"Members"**, select the member to be removed, and click **"Remove from team"**.
 
-<figure><img src="../../.gitbook/assets/team-members-management-02.png" alt=""><figcaption><p>Removing a member</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/management/ac212207a54389ec593a862dbe5431c9.webp" alt=""><figcaption><p>Removing a member</p></figcaption></figure>
 
 ### Frequently Asked Questions
 

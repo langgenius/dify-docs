@@ -51,7 +51,7 @@ On success, the proxy will start running on `http://localhost:4000`
 
 In `Settings > Model Providers > OpenAI-API-compatible`, fill in:
 
-<figure><img src="../../.gitbook/assets/image (115).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/en/models-integration/f69083ad920029a8141ca3f5db031379.webp" alt=""><figcaption></figcaption></figure>
 
 * Model Name: `gpt-4`
 *   Base URL: `http://localhost:4000`

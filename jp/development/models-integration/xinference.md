@@ -29,7 +29,7 @@ Xinferenceのデプロイ方法は、[ローカルデプロイ](https://github.c
 
     `http://127.0.0.1:9997`にアクセスし、デプロイするモデルとその仕様を選択します。以下の図を参照してください：
 
-    <figure><img src="../../.gitbook/assets/image (16).png" alt=""><figcaption></figcaption></figure>
+    <figure><img src="https://assets-docs.dify.ai/img/jp/models-integration/5db924ca8cb21a4916c698818202421c.webp" alt=""><figcaption></figcaption></figure>
 
     モデルによっては異なるハードウェアプラットフォームでの互換性が異なるため、[Xinference内蔵モデル](https://inference.readthedocs.io/en/latest/models/builtin/index.html)を確認して、作成するモデルが現在のハードウェアプラットフォームでサポートされているかどうかを確認してください。
 4.  モデルUIDの取得

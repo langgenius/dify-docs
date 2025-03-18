@@ -8,7 +8,7 @@
 
 事前定義モデルとは異なり、カスタムベンダーのインテグレーション時には常に以下の2つのパラメータが存在し、ベンダー yaml に定義する必要はありません。
 
-<figure><img src="../../.gitbook/assets/image (24).png" alt=""><figcaption></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/img/jp/model-configuration/b4e160d4511254ce1649226caf45ccf3.webp" alt=""><figcaption></figcaption></figure>
 
 前述したように、ベンダーは`validate_provider_credential`を実装する必要はなく、Runtimeがユーザーが選択したモデルタイプとモデル名に基づいて、対応するモデル層の`validate_credentials`を呼び出して検証を行います。
 
