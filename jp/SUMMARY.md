@@ -51,6 +51,7 @@
     * [反復処理（イテレーション）](guides/workflow/node/iteration.md)
     * [パラメータ抽出](guides/workflow/node/parameter-extractor.md)
     * [HTTPリクエスト](guides/workflow/node/http-request.md)
+    * [エージェント](guides/workflow/node/agent.md)
     * [ツール](guides/workflow/node/tools.md)
     * [繰り返し処理（ループ）](guides/workflow/node/loop.md)
   * [ショートカットキー](guides/workflow/shortcut-key.md)
