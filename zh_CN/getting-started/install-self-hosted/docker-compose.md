@@ -88,6 +88,18 @@ docker-web-1          langgenius/dify-web:0.6.13         "/bin/sh ./entrypoin…
 docker-worker-1       langgenius/dify-api:0.6.13         "/bin/bash /entrypoi…"   worker       About a minute ago   Up About a minute             5001/tcp
 ```
 
+此时，由于PostgreSQL的安全设置，在docker-api-1的日志中很可能会报出类似以下错误：
+```bash
+FATAL:  no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
+```
+而打开`http://localhost`则提示`Internal Server Error`
+
+你应当修改db容器下的`/var/lib/postgresql/pgdata/pg_hba.conf`，添加对应你报错提示中的网段进入授权名单，例如
+```bash
+docker exec -it docker-db-1 sh -c "echo 'host all all 172.21.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
+docker-compose restart
+```
+
 通过这些步骤，你应该可以成功在本地安装 Dify。
 
 ### 更新 Dify
