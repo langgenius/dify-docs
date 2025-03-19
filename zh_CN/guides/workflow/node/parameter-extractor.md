@@ -54,8 +54,6 @@ Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guide
 
 开启图片
 
-
-
 **输出变量**
 
 * 提取定义的变量
