@@ -27,6 +27,12 @@ window.difyChatbotConfig = {
         // key は変数名です
         // 例:
         // name: "NAME"
+    },
+    // difyチャットボットのシステム変数をオーバーライドするためのオプションオブジェクト
+    systemVariables: {
+        // 現在のところ user_id のオーバーライドのみがサポートされています
+        // 例:
+        // user_id: "1"
     }
 };
 ```
@@ -134,3 +140,22 @@ window.difyChatbotConfig = {
 
 例えば、処理された入力値を含むURLは以下のようになります：
 `http://localhost/chatbot/{token}?name=H4sIAKUlmWYA%2FwWAIQ0AAACDsl7gLuiv2PQEUNAuqQUAAAA%3D`
+
+### 4. `systemVariables` の渡し方
+
+現在のところ、文字列型の `user_id` のみがサポートされている。
+
+設定例:
+
+```javascript
+window.difyChatbotConfig = {
+  // 他の設定項目...
+  systemVariables: {
+   user_id: '1',
+  },
+}
+```
+
+注意: `inputs` と同様に、`embed.js` スクリプトを使用してiframeを作成する場合、各入力値はURLに追加される前にGZIPで圧縮され、base64でエンコードされます。
+
+例えば、処理された入力値を含むURLは以下のようになります：`http://localhost/chatbot/{token}?sys.user_id=H4sIAAAAAAEzMEALfv3IMBAAAAA`

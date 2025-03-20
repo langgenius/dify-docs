@@ -40,8 +40,13 @@ window.difyChatbotConfig = {
         // 键是变量名
         // 例如：
         // name: "NAME"
+    },
+    // 可选项，覆盖 dify 聊天机器人系统变量的对象
+    systemVariables: {
+        // 目前只支持覆盖 user_id
+        // 例如：
+        // user_id: "1"
     }
-
 };
 ```
 
@@ -147,3 +152,22 @@ window.difyChatbotConfig = {
 注意：使用 embed.js 脚本创建 iframe 时，每个输入值将被处理——使用 GZIP 压缩并以 base64 编码——然后附加到 URL 上。
 
 例如，处理后的输入值 URL 将如下所示： `http://localhost/chatbot/{token}?name=H4sIAKUlmWYA%2FwWAIQ0AAACDsl7gLuiv2PQEUNAuqQUAAAA%3D`
+
+### 4. 传递 `systemVariables`
+
+目前只支持 `user_id`，类型为字符串。
+
+示例配置：
+
+```javascript
+window.difyChatbotConfig = {
+    // ... 其他配置
+    systemVariables: {
+        user_id: '1',
+    },
+}
+```
+
+注意：和 `inputs` 类似，使用 embed.js 脚本创建 iframe 时，每个输入值将被处理——使用 GZIP 压缩并以 base64 编码——然后附加到 URL 上。
+
+例如：处理后的输入值 URL 将如下所示：`http://localhost/chatbot/{token}?sys.user_id=H4sIAAAAAAAAEzMEALfv3IMBAAAA`
