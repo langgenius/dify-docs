@@ -34,7 +34,7 @@ Agent 节点是 Dify Chatflow/Workflow 中用于实现自主工具调用的组�
 
 <figure><img src="../../../.gitbook/assets/zh-agnent-1.png" alt=""><figcaption></figcaption></figure>
 
-2. **ReAct (Reason + Act)**
+#### 2. ReAct (Reason + Act)
 
 ReAct 策略使 Agent 交替进行思考和行动：LLM 首先思考当前状态和目标，然后选择并调用合适的工具，工具的输出结果又将引导 LLM 进行下一步的思考和行动，如此循环，直到问题解决。
 
@@ -48,7 +48,7 @@ ReAct 策略使 Agent 交替进行思考和行动：LLM 首先思考当前状态
 
 开发者可以向[公开仓库](https://github.com/langgenius/dify-plugins)贡献 Agent 策略插件，经过审核后将在 Marketplace 上架，供其他用户安装使用。
 
-### **配置节点参数**
+### 配置节点参数
 
 选择 Agent 策略后，配置面板会显示对应的配置项。Dify 官方内置的 Function Calling 和 ReAct 策略的配置项包括：
 
@@ -64,7 +64,7 @@ ReAct 策略使 Agent 交替进行思考和行动：LLM 首先思考当前状态
 
 <figure><img src="../../../.gitbook/assets/zh-1-9-3.png" alt=""><figcaption></figcaption></figure>
 
-## **查看日志**
+## 查看日志
 
 Agent 节点执行过程中将生成详细日志。显示节点执行的总体信息，包括输入和输出、token 开销、耗时和状态。点击 "详情" 查看 Agent 策略执行的每一轮输出信息。
 
