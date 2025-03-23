@@ -14,6 +14,7 @@
   * [环境变量说明](getting-started/install-self-hosted/environments.md)
   * [常见问题](getting-started/install-self-hosted/faq.md)
 * [Dify Premium](getting-started/dify-premium.md)
+* [Dify 教育版](getting-started/dify-for-education.md)
 
 ## 手册 <a href="#guides" id="guides"></a>
 
