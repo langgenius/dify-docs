@@ -13,7 +13,7 @@
   * [Environment Variables Explanation](getting-started/install-self-hosted/environments.md)
   * [FAQs](getting-started/install-self-hosted/faqs.md)
 * [Dify Cloud](getting-started/cloud.md)
-* [Dify Premium on AWS](getting-started/dify-premium-on-aws.md)
+* [Dify Premium on AWS](getting-started/dify-premium.md)
 
 ## Guides
 
