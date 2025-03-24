@@ -32,9 +32,9 @@
   *   <img src="../../../../.gitbook/assets/5.png" alt="" data-size="line">
 
       会话历史仅在对话型应用的文本补全模型中可用。在对话型应用中多次对话时，Dify 会将历史的对话记录根据内置规则进行组装拼接，并替换 `会话历史` 变量。其中 Human 和 Assistant 前缀可点击 `会话历史` 后的`...` 进行修改。
-*   **初始模版**
+*   **初始模板**
 
-    在**专家模式**下，正式编排之前，提示词框会给到一个初始模版，我们可以直接修改初始模版来对 LLM有更加定制化的要求。注意：不同类型应用的不同类型模式下有所区别。
+    在**专家模式**下，正式编排之前，提示词框会给到一个初始模板，我们可以直接修改初始模板来对 LLM有更加定制化的要求。注意：不同类型应用的不同类型模式下有所区别。
 
     具体请参考👉[prompt-engineering-template.md](prompt-engineering-template.md "mention")
 
@@ -114,7 +114,7 @@ Assistant1: 土是黄色的
 
 ### 5. 输入对话前提示词
 
-系统的提示词初始模版提供了必要的参数和 LLM 回复要求，详情见👉：[prompt-engineering-template.md](prompt-engineering-template.md "mention")。
+系统的提示词初始模板提供了必要的参数和 LLM 回复要求，详情见👉：[prompt-engineering-template.md](prompt-engineering-template.md "mention")。
 
 而开发人员前期编排的核心是对话前提示词（`Pre-prompt`），需要编辑后插入内置提示词，建议的插入位置如下（以创建 “iPhone 咨询客服”为例）：
 
@@ -131,7 +131,7 @@ And answer according to the language of the user's question.
 注意：你目前掌握的只是一部分 iPhone 型号，而不是全部。
 ```
 
-当然，你也可以定制化修改提示词初始模版，比如你希望 LLM 回复的语言都是英文，你可以将上述的内置提示词修改为：
+当然，你也可以定制化修改提示词初始模板，比如你希望 LLM 回复的语言都是英文，你可以将上述的内置提示词修改为：
 
 ```
 When answer to user:
