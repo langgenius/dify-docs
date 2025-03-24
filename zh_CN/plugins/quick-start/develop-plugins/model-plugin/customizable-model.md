@@ -317,8 +317,8 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 如果想要将插件发布至 Dify Marketplace，请参考以下内容：
 
-{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace/" %}
-[publish-to-dify-marketplace](../../../publish-plugins/publish-to-dify-marketplace/)
+{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace.md" %}
+[publish-to-dify-marketplace.md](../../../publish-plugins/publish-to-dify-marketplace/README.md)
 {% endcontent-ref %}
 
 ### **探索更多**
