@@ -12,13 +12,13 @@ This article will briefly introduce how to connect the Dify platform with the AW
 
 Visit [AWS Bedrock](https://aws.amazon.com/bedrock/) and create the Knowledge Base service.
 
-<figure><img src="../../../en/.gitbook/assets/image (360).png" alt=""><figcaption><p>Create AWS Bedrock Knowledge Base</p></figcaption></figure>
+<figure><img src="../../../zh_CN/.gitbook/assets/image (360).png" alt=""><figcaption><p>Create AWS Bedrock Knowledge Base</p></figcaption></figure>
 
 ### 2. Build the Backend API Service
 
 The Dify platform cannot directly connect to AWS Bedrock Knowledge Base. The developer needs to refer to Dify's [API definition](../../guides/knowledge-base/external-knowledge-api-documentation.md) on external knowledge base connection, manually create the backend API service, and establish a connection with AWS Bedrock. Please refer to the specific architecture diagram:
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (1).png" alt=""><figcaption><p>Build the backend API service</p></figcaption></figure>
+<figure><img src="../../../zh_CN/.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption><p>Build the backend API service</p></figcaption></figure>
 
 You can refer to the following 2 demo code.
 

@@ -38,6 +38,6 @@ Jinja2のPythonテンプレート言語を使って、データ変換やテキ�
 {% endraw %}
 ```
 
-<figure><img src="https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FCdDIVDY6AtAz028MFT4d%2Fuploads%2FOtGkLaz38v0FSzSBNuV2%2Fimage.png?alt=media&#x26;token=122965f8-9d70-4e57-b0e2-1fdaf1320275" alt=""><figcaption><p>ナレッジリトリーバルノードの出力をMarkdownに変換</p></figcaption></figure>
+<figure><img src="https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FCdDIVDY6AtAz028MFT4d%2Fuploads%2FOtGkLaz38v0FSzSBNuV2%2Fimage.png?alt=media&token=122965f8-9d70-4e57-b0e2-1fdaf1320275" alt=""><figcaption><p>ナレッジリトリーバルノードの出力をMarkdownに変換</p></figcaption></figure>
 
 Jinjaの[公式ドキュメント](https://jinja.palletsprojects.com/en/3.1.x/templates/)を参考にして、さまざまなタスクを実行するためのより複雑なテンプレートを作成することができます。

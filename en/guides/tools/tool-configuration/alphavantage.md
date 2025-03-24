@@ -2,6 +2,10 @@
 
 > Tool developed by [@zhuhao](https://github.com/hwzhuhao).
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 AlphaVantage is a comprehensive online platform offering financial market data and APIs, enabling individual investors and developers to easily access stock quotes, technical indicators, and in-depth stock analysis. Dify has integrated the AlphaVantage tool, and the following are the steps to configure and use the AlphaVantage tool in Dify.
 
 ## 1. Obtaining an AlphaVantage API Key

@@ -37,18 +37,18 @@ docker compose -f docker-compose.middleware.yaml up -d
 
 #### Installation of the basic environment:
 
-Server startup requires Python 3.11 or 3.12. It is recommended to use [pyenv](https://github.com/pyenv/pyenv) for quick installation of the Python environment.
+Server startup requires Python 3.12. It is recommended to use [pyenv](https://github.com/pyenv/pyenv) for quick installation of the Python environment.
 
 To install additional Python versions, use pyenv install.
 
 ```Bash
-pyenv install 3.11
+pyenv install 3.12
 ```
 
-To switch to the "3.11" Python environment, use the following command:
+To switch to the "3.12" Python environment, use the following command:
 
 ```Bash
-pyenv global 3.11
+pyenv global 3.12
 ```
 
 #### Follow these steps :
@@ -59,40 +59,41 @@ pyenv global 3.11
     cd api
     ```
 
-2.  Copy the environment variable configuration file:
+> For macOS: install libmagic with `brew install libmagic`.
+
+1.  Copy the environment variable configuration file:
 
     ```
     cp .env.example .env
     ```
 
-3.  Generate a random secret key and replace the value of SECRET_KEY in the .env file:
+2.  Generate a random secret key and replace the value of SECRET_KEY in the .env file:
 
     ```
     awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
 
-4.  Install the required dependencies:
+3.  Install the required dependencies:
 
-    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies. You can execute `poetry shell` to activate the environment.
+    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies.
 
     ```
-    poetry env use 3.11
+    poetry env use 3.12
     poetry install
     ```
 
-5.  Perform the database migration:
+4.  Perform the database migration:
 
     Perform database migration to the latest version:
 
     ```
-    poetry shell
-    flask db upgrade
+    poetry run flask db upgrade
     ```
 
-6.  Start the API server:
+5.  Start the API server:
 
     ```
-    flask run --host 0.0.0.0 --port=5001 --debug
+    poetry run flask run --host 0.0.0.0 --port=5001 --debug
     ```
 
     output：
@@ -108,18 +109,18 @@ pyenv global 3.11
     INFO:werkzeug: * Debugger PIN: 695-801-919
     ```
 
-7.  Start the Worker service
+6.  Start the Worker service
 
     To consume asynchronous tasks from the queue, such as dataset file import and dataset document updates, follow these steps to start the Worker service on Linux or macOS:
 
     ```
-    celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
+    poetry run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
     ```
 
     If you are using a Windows system to start the Worker service, please use the following command instead:
 
     ```
-    celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     output:

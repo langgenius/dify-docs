@@ -281,6 +281,8 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `pinecone` (not yet open)
     - `analyticdb`
     - `couchbase`
+    - `oceanbase`
+
 - WEAVIATE_ENDPOINT
 
   Weaviate endpoint address, such as: `http://weaviate:8080`.
@@ -317,7 +319,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 
 - MILVUS_URI
 
-  Milvus uri configuration. e.g.http://localhost:19530. For Zilliz Cloud, adjust the uri and token to the [Public Endpoint and Api key](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details).
+  Milvus uri configuration. e.g. `http://host.docker.internal:19530`. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), adjust the uri and token to the Public Endpoint and API Key.
 
 - MILVUS_TOKEN
 
@@ -406,6 +408,34 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - COUCHBASE_SCOPE_NAME
     
   The name of the scope to use.
+
+- OCEANBASE_VECTOR_HOST
+
+  The hostname or IP address of OceanBase vector database.
+
+- OCEANBASE_VECTOR_PORT
+
+  The port of OceanBase vector database.
+
+- OCEANBASE_VECTOR_USER 
+
+  The username of OceanBase vector database.
+
+- OCEANBASE_VECTOR_PASSWORD
+
+  The password of OceanBase vector database user.
+
+- OCEANBASE_VECTOR_DATABASE
+
+  The database name of OceanBase vector database.
+
+- OCEANBASE_CLUSTER_NAME
+
+  The cluster name of OceanBase vector database, only available for Docker deployment.
+
+- OCEANBASE_MEMORY_LIMIT
+
+  The memory limit of OceanBase vector database, only available for Docker deployment.
 
 #### Knowledge Configuration
 
@@ -610,3 +640,21 @@ Used to set the browser policy for session cookies used for identity verificatio
 - COOKIE_SECURE
 
   Cookie Secure configuration, default is false.
+
+### Chunk Length Configuration
+
+#### MAXIMUM_CHUNK_TOKEN_LENGTH 
+
+Configuration for document chunk length. It is used to control the size of text segments when processing long documents. Default: 500. Maximum: 4000.
+
+**Larger Chunks**
+- Retain more context within each chunk, ideal for tasks requiring a broader understanding of the text.
+- Reduce the total number of chunks, lowering processing time and storage overhead.
+
+**Smaller Chunks**
+- Provide finer granularity, improving accuracy for tasks like extraction or summarization.
+- Reduce the risk of exceeding model token limits, making it safer for models with stricter constraints.
+
+**Configuration Recommendations**
+- Choose larger chunks for context-heavy tasks like sentiment analysis or document summarization.
+- Choose smaller chunks for fine-grained tasks such as keyword extraction or paragraph-level processing.

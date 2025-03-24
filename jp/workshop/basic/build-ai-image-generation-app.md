@@ -50,13 +50,13 @@ Difyの無料版では、200回の無料のOpenAIメッセージクレジット�
 
 [groq API管理ページ](https://console.groq.com/keys)にログインします。
 
-**APIキーの作成**をクリックし、希望の名前を設定してAPIキーをコピーします。
+**API Keyの作成**をクリックし、希望の名前を設定してAPIキーをコピーします。
 
 **Dify - モデルプロバイダ**に戻り、**groqcloud**を選択し、**設定**をクリックします。
 
 ![](../../../img/workshop/build-ai-image-generation-app-4-en.png)
 
-APIキーを貼り付けて保存します。
+API Keyを貼り付けて保存します。
 
 ![](../../../img/workshop/build-ai-image-generation-app-5-en.png)
 

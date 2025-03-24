@@ -36,18 +36,18 @@ docker compose -f docker-compose.middleware.yaml up -d
 
 #### 基本環境インストール
 
-サーバーの起動にはPython 3.11 や 3.12 が必要です。Python環境の迅速なインストールには[pyenv](https://github.com/pyenv/pyenv)を使用することをお勧めします。
+サーバーの起動にはPython 3.12 が必要です。Python環境の迅速なインストールには[pyenv](https://github.com/pyenv/pyenv)を使用することをお勧めします。
 
 追加のPythonバージョンをインストールするには、pyenv installを使用します。
 
 ```Bash
-pyenv install 3.11
+pyenv install 3.12
 ```
 
-"3.11" の Python 環境に切り替えるには、次のコマンドを使用します。
+"3.12" の Python 環境に切り替えるには、次のコマンドを使用します。
 
 ```Bash
-pyenv global 3.11
+pyenv global 3.12
 ```
 
 
@@ -58,6 +58,8 @@ pyenv global 3.11
     ```
     cd api
     ```
+> macOSの場合：`brew install libmagic`でlibmagicをインストールしてください。
+
 2.  環境変数構成ファイルをコピー
 
     ```
@@ -70,10 +72,10 @@ pyenv global 3.11
     ```
 4.  依存関係をインストール
 
-    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。環境を有効にするには、`poetry shell`を実行できます。
+    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。
 
     ```
-    poetry env use 3.11
+    poetry env use 3.12
     poetry install
     ```
 5.  データベース移行を実行
@@ -81,13 +83,12 @@ pyenv global 3.11
     データベーススキーマを最新バージョンに更新します。
 
     ```
-    poetry shell
-    flask db upgrade
+    poetry run flask db upgrade
     ```
 6.  APIサービスを開始
 
     ```
-    flask run --host 0.0.0.0 --port=5001 --debug
+    poetry run flask run --host 0.0.0.0 --port=5001 --debug
     ```
 
     正常な出力：
@@ -107,13 +108,13 @@ pyenv global 3.11
     データセットファイルのインポートやデータセットドキュメントの更新などの非同期操作を消費するためのサービスです。Linux / MacOSでの起動：
 
     ```
-    celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     Windowsシステムでの起動の場合、以下のコマンドを使用してください：
 
     ```
-    celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     正常な出力：

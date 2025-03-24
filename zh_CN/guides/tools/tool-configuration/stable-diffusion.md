@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify。
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 StableDiffusion 是一种基于文本提示生成图像的工具，Dify 已经实现了访问 Stable Diffusion WebUI API 的接口，因此你可以直接在 Dify 中使用它。以下是在 Dify 中集成 Stable Diffusion 的步骤。
 
 ## 1. 初始化本地环境

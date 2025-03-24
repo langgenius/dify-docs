@@ -12,11 +12,11 @@
 2. 输出生成图片
 3. 输出纯文本
 
-**示例1：**&#x8F93;出纯文本
+**示例1：** 输出纯文本
 
 <figure><img src="../../../.gitbook/assets/output (2) (2).png" alt=""><figcaption></figcaption></figure>
 
-**示例2：**&#x8F93;出图片+LLM回复
+**示例2：** 输出图片+LLM回复
 
 <figure><img src="../../../.gitbook/assets/image (95).png" alt=""><figcaption></figcaption></figure>
 

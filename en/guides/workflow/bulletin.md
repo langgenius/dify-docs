@@ -12,7 +12,7 @@ The image upload feature has been integrated into the more comprehensive [File U
 
 ### Why Replace the “Image Upload” Feature?
 
-Previously, Dify only supported image file uploads. In the latest version, a more comprehensive file upload capability has been introduced, supporting documents, images, audio, video, and custom file formats.&#x20;
+Previously, Dify only supported image file uploads. In the latest version, a more comprehensive file upload capability has been introduced, supporting documents, images, audio, video, and custom file formats.
 
 **Image uploading is now part of the broader “File Upload” feature.** When adding the file upload feature, developers can simply check the “image” file type to enable image uploads.
 
@@ -22,7 +22,7 @@ To avoid confusion caused by redundant features, we have decided to replace the 
 
 To enhance the information processing capabilities of your applications, we have introduced the “File Upload” feature in this update. Unlike chat text, document files can carry a large amount of information, such as academic reports or legal contracts.
 
-* The file upload feature allows files to be uploaded, parsed, referenced, and downloaded as file variables within Workflow applications.&#x20;
+* The file upload feature allows files to be uploaded, parsed, referenced, and downloaded as file variables within Workflow applications.
 * Developers can now easily build applications capable of understanding and processing complex tasks involving images, audio, and video.
 
 <figure><img src="../../.gitbook/assets/image (141).png" alt="" width="375"><figcaption></figcaption></figure>

@@ -1,112 +1,126 @@
-# ⏰ Dify定时任务助手
+# 构建 Dify 应用定时任务助手
 
-> 作者：[Leo_chen](https://github.com/leochen-g)，"[Dify Schedule](https://github.com/leochen-g/dify-schedule)" "[智能微秘书](https://github.com/leochen-g/wechat-assistant-pro)" 开源项目作者
+> 作者：[Leo\_chen](https://github.com/leochen-g)，[Dify Schedule](https://github.com/leochen-g/dify-schedule) 与 [智能微秘书](https://github.com/leochen-g/wechat-assistant-pro) 开源项目作者
 
 ## 概述
 
-还在手动执行Dify工作流吗？还在为Dify没有定时任务苦恼吗？ 让我为您的工作流添加一些自动化魔法吧！。通过GitHub Actions，您现在可以设置工作流自动执行，并及时收到执行通知。
+Dify 定时任务管理工具是一个基于 GitHub Actions 的自动化解决方案，用于实现 Dify Workflow 的定时执行和状态监控。无需再为缺乏定时任务支持而感到困扰，本工具可以帮助设置自动执行任务并获取实时通知，优化你的工作效率。
 
-## 🌟 功能特点
+> 注意：本工具仅支持 Dify Workflow 类型应用
 
-- 🔄 支持多个Dify工作流同时自动执行
-- ⏰ 可自定义执行时间（默认：北京时间 06:30）
-- 📱 支持多种消息通知渠道： 微信，钉钉，企微，邮件 ，Server酱，飞书，Pushplus
-- 🆓 完全免费使用
-- 🔒 基于GitHub Actions的安全可靠执行
-- 🐲 青龙面板支持
+## 🌟 核心功能
 
-## 🚀 开始使用
+* 🔄 支持多 Workflow 并行自动执行
+* ⏰ 灵活的定时配置（默认执行时间：UTC+8 06:30）
+* 📱 多渠道消息通知集成
+  * 企业级通知：企业微信、钉钉、飞书
+  * 个人通知：微信、邮件、Server 酱、Pushplus
+* 🔒 基于 GitHub Actions 的安全执行环境
+* 🐲 支持青龙面板部署方案
 
-您可以通过以下两种方式使用：
-- 🌐 快速使用（在线方式）
-- 🐲 青龙面板定时任务
+## 🚀 快速开始
 
-### 🌐 快速开始
+你可以通过以下两种方式设置和运行 Dify 定时任务助手：
 
-让我们通过几个简单的步骤来配置您的自动化工作流！
+1. **在线方式（GitHub Actions）**
+2. **本地部署（青龙面板）**
 
-1. 🍴 首先，[Fork 本仓库](https://github.com/leochen-g/dify-schedule)
+### 方案一：GitHub Actions 部署
 
-2. ⚙️ 配置密钥：
-   访问：仓库 Settings -> Secrets -> New repository secret
+按照以下简单步骤快速配置你的自动化 Workflow：
 
-   | 密钥名称 | 填写内容 | 是否必填 |
-   |---------|----------|---------|
-   | DIFY_BASE_URL | Dify接口地址（默认：https://api.dify.ai/v1） | 否 |
-   | DIFY_TOKENS | Dify工作流API密钥（多个用;分隔） | 是 |
-   | DIFY_INPUTS | 工作流所需变量（JSON格式） | 否 |
-   
-   ### 📱 通知配置（可选但推荐配置）
-   
-   | 密钥名称 | 填写内容 | 用途 |
-   |---------|----------|-----|
-   | EMAIL_USER | 发件人邮箱（需开启SMTP） | 邮件通知 |
-   | EMAIL_PASS | 邮箱SMTP密码 | 邮件通知 |
-   | EMAIL_TO | 收件人邮箱（多个用`, `分隔） | 邮件通知 |
-   | PUSHPLUS_TOKEN | [Pushplus](http://www.pushplus.plus/) 的token | 微信通知 |
-   | SERVERPUSHKEY | [Server酱](https://sct.ftqq.com/) 的密钥 | 微信通知 |
-   | DINGDING_WEBHOOK | 钉钉机器人webhook地址 | 钉钉通知 |
-   | WEIXIN_WEBHOOK | 企业微信机器人webhook地址 | 企业微信通知 |
-   | FEISHU_WEBHOOK | 飞书机器人webhook地址 | 飞书通知 |
-   | AIBOTK_KEY | [智能微秘书](https://wechat.aibotk.com?r=dBL0Bn&f=difySchedule) apikey | 微信通知 |
-   | AIBOTK_ROOM_RECIVER | 智能微秘书群聊名称 | 微信群通知 |
-   | AIBOTK_CONTACT_RECIVER | 智能微秘书联系人昵称 | 微信私聊通知 |
+1. **Fork 仓库** 访问 [Dify Workflow 定时助手代码仓库](https://github.com/leochen-g/dify-schedule)，点击 Fork 按钮，创建副本到你的 GitHub 账户。
+2.  **配置密钥** 进入 Fork 代码仓库，依次点击 **Settings -> Secrets -> New repository secret**，添加以下密钥：
 
-3. ▶️ 启用工作流：
-   前往 Actions 标签页并启用工作流
+    | 密钥名称            | 填写内容                                 | 是否必填 |
+    | --------------- | ------------------------------------ | ---- |
+    | `DIFY_BASE_URL` | Dify 接口地址（默认：https://api.dify.ai/v1） | 否    |
+    | `DIFY_TOKENS`   | Dify Workflow API 密钥（多个用 `;` 分隔）     | 是    |
+    | `DIFY_INPUTS`   | Workflow 所需变量（JSON 格式）               | 否    |
 
-### 🐲 青龙面板部署
+    **通知配置（可选，推荐设置）**
 
-想在自己的服务器上运行？请按照以下步骤操作：
+    如果希望通过通知及时了解任务状态，可添加以下产品服务的密钥：
 
-1. 📦 添加订阅：
-```shell
+    | 密钥名称                     | 填写内容                                                                 | 用途     |
+    | ------------------------ | -------------------------------------------------------------------- | ------ |
+    | `EMAIL_USER`             | 发件人邮箱（需开启 SMTP）                                                      | 邮件通知   |
+    | `EMAIL_PASS`             | 邮箱 SMTP 密码                                                           | 邮件通知   |
+    | `EMAIL_TO`               | 收件人邮箱（多个用 `,` 分隔）                                                    | 邮件通知   |
+    | `PUSHPLUS_TOKEN`         | [Pushplus](http://www.pushplus.plus/) 的 token                        | 微信通知   |
+    | `SERVERPUSHKEY`          | [Server 酱](https://sct.ftqq.com/) 的密钥                                | 微信通知   |
+    | `DINGDING_WEBHOOK`       | 钉钉机器人 webhook 地址                                                     | 钉钉通知   |
+    | `WEIXIN_WEBHOOK`         | 企业微信机器人 webhook 地址                                                   | 企业微信通知 |
+    | `FEISHU_WEBHOOK`         | 飞书机器人 webhook 地址                                                     | 飞书通知   |
+    | `AIBOTK_KEY`             | [智能微秘书](https://wechat.aibotk.com/?r=dBL0Bn\&f=difySchedule) API Key | 微信通知   |
+    | `AIBOTK_ROOM_RECIVER`    | 智能微秘书群聊名称                                                            | 微信群通知  |
+    | `AIBOTK_CONTACT_RECIVER` | 智能微秘书联系人昵称                                                           | 微信私聊通知 |
+3. **启用 Workflow** 前往 **Actions**标签页，启用 Workflow 以启动定时任务。
+
+### 方案二：本地部署
+
+> 青龙面板是一款开源的定时任务管理工具，[项目地址](https://github.com/whyour/qinglong)。
+
+如果你的环境无法使用 GitHub Actions，你可以选择本地部署方案。通过在青龙面板中设置定时任务实现 Dify 应用的定时触发。
+
+1. **安装青龙面板**
+
+详细说明请参考 [项目地址](https://github.com/whyour/qinglong)。
+
+2. **添加订阅**
+
+在服务器中执行以下命令添加 [Dify 定时任务项目](https://github.com/leochen-g/dify-schedule) 的订阅任务：
+
+```bash
 ql repo https://github.com/leochen-g/dify-schedule.git "ql_" "utils" "sdk"
 ```
 
-2. ➕ 安装依赖：
-   - 进入【依赖管理】->【NodeJS】
-   - 添加 `axios` 依赖包
+3. **依赖安装**
+   * 导航至【依赖管理】->【NodeJS】
+   * 安装 `axios` 依赖包
+4. **环境变量配置**
+   * `DIFY_TOKENS`：Workflow API 密钥（必填）
+   * `DIFY_BASE_URL`：API 接口地址（可选）
+   * 多个 token 使用分号 `;` 分隔
+5. **通知配置**
+   * 直接使用青龙面板内置的通知系统
 
-3. 🔑 配置环境变量：
-   - 添加 `DIFY_TOKENS`（必填）
-   - 添加 `DIFY_BASE_URL`（选填）
-   - 多个token请用`;`分隔
+## 📸 通知效果预览
 
-4. 📨 通知将使用青龙面板自带的通知配置
+|                                      微信通知示例                                     |                                      邮件通知示例                                     |
+| :-----------------------------------------------------------------------------: | :-----------------------------------------------------------------------------: |
+| ![微信](https://assets-docs.dify.ai/2025/01/854f7a601a7dc277f8df095f06b2d5f0.png) | ![邮件](https://assets-docs.dify.ai/2025/01/192e3ec292686129198a45562fad26cf.png) |
 
-## 📸 效果预览
+## ❓ 故障排查指南
 
-| 微信通知效果 | 邮件通知效果 |
-|:------------:|:------------:|
-| ![微信](../../.gitbook/assets/schedule-chat.png) | ![邮件](../../.gitbook/assets/schedule-chat2.png) |
+### API 密钥获取流程
 
-## ❓ 常见问题
+1. 登录 Dify 控制台
+2. 进入目标 Workflow 应用
+3. 访问 API 参考页面
+4. 获取 API 密钥
 
-### 🔑 如何获取Dify工作流token？
+![](https://assets-docs.dify.ai/2025/01/f7239b198b4aeac98d209bfcebae153d.png)
 
-1. 打开Dify控制台
-2. 进入您的工作流应用
-3. 找到API参考
-4. 复制API密钥
+## 常见问题
 
-> 💡 注意：仅支持工作流类型的应用！
+1. **连接问题**
+   * 确保私有部署的 Dify 实例具有公网访问能力
+   * 验证网络连接和防火墙配置
+2. **执行错误**
+   * 验证应用类型是否为 Workflow
+   * 检查 `DIFY_INPUTS` 配置格式（JSON）
+   * 分析执行日志，确认所需变量配置完整
 
-![获取Token步骤1](../../.gitbook/assets/schedule-dify1.png)
-![获取Token步骤2](../../.gitbook/assets/schedule-dify2.png)
+如遇其他问题，欢迎在 GitHub Issues 中反馈（请注意脱敏处理）。
 
-### 🚫 连接问题？
+## 🤝 贡献指南
 
-如果您使用的是私有部署的Dify实例，请确保它可以从公网访问 - GitHub Actions需要能够连接到您的服务器！
+我们欢迎社区贡献，包括但不限于：
 
-### ❌ 执行错误？
+* 功能优化建议
+* Bug 修复
+* 文档完善
+* 新功能开发
 
-1. 🔍 检查您的应用是否为工作流应用
-2. ⚙️ 如果工作流需要输入变量，请确保正确配置了`DIFY_INPUTS`（JSON格式）
-3. 📝 仔细阅读错误日志，确保所有必需变量都已正确设置
-
-需要更多帮助？欢迎提出issue（记得删除敏感信息）！
-
-## 🤝 参与贡献
-
-欢迎提交PR或者Issue！让我们一起让这个工具变得更好！
+请通过 Pull Request 或 Issue 参与项目建设。

@@ -69,13 +69,13 @@ The parameters that can be set for annotated replies include: Score Threshold an
 
 In the bulk import feature, you can download the annotation import template, edit the annotated Q\&A pairs according to the template format, and then import them in bulk.
 
-<figure><img src="../../.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>Bulk Import of Annotated Q&#x26;A Pairs</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/bulk-import-annotated.png" alt=""><figcaption><p>Bulk Import of Annotated Q&A Pairs</p></figcaption></figure>
 
 ### Bulk Export of Annotated Q\&A Pairs
 
 Through the bulk export feature, you can export all saved annotated Q\&A pairs in the system at once.
 
-<figure><img src="../../.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>Bulk Export of Annotated Q&#x26;A Pairs</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/bulk-export-annotations.png" alt=""><figcaption><p>Bulk Export of Annotated Q&A Pairs</p></figcaption></figure>
 
 ### Viewing Annotation Hit History
 

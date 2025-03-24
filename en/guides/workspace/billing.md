@@ -28,7 +28,7 @@ Check out the [pricing page ](https://dify.ai/pricing)to learn more.
 
 > **Vector storage:**Vector storage is used to store knowledge bases as vectors for LLMs to understand. Each 1MB can store about 1.2million characters of vectorized data(estimated using OpenAI Embeddings, varies across models). How much the data shrinks depends on complexity and repetition in the content.
 >
-> **Annotation Quota Limits:**Manual editing and annotation of responses provides customizable high-quality question-answering abilities for apps.&#x20;
+> **Annotation Quota Limits:**Manual editing and annotation of responses provides customizable high-quality question-answering abilities for apps.
 >
 > **Message Requests:**The number of times the Dify API is called daily during application sessions (rather than LLM API resource usage). It includes all messages generated from your applications via API calls or during WebApp sessions. **Note:Daily quotas are refreshed at midnight Pacific Standard Time.**
 >

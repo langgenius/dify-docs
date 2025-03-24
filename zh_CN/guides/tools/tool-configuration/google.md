@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify。
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 Google 搜索工具能够帮助你在使用 LLM 应用的时候，获取联网搜索结果。以下是在 Dify 中配置和使用 Google 搜索工具的步骤。
 
 ## 1. 申请 Serp API Key

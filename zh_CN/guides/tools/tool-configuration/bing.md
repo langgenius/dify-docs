@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 Bing 搜索工具能够帮助你在使用 LLM 应用的时候，获取联网搜索结果。以下是在 Dify 中配置和使用 Bing 搜索工具的步骤。
 
 ## 1. 申请 Bing API Key

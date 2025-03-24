@@ -1,6 +1,6 @@
 # 集成 LangSmith
 
-### 什么是 LangSmith
+### LangSmith 简介
 
 LangSmith 是一个用于构建生产级 LLM 应用程序的平台，它用于开发、协作、测试、部署和监控 LLM 应用程序。
 
@@ -10,7 +10,7 @@ LangSmith 官网介绍：[https://www.langchain.com/langsmith](https://www.langc
 
 ***
 
-### 如何配置 LangSmith
+### 配置 LangSmith
 
 本章节将指引你注册 LangSmith 并将其集成至 Dify 平台内。
 

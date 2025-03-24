@@ -33,7 +33,7 @@ Next, you need to fill in the key in [Dify - Tools - Stability](https://cloud.di
 * Select Stability
 * Click `Authorize`
 
-&#x20;![](../../.gitbook/assets/build-ai-image-generation-app-2-en.png)
+![](../../.gitbook/assets/build-ai-image-generation-app-2-en.png)
 
 * Fill in the key and save
 
@@ -164,8 +164,6 @@ If the user requests content unrelated to drawing, reply: "Sorry, I don't unders
 ```
 
 For example, let's ask: What's for dinner tonight?
-
-&#x20;
 
 <figure><img src="../../.gitbook/assets/build-ai-image-generation-app-15-en.png" alt=""><figcaption></figcaption></figure>
 

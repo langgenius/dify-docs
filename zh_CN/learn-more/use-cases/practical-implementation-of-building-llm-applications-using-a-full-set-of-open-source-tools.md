@@ -6,10 +6,10 @@
 
 在当下开源大语言模型火热的背景下，有很大一部分开发者希望本地部署开源 LLM，用于研究 LLM 或者是基于开源 LLM 构建自己的 LLM 应用。笔者也正在尝试通过开源社区的一系列相关优秀项目，通过本地化部署服务来构建自己的 LLM 应用。那么本地部署一个开源 LLM 来构建一个聊天应用需要哪些准备呢？
 
-1. **本地环境的准备：**&#x56E0;为我们需要在本地部署一个开源的大模型，所以你需要准备一个相当硬核的本地环境。硬件上需要一台拥有高性能、大显存的 NVDIA 显卡，大容量高速内存以及大容量固态硬盘，软件上则需要安装显卡驱动、CUDA、Python 环境。笔者这次选择跑 Baichuan-13B-Chat 模型为例，基本配置是 CPU i9-13900K、GTX3090 24 GB 双卡、64GB 内存和 2TB 固态硬盘。
-2. **一个大型语言模型（LLM）：**&#x8FD9;是我们构建 LLM 应用的基础。不同的 LLM 根据预训练的数据和目标任务的不同，其模型结构和学到的知识也不相同。基于不同模型构建出来的 AI 应用表现也会不一样。你可以通过火热的 AI 社区 [Hugging Face](https://huggingface.co/) 上找自己感兴趣的开源 LLMs 来进行尝试和能力对比 。
-3. **一个本地部署 LLM 的推理服务：**&#x63A8;理服务可以将预训练好的 LLM 模型加载到本地服务器，并提供模型预测接口，这样就可以本地化使用 LLM 模型进行各种 NLP 任务，而不需要依赖云服务。你可以使用一些优秀的 GitHub 开源项目，这些项目对热门的开源 LLM 都做了推理服务的一键部署。知名度比较高的有 [LocalAI](https://github.com/go-skynet/LocalAI)、[openLLM](https://github.com/bentoml/OpenLLM) 等。
-4. **一个简单易用的“ LLM 操作系统 ” Dify.AI：**&#x5982;果要基于 LLM 的能力构建一个聊天应用，你可能需要学习研究全套的 LLM 技术栈，比如：不同模型的 API 调用、向量数据库选型、Embedding 技术研究等等。如果你使用开源项目 [Dify.AI](https://github.com/langgenius/dify)，则可以省掉这些研究学习工作，**帮助你通过可视化的界面即可快速创建基于不同 LLM 能力的** **AI** **应用。** Dify 最近的版本新增了对开源 LLMs 的支持，对托管在 HuggingFace 和 Replicate 上所有的模型都能快速调用和切换使用，同时支持本地部署方式能够基于 [OpenLLM](https://github.com/bentoml/OpenLLM) 和 [Xorbits inference](https://github.com/xorbitsai/inference) 推理服务来实现 AI 应用的构建。
+1. **本地环境的准备：** 因为我们需要在本地部署一个开源的大模型，所以你需要准备一个相当硬核的本地环境。硬件上需要一台拥有高性能、大显存的 NVDIA 显卡，大容量高速内存以及大容量固态硬盘，软件上则需要安装显卡驱动、CUDA、Python 环境。笔者这次选择跑 Baichuan-13B-Chat 模型为例，基本配置是 CPU i9-13900K、GTX3090 24 GB 双卡、64GB 内存和 2TB 固态硬盘。
+2. **一个大型语言模型（LLM）：** 这是我们构建 LLM 应用的基础。不同的 LLM 根据预训练的数据和目标任务的不同，其模型结构和学到的知识也不相同。基于不同模型构建出来的 AI 应用表现也会不一样。你可以通过火热的 AI 社区 [Hugging Face](https://huggingface.co/) 上找自己感兴趣的开源 LLMs 来进行尝试和能力对比 。
+3. **一个本地部署 LLM 的推理服务：** 推理服务可以将预训练好的 LLM 模型加载到本地服务器，并提供模型预测接口，这样就可以本地化使用 LLM 模型进行各种 NLP 任务，而不需要依赖云服务。你可以使用一些优秀的 GitHub 开源项目，这些项目对热门的开源 LLM 都做了推理服务的一键部署。知名度比较高的有 [LocalAI](https://github.com/go-skynet/LocalAI)、[openLLM](https://github.com/bentoml/OpenLLM) 等。
+4. **一个简单易用的“ LLM 操作系统 ” Dify.AI：** 如果要基于 LLM 的能力构建一个聊天应用，你可能需要学习研究全套的 LLM 技术栈，比如：不同模型的 API 调用、向量数据库选型、Embedding 技术研究等等。如果你使用开源项目 [Dify.AI](https://github.com/langgenius/dify)，则可以省掉这些研究学习工作，**帮助你通过可视化的界面即可快速创建基于不同 LLM 能力的** **AI** **应用。** Dify 最近的版本新增了对开源 LLMs 的支持，对托管在 HuggingFace 和 Replicate 上所有的模型都能快速调用和切换使用，同时支持本地部署方式能够基于 [OpenLLM](https://github.com/bentoml/OpenLLM) 和 [Xorbits inference](https://github.com/xorbitsai/inference) 推理服务来实现 AI 应用的构建。
 
 笔者将尝试使用**开源的 LLMOps 平台 Dify.AI + 开源的推理服务** **Xinference** **+** **开源模型 Baichuan-13B-Chat** 为例，手把手实操教你在 windows 环境下，使用全套开源工具产品来构建一个 LLM 聊天应用。
 

@@ -1,5 +1,9 @@
 # ComfyUI
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 [ComfyUI](https://www.comfy.org/)は、最強のモジュラー型拡散モデルのGUI、API、バックエンドを備えたツールで、グラフやノードインターフェースを提供します。現在、Difyで利用可能で、画像のプロンプトを入力することで生成された画像を取得できます。
 
 ## 1. ComfyUIのワークフローが正しく動作しているか確認します。

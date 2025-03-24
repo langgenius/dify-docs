@@ -1,6 +1,6 @@
 # 集成 Langfuse
 
-### 1 什么是 Langfuse
+### Langfuse 简介
 
 Langfuse 是一个开源的 LLM 工程平台，可以帮助团队协作调试、分析和迭代他们的应用程序。
 
@@ -10,7 +10,7 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 2 如何配置 Langfuse
+### 配置 Langfuse
 
 1. 在[官网注册](https://langfuse.com/)并登录 Langfuse
 2. 在 Langfuse 内创建项目，登录后在主页点击 **New** ，创建一个自己的项目，**项目**将用于与 Dify 内的**应用**关联进行数据监测。
@@ -47,7 +47,7 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 3 在 Langfuse 内查看监测数据
+### 在 Langfuse 内查看监测数据
 
 配置完成后， Dify 内应用的调试或生产数据可以在 Langfuse 查看监测数据。
 
@@ -57,7 +57,7 @@ Langfuse 官网介绍：[https://langfuse.com/](https://langfuse.com/)
 
 <figure><img src="../../../.gitbook/assets/image (26).png" alt=""><figcaption><p>在 Langfuse 内查看应用数据</p></figcaption></figure>
 
-### 4 监测数据清单
+### 监测数据清单
 
 #### Workflow /Chatflow Trace信息
 

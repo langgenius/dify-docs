@@ -2,124 +2,132 @@
 
 ![ollama](../../.gitbook/assets/ollama.png)
 
-[Ollama](https://github.com/jmorganca/ollama) は、Llama 2、Mistral、Llava などの大型言語モデルをワンクリックでデプロイできるローカル推論フレームワーククライアントです。 Dify は、Ollama でデプロイした大型言語モデルの推論および埋め込み機能への接続をサポートしています。
+[Ollama](https://github.com/jmorganca/ollama)は、Llama 2、Mistral、LlavaといったLLMを簡単にデプロイできるように設計された、クロスプラットフォーム対応の推論フレームワーククライアントです（MacOS、Windows、Linuxに対応）。ワンクリックでセットアップできるOllamaを利用すれば、LLMをローカル環境で実行でき、データを手元のマシンに保持することで、データプライバシーとセキュリティを強化できます。
 
-## クイック接続
+## 簡単な統合
 
-### Ollama のダウンロードと起動
+### Ollamaのダウンロードと起動
 
-1.  Ollama をダウンロード
+1.  Ollamaをダウンロード
 
-    [https://ollama.ai/download](https://ollama.ai/download) にアクセスし、対応するシステムの Ollama クライアントをダウンロードします。
-2.  Ollama を実行して Llava とチャット
+    [https://ollama.com/download](https://ollama.com/download)にアクセスし、お使いのシステムに対応したOllamaクライアントをダウンロードしてください。
+
+2.  Ollamaを実行し、Llama3.2とチャット
 
     ```bash
-    ollama run llava
+    ollama run llama3.2
     ```
+    
+    起動が成功すると、Ollamaはローカルポート11434でAPIサービスを開始します。このサービスには、`http://localhost:11434`からアクセスできます。
 
-    起動に成功すると、ollama はローカルの 11434 ポートで API サービスを開始し、`http://localhost:11434` でアクセスできます。
+    他のモデルについては、[Ollama Models](https://ollama.com/library)で詳細をご確認ください。
 
-    その他のモデルについては [Ollama Models](https://ollama.ai/library) を参照してください。
-3.  Dify に Ollama を接続
+3.  DifyへのOllama統合
 
-    `設定 > モデル供給元 > Ollama` に以下を入力します：
+    Difyの設定画面で、「モデルプロバイダー」>「Ollama」を選択し、以下の情報を入力します。
 
-    ![](../../.gitbook/assets/jp-ollama-config.png)
+    ![](../../.gitbook/assets/ollama-config-en.png)
 
-    * モデル名称：`llava`
-    *   基本 URL：`http://<your-ollama-endpoint-domain>:11434`
+    *   モデル名: `llama3.2`
+    *   ベースURL: `http://<your-ollama-endpoint-domain>:11434`
 
-        ここには、アクセス可能な Ollama サービスのアドレスを入力します。
+        OllamaサービスにアクセスできるベースURLを入力してください。パブリックURLを入力してもエラーが発生する場合は、[FAQ](#faq)を参照し、すべてのIPアドレスからOllamaサービスにアクセスできるよう環境変数を変更してください。
 
-        Dify が Docker でデプロイされている場合、ローカルネットワークの IP アドレス（例：`http://192.168.1.100:11434`）または Docker ホストマシンの IP アドレス（例：`http://172.17.0.1:11434`）を入力することをお勧めします。
+        DifyをDockerでデプロイしている場合は、ローカルネットワークのIPアドレス（例：`http://192.168.1.100:11434` や `http://host.docker.internal:11434`）を使用してサービスにアクセスすることを推奨します。
 
-        ローカルソースコードでデプロイされている場合は、`http://localhost:11434` を入力できます。
-    * モデルタイプ：`対話`
-    *   モデルのコンテキスト長：`4096`
+        ローカルでソースコードをデプロイしている場合は、`http://localhost:11434` を使用してください。
 
-        モデルの最大コンテキスト長です。不明な場合はデフォルト値の 4096 を入力してください。
-    *   最大トークン上限：`4096`
+    *   モデルタイプ: `Chat`
+    *   モデルコンテキスト長: `4096`
 
-        モデルが返す内容の最大トークン数です。特に記載がない場合、モデルのコンテキスト長と同じ値を入力してください。
-    *   ビジョン対応：`はい`
+        モデルが一度に処理できる最大コンテキスト長です。不明な場合は、デフォルト値の4096を使用してください。
+    *   最大トークン制限: `4096`
 
-        モデルが画像理解（マルチモーダル）をサポートしている場合、このオプションを選択してください。例えば `llava` などです。
+        モデルが返す最大トークン数です。モデルに特別な要件がない場合は、モデルのコンテキスト長と同じ値に設定できます。
+    *   Visionのサポート: `はい`
 
-    「保存」をクリックし、エラーがないことを確認したら、このモデルをアプリで使用できます。
+        `llava`のように、画像認識（マルチモーダル）をサポートするモデルを使用する場合は、このオプションをオンにしてください。
 
-    埋め込みモデルの接続方法も LLM と似ています。モデルタイプを Text Embedding に変更するだけです。
-4.  Ollama モデルの使用
+    エラーがないことを確認したら、「保存」をクリックして、アプリでモデルを使用します。
+
+    Embeddingモデルの統合もLLMと同様の手順で行いますが、モデルタイプを「Text Embedding」に変更するだけです。
+
+4.  Ollamaモデルの使用
 
     ![](../../.gitbook/assets/jp-ollama-use-model.png)
 
-    設定が必要なアプリのプロンプト編成ページに移動し、Ollama 供給元の `llava` モデルを選択し、モデルパラメーターを設定した後に使用できます。
+    設定が必要なアプリの「プロンプトエンジニアリング」ページを開き、Ollamaプロバイダーの中から`llava`モデルを選択し、モデルパラメーターを設定して使用します。
 
 ## FAQ
 
-### ⚠️ Docker を使用して Dify と Ollama をデプロイする場合、以下のエラーが発生することがあります:
+### ⚠️ DifyとOllamaをDockerでデプロイしている場合、以下のエラーが発生することがあります。
 
-```
+```bash
 httpconnectionpool(host=127.0.0.1, port=11434): max retries exceeded with url:/cpi/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8562812c20>: fail to establish a new connection:[Errno 111] Connection refused'))
 
 httpconnectionpool(host=localhost, port=11434): max retries exceeded with url:/cpi/chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8562812c20>: fail to establish a new connection:[Errno 111] Connection refused'))
 ```
 
-このエラーは、Docker コンテナが Ollama サービスにアクセスできないために発生します。localhost は通常、コンテナ自体を指すため、ホストや他のコンテナではありません。この問題を解決するには、Ollama サービスをネットワークに公開する必要があります。
+このエラーは、OllamaサービスがDockerコンテナからアクセスできない場合に発生します。`localhost` は通常、ホストマシンや他のコンテナではなく、コンテナ自体を指します。
 
-### Macで環境変数を設定する方法
+この問題を解決するには、Ollamaサービスをネットワークに公開する必要があります。
 
-`Ollama` を `macOS` アプリケーションとして実行する場合、以下のコマンドを使用して環境変数`launchctl`を設定します：
+### Macでの環境変数の設定
 
-1.  `launchctl setenv` を呼び出して環境変数を設定：
+OllamaをmacOSアプリとして実行している場合は、環境変数を `launchctl` を使用して設定する必要があります。
+
+1.  各環境変数に対して、`launchctl setenv` を実行します。
 
     ```bash
     launchctl setenv OLLAMA_HOST "0.0.0.0"
     ```
-2. Ollama アプリケーションを再起動します。
-3.  上記の手順が無効な場合は、次の方法を試してください：
 
-    問題は Docker 内部で、docker のホストにアクセスするために `host.docker.internal` に接続する必要があるため、`localhost` を `host.docker.internal` に置き換えてサービスを設定します：
+2. Ollamaアプリを再起動します。
+
+3. 上記の手順で解決しない場合は、以下の方法を試してください。
+
+    問題はDocker自体にあり、Dockerホストにアクセスするには、`host.docker.internal` に接続する必要があります。したがって、サービス内で `localhost` を `host.docker.internal` に置き換えることで、正常に動作するようになります。
 
     ```bash
     http://host.docker.internal:11434
     ```
 
-### Linuxで環境変数を設定する方法
+### Linuxでの環境変数の設定
 
-Ollama を systemd サービスとして実行する場合は、`systemctl` を使用して環境変数を設定します：
+Ollamaをsystemdサービスとして実行している場合は、環境変数を `systemctl` を使用して設定する必要があります。
 
-1. `systemctl edit ollama.service` を呼び出して systemd サービスを編集します。これにより、エディタが開きます。
-2.  各環境変数について、`[Service]` セクションの下に `Environment` 行を追加します：
+1. `systemctl edit ollama.service` を実行してsystemdサービスを編集します。これにより、エディターが開きます。
+2. 各環境変数に対して、`[Service]` セクションの下に `Environment` 行を追加します。
 
     ```ini
     [Service]
     Environment="OLLAMA_HOST=0.0.0.0"
     ```
-3. 保存して終了します。
-4.  `systemd` をリロードし、Ollama を再起動します：
+3.  保存してエディターを閉じます。
+4.  `systemd` をリロードし、Ollamaを再起動します。
 
     ```bash
     systemctl daemon-reload
     systemctl restart ollama
     ```
 
-### Windowsで環境変数を設定する方法
+### Windowsでの環境変数の設定
 
-Windows では、Ollama はユーザーとシステムの環境変数を継承します。
+Windowsでは、Ollamaはユーザーとシステムの環境変数を継承します。
 
-1. まずタスクバーから Ollama をクリックしてプログラムを終了します
-2. コントロールパネルからシステム環境変数を編集します
-3. ユーザーアカウントのために変数を編集または新規作成します。例えば、`OLLAMA_HOST`、`OLLAMA_MODELS`などです。
-4. OK/適用をクリックして保存します
-5. 新しいターミナルウィンドウで `ollama` を実行します
+1.  まず、タスクバーにあるOllamaのアイコンをクリックしてOllamaを終了します。
+2.  コントロールパネルからシステム環境変数を編集します。
+3.  `OLLAMA_HOST` や `OLLAMA_MODELS` など、ユーザーアカウントの新しい環境変数を作成または編集します。
+4.  [OK/適用] をクリックして保存します。
+5.  新しいターミナルウィンドウから `ollama` を実行します。
 
-### Ollama をネットワーク上で公開する方法
+## ネットワーク上でOllamaを公開するにはどうすればよいですか？
 
-Ollama はデフォルトで 127.0.0.1 の 11434 ポートにバインドされています。`OLLAMA_HOST` 環境変数を使用してバインドアドレスを変更します。
+Ollamaはデフォルトで127.0.0.1のポート11434にバインドされています。`OLLAMA_HOST` 環境変数を使用して、バインドするアドレスを変更してください。
 
-## Ollama に関する詳細情報については以下を参照してください
+## 詳細情報
 
-For more information on Ollama, please refer to:
+Ollamaの詳細については、以下を参照してください。
 
 * [Ollama](https://github.com/jmorganca/ollama)
 * [Ollama FAQ](https://github.com/ollama/ollama/blob/main/docs/faq.md)

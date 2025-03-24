@@ -40,7 +40,7 @@ In **Records**, you can check the past query records. If the knowledge base is l
 
 #### Modify Text Retrieval Setting
 
-Click the icon in the upper-right corner of the Source Text field to change the current knowledge base’s retrieval method and related parameters. These changes only take effect during the current retrieval test session for debugging, you can compare the retrieval performance of different retrieval settings.&#x20;
+Click the icon in the upper-right corner of the Source Text field to change the current knowledge base’s retrieval method and related parameters. These changes only take effect during the current retrieval test session for debugging, you can compare the retrieval performance of different retrieval settings.
 
 If you want to permanently modify the retrieval method for the knowledge base, go to **“Knowledge Base Settings”** > **“Retrieval Settings”** to make changes.
 

@@ -18,7 +18,7 @@
 
 Difyプラットフォームは、直接的にAWS Bedrock Knowledge Baseに接続することができません。開発チームは、Difyの外部ナレッジベース接続に関する[API定義](../../guides/knowledge-base/external-knowledge-api-documentation.md)を参照し、バックエンドAPIサービスを手動で構築してAWS Bedrockと接続する必要があります。具体的なアーキテクチャの概要は以下の通りです：
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image.png" alt=""><figcaption><p>バックエンドAPIサービスの構築</p></figcaption></figure>
+<figure><img src="../../../zh_CN/.gitbook/assets/image (1) (1) (1).png" alt=""><figcaption><p>バックエンドAPIサービスの構築</p></figcaption></figure>
 
 以下の2つのコードファイルを参考にして、バックエンドサービスAPIを構築できます。
 
@@ -126,25 +126,27 @@ Difyプラットフォームの**"ナレッジベース"**ページに移動し�
 ページの指示に従い、以下の内容を順番に入力します：
 
 - ナレッジベースの名称（カスタマイズ可能で、Difyプラットフォーム内の異なる外部知識APIを区別するために使用）
-- APIエンドポイント（外部ナレッジベースへの接続アドレス、2ステップ目でカスタマイズ可能）。例：`api-endpoint/retrieval`
-- APIキー（外部ナレッジベースへの接続キー、2ステップ目でカスタマイズ可能）
+- APIエンドポイント（外部ナレッジベースへの接続アドレス、ステップ2でカスタマイズ可能）。例：`api-endpoint/retrieval`
+- API Key（外部ナレッジベースへの接続キー、ステップ2でカスタマイズ可能）
 
 <figure><img src="../../../zh_CN/.gitbook/assets/image (362).png" alt=""><figcaption></figcaption></figure>
 
 ### 5. 外部ナレッジベースの接続
 
-**"ナレッジベース"**ページに移動し、ナレッジベースのカードの下にある**"外部ナレッジベースを接続"**をクリックして、パラメータ設定ページに移動します。
+**"ナレッジベース"**ページに移動し、ナレッジベースのカードの下にある **"外部ナレッジベースを接続"** をクリックして、パラメータ設定ページに移動します。
+
+<figure><img src="../../../zh_CN/.gitbook/assets/image (363).png" alt=""><figcaption></figcaption></figure>
 
 以下のパラメータを入力してください：
 
 * **ナレッジベースの名称と説明**
 * **外部知識API**
 
-  4ステップで関連付けた外部ナレッジベースAPIを選択
+  ステップ4で関連付けた外部ナレッジベースAPIを選択
 
 * **外部ナレッジベースID**
 
-  3ステップで取得したAWS Bedrock Knowledge BaseIDを入力
+  ステップ3で取得したAWS Bedrock Knowledge BaseIDを入力
 
 * **検索設定の調整**
 
@@ -164,4 +166,4 @@ Difyプラットフォームの**"ナレッジベース"**ページに移動し�
 
 検索結果に満足できない場合は、検索設定を変更したり、AWS Bedrock Knowledge Baseの検索設定を調整したりすることができます。
 
-<figure><img src="../../../zh_CN/.gitbook/assets/image (367).png" alt=""><figcaption><p>调整 AWS Bedrock Knowledge Base の検索設定を調整</p></figcaption></figure>
+<figure><img src="../../../zh_CN/.gitbook/assets/image (367).png" alt=""><figcaption><p>AWS Bedrock Knowledge Base の検索設定を調整</p></figcaption></figure>

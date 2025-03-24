@@ -141,9 +141,9 @@ And answer according to the language of the user's question.
 Dify has collaborated with some model providers for joint deep optimization of system prompts, and the initial templates for some models may differ from the examples provided above.
 {% endhint %}
 
-### **Parameter Definitions**&#x20;
+### **Parameter Definitions**
 
-* **Context**: Used to insert related text from the knowledge as context into the complete prompts.&#x20;
-* **Pre-prompt**: Pre-prompts arranged in the **Basic Mode** are inserted into the complete prompts.&#x20;
+* **Context**: Used to insert related text from the knowledge as context into the complete prompts.
+* **Pre-prompt**: Pre-prompts arranged in the **Basic Mode** are inserted into the complete prompts.
 * **History**: When building a chat application using text generation models, the system inserts the user's conversation history as context into the complete prompts. Since some models may respond differently to role prefixes, you can also modify the role prefix name in the conversation history settings, for example, changing the name "Assistant" to "AI".
 * **Query**: The query content represents variable values used to insert questions that users input during the chat.

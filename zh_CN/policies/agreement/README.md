@@ -1,13 +1,26 @@
 # 用户协议
 
-### 关于数据安全
+## 用户协议
 
-Dify 非常重视你的数据安全，已获得 SOC 2 Type 1 认证，并且正处于 SOC 2 Type 2 的窗口期。除此之外，我们正在推进获得 ISO 27001 和 GDPR 认证。
+#### 服务条款与隐私政策
 
-有关 Dify 安全措施和协议的完整信息，请参考 [Dify Trust Center](https://security.dify.ai/) 上的官方安全政策。Dify Trust Center 应被视为安全相关信息的主要和权威来源。
+您可以通过以下内容了解在使用 Dify.AI 时需遵循的服务条款和隐私政策。
 
-Dify.AI 的云服务位于美国区的 AWS 上，仅极少数获得授权的人员经审批后才可访问用户的数据。另外，我们的代码均在 GitHub 开源，如果你对云服务有安全担忧可以使用自部署版本。
+* [服务条款](https://dify.ai/terms)
+* [隐私政策](https://dify.ai/privacy)
 
-在 Dify 的自部署版本中，仅有一处调用 Dify 服务器，即检查当前版本更新 API 的功能。且必须由管理员在后台触发。其它没有任何使用到远程服务器的技术，因此你可以安全使用。
+#### 合规认证
 
-如果你仍有疑虑，可以通过设置防火墙等方式对数据进行保护。
+Dify.AI 已获取以下认证：
+
+* **SOC 2 Type I**
+* **SOC 2 Type II**
+* **ISO 27001:2022 Certification**
+* **GDPR DPA**
+
+如需了解如何下载并查看上述合规证书，请参考以下文档：
+
+{% content-ref url="get-compliance-report.md" %}
+[get-compliance-report.md](get-compliance-report.md)
+{% endcontent-ref %}
+

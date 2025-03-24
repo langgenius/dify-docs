@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 [Youtube](https://www.youtube.com/) は、最大のオンライン動画共有プラットフォームです。現在、Dify.ai には関連する2つのツール「Video Statistics」と「Free YouTube Transcript API」があり、URLまたはキーワードを入力することで動画情報を分析することができます。
 
 ## 1. Google Cloud サービスの使用を許可する

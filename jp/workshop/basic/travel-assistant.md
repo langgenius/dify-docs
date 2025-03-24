@@ -33,7 +33,7 @@ Difyが提供するGoogleツールはSerpAPIに基づいており、事前にSer
 
 1. SerpAPIのAPIキーを追加：
 
-[SearpAPI - API Key](https://serpapi.com/manage-api-key)にアクセスし、まだ登録していない場合は登録ページにリダイレクトされます。
+[SerpAPI - API Key](https://serpapi.com/manage-api-key)にアクセスし、まだ登録していない場合は登録ページにリダイレクトされます。
 
 SerpAPIは1か月に100回の無料呼び出しを提供しており、この実験を完了するのに十分です。追加クレジットが必要な場合は、残高を追加するか、他のオープンソースのソリューションを使用できます。
 

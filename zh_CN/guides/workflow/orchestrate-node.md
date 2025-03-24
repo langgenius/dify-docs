@@ -12,7 +12,7 @@ Chatflow 和 Workflow 类型应用内的节点均可以通过可视化拖拉拽�
 
 ### 设计串行结构
 
-点击两个节点中间连线的 + 号即可在中间添加一个串行节点；按照顺序将节点依次串线连接，最后将线收拢&#x81F3;**“结束”节点**（Workflow）/ **“直接回复”节点**（Chatflow）完成设计。
+点击两个节点中间连线的 + 号即可在中间添加一个串行节点；按照顺序将节点依次串线连接，最后将线收拢至 **“结束”节点**（Workflow）/ **“直接回复”节点**（Chatflow）完成设计。
 
 <figure><img src="../../.gitbook/assets/image (337).png" alt=""><figcaption><p>串行结构</p></figcaption></figure>
 

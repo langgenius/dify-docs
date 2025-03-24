@@ -2,6 +2,10 @@
 
 > Tool author @Dify.
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 The Google Search tool can help you obtain online search results when using LLM applications. Here are the steps to configure and use the Google Search tool in Dify.
 
 ## 1. Apply for Serp API Key

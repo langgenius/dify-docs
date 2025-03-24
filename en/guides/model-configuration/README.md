@@ -64,10 +64,10 @@ Dify uses [PKCS1\_OAEP](https://pycryptodome.readthedocs.io/en/latest/src/cipher
 
 Specific integration methods are not detailed here.
 
-* [Hugging Face](https://docs.dify.ai/advanced/model-configuration/hugging-face)
-* [Replicate](https://docs.dify.ai/advanced/model-configuration/replicate)
-* [Xinference](https://docs.dify.ai/advanced/model-configuration/xinference)
-* [OpenLLM](https://docs.dify.ai/advanced/model-configuration/openllm)
+* [Hugging Face](../../development/models-integration/hugging-face.md)
+* [Replicate](../../development/models-integration/replicate.md)
+* [Xinference](../../development/models-integration/xinference.md)
+* [OpenLLM](../../development/models-integration/openllm.md)
 
 ## Using Models
 

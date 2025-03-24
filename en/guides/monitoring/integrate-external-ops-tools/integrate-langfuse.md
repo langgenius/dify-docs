@@ -1,6 +1,6 @@
 # Integrate Langfuse
 
-### 1. What is Langfuse
+### What is Langfuse
 
 Langfuse is an open-source LLM engineering platform that helps teams collaborate on debugging, analyzing, and iterating their applications.
 
@@ -10,7 +10,7 @@ Introduction to Langfuse: [https://langfuse.com/](https://langfuse.com/)
 
 ***
 
-### 2. How to Configure Langfuse
+### How to Configure Langfuse
 
 1. Register and log in to Langfuse on the [official website](https://langfuse.com/)
 2. Create a project in Langfuse. After logging in, click **New** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
@@ -47,7 +47,7 @@ Once successfully saved, you can view the status on the current page. If it show
 
 ***
 
-### 3. Viewing Monitoring Data in Langfuse
+### Viewing Monitoring Data in Langfuse
 
 After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
 
@@ -57,7 +57,7 @@ After configuration, debugging or production data of the application in Dify can
 
 ***
 
-### 4 List of monitoring data
+### List of monitoring data
 
 #### Trace the information of Workflow and Chatflow
 

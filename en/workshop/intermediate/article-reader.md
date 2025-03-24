@@ -11,15 +11,12 @@ In this experiment, we will build the article reader as a case study. This assis
 * File upload usage
 * Basic usage of Chatflow
 * Prompt writing skill
-* Iteration node usage&#x20;
+* Iteration node usage
 * Doc extractor and list operator usage
 
 ## **Prerequisites**
 
 Create a Chatflow in Dify. Make sure you have added a model provider and have sufficient quota.
-
-{% @arcade/embed flowId="MKWZLfD4CtDJNQIOfLrI" url="https://app.arcade.software/share/MKWZLfD4CtDJNQIOfLrI" %}
-
 
 
 ## **Adding Nodes**
@@ -34,15 +31,11 @@ For more information on file upload, please read: [File Upload](../../guides/wor
 
 In the start node, you need to add a file variable and check the document in the supported file types.
 
-{% @arcade/embed flowId="oJXuUOTVI3UwWnSGafqE" url="https://app.arcade.software/share/oJXuUOTVI3UwWnSGafqE" %}
-
 
 
 Some readers might notice the `sys.files` in the system variables, which are files or file lists uploaded by users in the dialog box.
 
 The difference between creating your own file variables is that this feature requires enabling file upload in the functions and setting the upload file types, and each time a new file is uploaded in the dialog, this variable will be overwritten.
-
-{% @arcade/embed flowId="zJDTlwV4OrEt1GKqbaQ0" url="https://app.arcade.software/share/zJDTlwV4OrEt1GKqbaQ0" %}
 
 
 
@@ -117,7 +110,7 @@ Read the following article content and perform the task
 - **Quantity**: As many as possible, but each question should be meaningful and valuable.
 ```
 
-## **Question 1: Handling Multiple Uploaded Files**&#x20;
+## **Question 1: Handling Multiple Uploaded Files**
 
 To handle multiple uploaded files, an iterative node is needed.
 

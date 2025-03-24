@@ -13,7 +13,7 @@
 * **PUT**，用于向服务器上传资源，通常用于更新已存在的资源或创建新的资源。
 * **DELETE**，用于请求服务器删除指定的资源。
 
-你可以通过配置 HTTP 请求的包括 URL、请求头、查询参数、请求体内容以及认证信息等。&#x20;
+你可以通过配置 HTTP 请求的包括 URL、请求头、查询参数、请求体内容以及认证信息等。
 
 <figure><img src="../../../.gitbook/assets/image (52).png" alt="" width="332"><figcaption><p>HTTP 请求配置</p></figcaption></figure>
 

@@ -4,7 +4,7 @@
 
 下表说明了使用 Dify 前后开发 AI 应用的各环节差异：
 
-<table><thead><tr><th width="199">步骤</th><th width="293">未使用 LLMOps 平台</th><th width="289">使用 Dify LLMOps 平台</th><th>时间差异</th></tr></thead><tbody><tr><td>开发应用前&#x26;后端</td><td>集成和封装 LLM 能力，花费较多时间开发前端应用</td><td>直接使用 Dify 的后端服务，可基于 WebApp 脚手架开发</td><td>-80%</td></tr><tr><td>Prompt Engineering</td><td>仅能通过调用 API 或 Playground 进行</td><td>结合用户输入数据所见即所得完成调试</td><td>-25%</td></tr><tr><td>数据准备与嵌入</td><td>编写代码实现长文本数据处理、嵌入</td><td>在平台上传文本或绑定数据源即可</td><td>-80%</td></tr><tr><td>应用日志与分析</td><td>编写代码记录日志，访问数据库查看</td><td>平台提供实时日志与分析</td><td>-70%</td></tr><tr><td>数据分析与微调</td><td>技术人员进行数据管理和创建微调队列</td><td>非技术人员可协同，可视化模型调整</td><td>-60%</td></tr><tr><td>AI 插件开发与集成</td><td>编写代码创建、集成 AI 插件</td><td>平台提供可视化工具创建、集成插件能力</td><td>-50%</td></tr></tbody></table>
+<table><thead><tr><th width="199">步骤</th><th width="293">未使用 LLMOps 平台</th><th width="289">使用 Dify LLMOps 平台</th><th>时间差异</th></tr></thead><tbody><tr><td>开发应用前&后端</td><td>集成和封装 LLM 能力，花费较多时间开发前端应用</td><td>直接使用 Dify 的后端服务，可基于 WebApp 脚手架开发</td><td>-80%</td></tr><tr><td>Prompt Engineering</td><td>仅能通过调用 API 或 Playground 进行</td><td>结合用户输入数据所见即所得完成调试</td><td>-25%</td></tr><tr><td>数据准备与嵌入</td><td>编写代码实现长文本数据处理、嵌入</td><td>在平台上传文本或绑定数据源即可</td><td>-80%</td></tr><tr><td>应用日志与分析</td><td>编写代码记录日志，访问数据库查看</td><td>平台提供实时日志与分析</td><td>-70%</td></tr><tr><td>数据分析与微调</td><td>技术人员进行数据管理和创建微调队列</td><td>非技术人员可协同，可视化模型调整</td><td>-60%</td></tr><tr><td>AI 插件开发与集成</td><td>编写代码创建、集成 AI 插件</td><td>平台提供可视化工具创建、集成插件能力</td><td>-50%</td></tr></tbody></table>
 
 在使用 LLMOps 平台如 Dify 之前，基于 LLM 开发应用的过程可能会非常繁琐和耗时。开发者需要自行处理各个阶段的任务，这可能导致效率低下、难以扩展和安全性问题。以下是使用 LLMOps 平台前的开发过程：
 

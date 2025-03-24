@@ -64,7 +64,7 @@
     ![VariableNotFoundError](https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png)
 2.  **上下文结构无效（InvalidContextStructureError）**
 
-    &#x20;LLM 节点内的 [上下文](https://docs.dify.ai/guides/workflow/node/llm#explanation-of-special-variables) 接收到非法数据结构（如 `array[object]`）时会报错。
+    LLM 节点内的 [上下文](https://docs.dify.ai/guides/workflow/node/llm#explanation-of-special-variables) 接收到非法数据结构（如 `array[object]`）时会报错。
 
     > 上下文仅支持字符串（String）数据结构。
 

@@ -177,4 +177,4 @@ In the initial application's main interface, you can find "Logs & Ann." in the l
 
 For more head to 👉 [logs.md](../logs.md "mention") .
 
-<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/33333.png" alt=""><figcaption><p>Logs &#x26; Ann.</p></figcaption></figure>
+<figure><img src="/en/.gitbook/assets/guides/application_orchestrate/prompt-engineering/33333.png" alt=""><figcaption><p>Logs & Ann.</p></figcaption></figure>

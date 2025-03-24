@@ -1,4 +1,10 @@
 # ComfyUI
+
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
+
 [ComfyUI](https://www.comfy.org/): The most powerful and modular diffusion model GUI, api and backend with a graph/nodes interface. Now you can use it in dify, input the prompt or images, and get the generated image.
 
 ## 1. Ensure that the ComfyUI workflow is running normally.  

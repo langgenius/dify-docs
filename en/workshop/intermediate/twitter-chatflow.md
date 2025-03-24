@@ -33,10 +33,10 @@ Click to register: [crawlbase.com](https://crawlbase.com)
 
 Dify is an open-source LLM app development platform. You can choose cloud service or deploy it locally using docker compose.
 
-In this article, If you don’t want to deploy it locally, register a free Dify Cloud sandbox account here: [https://cloud.dify.ai/signin](https://cloud.dify.ai/signin).&#x20;
+In this article, If you don’t want to deploy it locally, register a free Dify Cloud sandbox account here: [https://cloud.dify.ai/signin](https://cloud.dify.ai/signin).
 
 {% hint style="info" %}
-Dify Cloud Sandbox users get 200 free credits, equivalent to 200 GPT-3.5 messages or 20 GPT-4 messages. &#x20;
+Dify Cloud Sandbox users get 200 free credits, equivalent to 200 GPT-3.5 messages or 20 GPT-4 messages. 
 {% endhint %}
 
 The following are brief tutorials on how to deploy Dify:
@@ -134,7 +134,7 @@ The following is a sample system prompt.
 
 ## Test run
 
-Click `Preview` to start a test run and input twitter user id in `id`&#x20;
+Click `Preview` to start a test run and input twitter user id in `id`
 
 <figure><img src="../../.gitbook/assets/%E6%88%AA%E5%B1%8F2024-09-02_23.41.03.png" alt=""><figcaption></figcaption></figure>
 

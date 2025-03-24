@@ -17,4 +17,6 @@
 * 访问 API
 * 发布为工具
 
-你也可以点击 **恢复** 预览上一次发布的应用版本，确认恢复将会使用上一次发布的工作流版本覆盖当前的工作流版本。
+{% hint style="info" %}
+如需管理多个版本的 聊天流/工作流，请参阅 [版本管理](https://docs.dify.ai/zh-hans/guides/management/version-control)。
+{% endhint %}

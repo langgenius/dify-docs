@@ -31,9 +31,9 @@ Dify 提供的 Google 工具基于 SerpAPI，因此需要提前进入 SerpAPI �
 
 具体操作步骤如下：
 
-1. 新增 SearpAPI 的 API Key：
+1. 新增 SerpAPI 的 API Key：
 
-进入[SearpAPI - API Key](https://serpapi.com/manage-api-key)，如果你尚未注册，会被跳转至进入注册页。
+进入[SerpAPI - API Key](https://serpapi.com/manage-api-key)，如果你尚未注册，会被跳转至进入注册页。
 
 SerpAPI提供一个月100次的免费调用次数，这足够我们完成本次实验了。如果你需要更多的额度，可以增加余额，或者使用其他的开源方案。
 

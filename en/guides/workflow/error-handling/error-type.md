@@ -15,7 +15,7 @@ This article summarizes the potential exceptions and corresponding error types t
 
 [Code](../node/code.md) nodes support running Python and JavaScript code for data transformation in workflows or chat flows. Here are 4 common runtime errors:
 
-1.  **Code Node Error (CodeNodeError)**&#x20;
+1.  **Code Node Error (CodeNodeError)**
 
     This error occurs due to exceptions in developer-written code, such as: missing variables, calculation logic errors, or treating string array inputs as string variables. You can locate the issue using the error message and exact line number.
 
@@ -45,7 +45,7 @@ This article summarizes the potential exceptions and corresponding error types t
 
 ### LLM Node
 
-The [LLM](../node/llm.md) node is a core component of Chatflow and Workflow, utilizing LLM' capabilities in dialogue, generation, classification, and processing to complete various tasks based on user input instructions.&#x20;
+The [LLM](../node/llm.md) node is a core component of Chatflow and Workflow, utilizing LLM' capabilities in dialogue, generation, classification, and processing to complete various tasks based on user input instructions.
 
 Here are 6 common runtime errors:
 
@@ -55,9 +55,9 @@ Here are 6 common runtime errors:
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/f20c5fbde345144de6183374ab277662.png" alt=""><figcaption></figcaption></figure>
 
-2.  **Invalid Context Structure Error (InvalidContextStructureError)**&#x20;
+2.  **Invalid Context Structure Error (InvalidContextStructureError)**
 
-    An error occurs when the context within the LLM node receives an invalid data structure (such as `array[object]`).&#x20;
+    An error occurs when the context within the LLM node receives an invalid data structure (such as `array[object]`).
 
     > Context only supports string (String) data structures.
 
@@ -82,14 +82,14 @@ Here are 6 common runtime errors:
 
 [HTTP](../node/http-request.md) nodes allow seamless integration with external services through customizable requests for data retrieval, webhook triggering, image generation, or file downloads via HTTP requests. Here are 5 common errors for this node:
 
-1.  **Authorization Configuration Error (AuthorizationConfigError)**&#x20;
+1.  **Authorization Configuration Error (AuthorizationConfigError)**
 
     This error occurs when authentication information (Auth) is not configured.
 2. **File Fetch Error (FileFetchError)** This error appears when file variables cannot be retrieved.
-3.  **Invalid HTTP Method Error (InvalidHttpMethodError)**&#x20;
+3.  **Invalid HTTP Method Error (InvalidHttpMethodError)**
 
     An error occurs when the request header method is not one of the following: GET, HEAD, POST, PUT, PATCH, or DELETE.
-4.  **Response Size Error (ResponseSizeError)**&#x20;
+4.  **Response Size Error (ResponseSizeError)**
 
     HTTP response size is limited to 10MB. An error occurs if the response exceeds this limit.
 5. **HTTP Response Code Error (HTTPResponseCodeError)** An error occurs when the request response returns a code that doesn't start with 2 (such as 200, 201). If exception handling is enabled, errors will occur for status codes 400, 404, and 500; otherwise, these won't trigger errors.
@@ -98,17 +98,17 @@ Here are 6 common runtime errors:
 
 The following 3 errors commonly occur during runtime:
 
-1.  **Tool Execution Error (ToolNodeError)**&#x20;
+1.  **Tool Execution Error (ToolNodeError)**
 
     An error that occurs during tool execution itself, such as when reaching the target API's request limit.
 
 
 
     <figure><img src="https://assets-docs.dify.ai/2024/12/84af0831b7cb23e64159dfbba80e9b28.jpg" alt="" width="375"><figcaption></figcaption></figure>
-2.  **Tool Parameter Error (ToolParameterError)**&#x20;
+2.  **Tool Parameter Error (ToolParameterError)**
 
     An error occurs when the configured tool node parameters are invalid, such as passing parameters that don't match the tool node's defined parameters.
-3.  **Tool File Processing Error (ToolFileError)**&#x20;
+3.  **Tool File Processing Error (ToolFileError)**
 
     An error occurs when the tool node cannot find the required files.
 

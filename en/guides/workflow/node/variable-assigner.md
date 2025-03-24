@@ -18,10 +18,6 @@ Using the variable assigner node, you can write context from the conversation pr
 
 **Scenario 1**
 
-You can write the **context during the conversation, the file uploaded to the chatting box (coming soon), the preference information entered by the user,etc.** into the conversation variable using **Variable Assigner** node. These stored information can be referenced in subsequent chats to guide different processing flows or provide responses.
-
-**Scenario 1**
-
 **Automatically judge and extract content**, store history in the conversation, record important user information through the session variable array within the conversation, and use this history content to personalize responses in subsequent chats.
 
 Example: After the conversation starts, LLM will automatically determine whether the user's input contains facts, preferences, or chat history that need to be remembered. If it has, LLM will first extract and store those information, then use it as context to respond. If there is no new information to remember, LLM will directly use the previously relevant memories to answer questions.

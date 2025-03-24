@@ -4,7 +4,7 @@ Here are four types of nodes that provide with predefined logic for handling une
 
 •  [LLM](../node/llm.md)
 
-•  [HTTP](../node/http-request.md)&#x20;
+•  [HTTP](../node/http-request.md)
 
 •  [Code](../node/code.md)
 
@@ -49,7 +49,7 @@ For instance, you might connect a mail tool node to send error notifications, pr
 
 <figure><img src="https://assets-docs.dify.ai/2024/12/e5ea1af947818bd9e27cab3042c1c4f3.png" alt=""><figcaption></figcaption></figure>
 
-A common approach to handling errors is enable fail branch on nodes. These nodes can address issues, and the corrected outputs can be merged back into the main flow by using variable aggregation nodes to ensure consistency in the final results.&#x20;
+A common approach to handling errors is enable fail branch on nodes. These nodes can address issues, and the corrected outputs can be merged back into the main flow by using variable aggregation nodes to ensure consistency in the final results.
 
 ### Exception Variables
 

@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify。
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 DALL-E 是由 OpenAI 开发的一种基于文本提示生成图像的工具。Dify 已接入 DALL-E 工具，以下是在 Dify 中配置和使用 DALL-E 绘图工具的步骤。
 
 ## 1. 申请 OpenAI 的 API Key

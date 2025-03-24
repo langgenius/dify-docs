@@ -2,6 +2,10 @@
 
 > 工具作者 @Dify。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 Stable Diffusionは、テキストプロンプトを基に画像を生成するツールです。DifyではStable DiffusionWebUI APIへのアクセスを実現しているため、Dify内で直接利用することができます。以下にDifyにStable Diffusionを統合する手順を説明します。
 
 ## 1. ローカル環境の初期化

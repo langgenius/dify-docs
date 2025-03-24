@@ -172,7 +172,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
     フォーマットは以下の通りです（直接接続モード）
 
-    <pre><code><strong>redis://&#x3C;redis_username>:&#x3C;redis_password>@&#x3C;redis_host>:&#x3C;redis_port>/&#x3C;redis_database>
+    <pre><code><strong>redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
     </strong><strong>  
     </strong></code></pre>
 
@@ -180,7 +180,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
     Sentinelモード
 
-    <pre><code><strong>sentinel://&#x3C;sentinel_username>:&#x3C;sentinel_password>@&#x3C;sentinel_host>:&#x3C;sentinel_port>/&#x3C;redis_database>
+    <pre><code><strong>sentinel://<sentinel_username>:<sentinel_password>@<sentinel_host>:<sentinel_port>/<redis_database>
     </strong><strong>  
     </strong></code></pre>
 
@@ -280,6 +280,8 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `tidb_vector`
     * `analyticdb`
     * `couchbase`
+    * `oceanbase`
+
 *   WEAVIATE\_ENDPOINT
 
     Weaviateエンドポイントアドレス（例：`http://weaviate:8080`）。
@@ -314,7 +316,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 
 *   MILVUS\_URI
 
-    MilvusのURI設定。例：http://localhost:19530 。Zilliz Cloudの場合は、URIとトークンを [パブリックエンドポイントとAPIキー](https://docs.zilliz.com/docs/on-zilliz-cloud-console#free-cluster-details) に調整してください。
+    MilvusのURI設定。例：`http://host.docker.internal:19530`。[Zilliz Cloud](https://zilliz.com/jp/cloud)の場合は、URIとトークンを パブリックエンドポイントとAPIキーに調整してください。
 
 *   MILVUS\_TOKEN
 
@@ -398,6 +400,34 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 *   COUCHBASE_SCOPE_NAME
 
     使用するスコープの名前です。
+
+*   OCEANBASE\_VECTOR\_HOST
+
+    OceanBase Vector ホスト。
+
+*   OCEANBASE\_VECTOR\_PORT
+
+    OceanBase Vector ポート。
+
+*   OCEANBASE\_VECTOR\_USER
+
+    OceanBase Vector ユーザー名。
+
+*   OCEANBASE\_VECTOR\_PASSWORD
+
+    OceanBase Vector パスワード。
+
+*   OCEANBASE\_VECTOR\_DATABASE
+
+    OceanBase Vector データベース名。
+
+*   OCEANBASE\_CLUSTER\_NAME
+
+    OceanBase クラスタ名，Docker デプロイメントのみ。
+
+*   OCEANBASE\_MEMORY\_LIMIT
+
+    OceanBase メモリ使用上限，Docker デプロイメントのみ。
 
 #### ナレッジベース設定
 
@@ -598,3 +628,21 @@ API サービスによってインターフェース ID 検証にのみ使用さ
 *   COOKIE\_SECURE
 
     クッキーの Secure 設定、デフォルトは false。
+
+### 文書チャンク長の設定
+
+#### MAXIMUM_CHUNK_TOKEN_LENGTH 
+
+文書チャンク長の設定。長文処理時のテキストセグメントサイズを制御するために使用。デフォルト値：500。最大値：4000。
+
+**大きなチャンク**
+- 単一のチャンク内により多くの文脈を保持でき、複雑または文脈依存のタスクに適しています。
+- チャンク数が減少し、処理時間やストレージの負担が軽減されます。
+
+**小さなチャンク**
+- より細かい粒度を提供し、正確な情報抽出や要約タスクに適しています。
+- モデルのトークン制限を超えるリスクを低減し、制限の厳しいモデルに適応します。
+
+**設定の推奨**
+- 大きなチャンク: 文脈依存性が高いタスク（例: 感情分析や長文の要約）に適しています。
+- 小さなチャンク: 詳細な分析が必要なタスク（例: キーワード抽出や段落レベルの内容処理）に適しています。

@@ -53,9 +53,9 @@ Password confirm: newpassword4567
 Password reset successfully.
 ```
 
-### 5. How to Change the Port&#x20;
+### 5. How to Change the Port
 
-If you're using Docker Compose, you can customize the access port by modifying the `.env` configuration file.&#x20;
+If you're using Docker Compose, you can customize the access port by modifying the `.env` configuration file.
 
 You need to modify the Nginx configuration:
 

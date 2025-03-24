@@ -70,7 +70,7 @@ IM 是天然的智能聊天机器人应用场景，校企用户有不少是使�
 
 为了让钉钉机器人的回复也实现打字机一样的流式输出效果，需要用到钉钉近来针对 AI 功能开放的 AI 卡片。
 
-进入钉钉开发者后台，顶部菜单 -> 开放能力 ->[卡片平台](https://open-dev.dingtalk.com/fe/card) -> 新建模版，来新建一个 AI 卡片模板，填入你喜欢的模版名称，卡片类型选择 **消息卡片**，卡片模板场景选择 **AI 卡片**，并 **关联刚才创建的应用**。
+进入钉钉开发者后台，顶部菜单 -> 开放能力 ->[卡片平台](https://open-dev.dingtalk.com/fe/card) -> 新建模板，来新建一个 AI 卡片模板，填入你喜欢的模板名称，卡片类型选择 **消息卡片**，卡片模板场景选择 **AI 卡片**，并 **关联刚才创建的应用**。
 
 <figure><img src="../../.gitbook/assets/dingtalk-ai-card-template-creation.jpg" alt=""><figcaption></figcaption></figure>
 
@@ -78,7 +78,7 @@ IM 是天然的智能聊天机器人应用场景，校企用户有不少是使�
 
 <figure><img src="../../.gitbook/assets/dingtalk-ai-card-edit.jpg" alt=""><figcaption></figcaption></figure>
 
-最后点击保存，发布，显示 “模版发布成功”，然后返回到刚才的模版列表页面，复制 \*\* 模版 ID\*\*，保存下来一会儿会用到。
+最后点击保存，发布，显示 “模板发布成功”，然后返回到刚才的模板列表页面，复制 \*\* 模板 ID\*\*，保存下来一会儿会用到。
 
 <figure><img src="../../.gitbook/assets/dingtalk-ai-card-temp-id.jpg" alt=""><figcaption></figcaption></figure>
 
@@ -117,7 +117,7 @@ DEFAULT_MAX_WORKERS=2
 DIFY_OPEN_API_URL="https://api.dify.ai/v1"
 # 用户各自上下文维持时间，默认 15 minutes，只对 chatbot app 有效
 DIFY_CONVERSATION_REMAIN_TIME=15
-# 钉钉 AI 卡片模版 ID，上文 2.3. 步骤里记录的
+# 钉钉 AI 卡片模板 ID，上文 2.3. 步骤里记录的
 DINGTALK_AI_CARD_TEMPLATE_ID="<your-dingtalk-ai-card-temp-id>"
 ```
 

@@ -5,3 +5,4 @@ This repository contains the documentation website code and Markdown source file
 ## License
 
 The Dify product documentation in the assets, content, and data folders are licensed under a [CC-BY license](LICENSE).
+

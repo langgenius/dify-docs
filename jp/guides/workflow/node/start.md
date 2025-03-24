@@ -59,7 +59,7 @@ Difyに組み込まれているファイル抽出ノードは、特定のフォ�
 | `sys.workflow_id`      | String       | ワークフローIDで、現在のワークフローアプリに含まれるすべてのノード情報を記録します。 | 開発能力のあるユーザー向けで、このパラメータを通じてワークフロー内のノード情報を追跡・記録できます。 |
 | `sys.workflow_run_id`  | String       | ワークフローアプリの実行IDで、ワークフローアプリの運用状況を記録します。 | 開発能力のあるユーザー向けで、このパラメータを通じてアプリの過去の実行状況を追跡できます。 |
 
-<figure><img src="https://docs.dify.ai/~gitbook/image?url=https%3A%2F%2F1288284732-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FCdDIVDY6AtAz028MFT4d%252Fuploads%252FrN6uw5MOfjV2xsDnQsV1%252Fimage.png%3Falt%3Dmedia%26token%3D309a9336-7bd7-4ef6-8621-779538245e25&#x26;width=768&#x26;dpr=4&#x26;quality=100&#x26;sign=9d7d625a&#x26;sv=1" alt=""><figcaption><p>ワークフロータイプアプリのシステム変数</p></figcaption></figure>
+<figure><img src="https://docs.dify.ai/~gitbook/image?url=https%3A%2F%2F1288284732-files.gitbook.io%2F%7E%2Ffiles%2Fv0%2Fb%2Fgitbook-x-prod.appspot.com%2Fo%2Fspaces%252FCdDIVDY6AtAz028MFT4d%252Fuploads%252FrN6uw5MOfjV2xsDnQsV1%252Fimage.png%3Falt%3Dmedia%26token%3D309a9336-7bd7-4ef6-8621-779538245e25&width=768&dpr=4&quality=100&sign=9d7d625a&sv=1" alt=""><figcaption><p>ワークフロータイプアプリのシステム変数</p></figcaption></figure>
 
 **チャットフロー**
 

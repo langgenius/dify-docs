@@ -1,4 +1,4 @@
-# Self Host / Local Deployment Frequently Asked Questions (FAQs)
+# Self Host / Local Deployment
 
 ### 1. How to reset the password if it is incorrect after local deployment initialization?
 

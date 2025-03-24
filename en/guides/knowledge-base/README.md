@@ -2,7 +2,7 @@
 
 Dify’s Knowledge feature visualizes each stage of the RAG pipeline, providing a friendly UI for application builders to easily manage personal or team knowledge. It also allows for seamless integration into AI applications.
 
-Developers can upload internal company documents, FAQs, and standard working guides, then process them into structured data that large language models (LLMs) can query.&#x20;
+Developers can upload internal company documents, FAQs, and standard working guides, then process them into structured data that large language models (LLMs) can query.
 
 Compared with the static pre-trained datasets built into AI models, the content in a knowledge base can be updated in real time, ensuring LLMs always have access to the latest information and helping avoid problems caused by outdated or missing data.
 
@@ -34,9 +34,9 @@ By simply uploading files to the **Knowledge Base**, data processing is handled 
 
 ### **Use Case**
 
-If you want to create an AI customer support assistant based on your existing knowledge base and product documentation, you can simply upload those files to the Knowledge Base in Dify, then set up a conversational application.&#x20;
+If you want to create an AI customer support assistant based on your existing knowledge base and product documentation, you can simply upload those files to the Knowledge Base in Dify and then set up a conversational application.
 
-Traditionally, going from raw text training to a fully developed AI customer support chatbot could take weeks, plus it’s challenging to maintain and iterate effectively.&#x20;
+Traditionally, going from raw text training to a fully developed AI customer support chatbot could take weeks, plus it’s challenging to maintain and iterate effectively.
 
 In Dify, the entire process takes just three minutes, after which you can immediately begin gathering user feedback.
 

@@ -1,4 +1,9 @@
 # ComfyUI
+
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 [ComfyUI](https://www.comfy.org/) 是一个强大的、模块化的生成图形的平台。现在你可以在 Dify 中使用它， 传入图片的提示词或图片文件， 得到生成的图片。
 
 ## 1. 确保已能正常运行 ComfyUI 的工作流
