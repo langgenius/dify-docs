@@ -9,10 +9,11 @@ Taking a chat assistant as an example, the process is as follows:
 1. Go to **Knowledge -- Create Knowledge -- Upload file**
 2. Go to **Studio -- Create Application -- Select Chatbot**
 3. Enter **Context**, click **Add**, and select one of the knowledge base created
-4. In **Context Settings -- Retrieval Setting**, configure the **Retrieval Setting**
-5. Enable **Citation and Attribution** in **Add Features**
-6. In **Debug and Preview**, input user questions related to the knowledge base for debugging
-7. After debugging, click **Publish** button to make an AI application based on your own knowledge!
+4. Use **Metadata Filtering** to refine document search in your knowledge base
+5. In **Context Settings -- Retrieval Setting**, configure the **Retrieval Setting**
+6. Enable **Citation and Attribution** in **Add Features**
+7. In **Debug and Preview**, input user questions related to the knowledge base for debugging
+8. After debugging, click **Publish** button to make an AI application based on your own knowledge!
 
 ***
 
@@ -66,6 +67,171 @@ Dify currently supports multiple Rerank models. To use external Rerank models, y
 
 * **TopK**: Determines how many text chunks, deemed most similar to the user’s query, are retrieved. It also automatically adjusts the number of chunks based on the chosen model’s context window. The default value is **3**, and higher numbers will recall more text chunks.
 * **Score Threshold**: Sets the minimum similarity score required for a chunk to be retrieved. Only chunks exceeding this score are retrieved. The default value is **0.5**. Higher thresholds demand greater similarity and thus result in fewer chunks being retrieved.
+
+### Metadata Filtering
+
+#### Chatflow/Workflow
+
+The **Knowledge Retrieval** node allows you to filter documents using metadata fields.
+
+#### Steps
+
+1. Select Filter Mode:
+    - **Disabled (Default):** No metadata filtering.
+
+    - **Automatic:** Filters auto-configure from query variables in the **Knowledge Retrieval** node.
+
+    > Note: Automatic Mode requires model selection for document retrieval.
+
+    ![model_selection](https://assets-docs.dify.ai/2025/03/fe387793ad9923660f9f9470aacff01b.png)
+
+    - **Manual:** Configure filters manually.
+
+![Filter mode](https://assets-docs.dify.ai/2025/03/ec6329e265e035e3a0d6941c9313a19d.png)
+
+2. For Manual Mode, follow these steps:
+
+    1. Click **Conditions** to open the configuration panel.
+
+    ![Conditions](https://assets-docs.dify.ai/2025/03/cd80d150f6f5646350b7ac8dfee46429.png)
+
+    2. Click **+Add Condition**:
+        - Select metadata fields within your chosen knowledge base from the dropdown list.
+        > Note: When multiple knowledge bases are selected, only common metadata fields are shown in the list.
+        - Use the search box to find specific fields.
+
+    ![Add Condition](https://assets-docs.dify.ai/2025/03/72678c4174f753f306378b748fbe6635.png)
+
+    3. Click **+Add Condition** to add more fields.
+
+    ![Add more fields](https://assets-docs.dify.ai/2025/03/aeb518c40aabdf467c9d2c23016d0a16.png)
+
+    4. Configure filter conditions:
+
+    <table border="0" style="border-collapse: collapse; width: 100%;">
+    <tr style="background-color: #f5f5f5;">
+        <td width="15%">Field Type</td>
+        <td width="20%">Operator</td>
+        <td width="65%">Description and Examples</td>
+    </tr>
+    <tr>
+        <td rowspan="8">String</td>
+        <td>is</td>
+        <td>Exact match required. Example: <code>is "Published"</code> returns only documents marked exactly as “Published”.</td>
+    </tr>
+    <tr>
+        <td>is not</td>
+        <td>Excludes exact matches. Example: <code>is not "Draft"</code> returns all documents except those marked as “Draft”.</td>
+    </tr>
+    <tr>
+        <td>is empty</td>
+        <td>Returns documents where the field has no value.</td>
+    </tr>
+    <tr>
+        <td>is not empty</td>
+        <td>Returns documents where the field has any value.</td>
+    </tr>
+    <tr>
+        <td>contains</td>
+        <td>Matches partial text. Example: <code>contains "Report"</code> returns “Monthly Report”, “Annual Report”, etc.</td>
+    </tr>
+    <tr>
+        <td>not contains</td>
+        <td>Excludes documents containing specified text. Example: <code>not contains "Draft"</code> returns documents without “Draft” in the field.</td>
+    </tr>
+    <tr>
+        <td>starts with</td>
+        <td>Matches text at beginning. Example: <code>starts with "Doc"</code> returns “Doc1”, “Document”, etc.</td>
+    </tr>
+    <tr>
+        <td>ends with</td>
+        <td>Matches text at end. Example: <code>ends with "2024"</code> returns “Report 2024”, “Summary 2024”, etc.</td>
+    </tr>
+    <tr>
+        <td rowspan="8">Number</td>
+        <td>=</td>
+        <td>Exact number match. Example: <code>= 10</code> returns documents marked with exactly 10.</td>
+    </tr>
+    <tr>
+        <td>≠</td>
+        <td>Excludes specific number. Example: <code>≠ 5</code> returns all documents except those marked with 5.</td>
+    </tr>
+    <tr>
+        <td>></td>
+        <td>Greater than. Example: <code>> 100</code> returns documents with values above 100.</td>
+    </tr>
+    <tr>
+        <td><</td>
+        <td>Less than. Example: <code>< 50</code> returns documents with values below 50.</td>
+    </tr>
+    <tr>
+        <td>≥</td>
+        <td>Greater than or equal to. Example: <code>≥ 20</code> returns documents with values 20 or higher.</td>
+    </tr>
+    <tr>
+        <td>≤</td>
+        <td>Less than or equal to. Example: <code>≤ 200</code> returns documents with values 200 or lower.</td>
+    </tr>
+    <tr>
+        <td>is empty</td>
+        <td>Field has no value assigned. For example, <code>is empty</code> returns all documents where this field has no number assigned.</td>
+    </tr>
+    <tr>
+        <td>is not empty</td>
+        <td>Field has a value assigned. For example, <code>is not empty</code> returns all documents where this field has a number assigned.</td>
+    </tr>
+    <tr>
+        <td rowspan="5">Date</td>
+        <td>is</td>
+        <td>Exact date match. Example: <code>is "2024-01-01"</code> returns documents dated January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>before</td>
+        <td>Prior to date. Example: <code>before "2024-01-01"</code> returns documents dated before January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>after</td>
+        <td>After date. Example: <code>after "2024-01-01"</code> returns documents dated after January 1, 2024.</td>
+    </tr>
+    <tr>
+        <td>is empty</td>
+        <td>Returns documents with no date value.</td>
+    </tr>
+    <tr>
+        <td>is not empty</td>
+        <td>Returns documents with any date value.</td>
+    </tr>
+</table>
+    
+5. Add filter values:
+
+    - **Variable:** Select from existing **Chatflow/Workflow** variables. 
+
+    ![Variable](https://assets-docs.dify.ai/2025/03/4c2c55ffcf0f72553fabdf23f86597d0.png)
+
+    - **Constant:** Enter specific values.
+
+    > Time-type fields can only be filtered by constants The date picker is for time-type fields.
+
+    ![Date picker](https://assets-docs.dify.ai/2025/03/593da1575ddc995d938bd0cc3847cf3c.png)
+
+{% hint style="warning" %}
+Filter values are case-sensitive and require exact matches. Example: a filter `starts with “App”` or `contains “App”` will match “Apple” but not “apple” or “APPLE”.
+{% endhint %}
+
+6. Set logic operators:
+    - `AND`: Match all conditions
+    - `OR`: Match any condition
+
+![Logic](https://assets-docs.dify.ai/2025/03/822dac015308dc5c01768afc0697c1ad.png)
+
+7. Click outside the panel to save your settings.
+
+#### Chatbot
+
+Access **Metadata Filtering** below **Knowledge** (bottom-left). Configuration steps are the same as in **Chatflow/Workflow**.
+
+![Chatbot](https://assets-docs.dify.ai/2025/03/9d9a64bde687a686f24fd99d6f193c57.png)
 
 ### View Linked Applications in the Knowledge Base
 

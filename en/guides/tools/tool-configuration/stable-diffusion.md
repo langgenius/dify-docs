@@ -1,5 +1,9 @@
 # Stable Diffusion
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 Stable Diffusion is a tool for generating images based on text prompts, Dify has implemented the interface to access the Stable Diffusion WebUI API, so you can use it directly in Dify. followings are steps to integrate Stable Diffusion in Dify.
 
 ## 1. Make sure you have a machine with a GPU

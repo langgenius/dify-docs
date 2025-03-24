@@ -1,11 +1,11 @@
-# Create Knowledge
+# Create Knowledge Base
 
 Steps to upload documents to create a knowledge base:
 
 1. Create a knowledge base and import either local document file or online data.
 
 {% content-ref url="create-knowledge-and-upload-documents/1.-import-text-data/" %}
-[1.-import-text-data](create-knowledge-and-upload-documents/1.-import-text-data/)
+[1.-import-text-data](create-knowledge-and-upload-documents/1.-import-text-data/README.md)
 {% endcontent-ref %}
 
 2. Choose a chunking mode and preview the spliting results. This stage involves content preprocessing and structuring, where long texts are divided into multiple smaller chunks.
@@ -50,9 +50,12 @@ Differences in supported file formats for parsing:
 Different ETL solutions may have differences in file extraction effects. For more information on Unstructured ETL’s data processing methods, please refer to the [official documentation](https://docs.unstructured.io/open-source/core-functionality/partitioning).
 {% endhint %}
 
-#### Embedding
+#### **Embedding**
 
 **Embedding** transforms discrete variables (words, sentences, documents) into continuous vector representations, mapping high-dimensional data to lower-dimensional spaces. This technique preserves crucial semantic information while reducing dimensionality, enhancing content retrieval efficiency.
 
 **Embedding models**, specialized large language models, excel at converting text into dense numerical vectors, effectively capturing semantic nuances for improved data processing and analysis.
 
+#### **Metadata**
+
+For managing the knowledge base with metadata, see *[Metadata](https://docs.dify.ai/guides/knowledge-base/metadata)*.

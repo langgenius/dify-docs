@@ -2,6 +2,10 @@
 
 > 工具作者 @SearchApi。
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 SearchApi 是一个强大的实时 SERP API，可提供来自 Google 搜索、Google 招聘、YouTube、Google 新闻等搜索引擎集合的结构化数据。以下是在 Dify 中配置和使用 SearchApi 搜索工具的步骤。
 
 ## 1. 申请 Search API Key

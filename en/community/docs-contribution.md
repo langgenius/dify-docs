@@ -6,10 +6,11 @@ Dify documentation is an [open-source project](https://github.com/langgenius/dif
 
 We categorize documentation issues into two main types:
 
-* Content Corrections (Typos / Inaccuracies)
-* Content Additions (New documentation)
+* Content Corrections
+* Content Additions
+* Best Practices
 
-### Content Errors
+### Content Corrections
 
 If you encounter errors while reading a document or wish to suggest modifications, please use the **"Edit on GitHub"** button located in the table of contents on the right side of the document page. Utilize GitHub's built-in online editor to make your changes, then submit a pull request with a concise description of your edits. Please format your pull request title as `Fix: Update xxx`. We'll review your submission and merge the changes if everything looks good.
 
@@ -31,13 +32,42 @@ git clone https://github.com/<your-github-account>/dify-docs.git
 
 > Note: You can also use GitHub's online code editor to submit new Markdown files directly in the appropriate directory.
 
-1. Locate the relevant document directory and add your file
+2. Locate the relevant document directory and add your file
 
 For instance, if you're contributing documentation for third-party tools, please add new `.md` files to the `/guides/tools/tool-configuration/` directory.
 
 3. Submit a pull request
 
 When submitting a pull request, please use the format `Docs: Add xxx` for the title and provide a brief description in the comment field. We'll review your submission and merge the changes if everything is in order.
+
+### Best Practices
+
+We warmly encourage you to share the creative application scenarios you have built with Dify! To help community members better understand and replicate your hands-on experience, we recommend structuring your content as follows:
+
+
+```text
+1. Introduction
+   - Application scenarios and problems addressed
+   - Key features and highlights
+   - Final results and demonstrations
+
+2. Project Principles / Process Overview
+
+3. Prerequisites (if any)
+   - Required resource list
+   - Tool and dependency requirements
+
+4. Implementation in the Dify Platform (Suggested Steps)
+   - Application creation and basic configurations
+   - Process-building guide
+   - Configuration details for key nodes
+
+5. FAQ
+```
+
+> For images and screenshots, please use online image hosting links in your documentation.
+
+We look forward to your valuable contributions and to fostering knowledge within the Dify community together!
 
 ## Getting Help
 

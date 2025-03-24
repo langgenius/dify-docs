@@ -1,5 +1,3 @@
-はい、承知いたしました。以下に、ご提示いただいた中国語の原文を、より自然で分かりやすい日本語に再翻訳します。オリジナルの形式は維持し、翻訳の問題点を考慮して修正しました。
-
 # カスタムモデルの組み込み
 
 カスタムモデルとは、ユーザー自身でデプロイまたは設定する必要があるLLMのことです。この記事では、[Xinferenceモデル](https://inference.readthedocs.io/en/latest/)を例に、モデルプラグイン内でカスタムモデルを組み込む方法を解説します。
@@ -320,8 +318,8 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 プラグインをDify マーケットプレイスに公開する場合は、以下を参照してください。
 
-{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace.md" %}
-[publish-to-dify-marketplace.md](../../../publish-plugins/publish-to-dify-marketplace.md)
+{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace/" %}
+[publish-to-dify-marketplace](../../../publish-plugins/publish-to-dify-marketplace/)
 {% endcontent-ref %}
 
 ### さらに詳しく

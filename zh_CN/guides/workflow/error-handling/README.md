@@ -12,8 +12,6 @@ description: 作者：Allen, Evan
 
 开发者无需在节点内编排复杂的逻辑代码或额外的节点应对错误情况。异常处理机制将简化工作流的设计复杂度，以多样的预设策略编排工作流的执行逻辑。
 
-{% @arcade/embed flowId="g0ePRj5dA5WVv6noiPKX" url="https://app.arcade.software/share/g0ePRj5dA5WVv6noiPKX" %}
-
 ### 应用场景
 
 **1. 网络异常处理**
@@ -91,8 +89,6 @@ def main(json_str: str) -> dict:
 
 A 代码节点是验证 JSON 内容的节点，如果接收到的 JSON 内容格式错误，需要通过异常处理机制运行备用路径，让下一个 LLM 节点修复错误内容并重新验证 JSON 从而继续主流程。在 A 代码节点的“异常处理”选项卡中，选择“异常分支”并新建 LLM 节点。
 
-{% @arcade/embed flowId="rKbAJ2tYTbTA9JXhMMun" url="https://app.arcade.software/share/rKbAJ2tYTbTA9JXhMMun" %}
-
 #### 3. 修正 A 代码节点输出的异常内容
 
 在新的 LLM 节点中，填写 Prompt 并通过变量引用 A 代码节点的异常输出内容，并进行修复。添加 B 代码节点对 JSON 内容进行二次验证。
@@ -137,8 +133,6 @@ A 代码节点是验证 JSON 内容的节点，如果接收到的 JSON 内容格
 
 #### 1. 启用异常处理机制前后的区别是什么？
 
-<<<<<<< HEAD
-<<<<<<< HEAD
 #### **没有错误处理机制时：**
 
 * **节点错误中断流程**：当 LLM 调用失败、网络出现问题或工具出错时，整个工作流程会立即中断，应用开发者需要手动查找并修复错误后重新运行流程。

@@ -247,7 +247,7 @@ class SlackEndpoint(Endpoint):
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=remote-url
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
@@ -293,6 +293,8 @@ python -m main
 确认插件能够正常运行后，可以通过以下命令行工具打包并命名插件。运行以后你可以在当前文件夹发现 `slack_bot.difypkg` 文件，该文件为最终的插件包。
 
 ```bash
+# Replace ./slack_bot with your actual plugin project path.
+
 dify plugin package ./slack_bot
 ```
 

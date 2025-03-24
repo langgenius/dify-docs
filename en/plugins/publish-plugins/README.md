@@ -15,7 +15,7 @@ To accommodate the various publishing needs of developers, Dify provides three p
 
 **Publication Process**:
 
-* Submit the plugin project to the **Dify Marketplace** code repository.
+* Submit the plugin project to the **Dify Marketplace** [code repository](https://github.com/langgenius/dify-plugins).
 * After an official review, the plugin will be publicly released in the marketplace for other users to install and use.
 
 For detailed instructions, please refer to:

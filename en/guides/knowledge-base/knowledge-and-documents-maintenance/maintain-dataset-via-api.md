@@ -2,7 +2,7 @@
 
 > The authentication and invocation methods for the Knowledge Base API are consistent with the Application Service API. However, a single Knowledge Base API token generated has the authority to operate on all visible knowledge bases under the same account. Please pay attention to data security.
 
-### Advantages of Utilizing Knowledge Base API
+## Advantages of Utilizing Knowledge Base API
 
 Leveraging the API for knowledge base maintenance significantly enhances data processing efficiency. It enables seamless data synchronization via command-line interfaces, facilitating automated operations instead of manipulating the user interface.
 
@@ -13,15 +13,15 @@ Key advantages include:
 * Flexible Content Ingestion: Accommodates both plain text and file upload methodologies, supporting batch operations for addition and modification of content chunks.
 * Enhanced Productivity: Minimizes manual data handling requirements, thereby optimizing the overall user experience on the Dify platform.
 
-### How to Use
+## How to Use
 
 Navigate to the knowledge base page, and you can switch to the **API ACCESS** page from the left navigation. On this page, you can view the dataset API documentation provided by Dify and manage the credentials for accessing the dataset API in **API Keys**.
 
 <figure><img src="../../../.gitbook/assets/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API Document</p></figcaption></figure>
 
-### API Requesting Examples
+## API Requesting Examples
 
-#### **Create a document from text**
+### Create a document from text
 
 This api is based on an existing Knowledge and creates a new document through text based on this Knowledge.
 
@@ -66,7 +66,7 @@ Response example:
 }
 ```
 
-#### Create a Document from a file
+### Create a Document from a file
 
 This API is based on an existing knowledge and creates a new document through a file based on this knowledge.
 
@@ -108,7 +108,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### Create Documents from a File
+### Create Documents from a File
 
 This api is based on an existing Knowledge and creates a new document through a file based on this Knowledge.
 
@@ -154,7 +154,7 @@ Response example:
 
 ```
 
-#### Create an Empty Knowledge Base
+### Create an Empty Knowledge Base
 
 {% hint style="warning" %}
 Only used to create an empty knowledge base.
@@ -193,7 +193,7 @@ Response example:
 }
 ```
 
-#### Get Knowledge Base List
+### Get Knowledge Base List
 
 Request example:
 
@@ -231,7 +231,7 @@ Response example:
 }
 ```
 
-#### Delete a Knowledge Base
+### Delete a Knowledge Base
 
 Request example:
 
@@ -291,7 +291,7 @@ Response example:
 }
 ```
 
-#### Update a document with a file
+### Update a document with a file
 
 This api is based on an existing Knowledge, and updates documents through files based on this Knowledge.
 
@@ -336,7 +336,7 @@ Response example:
 }
 ```
 
-#### Get Document Embedding Status (Progress)
+### Get Document Embedding Status (Progress)
 
 Request example:
 
@@ -366,7 +366,7 @@ Response example:
 }
 ```
 
-#### Delete a Document
+### Delete a Document
 
 Request example:
 
@@ -383,7 +383,7 @@ Response example:
 }
 ```
 
-#### Get the Document List of a Knowledge Base
+### Get the Document List of the Knowledge Base
 
 Request example:
 
@@ -423,7 +423,7 @@ Response example:
 }
 ```
 
-#### Add Chunks to a Document
+### Add Chunks to a Document
 
 Request example:
 
@@ -511,7 +511,7 @@ Response example:
 }
 ```
 
-#### Delete a Chunk in a Document
+### Delete a Chunk in a Document
 
 Request example:
 
@@ -529,7 +529,7 @@ Response example:
 }
 ```
 
-#### Update a Chunk in a Document
+### Update a Chunk in a Document
 
 Request example:
 
@@ -573,7 +573,7 @@ Response example:
 }
 ```
 
-#### Retrieve Chunks from a Knowledge Base
+### Retrieve Chunks from the Knowledge Base
 
 Request example:
 
@@ -655,6 +655,151 @@ Response example:
 }
 ```
 
+
+### Add Metadata Fields to the Knowledge Base
+
+Request example:
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "type":"string",
+    "name":"test"
+}'
+```
+
+Response example:
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+### Modify Metadata Fields in the Knowledge Base
+
+Request example:
+
+```bash
+curl --location --request PATCH 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata/{metadata_id}' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "name":"test"
+}'
+```
+
+Response example:
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+### Delete Metadata Fields in the Knowledge Base
+
+Request example:
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/{metadata_id}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+Response example:
+
+```json
+200 success
+```
+
+#### Enable/Disable Built-in Fields in the Knowledge Base
+
+Request example:
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/built-in/{action}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+Response example:
+
+```json
+200 success
+```
+
+### Modify Metadata for a Single Document (Assignment)
+
+Request example:
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/documents/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}'
+--data '{
+    "operation_data":[
+        {
+            "document_id": "3e928bc4-65ea-4201-87c8-cbcc5871f525",
+            "metadata_list": [
+                    {
+                    "id": "1887f5ec-966f-4c93-8c99-5ad386022f46",
+                    "value": "dify",
+                    "name": "test"
+                }
+            ]
+        }
+    ]
+}'
+```
+
+Response example:
+
+```json
+200 success
+```
+
+### Metadata List of the Dataset
+
+Request example:
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+Response example:
+
+```json
+{
+  "doc_metadata": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string",
+      "name": "title",
+      "use_count": 42
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "type": "number",
+      "name": "price",
+      "use_count": 28
+    },
+    {
+      "id": "7ba7b810-9dad-11d1-80b4-00c04fd430c9",
+      "type": "time",
+      "name": "created_at",
+      "use_count": 35
+    }
+  ],
+  "built_in_field_enabled": true
+}
+```
+
 ### Error message
 
 Response example:
@@ -681,4 +826,4 @@ Response example:
 | invalid\_action               | 400    | Invalid action.                                                                              |
 | document\_already\_finished   | 400    | The document has been processed. Please refresh the page or go to the document details.      |
 | document\_indexing            | 400    | The document is being processed and cannot be edited.                                        |
-| invalid\_metadata             | 400    | The metadata content is incorrect. Please check and verify.                                  |
+| invalid\_metadata             | 400    | The metadata content is incorrect. Please check and verify.        

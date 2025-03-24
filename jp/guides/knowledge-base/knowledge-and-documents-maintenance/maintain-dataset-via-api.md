@@ -1,27 +1,27 @@
-# APIによるデータセットの維持
+# APIを活用したナレッジベースのメンテナンス
 
 > 認証や呼び出し方法はサービスAPIと同様ですが、生成される各ナレッジベースAPIトークンには、現在のアカウントでアクセス可能なすべてのナレッジベースを操作する権限が付与されています。データの安全性には十分ご注意ください。
 
-### ナレッジベースAPIを使用するのメリット
+## ナレッジベースAPI活用のメリット
 
-APIを利用してナレッジベースを管理することで、データ処理の効率が大幅に向上します。コマンドラインを使ってデータの同期を簡単に行え、自動化も可能になるため、ユーザーインターフェースでの手間のかかる操作が不要になります。
+APIによるナレッジベース管理はデータ処理効率を飛躍的に向上させます。コマンドラインからのデータ同期や自動化操作を容易に実現でき、UI操作の煩雑さから解放されます。
 
-主なメリットは以下の通りです：
+主なメリット：
 
-* **自動同期**: データシステムとDifyナレッジベースをシームレスに統合し、効率的なワークフローを実現します。
-* **包括的な管理**: ナレッジベースリスト、ドキュメントリスト、詳細クエリなどの機能を提供し、自分だけのデータ管理画面を簡単に作成できます。
-* **柔軟なアップロード**: 純粋なテキストやファイルのアップロード方法をサポートし、セグメント（Chunks）コンテンツに対する一括追加や変更が可能です。
-* **効率の向上**: 手動処理の時間を短縮し、Difyプラットフォームの利用体験を向上させます。
+* **自動同期**: データシステムとDifyナレッジベースをシームレスに連携し、効率的なワークフローを構築。
+* **総合管理**: ナレッジベースリスト、ドキュメントリスト、詳細検索機能を提供し、カスタム管理インターフェースの構築が可能。
+* **柔軟なアップロード**: テキスト直接入力とファイルアップロードを両方サポート、チャンク単位の一括操作に対応。
+* **生産性向上**: 手動作業時間を削減し、Difyプラットフォームの利用体験を最適化。
 
-### 使用方法
+## 使用方法
 
-ナレッジベースページにアクセスし、左側のナビゲーションで **API** ページに切り替えます。このページでは、Difyが提供するナレッジベースAPIドキュメントを確認し、 **APIキー** でナレッジベースAPIにアクセスするための資格情報を管理できます。
+ナレッジベース管理画面左側ナビゲーションの**API**ページにアクセス。APIドキュメントの閲覧や、**APIキー**による認証情報の管理が可能です。
 
-<figure><img src="../../.gitbook/assets/knowledge-base-api-token.png" alt=""><figcaption><p>Knowledge API ドキュメント</p></figcaption></figure>
+<figure><img src="../../.gitbook/assets/knowledge-base-api-token.png" alt=""><figcaption><p>ナレッジベースAPIドキュメント</p></figcaption></figure>
 
-### API呼び出しの例
+## API呼び出しの例
 
-#### テクストを通してドキュメントを作成する
+### テクストを通してドキュメントを作成する
 
 入力例：
 
@@ -64,7 +64,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 }
 ```
 
-#### ファイルを通してドキュメントを作成する
+### ファイルを通してドキュメントを作成する
 
 入力例：
 
@@ -108,7 +108,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 
 ```
 
-#### **空白のナレッジベースを作成する**
+### 空白のナレッジベースを作成する
 
 {% hint style="warning" %}
 空のデータセットを作成するためだけに使用
@@ -147,7 +147,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets' \
 }
 ```
 
-#### **ナレッジベースリスト**
+### ナレッジベースリスト
 
 入力例：
 
@@ -185,7 +185,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets?page=1&limit=20' 
 }
 ```
 
-#### ナレッジベースの削除
+### ナレッジベースの削除
 
 入力例：
 
@@ -200,7 +200,7 @@ curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}' 
 204 No Content
 ```
 
-#### テクストを通してドキュメントを更新する
+### テクストを通してドキュメントを更新する
 
 このAPIは存在しているナレッジベースにしか使えます。
 
@@ -245,7 +245,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 }
 ```
 
-#### ファイルを通してドキュメントを更新する
+### ファイルを通してドキュメントを更新する
 
 このAPIは存在しているナレッジベースにしか使えます。
 
@@ -290,7 +290,7 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
 }
 ```
 
-#### **ドキュメント埋め込みステータス(進捗状況)の取得**
+### ドキュメント埋め込みステータス(進捗状況)の取得
 
 入力例：
 
@@ -320,7 +320,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **ドキュメントの削除**
+### ドキュメントの削除
 
 入力例：
 
@@ -337,7 +337,7 @@ curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/d
 }
 ```
 
-#### **ナレッジベースのドキュメントのリスト**
+### ナレッジベースのドキュメントのリスト
 
 入力例：
 
@@ -377,7 +377,7 @@ curl --location --request GET 'https://api.dify.ai/v1/datasets/{dataset_id}/docu
 }
 ```
 
-#### **新しセグメントを増加**
+### 新しセグメントを増加
 
 入力例：
 
@@ -524,6 +524,152 @@ curl --location --request POST 'https://api.dify.ai/v1/datasets/{dataset_id}/doc
     "stopped_at": null
   }],
   "doc_form": "text_model"
+}
+```
+
+### ナレッジベースのメタデータフィールドを追加する
+
+入力例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "type":"string",
+    "name":"test"
+}'
+```
+
+出力例：
+
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+### ナレッジベースのメタデータフィールドを修正する
+
+入力例：
+
+```bash
+curl --location --request PATCH 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata/{metadata_id}' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}' \
+--data '{
+    "name":"test"
+}'
+```
+
+
+出力例：
+
+```json
+{
+    "id": "9f63c91b-d60e-4142-bb0c-c81a54dc2db5",
+    "type": "string",
+    "name": "test"
+}
+```
+
+### ナレッジベースのメタデータフィールドを削除する
+
+入力例：
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/{metadata_id}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+出力例：
+
+```json
+200 success
+```
+
+### ナレッジベースのメタデータにある組み込みフィールドを有効化/無効化する
+
+入力例：
+
+```bash
+curl --location --request DELETE 'https://api.dify.ai/v1/datasets/{dataset_id}/document/metadata/built-in/{action}' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+出力例：
+
+```json
+200 success
+```
+
+### ドキュメントのメタデータを修正する（値の割り当て）
+
+入力例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/documents/metadata' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer {api_key}'
+--data '{
+    "operation_data":[
+        {
+            "document_id": "3e928bc4-65ea-4201-87c8-cbcc5871f525",
+            "metadata_list": [
+                    {
+                    "id": "1887f5ec-966f-4c93-8c99-5ad386022f46",
+                    "value": "dify",
+                    "name": "test"
+                }
+            ]
+        }
+    ]
+}'
+```
+
+出力例：
+
+```json
+200 success
+```
+
+### データセットのメタデータリスト
+
+入力例：
+
+```bash
+curl --location 'https://api.dify.ai/v1/datasets/{dataset_id}/metadata' \
+--header 'Authorization: Bearer {api_key}'
+```
+
+出力例：
+
+```json
+{
+  "doc_metadata": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "string",
+      "name": "title",
+      "use_count": 42
+    },
+    {
+      "id": "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+      "type": "number",
+      "name": "price",
+      "use_count": 28
+    },
+    {
+      "id": "7ba7b810-9dad-11d1-80b4-00c04fd430c9",
+      "type": "time",
+      "name": "created_at",
+      "use_count": 35
+    }
+  ],
+  "built_in_field_enabled": true
 }
 ```
 

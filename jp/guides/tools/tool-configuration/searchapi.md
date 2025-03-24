@@ -2,6 +2,10 @@
 
 > ツールの作者：@SearchApi。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 SearchApiは、Google検索、Google Jobs、YouTube、Googleニュースなどの検索エンジンから構造化データを提供する強力なリアルタイムのSERP APIです。以下示されましたの手順フォローし、SearchApiツールを設定する。
 
 ## 1. SearchのAPIキーを申請する

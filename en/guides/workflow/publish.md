@@ -16,4 +16,6 @@ Workflow applications can be published as:
 * Batch Run App
 * Access API Reference
 
-You can also click "Restore" to preview the last published version of the application. Confirming the restore will use the last published workflow version to overwrite the current workflow version.
+{% hint style="info" %}
+To manage multiple versions of chatflow/workflow, see [Version Control](https://docs.dify.ai/guides/management/version-control).
+{% endhint %}

@@ -15,7 +15,7 @@
 
 **公開手順：**
 
-* プラグインプロジェクトをDify Marketplaceのリポジトリに提出。
+* プラグインプロジェクトをDify Marketplaceの[リポジトリに](https://github.com/langgenius/dify-plugins)提出。
 * 公式審査を経て、マーケットプレイスで公開され、他のユーザーがインストール可能になります。
 
 詳細については以下をご参照ください：

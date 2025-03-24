@@ -85,11 +85,11 @@
 {% endtab %}
 
 {% tab title="Q&A 模式（仅用于社区版）" %}
-**Q\&A 模式**
+**Q&A 模式**
 
-在 Q\&A 模式下，一个内容区块包含问题与答案，轻点任意文档标题即可查看文本分段。
+在 Q&A 模式下，一个内容区块包含问题与答案，轻点任意文档标题即可查看文本分段。
 
-![ Q\&A 模式 - 查看文本分段](https://assets-docs.dify.ai/2024/12/98e2486f6c5e06b4ece1b81d078afa08.png)
+![ Q&A 模式 - 查看文本分段](https://assets-docs.dify.ai/2024/12/98e2486f6c5e06b4ece1b81d078afa08.png)
 {% endtab %}
 {% endtabs %}
 
@@ -157,7 +157,7 @@
 {% endtab %}
 
 {% tab title="Q&A 模式（仅用于社区版）" %}
-**Q\&A 模式**
+**Q&A 模式**
 
 点击分段列表顶部的 「 添加分段 」 按钮，可以在文档内自行添加一个或批量添加多个问题-答案内容对区块。
 {% endtab %}
@@ -199,11 +199,11 @@
 {% endtab %}
 
 {% tab title="Q&A 模式（仅适用于社区版）" %}
-**Q\&A 模式**
+**Q&A 模式**
 
-在 Q\&A 分段模式下，一个内容区块包含问题与答案。点击需要编辑的文本分段，可以分别对问题和答案内容做出修改；同时也支持修改当前区块的关键词。
+在 Q&A 分段模式下，一个内容区块包含问题与答案。点击需要编辑的文本分段，可以分别对问题和答案内容做出修改；同时也支持修改当前区块的关键词。
 
-![Q\&A 模式 - 修改文本分段](https://assets-docs.dify.ai/2024/12/5c69adc0d4ec470d0677e67a4dd894a1.png)
+![Q&A 模式 - 修改文本分段](https://assets-docs.dify.ai/2024/12/5c69adc0d4ec470d0677e67a4dd894a1.png)
 {% endtab %}
 {% endtabs %}
 
@@ -230,6 +230,4 @@
 
 ### 元数据管理
 
-除了用于标记不同来源文档的元数据信息，例如网页数据的标题、网址、关键词、描述等。元数据将被用于知识库的分段召回过程中，作为结构化字段参与召回过滤或者显示引用来源。
-
-<figure><img src="https://assets-docs.dify.ai/2024/12/f3b1ff4b559ebc40f18b8980b3719fe8.png" alt=""><figcaption><p>元数据管理</p></figcaption></figure>
+如需了解元数据的相关信息，请参阅 [元数据](https://docs.dify.ai/zh-hans/guides/knowledge-base/metadata)。

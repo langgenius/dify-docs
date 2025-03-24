@@ -72,7 +72,7 @@ pyenv global 3.12
     ```
 4.  依存関係をインストール
 
-    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。環境を有効にするには、`poetry shell`を実行できます。
+    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。
 
     ```
     poetry env use 3.12
@@ -83,13 +83,12 @@ pyenv global 3.12
     データベーススキーマを最新バージョンに更新します。
 
     ```
-    poetry shell
-    flask db upgrade
+    poetry run flask db upgrade
     ```
 6.  APIサービスを開始
 
     ```
-    flask run --host 0.0.0.0 --port=5001 --debug
+    poetry run flask run --host 0.0.0.0 --port=5001 --debug
     ```
 
     正常な出力：
@@ -109,13 +108,13 @@ pyenv global 3.12
     データセットファイルのインポートやデータセットドキュメントの更新などの非同期操作を消費するためのサービスです。Linux / MacOSでの起動：
 
     ```
-    celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     Windowsシステムでの起動の場合、以下のコマンドを使用してください：
 
     ```
-    celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     正常な出力：

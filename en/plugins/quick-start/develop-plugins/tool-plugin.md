@@ -313,7 +313,7 @@ The `.env` file:
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=localhost
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
@@ -326,7 +326,9 @@ Run the `python -m main` command to launch the plugin. You can see on the plugin
 
 After confirming that the plugin works properly, you can package and name the plugin with the following command line tool. After running it you can find the `google.difypkg` file in the current folder, which is the final plugin package.
 
-```
+```bash
+# Replace ./google with your actual plugin project path.
+
 dify plugin package ./google
 ```
 

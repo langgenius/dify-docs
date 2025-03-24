@@ -1,6 +1,6 @@
 # Tool
 
-在阅读详细的接口文档之前，请确保你已经阅读过[快速开始开发插件：工具](../quick-start/develop-plugins/tool-type-plugin.md)，并对 Dify 插件的工具接入流程已有大致了解。
+在阅读详细的接口文档之前，请确保你已经阅读过[快速开始开发插件：工具](../quick-start/develop-plugins/tool-plugin.md)，并对 Dify 插件的工具接入流程已有大致了解。
 
 ### 数据结构
 

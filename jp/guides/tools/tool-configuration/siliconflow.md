@@ -2,6 +2,10 @@
 
 > ツール制作者 @hjlarry。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 SiliconFlowは、優れたオープンソースの基盤モデルをもとに、高品質なGenAIサービスを提供します。Difyを通じて、SiliconFlowを利用してFluxやStable Diffusionなどの画像生成モデルを呼び出し、自分自身のAI画像生成アプリケーションを構築できます。
 
 ## 1. SiliconCloud APIキーの取得

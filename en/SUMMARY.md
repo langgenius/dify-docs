@@ -13,7 +13,7 @@
   * [Environment Variables Explanation](getting-started/install-self-hosted/environments.md)
   * [FAQs](getting-started/install-self-hosted/faqs.md)
 * [Dify Cloud](getting-started/cloud.md)
-* [Dify Premium on AWS](getting-started/dify-premium-on-aws.md)
+* [Dify Premium on AWS](getting-started/dify-premium.md)
 
 ## Guides
 
@@ -53,6 +53,7 @@
     * [HTTP Request](guides/workflow/node/http-request.md)
     * [Agent](guides/workflow/node/agent.md)
     * [Tools](guides/workflow/node/tools.md)
+    * [Loop](guides/workflow/node/loop.md)
   * [Shortcut Key](guides/workflow/shortcut-key.md)
   * [Orchestrate Node](guides/workflow/orchestrate-node.md)
   * [File Upload](guides/workflow/file-upload.md)
@@ -70,17 +71,19 @@
   * [Bulletin: Image Upload Replaced by File Upload](guides/workflow/bulletin.md)
 * [Knowledge](guides/knowledge-base/README.md)
   * [Create Knowledge](guides/knowledge-base/create-knowledge-and-upload-documents.md)
-    * [1. Import Text Data](guides/knowledge-base/create-knowledge-and-upload-documents/1.-import-text-data/README.md)
-      * [1.1 Import Data from Notion](guides/knowledge-base/create-knowledge-and-upload-documents/1.-import-text-data/1.1-import-data-from-notion.md)
-      * [1.2 Import Data from Website](guides/knowledge-base/sync-from-website.md)
-    * [2. Choose a Chunk Mode](guides/knowledge-base/create-knowledge-and-upload-documents/2.-choose-a-chunk-mode.md)
-    * [3. Select the Indexing Method and Retrieval Setting](guides/knowledge-base/create-knowledge-and-upload-documents/3.-select-the-indexing-method-and-retrieval-setting.md)
-  * [Manage Knowledge](guides/knowledge-base/knowledge-and-documents-maintenance.md)
+    * [1. Import Text Data](guides/knowledge-base/create-knowledge-and-upload-documents/import-content-data/README.md)
+      * [1.1 Import Data from Notion](guides/knowledge-base/create-knowledge-and-upload-documents/import-content-data/sync-from-notion.md)
+      * [1.2 Import Data from Website](guides/knowledge-base/create-knowledge-and-upload-documents/import-content-data/sync-from-website.md)
+    * [2. Choose a Chunk Mode](guides/knowledge-base/create-knowledge-and-upload-documents/chunking-and-cleaning-text.md)
+    * [3. Select the Indexing Method and Retrieval Setting](guides/knowledge-base/create-knowledge-and-upload-documents/setting-indexing-methods.md)
+  * [Manage Knowledge](guides/knowledge-base/knowledge-and-documents-maintenance/README.md)
     * [Maintain Documents](guides/knowledge-base/knowledge-and-documents-maintenance/maintain-knowledge-documents.md)
     * [Maintain Knowledge via API](guides/knowledge-base/knowledge-and-documents-maintenance/maintain-dataset-via-api.md)
+  * [Metadata](guides/knowledge-base/metadata.md)
   * [Integrate Knowledge Base within Application](guides/knowledge-base/integrate-knowledge-within-application.md)
   * [Retrieval Test / Citation and Attributions](guides/knowledge-base/retrieval-test-and-citation.md)
-  * [Connect to an External Knowledge Base](guides/knowledge-base/connect-external-knowledge.md)
+  * [Knowledge Request Rate Limit](guides/knowledge-base/knowledge-request-rate-limit.md)
+  * [Connect to an External Knowledge Base](guides/knowledge-base/connect-external-knowledge-base.md)
   * [External Knowledge API](guides/knowledge-base/external-knowledge-api-documentation.md)
 * [Tools](guides/tools/README.md)
   * [Quick Tool Integration](guides/tools/quick-tool-integration.md)
@@ -131,6 +134,7 @@
   * [Team Members Management](guides/management/team-members-management.md)
   * [Personal Account Management](guides/management/personal-account-management.md)
   * [Subscription Management](guides/management/subscription-management.md)
+  * [Version Control](guides/management/version-control.md)
 
 ## Workshop
 
@@ -204,6 +208,9 @@
   * [Integrate Models on LiteLLM Proxy](development/models-integration/litellm.md)
   * [Integrating with GPUStack for Local Model Deployment](development/models-integration/gpustack.md)
   * [Integrating AWS Bedrock Models (DeepSeek)](development/models-integration/aws-bedrock-deepseek.md)
+* [Migration](development/migration/README.md)
+  * [Migrating Community Edition to v1.0.0](development/migration/migrate-to-v1.md)
+
 
 ## Learn More
 
@@ -216,6 +223,7 @@
   * [Integrating Dify Chatbot into Your Wix Website](learn-more/use-cases/how-to-integrate-dify-chatbot-to-your-wix-website.md)
   * [How to connect with AWS Bedrock Knowledge Base？](learn-more/use-cases/how-to-connect-aws-bedrock.md)
   * [Building the Dify Scheduler](learn-more/use-cases/dify-schedule.md)
+  * [Building an AI Thesis Slack Bot on Dify](learn-more/use-cases/building-an-ai-thesis-slack-bot.md)
 * [Extended Reading](learn-more/extended-reading/README.md)
   * [What is LLMOps?](learn-more/extended-reading/what-is-llmops.md)
   * [Retrieval-Augmented Generation (RAG)](learn-more/extended-reading/retrieval-augment/README.md)

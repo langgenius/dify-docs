@@ -31,9 +31,9 @@
 
 <figure><img src="../../../.gitbook/assets/image (73) (1).png" alt=""><figcaption></figcaption></figure>
 
-#### 第 2 步 下载模版并填写内容
+#### 第 2 步 下载模板并填写内容
 
-点击下载模版按钮，下载模版。编辑模版，填写内容，并另存为 `.csv` 格式的文件。
+点击下载模板按钮，下载模板。编辑模板，填写内容，并另存为 `.csv` 格式的文件。
 
 <figure><img src="../../../.gitbook/assets/image (36) (1).png" alt=""><figcaption></figcaption></figure>
 

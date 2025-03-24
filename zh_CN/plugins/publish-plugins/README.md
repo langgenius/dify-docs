@@ -15,7 +15,7 @@
 
 **发布流程**：
 
-* 将插件项目提交至 **Dify Marketplace** 的代码仓库。
+* 将插件项目提交至 **Dify Marketplace** [代码仓库](https://github.com/langgenius/dify-plugins)。
 * 经过官方审核后，插件将在市场内公开发布，供其他用户安装使用。
 
 详细说明请参考：

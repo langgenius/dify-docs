@@ -1,5 +1,9 @@
 # 高度接続ツール
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい開発手順については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/develop-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 高度接続を始める前に、[クイック接続](https://docs.dify.ai/v/ja-jp/guides/tools/quick-tool-integration)を読んで、Difyのツール接続プロセスについて基本的な理解を持っていることを確認してください。
 
 ### ツールインターフェース
