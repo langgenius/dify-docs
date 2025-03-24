@@ -84,8 +84,6 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 対応するエラーを直接発生させ、以下のように定義することもできます。これにより、後続の呼び出しで`InvokeConnectionError`などの例外を直接発生させることができます。
 
-はい、以下に修正後の翻訳を示します。
-
 #### LLM
 
 `__base.large_language_model.LargeLanguageModel` 基底クラスを継承し、以下のインターフェースを実装します：
@@ -313,8 +311,6 @@ def _invoke(self, model: str, credentials: dict,
 * 戻り値：
 
 音声変換された文字列。
-
-はい、以下に修正後の翻訳を示します。直訳の問題点を踏まえ、より自然で分かりやすい日本語になるように調整しました。
 
 #### Text2speech (テキスト音声変換)
 
