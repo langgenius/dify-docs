@@ -318,8 +318,8 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 プラグインをDify マーケットプレイスに公開する場合は、以下を参照してください。
 
-{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace.md" %}
-[publish-to-dify-marketplace.md](../../../publish-plugins/publish-to-dify-marketplace/README.md)
+{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace/" %}
+[publish-to-dify-marketplace](../../../publish-plugins/publish-to-dify-marketplace/)
 {% endcontent-ref %}
 
 ### さらに詳しく

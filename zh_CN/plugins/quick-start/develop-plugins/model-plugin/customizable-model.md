@@ -310,15 +310,15 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 插件开发完成后，接下来需测试插件是否可以正常运行。详细说明请参考：
 
 {% content-ref url="../../debug-plugins.md" %}
-[debug-plugins.md](../../debug-plugins.md)
+[debug-plugins.md](../../debug-plugin.md)
 {% endcontent-ref %}
 
 ### 4. 发布插件
 
 如果想要将插件发布至 Dify Marketplace，请参考以下内容：
 
-{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace.md" %}
-[publish-to-dify-marketplace.md](../../../publish-plugins/publish-to-dify-marketplace/README.md)
+{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace/" %}
+[publish-to-dify-marketplace](../../../publish-plugins/publish-to-dify-marketplace/)
 {% endcontent-ref %}
 
 ### **探索更多**
