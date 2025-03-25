@@ -37,7 +37,7 @@ class Colors:
 # 1. Markdown格式: ![alt text](https://assets-docs.dify.ai/...)
 # 2. HTML格式: <img src="https://assets-docs.dify.ai/..." alt="..." />
 # 3. Frame标签中的图片: <Frame>...<img src="https://assets-docs.dify.ai/..." />...</Frame>
-# 4. 相对路径图片: ![alt](/zh-cn/user-guide/.gitbook/assets/...)
+# 4. 相对路径图片: ![alt](/zh-cn/img/...)
 
 # Markdown格式图片
 MD_IMG_PATTERN = re.compile(r'!\[(.*?)\]\((https?://[^)]+|/[^)]+)\)')
@@ -49,7 +49,7 @@ HTML_IMG_PATTERN = re.compile(r'<img\s+src="([^"]+)"[^>]*>')
 ASSETS_URL_PREFIX = 'https://assets-docs.dify.ai/'
 
 # 相对路径特征
-RELATIVE_PATH_PREFIX = '/zh-cn/user-guide/.gitbook/assets/'
+RELATIVE_PATH_PREFIX = '/zh-cn/'
 
 def find_corresponding_file(source_file: str, source_dir: str, target_dir: str) -> Optional[str]:
     """查找源文件在目标目录中的对应文件"""
@@ -120,6 +120,18 @@ def extract_image_links(content: str) -> List[Tuple[str, str, str]]:
     
     return images
 
+def generate_markdown_replacement(old_match: str, old_url: str, new_url: str) -> str:
+    """
+    生成Markdown图片标签的替换内容
+    """
+    return old_match.replace(old_url, new_url)
+
+def generate_html_replacement(old_match: str, old_url: str, new_url: str) -> str:
+    """
+    生成HTML图片标签的替换内容
+    """
+    return old_match.replace(f'src="{old_url}"', f'src="{new_url}"')
+
 def generate_frame_replacement(old_content: str, new_image_url: str) -> str:
     """
     生成Frame标签的替换内容
@@ -171,7 +183,15 @@ def sync_image_links(source_file: str, target_file: str, dry_run: bool = False) 
     online_images = [(match, alt, url) for match, alt, url in source_images if url.startswith(ASSETS_URL_PREFIX)]
     
     if not online_images:
+        print(f"{Colors.WARNING}警告: 源文件中没有找到在线图片链接{Colors.ENDC}")
         return 0, []
+    
+    # 提取目标文件中的图片链接
+    target_images = extract_image_links(target_content)
+    relative_images = [(match, alt, url) for match, alt, url in target_images if url.startswith(RELATIVE_PATH_PREFIX)]
+    
+    if not relative_images:
+        print(f"{Colors.BLUE}目标文件中没有找到相对路径图片链接{Colors.ENDC}")
     
     # 处理目标文件中的内容
     new_content = target_content
@@ -183,7 +203,7 @@ def sync_image_links(source_file: str, target_file: str, dry_run: bool = False) 
     
     # 处理每个在线图片链接
     for _, _, image_url in online_images:
-        # 查找目标文件中可能的相对路径格式
+        # 1. 首先处理Frame标签中的图片
         for match in frame_matches:
             frame_text = match.group(0)
             old_url = match.group(1)
@@ -197,6 +217,25 @@ def sync_image_links(source_file: str, target_file: str, dry_run: bool = False) 
                 new_frame = generate_frame_replacement(frame_text, image_url)
                 new_content = new_content.replace(frame_text, new_frame)
                 modified_links.append((old_url, image_url))
+        
+        # 2. 处理Markdown格式的图片
+        for match, alt, url in relative_images:
+            # 跳过已经是在线链接的图片
+            if url.startswith(ASSETS_URL_PREFIX):
+                continue
+            
+            # 如果是相对路径，替换为在线链接
+            if url.startswith('/'):
+                if "!(" in match or "![" in match:
+                    # Markdown格式
+                    new_md = generate_markdown_replacement(match, url, image_url)
+                    new_content = new_content.replace(match, new_md)
+                else:
+                    # HTML格式
+                    new_html = generate_html_replacement(match, url, image_url)
+                    new_content = new_content.replace(match, new_html)
+                
+                modified_links.append((url, image_url))
     
     # 如果是预览模式，不写入修改
     if dry_run:
@@ -224,6 +263,11 @@ def process_file(source_file: str, source_dir: str, target_dir: str, dry_run: bo
         (是否成功处理, 修改的链接数量)
     """
     print(f"{Colors.HEADER}处理文件: {source_file}{Colors.ENDC}")
+    
+    # 检查源文件是否存在
+    if not os.path.isfile(source_file):
+        print(f"{Colors.FAIL}错误: 源文件不存在: {source_file}{Colors.ENDC}")
+        return False, 0
     
     # 查找对应文件
     target_file = find_corresponding_file(source_file, source_dir, target_dir)
@@ -334,8 +378,11 @@ def main():
         
         if choice == '1':
             # 处理单个文件
-            source_file = input(f"{Colors.BOLD}请输入源文件路径 (相对于源目录): {Colors.ENDC}")
-            source_file = os.path.join(default_source_dir, source_file)
+            source_file = input(f"{Colors.BOLD}请输入源文件路径: {Colors.ENDC}")
+            
+            # 如果用户输入的是相对路径，则转换为绝对路径
+            if not os.path.isabs(source_file):
+                source_file = os.path.join(default_source_dir, source_file)
             
             if not os.path.isfile(source_file):
                 print(f"{Colors.FAIL}错误: 文件不存在: {source_file}{Colors.ENDC}")
@@ -356,8 +403,11 @@ def main():
             
         elif choice == '2':
             # 处理目录
-            dir_path = input(f"{Colors.BOLD}请输入要处理的源目录路径 (相对于源目录): {Colors.ENDC}")
-            dir_path = os.path.join(default_source_dir, dir_path)
+            dir_path = input(f"{Colors.BOLD}请输入要处理的源目录路径: {Colors.ENDC}")
+            
+            # 如果用户输入的是相对路径，则转换为绝对路径
+            if not os.path.isabs(dir_path):
+                dir_path = os.path.join(default_source_dir, dir_path)
             
             if not os.path.isdir(dir_path):
                 print(f"{Colors.FAIL}错误: 目录不存在: {dir_path}{Colors.ENDC}")
