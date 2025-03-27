@@ -42,7 +42,7 @@ meta:
     - "arm64"
   runner:
     language: "python"
-    version: "3.10"
+    version: "3.11"
     entrypoint: "main"
 privacy: "./privacy.md"
 ```
