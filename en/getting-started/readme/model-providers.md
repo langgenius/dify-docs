@@ -152,6 +152,14 @@ Dify supports the below model providers out-of-box:
             <td align="center"></td>
         </tr>
         <tr>
+            <td align="center">ModelScope</td>
+            <td align="center">✔️</td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+            <td align="center"></td>
+        </tr>
+        <tr>
             <td align="center">Xorbits inference</td>
             <td align="center">✔️</td>
             <td align="center">✔️</td>
@@ -385,6 +393,7 @@ Dify supports the below model providers out-of-box:
         </tr>
     </tbody>
 </table>
+
 
 where (🛠️) ︎ denotes "function calling" and (👓) denotes "support for vision".
 
