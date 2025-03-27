@@ -228,6 +228,9 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
   - azure-blob
 
     Azure Blob object storage, if this option is selected, the following AZURE_BLOB\_ prefixed configurations need to be set.
+  - aliyun-oss
+  
+    Alibaba Cloud OSS object storage, if this option is selected, the following ALIYUN_OSS\_ prefixed configurations need to be set.
 
   - huawei-obs
 
