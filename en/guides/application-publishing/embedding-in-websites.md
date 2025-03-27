@@ -27,6 +27,12 @@ window.difyChatbotConfig = {
         // key is the variable name
         // e.g.
         // name: "NAME"
+    },
+    // Optional，An object that override the system variables of the dify chatbot
+    systemVariables: {
+        // currently only overriding user_id is supported
+        // e.g.
+        // user_id: "1"
     }
 }
 ```
@@ -134,3 +140,22 @@ Note: When using the embed.js script to create an iframe, each input value will 
 
 For example, the URL with processed input values will look like this:
 `http://localhost/chatbot/{token}?name=H4sIAKUlmWYA%2FwWAIQ0AAACDsl7gLuiv2PQEUNAuqQUAAAA%3D`
+
+### 4. Passing `systemVariables`
+
+Currently only `user_id` is supported, which is a string.
+
+Example configuration:
+
+```javascript
+window.difyChatbotConfig = { 
+  // Other configuration settings...
+  systemVariables: { 
+    user_id: '1', 
+  }, 
+} 
+```
+
+Note: Similar to ``inputs`', when using the embed.js script to create an iframe, each input value will be processed—compressed using GZIP and encoded in base64—before being appended to the URL.
+
+For example, the URL with processed input values will look like this: `http://localhost/chatbot/{token}?sys.user_id=H4sIAAAAAAAAEzMEALfv3IMBAAAA`
