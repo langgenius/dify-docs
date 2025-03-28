@@ -282,6 +282,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `analyticdb`
     - `couchbase`
     - `oceanbase`
+    - `tablestore`
 
 - WEAVIATE_ENDPOINT
 
@@ -436,6 +437,22 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - OCEANBASE_MEMORY_LIMIT
 
   The memory limit of OceanBase vector database, only available for Docker deployment.
+
+- TABLESTORE_ENDPOINT 
+
+  The endpoint address of the TableStore server (e.g. 'https://instance-name.cn-hangzhou.ots.aliyuncs.com')
+
+- TABLESTORE_INSTANCE_NAME
+
+  The instance name to access TableStore server (e.g. 'instance-name')
+
+- TABLESTORE_ACCESS_KEY_ID
+
+  The accessKey id for the instance name
+
+- TABLESTORE_ACCESS_KEY_SECRET
+
+  The accessKey secret for the instance name
 
 #### Knowledge Configuration
 
