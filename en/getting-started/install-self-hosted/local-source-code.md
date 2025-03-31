@@ -75,7 +75,7 @@ pyenv global 3.12
 
 3.  Install the required dependencies:
 
-    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies. You can execute `poetry shell` to activate the environment.
+    Dify API service uses [Poetry](https://python-poetry.org/docs/) to manage dependencies.
 
     ```
     poetry env use 3.12
@@ -87,14 +87,13 @@ pyenv global 3.12
     Perform database migration to the latest version:
 
     ```
-    poetry shell
-    flask db upgrade
+    poetry run flask db upgrade
     ```
 
 5.  Start the API server:
 
     ```
-    flask run --host 0.0.0.0 --port=5001 --debug
+    poetry run flask run --host 0.0.0.0 --port=5001 --debug
     ```
 
     output：
@@ -115,13 +114,13 @@ pyenv global 3.12
     To consume asynchronous tasks from the queue, such as dataset file import and dataset document updates, follow these steps to start the Worker service on Linux or macOS:
 
     ```
-    celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
+    poetry run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
     ```
 
     If you are using a Windows system to start the Worker service, please use the following command instead:
 
     ```
-    celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     output:

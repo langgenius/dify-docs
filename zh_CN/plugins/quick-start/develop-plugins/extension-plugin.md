@@ -223,7 +223,7 @@ pip install dify-plugin
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=remote-url
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
@@ -241,7 +241,9 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 确认插件能够正常运行后，可以通过以下命令行工具打包并命名插件。运行以后你可以在当前文件夹发现 `neko.difypkg` 文件，该文件为最终的插件包。
 
 ```bash
-dify-plugin package ./neko
+# 将 ./neko 替换为插件项目的实际路径
+
+dify plugin package ./neko
 ```
 
 恭喜，你已完成一个插件的完整开发、测试打包过程！

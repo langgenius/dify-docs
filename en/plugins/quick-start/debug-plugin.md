@@ -14,7 +14,7 @@ Go back to the plugin project, copy the `.env.example` file and rename it to `.e
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=remote-url
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```

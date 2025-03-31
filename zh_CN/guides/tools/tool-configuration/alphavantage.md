@@ -2,6 +2,10 @@
 
 > 工具作者 [@zhuhao](https://github.com/hwzhuhao)。
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 AlphaVantage 一个在线平台，它提供金融市场数据和API，便于个人投资者和开发者获取股票报价、技术指标和股票分析。本
 
 ## 1. 申请 AlphaVantage API Key

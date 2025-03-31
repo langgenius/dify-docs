@@ -309,8 +309,8 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 插件开发完成后，接下来需测试插件是否可以正常运行。详细说明请参考：
 
-{% content-ref url="../../debug-plugins.md" %}
-[debug-plugins.md](../../debug-plugins.md)
+{% content-ref url="../../debug-plugin.md" %}
+[debug-plugin.md](../../debug-plugin.md)
 {% endcontent-ref %}
 
 ### 4. 发布插件
@@ -326,7 +326,7 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 **快速开始：**
 
 * [开发 Extension 插件](../extension-plugin.md)
-* [开发 Tool 插件](../tool-type-plugin.md)
+* [开发 Tool 插件](../tool-plugin.md)
 * [Bundle 插件：将多个插件打包](../bundle.md)
 
 **插件接口文档：**

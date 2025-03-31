@@ -53,7 +53,7 @@ LLM 节点是 Chatflow/Workflow 的核心节点。该节点能够利用大语言
 
 <figure><img src="../../../.gitbook/assets/image (253).png" alt="" width="366"><figcaption><p>呼出变量插入菜单</p></figcaption></figure>
 
-5. **高级设置**，可以开关记忆功能并设置记忆窗口、开关 Vision 功能或者使用 Jinja-2 模版语言来进行更复杂的提示词等。
+5. **高级设置**，可以开关记忆功能并设置记忆窗口、开关 Vision 功能或者使用 Jinja-2 模板语言来进行更复杂的提示词等。
 
 ***
 

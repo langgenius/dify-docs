@@ -22,10 +22,11 @@
 
 1. クエリ変数を選択し、ナレッジベース内の関連するテキストセグメントを検索するための入力として使用します。一般的な対話型アプリケーションでは、開始ノードの`sys.query`をクエリ変数として使用します。ナレッジ ベースが受け入れることができる最大クエリ コンテンツは 200 文字です。
 2. 検索するナレッジベースを選択します。オプションとして選択可能なナレッジベースは、Difyナレッジベース内で事前に[作成](../../knowledge-base/create-knowledge-and-upload-documents.md#id-1-chuang-jian-zhi-shi-ku)する必要があります。
-3. [リコールモード](../../../learn-more/extended-reading/retrieval-augment/retrieval.md)と[ナレッジベース設定](../../knowledge-base/knowledge-and-documents-maintenance.md#id-8-zhi-shi-ku-she-zhi)を設定します。
-4. 下流ノードを接続し設定します。一般的にはLLMノードです。
+3. メタデータフィルター セクションでメタデータのフィルター条件を設定し、メタデータ機能を使用してナレッジベース内のドキュメントをフィルタリングします。詳細については、[アプリ内でのナレッジベース統合](https://docs.dify.ai/ja-jp/guides/knowledge-base/integrate-knowledge-within-application)の「**メタデータを使用して知識をフィルタリングする**」の章を参照してください。
+4. [リコールモード](../../../learn-more/extended-reading/retrieval-augment/retrieval.md)と[ナレッジベース設定](../../knowledge-base/knowledge-and-documents-maintenance.md#id-8-zhi-shi-ku-she-zhi)を設定します。
+5. 下流ノードを接続し設定します。一般的にはLLMノードです。
 
-<figure><img src="../../../.gitbook/assets/jp-knowledge-retrieval-setting.png" alt=""><figcaption><p>ナレッジ検索の設定</p></figcaption></figure>
+<figure><img src="https://assets-docs.dify.ai/2025/03/f33b9a3ff1c9468fb5d7c1de4c1e02d6.png" alt=""><figcaption><p>ナレッジ検索の設定</p></figcaption></figure>
 
 **出力変数**
 

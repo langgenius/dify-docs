@@ -1,6 +1,11 @@
 # Perplexity検索ツール
 
-> ツールの作者：@Dify  
+> ツールの作者：@Dify
+
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 Perplexityは、複雑なクエリを理解し、正確で関連性の高いリアルタイムの回答を提供できるAIベースの検索エンジンです。以下は、DifyでPerplexity検索ツールを設定し、使用するための手順です。
 
 ## 1. PerplexityのAPIキーを申請する

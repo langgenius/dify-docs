@@ -1,4 +1,4 @@
-# 手摸手教你把 Dify 接入微信生态
+# 手把手教你把 Dify 接入微信生态
 
 > 作者：韩方圆，"Dify on WeChat"开源项目作者
 
@@ -10,7 +10,7 @@
 
 微信不仅有个人微信，同时提供了公众号、企业微信、企业微信应用、企业微信客服等对话渠道，拥有良好的微信生态。
 
-把Dify应用接入微信生态，就能打造一个功能强大的智能客服，大大降低客服成本，同时也能够提升客户体验。本篇教程就是手摸手地教你如何利用[Dify on WeChat](https://github.com/hanfangyuan4396/dify-on-wechat)项目，把Dify应用接入微信生态。
+把Dify应用接入微信生态，就能打造一个功能强大的智能客服，大大降低客服成本，同时也能够提升客户体验。本篇教程就是手把手地教你如何利用[Dify on WeChat](https://github.com/hanfangyuan4396/dify-on-wechat)项目，把Dify应用接入微信生态。
 
 ## 2. Dify接入个人微信
 

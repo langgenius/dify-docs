@@ -6,8 +6,6 @@ Workflow applications often comprise multiple interconnected nodes operating in 
 
 Developers no longer need to handle potential node errors by embedding complex logic within nodes or adding extra nodes. The error-handling feature simplifies workflow design, enabling streamlined execution through various predefined strategies.
 
-{% @arcade/embed flowId="g0ePRj5dA5WVv6noiPKX" url="https://app.arcade.software/share/g0ePRj5dA5WVv6noiPKX" %}
-
 ### Application Scenarios
 
 #### 1. Handling Network Exceptions
@@ -89,7 +87,6 @@ Node A is responsible for validating JSON content. If it receives incorrectly fo
 
 In the "Error Handling" tab of Node A, select "Fail Branch" and create a new LLM node.
 
-{% @arcade/embed flowId="rKbAJ2tYTbTA9JXhMMun" url="https://app.arcade.software/share/rKbAJ2tYTbTA9JXhMMun" %}
 
 3. **Correct the Error Output from Node A**
 

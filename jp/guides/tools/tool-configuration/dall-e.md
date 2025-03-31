@@ -2,6 +2,10 @@
 
 > ツール作成者：@Dify。 DALL-E は、入力したテキストに基づいて画像を生成するツールで、OpenAIによって開発されました。以下はDifyでDALL-E絵画ツールを設定および使用する手順です。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 ## 1. OpenAIのAPIキーを申請する
 
 [OpenAI Platform](https://platform.openai.com/) でAPIキーを申請し、アカウントに十分なクレジットがあることを確認してください。

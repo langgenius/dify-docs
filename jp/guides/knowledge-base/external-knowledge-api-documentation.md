@@ -25,6 +25,7 @@ Authorization: Bearer {API_KEY}
 | knowledge_id | TRUE | string | ナレッジベースの一意ID | AAA-BBB-CCC |
 | query | TRUE | string | ユーザーのクエリ | Difyとは何ですか？ |
 | retrieval_setting | TRUE | object | 知識の検索パラメータ | 以下参照 |
+| metadata_condition | FALSE | object | 元の配列のフィルタリング | 以下参照 |
 
 `retrieval_setting` プロパティは以下のキーを含むオブジェクトです：
 
@@ -32,6 +33,40 @@ Authorization: Bearer {API_KEY}
 |------------|------|-----|------|------|
 | top_k | TRUE | int | 検索結果の最大数 | 5 |
 | score_threshold | TRUE | float | クエリに対する結果の関連性スコアの閾値、範囲：0〜1 | 0.5 |
+
+`metadata_condition` プロパティは以下のキーを含むオブジェクトです：
+
+| 属性 | 必須かどうか | 型 | 説明 | 例 |
+|------|----------|------|------|--------|
+| logical_operator | いいえ | 文字列 | 論理演算子、値は `and` または `or`、デフォルトは `and` | and |
+| conditions | はい | 配列（オブジェクト） | 条件リスト | 以下参照 |
+
+`conditions` 配列の各オブジェクトには以下のキーが含まれます：
+
+| 属性 | 必須かどうか | 型 | 説明 | 例 |
+|------|----------|------|------|--------|
+| name | はい | 配列（文字列） | フィルタリングするmetadataの名前 | `["category", "tag"]` |
+| comparison_operator | はい | 文字列 | 比較演算子 | `contains` |
+| value | いいえ | 文字列 | 比較値、演算子が `empty`、`not empty`、`null`、`not null` の場合は省略可能 | `"AI"` |
+
+サポートされている `comparison_operator` 演算子：
+
+- `contains`：特定の値を含む
+- `not contains`：特定の値を含まない
+- `start with`：特定の値で始まる
+- `end with`：特定の値で終わる
+- `is`：特定の値と等しい
+- `is not`：特定の値と等しくない
+- `empty`：空である
+- `not empty`：空ではない
+- `=`：等しい
+- `≠`：等しくない
+- `>`：より大きい
+- `<`：より小さい
+- `≥`：以上
+- `≤`：以下
+- `before`：特定の日付より前
+- `after`：特定の日付より後
 
 ## リクエスト構文
 
@@ -124,3 +159,11 @@ HTTPステータスコード：403
 **InternalServerException**
 内部サーバーエラーが発生しました。リクエストを再試行してください。
 HTTPステータスコード：500
+
+## 開発例
+
+以下の動画では、LlamaCloudを例として外部ナレッジベースプラグインの開発方法を学ぶことができます：
+
+{% embed url="https://www.youtube.com/embed/FaOzKZRS-2E" %}
+
+詳細については、プラグインの[GitHubリポジトリ](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud)を参照してください。

@@ -73,7 +73,7 @@ pyenv global 3.12
     ```
 4.  安装依赖包
 
-    Dify API 服务使用 [Poetry](https://python-poetry.org/docs/) 来管理依赖。你可以执行 `poetry shell` 来激活环境。
+    Dify API 服务使用 [Poetry](https://python-poetry.org/docs/) 来管理依赖。
 
     ```
     poetry env use 3.12
@@ -85,13 +85,12 @@ pyenv global 3.12
     将数据库结构迁移至最新版本。
 
     ```
-    poetry shell
-    flask db upgrade
+    poetry run flask db upgrade
     ```
 6.  启动 API 服务
 
     ```
-    flask run --host 0.0.0.0 --port=5001 --debug
+    poetry run flask run --host 0.0.0.0 --port=5001 --debug
     ```
 
     正确输出：
@@ -111,13 +110,13 @@ pyenv global 3.12
     用于消费异步队列任务，如知识库文件导入、更新知识库文档等异步操作。 Linux / MacOS 启动：
 
     ```
-    celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     如果使用 Windows 系统启动，请替换为该命令：
 
     ```
-    celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
     ```
 
     正确输出：

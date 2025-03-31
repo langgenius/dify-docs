@@ -1,5 +1,9 @@
 # Quick Tool Integration
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Develop Plugins](https://docs.dify.ai/plugins/quick-start/develop-plugins). The content below has been archived.
+{% endhint %}
+
 Here, we will use GoogleSearch as an example to demonstrate how to quickly integrate a tool.
 
 ### 1. Prepare the Tool Provider yaml

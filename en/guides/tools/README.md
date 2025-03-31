@@ -1,5 +1,9 @@
 # Tools
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". Please refer to the [documentation](https://docs.dify.ai/plugins/introduction) for detailed information.
+{% endhint %}
+
 ### Tool Definition
 
 Tools can extend the capabilities of LLMs (Language Learning Models), such as performing web searches, scientific calculations, or generating images, thereby enhancing the LLM's ability to connect with the external world. Dify provides two types of tools: **First-party Tools** and **Custom Tools**.

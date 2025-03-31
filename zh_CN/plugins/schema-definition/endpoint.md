@@ -59,7 +59,7 @@ extra:
 
 ### 接口实现
 
-需要实现一个继承自 `dify_plugin.Enterpoint`的子类，并实现`_invoke`方法。
+需要实现一个继承自 `dify_plugin.Endpoint` 子类，并实现 `_invoke` 方法。
 
 * **输入参数**
   * `r`(Request)：`werkzeug` 中的 `Request` 对象

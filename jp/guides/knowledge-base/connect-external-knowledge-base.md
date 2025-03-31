@@ -96,9 +96,33 @@ APIサービスの設定の前に、適合した外部ナレッジベースAPI�
 
 <figure><img src="../../../img/connect-kb-7-en.webp" alt=""><figcaption><p>ナレッジベースの設置</p></figcaption></figure>
 
-### 接続示例
+### 接続例
 
-[how-to-connect-aws-bedrock.md](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
+#### AWS Bedrock
+
+[AWS Bedrockナレッジベースへの接続方法](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
+
+#### LlamaCloud
+
+DifyはLlamaCloudプラグインを公式に提供しており、LlamaCloudナレッジベースに簡単に接続することができます。
+
+##### プラグインのインストール
+
+1. Difyの[マーケットプレイス](https://marketplace.dify.ai/)にアクセスし、`LlamaCloud`を検索します
+2. 指示に従ってLlamaCloudプラグインをインストールおよび設定します
+3. Difyプラットフォームでプラグインを有効にします
+4. プラグイン設定ウィザードに従って、LlamaCloudのAPIキーやその他の必要な情報を入力します
+5. 設定が完了すると、ナレッジベースリストに接続された外部ナレッジベースが表示されます
+
+LlamaCloudプラグインを使用すると、カスタムAPIを作成することなく、DifyプラットフォームでLlamaCloudの強力な検索機能を直接利用できます。
+
+詳細については、プラグインの[GitHubリポジトリ](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud)を参照してください。
+
+##### ビデオチュートリアル
+
+以下の動画では、LlamaCloudプラグインを使用して外部ナレッジベースに接続する方法を詳しく説明しています：
+
+{% embed url="https://www.youtube.com/embed/FaOzKZRS-2E" %}
 
 ## よくある問題
 

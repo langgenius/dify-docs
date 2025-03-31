@@ -2,6 +2,10 @@
 
 > 工具作者 @hjlarry
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的使用说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/install-plugins)。以下内容已归档。
+{% endhint %}
+
 SiliconCloud 基于优秀的开源基础模型，提供高性价比的 GenAI 服务。你可以通过 **SiliconFlow** 在 Dify 内调用 Flux 、Stable Diffusion 绘图模型，搭建你的专属 AI 绘图应用。以下是在 Dify 中配置 SiliconFlow 工具的步骤。
 
 ### 1. 申请 SiliconCloud API Key

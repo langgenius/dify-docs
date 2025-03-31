@@ -18,8 +18,6 @@ Difyでは、ナレッジベースツールを利用して、エージェント�
 
 DifyでChatflowを作成し、モデルプロバイダーを追加して、十分な残高があることを確認してください。
 
-{% @arcade/embed flowId="MKWZLfD4CtDJNQIOfLrI" url="https://app.arcade.software/share/MKWZLfD4CtDJNQIOfLrI" %}
-
 ### **ノードの追加**
 
 この実験では、以下の4つのノードが必要です：開始ノード、文書抽出器ノード、LLMノード、返信ノード。
@@ -32,13 +30,9 @@ DifyでChatflowを作成し、モデルプロバイダーを追加して、十�
 
 開始ノードにファイル変数を追加し、サポートされているファイルタイプの中でドキュメントにチェックを入れる必要があります。
 
-{% @arcade/embed flowId="oJXuUOTVI3UwWnSGafqE" url="https://app.arcade.software/share/oJXuUOTVI3UwWnSGafqE" %}
-
 一部の読者は、システム変数に`sys.files`が存在することに気づくかもしれません。この変数は、ユーザーがダイアログボックスでアップロードしたファイルやファイルリストを示します。
 
 自分でファイル変数を作成することとの違いは、この機能がファイルのアップロードを行い、アップロードされたファイルのタイプを設定し、対話中に新しいファイルをアップロードするたびにこの変数が上書きされる点です。
-
-{% @arcade/embed flowId="zJDTlwV4OrEt1GKqbaQ0" url="https://app.arcade.software/share/zJDTlwV4OrEt1GKqbaQ0" %}
 
 ビジネスシーンに応じて、適切なファイルアップロード方法を選択してください。
 

@@ -2,6 +2,10 @@
 
 > ツール作者 @zhuhao 
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 Serperは、Google検索エンジンから取得した構造化データを提供する強力なリアルタイム検索エンジンAPIです。以下示されましたの手順フォローし、Serperツールを設定する。
 
 ## 1. SerperのAPIキーを申請する

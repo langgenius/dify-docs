@@ -223,7 +223,7 @@ pip install dify-plugin
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=remote-url
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
@@ -241,7 +241,7 @@ REMOTE_INSTALL_KEY=****-****-****-****-****
 プラグインが正常に動作することを確認したら、以下のコマンドラインツールを使用してプラグインをパッケージ化し、名前を付けることができます。実行後、現在のフォルダに`neko.difypkg`というファイルが生成されます。このファイルが最終的なプラグインパッケージです。
 
 ```bash
-dify-plugin package ./neko
+dify plugin package ./neko
 ```
 
 おめでとうございます！これで、プラグインの開発、テスト、パッケージ化の全工程が完了しました。
@@ -255,7 +255,7 @@ dify-plugin package ./neko
 **クイックスタート：**
 
 *   [バンドルタイププラグイン：複数のプラグインをまとめる](bundle.md)
-*   [ツールタイププラグイン：Google検索](tool-type-plugin.md)
+*   [ツールタイププラグイン：Google検索](tool-plugin.md)
 *   [モデルタイププラグイン](model/)
 
 **プラグインインターフェースドキュメント：**

@@ -55,7 +55,7 @@ extra:
 
 ### **Endpoint Implementation**
 
-Must implement a subclass inheriting from `dify_plugin.Enterpoint` and implement the `_invoke` method.
+Must implement a subclass inheriting from `dify_plugin.Endpoint` and implement the `_invoke` method.
 
 * **Input Parameters**
   * `r` (Request): Request object from werkzeug

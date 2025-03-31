@@ -1,5 +1,9 @@
 # ツールを迅速に接続
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい開発手順については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/develop-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 ここでは、GoogleSearchを例にとって、ツールを迅速に接続する方法をご紹介します。
 
 ### 1. ツールプロバイダーのyamlを準備

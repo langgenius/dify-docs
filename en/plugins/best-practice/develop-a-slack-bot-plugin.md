@@ -240,7 +240,7 @@ Back in your plugin project, copy the `.env.example` file and rename it to `.env
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_HOST=remote-url
+REMOTE_INSTALL_HOST=remote
 REMOTE_INSTALL_PORT=5003
 REMOTE_INSTALL_KEY=****-****-****-****-****
 ```
@@ -287,6 +287,8 @@ In your code, `self.session.app.chat.invoke` is used to call the Dify applicatio
 Once you confirm that the plugin works correctly, you can package and name it via the following command. After it runs, you’ll find a `slack_bot.difypkg` file in the current directory—your final plugin package.
 
 ```bash
+# Replace ./slack_bot with your actual plugin project path.
+
 dify plugin package ./slack_bot
 ```
 

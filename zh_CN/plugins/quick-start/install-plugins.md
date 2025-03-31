@@ -4,35 +4,37 @@ description: 'Author: Allen'
 
 # 安装与使用插件
 
-### 安装插件
+## 安装插件
 
 点击 Dify 平台右上角的“插件”，前往插件管理页，支持通过 **Marketplace、GitHub、上传本地文件**三种方式安装插件。
 
 <figure><img src="https://assets-docs.dify.ai/2025/01/a56c40245090d9252557dcc6f4064a14.png" alt=""><figcaption><p>安装插件</p></figcaption></figure>
 
-#### Marketplace
+### Marketplace
 
 你可以选择任意插件，点&#x51FB;**“安装”**&#x6309;钮将插件安装至当前 Workspace 内。
 
 ![通过 Marketplace 安装插件](https://assets-docs.dify.ai/2025/01/6ae8b661b7fa01b228a954d00ef552f3.png)
 
-#### GitHub
+### GitHub
 
 你可以直接通过 GitHub 代码仓库链接安装插件，使用此方法安装插件时需确保插件满足代码规范。插件代码仓库需创建 Release 并在附件中包含 `.difypkg` 后缀的文件包。详细说明请参考[发布插件：GitHub](../publish-plugins/publish-plugin-on-personal-github-repo.md)。
 
 <figure><img src="https://assets-docs.dify.ai/2025/01/4026a12a915e3fe9bd057d8827acfdce.png" alt=""><figcaption><p>通过 GitHub 安装</p></figcaption></figure>
 
-**上传本地文件**
+### 上传本地文件
 
 本地文件指的是 `.difypkg` 后缀的文件包，常用于离线环境或测试环境。开发者可通过此方式安装除官方市场以外的插件文件。对于组织而言，可以开发维护内部插件并通过本地上传的方式安装，避免公开敏感信息。
 
 关于如何打包插件并获取 `.difypkg` 文件，详细说明请参考[打包插件](../publish-plugins/package-plugin-file-and-publish.md)。
 
-### 使用插件
+***
+
+## 使用插件
 
 将插件安装至 Workspace 后即可在 Dify 应用内进行使用。下文将简要介绍不同类型的插件对应不同的使用方法。
 
-#### 模型插件
+### 模型插件
 
 以 `OpenAI` 为例，安装模型插件后，点击右上角的**头像页 → 设置 → 模型供应商**，配置 API Key 即可激活该模型供应商。
 
@@ -42,7 +44,7 @@ description: 'Author: Allen'
 
 ![使用模型类型插件](https://assets-docs.dify.ai/2024/12/4a38b1ea534ca68515839c518c250d2f.png)
 
-#### 工具插件
+### 工具插件
 
 工具插件支持在 Chatflow、Workflow、Agent 应用内使用。部分插件在安装后可能还要求进行 API Key 或其它形式的授权，手动添加授权后才能正常使用。
 
@@ -76,7 +78,7 @@ Chatflow 和 Workflow 类型应用共用一套工作流编排画布，因此工�
 
 <figure><img src="https://assets-docs.dify.ai/2025/01/9d826302637638f705a94f73bd653958.png" alt=""><figcaption><p>使用插件</p></figcaption></figure>
 
-### 阅读更多
+## 阅读更多
 
 如需了解如何上手开发插件，请阅读以下内容：
 

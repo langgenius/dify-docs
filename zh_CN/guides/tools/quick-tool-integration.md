@@ -1,5 +1,9 @@
 # 快速接入工具
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的开发说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/develop-plugins)。以下内容已归档。
+{% endhint %}
+
 这里我们以 GoogleSearch 为例，介绍如何快速接入一个工具。
 
 ### 1. 准备工具供应商 yaml

@@ -55,7 +55,7 @@ extra:
 
 ### エンドポイントの実装
 
-`dify_plugin.Enterpoint`を継承したサブクラスを実装し、`_invoke`メソッドを実装する必要があります。
+`dify_plugin.Endpoint`を継承したサブクラスを実装し、`_invoke`メソッドを実装する必要があります。
 
 * **入力パラメータ**
   *   `r` (Request): werkzeugからのリクエストオブジェクト

@@ -2,6 +2,10 @@
 
 > Tool author @Dify.
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 DALL-E is an AI image generator developed by OpenAI that generates images based on text prompts. Dify has integrated the DALL-E tool, and the following are the steps to configure and use the DALL-E tool in Dify.
 
 ## 1. Apply for OpenAI's API Key

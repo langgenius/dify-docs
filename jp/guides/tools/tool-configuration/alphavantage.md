@@ -2,6 +2,10 @@
 
 > ツール作者 [@zhuhao](https://github.com/hwzhuhao)。
 
+{% hint style="warning" %}
+「ツール」は「プラグイン」エコシステムに完全アップグレードされました。詳しい使用方法については[プラグイン開発](https://docs.dify.ai/ja-jp/plugins/quick-start/install-plugins)をご参照ください。以下の内容はアーカイブされています。
+{% endhint %}
+
 AlphaVantageは、金融市場のデータとAPIを提供する包括的なオンラインプラットフォームであり、個人投資家や開発者が株価、テクニカル指標、そして詳細な株式分析に簡単にアクセスできるようにします。DifyはAlphaVantageツールを統合しており、以下示されましたの手順フォローし、AlphaVantageツールを設定する。
 
 ## 1. AlphaVantageのAPIキーを申請する

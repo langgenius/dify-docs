@@ -73,7 +73,7 @@
 
 ### 3. 添加实现类
 
-`weather_search.py` 代码模版，你可以在这里实现具体的业务逻辑。
+`weather_search.py` 代码模板，你可以在这里实现具体的业务逻辑。
 
 {% hint style="warning" %}
 注意：类变量 name 为自定义类型名称，需要跟目录和文件名保持一致，而且唯一。
@@ -131,7 +131,7 @@ class WeatherSearch(ExternalDataTool):
 
 至此，即可在 Dify 应用编排界面选择自定义的 `Weather Search` 外部数据工具扩展类型进行调试。
 
-## 实现类模版
+## 实现类模板
 
 ```python
 from typing import Optional

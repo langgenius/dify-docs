@@ -26,8 +26,6 @@
 
 在 Dify 中选择**创建空白应用 - 工作流编排。**
 
-{% @arcade/embed flowId="v0ZHj9I9XRQIUznXEdnu" url="https://app.arcade.software/share/v0ZHj9I9XRQIUznXEdnu" %}
-
 ### 添加模型供应商
 
 本次实验中需要涉及使用 embedding 模型，目前支持 embedding 的模型提供商中有 OpenAI、Cohere 等，在 Dify 的模型供应商中有标注 `TEXT EMBEDDING` ，请确保至少添加了一个并且有充足余额。
@@ -43,8 +41,6 @@
 ## 创建知识库
 
 登录 Dify -> 知识库 -> 选择数据源
-
-{% @arcade/embed flowId="TdyXeM14zoBmuHnusAtv" url="https://app.arcade.software/share/TdyXeM14zoBmuHnusAtv" %}
 
 Dify 支持三种数据源：上传文本文件、Notion、网页。
 
@@ -98,8 +94,6 @@ Dify 提供了向量检索、全文检索、混合检索三种检索功能，其
 
 点击文档内容，对分段内容进行浏览，如果有无关的内容可以禁用或删除。
 
-{% @arcade/embed flowId="LumJpKJt8taR4yCg0NNF" url="https://app.arcade.software/share/LumJpKJt8taR4yCg0NNF" %}
-
 如果有内容被分段到了另外一个段落，也需要调整回来。
 
 ### 召回测试
@@ -147,8 +141,6 @@ Dify 支持 Markdown 格式的文本的输出。你可以在输出中用 Makrdow
 
 在“用户询问和Dify相关问题”后增加知识检索节点，勾选需要使用的知识库。
 
-{% @arcade/embed flowId="Tf9MK5QPJexAQhxRMzsw" url="https://app.arcade.software/share/Tf9MK5QPJexAQhxRMzsw" %}
-
 
 
 ### LLM 节点
@@ -187,5 +179,4 @@ LLM 需要根据用户的提问，调整回复，使得回复内容更加得体�
 
 应用发布后，选择嵌入网页，选择一种合适的嵌入形式，将代码粘贴到网页的合适位置即可。
 
-{% @arcade/embed flowId="jzRqVty9I1aMtoYZjfHW" url="https://app.arcade.software/share/jzRqVty9I1aMtoYZjfHW" %}
 

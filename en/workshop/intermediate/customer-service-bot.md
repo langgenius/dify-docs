@@ -44,8 +44,6 @@ This experiment involves using embedding models. Currently, supported embedding 
 
 Log in to Dify -> Knowledge -> Create Knowledge
 
-{% @arcade/embed flowId="AWhXMYEPd4mYWnupP88B" url="https://app.arcade.software/share/AWhXMYEPd4mYWnupP88B" %}
-
 
 
 Dify supports three data sources: documents, Notion, and web pages.
@@ -100,8 +98,6 @@ After the knowledge base has processed all documents, it is best to check the co
 
 Click on the document content to browse the segmented content. If there is irrelevant content, you can disable or delete it.
 
-{% @arcade/embed flowId="4JUDJQf4ijK85yanuxaI" url="https://app.arcade.software/share/4JUDJQf4ijK85yanuxaI" %}
-
 
 
 If content is segmented into another paragraph, it also needs to be adjusted back.
@@ -147,8 +143,6 @@ Dify supports Markdown formatted text output. You can use Markdown to enrich the
 
 Add a knowledge retrieval node after "User asks Dify-related questions" and check the knowledge base to be used.
 
-{% @arcade/embed flowId="lFy1LfZ4cFyu1GlmJk8c" url="https://app.arcade.software/share/lFy1LfZ4cFyu1GlmJk8c" %}
-
 
 
 #### LLM Node
@@ -187,5 +181,4 @@ In the instance with the knowledge base deployed, go to **Knowledge Base -> API*
 
 After application deployment, select embed webpage, choose a suitable embedding method, and paste the code into the appropriate location on the webpage.
 
-{% @arcade/embed flowId="5Bc0DqWslBfE99uWQH77" url="https://app.arcade.software/share/5Bc0DqWslBfE99uWQH77" %}
 

@@ -2,6 +2,10 @@
 
 > Tool author @Dify.
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 [Youtube](https://www.youtube.com/) is the biggest online video sharing platform. Currently Dify.ai has two relevant tools `Video Statisctics` and `Free YouTube Transcript API` to analysis the videos' information by entering the url or keyword.  
 
 ## 1. Ensure that you allow to use the Google Cloud Service

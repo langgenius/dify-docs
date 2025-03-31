@@ -93,9 +93,28 @@ description: 作者： Allen。 Dify Technical Writer。
 
 外部知识库所关联的 **“外部知识库 API”** 和 **“外部知识 ID”** 不支持修改，如需修改请关联新的 “外部知识库 API” 并重新进行连接。
 
-### 连接示例
+### 外部知识库连接示例
+
+#### AWS Bedrock
 
 [how-to-connect-aws-bedrock.md](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
+
+#### LlamaCloud
+
+[Dify 插件市场](https://marketplace.dify.ai/)内提供了 LlamaCloud 插件，可以帮助你快速连接 LlamaCloud 知识库，在 Dify 平台中使用由 LlamaCloud 提供的检索功能，而无需编写自定义 API。
+
+插件市场中搜索 `LlamaCloud` 即可快速安装插件。
+
+按照插件配置向导，填写 LlamaCloud 的 API 密钥和其他必要信息。完成配置后，您可以在知识库列表中看到连接的外部知识库。
+
+**视频教程**
+
+以下视频详细展示了如何使用 LlamaCloud 插件连接外部知识库：
+
+{% embed url="https://www.youtube.com/embed/FaOzKZRS-2E" %}
+
+
+如需了解功能原理，请参考插件 [GitHub 地址](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud)。
 
 ### 常见问题
 

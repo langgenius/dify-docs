@@ -19,7 +19,7 @@
 * 一部安装了WhatsApp的智能手机，用于测试你的AI聊天机器人
 * 对FastAPI的基本理解，这是一个使用Python 3.6+构建API的框架
 
-## 3. 创建Dify基础编排聊天助手应用 （節錄自[手摸手教你把 Dify 接入微信生态](dify-on-wechat.md))
+## 3. 创建Dify基础编排聊天助手应用 （節錄自[手把手教你把 Dify 接入微信生态](dify-on-wechat.md))
 
 首先，登录[Dify官方应用平台](https://cloud.dify.ai/signin)，你可以选择使用Github登录或者使用Google登录。此外，你也可以参考Dify官方教程[Docker Compose 部署 | 中文 | Dify](https://docs.dify.ai/v/zh-hans/getting-started/install-self-hosted/docker-compose) 私有部署，Dify是开源项目，支持私有部署。
 

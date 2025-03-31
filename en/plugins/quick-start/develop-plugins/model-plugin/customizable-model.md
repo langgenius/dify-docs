@@ -320,14 +320,16 @@ After finishing development, test the plugin to ensure it runs correctly. For mo
 
 If you’d like to list this plugin on the Dify Marketplace, see:
 
-Publish to Dify Marketplace
+{% content-ref url="../../../publish-plugins/publish-to-dify-marketplace/" %}
+[publish-to-dify-marketplace](../../../publish-plugins/publish-to-dify-marketplace/)
+{% endcontent-ref %}
 
 ## Explore More
 
 **Quick Start:**
 
 * [Develop Extension Plugin](../extension-plugin.md)
-* [Develop Tool Plugin](../tool-type-plugin.md)
+* [Develop Tool Plugin](../tool-plugin.md)
 * [Bundle Plugins: Package Multiple Plugins](../bundle.md)
 
 **Plugins Endpoint Docs:**

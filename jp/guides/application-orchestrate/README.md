@@ -22,6 +22,6 @@ Difyには、五つのアプリケーションタイプが提供されていま�
 
 テキスト ジェネレーターアプリケーションとチャットボットアシスタントの違いは以下の表をご覧ください:
 
-<table><thead><tr><th width="180.33333333333331"></th><th>テキスト ジェネレーター</th><th>チャットボット</th></tr></thead><tbody><tr><td>WebApp 界面</td><td>フォーム+結果式</td><td>チャット式</td></tr><tr><td>WebAPIエンドポイント</td><td><code>completion-messages</code></td><td><code>chat-messages</code></td></tr><tr><td>インタラクション方式</td><td>一問一答</td><td>多輪対話</td></tr><tr><td>ストリーミング結果返却</td><td>支持</td><td>支持</td></tr><tr><td>コンテキスト保存</td><td>当次</td><td>持続</td></tr><tr><td>ユーザー入力フォーム</td><td>支持</td><td>支持</td></tr><tr><td>データセットとプラグイン</td><td>支持</td><td>支持</td></tr><tr><td>AIオープニング</td><td>不支持</td><td>支持</td></tr><tr><td>シナリオ例</td><td>翻訳、判断、インデックス付け</td><td>チャット</td></tr></tbody></table>
+<table><thead><tr><th width="180.33333333333331"></th><th>テキスト ジェネレーター</th><th>チャットボット</th></tr></thead><tbody><tr><td>Webアプリインターフェース</td><td>フォーム+結果式</td><td>チャット式</td></tr><tr><td>WebAPIエンドポイント</td><td><code>completion-messages</code></td><td><code>chat-messages</code></td></tr><tr><td>インタラクション方式</td><td>一問一答</td><td>対話型のやりとり</td></tr><tr><td>ストリーミング結果返却</td><td>対応</td><td>対応</td></tr><tr><td>コンテキスト保存</td><td>セッション内のみ</td><td>継続的に保存</td></tr><tr><td>ユーザー入力フォーム</td><td>対応</td><td>対応</td></tr><tr><td>データセットとプラグイン</td><td>対応</td><td>対応</td></tr><tr><td>AIオープニング</td><td>不対応</td><td>対応</td></tr><tr><td>シナリオ例</td><td>翻訳、判断、インデックス付け</td><td>チャット</td></tr></tbody></table>
 
 ###

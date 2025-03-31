@@ -27,6 +27,7 @@ The request accepts the following data in JSON format.
 | knowledge_id | TRUE | string | Your knowledge's unique ID | AAA-BBB-CCC |
 | query | TRUE | string | User's query | What is Dify? |
 | retrieval_setting | TRUE | object | Knowledge's retrieval parameters | See below |
+| metadata_condition | FALSE | Object | Original array filtering | See below |
 
 The `retrieval_setting` property is an object containing the following keys:
 
@@ -34,6 +35,40 @@ The `retrieval_setting` property is an object containing the following keys:
 |----------|----------|------|-------------|---------------|
 | top_k | TRUE | int | Maximum number of retrieved results | 5 |
 | score_threshold | TRUE | float | The score limit of relevance of the result to the query, scope: 0~1 | 0.5 |
+
+The `metadata_condition` property is an object containing the following keys:
+
+| Attribute | Required | Type | Description | Example Value |
+|-----------|----------|------|-------------|--------------|
+| logical_operator | No | String | Logical operator, values can be `and` or `or`, default is `and` | and |
+| conditions | Yes | Array (Object) | List of conditions | See below |
+
+Each object in the `conditions` array contains the following keys:
+
+| Attribute | Required | Type | Description | Example Value |
+|-----------|----------|------|-------------|--------------|
+| name | Yes | Array (String) | Names of the metadata to filter | `["category", "tag"]` |
+| comparison_operator | Yes | String | Comparison operator | `contains` |
+| value | No | String | Comparison value, can be omitted when the operator is `empty`, `not empty`, `null`, or `not null` | `"AI"` |
+
+Supported `comparison_operator` operators:
+
+- `contains`: Contains a certain value  
+- `not contains`: Does not contain a certain value  
+- `start with`: Starts with a certain value  
+- `end with`: Ends with a certain value  
+- `is`: Equals a certain value  
+- `is not`: Does not equal a certain value  
+- `empty`: Is empty  
+- `not empty`: Is not empty  
+- `=`: Equals  
+- `≠`: Not equal  
+- `>`: Greater than  
+- `<`: Less than  
+- `≥`: Greater than or equal to  
+- `≤`: Less than or equal to  
+- `before`: Before a certain date  
+- `after`: After a certain date  
 
 ## Request Syntax
 
@@ -126,3 +161,11 @@ HTTP Status Code: 403
 **InternalServerException**
 An internal server error occurred. Retry your request.
 HTTP Status Code: 500
+
+## Development Example
+
+You can learn how to develop external knowledge base plugins through the following video tutorial using LlamaCloud as an example:
+
+{% embed url="https://www.youtube.com/embed/FaOzKZRS-2E" %}
+
+For more information about how it works, please refer to the plugin's [GitHub repository](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud).

@@ -2,7 +2,7 @@
 
 ## 概要
 
-Difyのチャットアシスタントタイプのアプリケーションにプリインストールされている[複数モデルのデバッグ](../../guides/application-orchestrate/multiple-llms-debugging.md)機能を使うと、同じ質問に対する異なるLLMの回答効果を同時に比較できます。この記事では、DeepSeek R1とo1を例に、Dify内でさまざまな大規模言語モデルの回答品質を直感的に比較する方法をご紹介します。
+Difyのチャットボットタイプのアプリケーションにプリインストールされている[複数モデルのデバッグ](../../guides/application-orchestrate/multiple-llms-debugging.md)機能を使うと、同じ質問に対する異なるLLMの回答効果を同時に比較できます。この記事では、DeepSeek R1とo1を例に、Dify内でさまざまな大規模言語モデルの回答品質を直感的に比較する方法をご紹介します。
 
 ![](https://assets-docs.dify.ai/2025/02/dd2a54e05cf5bfa252ac980ec478e3d5.png)
 

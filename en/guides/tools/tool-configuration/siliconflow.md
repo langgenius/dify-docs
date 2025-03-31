@@ -2,6 +2,10 @@
 
 > Tool author @hjlarry.
 
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 SiliconFlow provides high-quality GenAI services based on excellent open-source foundation models. You can use SiliconFlow in Dify to call image generation models like Flux and Stable Diffusion, and build your own AI image generation application.
 
 ## 1. Apply for SiliconCloud API Key

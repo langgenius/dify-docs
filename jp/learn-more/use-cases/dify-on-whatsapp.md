@@ -19,19 +19,19 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 - AIチャットボットのテスト用にWhatsAppをインストールしたスマートフォン
 - Python 3.6+を使用してAPIを構築するためのフレームワークであるFastAPIの基本的な理解
 
-## 3. Difyの基本的なチャットアシスタントアプリケーションの作成（[DifyをWeChatエコシステムに接続する方法](./dify-on-wechat.md)からの抜粋）
+## 3. Difyの基本的なチャットボットアプリケーションの作成（[DifyをWeChatエコシステムに接続する方法](./dify-on-wechat.md)からの抜粋）
 
 まず、[Dify公式アプリケーションプラットフォーム](https://cloud.dify.ai/signin)にログインします。GithubまたはGoogleのアカウントでログインすることができます。また、Dify公式チュートリアル[Docker Composeによるデプロイ | 日本語 | Dify](https://docs.dify.ai/v/ja-jp/getting-started/install-self-hosted/docker-compose)を参照して、プライベートデプロイを行うことも可能です。Difyはオープンソースプロジェクトであり、プライベートデプロイをサポートしています。
 
 <figure><img src="../../.gitbook/assets/dify-on-wechat/create-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
 
-ログイン後、Difyのページに移動し、以下のステップに従って基本的なチャットアシスタントアプリケーションを作成します。
+ログイン後、Difyのページに移動し、以下のステップに従って基本的なチャットボットアプリケーションを作成します。
 
 1. ページ上部の「スタジオ」をクリック
 2. 空のアプリケーションを作成
-3. アプリケーションの種類を「チャットアシスタント」に選択
-4. チャットアシスタントの編成方法を「基本編成」に選択
-5. アプリケーションのアイコンを選択し、アプリケーションに「基本編成チャットアシスタント」などの名前を付ける
+3. アプリケーションの種類を「チャットボット」に選択
+4. チャットボットの編成方法を「基本編成」に選択
+5. アプリケーションのアイコンを選択し、アプリケーションに「基本編成チャットボット」などの名前を付ける
 6. 作成をクリック
 
 <figure><img src="../../.gitbook/assets/dify-on-wechat/config-basic-chatbot.jpg" alt=""><figcaption></figcaption></figure>
@@ -49,7 +49,7 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 2. 更新
 3. APIのアクセス
 
-##### （4）基本編成チャットアシスタントのAPIキーの生成
+##### （4）基本編成チャットボットのAPIキーの生成
 <figure><img src="../../.gitbook/assets/dify-on-wechat/create-basic-chatbot-apikey.jpg" alt=""><figcaption></figcaption></figure>
 
 「APIのアクセス」をクリックすると、上記のAPI管理ページに移動します。このページで以下の手順に従ってAPIキーを取得します。
@@ -60,7 +60,7 @@ Localtunnelを使用して、FastAPIのローカルホストをインターネ�
 
 キーを保存した後、右上のAPIサーバーも確認してください。Dify公式のアプリケーションの場合、APIサーバーのアドレスは「https://api.dify.ai/v1」です。プライベートデプロイの場合は、自分のAPIサーバーアドレスを確認してください。
 
-以上でチャットアシスタントの準備作業が終了です。このセクションでは、**APIキー**と**APIサーバーアドレス**の2つを保存する必要があります。
+以上でチャットボットの準備作業が終了です。このセクションでは、**APIキー**と**APIサーバーアドレス**の2つを保存する必要があります。
 
 ## 4. Twilioキーの取得
 
@@ -213,7 +213,7 @@ FastAPIアプリケーションで設定したエンドポイントは/message�
 
 ## 7. WhatsAppのテスト
 
-6.1のページでQRコードをスキャンしてWhatsAppサンドボックス環境に入り、WhatsAppメッセージを送信してAIチャットボットの応答を待ちます。Difyチャットアシスタントに質問できることをAIチャットボットに試してみてください。
+6.1のページでQRコードをスキャンしてWhatsAppサンドボックス環境に入り、WhatsAppメッセージを送信してAIチャットボットの応答を待ちます。Difyチャットボットに質問できることをAIチャットボットに試してみてください。
 
 <figure><img src="../../.gitbook/assets/dify-on-whatsapp/whatsapp1.jpg" style="width:300px;" alt=""><figcaption></figcaption></figure>
 

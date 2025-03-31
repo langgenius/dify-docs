@@ -20,8 +20,6 @@
 
 在 Dify 中创建一个 Chatflow。请确保你已添加模型供应商并有足够额度。
 
-{% @arcade/embed flowId="v0ZHj9I9XRQIUznXEdnu" url="https://app.arcade.software/share/v0ZHj9I9XRQIUznXEdnu" %}
-
 ## 添加节点
 
 在本次实验中至少需要涉及四种节点：开始节点、文档提取器节点、LLM 节点、回复节点。
@@ -34,15 +32,11 @@
 
 在开始节点需要增加一个文件变量，在**支持的文件类型**中，需要勾选**文档。**
 
-{% @arcade/embed flowId="TiLAgL3vgozVhuLBmob9" url="https://app.arcade.software/share/TiLAgL3vgozVhuLBmob9" %}
-
 一些读者可能会注意到在系统变量中有 `sys.files`，这个变量是用户在对话框中上传的文件或者文件列表。
 
 和自己创建文件变量的区别在于，这个功能需要在**功能**中打开**文件上传**并且设置上传文件类型，并且在对话中每次上传新的文件都会将这个变量覆写。
 
 请需要根据业务场景选取合适的文件上传方式。
-
-{% @arcade/embed flowId="pTM0eChRVMadEChYjBPP" url="https://app.arcade.software/share/pTM0eChRVMadEChYjBPP" %}
 
 
 

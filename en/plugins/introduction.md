@@ -55,7 +55,7 @@ Whether you’re looking to integrate a new model or add a specialized tool to e
     * **Built-In Data Management**: Plugins can reliably store and manage data, making it easier to implement complex business logic.
 *   **Convenient Reverse Invocation**
 
-    Plugins can now interact bidirectionally with Dify’s core functions, including:&#x20;
+    Plugins can now interact bidirectionally with Dify’s core functions, including:
 
     * AI model invokes
     * Tool usage

@@ -1,4 +1,9 @@
 # SearXNG
+
+{% hint style="warning" %}
+"Tools" has been fully upgraded to the "Plugins". For more details, please refer to [Install and Use Plugins](https://docs.dify.ai/plugins/quick-start/install-plugins). The content below has been archived.
+{% endhint %}
+
 SearXNG is a free internet metasearch engine which aggregates results from various search services and databases. Users are neither tracked nor profiled. Now you can use this tool directly in Dify.
 
 Below are the steps for integrating SearXNG into Dify using Docker in the [Community Edition](https://docs.dify.ai/getting-started/install-self-hosted/docker-compose).

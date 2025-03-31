@@ -1,5 +1,9 @@
 # 高级接入工具
 
+{% hint style="warning" %}
+“工具”已全面升级为“插件”生态，详细的开发说明请参考[插件开发](https://docs.dify.ai/zh-hans/plugins/quick-start/develop-plugins)。以下内容已归档。
+{% endhint %}
+
 在开始高级接入之前，请确保你已经阅读过[快速接入](https://docs.dify.ai/v/zh-hans/guides/tools/quick-tool-integration)，并对Dify的工具接入流程有了基本的了解。
 
 ### 工具接口

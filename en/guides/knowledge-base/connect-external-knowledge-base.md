@@ -96,9 +96,33 @@ The **"External Knowledge API"** and **"External Knowledge ID"** associated with
 
 <figure><img src="../../../img/connect-kb-7-en.webp" alt=""><figcaption></figcaption></figure>
 
-### Connection Example
+### Connection Examples
 
-[how-to-connect-aws-bedrock.md](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
+#### AWS Bedrock
+
+[How to connect with AWS Bedrock Knowledge Base](../../learn-more/use-cases/how-to-connect-aws-bedrock.md "mention")
+
+#### LlamaCloud
+
+Dify provides an official LlamaCloud plugin that helps you quickly connect to LlamaCloud knowledge bases.
+
+##### Plugin Installation
+
+1. Visit the Dify [Marketplace](https://marketplace.dify.ai/) and search for `LlamaCloud`
+2. Install and configure the LlamaCloud plugin according to the instructions
+3. Enable the plugin in the Dify platform
+4. Fill in the LlamaCloud API key and other necessary information following the plugin configuration wizard
+5. After configuration is complete, you can see the connected external knowledge base in your knowledge base list
+
+With the LlamaCloud plugin, you can directly use LlamaCloud's powerful retrieval capabilities in the Dify platform without writing custom APIs.
+
+For more information about how it works, please refer to the plugin's [GitHub repository](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud).
+
+##### Video Tutorial
+
+The following video demonstrates in detail how to use the LlamaCloud plugin to connect to external knowledge bases:
+
+{% embed url="https://www.youtube.com/embed/FaOzKZRS-2E" %}
 
 ## FAQ
 
