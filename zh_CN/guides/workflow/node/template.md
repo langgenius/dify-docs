@@ -22,7 +22,6 @@
 
 **示例2：** 将知识检索节点获取的信息及其相关的元数据，整理成一个结构化的 Markdown 格式
 
-{% code fullWidth="false" %}
 ```Plain
 {% raw %}
 {% for item in chunks %}
@@ -38,7 +37,6 @@
 {% endfor %}
 {% endraw %}
 ```
-{% endcode %}
 
 <figure><img src="../../../.gitbook/assets/image (210).png" alt=""><figcaption><p>知识检索节点输出转换为 Markdown</p></figcaption></figure>
 
