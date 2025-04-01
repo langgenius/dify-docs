@@ -67,11 +67,11 @@ Difyプラットフォームにアクセスし、**プロファイル → 設定
 
 ### 3. 知識ベースによるテキスト分析の有効化
 
-[検索拡張生成（RAG）](https://docs.dify.ai/zh-hans/learn-more/extended-reading/retrieval-augment) は、関連する知識を検索することでAIの応答を強化する高度な手法です。モデルに必要なコンテキスト情報を提供することで、応答の精度と関連性が向上します。内部ドキュメントや特定の分野の資料をアップロードすると、AIはこの知識に基づいて、より情報に基づいた回答を生成できます。
+[検索拡張生成（RAG）](https://docs.dify.ai/ja-jp/learn-more/extended-reading/retrieval-augment) は、関連する知識を検索することでAIの応答を強化する高度な手法です。モデルに必要なコンテキスト情報を提供することで、応答の精度と関連性が向上します。内部ドキュメントや特定の分野の資料をアップロードすると、AIはこの知識に基づいて、より情報に基づいた回答を生成できます。
 
 #### 3.1 知識ベースの作成
 
-AIに分析させたい情報を含むドキュメントをアップロードします。DeepSeekがドキュメントの内容を正確に理解できるように、**親子分割**モードを使用することを推奨します。これにより、ドキュメントの階層構造とコンテキストが保持されます。詳細な手順については、[知識ベースの作成](https://docs.dify.ai/zh-hans/guides/knowledge-base/create-knowledge-and-upload-documents) を参照してください。
+AIに分析させたい情報を含むドキュメントをアップロードします。DeepSeekがドキュメントの内容を正確に理解できるように、**親子分割**モードを使用することを推奨します。これにより、ドキュメントの階層構造とコンテキストが保持されます。詳細な手順については、[知識ベースの作成](https://docs.dify.ai/ja-jp/guides/knowledge-base/create-knowledge-and-upload-documents) を参照してください。
 
 ![](https://assets-docs.dify.ai/2025/01/f38af53d2b124391e2ea32f29da7d87d.png)
 

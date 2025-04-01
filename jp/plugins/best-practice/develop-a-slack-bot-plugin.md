@@ -301,7 +301,7 @@ dify plugin package ./slack_bot
 
 ### 5. プラグインの公開（オプション）
 
-作成したプラグインを [Dify Marketplace リポジトリ](https://github.com/langgenius/dify-plugins) にアップロードして公開できます。ただし、公開する前に、プラグインが[プラグイン公開仕様](https://docs.dify.ai/zh-hans/plugins/publish-plugins/publish-to-dify-marketplace)に準拠しているか確認してください。
+作成したプラグインを [Dify Marketplace リポジトリ](https://github.com/langgenius/dify-plugins) にアップロードして公開できます。ただし、公開する前に、プラグインが[プラグイン公開仕様](https://docs.dify.ai/ja-jp/plugins/publish-plugins/publish-to-dify-marketplace)に準拠しているか確認してください。
 
 ### 参考資料
 

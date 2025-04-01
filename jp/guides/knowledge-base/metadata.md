@@ -311,11 +311,11 @@
 
 ## メタデータ機能を使用してナレッジベース内の文書をフィルタリングする方法は？
 
-[アプリケーション内でナレッジベースを統合する](https://docs.dify.ai/zh-hans/guides/knowledge-base/integrate-knowledge-within-application)の**メタデータを使用して知識をフィルタリングする**セクションを参照してください。
+[アプリケーション内でナレッジベースを統合する](https://docs.dify.ai/ja-jp/guides/knowledge-base/integrate-knowledge-within-application)の**メタデータを使用して知識をフィルタリングする**セクションを参照してください。
 
 ## API情報
 
-[APIを通じてナレッジベースを維持する](https://docs.dify.ai/zh-hans/guides/knowledge-base/knowledge-and-documents-maintenance/maintain-dataset-via-api)を参照してください。
+[APIを通じてナレッジベースを維持する](https://docs.dify.ai/ja-jp/guides/knowledge-base/knowledge-and-documents-maintenance/maintain-dataset-via-api)を参照してください。
 
 ## FAQ
 

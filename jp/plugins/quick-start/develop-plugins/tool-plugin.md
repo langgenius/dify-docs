@@ -352,7 +352,7 @@ dify plugin package ./google
 
 ### プラグインの公開
 
-[Dify Plugins コードリポジトリ](https://github.com/langgenius/dify-plugins)にアップロードして、プラグインを公開しましょう。アップロードする前に、プラグインが[プラグイン公開仕様](https://docs.dify.ai/zh-hans/plugins/publish-plugins/publish-to-dify-marketplace)に準拠していることを確認してください。レビューに合格すると、コードはメインブランチにマージされ、[Dify Marketplace](https://marketplace.dify.ai/) に自動的に公開されます。
+[Dify Plugins コードリポジトリ](https://github.com/langgenius/dify-plugins)にアップロードして、プラグインを公開しましょう。アップロードする前に、プラグインが[プラグイン公開仕様](https://docs.dify.ai/ja-jp/plugins/publish-plugins/publish-to-dify-marketplace)に準拠していることを確認してください。レビューに合格すると、コードはメインブランチにマージされ、[Dify Marketplace](https://marketplace.dify.ai/) に自動的に公開されます。
 
 #### さらに詳しく
 

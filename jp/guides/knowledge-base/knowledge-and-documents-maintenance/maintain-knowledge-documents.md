@@ -230,4 +230,4 @@ Q&Aモードでは、1つのコンテンツブロック内に質問と回答が�
 
 ### メタデータ管理
 
-メタデータの詳細については、[メタデータ](https://docs.dify.ai/zh-hans/guides/knowledge-base/metadata)を参照してください。
+メタデータの詳細については、[メタデータ](https://docs.dify.ai/ja-jp/guides/knowledge-base/metadata)を参照してください。
