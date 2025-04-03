@@ -281,6 +281,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `analyticdb`
     * `couchbase`
     * `oceanbase`
+    * `tablestore`
 
 *   WEAVIATE\_ENDPOINT
 
@@ -428,6 +429,22 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 *   OCEANBASE\_MEMORY\_LIMIT
 
     OceanBase メモリ使用上限，Docker デプロイメントのみ。
+
+*   TABLESTORE\_ENDPOINT
+
+    TablestoreのアクセスEndpoint。
+
+*   TABLESTORE\_INSTANCE\_NAME
+
+    Tablestoreのアクセスインスタンス名。
+
+*   TABLESTORE\_ACCESS\_KEY\_ID
+
+    TablestoreのアクセスID。
+
+*   TABLESTORE\_ACCESS\_KEY\_SECRET
+
+    Tablestoreのアクセスキー。
 
 #### ナレッジベース設定
 
