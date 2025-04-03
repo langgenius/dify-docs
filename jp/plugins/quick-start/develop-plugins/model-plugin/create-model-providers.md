@@ -239,5 +239,5 @@ class XinferenceProvider(Provider):
 
 モデルプロバイダーを初期化した後、プロバイダーが提供する具体的なLLMモデルを接続する必要があります。詳細については、以下を参照してください。
 
-* [定義済みモデルの接続](../../../../guides/model-configuration/predefined-model.md)
-* [カスタムモデルの接続](../../../../guides/model-configuration/customizable-model.md)
+* [定義済みモデルの接続](integrate-the-predefined-model.md)
+* [カスタムモデルの接続](customizable-model.md)
