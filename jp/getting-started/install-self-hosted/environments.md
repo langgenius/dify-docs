@@ -234,6 +234,10 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     *   azure-blob
 
         Azure Blobストレージ。この場合、以下のAZURE_BLOB\_ プレフィックスを設定する必要があります。
+    
+    *   aliyun-oss
+    
+        Alibaba Cloud OSS オブジェクト ストレージ。 このオプションが選択されている場合は、次の ALIYUN_OSS\_ という接頭辞が付いた構成を設定する必要があります。
 
     *   huawei-obs
 
