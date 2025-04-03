@@ -4,7 +4,9 @@
 
 变量赋值节点用于向可写入变量进行变量赋值，已支持以下可写入变量：
 
-* [会话变量](../key-concept.md#hui-hua-bian-liang)。
+* [会话变量](../key-concept.md#hui-hua-bian-liang)
+
+* [循环变量](https://docs.dify.ai/zh-hans/guides/workflow/node/loop)
 
 用法：通过变量赋值节点，你可以将工作流内的变量赋值到会话变量中用于临时存储，并可以在后续对话中持续引用。
 

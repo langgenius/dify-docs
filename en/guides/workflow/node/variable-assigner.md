@@ -4,7 +4,9 @@
 
 The variable assigner node is used to assign values to writable variables. Currently supported writable variables include:
 
-* [conversation variables](https://docs.dify.ai/guides/workflow/key-concepts#conversation-variables).
+* [Conversation variables](https://docs.dify.ai/guides/workflow/key-concepts#conversation-variables).
+
+* [Loop variables](https://docs.dify.ai/guides/workflow/node/loop).
 
 Usage: Through the variable assigner node, you can assign workflow variables to conversation variables for temporary storage, which can be continuously referenced in subsequent conversations.
 

@@ -6,6 +6,8 @@
 
 * [会話変数](../key-concept.md##hui-hua-bian-shu)
 
+* [ループ変数](https://docs.dify.ai/ja-jp/guides/workflow/node/loop)
+
 使用方法：このノードを使用することで、ワークフローの中で変数の値を会話変数に一時的に保存し、後続の会話でその値を参照することができます。
 
 <figure><img src="https://assets-docs.dify.ai/2024/11/83d0b9ef4c1fad947b124398d472d656.png" alt="" width="375"><figcaption></figcaption></figure>
