@@ -282,6 +282,7 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
     - `analyticdb`
     - `couchbase`
     - `oceanbase`
+    - `opengauss`
 
 - WEAVIATE_ENDPOINT
 
@@ -436,6 +437,38 @@ Used to store uploaded data set files, team/tenant encryption keys, and other fi
 - OCEANBASE_MEMORY_LIMIT
 
   The memory limit of OceanBase vector database, only available for Docker deployment.
+
+- OPENGAUSS_HOST
+
+  The hostname or IP address of the openGauss vector database.
+
+- OPENGAUSS_PORT
+
+  The port of the openGauss vector database.
+
+- OPENGAUSS_USER
+
+  The username of the openGauss vector database.
+
+- OPENGAUSS_PASSWORD
+
+  The password of the openGauss vector database.
+
+- OPENGAUSS_DATABASE
+
+  The database name of the openGauss vector database.
+
+- OPENGAUSS_MIN_CONNECTION
+
+  Min connection of the openGauss vector database.
+
+- OPENGAUSS_MAX_CONNECTION
+
+  Max connection of the openGauss vector database.
+
+- OPENGAUSS_ENABLE_PQ
+
+  Enabling PQ Acceleration for the openGauss vector database.
 
 #### Knowledge Configuration
 
