@@ -191,6 +191,7 @@
     * [プラグインのプライバシー保護に関するガイドライン](plugins/publish-plugins/publish-to-dify-marketplace/plugin-privacy-protection-guidelines.md)
   * [個人GitHubリポジトリへの公開](plugins/publish-plugins/publish-plugin-on-personal-github-repo.md)
   * [ローカルでの公開と共有](plugins/publish-plugins/package-plugin-file-and-publish.md)
+  * [第三者署名検証のためにプラグインに署名する](plugins/publish-plugins/signing-plugins-for-third-party-signature-verification.md)
 * [よくある質問](plugins/faq.md)
 
 ## 開発 <a href="#development" id="development"></a>

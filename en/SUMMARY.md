@@ -192,6 +192,7 @@
     * [Plugin Privacy Protection Guidelines](plugins/publish-plugins/publish-to-dify-marketplace/plugin-privacy-protection-guidelines.md)
   * [Publish to Your Personal GitHub Repository](plugins/publish-plugins/publish-plugin-on-personal-github-repo.md)
   * [Package the Plugin File and Publish it](plugins/publish-plugins/package-plugin-file-and-publish.md)
+  * [Signing Plugins for Third-Party Signature Verification](plugins/publish-plugins/signing-plugins-for-third-party-signature-verification.md)
 * [FAQ](plugins/faq.md)
 
 ## Development
