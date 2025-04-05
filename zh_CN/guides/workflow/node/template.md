@@ -41,3 +41,27 @@
 <figure><img src="../../../.gitbook/assets/image (210).png" alt=""><figcaption><p>知识检索节点输出转换为 Markdown</p></figcaption></figure>
 
 你可以参考 Jinja 的[官方文档](https://jinja.palletsprojects.com/en/3.1.x/templates/)，创建更为复杂的模板来执行各种任务。
+
+**示例3：** 支持渲染HTML的表单
+```html
+<form data-format="json"> // Default to text
+  <label for="username">Username:</label>
+  <input type="text" name="username" />
+  <label for="password">Password:</label>
+  <input type="password" name="password" />
+  <label for="content">Content:</label>
+  <textarea name="content"></textarea>
+  <label for="date">Date:</label>
+  <input type="date" name="date" />
+  <label for="time">Time:</label>
+  <input type="time" name="time" />
+  <label for="datetime">Datetime:</label>
+  <input type="datetime" name="datetime" />
+  <label for="select">Select:</label>
+  <input type="select" name="select" data-options='["hello","world"]'/>
+  <input type="checkbox" name="check" data-tip="By checking this means you agreed"/>
+  <button data-size="small" data-variant="primary">Login</button>
+</form>
+```
+
+<figure><img src="../../../.gitbook/assets/form_002.jpg" alt="" width="375"><figcaption></figcaption></figure>

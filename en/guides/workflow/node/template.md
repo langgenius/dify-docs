@@ -27,3 +27,28 @@ Beyond naive use cases, you can create more complex templates as per Jinja's [do
 This template node can then be used within a Chatflow to return intermediate outputs to the end user, before a LLM response is initiated.
 
 > The `Answer` node in a Chatflow is non-terminal. It can be inserted anywhere to output responses at multiple points within the flow.
+
+Support for rendering HTML forms
+
+```html
+<form data-format="json"> // Default to text
+  <label for="username">Username:</label>
+  <input type="text" name="username" />
+  <label for="password">Password:</label>
+  <input type="password" name="password" />
+  <label for="content">Content:</label>
+  <textarea name="content"></textarea>
+  <label for="date">Date:</label>
+  <input type="date" name="date" />
+  <label for="time">Time:</label>
+  <input type="time" name="time" />
+  <label for="datetime">Datetime:</label>
+  <input type="datetime" name="datetime" />
+  <label for="select">Select:</label>
+  <input type="select" name="select" data-options='["hello","world"]'/>
+  <input type="checkbox" name="check" data-tip="By checking this means you agreed"/>
+  <button data-size="small" data-variant="primary">Login</button>
+</form>
+```
+
+<figure><img src="../../../.gitbook/assets/form_002.jpg" alt="" width="375"><figcaption></figcaption></figure>
