@@ -69,6 +69,7 @@
     * [检查清单](guides/workflow/debug-and-preview/checklist.md)
     * [运行历史](guides/workflow/debug-and-preview/history.md)
   * [应用发布](guides/workflow/publish.md)
+  * [结构化输出](guides/workflow/structured-outputs.md)
   * [变更公告：图片上传被替换为文件上传](guides/workflow/bulletin.md)
 * [知识库](guides/knowledge-base/README.md)
   * [创建知识库](guides/knowledge-base/create-knowledge-and-upload-documents/README.md)
