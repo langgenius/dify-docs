@@ -4,9 +4,9 @@ Chatflow / Workflow 应用编排页支持以下快捷键，帮助你提升编排
 
 | Windows          | macOS               | 说明            |
 | ---------------- | ------------------- | ------------- |
-| Ctrl + C         | Command + C         | 复制节点          |
+| Ctrl + C         | Command + C         | 拷贝节点          |
 | Ctrl + V         | Command + V         | 粘贴节点          |
-| Ctrl + D         | Command + D         | 复制并新建节点       |
+| Ctrl + D         | Command + D         | 复制节点       |
 | Ctrl + O         | Command + O         | 管理节点          |
 | Ctrl + Z         | Command + Z         | 撤销            |
 | Ctrl + Y         | Command + Y         | 重做            |
