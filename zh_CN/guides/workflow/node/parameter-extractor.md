@@ -26,7 +26,7 @@ Dify 工作流内提供了丰富的[工具](https://docs.dify.ai/v/zh-hans/guide
 
 ***
 
-### 3 如何配置
+### 如何配置
 
 <figure><img src="../../../.gitbook/assets/image (69).png" alt="" width="375"><figcaption></figcaption></figure>
 
