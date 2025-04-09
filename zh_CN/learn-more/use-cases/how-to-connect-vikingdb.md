@@ -125,7 +125,7 @@ class ExternalDatasetService:
             result = {
                 "metadata": retrieval_result.get("doc_info"),
                 "score": retrieval_result.get("score"),
-                "title": retrieval_result.get("chunk_title"), # chunk title
+                "title": retrieval_result.get("doc_info").get("doc_name"),  # chunk title
                 "content": retrieval_result.get("content"),
             }
             results.append(result)
