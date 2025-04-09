@@ -392,6 +392,27 @@ docker logs -f dify-on-wechat  # 查看二维码并登录
 
 确保你有一台windows系统的电脑，然后在此电脑下载安装特定版本的企业微信，[官方下载链接](https://dldir1.qq.com/wework/work\_weixin/WeCom\_4.0.8.6027.exe)，[备用下载链接](https://www.alipan.com/s/UxQHrZ5WoxS)。
 
+笔者目前企业微信最新版本为4.1.33.6009。即使电脑端下载了旧版本的，然后用手机扫码登录，也会被提示版本过低需要升级pc端版本，且无法避免，ntwork-whl只兼容了固定版本企业微信客户端，最新版本没有兼容。
+解决方案如下：
+1. 下载并安装最新版本和4.0.8.6027版本的企业微信
+<figure><img src="../../.gitbook/assets/dify-on-wechat/download_old_new_wework.png" alt=""><figcaption></figcaption></figure>
+
+● wxwork_last文件夹为最新版本的企业微信
+● WxWork文件夹为4.0.8.6027版本
+
+2. 先打开最新版本的企业微信，并扫码登录
+<figure><img src="../../.gitbook/assets/dify-on-wechat/open_last_wework.png" alt=""><figcaption></figcaption></figure>
+打开Wxwork_last/wxwork.exe文件，运行最新版本的企业微信，扫码登录
+
+3. 登录成功后，打开设置，勾选上启动企业微信后自动登录，去掉自动更新的选项。然后关闭最新版本的企业微信程序
+<figure><img src="../../.gitbook/assets/dify-on-wechat/change_wework_config.png" alt=""><figcaption></figcaption></figure>
+
+<figure><img src="../../.gitbook/assets/dify-on-wechat/change_wework_config2.png" alt=""><figcaption></figcaption></figure>
+
+4. 现在再打开旧版本的企业微信，就可以直接登录了
+<figure><img src="../../.gitbook/assets/dify-on-wechat/open_old_wework.png" alt=""><figcaption></figcaption></figure>
+运行wxwork/wxwork.exe即可。
+
 ### 3.2. 创建Dify应用
 
 我们已经在前面的**2.1.1**、**2.3.2**、**2.4.1**与**2.5.1**小节分别介绍了创建基础聊天助手、工作流聊天助手、智能助手、工作流这4种不同的Dify应用，你可以根据上面的教程任意创建一种应用。
