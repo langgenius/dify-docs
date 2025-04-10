@@ -41,3 +41,29 @@ Jinja2のPythonテンプレート言語を使って、データ変換やテキ�
 <figure><img src="https://files.gitbook.com/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FCdDIVDY6AtAz028MFT4d%2Fuploads%2FOtGkLaz38v0FSzSBNuV2%2Fimage.png?alt=media&token=122965f8-9d70-4e57-b0e2-1fdaf1320275" alt=""><figcaption><p>ナレッジリトリーバルノードの出力をMarkdownに変換</p></figcaption></figure>
 
 Jinjaの[公式ドキュメント](https://jinja.palletsprojects.com/en/3.1.x/templates/)を参考にして、さまざまなタスクを実行するためのより複雑なテンプレートを作成することができます。
+
+
+**例3：** HTMLフォームのレンダリングをサポート
+
+```html
+<form data-format="json"> // Default to text
+  <label for="username">Username:</label>
+  <input type="text" name="username" />
+  <label for="password">Password:</label>
+  <input type="password" name="password" />
+  <label for="content">Content:</label>
+  <textarea name="content"></textarea>
+  <label for="date">Date:</label>
+  <input type="date" name="date" />
+  <label for="time">Time:</label>
+  <input type="time" name="time" />
+  <label for="datetime">Datetime:</label>
+  <input type="datetime" name="datetime" />
+  <label for="select">Select:</label>
+  <input type="select" name="select" data-options='["hello","world"]'/>
+  <input type="checkbox" name="check" data-tip="By checking this means you agreed"/>
+  <button data-size="small" data-variant="primary">Login</button>
+</form>
+```
+
+<figure><img src="../../../.gitbook/assets/form_002.jpg" alt="" width="375"><figcaption></figcaption></figure>
