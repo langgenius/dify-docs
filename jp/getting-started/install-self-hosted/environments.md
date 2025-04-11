@@ -281,6 +281,7 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
     * `analyticdb`
     * `couchbase`
     * `oceanbase`
+    * `opengauss`
 
 *   WEAVIATE\_ENDPOINT
 
@@ -428,6 +429,38 @@ dockerイメージまたはdocker-composeによる起動時にのみ有効です
 *   OCEANBASE\_MEMORY\_LIMIT
 
     OceanBase メモリ使用上限，Docker デプロイメントのみ。
+
+*   OPENGAUSS\_HOST
+
+    openGaussベクトルデータベースのホスト名またはIPアドレス。
+
+*   OPENGAUSS\_PORT
+
+    openGaussベクトルデータベースのポート。
+
+*   OPENGAUSS\_USER
+
+    openGaussベクトルデータベースのユーザー名。
+
+*   OPENGAUSS\_PASSWORD
+
+    openGaussベクトルデータベースのパスワード。
+
+*   OPENGAUSS\_DATABASE
+
+    openGaussベクトルデータベースのデータベース名。
+
+*   OPENGAUSS\_MIN\_CONNECTION
+
+    openGaussベクトルデータベースの最小接続。
+
+*   OPENGAUSS\_MAX\_CONNECTION
+
+    openGaussベクトルデータベースの最大接続数。
+
+*   OPENGAUSS\_ENABLE\_PQ
+
+    openGaussベクトルデータベースのPQ加速を有効にします。
 
 #### ナレッジベース設定
 
