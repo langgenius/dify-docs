@@ -267,6 +267,7 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
     * `analyticdb`
     * `couchbase`
     * `oceanbase`
+    * `tablestore`
 
 *   WEAVIATE\_ENDPOINT
 
@@ -418,6 +419,22 @@ Flask 调试模式，开启可在接口输出 trace 信息，方便调试。
 *   OCEANBASE\_MEMORY\_LIMIT
 
     OceanBase 内存使用上限，仅用于 Docker 部署。
+
+*   TABLESTORE\_ENDPOINT
+
+    Tablestore访问Endpoint。
+
+*   TABLESTORE\_INSTANCE\_NAME
+
+    Tablestore访问实例名。
+
+*   TABLESTORE\_ACCESS\_KEY\_ID
+
+    Tablestore访问ID。
+
+*   TABLESTORE\_ACCESS\_KEY\_SECRET
+
+    Tablestore访问密钥。
 
 #### 知识库配置
 
