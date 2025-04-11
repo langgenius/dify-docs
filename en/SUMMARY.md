@@ -69,6 +69,7 @@
     * [Checklist](guides/workflow/debug-and-preview/checklist.md)
     * [Run History](guides/workflow/debug-and-preview/history.md)
   * [Application Publishing](guides/workflow/publish.md)
+  * [Structured Outputs](guides/workflow/structured-outputs.md)
   * [Bulletin: Image Upload Replaced by File Upload](guides/workflow/bulletin.md)
 * [Knowledge](guides/knowledge-base/README.md)
   * [Create Knowledge](guides/knowledge-base/create-knowledge-and-upload-documents.md)
