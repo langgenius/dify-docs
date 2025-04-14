@@ -26,7 +26,7 @@ To preview and develop documentation locally:
 npm i -g mintlify
 ```
 
-2. Start local development
+### 2. Start local development
 
 Run this command at the root of your project (where docs.json is located):
 
