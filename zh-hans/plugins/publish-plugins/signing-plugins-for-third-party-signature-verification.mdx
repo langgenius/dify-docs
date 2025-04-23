@@ -1,0 +1,100 @@
+---
+title: 第三方签名验证
+---
+
+<Warning>
+此功能仅在 Dify 社区版中可用，Dify 云端版目前不支持第三方签名验证。
+</Warning>
+
+第三方签名验证允许 Dify 管理员安全地安装尚未在 Dify 市场上提供的插件，而无需修改 `.env` 文件绕开签名验证安全限制。
+
+**使用场景：**
+
+* 一经同意，Dfy 管理员可以为插件添加由开发者发送的签名。
+* 插件开发者可以为他们的插件添加签名，并将其与公钥一起发布给无法禁用签名验证的 Dify 管理员。
+
+Dify 管理员和插件开发者都可以使用预先生成的密钥对为插件添加签名。此外，管理员可以配置 Dify 在插件安装过程中使用特定公钥强制执行签名验证。
+
+## 生成用于签名和验证的密钥对
+
+使用以下命令生成新的密钥对，用于添加和验证插件签名：
+
+```bash
+dify signature generate -f your_key_pair
+```
+
+运行此命令后，将在当前目录中生成两个文件：
+
+* **私钥**：`your_key_pair.private.pem`
+* **公钥**：`your_key_pair.public.pem`
+
+私钥用于签名插件，公钥用于验证插件的签名。
+
+<Warning>请妥善保管私钥。如果私钥被泄露，攻击者可以为任何插件添加有效签名，这将危及 Dify 社区版的安全性。</Warning>
+
+## 为插件添加签名并验证
+
+运行以下命令为插件添加签名。请注意，你需要指定**待签名的插件文件**和**私钥**：
+
+```bash
+dify signature sign your_plugin_project.difypkg -p your_key_pair.private.pem
+```
+
+执行命令后，将在同一目录中生成一个新的插件文件，文件名中添加了 `signed`：`your_plugin_project.signed.difypkg`
+
+你可以使用以下命令验证插件是否已正确签名。运行命令时需要指定**已签名的插件文件**和**公钥**：
+
+```bash
+dify signature verify your_plugin_project.signed.difypkg -p your_key_pair.public.pem
+```
+
+<Info>如果省略公钥参数，验证将使用 Dify 市场公钥。在这种情况下，对于任何未从 Dify 市场下载的插件文件，签名验证将失败。</Info>
+
+## 启用第三方签名验证
+
+Dify 管理员可以在安装插件前强制使用预先批准的公钥进行签名验证。
+
+### 放置公钥
+
+将用于签名的私钥对应的**公钥**放在插件守护程序可以访问的位置。
+
+例如，在 `docker/volumes/plugin_daemon` 下创建 `public_keys` 目录，并将公钥文件复制到对应路径：
+
+```bash
+mkdir docker/volumes/plugin_daemon/public_keys
+cp your_key_pair.public.pem docker/volumes/plugin_daemon/public_keys
+```
+
+### 环境变量配置
+
+在 `plugin_daemon` 容器中，配置以下环境变量：
+
+* `THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED`
+  * 启用第三方签名验证。
+  * 将此项设置为 `true` 以启用此功能。
+* `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS`
+  * 指定用于签名验证的公钥文件路径。
+  * 你可以列出多个公钥文件，用逗号分隔。
+
+以下是配置这些变量的 Docker Compose 覆盖文件 (`docker-compose.override.yaml`) 示例：
+
+```yaml
+services:
+  plugin_daemon:
+    environment:
+      FORCE_VERIFYING_SIGNATURE: true
+      THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED: true
+      THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS: /app/storage/public_keys/your_key_pair.public.pem
+```
+
+<Info>请注意，`docker/volumes/plugin_daemon` 在 `plugin_daemon` 容器中被挂载到 `/app/storage`。确保在 `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS` 中指定的路径对应于容器内的路径。</Info>
+
+要应用这些更改，请重启 Dify 服务：
+
+```bash
+cd docker
+docker compose down
+docker compose up -d
+```
+
+重启服务后，第三方签名验证功能将在当前社区版环境中启用。
