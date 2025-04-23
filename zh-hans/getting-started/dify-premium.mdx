@@ -108,3 +108,7 @@ poetry run flask install-plugins --workers=2
 docker-compose down
 docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
 ```
+
+## 自定义 WebApp & 品牌
+
+你可以在设置里的 **定制** 中启用此功能，启用 **移除 Powered by Dify** 并上传您自己的标志。

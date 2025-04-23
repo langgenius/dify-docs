@@ -110,3 +110,7 @@ poetry run flask install-plugins --workers=2
 docker-compose down
 ocker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
 ```
+
+## カスタマイズ Webアプリのロゴやブランド
+
+この機能は設定の**カスタマイズ**で有効にすることができます。**Powered by Difyを削除**を有効にして、独自のロゴをアップロードしてください。
