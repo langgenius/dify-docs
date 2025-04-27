@@ -221,7 +221,7 @@ http_access deny all
 
 目前还不支持将你自己创建的应用设置为模板。现有的模板是由Dify官方为云版本用户参考提供的。如果你正在使用云版本，你可以将应用添加到你的工作空间或者在修改后定制它们以创建你自己的应用。如果你正在使用社区版本并且需要为你的团队创建更多的应用模板，你可以咨询我们的商务团队以获得付费技术支持：[business@dify.ai](mailto:business@dify.ai)
 
-### 20.502 Bad Gateway
+### 20. 502 Bad Gateway
 
 这是因为Nginx将服务转发到了错误的位置导致的，首先确保容器正在运行，然后以Root权限运行以下命令：
 
@@ -277,4 +277,97 @@ API 服务与 Dify 平台使用的端口号相一致。你可以通过修改 `do
    ```bash
    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
+   ```
+
+### 24. 如何删除旧日志和未使用的文件以减少存储使用量？
+
+Dify **不会** 自动删除数据库中的旧日志或存储中的未使用文件。相反，为了让实例管理员能够 **手动** 删除旧日志和未使用的文件，提供了几个命令。
+
+**删除旧日志**
+
+你可以使用 `clear-free-plan-tenant-expired-logs` 命令指定天数来删除旧日志。例如，要删除超过30天的日志，请运行以下命令：
+
+1. 获取租户ID
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c "echo 'db.session.query(Tenant).all(); quit()' | flask shell"
+   ...
+   >>> [<Tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2>]
+   ```
+
+   - 在此示例中，租户ID为 `618b5d66-a1f5-4b6b-8d12-f171182a1cb2`。
+
+2. 通过指定租户ID和天数删除旧日志
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs --days 30 --batch 100 --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ...
+   Starting clear free plan tenant expired logs.
+   Clearing free plan tenant expired logs
+   Total tenant count: 1
+   [2025-04-27 05:28:22.027032] Processed 2555 messages for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.085901] Processed 2190 conversations for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.112561] Processed 5110 workflow node executions for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ```
+
+   - 使用 `--tenant_ids` 选项指定租户ID。
+   - 将删除比 `--days` 选项指定的天数更旧的日志。
+
+**删除未使用的文件**
+
+你可以使用 `clear-orphaned-file-records` 命令和 `remove-orphaned-files-on-storage` 命令删除未使用的文件。
+
+<Warning>
+  由于并非所有模式都经过完全测试，请注意这些命令可能会删除意外的文件记录或文件。
+  在继续之前，请确保备份数据库和存储。
+  还建议在维护窗口期间运行此操作，因为这可能会导致实例负载过高。
+</Warning>
+
+<Warning>
+  在当前实现中，仅当存储类型为OpenDAL（当环境变量 `STORAGE_TYPE` 设置为 `opendal`）时，才支持删除未使用的文件。
+  如果你使用的存储类型不是OpenDAL，则需要手动删除未使用的文件，或者[帮助为存储接口实现 `scan` 方法](https://github.com/langgenius/dify/blob/main/api/extensions/storage/base_storage.py)。
+</Warning>
+
+1. 从数据库中删除未使用的文件记录
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-orphaned-file-records
+   ...
+   !!! USE WITH CAUTION !!!
+   Since not all patterns have been fully tested, please note that this command may delete unintended file records.
+   This cannot be undone. Please make sure to back up your database before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned file records.
+   - orphaned file id: 8a0387e6-dde7-411c-bac2-6e6d8af6ae31
+   - orphaned file id: 9177f9df-7360-4434-b65f-10fdec7d38af
+   ...
+   Do you want to proceed to delete all 365 orphaned file records? [y/N]: y
+   - Deleting orphaned file records in table upload_files
+   - Deleting orphaned file records in table tool_files
+   Removed 365 orphaned file records.
+   ```
+
+2. 删除数据库中不存在的存储文件
+
+   ```bash
+   $ docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   ...
+   !!! USE WITH CAUTION !!!
+   Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).
+   Since not all patterns have been fully tested, please note that this command may delete unintended files.
+   This cannot be undone. Please make sure to back up your storage before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned files.
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Do you want to proceed to remove all 365 orphaned files? [y/N]: y
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Removed 365 orphaned files without errors.
    ```
