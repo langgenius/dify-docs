@@ -1,415 +1,168 @@
 ---
-title: Chatbot
-version: 'English'
+title: External Knowledge API
 ---
 
-## Overview
-Chat applications support session persistence, allowing previous chat history to be used as context for responses. This can be applicable for chatbots, customer service AI, etc.
+## Endpoint
 
-## Base URL 
 ```
-https://api.dify.ai/v1
+POST <your-endpoint>/retrieval
 ```
 
-## Authentication 
-The Service API uses API-Key authentication. 
+## Header
 
-> **Important**: Strongly recommend storing your API Key on the server-side, not shared or stored on the client-side, to avoid possible API-Key leakage that can lead to serious consequences.  
+This API is used to connect to a knowledge base that is independent of the Dify and maintained by developers. For more details, please refer to [Connecting to an External Knowledge Base](https://docs.dify.ai/guides/knowledge-base/connect-external-knowledge-base). You can use `API-Key` in the `Authorization` HTTP Header to verify permissions. The authentication logic is defined by you in the retrieval API, as shown below:
 
-For all API requests, include your API Key in the Authorization HTTP Header:
 ```
 Authorization: Bearer {API_KEY}
 ```
 
-## API Endpoints
+## Request Body Elements
 
-### Send Chat Message
-`POST /chat-messages`
+The request accepts the following data in JSON format.
 
-Send a request to the chat application.
+| Property | Required | Type | Description | Example value |
+|----------|----------|------|-------------|---------------|
+| knowledge_id | TRUE | string | Your knowledge's unique ID | AAA-BBB-CCC |
+| query | TRUE | string | User's query | What is Dify? |
+| retrieval_setting | TRUE | object | Knowledge's retrieval parameters | See below |
+| metadata_condition | FALSE | Object | Original array filtering | See below |
 
-#### Request Body
+The `retrieval_setting` property is an object containing the following keys:
 
-- **query** (string) Required
-  - User Input / Question Content
+| Property | Required | Type | Description | Example value |
+|----------|----------|------|-------------|---------------|
+| top_k | TRUE | int | Maximum number of retrieved results | 5 |
+| score_threshold | TRUE | float | The score limit of relevance of the result to the query, scope: 0~1 | 0.5 |
 
-- **inputs** (object) Required
-  - Allows the entry of various variable values defined by the App
-  - Contains multiple key/value pairs, each key corresponding to a specific variable
-  - At least one key/value pair required
+The `metadata_condition` property is an object containing the following keys:
 
-- **response_mode** (string) Required
-  - Modes supported:
-    - `streaming`: Streaming mode (recommended), implements typewriter-like output through SSE
-    - `blocking`: Blocking mode, returns result after execution completes
-      - Note: Due to Cloudflare restrictions, requests will timeout after 100 seconds
-      - Note: blocking mode is not supported in Agent Assistant mode
+| Attribute | Required | Type | Description | Example Value |
+|-----------|----------|------|-------------|--------------|
+| logical_operator | No | String | Logical operator, values can be `and` or `or`, default is `and` | and |
+| conditions | Yes | Array (Object) | List of conditions | See below |
 
-- **user** (string) Required
-  - User identifier for retrieval and statistics
-  - Should be uniquely defined within the application
+Each object in the `conditions` array contains the following keys:
 
-- **conversation_id** (string) Optional
-  - Conversation ID to continue based on previous chat records
+| Attribute | Required | Type | Description | Example Value |
+|-----------|----------|------|-------------|--------------|
+| name | Yes | Array (String) | Names of the metadata to filter | `["category", "tag"]` |
+| comparison_operator | Yes | String | Comparison operator | `contains` |
+| value | No | String | Comparison value, can be omitted when the operator is `empty`, `not empty`, `null`, or `not null` | `"AI"` |
 
-- **files** (array[object]) Optional
-  - File list for image input with text understanding
-  - Available only when model supports Vision capability
-  - Properties:
-    - `type` (string): Supported type: image
-    - `transfer_method` (string): 'remote_url' or 'local_file'
-    - `url` (string): Image URL (for remote_url)
-    - `upload_file_id` (string): Uploaded file ID (for local_file)
+Supported `comparison_operator` operators:
 
-- **auto_generate_name** (bool) Optional
-  - Auto-generate title, default is false
-  - Can achieve async title generation via conversation rename API
+- `contains`: Contains a certain value  
+- `not contains`: Does not contain a certain value  
+- `start with`: Starts with a certain value  
+- `end with`: Ends with a certain value  
+- `is`: Equals a certain value  
+- `is not`: Does not equal a certain value  
+- `empty`: Is empty  
+- `not empty`: Is not empty  
+- `=`: Equals  
+- `≠`: Not equal  
+- `>`: Greater than  
+- `<`: Less than  
+- `≥`: Greater than or equal to  
+- `≤`: Less than or equal to  
+- `before`: Before a certain date  
+- `after`: After a certain date  
 
-#### Response Types
+## Request Syntax
 
-**Blocking Mode Response (ChatCompletionResponse)**
-Returns complete App result with Content-Type: application/json
-
-```typescript
-interface ChatCompletionResponse {
-  message_id: string;
-  conversation_id: string;
-  mode: string;
-  answer: string;
-  metadata: {
-    usage: Usage;
-    retriever_resources: RetrieverResource[];
-  };
-  created_at: number;
-}
-```
-
-**Streaming Mode Response (ChunkChatCompletionResponse)**
-Returns stream chunks with Content-Type: text/event-stream
-
-Events:
-- `message`: LLM text chunk event
-- `agent_message`: LLM text chunk event (Agent Assistant mode)
-- `agent_thought`: Agent reasoning process 
-- `message_file`: New file created by tool
-- `message_end`: Stream end event
-- `message_replace`: Content replacement event
-- `workflow_started`: Workflow execution start
-- `node_started`: Node execution start
-- `node_finished`: Node execution completion
-- `workflow_finished`: Workflow execution completion
-- `parallel_branch_started`: Parallel branch start
-- `parallel_branch_finished`: Parallel branch completion
-- `iteration_started`: Iteration start
-- `iteration_next`: Next iteration
-- `iteration_completed`: Iteration completion
-- `error`: Exception event
-- `ping`: Keep-alive event (every 10s)
-
-### File Upload
-`POST /files/upload`
-
-Upload files (currently only images) for multimodal understanding.
-
-#### Supported Formats
-- png
-- jpg
-- jpeg
-- webp
-- gif
-
-#### Request Body
-Requires multipart/form-data:
-- `file` (File) Required
-- `user` (string) Required
-
-#### Response
-```typescript
-interface FileUploadResponse {
-  id: string;
-  name: string;
-  size: number;
-  extension: string;
-  mime_type: string;
-  created_by: string;
-  created_at: number;
-}
-```
-
-### Stop Generate
-`POST /chat-messages/:task_id/stop`
-
-Stop ongoing generation (streaming mode only).
-
-#### Request Body
-- `user` (string) Required
-
-#### Response
 ```json
+POST <your-endpoint>/retrieval HTTP/1.1
+-- header
+Content-Type: application/json
+Authorization: Bearer your-api-key
+-- data
 {
-    "result": "success"
+    "knowledge_id": "your-knowledge-id",
+    "query": "your question",
+    "retrieval_setting":{
+        "top_k": 2,
+        "score_threshold": 0.5
+    }
 }
 ```
 
-### Message Feedback
-`POST /messages/:message_id/feedbacks`
+## Response Elements
 
-Submit user feedback on messages.
+If the action is successful, the service sends back an HTTP 200 response.
 
-#### Request Body
-- `rating` (string) Required: "like" | "dislike" | null
-- `user` (string) Required
+The following data is returned in JSON format by the service.
 
-#### Response
+| Property | Required | Type | Description | Example value |
+|----------|----------|------|-------------|---------------|
+| records | TRUE | List[Object] | A list of records from querying the knowledge base. | See below |
+
+The `records` property is a list object containing the following keys:
+
+| Property | Required | Type | Description | Example value |
+|----------|----------|------|-------------|---------------|
+| content | TRUE | string | Contains a chunk of text from a data source in the knowledge base. | Dify:The Innovation Engine for GenAI Applications |
+| score | TRUE | float | The score of relevance of the result to the query, scope: 0~1 | 0.5 |
+| title | TRUE | string | Document title | Dify Introduction |
+| metadata | FALSE | json | Contains metadata attributes and their values for the document in the data source. | See example |
+
+## Response Syntax
+
 ```json
+HTTP/1.1 200
+Content-type: application/json
 {
-    "result": "success"
+    "records": [{
+                    "metadata": {
+                            "path": "s3://dify/knowledge.txt",
+                            "description": "dify knowledge document"
+                    },
+                    "score": 0.98,
+                    "title": "knowledge.txt",
+                    "content": "This is the document for external knowledge."
+            },
+            {
+                    "metadata": {
+                            "path": "s3://dify/introduce.txt",
+                            "description": "dify introduce"
+                    },
+                    "score": 0.66,
+                    "title": "introduce.txt",
+                    "content": "The Innovation Engine for GenAI Applications"
+            }
+    ]
 }
 ```
 
-### Get Conversation History
-`GET /messages`
+## Errors
 
-Returns historical chat records in reverse chronological order.
+If the action fails, the service sends back the following error information in JSON format:
 
-#### Query Parameters
-- `conversation_id` (string) Required
-- `user` (string) Required
-- `first_id` (string) Optional: First chat record ID
-- `limit` (int) Optional: Default 20
+| Property | Required | Type | Description | Example value |
+|----------|----------|------|-------------|---------------|
+| error_code | TRUE | int | Error code | 1001 |
+| error_msg | TRUE | string | The description of API exception | Invalid Authorization header format. Expected 'Bearer <api-key>' format. |
 
-#### Response
-```typescript
-interface ConversationHistory {
-  data: Array<{
-    id: string;
-    conversation_id: string;
-    inputs: Record<string, any>;
-    query: string;
-    message_files: Array<{
-      id: string;
-      type: string;
-      url: string;
-      belongs_to: 'user' | 'assistant';
-    }>;
-    agent_thoughts: Array<{
-      id: string;
-      message_id: string;
-      position: number;
-      thought: string;
-      observation: string;
-      tool: string;
-      tool_input: string;
-      created_at: number;
-      message_files: string[];
-    }>;
-    answer: string;
-    created_at: number;
-    feedback?: {
-      rating: 'like' | 'dislike';
-    };
-    retriever_resources: RetrieverResource[];
-  }>;
-  has_more: boolean;
-  limit: number;
-}
-```
+The `error_code` property has the following types:
 
-### Get Conversations
-`GET /conversations`
+| Code | Description |
+|------|-------------|
+| 1001 | Invalid Authorization header format. |
+| 1002 | Authorization failed |
+| 2001 | The knowledge does not exist |
 
-Retrieve conversation list for current user.
+### HTTP Status Codes
 
-#### Query Parameters
-- `user` (string) Required
-- `last_id` (string) Optional
-- `limit` (int) Optional: Default 20
-- `pinned` (boolean) Optional
+**AccessDeniedException**
+The request is denied because of missing access permissions. Check your permissions and retry your request.
+HTTP Status Code: 403
 
-#### Response
-```typescript
-interface ConversationList {
-  data: Array<{
-    id: string;
-    name: string;
-    inputs: Record<string, any>;
-    introduction: string;
-    created_at: number;
-  }>;
-  has_more: boolean;
-  limit: number;
-}
-```
+**InternalServerException**
+An internal server error occurred. Retry your request.
+HTTP Status Code: 500
 
-### Delete Conversation
-`DELETE /conversations/:conversation_id`
+## Development Example
 
-Delete a conversation.
+You can learn how to develop external knowledge base plugins through the following video tutorial using LlamaCloud as an example:
 
-#### Request Body
-- `user` (string) Required
 
-#### Response
-```json
-{
-    "result": "success"
-}
-```
-
-### Rename Conversation
-`POST /conversations/{conversation_id}/name`
-
-#### Request Body
-- `name` (string) Optional
-- `auto_generate` (boolean) Optional: Default false
-- `user` (string) Required
-
-#### Response
-```typescript
-interface RenamedConversation {
-  id: string;
-  name: string;
-  inputs: Record<string, any>;
-  introduction: string;
-  created_at: number;
-}
-```
-
-### Speech to Text
-`POST /audio-to-text`
-
-Convert audio to text.
-
-#### Request Body (multipart/form-data)
-- `file` (File) Required
-  - Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm
-  - Size limit: 15MB
-- `user` (string) Required
-
-#### Response
-```typescript
-interface AudioToTextResponse {
-  text: string;
-}
-```
-
-### Get Application Parameters
-`GET /parameters`
-
-Retrieve application configuration and settings.
-
-#### Query Parameters
-- `user` (string) Required
-
-#### Response
-```typescript
-interface ApplicationParameters {
-  opening_statement: string;
-  suggested_questions_after_answer: {
-    enabled: boolean;
-  };
-  speech_to_text: {
-    enabled: boolean;
-  };
-  retriever_resource: {
-    enabled: boolean;
-  };
-  annotation_reply: {
-    enabled: boolean;
-  };
-  user_input_form: Array<{
-    'text-input' | 'paragraph' | 'select': {
-      label: string;
-      variable: string;
-      required: boolean;
-      default: string;
-      options?: string[];
-    };
-  }>;
-  file_upload: {
-    image: {
-      enabled: boolean;
-      number_limits: number;
-      transfer_methods: string[];
-    };
-  };
-  system_parameters: {
-    image_file_size_limit: string;
-  };
-}
-```
-
-### Get Application Meta Information
-`GET /meta`
-
-Retrieve tool icons and metadata.
-
-#### Query Parameters
-- `user` (string) Required
-
-#### Response
-```typescript
-interface ApplicationMeta {
-  tool_icons: Record<string, string | {
-    background: string;
-    content: string;
-  }>;
-}
-```
-
-## Type Definitions
-
-### Usage
-```typescript
-interface Usage {
-  prompt_tokens: number;
-  prompt_unit_price: string;
-  prompt_price_unit: string;
-  prompt_price: string;
-  completion_tokens: number;
-  completion_unit_price: string;
-  completion_price_unit: string;
-  completion_price: string;
-  total_tokens: number;
-  total_price: string;
-  currency: string;
-  latency: number;
-}
-```
-
-### RetrieverResource
-```typescript
-interface RetrieverResource {
-  position: number;
-  content: string;
-  score: string;
-  dataset_id: string;
-  dataset_name: string;
-  document_id: string;
-  document_name: string;
-  segment_id: string;
-}
-```
-
-## Error Codes
-
-Common error codes you may encounter:
-- 404: Conversation does not exist
-- 400: invalid_param - Abnormal parameter input
-- 400: app_unavailable - App configuration unavailable
-- 400: provider_not_initialize - No available model credential configuration
-- 400: provider_quota_exceeded - Model invocation quota insufficient
-- 400: model_currently_not_support - Current model unavailable
-- 400: completion_request_error - Text generation failed
-- 500: Internal server error
-
-For file uploads:
-- 400: no_file_uploaded - File must be provided
-- 400: too_many_files - Only one file accepted
-- 400: unsupported_preview - File does not support preview
-- 400: unsupported_estimate - File does not support estimation
-- 413: file_too_large - File is too large
-- 415: unsupported_file_type - Unsupported extension
-- 503: s3_connection_failed - Unable to connect to S3
-- 503: s3_permission_denied - No permission for S3
-- 503: s3_file_too_large - Exceeds S3 size limit
+For more information about how it works, please refer to the plugin's [GitHub repository](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud).

@@ -5,7 +5,7 @@
 
 ## 来自 community/contribution.md
 
-* [Become a Contributor](/community/contribution) ✅ | [code of conduct](https://github.com/langgenius/.github/blob/main/CODE\_OF\_CONDUCT.md) ❌ | [this guide](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/README.md) ❌ | [this guide](https://github.com/langgenius/dify/blob/main/api/core/tools/README.md) ❌
+* [Become a Contributor](/community/contribution) ✅ | [code of conduct](https://github.com/langgenius/.github/blob/main/CODE\_OF\_CONDUCT) ❌ | [this guide](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/README) ❌ | [this guide](https://github.com/langgenius/dify/blob/main/api/core/tools/README) ❌
 
 ## 来自 development/models-integration/hugging-face.md
 
@@ -17,7 +17,7 @@
 
 ## 来自 development/models-integration/localai.md
 
-* [Integrate Local Models Deployed by LocalAI](./development/models-integration/localai) ✅ | [LocalAI Data query example](https://github.com/go-skynet/LocalAI/blob/master/examples/langchain-chroma/README.md) ❌
+* [Integrate Local Models Deployed by LocalAI](./development/models-integration/localai) ✅ | [LocalAI Data query example](https://github.com/go-skynet/LocalAI/blob/master/examples/langchain-chroma/README) ❌
 
 ## 来自 development/models-integration/ollama.md
 
@@ -57,7 +57,7 @@
 
 ## 来自 guides/model-configuration/customizable-model.md
 
-* [Custom Model Integration](./guides/model-configuration/customizable-model) ✅ | [Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/en\_US/interfaces.md) ❌ | [llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model\_providers/anthropic/llm/llm.py) ❌
+* [Custom Model Integration](./guides/model-configuration/customizable-model) ✅ | [Interfaces](https://github.com/langgenius/dify/blob/main/api/core/model\_runtime/docs/en\_US/interfaces) ❌ | [llm.py](https://github.com/langgenius/dify-runtime/blob/main/lib/model\_providers/anthropic/llm/llm.py) ❌
 
 ## 来自 guides/model-configuration/new-provider.md
 

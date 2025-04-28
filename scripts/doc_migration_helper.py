@@ -90,7 +90,7 @@ class DocMigrationHelper:
         # 收集可能的路径
         potential_paths = []
         
-        # 处理文件扩展名 (.mdx -> .md)
+        # 处理文件扩展名 (.mdx -> )
         rest_path = os.path.join(*parts[1:])
         if rest_path.endswith(".mdx"):
             rest_path = rest_path[:-4] + ".md"
@@ -489,7 +489,7 @@ class DocMigrationHelper:
                     changes.append((full_match, new_text, 'Frame组件图片'))
             
             # 3. 查找并替换文档引用链接
-            # [link text](./path/to/file.md) 或 [link text](path/to/file.md)
+            # [link text](./path/to/file) 或 [link text](path/to/file)
             doc_link_pattern = re.compile(r'\[([^\]]+)\]\((\./[^)]+\.md(?:#[^)]*)?|\.\./[^)]+\.md(?:#[^)]*)?|[^)]+\.md(?:#[^)]*)?)\)')
             for match in doc_link_pattern.finditer(content):
                 link_text = match.group(1)
