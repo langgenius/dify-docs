@@ -276,3 +276,96 @@ API サービスのポートは、Dify プラットフォームで使用され�
    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
    ```
+
+### 24. 古いログや未使用のファイルを削除し、ストレージの使用量を削減する方法
+
+Dify はデータベース上の古いログやストレージ上の未使用のファイルの自動的な削除は **行いません**。代わりに、インスタンスの管理者が古いログや未使用のファイルを **手動で** 削除できるように、いくつかのコマンドが用意されています。
+
+**古いログを削除する**
+
+`clear-free-plan-tenant-expired-logs` コマンドで、日数を指定して古いログを削除できます。たとえば、30日以上前のログを削除するには、次のコマンドを実行します。
+
+1. テナント ID を確認する
+
+  ```bash
+  $ docker exec -it docker-api-1 bash -c "echo 'db.session.query(Tenant).all(); quit()' | flask shell"
+  ...
+  >>> [<Tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2>]
+  ```
+
+  - この例では、テナント ID が `618b5d66-a1f5-4b6b-8d12-f171182a1cb2` であることがわかります。
+
+2. テナント ID と日数を指定して、古いログを削除する
+
+  ```bash
+  $ docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs --days 30 --batch 100 --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  ...
+  Starting clear free plan tenant expired logs.
+  Clearing free plan tenant expired logs
+  Total tenant count: 1
+  [2025-04-27 05:28:22.027032] Processed 2555 messages for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  [2025-04-27 05:28:22.085901] Processed 2190 conversations for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  [2025-04-27 05:28:22.112561] Processed 5110 workflow node executions for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  ```
+
+  - `--tenant_ids` オプションでテナント ID を指定します。
+  - `--days` オプションで指定した日数より古いログが削除されます。
+
+**未使用のファイルを削除する**
+
+`clear-orphaned-file-records` コマンドと `remove-orphaned-files-on-storage` コマンドを使用して、未使用のファイルを削除できます。
+
+<Warning>
+  全てのパタンが完全にテストされているわけではないため、このコマンドは意図しないファイルレコードやファイルを削除する可能性があります。
+  続行する前に、データベースとストレージのバックアップがあることを確認してください。
+  また、この操作がインスタンスの高負荷につながる可能性があるため、メンテナンスウィンドウ中に実行することをおすすめします。
+</Warning>
+
+<Warning>
+  現在の実装では、未使用のファイルの削除はストレージタイプが OpenDAL の場合（環境変数 `STORAGE_TYPE` が `opendal` の場合）のみサポートされています。
+  OpenDAL 以外のストレージタイプを使用している場合は、未使用のファイルを手動で削除するか、[ストレージインタフェイスへの `scan` メソッドの実装にご協力ください](https://github.com/langgenius/dify/blob/main/api/extensions/storage/base_storage.py)。
+</Warning>
+
+1. データベースから未使用のファイルのレコードを削除する
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-orphaned-file-records
+   ...
+   !!! USE WITH CAUTION !!!
+   Since not all patterns have been fully tested, please note that this command may delete unintended file records.
+   This cannot be undone. Please make sure to back up your database before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned file records.
+   - orphaned file id: 8a0387e6-dde7-411c-bac2-6e6d8af6ae31
+   - orphaned file id: 9177f9df-7360-4434-b65f-10fdec7d38af
+   ...
+   Do you want to proceed to delete all 365 orphaned file records? [y/N]: y
+   - Deleting orphaned file records in table upload_files
+   - Deleting orphaned file records in table tool_files
+   Removed 365 orphaned file records.
+   ```
+
+2. ストレージからデータベースに存在しないファイルを削除する
+
+   ```bash
+   $ docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   ...
+   !!! USE WITH CAUTION !!!
+   Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).
+   Since not all patterns have been fully tested, please note that this command may delete unintended files.
+   This cannot be undone. Please make sure to back up your storage before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned files.
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Do you want to proceed to remove all 365 orphaned files? [y/N]: y
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Removed 365 orphaned files without errors.
+   ```
