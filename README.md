@@ -1,32 +1,28 @@
-# 📘 Dify Documentation (Mintlify Edition)
+## 📘 Dify Documentation (Mintlify Edition)
 
-Welcome to the new documentation repository for **Dify**, currently in migration from the original [`dify-docs`](https://github.com/langgenius/dify-docs) repo.
+Welcome to the documentation repository for Dify.
 
-> 🚧 This is a **work-in-progress** version of the official Dify docs.  
-> You can preview the site at: [https://docs.dify.dev](https://docs.dify.dev/en/introduction)  
-> Once finalized, the docs will be moved to [https://docs.dify.ai](https://docs.dify.ai) and fully replace the old documentation site.
+We warmly welcome your contributions — whether it’s proofreading, fixing typos, or submitting new content. Please feel free to open issues or PRs if you find anything that could be improved!
 
-We warmly welcome your contributions — whether it's proofreading, fixing typos, or submitting new content. Please feel free to open issues or PRs if you find anything that could be improved!
-
----
+⸻
 
 ## 🚀 Project Overview
 
-This project uses the [Mintlify Starter Kit](https://github.com/mintlify/starter) to build and serve modern, developer-friendly documentation.
+This project uses the Mintlify Kit to build and serve modern, developer-friendly documentation.
 
----
+⸻
 
 ## 🛠️ Local Development
 
 To preview and develop documentation locally:
 
-### 1. Install the Mintlify CLI
+1. Install the Mintlify CLI
 
 ```bash
 npm i -g mintlify
 ```
 
-### 2. Start local development
+2. Start local development
 
 Run this command at the root of your project (where docs.json is located):
 
@@ -36,24 +32,27 @@ mintlify dev
 
 ⸻
 
-🧩 Troubleshooting
-	•	mintlify dev isn’t running?
-→ Try mintlify install to re-install dependencies.
-	•	Page loads as 404?
-→ Make sure you’re browsing the correct docs path.
+## 🙌 Contributing
+
+Your help in reviewing, editing, and expanding the documentation is truly appreciated.
+
+### 📝 Contribution Workflow
+
+1.	Fork this repository to your own GitHub account.
+2.	Create a new branch based on the `main` branch.
+3.	Start the local development server following the steps above to preview your changes live.
+4.	Make your edits or write new content in the appropriate file under the content/ directory.
+5.	Submit a Pull Request (PR) after verifying your changes:
+
+	• If you’ve added new pages or sections, don’t forget to update docs.json to include them in the sidebar navigation.
+	• We welcome tri-lingual contributions (English, Simplified Chinese, Japanese) — contribute in one or more languages if possible.
+
+Please submit PRs to this repository instead of the legacy one: 📘 https://github.com/langgenius/dify-docs
+
+Thanks again for being part of Dify’s documentation journey!
 
 ⸻
 
-🙌 Contributing
-
-If you’re a contributor from the original dify-docs project — welcome back!
-We’re gradually migrating content, so your help in reviewing, editing, and expanding is truly appreciated.
-
-For non-urgent contributions, please submit PRs to this repository instead of the old one.
-Thanks for being part of Dify’s documentation journey!
-
----
-
-## License
+## 📄 License
 
 The Dify product documentation in the assets, content, and data folders are licensed under a [CC-BY license](LICENSE).
