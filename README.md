@@ -38,11 +38,11 @@ Your help in reviewing, editing, and expanding the documentation is truly apprec
 
 ### 📝 Contribution Workflow
 
-1.	Fork this repository to your own GitHub account.
-2.	Create a new branch based on the `main` branch.
-3.	Start the local development server following the steps above to preview your changes live.
-4.	Make your edits or write new content in the appropriate file under the content/ directory.
-5.	Submit a Pull Request (PR) after verifying your changes:
+1. Fork this repository to your own GitHub account.
+2. Create a new branch based on the `main` branch.
+3. Start the local development server following the steps above to preview your changes live.
+4. Make your edits or write new content in the appropriate file under the content/ directory.
+5. Submit a Pull Request (PR) after verifying your changes:
 
 	• If you’ve added new pages or sections, don’t forget to update docs.json to include them in the sidebar navigation.
 	• We welcome tri-lingual contributions (English, Simplified Chinese, Japanese) — contribute in one or more languages if possible.
