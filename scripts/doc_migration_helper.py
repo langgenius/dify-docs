@@ -190,7 +190,7 @@ class DocMigrationHelper:
         根据本地图片路径找到对应的在线URL
         
         Args:
-            local_path: 本地图片路径，例如 /zh-cn/user-guide/.gitbook/assets/image (66).png
+            local_path: 本地图片路径，例如 /zh-hans/user-guide/.gitbook/assets/image (66).png
             
         Returns:
             online_url: 在线图片URL
@@ -461,7 +461,7 @@ class DocMigrationHelper:
             changes = []
             
             # 1. 查找并替换Markdown格式图片
-            # ![alt text](/zh-cn/user-guide/.gitbook/assets/image.png)
+            # ![alt text](/zh-hans/user-guide/.gitbook/assets/image.png)
             md_img_pattern = re.compile(r'!\[([^\]]*)\]\((/[^)]+)\)')
             for match in md_img_pattern.finditer(content):
                 alt_text = match.group(1)
