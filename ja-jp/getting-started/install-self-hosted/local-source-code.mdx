@@ -1,124 +1,108 @@
 ---
-title: ローカルソースコード起動
+title: ローカルソースコードからの起動
 ---
 
+## 前提条件
 
-### 前提条件
+### Docker と Docker Compose のセットアップ
 
-> Dify インストール前に, ぜひマシンが最小インストール要件を満たしていることを確認してください：
-> - CPU >= 2 Core
+> Dify をインストールする前に、マシンが以下の最小システム要件を満たしていることを確認してください：
+> - CPU >= 2 コア
 > - RAM >= 4 GiB
 
-<table>
-  <thead>
-    <tr>
-      <th>操作系统</th>
-      <th>ソフトウェア</th>
-      <th>説明</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>macOS 10.14またはそれ以降</td>
-      <td>Docker Desktop</td>
-      <td>Docker 仮想マシン（VM）を少なくとも2つの仮想CPU（vCPU）と8GBの初期メモリを使用するように設定してください。そうでないと、インストールが失敗する可能性があります。詳細は<a href="https://docs.docker.com/desktop/mac/install/">MacにDocker Desktopをインストールする</a>を参照してください。</td>
-    </tr>
-    <tr>
-      <td>Linux プラットフォーム</td>
-      <td>
-        <p>Docker 19.03またはそれ以降</p>
-        <p>Docker Compose 1.25.1またはそれ以降</p>
-      </td>
-      <td>詳細は<a href="https://docs.docker.com/engine/install/">Dockerをインストールする</a>および<a href="https://docs.docker.com/compose/install/">Docker Composeをインストールする</a>を参照してください。</td>
-    </tr>
-    <tr>
-      <td>WSL 2が有効なWindows</td>
-      <td>Docker Desktop</td>
-      <td>ソースコードや他のデータをLinuxコンテナにバインドする際、WindowsファイルシステムではなくLinuxファイルシステムに保存することをお勧めします。詳細は<a href="https://docs.docker.com/desktop/windows/install/#wsl-2-backend">WSL 2バックエンドを使用してWindowsにDocker Desktopをインストールする</a>を参照してください。</td>
-    </tr>
-  </tbody>
-</table>
-> OpenAI TTSを使用する場合、システムにFFmpegをインストールする必要があります。詳細は[リンク](https://docs.dify.ai/v/ja-jp/learn-more/faq/install-faq#id-15-tekisutomigeniopenai-error-ffmpeg-is-not-installedtoiuergashitano)を参照してください。
+| オペレーティングシステム | ソフトウェア                                                      | 説明                                                                                                                                                                                                                                                                                                                               |
+| -------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS 10.14 以降       | Docker Desktop                                                 | Docker 仮想マシン（VM）が最低 2 つの仮想 CPU（vCPU）と 8 GB の初期メモリを使用するように設定してください。そうしないと、インストールが失敗する可能性があります。詳細については、[Mac 用 Docker Desktop インストールガイド](https://docs.docker.com/desktop/mac/install/)を参照してください。                                                     |
+| Linux プラットフォーム            | Docker 19.03 以降 Docker Compose 1.25.1 以降 | Docker と Docker Compose のインストール方法については、それぞれ[Docker インストールガイド](https://docs.docker.com/engine/install/)と[Docker Compose インストールガイド](https://docs.docker.com/compose/install/)を参照してください。                                                                            |
+| WSL 2 が有効な Windows | Docker Desktop                                      | Linux コンテナにバインドされるソースコードやその他のデータは、Windows ファイルシステムではなく Linux ファイルシステムに保存することをお勧めします。詳細については、[Windows での WSL 2 バックエンドを使用した Docker Desktop インストールガイド](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)を参照してください。 |
 
-Dify コードをクローン：
+> OpenAI TTS を使用する必要がある場合は、正常に機能するためにシステムに `FFmpeg` がインストールされている必要があります。詳細については、[リンク](https://docs.dify.ai/getting-started/install-self-hosted/install-faq#id-14.-what-to-do-if-this-error-occurs-in-text-to-speech)を参照してください。
 
+### Dify リポジトリのクローン
+git コマンドを実行して [Dify リポジトリ](https://github.com/langgenius/dify) をクローンします。
 ```Bash
 git clone https://github.com/langgenius/dify.git
 ```
 
-ビジネスサービスを有効にする前に、PostgreSQL / Redis / Weaviate（ローカルにない場合）をデプロイする必要があります。以下のコマンドで起動できます：
+### Docker Compose でミドルウェアを起動する
+
+ストレージ用（PostgreSQL / Redis / Weaviate（ローカルで利用できない場合））や拡張機能用（Dify の [sandbox](https://github.com/langgenius/dify-sandbox) や [plugin-daemon](https://github.com/langgenius/dify-plugin-daemon) サービスなど）の一連のミドルウェアが Dify バックエンドサービスで必要です。次のコマンドを実行して Docker Compose でミドルウェアを起動します：
 
 ```Bash
 cd docker
+cp middleware.env.example middleware.env
 docker compose -f docker-compose.middleware.yaml up -d
 ```
 
-***
+---
 
-### サービスデプロイ
+## バックエンドサービスのセットアップ
 
-* API インターフェースサービス
-* Worker 非同期キュー消費サービス
+バックエンドサービスには以下が含まれます：
 
-#### 基本環境インストール
+1. API サービス：フロントエンドサービスと API アクセス用の API リクエストを提供
+2. Worker サービス：データセット処理、ワークスペース、クリーンアップなどの非同期タスクを提供
 
-サーバーの起動にはPython 3.12 が必要です。Python環境の迅速なインストールには[pyenv](https://github.com/pyenv/pyenv)を使用することをお勧めします。
+### 環境の準備
 
-追加のPythonバージョンをインストールするには、pyenv installを使用します。
+Python 3.12 が必要です。Python 環境をすばやくインストールするには [pyenv](https://github.com/pyenv/pyenv) の使用をお勧めします。
+
+追加の Python バージョンをインストールするには、pyenv install を使用します。
 
 ```Bash
 pyenv install 3.12
 ```
 
-"3.12" の Python 環境に切り替えるには、次のコマンドを使用します。
+「3.12」Python 環境に切り替えるには、次のコマンドを使用します：
 
 ```Bash
 pyenv global 3.12
 ```
 
+### API サービスの起動
 
-#### 起動手順
-
-1.  apiディレクトリに移動
+1. `api` ディレクトリに移動します：
 
     ```
     cd api
     ```
-> macOSの場合：`brew install libmagic`でlibmagicをインストールしてください。
 
-2.  環境変数構成ファイルをコピー
+2. 環境変数設定ファイルを準備します
 
     ```
     cp .env.example .env
     ```
-3.  ランダムキーを生成し、`.env`の`SECRET_KEY`の値を置き換え
+
+3. ランダムな秘密鍵を生成し、.env ファイルの SECRET_KEY の値を置き換えます
 
     ```
     awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
     ```
-4.  依存関係をインストール
 
-    Dify APIサービスは依存関係を管理するために[Poetry](https://python-poetry.org/docs/)を使用します。
+4. 依存関係のインストール
+
+    依存関係の管理には [uv](https://docs.astral.sh/uv/getting-started/installation/) を使用します。
+    `uv` で必要な依存関係をインストールするには、次のコマンドを実行します：
+    ```
+    uv sync
+    ```
+    > macOS の場合：`brew install libmagic` で libmagic をインストールしてください。
+
+5. データベースの移行を実行する
+
+    データベースを最新バージョンに移行します：
 
     ```
-    poetry env use 3.12
-    poetry install
-    ```
-5.  データベース移行を実行
-
-    データベーススキーマを最新バージョンに更新します。
-
-    ```
-    poetry run flask db upgrade
-    ```
-6.  APIサービスを開始
-
-    ```
-    poetry run flask run --host 0.0.0.0 --port=5001 --debug
+    uv run flask db upgrade
     ```
 
-    正常な出力：
+6. API サービスを起動する
 
+    ```
+    uv run flask run --host 0.0.0.0 --port=5001 --debug
+    ```
+
+    期待される出力：
     ```
     * Debug mode: on
     INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
@@ -129,98 +113,134 @@ pyenv global 3.12
     WARNING:werkzeug: * Debugger is active!
     INFO:werkzeug: * Debugger PIN: 695-801-919
     ```
-7.  Workerサービスを開始
 
-    データセットファイルのインポートやデータセットドキュメントの更新などの非同期操作を消費するためのサービスです。Linux / MacOSでの起動：
+### Worker サービスの起動
 
+データセットファイルのインポートやデータセットドキュメントの更新などのキューからの非同期タスクを処理するには、以下の手順に従って Worker サービスを起動します
+
+- macOS または Linux の場合
     ```
-    poetry run celery -A app.celery worker -P gevent -c 1 -Q dataset,generation,mail,ops_trace --loglevel INFO
-    ```
-
-    Windowsシステムでの起動の場合、以下のコマンドを使用してください：
-
-    ```
-    poetry run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    uv run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
     ```
 
-    正常な出力：
+    Windows システムで Worker サービスを起動する場合は、代わりに次のコマンドを使用してください：
+
+- Windows の場合
+    ```
+    uv run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    ```
+
+    期待される出力：
 
     ```
-     -------------- celery@TAKATOST.lan v5.2.7 (dawn-chorus)
-    --- ***** ----- 
-    -- ******* ---- macOS-10.16-x86_64-i386-64bit 2023-07-31 12:58:08
-    - *** --- * --- 
+    -------------- celery@bwdeMacBook-Pro-2.local v5.4.0 (opalescent)
+    --- ***** -----
+    -- ******* ---- macOS-15.4.1-arm64-arm-64bit 2025-04-28 17:07:14
+    - *** --- * ---
     - ** ---------- [config]
-    - ** ---------- .> app:         app:0x7fb568572a10
+    - ** ---------- .> app:         app_factory:0x1439e8590
     - ** ---------- .> transport:   redis://:**@localhost:6379/1
     - ** ---------- .> results:     postgresql://postgres:**@localhost:5432/dify
     - *** --- * --- .> concurrency: 1 (gevent)
-    -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
-    --- ***** ----- 
-     -------------- [queues]
-                    .> dataset          exchange=dataset(direct) key=dataset
-                    .> generation       exchange=generation(direct) key=generation
-                    .> mail             exchange=mail(direct) key=mail
+      -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+      --- ***** -----
+      -------------- [queues]
+      .> dataset          exchange=dataset(direct) key=dataset
+      .> generation       exchange=generation(direct) key=generation
+      .> mail             exchange=mail(direct) key=mail
+      .> ops_trace        exchange=ops_trace(direct) key=ops_trace
 
     [tasks]
-      . tasks.add_document_to_index_task.add_document_to_index_task
-      . tasks.clean_dataset_task.clean_dataset_task
-      . tasks.clean_document_task.clean_document_task
-      . tasks.clean_notion_document_task.clean_notion_document_task
-      . tasks.create_segment_to_index_task.create_segment_to_index_task
-      . tasks.deal_dataset_vector_index_task.deal_dataset_vector_index_task
-      . tasks.document_indexing_sync_task.document_indexing_sync_task
-      . tasks.document_indexing_task.document_indexing_task
-      . tasks.document_indexing_update_task.document_indexing_update_task
-      . tasks.enable_segment_to_index_task.enable_segment_to_index_task
-      . tasks.generate_conversation_summary_task.generate_conversation_summary_task
-      . tasks.mail_invite_member_task.send_invite_member_mail_task
-      . tasks.remove_document_from_index_task.remove_document_from_index_task
-      . tasks.remove_segment_from_index_task.remove_segment_from_index_task
-      . tasks.update_segment_index_task.update_segment_index_task
-      . tasks.update_segment_keyword_index_task.update_segment_keyword_index_task
+    . schedule.clean_embedding_cache_task.clean_embedding_cache_task
+    . schedule.clean_messages.clean_messages
+    . schedule.clean_unused_datasets_task.clean_unused_datasets_task
+    . schedule.create_tidb_serverless_task.create_tidb_serverless_task
+    . schedule.mail_clean_document_notify_task.mail_clean_document_notify_task
+    . schedule.update_tidb_serverless_status_task.update_tidb_serverless_status_task
+    . tasks.add_document_to_index_task.add_document_to_index_task
+    . tasks.annotation.add_annotation_to_index_task.add_annotation_to_index_task
+    . tasks.annotation.batch_import_annotations_task.batch_import_annotations_task
+    . tasks.annotation.delete_annotation_index_task.delete_annotation_index_task
+    . tasks.annotation.disable_annotation_reply_task.disable_annotation_reply_task
+    . tasks.annotation.enable_annotation_reply_task.enable_annotation_reply_task
+    . tasks.annotation.update_annotation_to_index_task.update_annotation_to_index_task
+    . tasks.batch_clean_document_task.batch_clean_document_task
+    . tasks.batch_create_segment_to_index_task.batch_create_segment_to_index_task
+    . tasks.clean_dataset_task.clean_dataset_task
+    . tasks.clean_document_task.clean_document_task
+    . tasks.clean_notion_document_task.clean_notion_document_task
+    . tasks.deal_dataset_vector_index_task.deal_dataset_vector_index_task
+    . tasks.delete_account_task.delete_account_task
+    . tasks.delete_segment_from_index_task.delete_segment_from_index_task
+    . tasks.disable_segment_from_index_task.disable_segment_from_index_task
+    . tasks.disable_segments_from_index_task.disable_segments_from_index_task
+    . tasks.document_indexing_sync_task.document_indexing_sync_task
+    . tasks.document_indexing_task.document_indexing_task
+    . tasks.document_indexing_update_task.document_indexing_update_task
+    . tasks.duplicate_document_indexing_task.duplicate_document_indexing_task
+    . tasks.enable_segments_to_index_task.enable_segments_to_index_task
+    . tasks.mail_account_deletion_task.send_account_deletion_verification_code
+    . tasks.mail_account_deletion_task.send_deletion_success_task
+    . tasks.mail_email_code_login.send_email_code_login_mail_task
+    . tasks.mail_invite_member_task.send_invite_member_mail_task
+    . tasks.mail_reset_password_task.send_reset_password_mail_task
+    . tasks.ops_trace_task.process_trace_tasks
+    . tasks.recover_document_indexing_task.recover_document_indexing_task
+    . tasks.remove_app_and_related_data_task.remove_app_and_related_data_task
+    . tasks.remove_document_from_index_task.remove_document_from_index_task
+    . tasks.retry_document_indexing_task.retry_document_indexing_task
+    . tasks.sync_website_document_indexing_task.sync_website_document_indexing_task
 
-    [2023-07-31 12:58:08,831: INFO/MainProcess] Connected to redis://:**@localhost:6379/1
-    [2023-07-31 12:58:08,840: INFO/MainProcess] mingle: searching for neighbors
-    [2023-07-31 12:58:09,873: INFO/MainProcess] mingle: all alone
-    [2023-07-31 12:58:09,886: INFO/MainProcess] pidbox: Connected to redis://:**@localhost:6379/1.
-    [2023-07-31 12:58:09,890: INFO/MainProcess] celery@TAKATOST.lan ready.
+    2025-04-28 17:07:14,681 INFO [connection.py:22]  Connected to redis://:**@localhost:6379/1
+    2025-04-28 17:07:14,684 INFO [mingle.py:40]  mingle: searching for neighbors
+    2025-04-28 17:07:15,704 INFO [mingle.py:49]  mingle: all alone
+    2025-04-28 17:07:15,733 INFO [worker.py:175]  celery@bwdeMacBook-Pro-2.local ready.
+    2025-04-28 17:07:15,742 INFO [pidbox.py:111]  pidbox: Connected to redis://:**@localhost:6379/1.
     ```
 
-***
+---
 
-### フロントエンドページデプロイ
+## Web サービスのセットアップ
 
-Web フロントエンドクライアントページサービス
+フロントエンドページ用の Web サービスを起動します。
 
-#### 基本環境インストール
+### 環境の準備
 
-Web フロントエンドサービスを起動するには[Node.js v18.x (LTS)](http://nodejs.org)、[NPMバージョン8.x.x](https://www.npmjs.com/)または[Yarn](https://yarnpkg.com/)が必要です。
+Web フロントエンドサービスを起動するには、[Node.js v22 (LTS)](http://nodejs.org/) と [PNPM v10](https://pnpm.io/) が必要です。
 
-* NodeJS + NPMをインストール
+- NodeJS のインストール
 
-https://nodejs.org/en/download から対応するOSのv18.x以上のインストーラーをダウンロードしてインストールしてください。stableバージョンをお勧めします。NPMも同梱されています。
+  [https://nodejs.org/en/download](https://nodejs.org/en/download) にアクセスし、v18.x 以上のお使いのオペレーティングシステム用のインストールパッケージを選択してください。一般的な使用には LTS バージョンをお勧めします。
 
-#### 起動手順
+- PNPM のインストール
 
-1.  webディレクトリに移動
+  [インストールガイド](https://pnpm.io/installation) に従って PNPM をインストールします。または、以下のコマンドで `npm` を使用して `pnpm` をインストールできます。
+    ```
+    npm i -g pnpm
+    ```
+
+### Web サービスの起動
+
+1.  web ディレクトリに移動します
 
     ```
     cd web
     ```
-2.  依存関係をインストール
+
+2.  依存関係をインストールします
 
     ```
-    npm i -g pnpm
-    pnpm install
+    pnpm install --frozen-lockfile
     ```
 
-3.  環境変数を構成。現在のディレクトリに `.env.local` ファイルを作成し、`.env.example` の内容をコピーします。必要に応じてこれらの環境変数の値を変更します。
+3.  環境変数設定ファイルを準備します
+
+    現在のディレクトリに `.env.local` というファイルを作成し、`.env.example` の内容をコピーします。必要に応じてこれらの環境変数の値を変更します：
 
     ```
     # For production release, change this to PRODUCTION
     NEXT_PUBLIC_DEPLOY_ENV=DEVELOPMENT
-    # The deployment edition, SELF_HOSTED
+    # The deployment edition, SELF_HOSTED or CLOUD
     NEXT_PUBLIC_EDITION=SELF_HOSTED
     # The base URL of console application, refers to the Console base URL of WEB service if console domain is
     # different from api or web app domain.
@@ -236,30 +256,31 @@ https://nodejs.org/en/download から対応するOSのv18.x以上のインスト
     NEXT_PUBLIC_SENTRY_ORG=
     NEXT_PUBLIC_SENTRY_PROJECT=
     ```
-4.  コードをビルド
+
+4.  Web サービスをビルドします
 
     ```
-    npm run build
+    pnpm build
     ```
-5.  webサービスを開始
+
+5.  Web サービスを起動します
 
     ```
-    npm run start
-    # または
-    yarn start
-    # または
     pnpm start
     ```
 
-正常に起動すると、ターミナルに以下の情報が出力されます：
+    期待される出力：
+    ```
+       ▲ Next.js 15
+       - Local:        http://localhost:3000
+       - Network:      http://0.0.0.0:3000
 
-```
-ready - started server on 0.0.0.0:3000, url: http://localhost:3000
-warn  - You have enabled experimental feature (appDir) in next.config.js.
-warn  - Experimental features are not covered by semver, and may cause unexpected or broken application behavior. Use at your own risk.
-info  - Thank you for testing `appDir` please leave your feedback at https://nextjs.link/app-feedback
-```
+     ✓ Starting...
+     ✓ Ready in 73ms
+    ```
 
-### Difyを訪問
+### Dify にアクセスする
 
-最後に、http://127.0.0.1:3000 にアクセスすると、ローカルデプロイメントされたDifyを使用できます。
+ブラウザで [http://127.0.0.1:3000](http://127.0.0.1:3000/) にアクセスして、Dify のすべての機能をお楽しみください。
+
+乾杯！🍻
