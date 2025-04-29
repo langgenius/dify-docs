@@ -5,7 +5,7 @@
 
 ## 来自 community/contribution.md
 
-* [貢献者ガイド](./community/contribution) ✅ | [このガイド](https://github.com/langgenius/dify/blob/main/api/core/tools/README.md) ❌
+* [貢献者ガイド](./community/contribution) ✅ | [このガイド](https://github.com/langgenius/dify/blob/main/api/core/tools/README) ❌
 
 ## 来自 development/models-integration/hugging-face.md
 
@@ -13,7 +13,7 @@
 
 ## 来自 development/models-integration/localai.md
 
-* [LocalAIでデプロイしたローカルモデルを統合](./development/models-integration/localai) ✅ | [LocalAI Data query example](https://github.com/go-skynet/LocalAI/blob/master/examples/langchain-chroma/README.md) ❌
+* [LocalAIでデプロイしたローカルモデルを統合](./development/models-integration/localai) ✅ | [LocalAI Data query example](https://github.com/go-skynet/LocalAI/blob/master/examples/langchain-chroma/README) ❌
 
 ## 来自 getting-started/install-self-hosted/environments.md
 

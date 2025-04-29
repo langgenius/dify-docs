@@ -90,7 +90,7 @@ class DocMigrationHelper:
         # 收集可能的路径
         potential_paths = []
         
-        # 处理文件扩展名 (.mdx -> .md)
+        # 处理文件扩展名 (.mdx -> )
         rest_path = os.path.join(*parts[1:])
         if rest_path.endswith(".mdx"):
             rest_path = rest_path[:-4] + ".md"
@@ -190,7 +190,7 @@ class DocMigrationHelper:
         根据本地图片路径找到对应的在线URL
         
         Args:
-            local_path: 本地图片路径，例如 /zh-cn/user-guide/.gitbook/assets/image (66).png
+            local_path: 本地图片路径，例如 /zh-hans/user-guide/.gitbook/assets/image (66).png
             
         Returns:
             online_url: 在线图片URL
@@ -461,7 +461,7 @@ class DocMigrationHelper:
             changes = []
             
             # 1. 查找并替换Markdown格式图片
-            # ![alt text](/zh-cn/user-guide/.gitbook/assets/image.png)
+            # ![alt text](/zh-hans/user-guide/.gitbook/assets/image.png)
             md_img_pattern = re.compile(r'!\[([^\]]*)\]\((/[^)]+)\)')
             for match in md_img_pattern.finditer(content):
                 alt_text = match.group(1)
@@ -489,7 +489,7 @@ class DocMigrationHelper:
                     changes.append((full_match, new_text, 'Frame组件图片'))
             
             # 3. 查找并替换文档引用链接
-            # [link text](./path/to/file.md) 或 [link text](path/to/file.md)
+            # [link text](./path/to/file) 或 [link text](path/to/file)
             doc_link_pattern = re.compile(r'\[([^\]]+)\]\((\./[^)]+\.md(?:#[^)]*)?|\.\./[^)]+\.md(?:#[^)]*)?|[^)]+\.md(?:#[^)]*)?)\)')
             for match in doc_link_pattern.finditer(content):
                 link_text = match.group(1)

@@ -841,7 +841,7 @@
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
-| 6 | 快速接入 | /zh-cn/user-guide/tools/quick-tool-integration |
+| 6 | 快速接入 | /zh-hans/user-guide/tools/quick-tool-integration |
 
 ### 文件: zh-hans/guides/tools/extensions/code-based/moderation.mdx
 
@@ -853,33 +853,33 @@
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
-| 6 | API 扩展 | /zh-cn/user-guide/tools/extensions/api-based/api-based-extension |
-| 6 | API 扩展 | /zh-cn/user-guide/tools/extensions/api-based/api-based-extension |
+| 6 | API 扩展 | /zh-hans/user-guide/tools/extensions/api-based/api-based-extension |
+| 6 | API 扩展 | /zh-hans/user-guide/tools/extensions/api-based/api-based-extension |
 
 ### 文件: zh-hans/guides/tools/extensions/api-based/api-based-extension.mdx
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
 | 266 | 外部数据工具 | ../../knowledge-base/external-data-tool.md "mention" |
-| 272 | 使用 Cloudflare Workers 部署 API Tools | /zh-cn/user-guide/tools/extensions/api-based/cloudflare-workers |
+| 272 | 使用 Cloudflare Workers 部署 API Tools | /zh-hans/user-guide/tools/extensions/api-based/cloudflare-workers |
 
 ### 文件: zh-hans/guides/tools/community/alphavantage.mdx
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
-| 22 | 变量 | /zh-cn/user-guide/build-app/flow-app/variables |
+| 22 | 变量 | /zh-hans/user-guide/build-app/flow-app/variables |
 
 ### 文件: zh-hans/guides/tools/dify/dall-e.mdx
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
-| 24 | 变量 | /zh-cn/user-guide/build-app/flow-app/variables |
+| 24 | 变量 | /zh-hans/user-guide/build-app/flow-app/variables |
 
 ### 文件: zh-hans/guides/tools/dify/stable-diffusion.mdx
 
 | 行号 | 链接文本 | 链接 URL |
 |------|----------|----------|
-| 76 | 变量 | /zh-cn/user-guide/build-app/flow-app/variables |
+| 76 | 变量 | /zh-hans/user-guide/build-app/flow-app/variables |
 
 ### 文件: zh-hans/guides/management/app-management.mdx
 
@@ -987,7 +987,7 @@
 |------|----------|----------|
 | 41 | 支持 | user-guide/getting-started/readme/model-providers |
 | 85 | 提示词专家模式（已下线） | user-guide/learn-more/extended-reading/prompt-engineering/prompt-engineering-1/ |
-| 132 | "知识库" | /zh-cn/user-guide/knowledge-base/ |
+| 132 | "知识库" | /zh-hans/user-guide/knowledge-base/ |
 
 ### 文件: zh-hans/guides/workflow/nodes/variable-assigner.mdx
 

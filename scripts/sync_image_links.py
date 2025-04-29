@@ -37,7 +37,7 @@ class Colors:
 # 1. Markdown格式: ![alt text](https://assets-docs.dify.ai/...)
 # 2. HTML格式: <img src="https://assets-docs.dify.ai/..." alt="..." />
 # 3. Frame标签中的图片: <Frame>...<img src="https://assets-docs.dify.ai/..." />...</Frame>
-# 4. 相对路径图片: ![alt](/zh-cn/img/...)
+# 4. 相对路径图片: ![alt](/zh-hans/img/...)
 
 # Markdown格式图片
 MD_IMG_PATTERN = re.compile(r'!\[(.*?)\]\((https?://[^)]+|/[^)]+)\)')
@@ -49,7 +49,7 @@ HTML_IMG_PATTERN = re.compile(r'<img\s+src="([^"]+)"[^>]*>')
 ASSETS_URL_PREFIX = 'https://assets-docs.dify.ai/'
 
 # 相对路径特征
-RELATIVE_PATH_PREFIX = '/zh-cn/'
+RELATIVE_PATH_PREFIX = '/zh-hans/'
 
 def find_corresponding_file(source_file: str, source_dir: str, target_dir: str) -> Optional[str]:
     """查找源文件在目标目录中的对应文件"""

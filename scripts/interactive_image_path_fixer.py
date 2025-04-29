@@ -75,7 +75,7 @@ def find_relative_images(file_path):
     # 检查 Frame 组件中的相对路径
     for match in FRAME_IMAGE_RE.finditer(content):
         image_path = match.group(1)
-        # 如 /ja-jp/img/... 或 /en-us/img/... 或 /zh-cn/... 这样的路径
+        # 如 /ja-jp/img/... 或 /en-us/img/... 或 /zh-hans/... 这样的路径
         if image_path.startswith('/'):
             line_no = content[:match.start()].count('\n') + 1
             position = match.start()
