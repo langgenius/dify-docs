@@ -21,7 +21,7 @@
 
 ## 来自 development/models-integration/ollama.md
 
-* [Integrate Local Models Deployed by Ollama](./development/models-integration/ollama) ✅ | [ollama](<../../.gitbook/assets/ollama (1) ❌
+* [Integrate Local Models Deployed by Ollama](./development/models-integration/ollama) ✅ | [ollama](../../.gitbook/assets/ollama%20(1)) ❌
 
 ## 来自 getting-started/install-self-hosted/environments.md
 
