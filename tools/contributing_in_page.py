@@ -1,4 +1,5 @@
 import os
+import re
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -98,53 +99,52 @@ def append_content_to_files(
     fix_md_endings(target_dir_relative, base_dir, file_extension)
     appended_count = 0
     error_count = 0
-    for filename in os.listdir(target_path):
-        if filename.endswith(file_extension):
-            filepath = os.path.join(target_path, filename)
-            try:
-                # Open in text append mode to write
-                with open(filepath, "a", encoding="utf-8") as f:
-                    f.write(generate_contributing_section(
-                        repo_owner, repo_name, target_dir_relative, filename, language))
-                appended_count += 1
-            except (IOError, OSError) as e:
-                print(f"Error processing file {filepath}: {e}")
-                error_count += 1
+    for root, dirs, files in os.walk(target_path):
+        for filename in files:
+            if filename.endswith(file_extension):
+                filepath = os.path.join(root, filename)
+                current_dir_relative = os.path.relpath(root, base_dir)
+                try:
+                    with open(filepath, "a", encoding="utf-8") as f:
+                        f.write(generate_contributing_section(
+                            repo_owner, repo_name, current_dir_relative, filename, language))
+                    appended_count += 1
+                except (IOError, OSError) as e:
+                    print(f"Error processing file {filepath}: {e}")
+                    error_count += 1
     print(
-        f"Finished processing directory '{target_path}'. "
+        f"Finished processing directory tree starting at '{target_path}'. "
         f"Appended to {appended_count} files. Encountered {error_count} errors."
     )
 
 
 def remove_contributing_section(target_dir_relative, base_dir=BASE_DIR, file_extension=".mdx"):
-    import re
     target_path = os.path.join(base_dir, target_dir_relative)
     if not os.path.isdir(target_path):
         print(f"Error: Directory '{target_path}' not found.")
         return
     removed_count = 0
     error_count = 0
-    for filename in os.listdir(target_path):
-        if filename.endswith(file_extension):
-            filepath = os.path.join(target_path, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                # 更新正则表达式以更精确地匹配注释和 CardGroup 结构
-                # 这将匹配从 {/* Contributing Section ... */} 开始到最近的 </CardGroup> 结束的块
-                pattern = re.compile(
-                    r"\{\/\*\s*Contributing Section[\s\S]*?\*\/\}[\s\S]*?<CardGroup cols=\"2\">[\s\S]*?</CardGroup>", re.DOTALL)
-                # 移除 count=1 以确保替换所有匹配项
-                new_content = re.sub(pattern, "", content)
-                if new_content != content:
-                    with open(filepath, "w", encoding="utf-8") as f:
-                        f.write(new_content)
-                    removed_count += 1
-            except (IOError, OSError) as e:
-                print(f"Error processing file {filepath}: {e}")
-                error_count += 1
+    for root, dirs, files in os.walk(target_path):
+        for filename in files:
+            if filename.endswith(file_extension):
+                filepath = os.path.join(root, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    pattern = re.compile(
+                        r"\{\/\*\s*Contributing Section[\s\S]*?\*\/\}[\s\S]*?<CardGroup cols=\"2\">[\s\S]*?</CardGroup>", re.DOTALL)
+                    new_content = re.sub(pattern, "", content)
+                    if new_content != content:
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write(new_content)
+                        removed_count += 1
+                except (IOError, OSError) as e:
+                    print(f"Error processing file {filepath}: {e}")
+                    error_count += 1
     fix_md_endings(target_dir_relative, base_dir, file_extension)
     print(
+        f"Finished processing directory tree starting at '{target_path}'. "
         f"Removed from {removed_count} files. Encountered {error_count} errors.")
 
 
@@ -155,23 +155,25 @@ def fix_md_endings(target_dir_relative, base_dir=BASE_DIR, file_extension=".mdx"
         return
     fixed_count = 0
     error_count = 0
-    for filename in os.listdir(target_path):
-        if filename.endswith(file_extension):
-            filepath = os.path.join(target_path, filename)
-            try:
-                with open(filepath, "r", encoding="utf-8") as f:
-                    content = f.read()
-                processed_content = content.replace("\r\n", "\n")
-                processed_content = processed_content.rstrip()
-                processed_content += "\n"
-                if processed_content != content:
-                    with open(filepath, "w", encoding="utf-8") as f:
-                        f.write(processed_content)
-                    fixed_count += 1
-            except (IOError, OSError) as e:
-                print(f"Error processing file {filepath}: {e}")
-                error_count += 1
+    for root, dirs, files in os.walk(target_path):
+        for filename in files:
+            if filename.endswith(file_extension):
+                filepath = os.path.join(root, filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        content = f.read()
+                    processed_content = content.replace("\r\n", "\n")
+                    processed_content = processed_content.rstrip()
+                    processed_content += "\n"
+                    if processed_content != content:
+                        with open(filepath, "w", encoding="utf-8") as f:
+                            f.write(processed_content)
+                        fixed_count += 1
+                except (IOError, OSError) as e:
+                    print(f"Error processing file {filepath}: {e}")
+                    error_count += 1
     print(
+        f"Finished processing directory tree starting at '{target_path}'. "
         f"Fixed line endings and trailing lines in {fixed_count} files. Encountered {error_count} errors.")
 
 
@@ -186,6 +188,24 @@ if __name__ == "__main__":
     )
     append_content_to_files(
         target_dir_relative="plugin_dev_zh",
+        repo_owner="langgenius",
+        repo_name="dify-docs-mintlify",
+        language="zh"
+    )
+    append_content_to_files(
+        target_dir_relative="en",
+        repo_owner="langgenius",
+        repo_name="dify-docs-mintlify",
+        language="en"
+    )
+    append_content_to_files(
+        target_dir_relative="ja-jp",
+        repo_owner="langgenius",
+        repo_name="dify-docs-mintlify",
+        language="jp"
+    )
+    append_content_to_files(
+        target_dir_relative="zh-hans",
         repo_owner="langgenius",
         repo_name="dify-docs-mintlify",
         language="zh"
