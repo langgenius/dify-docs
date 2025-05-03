@@ -1,0 +1,563 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: basic
+  level: beginner
+standard_title: Getting Started Dify Tool
+language: zh
+title: Dify 插件开发：Hello World 指南
+description: 本文档提供了从零开始Dify插件开发的详细教程，以创建Telegraph发布插件为例，涉及环境准备、项目初始化、虚拟环境配置、插件核心逻辑开发、本地运行调试、插件元信息完善以及打包发布等环节。
+---
+
+欢迎阅读 Dify 插件开发的入门指南！本教程假设您具备基本的编程背景知识，并有使用 Dify 平台的经验。完成本教程后，您将掌握创建简单 Dify 插件的基础流程，从 Dify 用户迈向插件贡献者。
+
+我们将一步步示范如何开发一个简单的 Telegraph 发布插件。本教程主要使用命令行操作，并辅以 VSCode 作为代码编辑器的示例说明。**建议您先快速通读一遍以了解整体流程，然后再跟着步骤动手操作。**
+
+> **面向 LLM 的说明:** 你也可以在这里使用我们构建的 prompt 来协助你开发插件：[Dify 插件开发：Prompt](/plugin_dev_zh/0211-getting-started-by-prompt.zh)
+
+在开始之前，您可以随时查阅我们提供的 [**开发者速查表 (Cheatsheet)**](/plugin_dev_zh/0131-cheatsheet.zh) 获取常用指令和信息，或在遇到更复杂问题时参考完整的开发者文档。
+
+## 1. 准备开发环境
+
+在开始开发 Dify 插件之前，请确保您的环境中已准备好以下工具：
+
+- **Dify 插件开发脚手架 (CLI):** 这是开发、调试和打包插件的核心工具，也称为 `dify-plugin-daemon` 或“插件开发 SDK”。
+- **Python 环境:** 需要 Python 3.12 或更高版本。
+
+### 1.1 安装 Dify 插件开发脚手架 (CLI)
+
+> 更详细的开发环境准备指南，请参考[初始化开发工具](/plugin_dev_zh/0221-initialize-development-tools.zh)。
+
+1. **下载:** 访问 [Dify Plugin CLI Releases](https://github.com/langgenius/dify-plugin-daemon/releases) 页面。根据您的操作系统（Windows, macOS Intel/ARM, Linux）下载对应的最新版本二进制文件。
+2. **设置执行权限 (macOS / Linux):**
+
+    - **以下步骤以 macOS (Apple Silicon / M 系列芯片) 为例**，假设下载的文件名为 `dify-plugin-darwin-arm64`。在终端中，进入文件所在目录，并执行以下命令赋予其执行权限：
+
+        ```bash
+        chmod +x dify-plugin-darwin-arm64
+        ```
+
+    - 对于 Linux 用户，请下载对应的 Linux 版本文件并执行类似 `chmod +x <downloaded_filename>` 的命令。
+    - 对于 Windows 用户，下载 `.exe` 文件后通常可直接运行。
+
+3. **验证安装:**
+
+    - 在终端中，执行以下命令检查工具是否能正常运行（请将 `./dify-plugin-darwin-arm64` 替换为您下载的实际文件名或路径）：
+
+        ```bash
+        ./dify-plugin-darwin-arm64 version
+        ```
+
+    - 如果终端成功输出了版本号信息（例如 `v0.0.1-beta.15`），则说明安装成功。
+
+> **提示 (Tips):**
+>
+> - **macOS 安全提示:** 若在 macOS 上首次运行时提示“Apple 无法验证”或“无法打开”，请前往“系统设置”→“隐私与安全性”→“安全性”部分，找到相关提示并点击“仍要打开”或“允许”。
+> - **简化命令:** 您可以将下载的二进制文件重命名为一个更短的名称（例如 `dify` 或 `dify-plugin`），以便后续使用。示例：`mv dify-plugin-darwin-arm64 dify`，之后即可使用 `./dify version`。
+> - **全局安装 (可选):** 如果希望在系统的任何路径下都能直接运行该命令（例如，直接输入 `dify` 而不是 `./dify`），可以将重命名后的文件移动到系统的 `PATH` 环境变量包含的目录中，例如 `/usr/local/bin` (macOS/Linux) 或添加到 Windows 的环境变量中。
+>     - 例如 (macOS/Linux): `sudo mv dify /usr/local/bin/`
+>     - 配置完成后，直接在终端输入 `dify version` 应能成功输出版本号。
+
+**为方便起见，本文后续将使用 `./dify` 作为 Dify 插件开发脚手架命令的示例。请根据您的实际情况替换为对应的命令。**
+
+## 2. 初始化插件项目
+
+现在，让我们使用脚手架工具创建一个新的插件项目。
+
+1. 打开终端，执行初始化命令：
+
+    ```bash
+    ./dify plugin init
+    ```
+
+2. 根据提示依次输入插件的基本信息：
+    - **Plugin name:** 插件的唯一标识符。例如：`telegraph`
+        - _约束: 长度 1-128 字符，只能包含小写字母、数字、连字符(-)和下划线(\_)。_
+    - **Author:** 插件作者的标识符。例如：`alterxyz`
+        - _约束: 长度 1-64 字符，只能包含小写字母、数字、连字符(-)和下划线(\_)。_
+    - **Description:** 对插件功能的简短描述。例如：`A Telegraph plugin that allows you to publish your content easily`
+3. **选择开发语言:** 当提示 `Select language` 时，请选择 `python`。
+4. **选择插件类型:** 当提示 `Select plugin type` 时，对于本教程，请选择 `tool`。
+5. **选择附加功能:** 接下来会提示是否需要包含 Provider 验证、持久存储等附加功能。对于这个简单的 Hello World 插件，我们暂时不需要这些，可以直接按 **回车键** 跳过所有选项，直到看到成功信息。
+6. **确认创建成功:** 当终端输出类似以下信息时，表示插件项目已成功创建：
+
+    ```bash
+    [INFO] plugin telegraph created successfully, you can refer to `telegraph/GUIDE.md` for more information about how to develop it
+    ```
+
+现在，您的当前目录下应该出现了一个名为 `telegraph` (或您指定的插件名) 的新文件夹，这就是您的插件项目。
+
+## 3. 配置 Python 虚拟环境与依赖
+
+为了隔离项目依赖，推荐使用 Python 虚拟环境。
+
+### 3.1 创建并激活虚拟环境 (命令行方式)
+
+这是**推荐且通用**的方法，不依赖特定 IDE：
+
+1. **进入项目目录:**
+
+    ```bash
+    cd telegraph
+    ```
+
+2. **创建虚拟环境:** (建议命名为 `venv`)
+
+    ```bash
+    python -m venv venv
+    ```
+
+3. **激活虚拟环境:**
+
+    - **macOS / Linux:**
+
+        ```bash
+        source venv/bin/activate
+        ```
+
+    - **Windows (cmd.exe):**
+
+        ```bash
+        venv\Scripts\activate.bat
+        ```
+
+    - **Windows (PowerShell):**
+
+        ```bash
+        venv\Scripts\Activate.ps1
+        ```
+
+    - 激活成功后，您的终端提示符前通常会显示 `(venv)` 字样。
+
+### 3.2 安装基础依赖
+
+项目初始化时生成的 `requirements.txt` 文件已包含插件开发所需的基础库 `dify_plugin`。激活虚拟环境后，执行以下命令安装：
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3.3 (可选) VSCode 集成环境配置
+
+如果您使用 VSCode 作为代码编辑器，可以利用其集成功能来管理 Python 环境：
+
+1. **打开项目文件夹:** 使用 VSCode 打开刚刚创建的 `telegraph` 文件夹。
+2. **选择 Python 解释器:**
+    - 打开命令面板 (macOS: `Cmd+Shift+P`, Windows/Linux: `Ctrl+Shift+P`)。
+    - 输入并选择 `Python: Select Interpreter`。
+    - 在弹出的列表中，选择您刚刚创建的虚拟环境中的 Python 解释器（通常路径包含 `.venv/bin/python` 或 `venv\Scripts\python.exe`）。如果列表没有自动显示，您可以选择 `Enter interpreter path...` 手动查找。
+    - _(请参考您本地对应的截图 ，它展示了选择解释器的界面)_
+3. **安装依赖 (若 VSCode 提示):** VSCode 可能会检测到 `requirements.txt` 文件并提示您安装其中的依赖项。如果出现提示，请确认安装。
+    - _(请参考您本地对应的截图 ，它展示了确认安装依赖的界面)_
+
+**请确保后续的所有 `pip install` 命令和运行 `python -m main` 的操作都在已激活的虚拟环境中执行。**
+
+## 4. 开发插件核心逻辑
+
+现在我们开始编写插件代码。本示例将实现一个简单的工具，用于将指定内容发布到 Telegraph。
+
+### 4.1 示例依赖库: `your-telegraph`
+
+我们将使用一个名为 `your-telegraph` 的 Python 库来与 Telegraph API 交互。（_这是一个假设的库名，请确保您实际使用的库是有效的_）。
+
+> `your-telegraph` 是一个简化 Telegraph API 操作的 Python 包装器，可以用几行代码轻松发布内容。
+
+其基本用法可能如下：
+
+```python
+# 示例代码，非插件内代码
+from ytelegraph import TelegraphAPI
+
+# 需要一个 access_token
+ph = TelegraphAPI(access_token="your_telegraph_access_token")
+
+# 创建页面并获取链接
+ph_link = ph.create_page_md("My First Page", "# Hello, Telegraph!\n\nThis is my first Telegraph page.")
+print(ph_link)
+```
+
+我们的目标是在 Dify 插件中实现类似的功能。
+
+### 4.2 添加并配置项目依赖
+
+1. **安装依赖库:** 确保您的虚拟环境已激活，然后在终端中执行：
+
+    ```bash
+    pip install your-telegraph
+    ```
+
+2. **更新 `requirements.txt`:** 打开项目根目录下的 `telegraph/requirements.txt` 文件，在 `dify_plugin` 下面添加一行，写入刚刚安装的库名：
+
+    ```plaintext
+    dify_plugin
+    your-telegraph
+    ```
+
+    这样做可以确保其他开发者或部署环境能够方便地安装所有必需的依赖。
+
+### 4.3 配置 Provider 凭证
+
+我们的示例需要 `telegraph_access_token`。我们需要在 Provider 配置中定义这个凭证，以便用户在使用插件时可以输入。关于 Provider 配置的更多信息，请参考[一般规范定义](/plugin_dev_zh/0411-general-specifications.zh)。
+
+1. **编辑 Provider YAML:** 打开 `telegraph/provider/telegraph.yaml` 文件。
+2. **添加 `credentials_for_provider`:** 在文件末尾（或适当位置）添加以下内容：
+
+    ```yaml
+    # ... (文件可能已有的 identity, name, label, description, icon 等保持不变) ...
+
+    credentials_for_provider:
+        telegraph_access_token: # 这是凭证的内部名称，将在 Python 代码中使用
+            type: secret-input # 输入类型为密码框
+            required: true # 此凭证是必需的
+            label: # 在 Dify UI 中显示的标签 (支持多语言)
+                en_US: Telegraph Access Token
+                zh_Hans: Telegraph 访问令牌
+                # ... (其他语言)
+            placeholder: # 输入框的提示文字 (支持多语言)
+                en_US: Enter your Telegraph access token
+                zh_Hans: 请输入您的 Telegraph 访问令牌
+                # ... (其他语言)
+            help: # 帮助提示信息 (支持多语言)
+                en_US: How to get your Telegraph access token
+                zh_Hans: 如何获取 Telegraph 访问令牌
+                # ... (其他语言)
+            url: https://telegra.ph/api#createAccount # 点击帮助提示时跳转的 URL
+    ```
+
+    - **字段解释:**
+        - `telegraph_access_token`: 凭证的唯一标识符，代码中通过 `self.runtime.credentials["telegraph_access_token"]` 来访问用户输入的值。
+        - `type: secret-input`: 表示在 Dify 界面上会显示为密码输入框。
+        - `required: true`: 表示用户必须填写此凭证才能使用该插件提供的工具。
+        - `label`, `placeholder`, `help`: 提供多语言界面文本。
+        - `url`: (可选) 提供一个获取凭证的帮助链接。
+
+### 4.4 实现工具 (Tool) 逻辑
+
+现在我们来编写实际执行发布操作的工具代码。
+
+1. **编辑 Tool Python 文件:** 打开 `telegraph/tools/telegraph.py`。
+2. **实现 `_invoke` 方法:** 将文件内容替换为以下代码：
+
+    ```python
+    from collections.abc import Generator
+    from typing import Any
+    from ytelegraph import TelegraphAPI # 导入我们使用的库
+
+    from dify_plugin import Tool
+    from dify_plugin.entities.tool import ToolInvokeMessage
+
+    class TelegraphTool(Tool):
+        """
+        一个简单的 Telegraph 发布工具。
+        """
+
+        def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage, None, None]:
+            """
+            根据输入的标题和内容，创建一个新的 Telegraph 页面。
+
+            Args:
+                tool_parameters: 一个包含工具输入参数的字典:
+                    - p_title (str): Telegraph 页面的标题。
+                    - p_content (str): 要发布的 Markdown 格式的内容。
+
+            Yields:
+                ToolInvokeMessage: 包含成功创建的 Telegraph 页面 URL 的消息。
+
+            Raises:
+                Exception: 如果页面创建失败，则抛出包含错误信息的异常。
+            """
+            # 1. 从运行时获取凭证
+            try:
+                access_token = self.runtime.credentials["telegraph_access_token"]
+            except KeyError:
+                raise Exception("Telegraph Access Token 未配置或无效。请在插件设置中提供。")
+
+            # 2. 获取工具输入参数
+            title = tool_parameters.get("p_title", "Untitled") # 使用 .get 提供默认值
+            content = tool_parameters.get("p_content", "")
+
+            if not content:
+                raise Exception("发布内容不能为空。")
+
+            # 3. 调用库执行操作
+            try:
+                telegraph = TelegraphAPI(access_token)  # 初始化 Telegraph API
+                ph_link = telegraph.create_page_md(title, content)  # 创建页面
+            except Exception as e:
+                # 如果库调用失败，抛出异常
+                raise Exception(f"调用 Telegraph API 失败: {e}")
+
+            # 4. 返回结果
+            # 使用 create_link_message 生成一个包含链接的输出消息
+            yield self.create_link_message(ph_link)
+    ```
+
+    - **关键点:**
+        - 从 `self.runtime.credentials` 获取凭证。
+        - 从 `tool_parameters` 获取工具的输入参数（参数名将在下一步的 YAML 中定义）。使用 `.get()` 是更健壮的方式。
+        - 调用 `ytelegraph` 库执行实际操作。
+        - 使用 `try...except` 捕获可能的错误并抛出异常。
+        - 使用 `yield self.create_link_message(url)` 返回一个包含 URL 的结果给 Dify。
+
+### 4.5 配置工具 (Tool) 参数
+
+我们需要告诉 Dify 这个工具接收哪些输入参数。
+
+1. **编辑 Tool YAML 文件:** 打开 `telegraph/tools/telegraph.yaml`。
+2. **定义参数:** 将文件内容替换或修改为：
+
+    ```yaml
+    identity:
+        name: telegraph_publisher # 工具的唯一内部名称
+        author: alterxyz
+        label: # 在 Dify UI 中显示的工具名称 (多语言)
+            en_US: Publish to Telegraph
+            zh_Hans: 发布到 Telegraph
+            # ... (其他语言)
+    description:
+        human: # 给人类用户看的工具描述 (多语言)
+            en_US: Publish content to Telegraph as a new page.
+            zh_Hans: 将内容作为新页面发布到 Telegraph。
+            # ... (其他语言)
+        llm: # 给 LLM 看的工具描述 (用于 Agent 模式)
+            A tool that takes a title and markdown content, then publishes it as a new page on Telegraph, returning the URL of the published page. Use this when the user wants to publish formatted text content publicly via Telegraph.
+    parameters: # 定义工具的输入参数列表
+        - name: p_title # 参数的内部名称，与 Python 代码中的 key 对应
+          type: string # 参数类型
+          required: true # 是否必需
+          label: # 在 Dify UI 中显示的参数标签 (多语言)
+              en_US: Post Title
+              zh_Hans: 文章标题
+          human_description: # 给人类用户看的参数描述 (多语言)
+              en_US: The title for the Telegraph page.
+              zh_Hans: Telegraph 页面的标题。
+          llm_description: # 给 LLM 看的参数描述 (指导 Agent 如何填充)
+              The title of the post. Should be a concise and meaningful plain text string.
+          form: llm # 参数表单类型 ('llm' 或 'form')
+        - name: p_content
+          type: string
+          required: true
+          label:
+              en_US: Content (Markdown)
+              zh_Hans: 内容 (Markdown)
+          human_description:
+              en_US: The main content for the Telegraph page, written in Markdown format.
+              zh_Hans: Telegraph 页面的主要内容，请使用 Markdown 格式编写。
+          llm_description: # 强调格式要求对 LLM 很重要
+              The full content to be published on the Telegraph page. Must be provided in Markdown format. Ensure proper Markdown syntax for formatting like headings, lists, links, etc.
+          form: llm
+    extra: # 额外配置
+        python:
+            source: tools/telegraph.py # 指向实现该工具逻辑的 Python 文件
+    ```
+
+    - **字段解释:**
+        - `identity`: 工具的基本信息，`name` 是唯一标识。
+        - `description`: 分为 `human` (给用户看) 和 `llm` (给 Agent 看)。**`llm` 描述对于 Agent 能否正确理解和使用工具至关重要。**
+        - `parameters`: 定义每个输入参数。
+            - `name`: 内部名称，需与 Python 代码中 `tool_parameters.get("...")` 的键一致。
+            - `type`: 数据类型 (如 `string`, `number`, `boolean` 等)。
+            - `required`: 是否必须提供。
+            - `label`, `human_description`, `llm_description`: 类似 `identity` 中的描述，但针对具体参数。**`llm_description` 应清晰指导 LLM 如何生成或获取该参数的值，包括格式要求（如此处的 Markdown）。**
+            - `form`: 定义参数如何在 Dify 中呈现和填充。`llm` 表示该参数值可以由用户输入、通过变量传入，或者在 Agent 模式下由 LLM 自主决定；`form` 通常表示需要用户在界面上固定填写的配置项。对于工具输入，`llm` 更常见。
+        - `extra.python.source`: 指明实现此工具逻辑的 Python 文件路径（相对于项目根目录）。
+
+### 4.6 实现 Provider 凭证验证 (可选但推荐)
+
+为了确保用户提供的凭证有效，我们应该实现验证逻辑。
+
+1. **编辑 Provider Python 文件:** 打开 `telegraph/provider/telegraph.py`。
+2. **实现 `_validate_credentials` 方法:** 将文件内容替换为：
+
+    ```python
+    from typing import Any
+    from dify_plugin import ToolProvider
+    from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+
+    class TelegraphProvider(ToolProvider):
+        def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+            """
+            验证提供的 Telegraph Access Token 是否有效。
+            尝试使用该 token 创建一个测试页面。
+            如果验证失败，应抛出 ToolProviderCredentialValidationError 异常。
+            """
+            access_token = credentials.get("telegraph_access_token")
+            if not access_token:
+                raise ToolProviderCredentialValidationError("Telegraph Access Token 不能为空。")
+
+            try:
+                # 尝试执行一个需要凭证的简单操作来验证
+                from ytelegraph import TelegraphAPI
+                ph = TelegraphAPI(access_token=access_token)
+                # 尝试创建一个临时的、无害的页面作为验证手段
+                # 注意：更好的验证方式可能是调用 API 的 'getAccountInfo' 等只读方法（如果存在）
+                test_page = ph.create_page_md("Dify Validation Test", "This is a test page created by Dify plugin validation.")
+                # 如果需要，可以考虑立即编辑或删除这个测试页面，但这会增加复杂性
+                # print(f"Validation successful. Test page created: {test_page}")
+            except Exception as e:
+                # 如果 API 调用失败，说明凭证很可能无效
+                raise ToolProviderCredentialValidationError(f"Telegraph 凭证验证失败: {e}")
+
+    ```
+
+    - **关键点:**
+        - 从 `credentials` 字典中获取凭证。
+        - 执行一个需要该凭证的 API 调用（最好是只读操作，如获取账户信息；如果没有，创建一个无害的测试页面也可以，但要注意可能产生的副作用）。
+        - 如果 API 调用成功，则不抛出异常，表示验证通过。
+        - 如果 API 调用失败，则捕获异常并抛出 `ToolProviderCredentialValidationError`，将原始错误信息包含在内。
+
+## 5. 本地运行与调试
+
+现在可以在本地运行插件，并在 Dify 中进行调试了。
+
+1. **准备 `.env` 文件:**
+
+    - 确保您仍在 `telegraph` 项目目录下。
+    - 复制环境变量模板文件：
+
+        ```bash
+        cp .env.example .env
+        ```
+
+    - **编辑 `.env` 文件:** 打开刚刚创建的 `.env` 文件，填入您的 Dify 环境信息：
+
+        ```dotenv
+        DIFY_API_HOST=https://your-dify-host.com # 替换为您的 Dify 实例地址 (例如 https://cloud.dify.ai)
+        DIFY_API_KEY=your-api-key             # 替换为您的 Dify API 密钥
+        ```
+
+        - **获取 Host 和 Key:** 登录您的 Dify 环境，点击右上角的“插件”图标，然后点击调试图标（或类似虫子形状）。在弹出的窗口中，复制“API 密钥 (Key)”和“主机地址 (Host)”。 _(请参考您本地对应的截图 ，它展示了获取密钥和主机地址的界面)_
+
+2. **启动本地插件服务:**
+
+    - 确保您的 Python 虚拟环境已激活。
+    - 在 `telegraph` 目录下，运行主程序：
+
+        ```bash
+        python -m main
+        ```
+
+    - **观察终端输出:** 如果一切正常，您应该会看到类似以下的日志信息，表示插件工具已成功加载并连接到 Dify：
+
+        ```json
+        {"event": "log", "data": {"level": "INFO", "message": "Installed tool: telegraph_publisher", "timestamp": 1678886400.123456}}
+        {"event": "log", "data": {"level": "INFO", "message": "Plugin daemon started, waiting for requests...", "timestamp": 1678886400.123457}}
+        ```
+
+3. **在 Dify 中查看并测试:**
+
+    - **刷新 Dify 页面:** 回到您的 Dify 环境（浏览器中），刷新插件管理页面 (通常是 `https://your-dify-host.com/plugins`)。
+    - **查找插件:** 您应该能在列表中看到名为 "Telegraph" (或您在 Provider YAML 中定义的 `label`) 的插件，并且可能带有一个“调试中”的标记。
+    - **添加凭证:** 点击该插件，系统会提示您输入之前在 `provider/telegraph.yaml` 中定义的 "Telegraph Access Token"。输入有效的 token 并保存。如果您的验证逻辑 (`_validate_credentials`) 实现正确，这里会进行验证。 _(请参考您本地对应的截图 ，它展示了插件出现在列表并请求授权的界面)_
+    - **在应用中使用:** 现在，您可以在 Dify 的应用（如 Chatbot 或 Workflow）中添加这个工具节点，并尝试调用它了！当您在应用中运行并触发该工具时，请求会被转发到您本地运行的 `python -m main` 进程进行处理。您可以在本地终端看到相关的日志输出，并进行调试。
+
+4. **停止本地服务:** 在终端中按下 `Ctrl + C` 可以停止本地插件服务。
+
+这个运行 -> 测试 -> 停止 -> 修改代码 -> 重新运行 的循环是插件开发的主要流程。
+
+## 6. 完善插件元信息
+
+为了让插件更专业、更易于被发现和理解，我们需要完善一些展示性的信息。
+
+1. **图标 (Icon):**
+    - 在 `telegraph/_assets` 目录下放置一个代表您插件的图标文件（例如 `icon.png`, `icon.svg`）。推荐使用正方形、清晰的图片。
+2. **Provider 信息 (`provider/telegraph.yaml`):**
+
+    - 确保 `identity` 部分的 `label` (显示名称), `description` (功能描述), 和 `icon` (填写图标文件名，如 `icon.png`) 已填写并支持多语言。这部分信息主要在 Dify 应用编排界面中展示给_使用_插件的用户。
+
+    ```yaml
+    identity:
+        author: alterxyz
+        name: telegraph # 内部名称，保持不变
+        label:
+            en_US: Telegraph
+            zh_Hans: Telegraph 发布文章
+        description:
+            en_US: A Telegraph plugin that allow you publish your content easily
+            zh_Hans: 一个让您轻松发布内容的Telegraph插件
+        icon: icon.png # 引用 _assets 目录下的图标文件名
+    ```
+
+3. **插件清单 (`manifest.yaml`):**
+
+    - 编辑项目根目录下的 `telegraph/manifest.yaml` 文件。这是整个插件的“身份证”，其信息将展示在 Dify 的**插件管理页面**和**插件市场 (Marketplace)** 中。
+    - 务必更新或确认以下字段：
+        - `label`: 插件的**主要显示名称** (支持多语言)。
+        - `description`: 对插件功能的**整体简介** (支持多语言)，应清晰概括其核心价值。注意市场展示可能有长度限制。
+        - `icon`: 插件的**主图标** (直接填写 `_assets` 目录下的图标文件名，如 `icon.png`)。
+        - `tags`: 为插件添加分类标签，有助于用户在市场中筛选。可选值请参考 Dify 提供的枚举或文档说明 (例如 `media`, `tools`, `data-processing` 等)。可参考 [ToolLabelEnum 定义](https://github.com/langgenius/dify-plugin-sdks/blob/main/python/dify_plugin/entities/tool.py)。
+
+    ```yaml
+    label:
+        en_US: Telegraph Publisher
+        zh_Hans: Telegraph 发布助手
+    description:
+        en_US: Easily publish content to Telegraph pages directly from your Dify applications. Supports Markdown formatting.
+        zh_Hans: 从 Dify 应用中轻松将内容发布为 Telegraph 页面，支持 Markdown 格式。
+    icon: icon.png
+    tags: ['media', 'content-creation'] # 示例标签
+    # ... (author, name 等其他字段保持不变)
+    ```
+
+4. **README 和隐私政策:**
+    - `README.md`: 编辑项目根目录下的 `README.md` 文件。它将作为插件在 **Marketplace** 上的详细介绍页面，应包含更丰富的信息，如功能详述、使用示例、配置指南、常见问题等。可参考 [AWS 插件市场页面](https://marketplace.dify.ai/plugins/langgenius/aws_tools) 的样式。
+    - `PRIVACY.md`: 如果您计划将插件发布到官方 Marketplace，需要提供隐私政策说明文件 `PRIVACY.md`，描述插件如何处理数据。
+
+## 7. 打包插件
+
+当插件开发完成并通过本地测试后，您可以将其打包成一个 `.difypkg` 文件，用于分发或安装。关于插件打包和发布的详细信息，请参考[发布概览](/plugin_dev_zh/0321-release-overview.zh)。
+
+1. **返回上级目录:** 确保您的终端当前路径在 `telegraph` 文件夹的**上一级**。
+
+    ```bash
+    cd ..
+    ```
+
+2. **执行打包命令:**
+
+    ```bash
+    ./dify plugin package ./telegraph
+    ```
+
+    (请将 `./telegraph` 替换为您插件项目的实际路径)
+
+3. **获取打包文件:** 命令执行成功后，将在当前目录下生成一个名为 `telegraph.difypkg` (或 `您的插件名.difypkg`) 的文件。
+
+这个 `.difypkg` 文件就是一个完整的插件包。您可以：
+
+- 在 Dify 的插件管理页面手动**上传并安装**它。
+- 将其**分享**给其他人安装。
+- 按照 Dify 的规范和流程，将其**发布到官方的插件市场 (Marketplace)**，让所有 Dify 用户都能发现和使用您的插件。具体发布流程请参考[发布到 Dify 市场](/plugin_dev_zh/0322-release-to-dify-marketplace.zh)。
+
+恭喜！您已经完成了第一个 Dify 插件的开发、调试、完善和打包的全过程。现在您可以基于这个基础，探索更复杂、更强大的插件功能了。
+
+## 下一步学习
+
+- [远程调试插件](/plugin_dev_zh/0411-remote-debug-a-plugin.zh) - 了解更高级的插件调试技巧
+- [持久化存储](/plugin_dev_zh/0411-persistent-storage-kv.zh) - 学习如何在插件中使用数据存储
+- [Slack 机器人插件开发示例](/plugin_dev_zh/0432-develop-a-slack-bot-plugin.zh) - 查看更复杂的插件开发案例
+- [工具插件](/plugin_dev_zh/0222-tool-plugin.zh) - 探索工具插件的高级功能
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="编辑此页面"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin_dev_zh/0211-getting-started-dify-tool.zh.mdx"
+    >
+        通过直接提交修改来帮助改进文档内容
+    </Card>
+    <Card
+        title="提交问题"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=文档问题%3A%20getting-started-dify-tool&body=%23%23%20问题描述%0A%3C%21--%20请简要描述您发现的问题%20--%3E%0A%0A%23%23%20页面链接%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin_dev_zh%2F0211-getting-started-dify-tool.zh.mdx%0A%0A%23%23%20建议修改%0A%3C%21--%20如果有具体的修改建议，请在此说明%20--%3E%0A%0A%3C%21--%20感谢您对文档质量的关注！%20--%3E"
+    >
+        发现错误或有改进建议？请提交问题反馈
+    </Card>
+</CardGroup>
