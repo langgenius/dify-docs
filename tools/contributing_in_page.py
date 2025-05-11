@@ -180,6 +180,10 @@ def fix_md_endings(target_dir_relative, base_dir=BASE_DIR, file_extension=".mdx"
 if __name__ == "__main__":
     remove_contributing_section(target_dir_relative="plugin_dev_en")
     remove_contributing_section(target_dir_relative="plugin_dev_zh")
+    remove_contributing_section(target_dir_relative="en")
+    remove_contributing_section(target_dir_relative="ja-jp")
+    remove_contributing_section(target_dir_relative="zh-hans")
+    remove_contributing_section(target_dir_relative="api_access")
     append_content_to_files(
         target_dir_relative="plugin_dev_en",
         repo_owner="langgenius",
@@ -209,4 +213,10 @@ if __name__ == "__main__":
         repo_owner="langgenius",
         repo_name="dify-docs-mintlify",
         language="zh"
+    )
+    append_content_to_files(
+        target_dir_relative="api_access",
+        repo_owner="langgenius",
+        repo_name="dify-docs-mintlify",
+        language="en"
     )

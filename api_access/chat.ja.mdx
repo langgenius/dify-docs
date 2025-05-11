@@ -1,0 +1,1003 @@
+---
+title: チャットボット
+---
+
+チャットアプリケーションはセッションの持続性をサポートしており、以前のチャット履歴を応答のコンテキストとして使用できます。これは、チャットボットやカスタマーサービス AI などに適用できます。
+
+### ベース URL
+
+```text
+https://api.dify.ai/v1
+```
+
+### 認証
+
+サービス API は`API-Key`認証を使用します。
+
+<i>
+    **APIキーの漏洩を防ぐため、APIキーはクライアント側で共有または保存せず、サーバー側で保存することを強くお勧めします。**
+</i>
+
+すべての API リクエストにおいて、以下のように`Authorization`HTTP ヘッダーに API キーを含めてください：
+
+```
+Authorization: Bearer {API_KEY}
+```
+
+---
+
+## チャットメッセージを送信 `POST /chat-messages`
+
+チャットアプリケーションにリクエストを送信します。
+
+### リクエストボディ
+
+-   `query` (string, required): ユーザー入力/質問内容
+-   `inputs` (object): アプリで定義されたさまざまな変数値の入力を許可します。`inputs`パラメータには複数のキー/値ペアが含まれ、各キーは特定の変数に対応し、各値はその変数の特定の値です。デフォルトは`{}`
+-   `response_mode` (string, required): 応答の返却モードを指定します。サポートされているモード：
+    -   `streaming` ストリーミングモード（推奨）、SSE（[Server-Sent Events](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)）を通じてタイプライターのような出力を実装します。
+    -   `blocking` ブロッキングモード、実行完了後に結果を返します。（プロセスが長い場合、リクエストが中断される可能性があります）
+        Cloudflare の制限により、100 秒後に応答がない場合、リクエストは中断されます。
+        <i>
+            注：エージェントアシスタントモードではブロッキングモードはサポートされていません
+        </i>
+-   `user` (string, required): ユーザー識別子、エンドユーザーのアイデンティティを定義するために使用されます。アプリケーション内で開発者によって一意に定義される必要があります。
+-   `conversation_id` (string): 会話 ID、以前のチャット記録に基づいて会話を続けるには、前のメッセージの conversation_id を渡す必要があります。
+-   `files` (array[object]): ファイルリスト、テキストの理解と質問への回答を組み合わせたファイル（画像）の入力に適しており、モデルがビジョン機能をサポートしている場合にのみ利用可能です。
+    -   `type` (string): サポートされているタイプ：`image`（現在は画像タイプのみサポート）
+    -   `transfer_method` (string): 転送方法、画像 URL の場合は`remote_url` / ファイルアップロードの場合は`local_file`
+    -   `url` (string): 画像 URL（転送方法が`remote_url`の場合）
+    -   `upload_file_id` (string): アップロードされたファイル ID、事前にファイルアップロード API を通じて取得する必要があります（転送方法が`local_file`の場合）
+-   `auto_generate_name` (bool): タイトルを自動生成します。デフォルトは`true`です。
+
+### 応答
+
+`response_mode`がブロッキングの場合、`ChatCompletionResponse`オブジェクトを返します。
+`response_mode`がストリーミングの場合、`ChunkChatCompletionResponse`ストリームを返します。
+
+#### ChatCompletionResponse
+
+完全なアプリ結果を返します。`Content-Type`は`application/json`です。
+
+-   `event` (string): イベントタイプ、固定で `message`
+-   `task_id` (string): タスク ID、リクエスト追跡と以下の Stop Generate API に使用
+-   `id` (string): ユニーク ID
+-   `message_id` (string): 一意のメッセージ ID
+-   `conversation_id` (string): 会話 ID
+-   `mode` (string): アプリモード、`chat`として固定
+-   `answer` (string): 完全な応答内容
+-   `metadata` (object): メタデータ
+    -   `usage` (object): モデル使用情報 (詳細は Usage オブジェクトを参照)
+    -   `retriever_resources` (array[object]): 引用と帰属リスト (詳細は RetrieverResource オブジェクトを参照)
+-   `created_at` (int): メッセージ作成タイムスタンプ、例：1705395332
+
+#### ChunkChatCompletionResponse
+
+アプリによって出力されたストリームチャンクを返します。`Content-Type`は`text/event-stream`です。
+各ストリーミングチャンクは`data:`で始まり、2 つの改行文字`\n\n`で区切られます。以下のように表示されます：
+
+<CodeGroup>
+```streaming 応答
+data: {"event": "message", "task_id": "900bbd43-dc0b-4383-a372-aa6e6c414227", "id": "663c5084-a254-4040-8ad3-51f2a3c1a77c", "answer": "Hi", "created_at": 1705398420}\n\n
+```
+</CodeGroup>
+ストリーミングチャンクの構造は`event`に応じて異なります：
+- `event: message`: LLMはテキストチャンクイベントを返します。つまり、完全なテキストがチャンク形式で出力されます。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `conversation_id` (string): 会話ID
+  - `answer` (string): LLMが返したテキストチャンク内容
+  - `created_at` (int): 作成タイムスタンプ
+- `event: agent_message`: LLMはテキストチャンクイベントを返します（エージェントモードでのみサポート）。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `conversation_id` (string): 会話ID
+  - `answer` (string): LLMが返したテキストチャンク内容
+  - `created_at` (int): 作成タイムスタンプ
+- `event: tts_message`: TTSオーディオストリームイベント。内容はMp3形式のオーディオブロックで、base64文字列としてエンコードされています。（自動再生が有効な場合のみ利用可能）
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `audio` (string): base64エンコードされたオーディオコンテンツ
+  - `created_at` (int): 作成タイムスタンプ
+- `event: tts_message_end`: TTSオーディオストリーム終了イベント。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `audio` (string): 空の文字列
+  - `created_at` (int): 作成タイムスタンプ
+- `event: agent_thought`: エージェントの思考（エージェントモードでのみサポート）。
+  - `id` (string): エージェント思考ID
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `position` (int): 現在のエージェント思考の位置
+  - `thought` (string): LLMが考えていること
+  - `observation` (string): ツール呼び出しからの応答
+  - `tool` (string): 呼び出されたツールのリスト（;で区切られる）
+  - `tool_input` (string): ツールの入力（JSON形式）
+  - `created_at` (int): 作成タイムスタンプ
+  - `message_files` (array[string]): この思考ステップに関連付けられたファイルIDのリスト。各IDは、対応する `message_file` イベントで詳細が提供されるファイルを参照します。
+  - `conversation_id` (string): 会話ID
+- `event: message_file`: メッセージファイルイベント。ツールによって新しいファイルが作成されました。
+  - `id` (string): ファイル一意ID
+  - `type` (string): ファイルタイプ（現在は"image"のみ）
+  - `belongs_to` (string): 所属（ここでは'assistant'のみ）
+  - `url` (string): ファイルのリモートURL
+  - `conversation_id` (string): 会話ID
+- `event: message_end`: メッセージ終了イベント。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `conversation_id` (string): 会話ID
+  - `metadata` (object): メタデータ
+    - `usage` (object): モデル使用情報
+    - `retriever_resources` (array[object]): 引用と帰属リスト
+- `event: message_replace`: メッセージ内容置換イベント。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `conversation_id` (string): 会話ID
+  - `answer` (string): 置換内容
+  - `created_at` (int): 作成タイムスタンプ
+- `event: error`: エラーイベント。
+  - `task_id` (string): タスクID
+  - `message_id` (string): 一意のメッセージID
+  - `status` (int): HTTPステータスコード
+  - `code` (string): エラーコード
+  - `message` (string): エラーメッセージ
+- `event: ping`: 接続維持のためのpingイベント（10秒ごと）。
+
+### エラー
+
+-   404, 会話が存在しません
+-   400, `invalid_param`, 異常なパラメータ入力
+-   400, `app_unavailable`, アプリ構成が利用できません
+-   400, `provider_not_initialize`, 利用可能なモデル資格情報構成がありません
+-   400, `provider_quota_exceeded`, モデル呼び出しクォータが不足しています
+-   400, `model_currently_not_support`, 現在のモデルは利用できません
+-   400, `completion_request_error`, テキスト生成に失敗しました
+-   500, 内部サーバーエラー
+
+<CodeGroup>
+```bash cURL
+curl -X POST 'https://api.dify.ai/v1/chat-messages' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "inputs": {},
+    "query": "What are the specs of the iPhone 13 Pro Max?",
+    "response_mode": "streaming",
+    "conversation_id": "",
+    "user": "abc-123",
+    "files": [
+      {
+        "type": "image",
+        "transfer_method": "remote_url",
+        "url": "https://cloud.dify.ai/logo/logo-site.png"
+      }
+    ]
+}'
+```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答 (ブロッキングモード)
+{
+    "event": "message",
+    "task_id": "c3800678-a077-43df-a102-53f23ed20b88", 
+    "id": "9da23599-e713-473b-982c-4328d4f5c78a",
+    "message_id": "9da23599-e713-473b-982c-4328d4f5c78a",
+    "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2",
+    "mode": "chat",
+    "answer": "iPhone 13 Pro Maxの仕様は次のとおりです:...",
+    "metadata": {
+        "usage": {
+            "prompt_tokens": 1033,
+            "prompt_unit_price": "0.001",
+            "prompt_price_unit": "0.001",
+            "prompt_price": "0.0010330",
+            "completion_tokens": 128,
+            "completion_unit_price": "0.002",
+            "completion_price_unit": "0.001",
+            "completion_price": "0.0002560",
+            "total_tokens": 1161,
+            "total_price": "0.0012890",
+            "currency": "USD",
+            "latency": 0.7682376249867957
+        },
+        "retriever_resources": [
+            {
+                "position": 1,
+                "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb",
+                "dataset_name": "iPhone",
+                "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00",
+                "document_name": "iPhone List",
+                "segment_id": "ed599c7f-2766-4294-9d1d-e5235a61270a",
+                "score": 0.98457545,
+                "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\"\n\"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\""
+            }
+        ]
+    },
+    "created_at": 1705407629
+}
+```
+```streaming 応答 (ストリーミングモード - 基本アシスタント)
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " I", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": "'m", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " glad", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " to", "created_at": 1679586595}
+data: {"event": "message", "message_id" : "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " meet", "created_at": 1679586595}
+data: {"event": "message", "message_id" : "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " you", "created_at": 1679586595}
+data: {"event": "message_end", "id": "5e52ce04-874b-4d27-9045-b3bc80def685", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "metadata": {"usage": {"prompt_tokens": 1033, "prompt_unit_price": "0.001", "prompt_price_unit": "0.001", "prompt_price": "0.0010330", "completion_tokens": 135, "completion_unit_price": "0.002", "completion_price_unit": "0.001", "completion_price": "0.0002700", "total_tokens": 1168, "total_price": "0.0013030", "currency": "USD", "latency": 1.381760165997548}, "retriever_resources": [{"position": 1, "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb", "dataset_name": "iPhone", "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00", "document_name": "iPhone List", "segment_id": "ed599c7f-2766-4294-9d1d-e5235a61270a", "score": 0.98457545, "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\"\n\"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\""}]}}
+data: {"event": "tts_message", "conversation_id": "23dd85f3-1a41-4ea0-b7a9-062734ccfaf9", "message_id": "a8bdc41c-13b2-4c18-bfd9-054b9803038c", "created_at": 1721205487, "task_id": "3bf8a0bb-e73b-4690-9e66-4e429bad8ee7", "audio": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"}
+data: {"event": "tts_message_end", "conversation_id": "23dd85f3-1a41-4ea0-b7a9-062734ccfaf9", "message_id": "a8bdc41c-13b2-4c18-bfd9-054b9803038c", "created_at": 1721205487, "task_id": "3bf8a0bb-e73b-4690-9e66-4e429bad8ee7", "audio": ""}
+```
+```streaming 応答 (エージェントアシスタント)
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " I", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": "'m", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " glad", "created_at": 1679586595}
+data: {"event": "message", "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " to", "created_at": 1679586595}
+data: {"event": "message", "message_id" : "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " meet", "created_at": 1679586595}
+data: {"event": "message", "message_id" : "5ad4cb98-f0c7-4085-b384-88c403be6290", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "answer": " you", "created_at": 1679586595}
+data: {"event": "message_end", "id": "5e52ce04-874b-4d27-9045-b3bc80def685", "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2", "metadata": {"usage": {"prompt_tokens": 1033, "prompt_unit_price": "0.001", "prompt_price_unit": "0.001", "prompt_price": "0.0010330", "completion_tokens": 135, "completion_unit_price": "0.002", "completion_price_unit": "0.001", "completion_price": "0.0002700", "total_tokens": 1168, "total_price": "0.0013030", "currency": "USD", "latency": 1.381760165997548}, "retriever_resources": [{"position": 1, "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb", "dataset_name": "iPhone", "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00", "document_name": "iPhone List", "segment_id": "ed599c7f-2766-4294-9d1d-e5235a61270a", "score": 0.98457545, "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\"\n\"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\""}]}}
+data: {"event": "tts_message", "conversation_id": "23dd85f3-1a41-4ea0-b7a9-062734ccfaf9", "message_id": "a8bdc41c-13b2-4c18-bfd9-054b9803038c", "created_at": 1721205487, "task_id": "3bf8a0bb-e73b-4690-9e66-4e429bad8ee7", "audio": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"}
+data: {"event": "tts_message_end", "conversation_id": "23dd85f3-1a41-4ea0-b7a9-062734ccfaf9", "message_id": "a8bdc41c-13b2-4c18-bfd9-054b9803038c", "created_at": 1721205487, "task_id": "3bf8a0bb-e73b-4690-9e66-4e429bad8ee7", "audio": ""}
+```
+</CodeGroup>
+
+---
+
+## ファイルアップロード `POST /files/upload`
+
+メッセージ送信時に使用するためのファイルをアップロードします（現在は画像のみサポート）。画像とテキストのマルチモーダル理解を可能にします。
+png、jpg、jpeg、webp、gif 形式をサポートしています。
+アップロードされたファイルは現在のエンドユーザーのみが使用できます。
+
+### リクエストボディ
+
+このインターフェースは`multipart/form-data`リクエストを必要とします。
+
+-   `file` (File, required): アップロードするファイル。
+-   `user` (string, required): ユーザー識別子、開発者のルールで定義され、アプリケーション内で一意でなければなりません。
+
+### 応答
+
+アップロードが成功すると、サーバーはファイルの ID と関連情報を返します。
+
+-   `id` (uuid): ID
+-   `name` (string): ファイル名
+-   `size` (int): ファイルサイズ（バイト）
+-   `extension` (string): ファイル拡張子
+-   `mime_type` (string): ファイルの MIME タイプ
+-   `created_by` (uuid): エンドユーザー ID
+-   `created_at` (timestamp): 作成タイムスタンプ、例：1705395332
+
+### エラー
+
+-   400, `no_file_uploaded`, ファイルが提供されなければなりません
+-   400, `too_many_files`, 現在は 1 つのファイルのみ受け付けます
+-   400, `unsupported_preview`, ファイルはプレビューをサポートしていません
+-   400, `unsupported_estimate`, ファイルは推定をサポートしていません
+-   413, `file_too_large`, ファイルが大きすぎます
+-   415, `unsupported_file_type`, サポートされていない拡張子、現在はドキュメントファイルのみ受け付けます
+-   503, `s3_connection_failed`, S3 サービスに接続できません
+-   503, `s3_permission_denied`, S3 にファイルをアップロードする権限がありません
+-   503, `s3_file_too_large`, ファイルが S3 のサイズ制限を超えています
+-   500, 内部サーバーエラー
+
+<CodeGroup>
+    ```bash cURL curl -X POST 'https://api.dify.ai/v1/files/upload' \ --header
+    'Authorization: Bearer {api_key}' \ --form
+    'file=@/path/to/your/image.png;type=image/png' \ --form 'user=abc-123' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "id": "72fa9618-8f89-4a37-9b33-7e1178a24a67",
+  "name": "example.png",
+  "size": 1024,
+  "extension": "png",
+  "mime_type": "image/png",
+  "created_by": "6ad1ab0a-73ff-4ac1-b9e4-cdb312f71f13",
+  "created_at": 1577836800
+}
+```
+</CodeGroup>
+
+---
+
+## 生成停止 `POST /chat-messages/:task_id/stop`
+
+ストリーミングモードでのみサポートされています。
+
+### パスパラメータ
+
+-   `task_id` (string, required): タスク ID、ストリーミングチャンクの返り値から取得できます。
+
+### リクエストボディ
+
+-   `user` (string, required): ユーザー識別子、エンドユーザーのアイデンティティを定義するために使用され、メッセージ送信インターフェースで渡されたユーザーと一致している必要があります。
+
+### 応答
+
+-   `result` (string): 常に"success"を返します。
+
+<CodeGroup>
+```bash cURL
+curl -X POST 'https://api.dify.ai/v1/chat-messages/your_task_id/stop' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "user": "abc-123"
+}'
+```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "result": "success"
+}
+```
+</CodeGroup>
+
+---
+
+## メッセージフィードバック `POST /messages/:message_id/feedbacks`
+
+エンドユーザーはフィードバックメッセージを提供でき、アプリケーション開発者が期待される出力を最適化するのに役立ちます。
+
+### パスパラメータ
+
+-   `message_id` (string, required): メッセージ ID
+
+### リクエストボディ
+
+-   `rating` (string): アップボートは`like`、ダウンボートは`dislike`、アップボートの取り消しは`null`。
+-   `user` (string, required): ユーザー識別子、開発者のルールで定義され、アプリケーション内で一意でなければなりません。
+-   `content` (string): メッセージのフィードバックです。
+
+### 応答
+
+-   `result` (string): 常に"success"を返します。
+
+<CodeGroup>
+```bash cURL
+curl -X POST 'https://api.dify.ai/v1/messages/your_message_id/feedbacks' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "rating": "like",
+    "user": "abc-123",
+    "content": "message feedback information"
+}'
+```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "result": "success"
+}
+```
+</CodeGroup>
+
+---
+
+## 次の推奨質問 `GET /messages/{message_id}/suggested`
+
+現在のメッセージに対する次の質問の提案を取得します。
+
+### パスパラメータ
+
+-   `message_id` (string, required): メッセージ ID
+
+### クエリパラメータ
+
+-   `user` (string, required): ユーザー識別子、エンドユーザーのアイデンティティを定義するために使用され、統計のために使用されます。アプリケーション内で開発者によって一意に定義される必要があります。
+
+<CodeGroup>
+    ```bash cURL curl --location --request GET
+    'https://api.dify.ai/v1/messages/your_message_id/suggested?user=abc-123' \
+    --header 'Authorization: Bearer {api_key}' \ --header 'Content-Type:
+    application/json' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "result": "success",
+  "data": [
+        "a",
+        "b",
+        "c"
+    ]
+}
+```
+</CodeGroup>
+
+---
+
+## 会話履歴メッセージを取得 `GET /messages`
+
+スクロールロード形式で過去のチャット記録を返し、最初のページは最新の`{limit}`メッセージを返します。つまり、逆順です。
+
+### クエリパラメータ
+
+-   `conversation_id` (string, required): 会話 ID
+-   `user` (string, required): ユーザー識別子
+-   `first_id` (string): 現在のページの最初のチャット記録の ID、デフォルトは null です。
+-   `limit` (int): 1 回のリクエストで返すチャット履歴メッセージの数、デフォルトは 20 です。
+
+### 応答
+
+-   `data` (array[object]): メッセージリスト
+    -   `id` (string): メッセージ ID
+    -   `conversation_id` (string): 会話 ID
+    -   `inputs` (object): ユーザー入力パラメータ
+    -   `query` (string): ユーザー入力/質問内容
+    -   `message_files` (array[object]): メッセージファイル
+        -   `id` (string): ID
+        -   `type` (string): ファイルタイプ（例: `image`）
+        -   `url` (string): プレビュー画像 URL
+        -   `belongs_to` (string): 所属（`user` または `assistant`）
+    -   `agent_thoughts` (array[object]): エージェントの思考（基本アシスタントの場合は空）
+        -   `id` (string): エージェント思考 ID
+        -   `message_id` (string): 一意のメッセージ ID
+        -   `position` (int): 現在のエージェント思考の位置
+        -   `thought` (string): LLM が考えていること
+        -   `observation` (string): ツール呼び出しからの応答
+        -   `tool` (string): 呼び出されたツールのリスト（;で区切られる）
+        -   `tool_input` (string): ツールの入力（JSON 形式）
+        -   `created_at` (int): 作成タイムスタンプ
+        -   `message_files` (array[string]): この思考ステップに関連付けられたファイル ID のリスト。
+    -   `answer` (string): 応答メッセージ内容
+    -   `created_at` (timestamp): 作成タイムスタンプ
+    -   `feedback` (object): フィードバック情報
+        -   `rating` (string): `like` / `dislike`
+    -   `retriever_resources` (array[object]): 引用と帰属リスト
+-   `has_more` (bool): 次のページがあるかどうか
+-   `limit` (int): 返されたアイテムの数
+
+<CodeGroup>
+    ```bash cURL curl -X GET
+    'https://api.dify.ai/v1/messages?user=abc-123&conversation_id=your_conversation_id'
+    \ --header 'Authorization: Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答 (基本アシスタント)
+{
+  "limit": 20,
+  "has_more": false,
+  "data": [
+    {
+        "id": "a076a87f-31e5-48dc-b452-0061adbbc922",
+        "conversation_id": "cd78daf6-f9e4-4463-9ff2-54257230a0ce",
+        "inputs": {
+            "name": "dify"
+        },
+        "query": "iphone 13 pro",
+        "answer": "iPhone 13 Proは2021年9月24日に発売され、6.1インチのディスプレイと1170 x 2532の解像度を備えています。Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)プロセッサ、6 GBのRAMを搭載し、128 GB、256 GB、512 GB、1 TBのストレージオプションを提供します。カメラは12 MP、バッテリー容量は3095 mAhで、iOS 15を搭載しています。",
+        "message_files": [],
+        "feedback": null,
+        "retriever_resources": [
+            {
+                "position": 1,
+                "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb",
+                "dataset_name": "iPhone",
+                "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00",
+                "document_name": "iPhone List",
+                "segment_id": "ed599c7f-2766-4294-9d1d-e5235a61270a",
+                "score": 0.98457545,
+                "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\"\n\"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\""
+            }
+        ],
+        "agent_thoughts": [],
+        "created_at": 1705569239
+    }
+  ]
+}
+```
+```json 応答 (エージェントアシスタント)
+{
+    "limit": 20,
+    "has_more": false,
+    "data": [
+        {
+            "id": "d35e006c-7c4d-458f-9142-be4930abdf94",
+            "conversation_id": "957c068b-f258-4f89-ba10-6e8a0361c457",
+            "inputs": {},
+            "query": "draw a cat",
+            "answer": "猫の画像を生成しました。メッセージを確認して画像を表示してください。",
+            "message_files": [
+                {
+                    "id": "976990d2-5294-47e6-8f14-7356ba9d2d76",
+                    "type": "image",
+                    "url": "http://127.0.0.1:5001/files/tools/976990d2-5294-47e6-8f14-7356ba9d2d76.png?timestamp=1705988524&nonce=55df3f9f7311a9acd91bf074cd524092&sign=z43nMSO1L2HBvoqADLkRxr7Biz0fkjeDstnJiCK1zh8=",
+                    "belongs_to": "assistant"
+                }
+            ],
+            "feedback": null,
+            "retriever_resources": [],
+            "created_at": 1705988187,
+            "agent_thoughts": [
+                {
+                    "id": "592c84cf-07ee-441c-9dcc-ffc66c033469",
+                    "chain_id": null,
+                    "message_id": "d35e006c-7c4d-458f-9142-be4930abdf94",
+                    "position": 1,
+                    "thought": "",
+                    "tool": "dalle2",
+                    "tool_input": "{\"dalle2\": {\"prompt\": \"cat\"}}",
+                    "created_at": 1705988186,
+                    "observation": "画像はすでに作成され、ユーザーに送信されました。今すぐユーザーに確認するように伝えてください。",
+                    "files": [
+                        "976990d2-5294-47e6-8f14-7356ba9d2d76"
+                    ]
+                },
+                {
+                    "id": "73ead60d-2370-4780-b5ed-532d2762b0e5",
+                    "chain_id": null,
+                    "message_id": "d35e006c-7c4d-458f-9142-be4930abdf94",
+                    "position": 2,
+                    "thought": "猫の画像を生成しました。メッセージを確認して画像を表示してください。",
+                    "tool": "",
+                    "tool_input": "",
+                    "created_at": 1705988199,
+                    "observation": "",
+                    "files": []
+                }
+            ]
+        }
+    ]
+}
+```
+</CodeGroup>
+
+---
+
+## 会話を取得 `GET /conversations`
+
+現在のユーザーの会話リストを取得し、デフォルトで最新の 20 件を返します。
+
+### クエリパラメータ
+
+-   `user` (string, required): ユーザー識別子
+-   `last_id` (string, optional): 現在のページの最後のレコードの ID、デフォルトは null です。
+-   `limit` (int, optional): 1 回のリクエストで返すレコードの数、デフォルトは最新の 20 件です。最大 100、最小 1。
+-   `sort_by` (string, optional): ソートフィールド、デフォルト：`-updated_at`（更新時間で降順にソート）。利用可能な値：`created_at`, `-created_at`, `updated_at`, `-updated_at`。フィールドの前の記号は順序または逆順を表し、`-`は逆順を表します。
+
+### 応答
+
+-   `data` (array[object]): 会話のリスト
+    -   `id` (string): 会話 ID
+    -   `name` (string): 会話名
+    -   `inputs` (object): ユーザー入力パラメータ
+    -   `introduction` (string): 紹介
+    -   `created_at` (timestamp): 作成タイムスタンプ
+    -   `updated_at` (timestamp): 更新タイムスタンプ
+-   `has_more` (bool): さらにレコードがあるか
+-   `limit` (int): 返されたエントリの数
+
+<CodeGroup>
+    ```bash cURL curl -X GET
+    'https://api.dify.ai/v1/conversations?user=abc-123&last_id=&limit=20' \
+    --header 'Authorization: Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "limit": 20,
+  "has_more": false,
+  "data": [
+    {
+      "id": "10799fb8-64f7-4296-bbf7-b42bfbe0ae54",
+      "name": "新しいチャット",
+      "inputs": {
+          "book": "book",
+          "myName": "Lucy"
+      },
+      "status": "normal",
+      "created_at": 1679667915,
+      "updated_at": 1679667915
+    },
+    {
+      "id": "hSIhXBhNe8X1d8Et"
+      // ...
+    }
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+## 会話を削除 `DELETE /conversations/:conversation_id`
+
+会話を削除します。
+
+### パスパラメータ
+
+-   `conversation_id` (string, required): 会話 ID
+
+### リクエストボディ
+
+-   `user` (string, required): ユーザー識別子、開発者によって定義され、アプリケーション内で一意である必要があります。
+
+### 応答
+
+-   `204 No Content`: 成功を示す HTTP ステータス。
+
+<CodeGroup>
+```bash cURL
+curl -X DELETE 'https://api.dify.ai/v1/conversations/your_conversation_id' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "user": "abc-123"
+}'
+```
+</CodeGroup>
+
+<CodeGroup>```text 応答 204 No Content ```</CodeGroup>
+
+---
+
+## 会話の名前を変更 `POST /conversations/:conversation_id/name`
+
+セッションの名前を変更します。セッション名は、複数のセッションをサポートするクライアントでの表示に使用されます。
+
+### パスパラメータ
+
+-   `conversation_id` (string, required): 会話 ID
+
+### リクエストボディ
+
+-   `name` (string, optional): 会話の名前。このパラメータは、`auto_generate`が`true`に設定されている場合、省略できます。
+-   `auto_generate` (bool, optional): タイトルを自動生成します。デフォルトは`false`です。
+-   `user` (string, required): ユーザー識別子、開発者によって定義され、アプリケーション内で一意である必要があります。
+
+### 応答
+
+-   `id` (string): 会話 ID
+-   `name` (string): 会話名
+-   `inputs` (object): ユーザー入力パラメータ
+-   `status` (string): 会話状態
+-   `introduction` (string): 紹介
+-   `created_at` (timestamp): 作成タイムスタンプ
+-   `updated_at` (timestamp): 更新タイムスタンプ
+
+<CodeGroup>
+```bash cURL
+curl -X POST 'https://api.dify.ai/v1/conversations/your_conversation_id/name' \
+--header 'Authorization: Bearer {api_key}' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "name": "新しい会話名",
+    "auto_generate": false,
+    "user": "abc-123"
+}'
+```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+    "id": "cd78daf6-f9e4-4463-9ff2-54257230a0ce",
+    "name": "Chat vs AI",
+    "inputs": {},
+    "introduction": "",
+    "created_at": 1705569238,
+    "updated_at": 1705569238
+}
+```
+</CodeGroup>
+
+---
+
+## 会話変数の取得 `GET /conversations/:conversation_id/variables`
+
+特定の会話から変数を取得します。このエンドポイントは、会話中に取得された構造化データを抽出するのに役立ちます。
+
+### パスパラメータ
+
+-   `conversation_id` (string, required): 変数を取得する会話の ID。
+
+### クエリパラメータ
+
+-   `user` (string, required): ユーザー識別子。開発者によって定義されたルールに従い、アプリケーション内で一意である必要があります。
+-   `last_id` (string, optional): 現在のページの最後のレコードの ID、デフォルトは null です。
+-   `limit` (int, optional): 1 回のリクエストで返すレコードの数、デフォルトは最新の 20 件です。最大 100、最小 1。
+
+### 応答
+
+-   `limit` (int): ページごとのアイテム数
+-   `has_more` (bool): さらにアイテムがあるかどうか
+-   `data` (array[object]): 変数のリスト
+    -   `id` (string): 変数 ID
+    -   `name` (string): 変数名
+    -   `value_type` (string): 変数タイプ（文字列、数値、真偽値など）
+    -   `value` (string): 変数値
+    -   `description` (string): 変数の説明
+    -   `created_at` (int): 作成タイムスタンプ
+    -   `updated_at` (int): 最終更新タイムスタンプ
+
+### エラー
+
+-   404, `conversation_not_exists`, 会話が見つかりません
+
+<CodeGroup>
+    ```bash cURL (全変数) curl -X GET
+    'https://api.dify.ai/v1/conversations/your_conversation_id/variables?user=abc-123'
+    \ --header 'Authorization: Bearer {api_key}' ``` ```bash cURL
+    (変数名でフィルタ) curl -X GET
+    'https://api.dify.ai/v1/conversations/your_conversation_id/variables?user=abc-123&variable_name=customer_name'
+    \ --header 'Authorization: Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "limit": 100,
+  "has_more": false,
+  "data": [
+    {
+      "id": "variable-uuid-1",
+      "name": "customer_name",
+      "value_type": "string",
+      "value": "John Doe",
+      "description": "会話から抽出された顧客名",
+      "created_at": 1650000000000,
+      "updated_at": 1650000000000
+    },
+    {
+      "id": "variable-uuid-2",
+      "name": "order_details",
+      "value_type": "json",
+      "value": "{\"product\":\"Widget\",\"quantity\":5,\"price\":19.99}",
+      "description": "顧客の注文詳細",
+      "created_at": 1650000000000,
+      "updated_at": 1650000000000
+    }
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+## 音声からテキストへ `POST /audio-to-text`
+
+このエンドポイントは`multipart/form-data`リクエストを必要とします。
+
+### リクエストボディ
+
+-   `file` (file, required): オーディオファイル。サポートされている形式：`['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm']`。ファイルサイズ制限：15MB。
+-   `user` (string, required): ユーザー識別子、開発者のルールで定義され、アプリケーション内で一意でなければなりません。
+
+### 応答
+
+-   `text` (string): 出力テキスト
+
+<CodeGroup>
+    ```bash cURL curl -X POST 'https://api.dify.ai/v1/audio-to-text' \ --header
+    'Authorization: Bearer {api_key}' \ --form
+    'file=@/path/to/your/audio.mp3;type=audio/mp3' \ --form 'user=abc-123' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "text": "変換されたテキストがここに入ります。"
+}
+```
+</CodeGroup>
+
+---
+
+## テキストから音声へ `POST /text-to-audio`
+
+テキストを音声に変換します。
+
+### リクエストボディ
+
+-   `message_id` (string, optional): Dify によって生成されたテキストメッセージの場合、生成されたメッセージ ID を直接渡します。バックエンドはメッセージ ID を使用して対応するコンテンツを検索し、音声情報を直接合成します。`message_id`と`text`が同時に提供される場合、`message_id`が優先されます。
+-   `text` (string, optional): 音声生成コンテンツ。`message_id` がない場合は必須です。
+-   `user` (string, required): ユーザー識別子、開発者によって定義され、アプリ内で一意である必要があります。
+
+### 応答
+
+成功すると、レスポンスボディは `audio/wav` 形式の音声データを含みます。
+
+<CodeGroup>
+    ```bash cURL curl --location --request POST
+    'https://api.dify.ai/v1/text-to-audio' \ --header 'Authorization: Bearer{' '}
+    {api_key}' \ --form 'text=Hello Dify' \ --form 'user=abc-123' # --form
+    'message_id=your_message_id' # message_id を使用する場合 ```
+</CodeGroup>
+
+<CodeGroup>```http Headers Content-Type: audio/wav ```</CodeGroup>
+
+---
+
+## アプリケーションの基本情報を取得 `GET /info`
+
+このアプリケーションの基本情報を取得するために使用されます。
+
+### 応答
+
+-   `name` (string): アプリケーションの名前
+-   `description` (string): アプリケーションの説明
+-   `tags` (array[string]): アプリケーションのタグ
+
+<CodeGroup>
+    ```bash cURL curl -X GET 'https://api.dify.ai/v1/info' \ -H 'Authorization:
+    Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "name": "My App",
+  "description": "This is my app.",
+  "tags": [
+    "tag1",
+    "tag2"
+  ]
+}
+```
+</CodeGroup>
+
+---
+
+## アプリケーションのパラメータ情報を取得 `GET /parameters`
+
+ページに入る際に、機能、入力パラメータ名、タイプ、デフォルト値などの情報を取得するために使用されます。
+
+### 応答
+
+-   `opening_statement` (string): 開始文
+-   `suggested_questions` (array[string]): 開始時の推奨質問のリスト
+-   `suggested_questions_after_answer` (object): 答えを有効にした後の質問を提案します。
+    -   `enabled` (bool): 有効かどうか
+-   `speech_to_text` (object): 音声からテキストへ
+    -   `enabled` (bool): 有効かどうか
+-   `retriever_resource` (object): 引用と帰属
+    -   `enabled` (bool): 有効かどうか
+-   `annotation_reply` (object): 注釈返信
+    -   `enabled` (bool): 有効かどうか
+-   `user_input_form` (array[object]): ユーザー入力フォームの構成
+    -   `text-input` (object): テキスト入力コントロール
+        -   `label` (string): 変数表示ラベル名
+        -   `variable` (string): 変数 ID
+        -   `required` (bool): 必須かどうか
+        -   `default` (string): デフォルト値
+    -   `paragraph` (object): 段落テキスト入力コントロール
+        -   `label` (string): 変数表示ラベル名
+        -   `variable` (string): 変数 ID
+        -   `required` (bool): 必須かどうか
+        -   `default` (string): デフォルト値
+    -   `select` (object): ドロップダウンコントロール
+        -   `label` (string): 変数表示ラベル名
+        -   `variable` (string): 変数 ID
+        -   `required` (bool): 必須かどうか
+        -   `default` (string): デフォルト値
+        -   `options` (array[string]): オプション値
+-   `file_upload` (object): ファイルアップロード構成
+    -   `image` (object): 画像設定。現在サポートされている画像タイプ：`png`, `jpg`, `jpeg`, `webp`, `gif`
+        -   `enabled` (bool): 有効かどうか
+        -   `number_limits` (int): 画像数の制限、デフォルトは 3
+        -   `transfer_methods` (array[string]): 転送方法のリスト（`remote_url`, `local_file`）。いずれかを選択する必要があります。
+-   `system_parameters` (object): システムパラメータ
+    -   `file_size_limit` (int): ドキュメントアップロードサイズ制限（MB）
+    -   `image_file_size_limit` (int): 画像ファイルアップロードサイズ制限（MB）
+    -   `audio_file_size_limit` (int): オーディオファイルアップロードサイズ制限（MB）
+    -   `video_file_size_limit` (int): ビデオファイルアップロードサイズ制限（MB）
+
+<CodeGroup>
+    ```bash cURL curl -X GET 'https://api.dify.ai/v1/parameters' \ --header
+    'Authorization: Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "opening_statement": "こんにちは！",
+  "suggested_questions_after_answer": {
+      "enabled": true
+  },
+  "speech_to_text": {
+      "enabled": true
+  },
+  "retriever_resource": {
+      "enabled": true
+  },
+  "annotation_reply": {
+      "enabled": true
+  },
+  "user_input_form": [
+      {
+          "paragraph": {
+              "label": "クエリ",
+              "variable": "query",
+              "required": true,
+              "default": ""
+          }
+      }
+  ],
+  "file_upload": {
+      "image": {
+          "enabled": false,
+          "number_limits": 3,
+          "detail": "high",
+          "transfer_methods": [
+              "remote_url",
+              "local_file"
+          ]
+      }
+  },
+  "system_parameters": {
+      "file_size_limit": 15,
+      "image_file_size_limit": 10,
+      "audio_file_size_limit": 50,
+      "video_file_size_limit": 100
+  }
+}
+```
+</CodeGroup>
+
+---
+
+## アプリケーションのメタ情報を取得 `GET /meta`
+
+このアプリケーションのツールのアイコンを取得するために使用されます。
+
+### 応答
+
+-   `tool_icons` (object): ツールのアイコン。キーはツール名です。
+    -   `[tool_name]` (string | object): アイコンの定義。
+        -   文字列の場合: アイコンの URL。
+        -   オブジェクトの場合:
+            -   `background` (string): 背景色 (16 進数形式)。
+            -   `content` (string): 絵文字。
+
+<CodeGroup>
+    ```bash cURL curl -X GET 'https://api.dify.ai/v1/meta' \ -H 'Authorization:
+    Bearer {api_key}' ```
+</CodeGroup>
+
+<CodeGroup>
+```json 応答
+{
+  "tool_icons": {
+    "dalle2": "https://cloud.dify.ai/console/api/workspaces/current/tool-provider/builtin/dalle/icon",
+    "api_tool": {
+      "background": "#252525",
+      "content": "\ud83d\ude01"
+    }
+  }
+}
+```
+</CodeGroup>
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/api_access/chat.ja.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fapi_access%2Fchat.ja.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>
