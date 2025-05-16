@@ -2,23 +2,22 @@ import json
 import os
 import re
 
-# 弃用通告的模板
 # {new_doc_href} 将被替换为新文档的实际链接
 DEPRECATION_NOTICE_TEMPLATE = """{{/* 
-  CONTRIBUTOR NOTE:
+  贡献者注意:
   ----------------
-  This is a legacy document that is being deprecated.
-  Please DO NOT make changes to this version.
-  All updates should be directed to the new version at:
+  本文档为旧版文档，即将弃用。
+  请勿对此版本进行更改。
+  所有更新应指向新版本：
   {new_doc_href}
 */}}
 
-<Card title="This Documentation is Being Deprecated" icon="circle-exclamation" href="{new_doc_href}">
-  <p>This page is being phased out as part of our documentation reorganization.</p>
+<Card title="本文档即将弃用" icon="circle-exclamation" href="{new_doc_href}">
+  <p>作为我们文档重组的一部分，此页面正在逐步淘汰。</p>
   
-  <p><strong>Click this card</strong> to be redirected to the updated version with the most current information.</p>
+  <p><u><b>点击此卡片</b></u>跳转到包含最新信息的更新版本。</p>
   
-  <p>If you notice any discrepancies or areas needing improvement in the new documentation, please use the "Report an issue" button at the bottom of the page.</p>
+  <p>如果您在新的文档中发现任何差异或需要改进的地方，请使用页面底部的“报告问题”按钮。</p>
 </Card>"""
 
 def load_mappings(json_full_path):
@@ -73,8 +72,8 @@ def add_deprecation_notice_to_file_content(target_file_full_path, new_doc_href):
     notice_body = DEPRECATION_NOTICE_TEMPLATE.format(new_doc_href=new_doc_href).strip()
 
     # 检查是否已存在通告 (基于标题和链接)，避免重复添加
-    # "This Documentation is Being Deprecated" 是 Card 的标题
-    if 'This Documentation is Being Deprecated' in rest_of_content and new_doc_href in rest_of_content:
+    # "本文档即将弃用" 是 Card 的标题
+    if '本文档即将弃用' in rest_of_content and new_doc_href in rest_of_content:
         print(f"信息：通告 (链接到 {new_doc_href}) 已存在于 {target_file_full_path}。跳过。")
         return
 
@@ -109,7 +108,7 @@ def main():
     base_dir = os.path.dirname(script_dir) # 项目根目录
 
     # JSON 配置文件相对于 base_dir 的路径
-    json_file_relative_path = "plugin_dev_en/sync/plugin_mappings.json"
+    json_file_relative_path = "plugin_dev_zh/sync/plugin_mappings.json"  # 更新为中文版路径
     json_full_path = os.path.join(base_dir, json_file_relative_path)
 
     mappings_data = load_mappings(json_full_path)
