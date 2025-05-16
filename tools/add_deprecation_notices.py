@@ -4,20 +4,20 @@ import re
 
 # {new_doc_href} 将被替换为新文档的实际链接
 DEPRECATION_NOTICE_TEMPLATE = """{{/* 
-  贡献者注意:
+  コントリビューター注:
   ----------------
-  本文档为旧版文档，即将弃用。
-  请勿对此版本进行更改。
-  所有更新应指向新版本：
+  これはレガシードキュメントであり、非推奨になります。
+  このバージョンに変更を加えないでください。
+  すべての更新は新しいバージョンに向けられるべきです：
   {new_doc_href}
 */}}
 
-<Card title="本文档即将弃用" icon="circle-exclamation" href="{new_doc_href}">
-  <p>作为我们文档重组的一部分，此页面正在逐步淘汰。</p>
+<Card title="このドキュメントはまもなく非推奨になります" icon="circle-exclamation" href="{new_doc_href}">
+  <p>ドキュメント再編の一環として、このページは段階的に廃止されます。</p>
   
-  <p><u><b>点击此卡片</b></u>跳转到包含最新信息的更新版本。</p>
+  <p><u><b>このカードをクリックして</b></u>、最新情報が含まれる更新版にリダイレクトしてください。</p>
   
-  <p>如果您在新的文档中发现任何差异或需要改进的地方，请使用页面底部的“报告问题”按钮。</p>
+  <p>新しいドキュメントに不一致や改善が必要な箇所を見つけた場合は、ページ下部の「問題を報告」ボタンを使用してください。</p>
 </Card>"""
 
 def load_mappings(json_full_path):
@@ -72,9 +72,9 @@ def add_deprecation_notice_to_file_content(target_file_full_path, new_doc_href):
     notice_body = DEPRECATION_NOTICE_TEMPLATE.format(new_doc_href=new_doc_href).strip()
 
     # 检查是否已存在通告 (基于标题和链接)，避免重复添加
-    # "本文档即将弃用" 是 Card 的标题
-    if '本文档即将弃用' in rest_of_content and new_doc_href in rest_of_content:
-        print(f"信息：通告 (链接到 {new_doc_href}) 已存在于 {target_file_full_path}。跳过。")
+    # "このドキュメントはまもなく非推奨になります" 是 Card 的日文标题
+    if 'このドキュメントはまもなく非推奨になります' in rest_of_content and new_doc_href in rest_of_content:
+        print(f"情報：通知 (リンク先 {new_doc_href}) は既に {target_file_full_path} に存在します。スキップします。") # 日语提示
         return
 
     # 组装新内容：frontmatter + 两个换行 + 通告 + 两个换行 + 原有内容（去除开头的换行）
@@ -108,7 +108,7 @@ def main():
     base_dir = os.path.dirname(script_dir) # 项目根目录
 
     # JSON 配置文件相对于 base_dir 的路径
-    json_file_relative_path = "plugin_dev_zh/sync/plugin_mappings.json"  # 更新为中文版路径
+    json_file_relative_path = "plugin_dev_ja/sync/plugin_mappings.json"  # 更新为日文版路径
     json_full_path = os.path.join(base_dir, json_file_relative_path)
 
     mappings_data = load_mappings(json_full_path)
