@@ -1,0 +1,563 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: basic
+  level: beginner
+standard_title: Getting Started Dify Tool
+language: ja
+title: Dify プラグイン開発：Hello World ガイド
+description: このドキュメントでは、Telegraph公開プラグインの作成を例に、ゼロからのDifyプラグイン開発に関する詳細なチュートリアルを提供します。環境準備、プロジェクト初期化、仮想環境設定、プラグインコアロジック開発、ローカル実行デバッグ、プラグインメタ情報整備、パッケージ化と公開といった手順が含まれます。
+---
+
+Dify プラグイン開発入門ガイドへようこそ！このチュートリアルは、基本的なプログラミング知識と Dify プラットフォームの使用経験があることを前提としています。このチュートリアルを完了すると、簡単な Dify プラグインを作成するための基本的な流れを習得し、Dify ユーザーからプラグイン貢献者へとステップアップできます。
+
+Telegraph 公開プラグインを例に、簡単なプラグインの開発方法をステップバイステップで示します。このチュートリアルでは、主にコマンドライン操作を使用し、VSCode をコードエディタとして使用する場合の例も示します。**まず全体的な流れを理解するために一度ざっと目を通し、その後、手順に従って実際に操作することをお勧めします。**
+
+> **LLM 向けの説明:** ここで私たちが作成したプロンプトを使用して、プラグイン開発を支援することもできます：[Dify プラグイン開発：プロンプト](/plugin_dev_ja/0211-getting-started-by-prompt.ja)
+
+始める前に、いつでも私たちが提供する [**開発者向けチートシート (Cheatsheet)**](/plugin_dev_ja/0131-cheatsheet.ja) でよく使われるコマンドや情報を確認したり、より複雑な問題に遭遇した場合には完全な開発者ドキュメントを参照したりすることができます。
+
+## 1. 開発環境の準備
+
+Dify プラグインの開発を始める前に、お使いの環境に以下のツールが準備されていることを確認してください：
+
+- **Dify プラグイン開発 CLI (CLI):** これはプラグインの開発、デバッグ、パッケージ化を行うための中核となるツールで、`dify-plugin-daemon` または「プラグイン開発SDK」とも呼ばれます。
+- **Python 環境:** Python 3.12 以降が必要です。
+
+### 1.1 Dify プラグイン開発 CLI のインストール
+
+> より詳細な開発環境準備ガイドについては、[開発ツールの初期化](/plugin_dev_ja/0221-initialize-development-tools.ja) を参照してください。
+
+1.  **ダウンロード:** [Dify Plugin CLI Releases](https://github.com/langgenius/dify-plugin-daemon/releases) ページにアクセスします。お使いのオペレーティングシステム（Windows, macOS Intel/ARM, Linux）に対応する最新バージョンのバイナリファイルをダウンロードします。
+2.  **実行権限の設定 (macOS / Linux):**
+
+    -   **以下の手順は macOS (Apple Silicon / M シリーズチップ) を例としています**。ダウンロードしたファイル名を `dify-plugin-darwin-arm64` と仮定します。ターミナルで、ファイルが存在するディレクトリに移動し、以下のコマンドを実行して実行権限を付与します：
+
+        ```bash
+        chmod +x dify-plugin-darwin-arm64
+        ```
+
+    -   Linux ユーザーの場合は、対応する Linux バージョンのファイルをダウンロードし、同様の `chmod +x <downloaded_filename>` コマンドを実行してください。
+    -   Windows ユーザーの場合は、`.exe` ファイルをダウンロードした後、通常は直接実行できます。
+
+3.  **インストールの確認:**
+
+    -   ターミナルで、以下のコマンドを実行してツールが正常に動作するか確認します（`./dify-plugin-darwin-arm64` をダウンロードした実際のファイル名またはパスに置き換えてください）：
+
+        ```bash
+        ./dify-plugin-darwin-arm64 version
+        ```
+
+    -   ターミナルにバージョン情報（例：`v0.0.1-beta.15`）が正常に出力されれば、インストールは成功です。
+
+> **ヒント (Tips):**
+>
+> -   **macOS のセキュリティ警告:** macOS で初めて実行する際に「Apple は検証できません」または「開けません」と表示された場合は、「システム設定」→「プライバシーとセキュリティ」→「セキュリティ」セクションに移動し、関連するメッセージを見つけて「それでも開く」または「許可」をクリックしてください。
+> -   **コマンドの簡略化:** ダウンロードしたバイナリファイル名を短い名前（例：`dify` や `dify-plugin`）に変更すると、後の使用が便利になります。例：`mv dify-plugin-darwin-arm64 dify`、その後は `./dify version` で使用できます。
+> -   **グローバルインストール（オプション）:** システムのどのパスからでも直接コマンドを実行できるようにしたい場合（例：`./dify` ではなく直接 `dify` と入力する）、名前変更後のファイルをシステムの `PATH` 環境変数に含まれるディレクトリ（例：`/usr/local/bin` (macOS/Linux)）に移動するか、Windows の環境変数に追加します。
+>     -   例 (macOS/Linux): `sudo mv dify /usr/local/bin/`
+>     -   設定完了後、ターミナルで直接 `dify version` と入力すると、バージョン番号が正常に出力されるはずです。
+
+**便宜上、このドキュメントでは以降、Dify プラグイン開発 CLI コマンドの例として `./dify` を使用します。ご自身の実際の状況に合わせてコマンドを置き換えてください。**
+
+## 2. プラグインプロジェクトの初期化
+
+それでは、CLI ツールを使用して新しいプラグインプロジェクトを作成しましょう。
+
+1.  ターミナルを開き、初期化コマンドを実行します：
+
+    ```bash
+    ./dify plugin init
+    ```
+
+2.  プロンプトに従って、プラグインの基本情報を順に入力します：
+    -   **Plugin name:** プラグインの一意の識別子。例：`telegraph`
+        -   _制約: 長さ 1～128 文字、小文字の英数字、ハイフン(-)、アンダースコア(_)のみ使用可能。_
+    -   **Author:** プラグイン作者の識別子。例：`alterxyz`
+        -   _制約: 長さ 1～64 文字、小文字の英数字、ハイフン(-)、アンダースコア(_)のみ使用可能。_
+    -   **Description:** プラグイン機能の簡単な説明。例：`A Telegraph plugin that allows you to publish your content easily`
+3.  **開発言語の選択:** `Select language` と表示されたら、`python` を選択してください。
+4.  **プラグインタイプの選択:** `Select plugin type` と表示されたら、このチュートリアルでは `tool` を選択してください。
+5.  **追加機能の選択:** 次に、プロバイダー認証、永続ストレージなどの追加機能が必要かどうか尋ねられます。この簡単な Hello World プラグインでは、これらは一時的に不要なので、成功メッセージが表示されるまで **Enter キー** を押してすべてのオプションをスキップできます。
+6.  **作成成功の確認:** ターミナルに以下のような情報が出力されたら、プラグインプロジェクトは正常に作成されています：
+
+    ```bash
+    [INFO] plugin telegraph created successfully, you can refer to `telegraph/GUIDE.md` for more information about how to develop it
+    ```
+
+これで、現在のディレクトリに `telegraph`（または指定したプラグイン名）という名前の新しいフォルダが表示され、これがプラグインプロジェクトになります。
+
+## 3. Python 仮想環境と依存関係の設定
+
+プロジェクトの依存関係を分離するために、Python 仮想環境の使用を推奨します。
+
+### 3.1 仮想環境の作成とアクティベート（コマンドライン方式）
+
+これは**推奨される一般的な**方法で、特定の IDE に依存しません：
+
+1.  **プロジェクトディレクトリへの移動:**
+
+    ```bash
+    cd telegraph
+    ```
+
+2.  **仮想環境の作成:** (名前を `venv` にすることを推奨します)
+
+    ```bash
+    python -m venv venv
+    ```
+
+3.  **仮想環境のアクティベート:**
+
+    -   **macOS / Linux:**
+
+        ```bash
+        source venv/bin/activate
+        ```
+
+    -   **Windows (cmd.exe):**
+
+        ```bash
+        venv\Scripts\activate.bat
+        ```
+
+    -   **Windows (PowerShell):**
+
+        ```bash
+        venv\Scripts\Activate.ps1
+        ```
+
+    -   アクティベートに成功すると、通常、ターミナルのプロンプトの前に `(venv)` と表示されます。
+
+### 3.2 基本的な依存関係のインストール
+
+プロジェクト初期化時に生成された `requirements.txt` ファイルには、プラグイン開発に必要な基本ライブラリ `dify_plugin` が含まれています。仮想環境をアクティベートした後、以下のコマンドを実行してインストールします：
+
+```bash
+pip install -r requirements.txt
+```
+
+### 3.3 (オプション) VSCode 統合環境設定
+
+VSCode をコードエディタとして使用している場合、その統合機能を利用して Python 環境を管理できます：
+
+1.  **プロジェクトフォルダを開く:** 作成した `telegraph` フォルダを VSCode で開きます。
+2.  **Python インタープリタの選択:**
+    -   コマンドパレットを開きます (macOS: `Cmd+Shift+P`, Windows/Linux: `Ctrl+Shift+P`)。
+    -   `Python: Select Interpreter` と入力して選択します。
+    -   表示されたリストから、先ほど作成した仮想環境内の Python インタープリタを選択します（通常、パスには `.venv/bin/python` または `venv\Scripts\python.exe` が含まれます）。リストに自動的に表示されない場合は、`Enter interpreter path...` を選択して手動で検索できます。
+    -   _(ローカルの対応するスクリーンショットを参照してください。インタープリタ選択画面が表示されています)_
+3.  **依存関係のインストール (VSCode が提示した場合):** VSCode が `requirements.txt` ファイルを検出し、その中の依存関係をインストールするよう促すことがあります。プロンプトが表示されたら、インストールを確認してください。
+    -   _(ローカルの対応するスクリーンショットを参照してください。依存関係のインストール確認画面が表示されています)_
+
+**以降のすべての `pip install` コマンドと `python -m main` の実行操作は、アクティベートされた仮想環境で実行してください。**
+
+## 4. プラグインコアロジックの開発
+
+それでは、プラグインのコードを記述していきましょう。この例では、指定されたコンテンツを Telegraph に公開するための簡単なツールを実装します。
+
+### 4.1 サンプル依存ライブラリ: `your-telegraph`
+
+`your-telegraph` という名前の Python ライブラリを使用して Telegraph API とやり取りします。（_これは仮のライブラリ名です。実際に使用するライブラリが有効であることを確認してください_）。
+
+> `your-telegraph` は、Telegraph API の操作を簡略化する Python ラッパーで、数行のコードで簡単にコンテンツを公開できます。
+
+その基本的な使い方は以下のようになるかもしれません：
+
+```python
+# サンプルコードであり、プラグイン内のコードではありません
+from ytelegraph import TelegraphAPI
+
+# access_token が必要です
+ph = TelegraphAPI(access_token="your_telegraph_access_token")
+
+# ページを作成してリンクを取得
+ph_link = ph.create_page_md("My First Page", "# Hello, Telegraph!\n\nThis is my first Telegraph page.")
+print(ph_link)
+```
+
+私たちの目標は、Dify プラグインで同様の機能を実現することです。
+
+### 4.2 プロジェクト依存関係の追加と設定
+
+1.  **依存ライブラリのインストール:** 仮想環境がアクティベートされていることを確認し、ターミナルで以下を実行します：
+
+    ```bash
+    pip install your-telegraph
+    ```
+
+2.  **`requirements.txt` の更新:** プロジェクトルートディレクトリにある `telegraph/requirements.txt` ファイルを開き、`dify_plugin` の下に、先ほどインストールしたライブラリ名を一行追加します：
+
+    ```plaintext
+    dify_plugin
+    your-telegraph
+    ```
+
+    これにより、他の開発者やデプロイ環境がすべての必要な依存関係を簡単にインストールできるようになります。
+
+### 4.3 プロバイダー認証情報の設定
+
+この例では `telegraph_access_token` が必要です。プロバイダー設定でこの認証情報を定義し、ユーザーがプラグインを使用する際に入力できるようにする必要があります。プロバイダー設定の詳細については、[一般仕様定義](/plugin_dev_ja/0411-general-specifications.ja) を参照してください。
+
+1.  **プロバイダー YAML の編集:** `telegraph/provider/telegraph.yaml` ファイルを開きます。
+2.  **`credentials_for_provider` の追加:** ファイルの末尾（または適切な場所）に以下の内容を追加します：
+
+    ```yaml
+    # ... (ファイルに既にある identity, name, label, description, icon などは変更しません) ...
+
+    credentials_for_provider:
+        telegraph_access_token: # これは認証情報の内部名で、Python コードで使用されます
+            type: secret-input # 入力タイプはパスワードフィールド
+            required: true # この認証情報は必須です
+            label: # Dify UI に表示されるラベル (多言語対応)
+                en_US: Telegraph Access Token
+                ja: Telegraph アクセストークン
+                # ... (その他の言語)
+            placeholder: # 入力フィールドのプレースホルダーテキスト (多言語対応)
+                en_US: Enter your Telegraph access token
+                ja: Telegraph アクセストークンを入力してください
+                # ... (その他の言語)
+            help: # ヘルプヒント情報 (多言語対応)
+                en_US: How to get your Telegraph access token
+                ja: Telegraph アクセストークンの取得方法
+                # ... (その他の言語)
+            url: https://telegra.ph/api#createAccount # ヘルプヒントをクリックしたときにジャンプする URL
+    ```
+
+    -   **フィールドの説明:**
+        -   `telegraph_access_token`: 認証情報の一意の識別子。コード内では `self.runtime.credentials["telegraph_access_token"]` を介してユーザーが入力した値にアクセスします。
+        -   `type: secret-input`: Dify UI 上でパスワード入力フィールドとして表示されます。
+        -   `required: true`: ユーザーがこのプラグイン提供のツールを使用するには、この認証情報を入力する必要があります。
+        -   `label`, `placeholder`, `help`: 多言語対応の UI テキストを提供します。
+        -   `url`: (オプション) 認証情報取得のためのヘルプリンクを提供します。
+
+### 4.4 ツール (Tool) ロジックの実装
+
+それでは、実際に公開操作を実行するツールのコードを記述しましょう。
+
+1.  **ツール Python ファイルの編集:** `telegraph/tools/telegraph.py` を開きます。
+2.  **`_invoke` メソッドの実装:** ファイルの内容を以下のコードに置き換えます：
+
+    ```python
+    from collections.abc import Generator
+    from typing import Any
+    from ytelegraph import TelegraphAPI # 使用するライブラリをインポート
+
+    from dify_plugin import Tool
+    from dify_plugin.entities.tool import ToolInvokeMessage
+
+    class TelegraphTool(Tool):
+        """
+        シンプルな Telegraph 公開ツールです。
+        """
+
+        def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage, None, None]:
+            """
+            入力されたタイトルと内容に基づいて、新しい Telegraph ページを作成します。
+
+            Args:
+                tool_parameters: ツールの入力パラメータを含む辞書:
+                    - p_title (str): Telegraph ページのタイトル。
+                    - p_content (str): 公開する Markdown 形式の内容。
+
+            Yields:
+                ToolInvokeMessage: 正常に作成された Telegraph ページの URL を含むメッセージ。
+
+            Raises:
+                Exception: ページの作成に失敗した場合、エラー情報を含む例外をスローします。
+            """
+            # 1. ランタイムから認証情報を取得
+            try:
+                access_token = self.runtime.credentials["telegraph_access_token"]
+            except KeyError:
+                raise Exception("Telegraph アクセストークンが設定されていないか無効です。プラグイン設定で提供してください。")
+
+            # 2. ツールの入力パラメータを取得
+            title = tool_parameters.get("p_title", "Untitled") # .get を使用してデフォルト値を提供
+            content = tool_parameters.get("p_content", "")
+
+            if not content:
+                raise Exception("公開するコンテンツは空にできません。")
+
+            # 3. ライブラリを呼び出して操作を実行
+            try:
+                telegraph = TelegraphAPI(access_token)  # Telegraph API を初期化
+                ph_link = telegraph.create_page_md(title, content)  # ページを作成
+            except Exception as e:
+                # ライブラリ呼び出しに失敗した場合、例外をスロー
+                raise Exception(f"Telegraph API の呼び出しに失敗しました: {e}")
+
+            # 4. 結果を返す
+            # create_link_message を使用してリンクを含む出力メッセージを生成
+            yield self.create_link_message(ph_link)
+    ```
+
+    -   **重要なポイント:**
+        -   `self.runtime.credentials` から認証情報を取得します。
+        -   `tool_parameters` からツールの入力パラメータを取得します（パラメータ名は次のステップの YAML で定義します）。`.get()` を使用する方が堅牢な方法です。
+        -   `ytelegraph` ライブラリを呼び出して実際の操作を実行します。
+        -   `try...except` を使用して起こりうるエラーをキャッチし、例外をスローします。
+        -   `yield self.create_link_message(url)` を使用して URL を含む結果を Dify に返します。
+
+### 4.5 ツール (Tool) パラメータの設定
+
+このツールがどの入力パラメータを受け取るかを Dify に伝える必要があります。
+
+1.  **ツール YAML ファイルの編集:** `telegraph/tools/telegraph.yaml` を開きます。
+2.  **パラメータの定義:** ファイルの内容を以下のように置き換えるか変更します：
+
+    ```yaml
+    identity:
+        name: telegraph_publisher # ツールの一意の内部名
+        author: alterxyz
+        label: # Dify UI に表示されるツール名 (多言語対応)
+            en_US: Publish to Telegraph
+            ja: Telegraph に公開
+            # ... (その他の言語)
+    description:
+        human: # 人間ユーザー向けのツールの説明 (多言語対応)
+            en_US: Publish content to Telegraph as a new page.
+            ja: コンテンツを新しいページとして Telegraph に公開します。
+            # ... (その他の言語)
+        llm: # LLM 向けのツールの説明 (Agent モード用)
+            A tool that takes a title and markdown content, then publishes it as a new page on Telegraph, returning the URL of the published page. Use this when the user wants to publish formatted text content publicly via Telegraph.
+    parameters: # ツールの入力パラメータリストを定義
+        - name: p_title # パラメータの内部名、Python コードのキーに対応
+          type: string # パラメータタイプ
+          required: true # 必須かどうか
+          label: # Dify UI に表示されるパラメータラベル (多言語対応)
+              en_US: Post Title
+              ja: 記事タイトル
+          human_description: # 人間ユーザー向けのパラメータの説明 (多言語対応)
+              en_US: The title for the Telegraph page.
+              ja: Telegraph ページのタイトル。
+          llm_description: # LLM 向けのパラメータの説明 (Agent がどのように入力するかを指示)
+              The title of the post. Should be a concise and meaningful plain text string.
+          form: llm # パラメータフォームタイプ ('llm' または 'form')
+        - name: p_content
+          type: string
+          required: true
+          label:
+              en_US: Content (Markdown)
+              ja: 内容 (Markdown)
+          human_description:
+              en_US: The main content for the Telegraph page, written in Markdown format.
+              ja: Telegraph ページの主な内容、Markdown 形式で記述してください。
+          llm_description: # フォーマット要件を強調することは LLM にとって重要
+              The full content to be published on the Telegraph page. Must be provided in Markdown format. Ensure proper Markdown syntax for formatting like headings, lists, links, etc.
+          form: llm
+    extra: # 追加設定
+        python:
+            source: tools/telegraph.py # このツールのロジックを実装する Python ファイルを指す
+    ```
+
+    -   **フィールドの説明:**
+        -   `identity`: ツールの基本情報、`name` は一意の識別子です。
+        -   `description`: `human` (ユーザー向け) と `llm` (Agent 向け) に分かれます。**`llm` の説明は、Agent がツールを正しく理解して使用できるかどうかにおいて非常に重要です。**
+        -   `parameters`: 各入力パラメータを定義します。
+            -   `name`: 内部名、Python コードの `tool_parameters.get("...")` のキーと一致する必要があります。
+            -   `type`: データ型 (例: `string`, `number`, `boolean` など)。
+            -   `required`: 提供が必須かどうか。
+            -   `label`, `human_description`, `llm_description`: `identity` の説明と同様ですが、特定のパラメータに対するものです。**`llm_description` は、LLM がそのパラメータの値をどのように生成または取得するか（ここでの Markdown のようなフォーマット要件を含む）を明確に指示する必要があります。**
+            -   `form`: パラメータが Dify でどのように表示され、入力されるかを定義します。`llm` は、そのパラメータ値をユーザーが入力したり、変数を介して渡したり、Agent モードで LLM が自律的に決定したりできることを示します。`form` は通常、ユーザーが UI 上で固定的に入力する必要がある設定項目を示します。ツール入力の場合、`llm` の方が一般的です。
+        -   `extra.python.source`: このツールのロジックを実装する Python ファイルのパス（プロジェクトルートディレクトリからの相対パス）を示します。
+
+### 4.6 プロバイダー認証情報の検証実装（オプションだが推奨）
+
+ユーザーが提供した認証情報が有効であることを保証するために、検証ロジックを実装すべきです。
+
+1.  **プロバイダー Python ファイルの編集:** `telegraph/provider/telegraph.py` を開きます。
+2.  **`_validate_credentials` メソッドの実装:** ファイルの内容を以下に置き換えます：
+
+    ```python
+    from typing import Any
+    from dify_plugin import ToolProvider
+    from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+
+    class TelegraphProvider(ToolProvider):
+        def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+            """
+            提供された Telegraph アクセストークンが有効かどうかを検証します。
+            このトークンを使用してテストページを作成しようとします。
+            検証に失敗した場合、ToolProviderCredentialValidationError 例外をスローする必要があります。
+            """
+            access_token = credentials.get("telegraph_access_token")
+            if not access_token:
+                raise ToolProviderCredentialValidationError("Telegraph アクセストークンは空にできません。")
+
+            try:
+                # 認証情報が必要な簡単な操作を実行して検証を試みる
+                from ytelegraph import TelegraphAPI
+                ph = TelegraphAPI(access_token=access_token)
+                # 検証手段として、一時的で無害なページを作成してみる
+                # 注意: より良い検証方法は、API の 'getAccountInfo' などの読み取り専用メソッドを呼び出すことです（存在する場合）
+                test_page = ph.create_page_md("Dify Validation Test", "This is a test page created by Dify plugin validation.")
+                # 必要であれば、このテストページをすぐに編集または削除することを検討できますが、複雑さが増します
+                # print(f"Validation successful. Test page created: {test_page}")
+            except Exception as e:
+                # API 呼び出しに失敗した場合、認証情報が無効である可能性が高い
+                raise ToolProviderCredentialValidationError(f"Telegraph 認証情報の検証に失敗しました: {e}")
+
+    ```
+
+    -   **重要なポイント:**
+        -   `credentials` 辞書から認証情報を取得します。
+        -   その認証情報が必要な API 呼び出しを実行します（アカウント情報の取得など、読み取り専用操作が望ましいです。もしなければ、無害なテストページを作成することもできますが、副作用の可能性に注意してください）。
+        -   API 呼び出しが成功した場合、例外はスローされず、検証が通過したことを示します。
+        -   API 呼び出しが失敗した場合、例外をキャッチして `ToolProviderCredentialValidationError` をスローし、元のエラーメッセージを含めます。
+
+## 5. ローカルでの実行とデバッグ
+
+これでプラグインをローカルで実行し、Dify でデバッグできます。
+
+1.  **`.env` ファイルの準備:**
+
+    -   `telegraph` プロジェクトディレクトリにいることを確認してください。
+    -   環境変数テンプレートファイルをコピーします：
+
+        ```bash
+        cp .env.example .env
+        ```
+
+    -   **`.env` ファイルの編集:** 作成したばかりの `.env` ファイルを開き、Dify 環境情報を入力します：
+
+        ```dotenv
+        DIFY_API_HOST=https://your-dify-host.com # ご自身の Dify インスタンスアドレスに置き換えてください (例: https://cloud.dify.ai)
+        DIFY_API_KEY=your-api-key             # ご自身の Dify API キーに置き換えてください
+        ```
+
+        -   **ホストとキーの取得:** Dify 環境にログインし、右上の「プラグイン」アイコンをクリックし、次にデバッグアイコン（または虫のような形）をクリックします。ポップアップウィンドウで、「API キー (Key)」と「ホストアドレス (Host)」をコピーします。 _(ローカルの対応するスクリーンショットを参照してください。キーとホストアドレスの取得画面が表示されています)_
+
+2.  **ローカルプラグインサービスの起動:**
+
+    -   Python 仮想環境がアクティベートされていることを確認してください。
+    -   `telegraph` ディレクトリで、メインプログラムを実行します：
+
+        ```bash
+        python -m main
+        ```
+
+    -   **ターミナル出力の確認:** すべてが正常であれば、以下のようなログ情報が表示され、プラグインツールが正常にロードされ、Dify に接続されたことを示します：
+
+        ```json
+        {"event": "log", "data": {"level": "INFO", "message": "Installed tool: telegraph_publisher", "timestamp": 1678886400.123456}}
+        {"event": "log", "data": {"level": "INFO", "message": "Plugin daemon started, waiting for requests...", "timestamp": 1678886400.123457}}
+        ```
+
+3.  **Dify での確認とテスト:**
+
+    -   **Dify ページを更新:** Dify 環境（ブラウザ）に戻り、プラグイン管理ページ (通常は `https://your-dify-host.com/plugins`) を更新します。
+    -   **プラグインを検索:** リストに "Telegraph" (またはプロバイダー YAML で定義した `label`) という名前のプラグインが表示され、「デバッグ中」のマークが付いている場合があります。
+    -   **認証情報を追加:** そのプラグインをクリックすると、以前 `provider/telegraph.yaml` で定義した "Telegraph Access Token" の入力を求められます。有効なトークンを入力して保存します。検証ロジック (`_validate_credentials`) が正しく実装されていれば、ここで検証が行われます。 _(ローカルの対応するスクリーンショットを参照してください。プラグインがリストに表示され、認証を要求する画面が表示されています)_
+    -   **アプリケーションで使用:** これで、Dify のアプリケーション（Chatbot や Workflow など）にこのツールノードを追加し、呼び出すことができます！アプリケーションで実行してツールをトリガーすると、リクエストはローカルで実行されている `python -m main` プロセスに転送されて処理されます。ローカルターミナルで関連するログ出力を確認し、デバッグできます。
+
+4.  **ローカルサービスの停止:** ターミナルで `Ctrl + C` を押すと、ローカルプラグインサービスを停止できます。
+
+この実行 -> テスト -> 停止 -> コード修正 -> 再実行のサイクルが、プラグイン開発の主なフローです。
+
+## 6. プラグインメタ情報の整備
+
+プラグインをより専門的に、発見・理解しやすくするために、いくつかの表示情報を整備する必要があります。
+
+1.  **アイコン (Icon):**
+    -   `telegraph/_assets` ディレクトリに、プラグインを表すアイコンファイル（例：`icon.png`, `icon.svg`）を配置します。正方形で鮮明な画像を推奨します。
+2.  **プロバイダー情報 (`provider/telegraph.yaml`):**
+
+    -   `identity` セクションの `label` (表示名)、`description` (機能説明)、`icon` (アイコンファイル名、例：`icon.png` を記入) が入力され、多言語対応していることを確認します。この情報は主に Dify アプリケーションオーケストレーションインターフェースでプラグインを_使用する_ユーザーに表示されます。
+
+    ```yaml
+    identity:
+        author: alterxyz
+        name: telegraph # 内部名、変更なし
+        label:
+            en_US: Telegraph
+            ja: Telegraph 記事公開
+        description:
+            en_US: A Telegraph plugin that allow you publish your content easily
+            ja: コンテンツを簡単に公開できるTelegraphプラグイン
+        icon: icon.png # _assets ディレクトリ内のアイコンファイル名を参照
+    ```
+
+3.  **プラグインマニフェスト (`manifest.yaml`):**
+
+    -   プロジェクトルートディレクトリにある `telegraph/manifest.yaml` ファイルを編集します。これはプラグイン全体の「身分証明書」のようなもので、その情報は Dify の**プラグイン管理ページ**や**プラグインマーケットプレイス (Marketplace)** に表示されます。
+    -   以下のフィールドを必ず更新または確認してください：
+        -   `label`: プラグインの**主要な表示名** (多言語対応)。
+        -   `description`: プラグイン機能の**全体的な概要** (多言語対応)。その核心的な価値を明確に要約する必要があります。マーケットプレイスでの表示には文字数制限があることに注意してください。
+        -   `icon`: プラグインの**メインアイコン** (`_assets` ディレクトリ内のアイコンファイル名を直接記入、例：`icon.png`)。
+        -   `tags`: プラグインに分類タグを追加し、ユーザーがマーケットプレイスでフィルタリングするのに役立ちます。選択可能な値は、Dify が提供する列挙型またはドキュメントの説明を参照してください (例: `media`, `tools`, `data-processing` など)。[ToolLabelEnum 定義](https://github.com/langgenius/dify-plugin-sdks/blob/main/python/dify_plugin/entities/tool.py) を参照してください。
+
+    ```yaml
+    label:
+        en_US: Telegraph Publisher
+        ja: Telegraph 公開アシスタント
+    description:
+        en_US: Easily publish content to Telegraph pages directly from your Dify applications. Supports Markdown formatting.
+        ja: Dify アプリケーションから直接 Telegraph ページにコンテンツを簡単に公開できます。Markdown 形式をサポートしています。
+    icon: icon.png
+    tags: ['media', 'content-creation'] # タグの例
+    # ... (author, name など他のフィールドは変更なし)
+    ```
+
+4.  **README とプライバシーポリシー:**
+    -   `README.md`: プロジェクトルートディレクトリの `README.md` ファイルを編集します。これはプラグインの **Marketplace** 上の詳細な紹介ページとなり、機能詳細、使用例、設定ガイド、よくある質問など、より豊富な情報を含めるべきです。[AWS プラグインマーケットプレイスページ](https://marketplace.dify.ai/plugins/langgenius/aws_tools) のスタイルを参考にしてください。
+    -   `PRIVACY.md`: プラグインを公式 Marketplace に公開する予定がある場合は、プラグインがデータをどのように処理するかを説明するプライバシーポリシー説明ファイル `PRIVACY.md` を提供する必要があります。
+
+## 7. プラグインのパッケージ化
+
+プラグイン開発が完了し、ローカルテストに合格したら、配布またはインストール用に `.difypkg` ファイルにパッケージ化できます。プラグインのパッケージ化と公開の詳細については、[公開概要](/plugin_dev_ja/0321-release-overview.ja) を参照してください。
+
+1.  **親ディレクトリに戻る:** ターミナルの現在のパスが `telegraph` フォルダの**一つ上**であることを確認してください。
+
+    ```bash
+    cd ..
+    ```
+
+2.  **パッケージ化コマンドの実行:**
+
+    ```bash
+    ./dify plugin package ./telegraph
+    ```
+
+    （`./telegraph` をプラグインプロジェクトの実際のパスに置き換えてください）
+
+3.  **パッケージファイルの取得:** コマンドが正常に実行されると、現在のディレクトリに `telegraph.difypkg` (または `あなたのプラグイン名.difypkg`) という名前のファイルが生成されます。
+
+この `.difypkg` ファイルは完全なプラグインパッケージです。これを以下のことができます：
+
+-   Dify のプラグイン管理ページで手動で**アップロードしてインストール**する。
+-   他の人に**共有**してインストールしてもらう。
+-   Dify の規範と手順に従って、**公式プラグインマーケットプレイス (Marketplace)** に公開し、すべての Dify ユーザーがあなたのプラグインを発見して使用できるようにする。具体的な公開手順については、[Dify マーケットプレイスへの公開](/plugin_dev_ja/0322-release-to-dify-marketplace.ja) を参照してください。
+
+おめでとうございます！ これで最初の Dify プラグインの開発、デバッグ、整備、パッケージ化の全プロセスを完了しました。この基礎を元に、より複雑で強力なプラグイン機能を探求できます。
+
+## 次の学習ステップ
+
+-   [リモートでプラグインをデバッグする](/plugin_dev_ja/0411-remote-debug-a-plugin.ja) - より高度なプラグインデバッグテクニックを学ぶ
+-   [永続ストレージ](/plugin_dev_ja/0411-persistent-storage-kv.ja) - プラグインでデータストレージを使用する方法を学ぶ
+-   [Slack ボットプラグイン開発例](/plugin_dev_ja/0432-develop-a-slack-bot-plugin.ja) - より複雑なプラグイン開発事例を見る
+-   [ツールプラグイン](/plugin_dev_ja/0222-tool-plugin.ja) - ツールプラグインの高度な機能を探る
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="このページを編集する"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin_dev_ja/0211-getting-started-dify-tool.ja.mdx"
+    >
+        直接貢献することでドキュメントの改善にご協力ください
+    </Card>
+    <Card
+        title="問題を報告する"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=ドキュメントの問題%3A%20getting-started-dify-tool&body=%23%23%20問題の説明%0A%3C%21--%20発見した問題について簡単に説明してください%20--%3E%0A%0A%23%23%20ページリンク%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin_dev_ja%2F0211-getting-started-dify-tool.ja.mdx%0A%0A%23%23%20提案される変更%0A%3C%21--%20特定の変更案がある場合は、ここで説明してください%20--%3E%0A%0A%3C%21--%20ドキュメントの品質向上にご協力いただきありがとうございます！%20--%3E"
+    >
+        エラーを見つけたり提案がありますか？お知らせください
+    </Card>
+</CardGroup>
