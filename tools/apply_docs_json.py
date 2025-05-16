@@ -89,6 +89,48 @@ PLUGIN_DEV_EN = {
     ]
 }
 
+# --- 日本語設定 (Japanese Configuration) ---
+PLUGIN_DEV_JA = {
+    "DOCS_DIR": "plugin_dev_ja",  # プラグイン開発ドキュメントディレクトリ
+    "LANGUAGE_CODE": "日本語",  #注意：変数名は LANGUAGE_CODE ですが、docs.json の 'version' 値としてデプロイされます。
+    "FILE_EXTENSION": ".ja.mdx",
+    "TARGET_TAB_NAME": "プラグイン開発", # 対象タブ名
+    "FILENAME_PATTERN": re.compile(r'^(\d{4})-(.*?)\.ja\.mdx$'), # ファイル名照合パターン
+    "PWX_TO_GROUP_MAP": {
+        # --- PWX からグループ名へのマッピング（「プラグイン開発」タブに統一）---
+        # (P, W, X) -> (tab_name, group_name, nested_group_name)
+        # Tab: プラグイン開発
+        #   Group: 概念と概要
+        ('0', '1', '1'): ("プラグイン開発", "概念と概要", "概要"),
+        ('0', '1', '3'): ("プラグイン開発", "概念と概要", None),
+        #   Group: 開発実践
+        ('0', '2', '1'): ("プラグイン開発", "開発実践", "クイックスタート"),
+        ('0', '2', '2'): ("プラグイン開発", "開発実践", "Difyプラグインの開発"),
+        #   Group: 貢献と公開
+        ('0', '3', '1'): ("プラグイン開発", "貢献と公開", "行動規範と基準"),
+        ('0', '3', '2'): ("プラグイン開発", "貢献と公開", "公開と掲載"),
+        ('0', '3', '3'): ("プラグイン開発", "貢献と公開", "よくある質問 (FAQ)"),
+        #   Group: 実践例とユースケース
+        ('0', '4', '3'): ("プラグイン開発", "実践例とユースケース", "開発例"),
+        #   Group: 高度な開発
+        ('9', '2', '2'): ("プラグイン開発", "高度な開発", "Extension と Agent"),
+        ('9', '2', '3'): ("プラグイン開発", "高度な開発", "Extension と Agent"),
+        ('9', '4', '3'): ("プラグイン開発", "高度な開発", "Extension と Agent"),
+        ('9', '2', '4'): ("プラグイン開発", "高度な開発", "リバースコール"), # Reverse Calling
+        #   Group: リファレンスと仕様
+        ('0', '4', '1'): ("プラグイン開発", "リファレンスと仕様", "コア仕様と機能"),
+    },
+    "DESIRED_GROUP_ORDER": [
+        "概念と概要",
+        "開発実践",
+        "貢献と公開",
+        "実践例とユースケース",
+        "高度な開発",
+        "リファレンスと仕様"  # これが最後になるように確認
+    ]
+}
+
+
 # --- 辅助函数 ---
 
 def clear_tabs_if_refresh(navigation_data, version_code, target_tab_name, do_refresh):
@@ -167,14 +209,18 @@ def extract_existing_pages(navigation_data, version_code, target_tab_name):
         return existing_pages, None, None # 返回三个值
 
     # 在目标版本中查找目标 Tab
-    for tab in target_version_nav.get('tabs', []):
-        if isinstance(tab, dict) and tab.get('tab') == target_tab_name:
-            target_tab_nav = tab # 存储找到的 Tab 对象
-            # 仅从目标 Tab 中提取页面
-            for group in tab.get('groups', []):
-                if isinstance(group, dict):
-                    _recursive_extract(group, existing_pages)
-            break # 找到目标 Tab 后即可退出循环
+    if 'tabs' in target_version_nav and isinstance(target_version_nav['tabs'], list):
+        for tab in target_version_nav['tabs']:
+            if isinstance(tab, dict) and tab.get('tab') == target_tab_name:
+                target_tab_nav = tab # 存储找到的 Tab 对象
+                # 仅从目标 Tab 中提取页面
+                for group in tab.get('groups', []):
+                    if isinstance(group, dict):
+                        _recursive_extract(group, existing_pages)
+                break # 找到目标 Tab 后即可退出循环
+    else: # 'tabs' might not exist or not be a list
+        target_version_nav['tabs'] = []
+
 
     if not target_tab_nav:
          print(f"警告: 在版本 '{version_code}' 中未找到 Tab '{target_tab_name}'，无法提取现有页面。")
@@ -594,7 +640,8 @@ if __name__ == "__main__":
     # 定义要处理的配置列表
     CONFIGS_TO_PROCESS = [
         PLUGIN_DEV_ZH,
-        PLUGIN_DEV_EN, # 取消注释以处理英文配置
+        PLUGIN_DEV_EN,
+        PLUGIN_DEV_JA,
     ]
 
     # 调用主处理函数
