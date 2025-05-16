@@ -257,7 +257,7 @@ if __name__ == "__main__":
             "language": "en",
         },
         "ja_plugin_dev": {
-            "target_dir_relative": "plugin_dev_ja-jp",
+            "target_dir_relative": "plugin_dev_ja",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs-mintlify",
             "language": "ja"
