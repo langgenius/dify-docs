@@ -1,0 +1,63 @@
+name: Process Plugin Documentation
+
+on:
+    push:
+        branches: [test-action]
+        paths:
+            - 'plugin_dev_zh/**'
+            - 'plugin_dev_en/**'
+            - 'plugin_dev_ja/**'
+            - 'tools/**'
+    workflow_dispatch:
+
+jobs:
+    process-docs:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v3
+
+            - name: Set up Python
+              uses: actions/setup-python@v4
+              with:
+                  python-version: '3.10'
+
+            - name: Install dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  pip install pyyaml
+
+            - name: Run documentation tools
+              id: doc-tools
+              run: python tools/main_docs_plugin_dev.py
+
+            - name: Display results
+              run: |
+                  echo "Execution results:"
+                  echo "Successful operations: ${{ steps.doc-tools.outputs.success_count }}"
+                  echo "Failed operations: ${{ steps.doc-tools.outputs.error_count }}"
+                  if [ "${{ steps.doc-tools.outputs.detailed_message }}" != "" ]; then
+                    echo "Details:"
+                    echo "${{ steps.doc-tools.outputs.detailed_message }}"
+                  fi
+
+            - name: Commit changes
+              if: always() # Execute this step even if previous steps fail
+              run: |
+                  # Check if there are file changes
+                  if [[ -n "$(git status --porcelain)" ]]; then
+                    # Use commit message from script output, or default if not available
+                    COMMIT_MESSAGE="${{ steps.doc-tools.outputs.commit_message || 'Documentation tools automatic execution' }}"
+                    
+                    git config --local user.email "88554920+alterxyz@users.noreply.github.com"
+                    git config --local user.name "alterxyz"
+                    git add .
+                    git commit -m "$COMMIT_MESSAGE" || echo "No changes to commit"
+                    git push
+                    echo "Changes committed: $COMMIT_MESSAGE"
+                  else
+                    echo "No file changes, skipping commit"
+                  fi
