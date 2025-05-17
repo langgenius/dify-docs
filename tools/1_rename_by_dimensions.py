@@ -77,7 +77,8 @@ def sanitize_filename_part(part: str) -> str:
     part = part.lower()
     part = part.replace("&", "and").replace("@", "at")
     part = re.sub(r"\s+", "-", part)
-    part = re.sub(r"[^\w\-]+", "", part)
+    # Allow dots for language suffix in stem
+    part = re.sub(r"[^\w\-.]+", "", part)
     part = part.strip(".-_")
     return part or "untitled"
 
@@ -213,9 +214,6 @@ def get_or_create_lang_dir(lang: str, config: Config) -> tuple[Path | None, bool
 
     return lang_dir_path, was_newly_created
 
-# This function is now a general utility, not directly tied to the old finalization flow.
-# It could be used if a pre-processing archive step is desired.
-
 
 def archive_existing_directory(path_to_archive: Path, archive_prefix_template: str, lang: str, timestamp: str) -> bool:
     """
@@ -255,9 +253,15 @@ def process_single_mdx_file(
     """
     Processes a single MDX file: extracts metadata, generates new filename,
     and renames the file in place.
-    Returns stats.
+    Returns stats, including old and new filename stems if renamed.
     """
-    stats = {"status": "processed", "warnings": [], "error_message": None}
+    stats = {
+        "status": "processed",
+        "warnings": [],
+        "error_message": None,
+        "old_filename_stem_for_replace": None,
+        "new_filename_stem_for_replace": None,
+    }
     display_path = mdx_filepath.name
     if mdx_filepath.parent != config.BASE_DIR:
         try:
@@ -284,8 +288,10 @@ def process_single_mdx_file(
             front_matter, config)
         file_warnings.extend(pwxy_warnings)
 
+        original_stem_for_title_fallback = mdx_filepath.stem # Used if standard_title is missing
+        
         padded_prefix, sanitized_title, lang_suffix, fname_warnings = _generate_filename_parts(
-            P, W, X, Y, front_matter, mdx_filepath.stem
+            P, W, X, Y, front_matter, original_stem_for_title_fallback
         )
         file_warnings.extend(fname_warnings)
 
@@ -297,10 +303,14 @@ def process_single_mdx_file(
             stats["status"] = "skipped_no_change"
         elif new_filepath.exists():
             stats["status"] = "skipped_target_exists"
-            # Do not print here, summary will handle it. Let main loop print progress.
         else:
             try:
+                original_stem_before_rename = mdx_filepath.stem # Capture actual stem before rename
                 mdx_filepath.rename(new_filepath)
+                stats["status"] = "processed"
+                # Store stems for content replacement phase
+                stats["old_filename_stem_for_replace"] = original_stem_before_rename
+                stats["new_filename_stem_for_replace"] = new_filepath.stem
             except Exception as rename_error:
                 stats["status"] = "error"
                 stats["error_message"] = f"Failed to rename file to '{new_filename}': {rename_error}"
@@ -308,10 +318,12 @@ def process_single_mdx_file(
                 return stats
 
         stats["warnings"] = file_warnings
+        action_taken = new_filepath != mdx_filepath and stats["status"] == "processed"
+        
         # Only print details if there are warnings or an actual change/error for this file
-        if file_warnings or (stats["status"] == "processed" and new_filepath != mdx_filepath) or stats["status"].startswith("error") or stats["status"] == "skipped_target_exists":
+        if file_warnings or action_taken or stats["status"].startswith("error") or stats["status"] == "skipped_target_exists":
             print(
-                f"\nProcessing: {display_path} -> {new_filename if new_filepath != mdx_filepath else '(no change)'}")
+                f"\nProcessing: {display_path} -> {new_filename if action_taken else '(no change or skipped)'}")
             for warning_msg in file_warnings:
                 print(f"  [Warning] {warning_msg}")
             if stats["status"] == "skipped_target_exists":
@@ -339,7 +351,8 @@ def run_processing_for_language(
     lang_dir_path: Path,
     config: Config
 ) -> dict:
-    """Processes all MDX files in the lang_dir_path by renaming them in place."""
+    """Processes all MDX files in the lang_dir_path by renaming them in place,
+       then updates internal content references."""
     print(f"Starting in-place processing for: {lang_dir_path.name}")
 
     lang_stats = {
@@ -349,8 +362,9 @@ def run_processing_for_language(
         "error_count": 0,
         "warning_files_count": 0,
         "status": "OK",
-        # For summary
-        "dir_path_str": str(lang_dir_path.relative_to(config.BASE_DIR))
+        "dir_path_str": str(lang_dir_path.relative_to(config.BASE_DIR)),
+        "content_replacements_made_count": 0,
+        "content_replacement_errors_count": 0,
     }
 
     if not lang_dir_path.exists() or not lang_dir_path.is_dir():
@@ -359,16 +373,24 @@ def run_processing_for_language(
         lang_stats["status"] = "LANG_DIR_ERROR"
         return lang_stats
 
-    # Sort for consistent processing order
+    # --- Phase 1: Rename files ---
+    print(f"\n--- Phase 1: Renaming files in '{lang_dir_path.name}' ---")
     mdx_files = sorted(list(lang_dir_path.rglob("*.mdx")))
     total_files = len(mdx_files)
-    print(f"Found {total_files} MDX files to process in '{lang_dir_path.name}'.")
+    print(f"Found {total_files} MDX files to process for renaming.")
+
+    rename_mappings = [] # List to store (old_stem, new_stem) for content replacement
 
     for i, mdx_filepath in enumerate(mdx_files):
         result = process_single_mdx_file(mdx_filepath, config)
 
         if result["status"] == "processed":
             lang_stats["processed_count"] += 1
+            # Check if stems were provided and different (meaning a rename happened)
+            old_stem = result.get("old_filename_stem_for_replace")
+            new_stem = result.get("new_filename_stem_for_replace")
+            if old_stem and new_stem and old_stem != new_stem:
+                rename_mappings.append((old_stem, new_stem))
         elif result["status"] == "skipped_no_change":
             lang_stats["skipped_no_change_count"] += 1
         elif result["status"] == "skipped_target_exists":
@@ -376,32 +398,78 @@ def run_processing_for_language(
         elif result["status"] == "error":
             lang_stats["error_count"] += 1
 
-        if result["warnings"]:  # Count files with warnings regardless of status
+        if result["warnings"]:
             lang_stats["warning_files_count"] += 1
 
         if total_files > 0:
             progress = (i + 1) / total_files * 100
             print(
-                f"Progress for {lang_dir_path.name}: {i+1}/{total_files} files ({progress:.1f}%) evaluated.", end="\r")
+                f"Rename Progress ({lang_dir_path.name}): {i+1}/{total_files} files ({progress:.1f}%) evaluated.", end="\r")
 
     if total_files > 0:
         print()  # Newline after progress bar
+    print("--- Phase 1: Renaming files complete. ---")
+
+    # --- Phase 2: Update content references ---
+    if rename_mappings:
+        print(f"\n--- Phase 2: Updating content references in '{lang_dir_path.name}' ---")
+        print(f"Found {len(rename_mappings)} filename changes to propagate.")
+        # Re-glob for files, as their names might have changed.
+        # Also, we need to process all files, not just the renamed ones.
+        all_mdx_files_after_rename = sorted(list(lang_dir_path.rglob("*.mdx")))
+        total_files_for_replacement = len(all_mdx_files_after_rename)
+        print(f"Scanning {total_files_for_replacement} .mdx files for content updates.")
+
+        files_content_updated = 0
+        for i, file_to_scan_path in enumerate(all_mdx_files_after_rename):
+            try:
+                original_content = file_to_scan_path.read_text(encoding="utf-8")
+                modified_content = original_content
+                file_actually_changed_by_replacement = False
+
+                for old_stem, new_stem in rename_mappings:
+                    if old_stem in modified_content: # Check if old_stem exists before replacing
+                        temp_content = modified_content.replace(old_stem, new_stem)
+                        if temp_content != modified_content:
+                            modified_content = temp_content
+                            file_actually_changed_by_replacement = True
+                
+                if file_actually_changed_by_replacement:
+                    file_to_scan_path.write_text(modified_content, encoding="utf-8")
+                    files_content_updated +=1
+                    print(f"  Updated references in: {file_to_scan_path.relative_to(lang_dir_path)}")
+            except Exception as e:
+                print(f"  [Error] Failed to update references in {file_to_scan_path.name}: {e}")
+                lang_stats["content_replacement_errors_count"] += 1
+            
+            if total_files_for_replacement > 0:
+                progress = (i + 1) / total_files_for_replacement * 100
+                print(
+                    f"Content Update Progress ({lang_dir_path.name}): {i+1}/{total_files_for_replacement} files ({progress:.1f}%) scanned.", end="\r")
+        
+        if total_files_for_replacement > 0:
+            print() # Newline after progress bar
+
+        lang_stats["content_replacements_made_count"] = files_content_updated
+        print(f"Content replacement phase: {files_content_updated} files had their content updated.")
+        print("--- Phase 2: Content references update complete. ---")
+    else:
+        print("\nNo renames occurred, skipping content reference update phase.")
+
 
     print("-" * 20)
     print(f"Language Processing Summary ({lang_dir_path.name}):")
-    print(
-        f"  Successfully processed (renamed): {lang_stats['processed_count']}")
-    # Clarified term
-    print(
-        f"  Checked (filename no change): {lang_stats['skipped_no_change_count']}")
-    print(
-        f"  Skipped (target filename exists): {lang_stats['skipped_target_exists_count']}")
+    print(f"  Successfully processed (renamed): {lang_stats['processed_count']}")
+    print(f"  Checked (filename no change): {lang_stats['skipped_no_change_count']}")
+    print(f"  Skipped (target filename exists): {lang_stats['skipped_target_exists_count']}")
     print(f"  Files with warnings: {lang_stats['warning_files_count']}")
-    print(
-        f"  Errors encountered during file processing: {lang_stats['error_count']}")
+    print(f"  Errors during file processing: {lang_stats['error_count']}")
+    if rename_mappings: # Only show if phase 2 ran
+        print(f"  Files with content updated (references): {lang_stats['content_replacements_made_count']}")
+        print(f"  Errors during content update: {lang_stats['content_replacement_errors_count']}")
     print("-" * 20)
 
-    if lang_stats["error_count"] > 0:
+    if lang_stats["error_count"] > 0 or lang_stats["content_replacement_errors_count"] > 0:
         lang_stats["status"] = "ERRORS_IN_PROCESSING"
     return lang_stats
 
@@ -414,9 +482,7 @@ def main():
     print(f"Timestamp for this run: {config.TIMESTAMP}")
 
     overall_summary = {}
-    # Store if the lang dir was newly created for cleanup decisions
     lang_dir_newly_created_flags = {}
-    # Store the Path object of the language directory for each lang
     lang_dirs_map = {}
 
     for lang in config.LANGUAGES:
@@ -432,44 +498,22 @@ def main():
                 "status": "SETUP_ERROR", "message": f"Failed to get or create language directory for {lang}."}
             continue
 
-        # Optional: Add a pre-processing archive step if desired for non-Git backups
-        # For example:
-        # if current_lang_dir.exists() and any(current_lang_dir.iterdir()): # if dir exists and is not empty
-        #     print(f"Attempting to archive '{current_lang_dir.name}' before processing...")
-        #     if not archive_existing_directory(current_lang_dir, config.ARCHIVE_LANG_DIR_PREFIX_TEMPLATE, lang, config.TIMESTAMP):
-        #         print(f"  [CRITICAL ERROR] Archiving failed. Skipping processing for {lang}.")
-        #         overall_summary[lang] = {"status": "PRE_ARCHIVE_ERROR", "message": f"Failed to archive existing directory {current_lang_dir.name}."}
-        #         continue
-        #     # After archiving, the original path is gone, so we need to re-create it to process into
-        #     current_lang_dir, was_newly_created = get_or_create_lang_dir(lang, config) # This will re-create it empty
-        #     lang_dir_newly_created_flags[lang] = True # Mark as newly created for potential cleanup
-        #     lang_dirs_map[lang] = current_lang_dir
-        #     if not current_lang_dir:
-        #         overall_summary[lang] = {"status": "SETUP_ERROR_POST_ARCHIVE", "message": f"Failed to re-create lang directory for {lang} after archiving."}
-        #         continue
-
         lang_results = run_processing_for_language(current_lang_dir, config)
         overall_summary[lang] = lang_results
 
-        # --- Finalization for this language (mainly cleanup) ---
-        if current_lang_dir:  # Should always be true if we reached here
-            # Processed, even if with errors
+        if current_lang_dir:
             if lang_results["status"] in ["OK", "ERRORS_IN_PROCESSING"]:
-                # If the directory was newly created by this script AND it's still empty after processing
-                # (e.g., no MDX files were found or created in it), then remove it.
                 if was_newly_created and current_lang_dir.exists() and not any(current_lang_dir.iterdir()):
                     try:
                         current_lang_dir.rmdir()
                         print(
                             f"  Removed empty newly created language directory: {current_lang_dir.name}")
-                        lang_dirs_map[lang] = None  # It's gone
+                        lang_dirs_map[lang] = None
                         lang_results["message"] = lang_results.get(
                             "message", "") + " Empty newly created directory removed."
                     except OSError as e:
                         print(
                             f"  Note: Could not remove empty newly created directory '{current_lang_dir.name}': {e}")
-            # No renaming logic needed as we operate in-place.
-            # The status messages in lang_results already indicate success/failure of content processing.
 
     print("\n\n" + "=" * 20 + " Overall Script Summary " + "=" * 20)
     for lang_code in config.LANGUAGES:
@@ -480,7 +524,7 @@ def main():
         status = summary.get("status", "UNKNOWN")
         print(f"  Status: {status}")
 
-        if "message" in summary:  # Print setup/archive messages
+        if "message" in summary:
             print(f"  Message: {summary['message']}")
 
         if status not in ["SETUP_ERROR", "SETUP_ERROR_POST_ARCHIVE", "PRE_ARCHIVE_ERROR", "LANG_DIR_ERROR"]:
@@ -495,13 +539,16 @@ def main():
                 f"  Files with Warnings: {summary.get('warning_files_count', 0)}")
             print(
                 f"  Errors during file processing: {summary.get('error_count', 0)}")
+            if summary.get('processed_count', 0) > 0 or "content_replacements_made_count" in summary : # Show only if relevant
+                print(f"  Files with content updated (references): {summary.get('content_replacements_made_count',0)}")
+                print(f"  Errors during content update: {summary.get('content_replacement_errors_count',0)}")
+
 
         if lang_dir_path_obj and lang_dir_path_obj.exists():
             print(f"  Final directory location: {lang_dir_path_obj.name}")
-        # If it was new and now gone
         elif lang_dir_newly_created_flags.get(lang_code) and not lang_dir_path_obj:
             print("  Note: Empty newly created directory was removed as expected.")
-        elif not lang_dir_path_obj and status != "SETUP_ERROR":  # If it wasn't a setup error but dir is None
+        elif not lang_dir_path_obj and status != "SETUP_ERROR":
             print(
                 f"  Note: Language directory '{config.LANG_DIR_TEMPLATE.format(lang=lang_code)}' may have been archived or removed.")
 
