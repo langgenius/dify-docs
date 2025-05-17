@@ -29,7 +29,7 @@ class Config:
     }
     DEFAULT_X = 0
     LEVEL_MAP = {
-        "beginner": 1, "intermediate": 3, "advanced": 2,
+        "beginner": 1, "intermediate": 2, "advanced": 3,
     }
     DEFAULT_Y = 0
     PRIORITY_NORMAL = 0
