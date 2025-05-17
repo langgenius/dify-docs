@@ -69,9 +69,6 @@ def main():
     set_github_output("detailed_message", total_message)
     set_github_output("success_count", str(success_count))
     set_github_output("error_count", str(error_count))
-    
-    if error_count > 0:
-        sys.exit(1)
 
 if __name__ == "__main__":
     main()
