@@ -20,7 +20,7 @@ def set_github_output(name, value):
         print(f"[GitHub Output] {name}={value}")
 
 def main():
-    total_message = ""
+    total_message = "Details:\n"
     success_count = 0
     error_count = 0
 
@@ -61,7 +61,7 @@ def main():
         commit_message = f"Docs tools: Successfully completed {success_count} operations"
         print("All tools executed successfully.")
     else:
-        commit_message = f"Docs tools: {success_count} succeeded, {error_count} failed"
+        commit_message = f"Docs tools: {success_count} succeeded, some failed"
         print("Some tools encountered issues:")
         print(total_message)
     
