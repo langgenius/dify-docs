@@ -20,7 +20,7 @@ def set_github_output(name, value):
         print(f"[GitHub Output] {name}={value}")
 
 def main():
-    total_message = "Details:\n"
+    total_message = " \n"
     success_count = 0
     error_count = 0
 
