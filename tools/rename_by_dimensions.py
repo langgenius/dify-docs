@@ -194,7 +194,7 @@ def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
 
         if missing_critical_fields:
             stats["status"] = "skipped_non_compliant"
-            reason = f"Missing critical frontmatter fields for renaming: {', '.join(missing_critical_fields)}."
+            reason = f"\nMissing critical frontmatter fields for renaming: {', '.join(missing_critical_fields)}."
             stats["non_compliant_reason"] = reason
             # This skip will be reported as a problem, so print concise info here
             print(f"\nProcessing: {display_path} -> (skipped, non-compliant)")
