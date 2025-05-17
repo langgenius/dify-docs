@@ -1,0 +1,453 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: high
+  level: intermediate
+standard_title: Agent
+language: en
+title: Agent
+description: This document details the development process for Dify's Agent strategy
+  plugins, including adding Agent strategy fields in the Manifest file, defining Agent
+  providers, and the core steps for implementing Agent strategies. It provides complete
+  example code for getting parameters, invoking models, invoking tools, and generating
+  and managing logs.
+---
+
+An Agent strategy is an extensible template that defines standard input content and output formats. By developing the functional code for specific Agent strategy interfaces, you can implement various Agent strategies such as CoT (Chain of Thought) / ToT (Tree of Thoughts) / GoT (Graph of Thoughts) / BoT (Skeleton of Thought), enabling complex strategies like [Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/overview/).
+
+### Add Fields in Manifest
+
+To add an Agent strategy in a plugin, you need to add the `plugins.agent_strategies` field in the `manifest.yaml` file and also define the Agent provider. Here is an example:
+
+```yaml
+version: 0.0.2
+type: plugin
+author: "langgenius"
+name: "agent"
+plugins:
+  agent_strategies:
+    - "provider/agent.yaml"
+```
+
+Some irrelevant fields in the `manifest` file have been omitted here. For the detailed format of the Manifest, please refer to the [Define Plugin Information via Manifest File](/plugin_dev_en/0411-general-specifications.en) document.
+
+### Define Agent Provider
+
+Next, you need to create a new `agent.yaml` file and fill in the basic Agent provider information.
+
+```yaml
+identity:
+  author: langgenius
+  name: agent
+  label:
+    en_US: Agent
+    zh_Hans: Agent
+    pt_BR: Agent
+  description:
+    en_US: Agent
+    zh_Hans: Agent
+    pt_BR: Agent
+  icon: icon.svg
+strategies:
+  - strategies/function_calling.yaml
+```
+
+It mainly contains basic descriptive content and specifies which strategies the current provider includes. In the example code above, only the most basic `function_calling.yaml` strategy file is specified.
+
+### Define and Implement Agent Strategy
+
+#### Definition
+
+Next, you need to define the code that implements the Agent strategy. Create a new `function_calling.yaml` file:
+
+```yaml
+identity:
+  name: function_calling
+  author: Dify
+  label:
+    en_US: FunctionCalling
+    zh_Hans: FunctionCalling
+    pt_BR: FunctionCalling
+description:
+  en_US: Function Calling is a basic strategy for agent, model will use the tools provided to perform the task.
+  zh_Hans: Function Calling 是一个基本的 Agent 策略，模型将使用提供的工具来执行任务。
+  pt_BR: Function Calling is a basic strategy for agent, model will use the tools provided to perform the task.
+parameters:
+  - name: model
+    type: model-selector
+    scope: tool-call&llm
+    required: true
+    label:
+      en_US: Model
+      zh_Hans: 模型
+      pt_BR: Model
+  - name: tools
+    type: array[tools]
+    required: true
+    label:
+      en_US: Tools list
+      zh_Hans: 工具列表
+      pt_BR: Tools list
+  - name: query
+    type: string
+    required: true
+    label:
+      en_US: Query
+      zh_Hans: 用户提问
+      pt_BR: Query
+  - name: max_iterations
+    type: number
+    required: false
+    default: 5
+    label:
+      en_US: Max Iterations
+      zh_Hans: 最大迭代次数
+      pt_BR: Max Iterations
+    max: 50
+    min: 1
+extra:
+  python:
+    source: strategies/function_calling.py
+```
+
+The code format is similar to the [`Tool` standard format](/plugin_dev_en/0411-tool.en), defining four parameters: `model`, `tools`, `query`, and `max_iterations`, to implement the most basic Agent strategy. This code allows users to select a model and the tools to use, configure the maximum number of iterations, and finally input a query to start executing the Agent.
+
+#### Write Functional Implementation Code
+
+**Get Parameters**
+
+Based on the four parameters defined above, the model type parameter is `model-selector`, and the tool type parameter is a special `array[tools]`. The forms obtained in the parameters can be converted using the built-in `AgentModelConfig` and `list[ToolEntity]` in the SDK.
+
+```python
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+
+class FunctionCallingParams(BaseModel):
+    query: str
+    model: AgentModelConfig
+    tools: list[ToolEntity] | None
+    maximum_iterations: int = 3
+    
+ class FunctionCallingAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        """
+        Run FunctionCall agent application
+        """
+        fc_params = FunctionCallingParams(**parameters)
+```
+
+**Invoke Model**
+
+Invoking the specified model is an essential capability in Agent plugins. Use the `session.model.invoke()` function in the SDK to invoke the model. You can get the required input parameters from the model.
+
+Example method signature for invoking the model:
+
+```python
+def invoke(
+        self,
+        model_config: LLMModelConfig,
+        prompt_messages: list[PromptMessage],
+        tools: list[PromptMessageTool] | None = None,
+        stop: list[str] | None = None,
+        stream: bool = True,
+    ) -> Generator[LLMResultChunk, None, None] | LLMResult:
+```
+
+You need to pass the model information `model_config`, prompt information `prompt_messages`, and tool information `tools`.
+
+The `prompt_messages` parameter can be invoked using the example code below; the `tool_messages` require some conversion.
+
+Please refer to the example code for using invoke model:
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+from pydantic import BaseModel
+
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.entities.model.llm import LLMModelConfig
+from dify_plugin.entities.model.message import (
+    PromptMessageTool,
+    SystemPromptMessage,
+    UserPromptMessage,
+)
+from dify_plugin.entities.tool import ToolParameter
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+
+class FunctionCallingParams(BaseModel):
+    query: str
+    instruction: str | None
+    model: AgentModelConfig
+    tools: list[ToolEntity] | None
+    maximum_iterations: int = 3
+
+class FunctionCallingAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        """
+        Run FunctionCall agent application
+        """
+        # init params
+        fc_params = FunctionCallingParams(**parameters)
+        query = fc_params.query
+        model = fc_params.model
+        stop = fc_params.model.completion_params.get("stop", []) if fc_params.model.completion_params else []
+        prompt_messages = [
+            SystemPromptMessage(content="your system prompt message"),
+            UserPromptMessage(content=query),
+        ]
+        tools = fc_params.tools
+        prompt_messages_tools = self._init_prompt_tools(tools)
+
+        # invoke llm
+        chunks = self.session.model.llm.invoke(
+            model_config=LLMModelConfig(**model.model_dump(mode="json")),
+            prompt_messages=prompt_messages,
+            stream=True,
+            stop=stop,
+            tools=prompt_messages_tools,
+        )
+
+    def _init_prompt_tools(self, tools: list[ToolEntity] | None) -> list[PromptMessageTool]:
+        """
+        Init tools
+        """
+
+        prompt_messages_tools = []
+        for tool in tools or []:
+            try:
+                prompt_tool = self._convert_tool_to_prompt_message_tool(tool)
+            except Exception:
+                # api tool may be deleted
+                continue
+
+            # save prompt tool
+            prompt_messages_tools.append(prompt_tool)
+
+        return prompt_messages_tools
+
+    def _convert_tool_to_prompt_message_tool(self, tool: ToolEntity) -> PromptMessageTool:
+        """
+        convert tool to prompt message tool
+        """
+        message_tool = PromptMessageTool(
+            name=tool.identity.name,
+            description=tool.description.llm if tool.description else "",
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        )
+
+        parameters = tool.parameters
+        for parameter in parameters:
+            if parameter.form != ToolParameter.ToolParameterForm.LLM:
+                continue
+
+            parameter_type = parameter.type
+            if parameter.type in {
+                ToolParameter.ToolParameterType.FILE,
+                ToolParameter.ToolParameterType.FILES,
+            }:
+                continue
+            enum = []
+            if parameter.type == ToolParameter.ToolParameterType.SELECT:
+                enum = [option.value for option in parameter.options] if parameter.options else []
+
+            message_tool.parameters["properties"][parameter.name] = {
+                "type": parameter_type,
+                "description": parameter.llm_description or "",
+            }
+
+            if len(enum) > 0:
+                message_tool.parameters["properties"][parameter.name]["enum"] = enum
+
+            if parameter.required:
+                message_tool.parameters["required"].append(parameter.name)
+
+        return message_tool
+
+```
+
+**Invoke Tool**
+
+Invoking tools is also an essential capability in Agent plugins. You can use `self.session.tool.invoke()` to call them. Example method signature for invoking a tool:
+
+```python
+def invoke(
+        self,
+        provider_type: ToolProviderType,
+        provider: str,
+        tool_name: str,
+        parameters: dict[str, Any],
+    ) -> Generator[ToolInvokeMessage, None, None]
+```
+
+The required parameters are `provider_type`, `provider`, `tool_name`, and `parameters`. In Function Calling, `tool_name` and `parameters` are often generated by the LLM. Example code for using invoke tool:
+
+```python
+from dify_plugin.entities.tool import ToolProviderType
+
+class FunctionCallingAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        """
+        Run FunctionCall agent application
+        """
+        fc_params = FunctionCallingParams(**parameters)
+        
+        # tool_call_name and tool_call_args parameter is obtained from the output of LLM
+        tool_instances = {tool.identity.name: tool for tool in fc_params.tools} if fc_params.tools else {}
+        tool_instance = tool_instances[tool_call_name]
+        tool_invoke_responses = self.session.tool.invoke(
+            provider_type=ToolProviderType.BUILT_IN,
+            provider=tool_instance.identity.provider,
+            tool_name=tool_instance.identity.name,
+            # add the default value
+            parameters={**tool_instance.runtime_parameters, **tool_call_args},
+        )
+```
+
+The output of the `self.session.tool.invoke()` function is a Generator, which means it also needs to be parsed streamingly.
+
+Please refer to the following function for the parsing method:
+
+```python
+import json
+from collections.abc import Generator
+from typing import cast
+
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.entities.tool import ToolInvokeMessage
+
+def parse_invoke_response(tool_invoke_responses: Generator[AgentInvokeMessage]) -> str:
+    result = ""
+    for response in tool_invoke_responses:
+        if response.type == ToolInvokeMessage.MessageType.TEXT:
+            result += cast(ToolInvokeMessage.TextMessage, response.message).text
+        elif response.type == ToolInvokeMessage.MessageType.LINK:
+            result += (
+                f"result link: {cast(ToolInvokeMessage.TextMessage, response.message).text}."
+                + " please tell user to check it."
+            )
+        elif response.type in {
+            ToolInvokeMessage.MessageType.IMAGE_LINK,
+            ToolInvokeMessage.MessageType.IMAGE,
+        }:
+            result += (
+                "image has been created and sent to user already, "
+                + "you do not need to create it, just tell the user to check it now."
+            )
+        elif response.type == ToolInvokeMessage.MessageType.JSON:
+            text = json.dumps(cast(ToolInvokeMessage.JsonMessage, response.message).json_object, ensure_ascii=False)
+            result += f"tool response: {text}."
+        else:
+            result += f"tool response: {response.message!r}."
+    return result
+```
+
+#### Log
+
+If you want to see the Agent's thinking process, besides viewing the normally returned messages, you can use a dedicated interface to display the entire Agent's thinking process in a tree structure.
+
+**Create Log**
+
+*   This interface creates and returns an `AgentLogMessage`, which represents a node in the log tree.
+*   If `parent` is passed, it indicates that the node has a parent node.
+*   The status defaults to "Success". However, if you want to better display the task execution process, you can first set the status to "start" to show a "running" log, and then update the log's status to "Success" after the task is completed. This allows users to clearly see the entire process from start to finish.
+*   `label` will be used to display the log title to the user.
+
+```python
+    def create_log_message(
+        self,
+        label: str,
+        data: Mapping[str, Any],
+        status: AgentInvokeMessage.LogMessage.LogStatus = AgentInvokeMessage.LogMessage.LogStatus.SUCCESS,
+        parent: AgentInvokeMessage | None = None,
+    ) -> AgentInvokeMessage
+```
+
+**Finish Log**
+
+If you chose the `start` status as the initial state in the previous step, you can use the finish log interface to change the status.
+
+```python
+    def finish_log_message(
+        self,
+        log: AgentInvokeMessage,
+        status: AgentInvokeMessage.LogMessage.LogStatus = AgentInvokeMessage.LogMessage.LogStatus.SUCCESS,
+        error: Optional[str] = None,
+    ) -> AgentInvokeMessage
+```
+
+**Example**
+
+This example shows a simple two-step execution process: first, output a log with the status "Thinking", then complete the actual task processing.
+
+```python
+class FunctionCallingAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        thinking_log = self.create_log_message(
+            data={
+                "Query": parameters.get("query"),
+            },
+            label="Thinking",
+            status=AgentInvokeMessage.LogMessage.LogStatus.START,
+        )
+
+        yield thinking_log
+
+        llm_response = self.session.model.llm.invoke(
+            model_config=LLMModelConfig(
+                provider="openai",
+                model="gpt-4o-mini",
+                mode="chat",
+                completion_params={},
+            ),
+            prompt_messages=[
+                SystemPromptMessage(content="you are a helpful assistant"),
+                UserPromptMessage(content=parameters.get("query")),
+            ],
+            stream=False,
+            tools=[],
+        )
+
+        thinking_log = self.finish_log_message(
+            log=thinking_log,
+        )
+
+        yield thinking_log
+
+        yield self.create_text_message(text=llm_response.message.content)
+```
+
+## Related Resources
+
+- [Getting Started with Dify Plugins](/plugin_dev_en/0111-getting-started-dify-plugin.en) - Understand the overall architecture of plugin development
+- [Agent Strategy Plugin Example](/plugin_dev_en/9433-agent-strategy-plugin.en) - A practical example of Agent strategy plugin development
+- [Define Plugin Information via Manifest File](/plugin_dev_en/0411-general-specifications.en) - Understand the detailed format of the Manifest file
+- [Reverse Invocation: Model](/plugin_dev_en/9242-reverse-invocation-model.en) - Learn how to invoke model capabilities within the platform
+- [Reverse Invocation: Tool](/plugin_dev_en/9242-reverse-invocation-tool.en) - Learn how to invoke other plugins
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin_dev_en/9232-agent.en.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20agent&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin_dev_en%2F9232-agent.en.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>
