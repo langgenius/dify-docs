@@ -13,13 +13,14 @@ refresh = False # Flag to control whether to clear existing tabs before processi
 DOCS_JSON_PATH = BASE_DIR / "docs.json" # Path to the main documentation structure JSON file
 
 # --- Language Configurations ---
-# These configurations define how documentation files for different languages are processed.
 # IMPORTANT: The string values for LANGUAGE_CODE, TARGET_TAB_NAME, and content within
 # PWX_TO_GROUP_MAP and DESIRED_GROUP_ORDER are i18n-specific and MUST NOT be translated.
+
+# --- MODIFICATION START for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
 PLUGIN_DEV_ZH = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": ".zh",
-    "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.zh\.mdx$"),
-    "PWX_TO_GROUP_MAP": { # Maps (P, W, X) prefixes from filenames to (Tab Name, Group Name, Optional Nested Group Name)
+    "DOCS_DIR_RELATIVE": "plugin_dev_zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
+    "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects .zh before .mdx
+    "PWX_TO_GROUP_MAP": { 
         ("0", "1", "1"): ("插件开发", "概念与入门", "概览"), ("0", "1", "3"): ("插件开发", "概念与入门", None),
         ("0", "2", "1"): ("插件开发", "开发实践", "快速开始"),("0", "2", "2"): ("插件开发", "开发实践", "开发 Dify 插件"),
         ("0", "3", "1"): ("插件开发", "贡献与发布", "行为准则与规范"),("0", "3", "2"): ("插件开发", "贡献与发布", "发布与上架"),("0", "3", "3"): ("插件开发", "贡献与发布", "常见问题解答"),
@@ -30,8 +31,8 @@ PLUGIN_DEV_ZH = {
     "DESIRED_GROUP_ORDER": ["概念与入门", "开发实践", "贡献与发布", "实践案例与示例", "高级开发", "Reference & Specifications"],
 }
 PLUGIN_DEV_EN = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": ".en",
-    "TARGET_TAB_NAME": "Plugin Development", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.en\.mdx$"),
+    "DOCS_DIR_RELATIVE": "plugin_dev_en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
+    "TARGET_TAB_NAME": "Plugin Development", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
         ("0", "1", "1"): ("Plugin Development", "Concepts & Getting Started", "Overview"),("0", "1", "3"): ("Plugin Development", "Concepts & Getting Started", None),
         ("0", "2", "1"): ("Plugin Development", "Development Practices", "Quick Start"),("0", "2", "2"): ("Plugin Development", "Development Practices", "Developing Dify Plugins"),
@@ -43,8 +44,8 @@ PLUGIN_DEV_EN = {
     "DESIRED_GROUP_ORDER": ["Concepts & Getting Started", "Development Practices", "Contribution & Publishing", "Examples & Use Cases", "Advanced Development", "Reference & Specifications"],
 }
 PLUGIN_DEV_JA = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_ja", "LANGUAGE_CODE": "日本語", "FILE_EXTENSION_SUFFIX": ".ja",
-    "TARGET_TAB_NAME": "プラグイン開発", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.ja\.mdx$"),
+    "DOCS_DIR_RELATIVE": "plugin_dev_ja", "LANGUAGE_CODE": "日本語", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
+    "TARGET_TAB_NAME": "プラグイン開発", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
         ("0", "1", "1"): ("プラグイン開発", "概念と概要", "概要"),("0", "1", "3"): ("プラグイン開発", "概念と概要", None),
         ("0", "2", "1"): ("プラグイン開発", "開発実践", "クイックスタート"),("0", "2", "2"): ("プラグイン開発", "開発実践", "Difyプラグインの開発"),
@@ -55,11 +56,13 @@ PLUGIN_DEV_JA = {
     },
     "DESIRED_GROUP_ORDER": ["概念と概要", "開発実践", "貢献と公開", "実践例とユースケース", "高度な開発", "リファレンスと仕様"],
 }
+# --- MODIFICATION END for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
+
 
 # --- Helper Functions ---
 
 # Defines log issue types considered critical enough to be included in the commit message summary.
-CRITICAL_ISSUE_TYPES = {"Error", "Critical", "ConfigError", "SeriousWarning"}
+CRITICAL_ISSUE_TYPES = {"Error", "Critical", "ConfigError", "SeriousWarning", "InternalError"} # Added InternalError from process_single_config
 
 def _log_issue(reports_list_for_commit_message: list, lang_code: str, issue_type: str, message: str, details: str = ""):
     """
@@ -76,32 +79,14 @@ def _log_issue(reports_list_for_commit_message: list, lang_code: str, issue_type
     full_log_message = f"[{issue_type.upper()}] Lang '{lang_code}': {message}"
     if details:
         full_log_message += f" Details: {details}"
-    print(full_log_message) # Always print the detailed log message to console.
+    print(full_log_message) 
 
     if issue_type in CRITICAL_ISSUE_TYPES:
-        # Prepare a more concise message for the commit summary.
         commit_msg_part = f"- Lang '{lang_code}': [{issue_type}] {message}"
         reports_list_for_commit_message.append(commit_msg_part)
-    # INFO and non-critical Warning logs are only printed to console, not added to the commit summary list.
 
-
-# Note: The following helper functions call `_log_issue`. Their docstrings will describe their primary purpose.
-# The `commit_message_reports_list` parameter passed to them is for `_log_issue`.
 
 def clear_tabs_if_refresh(navigation_data: dict, version_code: str, target_tab_name: str, do_refresh: bool, commit_message_reports_list: list) -> bool:
-    """
-    Clears groups within a specific tab in the navigation data if `do_refresh` is True.
-
-    Args:
-        navigation_data: The main navigation data structure.
-        version_code: The language code or version identifier (e.g., "简体中文").
-        target_tab_name: The name of the tab to clear.
-        do_refresh: Boolean flag; if True, groups in the tab will be cleared.
-        commit_message_reports_list: List for accumulating critical issue messages.
-
-    Returns:
-        True if the tab was found and cleared, False otherwise.
-    """
     if not do_refresh:
         return False
     if not navigation_data or "versions" not in navigation_data:
@@ -118,8 +103,6 @@ def clear_tabs_if_refresh(navigation_data: dict, version_code: str, target_tab_n
                 _log_issue(commit_message_reports_list, version_code, "Info", f"Cleared groups for Tab '{target_tab_name}'.")
                 tab_cleared = True
             else:
-                # This might be an Info log if we expect the tab to be created later.
-                # If refresh implies the tab must exist, it could be a Warning.
                 _log_issue(commit_message_reports_list, version_code, "Info", f"Tab '{target_tab_name}' not found to clear groups (will be created if needed).")
             break
     if not version_found:
@@ -129,49 +112,36 @@ def clear_tabs_if_refresh(navigation_data: dict, version_code: str, target_tab_n
 def get_page_path_from_filename(filename: str, docs_dir_name: str) -> str:
     """
     Constructs the documentation page path from its filename and directory name.
-    Example: "0001-intro.en.mdx", "plugin_dev_en" -> "plugin_dev_en/0001-intro.en"
+    Example: 
+        Old: "0001-intro.en.mdx", "plugin_dev_en" -> "plugin_dev_en/0001-intro.en"
+        New: "0001-intro.mdx",    "plugin_dev_en" -> "plugin_dev_en/0001-intro"
 
     Args:
-        filename: The .mdx filename (e.g., "0001-intro.en.mdx").
+        filename: The .mdx filename (e.g., "0001-intro.mdx").
         docs_dir_name: The relative directory name for this set of docs (e.g., "plugin_dev_en").
 
     Returns:
         The page path string used in docs.json.
 
     Raises:
-        ValueError: If the filename does not end with ".mdx" (internal error if this happens).
+        ValueError: If the filename does not end with ".mdx".
     """
     if not filename.endswith(".mdx"):
-        # This case should ideally be filtered out before calling this function.
-        # If it reaches here, it indicates an internal logic error.
         raise ValueError(f"Internal Error: Filename '{filename}' received by get_page_path_from_filename does not end with '.mdx'.")
-    base_filename = filename[:-len(".mdx")] # Remove ".mdx"
+    base_filename = filename[:-len(".mdx")] 
     return f"{docs_dir_name}/{base_filename}"
 
 
 def extract_existing_pages(navigation_data: dict, version_code: str, target_tab_name: str, commit_message_reports_list: list):
-    """
-    Extracts all existing page paths from a specific tab within a version in the navigation data.
-
-    Args:
-        navigation_data: The main navigation data structure.
-        version_code: The language code or version identifier.
-        target_tab_name: The name of the tab to extract pages from.
-        commit_message_reports_list: List for accumulating critical issue messages (passed to helpers, not used directly).
-
-    Returns:
-        A tuple: (set_of_existing_page_paths, target_version_nav_dict, target_tab_nav_dict).
-        Returns (set(), None, None) if the version or tab is not found.
-    """
     existing_pages = set()
     target_version_nav, target_tab_nav = None, None
 
     if not navigation_data or "versions" not in navigation_data:
-        return existing_pages, None, None # No versions structure, so no pages
+        return existing_pages, None, None 
 
     target_version_nav = next((v for v in navigation_data.get("versions", []) if v.get("version") == version_code), None)
     if not target_version_nav:
-        return existing_pages, None, None # Version not found
+        return existing_pages, None, None 
 
     if "tabs" in target_version_nav and isinstance(target_version_nav["tabs"], list):
         target_tab_nav = next((t for t in target_version_nav["tabs"] if isinstance(t,dict) and t.get("tab") == target_tab_name), None)
@@ -183,44 +153,26 @@ def extract_existing_pages(navigation_data: dict, version_code: str, target_tab_
     return existing_pages, target_version_nav, target_tab_nav
 
 def _recursive_extract(group_item: dict, pages_set: set):
-    """
-    Recursively extracts page paths from a group item and its nested groups.
-    (Helper for extract_existing_pages).
-
-    Args:
-        group_item: A dictionary representing a group, which may contain pages or nested groups.
-        pages_set: A set to which extracted page paths are added.
-    """
-    if not isinstance(group_item, dict): return # Safety check
+    if not isinstance(group_item, dict): return 
     for page in group_item.get("pages", []):
         if isinstance(page, str):
             pages_set.add(page)
-        elif isinstance(page, dict) and "group" in page: # It's a nested group
+        elif isinstance(page, dict) and "group" in page: 
             _recursive_extract(page, pages_set)
 
 
 def remove_obsolete_pages(target_tab_data: dict, pages_to_remove: set, commit_message_reports_list: list, lang_code: str):
-    """
-    Removes obsolete page paths from the groups within the target tab data.
-    Modifies `target_tab_data` in place.
-
-    Args:
-        target_tab_data: The dictionary for the specific tab being processed.
-        pages_to_remove: A set of page path strings that should be removed.
-        commit_message_reports_list: List for accumulating critical issue messages.
-        lang_code: Language code for logging purposes.
-    """
     if not isinstance(target_tab_data, dict) or "groups" not in target_tab_data or not isinstance(target_tab_data.get("groups"), list):
         _log_issue(commit_message_reports_list, lang_code, "Warning", "Attempted to remove obsolete pages from invalid target_tab_data structure.", f"Tab data: {target_tab_data}")
         return
 
     groups = target_tab_data["groups"]
     i = 0
-    while i < len(groups): # Iterate with index to handle potential removal of empty groups (currently retains structure)
+    while i < len(groups): 
         group_item = groups[i]
         if isinstance(group_item, dict):
             _remove_obsolete_from_group(group_item, pages_to_remove, commit_message_reports_list, lang_code)
-            if not group_item.get("pages"): # Check if the group became empty
+            if not group_item.get("pages"): 
                  _log_issue(commit_message_reports_list, lang_code, "Info", f"Group '{group_item.get('group', 'Unknown')}' emptied after removing obsolete pages; structure retained.")
             i += 1
         else: 
@@ -228,60 +180,33 @@ def remove_obsolete_pages(target_tab_data: dict, pages_to_remove: set, commit_me
             i += 1
 
 def _remove_obsolete_from_group(group_dict: dict, pages_to_remove: set, commit_message_reports_list: list, lang_code: str):
-    """
-    Recursively removes obsolete page paths from a group dictionary and its nested groups.
-    Modifies `group_dict` in place. (Helper for remove_obsolete_pages).
-
-    Args:
-        group_dict: The dictionary representing a group.
-        pages_to_remove: A set of page path strings to remove.
-        commit_message_reports_list: List for accumulating critical issue messages.
-        lang_code: Language code for logging.
-    """
     if not isinstance(group_dict, dict) or "pages" not in group_dict or not isinstance(group_dict.get("pages"), list):
         group_name_for_log_err = group_dict.get('group', 'Unnamed Group with structural issue') if isinstance(group_dict, dict) else 'Non-dict item'
         _log_issue(commit_message_reports_list, lang_code, "Warning", f"Group '{group_name_for_log_err}' has invalid 'pages' structure; cannot remove obsolete pages from it. Structure: {group_dict}")
         return
 
     new_pages = []
-    group_name_for_log = group_dict.get('group', 'Unknown') # For logging context
+    group_name_for_log = group_dict.get('group', 'Unknown') 
     for page_item in group_dict["pages"]:
-        if isinstance(page_item, str): # It's a page path
+        if isinstance(page_item, str): 
             if page_item not in pages_to_remove:
                 new_pages.append(page_item)
             else:
                 _log_issue(commit_message_reports_list, lang_code, "Info", f"Removed obsolete page '{page_item}' from Group '{group_name_for_log}'.")
-        elif isinstance(page_item, dict) and "group" in page_item: # It's a nested group
+        elif isinstance(page_item, dict) and "group" in page_item: 
             _remove_obsolete_from_group(page_item, pages_to_remove, commit_message_reports_list, lang_code)
-            # Retain nested group even if it becomes empty.
             if page_item.get("pages"): 
                 new_pages.append(page_item)
             else:
                  _log_issue(commit_message_reports_list, lang_code, "Info", f"Nested group '{page_item.get('group', 'Unknown')}' in Group '{group_name_for_log}' emptied; structure retained.")
-                 new_pages.append(page_item) # Still append the empty nested group structure
-        else: # Unknown item type, preserve it
+                 new_pages.append(page_item) 
+        else: 
             _log_issue(commit_message_reports_list, lang_code, "Warning", f"Encountered unexpected item type in 'pages' list of Group '{group_name_for_log}'. Preserving item: {page_item}")
             new_pages.append(page_item)
     group_dict["pages"] = new_pages
 
 
 def find_or_create_target_group(target_version_nav: dict, tab_name: str, group_name: str, nested_group_name: str | None, commit_message_reports_list: list, lang_code: str) -> list:
-    """
-    Finds or creates the target group (and nested group, if specified) within the navigation data
-    and returns the 'pages' list where new pages should be added.
-    Modifies `target_version_nav` in place by adding new structures if they don't exist.
-
-    Args:
-        target_version_nav: The dictionary for the specific version being processed.
-        tab_name: The name of the target tab.
-        group_name: The name of the primary group.
-        nested_group_name: The name of the nested group (optional, can be None).
-        commit_message_reports_list: List for accumulating critical issue messages.
-        lang_code: Language code for logging.
-
-    Returns:
-        The 'pages' list (mutable) of the target group or nested group.
-    """
     target_version_nav.setdefault("tabs", [])
     if not isinstance(target_version_nav["tabs"], list): 
         _log_issue(commit_message_reports_list, lang_code, "Critical", f"Internal state error: version.tabs is not a list for version '{target_version_nav.get('version')}'. Attempting to recover by creating a new list.")
@@ -327,17 +252,6 @@ def find_or_create_target_group(target_version_nav: dict, tab_name: str, group_n
     return container_for_pages 
 
 def get_group_sort_key(group_dict: dict, desired_order_list: list) -> int:
-    """
-    Calculates a sort key for a group based on its desired order.
-    Groups not in the desired_order_list will be placed at the end.
-
-    Args:
-        group_dict: The group dictionary, expected to have a "group" key with its name.
-        desired_order_list: A list of group names in their desired display order.
-
-    Returns:
-        An integer sort key. Lower numbers sort earlier.
-    """
     group_name = group_dict.get("group", "") 
     try:
         return desired_order_list.index(group_name) 
@@ -346,16 +260,6 @@ def get_group_sort_key(group_dict: dict, desired_order_list: list) -> int:
 
 # --- Main Logic ---
 def process_single_config(docs_config: dict, navigation_data: dict, commit_message_reports_list: list):
-    """
-    Processes a single language/documentation configuration.
-    It updates the `navigation_data` by adding new pages, removing obsolete ones,
-    and structuring them according to the configuration.
-
-    Args:
-        docs_config: A dictionary containing the configuration for a specific documentation set (e.g., PLUGIN_DEV_EN).
-        navigation_data: The mutable main navigation data structure (specifically, the 'navigation' dict from docs_data).
-        commit_message_reports_list: List for accumulating critical issue messages.
-    """
     lang_code = docs_config["LANGUAGE_CODE"] 
     docs_dir_relative = docs_config["DOCS_DIR_RELATIVE"]
     docs_dir_abs = BASE_DIR / docs_dir_relative
@@ -363,6 +267,8 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
     filename_pattern = docs_config["FILENAME_PATTERN"]
     target_tab_name = docs_config["TARGET_TAB_NAME"] 
     desired_group_order = docs_config["DESIRED_GROUP_ORDER"]
+    # FILE_EXTENSION_SUFFIX is in docs_config but no longer directly used in this function's logic
+    # for deriving page paths, as get_page_path_from_filename handles the new simpler .mdx ending.
 
     _log_issue(commit_message_reports_list, lang_code, "Info", f"Processing Tab '{target_tab_name}'. Docs dir: '{docs_dir_abs}'")
 
@@ -384,14 +290,10 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
     if target_tab_nav is None: 
         _log_issue(commit_message_reports_list, lang_code, "Info", f"Tab '{target_tab_name}' not found in version '{lang_code}'. It will be created if pages are added to it.")
         existing_pages = set()
-        # Ensure target_version_nav.tabs exists for find_or_create_target_group
         target_version_nav.setdefault("tabs", [])
         if not isinstance(target_version_nav["tabs"], list):
             _log_issue(commit_message_reports_list, lang_code, "Critical", f"Version '{lang_code}' 'tabs' attribute is not a list. Re-initializing.")
             target_version_nav["tabs"] = []
-        # Tab structure will be fully created by find_or_create_target_group when the first page is added.
-        # If no pages are added, the tab might not appear unless explicitly created empty for sorting.
-        # For now, rely on find_or_create_target_group.
 
     _log_issue(commit_message_reports_list, lang_code, "Info", f"{len(existing_pages)} existing pages found in docs.json for Tab '{target_tab_name}'.")
 
@@ -406,7 +308,8 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
         if not filename.endswith(".mdx"):
             continue 
 
-        if filename_pattern.match(filename):
+        match = filename_pattern.match(filename) # MODIFIED: use match result directly
+        if match: # MODIFIED: check if match is not None
             try:
                 page_path = get_page_path_from_filename(filename, docs_dir_relative)
                 filesystem_pages_map[filename] = page_path
@@ -427,36 +330,34 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
     if removed_page_paths:
         _log_issue(commit_message_reports_list, lang_code, "Info", f"{len(removed_page_paths)} obsolete page(s) to remove from Tab '{target_tab_name}'.")
 
-    # Re-fetch target_tab_nav as it might have been None if the tab was new
-    # This ensures we operate on the correct tab structure, especially if it was just created by find_or_create_target_group
-    # or if it was pre-existing.
-    # This ensures 'remove_obsolete_pages' gets the correct tab object.
-    # Note: find_or_create_target_group modifies target_version_nav in-place.
-    # We need to find the tab object within target_version_nav *after* any potential modifications.
-    # This will be done before adding new pages and before sorting groups.
-
     _current_tab_for_removal = next((t for t in target_version_nav.get("tabs", []) if isinstance(t, dict) and t.get("tab") == target_tab_name), None)
     if removed_page_paths and _current_tab_for_removal: 
         remove_obsolete_pages(_current_tab_for_removal, removed_page_paths, commit_message_reports_list, lang_code)
-    elif removed_page_paths: # Means there were pages to remove, but the tab itself wasn't found (edge case)
+    elif removed_page_paths: 
         _log_issue(commit_message_reports_list, lang_code, "Warning", f"Obsolete pages detected for Tab '{target_tab_name}', but the tab was not found in the current version structure. Removal skipped.")
         
     if new_page_paths:
         files_to_add_sorted = sorted([fn for fn, pp in filesystem_pages_map.items() if pp in new_page_paths])
 
         for filename in files_to_add_sorted:
-            match = filename_pattern.match(filename)
-            if not match: 
+            match_for_add = filename_pattern.match(filename) # Re-match, or reuse 'match' if it was stored from earlier loop. Re-matching is safer.
+            if not match_for_add: 
                 _log_issue(commit_message_reports_list, lang_code, "InternalError", f"File '{filename}' was marked for addition but failed pattern match. Skipping.")
                 continue
 
-            pwxy_str = match.group(1) 
+            pwxy_str = match_for_add.group(1) 
             page_path = filesystem_pages_map[filename] 
 
-            if len(pwxy_str) < 3: 
-                _log_issue(commit_message_reports_list, lang_code, "Error", f"File '{filename}' has an invalid PWXY prefix '{pwxy_str}' (too short). Skipping this file.")
+            if len(pwxy_str) < 3: # This check for P, W, X assumes they are single digits from filename.
+                                  # If FILENAME_PATTERN's group(1) captures more/less, this needs adjustment.
+                                  # Current pattern (\d{4}) captures 4 digits for PWXY.
+                _log_issue(commit_message_reports_list, lang_code, "Error", f"File '{filename}' has an invalid PWXY prefix '{pwxy_str}' (too short, expected 3+). Skipping this file.")
                 continue
             
+            # Assuming PWXY is the first 4 digits, P, W, X are the first, second, third digits.
+            # The original code used pwxy_str[0], pwxy_str[1], pwxy_str[2] which implies PWX from the *first three* chars of the prefix.
+            # If the filename is 0123-title.mdx, and pwxy_str is "0123" (from (\d{4})), then:
+            # P = "0", W = "1", X = "2". (Y = "3" is not used for map key)
             p, w, x = pwxy_str[0], pwxy_str[1], pwxy_str[2] 
             group_key = (p, w, x)
 
@@ -484,7 +385,6 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
             else:
                 _log_issue(commit_message_reports_list, lang_code, "SeriousWarning", f"File '{filename}' (PWX prefix ({p},{w},{x})) has no corresponding entry in PWX_TO_GROUP_MAP. Skipping this file.")
 
-    # Final check for sorting: target_tab_nav needs to be the current state of the tab object.
     final_target_tab_nav = next((t for t in target_version_nav.get("tabs", []) if isinstance(t, dict) and t.get("tab") == target_tab_name), None)
 
     if final_target_tab_nav and "groups" in final_target_tab_nav and isinstance(final_target_tab_nav["groups"], list):
@@ -495,22 +395,11 @@ def process_single_config(docs_config: dict, navigation_data: dict, commit_messa
             _log_issue(commit_message_reports_list, lang_code, "Info", f"No groups to sort in Tab '{target_tab_name}' (tab is empty or contains no group structures).")
     elif final_target_tab_nav: 
          _log_issue(commit_message_reports_list, lang_code, "Warning", f"Tab '{target_tab_name}' exists but has no valid 'groups' list to sort.")
-    else: # Tab was not created (e.g., no new pages and it didn't exist before)
+    else: 
         _log_issue(commit_message_reports_list, lang_code, "Info", f"Tab '{target_tab_name}' does not exist in the final structure; no sorting needed.")
 
 
 def load_docs_data_robust(path: Path, commit_message_reports_list: list, lang_for_report: str = "GLOBAL") -> dict:
-    """
-    Loads docs.json data robustly. If file doesn't exist or is invalid, returns a default structure.
-
-    Args:
-        path: Path object to the docs.json file.
-        commit_message_reports_list: List for accumulating critical issue messages.
-        lang_for_report: Identifier for logging context (defaults to "GLOBAL").
-
-    Returns:
-        A dictionary with the loaded data or a default structure on failure.
-    """
     default_structure = {"navigation": {"versions": []}}
     try:
         if not path.exists():
@@ -532,18 +421,6 @@ def load_docs_data_robust(path: Path, commit_message_reports_list: list, lang_fo
         return default_structure
 
 def save_docs_data_robust(path: Path, data: dict, commit_message_reports_list: list, lang_for_report: str = "GLOBAL") -> bool:
-    """
-    Saves data to docs.json robustly.
-
-    Args:
-        path: Path object to the docs.json file.
-        data: The dictionary data to save.
-        commit_message_reports_list: List for accumulating critical issue messages.
-        lang_for_report: Identifier for logging context.
-
-    Returns:
-        True if save was successful, False otherwise.
-    """
     try:
         with open(path, "w", encoding="utf-8") as f:
             json.dump(data, f, ensure_ascii=False, indent=4)
@@ -554,20 +431,9 @@ def save_docs_data_robust(path: Path, data: dict, commit_message_reports_list: l
         return False
 
 def validate_config(config: dict, config_name: str, commit_message_reports_list: list) -> bool:
-    """
-    Validates a single documentation configuration dictionary.
-
-    Args:
-        config: The configuration dictionary to validate.
-        config_name: A name/identifier for the configuration (e.g., language code), used for logging.
-        commit_message_reports_list: List for accumulating critical issue messages.
-
-    Returns:
-        True if the configuration is valid, False otherwise.
-    """
     is_valid = True
     required_keys = [
-        "DOCS_DIR_RELATIVE", "LANGUAGE_CODE", "FILE_EXTENSION_SUFFIX",
+        "DOCS_DIR_RELATIVE", "LANGUAGE_CODE", "FILE_EXTENSION_SUFFIX", # FILE_EXTENSION_SUFFIX still checked for presence
         "TARGET_TAB_NAME", "FILENAME_PATTERN", "PWX_TO_GROUP_MAP", "DESIRED_GROUP_ORDER"
     ]
     for key in required_keys:
@@ -591,6 +457,12 @@ def validate_config(config: dict, config_name: str, commit_message_reports_list:
     if not isinstance(config["DESIRED_GROUP_ORDER"], list): 
         _log_issue(commit_message_reports_list, config_name, "ConfigError", f"Key 'DESIRED_GROUP_ORDER' must be a list. Found type: {type(config.get('DESIRED_GROUP_ORDER'))}.")
         is_valid = False
+    
+    # Validate FILE_EXTENSION_SUFFIX can be an empty string now
+    if "FILE_EXTENSION_SUFFIX" in config and not isinstance(config["FILE_EXTENSION_SUFFIX"], str):
+        _log_issue(commit_message_reports_list, config_name, "ConfigError", f"Key 'FILE_EXTENSION_SUFFIX' must be a string (can be empty). Found type: {type(config.get('FILE_EXTENSION_SUFFIX'))}.")
+        is_valid = False
+
 
     if not is_valid:
         _log_issue(commit_message_reports_list, config_name, "Info", f"Skipping configuration '{config_name}' due to type or content errors in its definition.")
@@ -598,18 +470,6 @@ def validate_config(config: dict, config_name: str, commit_message_reports_list:
 
 
 def process_all_configs(configs_to_process: list[dict], docs_json_path: Path) -> list[str]:
-    """
-    Main orchestrator for processing all provided documentation configurations.
-    Loads existing docs.json, processes each config, and saves the result.
-
-    Args:
-        configs_to_process: A list of configuration dictionaries.
-        docs_json_path: Path to the docs.json file.
-
-    Returns:
-        A list of strings, where each string is a critical issue message formatted for a commit summary.
-        Returns an empty list if no critical issues occurred.
-    """
     commit_message_reports = [] 
     
     docs_data = load_docs_data_robust(docs_json_path, commit_message_reports) 
@@ -655,14 +515,6 @@ def process_all_configs(configs_to_process: list[dict], docs_json_path: Path) ->
     return commit_message_reports 
 
 def main_apply_docs_json() -> str:
-    """
-    Entry point for the script. Initializes configurations, processes them,
-    and returns a status message for commit purposes.
-
-    Returns:
-        "success" if no critical issues were reported, otherwise a formatted string
-        summarizing critical issues for a commit message.
-    """
     print(f"Script base directory: {BASE_DIR}")
     print(f"Docs JSON path: {DOCS_JSON_PATH}")
     print(f"Refresh mode: {refresh}") 

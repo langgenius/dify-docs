@@ -105,7 +105,7 @@ def _generate_filename_parts(
     P: int, W: int, X: int, Y: int,
     front_matter: dict,
     original_filename_stem: str
-) -> tuple[str | None, str, str, list[str]]:
+) -> tuple[str | None, str, list[str]]: # MODIFIED: Return tuple changed, lang_suffix removed
     warnings_messages = []
     prefix_str = f"{P}{W}{X}{Y}"
     try:
@@ -121,15 +121,21 @@ def _generate_filename_parts(
         title_part_to_use = original_filename_stem
     sanitized_title = sanitize_filename_part(title_part_to_use)
 
-    lang_suffix = ""
+    # --- MODIFICATION START ---
+    # We still check the 'language' field in frontmatter for completeness/warnings,
+    # but we no longer use it to generate a suffix for the filename.
     language_fm = front_matter.get("language")
-    if language_fm is not None: # Check for presence
+    if language_fm is not None:
         lang_code = str(language_fm).strip().lower()
-        if lang_code: lang_suffix = f".{lang_code}"
-        else: warnings_messages.append("Empty 'language' field in frontmatter. Omitting language suffix.")
-    else: # language field is missing
-        warnings_messages.append("Missing 'language' field in frontmatter. Omitting language suffix.")
-    return padded_prefix, sanitized_title, lang_suffix, warnings_messages
+        if not lang_code:
+            warnings_messages.append("Empty 'language' field in frontmatter. This field is expected for metadata consistency.")
+        # else:
+            # lang_suffix = f".{lang_code}" # No longer creating this suffix for the filename
+    else:
+        warnings_messages.append("Missing 'language' field in frontmatter. This field is expected for metadata consistency.")
+    # --- MODIFICATION END ---
+
+    return padded_prefix, sanitized_title, warnings_messages # MODIFIED: lang_suffix no longer returned
 
 # --- Core Processing Functions ---
 
@@ -155,7 +161,7 @@ def get_or_create_lang_dir(lang: str, config: Config) -> tuple[Path | None, bool
 
 def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
     stats = {
-        "status": "processed", "all_file_warnings": [], "error_message": None, # all_file_warnings replaces warnings
+        "status": "processed", "all_file_warnings": [], "error_message": None,
         "old_filename_stem_for_replace": None, "new_filename_stem_for_replace": None,
         "problem_file_display_path": None, "problem_file_target_name": None,
         "non_compliant_reason": None,
@@ -163,11 +169,10 @@ def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
 
     try:
         if mdx_filepath.is_relative_to(config.BASE_DIR):
-             # Show path relative to BASE_DIR's parent for context (e.g. "lang_dir/file.mdx")
             display_path = mdx_filepath.relative_to(config.BASE_DIR.parent).as_posix()
         else:
-            display_path = mdx_filepath.name # Fallback
-    except ValueError: # Should not happen if path is under BASE_DIR
+            display_path = mdx_filepath.name
+    except ValueError:
         display_path = mdx_filepath.name
     stats["problem_file_display_path"] = display_path
 
@@ -176,13 +181,11 @@ def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
         content = mdx_filepath.read_text(encoding="utf-8")
         front_matter, _ = extract_front_matter(content)
 
-        if front_matter is None: # YAML Parsing Error from extract_front_matter
+        if front_matter is None:
             stats["status"] = "error"; stats["error_message"] = "YAML Error in file."
-            # The extract_front_matter already printed details
             print(f"\nProcessing: {display_path} -> (skipped due to YAML error)")
             return stats
 
-        # --- Check for critical missing frontmatter for renaming compliance ---
         missing_critical_fields = []
         fm_dimensions = front_matter.get("dimensions", {})
         fm_type = fm_dimensions.get("type", {})
@@ -191,26 +194,34 @@ def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
         if fm_type.get("detail") is None: missing_critical_fields.append("dimensions.type.detail")
         if fm_dimensions.get("level") is None: missing_critical_fields.append("dimensions.level")
         if front_matter.get("standard_title") is None: missing_critical_fields.append("standard_title")
+        # --- MODIFICATION START ---
+        # Add check for 'language' field as a compliance requirement, even if not used in filename suffix
+        if front_matter.get("language") is None:
+            missing_critical_fields.append("language (expected for metadata, though not used in filename suffix anymore)")
+        elif not str(front_matter.get("language")).strip():
+             missing_critical_fields.append("language (present but empty; expected for metadata)")
+        # --- MODIFICATION END ---
+
 
         if missing_critical_fields:
             stats["status"] = "skipped_non_compliant"
-            reason = f"\nMissing critical frontmatter fields for renaming: {', '.join(missing_critical_fields)}."
+            reason = f"\nMissing/empty critical frontmatter fields for renaming: {', '.join(missing_critical_fields)}."
             stats["non_compliant_reason"] = reason
-            # This skip will be reported as a problem, so print concise info here
             print(f"\nProcessing: {display_path} -> (skipped, non-compliant)")
             print(f"  [Skipping Reason] {reason}")
-            return stats # No further processing or warning generation for this file
+            return stats
 
-        # --- If compliant, proceed to calculate and generate parts ---
         P, W, X, Y, pwxy_warnings = _calculate_pwxy_and_warnings(front_matter, config)
         stats["all_file_warnings"].extend(pwxy_warnings)
 
         original_stem_for_title_fallback = mdx_filepath.stem
-        padded_prefix, sanitized_title, lang_suffix, fname_warnings = _generate_filename_parts(
+        # MODIFIED: Unpack one less item, as lang_suffix is no longer returned by _generate_filename_parts
+        padded_prefix, sanitized_title, fname_warnings = _generate_filename_parts(
             P, W, X, Y, front_matter, original_stem_for_title_fallback)
         stats["all_file_warnings"].extend(fname_warnings)
 
-        new_filename = f"{padded_prefix}-{sanitized_title}{lang_suffix}.mdx"
+        # MODIFIED: Construct new_filename without lang_suffix
+        new_filename = f"{padded_prefix}-{sanitized_title}.mdx"
         stats["problem_file_target_name"] = new_filename
         new_filepath = mdx_filepath.with_name(new_filename)
 
@@ -229,16 +240,15 @@ def process_single_mdx_file(mdx_filepath: Path, config: Config) -> dict:
                 stats["status"] = "error"
                 stats["error_message"] = f"Failed to rename to '{new_filename}': {rename_error}"
         
-        # Print details if warnings, actual change, error, or specific skips (except non-compliant already printed)
         action_taken = new_filepath != mdx_filepath and stats["status"] == "processed"
         if stats["all_file_warnings"] or action_taken or stats["status"].startswith("error") or stats["status"] == "skipped_target_exists":
             print(f"\nProcessing: {display_path} -> {new_filename if action_taken else '(no change or skipped/error)'}")
-            for warning_msg in stats["all_file_warnings"]: print(f"  [Warning] {warning_msg}") # These will now be problem reports
+            for warning_msg in stats["all_file_warnings"]: print(f"  [Warning] {warning_msg}")
             if stats["status"] == "skipped_target_exists": print(f"  [Skipping] Target '{new_filename}' already exists.")
             if stats["error_message"]: print(f"  [Error] {stats['error_message']}")
 
 
-    except FileNotFoundError: # Should be rare if mdx_filepath comes from rglob
+    except FileNotFoundError:
         stats["status"] = "error"; stats["error_message"] = f"File not found: {mdx_filepath.name}"
         print(f"\nProcessing: {display_path}"); print(f"  [Error] {stats['error_message']}")
     except Exception as e:
@@ -253,15 +263,15 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
     lang_stats = {
         "processed_count": 0, "skipped_no_change_count": 0,
         "skipped_target_exists_count": 0, "error_count": 0,
-        "warning_files_count": 0, # This counts files that HAD warnings.
+        "warning_files_count": 0, 
         "status": "OK",
-        "dir_path_str": str(lang_dir_path.relative_to(config.BASE_DIR)), # Path relative to project root
+        "dir_path_str": str(lang_dir_path.relative_to(config.BASE_DIR)),
         "content_replacements_made_count": 0, "content_replacement_errors_count": 0,
         "error_file_details": [], "skipped_target_exists_details": [],
         "content_replacement_error_details": [],
         "skipped_non_compliant_count": 0,
         "skipped_non_compliant_details": [],
-        "files_with_processing_warnings_details": [], # New: to store path and specific warnings
+        "files_with_processing_warnings_details": [], 
     }
 
     if not lang_dir_path.exists() or not lang_dir_path.is_dir():
@@ -302,16 +312,16 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
                 "path": result["problem_file_display_path"], "message": result["error_message"]
             })
         
-        if result["all_file_warnings"]: # If there were any warnings for this file
-            lang_stats["warning_files_count"] += 1 # Increment count of files with warnings
-            lang_stats["files_with_processing_warnings_details"].append({ # Store details for problem reporting
+        if result["all_file_warnings"]:
+            lang_stats["warning_files_count"] += 1 
+            lang_stats["files_with_processing_warnings_details"].append({ 
                 "path": result["problem_file_display_path"],
                 "warnings": result["all_file_warnings"]
             })
 
         if total_files > 0: print(f"Rename Progress ({lang_dir_path.name}): {i+1}/{total_files} ({((i+1)/total_files*100):.1f}%)", end="\r")
 
-    if total_files > 0: print() # Newline after progress
+    if total_files > 0: print() 
     print("--- Phase 1: Renaming files complete. ---")
 
     if rename_mappings:
@@ -321,12 +331,25 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
         print(f"Scanning {total_replace_scan} .mdx files for content updates.")
         updated_count = 0
         for i, scan_path in enumerate(all_mdx_after_rename):
-            display_scan_path = scan_path.relative_to(config.BASE_DIR.parent).as_posix() # Consistent display path
+            display_scan_path = scan_path.relative_to(config.BASE_DIR.parent).as_posix() 
             try:
                 content, changed = scan_path.read_text(encoding="utf-8"), False
                 mod_content = content
                 for old, new in rename_mappings:
-                    if old in mod_content: mod_content, changed = mod_content.replace(old, new), True
+                    # More robust replacement to avoid partial matches if old/new stems are substrings of other words
+                    # We'll replace the stem part of filenames, often appearing in links like `../plugin_dev_zh/0001-old-name`
+                    # This regex assumes stems are typically used without their .mdx extension in links
+                    # and might be preceded by a path separator or quote, and followed by a quote, hash, or space.
+                    old_pattern_for_links = r"(?P<prefix>[\"\'(/])" + re.escape(old) + r"(?P<suffix>[\"\'#\s)?!])"
+                    # Ensure `new` doesn't create issues if it contains special regex chars (though sanitize_filename_part should prevent this)
+                    new_safe = new 
+                    
+                    # Simple string replace is often sufficient if stems are unique enough
+                    # If simple replace causes issues, then use regex. For now, keeping simple.
+                    if old in mod_content: # Check before replacing
+                        mod_content = mod_content.replace(old, new)
+                        changed = True
+
                 if changed:
                     scan_path.write_text(mod_content, encoding="utf-8")
                     updated_count +=1; print(f"  Updated references in: {display_scan_path}")
@@ -336,7 +359,7 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
                 lang_stats["content_replacement_errors_count"] += 1
                 lang_stats["content_replacement_error_details"].append({"path": display_scan_path, "error": str(e)})
             if total_replace_scan > 0: print(f"Content Update Progress ({lang_dir_path.name}): {i+1}/{total_replace_scan} ({((i+1)/total_replace_scan*100):.1f}%)", end="\r")
-        if total_replace_scan > 0: print() # Newline after progress
+        if total_replace_scan > 0: print() 
         lang_stats["content_replacements_made_count"] = updated_count
         print(f"Content replacement phase: {updated_count} files had their content updated.")
         print("--- Phase 2: Content references update complete. ---")
@@ -347,27 +370,23 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
     print(f"  Skipped (no change): {lang_stats['skipped_no_change_count']}")
     print(f"  Skipped (target exists): {lang_stats['skipped_target_exists_count']}")
     print(f"  Skipped (non-compliant for rename): {lang_stats['skipped_non_compliant_count']}")
-    print(f"  Files generating warnings: {lang_stats['warning_files_count']}") # Renamed for clarity
+    print(f"  Files generating warnings: {lang_stats['warning_files_count']}") 
     print(f"  Errors (renaming phase): {lang_stats['error_count']}")
     if rename_mappings or lang_stats['content_replacement_errors_count'] > 0 or lang_stats['content_replacements_made_count'] > 0:
         print(f"  Content updated (references): {lang_stats['content_replacements_made_count']}")
         print(f"  Errors (content update): {lang_stats['content_replacement_errors_count']}")
     print("-" * 20)
 
-    # A language dir has errors if file errors or content replacement errors occurred.
-    # Non-compliant skips or warnings are now also reported as "problems" at main level,
-    # but don't change the "ERRORS_IN_PROCESSING" status of the language itself here.
-    # The main problem report will cover those.
     if lang_stats["error_count"] > 0 or lang_stats["content_replacement_errors_count"] > 0:
         lang_stats["status"] = "ERRORS_IN_PROCESSING"
     return lang_stats
 
 
-def main_rename_by_dimensions() -> str: # Return type is now str
+def main_rename_by_dimensions() -> str: 
     config = Config()
     print(f"Base directory: {config.BASE_DIR}\nTimestamp for this run: {config.TIMESTAMP}")
     overall_summary, lang_dir_created_flags, lang_dirs_map = {}, {}, {}
-    problem_reports_list = [] # Internal list to build up problem strings
+    problem_reports_list = [] 
 
     for lang in config.LANGUAGES:
         print(f"\n{'='*10} Processing Language: {lang.upper()} {'='*10}")
@@ -383,12 +402,10 @@ def main_rename_by_dimensions() -> str: # Return type is now str
         lang_results = run_processing_for_language(current_lang_dir, config)
         overall_summary[lang] = lang_results
 
-        # Cleanup empty newly created directory
         if current_lang_dir and was_newly_created and current_lang_dir.exists() and not any(current_lang_dir.iterdir()):
             try:
                 current_lang_dir.rmdir(); print(f"  Removed empty newly created language directory: {current_lang_dir.name}")
-                lang_dirs_map[lang] = None # Mark as gone
-                # No need to add to lang_results["message"] as it's a normal cleanup
+                lang_dirs_map[lang] = None 
             except OSError as e: print(f"  Note: Could not remove empty newly created directory '{current_lang_dir.name}': {e}")
 
     print("\n\n" + "=" * 20 + " Overall Script Summary " + "=" * 20)
@@ -398,7 +415,7 @@ def main_rename_by_dimensions() -> str: # Return type is now str
 
         print(f"\nLanguage: {lang_code.upper()}\n  Status: {summary.get('status', 'UNKNOWN')}")
         
-        if "message" in summary and summary['status'] in ["SETUP_ERROR", "LANG_DIR_ERROR"]: # Critical setup messages
+        if "message" in summary and summary['status'] in ["SETUP_ERROR", "LANG_DIR_ERROR"]:
             print(f"  Message: {summary['message']}")
         
         if summary.get('status') not in ["SETUP_ERROR", "LANG_DIR_ERROR"]:
@@ -412,17 +429,16 @@ def main_rename_by_dimensions() -> str: # Return type is now str
                 ("error_count", "Errors (renaming phase)"),
                 ("content_replacements_made_count", "Content updated (references)"),
                 ("content_replacement_errors_count", "Errors (content update)")
-            ]: # Iterate common stats
+            ]: 
                 if key in summary: print(f"  {label}: {summary.get(key, 0)}")
 
-            # Collect problem reports for return
             for detail in summary.get("error_file_details", []):
                 problem_reports_list.append(f"- Lang '{lang_code}': File '{detail['path']}' - Renaming error: {detail['message']}")
             for detail in summary.get("skipped_target_exists_details", []):
                 problem_reports_list.append(f"- Lang '{lang_code}': File '{detail['original_display_path']}' could not be renamed to '{detail['target_name']}' (target exists).")
-            for detail in summary.get("skipped_non_compliant_details", []): # Now a problem
+            for detail in summary.get("skipped_non_compliant_details", []): 
                 problem_reports_list.append(f"- Lang '{lang_code}': File '{detail['path']}' - Skipped (non-compliant): {detail['reason']}")
-            for detail in summary.get("files_with_processing_warnings_details", []): # Now a problem
+            for detail in summary.get("files_with_processing_warnings_details", []): 
                 warnings_str = "; ".join(detail['warnings'])
                 problem_reports_list.append(f"- Lang '{lang_code}': File '{detail['path']}' - Processing Warnings: {warnings_str}")
             for detail in summary.get("content_replacement_error_details", []):
@@ -430,9 +446,9 @@ def main_rename_by_dimensions() -> str: # Return type is now str
         
         if lang_dir_path_obj and lang_dir_path_obj.exists():
             print(f"  Final directory location: {lang_dir_path_obj.name}")
-        elif lang_dir_created_flags.get(lang_code) and not lang_dir_path_obj: # Was new, now gone
+        elif lang_dir_created_flags.get(lang_code) and not lang_dir_path_obj: 
             print("  Note: Empty newly created directory was removed as expected.")
-        elif not lang_dir_path_obj and summary.get('status') != "SETUP_ERROR": # Not a setup error, but dir is gone
+        elif not lang_dir_path_obj and summary.get('status') != "SETUP_ERROR": 
             print(f"  Note: Language directory '{config.LANG_DIR_TEMPLATE.format(lang=lang_code)}' may have been archived or removed by other means.")
             
     print("=" * (40 + len(" Overall Script Summary ")))
