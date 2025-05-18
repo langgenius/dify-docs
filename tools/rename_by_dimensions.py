@@ -5,8 +5,10 @@ from pathlib import Path
 import shutil
 import sys
 
-
 class Config:
+    # --- Feature Flags ---
+    UPDATE_REFERENCES = False
+
     # --- Path Setup ---
     BASE_DIR = Path(__file__).resolve().parent.parent
     LANGUAGES = ["zh", "en", "ja"]  # Languages to process
@@ -324,7 +326,7 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
     if total_files > 0: print() 
     print("--- Phase 1: Renaming files complete. ---")
 
-    if rename_mappings:
+    if rename_mappings and config.UPDATE_REFERENCES: # Check config.UPDATE_REFERENCES
         print(f"\n--- Phase 2: Updating content references in '{lang_dir_path.name}' ({len(rename_mappings)} filename changes to propagate) ---")
         all_mdx_after_rename = sorted(list(lang_dir_path.rglob("*.mdx")))
         total_replace_scan = len(all_mdx_after_rename)
@@ -363,7 +365,11 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
         lang_stats["content_replacements_made_count"] = updated_count
         print(f"Content replacement phase: {updated_count} files had their content updated.")
         print("--- Phase 2: Content references update complete. ---")
-    else: print("\nNo renames occurred, skipping content reference update phase.")
+    elif not rename_mappings: # No renames, so skip
+        print("\nNo renames occurred, skipping content reference update phase.")
+    elif not config.UPDATE_REFERENCES: # UPDATE_REFERENCES is False
+        print("\nContent reference update phase skipped as per configuration (UPDATE_REFERENCES=False).")
+
 
     print("-" * 20 + f"\nLanguage Processing Summary ({lang_dir_path.name}):")
     print(f"  Processed (renamed): {lang_stats['processed_count']}")
@@ -372,12 +378,15 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
     print(f"  Skipped (non-compliant for rename): {lang_stats['skipped_non_compliant_count']}")
     print(f"  Files generating warnings: {lang_stats['warning_files_count']}") 
     print(f"  Errors (renaming phase): {lang_stats['error_count']}")
-    if rename_mappings or lang_stats['content_replacement_errors_count'] > 0 or lang_stats['content_replacements_made_count'] > 0:
-        print(f"  Content updated (references): {lang_stats['content_replacements_made_count']}")
-        print(f"  Errors (content update): {lang_stats['content_replacement_errors_count']}")
+    if config.UPDATE_REFERENCES: # Only show content update stats if it was enabled
+        if rename_mappings or lang_stats['content_replacement_errors_count'] > 0 or lang_stats['content_replacements_made_count'] > 0:
+            print(f"  Content updated (references): {lang_stats['content_replacements_made_count']}")
+            print(f"  Errors (content update): {lang_stats['content_replacement_errors_count']}")
+    else:
+        print(f"  Content updated (references): Skipped by configuration") # Indicate skipped
     print("-" * 20)
 
-    if lang_stats["error_count"] > 0 or lang_stats["content_replacement_errors_count"] > 0:
+    if lang_stats["error_count"] > 0 or (config.UPDATE_REFERENCES and lang_stats["content_replacement_errors_count"] > 0):
         lang_stats["status"] = "ERRORS_IN_PROCESSING"
     return lang_stats
 
@@ -385,6 +394,7 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
 def main_rename_by_dimensions() -> str: 
     config = Config()
     print(f"Base directory: {config.BASE_DIR}\nTimestamp for this run: {config.TIMESTAMP}")
+    print(f"Update references flag: {config.UPDATE_REFERENCES}") # Optional: print the flag status
     overall_summary, lang_dir_created_flags, lang_dirs_map = {}, {}, {}
     problem_reports_list = [] 
 
@@ -427,10 +437,19 @@ def main_rename_by_dimensions() -> str:
                 ("skipped_non_compliant_count", "Skipped (non-compliant for rename)"),
                 ("warning_files_count", "Files generating warnings"),
                 ("error_count", "Errors (renaming phase)"),
-                ("content_replacements_made_count", "Content updated (references)"),
-                ("content_replacement_errors_count", "Errors (content update)")
-            ]: 
-                if key in summary: print(f"  {label}: {summary.get(key, 0)}")
+            ]:
+                 if key in summary: print(f"  {label}: {summary.get(key, 0)}")
+
+            if config.UPDATE_REFERENCES: # Only show these if the phase was potentially run
+                for key, label in [
+                    ("content_replacements_made_count", "Content updated (references)"),
+                    ("content_replacement_errors_count", "Errors (content update)")
+                ]:
+                    if key in summary: print(f"  {label}: {summary.get(key, 0)}")
+            else:
+                print(f"  Content updated (references): Skipped by configuration")
+                print(f"  Errors (content update): Skipped by configuration")
+
 
             for detail in summary.get("error_file_details", []):
                 problem_reports_list.append(f"- Lang '{lang_code}': File '{detail['path']}' - Renaming error: {detail['message']}")
