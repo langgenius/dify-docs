@@ -1,0 +1,713 @@
+---
+dimensions:
+  type:
+    primary: reference
+    detail: core
+  level: intermediate
+standard_title: Model Schema
+language: en
+title: Model API Interface
+description: This document provides detailed interface specifications required for
+  Dify model plugin development, including model provider implementation, interface
+  definitions for five model types (LLM, TextEmbedding, Rerank, Speech2text, Text2speech),
+  and complete specifications for related data structures such as PromptMessage and
+  LLMResult. The document serves as a development reference for developers implementing
+  various model integrations.
+---
+
+This section introduces the interface methods and parameter descriptions that providers and each model type need to implement. Before developing a model plugin, you may first need to read [Model Design Rules](/plugin_dev_en/0411-model-designing-rules) and [Model Plugin Introduction](/plugin_dev_en/0131-model-plugin-introduction.en).
+
+### Model Provider
+
+Inherit the `__base.model_provider.ModelProvider` base class and implement the following interface:
+
+```python
+def validate_provider_credentials(self, credentials: dict) -> None:
+    """
+    Validate provider credentials
+    You can choose any validate_credentials method of model type or implement validate method by yourself,
+    such as: get model list api
+
+    if validate failed, raise exception
+
+    :param credentials: provider credentials, credentials form defined in `provider_credential_schema`.
+    """
+```
+
+* `credentials` (object) Credential information
+
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema`, passed in as `api_key`, etc. If validation fails, please throw a `errors.validate.CredentialsValidateFailedError` error. **Note: Predefined models need to fully implement this interface, while custom model providers only need to implement it simply as follows:**
+
+```python
+class XinferenceProvider(Provider):
+    def validate_provider_credentials(self, credentials: dict) -> None:
+        pass
+```
+
+### Models
+
+Models are divided into 5 different types, with different base classes to inherit from and different methods to implement for each type.
+
+#### Common Interfaces
+
+All models need to implement the following 2 methods consistently:
+
+* Model credential validation
+
+Similar to provider credential validation, this validates individual models.
+
+```python
+def validate_credentials(self, model: str, credentials: dict) -> None:
+    """
+    Validate model credentials
+
+    :param model: model name
+    :param credentials: model credentials
+    :return:
+    """
+```
+
+Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc. If validation fails, please throw a `errors.validate.CredentialsValidateFailedError` error.
+
+* Invocation error mapping table
+
+When a model invocation exception occurs, it needs to be mapped to a specified `InvokeError` type in Runtime, which helps Dify handle different errors differently. Runtime Errors:
+
+* `InvokeConnectionError` Connection error during invocation
+* `InvokeServerUnavailableError` Service provider unavailable
+* `InvokeRateLimitError` Rate limit reached
+* `InvokeAuthorizationError` Authentication failed
+* `InvokeBadRequestError` Incorrect parameters passed
+
+```python
+@property
+def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+    """
+    Map model invoke error to unified error
+    The key is the error type thrown to the caller
+    The value is the error type thrown by the model,
+    which needs to be converted into a unified error type for the caller.
+
+    :return: Invoke error mapping
+    """
+```
+
+You can also directly throw corresponding Errors and define them as follows, so that in subsequent calls you can directly throw exceptions like `InvokeConnectionError`.
+
+#### LLM
+
+Inherit the `__base.large_language_model.LargeLanguageModel` base class and implement the following interface:
+
+* LLM Invocation
+
+Implement the core method for LLM invocation, which can support both streaming and synchronous responses.
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            prompt_messages: list[PromptMessage], model_parameters: dict,
+            tools: Optional[list[PromptMessageTool]] = None, stop: Optional[list[str]] = None,
+            stream: bool = True, user: Optional[str] = None) \
+        -> Union[LLMResult, Generator]:
+    """
+    Invoke large language model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param prompt_messages: prompt messages
+    :param model_parameters: model parameters
+    :param tools: tools for tool calling
+    :param stop: stop words
+    :param stream: is stream response
+    :param user: unique user id
+    :return: full response or stream response chunk generator result
+    """
+```
+
+* Parameters:
+  * `model` (string) Model name
+  * `credentials` (object) Credential information
+
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+
+* `prompt_messages` (array\[[PromptMessage](#promptmessage)]) Prompt list
+
+If the model is of `Completion` type, the list only needs to include one [UserPromptMessage](#userpromptmessage) element; if the model is of `Chat` type, different messages need to be passed in as a list of [SystemPromptMessage](#systempromptmessage), [UserPromptMessage](#userpromptmessage), [AssistantPromptMessage](#assistantpromptmessage), [ToolPromptMessage](#toolpromptmessage) elements
+
+* `model_parameters` (object) Model parameters defined by the model YAML configuration's `parameter_rules`.
+
+* `tools` (array\[[PromptMessageTool](#promptmessagetool)]) \[optional] Tool list, equivalent to `function` in `function calling`. This is the tool list passed to tool calling.
+
+* `stop` (array\[string]) \[optional] Stop sequence. The model response will stop output before the string defined in the stop sequence.
+
+* `stream` (bool) Whether to stream output, default is True
+For streaming output, it returns Generator\[[LLMResultChunk](#llmresultchunk)], for non-streaming output, it returns [LLMResult](#llmresult).
+
+* `user` (string) \[optional] A unique identifier for the user that can help the provider monitor and detect abuse.
+
+* Return Value
+
+For streaming output, it returns Generator\[[LLMResultChunk](#llmresultchunk)], for non-streaming output, it returns [LLMResult](#llmresult).
+
+* Pre-calculate input tokens
+
+If the model does not provide a pre-calculation tokens interface, you can directly return 0.
+
+```python
+def get_num_tokens(self, model: str, credentials: dict, prompt_messages: list[PromptMessage],
+                   tools: Optional[list[PromptMessageTool]] = None) -> int:
+    """
+    Get number of tokens for given prompt messages
+
+    :param model: model name
+    :param credentials: model credentials
+    :param prompt_messages: prompt messages
+    :param tools: tools for tool calling
+    :return:
+    """
+```
+
+Parameter explanations are the same as in `LLM Invocation` above. This interface needs to calculate based on the appropriate `tokenizer` for the corresponding `model`. If the corresponding model does not provide a `tokenizer`, you can use the `_get_num_tokens_by_gpt2(text: str)` method in the `AIModel` base class for calculation.
+
+* Get custom model rules [optional]
+
+```python
+def get_customizable_model_schema(self, model: str, credentials: dict) -> Optional[AIModelEntity]:
+    """
+    Get customizable model schema
+
+    :param model: model name
+    :param credentials: model credentials
+    :return: model schema
+    """
+```
+
+When a provider supports adding custom LLMs, this method can be implemented to allow custom models to obtain model rules. By default, it returns None.
+
+For most fine-tuned models under the `OpenAI` provider, the base model can be obtained through the fine-tuned model name, such as `gpt-3.5-turbo-1106`, and then return the predefined parameter rules of the base model. Refer to the specific implementation of [OpenAI](https://github.com/langgenius/dify-official-plugins/tree/main/models/openai).
+
+#### TextEmbedding
+
+Inherit the `__base.text_embedding_model.TextEmbeddingModel` base class and implement the following interface:
+
+* Embedding Invocation
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            texts: list[str], user: Optional[str] = None) \
+        -> TextEmbeddingResult:
+    """
+    Invoke large language model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param texts: texts to embed
+    :param user: unique user id
+    :return: embeddings result
+    """
+```
+
+* Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+
+* `texts` (array\[string]) Text list, can be processed in batch
+* `user` (string) \[optional] A unique identifier for the user
+Can help the provider monitor and detect abuse.
+
+* Return:
+
+[TextEmbeddingResult](#textembeddingresult) entity.
+
+* Pre-calculate tokens
+
+```python
+def get_num_tokens(self, model: str, credentials: dict, texts: list[str]) -> int:
+    """
+    Get number of tokens for given prompt messages
+
+    :param model: model name
+    :param credentials: model credentials
+    :param texts: texts to embed
+    :return:
+    """
+```
+
+Parameter explanations can be found in the `Embedding Invocation` section above.
+
+Similar to the `LargeLanguageModel` above, this interface needs to calculate based on the appropriate `tokenizer` for the corresponding `model`. If the corresponding model does not provide a `tokenizer`, you can use the `_get_num_tokens_by_gpt2(text: str)` method in the `AIModel` base class for calculation.
+
+#### Rerank
+
+Inherit the `__base.rerank_model.RerankModel` base class and implement the following interface:
+
+* Rerank Invocation
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            query: str, docs: list[str], score_threshold: Optional[float] = None, top_n: Optional[int] = None,
+            user: Optional[str] = None) \
+        -> RerankResult:
+    """
+    Invoke rerank model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param query: search query
+    :param docs: docs for reranking
+    :param score_threshold: score threshold
+    :param top_n: top n
+    :param user: unique user id
+    :return: rerank result
+    """
+```
+
+* Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+* `query` (string) Query request content
+* `docs` (array\[string]) List of segments that need to be reranked
+* `score_threshold` (float) \[optional] Score threshold
+* `top_n` (int) \[optional] Take the top n segments
+* `user` (string) \[optional] A unique identifier for the user
+Can help the provider monitor and detect abuse.
+
+* Return:
+
+[RerankResult](#rerankresult) entity.
+
+#### Speech2text
+
+Inherit the `__base.speech2text_model.Speech2TextModel` base class and implement the following interface:
+
+* Invoke
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            file: IO[bytes], user: Optional[str] = None) \
+        -> str:
+    """
+    Invoke large language model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param file: audio file
+    :param user: unique user id
+    :return: text for given audio file
+    """        
+```
+
+* Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+* `file` (File) File stream
+* `user` (string) \[optional] A unique identifier for the user
+Can help the provider monitor and detect abuse.
+
+* Return:
+
+String after speech conversion.
+
+#### Text2speech
+
+Inherit the `__base.text2speech_model.Text2SpeechModel` base class and implement the following interface:
+
+* Invoke
+
+```python
+def _invoke(self, model: str, credentials: dict, content_text: str, streaming: bool, user: Optional[str] = None):
+    """
+    Invoke large language model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param content_text: text content to be translated
+    :param streaming: output is streaming
+    :param user: unique user id
+    :return: translated audio file
+    """        
+```
+
+* Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+* `content_text` (string) Text content to be converted
+* `streaming` (bool) Whether to stream output
+* `user` (string) \[optional] A unique identifier for the user
+Can help the provider monitor and detect abuse.
+
+* Return:
+
+Audio stream after text conversion.
+
+
+#### Moderation
+
+Inherit the `__base.moderation_model.ModerationModel` base class and implement the following interface:
+
+* Invoke
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            text: str, user: Optional[str] = None) \
+        -> bool:
+    """
+    Invoke large language model
+
+    :param model: model name
+    :param credentials: model credentials
+    :param text: text to moderate
+    :param user: unique user id
+    :return: false if text is safe, true otherwise
+    """
+```
+
+* Parameters:
+
+* `model` (string) Model name
+* `credentials` (object) Credential information
+The credential parameters are defined by the provider YAML configuration file's `provider_credential_schema` or `model_credential_schema`, passed in as `api_key`, etc.
+* `text` (string) Text content
+* `user` (string) \[optional] A unique identifier for the user
+Can help the provider monitor and detect abuse.
+
+* Return:
+
+False indicates the input text is safe, True indicates it is not.
+
+### Entities
+
+#### PromptMessageRole
+
+Message role
+
+```python
+class PromptMessageRole(Enum):
+    """
+    Enum class for prompt message.
+    """
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+```
+
+#### PromptMessageContentType
+
+Message content type, divided into plain text and images.
+
+```python
+class PromptMessageContentType(Enum):
+    """
+    Enum class for prompt message content type.
+    """
+    TEXT = 'text'
+    IMAGE = 'image'
+```
+
+#### PromptMessageContent
+
+Message content base class, used only for parameter declaration, cannot be initialized.
+
+```python
+class PromptMessageContent(BaseModel):
+    """
+    Model class for prompt message content.
+    """
+    type: PromptMessageContentType
+    data: str  # Content data
+```
+
+Currently supports two types: text and images, and can support text and multiple images simultaneously.
+You need to initialize `TextPromptMessageContent` and `ImagePromptMessageContent` separately.
+
+#### TextPromptMessageContent
+
+```python
+class TextPromptMessageContent(PromptMessageContent):
+    """
+    Model class for text prompt message content.
+    """
+    type: PromptMessageContentType = PromptMessageContentType.TEXT
+```
+
+When passing in text and images, text needs to be constructed as this entity as part of the `content` list.
+
+#### ImagePromptMessageContent
+
+```python
+class ImagePromptMessageContent(PromptMessageContent):
+    """
+    Model class for image prompt message content.
+    """
+    class DETAIL(Enum):
+        LOW = 'low'
+        HIGH = 'high'
+
+    type: PromptMessageContentType = PromptMessageContentType.IMAGE
+    detail: DETAIL = DETAIL.LOW  # Resolution
+```
+
+When passing in text and images, images need to be constructed as this entity as part of the `content` list.
+`data` can be a `url` or an image `base64` encoded string.
+
+#### PromptMessage
+
+Base class for all Role message bodies, used only for parameter declaration, cannot be initialized.
+
+```python
+class PromptMessage(ABC, BaseModel):
+    """
+    Model class for prompt message.
+    """
+    role: PromptMessageRole  # Message role
+    content: Optional[str | list[PromptMessageContent]] = None  # Supports two types: string and content list. The content list is for multimodal needs, see PromptMessageContent for details.
+    name: Optional[str] = None  # Name, optional.
+```
+
+#### UserPromptMessage
+
+UserMessage message body, represents user messages.
+
+```python
+class UserPromptMessage(PromptMessage):
+    """
+    Model class for user prompt message.
+    """
+    role: PromptMessageRole = PromptMessageRole.USER
+```
+
+#### AssistantPromptMessage
+
+Represents model response messages, typically used for `few-shots` or chat history input.
+
+```python
+class AssistantPromptMessage(PromptMessage):
+    """
+    Model class for assistant prompt message.
+    """
+    class ToolCall(BaseModel):
+        """
+        Model class for assistant prompt message tool call.
+        """
+        class ToolCallFunction(BaseModel):
+            """
+            Model class for assistant prompt message tool call function.
+            """
+            name: str  # Tool name
+            arguments: str  # Tool parameters
+
+        id: str  # Tool ID, only effective for OpenAI tool call, a unique ID for tool invocation, the same tool can be called multiple times
+        type: str  # Default is function
+        function: ToolCallFunction  # Tool call information
+
+    role: PromptMessageRole = PromptMessageRole.ASSISTANT
+    tool_calls: list[ToolCall] = []  # Model's tool call results (only returned when tools are passed in and the model decides to call them)
+```
+
+Here `tool_calls` is the list of `tool call` returned by the model after passing in `tools` to the model.
+
+#### SystemPromptMessage
+
+Represents system messages, typically used to set system instructions for the model.
+
+```python
+class SystemPromptMessage(PromptMessage):
+    """
+    Model class for system prompt message.
+    """
+    role: PromptMessageRole = PromptMessageRole.SYSTEM
+```
+
+#### ToolPromptMessage
+
+Represents tool messages, used to pass results to the model for next-step planning after a tool has been executed.
+
+```python
+class ToolPromptMessage(PromptMessage):
+    """
+    Model class for tool prompt message.
+    """
+    role: PromptMessageRole = PromptMessageRole.TOOL
+    tool_call_id: str  # Tool call ID, if OpenAI tool call is not supported, you can also pass in the tool name
+```
+
+The base class's `content` passes in the tool execution result.
+
+#### PromptMessageTool
+
+```python
+class PromptMessageTool(BaseModel):
+    """
+    Model class for prompt message tool.
+    """
+    name: str  # Tool name
+    description: str  # Tool description
+    parameters: dict  # Tool parameters dict
+
+```
+
+***
+
+#### LLMResult
+
+```python
+class LLMResult(BaseModel):
+    """
+    Model class for llm result.
+    """
+    model: str  # Actually used model
+    prompt_messages: list[PromptMessage]  # Prompt message list
+    message: AssistantPromptMessage  # Reply message
+    usage: LLMUsage  # Tokens used and cost information
+    system_fingerprint: Optional[str] = None  # Request fingerprint, refer to OpenAI parameter definition
+```
+
+#### LLMResultChunkDelta
+
+Delta entity within each iteration in streaming response
+
+```python
+class LLMResultChunkDelta(BaseModel):
+    """
+    Model class for llm result chunk delta.
+    """
+    index: int  # Sequence number
+    message: AssistantPromptMessage  # Reply message
+    usage: Optional[LLMUsage] = None  # Tokens used and cost information, only returned in the last message
+    finish_reason: Optional[str] = None  # Completion reason, only returned in the last message
+```
+
+#### LLMResultChunk
+
+Iteration entity in streaming response
+
+```python
+class LLMResultChunk(BaseModel):
+    """
+    Model class for llm result chunk.
+    """
+    model: str  # Actually used model
+    prompt_messages: list[PromptMessage]  # Prompt message list
+    system_fingerprint: Optional[str] = None  # Request fingerprint, refer to OpenAI parameter definition
+    delta: LLMResultChunkDelta  # Changes in content for each iteration
+```
+
+#### LLMUsage
+
+```python
+class LLMUsage(ModelUsage):
+    """
+    Model class for llm usage.
+    """
+    prompt_tokens: int  # Tokens used by prompt
+    prompt_unit_price: Decimal  # Prompt unit price
+    prompt_price_unit: Decimal  # Prompt price unit, i.e., unit price based on how many tokens
+    prompt_price: Decimal  # Prompt cost
+    completion_tokens: int  # Tokens used by completion
+    completion_unit_price: Decimal  # Completion unit price
+    completion_price_unit: Decimal  # Completion price unit, i.e., unit price based on how many tokens
+    completion_price: Decimal  # Completion cost
+    total_tokens: int  # Total tokens used
+    total_price: Decimal  # Total cost
+    currency: str  # Currency unit
+    latency: float  # Request time (s)
+```
+
+***
+
+#### TextEmbeddingResult
+
+```python
+class TextEmbeddingResult(BaseModel):
+    """
+    Model class for text embedding result.
+    """
+    model: str  # Actually used model
+    embeddings: list[list[float]]  # Embedding vector list, corresponding to the input texts list
+    usage: EmbeddingUsage  # Usage information
+```
+
+#### EmbeddingUsage
+
+```python
+class EmbeddingUsage(ModelUsage):
+    """
+    Model class for embedding usage.
+    """
+    tokens: int  # Tokens used
+    total_tokens: int  # Total tokens used
+    unit_price: Decimal  # Unit price
+    price_unit: Decimal  # Price unit, i.e., unit price based on how many tokens
+    total_price: Decimal  # Total cost
+    currency: str  # Currency unit
+    latency: float  # Request time (s)
+```
+
+***
+
+#### RerankResult
+
+```python
+class RerankResult(BaseModel):
+    """
+    Model class for rerank result.
+    """
+    model: str  # Actually used model
+    docs: list[RerankDocument]  # List of reranked segments        
+```
+
+#### RerankDocument
+
+```python
+class RerankDocument(BaseModel):
+    """
+    Model class for rerank document.
+    """
+    index: int  # Original sequence number
+    text: str  # Segment text content
+    score: float  # Score
+```
+
+## Related Resources
+
+- [Model Design Rules](/plugin_dev_en/0411-model-designing-rules) - Understand the standards for model configuration
+- [Model Plugin Introduction](/plugin_dev_en/0131-model-plugin-introduction.en) - Quickly understand the basic concepts of model plugins
+- [Quickly Integrate a New Model](/plugin_dev_en/0211-getting-started-new-model) - Learn how to add new models to existing providers
+- [Create a New Model Provider](/plugin_dev_en/0222-creating-new-model-provider) - Learn how to develop brand new model providers
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin_dev_en/0412-model-schema.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20model-sch&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin_dev_en%2F0412-model-schema.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>
