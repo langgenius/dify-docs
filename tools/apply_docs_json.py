@@ -17,7 +17,7 @@ DOCS_JSON_PATH = BASE_DIR / "docs.json" # Path to the main documentation structu
 # PWX_TO_GROUP_MAP and DESIRED_GROUP_ORDER are i18n-specific and MUST NOT be translated.
 
 # --- MODIFICATION START for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
-plugin-dev-zh = {
+DEV_ZH = {
     "DOCS_DIR_RELATIVE": "plugin-dev-zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
     "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects .zh before .mdx
     "PWX_TO_GROUP_MAP": { 
@@ -30,7 +30,7 @@ plugin-dev-zh = {
     },
     "DESIRED_GROUP_ORDER": ["概念与入门", "开发实践", "贡献与发布", "实践案例与示例", "高级开发", "Reference & Specifications"],
 }
-plugin-dev-en = {
+DEV_EN = {
     "DOCS_DIR_RELATIVE": "plugin-dev-en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
     "TARGET_TAB_NAME": "Plugin Development", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
@@ -43,7 +43,7 @@ plugin-dev-en = {
     },
     "DESIRED_GROUP_ORDER": ["Concepts & Getting Started", "Development Practices", "Contribution & Publishing", "Examples & Use Cases", "Advanced Development", "Reference & Specifications"],
 }
-PLUGIN_DEV_JA = {
+DEV_JA = {
     "DOCS_DIR_RELATIVE": "plugin-dev-ja", "LANGUAGE_CODE": "日本語", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
     "TARGET_TAB_NAME": "プラグイン開発", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
@@ -520,9 +520,9 @@ def main_apply_docs_json() -> str:
     print(f"Refresh mode: {refresh}") 
 
     CONFIGS_TO_PROCESS = [
-        plugin-dev-zh,
-        plugin-dev-en,
-        PLUGIN_DEV_JA,
+        DEV_ZH,
+        DEV_EN,
+        DEV_JA,
     ]
     
     commit_message_parts = process_all_configs(CONFIGS_TO_PROCESS, DOCS_JSON_PATH)
