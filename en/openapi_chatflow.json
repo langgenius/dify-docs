@@ -1,0 +1,993 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Advanced Chat App API",
+    "description": "Chat applications support session persistence, allowing previous chat history to be used as context for responses. This can be applicable for chatbot, customer service AI, etc. This version includes advanced features like workflow events and more detailed file type support.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{api_base_url}",
+      "description": "The base URL for the Advanced Chat App API. Replace {api_base_url} with the actual API base URL provided for your application (e.g., from props.appDetail.api_base_url).",
+      "variables": {
+        "api_base_url": {
+          "default": "https://example.com/api/v1",
+          "description": "Actual base URL of the API"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/chat-messages": {
+      "post": {
+        "summary": "Send Chat Message",
+        "description": "Send a request to the advanced chat application, supporting various file types and workflow events.",
+        "operationId": "sendAdvancedChatMessage",
+        "tags": ["Chatflow"],
+        "requestBody": {
+          "description": "Request body to send an advanced chat message.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdvancedChatRequest"
+              },
+              "examples": {
+                "streaming_with_file_and_workflow": {
+                  "summary": "Streaming mode example with image file",
+                  "value": {
+                    "inputs": {"user_name": "Alice"},
+                    "query": "Analyze this document and tell me its sentiment.",
+                    "response_mode": "streaming",
+                    "conversation_id": "conv_12345",
+                    "user": "user_alice",
+                    "files": [
+                      {
+                        "type": "document",
+                        "transfer_method": "remote_url",
+                        "url": "https://example.com/mydoc.pdf"
+                      }
+                    ],
+                    "auto_generate_name": true
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful response. The content type and structure depend on the `response_mode`.\n- `blocking`: `application/json` with `ChatCompletionResponse`.\n- `streaming`: `text/event-stream` with `ChunkAdvancedChatEvent` stream.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "A stream of Server-Sent Events. See `ChunkAdvancedChatEvent` for structures."
+                },
+                "examples": {
+                    "workflow_events_example": {
+                        "summary": "Example stream including workflow events",
+                        "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"wf_run_1\", \"workflow_id\": \"wf_def_xyz\", \"sequence_number\": 1, \"created_at\": 1705395332}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"node_run_1\", \"node_id\": \"node_start\", \"node_type\": \"start\", \"title\": \"Start Node\", \"index\": 0, \"inputs\": {}, \"created_at\": 1705395333}}\n\ndata: {\"event\": \"message\", \"task_id\": \"task_abc\", \"message_id\": \"msg_123\", \"conversation_id\": \"conv_123\", \"answer\": \"Processing... \", \"created_at\": 1705395334}\n\ndata: {\"event\": \"node_finished\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"node_run_1\", \"node_id\": \"node_start\", \"node_type\": \"start\", \"title\": \"Start Node\", \"index\": 0, \"status\": \"succeeded\", \"elapsed_time\": 0.5, \"created_at\": 1705395333}}\n\ndata: {\"event\": \"message_end\", \"task_id\": \"task_abc\", \"message_id\": \"msg_123\", \"conversation_id\": \"conv_123\", \"metadata\": {\"usage\": {\"total_tokens\": 10}}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"wf_run_1\", \"workflow_id\": \"wf_def_xyz\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 150, \"total_steps\": 3, \"created_at\": 1705395332, \"finished_at\": 1705395335}}\n\n"
+                    }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestGeneric" },
+          "404": { "$ref": "#/components/responses/ConversationNotFound" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "File Upload",
+        "description": "Upload a file for use when sending messages, enabling multimodal understanding. Supports any formats supported by your application. Uploaded files are for use by the current end-user only.",
+        "operationId": "uploadAdvancedChatFile",
+        "tags": ["Files"],
+        "requestBody": {
+          "description": "File upload request. Requires multipart/form-data.",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "user"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The file to be uploaded."
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "User identifier, unique within the application."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestFile" },
+          "413": { "$ref": "#/components/responses/FileTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFile" },
+          "503": { "$ref": "#/components/responses/S3ErrorFile" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/chat-messages/{task_id}/stop": {
+      "post": {
+        "summary": "Stop Advanced Chat Message Generation",
+        "description": "Stops an advanced chat message generation task. Only supported in streaming mode.",
+        "operationId": "stopAdvancedChatMessageGeneration",
+        "tags": ["Chatflow"],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "description": "Task ID from the streaming chunk.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user"],
+                "properties": {
+                  "user": {
+                    "type": "string",
+                    "description": "User identifier, consistent with the send message call."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResult" }
+        }
+      }
+    },
+    "/messages/{message_id}/feedbacks": {
+      "post": {
+        "summary": "Message Feedback",
+        "description": "Provide feedback for a message.",
+        "operationId": "postAdvancedChatMessageFeedback",
+        "tags": ["Feedback"],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "description": "Message ID.",
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessageFeedbackRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResult" }
+        }
+      }
+    },
+    "/app/feedbacks": {
+      "get": {
+        "summary": "Get feedbacks of application",
+        "description": "Get application's feedbacks.",
+        "operationId": "getAdvancedChatAppFeedbacks",
+        "tags": ["Feedback"],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of application feedbacks.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AppFeedbacksResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages/{message_id}/suggested": {
+      "get": {
+        "summary": "Next Suggested Questions",
+        "description": "Get next questions suggestions for the current message.",
+        "operationId": "getAdvancedSuggestedQuestions",
+        "tags": ["Chatflow"],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "description": "Message ID.",
+            "schema": { "type": "string" }
+          },
+          { "$ref": "#/components/parameters/UserQueryParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved suggested questions.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SuggestedQuestionsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages": {
+      "get": {
+        "summary": "Get Conversation History Messages",
+        "description": "Returns historical chat records in a scrolling load format.",
+        "operationId": "getAdvancedConversationHistory",
+        "tags": ["Conversations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/ConversationIdQueryParam" },
+          { "$ref": "#/components/parameters/UserQueryParam" },
+          {
+            "name": "first_id",
+            "in": "query",
+            "description": "ID of the first chat record on the current page (for pagination).",
+            "schema": { "type": "string" }
+          },
+          { "$ref": "#/components/parameters/LimitQueryParamDefault20" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversation history.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationHistoryResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "summary": "Get Conversations",
+        "description": "Retrieve the conversation list for the current user.",
+        "operationId": "getAdvancedConversationsList",
+        "tags": ["Conversations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/UserQueryParam" },
+          { "$ref": "#/components/parameters/LastIdQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParamDefault20Max100" },
+          { "$ref": "#/components/parameters/SortByQueryParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversations list.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationsListResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations/{conversation_id}": {
+      "delete": {
+        "summary": "Delete Conversation",
+        "description": "Delete a conversation.",
+        "operationId": "deleteAdvancedConversation",
+        "tags": ["Conversations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/ConversationIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user"],
+                "properties": {
+                  "user": { "type": "string", "description": "The user identifier." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Conversation deleted successfully. No Content." }
+        }
+      }
+    },
+    "/conversations/{conversation_id}/name": {
+      "post": {
+        "summary": "Conversation Rename",
+        "description": "Rename the session.",
+        "operationId": "renameAdvancedConversation",
+        "tags": ["Conversations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/ConversationIdPathParam" }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ConversationRenameRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Conversation renamed successfully.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationRenameResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+     "/conversations/{conversation_id}/variables": {
+      "get": {
+        "summary": "Get Conversation Variables",
+        "description": "Retrieve variables from a specific conversation.",
+        "operationId": "getAdvancedConversationVariables",
+        "tags": ["Conversations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/ConversationIdPathParam" },
+          { "$ref": "#/components/parameters/UserQueryParam" },
+          { "$ref": "#/components/parameters/LastIdQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParamDefault20Max100" },
+          { "$ref": "#/components/parameters/VariableNameQueryParam" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversation variables.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConversationVariablesResponse" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/ConversationNotFound" }
+        }
+      }
+    },
+    "/audio-to-text": {
+      "post": {
+        "summary": "Speech to Text",
+        "description": "Convert audio file to text. Supported formats: mp3, mp4, mpeg, mpga, m4a, wav, webm. File size limit: 15MB.",
+        "operationId": "advancedAudioToText",
+        "tags": ["TTS"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": { "$ref": "#/components/schemas/AudioToTextRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successfully converted audio to text.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AudioToTextResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/text-to-audio": {
+      "post": {
+        "summary": "Text to Audio",
+        "description": "Convert text to speech.",
+        "operationId": "advancedTextToAudio",
+        "tags": ["TTS"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+                "schema": { "$ref": "#/components/schemas/TextToAudioJsonRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Audio file generated successfully.",
+            "content": {
+              "audio/wav": { "schema": { "type": "string", "format": "binary" } },
+              "audio/mp3": { "schema": { "type": "string", "format": "binary" } }
+            },
+            "headers": {
+              "Content-Type": {
+                "schema": { "type": "string", "example": "audio/wav" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "Get Application Basic Information",
+        "operationId": "getAdvancedChatAppInfo",
+        "tags": ["Application"],
+        "responses": {
+          "200": {
+            "description": "Basic application information.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AppInfoResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "Get Application Parameters Information",
+        "operationId": "getAdvancedChatAppParameters",
+        "tags": ["Application"],
+        "responses": {
+          "200": {
+            "description": "Application parameters.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ChatAppParametersResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/meta": {
+      "get": {
+        "summary": "Get Application Meta Information",
+        "operationId": "getAdvancedChatAppMeta",
+        "tags": ["Application"],
+        "responses": {
+          "200": {
+            "description": "Application meta information (tool icons).",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AppMetaResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/site": {
+      "get": {
+        "summary": "Get Application WebApp Settings",
+        "operationId": "getAdvancedChatWebAppSettings",
+        "tags": ["Application"],
+        "responses": {
+          "200": {
+            "description": "WebApp settings.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebAppSettingsResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps/annotations": {
+      "get": {
+        "summary": "Get Annotation List",
+        "operationId": "getAdvancedAnnotationList",
+        "tags": ["Annotations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParamDefault20Max100" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Annotation list.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AnnotationListResponse" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Annotation",
+        "operationId": "createAdvancedAnnotation",
+        "tags": ["Annotations"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateAnnotationRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Annotation created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } },
+          "201": { "description": "Annotation created.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } }
+        }
+      }
+    },
+    "/apps/annotations/{annotation_id}": {
+      "put": {
+        "summary": "Update Annotation",
+        "operationId": "updateAdvancedAnnotation",
+        "tags": ["Annotations"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationIdPathParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAnnotationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Annotation updated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } }
+        }
+      },
+      "delete": {
+        "summary": "Delete Annotation",
+        "operationId": "deleteAdvancedAnnotation",
+        "tags": ["Annotations"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationIdPathParam" } ],
+        "responses": {
+          "204": { "description": "Annotation deleted." }
+        }
+      }
+    },
+    "/apps/annotation-reply/{action}": {
+      "post": {
+        "summary": "Initial Annotation Reply Settings",
+        "operationId": "initialAdvancedAnnotationReplySettings",
+        "tags": ["Annotations"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationActionPathParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitialAnnotationReplySettingsRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "Task initiated.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitialAnnotationReplySettingsResponse" } } } },
+          "202": { "description": "Task accepted.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitialAnnotationReplySettingsResponse" } } } }
+        }
+      }
+    },
+    "/apps/annotation-reply/{action}/status/{job_id}": {
+      "get": {
+        "summary": "Query Initial Annotation Reply Settings Task Status",
+        "operationId": "getAdvancedInitialAnnotationReplySettingsStatus",
+        "tags": ["Annotations"],
+        "parameters": [
+          { "$ref": "#/components/parameters/AnnotationActionPathParam" },
+          { "$ref": "#/components/parameters/JobIdPathParam" }
+        ],
+        "responses": {
+          "200": { "description": "Task status.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitialAnnotationReplySettingsStatusResponse" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API_KEY",
+        "description": "API Key authentication."
+      }
+    },
+    "parameters": {
+        "PageQueryParam": { "name": "page", "in": "query", "description": "Page number.", "schema": { "type": "integer", "default": 1 } },
+        "LimitQueryParam": { "name": "limit", "in": "query", "description": "Number of items per page.", "schema": { "type": "integer" } },
+        "LimitQueryParamDefault20": { "name": "limit", "in": "query", "description": "Number of items per page.", "schema": { "type": "integer", "default": 20 } },
+        "LimitQueryParamDefault20Max100": { "name": "limit", "in": "query", "description": "Number of items per page (Default 20, Max 100).", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
+        "UserQueryParam": { "name": "user", "in": "query", "required": true, "description": "User identifier.", "schema": { "type": "string" } },
+        "ConversationIdQueryParam": { "name": "conversation_id", "in": "query", "required": true, "description": "Conversation ID.", "schema": { "type": "string" } },
+        "LastIdQueryParam": { "name": "last_id", "in": "query", "description": "ID of the last record for pagination.", "schema": { "type": "string" } },
+        "SortByQueryParam": { "name": "sort_by", "in": "query", "description": "Sorting field (e.g., -updated_at).", "schema": { "type": "string", "enum": ["created_at", "-created_at", "updated_at", "-updated_at"], "default": "-updated_at" } },
+        "ConversationIdPathParam": { "name": "conversation_id", "in": "path", "required": true, "description": "Conversation ID.", "schema": { "type": "string" } },
+        "VariableNameQueryParam": { "name": "variable_name", "in": "query", "description": "Filter by variable name.", "schema": { "type": "string" } },
+        "AnnotationIdPathParam": { "name": "annotation_id", "in": "path", "required": true, "description": "Annotation ID.", "schema": { "type": "string", "format": "uuid" } },
+        "AnnotationActionPathParam": { "name": "action", "in": "path", "required": true, "description": "Action: 'enable' or 'disable'.", "schema": { "type": "string", "enum": ["enable", "disable"] } },
+        "JobIdPathParam": { "name": "job_id", "in": "path", "required": true, "description": "Job ID.", "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+        "BadRequestGeneric": { "description": "Bad Request. Check parameters.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "BadRequestFile": { "description": "Bad Request for file operation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "FileTooLarge": { "description": "File is too large.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "UnsupportedFileTypeFile": { "description": "Unsupported file type for upload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "S3ErrorFile": { "description": "S3 storage error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "InternalServerError": { "description": "Internal server error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "SuccessResult": { "description": "Operation successful.", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } },
+        "ConversationNotFound": { "description": "Conversation not found.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } }
+    },
+    "schemas": {
+      "AdvancedChatRequest": {
+        "type": "object",
+        "required": ["query", "user"],
+        "properties": {
+          "query": { "type": "string", "description": "User input/question content." },
+          "inputs": {
+            "type": "object",
+            "description": "Key/value pairs for app variables. For file type variables, value should be an InputFileObject.",
+            "additionalProperties": {
+                "oneOf": [
+                    { "type": "string" },
+                    { "type": "number" },
+                    { "type": "boolean" },
+                    { "$ref": "#/components/schemas/InputFileObjectAdvanced" }
+                ]
+            },
+            "default": {}
+          },
+          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "default": "streaming", "description": "Response mode. Cloudflare timeout is 100s for blocking." },
+          "user": { "type": "string", "description": "User identifier." },
+          "conversation_id": { "type": "string", "description": "Conversation ID to continue." },
+          "files": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/InputFileObjectAdvanced" },
+            "description": "List of files for Vision-capable models or general file input."
+          },
+          "auto_generate_name": { "type": "boolean", "default": true, "description": "Auto-generate conversation title." }
+        }
+      },
+      "InputFileObjectAdvanced": {
+        "type": "object",
+        "required": ["type", "transfer_method"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": ["document", "image", "audio", "video", "custom"],
+            "description": "Type of the file. 'document' covers TXT, MD, PDF, HTML, XLSX, DOCX, CSV, EML, MSG, PPTX, XML, EPUB. 'image' covers JPG, PNG, GIF, WEBP, SVG. 'audio' covers MP3, M4A, WAV, WEBM, AMR. 'video' covers MP4, MOV, MPEG, MPGA."
+          },
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"] },
+          "url": { "type": "string", "format": "url", "description": "URL (if `transfer_method` is `remote_url`)." },
+          "upload_file_id": { "type": "string", "description": "Uploaded file ID (if `transfer_method` is `local_file`)." }
+        },
+        "oneOf": [
+            {"required": ["url"]},
+            {"required": ["upload_file_id"]}
+        ],
+        "example": { "type": "image", "transfer_method": "remote_url", "url": "https://example.com/image.png" }
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "description": "Response for blocking mode chat.",
+        "properties": {
+          "event": { "type": "string", "example": "message" },
+          "task_id": { "type": "string", "format": "uuid" },
+          "id": { "type": "string", "format": "uuid", "description": "Unique ID of this response event." },
+          "message_id": { "type": "string", "format": "uuid" },
+          "conversation_id": { "type": "string", "format": "uuid" },
+          "mode": { "type": "string", "example": "chat" },
+          "answer": { "type": "string" },
+          "metadata": { "$ref": "#/components/schemas/ResponseMetadata" },
+          "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "ResponseMetadata": {
+        "type": "object",
+        "properties": {
+            "usage": { "$ref": "#/components/schemas/Usage" },
+            "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResource" } }
+        }
+      },
+      "ChunkAdvancedChatEvent": {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+          "event": { "type": "string", "enum": ["message", "message_file", "message_end", "tts_message", "tts_message_end", "message_replace", "workflow_started", "node_started", "node_finished", "workflow_finished", "error", "ping"] }
+        },
+        "discriminator": {
+          "propertyName": "event",
+          "mapping": {
+            "message": "#/components/schemas/StreamEventAdvChatMessage",
+            "message_file": "#/components/schemas/StreamEventAdvMessageFile",
+            "message_end": "#/components/schemas/StreamEventAdvMessageEnd",
+            "tts_message": "#/components/schemas/StreamEventAdvTtsMessage",
+            "tts_message_end": "#/components/schemas/StreamEventAdvTtsMessageEnd",
+            "message_replace": "#/components/schemas/StreamEventAdvMessageReplace",
+            "workflow_started": "#/components/schemas/StreamEventAdvWorkflowStarted",
+            "node_started": "#/components/schemas/StreamEventAdvNodeStarted",
+            "node_finished": "#/components/schemas/StreamEventAdvNodeFinished",
+            "workflow_finished": "#/components/schemas/StreamEventAdvWorkflowFinished",
+            "error": "#/components/schemas/StreamEventAdvError",
+            "ping": "#/components/schemas/StreamEventAdvPing"
+          }
+        }
+      },
+      "StreamEventBaseAdv": {
+        "type": "object",
+        "properties": {
+            "task_id": { "type": "string", "format": "uuid" },
+            "message_id": { "type": "string", "format": "uuid" },
+            "conversation_id": { "type": "string", "format": "uuid" },
+            "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "StreamEventAdvChatMessage": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "$ref": "#/components/schemas/StreamEventBaseAdv" },
+          { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string" } } } ]
+      },
+      "StreamEventAdvMessageFile": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["id", "type", "belongs_to", "url", "conversation_id"],
+            "properties": {
+              "id": { "type": "string", "format": "uuid" },
+              "type": { "type": "string", "description": "File type, e.g., 'image'." },
+              "belongs_to": { "type": "string", "enum": ["assistant"] },
+              "url": { "type": "string", "format": "url" },
+              "conversation_id": { "type": "string", "format": "uuid" }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvMessageEnd": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "$ref": "#/components/schemas/StreamEventBaseAdv" },
+          { "type": "object", "required": ["metadata"], "properties": { "metadata": { "$ref": "#/components/schemas/ResponseMetadata" } } } ]
+      },
+      "StreamEventAdvTtsMessage": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "$ref": "#/components/schemas/StreamEventBaseAdv" },
+            { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "format": "byte", "description": "Base64 encoded audio." } } }
+        ]
+      },
+      "StreamEventAdvTtsMessageEnd": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "$ref": "#/components/schemas/StreamEventBaseAdv" },
+            { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "description": "Empty string." } } }
+        ]
+      },
+      "StreamEventAdvMessageReplace": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "$ref": "#/components/schemas/StreamEventBaseAdv" },
+            { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "Replacement content." } } }
+        ]
+      },
+      "StreamEventAdvWorkflowStarted": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "workflow_run_id", "data"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "workflow_run_id": { "type": "string", "format": "uuid" },
+              "data": { "$ref": "#/components/schemas/WorkflowStartedData" }
+            }
+          }
+        ]
+      },
+      "WorkflowStartedData": {
+        "type": "object", "required": ["id", "workflow_id", "sequence_number", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workflow_id": { "type": "string", "format": "uuid" },
+          "sequence_number": { "type": "integer" },
+          "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "StreamEventAdvNodeStarted": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "workflow_run_id", "data"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "workflow_run_id": { "type": "string", "format": "uuid" },
+              "data": { "$ref": "#/components/schemas/NodeStartedData" }
+            }
+          }
+        ]
+      },
+      "NodeStartedData": {
+        "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid", "description": "Unique ID of this node execution instance." },
+          "node_id": { "type": "string", "format": "uuid", "description": "ID of the node definition." },
+          "node_type": { "type": "string" }, "title": { "type": "string" }, "index": { "type": "integer" },
+          "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true },
+          "inputs": { "type": "object", "additionalProperties": true, "description": "Variables used by the node." },
+          "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "StreamEventAdvNodeFinished": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "workflow_run_id", "data"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "workflow_run_id": { "type": "string", "format": "uuid" },
+              "data": { "$ref": "#/components/schemas/NodeFinishedData" }
+            }
+          }
+        ]
+      },
+      "NodeFinishedData": {
+        "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }, "node_id": { "type": "string", "format": "uuid" },
+          "node_type": { "type": "string" }, "title": { "type": "string" }, "index": { "type": "integer" },
+          "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true },
+          "inputs": { "type": "object", "additionalProperties": true, "nullable": true },
+          "process_data": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Node process data (JSON)." },
+          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content (JSON)." },
+          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+          "error": { "type": "string", "nullable": true },
+          "elapsed_time": { "type": "number", "format": "float", "nullable": true },
+          "execution_metadata": { "$ref": "#/components/schemas/NodeExecutionMetadata" , "nullable": true},
+          "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "NodeExecutionMetadata": {
+          "type": "object",
+          "properties": {
+              "total_tokens": { "type": "integer", "nullable": true },
+              "total_price": { "type": "number", "format": "float", "nullable": true, "description": "Using float for price compatibility, MD says decimal." },
+              "currency": { "type": "string", "nullable": true, "example": "USD" }
+          }
+      },
+      "StreamEventAdvWorkflowFinished": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "workflow_run_id", "data"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "workflow_run_id": { "type": "string", "format": "uuid" },
+              "data": { "$ref": "#/components/schemas/WorkflowFinishedData" }
+            }
+          }
+        ]
+      },
+      "WorkflowFinishedData": {
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at", "finished_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content (JSON)." },
+          "error": { "type": "string", "nullable": true },
+          "elapsed_time": { "type": "number", "format": "float", "nullable": true },
+          "total_tokens": { "type": "integer", "nullable": true },
+          "total_steps": { "type": "integer", "default": 0 },
+          "created_at": { "type": "integer", "format": "int64" },
+          "finished_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "StreamEventAdvError": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "status", "code", "message"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "message_id": { "type": "string", "format": "uuid", "nullable": true, "description": "May not always be present in a generic error." },
+              "status": { "type": "integer" }, "code": { "type": "string" }, "message": { "type": "string" }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvPing": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" }, { "type": "object" } ]
+      },
+      "Usage": {
+        "type": "object", "properties": { "prompt_tokens": { "type": "integer" }, "prompt_unit_price": { "type": "string" }, "prompt_price_unit": { "type": "string" }, "prompt_price": { "type": "string" }, "completion_tokens": { "type": "integer" }, "completion_unit_price": { "type": "string" }, "completion_price_unit": { "type": "string" }, "completion_price": { "type": "string" }, "total_tokens": { "type": "integer" }, "total_price": { "type": "string" }, "currency": { "type": "string" }, "latency": { "type": "number", "format": "double" } }
+      },
+      "RetrieverResource": {
+        "type": "object", "properties": { "position": { "type": "integer" }, "dataset_id": { "type": "string", "format": "uuid" }, "dataset_name": { "type": "string" }, "document_id": { "type": "string", "format": "uuid" }, "document_name": { "type": "string" }, "segment_id": { "type": "string", "format": "uuid" }, "score": { "type": "number", "format": "float" }, "content": { "type": "string" } }
+      },
+      "FileUploadResponse": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "size": { "type": "integer" }, "extension": { "type": "string" }, "mime_type": { "type": "string" }, "created_by": { "type": "string", "format": "uuid" }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "MessageFeedbackRequest": {
+        "type": "object", "required": ["user"], "properties": { "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true }, "user": { "type": "string" }, "content": { "type": "string", "nullable": true } }
+      },
+      "AppFeedbacksResponse": {
+        "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeedbackItem" } } }
+      },
+      "FeedbackItem": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "app_id": { "type": "string", "format": "uuid" }, "conversation_id": { "type": "string", "format": "uuid" }, "message_id": { "type": "string", "format": "uuid" }, "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true }, "content": { "type": "string" }, "from_source": { "type": "string" }, "from_end_user_id": { "type": "string", "format": "uuid" }, "from_account_id": { "type": "string", "format": "uuid", "nullable": true }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" } }
+      },
+      "SuggestedQuestionsResponse": {
+        "type": "object", "properties": { "result": { "type": "string", "example": "success" }, "data": { "type": "array", "items": { "type": "string" } } }
+      },
+      "ConversationHistoryResponse": {
+        "type": "object", "properties": { "limit": { "type": "integer" }, "has_more": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationMessageItem" } } }
+      },
+      "ConversationMessageItem": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "conversation_id": { "type": "string", "format": "uuid" }, "inputs": { "type": "object", "additionalProperties": true }, "query": { "type": "string" }, "answer": { "type": "string" }, "message_files": { "type": "array", "items": { "$ref": "#/components/schemas/MessageFileItem" } }, "feedback": { "type": "object", "nullable": true, "properties": { "rating": { "type": "string", "enum": ["like", "dislike"] } } }, "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResource" } }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "MessageFileItem": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "type": { "type": "string" }, "url": { "type": "string", "format": "url" }, "belongs_to": { "type": "string", "enum": ["user", "assistant"] } }
+      },
+      "ConversationsListResponse": {
+        "type": "object", "properties": { "limit": { "type": "integer" }, "has_more": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationListItem" } } }
+      },
+      "ConversationListItem": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "inputs": { "type": "object", "additionalProperties": true }, "status": { "type": "string" }, "introduction": { "type": "string", "nullable": true }, "created_at": { "type": "integer", "format": "int64" }, "updated_at": { "type": "integer", "format": "int64" } }
+      },
+      "ConversationRenameRequest": {
+        "type": "object", "required": ["user"], "properties": { "name": { "type": "string", "nullable": true }, "auto_generate": { "type": "boolean", "default": false }, "user": { "type": "string" } }
+      },
+      "ConversationRenameResponse": { "$ref": "#/components/schemas/ConversationListItem" },
+      "ConversationVariablesResponse": {
+        "type": "object", "properties": { "limit": { "type": "integer" }, "has_more": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationVariableItem" } } }
+      },
+      "ConversationVariableItem": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "value_type": { "type": "string" }, "value": { "type": "string" }, "description": { "type": "string", "nullable": true }, "created_at": { "type": "integer", "format": "int64" }, "updated_at": { "type": "integer", "format": "int64" } }
+      },
+      "AudioToTextRequest": {
+        "type": "object", "required": ["file", "user"], "properties": { "file": { "type": "string", "format": "binary", "description": "Audio file. Formats: mp3, mp4, mpeg, mpga, m4a, wav, webm. Limit: 15MB." }, "user": { "type": "string" } }
+      },
+      "AudioToTextResponse": { "type": "object", "properties": { "text": { "type": "string" } } },
+      "TextToAudioJsonRequest": {
+        "type": "object", "required": ["user"],
+        "properties": {
+          "message_id": { "type": "string", "format": "uuid", "description": "Message ID (priority)." },
+          "text": { "type": "string", "description": "Speech content." },
+          "user": { "type": "string" },
+          "streaming": {"type": "boolean", "default": false, "description": "If true, response will be a stream of audio chunks."}
+        },
+        "description": "Requires `user`. Provide `message_id` or `text`."
+      },
+      "AppInfoResponse": {
+        "type": "object", "properties": { "name": { "type": "string" }, "description": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } } }
+      },
+      "ChatAppParametersResponse": {
+        "type": "object", "properties": { "opening_statement": { "type": "string" }, "suggested_questions": { "type": "array", "items": { "type": "string" } }, "suggested_questions_after_answer": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }, "speech_to_text": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }, "text_to_speech": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "voice": { "type": "string" }, "language": { "type": "string" }, "autoPlay": { "type": "string", "enum": ["enabled", "disabled"] } } }, "retriever_resource": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }, "annotation_reply": { "type": "object", "properties": { "enabled": { "type": "boolean" } } }, "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItem" } }, "file_upload": { "type": "object", "properties": { "image": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "number_limits": { "type": "integer" }, "detail": { "type": "string" }, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] } } } } } }, "system_parameters": { "type": "object", "properties": { "file_size_limit": { "type": "integer" }, "image_file_size_limit": { "type": "integer" }, "audio_file_size_limit": { "type": "integer" }, "video_file_size_limit": { "type": "integer" } } } }
+      },
+      "UserInputFormItem": { "type": "object", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapper" }, { "$ref": "#/components/schemas/ParagraphControlWrapper" }, { "$ref": "#/components/schemas/SelectControlWrapper" } ] },
+      "TextInputControlWrapper": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControl" } }, "required":["text-input"] },
+      "ParagraphControlWrapper": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControl" } }, "required":["paragraph"] },
+      "SelectControlWrapper": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControl" } }, "required":["select"] },
+      "TextInputControl": { "type": "object", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" } } },
+      "ParagraphControl": { "type": "object", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" } } },
+      "SelectControl": { "type": "object", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" }, "options": { "type": "array", "items": { "type": "string" } } } },
+      "AppMetaResponse": { "type": "object", "properties": { "tool_icons": { "type": "object", "additionalProperties": { "oneOf": [ { "type": "string", "format": "url" }, { "$ref": "#/components/schemas/ToolIconDetail" } ] } } } },
+      "ToolIconDetail": { "type": "object", "properties": { "background": { "type": "string" }, "content": { "type": "string" } } },
+      "WebAppSettingsResponse": { "type": "object", "properties": { "title": { "type": "string" }, "chat_color_theme": { "type": "string" }, "chat_color_theme_inverted": { "type": "boolean" }, "icon_type": { "type": "string", "enum": ["emoji", "image"] }, "icon": { "type": "string" }, "icon_background": { "type": "string" }, "icon_url": { "type": "string", "format": "url", "nullable": true }, "description": { "type": "string" }, "copyright": { "type": "string" }, "privacy_policy": { "type": "string" }, "custom_disclaimer": { "type": "string" }, "default_language": { "type": "string" }, "show_workflow_steps": { "type": "boolean" }, "use_icon_as_answer_icon": { "type": "boolean" } } },
+      "AnnotationListResponse": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/AnnotationItem" } }, "has_more": { "type": "boolean" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "page": { "type": "integer" } } },
+      "AnnotationItem": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "question": { "type": "string" }, "answer": { "type": "string" }, "hit_count": { "type": "integer" }, "created_at": { "type": "integer", "format": "int64" } } },
+      "CreateAnnotationRequest": { "type": "object", "required": ["question", "answer"], "properties": { "question": { "type": "string" }, "answer": { "type": "string" } } },
+      "UpdateAnnotationRequest": { "type": "object", "required": ["question", "answer"], "properties": { "question": { "type": "string" }, "answer": { "type": "string" } } },
+      "InitialAnnotationReplySettingsRequest": { "type": "object", "required": ["score_threshold"], "properties": { "embedding_provider_name": { "type": "string", "nullable": true }, "embedding_model_name": { "type": "string", "nullable": true }, "score_threshold": { "type": "number", "format": "float" } } },
+      "InitialAnnotationReplySettingsResponse": { "type": "object", "properties": { "job_id": { "type": "string", "format": "uuid" }, "job_status": { "type": "string" } } },
+      "InitialAnnotationReplySettingsStatusResponse": { "type": "object", "properties": { "job_id": { "type": "string", "format": "uuid" }, "job_status": { "type": "string" }, "error_msg": { "type": "string", "nullable": true } } },
+      "ErrorResponse": { "type": "object", "properties": { "status": { "type": "integer", "nullable": true }, "code": { "type": "string", "nullable": true }, "message": { "type": "string" } } }
+    }
+  },
+  "tags": [
+    { "name": "Chatflow", "description": "Advanced chat operations with workflow events." },
+    { "name": "Files", "description": "File upload operations for advanced chat." },
+    { "name": "Feedback", "description": "User feedback operations for advanced chat." },
+    { "name": "Conversations", "description": "Conversation management for advanced chat." },
+    { "name": "TTS", "description": "Speech and Text conversion for advanced chat." },
+    { "name": "Application", "description": "Application settings and info for advanced chat." },
+    { "name": "Annotations", "description": "Annotation management for advanced chat." }
+  ]
+}

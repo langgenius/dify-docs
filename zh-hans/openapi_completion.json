@@ -1,0 +1,643 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "文本生成型应用 API",
+    "description": "文本生成应用无会话支持，适合用于翻译/文章写作/总结 AI 等等。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{api_base_url}",
+      "description": "API 的基础 URL。请将 {api_base_url} 替换为您的应用提供的实际 API 基础 URL。",
+      "variables": {
+        "api_base_url": {
+          "default": "https://example.com/api/v1",
+          "description": "实际的 API 基础 URL"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/completion-messages": {
+      "post": {
+        "summary": "发送消息",
+        "description": "发送请求给文本生成型应用。",
+        "operationId": "createCompletionMessage",
+        "tags": ["文本生成"],
+        "requestBody": {
+          "description": "创建完成消息的请求体。",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionRequest"
+              },
+              "examples": {
+                "streaming_example": {
+                  "summary": "流式模式示例",
+                  "value": {
+                    "inputs": {"query": "你好，世界！"},
+                    "response_mode": "streaming",
+                    "user": "abc-123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "成功响应。内容类型和结构取决于请求中的 `response_mode` 参数。\n- 若 `response_mode` 为 `blocking`，返回 `application/json` 及 `ChatCompletionResponse` 对象。\n- 若 `response_mode` 为 `streaming`，返回 `text/event-stream` 及 `ChunkChatCompletionResponse` 流式序列。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
+                },
+                "examples": {
+                    "blockingResponse": {
+                        "summary": "阻塞模式响应示例",
+                        "value": {
+                          "id": "0b089b9a-24d9-48cc-94f8-762677276261",
+                          "message_id": "0b089b9a-24d9-48cc-94f8-762677276261",
+                          "mode": "chat",
+                          "answer": "how are you?",
+                          "metadata": {},
+                          "created_at": 1679586667
+                        }
+                    }
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "服务器发送事件 (SSE) 流。每个事件都是以 'data: ' 开头，以 '\\n\\n' 结尾的 JSON 对象。详见 `ChunkEvent` 的可能结构。"
+                },
+                "examples": {
+                  "streamingResponse": {
+                    "summary": "流式模式响应示例",
+                    "value": "data: {\"event\": \"message\", \"task_id\": \"900bbd43-dc0b-4383-a372-aa6e6c414227\", \"id\": \"663c5084-a254-4040-8ad3-51f2a3c1a77c\", \"message_id\": \"663c5084-a254-4040-8ad3-51f2a3c1a77c\", \"answer\": \"Hi\", \"created_at\": 1705398420}\n\ndata: {\"event\": \"tts_message\", \"task_id\": \"3bf8a0bb-e73b-4690-9e66-4e429bad8ee7\", \"message_id\": \"a8bdc41c-13b2-4c18-bfd9-054b9803038c\", \"audio\": \"base64encodedaudio...\", \"created_at\": 1721205487}\n\n"
+                  }
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestCompletion" },
+          "404": { "$ref": "#/components/responses/ConversationNotFound" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "上传文件",
+        "description": "上传文件（目前仅支持图片）并在发送消息时使用，可实现图文多模态理解。支持 png, jpg, jpeg, webp, gif 格式。上传的文件仅供当前终端用户使用。",
+        "operationId": "uploadFile",
+        "tags": ["文件管理"],
+        "requestBody": {
+          "description": "文件上传请求，需使用 `multipart/form-data`。",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "user"],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "要上传的文件。支持的图片类型：png, jpg, jpeg, webp, gif。"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "用户标识，由开发者定义规则，需保证用户标识在应用内唯一，必须和发送消息接口传入 user 保持一致。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "文件上传成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "文件创建成功 (备选成功状态码)。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestFile" },
+          "413": { "$ref": "#/components/responses/FileTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFile" },
+          "503": { "$ref": "#/components/responses/S3ErrorFile" }
+        }
+      }
+    },
+    "/completion-messages/{task_id}/stop": {
+      "post": {
+        "summary": "停止响应",
+        "description": "停止生成任务，仅支持流式模式。",
+        "operationId": "stopCompletionGeneration",
+        "tags": ["文本生成"],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "description": "任务 ID，可在流式返回 Chunk 中获取。",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user"],
+                "properties": {
+                  "user": {
+                    "type": "string",
+                    "description": "用户标识，必须和发送消息接口传入 user 保持一致。"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResult" }
+        }
+      }
+    },
+    "/messages/{message_id}/feedbacks": {
+      "post": {
+        "summary": "消息反馈（点赞）",
+        "description": "消息终端用户反馈、点赞，方便应用开发者优化输出预期。",
+        "operationId": "postMessageFeedback",
+        "tags": ["反馈"],
+        "parameters": [
+          {
+            "name": "message_id",
+            "in": "path",
+            "required": true,
+            "description": "消息 ID。",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MessageFeedbackRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResult" }
+        }
+      }
+    },
+    "/app/feedbacks": {
+      "get": {
+        "summary": "获取应用反馈列表",
+        "description": "获取应用的反馈信息。",
+        "operationId": "getAppFeedbacks",
+        "tags": ["反馈"],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParamDefault20" }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取应用反馈列表。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AppFeedbacksResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/text-to-audio": {
+      "post": {
+        "summary": "文字转语音",
+        "description": "将文本内容转换为语音。",
+        "operationId": "textToAudio",
+        "tags": ["语音服务"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/TextToAudioRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "语音文件生成成功。",
+            "content": {
+              "audio/wav": { "schema": { "type": "string", "format": "binary", "description": "生成的 WAV 格式音频文件。" } },
+              "audio/mp3": { "schema": { "type": "string", "format": "binary", "description": "生成的 MP3 格式音频文件。" } }
+            },
+            "headers": {
+              "Content-Type": { "schema": { "type": "string", "example": "audio/wav" }, "description": "响应的内容类型，通常为 `audio/wav` 或 `audio/mp3`。" }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "获取应用基本信息",
+        "description": "用于获取此应用的基本信息。",
+        "operationId": "getAppInfo",
+        "tags": ["应用设置"],
+        "responses": {
+          "200": {
+            "description": "应用的基本信息。",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppInfoResponse" } } }
+          }
+        }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "获取应用参数",
+        "description": "用于进入页面一开始，获取功能开关、输入参数名称、类型及默认值等使用。",
+        "operationId": "getAppParameters",
+        "tags": ["应用设置"],
+        "responses": {
+          "200": {
+            "description": "应用的参数信息。",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppParametersResponseCompletion" } } }
+          }
+        }
+      }
+    },
+    "/site": {
+      "get": {
+        "summary": "获取应用 WebApp 设置",
+        "description": "用于获取应用的 WebApp 设置。",
+        "operationId": "getWebAppSettings",
+        "tags": ["应用设置"],
+        "responses": {
+          "200": {
+            "description": "应用的 WebApp 设置信息。",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WebAppSettingsResponse" } } }
+          }
+        }
+      }
+    },
+    "/apps/annotations": {
+      "get": {
+        "summary": "获取标注列表",
+        "description": "获取应用的标注列表。",
+        "operationId": "getAnnotationList",
+        "tags": ["标注管理"],
+        "parameters": [
+          { "$ref": "#/components/parameters/PageQueryParam" },
+          { "$ref": "#/components/parameters/LimitQueryParamAnnotation" }
+        ],
+        "responses": {
+          "200": { "description": "成功获取标注列表。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationListResponse" } } } }
+        }
+      },
+      "post": {
+        "summary": "创建标注",
+        "description": "创建一个新的标注。",
+        "operationId": "createAnnotation",
+        "tags": ["标注管理"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CreateAnnotationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "标注创建成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } },
+          "201": { "description": "标注创建成功 (备选)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } }
+        }
+      }
+    },
+    "/apps/annotations/{annotation_id}": {
+      "put": {
+        "summary": "更新标注",
+        "description": "更新一个已存在的标注。",
+        "operationId": "updateAnnotation",
+        "tags": ["标注管理"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationIdPathParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UpdateAnnotationRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "标注更新成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AnnotationItem" } } } }
+        }
+      },
+      "delete": {
+        "summary": "删除标注",
+        "description": "删除一个标注。",
+        "operationId": "deleteAnnotation",
+        "tags": ["标注管理"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationIdPathParam" } ],
+        "responses": { "204": { "description": "标注删除成功，无内容返回。" } }
+      }
+    },
+    "/apps/annotation-reply/{action}": {
+      "post": {
+        "summary": "标注回复初始设置",
+        "description": "启用或禁用标注回复设置，并配置嵌入模型。此接口异步执行。嵌入模型的提供商和模型名称可通过 v1/workspaces/current/models/model-types/text-embedding 接口获取（使用 Dataset API Token 鉴权）。",
+        "operationId": "initialAnnotationReplySettings",
+        "tags": ["标注管理"],
+        "parameters": [ { "$ref": "#/components/parameters/AnnotationActionPathParam" } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/InitialAnnotationReplySettingsRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "标注回复设置任务已启动。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncJobResponse" } } } },
+          "202": { "description": "标注回复设置任务已接受。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncJobResponse" } } } }
+        }
+      }
+    },
+    "/apps/annotation-reply/{action}/status/{job_id}": {
+      "get": {
+        "summary": "查询标注回复初始设置任务状态",
+        "description": "查询异步执行的标注回复初始设置任务的状态。",
+        "operationId": "getInitialAnnotationReplySettingsStatus",
+        "tags": ["标注管理"],
+        "parameters": [
+          { "$ref": "#/components/parameters/AnnotationActionPathParam" },
+          { "$ref": "#/components/parameters/JobIdPathParam" }
+        ],
+        "responses": {
+          "200": { "description": "成功获取任务状态。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AsyncJobStatusResponse" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API_KEY",
+        "description": "API-Key 鉴权。所有 API 请求都应在 `Authorization` HTTP Header 中包含您的 API-Key，格式为 `Bearer {API_KEY}`。**强烈建议开发者把 API-Key 放在后端存储，而非分享或者放在客户端存储，以免 API-Key 泄露，导致财产损失。**"
+      }
+    },
+    "parameters": {
+        "PageQueryParam": { "name": "page", "in": "query", "description": "（可选）分页页码，默认：1。", "schema": { "type": "integer", "default": 1 } },
+        "LimitQueryParamDefault20": { "name": "limit", "in": "query", "description": "（可选）每页记录数，默认：20。", "schema": { "type": "integer", "default": 20 } },
+        "LimitQueryParamAnnotation": { "name": "limit", "in": "query", "description": "每页数量，默认 20，范围 1-100。", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
+        "AnnotationIdPathParam": { "name": "annotation_id", "in": "path", "required": true, "description": "标注 ID。", "schema": { "type": "string", "format": "uuid" } },
+        "AnnotationActionPathParam": { "name": "action", "in": "path", "required": true, "description": "动作，只能是 'enable' 或 'disable'。", "schema": { "type": "string", "enum": ["enable", "disable"] } },
+        "JobIdPathParam": { "name": "job_id", "in": "path", "required": true, "description": "任务 ID，从标注回复初始设置接口返回。", "schema": { "type": "string", "format": "uuid" } }
+    },
+    "responses": {
+        "BadRequestCompletion": { "description": "错误的请求。可能原因：`invalid_param`（参数异常），`app_unavailable`（App 配置不可用），`provider_not_initialize`（无可用模型凭据），`provider_quota_exceeded`（额度不足），`model_currently_not_support`（模型不可用），`completion_request_error`（文本生成失败）。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "BadRequestFile": { "description": "文件操作相关的错误请求。可能原因：`no_file_uploaded`，`too_many_files`，`unsupported_preview`，`unsupported_estimate`。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "ConversationNotFound": { "description": "对话不存在。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "FileTooLarge": { "description": "文件太大 (`file_too_large`)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "UnsupportedFileTypeFile": { "description": "不支持的文件类型 (`unsupported_file_type`)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "S3ErrorFile": { "description": "S3 存储服务错误。可能原因：`s3_connection_failed`，`s3_permission_denied`，`s3_file_too_large`。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "InternalServerError": { "description": "服务内部异常。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "SuccessResult": { "description": "操作成功。", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } }
+    },
+    "schemas": {
+      "CompletionRequest": {
+        "type": "object",
+        "required": ["inputs", "response_mode", "user"],
+        "properties": {
+          "inputs": {
+            "type": "object",
+            "description": "（选填）允许传入 App 定义的各变量值。inputs 参数包含了多组键值对，每组的键对应一个特定变量，值则是该变量的具体值。文本生成型应用要求至少传入一组键值对。",
+            "required": ["query"],
+            "properties": {
+              "query": { "type": "string", "description": "用户输入的文本内容。" }
+            },
+            "additionalProperties": true 
+          },
+          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "description": "响应返回模式。`streaming`：流式模式（推荐），基于 SSE 实现打字机输出。`blocking`：阻塞模式，等待执行完毕后返回（长流程可能中断）。Cloudflare 限制为 100 秒超时。" },
+          "user": { "type": "string", "description": "用户标识，用于定义终端用户的身份，方便检索、统计。由开发者定义规则，需保证用户标识在应用内唯一。" },
+          "files": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/InputFileObject" },
+            "description": "上传的文件列表（目前仅支持图片）。"
+          }
+        }
+      },
+      "InputFileObject": {
+        "type": "object",
+        "required": ["type", "transfer_method"],
+        "properties": {
+          "type": { "type": "string", "enum": ["image"], "description": "支持类型：图片 `image`。" },
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "传递方式：`remote_url` (图片地址) 或 `local_file` (上传文件)。" },
+          "url": { "type": "string", "format": "url", "description": "图片地址（当传递方式为 `remote_url` 时）。" },
+          "upload_file_id": { "type": "string", "description": "上传文件 ID（当传递方式为 `local_file` 时，需通过文件上传 API 预先获取）。" }
+        },
+        "oneOf": [ {"required": ["url"]}, {"required": ["upload_file_id"]} ]
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "description": "阻塞模式下的完整 App 结果。",
+        "properties": {
+          "message_id": { "type": "string", "format": "uuid", "description": "消息唯一 ID。" },
+          "mode": { "type": "string", "description": "App 模式，固定为 `chat`。", "example": "chat" },
+          "answer": { "type": "string", "description": "完整回复内容。" },
+          "metadata": { "$ref": "#/components/schemas/ResponseMetadata" },
+          "created_at": { "type": "integer", "format": "int64", "description": "消息创建时间戳，如：1705395332。" }
+        }
+      },
+      "ResponseMetadata": {
+        "type": "object", "description": "元数据。",
+        "properties": {
+          "usage": { "$ref": "#/components/schemas/Usage" },
+          "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResource" }, "description": "引用和归属分段列表。" }
+        }
+      },
+      "ChunkEvent": {
+        "type": "object",
+        "description": "流式响应中的事件块结构。",
+        "required": ["event"],
+        "properties": {
+          "event": { "type": "string", "enum": ["message", "message_end", "tts_message", "tts_message_end", "message_replace", "error", "ping"], "description": "事件类型。" }
+        },
+        "discriminator": {
+          "propertyName": "event",
+          "mapping": {
+            "message": "#/components/schemas/StreamEventMessage",
+            "message_end": "#/components/schemas/StreamEventMessageEnd",
+            "tts_message": "#/components/schemas/StreamEventTtsMessage",
+            "tts_message_end": "#/components/schemas/StreamEventTtsMessageEnd",
+            "message_replace": "#/components/schemas/StreamEventMessageReplace",
+            "error": "#/components/schemas/StreamEventError",
+            "ping": "#/components/schemas/StreamEventPing"
+          }
+        }
+      },
+      "StreamEventBase": {
+          "type": "object",
+          "properties": {
+              "task_id": { "type": "string", "format": "uuid", "description": "任务 ID，用于请求跟踪和停止响应接口。" },
+              "message_id": { "type": "string", "format": "uuid", "description": "消息唯一 ID。" },
+              "created_at": { "type": "integer", "format": "int64", "description": "创建时间戳，如：1705395332。" }
+          }
+      },
+      "StreamEventMessage": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "LLM 返回文本块事件。", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "LLM 返回文本块内容。" } } }
+        ]
+      },
+      "StreamEventMessageEnd": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "消息结束事件。", "required": ["metadata"], "properties": { "metadata": { "$ref": "#/components/schemas/ResponseMetadata" } } }
+        ]
+      },
+      "StreamEventTtsMessage": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "TTS 音频流事件 (Mp3格式, Base64编码)。开启自动播放时可用。", "required": ["audio"], "properties": { "audio": { "type": "string", "format": "byte", "description": "Base64 编码的音频块。" } } }
+        ]
+      },
+      "StreamEventTtsMessageEnd": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "TTS 音频流结束事件。", "required": ["audio"], "properties": { "audio": { "type": "string", "description": "空字符串。" } } }
+        ]
+      },
+      "StreamEventMessageReplace": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "消息内容替换事件（内容审查触发）。", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "替换内容（直接替换所有 LLM 回复）。" } } }
+        ]
+      },
+      "StreamEventError": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "$ref": "#/components/schemas/StreamEventBase" },
+          { "type": "object", "description": "流式输出过程中的异常事件。", "required": ["status", "code", "message"],
+            "properties": { "status": { "type": "integer", "description": "HTTP 状态码。" }, "code": { "type": "string", "description": "错误码。" }, "message": { "type": "string", "description": "错误消息。" } }
+          }
+        ]
+      },
+      "StreamEventPing": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkEvent" }, { "type": "object", "description": "每 10s 一次的 ping 事件，保持连接存活。" } ]
+      },
+      "Usage": {
+        "type": "object", "description": "模型用量信息。",
+        "properties": { "prompt_tokens": { "type": "integer" }, "prompt_unit_price": { "type": "string" }, "prompt_price_unit": { "type": "string" }, "prompt_price": { "type": "string" }, "completion_tokens": { "type": "integer" }, "completion_unit_price": { "type": "string" }, "completion_price_unit": { "type": "string" }, "completion_price": { "type": "string" }, "total_tokens": { "type": "integer" }, "total_price": { "type": "string" }, "currency": { "type": "string" }, "latency": { "type": "number", "format": "double" } }
+      },
+      "RetrieverResource": {
+        "type": "object", "description": "引用和归属分段信息。",
+        "properties": { "position": { "type": "integer" }, "dataset_id": { "type": "string", "format": "uuid" }, "dataset_name": { "type": "string" }, "document_id": { "type": "string", "format": "uuid" }, "document_name": { "type": "string" }, "segment_id": { "type": "string", "format": "uuid" }, "score": { "type": "number", "format": "float" }, "content": { "type": "string" } }
+      },
+      "FileUploadResponse": {
+        "type": "object", "description": "文件上传成功后的响应。",
+        "properties": { "id": { "type": "string", "format": "uuid", "description": "ID。" }, "name": { "type": "string", "description": "文件名。" }, "size": { "type": "integer", "description": "文件大小（byte）。" }, "extension": { "type": "string", "description": "文件后缀。" }, "mime_type": { "type": "string", "description": "文件 mime-type。" }, "created_by": { "type": "string", "format": "uuid", "description": "上传人 ID (示例中为integer，规范为uuid)。" }, "created_at": { "type": "integer", "format": "int64", "description": "上传时间。" } }
+      },
+      "MessageFeedbackRequest": {
+        "type": "object", "required": ["user"], "description": "消息反馈请求体。",
+        "properties": { "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true, "description": "点赞 `like`, 点踩 `dislike`, 撤销 `null`。" }, "user": { "type": "string", "description": "用户标识，应用内唯一。" }, "content": { "type": "string", "nullable": true, "description": "消息反馈的具体信息。" } }
+      },
+      "AppFeedbacksResponse": {
+        "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeedbackItem" }, "description": "应用反馈列表。" } }
+      },
+      "FeedbackItem": {
+        "type": "object", "description": "单个反馈条目。",
+        "properties": { "id": { "type": "string", "format": "uuid" }, "app_id": { "type": "string", "format": "uuid" }, "conversation_id": { "type": "string", "format": "uuid", "nullable": true }, "message_id": { "type": "string", "format": "uuid" }, "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true }, "content": { "type": "string", "nullable": true }, "from_source": { "type": "string" }, "from_end_user_id": { "type": "string", "format": "uuid" }, "from_account_id": { "type": "string", "format": "uuid", "nullable": true }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" } }
+      },
+      "TextToAudioRequest": {
+        "type": "object", "required": ["user"], "description": "文字转语音请求体。",
+        "properties": { "message_id": { "type": "string", "format": "uuid", "description": "Dify 生成的消息 ID（优先使用）。" }, "text": { "type": "string", "description": "语音生成内容（若无 message_id）。" }, "user": { "type": "string", "description": "用户标识，应用内唯一。" }, "streaming": {"type": "boolean", "default": false, "description": "是否流式返回音频。"} },
+        "example": { "message_id": "5ad4cb98-f0c7-4085-b384-88c403be6290", "text": "你好Dify", "user": "abc-123", "streaming": false }
+      },
+      "AppInfoResponse": {
+        "type": "object", "description": "应用基本信息。",
+        "properties": { "name": { "type": "string", "description": "应用名称。" }, "description": { "type": "string", "description": "应用描述。" }, "tags": { "type": "array", "items": { "type": "string" }, "description": "应用标签。" } }
+      },
+      "AppParametersResponseCompletion": {
+        "type": "object", "description": "应用参数信息。",
+        "properties": {
+          "opening_statement": { "type": "string", "description": "开场白。", "example": "nice to meet you" },
+          "suggested_questions": { "type": "array", "items": { "type": "string" }, "description": "开场推荐问题列表。" },
+          "suggested_questions_after_answer": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "是否开启回答后推荐问题。" } } },
+          "speech_to_text": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "是否开启语音转文本。" } } },
+          "retriever_resource": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "是否开启引用和归属。" } } },
+          "annotation_reply": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "是否开启标记回复。" } } },
+          "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItem" }, "description": "用户输入表单配置。" },
+          "file_upload": { "$ref": "#/components/schemas/FileUploadSetting" },
+          "system_parameters": { "$ref": "#/components/schemas/SystemParameters" }
+        }
+      },
+      "UserInputFormItem": { "type": "object", "description": "用户输入表单中的一个控件。", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapper" }, { "$ref": "#/components/schemas/ParagraphControlWrapper" }, { "$ref": "#/components/schemas/SelectControlWrapper" } ] },
+      "TextInputControlWrapper": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControl" } }, "required":["text-input"] },
+      "ParagraphControlWrapper": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControl" } }, "required":["paragraph"] },
+      "SelectControlWrapper": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControl" } }, "required":["select"] },
+      "TextInputControl": { "type": "object", "description": "文本输入控件。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "description": "默认值。" }, "max_length": {"type": "integer", "description": "最大长度 (来自示例)。", "nullable": true} } },
+      "ParagraphControl": { "type": "object", "description": "段落文本输入控件。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "description": "默认值。" } } },
+      "SelectControl": { "type": "object", "description": "下拉控件。", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "description": "默认值。" }, "options": { "type": "array", "items": { "type": "string" }, "description": "选项值。" } } },
+      "FileUploadSetting": {
+        "type": "object", "description": "文件上传配置。",
+        "properties": { "image": { "type": "object", "description": "图片设置。当前仅支持图片类型：`png`, `jpg`, `jpeg`, `webp`, `gif`。", "properties": { "enabled": { "type": "boolean", "description": "是否开启。" }, "number_limits": { "type": "integer", "description": "图片数量限制，默认 3。" }, "detail": {"type": "string", "description": "图片细节 (来自示例)。", "nullable": true}, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] }, "description": "传递方式列表，remote_url , local_file，必选一个。" } } } }
+      },
+      "SystemParameters": {
+        "type": "object", "description": "系统参数。",
+        "properties": { "file_size_limit": { "type": "integer", "description": "文档上传大小限制 (MB)。" }, "image_file_size_limit": { "type": "integer", "description": "图片文件上传大小限制（MB）。" }, "audio_file_size_limit": { "type": "integer", "description": "音频文件上传大小限制 (MB)。" }, "video_file_size_limit": { "type": "integer", "description": "视频文件上传大小限制 (MB)。" } }
+      },
+      "WebAppSettingsResponse": {
+        "type": "object", "description": "应用的 WebApp 设置。",
+        "properties": { "title": { "type": "string", "description": "WebApp 名称。" }, "chat_color_theme": { "type": "string", "description": "聊天颜色主题, hex 格式。" }, "chat_color_theme_inverted": { "type": "boolean", "description": "聊天颜色主题是否反转。" }, "icon_type": { "type": "string", "enum": ["emoji", "image"], "description": "图标类型, `emoji`-表情, `image`-图片。" }, "icon": { "type": "string", "description": "图标, emoji 或图片 URL。" }, "icon_background": { "type": "string", "description": "hex 格式的背景色。" }, "icon_url": { "type": "string", "format": "url", "nullable": true, "description": "图标 URL。" }, "description": { "type": "string", "description": "描述。" }, "copyright": { "type": "string", "description": "版权信息。" }, "privacy_policy": { "type": "string", "description": "隐私政策链接。" }, "custom_disclaimer": { "type": "string", "description": "自定义免责声明。" }, "default_language": { "type": "string", "description": "默认语言。" }, "show_workflow_steps": { "type": "boolean", "description": "是否显示工作流详情。" }, "use_icon_as_answer_icon": { "type": "boolean", "description": "是否使用 WebApp 图标替换聊天中的 机器人图标。" } }
+      },
+      "AnnotationListResponse": {
+        "type": "object", "description": "标注列表响应。",
+        "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/AnnotationItem" } }, "has_more": { "type": "boolean" }, "limit": { "type": "integer" }, "total": { "type": "integer" }, "page": { "type": "integer" } }
+      },
+      "AnnotationItem": {
+        "type": "object", "description": "单个标注条目。",
+        "properties": { "id": { "type": "string", "format": "uuid" }, "question": { "type": "string", "description": "问题。" }, "answer": { "type": "string", "description": "答案内容。" }, "hit_count": { "type": "integer", "description": "命中次数。" }, "created_at": { "type": "integer", "format": "int64", "description": "创建时间戳。" } }
+      },
+      "CreateAnnotationRequest": {
+        "type": "object", "required": ["question", "answer"], "description": "创建标注请求体。",
+        "properties": { "question": { "type": "string", "description": "问题。" }, "answer": { "type": "string", "description": "答案内容。" } }
+      },
+      "UpdateAnnotationRequest": {
+        "type": "object", "required": ["question", "answer"], "description": "更新标注请求体。",
+        "properties": { "question": { "type": "string", "description": "问题。" }, "answer": { "type": "string", "description": "答案内容。" } }
+      },
+      "InitialAnnotationReplySettingsRequest": {
+        "type": "object", "required": ["score_threshold"], "description": "标注回复初始设置请求体。",
+        "properties": { "embedding_provider_name": { "type": "string", "nullable": true, "description": "（可选）指定的嵌入模型提供商名称。" }, "embedding_model_name": { "type": "string", "nullable": true, "description": "（可选）指定的嵌入模型名称。" }, "score_threshold": { "type": "number", "format": "float", "description": "相似度阈值。" } }
+      },
+      "AsyncJobResponse": {
+        "type": "object", "description": "异步任务响应。",
+        "properties": { "job_id": { "type": "string", "format": "uuid", "description": "任务 ID。" }, "job_status": { "type": "string", "description": "任务状态。" } }
+      },
+      "AsyncJobStatusResponse": {
+        "allOf": [ { "$ref": "#/components/schemas/AsyncJobResponse" }, { "type": "object", "properties": { "error_msg": { "type": "string", "nullable": true, "description": "错误信息（如果任务失败）。" } } } ]
+      },
+      "ErrorResponse": {
+        "type": "object", "description": "错误响应结构。",
+        "properties": { "status": { "type": "integer", "description": "HTTP 状态码。", "nullable": true }, "code": { "type": "string", "description": "错误码。", "nullable": true }, "message": { "type": "string", "description": "错误消息。" } }
+      }
+    }
+  },
+  "tags": [
+    { "name": "文本生成", "description": "与文本生成和完成相关的操作。" },
+    { "name": "文件管理", "description": "与文件上传和管理相关的操作。" },
+    { "name": "反馈", "description": "与用户反馈相关的操作。" },
+    { "name": "语音服务", "description": "与文本转语音相关的操作。" },
+    { "name": "应用设置", "description": "获取应用基本信息和参数配置的操作。" },
+    { "name": "标注管理", "description": "与标注（用于直接回复）相关的操作。" }
+  ]
+}
