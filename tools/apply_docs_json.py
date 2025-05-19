@@ -17,7 +17,7 @@ DOCS_JSON_PATH = BASE_DIR / "docs.json" # Path to the main documentation structu
 # PWX_TO_GROUP_MAP and DESIRED_GROUP_ORDER are i18n-specific and MUST NOT be translated.
 
 # --- MODIFICATION START for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
-PLUGIN_DEV_ZH = {
+plugin-dev-zh = {
     "DOCS_DIR_RELATIVE": "plugin-dev-zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
     "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects .zh before .mdx
     "PWX_TO_GROUP_MAP": { 
@@ -30,7 +30,7 @@ PLUGIN_DEV_ZH = {
     },
     "DESIRED_GROUP_ORDER": ["概念与入门", "开发实践", "贡献与发布", "实践案例与示例", "高级开发", "Reference & Specifications"],
 }
-PLUGIN_DEV_EN = {
+plugin-dev-en = {
     "DOCS_DIR_RELATIVE": "plugin-dev-en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
     "TARGET_TAB_NAME": "Plugin Development", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
@@ -520,8 +520,8 @@ def main_apply_docs_json() -> str:
     print(f"Refresh mode: {refresh}") 
 
     CONFIGS_TO_PROCESS = [
-        PLUGIN_DEV_ZH,
-        PLUGIN_DEV_EN,
+        plugin-dev-zh,
+        plugin-dev-en,
         PLUGIN_DEV_JA,
     ]
     
