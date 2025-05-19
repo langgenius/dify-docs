@@ -7,7 +7,7 @@ import sys
 
 class Config:
     # --- Feature Flags ---
-    UPDATE_REFERENCES = False
+    UPDATE_REFERENCES = True
 
     # --- Path Setup ---
     BASE_DIR = Path(__file__).resolve().parent.parent
