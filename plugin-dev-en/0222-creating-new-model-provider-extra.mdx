@@ -1,0 +1,301 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Creating New Model Provider Extra
+language: en
+title: Implementing Standard Model Integration
+description: This document is aimed at developers who need to write Python code to
+  add or enhance Dify model support, providing detailed guidance on creating directory
+  structures, writing model configurations, implementing model calling logic, and
+  the complete process of debugging and publishing plugins, including details of core
+  method implementation and error handling.
+---
+
+This document is a standard guide for developers who need to write Python code to add or enhance model support for Dify. You'll need to follow the steps in this guide when the model you're adding involves new API call logic, special parameter handling, or new features that Dify needs to explicitly support (such as Vision, Tool Calling).
+
+**Before reading this document, it's recommended that you:**
+
+* Have basic Python programming skills and a basic understanding of object-oriented programming.
+* Be familiar with the API documentation and authentication methods provided by the model provider you want to integrate.
+* Have installed and configured the Dify plugin development toolkit (refer to [Initializing Development Tools](/plugin-dev-en/0221-initialize-development-tools)).
+* (Optional) Read the [Model Plugin Introduction](/plugin-dev-en/0131-model-plugin-introduction.en) document to understand the basic concepts and architecture of model plugins.
+
+This guide will walk you through the complete process of creating a directory structure, writing model configurations (YAML), implementing model calling logic (Python), and debugging and publishing plugins.
+
+---
+
+## Step 1: Create Directory Structure
+
+A well-organized directory structure is the foundation for developing maintainable plugins. You need to create specific directories and files for your model provider plugin.
+
+1. **Locate or Create Provider Directory:** In the `models/` directory of your plugin project (typically a local clone of `dify-official-plugins`), find or create a folder named after the model provider (e.g., `models/my_new_provider`).
+2. **Create `models` Subdirectory:** In the provider directory, create a `models` subdirectory.
+3. **Create Subdirectories by Model Type:** In the `models/models/` directory, create a subdirectory for **each model type** you need to support. Common types include:
+    * `llm`: Text generation models
+    * `text_embedding`: Text Embedding models
+    * `rerank`: Rerank models
+    * `speech2text`: Speech-to-text models
+    * `tts`: Text-to-speech models
+    * `moderation`: Content moderation models
+4. **Prepare Implementation Files:**
+    * In each model type directory (e.g., `models/models/llm/`), you need to create a Python file to implement the calling logic for that type of model (e.g., `llm.py`).
+    * Also in that directory, you need to create a YAML configuration file for each specific model of that type (e.g., `my-model-v1.yaml`).
+    * (Optional) You can create a `_position.yaml` file to control the display order of models of that type in the Dify UI.
+
+**Example Structure (assuming provider `my_provider` supports LLM and Embedding):**
+
+```bash
+models/my_provider/
+├── models                # Model implementation and configuration directory
+│   ├── llm               # LLM type
+│   │   ├── _position.yaml  (Optional, controls sorting)
+│   │   ├── my-llm-model-v1.yaml
+│   │   ├── my-llm-model-v2.yaml
+│   │   └── llm.py          # LLM implementation logic
+│   └── text_embedding    # Embedding type
+│       ├── _position.yaml  (Optional, controls sorting)
+│       ├── my-embedding-model.yaml
+│       └── text_embedding.py # Embedding implementation logic
+├── provider              # Provider-level code directory
+│   └── my_provider.py    (For credential validation, etc., refer to "Creating Model Provider" document)
+└── manifest.yaml         # Plugin manifest file
+```
+
+---
+
+## Step 2: Define Model Configuration (YAML)
+
+For each specific model, you need to create a YAML file to describe its properties, parameters, and features so that Dify can correctly understand and use it.
+
+1. **Create YAML File:** In the corresponding model type directory (e.g., `models/models/llm/`), create a YAML file for the model you want to add. The filename typically matches or is descriptive of the model ID (e.g., `my-llm-model-v1.yaml`).
+2. **Write Configuration Content:** Follow the [AIModelEntity Schema Definition](/plugin-dev-en/0412-model-schema) specification to write the content. Key fields include:
+    * `model`: (Required) The official API identifier for the model.
+    * `label`: (Required) The name displayed in the Dify UI (supports multiple languages).
+    * `model_type`: (Required) Must match the directory type (e.g., `llm`).
+    * `features`: (Optional) Declare special features supported by the model (e.g., `vision`, `tool-call`, `stream-tool-call`, etc.).
+    * `model_properties`: (Required) Define inherent model properties, such as `mode` (`chat` or `completion`), `context_size`.
+    * `parameter_rules`: (Required) Define user-adjustable parameters and their rules (name `name`, type `type`, whether required `required`, default value `default`, range `min`/`max`, options `options`, etc.). You can use `use_template` to reference predefined templates to simplify configuration of common parameters (such as `temperature`, `max_tokens`).
+    * `pricing`: (Optional) Define billing information for the model.
+
+**Example (`claude-3-5-sonnet-20240620.yaml`):**
+
+```yaml
+model: claude-3-5-sonnet-20240620
+label:
+  en_US: claude-3-5-sonnet-20240620
+model_type: llm
+features:
+  - agent-thought
+  - vision
+  - tool-call
+  - stream-tool-call
+  - document
+model_properties:
+  mode: chat
+  context_size: 200000
+parameter_rules:
+  - name: temperature
+    use_template: temperature
+  - name: top_p
+    use_template: top_p
+  - name: max_tokens
+    use_template: max_tokens
+    required: true
+    default: 8192
+    min: 1
+    max: 8192 # Note that Dify may have limitations at its level
+pricing:
+  input: '3.00'
+  output: '15.00'
+  unit: '0.000001' # Per million tokens
+  currency: USD
+```
+
+---
+
+## Step 3: Write Model Calling Code (Python)
+
+This is the core step for implementing model functionality. You need to write code in the corresponding model type's Python file (e.g., `llm.py`) to handle API calls, parameter conversion, and result returns.
+
+1. **Create/Edit Python File:** Create or open the corresponding Python file (e.g., `llm.py`) in the model type directory (e.g., `models/models/llm/`).
+2. **Define Implementation Class:**
+    * Define a class, for example, `MyProviderLargeLanguageModel`.
+    * This class must inherit from the **model type base class** in the Dify plugin SDK. For example, for LLM, you need to inherit from `dify_plugin.provider_kits.llm.LargeLanguageModel`.
+
+    ```python
+    import logging
+    from typing import Union, Generator, Optional, List
+    from dify_plugin.provider_kits.llm import LargeLanguageModel # Import base class
+    from dify_plugin.provider_kits.llm import LLMResult, LLMResultChunk, LLMUsage # Import result and usage classes
+    from dify_plugin.provider_kits.llm import PromptMessage, PromptMessageTool # Import message and tool classes
+    from dify_plugin.errors.provider_error import InvokeError, InvokeAuthorizationError # Import error classes
+    # Assuming you have a vendor_sdk for calling the API
+    # import vendor_sdk
+
+    logger = logging.getLogger(__name__)
+
+    class MyProviderLargeLanguageModel(LargeLanguageModel):
+        # ... implement methods ...
+    ```
+
+3. **Implement Key Methods:** (The specific methods to implement depend on the base class inherited, using LLM as an example below)
+    * `_invoke(...)`: **Core calling method**.
+        * **Signature:** `def _invoke(self, model: str, credentials: dict, prompt_messages: List[PromptMessage], model_parameters: dict, tools: Optional[List[PromptMessageTool]] = None, stop: Optional[List[str]] = None, stream: bool = True, user: Optional[str] = None) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:`
+        * **Responsibilities:**
+            * Prepare API requests using `credentials` and `model_parameters`.
+            * Convert Dify's `prompt_messages` format to the format required by the provider API.
+            * Handle the `tools` parameter to support Function Calling / Tool Use (if the model supports it).
+            * Decide whether to make a streaming call or a synchronous call based on the `stream` parameter.
+            * **Streaming Return:** If `stream=True`, this method must return a generator (`Generator`) that uses `yield` to return `LLMResultChunk` objects piece by piece. Each chunk contains partial results (text, tool calling blocks, etc.) and optional usage information.
+            * **Synchronous Return:** If `stream=False`, this method must return a complete `LLMResult` object, containing the final text result, a complete list of tool calls, and total usage information (`LLMUsage`).
+        * **Implementation Pattern:** It is strongly recommended to split synchronous and streaming logic into internal helper methods.
+
+        ```python
+        def _invoke(self, ..., stream: bool = True, ...) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:
+            # Prepare API request parameters (authentication, model parameter conversion, message format conversion, etc.)
+            api_params = self._prepare_api_params(credentials, model_parameters, prompt_messages, tools, stop)
+
+            try:
+                if stream:
+                    return self._invoke_stream(model, api_params, user)
+                else:
+                    return self._invoke_sync(model, api_params, user)
+            except vendor_sdk.APIError as e:
+                # Handle API errors, map to Dify errors (reference _invoke_error_mapping)
+                # ... raise mapped_error ...
+                pass # Replace with actual error handling
+            except Exception as e:
+                logger.exception("Unknown error during model invocation")
+                raise e # Or raise a generic InvokeError
+
+        def _invoke_stream(self, model: str, api_params: dict, user: Optional[str]) -> Generator[LLMResultChunk, None, None]:
+            # Call the vendor_sdk's streaming interface
+            # for api_chunk in vendor_sdk.create_stream(...):
+            #     # Convert api_chunk to LLMResultChunk
+            #     dify_chunk = self._convert_api_chunk_to_llm_result_chunk(api_chunk)
+            #     yield dify_chunk
+            pass # Replace with actual implementation
+
+        def _invoke_sync(self, model: str, api_params: dict, user: Optional[str]) -> LLMResult:
+            # Call the vendor_sdk's synchronous interface
+            # api_response = vendor_sdk.create_sync(...)
+            # Convert api_response to LLMResult (including message.content, tools, usage)
+            # dify_result = self._convert_api_response_to_llm_result(api_response)
+            # return dify_result
+            pass # Replace with actual implementation
+        ```
+
+    * `validate_credentials(self, model: str, credentials: dict) -> None`: (Required) Used to validate the validity of credentials when a user adds or modifies them. This is typically implemented by calling a simple, low-cost API endpoint (such as listing available models, checking balance, etc.). If validation fails, a `CredentialsValidateFailedError` or its subclass should be thrown.
+    * `get_num_tokens(self, model: str, credentials: dict, prompt_messages: List[PromptMessage], tools: Optional[List[PromptMessageTool]] = None) -> int`: (Optional but recommended) Used to estimate the number of tokens for a given input. If it cannot be calculated accurately or the API does not support it, you can return 0.
+    * `@property _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]`: (Required) Define an **error mapping** dictionary. The keys are standard `InvokeError` subclasses from Dify, and the values are lists of exception types that may be thrown by the vendor SDK that need to be mapped to that standard error. This is crucial for Dify to handle errors from different providers uniformly.
+
+        ```python
+        @property
+        def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+            # Example mapping
+            mapping = {
+                InvokeAuthorizationError: [
+                    vendor_sdk.AuthenticationError,
+                    vendor_sdk.PermissionDeniedError,
+                ],
+                InvokeRateLimitError: [
+                    vendor_sdk.RateLimitError,
+                ],
+                # ... other mappings ...
+            }
+            # Can add default mappings from the base class here (if provided by the base class)
+            # base_mapping = super()._invoke_error_mapping
+            # mapping.update(base_mapping) # Note the merging strategy
+            return mapping
+        ```
+
+---
+
+## Step 4: Debug Plugin
+
+Thorough testing and debugging are essential before contributing your plugin to the community. Dify provides remote debugging capabilities, allowing you to modify code locally and test the effects in real-time in a Dify instance.
+
+1. **Get Debugging Information:**
+    * In your Dify instance, go to the "Plugin Management" page (may require administrator privileges).
+    * Click "Debug Plugin" in the top right corner of the page to get your `Debug Key` and `Remote Server Address` (e.g., `http://<your-dify-domain>:5003`).
+2. **Configure Local Environment:**
+    * In the **root directory** of your local plugin project, find or create a `.env` file (can be copied from `.env.example`).
+    * Edit the `.env` file, filling in the debugging information:
+
+      ```dotenv
+      INSTALL_METHOD=remote
+      REMOTE_INSTALL_HOST=<your-dify-domain-or-ip> # Dify server address
+      REMOTE_INSTALL_PORT=5003                     # Debug port
+      REMOTE_INSTALL_KEY=****-****-****-****-**** # Your Debug Key
+      ```
+
+3. **Start Local Plugin Service:**
+    * In the plugin project root directory, make sure your Python environment is activated (if using a virtual environment).
+    * Run the main program:
+
+      ```bash
+      python -m main
+      ```
+
+    * Observe the terminal output. If the connection is successful, there will typically be a corresponding log prompt.
+4. **Test in Dify:**
+    * Refresh the "Plugins" or "Model Providers" page in Dify, and you should see your local plugin instance, possibly with a "Debugging" identifier.
+    * Go to "Settings" -> "Model Providers", find your plugin, and configure valid API credentials.
+    * Select and use your model in a Dify application for testing. Your local modifications to the Python code (which will typically auto-reload the service after saving) will directly affect the calling behavior in Dify. Using Dify's debug preview feature can help you check input/output and error messages.
+
+---
+
+## Step 5: Package and Publish
+
+When you've completed development and debugging, and are satisfied with the plugin's functionality, you can package it and contribute it to the Dify community.
+
+1. **Package Plugin:**
+    * Stop the local debugging service (`Ctrl+C`).
+    * Run the packaging command in the plugin project **root directory**:
+
+      ```bash
+      # Replace <provider_name> with your provider directory name
+      dify plugin package models/<provider_name>
+      ```
+
+    * This will generate a `<provider_name>.difypkg` file in the project root directory.
+2. **Submit Pull Request:**
+    * Ensure your code style is good and follows Dify's [plugin publishing specifications](https://docs.dify.ai/plugins/publish-plugins/publish-to-dify-marketplace).
+    * Push your local Git commits to your forked `dify-official-plugins` repository.
+    * Initiate a Pull Request to the main `langgenius/dify-official-plugins` repository on GitHub. Clearly describe the changes you've made, the models or features you've added, and any necessary testing instructions in the PR description.
+    * Wait for review by the Dify team. After review and merging, your contribution will be included in the official plugins and available on the [Dify Marketplace](https://marketplace.dify.ai/).
+
+---
+
+## Explore More
+
+* [Model Schema Definition](/plugin-dev-en/0412-model-schema) (Model YAML specifications)
+* [Plugin Manifest Structure](/plugin-dev-en/0411-general-specifications) (`manifest.yaml` specifications)
+* [Dify Plugin SDK Reference](https://github.com/langgenius/dify-plugin-sdks) (Look up base classes, data structures, and error types)
+* [Dify Official Plugins Repository](https://github.com/langgenius/dify-official-plugins) (View implementations of existing plugins)
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin-dev-en/0222-creating-new-model-provider-extra.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20creating-new-model-provider-ex&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin-dev-en%2F0222-creating-new-model-provider-extra.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>

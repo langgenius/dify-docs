@@ -1,0 +1,327 @@
+---
+dimensions:
+  type:
+    primary: operational
+    detail: deployment
+  level: beginner
+standard_title: Plugin Auto Publish PR
+language: ja
+title: PRを通じてプラグインを自動的に公開する
+description: このドキュメントでは、GitHub Actionsを使用してDifyプラグインのリリースプロセスを自動化する方法について説明します。設定手順、パラメータの説明、使用方法などが含まれており、プラグイン開発者が手動介入なしにリリースプロセスを合理化するのに役立ちます。
+---
+
+### 背景
+
+プラグイン貢献者が**他のユーザーにすでに使用されているDifyプラグイン**を更新する必要がある場合、そのプロセスは非常に煩雑です：貢献者はまずプラグインのソースコードを修正してバージョン番号を更新し、変更をプラグインソースリポジトリにプッシュし、フォークしたdify-pluginリポジトリに新しいブランチを作成する必要があります。その後、プラグインを手動でパッケージ化し、パッケージファイルをアップロードし、元のdify-pluginリポジトリにマージするためのPRを作成する必要があります。このプロセスはプラグインコードが変更されるたびに繰り返す必要があり、時間がかかり非効率的です。
+
+このワークフローを簡素化するために、**Plugin Auto-PR**と呼ばれるGitHub Actionsベースの自動化ワークフローを構築しました。このツールを使用すると、プラグイン貢献者はプラグインのパッケージ化、ブランチのプッシュ、PRの作成を一度の操作で完了できます。
+
+### 概念紹介
+
+#### GitHub Actions
+
+GitHub Actionsは、GitHubが提供する組み込みのCI/CDサービスで、様々なビルド、テスト、デプロイタスクを自動化します。
+
+**動作原理**：トリガー条件（コードのプッシュなど）が満たされると、GitHubは自動的に仮想マシンを割り当ててワークフローを実行します。すべての操作はGitHubクラウドで完了します。
+
+![ワークフロー](https://assets-docs.dify.ai/2025/04/60534de8e220f860947b32a8329a8349.png)
+
+**無料枠の制限**：
+
+* 公開リポジトリ：無制限
+* プライベートリポジトリ：月2000分
+
+#### Plugin Auto-PR
+
+**動作原理**：
+
+1. プラグインソースリポジトリのmainブランチにコードをプッシュすると、ワークフローがトリガーされます
+2. ワークフローは`manifest.yaml`ファイルからプラグイン情報を読み取ります
+3. プラグインを自動的に`.difypkg`ファイルとしてパッケージ化します
+4. パッケージファイルをフォークした`dify-plugins`リポジトリにプッシュします
+5. 新しいブランチを作成して変更をコミットします
+6. 上流リポジトリへのマージを自動的にPRで要求します
+
+### 環境準備
+
+#### リポジトリ要件
+
+* すでに独自のプラグインソースコードリポジトリがある（例：`your-name/plugin-source`）
+* すでに独自のフォークしたプラグインリポジトリがある（例：`your-name/dify-plugins`）
+
+```
+dify-plugins/
+└── your-author-name
+    └── plugin-name
+```
+
+#### 権限要件
+
+このワークフローが正常に機能するには、適切な権限が必要です：
+
+* 十分な権限を持つGitHub Personal Access Token（PAT）を作成する必要があります
+* そのPATはフォークしたリポジトリにコードをプッシュする権限が必要です
+* そのPATは上流リポジトリにPRを作成する権限が必要です
+
+### パラメータと設定の詳細
+
+#### 必須パラメータ
+
+プラグイン自動公開ワークフローでは、以下の重要な要素を正しく設定する必要があります：
+
+**manifest.yamlファイル**：これは自動化プロセス全体の中核となる設定ソースです。以下のフィールドが正しいことを確認する必要があります：
+
+* `name`：プラグイン名（パッケージ名とブランチ名の生成に使用）
+* `version`：バージョン番号（更新のたびに増分する必要あり）
+* `author`：GitHubユーザー名（ターゲットリポジトリパスの決定に使用）
+
+**PLUGIN\_ACTION Secret**：プラグインソースリポジトリにこのシークレットを正しく設定する必要があります。
+
+* 値の要件：十分な権限を持つPersonal Access Token（PAT）である必要があります
+* 権限要件：フォークしたリポジトリにブランチをプッシュし、上流リポジトリにPRを作成する能力
+
+#### 自動生成されるパラメータ
+
+ワークフローは**以下を自動的に処理**し、手動介入は不要です：
+
+* GitHubユーザー名：`manifest.yaml`の`author`フィールドから読み取り
+* 作者フォルダ名：`author`フィールドと一致
+* プラグイン名：`manifest.yaml`の`name`フィールドから読み取り
+* ブランチ名：`bump-{plugin-name}-plugin-{version}`
+* パッケージファイル名：`{plugin-name}-{version}.difypkg`
+* PRのタイトルと内容：プラグイン名とバージョンに基づいて自動生成
+
+### インストールと設定手順
+
+<Steps>
+  <Step title="リポジトリの準備">
+    公式の`dify-plugins`リポジトリをフォークし、独自のプラグインソースリポジトリがあることを確認します。
+  </Step>
+  <Step title="シークレットの設定">
+    プラグインソースリポジトリに移動し、**Settings > Secrets and variables > Actions > New repository secret**をクリックして、GitHubシークレットを作成します：
+
+    * 名前：`PLUGIN_ACTION`
+    * 値：ターゲットリポジトリ（`your-name/dify-plugins`）への書き込み権限を持つGitHub Personal Access Token（PAT）
+
+    <img src="https://assets-docs.dify.ai/2025/04/8abd72b677dd24752910c304c76f1c26.png" alt="シークレットの作成" />
+  </Step>
+  <Step title="ワークフローファイルの作成">
+    リポジトリに`.github/workflows/`ディレクトリを作成し、このディレクトリに`plugin-publish.yml`という名前のファイルを作成し、以下の内容をファイルにコピーします：
+
+    ```yaml
+    # .github/workflows/auto-pr.yml
+    name: Auto Create PR on Main Push
+
+    on:
+      push:
+        branches: [ main ]  # Trigger on push to main
+
+    jobs:
+      create_pr: # Renamed job for clarity
+        runs-on: ubuntu-latest
+        steps:
+          - name: Checkout code
+            uses: actions/checkout@v3
+
+          - name: Print working directory # Kept for debugging
+            run: |
+              pwd
+              ls -la
+
+          - name: Download CLI tool
+            run: |
+              # Create bin directory in runner temp
+              mkdir -p $RUNNER_TEMP/bin
+              cd $RUNNER_TEMP/bin
+
+              # Download CLI tool
+              wget https://github.com/langgenius/dify-plugin-daemon/releases/download/0.0.6/dify-plugin-linux-amd64
+              chmod +x dify-plugin-linux-amd64
+
+              # Show download location and file
+              echo "CLI tool location:"
+              pwd
+              ls -la dify-plugin-linux-amd64
+
+          - name: Get basic info from manifest # Changed step name and content
+            id: get_basic_info
+            run: |
+              PLUGIN_NAME=$(grep "^name:" manifest.yaml | cut -d' ' -f2)
+              echo "Plugin name: $PLUGIN_NAME"
+              echo "plugin_name=$PLUGIN_NAME" >> $GITHUB_OUTPUT
+
+              VERSION=$(grep "^version:" manifest.yaml | cut -d' ' -f2)
+              echo "Plugin version: $VERSION"
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+              # If the author's name is not your github username, you can change the author here
+              AUTHOR=$(grep "^author:" manifest.yaml | cut -d' ' -f2)
+              echo "Plugin author: $AUTHOR"
+              echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+
+          - name: Package Plugin
+            id: package
+            run: |
+              # Use the downloaded CLI tool to package
+              cd $GITHUB_WORKSPACE
+              # Use variables for package name
+              PACKAGE_NAME="${{ steps.get_basic_info.outputs.plugin_name }}-${{ steps.get_basic_info.outputs.version }}.difypkg"
+              # Use CLI from runner temp
+              $RUNNER_TEMP/bin/dify-plugin-linux-amd64 plugin package . -o "$PACKAGE_NAME"
+
+              # Show packaging result
+              echo "Package result:"
+              ls -la "$PACKAGE_NAME"
+              echo "package_name=$PACKAGE_NAME" >> $GITHUB_OUTPUT
+
+              # Show full file path and directory structure (kept for debugging)
+              echo "\\nFull file path:"
+              pwd
+              echo "\\nDirectory structure:"
+              tree || ls -R
+
+          - name: Checkout target repo
+            uses: actions/checkout@v3
+            with:
+              # Use author variable for repository
+              repository: ${{steps.get_basic_info.outputs.author}}/dify-plugins
+              path: dify-plugins
+              token: ${{ secrets.PLUGIN_ACTION }}
+              fetch-depth: 1 # Fetch only the last commit to speed up checkout
+              persist-credentials: true # Persist credentials for subsequent git operations
+
+          - name: Prepare and create PR
+            run: |
+              # Debug info (kept)
+              echo "Debug: Current directory $(pwd)"
+              # Use variable for package name
+              PACKAGE_NAME="${{ steps.get_basic_info.outputs.plugin_name }}-${{ steps.get_basic_info.outputs.version }}.difypkg"
+              echo "Debug: Package name: $PACKAGE_NAME"
+              ls -la
+
+              # Move the packaged file to the target directory using variables
+              mkdir -p dify-plugins/${{ steps.get_basic_info.outputs.author }}/${{ steps.get_basic_info.outputs.plugin_name }}
+              mv "$PACKAGE_NAME" dify-plugins/${{ steps.get_basic_info.outputs.author }}/${{ steps.get_basic_info.outputs.plugin_name }}/
+
+              # Enter the target repository directory
+              cd dify-plugins
+
+              # Configure git
+              git config user.name "GitHub Actions"
+              git config user.email "actions@github.com"
+
+              # Ensure we are on the latest main branch
+              git fetch origin main
+              git checkout main
+              git pull origin main
+
+              # Create and switch to a new branch using variables and new naming convention
+              BRANCH_NAME="bump-${{ steps.get_basic_info.outputs.plugin_name }}-plugin-${{ steps.get_basic_info.outputs.version }}"
+              git checkout -b "$BRANCH_NAME"
+
+              # Add and commit changes (using git add .)
+              git add .
+              git status # for debugging
+              # Use variables in commit message
+              git commit -m "bump ${{ steps.get_basic_info.outputs.plugin_name }} plugin to version ${{ steps.get_basic_info.outputs.version }}"
+
+              # Push to remote (use force just in case the branch existed before from a failed run)
+              git push -u origin "$BRANCH_NAME" --force
+
+              # Confirm branch has been pushed and wait for sync (GitHub API might need a moment)
+              git branch -a
+              echo "Waiting for branch to sync..."
+              sleep 10  # Wait 10 seconds for branch sync
+
+          - name: Create PR via GitHub API
+            env:
+              GH_TOKEN: ${{ secrets.PLUGIN_ACTION }} # Use the provided token for authentication
+            run: |
+              gh pr create \
+                --repo langgenius/dify-plugins \
+                --head "${{ steps.get_basic_info.outputs.author }}:${{ steps.get_basic_info.outputs.plugin_name }}-${{ steps.get_basic_info.outputs.version }}" \
+                --base main \
+                --title "bump ${{ steps.get_basic_info.outputs.plugin_name }} plugin to version ${{ steps.get_basic_info.outputs.version }}" \
+                --body "bump ${{ steps.get_basic_info.outputs.plugin_name }} plugin package to version ${{ steps.get_basic_info.outputs.version }}
+
+                Changes:
+                - Updated plugin package file" || echo "PR already exists or creation skipped." # Handle cases where PR already exists
+
+          - name: Print environment info # Kept for debugging
+            run: |
+              echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+              echo "Current directory contents:"
+              ls -R
+    ```
+  </Step>
+  <Step title="manifest.yamlの更新">
+    `manifest.yaml`ファイルが以下のフィールドを正しく設定していることを確認します：
+
+    ```yaml
+    version: 0.0.x  # バージョン番号
+    author: your-github-username  # GitHubユーザー名/作者名
+    name: your-plugin-name  # プラグイン名
+    ```
+  </Step>
+</Steps>
+
+### 使用ガイド
+
+#### 初回セットアッププロセス
+
+自動公開ワークフローを初めて設定する場合は、次の手順を完了します：
+
+1. 公式の`dify-plugins`リポジトリをフォークしていることを確認します
+2. プラグインソースリポジトリの構造が正しいことを確認します
+3. プラグインソースリポジトリに`PLUGIN_ACTION Secret`を設定します
+4. ワークフローファイル`.github/workflows/plugin-publish.yml`を作成します
+5. `manifest.yaml`ファイルの`name`と`author`フィールドが正しく設定されていることを確認します
+
+#### 以降の更新プロセス
+
+セットアップが完了したら、新しいバージョンを公開する必要がある場合は、以下を行うだけです：
+
+1. プラグインコードを修正します
+2. `manifest.yaml`の`version`フィールドを更新します
+
+![リリース](https://assets-docs.dify.ai/2025/04/9eed2b9110e91e18008b399e58198f03.png)
+
+3. すべての変更をmainブランチにプッシュします
+4. GitHub Actionsがパッケージング、ブランチ作成、PR提出を自動的に完了するのを待ちます
+
+### 実行結果
+
+プラグインソースリポジトリのmainブランチにコードをプッシュすると、GitHub Actionsは自動的に公開プロセスを実行します：
+
+* プラグインを`{plugin-name}-{version}.difypkg`形式で自動的にパッケージ化します
+* パッケージファイルをターゲットリポジトリに自動的にプッシュします
+* フォークリポジトリへのマージを自動的にPRで作成します
+
+![結果](https://assets-docs.dify.ai/2025/04/60d5de910c6ce2482c67ddec3320311f.png)
+
+### サンプルリポジトリ
+
+完全な設定の詳細とベストプラクティスを理解するために、[サンプルリポジトリ](https://github.com/Yevanchen/exa-in-dify)を参照してください。\`
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="このページを編集する"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin-dev-ja/0321-plugin-auto-publish-pr.mdx"
+    >
+        直接貢献することでドキュメントの改善にご協力ください
+    </Card>
+    <Card
+        title="問題を報告する"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=ドキュメントの問題%3A%20plugin-auto-publish&body=%23%23%20問題の説明%0A%3C%21--%20発見した問題について簡単に説明してください%20--%3E%0A%0A%23%23%20ページリンク%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin-dev-ja%2F0321-plugin-auto-publish-pr.mdx%0A%0A%23%23%20提案される変更%0A%3C%21--%20特定の変更案がある場合は、ここで説明してください%20--%3E%0A%0A%3C%21--%20ドキュメントの品質向上にご協力いただきありがとうございます！%20--%3E"
+    >
+        エラーを見つけたり提案がありますか？お知らせください
+    </Card>
+</CardGroup>

@@ -1,0 +1,707 @@
+---
+dimensions:
+  type:
+    primary: reference
+    detail: core
+  level: intermediate
+standard_title: Model Schema
+language: ja
+title: モデルインターフェース
+description: 本書では、Difyモデルプラグイン開発に必要なインターフェース仕様について詳しく説明します。これには、モデルプロバイダーの実装、5つのモデルタイプ（LLM、TextEmbedding、Rerank、Speech2text、Text2speech）のインターフェース定義、およびPromptMessage、LLMResultなどの関連データ構造の完全な仕様が含まれます。本書は、開発者が様々なモデル統合を実装する際の開発リファレンスとして適しています。
+---
+
+ここでは、プロバイダーと各モデルタイプが実装する必要のあるインターフェースメソッドとパラメータについて説明します。モデルプラグインを開発する前に、まず[モデル設計ルール](/plugin-dev-ja/0411-model-designing-rules)と[モデルプラグイン紹介](/plugin-dev-ja/0131-model-plugin-introduction.ja)を読むことをお勧めします。
+
+### モデルプロバイダー
+
+`__base.model_provider.ModelProvider` ベースクラスを継承し、以下のインターフェースを実装します：
+
+```python
+def validate_provider_credentials(self, credentials: dict) -> None:
+    """
+    プロバイダーのクレデンシャルを検証します
+    モデルタイプの任意の validate_credentials メソッドを選択するか、自分で検証メソッドを実装することができます（例：モデルリスト取得API）。
+
+    検証に失敗した場合は、例外を発生させます
+
+    :param credentials: プロバイダーのクレデンシャル。クレデンシャルの形式は `provider_credential_schema` で定義されます。
+    """
+```
+
+* `credentials` (object) クレデンシャル情報
+
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` で定義され、`api_key` などが渡されます。検証に失敗した場合は、`errors.validate.CredentialsValidateFailedError` エラーをスローしてください。**注：事前定義モデルはこのインターフェースを完全に実装する必要がありますが、カスタムモデルプロバイダーは以下のように簡単な実装で済みます：**
+
+```python
+class XinferenceProvider(Provider):
+    def validate_provider_credentials(self, credentials: dict) -> None:
+        pass
+```
+
+### モデル
+
+モデルは5つの異なるモデルタイプに分かれ、モデルタイプごとに継承するベースクラスや実装が必要なメソッドも異なります。
+
+#### 共通インターフェース
+
+すべてのモデルは、以下の2つのメソッドを共通して実装する必要があります：
+
+* モデルクレデンシャルの検証
+
+プロバイダーのクレデンシャル検証と同様に、ここでは個別のモデルに対して検証を行います。
+
+```python
+def validate_credentials(self, model: str, credentials: dict) -> None:
+    """
+    モデルのクレデンシャルを検証します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :return:
+    """
+```
+
+パラメータ：
+
+* `model` (string) モデル名
+* `credentials` (object) クレデンシャル情報
+
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。検証に失敗した場合は、`errors.validate.CredentialsValidateFailedError` エラーをスローしてください。
+
+* 呼び出し例外エラーマッピングテーブル
+
+モデル呼び出し時に例外が発生した場合、Runtime が指定する `InvokeError` タイプにマッピングする必要があります。これにより、Dify は異なるエラーに対して異なる後続処理を行うことができます。Runtime Errors:
+
+* `InvokeConnectionError` 呼び出し接続エラー
+* `InvokeServerUnavailableError` 呼び出し先サーバー利用不可
+* `InvokeRateLimitError` 呼び出しレート制限超過
+* `InvokeAuthorizationError` 呼び出し認証失敗
+* `InvokeBadRequestError` 呼び出しパラメータ不正
+
+```python
+@property
+def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+    """
+    モデルの呼び出しエラーを統一エラーにマッピングします
+    キーは呼び出し元にスローされるエラータイプです
+    値はモデルによってスローされるエラータイプであり、呼び出し元のために統一エラータイプに変換する必要があります。
+
+    :return: 呼び出しエラーマッピング
+    """
+```
+
+対応するエラーを直接スローし、以下のように定義することも可能です。これにより、その後の呼び出しで `InvokeConnectionError` などの例外を直接スローできます。
+
+#### LLM
+
+`__base.large_language_model.LargeLanguageModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+* LLM 呼び出し
+
+LLM 呼び出しのコアメソッドを実装し、ストリーミングと同期的な返却の両方をサポートできます。
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            prompt_messages: list[PromptMessage], model_parameters: dict,
+            tools: Optional[list[PromptMessageTool]] = None, stop: Optional[list[str]] = None,
+            stream: bool = True, user: Optional[str] = None) \
+        -> Union[LLMResult, Generator]:
+    """
+    大規模言語モデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param prompt_messages: プロンプトメッセージ
+    :param model_parameters: モデルパラメータ
+    :param tools: ツール呼び出し用のツール
+    :param stop: ストップワード
+    :param stream: ストリーム応答かどうか
+    :param user: 一意のユーザーID
+    :return: 完全な応答またはストリーム応答チャンクジェネレータの結果
+    """
+```
+
+* パラメータ：
+  * `model` (string) モデル名
+  * `credentials` (object) クレデンシャル情報
+
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+
+* `prompt_messages` (array\[[PromptMessage](#promptmessage)]) プロンプトリスト
+
+モデルが `Completion` タイプの場合、リストには [UserPromptMessage](#userpromptmessage) 要素を1つ渡すだけで十分です。モデルが `Chat` タイプの場合、メッセージに応じて [SystemPromptMessage](#systempromptmessage)、[UserPromptMessage](#userpromptmessage)、[AssistantPromptMessage](#assistantpromptmessage)、[ToolPromptMessage](#toolpromptmessage) 要素のリストを渡す必要があります。
+
+* `model_parameters` (object) モデルパラメータ。モデルパラメータはモデルのYAML設定の `parameter_rules` で定義されます。
+
+* `tools` (array\[[PromptMessageTool](#promptmessagetool)]) \[optional] ツールリスト。`function calling` における `function` と同等です。つまり、tool calling に渡すツールリストです。
+
+* `stop` (array\[string]) \[optional] ストップシーケンス。モデルの返却は、ストップシーケンスで定義された文字列の直前で停止します。
+
+* `stream` (bool) ストリーミング出力かどうか、デフォルトは True。ストリーミング出力は Generator\[[LLMResultChunk](#llmresultchunk)] を返し、非ストリーミング出力は [LLMResult](#llmresult) を返します。
+
+* `user` (string) \[optional] ユーザーの一意の識別子。プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+* 返り値
+
+ストリーミング出力は Generator\[[LLMResultChunk](#llmresultchunk)] を返し、非ストリーミング出力は [LLMResult](#llmresult) を返します。
+
+* 入力トークンの事前計算
+
+モデルがトークン事前計算インターフェースを提供していない場合、直接 0 を返すことができます。
+
+```python
+def get_num_tokens(self, model: str, credentials: dict, prompt_messages: list[PromptMessage],
+                   tools: Optional[list[PromptMessageTool]] = None) -> int:
+    """
+    指定されたプロンプトメッセージのトークン数を取得します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param prompt_messages: プロンプトメッセージ
+    :param tools: ツール呼び出し用のツール
+    :return:
+    """
+```
+
+パラメータの説明は上記の `LLM 呼び出し` を参照してください。このインターフェースは、対応する `model` に基づいて適切な `tokenizer` を選択して計算する必要があります。対応するモデルが `tokenizer` を提供していない場合は、`AIModel` ベースクラスの `_get_num_tokens_by_gpt2(text: str)` メソッドを使用して計算できます。
+
+* カスタムモデルルールの取得 \[オプション]
+
+```python
+def get_customizable_model_schema(self, model: str, credentials: dict) -> Optional[AIModelEntity]:
+    """
+    カスタマイズ可能なモデルスキーマを取得します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :return: モデルスキーマ
+    """
+```
+
+プロバイダーがカスタムLLMの追加をサポートしている場合、このメソッドを実装することで、カスタムモデルがモデルルールを取得できるようになります。デフォルトでは None を返します。
+
+`OpenAI` プロバイダーのほとんどのファインチューニングモデルでは、ファインチューニングモデル名（例：`gpt-3.5-turbo-1106`）からベースモデルを取得し、そのベースモデルの事前定義パラメータルールを返すことができます。[OpenAI](https://github.com/langgenius/dify-official-plugins/tree/main/models/openai) の具体的な実装を参照してください。
+
+#### TextEmbedding
+
+`__base.text_embedding_model.TextEmbeddingModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+* Embedding 呼び出し
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            texts: list[str], user: Optional[str] = None) \
+        -> TextEmbeddingResult:
+    """
+    テキスト埋め込みモデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param texts: 埋め込むテキスト
+    :param user: 一意のユーザーID
+    :return: 埋め込み結果
+    """
+```
+
+* パラメータ：
+
+* `model` (string) モデル名
+
+* `credentials` (object) クレデンシャル情報
+
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+
+* `texts` (array\[string]) テキストリスト、バッチ処理可能
+
+* `user` (string) \[optional] ユーザーの一意の識別子。プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+* 返り値：
+
+[TextEmbeddingResult](#textembeddingresult) エンティティ。
+
+* トークンの事前計算
+
+```python
+def get_num_tokens(self, model: str, credentials: dict, texts: list[str]) -> int:
+    """
+    指定されたテキストのトークン数を取得します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param texts: 埋め込むテキスト
+    :return:
+    """
+```
+
+パラメータの説明は上記の `Embedding 呼び出し` を参照してください。
+
+上記の `LargeLanguageModel` と同様に、このインターフェースは対応する `model` に基づいて適切な `tokenizer` を選択して計算する必要があります。対応するモデルが `tokenizer` を提供していない場合は、`AIModel` ベースクラスの `_get_num_tokens_by_gpt2(text: str)` メソッドを使用して計算できます。
+
+#### Rerank
+
+`__base.rerank_model.RerankModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+* rerank 呼び出し
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            query: str, docs: list[str], score_threshold: Optional[float] = None, top_n: Optional[int] = None,
+            user: Optional[str] = None) \
+        -> RerankResult:
+    """
+    Rerankモデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param query: 検索クエリ
+    :param docs: リランキング対象のドキュメント
+    :param score_threshold: スコアのしきい値
+    :param top_n: 上位n件
+    :param user: 一意のユーザーID
+    :return: リランキング結果
+    """
+```
+
+* パラメータ：
+
+* `model` (string) モデル名
+* `credentials` (object) クレデンシャル情報
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+* `query` (string) クエリリクエストの内容
+* `docs` (array\[string]) リランキングが必要なドキュメント（チャンク）のリスト
+* `score_threshold` (float) \[optional] スコアのしきい値
+* `top_n` (int) \[optional] 上位n個のドキュメント（チャンク）を取得
+* `user` (string) \[optional] ユーザーの一意の識別子。プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+
+* 返り値：
+
+[RerankResult](#rerankresult) エンティティ。
+
+#### Speech2text
+
+`__base.speech2text_model.Speech2TextModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+
+* Invoke 呼び出し
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            file: IO[bytes], user: Optional[str] = None) \
+        -> str:
+    """
+    音声テキスト変換モデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルのクレデンシャル
+    :param file: 音声ファイル
+    :param user: 一意のユーザーID
+    :return: 指定された音声ファイルに対するテキスト
+    """        
+```
+
+* パラメータ：
+
+* `model` (string) モデル名
+* `credentials` (object) クレデンシャル情報
+クレデンシャル情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+* `file` (File) ファイルストリーム
+* `user` (string) \[optional] ユーザーの一意の識別子。プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+* 返り値：
+
+音声変換された文字列。
+
+#### Text2speech
+
+`__base.text2speech_model.Text2SpeechModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+* Invoke 呼び出し
+
+```python
+def _invoke(self, model: str, credentials: dict, content_text: str, streaming: bool, user: Optional[str] = None):
+    """
+    大規模言語モデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルの認証情報
+    :param content_text: 変換するテキストコンテンツ
+    :param streaming: 出力がストリーミングであるか
+    :param user: 一意のユーザーID
+    :return: 変換された音声ファイル
+    """        
+```
+
+* パラメータ：
+
+* `model` (string) モデル名
+* `credentials` (object) 認証情報
+認証情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+* `content_text` (string) 変換が必要なテキストコンテンツ
+* `streaming` (bool) ストリーミング出力を行うかどうか
+* `user` (string) \[optional] ユーザーの一意の識別子
+プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+* 戻り値：
+
+テキスト変換後の音声ストリーム。
+
+
+#### Moderation
+
+`__base.moderation_model.ModerationModel` ベースクラスを継承し、以下のインターフェースを実装します：
+
+* Invoke 呼び出し
+
+```python
+def _invoke(self, model: str, credentials: dict,
+            text: str, user: Optional[str] = None) \
+        -> bool:
+    """
+    大規模言語モデルを呼び出します
+
+    :param model: モデル名
+    :param credentials: モデルの認証情報
+    :param text: モデレーションするテキスト
+    :param user: 一意のユーザーID
+    :return: テキストが安全な場合はfalse、それ以外の場合はtrue
+    """
+```
+
+* パラメータ：
+
+* `model` (string) モデル名
+* `credentials` (object) 認証情報
+認証情報のパラメータは、プロバイダーのYAML設定ファイルの `provider_credential_schema` または `model_credential_schema` で定義され、`api_key` などが渡されます。
+* `text` (string) テキストコンテンツ
+* `user` (string) \[optional] ユーザーの一意の識別子
+プロバイダーが不正利用を監視および検出するのに役立ちます。
+
+
+* 戻り値：
+
+Falseは渡されたテキストが安全であることを示し、Trueはその逆を示します。
+
+### エンティティ
+
+#### PromptMessageRole
+
+メッセージロール
+
+```python
+class PromptMessageRole(Enum):
+    """
+    プロンプトメッセージのEnumクラス。
+    """
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    TOOL = "tool"
+```
+
+#### PromptMessageContentType
+
+メッセージコンテントタイプ。プレーンテキストと画像に分かれます。
+
+```python
+class PromptMessageContentType(Enum):
+    """
+    プロンプトメッセージコンテントタイプのEnumクラス。
+    """
+    TEXT = 'text'
+    IMAGE = 'image'
+```
+
+#### PromptMessageContent
+
+メッセージコンテントのベースクラス。パラメータ宣言専用であり、初期化できません。
+
+```python
+class PromptMessageContent(BaseModel):
+    """
+    プロンプトメッセージコンテントのモデルクラス。
+    """
+    type: PromptMessageContentType
+    data: str  # コンテンツデータ
+```
+
+現在、テキストと画像の2つのタイプをサポートしており、テキストと複数の画像を同時に渡すことができます。
+それぞれ `TextPromptMessageContent` と `ImagePromptMessageContent` を初期化して渡す必要があります。
+
+#### TextPromptMessageContent
+
+```python
+class TextPromptMessageContent(PromptMessageContent):
+    """
+    テキストプロンプトメッセージコンテントのモデルクラス。
+    """
+    type: PromptMessageContentType = PromptMessageContentType.TEXT
+```
+
+画像とテキストを渡す場合、その中のテキストはこのエンティティを `content` リストの一部として構築する必要があります。
+
+#### ImagePromptMessageContent
+
+```python
+class ImagePromptMessageContent(PromptMessageContent):
+    """
+    画像プロンプトメッセージコンテントのモデルクラス。
+    """
+    class DETAIL(Enum):
+        LOW = 'low'
+        HIGH = 'high'
+
+    type: PromptMessageContentType = PromptMessageContentType.IMAGE
+    detail: DETAIL = DETAIL.LOW  # 解像度
+```
+
+画像とテキストを渡す場合、その中の画像はこのエンティティを `content` リストの一部として構築する必要があります。
+`data` は `url` または画像の `base64` エンコードされた文字列です。
+
+#### PromptMessage
+
+すべてのRoleメッセージボディのベースクラス。パラメータ宣言専用であり、初期化できません。
+
+```python
+class PromptMessage(ABC, BaseModel):
+    """
+    プロンプトメッセージのモデルクラス。
+    """
+    role: PromptMessageRole  # メッセージロール
+    content: Optional[str | list[PromptMessageContent]] = None  # 文字列とコンテントリストの2つのタイプをサポートします。コンテントリストはマルチモーダルのニーズを満たすためのもので、詳細は `PromptMessageContent` の説明を参照してください。
+    name: Optional[str] = None  # 名称、オプション。
+```
+
+#### UserPromptMessage
+
+UserMessageメッセージボディ。ユーザーメッセージを表します。
+
+```python
+class UserPromptMessage(PromptMessage):
+    """
+    ユーザープロンプトメッセージのモデルクラス。
+    """
+    role: PromptMessageRole = PromptMessageRole.USER
+```
+
+#### AssistantPromptMessage
+
+モデルの返信メッセージを表します。通常、`few-shots` またはチャット履歴の入力に使用されます。
+
+```python
+class AssistantPromptMessage(PromptMessage):
+    """
+    アシスタントプロンプトメッセージのモデルクラス。
+    """
+    class ToolCall(BaseModel):
+        """
+        アシスタントプロンプトメッセージツールコールのモデルクラス。
+        """
+        class ToolCallFunction(BaseModel):
+            """
+            アシスタントプロンプトメッセージツールコール関数のモデルクラス。
+            """
+            name: str  # ツール名
+            arguments: str  # ツールパラメータ
+
+        id: str  # ツールID。OpenAI の tool call のみで有効で、ツールの呼び出しの一意のIDです。同じツールを複数回呼び出すことができます。
+        type: str  # デフォルトは function
+        function: ToolCallFunction  # ツール呼び出し情報
+
+    role: PromptMessageRole = PromptMessageRole.ASSISTANT
+    tool_calls: list[ToolCall] = []  # モデルが応答したツール呼び出し結果（tools が渡され、かつモデルがツールの呼び出しが必要だと判断した場合にのみ返されます）
+```
+
+この `tool_calls` は、モデルを呼び出す際に `tools` を渡した後、モデルから返される `tool call` のリストです。
+
+#### SystemPromptMessage
+
+システムメッセージを表します。通常、モデルに設定するシステム指示に使用されます。
+
+```python
+class SystemPromptMessage(PromptMessage):
+    """
+    システムプロンプトメッセージのモデルクラス。
+    """
+    role: PromptMessageRole = PromptMessageRole.SYSTEM
+```
+
+#### ToolPromptMessage
+
+ツールメッセージを表します。ツールの実行後に結果をモデルに渡し、次のステップを計画するために使用されます。
+
+```python
+class ToolPromptMessage(PromptMessage):
+    """
+    ツールプロンプトメッセージのモデルクラス。
+    """
+    role: PromptMessageRole = PromptMessageRole.TOOL
+    tool_call_id: str  # ツール呼び出しID。OpenAI tool call をサポートしていない場合、ツール名を渡すこともできます。
+```
+
+ベースクラスの `content` にツールの実行結果を渡します。
+
+#### PromptMessageTool
+
+```python
+class PromptMessageTool(BaseModel):
+    """
+    プロンプトメッセージツールのモデルクラス。
+    """
+    name: str  # ツール名
+    description: str  # ツールの説明
+    parameters: dict  # ツールパラメータのdict
+
+```
+
+***
+
+#### LLMResult
+
+```python
+class LLMResult(BaseModel):
+    """
+    LLM結果のモデルクラス。
+    """
+    model: str  # 実際に使用されたモデル
+    prompt_messages: list[PromptMessage]  # プロンプトメッセージのリスト
+    message: AssistantPromptMessage  # 返信メッセージ
+    usage: LLMUsage  # 使用されたトークンおよび料金情報
+    system_fingerprint: Optional[str] = None  # リクエストフィンガープリント。OpenAI の当該パラメータ定義を参照できます。
+```
+
+#### LLMResultChunkDelta
+
+ストリーミングレスポンスにおける各イテレーション内部の `delta` エンティティ
+
+```python
+class LLMResultChunkDelta(BaseModel):
+    """
+    LLM結果チャンクデルタのモデルクラス。
+    """
+    index: int  # シーケンス番号
+    message: AssistantPromptMessage  # 返信メッセージ
+    usage: Optional[LLMUsage] = None  # 使用されたトークンおよび料金情報。最後のメッセージでのみ返されます。
+    finish_reason: Optional[str] = None  # 終了理由。最後のメッセージでのみ返されます。
+```
+
+#### LLMResultChunk
+
+ストリーミングレスポンスにおける各イテレーションのエンティティ
+
+```python
+class LLMResultChunk(BaseModel):
+    """
+    LLM結果チャンクのモデルクラス。
+    """
+    model: str  # 実際に使用されたモデル
+    prompt_messages: list[PromptMessage]  # プロンプトメッセージのリスト
+    system_fingerprint: Optional[str] = None  # リクエストフィンガープリント。OpenAI の当該パラメータ定義を参照できます。
+    delta: LLMResultChunkDelta  # 各イテレーションで変化のある内容
+```
+
+#### LLMUsage
+
+```python
+class LLMUsage(ModelUsage):
+    """
+    LLM使用量のモデルクラス。
+    """
+    prompt_tokens: int  # プロンプト使用トークン数
+    prompt_unit_price: Decimal  # プロンプト単価
+    prompt_price_unit: Decimal  # プロンプト価格単位（単価が何トークンに基づいているか）
+    prompt_price: Decimal  # プロンプト料金
+    completion_tokens: int  # 返信使用トークン数
+    completion_unit_price: Decimal  # 返信単価
+    completion_price_unit: Decimal  # 返信価格単位（単価が何トークンに基づいているか）
+    completion_price: Decimal  # 返信料金
+    total_tokens: int  # 総使用トークン数
+    total_price: Decimal  # 総料金
+    currency: str  # 通貨単位
+    latency: float  # リクエスト遅延(秒)
+```
+
+***
+
+#### TextEmbeddingResult
+
+```python
+class TextEmbeddingResult(BaseModel):
+    """
+    テキスト埋め込み結果のモデルクラス。
+    """
+    model: str  # 実際に使用されたモデル
+    embeddings: list[list[float]]  # embeddingベクトルリスト。渡された texts リストに対応します。
+    usage: EmbeddingUsage  # 使用情報
+```
+
+#### EmbeddingUsage
+
+```python
+class EmbeddingUsage(ModelUsage):
+    """
+    埋め込み使用量のモデルクラス。
+    """
+    tokens: int  # 使用トークン数
+    total_tokens: int  # 総使用トークン数
+    unit_price: Decimal  # 単価
+    price_unit: Decimal  # 価格単位（単価が何トークンに基づいているか）
+    total_price: Decimal  # 総料金
+    currency: str  # 通貨単位
+    latency: float  # リクエスト遅延(秒)
+```
+
+***
+
+#### RerankResult
+
+```python
+class RerankResult(BaseModel):
+    """
+    Rerank結果のモデルクラス。
+    """
+    model: str  # 実際に使用されたモデル
+    docs: list[RerankDocument]  # リランキング後のドキュメントリスト        
+```
+
+#### RerankDocument
+
+```python
+class RerankDocument(BaseModel):
+    """
+    Rerankドキュメントのモデルクラス。
+    """
+    index: int  # 元のシーケンス番号
+    text: str  # ドキュメントのテキスト内容
+    score: float  # スコア
+```
+
+## 関連リソース
+
+- [モデル設計ルール](/plugin-dev-ja/0411-model-designing-rules) - モデル設定の仕様を理解する
+- [モデルプラグイン紹介](/plugin-dev-ja/0131-model-plugin-introduction.ja) - モデルプラグインの基本概念を素早く理解する
+- [新しいモデルへの迅速な接続](/plugin-dev-ja/0211-getting-started-new-model) - 既存のプロバイダーに新しいモデルを追加する方法を学ぶ
+- [新規モデルプロバイダーの作成](/plugin-dev-ja/0222-creating-new-model-provider) - 全く新しいモデルプロバイダーを開発する方法を学ぶ
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="このページを編集する"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin-dev-ja/0412-model-schema.mdx"
+    >
+        直接貢献することでドキュメントの改善にご協力ください
+    </Card>
+    <Card
+        title="問題を報告する"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=ドキュメントの問題%3A%20model-sch&body=%23%23%20問題の説明%0A%3C%21--%20発見した問題について簡単に説明してください%20--%3E%0A%0A%23%23%20ページリンク%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin-dev-ja%2F0412-model-schema.mdx%0A%0A%23%23%20提案される変更%0A%3C%21--%20特定の変更案がある場合は、ここで説明してください%20--%3E%0A%0A%3C%21--%20ドキュメントの品質向上にご協力いただきありがとうございます！%20--%3E"
+    >
+        エラーを見つけたり提案がありますか？お知らせください
+    </Card>
+</CardGroup>
