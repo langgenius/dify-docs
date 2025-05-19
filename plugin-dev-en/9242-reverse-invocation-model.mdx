@@ -1,0 +1,310 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: advanced
+  level: intermediate
+standard_title: Reverse Invocation Model
+language: en
+title: Reverse Invocation Model
+description: This document details how plugins can reverse invoke model services within
+  the Dify platform. It covers specific methods for reverse invoking LLM, Summary,
+  TextEmbedding, Rerank, TTS, Speech2Text, and Moderation models. Each model invocation
+  includes its entry point, interface parameter descriptions, practical usage code
+  examples, and best practice recommendations for invoking models.
+---
+
+Reverse invoking a Model refers to the ability of a plugin to call Dify's internal LLM capabilities, including all model types and functions within the platform, such as TTS, Rerank, etc. If you are not familiar with the basic concepts of reverse invocation, please read [Reverse Invocation of Dify Services](/plugin-dev-en/9241-reverse-invocation) first.
+
+However, please note that invoking a model requires passing a `ModelConfig` type parameter. Its structure can be referenced in the [General Specifications Definition](/plugin-dev-en/0411-general-specifications), and this structure will have slight differences for different types of models.
+
+For example, for `LLM` type models, it also needs to include `completion_params` and `mode` parameters. You can manually construct this structure or use `model-selector` type parameters or configurations.
+
+### Invoke LLM
+
+#### **Entry Point**
+
+```python
+    self.session.model.llm
+```
+
+#### **Endpoint**
+
+```python
+    def invoke(
+        self,
+        model_config: LLMModelConfig,
+        prompt_messages: list[PromptMessage],
+        tools: list[PromptMessageTool] | None = None,
+        stop: list[str] | None = None,
+        stream: bool = True,
+    ) -> Generator[LLMResultChunk, None, None] | LLMResult:
+        pass
+```
+
+Please note that if the model you are invoking does not have `tool_call` capability, the `tools` passed here will not take effect.
+
+#### **Use Case**
+
+If you want to invoke OpenAI's `gpt-4o-mini` model within a `Tool`, please refer to the following example code:
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+from dify_plugin import Tool
+from dify_plugin.entities.model.llm import LLMModelConfig
+from dify_plugin.entities.tool import ToolInvokeMessage
+from dify_plugin.entities.model.message import SystemPromptMessage, UserPromptMessage
+
+class LLMTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        response = self.session.model.llm.invoke(
+            model_config=LLMModelConfig(
+                provider='openai',
+                model='gpt-4o-mini',
+                mode='chat',
+                completion_params={}
+            ),
+            prompt_messages=[
+                SystemPromptMessage(
+                    content='you are a helpful assistant'
+                ),
+                UserPromptMessage(
+                    content=tool_parameters.get('query')
+                )
+            ],
+            stream=True
+        )
+
+        for chunk in response:
+            if chunk.delta.message:
+                assert isinstance(chunk.delta.message.content, str)
+                yield self.create_text_message(text=chunk.delta.message.content)
+```
+
+Note that the `query` parameter from `tool_parameters` is passed in the code.
+
+### **Best Practice**
+
+It is not recommended to manually construct `LLMModelConfig`. Instead, allow users to select the model they want to use on the UI. In this case, you can modify the tool's parameter list by adding a `model` parameter as follows:
+
+```yaml
+identity:
+  name: llm
+  author: Dify
+  label:
+    en_US: LLM
+    zh_Hans: LLM
+    pt_BR: LLM
+description:
+  human:
+    en_US: A tool for invoking a large language model
+    zh_Hans: 用于调用大型语言模型的工具
+    pt_BR: A tool for invoking a large language model
+  llm: A tool for invoking a large language model
+parameters:
+  - name: prompt
+    type: string
+    required: true
+    label:
+      en_US: Prompt string
+      zh_Hans: 提示字符串
+      pt_BR: Prompt string
+    human_description:
+      en_US: used for searching
+      zh_Hans: 用于搜索网页内容
+      pt_BR: used for searching
+    llm_description: key words for searching
+    form: llm
+  - name: model
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: Model
+      zh_Hans: 使用的模型
+      pt_BR: Model
+    human_description:
+      en_US: Model
+      zh_Hans: 使用的模型
+      pt_BR: Model
+    llm_description: which Model to invoke
+    form: form
+extra:
+  python:
+    source: tools/llm.py
+```
+
+Please note that in this example, the `scope` of `model` is specified as `llm`. This means the user can only select `llm` type parameters. Thus, the code from the previous use case can be modified as follows:
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+from dify_plugin import Tool
+from dify_plugin.entities.model.llm import LLMModelConfig
+from dify_plugin.entities.tool import ToolInvokeMessage
+from dify_plugin.entities.model.message import SystemPromptMessage, UserPromptMessage
+
+class LLMTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        response = self.session.model.llm.invoke(
+            model_config=tool_parameters.get('model'),
+            prompt_messages=[
+                SystemPromptMessage(
+                    content='you are a helpful assistant'
+                ),
+                UserPromptMessage(
+                    content=tool_parameters.get('query') # Assuming 'query' is still needed, otherwise use 'prompt' from parameters
+                )
+            ],
+            stream=True
+        )
+
+        for chunk in response:
+            if chunk.delta.message:
+                assert isinstance(chunk.delta.message.content, str)
+                yield self.create_text_message(text=chunk.delta.message.content)
+```
+
+### Invoke Summary
+
+You can request this endpoint to summarize a piece of text. It will use the system model within your current workspace to summarize the text.
+
+**Entry Point**
+
+```python
+    self.session.model.summary
+```
+
+**Endpoint**
+
+*   `text` is the text to be summarized.
+*   `instruction` is the additional instruction you want to add, allowing you to summarize the text stylistically.
+
+```python
+    def invoke(
+        self, text: str, instruction: str,
+    ) -> str:
+```
+
+### Invoke TextEmbedding
+
+**Entry Point**
+
+```python
+    self.session.model.text_embedding
+```
+
+**Endpoint**
+
+```python
+    def invoke(
+        self, model_config: TextEmbeddingResult, texts: list[str]
+    ) -> TextEmbeddingResult:
+        pass
+```
+
+### Invoke Rerank
+
+**Entry Point**
+
+```python
+    self.session.model.rerank
+```
+
+**Endpoint**
+
+```python
+    def invoke(
+        self, model_config: RerankModelConfig, docs: list[str], query: str
+    ) -> RerankResult:
+        pass
+```
+
+### Invoke TTS
+
+**Entry Point**
+
+```python
+    self.session.model.tts
+```
+
+**Endpoint**
+
+```python
+    def invoke(
+        self, model_config: TTSModelConfig, content_text: str
+    ) -> Generator[bytes, None, None]:
+        pass
+```
+
+Please note that the `bytes` stream returned by the `tts` endpoint is an `mp3` audio byte stream. Each iteration returns a complete audio segment. If you want to perform more in-depth processing tasks, please choose an appropriate library.
+
+### Invoke Speech2Text
+
+**Entry Point**
+
+```python
+    self.session.model.speech2text
+```
+
+**Endpoint**
+
+```python
+    def invoke(
+        self, model_config: Speech2TextModelConfig, file: IO[bytes]
+    ) -> str:
+        pass
+```
+
+Where `file` is an audio file encoded in `mp3` format.
+
+### Invoke Moderation
+
+**Entry Point**
+
+```python
+    self.session.model.moderation
+```
+
+**Endpoint**
+
+```python
+    def invoke(self, model_config: ModerationModelConfig, text: str) -> bool:
+        pass
+```
+
+If this endpoint returns `true`, it indicates that the `text` contains sensitive content.
+
+## Related Resources
+
+- [Reverse Invocation of Dify Services](/plugin-dev-en/9241-reverse-invocation) - Understand the fundamental concepts of reverse invocation
+- [Reverse Invocation of App](/plugin-dev-en/9242-reverse-invocation-app) - Learn how to invoke Apps within the platform
+- [Reverse Invocation of Tool](/plugin-dev-en/9242-reverse-invocation-tool) - Learn how to invoke other plugins
+- [Model Plugin Development Guide](/plugin-dev-en/0211-getting-started-new-model) - Learn how to develop custom model plugins
+- [Model Designing Rules](/plugin-dev-en/0411-model-designing-rules) - Understand the design principles of model plugins
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin-dev-en/9242-reverse-invocation-model.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20reverse-invocation-mo&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin-dev-en%2F9242-reverse-invocation-model.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>

@@ -1,0 +1,403 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Tool Plugin
+language: en
+title: Tool Plugin
+description: This document provides detailed instructions on how to develop tool plugins
+  for Dify, using Google Search as an example to demonstrate a complete tool plugin
+  development process. The content includes plugin initialization, template selection,
+  tool provider configuration file definition, adding third-party service credentials,
+  tool functionality code implementation, debugging, and packaging for release.
+---
+
+Tools refer to third-party services that can be called by Chatflow / Workflow / Agent-type applications, providing complete API implementation capabilities to enhance Dify applications. For example, adding extra features like online search, image generation, and more.
+
+![Tool Plugin Example](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
+
+In this article, **"Tool Plugin"** refers to a complete project that includes tool provider files, functional code, and other structures. A tool provider can include multiple Tools (which can be understood as additional features provided within a single tool), structured as follows:
+
+```
+- Tool Provider
+    - Tool A
+    - Tool B
+```
+
+![Tool Plugin Structure](https://assets-docs.dify.ai/2025/02/60c4c86a317d865133aa460592eac079.png)
+
+This article will use `Google Search` as an example to demonstrate how to quickly develop a tool plugin.
+
+### Prerequisites
+
+-   Dify plugin scaffolding tool
+-   Python environment, version ≥ 3.12
+
+For detailed instructions on how to prepare the plugin development scaffolding tool, please refer to [Initializing Development Tools](/plugin-dev-en/0221-initialize-development-tools). If you are developing a plugin for the first time, it is recommended to read [Dify Plugin Development: Hello World Guide](/plugin-dev-en/0211-getting-started-dify-tool) first.
+
+### Creating a New Project
+
+Run the scaffolding command line tool to create a new Dify plugin project.
+
+```bash
+./dify-plugin-darwin-arm64 plugin init
+```
+
+If you have renamed the binary file to `dify` and copied it to the `/usr/local/bin` path, you can run the following command to create a new plugin project:
+
+```bash
+dify plugin init
+```
+
+> In the following text, `dify` will be used as a command line example. If you encounter any issues, please replace the `dify` command with the path to the command line tool.
+
+### Choosing Plugin Type and Template
+
+All templates in the scaffolding tool provide complete code projects. In this example, select the `Tool` plugin.
+
+> If you are already familiar with plugin development and do not need to rely on templates, you can refer to the [General Specifications](/plugin-dev-en/0411-general-specifications) guide to complete the development of different types of plugins.
+
+![Plugin Type: Tool](https://assets-docs.dify.ai/2024/12/dd3c0f9a66454e15868eabced7b74fd6.png)
+
+#### Configuring Plugin Permissions
+
+The plugin also needs permissions to read from the Dify platform. Grant the following permissions to this example plugin:
+
+-   Tools
+-   Apps
+-   Enable persistent storage Storage, allocate default size storage
+-   Allow registering Endpoints
+
+> Use the arrow keys in the terminal to select permissions, and use the "Tab" button to grant permissions.
+
+After checking all permission items, press Enter to complete the plugin creation. The system will automatically generate the plugin project code.
+
+![Plugin Permissions](https://assets-docs.dify.ai/2024/12/9cf92c2e74dce55e6e9e331d031e5a9f.png)
+
+### Developing the Tool Plugin
+
+#### 1. Creating the Tool Provider File
+
+The tool provider file is a yaml format file, which can be understood as the basic configuration entry for the tool plugin, used to provide necessary authorization information to the tool.
+
+Go to the `/provider` path in the plugin template project and rename the yaml file to `google.yaml`. This `yaml` file will contain information about the tool provider, including the provider's name, icon, author, and other details. This information will be displayed when installing the plugin.
+
+**Example Code**
+
+```yaml
+identity: # Basic information of the tool provider
+    author: Your-name # Author
+    name: google # Name, unique, cannot have the same name as other providers
+    label: # Label, for frontend display
+        en_US: Google # English label
+        zh_Hans: Google # Chinese label
+    description: # Description, for frontend display
+        en_US: Google # English description
+        zh_Hans: Google # Chinese description
+    icon: icon.svg # Tool icon, needs to be placed in the _assets folder
+    tags: # Tags, for frontend display
+        - search
+```
+
+Make sure the file path is in the `/tools` directory, with the complete path as follows:
+
+```yaml
+plugins:
+    tools:
+        - 'google.yaml'
+```
+
+Where `google.yaml` needs to use its absolute path in the plugin project. In this example, it is located in the project root directory. The identity field in the YAML file is explained as follows: `identity` contains basic information about the tool provider, including author, name, label, description, icon, etc.
+
+-   The icon needs to be an attachment resource and needs to be placed in the `_assets` folder in the project root directory.
+-   Tags can help users quickly find plugins through categories. Below are all the currently supported tags.
+
+```python
+class ToolLabelEnum(Enum):
+  SEARCH = 'search'
+  IMAGE = 'image'
+  VIDEOS = 'videos'
+  WEATHER = 'weather'
+  FINANCE = 'finance'
+  DESIGN = 'design'
+  TRAVEL = 'travel'
+  SOCIAL = 'social'
+  NEWS = 'news'
+  MEDICAL = 'medical'
+  PRODUCTIVITY = 'productivity'
+  EDUCATION = 'education'
+  BUSINESS = 'business'
+  ENTERTAINMENT = 'entertainment'
+  UTILITIES = 'utilities'
+  OTHER = 'other'
+```
+
+#### **2. Completing Third-Party Service Credentials**
+
+For development convenience, we choose to use the Google Search API provided by the third-party service `SerpApi`. `SerpApi` requires an API Key for use, so we need to add the `credentials_for_provider` field in the `yaml` file.
+
+The complete code is as follows:
+
+```yaml
+identity:
+    author: Dify
+    name: google
+    label:
+        en_US: Google
+        zh_Hans: Google
+        pt_BR: Google
+    description:
+        en_US: Google
+        zh_Hans: GoogleSearch
+        pt_BR: Google
+    icon: icon.svg
+    tags:
+        - search
+credentials_for_provider: #Add credentials_for_provider field
+    serpapi_api_key:
+        type: secret-input
+        required: true
+        label:
+            en_US: SerpApi API key
+            zh_Hans: SerpApi API key
+        placeholder:
+            en_US: Please input your SerpApi API key
+            zh_Hans: Please enter your SerpApi API key
+        help:
+            en_US: Get your SerpApi API key from SerpApi
+            zh_Hans: Get your SerpApi API key from SerpApi
+        url: https://serpapi.com/manage-api-key
+tools:
+    - tools/google_search.yaml
+extra:
+    python:
+        source: google.py
+```
+
+-   The sub-level structure of `credentials_for_provider` needs to meet the requirements of [General Specifications](/plugin-dev-en/0411-general-specifications).
+-   You need to specify which tools the provider includes. This example only includes one `tools/google_search.yaml` file.
+-   As a provider, in addition to defining its basic information, you also need to implement some of its code logic, so you need to specify its implementation logic. In this example, we put the code file for the functionality in `google.py`, but we won't implement it yet, but instead write the code for `google_search` first.
+
+#### 3. Filling in the Tool YAML File
+
+A tool plugin can have multiple tool functions, and each tool function needs a `yaml` file for description, including basic information about the tool function, parameters, output, etc.
+
+Still using the `GoogleSearch` tool as an example, create a new `google_search.yaml` file in the `/tools` folder.
+
+```yaml
+identity:
+    name: google_search
+    author: Dify
+    label:
+        en_US: GoogleSearch
+        zh_Hans: Google Search
+        pt_BR: GoogleSearch
+description:
+    human:
+        en_US: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        zh_Hans: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        pt_BR: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+    llm: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+parameters:
+    - name: query
+      type: string
+      required: true
+      label:
+          en_US: Query string
+          zh_Hans: Query string
+          pt_BR: Query string
+      human_description:
+          en_US: used for searching
+          zh_Hans: used for searching web content
+          pt_BR: used for searching
+      llm_description: key words for searching
+      form: llm
+extra:
+    python:
+        source: tools/google_search.py
+```
+
+-   `identity` contains basic information about the tool, including name, author, label, description, etc.
+-   `parameters` parameter list
+    -   `name` (required) parameter name, unique, cannot have the same name as other parameters.
+    -   `type` (required) parameter type, currently supports `string`, `number`, `boolean`, `select`, `secret-input` five types, corresponding to string, number, boolean, dropdown, encrypted input box. For sensitive information, please use the `secret-input` type.
+    -   `label` (required) parameter label, for frontend display.
+    -   `form` (required) form type, currently supports `llm`, `form` two types.
+        -   In Agent applications, `llm` means that the parameter is inferred by the LLM itself, `form` means that parameters can be preset in advance to use this tool.
+        -   In Workflow applications, both `llm` and `form` need to be filled in by the frontend, but `llm` parameters will be used as input variables for the tool node.
+    -   `required` whether required
+        -   In `llm` mode, if the parameter is required, the Agent will be required to infer this parameter.
+        -   In `form` mode, if the parameter is required, the user will be required to fill in this parameter on the frontend before the conversation begins.
+    -   `options` parameter options
+        -   In `llm` mode, Dify will pass all options to the LLM, and the LLM can infer based on these options.
+        -   In `form` mode, when `type` is `select`, the frontend will display these options.
+    -   `default` default value.
+    -   `min` minimum value, can be set when the parameter type is `number`.
+    -   `max` maximum value, can be set when the parameter type is `number`.
+    -   `human_description` introduction for frontend display, supports multiple languages.
+    -   `placeholder` prompt text for the input field, can be set when the form type is `form` and the parameter type is `string`, `number`, `secret-input`, supports multiple languages.
+    -   `llm_description` introduction passed to the LLM. To make the LLM better understand this parameter, please write as detailed information as possible about this parameter here, so that the LLM can understand the parameter.
+
+#### 4. Preparing Tool Code
+
+After filling in the configuration information for the tool, you can start writing the code for the tool's functionality, implementing the logical purpose of the tool. Create `google_search.py` in the `/tools` directory with the following content:
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+import requests
+
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
+
+SERP_API_URL = "https://serpapi.com/search"
+
+class GoogleSearchTool(Tool):
+    def _parse_response(self, response: dict) -> dict:
+        result = {}
+        if "knowledge_graph" in response:
+            result["title"] = response["knowledge_graph"].get("title", "")
+            result["description"] = response["knowledge_graph"].get("description", "")
+        if "organic_results" in response:
+            result["organic_results"] = [
+                {
+                    "title": item.get("title", ""),
+                    "link": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                }
+                for item in response["organic_results"]
+            ]
+        return result
+
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        params = {
+            "api_key": self.runtime.credentials["serpapi_api_key"],
+            "q": tool_parameters["query"],
+            "engine": "google",
+            "google_domain": "google.com",
+            "gl": "us",
+            "hl": "en",
+        }
+
+        response = requests.get(url=SERP_API_URL, params=params, timeout=5)
+        response.raise_for_status()
+        valuable_res = self._parse_response(response.json())
+
+        yield self.create_json_message(valuable_res)
+```
+
+This example means requesting `serpapi` and using `self.create_json_message` to return a formatted `json` data string. If you want to learn more about return data types, you can refer to the [Remote Debugging Plugins](/plugin-dev-en/0411-remote-debug-a-plugin) and [Persistent Storage KV](/plugin-dev-en/0411-persistent-storage-kv) documents.
+
+#### 4. Completing the Tool Provider Code
+
+Finally, you need to create an implementation code for the provider to implement the credential validation logic. If credential validation fails, a `ToolProviderCredentialValidationError` exception will be thrown. After validation succeeds, the `google_search` tool service will be correctly requested.
+
+Create a `google.py` file in the `/provider` directory with the following content:
+
+```python
+from typing import Any
+
+from dify_plugin import ToolProvider
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+from tools.google_search import GoogleSearchTool
+
+class GoogleProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+        try:
+            for _ in GoogleSearchTool.from_credentials(credentials).invoke(
+                tool_parameters={"query": "test", "result_type": "link"},
+            ):
+                pass
+        except Exception as e:
+            raise ToolProviderCredentialValidationError(str(e))
+```
+
+### Debugging the Plugin
+
+After completing plugin development, you need to test whether the plugin can function properly. Dify provides a convenient remote debugging method to help you quickly verify the plugin's functionality in a test environment.
+
+Go to the ["Plugin Management"](https://cloud.dify.ai/plugins) page to obtain the remote server address and debugging Key.
+
+![Remote Debug Key](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
+
+Return to the plugin project, copy the `.env.example` file and rename it to `.env`, then fill in the remote server address and debugging Key information you obtained.
+
+`.env` file:
+
+```bash
+INSTALL_METHOD=remote
+REMOTE_INSTALL_HOST=remote
+REMOTE_INSTALL_PORT=5003
+REMOTE_INSTALL_KEY=****-****-****-****-****
+```
+
+Run the `python -m main` command to start the plugin. On the plugins page, you can see that the plugin has been installed in the Workspace, and other members of the team can also access the plugin.
+
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
+
+### Packaging the Plugin (Optional)
+
+After confirming that the plugin can run normally, you can package and name the plugin using the following command line tool. After running, you will discover a `google.difypkg` file in the current folder, which is the final plugin package.
+
+```bash
+# Replace ./google with the actual path of the plugin project
+
+dify plugin package ./google
+```
+
+Congratulations, you have completed the entire process of developing, debugging, and packaging a tool-type plugin!
+
+### Publishing the Plugin (Optional)
+
+If you want to publish the plugin to the Dify Marketplace, please ensure that your plugin follows the specifications in [Publish to Dify Marketplace](/plugin-dev-en/0322-release-to-dify-marketplace). After passing the review, the code will be merged into the main branch and automatically launched to the [Dify Marketplace](https://marketplace.dify.ai/).
+
+[Publishing Overview](/plugin-dev-en/0321-release-overview)
+
+### Explore More
+
+#### **Quick Start:**
+
+-   [Developing Extension Plugins](/plugin-dev-en/9231-extension-plugin)
+-   [Developing Model Plugins](/plugin-dev-en/0211-getting-started-new-model)
+-   [Bundle Plugins: Packaging Multiple Plugins](/plugin-dev-en/9241-bundle)
+
+#### **Plugin Interface Documentation:**
+
+-   [General Specifications](/plugin-dev-en/0411-general-specifications) - Manifest Structure and Tool Specifications
+-   [Endpoint](/plugin-dev-en/0432-endpoint) - Detailed Endpoint Definition
+-   [Reverse Invocation](/plugin-dev-en/9241-reverse-invocation) - Reverse Invocation of Dify Capabilities
+-   [Model Schema](/plugin-dev-en/0412-model-schema) - Models
+-   [Agent Plugins](/plugin-dev-en/9232-agent) - Extending Agent Strategies
+
+## Next Learning Steps
+
+- [Remote Debugging Plugins](/plugin-dev-en/0411-remote-debug-a-plugin) - Learn more advanced debugging techniques
+- [Persistent Storage](/plugin-dev-en/0411-persistent-storage-kv) - Learn how to use data storage in plugins
+- [Slack Bot Plugin Development Example](/plugin-dev-en/0432-develop-a-slack-bot-plugin) - View a more complex plugin development case
+- [Tool Plugin](/plugin-dev-en/0411-tool) - Explore advanced features of tool plugins
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs-mintlify/edit/main/plugin-dev-en/0222-tool-plugin.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs-mintlify/issues/new?title=Documentation%20Issue%3A%20tool-plu&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs-mintlify%2Fblob%2Fmain%2Fplugin-dev-en%2F0222-tool-plugin.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>
