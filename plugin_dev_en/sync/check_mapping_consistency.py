@@ -29,8 +29,8 @@ class MappingValidator:
         # plugin_dir 是 <workspace_root>/en/plugins
         self.plugin_dir = self.base_dir / "en" / "plugins"
         
-        # dev_dir 是 <workspace_root>/plugin_dev_en
-        self.dev_dir = self.base_dir / "plugin_dev_en"
+        # dev_dir 是 <workspace_root>/plugin-dev-en
+        self.dev_dir = self.base_dir / "plugin-dev-en"
         
         self.mappings = []
         self.load_mappings()
@@ -113,7 +113,7 @@ class MappingValidator:
             diff = actual_plugin_count - stats['expected_plugin_files']
             print(f"    状态: {RED}✗ 存在差异 (实际比预期{diff:+d}){RESET}")
         
-        print("\n  📁 开发文件夹 (plugin_dev_en):")
+        print("\n  📁 开发文件夹 (plugin-dev-en):")
         print(f"    JSON 映射预期: {stats['expected_dev_files']} 个文件")
         print(f"    实际扫描结果: {actual_dev_count} 个 .mdx 文件")
         if actual_dev_count == stats['expected_dev_files']:

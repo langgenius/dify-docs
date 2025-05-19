@@ -8,8 +8,8 @@ refresh = True  # 如果为 True，将清空指定版本的 tabs
 DOCS_JSON_PATH = "docs.json"
 
 # --- 简体中文配置（docs_config） ---
-PLUGIN_DEV_ZH = {
-    "DOCS_DIR": "plugin_dev_zh",  # 插件开发文档目录
+plugin-dev-zh = {
+    "DOCS_DIR": "plugin-dev-zh",  # 插件开发文档目录
     "LANGUAGE_CODE": "简体中文",  # 注意：虽然变量名是 LANGUAGE_CODE，但会部署为 docs.json 中的 'version' 值。
     "FILE_EXTENSION": ".zh.mdx",
     "TARGET_TAB_NAME": "插件开发",  # 新增：目标 Tab 名称
@@ -49,8 +49,8 @@ PLUGIN_DEV_ZH = {
 }
 
 # --- English Configuration ---
-PLUGIN_DEV_EN = {
-    "DOCS_DIR": "plugin_dev_en",  # Plugin development documentation directory
+plugin-dev-en = {
+    "DOCS_DIR": "plugin-dev-en",  # Plugin development documentation directory
     # Note: Although the variable name is LANGUAGE_CODE, it will be deployed as the 'version' value in docs.json.
     "LANGUAGE_CODE": "English",
     "FILE_EXTENSION": ".en.mdx",
@@ -768,8 +768,8 @@ def process_configurations(configs, docs_path):
 if __name__ == "__main__":
     # 定义要处理的配置列表
     CONFIGS_TO_PROCESS = [
-        PLUGIN_DEV_ZH,
-        PLUGIN_DEV_EN,
+        plugin-dev-zh,
+        plugin-dev-en,
         PLUGIN_DEV_JA,
     ]
 

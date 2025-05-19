@@ -15,10 +15,10 @@ class MdxSyncManager:
         self.base_dir = Path(os.path.dirname(
             # 指向项目根目录
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-        self.json_file = self.base_dir / "plugin_dev_en" / \
+        self.json_file = self.base_dir / "plugin-dev-en" / \
             "sync" / json_file  # 修正 JSON 文件路径
         self.plugin_dir = self.base_dir / "en" / "plugins"  # 指向英文插件目录
-        self.dev_dir = self.base_dir / "plugin_dev_en"  # 指向英文开发目录
+        self.dev_dir = self.base_dir / "plugin-dev-en"  # 指向英文开发目录
         self.mappings = []
         self.load_mappings()
 

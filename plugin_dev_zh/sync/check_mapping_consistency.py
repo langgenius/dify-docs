@@ -22,9 +22,9 @@ class MappingValidator:
     def __init__(self, json_file: str = "plugin_mappings.json"):
         self.base_dir = Path(os.path.dirname(os.path.dirname(
             os.path.dirname(os.path.abspath(__file__)))))
-        self.json_file = self.base_dir / "plugin_dev_zh" / "sync" / json_file
+        self.json_file = self.base_dir / "plugin-dev-zh" / "sync" / json_file
         self.plugin_dir = self.base_dir / "zh-hans" / "plugins"
-        self.dev_dir = self.base_dir / "plugin_dev_zh"
+        self.dev_dir = self.base_dir / "plugin-dev-zh"
         self.mappings = []
         self.load_mappings()
 
@@ -109,7 +109,7 @@ class MappingValidator:
             diff = actual_plugin_count - stats['expected_plugin_files']
             print(f"    状态: {RED}✗ 存在差异 (实际比预期{diff:+d}){RESET}")
 
-        print("\n  📁 开发文件夹 (plugin_dev_zh):")
+        print("\n  📁 开发文件夹 (plugin-dev-zh):")
         print(f"    JSON 映射预期: {stats['expected_dev_files']} 个文件")
         print(f"    实际扫描结果: {actual_dev_count} 个 .mdx 文件")
         if actual_dev_count == stats['expected_dev_files']:

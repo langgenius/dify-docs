@@ -14,9 +14,9 @@ class MdxSyncManager:
     def __init__(self, json_file: str = "plugin_mappings.json"):
         self.base_dir = Path(os.path.dirname(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # Corrected base_dir to project root
-        self.json_file = self.base_dir / "plugin_dev_zh" / "sync" / json_file  # Corrected json_file path
+        self.json_file = self.base_dir / "plugin-dev-zh" / "sync" / json_file  # Corrected json_file path
         self.plugin_dir = self.base_dir / "zh-hans" / "plugins"
-        self.dev_dir = self.base_dir / "plugin_dev_zh"
+        self.dev_dir = self.base_dir / "plugin-dev-zh"
         self.mappings = []
         self.load_mappings()
 

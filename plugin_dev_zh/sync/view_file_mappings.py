@@ -23,7 +23,7 @@ EMPTY_MARK = f"{YELLOW}❎{RESET}"
 def load_mappings(json_file="plugin_mappings.json"):
     """加载映射文件"""
     base_dir = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))) # 修改 base_dir 指向项目根目录
-    json_path = base_dir / "plugin_dev_zh" / "sync" / json_file # 修正 json_path
+    json_path = base_dir / "plugin-dev-zh" / "sync" / json_file # 修正 json_path
     
     try:
         with open(json_path, 'r', encoding='utf-8') as f:

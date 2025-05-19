@@ -22,10 +22,10 @@ EMPTY_MARK = f"{YELLOW}❎{RESET}"
 
 def load_mappings(json_file="plugin_mappings.json"):
     """加载映射文件"""
-    # base_dir 是工作区根目录。脚本位于 <workspace_root>/plugin_dev_en/sync/script.py
+    # base_dir 是工作区根目录。脚本位于 <workspace_root>/plugin-dev-en/sync/script.py
     # 因此，base_dir 是脚本目录的父目录的父目录的父目录。
     base_dir = Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-    json_path = base_dir / "plugin_dev_en" / "sync" / json_file # 修正 JSON 文件路径
+    json_path = base_dir / "plugin-dev-en" / "sync" / json_file # 修正 JSON 文件路径
     
     try:
         with open(json_path, 'r', encoding='utf-8') as f:
