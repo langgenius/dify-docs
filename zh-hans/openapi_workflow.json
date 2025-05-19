@@ -1,0 +1,384 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Workflow 应用 API",
+    "description": "Workflow 应用无会话支持，适合用于翻译/文章写作/总结 AI 等等。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{api_base_url}",
+      "description": "API 的基础 URL。请将 {api_base_url} 替换为您的应用提供的实际 API 基础 URL。",
+      "variables": {
+        "api_base_url": {
+          "default": "https://api.dify.ai/v1",
+          "description": "实际的 API 基础 URL"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/workflows/run": {
+      "post": {
+        "summary": "执行 workflow",
+        "description": "执行 workflow，没有已发布的 workflow，不可执行。",
+        "operationId": "executeWorkflowCn",
+        "tags": ["工作流执行"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowExecutionRequestCn"
+              },
+              "examples": {
+                "basic_execution_cn": {
+                  "summary": "基础工作流执行示例",
+                  "value": {
+                    "inputs": {
+                      "query": "请总结这段文字：..."
+                    },
+                    "response_mode": "streaming",
+                    "user": "workflow_user_001"
+                  }
+                },
+                "with_file_array_variable_cn":{
+                  "summary": "包含文件列表变量的输入示例",
+                  "value": {
+                    "inputs": {
+                      "my_documents": [
+                        {
+                          "type": "document",
+                          "transfer_method": "local_file",
+                          "upload_file_id": "已上传的文件ID_abc"
+                        },
+                        {
+                          "type": "image",
+                          "transfer_method": "remote_url",
+                          "url": "https://example.com/image.jpg"
+                        }
+                      ]
+                    },
+                    "response_mode": "blocking",
+                    "user": "workflow_user_002"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "工作流执行成功。响应结构取决于 `response_mode`。\n- `blocking`: `application/json` 格式，包含 `WorkflowCompletionResponseCn` 对象。\n- `streaming`: `text/event-stream` 格式，包含 `ChunkWorkflowEventCn` 事件流。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowCompletionResponseCn"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE 事件流。每个事件以 'data: ' 开头，以 '\\n\\n' 结尾。具体结构请参见 `ChunkWorkflowEventCn`。"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestWorkflowCn" },
+          "500": { "$ref": "#/components/responses/InternalServerErrorCn" }
+        }
+      }
+    },
+    "/workflows/run/{workflow_run_id}": {
+      "get": {
+        "summary": "获取workflow执行情况",
+        "description": "根据 workflow 执行 ID 获取 workflow 任务当前执行结果。",
+        "operationId": "getWorkflowRunDetailCn",
+        "tags": ["工作流执行"],
+        "parameters": [
+          {
+            "name": "workflow_run_id",
+            "in": "path",
+            "required": true,
+            "description": "workflow 执行 ID，可在流式返回 Chunk 或阻塞模式响应中获取。",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功获取 workflow 执行详情。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WorkflowRunDetailResponseCn" }
+              }
+            }
+          },
+          "404": {"description": "Workflow 执行记录未找到。"}
+        }
+      }
+    },
+    "/workflows/tasks/{task_id}/stop": {
+      "post": {
+        "summary": "停止响应 (Workflow Task)",
+        "description": "停止 workflow 任务的生成。仅支持流式模式。",
+        "operationId": "stopWorkflowTaskGenerationCn",
+        "tags": ["工作流执行"],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "description": "任务 ID，可在流式返回 Chunk 中获取。",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user"],
+                "properties": {
+                  "user": { "type": "string", "description": "用户标识，必须和执行 workflow 接口传入的 user 保持一致。" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResultCn" }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "上传文件 (Workflow)",
+        "description": "上传文件并在执行 workflow 时使用。支持您的工作流程所支持的任何格式。上传的文件仅供当前终端用户使用。",
+        "operationId": "uploadWorkflowFileCn",
+        "tags": ["文件操作 (Workflow)"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "user"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "要上传的文件。" },
+                  "user": { "type": "string", "description": "用户标识。" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "文件上传成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponseCn" } } } },
+          "201": { "description": "文件创建成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponseCn" } } } },
+          "400": { "$ref": "#/components/responses/BadRequestFileCn" },
+          "413": { "$ref": "#/components/responses/FileTooLargeCn" },
+          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFileCn" },
+          "503": { "$ref": "#/components/responses/S3ErrorFileCn" },
+          "500": { "$ref": "#/components/responses/InternalServerErrorCn" }
+        }
+      }
+    },
+    "/workflows/logs": {
+        "get": {
+            "summary": "获取 workflow 日志",
+            "description": "倒序返回 workflow 日志。",
+            "operationId": "getWorkflowLogsCn",
+            "tags": ["工作流执行"],
+            "parameters": [
+                { "name": "keyword", "in": "query", "description": "（可选）关键字。", "schema": { "type": "string" } },
+                { "name": "status", "in": "query", "description": "（可选）执行状态：succeeded, failed, stopped, running。", "schema": { "type": "string", "enum": ["succeeded", "failed", "stopped", "running"] } },
+                { "name": "page", "in": "query", "description": "（可选）当前页码, 默认1。", "schema": { "type": "integer", "default": 1 } },
+                { "name": "limit", "in": "query", "description": "（可选）每页条数, 默认20。", "schema": { "type": "integer", "default": 20 } }
+            ],
+            "responses": {
+                "200": { "description": "成功获取 workflow 日志。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowLogsResponseCn" } } } }
+            }
+        }
+    },
+    "/info": {
+      "get": {
+        "summary": "获取应用基本信息 (Workflow)",
+        "operationId": "getWorkflowAppInfoCn",
+        "tags": ["应用配置 (Workflow)"],
+        "responses": { "200": { "description": "应用基本信息。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppInfoResponseCn" } } } } }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "获取应用参数 (Workflow)",
+        "operationId": "getWorkflowAppParametersCn",
+        "tags": ["应用配置 (Workflow)"],
+        "responses": { "200": { "description": "应用参数信息。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowAppParametersResponseCn" } } } } }
+      }
+    },
+    "/site": {
+      "get": {
+        "summary": "获取应用 WebApp 设置 (Workflow)",
+        "operationId": "getWorkflowWebAppSettingsCn",
+        "tags": ["应用配置 (Workflow)"],
+        "responses": { "200": { "description": "WebApp 设置信息。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowWebAppSettingsResponseCn" } } } } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "API_KEY", "description": "API-Key 鉴权。所有 API 请求都应在 Authorization HTTP Header 中包含您的 API-Key，格式为：Bearer {API_KEY}。强烈建议开发者把 API-Key 放在后端存储，而非客户端，以免泄露。" }
+    },
+    "responses": {
+        "BadRequestWorkflowCn": { "description": "请求参数错误或工作流执行失败。可能错误码：invalid_param, app_unavailable, provider_not_initialize, provider_quota_exceeded, model_currently_not_support, workflow_request_error。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "BadRequestFileCn": { "description": "文件操作请求错误。可能错误码：no_file_uploaded, too_many_files, unsupported_preview, unsupported_estimate。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "FileTooLargeCn": { "description": "文件太大 (file_too_large)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "UnsupportedFileTypeFileCn": { "description": "不支持的文件类型 (unsupported_file_type)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "S3ErrorFileCn": { "description": "S3 存储服务错误。可能错误码：s3_connection_failed, s3_permission_denied, s3_file_too_large。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "InternalServerErrorCn": { "description": "服务内部异常。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseCn" } } } },
+        "SuccessResultCn": { "description": "操作成功。", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } }
+    },
+    "schemas": {
+      "WorkflowExecutionRequestCn": {
+        "type": "object",
+        "required": ["inputs", "response_mode", "user"],
+        "properties": {
+          "inputs": {
+            "type": "object",
+            "description": "允许传入 App 定义的各变量值。如果变量是文件列表类型，该变量对应的值应是 InputFileObjectWorkflowCn 对象的列表。",
+            "additionalProperties": {
+              "oneOf": [ { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "object" }, { "type": "array", "items": { "$ref": "#/components/schemas/InputFileObjectWorkflowCn" } } ]
+            },
+            "example": { "user_query": "请帮我翻译这句话。", "target_language": "法语" }
+          },
+          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "description": "返回响应模式。streaming (推荐) 基于 SSE；blocking 等待执行完毕后返回 (Cloudflare 100秒超时限制)。" },
+          "user": { "type": "string", "description": "用户标识，应用内唯一。" }
+        }
+      },
+      "InputFileObjectWorkflowCn": {
+        "type": "object",
+        "required": ["type", "transfer_method"],
+        "properties": {
+          "type": { "type": "string", "enum": ["document", "image", "audio", "video", "custom"], "description": "文件类型。document: TXT,MD,PDF等; image: JPG,PNG等; audio: MP3,WAV等; video: MP4,MOV等; custom: 其他。" },
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "传递方式。" },
+          "url": { "type": "string", "format": "url", "description": "图片地址 (当 transfer_method 为 remote_url 时)。" },
+          "upload_file_id": { "type": "string", "format": "uuid", "description": "上传文件 ID (当 transfer_method 为 local_file 时)。" }
+        },
+        "oneOf": [ {"required": ["url"]}, {"required": ["upload_file_id"]} ]
+      },
+      "WorkflowCompletionResponseCn": {
+        "type": "object", "description": "阻塞模式下的 workflow 执行结果。",
+        "properties": {
+          "workflow_run_id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID。" },
+          "task_id": { "type": "string", "format": "uuid", "description": "任务 ID。" },
+          "data": { "$ref": "#/components/schemas/WorkflowFinishedDataCn" }
+        }
+      },
+      "ChunkWorkflowEventCn": {
+        "type": "object", "required": ["event"],
+        "properties": { "event": { "type": "string", "enum": ["workflow_started", "node_started", "text_chunk", "node_finished", "workflow_finished", "tts_message", "tts_message_end", "ping"], "description": "事件类型。" } },
+        "discriminator": { "propertyName": "event", "mapping": {
+            "workflow_started": "#/components/schemas/StreamEventWfWorkflowStartedCn", "node_started": "#/components/schemas/StreamEventWfNodeStartedCn",
+            "text_chunk": "#/components/schemas/StreamEventWfTextChunkCn", "node_finished": "#/components/schemas/StreamEventWfNodeFinishedCn",
+            "workflow_finished": "#/components/schemas/StreamEventWfWorkflowFinishedCn", "tts_message": "#/components/schemas/StreamEventWfTtsMessageCn",
+            "tts_message_end": "#/components/schemas/StreamEventWfTtsMessageEndCn", "ping": "#/components/schemas/StreamEventWfPingCn"
+          }}
+      },
+      "StreamEventBaseWfCn": {
+        "type": "object", "properties": { "task_id": { "type": "string", "format": "uuid", "description": "任务 ID。" }, "workflow_run_id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID。" } }
+      },
+      "StreamEventWfWorkflowStartedCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowStartedDataCn" } } } ] },
+      "WorkflowStartedDataCn": { "type": "object", "description": "Workflow 开始执行事件的详细内容。", "required": ["id", "workflow_id", "sequence_number", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID。" }, "workflow_id": { "type": "string", "format": "uuid", "description": "关联 Workflow ID。" }, "sequence_number": { "type": "integer", "description": "自增序号，App 内自增，从 1 开始。" }, "created_at": { "type": "integer", "format": "int64", "description": "开始时间。" } } },
+      "StreamEventWfNodeStartedCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/NodeStartedDataCn" } } } ] },
+      "NodeStartedDataCn": { "type": "object", "description": "Node 开始执行事件的详细内容。", "required": ["id", "node_id", "node_type", "title", "index", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID (应为 node 执行 ID，根据上下文修正)。" }, "node_id": { "type": "string", "format": "uuid", "description": "节点 ID。" }, "node_type": { "type": "string", "description": "节点类型。" }, "title": { "type": "string", "description": "节点名称。" }, "index": { "type": "integer", "description": "执行序号。" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true, "description": "前置节点 ID。" }, "inputs": { "type": "object", "additionalProperties": true, "description": "节点中所有使用到的前置节点变量内容。" }, "created_at": { "type": "integer", "format": "int64", "description": "开始时间。" } } },
+      "StreamEventWfTextChunkCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/TextChunkDataCn" } } } ] },
+      "TextChunkDataCn": { "type": "object", "description": "文本片段事件的详细内容。", "required": ["text", "from_variable_selector"], "properties": { "text": { "type": "string", "description": "文本内容。" }, "from_variable_selector": { "type": "array", "items": { "type": "string" }, "description": "文本来源路径，帮助开发者了解文本是由哪个节点的哪个变量生成的。" } } },
+      "StreamEventWfNodeFinishedCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/NodeFinishedDataCn" } } } ] },
+      "NodeFinishedDataCn": { "type": "object", "description": "Node 执行结束事件的详细内容。", "required": ["id", "node_id", "index", "status", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "node 执行 ID。" }, "node_id": { "type": "string", "format": "uuid", "description": "节点 ID。" }, "index": { "type": "integer", "description": "执行序号。" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true, "description": "（可选）前置节点 ID。" }, "inputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "节点中所有使用到的前置节点变量内容。" }, "process_data": { "type": "object", "additionalProperties": true, "nullable": true, "description": "（可选）节点过程数据 (JSON)。" }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "（可选）输出内容 (JSON)。" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "执行状态。" }, "error": { "type": "string", "nullable": true, "description": "（可选）错误原因。" }, "elapsed_time": { "type": "number", "format": "float", "nullable": true, "description": "（可选）耗时(秒)。" }, "execution_metadata": { "$ref": "#/components/schemas/NodeExecutionMetadataCn" , "nullable": true, "description":"元数据"}, "created_at": { "type": "integer", "format": "int64", "description": "开始时间。" } } },
+      "NodeExecutionMetadataCn": { "type": "object", "description": "节点执行元数据。", "properties": { "total_tokens": { "type": "integer", "nullable": true, "description": "（可选）总使用 tokens。" }, "total_price": { "type": "number", "format": "float", "nullable": true, "description": "（可选）总费用 (使用 float 兼容 decimal)。" }, "currency": { "type": "string", "nullable": true, "example": "USD", "description": "（可选）货币，如 USD / RMB。" } } },
+      "StreamEventWfWorkflowFinishedCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowFinishedDataCn" } } } ] },
+      "WorkflowFinishedDataCn": { "type": "object", "description": "Workflow 执行结束事件的详细内容。", "required": ["id", "workflow_id", "status", "created_at", "finished_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID。" }, "workflow_id": { "type": "string", "format": "uuid", "description": "关联 Workflow ID。" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "执行状态。" }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "（可选）输出内容 (JSON)。" }, "error": { "type": "string", "nullable": true, "description": "（可选）错误原因。" }, "elapsed_time": { "type": "number", "format": "float", "nullable": true, "description": "（可选）耗时(秒)。" }, "total_tokens": { "type": "integer", "nullable": true, "description": "（可选）总使用 tokens。" }, "total_steps": { "type": "integer", "default": 0, "description": "总步数，默认 0。" }, "created_at": { "type": "integer", "format": "int64", "description": "开始时间。" }, "finished_at": { "type": "integer", "format": "int64", "description": "结束时间。" } } },
+      "StreamEventWfTtsMessageCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["audio", "message_id", "created_at"], "properties": { "audio": { "type": "string", "format": "byte", "description": "语音合成之后的音频块 Base64 编码文本。" }, "message_id": { "type": "string", "format": "uuid", "description": "消息唯一 ID。" }, "created_at": { "type": "integer", "format": "int64", "description": "创建时间戳。" } } } ] },
+      "StreamEventWfTtsMessageEndCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "$ref": "#/components/schemas/StreamEventBaseWfCn" }, { "type": "object", "required": ["audio", "message_id", "created_at"], "properties": { "audio": { "type": "string", "description": "结束事件音频为空字符串。" }, "message_id": { "type": "string", "format": "uuid", "description": "消息唯一 ID。" }, "created_at": { "type": "integer", "format": "int64", "description": "创建时间戳。" } } } ] },
+      "StreamEventWfPingCn": { "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEventCn" }, { "type": "object", "description": "每 10s 一次的 ping 事件，保持连接存活。" } ] },
+      "WorkflowRunDetailResponseCn": {
+        "type": "object", "description": "Workflow 执行详情。",
+        "properties": {
+            "id": { "type": "string", "format": "uuid", "description": "workflow 执行 ID。" },
+            "workflow_id": { "type": "string", "format": "uuid", "description": "关联的 Workflow ID。" },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "执行状态。" },
+            "inputs": { "type": "string", "description": "任务输入内容的 JSON 字符串。" },
+            "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "任务输出内容的 JSON 对象。" },
+            "error": { "type": "string", "nullable": true, "description": "错误原因。" },
+            "total_steps": { "type": "integer", "description": "任务执行总步数。" },
+            "total_tokens": { "type": "integer", "description": "任务执行总 tokens。" },
+            "created_at": { "type": "integer", "format": "int64", "description": "任务开始时间。" },
+            "finished_at": { "type": "integer", "format": "int64", "nullable": true, "description": "任务结束时间。" },
+            "elapsed_time": { "type": "number", "format": "float", "nullable": true, "description": "耗时(秒)。" }
+        }
+      },
+      "FileUploadResponseCn": { "type": "object", "description": "文件上传成功响应。", "properties": { "id": { "type": "string", "format": "uuid", "description": "ID。" }, "name": { "type": "string", "description": "文件名。" }, "size": { "type": "integer", "description": "文件大小 (byte)。" }, "extension": { "type": "string", "description": "文件后缀。" }, "mime_type": { "type": "string", "description": "文件 mime-type。" }, "created_by": { "type": "string", "format": "uuid", "description": "上传人 ID (应为 uuid，示例中为 int，已修正)。" }, "created_at": { "type": "integer", "format": "int64", "description": "上传时间。" } } },
+      "WorkflowLogsResponseCn": {
+        "type": "object", "description": "Workflow 日志列表响应。",
+        "properties": {
+            "page": { "type": "integer", "description": "当前页码。" }, "limit": { "type": "integer", "description": "每页条数。" },
+            "total": { "type": "integer", "description": "总条数。" }, "has_more": { "type": "boolean", "description": "是否还有更多数据。" },
+            "data": { "type": "array", "items": { "$ref": "#/components/schemas/WorkflowLogItemCn" }, "description": "当前页码的数据。" }
+        }
+      },
+      "WorkflowLogItemCn": {
+        "type": "object", "description": "单条 Workflow 日志。",
+        "properties": {
+            "id": { "type": "string", "format": "uuid", "description": "标识。" },
+            "workflow_run": { "$ref": "#/components/schemas/WorkflowRunSummaryCn", "description": "Workflow 执行日志。" },
+            "created_from": { "type": "string", "description": "来源。" },
+            "created_by_role": { "type": "string", "description": "角色。" },
+            "created_by_account": { "type": "string", "format": "uuid", "nullable": true, "description": "（可选）帐号。" },
+            "created_by_end_user": { "$ref": "#/components/schemas/EndUserSummaryCn", "description": "用户。" },
+            "created_at": { "type": "integer", "format": "int64", "description": "创建时间。" }
+        }
+      },
+      "WorkflowRunSummaryCn": {
+        "type": "object", "description": "Workflow 执行摘要信息。",
+        "properties": {
+            "id": { "type": "string", "format": "uuid", "description": "标识。" }, "version": { "type": "string", "description": "版本。" },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "执行状态。" },
+            "error": { "type": "string", "nullable": true, "description": "（可选）错误。" },
+            "elapsed_time": { "type": "number", "format": "float", "description": "耗时，单位秒。" },
+            "total_tokens": { "type": "integer", "description": "消耗的token数量。" },
+            "total_steps": { "type": "integer", "description": "执行步骤长度。" },
+            "created_at": { "type": "integer", "format": "int64", "description": "开始时间。" },
+            "finished_at": { "type": "integer", "format": "int64", "nullable": true, "description": "结束时间。" }
+        }
+      },
+      "EndUserSummaryCn": {
+        "type": "object", "description": "终端用户信息摘要。",
+        "properties": {
+            "id": { "type": "string", "format": "uuid", "description": "标识。" }, "type": { "type": "string", "description": "类型。" },
+            "is_anonymous": { "type": "boolean", "description": "是否匿名。" }, "session_id": { "type": "string", "description": "会话标识。" }
+        }
+      },
+      "AppInfoResponseCn": { "type": "object", "description": "应用基本信息。", "properties": { "name": { "type": "string", "description": "应用名称。" }, "description": { "type": "string", "description": "应用描述。" }, "tags": { "type": "array", "items": { "type": "string" }, "description": "应用标签。" } } },
+      "WorkflowAppParametersResponseCn": { "type": "object", "description": "Workflow 应用参数信息。", "properties": { "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItemCn" }, "description": "用户输入表单配置。" }, "file_upload": { "type": "object", "properties": { "image": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "number_limits": { "type": "integer" }, "detail": { "type": "string" }, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] } } }, "description": "图片设置。当前仅支持图片类型：png, jpg, jpeg, webp, gif。" } }, "description": "文件上传配置。" }, "system_parameters": { "type": "object", "properties": { "file_size_limit": { "type": "integer", "description": "文档上传大小限制 (MB)。" }, "image_file_size_limit": { "type": "integer", "description": "图片文件上传大小限制（MB）。" }, "audio_file_size_limit": { "type": "integer", "description": "音频文件上传大小限制 (MB)。" }, "video_file_size_limit": { "type": "integer", "description": "视频文件上传大小限制 (MB)。" } }, "description": "系统参数。" } } },
+      "UserInputFormItemCn": { "type": "object", "description": "用户输入表单中的控件项。", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapperCn" }, { "$ref": "#/components/schemas/ParagraphControlWrapperCn" }, { "$ref": "#/components/schemas/SelectControlWrapperCn" } ] },
+      "TextInputControlWrapperCn": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControlCn" } }, "required":["text-input"] },
+      "ParagraphControlWrapperCn": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControlCn" } }, "required":["paragraph"] },
+      "SelectControlWrapperCn": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControlCn" } }, "required":["select"] },
+      "TextInputControlCn": { "type": "object", "description": "文本输入控件。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "nullable": true, "description": "默认值。" } } },
+      "ParagraphControlCn": { "type": "object", "description": "段落文本输入控件。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "nullable": true, "description": "默认值。" } } },
+      "SelectControlCn": { "type": "object", "description": "下拉控件。", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string", "description": "控件展示标签名。" }, "variable": { "type": "string", "description": "控件 ID。" }, "required": { "type": "boolean", "description": "是否必填。" }, "default": { "type": "string", "nullable": true, "description": "默认值。" }, "options": { "type": "array", "items": { "type": "string" }, "description": "选项值。" } } },
+      "WorkflowWebAppSettingsResponseCn": { "type": "object", "description": "Workflow 应用 WebApp 设置。", "properties": { "title": { "type": "string", "description": "WebApp 名称。" }, "icon_type": { "type": "string", "enum": ["emoji", "image"], "description": "图标类型。" }, "icon": { "type": "string", "description": "图标内容 (emoji 或图片 URL)。" }, "icon_background": { "type": "string", "description": "hex 格式的背景色。" }, "icon_url": { "type": "string", "format": "url", "nullable": true, "description": "图标 URL。" }, "description": { "type": "string", "description": "描述。" }, "copyright": { "type": "string", "description": "版权信息。" }, "privacy_policy": { "type": "string", "description": "隐私政策链接。" }, "custom_disclaimer": { "type": "string", "description": "自定义免责声明。" }, "default_language": { "type": "string", "description": "默认语言。" }, "show_workflow_steps": { "type": "boolean", "description": "是否显示工作流详情。" } } },
+      "ErrorResponseCn": { "type": "object", "description": "错误响应。", "properties": { "status": { "type": "integer", "nullable": true, "description": "HTTP 状态码。" }, "code": { "type": "string", "nullable": true, "description": "错误码。" }, "message": { "type": "string", "description": "错误消息。" } } }
+    }
+  },
+  "tags": [
+    { "name": "工作流执行", "description": "与执行和管理工作流相关的操作。" },
+    { "name": "文件操作 (Workflow)", "description": "特定于工作流的文件上传操作。" },
+    { "name": "应用配置 (Workflow)", "description": "工作流应用的应用设置和信息。" }
+  ]
+}

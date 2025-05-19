@@ -1,0 +1,472 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Workflow App API",
+    "description": "Workflow applications offers non-session support and is ideal for translation, article writing, summarization AI, and more.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{api_base_url}",
+      "description": "The base URL for the Workflow App API. Replace {api_base_url} with the actual API base URL.",
+      "variables": {
+        "api_base_url": {
+          "default": "https://api.dify.ai/v1",
+          "description": "Actual base URL of the API"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/workflows/run": {
+      "post": {
+        "summary": "Execute Workflow",
+        "description": "Execute workflow. Cannot be executed without a published workflow.",
+        "operationId": "executeWorkflow",
+        "tags": ["Workflow Execution"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowExecutionRequest"
+              },
+              "examples": {
+                "basic_execution": {
+                  "summary": "Basic workflow execution",
+                  "value": {
+                    "inputs": {
+                      "query": "Summarize this text: ..."
+                    },
+                    "response_mode": "streaming",
+                    "user": "user_workflow_123"
+                  }
+                },
+                "with_file_array_variable":{
+                  "summary": "Example with a file array input variable",
+                  "value": {
+                    "inputs": {
+                      "my_documents": [
+                        {
+                          "type": "document",
+                          "transfer_method": "local_file",
+                          "upload_file_id": "uploaded_file_id_abc"
+                        },
+                        {
+                          "type": "image",
+                          "transfer_method": "remote_url",
+                          "url": "https://example.com/image.jpg"
+                        }
+                      ]
+                    },
+                    "response_mode": "blocking",
+                    "user": "user_workflow_456"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful workflow execution. Structure depends on `response_mode`.\n- `blocking`: `application/json` with `WorkflowCompletionResponse`.\n- `streaming`: `text/event-stream` with `ChunkWorkflowEvent` stream.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowCompletionResponse"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "A stream of Server-Sent Events. See `ChunkWorkflowEvent` for structures."
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestWorkflow" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/workflows/run/{workflow_run_id}": {
+      "get": {
+        "summary": "Get Workflow Run Detail",
+        "description": "Retrieve the current execution results of a workflow task based on the workflow execution ID.",
+        "operationId": "getWorkflowRunDetail",
+        "tags": ["Workflow Execution"],
+        "parameters": [
+          {
+            "name": "workflow_run_id",
+            "in": "path",
+            "required": true,
+            "description": "Workflow Run ID, can be obtained from workflow execution response or streaming events.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved workflow run details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WorkflowRunDetailResponse" }
+              }
+            }
+          },
+          "404": {"description": "Workflow run not found."}
+        }
+      }
+    },
+    "/workflows/tasks/{task_id}/stop": {
+      "post": {
+        "summary": "Stop Workflow Task Generation",
+        "description": "Stops a workflow task generation. Only supported in streaming mode.",
+        "operationId": "stopWorkflowTaskGeneration",
+        "tags": ["Workflow Execution"],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "description": "Task ID from the streaming chunk.",
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["user"],
+                "properties": {
+                  "user": { "type": "string", "description": "User identifier." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "$ref": "#/components/responses/SuccessResult" }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "File Upload for Workflow",
+        "description": "Upload a file for use in workflows. Supports any formats supported by your workflow. Uploaded files are for the current end-user only.",
+        "operationId": "uploadWorkflowFile",
+        "tags": ["Files"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "user"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "The file to be uploaded." },
+                  "user": { "type": "string", "description": "User identifier." }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "File uploaded successfully.",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponse" } } }
+          },
+          "201": {
+            "description": "File created successfully (alternative success code).",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponse" } } }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestFile" },
+          "413": { "$ref": "#/components/responses/FileTooLarge" },
+          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFile" },
+          "503": { "$ref": "#/components/responses/S3ErrorFile" },
+          "500": { "$ref": "#/components/responses/InternalServerError" }
+        }
+      }
+    },
+    "/workflows/logs": {
+        "get": {
+            "summary": "Get Workflow Logs",
+            "description": "Returns workflow logs, with the first page returning the latest `{limit}` messages, i.e., in reverse order.",
+            "operationId": "getWorkflowLogs",
+            "tags": ["Workflow Execution"],
+            "parameters": [
+                { "name": "keyword", "in": "query", "description": "Keyword to search.", "schema": { "type": "string" } },
+                { "name": "status", "in": "query", "description": "Filter by status.", "schema": { "type": "string", "enum": ["succeeded", "failed", "stopped", "running"] } },
+                { "name": "page", "in": "query", "description": "Current page.", "schema": { "type": "integer", "default": 1 } },
+                { "name": "limit", "in": "query", "description": "Number of items per page.", "schema": { "type": "integer", "default": 20 } }
+            ],
+            "responses": {
+                "200": {
+                    "description": "Successfully retrieved workflow logs.",
+                    "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowLogsResponse" } } }
+                }
+            }
+        }
+    },
+    "/info": {
+      "get": {
+        "summary": "Get Application Basic Information",
+        "operationId": "getWorkflowAppInfo",
+        "tags": ["Application"],
+        "responses": {
+          "200": { "description": "Basic application information.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppInfoResponse" } } } }
+        }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "Get Application Parameters Information",
+        "operationId": "getWorkflowAppParameters",
+        "tags": ["Application"],
+        "responses": {
+          "200": { "description": "Application parameters.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowAppParametersResponse" } } } }
+        }
+      }
+    },
+    "/site": {
+      "get": {
+        "summary": "Get Application WebApp Settings",
+        "operationId": "getWorkflowWebAppSettings",
+        "tags": ["Application"],
+        "responses": {
+          "200": { "description": "WebApp settings.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WorkflowWebAppSettingsResponse" } } } }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "API_KEY", "description": "API Key authentication." }
+    },
+    "responses": {
+        "BadRequestWorkflow": { "description": "Bad Request for workflow operation. Possible error codes: invalid_param, app_unavailable, provider_not_initialize, provider_quota_exceeded, model_currently_not_support, workflow_request_error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "BadRequestFile": { "description": "Bad Request for file operation.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "FileTooLarge": { "description": "File is too large.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "UnsupportedFileTypeFile": { "description": "Unsupported file type for upload.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "S3ErrorFile": { "description": "S3 storage error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "InternalServerError": { "description": "Internal server error.", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponse" } } } },
+        "SuccessResult": { "description": "Operation successful.", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } }
+    },
+    "schemas": {
+      "WorkflowExecutionRequest": {
+        "type": "object",
+        "required": ["inputs", "response_mode", "user"],
+        "properties": {
+          "inputs": {
+            "type": "object",
+            "description": "Key/value pairs for workflow variables. Value for a file array type variable should be a list of InputFileObjectWorkflow.",
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "type": "object" },
+                { "type": "array", "items": { "$ref": "#/components/schemas/InputFileObjectWorkflow" } }
+              ]
+            },
+            "example": { "user_query": "Translate this for me.", "target_language": "French" }
+          },
+          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "description": "Response mode. Cloudflare timeout is 100s for blocking." },
+          "user": { "type": "string", "description": "User identifier." }
+        }
+      },
+      "InputFileObjectWorkflow": {
+        "type": "object",
+        "required": ["type", "transfer_method"],
+        "properties": {
+          "type": { "type": "string", "enum": ["document", "image", "audio", "video", "custom"], "description": "Type of file." },
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"] },
+          "url": { "type": "string", "format": "url", "description": "URL (if `remote_url`)." },
+          "upload_file_id": { "type": "string", "description": "Uploaded file ID (if `local_file`)." }
+        },
+        "oneOf": [ {"required": ["url"]}, {"required": ["upload_file_id"]} ]
+      },
+      "WorkflowCompletionResponse": {
+        "type": "object",
+        "description": "Response for blocking mode workflow execution.",
+        "properties": {
+          "workflow_run_id": { "type": "string", "format": "uuid" },
+          "task_id": { "type": "string", "format": "uuid" },
+          "data": { "$ref": "#/components/schemas/WorkflowFinishedData" }
+        }
+      },
+      "ChunkWorkflowEvent": {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+          "event": { "type": "string", "enum": ["workflow_started", "node_started", "text_chunk", "node_finished", "workflow_finished", "tts_message", "tts_message_end", "ping"] }
+        },
+        "discriminator": {
+          "propertyName": "event",
+          "mapping": {
+            "workflow_started": "#/components/schemas/StreamEventWfWorkflowStarted",
+            "node_started": "#/components/schemas/StreamEventWfNodeStarted",
+            "text_chunk": "#/components/schemas/StreamEventWfTextChunk",
+            "node_finished": "#/components/schemas/StreamEventWfNodeFinished",
+            "workflow_finished": "#/components/schemas/StreamEventWfWorkflowFinished",
+            "tts_message": "#/components/schemas/StreamEventWfTtsMessage",
+            "tts_message_end": "#/components/schemas/StreamEventWfTtsMessageEnd",
+            "ping": "#/components/schemas/StreamEventWfPing"
+          }
+        }
+      },
+      "StreamEventBaseWf": {
+        "type": "object",
+        "properties": {
+            "task_id": { "type": "string", "format": "uuid" },
+            "workflow_run_id": { "type": "string", "format": "uuid" }
+        }
+      },
+      "StreamEventWfWorkflowStarted": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowStartedData" } } } ]
+      },
+      "WorkflowStartedData": {
+        "type": "object", "required": ["id", "workflow_id", "sequence_number", "created_at"],
+        "properties": { "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" }, "sequence_number": { "type": "integer" }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "StreamEventWfNodeStarted": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/NodeStartedData" } } } ]
+      },
+      "NodeStartedData": {
+        "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "created_at"],
+        "properties": { "id": { "type": "string", "format": "uuid" }, "node_id": { "type": "string", "format": "uuid" }, "node_type": { "type": "string" }, "title": { "type": "string" }, "index": { "type": "integer" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true }, "inputs": { "type": "object", "additionalProperties": true }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "StreamEventWfTextChunk": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/TextChunkData" } } } ]
+      },
+      "TextChunkData": {
+        "type": "object", "required": ["text", "from_variable_selector"],
+        "properties": { "text": { "type": "string" }, "from_variable_selector": { "type": "array", "items": { "type": "string" }, "description": "Text source path." } }
+      },
+      "StreamEventWfNodeFinished": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/NodeFinishedData" } } } ]
+      },
+      "NodeFinishedData": {
+        "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "status", "created_at"],
+        "properties": { "id": { "type": "string", "format": "uuid" }, "node_id": { "type": "string", "format": "uuid" }, "node_type": { "type": "string" }, "title": { "type": "string" }, "index": { "type": "integer" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true }, "inputs": { "type": "object", "additionalProperties": true, "nullable": true }, "process_data": { "type": "object", "additionalProperties": true, "nullable": true }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] }, "error": { "type": "string", "nullable": true }, "elapsed_time": { "type": "number", "format": "float", "nullable": true }, "execution_metadata": { "$ref": "#/components/schemas/NodeExecutionMetadata" , "nullable": true }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "NodeExecutionMetadata": {
+          "type": "object", "properties": { "total_tokens": { "type": "integer", "nullable": true }, "total_price": { "type": "number", "format": "float", "nullable": true }, "currency": { "type": "string", "nullable": true, "example": "USD" } }
+      },
+      "StreamEventWfWorkflowFinished": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowFinishedData" } } } ]
+      },
+      "WorkflowFinishedData": {
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at", "finished_at"],
+        "properties": { "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true }, "error": { "type": "string", "nullable": true }, "elapsed_time": { "type": "number", "format": "float", "nullable": true }, "total_tokens": { "type": "integer", "nullable": true }, "total_steps": { "type": "integer", "default": 0 }, "created_at": { "type": "integer", "format": "int64" }, "finished_at": { "type": "integer", "format": "int64" } }
+      },
+      "StreamEventWfTtsMessage": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+            { "type": "object", "required": ["audio", "message_id", "created_at"], "properties": { "audio": { "type": "string", "format": "byte" }, "message_id": {"type": "string", "format": "uuid"}, "created_at": {"type": "integer", "format":"int64"} } }
+        ]
+      },
+      "StreamEventWfTtsMessageEnd": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+            { "type": "object", "required": ["audio", "message_id", "created_at"], "properties": { "audio": { "type": "string" }, "message_id": {"type": "string", "format": "uuid"}, "created_at": {"type": "integer", "format":"int64"} } }
+        ]
+      },
+      "StreamEventWfPing": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "type": "object" } ]
+      },
+      "WorkflowRunDetailResponse": {
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "format": "uuid" },
+            "workflow_id": { "type": "string", "format": "uuid" },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+            "inputs": { "type": "string", "description": "JSON string of input content." },
+            "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "JSON object of output content." },
+            "error": { "type": "string", "nullable": true },
+            "total_steps": { "type": "integer" },
+            "total_tokens": { "type": "integer" },
+            "created_at": { "type": "integer", "format": "int64" },
+            "finished_at": { "type": "integer", "format": "int64", "nullable": true },
+            "elapsed_time": { "type": "number", "format": "float", "nullable": true }
+        }
+      },
+      "FileUploadResponse": {
+        "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "name": { "type": "string" }, "size": { "type": "integer" }, "extension": { "type": "string" }, "mime_type": { "type": "string" }, "created_by": { "type": "string", "format": "uuid" }, "created_at": { "type": "integer", "format": "int64" } }
+      },
+      "WorkflowLogsResponse": {
+        "type": "object",
+        "properties": {
+            "page": { "type": "integer" },
+            "limit": { "type": "integer" },
+            "total": { "type": "integer" },
+            "has_more": { "type": "boolean" },
+            "data": { "type": "array", "items": { "$ref": "#/components/schemas/WorkflowLogItem" } }
+        }
+      },
+      "WorkflowLogItem": {
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "format": "uuid" },
+            "workflow_run": { "$ref": "#/components/schemas/WorkflowRunSummary" },
+            "created_from": { "type": "string" },
+            "created_by_role": { "type": "string" },
+            "created_by_account": { "type": "string", "format": "uuid", "nullable": true },
+            "created_by_end_user": { "$ref": "#/components/schemas/EndUserSummary" },
+            "created_at": { "type": "integer", "format": "int64" }
+        }
+      },
+      "WorkflowRunSummary": {
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "format": "uuid" },
+            "version": { "type": "string" },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+            "error": { "type": "string", "nullable": true },
+            "elapsed_time": { "type": "number", "format": "float" },
+            "total_tokens": { "type": "integer" },
+            "total_steps": { "type": "integer" },
+            "created_at": { "type": "integer", "format": "int64" },
+            "finished_at": { "type": "integer", "format": "int64", "nullable": true }
+        }
+      },
+      "EndUserSummary": {
+        "type": "object",
+        "properties": {
+            "id": { "type": "string", "format": "uuid" },
+            "type": { "type": "string" },
+            "is_anonymous": { "type": "boolean" },
+            "session_id": { "type": "string" }
+        }
+      },
+      "AppInfoResponse": {
+        "type": "object", "properties": { "name": { "type": "string" }, "description": { "type": "string" }, "tags": { "type": "array", "items": { "type": "string" } } }
+      },
+      "WorkflowAppParametersResponse": {
+        "type": "object", "properties": { "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItem" } }, "file_upload": { "type": "object", "properties": { "image": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "number_limits": { "type": "integer" }, "detail": { "type": "string" }, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] } } } } } }, "system_parameters": { "type": "object", "properties": { "file_size_limit": { "type": "integer" }, "image_file_size_limit": { "type": "integer" }, "audio_file_size_limit": { "type": "integer" }, "video_file_size_limit": { "type": "integer" } } } }
+      },
+      "UserInputFormItem": { "type": "object", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapper" }, { "$ref": "#/components/schemas/ParagraphControlWrapper" }, { "$ref": "#/components/schemas/SelectControlWrapper" } ] },
+      "TextInputControlWrapper": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControl" } }, "required":["text-input"] },
+      "ParagraphControlWrapper": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControl" } }, "required":["paragraph"] },
+      "SelectControlWrapper": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControl" } }, "required":["select"] },
+      "TextInputControl": { "type": "object", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" } } },
+      "ParagraphControl": { "type": "object", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" } } },
+      "SelectControl": { "type": "object", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string" }, "variable": { "type": "string" }, "required": { "type": "boolean" }, "default": { "type": "string" }, "options": { "type": "array", "items": { "type": "string" } } } },
+      "WorkflowWebAppSettingsResponse": {
+        "type": "object", "properties": { "title": { "type": "string" }, "icon_type": { "type": "string", "enum": ["emoji", "image"] }, "icon": { "type": "string" }, "icon_background": { "type": "string" }, "icon_url": { "type": "string", "format": "url", "nullable": true }, "description": { "type": "string" }, "copyright": { "type": "string" }, "privacy_policy": { "type": "string" }, "custom_disclaimer": { "type": "string" }, "default_language": { "type": "string" }, "show_workflow_steps": { "type": "boolean" } }
+      },
+      "ErrorResponse": { "type": "object", "properties": { "status": { "type": "integer", "nullable": true }, "code": { "type": "string", "nullable": true }, "message": { "type": "string" } } }
+    }
+  },
+  "tags": [
+    { "name": "Workflow Execution", "description": "Operations related to executing and managing workflows." },
+    { "name": "Files", "description": "File upload operations specific to workflows." },
+    { "name": "Application", "description": "Application settings and info for workflow apps." }
+  ]
+}
