@@ -245,19 +245,19 @@ def main_contributing_in_page():
         },
         # Plugin Development
         "zh_plugin_dev": {
-            "target_dir_relative": "plugin_dev_zh",
+            "target_dir_relative": "plugin-dev-zh",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs-mintlify",
             "language": "zh",
         },
         "en_plugin_dev": {
-            "target_dir_relative": "plugin_dev_en",
+            "target_dir_relative": "plugin-dev-en",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs-mintlify",
             "language": "en",
         },
         "ja_plugin_dev": {
-            "target_dir_relative": "plugin_dev_ja",
+            "target_dir_relative": "plugin-dev-ja",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs-mintlify",
             "language": "ja"

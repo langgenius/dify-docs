@@ -18,7 +18,7 @@ DOCS_JSON_PATH = BASE_DIR / "docs.json" # Path to the main documentation structu
 
 # --- MODIFICATION START for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
 PLUGIN_DEV_ZH = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
+    "DOCS_DIR_RELATIVE": "plugin-dev-zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
     "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects .zh before .mdx
     "PWX_TO_GROUP_MAP": { 
         ("0", "1", "1"): ("插件开发", "概念与入门", "概览"), ("0", "1", "3"): ("插件开发", "概念与入门", None),
@@ -31,7 +31,7 @@ PLUGIN_DEV_ZH = {
     "DESIRED_GROUP_ORDER": ["概念与入门", "开发实践", "贡献与发布", "实践案例与示例", "高级开发", "Reference & Specifications"],
 }
 PLUGIN_DEV_EN = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
+    "DOCS_DIR_RELATIVE": "plugin-dev-en", "LANGUAGE_CODE": "English", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
     "TARGET_TAB_NAME": "Plugin Development", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
         ("0", "1", "1"): ("Plugin Development", "Concepts & Getting Started", "Overview"),("0", "1", "3"): ("Plugin Development", "Concepts & Getting Started", None),
@@ -44,7 +44,7 @@ PLUGIN_DEV_EN = {
     "DESIRED_GROUP_ORDER": ["Concepts & Getting Started", "Development Practices", "Contribution & Publishing", "Examples & Use Cases", "Advanced Development", "Reference & Specifications"],
 }
 PLUGIN_DEV_JA = {
-    "DOCS_DIR_RELATIVE": "plugin_dev_ja", "LANGUAGE_CODE": "日本語", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
+    "DOCS_DIR_RELATIVE": "plugin-dev-ja", "LANGUAGE_CODE": "日本語", "FILE_EXTENSION_SUFFIX": "", # MODIFIED
     "TARGET_TAB_NAME": "プラグイン開発", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED
     "PWX_TO_GROUP_MAP": {
         ("0", "1", "1"): ("プラグイン開発", "概念と概要", "概要"),("0", "1", "3"): ("プラグイン開発", "概念と概要", None),
@@ -113,12 +113,12 @@ def get_page_path_from_filename(filename: str, docs_dir_name: str) -> str:
     """
     Constructs the documentation page path from its filename and directory name.
     Example: 
-        Old: "0001-intro.en.mdx", "plugin_dev_en" -> "plugin_dev_en/0001-intro.en"
-        New: "0001-intro.mdx",    "plugin_dev_en" -> "plugin_dev_en/0001-intro"
+        Old: "0001-intro.en.mdx", "plugin-dev-en" -> "plugin-dev-en/0001-intro.en"
+        New: "0001-intro.mdx",    "plugin-dev-en" -> "plugin-dev-en/0001-intro"
 
     Args:
         filename: The .mdx filename (e.g., "0001-intro.mdx").
-        docs_dir_name: The relative directory name for this set of docs (e.g., "plugin_dev_en").
+        docs_dir_name: The relative directory name for this set of docs (e.g., "plugin-dev-en").
 
     Returns:
         The page path string used in docs.json.

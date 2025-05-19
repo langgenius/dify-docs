@@ -15,8 +15,8 @@ class Config:
     TIMESTAMP = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
 
     # --- Directory Naming Templates ---
-    LANG_DIR_TEMPLATE = "plugin_dev_{lang}"
-    ARCHIVE_LANG_DIR_PREFIX_TEMPLATE = "plugin_dev_{lang}_archive_pre_processing_"
+    LANG_DIR_TEMPLATE = "plugin-dev-{lang}"
+    ARCHIVE_LANG_DIR_PREFIX_TEMPLATE = "plugin-dev-{lang}_archive_pre_processing_"
 
     # --- PWXY Mappings ---
     PRIMARY_TYPE_MAP = {
@@ -339,7 +339,7 @@ def run_processing_for_language(lang_dir_path: Path, config: Config) -> dict:
                 mod_content = content
                 for old, new in rename_mappings:
                     # More robust replacement to avoid partial matches if old/new stems are substrings of other words
-                    # We'll replace the stem part of filenames, often appearing in links like `../plugin_dev_zh/0001-old-name`
+                    # We'll replace the stem part of filenames, often appearing in links like `../plugin-dev-zh/0001-old-name`
                     # This regex assumes stems are typically used without their .mdx extension in links
                     # and might be preceded by a path separator or quote, and followed by a quote, hash, or space.
                     old_pattern_for_links = r"(?P<prefix>[\"\'(/])" + re.escape(old) + r"(?P<suffix>[\"\'#\s)?!])"
