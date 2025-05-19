@@ -170,13 +170,13 @@ if __name__ == "__main__":
     repo_name = "dify-docs-plugin-dev"
     repo_owner = "alterxyz"
     append_content_to_files(
-        target_dir_relative="plugin_dev_en",
+        target_dir_relative="plugin-dev-en",
         repo_owner="alterxyz",
         repo_name="dify-docs-plugin-dev",
         language="en"
     )
     append_content_to_files(
-        target_dir_relative="plugin_dev_zh",
+        target_dir_relative="plugin-dev-zh",
         repo_owner="alterxyz",
         repo_name="dify-docs-plugin-dev",
         language="zh"

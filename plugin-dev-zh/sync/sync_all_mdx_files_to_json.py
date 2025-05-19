@@ -135,8 +135,8 @@ class MdxSyncManager:
         """尝试找到可能匹配的 plugin 文件"""
         # 提取文件名（去除路径和语言后缀）
         dev_filename = os.path.basename(dev_file)
-        if dev_filename.endswith('.zh.mdx'):
-            base_name = dev_filename[:-7]  # 去除 .zh.mdx
+        if dev_filename.endswith('.mdx'):
+            base_name = dev_filename[:-7]  # 去除 .mdx
         else:
             base_name = dev_filename[:-4]  # 去除 .mdx
 
