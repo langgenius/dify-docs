@@ -113,7 +113,7 @@ def get_page_path_from_filename(filename: str, docs_dir_name: str) -> str:
     """
     Constructs the documentation page path from its filename and directory name.
     Example: 
-        Old: "0001-intro.en.mdx", "plugin-dev-en" -> "plugin-dev-en/0001-intro.en"
+        Old: "0001-intro.mdx", "plugin-dev-en" -> "plugin-dev-en/0001-intro.en"
         New: "0001-intro.mdx",    "plugin-dev-en" -> "plugin-dev-en/0001-intro"
 
     Args:

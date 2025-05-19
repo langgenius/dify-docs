@@ -66,10 +66,10 @@ class MdxSyncManager:
     def get_base_filename(self, filepath: str) -> str:
         """从文件路径中提取基本名称，移除扩展名和常见的语言代码。"""
         name = os.path.basename(filepath)
-        # 顺序很重要：先匹配更具体的（如 .en.mdx），再匹配通用的（如 .mdx）
-        if name.endswith('.en.mdx'):
+        # 顺序很重要：先匹配更具体的（如 .mdx），再匹配通用的（如 .mdx）
+        if name.endswith('.mdx'):
             return name[:-7]
-        elif name.endswith('.zh.mdx'):  # 保留以处理多语言情况
+        elif name.endswith('.mdx'):  # 保留以处理多语言情况
             return name[:-7]
         elif name.endswith('.ja.mdx'):  # 保留以处理多语言情况
             return name[:-7]

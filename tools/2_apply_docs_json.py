@@ -11,7 +11,7 @@ DOCS_JSON_PATH = "docs.json"
 plugin-dev-zh = {
     "DOCS_DIR": "plugin-dev-zh",  # 插件开发文档目录
     "LANGUAGE_CODE": "简体中文",  # 注意：虽然变量名是 LANGUAGE_CODE，但会部署为 docs.json 中的 'version' 值。
-    "FILE_EXTENSION": ".zh.mdx",
+    "FILE_EXTENSION": ".mdx",
     "TARGET_TAB_NAME": "插件开发",  # 新增：目标 Tab 名称
     "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.zh\.mdx$"),  # 新增：文件名匹配模式
     "PWX_TO_GROUP_MAP": {
@@ -53,7 +53,7 @@ plugin-dev-en = {
     "DOCS_DIR": "plugin-dev-en",  # Plugin development documentation directory
     # Note: Although the variable name is LANGUAGE_CODE, it will be deployed as the 'version' value in docs.json.
     "LANGUAGE_CODE": "English",
-    "FILE_EXTENSION": ".en.mdx",
+    "FILE_EXTENSION": ".mdx",
     "TARGET_TAB_NAME": "Plugin Development",
     "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.en\.mdx$"),
     "PWX_TO_GROUP_MAP": {
