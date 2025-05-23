@@ -27,15 +27,14 @@ Run the `tools/main_docs_bundle.py` script.
 ### Plugin Dev docs
 
 - Rename plugin-dev-** docs based on its frontmatter.
-    - Automatically sync references at other docs when renaming happens. (Optional - consider specifying how this is triggered, e.g., via a script flag like `--sync-refs`)
+    - Automatically sync references at other docs when renaming happens. (Optional - you can modify it by edit `UPDATE_REFERENCES = True` at the top of `tools/rename_by_dimensions.py` if needed.)
 - Apply plugin-dev-** docs to docs.json (Auto Mintlify deployment).
     - Remove non-existing docs.
     - Leave docs that already exist.
-        - Optionally rebuild all plugin-dev-** docs - would be useful when changing order or nested structure. (Consider specifying how this is triggered, e.g., via a script flag like `--rebuild-all`)
-
+        - Optionally rebuild all plugin-dev-** docs - would be useful when changing order or nested structure. Modify `refresh = False` at the top of `tools/apply_docs_json.py` if needed.
 ## Additional notes
 
 Plugin Dev docs manually modified:
 
-- The "Contributing" documentation is manually positioned at the end of its relevant navigation group (e.g., in `docs.json` or sidebar configuration).
+- Contributing guidance is manually positioned at the end of its relevant navigation group (e.g., in `docs.json` or sidebar configuration).
 - The order of a few documents requires manual adjustment as the automated process defaults to alphabetical sorting.
