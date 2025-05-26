@@ -19,7 +19,7 @@ DOCS_JSON_PATH = BASE_DIR / "docs.json" # Path to the main documentation structu
 # --- MODIFICATION START for FILENAME_PATTERN and FILE_EXTENSION_SUFFIX ---
 DEV_ZH = {
     "DOCS_DIR_RELATIVE": "plugin-dev-zh", "LANGUAGE_CODE": "简体中文", "FILE_EXTENSION_SUFFIX": "", # MODIFIED: No longer a distinct suffix in filename base
-    "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects .zh before .mdx
+    "TARGET_TAB_NAME": "插件开发", "FILENAME_PATTERN": re.compile(r"^(\d{4})-(.*?)\.mdx$"), # MODIFIED: Pattern no longer expects  before .mdx
     "PWX_TO_GROUP_MAP": { 
         ("0", "1", "1"): ("插件开发", "概念与入门", "概览"), ("0", "1", "3"): ("插件开发", "概念与入门", None),
         ("0", "2", "1"): ("插件开发", "开发实践", "快速开始"),("0", "2", "2"): ("插件开发", "开发实践", "开发 Dify 插件"),
