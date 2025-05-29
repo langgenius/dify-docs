@@ -10,7 +10,7 @@
 每次找到一个问题时，会显示详细信息并等待用户确认后再进行修改。
 
 目录映射关系:
-    dify-docs-mintlify -> dify-docs
+    dify-docs -> dify-docs
     zh-hans -> zh_CN
     en -> en
     ja-jp -> jp
@@ -571,8 +571,8 @@ def interactive_fix(file_path, mintlify_base, dify_base):
 
 def main():
     parser = argparse.ArgumentParser(description='交互式修复 MDX 文件中的相对图片路径')
-    parser.add_argument('--mintlify-dir', default='/Users/allen/Documents/dify-docs-mintlify', 
-                        help='dify-docs-mintlify 目录路径')
+    parser.add_argument('--mintlify-dir', default='/Users/allen/Documents/dify-docs', 
+                        help='dify-docs 目录路径')
     parser.add_argument('--dify-dir', default='/Users/allen/Documents/dify-docs', 
                         help='dify-docs 目录路径')
     parser.add_argument('--file', help='处理特定文件')

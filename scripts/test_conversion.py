@@ -61,7 +61,7 @@ alt="{alt}"
     return new_content, replacements
 
 # 测试
-test_file = "/Users/allen/Documents/dify-docs-mintlify/zh-hans/guides/workflow/nodes/ifelse.mdx"
+test_file = "/Users/allen/Documents/dify-docs/zh-hans/guides/workflow/nodes/ifelse.mdx"
 
 # 读取文件
 with open(test_file, 'r', encoding='utf-8') as f:

@@ -2,7 +2,7 @@
 """
 Mintlify图片格式转换工具
 
-这个脚本用于扫描dify-docs-mintlify目录中的所有.mdx文件，
+这个脚本用于扫描dify-docs目录中的所有.mdx文件，
 并将<Frame>标签中的图片转换为标准Markdown格式或HTML格式。
 
 支持以下转换:
@@ -283,7 +283,7 @@ def main():
     """主程序入口"""
     # 确定默认目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    default_dir = os.path.dirname(script_dir)  # dify-docs-mintlify
+    default_dir = os.path.dirname(script_dir)  # dify-docs
     
     # 显示欢迎信息
     print(f"\n{Colors.HEADER}{'='*60}{Colors.ENDC}")
