@@ -2,9 +2,9 @@
 """
 图片链接同步工具
 
-这个脚本用于比较dify-docs和dify-docs-mintlify目录中的相同文件，
+这个脚本用于比较dify-docs和dify-docs目录中的相同文件，
 并将dify-docs中的图片链接(https://assets-docs.dify.ai/...)同步到
-dify-docs-mintlify中的对应文件。
+dify-docs中的对应文件。
 
 支持:
 - 手动指定单个文件同步
@@ -348,7 +348,7 @@ def main():
     """主程序入口"""
     # 确定默认源目录和目标目录
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    default_target_dir = os.path.dirname(script_dir)  # dify-docs-mintlify
+    default_target_dir = os.path.dirname(script_dir)  # dify-docs
     default_source_dir = os.path.dirname(default_target_dir) + '/dify-docs'  # dify-docs
     
     # 显示欢迎信息

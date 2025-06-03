@@ -2,7 +2,7 @@
 """
 文档迁移助手
 
-这个脚本用于辅助 gitbook 文档(dify-docs)迁移至 mintlify（dify-docs-mintlify）
+这个脚本用于辅助 gitbook 文档(dify-docs)迁移至 mintlify（dify-docs）
 主要功能包括：
 1. 图片路径替换：从原始文档查找并替换为在线图片链接
 2. 文档引用路径替换：将相对路径替换为绝对路径
@@ -11,7 +11,7 @@
 使用方法:
 python doc_migration_helper.py <目标文件路径>
 例如:
-python doc_migration_helper.py /Users/allen/Documents/dify-docs-mintlify/zh-hans/guides/workflow/nodes/parameter-extractor.mdx
+python doc_migration_helper.py /Users/allen/Documents/dify-docs/zh-hans/guides/workflow/nodes/parameter-extractor.mdx
 """
 
 import os
@@ -34,7 +34,7 @@ class Colors:
 
 class DocMigrationHelper:
     def __init__(self, target_file, source_dir="/Users/allen/Documents/dify-docs", 
-                 mintlify_dir="/Users/allen/Documents/dify-docs-mintlify"):
+                 mintlify_dir="/Users/allen/Documents/dify-docs"):
         """
         初始化文档迁移助手
         
@@ -565,7 +565,7 @@ def main():
     # 检查命令行参数
     if len(sys.argv) != 2:
         print(f"用法: {sys.argv[0]} <目标文件路径>")
-        print(f"例如: {sys.argv[0]} /Users/allen/Documents/dify-docs-mintlify/zh-hans/guides/workflow/nodes/parameter-extractor.mdx")
+        print(f"例如: {sys.argv[0]} /Users/allen/Documents/dify-docs/zh-hans/guides/workflow/nodes/parameter-extractor.mdx")
         return
     
     # 获取目标文件路径
