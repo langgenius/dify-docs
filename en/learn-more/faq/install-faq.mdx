@@ -64,7 +64,7 @@ This might be due to switching the domain/URL, causing cross-domain issues betwe
 `APP_API_URL:` Backend URL for the WebApp API.
 `APP_WEB_URL:` URL for the WebApp.
 
-For more information, please refer to: [Environment Variables](../../getting-started/install-self-hosted/environments.md)
+For more information, please refer to: [Environment Variables](../../getting-started/install-self-hosted/environments)
 
 ### 5. How to upgrade the version after deployment?
 
@@ -243,11 +243,16 @@ Remember the IP addresses. Then open the directory where you store the Dify sour
 
 These IP addresses are _**examples**_, you must execute the command to get your own IP addresses, do not fill them in directly. You might need to reconfigure the IP addresses when restarting the relevant containers.
 
-### 21. How to modify the API service port number?
+### 21. How to enable Content Security Policy?
+
+Find the `CSP_WHITELIST` parameter in the `.env` configuration file and enter the domain names that you can allow, such as all URLs and API request addresses related to product use.
+This behavior helps reduce potential XSS attacks. For more information on CSP recommendations, see [Content Security Policy](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP).
+
+### 22. How to modify the API service port number?
 
 The API service port is consistent with the one used by the Dify platform. You can reassign the running port by modifying the `nginx` configuration in the `docker-compose.yaml` file.
 
-### 22. How to Migrate from Local to Cloud Storage?
+### 23. How to Migrate from Local to Cloud Storage?
 
 To migrate files from local storage to cloud storage (e.g., Alibaba Cloud OSS), you'll need to transfer data from the 'upload_files' and 'privkeys' folders. Follow these steps:
 
@@ -276,3 +281,144 @@ To migrate files from local storage to cloud storage (e.g., Alibaba Cloud OSS), 
    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
    ```
+
+### 24. How to delete old logs and unused files to reduce storage usage?
+
+Dify does **not** automatically delete old logs in database or unused files on storage. Instead, several commands are provided for instance administrators to **manually** delete old logs and unused files.
+
+**Deleting old logs**
+
+You can delete old logs by specifying the number of days using the `clear-free-plan-tenant-expired-logs` command. For example, to delete logs older than 30 days, run the following command:
+
+1. Gather the tenant ID
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c "echo 'db.session.query(Tenant).all(); quit()' | flask shell"
+   ...
+   >>> [<Tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2>]
+   ```
+
+   - In this example, the tenant ID is `618b5d66-a1f5-4b6b-8d12-f171182a1cb2`.
+
+2. Delete old logs by specifying the tenant ID and number of days
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs --days 30 --batch 100 --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ...
+   Starting clear free plan tenant expired logs.
+   Clearing free plan tenant expired logs
+   Total tenant count: 1
+   [2025-04-27 05:28:22.027032] Processed 2555 messages for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.085901] Processed 2190 conversations for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.112561] Processed 5110 workflow node executions for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ```
+
+   - Use the `--tenant_ids` option to specify the tenant ID.
+   - Logs older than the number of days specified by the `--days` option will be deleted.
+
+3. (Optional) Remove exported `free_plan_tenant_expired_logs` directory
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c 'ls -l ${OPENDAL_FS_ROOT}/free_plan_tenant_expired_logs'
+   ```
+
+   - The `flask clear-free-plan-tenant-expired-logs` command first exports any logs marked for deletion to the `free_plan_tenant_expired_logs` directory before actually deleting them. If you want to free up storage space, it's a good idea to delete this directory afterward.
+   - The method for deleting the `free_plan_tenant_expired_logs` directory may vary depending on your storage type. The above command is an example for environments with the default settings.
+
+<Info>
+  If you'd like to reduce storage usage even further, you might consider reclaiming storage for the database (e.g. [`VACUUM` for PostgreSQL](https://www.postgresql.org/docs/current/sql-vacuum.html)) as well.
+</Info>
+
+**Deleting unused files**
+
+You can delete unused files using the `clear-orphaned-file-records` command and the `remove-orphaned-files-on-storage` command.
+
+<Warning>
+  Since not all patterns have been fully tested, please note that these command may delete unintended file records or files.
+  Please make sure to back up your database and storage before proceeding.
+  It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+</Warning>
+
+<Warning>
+  In the current implementation, deleting unused files is only supported when the storage type is OpenDAL (when the environment variable `STORAGE_TYPE` is set to `opendal`).
+  If you are using a storage type other than OpenDAL, you will need to manually delete unused files or [help implement the `scan` method for the storage interface](https://github.com/langgenius/dify/blob/main/api/extensions/storage/base_storage.py).
+</Warning>
+
+<Info>
+  If you want to skip the confirmation prompt, you can use the `--force` (`-f`) option for both commands.
+</Info>
+
+1. Delete unused file records from the database
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-orphaned-file-records
+   ...
+   !!! USE WITH CAUTION !!!
+   Since not all patterns have been fully tested, please note that this command may delete unintended file records.
+   This cannot be undone. Please make sure to back up your database before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 230 orphaned message_files records:
+   - id: 8051365a-23ac-4ded-8c66-721f53bb46c7, message_id: 99a719aa-cc45-4856-8f84-6772d84f8ee84
+   - id: 9d95b217-29f8-424c-85f6-827731b68a7a, message_id: 45f7e9d7-6194-46ea-bd53-336218b28e1e
+   ...
+   Do you want to proceed to delete all 230 orphaned message_files records? [y/N]: y
+   - Deleting orphaned message_files records
+   Removed 230 orphaned message_files records.
+   ...
+   Found 365 orphaned file records.
+   - orphaned file id: 8a0387e6-dde7-411c-bac2-6e6d8af6ae31
+   - orphaned file id: 9177f9df-7360-4434-b65f-10fdec7d38af
+   ...
+   Do you want to proceed to delete all 365 orphaned file records? [y/N]: y
+   - Deleting orphaned file records in table upload_files
+   - Deleting orphaned file records in table tool_files
+   Removed 365 orphaned file records.
+   ```
+
+2. Delete files from storage that do not exist in the database
+
+   ```bash
+   $ docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   ...
+   !!! USE WITH CAUTION !!!
+   Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).
+   Since not all patterns have been fully tested, please note that this command may delete unintended files.
+   This cannot be undone. Please make sure to back up your storage before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned files.
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Do you want to proceed to remove all 365 orphaned files? [y/N]: y
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Removed 365 orphaned files without errors.
+   ```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="Edit this page"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs/edit/main/en/learn-more/faq/install-faq.mdx"
+    >
+        Help improve our documentation by contributing directly
+    </Card>
+    <Card
+        title="Report an issue"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs/issues/new?title=Documentation%20Issue%3A%20ll-&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fen/learn-more/faq%2Finstall-faq.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E"
+    >
+        Found an error or have suggestions? Let us know
+    </Card>
+</CardGroup>

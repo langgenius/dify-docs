@@ -276,3 +276,144 @@ API サービスのポートは、Dify プラットフォームで使用され�
    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
    ```
+
+### 24. 古いログや未使用のファイルを削除し、ストレージの使用量を削減する方法
+
+Dify はデータベース上の古いログやストレージ上の未使用のファイルの自動的な削除は **行いません**。代わりに、インスタンスの管理者が古いログや未使用のファイルを **手動で** 削除できるように、いくつかのコマンドが用意されています。
+
+**古いログを削除する**
+
+`clear-free-plan-tenant-expired-logs` コマンドで、日数を指定して古いログを削除できます。たとえば、30日以上前のログを削除するには、次のコマンドを実行します。
+
+1. テナント ID を確認する
+
+  ```bash
+  $ docker exec -it docker-api-1 bash -c "echo 'db.session.query(Tenant).all(); quit()' | flask shell"
+  ...
+  >>> [<Tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2>]
+  ```
+
+  - この例では、テナント ID が `618b5d66-a1f5-4b6b-8d12-f171182a1cb2` であることがわかります。
+
+2. テナント ID と日数を指定して、古いログを削除する
+
+  ```bash
+  $ docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs --days 30 --batch 100 --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  ...
+  Starting clear free plan tenant expired logs.
+  Clearing free plan tenant expired logs
+  Total tenant count: 1
+  [2025-04-27 05:28:22.027032] Processed 2555 messages for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  [2025-04-27 05:28:22.085901] Processed 2190 conversations for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  [2025-04-27 05:28:22.112561] Processed 5110 workflow node executions for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+  ```
+
+  - `--tenant_ids` オプションでテナント ID を指定します。
+  - `--days` オプションで指定した日数より古いログが削除されます。
+
+3. （オプション）エクスポートされた `free_plan_tenant_expired_logs` ディレクトリを削除する
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c 'ls -l ${OPENDAL_FS_ROOT}/free_plan_tenant_expired_logs'
+   ```
+
+   - `flask clear-free-plan-tenant-expired-logs` コマンドは、実際に削除する前に削除対象のログを `free_plan_tenant_expired_logs` ディレクトリにエクスポートします。ストレージ容量を解放したい場合は、このディレクトリも削除することをおすすめします。
+   - `free_plan_tenant_expired_logs` ディレクトリの削除方法はストレージタイプによって異なります。上記コマンドはデフォルト設定環境での例です。
+
+<Info>
+  さらにストレージ使用量を削減したい場合は、データベースのストレージの再利用（例: [PostgreSQL の `VACUUM`](https://www.postgresql.org/docs/current/sql-vacuum.html) など）も検討できます。
+</Info>
+
+**未使用のファイルを削除する**
+
+`clear-orphaned-file-records` コマンドと `remove-orphaned-files-on-storage` コマンドを使用して、未使用のファイルを削除できます。
+
+<Warning>
+  全てのパタンが完全にテストされているわけではないため、このコマンドは意図しないファイルレコードやファイルを削除する可能性があります。
+  続行する前に、データベースとストレージのバックアップがあることを確認してください。
+  また、この操作がインスタンスの高負荷につながる可能性があるため、メンテナンスウィンドウ中に実行することをおすすめします。
+</Warning>
+
+<Warning>
+  現在の実装では、未使用のファイルの削除はストレージタイプが OpenDAL の場合（環境変数 `STORAGE_TYPE` が `opendal` の場合）のみサポートされています。
+  OpenDAL 以外のストレージタイプを使用している場合は、未使用のファイルを手動で削除するか、[ストレージインタフェイスへの `scan` メソッドの実装にご協力ください](https://github.com/langgenius/dify/blob/main/api/extensions/storage/base_storage.py)。
+</Warning>
+
+<Info>
+  確認プロンプトをスキップしたい場合は、両方のコマンドで `--force` (`-f`) オプションを利用できます。
+</Info>
+
+1. データベースから未使用のファイルのレコードを削除する
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-orphaned-file-records
+   ...
+   !!! USE WITH CAUTION !!!
+   Since not all patterns have been fully tested, please note that this command may delete unintended file records.
+   This cannot be undone. Please make sure to back up your database before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 230 orphaned message_files records:
+   - id: 8051365a-23ac-4ded-8c66-721f53bb46c7, message_id: 99a719aa-cc45-4856-8f84-6772d84f8ee84
+   - id: 9d95b217-29f8-424c-85f6-827731b68a7a, message_id: 45f7e9d7-6194-46ea-bd53-336218b28e1e
+   ...
+   Do you want to proceed to delete all 230 orphaned message_files records? [y/N]: y
+   - Deleting orphaned message_files records
+   Removed 230 orphaned message_files records.
+   ...
+   Found 365 orphaned file records.
+   - orphaned file id: 8a0387e6-dde7-411c-bac2-6e6d8af6ae31
+   - orphaned file id: 9177f9df-7360-4434-b65f-10fdec7d38af
+   ...
+   Do you want to proceed to delete all 365 orphaned file records? [y/N]: y
+   - Deleting orphaned file records in table upload_files
+   - Deleting orphaned file records in table tool_files
+   Removed 365 orphaned file records.
+   ```
+
+2. ストレージからデータベースに存在しないファイルを削除する
+
+   ```bash
+   $ docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   ...
+   !!! USE WITH CAUTION !!!
+   Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).
+   Since not all patterns have been fully tested, please note that this command may delete unintended files.
+   This cannot be undone. Please make sure to back up your storage before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned files.
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Do you want to proceed to remove all 365 orphaned files? [y/N]: y
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Removed 365 orphaned files without errors.
+   ```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="このページを編集する"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs/edit/main/ja-jp/learn-more/faq/install-faq.mdx"
+    >
+        直接貢献することでドキュメントの改善にご協力ください
+    </Card>
+    <Card
+        title="問題を報告する"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs/issues/new?title=ドキュメントの問題%3A%20ll-&body=%23%23%20問題の説明%0A%3C%21--%20発見した問題について簡単に説明してください%20--%3E%0A%0A%23%23%20ページリンク%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fja-jp/learn-more/faq%2Finstall-faq.mdx%0A%0A%23%23%20提案される変更%0A%3C%21--%20特定の変更案がある場合は、ここで説明してください%20--%3E%0A%0A%3C%21--%20ドキュメントの品質向上にご協力いただきありがとうございます！%20--%3E"
+    >
+        エラーを見つけたり提案がありますか？お知らせください
+    </Card>
+</CardGroup>

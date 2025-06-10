@@ -1,0 +1,297 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Creating New Model Provider Extra
+language: ja
+title: 標準モデル統合の実装
+description: このドキュメントは、Pythonコードを記述してDifyのモデルサポートを追加または強化する必要がある開発者向けのもので、ディレクトリ構造の作成、モデル設定の記述、モデル呼び出しロジックの実装、プラグインのデバッグと公開までの完全なプロセスを詳細にガイドし、コアメソッドの実装とエラー処理の詳細を含んでいます。
+---
+
+このドキュメントは、Pythonコードを記述してDifyのモデルサポートを追加または強化する必要がある開発者向けの標準ガイドです。追加したいモデルが新しいAPI呼び出しロジック、特別なパラメータ処理、またはDifyが明示的にサポートする必要がある新機能（Vision、Tool Callingなど）を含む場合、このガイドの手順に従う必要があります。
+
+**本文を読む前に、以下のことをお勧めします：**
+
+* Pythonプログラミングの基礎とオブジェクト指向プログラミングの基本的な理解があること。
+* 統合したいモデルプロバイダーが提供するAPIドキュメントと認証方法に精通していること。
+* Difyプラグイン開発ツールキットをインストールし、設定済みであること（[開発ツールの初期化](../initialize-development-tools.md)を参照）。
+* （オプション）[モデルプラグインの紹介](link-to-conceptual-intro)ドキュメントを読み、モデルプラグインの基本概念とアーキテクチャを理解していること。
+
+このガイドでは、ディレクトリ構造の作成、モデル設定（YAML）の記述、モデル呼び出しロジック（Python）の実装、およびプラグインのデバッグと公開までの全プロセスを案内します。
+
+---
+
+## ステップ1：ディレクトリ構造の作成
+
+整理されたディレクトリ構造は、保守可能なプラグインを開発するための基礎です。モデルプロバイダープラグインのために特定のディレクトリとファイルを作成する必要があります。
+
+1.  **プロバイダーディレクトリの特定または作成：** プラグインプロジェクト（通常は `dify-official-plugins` のローカルクローン）の `models/` ディレクトリ内で、モデルプロバイダー名でフォルダを見つけるか作成します（例：`models/my_new_provider`）。
+2.  **`models` サブディレクトリの作成：** プロバイダーディレクトリ内に `models` サブディレクトリを作成します。
+3.  **モデルタイプごとのサブディレクトリ作成：** `models/models/` ディレクトリ内に、サポートする必要のある**各モデルタイプ**ごとにサブディレクトリを作成します。一般的なタイプには以下が含まれます：
+    *   `llm`: テキスト生成モデル
+    *   `text_embedding`: テキストEmbeddingモデル
+    *   `rerank`: Rerankモデル
+    *   `speech2text`: 音声認識モデル
+    *   `tts`: テキスト読み上げモデル
+    *   `moderation`: コンテンツ審査モデル
+4.  **実装ファイルの準備：**
+    *   各モデルタイプディレクトリ（例：`models/models/llm/`）に、そのタイプのモデル呼び出しロジックを実装するためのPythonファイルを作成します（例：`llm.py`）。
+    *   同じディレクトリに、そのタイプ下の各具体的なモデルごとにYAML設定ファイルを作成します（例：`my-model-v1.yaml`）。
+    *   （オプション）`_position.yaml` ファイルを作成して、そのタイプ下のモデルがDify UIに表示される順序を制御できます。
+
+**構造例（プロバイダー `my_provider` がLLMとEmbeddingをサポートすると仮定）：**
+
+```bash
+models/my_provider/
+├── models                # モデル実装と設定ディレクトリ
+│   ├── llm               # LLMタイプ
+│   │   ├── _position.yaml  (オプション、ソート順制御)
+│   │   ├── my-llm-model-v1.yaml
+│   │   ├── my-llm-model-v2.yaml
+│   │   └── llm.py          # LLM実装ロジック
+│   └── text_embedding    # Embeddingタイプ
+│       ├── _position.yaml  (オプション、ソート順制御)
+│       ├── my-embedding-model.yaml
+│       └── text_embedding.py # Embedding実装ロジック
+├── provider              # プロバイダーレベルのコードディレクトリ
+│   └── my_provider.py    (認証情報検証などに使用、詳細は「モデルプロバイダーの作成」ドキュメント参照)
+└── manifest.yaml         # プラグインマニフェストファイル
+```
+
+---
+
+## ステップ2：モデル設定の定義（YAML）
+
+各具体的なモデルについて、Difyがそれを正しく理解し使用できるように、その属性、パラメータ、および機能を記述するYAMLファイルを作成する必要があります。
+
+1.  **YAMLファイルの作成：** 対応するモデルタイプディレクトリ（例：`models/models/llm/`）に、追加するモデル用のYAMLファイルを作成します。ファイル名は通常、モデルIDと一致させるか、説明的なものにします（例：`my-llm-model-v1.yaml`）。
+2.  **設定内容の記述：** [AIModelEntityスキーマ定義](../../../schema-definition/model/model-designing-rules.md#aimodelentity)仕様に従って内容を記述します。主要なフィールドは以下の通りです：
+    *   `model`: （必須）モデルの公式API識別子。
+    *   `label`: （必須）Dify UIに表示される名前（多言語対応）。
+    *   `model_type`: （必須）所在するディレクトリタイプと一致する必要があります（例：`llm`）。
+    *   `features`: （オプション）モデルがサポートする特殊機能（`vision`、`tool-call`、`stream-tool-call`など）を宣言します。
+    *   `model_properties`: （必須）モデル固有のプロパティ（`mode`（`chat`または`completion`）、`context_size`など）を定義します。
+    *   `parameter_rules`: （必須）ユーザーが調整可能なパラメータとそのルール（名前`name`、タイプ`type`、必須`required`、デフォルト値`default`、範囲`min`/`max`、オプション`options`など）を定義します。`use_template`を使用して事前定義されたテンプレートを参照し、一般的なパラメータ（`temperature`、`max_tokens`など）の設定を簡略化できます。
+    *   `pricing`: （オプション）モデルの課金情報を定義します。
+
+**例（`claude-3-5-sonnet-20240620.yaml`）：**
+
+```yaml
+model: claude-3-5-sonnet-20240620
+label:
+  en_US: claude-3-5-sonnet-20240620
+model_type: llm
+features:
+  - agent-thought
+  - vision
+  - tool-call
+  - stream-tool-call
+  - document
+model_properties:
+  mode: chat
+  context_size: 200000
+parameter_rules:
+  - name: temperature
+    use_template: temperature
+  - name: top_p
+    use_template: top_p
+  - name: max_tokens
+    use_template: max_tokens
+    required: true
+    default: 8192
+    min: 1
+    max: 8192 # Difyレベルで制限がある可能性に注意
+pricing:
+  input: '3.00'
+  output: '15.00'
+  unit: '0.000001' # 100万トークンあたり
+  currency: USD
+```
+
+---
+
+## ステップ3：モデル呼び出しコードの記述（Python）
+
+これはモデル機能実装の中核となるステップです。対応するモデルタイプのPythonファイル（例：`llm.py`）に、API呼び出し、パラメータ変換、結果返却を処理するコードを記述する必要があります。
+
+1.  **Pythonファイルの作成/編集：** モデルタイプディレクトリ（例：`models/models/llm/`）で、対応するPythonファイル（例：`llm.py`）を作成または開きます。
+2.  **実装クラスの定義：**
+    *   クラスを定義します。例：`MyProviderLargeLanguageModel`。
+    *   このクラスは、DifyプラグインSDK内の対応する**モデルタイプベースクラス**を継承する必要があります。例えば、LLMの場合は `dify_plugin.provider_kits.llm.LargeLanguageModel` を継承します。
+
+    ```python
+    import logging
+    from typing import Union, Generator, Optional, List
+    from dify_plugin.provider_kits.llm import LargeLanguageModel # ベースクラスをインポート
+    from dify_plugin.provider_kits.llm import LLMResult, LLMResultChunk, LLMUsage # 結果と使用量クラスをインポート
+    from dify_plugin.provider_kits.llm import PromptMessage, PromptMessageTool # メッセージとツールクラスをインポート
+    from dify_plugin.errors.provider_error import InvokeError, InvokeAuthorizationError # エラークラスをインポート
+    # APIを呼び出すための vendor_sdk があると仮定します
+    # import vendor_sdk
+
+    logger = logging.getLogger(__name__)
+
+    class MyProviderLargeLanguageModel(LargeLanguageModel):
+        # ... メソッドを実装 ...
+    ```
+
+3.  **主要メソッドの実装：**（具体的に実装が必要なメソッドは継承するベースクラスによって異なります。以下はLLMを例とします）
+    *   `_invoke(...)`: **コア呼び出しメソッド**。
+        *   **シグネチャ：** `def _invoke(self, model: str, credentials: dict, prompt_messages: List[PromptMessage], model_parameters: dict, tools: Optional[List[PromptMessageTool]] = None, stop: Optional[List[str]] = None, stream: bool = True, user: Optional[str] = None) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:`
+        *   **責務：**
+            *   `credentials` と `model_parameters` を使用してAPIリクエストを準備します。
+            *   Difyの `prompt_messages` 形式をプロバイダーAPIが必要とする形式に変換します。
+            *   Function Calling / Tool Useをサポートするために `tools` パラメータを処理します（モデルがサポートしている場合）。
+            *   `stream` パラメータに基づいて、ストリーミング呼び出しを行うか同期呼び出しを行うかを決定します。
+            *   **ストリーミング返却：** `stream=True` の場合、このメソッドはジェネレータ（`Generator`）を返す必要があり、`yield` を介して `LLMResultChunk` オブジェクトを逐次返却します。各チャンクには部分的な結果（テキスト、ツール呼び出しチャンクなど）とオプションの使用量情報が含まれます。
+            *   **同期返却：** `stream=False` の場合、このメソッドは完全な `LLMResult` オブジェクトを返す必要があります。これには最終的なテキスト結果、完全なツール呼び出しリスト、および総使用量情報（`LLMUsage`）が含まれます。
+        *   **実装パターン：** 同期ロジックとストリーミングロジックを内部ヘルパーメソッドに分割することを強く推奨します。
+
+        ```python
+        def _invoke(self, ..., stream: bool = True, ...) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:
+            # APIリクエストパラメータの準備（認証、モデルパラメータ変換、メッセージ形式変換など）
+            api_params = self._prepare_api_params(credentials, model_parameters, prompt_messages, tools, stop)
+
+            try:
+                if stream:
+                    return self._invoke_stream(model, api_params, user)
+                else:
+                    return self._invoke_sync(model, api_params, user)
+            except vendor_sdk.APIError as e:
+                # APIエラーを処理し、Difyエラーにマッピングします（_invoke_error_mappingを参照）
+                # ... mapped_error を発生させる ...
+                pass # 実際のエラー処理に置き換えてください
+            except Exception as e:
+                logger.exception("モデル呼び出し中の不明なエラー")
+                raise e # または汎用的な InvokeError を発生させる
+
+        def _invoke_stream(self, model: str, api_params: dict, user: Optional[str]) -> Generator[LLMResultChunk, None, None]:
+            # vendor_sdk のストリーミングインターフェースを呼び出す
+            # for api_chunk in vendor_sdk.create_stream(...):
+            #     # api_chunk を LLMResultChunk に変換する
+            #     dify_chunk = self._convert_api_chunk_to_llm_result_chunk(api_chunk)
+            #     yield dify_chunk
+            pass # 実際の実装に置き換えてください
+
+        def _invoke_sync(self, model: str, api_params: dict, user: Optional[str]) -> LLMResult:
+            # vendor_sdk の同期インターフェースを呼び出す
+            # api_response = vendor_sdk.create_sync(...)
+            # api_response を LLMResult (message.content, tools, usage を含む) に変換する
+            # dify_result = self._convert_api_response_to_llm_result(api_response)
+            # return dify_result
+            pass # 実際の実装に置き換えてください
+        ```
+
+    *   `validate_credentials(self, model: str, credentials: dict) -> None`: （必須）ユーザーが認証情報を追加または変更する際にその有効性を検証するために使用されます。通常、簡単で低コストのAPIエンドポイント（利用可能なモデルのリスト表示、残高確認など）を呼び出すことで実装されます。検証に失敗した場合は、`CredentialsValidateFailedError` またはそのサブクラスをスローする必要があります。
+    *   `get_num_tokens(self, model: str, credentials: dict, prompt_messages: List[PromptMessage], tools: Optional[List[PromptMessageTool]] = None) -> int`: （オプションだが推奨）与えられた入力のトークン数を推定するために使用されます。正確に計算できない場合やAPIがサポートしていない場合は、0を返すことができます。
+    *   `@property _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]`: （必須）**エラーマッピング**辞書を定義します。キーはDifyの標準 `InvokeError` サブクラスであり、値はその標準エラーにマッピングされるべきプロバイダーSDKがスローする可能性のある例外タイプのリストです。これはDifyが異なるプロバイダーのエラーを統一的に処理するために不可欠です。
+
+        ```python
+        @property
+        def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+            # マッピング例
+            mapping = {
+                InvokeAuthorizationError: [
+                    vendor_sdk.AuthenticationError,
+                    vendor_sdk.PermissionDeniedError,
+                ],
+                InvokeRateLimitError: [
+                    vendor_sdk.RateLimitError,
+                ],
+                # ... その他のマッピング ...
+            }
+            # ここにベースクラスのデフォルトマッピングを追加できます（ベースクラスが提供している場合）
+            # base_mapping = super()._invoke_error_mapping
+            # mapping.update(base_mapping) # マージ戦略に注意
+            return mapping
+        ```
+
+---
+
+## ステップ4：プラグインのデバッグ
+
+プラグインをコミュニティに貢献する前に、十分なテストとデバッグが不可欠です。Difyはリモートデバッグ機能を提供しており、ローカルでコードを修正し、Difyインスタンスでリアルタイムに効果をテストできます。
+
+1.  **デバッグ情報の取得：**
+    *   Difyインスタンスで、「プラグイン管理」ページに移動します（管理者権限が必要な場合があります）。
+    *   ページ右上の「プラグインのデバッグ」をクリックして、`デバッグキー`と`リモートサーバーアドレス`（例：`http://<your-dify-domain>:5003`）を取得します。
+2.  **ローカル環境の設定：**
+    *   ローカルプラグインプロジェクトの**ルートディレクトリ**で、`.env`ファイルを見つけるか作成します（`.env.example`からコピーできます）。
+    *   `.env`ファイルを編集し、デバッグ情報を入力します：
+
+      ```dotenv
+      INSTALL_METHOD=remote
+      REMOTE_INSTALL_HOST=<your-dify-domain-or-ip> # Difyサーバーアドレス
+      REMOTE_INSTALL_PORT=5003                     # デバッグポート
+      REMOTE_INSTALL_KEY=****-****-****-****-**** # あなたのデバッグキー
+      ```
+
+3.  **ローカルプラグインサービスの起動：**
+    *   プラグインプロジェクトのルートディレクトリで、Python環境がアクティブになっていることを確認します（仮想環境を使用している場合）。
+    *   メインプログラムを実行します：
+
+      ```bash
+      python -m main
+      ```
+
+    *   ターミナルの出力を観察し、接続が成功すると、通常、対応するログが表示されます。
+4.  **Difyでのテスト：**
+    *   Difyの「プラグイン」または「モデルプロバイダー」ページを更新すると、ローカルプラグインインスタンスが表示され、「デバッグ中」のマークが付いている場合があります。
+    *   「設定」->「モデルプロバイダー」に移動し、プラグインを見つけて有効なAPI認証情報を設定します。
+    *   Difyアプリケーションでモデルを選択して使用し、テストを行います。ローカルでのPythonコードの変更（保存後、通常はサービスが自動的に再読み込みされます）は、Difyでの呼び出し動作に直接影響します。Difyのデバッグプレビュー機能を使用すると、入出力とエラー情報を確認するのに役立ちます。
+
+---
+
+## ステップ5：パッケージ化と公開
+
+開発とデバッグが完了し、プラグインの機能に満足したら、パッケージ化してDifyコミュニティに貢献できます。
+
+1.  **プラグインのパッケージ化：**
+    *   ローカルデバッグサービスを停止します（`Ctrl+C`）。
+    *   プラグインプロジェクトの**ルートディレクトリ**でパッケージ化コマンドを実行します：
+
+      ```bash
+      # <provider_name> をプロバイダーのディレクトリ名に置き換えます
+      dify plugin package models/<provider_name>
+      ```
+
+    *   これにより、プロジェクトのルートディレクトリに `<provider_name>.difypkg` ファイルが生成されます。
+2.  **プルリクエストの送信：**
+    *   コードスタイルが良好で、Difyの[プラグイン公開仕様](https://docs.dify.ai/zh-hans/plugins/publish-plugins/publish-to-dify-marketplace)に従っていることを確認します。
+    *   ローカルGitのコミットをフォークした `dify-official-plugins` リポジトリにプッシュします。
+    *   GitHub上で `langgenius/dify-official-plugins` メインリポジトリに対してプルリクエストを作成します。PRの説明には、行った変更、追加したモデルや機能、および必要なテスト手順を明確に記述します。
+    *   Difyチームのレビューを待ちます。レビューが承認されマージされると、あなたの貢献は公式プラグインに含まれ、[Difyマーケットプレイス](https://marketplace.dify.ai/)で利用可能になります。
+
+---
+
+## さらに探る
+
+*   [モデルスキーマ定義](/plugin-dev-ja/0412-model-schema) （モデルYAML仕様）
+*   [プラグインマニフェスト構造](/plugin-dev-ja/0411-general-specifications) （`manifest.yaml` 仕様）
+*   [Dify Plugin SDKリファレンス](https://github.com/langgenius/dify-plugin-sdks) （ベースクラス、データ構造、エラータイプを検索）
+*   [Dify公式プラグインリポジトリ](https://github.com/langgenius/dify-official-plugins) （既存プラグインの実装を参照）
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="このページを編集する"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs/edit/main/plugin-dev-ja/0222-creating-new-model-provider-extra.mdx"
+    >
+        直接貢献することでドキュメントの改善にご協力ください
+    </Card>
+    <Card
+        title="問題を報告する"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs/issues/new?title=ドキュメントの問題%3A%20creating-new-model-provider-ex&body=%23%23%20問題の説明%0A%3C%21--%20発見した問題について簡単に説明してください%20--%3E%0A%0A%23%23%20ページリンク%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fplugin-dev-ja%2F0222-creating-new-model-provider-extra.mdx%0A%0A%23%23%20提案される変更%0A%3C%21--%20特定の変更案がある場合は、ここで説明してください%20--%3E%0A%0A%3C%21--%20ドキュメントの品質向上にご協力いただきありがとうございます！%20--%3E"
+    >
+        エラーを見つけたり提案がありますか？お知らせください
+    </Card>
+</CardGroup>

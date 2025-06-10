@@ -221,29 +221,32 @@ http_access deny all
 
 目前还不支持将你自己创建的应用设置为模板。现有的模板是由Dify官方为云版本用户参考提供的。如果你正在使用云版本，你可以将应用添加到你的工作空间或者在修改后定制它们以创建你自己的应用。如果你正在使用社区版本并且需要为你的团队创建更多的应用模板，你可以咨询我们的商务团队以获得付费技术支持：[business@dify.ai](mailto:business@dify.ai)
 
-### 20.502 Bad Gateway
+### 20. 502 Bad Gateway
 
-这是因为Nginx将服务转发到了错误的位置导致的，首先确保容器正在运行，然后以Root权限运行以下命令：
+这是因为 Nginx 将服务转发到了错误路径。首先确保容器正在运行，然后以 Root 权限运行以下命令：
 
-```
+```bash
 docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
 ```
 
 在输出内容中找到这两行：
 
-```
+```bash
 /docker-web-1: 172.19.0.5
 /docker-api-1: 172.19.0.7
 ```
 
-记住后面的IP地址。然后打开你存放dify源代码的地方，打开`dify/docker/nginx/conf.d`,将`http://api:5001`替换为`http://172.19.0.7:5001`,将`http://web:3000`替换为`http://172.19.0.5:3000`，随后重启Nginx容器或者重载配置。\
-这些IP地址是_**示例性**_ 的，你必须执行命令获取你自己的IP地址，不要直接填入。\
-你可能在重新启动相关容器时需要再次根据IP进行配置。
+记录 IP 地址，打开 Dify 源代码路径，打开 `dify/docker/nginx/conf.d` 文件，将 `http://api:5001` 替换为 `http://172.19.0.7:5001`，将 `http://web:3000` 替换为 `http://172.19.0.5:3000`，随后重启 Nginx 容器或者重载配置。
+
+<Warning>
+   以上 IP 地址仅供参考，在实际的命令执行过程中请替换为实际 IP 地址。
+   重启相关容器时，你可能需要再次根据 IP 地址进行配置。
+</Warning>
 
 ### 21. 如何开启内容安全策略？
 
 在 `.env` 配置文件中找到 `CSP_WHITELIST` 参数，然后填写能够被允许放行的域名，例如和所有和产品使用相关的网址、API 请求地址
-此举将有助于减少潜在的 XSS 攻击。如需了解更多关于 CSP 的建议，请参考[内容安全策略](https://developer.mozilla.org/zh-CN/docs/Web/HTTP/CSP)。
+此举将有助于减少潜在的 XSS 攻击。如需了解更多关于 CSP 的建议，请参考[内容安全策略](https://developer.mozilla.org/zh-hans/docs/Web/HTTP/CSP)。
 
 ### 22. 如何修改 API 服务的端口号？
 
@@ -278,3 +281,144 @@ API 服务与 Dify 平台使用的端口号相一致。你可以通过修改 `do
    docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
    docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
    ```
+
+### 24. 如何删除旧日志和未使用的文件以减少存储使用量？
+
+Dify**不会**自动删除数据库中的旧日志或存储中的未使用文件。请参考以下命令**手动**删除旧日志和未使用的文件。
+
+#### 删除旧日志
+
+你可以使用 `clear-free-plan-tenant-expired-logs` 命令指定天数删除旧日志。例如，要删除超过 30 天的日志，请运行以下命令：
+
+1. 获取租户 ID
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c "echo 'db.session.query(Tenant).all(); quit()' | flask shell"
+   ...
+   >>> [<Tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2>]
+   ```
+
+   - 在此示例中，租户 ID 为 `618b5d66-a1f5-4b6b-8d12-f171182a1cb2`。
+
+2. 指定租户 ID 和天数删除旧日志
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs --days 30 --batch 100 --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ...
+   Starting clear free plan tenant expired logs.
+   Clearing free plan tenant expired logs
+   Total tenant count: 1
+   [2025-04-27 05:28:22.027032] Processed 2555 messages for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.085901] Processed 2190 conversations for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   [2025-04-27 05:28:22.112561] Processed 5110 workflow node executions for tenant 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ```
+
+   - 使用 `--tenant_ids` 选项指定租户 ID。
+   - 将删除比 `--days` 选项指定的天数更旧的日志。
+
+3. （可选）删除已导出的 `free_plan_tenant_expired_logs` 目录
+
+   ```bash
+   $ docker exec -it docker-api-1 bash -c 'ls -l ${OPENDAL_FS_ROOT}/free_plan_tenant_expired_logs'
+   ```
+
+   - `flask clear-free-plan-tenant-expired-logs` 命令会在实际删除前，将标记为删除的日志先导出到 `free_plan_tenant_expired_logs` 目录。如果你想释放存储空间，建议随后删除该目录。
+   - 删除 `free_plan_tenant_expired_logs` 目录的方法可能因存储类型不同而有所差异。上述命令适用于默认设置环境。
+
+<Info>
+  如果你希望进一步减少存储占用，也可以考虑回收存储空间（例如 [PostgreSQL 的 `VACUUM`](https://www.postgresql.org/docs/current/sql-vacuum.html)）。
+</Info>
+
+#### 删除未使用的文件
+
+你可以使用 `clear-orphaned-file-records` 命令和 `remove-orphaned-files-on-storage` 命令删除未使用的文件。
+
+<Warning>
+  由于并非所有模式都经过完全测试，请注意这些命令可能会删除意外的文件记录或文件。
+  运行命令前，请确保备份数据库和存储。
+  建议在维护窗口期间运行此操作，因为这可能会导致实例负载过高。
+</Warning>
+
+<Warning>
+  在当前场景下，仅当存储类型为 OpenDAL（当环境变量 `STORAGE_TYPE` 设置为 `opendal`）时，才支持删除未使用的文件。
+  如果你使用的存储类型不是 OpenDAL，则需要手动删除未使用的文件，或者参考脚本 [为存储接口实现 `scan` 方法](https://github.com/langgenius/dify/blob/main/api/extensions/storage/base_storage.py)。
+</Warning>
+
+<Info>
+  如果你想跳过确认提示，可以在两个命令中使用 `--force` (`-f`) 选项。
+</Info>
+
+示例一：从数据库中删除未使用的文件记录
+
+   ```bash
+   $ docker exec -it docker-api-1 flask clear-orphaned-file-records
+   ...
+   !!! USE WITH CAUTION !!!
+   Since not all patterns have been fully tested, please note that this command may delete unintended file records.
+   This cannot be undone. Please make sure to back up your database before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 230 orphaned message_files records:
+   - id: 8051365a-23ac-4ded-8c66-721f53bb46c7, message_id: 99a719aa-cc45-4856-8f84-6772d84f8ee84
+   - id: 9d95b217-29f8-424c-85f6-827731b68a7a, message_id: 45f7e9d7-6194-46ea-bd53-336218b28e1e
+   ...
+   Do you want to proceed to delete all 230 orphaned message_files records? [y/N]: y
+   - Deleting orphaned message_files records
+   Removed 230 orphaned message_files records.
+   ...
+   Found 365 orphaned file records.
+   - orphaned file id: 8a0387e6-dde7-411c-bac2-6e6d8af6ae31
+   - orphaned file id: 9177f9df-7360-4434-b65f-10fdec7d38af
+   ...
+   Do you want to proceed to delete all 365 orphaned file records? [y/N]: y
+   - Deleting orphaned file records in table upload_files
+   - Deleting orphaned file records in table tool_files
+   Removed 365 orphaned file records.
+   ```
+
+示例二：删除数据库中不存在的存储文件
+
+   ```bash
+   $ docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   ...
+   !!! USE WITH CAUTION !!!
+   Currently, this command will work only for opendal based storage (STORAGE_TYPE=opendal).
+   Since not all patterns have been fully tested, please note that this command may delete unintended files.
+   This cannot be undone. Please make sure to back up your storage before proceeding.
+   It is also recommended to run this during the maintenance window, as this may cause high load on your instance.
+   Do you want to proceed? [y/N]: y
+   ...
+   Found 365 orphaned files.
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Do you want to proceed to remove all 365 orphaned files? [y/N]: y
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/3a1d5e19-426a-4c10-91eb-cfb9b786f2dc.png
+   - Removing orphaned file: upload_files/618b5d66-a1f5-4b6b-8d12-f171182a1cb2/795986eb-d213-4cc5-8c34-c121be43ab5e.png
+   ...
+   Removed 365 orphaned files without errors.
+   ```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+<CardGroup cols="2">
+    <Card
+        title="编辑此页面"
+        icon="pen-to-square"
+        href="https://github.com/langgenius/dify-docs/edit/main/zh-hans/learn-more/faq/install-faq.mdx"
+    >
+        通过直接提交修改来帮助改进文档内容
+    </Card>
+    <Card
+        title="提交问题"
+        icon="github"
+        href="https://github.com/langgenius/dify-docs/issues/new?title=文档问题%3A%20ll-&body=%23%23%20问题描述%0A%3C%21--%20请简要描述您发现的问题%20--%3E%0A%0A%23%23%20页面链接%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fzh-hans/learn-more/faq%2Finstall-faq.mdx%0A%0A%23%23%20建议修改%0A%3C%21--%20如果有具体的修改建议，请在此说明%20--%3E%0A%0A%3C%21--%20感谢您对文档质量的关注！%20--%3E"
+    >
+        发现错误或有改进建议？请提交问题反馈
+    </Card>
+</CardGroup>

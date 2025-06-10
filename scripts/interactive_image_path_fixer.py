@@ -10,7 +10,7 @@
 每次找到一个问题时，会显示详细信息并等待用户确认后再进行修改。
 
 目录映射关系:
-    dify-docs-mintlify -> dify-docs
+    dify-docs -> dify-docs
     zh-hans -> zh_CN
     en -> en
     ja-jp -> jp
@@ -75,7 +75,7 @@ def find_relative_images(file_path):
     # 检查 Frame 组件中的相对路径
     for match in FRAME_IMAGE_RE.finditer(content):
         image_path = match.group(1)
-        # 如 /ja-jp/img/... 或 /en-us/img/... 或 /zh-cn/... 这样的路径
+        # 如 /ja-jp/img/... 或 /en-us/img/... 或 /zh-hans/... 这样的路径
         if image_path.startswith('/'):
             line_no = content[:match.start()].count('\n') + 1
             position = match.start()
@@ -571,8 +571,8 @@ def interactive_fix(file_path, mintlify_base, dify_base):
 
 def main():
     parser = argparse.ArgumentParser(description='交互式修复 MDX 文件中的相对图片路径')
-    parser.add_argument('--mintlify-dir', default='/Users/allen/Documents/dify-docs-mintlify', 
-                        help='dify-docs-mintlify 目录路径')
+    parser.add_argument('--mintlify-dir', default='/Users/allen/Documents/dify-docs', 
+                        help='dify-docs 目录路径')
     parser.add_argument('--dify-dir', default='/Users/allen/Documents/dify-docs', 
                         help='dify-docs 目录路径')
     parser.add_argument('--file', help='处理特定文件')

@@ -2,7 +2,7 @@
 """
 This script automatically fixes relative path references in Markdown files.
 It searches for links to .md and .mdx files and replaces them with the correct format
-for Mintlify documentation, changing links like [text](file.md) or [text](file.mdx) to [text](./file).
+for Mintlify documentation, changing links like [text](file) or [text](file.mdx) to [text](./file).
 
 使用方法：
 1. 在命令行中运行： python fix_markdown_links.py [directory]

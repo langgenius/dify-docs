@@ -1,0 +1,275 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Completion アプリ API",
+    "description": "テキスト生成アプリケーションはセッションレスをサポートし、翻訳、記事作成、要約AI等に最適です。",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "{api_base_url}",
+      "description": "API のベースURL。 {api_base_url} をアプリケーション提供の実際の API ベースURLに置き換えてください。",
+      "variables": {
+        "api_base_url": {
+          "default": "https://api.dify.ai/v1",
+          "description": "実際の API ベースURL"
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/completion-messages": {
+      "post": {
+        "summary": "完了メッセージの作成",
+        "description": "テキスト生成アプリケーションにリクエストを送信します。",
+        "operationId": "createCompletionMessageJp",
+        "tags": ["完了メッセージ"],
+        "requestBody": {
+          "description": "完了メッセージを作成するためのリクエストボディ。",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompletionRequestJp"
+              },
+              "examples": {
+                "streaming_example_jp": {
+                  "summary": "ストリーミングモードの例",
+                  "value": {
+                    "inputs": {"query": "こんにちは、世界！"},
+                    "response_mode": "streaming",
+                    "user": "jp_user_123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "リクエスト成功。レスポンスのコンテントタイプと構造はリクエストの `response_mode` パラメータに依存します。\n- `response_mode` が `blocking` の場合、`application/json` で `CompletionResponseJp` オブジェクトを返します。\n- `response_mode` が `streaming` の場合、`text/event-stream` で `ChunkCompletionEventJp` のストリームを返します。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompletionResponseJp"
+                }
+              },
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE (Server-Sent Events) のストリーム。各イベントは 'data: ' で始まり、'\\n\\n' で終わるJSONオブジェクトです。詳細は `ChunkCompletionEventJp` を参照してください。"
+                }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequestGenericJp" },
+          "404": { "$ref": "#/components/responses/ConversationNotFoundJp" },
+          "500": { "$ref": "#/components/responses/InternalServerErrorJp" }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "ファイルアップロード",
+        "description": "メッセージ送信時に使用するファイル（現在は画像のみ対応）をアップロードし、画像とテキストのマルチモーダルな理解を可能にします。png、jpg、jpeg、webp、gif形式に対応しています。アップロードされたファイルは、現在のエンドユーザーのみが使用できます。",
+        "operationId": "uploadCompletionFileJp",
+        "tags": ["ファイル操作"],
+        "requestBody": {
+          "description": "ファイルアップロードリクエスト。`multipart/form-data` 形式が必要です。",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file", "user"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary", "description": "アップロードするファイル。" },
+                  "user": { "type": "string", "description": "開発者のルールで定義されたユーザー識別子。アプリケーション内で一意である必要があります。" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "ファイルアップロード成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponseJp" } } } },
+          "201": { "description": "ファイル作成成功（代替成功コード）。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponseJp" } } } },
+          "400": { "$ref": "#/components/responses/BadRequestFileJp" },
+          "413": { "$ref": "#/components/responses/FileTooLargeJp" },
+          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFileJp" },
+          "503": { "$ref": "#/components/responses/S3ErrorFileJp" },
+          "500": { "$ref": "#/components/responses/InternalServerErrorJp" }
+        }
+      }
+    },
+    "/completion-messages/{task_id}/stop": {
+      "post": {
+        "summary": "生成の停止",
+        "description": "完了メッセージの生成を停止します。ストリーミングモードでのみサポートされています。",
+        "operationId": "stopCompletionGenerationJp",
+        "tags": ["完了メッセージ"],
+        "parameters": [
+          { "name": "task_id", "in": "path", "required": true, "description": "タスクID、ストリーミングチャンクの返信から取得可能。", "schema": { "type": "string", "format": "uuid" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "type": "object", "required": ["user"], "properties": { "user": { "type": "string", "description": "ユーザー識別子。メッセージ送信インターフェースで渡されたユーザーと一致する必要があります。" } } } } }
+        },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessResultJp" } }
+      }
+    },
+    "/messages/{message_id}/feedbacks": {
+      "post": {
+        "summary": "メッセージフィードバック",
+        "description": "エンドユーザーはフィードバックメッセージを提供でき、アプリケーション開発者が期待される出力を最適化するのに役立ちます。",
+        "operationId": "postCompletionMessageFeedbackJp",
+        "tags": ["メッセージフィードバック"],
+        "parameters": [ { "name": "message_id", "in": "path", "required": true, "description": "メッセージID。", "schema": { "type": "string", "format": "uuid" } } ],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/MessageFeedbackRequestJp" } } } },
+        "responses": { "200": { "$ref": "#/components/responses/SuccessResultJp" } }
+      }
+    },
+    "/app/feedbacks": {
+      "get": {
+        "summary": "アプリのメッセージの「いいね」とフィードバックを取得",
+        "description": "アプリのエンドユーザーからのフィードバックや「いいね」を取得します。",
+        "operationId": "getAppFeedbacksCompletionJp",
+        "tags": ["メッセージフィードバック"],
+        "parameters": [
+          { "name": "page", "in": "query", "description": "（任意）ページ番号。デフォルト値：1。", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "description": "（任意）1ページあたりの件数。デフォルト値：20。", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": { "200": { "description": "フィードバックリストの取得成功。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppFeedbacksResponseJp" } } } } }
+      }
+    },
+    "/text-to-audio": {
+      "post": {
+        "summary": "テキストから音声",
+        "description": "テキストを音声に変換します。",
+        "operationId": "textToAudioCompletionJp",
+        "tags": ["音声変換"],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TextToAudioRequestJp" } } } },
+        "responses": {
+          "200": {
+            "description": "音声ファイル生成成功。", "content": { "audio/wav": { "schema": { "type": "string", "format": "binary" } }, "audio/mp3": { "schema": { "type": "string", "format": "binary" } } },
+            "headers": { "Content-Type": { "schema": { "type": "string", "example": "audio/wav" } } }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "アプリケーションの基本情報を取得",
+        "operationId": "getCompletionAppInfoJp",
+        "tags": ["アプリケーション情報"],
+        "responses": { "200": { "description": "アプリケーション基本情報。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppInfoResponseJp" } } } } }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "アプリケーションのパラメータ情報を取得",
+        "operationId": "getCompletionAppParametersJp",
+        "tags": ["アプリケーション情報"],
+        "responses": { "200": { "description": "アプリケーションパラメータ情報。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/CompletionAppParametersResponseJp" } } } } }
+      }
+    },
+    "/site": {
+      "get": {
+        "summary": "アプリのWebApp設定を取得",
+        "operationId": "getCompletionWebAppSettingsJp",
+        "tags": ["アプリケーション情報"],
+        "responses": { "200": { "description": "WebApp設定。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WebAppSettingsResponseJp" } } } } }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "API_KEY", "description": "API-Key認証。すべてのAPIリクエストで、`Authorization` HTTPヘッダーに `Bearer {API_KEY}` の形式でAPIキーを含めてください。APIキーの漏洩を避けるため、サーバーサイドでの保存を強く推奨します。" }
+    },
+    "responses": {
+        "BadRequestGenericJp": { "description": "リクエストパラメータエラー。エラーコード例: invalid_param, app_unavailable, provider_not_initialize, provider_quota_exceeded, model_currently_not_support, completion_request_error。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "ConversationNotFoundJp": { "description": "会話が存在しません。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "InternalServerErrorJp": { "description": "内部サーバーエラー。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "BadRequestFileJp": { "description": "ファイル操作リクエストエラー。エラーコード例: no_file_uploaded, too_many_files, unsupported_preview, unsupported_estimate。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "FileTooLargeJp": { "description": "ファイルが大きすぎます (file_too_large)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "UnsupportedFileTypeFileJp": { "description": "サポートされていないファイルタイプです (unsupported_file_type)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "S3ErrorFileJp": { "description": "S3ストレージサービスエラー。エラーコード例: s3_connection_failed, s3_permission_denied, s3_file_too_large。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
+        "SuccessResultJp": { "description": "操作成功。", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } }
+    },
+    "schemas": {
+      "CompletionRequestJp": {
+        "type": "object", "required": ["inputs"],
+        "properties": {
+          "inputs": { "type": "object", "required": ["query"], "properties": { "query": { "type": "string", "description": "入力テキスト、処理される内容。" } }, "additionalProperties": true, "description": "アプリで定義された各種変数値を入力。少なくとも1つのキー/値ペアが必要。" },
+          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "default": "streaming", "description": "レスポンス返却モード。streaming (推奨): SSEによるタイプライター風出力。blocking: 実行完了後に結果返却 (Cloudflare 100秒制限あり)。" },
+          "user": { "type": "string", "description": "ユーザー識別子。アプリケーション内で開発者が一意に定義。" },
+          "files": { "type": "array", "items": { "$ref": "#/components/schemas/InputFileObjectJp" }, "description": "(任意) ファイルリスト。モデルがVision機能をサポートしている場合のみ利用可能。" }
+        }
+      },
+      "InputFileObjectJp": {
+        "type": "object", "required": ["type", "transfer_method"],
+        "properties": {
+          "type": { "type": "string", "enum": ["image"], "description": "サポートされるタイプ：`image`（現在は画像タイプのみサポート）。" },
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "転送方法。" },
+          "url": { "type": "string", "format": "url", "description": "画像URL（`transfer_method`が`remote_url`の場合）。" },
+          "upload_file_id": { "type": "string", "format": "uuid", "description": "アップロードされたファイルID（`transfer_method`が`local_file`の場合）。" }
+        },
+        "oneOf": [ {"required": ["url"]}, {"required": ["upload_file_id"]} ]
+      },
+      "CompletionResponseJp": {
+        "type": "object", "description": "ブロッキングモードでのアプリの完全な結果。",
+        "properties": {
+          "event": { "type": "string", "description": "イベントタイプ、通常 'message'。(MarkdownではChatCompletionResponseで 'chat' とあったが、Completionの文脈では 'completion' or 'message' が一般的。blocking example に合わせて 'message' を使用)" },
+          "message_id": { "type": "string", "format": "uuid", "description": "一意のメッセージID。" },
+          "mode": { "type": "string", "description": "アプリモード。ブロッキングモードの例では 'completion'、Markdown本文では 'chat' と記載。ここでは 'completion' を採用。" },
+          "answer": { "type": "string", "description": "完全な応答内容。" },
+          "metadata": { "$ref": "#/components/schemas/ResponseMetadataJp" },
+          "created_at": { "type": "integer", "format": "int64", "description": "メッセージ作成タイムスタンプ。" }
+        }
+      },
+      "ResponseMetadataJp": { "type": "object", "description": "メタデータ。", "properties": { "usage": { "$ref": "#/components/schemas/UsageJp" }, "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResourceJp" }, "description": "引用と帰属のリスト。" } } },
+      "ChunkCompletionEventJp": {
+        "type": "object", "required": ["event"],
+        "properties": { "event": { "type": "string", "enum": ["message", "message_end", "tts_message", "tts_message_end", "message_replace", "error", "ping"], "description": "イベントタイプ。" } },
+        "discriminator": { "propertyName": "event", "mapping": { "message": "#/components/schemas/StreamEventMessageJp", "message_end": "#/components/schemas/StreamEventMessageEndJp", "tts_message": "#/components/schemas/StreamEventTtsMessageJp", "tts_message_end": "#/components/schemas/StreamEventTtsMessageEndJp", "message_replace": "#/components/schemas/StreamEventMessageReplaceJp", "error": "#/components/schemas/StreamEventErrorJp", "ping": "#/components/schemas/StreamEventPingJp" } }
+      },
+      "StreamEventBaseCompletionJp": { "type": "object", "properties": { "task_id": { "type": "string", "format": "uuid", "description": "タスクID。" }, "message_id": { "type": "string", "format": "uuid", "description": "一意のメッセージID。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" } } },
+      "StreamEventMessageJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "LLMが返したテキストチャンクの内容。" } } } ] },
+      "StreamEventMessageEndJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["metadata"], "properties": { "metadata": { "$ref": "#/components/schemas/ResponseMetadataJp" } } } ] },
+      "StreamEventTtsMessageJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "format": "byte", "description": "Base64エンコードされた音声ブロック。" } } } ] },
+      "StreamEventTtsMessageEndJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "description": "空文字列。" } } } ] },
+      "StreamEventMessageReplaceJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "置換内容。" } } } ] },
+      "StreamEventErrorJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseCompletionJp" }, { "type": "object", "required": ["status", "code", "message"], "properties": { "status": { "type": "integer", "description": "HTTPステータスコード。" }, "code": { "type": "string", "description": "エラーコード。" }, "message": { "type": "string", "description": "エラーメッセージ。" } } } ] },
+      "StreamEventPingJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkCompletionEventJp" }, { "type": "object", "description": "接続維持のためのPingイベント。" } ] },
+      "UsageJp": { "type": "object", "description": "モデル使用情報。", "properties": { "prompt_tokens": { "type": "integer" }, "prompt_unit_price": { "type": "string" }, "prompt_price_unit": { "type": "string" }, "prompt_price": { "type": "string" }, "completion_tokens": { "type": "integer" }, "completion_unit_price": { "type": "string" }, "completion_price_unit": { "type": "string" }, "completion_price": { "type": "string" }, "total_tokens": { "type": "integer" }, "total_price": { "type": "string" }, "currency": { "type": "string" }, "latency": { "type": "number", "format": "double" } } },
+      "RetrieverResourceJp": { "type": "object", "description": "引用と帰属の情報。", "properties": { "document_id": { "type": "string" }, "segment_id": { "type": "string" }, "score": { "type": "number" }, "content": { "type": "string" } } },
+      "FileUploadResponseJp": { "type": "object", "description": "ファイルアップロード成功時のレスポンス。", "properties": { "id": { "type": "string", "format": "uuid", "description": "ID。" }, "name": { "type": "string", "description": "ファイル名。" }, "size": { "type": "integer", "description": "ファイルサイズ（バイト）。" }, "extension": { "type": "string", "description": "ファイル拡張子。" }, "mime_type": { "type": "string", "description": "ファイルのMIMEタイプ。" }, "created_by": { "type": "string", "format": "uuid", "description": "エンドユーザーID。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" } } },
+      "MessageFeedbackRequestJp": { "type": "object", "required": ["user"], "properties": { "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true, "description": "高評価 `like`, 低評価 `dislike`, 取り消し `null`。" }, "user": { "type": "string", "description": "ユーザー識別子。" }, "content": { "type": "string", "nullable": true, "description": "メッセージフィードバックの具体的な内容。" } } },
+      "AppFeedbacksResponseJp": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeedbackItemJp" }, "description": "このアプリの「いいね」とフィードバックの一覧。" } } },
+      "FeedbackItemJp": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "app_id": { "type": "string", "format": "uuid" }, "conversation_id": { "type": "string", "format": "uuid" }, "message_id": { "type": "string", "format": "uuid" }, "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true }, "content": { "type": "string" }, "from_source": { "type": "string" }, "from_end_user_id": { "type": "string", "format": "uuid" }, "from_account_id": { "type": "string", "format": "uuid", "nullable": true }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" } } },
+      "TextToAudioRequestJp": { "type": "object", "required": ["user"], "properties": { "message_id": { "type": "string", "format": "uuid", "description": "メッセージID（textより優先）。" }, "text": { "type": "string", "description": "音声生成コンテンツ。" }, "user": { "type": "string", "description": "ユーザー識別子。" } }, "description": "`user`が必須。`message_id`または`text`のいずれかを提供。" },
+      "AppInfoResponseJp": { "type": "object", "description": "アプリケーションの基本情報。", "properties": { "name": { "type": "string", "description": "アプリケーションの名前。" }, "description": { "type": "string", "description": "アプリケーションの説明。" }, "tags": { "type": "array", "items": { "type": "string" }, "description": "アプリケーションのタグ。" } } },
+      "CompletionAppParametersResponseJp": { "type": "object", "description": "アプリケーションのパラメータ情報。", "properties": { "opening_statement": { "type": "string", "description": "開始文。" }, "suggested_questions": { "type": "array", "items": { "type": "string" }, "description": "開始時の提案質問リスト。" }, "suggested_questions_after_answer": { "type": "object", "properties": { "enabled": { "type": "boolean" } }, "description": "回答後の提案質問。" }, "speech_to_text": { "type": "object", "properties": { "enabled": { "type": "boolean" } }, "description": "音声からテキスト。" }, "retriever_resource": { "type": "object", "properties": { "enabled": { "type": "boolean" } }, "description": "引用と帰属。" }, "annotation_reply": { "type": "object", "properties": { "enabled": { "type": "boolean" } }, "description": "注釈付き返信。" }, "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItemJp" }, "description": "ユーザー入力フォーム設定。" }, "file_upload": { "type": "object", "properties": { "image": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "number_limits": { "type": "integer" }, "detail": { "type": "string" }, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] } } }, "description": "画像設定。" } }, "description": "ファイルアップロード設定。" }, "system_parameters": { "type": "object", "properties": { "file_size_limit": { "type": "integer" }, "image_file_size_limit": { "type": "integer" }, "audio_file_size_limit": { "type": "integer" }, "video_file_size_limit": { "type": "integer" } }, "description": "システムパラメータ。" } } },
+      "UserInputFormItemJp": { "type": "object", "description": "ユーザー入力フォームのコントロール項目。", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapperJp" }, { "$ref": "#/components/schemas/ParagraphControlWrapperJp" }, { "$ref": "#/components/schemas/SelectControlWrapperJp" } ] },
+      "TextInputControlWrapperJp": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControlJp" } }, "required":["text-input"] },
+      "ParagraphControlWrapperJp": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControlJp" } }, "required":["paragraph"] },
+      "SelectControlWrapperJp": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControlJp" } }, "required":["select"] },
+      "TextInputControlJp": { "type": "object", "description": "テキスト入力コントロール。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必須かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" } } },
+      "ParagraphControlJp": { "type": "object", "description": "段落テキスト入力コントロール。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必須かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" } } },
+      "SelectControlJp": { "type": "object", "description": "ドロップダウンコントロール。", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必须かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" }, "options": { "type": "array", "items": { "type": "string" }, "description": "オプション値。" } } },
+      "WebAppSettingsResponseJp": { "type": "object", "description": "アプリケーションのWebApp設定。", "properties": { "title": { "type": "string", "description": "WebApp名。" }, "chat_color_theme": { "type": "string", "description": "チャットの色テーマ（16進数）。" }, "chat_color_theme_inverted": { "type": "boolean", "description": "テーマ反転。" }, "icon_type": { "type": "string", "enum": ["emoji", "image"], "description": "アイコンタイプ。" }, "icon": { "type": "string", "description": "アイコン（emojiまたは画像URL）。" }, "icon_background": { "type": "string", "description": "背景色（16進数）。" }, "icon_url": { "type": "string", "format": "url", "nullable": true, "description": "アイコンURL。" }, "description": { "type": "string", "description": "説明。" }, "copyright": { "type": "string", "description": "著作権情報。" }, "privacy_policy": { "type": "string", "description": "プライバシーポリシーリンク。" }, "custom_disclaimer": { "type": "string", "description": "カスタム免責事項。" }, "default_language": { "type": "string", "description": "デフォルト言語。" }, "show_workflow_steps": { "type": "boolean", "description": "ワークフロー詳細表示。" }, "use_icon_as_answer_icon": { "type": "boolean", "description": "WebAppアイコンを返信アイコンとして使用。" } } },
+      "ErrorResponseJp": { "type": "object", "description": "エラーレスポンス。", "properties": { "status": { "type": "integer", "nullable": true, "description": "HTTPステータスコード。" }, "code": { "type": "string", "nullable": true, "description": "エラーコード。" }, "message": { "type": "string", "description": "エラーメッセージ。" } } }
+    }
+  },
+  "tags": [
+    { "name": "完了メッセージ", "description": "テキスト生成と完了に関連する操作。" },
+    { "name": "ファイル操作", "description": "ファイル管理に関連する操作。" },
+    { "name": "メッセージフィードバック", "description": "ユーザーフィードバックに関連する操作。" },
+    { "name": "音声変換", "description": "テキストから音声への変換に関連する操作。" },
+    { "name": "アプリケーション情報", "description": "アプリケーションの設定と情報を取得する操作。" }
+  ]
+}
