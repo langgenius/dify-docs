@@ -1,0 +1,295 @@
+Here is the full English translation of your document titled **"AI Bot Development: Integration of RongCloud IM with Dify – A Practical Guide"**:
+
+---
+
+# AI Bot Development: RongCloud IM and Dify Integration Guide
+
+> Author: wangqijia｜RongCloud Developer Team
+> Date: June 2025
+
+---
+
+## 1. Overview
+
+RongCloud IM PaaS provides comprehensive [AI bot management]((https://docs.rongcloud.cn/platform-chat-api/bot/overview)) capabilities, supporting rich event callbacks triggered by specific bots. This enables developers to flexibly handle various business scenarios, such as:
+
+* Initiating one-on-one conversations with bots
+* Using @mention to trigger contextual responses
+
+In addition, the platform comes with built-in integration capabilities for AI platforms, allowing bot messages to be automatically forwarded to connected LLM platforms (e.g., Dify). This eliminates the need for an intermediate service layer, greatly improving the stability of message flow, reducing integration costs, and accelerating development delivery.
+
+This guide will walk you through integrating AI bots into the RongCloud IM platform and connecting them with Dify LLM services.
+
+---
+
+## 2. High-Level Architecture
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/bot-dify-high-level-design.jpg" alt="Diagram" width="80%" />
+
+**Workflow:**
+
+1. **App Server**
+
+* Manages bots, processes webhook callbacks, and receives bot messages.
+
+2. **User Client**
+
+* Sends user messages and receives bot responses.
+
+3. **IM Server**
+
+* **Message Forwarding**: Forwards messages to Dify based on callback types (e.g., `dify_chat`, `dify_completion`) and supports both streaming and non-streaming modes.
+* **Response Handling and Session Management**:
+
+* *Streaming*: Pushes incremental content from Dify in real time.
+* *Non-streaming*: Sends the complete message after receiving the full response.
+* *Session Context*: Stores `conversation_id` from the first interaction (valid for 24 hours). Subsequent messages use this ID to maintain multi-turn context.
+
+4. **Dify**
+
+* Receives the message, performs inference, and returns either streaming or complete text responses.
+
+---
+
+## 3. Integration and Deployment Guide
+
+This section helps you deploy and configure the integration quickly, enabling you to experience intelligent bot interactions on RongCloud IM.
+
+### 3.1 Prerequisites
+
+Before integrating your bot, please ensure the following:
+
+* You have created an application on the **RongCloud Developer Console** and obtained a valid `App Key` and `App Secret`.
+* Dify is deployed (either self-hosted or via a cloud service).
+
+### 3.2 Supported Callback Types
+
+Callback types determine how bots interact with different platforms or systems. Currently supported types include:
+
+| Type                 | Description                                                             |
+| -------------------- | ----------------------------------------------------------------------- |
+| **webhook**          | Custom callback via webhook, suitable for flexible integration          |
+| **dify\_chat**       | Connects to Dify’s “Chat Assistant” mode for building multi-turn bots   |
+| **dify\_completion** | Connects to Dify’s “Text Completion” mode for generative applications   |
+| **dify\_chatflow**   | Connects to Dify’s “Chatflow” mode for flow-based conversational design |
+
+### 3.3 Integration Steps
+
+1. **Create a Dify App**: Create an app in Dify and obtain the API key.
+2. **Create a Real User**: Create a real user account to interact with the bot.
+3. **Configure the Bot and Callback Address**: Register your bot and set up the message callback.
+4. **Verify Integration**: Send a private message from the real user to the bot and confirm the response from Dify.
+5. **Verify Multi-Turn Conversation**: Continue sending messages from the same user to the bot and check if context is preserved.
+
+⚠️ Note: RongCloud API calls require authentication. Use the provided script to generate credentials.
+
+---
+
+### Step 1: Create a Dify App
+
+Message assistants connect using the `dify_chatflow` mode, which supports memory-based multi-turn workflows.
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/create-dify-app.png" alt="Diagram" width="80%" />
+
+You can check the full DSL config example: [dify-chatflow-dsl.yml](https://docs.rongcloud.cn/platform-chat-api/assets/bot/dify-chatflow-dsl.yml)
+
+---
+
+### Step 2: Create a Real User
+
+```bash
+curl -X POST "https://api.rong-api.com/v3/bot/create.json" \
+  -H "App-Key: YOUR_APP_KEY" \
+  -H "Nonce: YOUR_NONCE" \
+  -H "Timestamp: YOUR_TIMESTAMP" \
+  -H "Signature: YOUR_SIGNATURE" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "userId=LoDld8izA"
+```
+
+---
+
+### Step 3: Configure Bot and Callback Address
+
+Depending on your scenario, choose between:
+
+* **Streaming mode**: Best for long or incremental responses, offering a smoother user experience.
+* **Non-streaming mode**: Best when responses are shown only after completion.
+
+```bash
+curl -X POST "https://api.rong-api.com/v3/bot/create.json" \
+  -H "App-Key: YOUR_APP_KEY" \
+  -H "Nonce: YOUR_NONCE" \
+  -H "Timestamp: YOUR_TIMESTAMP" \
+  -H "Signature: YOUR_SIGNATURE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "bot-test004",
+    "name": "Message Assistant",
+    "type": "Message AI",
+    "profileUrl": "https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji/assets/Robot/3D/robot_3d.png",
+    "integrations": [
+        {
+            "type": "webhook",
+            "callbackUrl": "https://yourserver.com/callback",
+            "objectNames":["RC:TxtMsg"],
+            "events":["message:private"]
+        },
+        {
+            "type": "dify_chatflow",
+            "callbackUrl": "https://api.dify.ai/v1",
+            "stream": true,
+            "auth": {
+                "apiKey": "YOUR_DIFY_API_KEY"
+            }
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}'
+```
+
+---
+
+### Step 4: Verify Integration
+
+Send a message from the real user created in step 2:
+
+```bash
+curl -X POST "https://api.rong-api.com/message/private/publish.json" \
+  -H "App-Key: YOUR_APP_KEY" \
+  -H "Nonce: YOUR_NONCE" \
+  -H "Timestamp: YOUR_TIMESTAMP" \
+  -H "Signature: YOUR_SIGNATURE" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "fromUserId=BesqX1FTg33" \
+  --data-urlencode "toUserId=bot-001" \
+  --data-urlencode "objectName=RC:TxtMsg" \
+  --data-urlencode 'content={"content":"Can you give me a few AI use case ideas?","extra":""}'
+```
+
+> Demo screenshots from Sealtalk APP:
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message.png" alt="Demo" width="50%" />
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message2.png" alt="Demo" width="50%" />
+
+---
+
+### Step 5: Verify Multi-Turn Conversations
+
+Send multiple messages from the same user to the same bot and check if the context is preserved.
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message3.png" alt="Demo" width="50%" />
+
+> The Dify log shows 4 messages, confirming that multi-turn conversation context is successfully maintained within the same session.
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/dify-log.png" alt="Log" width="50%" />
+
+---
+
+## 4. Use Cases
+
+### 4.1 Message Assistant: Enable smart Q\&A, task execution, content generation
+
+* Knowledge Q\&A powered by knowledge base or LLM
+* Content generation requests (e.g., "Write an apology email")
+* Translation requests (e.g., "Translate this to English")
+* Instruction requests that trigger system actions (e.g., "Create a ticket")
+* FAQ automation based on user intent parsing
+
+### 4.2 Companion Bot: Create personalized, emotionally intelligent chatbots
+
+* Natural casual conversations to fulfill daily social interaction needs
+* Role simulation (e.g., friend, therapist, virtual idol) to enhance engagement
+* Emotion-aware responses and empathetic interaction
+* Combine with custom character settings (e.g., "AI Partner", "Career Coach") for immersive experiences
+
+---
+
+## 5. Best Practices
+
+### 5.1 Use Metadata to Personalize Bot Context
+
+When creating bots, you can pass custom metadata for the creator. This metadata will be included in message callbacks and forwarded to Dify. It can be used for:
+
+* Prompt variable substitution
+* Contextual customization
+* Flow orchestration
+
+### 5.2 Configure Separate Bots and Dify Apps per Scenario
+
+It is recommended to create separate bots and Dify apps for each business use case (e.g., Q\&A, translation, tools, companionship). Assign specific prompts to each bot for better targeting and improved user experience.
+
+---
+
+## 6. Utility Scripts
+
+### 6.1 Generate RongCloud HTTP Signature
+
+```python
+import hashlib
+import time
+import random
+
+
+def generate_rongcloud_signature(app_secret, nonce=None, timestamp=None):
+    """
+    Generate RongCloud HTTP request signature.
+
+    Parameters:
+        app_secret: Your RongCloud App Secret
+        nonce: Optional random string
+        timestamp: Optional timestamp
+
+    Returns:
+        Dictionary with nonce, timestamp, and signature
+    """
+    if nonce is None:
+        nonce = ''.join(random.choices('0123456789abcdefghijklmnopqrstuvwxyz', k=6))
+
+    if timestamp is None:
+        timestamp = str(int(time.time()))
+
+    signature_str = app_secret + nonce + timestamp
+    signature = hashlib.sha1(signature_str.encode('utf-8')).hexdigest()
+
+    return {
+        'nonce': nonce,
+        'timestamp': timestamp,
+        'signature': signature
+    }
+
+
+if __name__ == '__main__':
+    app_secret = 'YOUR_APP_SECRET'
+    signature_data = generate_rongcloud_signature(app_secret)
+
+    print("Generated RongCloud Signature:")
+    print(f"Nonce: {signature_data['nonce']}")
+    print(f"Timestamp: {signature_data['timestamp']}")
+    print(f"Signature: {signature_data['signature']}")
+```
+
+---
+
+## Conclusion
+
+Thank you for exploring this guide on integrating RongCloud IM PaaS with Dify LLM services. This powerful combination simplifies the AI bot development process by reducing technical complexity, while providing a robust callback mechanism and native multi-turn support.
+
+Whether you're building a knowledge bot, a content generation tool, or a personalized companion chatbot, RongCloud and Dify together offer a stable and efficient solution.
+
+As AI technology continues to evolve, we will keep enhancing platform compatibility and provide more tools and documentation. We welcome your feedback to help shape the future of intelligent dialogue systems.
+
+**Wishing you success on your development journey and in your projects!**
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/learn-more/use-cases/ai-bot-rongcloud-dify-integration-guide.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?title=Documentation%20Issue%3A%20t-rongcloud-dify-integration-gu&body=%23%23%20Issue%20Description%0A%3C%21--%20Please%20briefly%20describe%20the%20issue%20you%20found%20--%3E%0A%0A%23%23%20Page%20Link%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fen/learn-more/use-cases%2Fai-bot-rongcloud-dify-integration-guide.mdx%0A%0A%23%23%20Suggested%20Changes%0A%3C%21--%20If%20you%20have%20specific%20suggestions%20for%20changes%2C%20please%20describe%20them%20here%20--%3E%0A%0A%3C%21--%20Thank%20you%20for%20helping%20improve%20our%20documentation%21%20--%3E)
+

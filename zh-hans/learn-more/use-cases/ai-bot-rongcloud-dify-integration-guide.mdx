@@ -1,0 +1,294 @@
+---
+title: AI 机器人开发：融云 IM 与 Dify 集成实战
+---
+
+> 作者：wangqijia｜融云开发者团队
+> 日期：2025 年 6 月
+
+
+## 1. 概述
+
+融云 IM PaaS 提供完善的 [AI 机器人](https://docs.rongcloud.cn/platform-chat-api/bot/overview)管理能力，支持基于指定机器人触发更丰富的事件回调，帮助开发者灵活处理各类业务场景，例如：
+
+* 与机器人发起单聊对话
+* @ 机器人触发上下文响应
+
+此外，平台内置 AI 平台对接能力，可将机器人消息自动转发至接入的大模型平台（如 Dify），省去中间处理服务，有效提升链路稳定性，降低接入成本，加快开发交付。
+
+本指南将介绍如何基于融云 IM 平台集成 AI 机器人，并接入 Dify 平台大模型服务。
+
+---
+
+# 2. 高层设计
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/bot-dify-high-level-design.jpg" alt="图示" width="80%"  />
+
+
+**工作流程**:
+
+1. **App Server**
+  * 管理机器人，处理 Webhook 回调，接收机器人消息。
+2. **用户终端**
+  * 发送用户消息，接收机器人响应。
+3. **IM Server**
+* **消息转发**：根据回调类型（如 dify\_chat, dify\_completion）转发至 Dify 对应接口，支持流式/非流式模式。
+* **响应处理与会话管理**：
+  * 流式：实时推送 Dify 增量内容。
+  * 非流式：整合完整文本后发送。
+  * 会话上下文：存储首次交互的 conversation\_id（24 小时有效），后续对话携带此 ID 确保多轮上下文。
+4. **Dify**
+  * 接收消息，推理生成响应，返回流式数据或完整文本。
+
+---
+
+# 3. 接入与部署指南
+
+本部分将帮助你快速完成部署与接入配置，开始使用融云机器人提供的智能对话体验。
+
+## 3.1 准备工作
+
+在开始集成机器人之前，请确保以下准备工作已完成：
+
+* 已在 **融云开发者控制台** 创建应用，并获取有效的 App Key 和 App Secret。
+* 已完成 Dify 的部署（支持自部署或使用云平台服务）。
+
+## 3.2 机器人回调方式
+
+用于将机器人集成到不同平台或系统中，当前支持以下回调方式：
+
+| 类型                   | 描述                                 |
+| -------------------- | ---------------------------------- |
+| **webhook**          | 通过 Webhook 实现自定义回调，适用于灵活对接外部系统。    |
+| **dify\_chat**       | 接入 Dify 平台的“聊天助手”模式，用于构建多轮对话机器人。   |
+| **dify\_completion** | 接入 Dify 平台的“文本生成”模式，用于生成式内容应用场景。   |
+| **dify\_chatflow**   | 接入 Dify 平台的“Chatflow”模式，用于流程化对话构建。 |
+
+## 3.3 接入步骤
+
+1. **创建 Dify 应用**：在 Dify 中创建应用，并获取对应的 API 密钥（API Key）。
+2. **创建真实用户**：在系统中创建一个用于与机器人交互的真实用户账号。
+3. **配置机器人与回调地址**：创建机器人，并配置消息回调地址。当用户向机器人发送消息时，消息将回调至您的系统或 Dify 平台。
+4. **验证接入效果**：使用第二步创建的用户账号向机器人发送一条单聊消息，确认用户终端是否能收到来自 Dify 的对话响应。
+5. **验证连续对话效果**：使用同一用户持续向同一机器人发送消息，验证对话上下文是否正确延续。融云将自动维持与 Dify 的上下文会话，实现连续对话体验。
+
+⚠️ 注意：调用融云服务需进行身份认证，认证信息需通过工具脚本生成，具体使用方法见下文。
+
+---
+
+### 步骤 1：创建 Dify 应用
+
+消息助手采用 dify\_chatflow 模式接入大模型服务，该模式支持记忆的复杂多轮对话工作流
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/create-dify-app.png" alt="图示" width="80%"  />
+
+你可以查看 [dify-chatflow-dsl.yml](https://docs.rongcloud.cn/platform-chat-api/assets/bot/dify-chatflow-dsl.yml) 来了解完整的 DSL 配置示例。
+
+
+---
+
+### 步骤 2：创建真实用户
+
+```bash
+curl -X POST "https://api.rong-api.com/v3/bot/create.json" \
+  -H "App-Key: 填写您的App-Key" \
+  -H "Nonce: 填写您的 Nonce" \
+  -H "Timestamp: 填写您的 Timestamp" \
+  -H "Signature: 填写您的Signature" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "userId=LoDld8izA"
+```
+
+---
+
+### 步骤 3：配置机器人与回调地址
+
+与 Dify 集成，可根据实际业务场景选择消息响应模式：
+
+* **流式模式**：适用于大模型生成内容较长或需逐步生成的场景，系统将以流消息（Streaming）方式将响应内容实时发送至用户终端，提升响应速度与用户交互体验。
+* **非流式模式**：适用于需要完整响应后再展示的场景，系统将在接收到完整内容后一次性发送给用户。
+
+开发者可按需配置响应模式，灵活适配不同交互体验需求。
+
+```bash
+curl -X POST "https://api.rong-api.com/v3/bot/create.json" \
+  -H "App-Key: 填写您的App-Key" \
+  -H "Nonce: 填写您的 Nonce" \
+  -H "Timestamp: 填写您的 Timestamp" \
+  -H "Signature: 填写您的Signature" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "userId": "bot-test004",
+    "name": "消息助手",
+    "type": "Message AI",
+    "profileUrl": "https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji/assets/Robot/3D/robot_3d.png",
+    "integrations": [
+        {
+            "type": "webhook",
+            "callbackUrl": "https://yourserver.com/callback",
+            "objectNames":["RC:TxtMsg"],
+            "events":["message:private"]
+        },
+        {
+            "type": "dify_chatflow",
+            "callbackUrl": "https://api.dify.ai/v1",
+            "stream": true,
+            "auth": {
+                "apiKey": "填写您的 api-key"
+            }
+        }
+    ],
+    "metadata": {
+        "version": 1
+    }
+}'
+```
+
+---
+
+### 步骤 4：验证接入效果
+
+使用第二步创建的用户账号向机器人发送一条单聊消息，确认用户终端是否能收到来自 Dify 的对话响应。
+
+```bash
+curl -X POST "https://api.rong-api.com/message/private/publish.json" \
+  -H "App-Key: 填写您的App-Key" \
+  -H "Nonce: 填写您的 Nonce" \
+  -H "Timestamp: 填写您的 Timestamp" \
+  -H "Signature: 填写您的Signature" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "fromUserId=BesqX1FTg33" \
+  --data-urlencode "toUserId=bot-001" \
+  --data-urlencode "objectName=RC:TxtMsg" \
+  --data-urlencode 'content={"content":"能给我几个 AI 应用场景的点子吗？","extra":""}'
+```
+
+> 以下是演示效果，截图来自融云 Sealtalk APP Demo
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message.png" alt="图示" width="50%"  />
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message2.png" alt="图示" width="50%"  />
+
+
+---
+
+### 步骤 5：验证连续对话效果
+
+使用同一用户持续向同一机器人发送消息，验证对话上下文是否正确延续。融云将自动维持与 Dify 的上下文会话，实现连续对话体验。
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/send-bot-message3.png" alt="图示" width="50%"  />
+
+
+> Dify 日志显示共记录了 4 条消息，验证了多轮对话过程中上下文得以正确延续，说明聊天会话在同一上下文中持续进行。
+
+<img src="https://docs.rongcloud.cn/platform-chat-api/assets/bot/dify-log.png" alt="图示" width="50%"  />
+
+
+---
+
+# 4. 使用场景
+
+## 4.1 消息助手：触发智能对话、任务执行、内容生成等功能
+
+* 用户向 AI 提问知识类问题，机器人通过知识库或大模型进行回答；
+* 发起内容生成请求，如“帮我写一封道歉邮件”；
+* 发起内容翻译请求，如“将内容翻译为英文”；
+* 发起指令请求，将消息分类同步到业务系统，如“创建工单”；
+* FAQ 问答：解析用户意图并自动回复；
+
+## 4.2 陪聊助手：打造具备情感陪伴与个性化交互能力的智能聊天机器人
+
+* 提供持续自然的闲聊体验，满足用户日常交流需求；
+* 模拟具有性格特征的角色（如朋友、心理咨询师、虚拟偶像等），提升互动趣味性与沉浸感；
+* 根据用户的情绪变化进行适当回应，实现基础的情绪识别与关怀；
+* 可与用户设定的虚拟人物设定结合，构建个性化陪伴场景（如“我的 AI 恋人”、“职场导师”）；
+
+---
+
+# 5. 使用建议
+
+## 5.1 支持设置创建人元数据
+
+在创建机器人时，支持为创建人设置自定义元数据（metadata）。该元数据会在消息回调时一并透传至 Dify，可用于提示词变量替换、上下文定制或流程编排，提升机器人响应的个性化与灵活性。
+
+## 5.2 为不同场景配置独立机器人与 Dify 应用
+
+建议根据具体业务场景（如知识问答、翻译、工具使用、陪聊等）创建不同类型的机器人，并为每个机器人配置独立的 Dify 应用与专属提示词，以实现更精准的能力定位与更优质的用户体验。
+
+---
+
+# 6. 工具脚本
+
+## 6.1 生成融云 HTTP 请求签名
+
+```python
+import hashlib
+import time
+import random
+
+
+def generate_rongcloud_signature(app_secret, nonce=None, timestamp=None):
+    """
+    生成融云 HTTP 请求签名
+
+    参数:
+        app_secret: 融云应用的App Secret
+        nonce: 随机字符串(可选)，如果不提供将自动生成
+        timestamp: 时间戳(可选)，如果不提供将使用当前时间
+
+    返回:
+        包含nonce, timestamp和signature的字典
+    """
+    if nonce is None:
+        # 生成随机字符串(由数字和字母组成的6位字符串)
+        nonce = ''.join(random.choices('0123456789abcdefghijklmnopqrstuvwxyz', k=6))
+
+    if timestamp is None:
+        # 获取当前时间戳(秒)
+        timestamp = str(int(time.time()))
+
+    # 计算签名
+    signature_str = app_secret + nonce + timestamp
+    signature = hashlib.sha1(signature_str.encode('utf-8')).hexdigest()
+
+    return {
+        'nonce': nonce,
+        'timestamp': timestamp,
+        'signature': signature
+    }
+
+
+if __name__ == '__main__':
+    # 替换为你自己的App Secret
+    app_secret = 'YOUR_APP_SECRET'
+
+    # 生成签名
+    signature_data = generate_rongcloud_signature(app_secret)
+
+    print("生成的融云签名信息:")
+    print(f"Nonce: {signature_data['nonce']}")
+    print(f"Timestamp: {signature_data['timestamp']}")
+    print(f"Signature: {signature_data['signature']}")
+```
+
+---
+
+# 结语
+
+感谢您通过本指南深入了解了融云 IM PaaS 平台与 Dify 大模型服务的集成过程。这一结合不仅简化了开发者在智能机器人开发中的技术门槛，还通过高效的回调机制和多轮对话支持，赋予了应用更强的交互能力与商业价值。
+
+无论是构建知识问答助手、内容生成工具，还是打造个性化的陪聊机器人，融云与 Dify 的协作都能为您提供稳定、高效的解决方案。
+
+未来，随着 AI 技术的不断演进，我们将持续优化平台功能，增强与更多大模型平台的兼容性，并提供更多实用工具与文档支持。期待您在开发过程中提出宝贵意见，一同推动智能对话技术的进步。
+
+如有任何问题，欢迎随时访问融云开发者社区或联系技术支持团队。
+
+**祝您的开发之旅顺利，项目成功！**
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[编辑此页面](https://github.com/langgenius/dify-docs/edit/main/zh-hans/learn-more/use-cases/ai-bot-rongcloud-dify-integration-guide.mdx) | [提交问题](https://github.com/langgenius/dify-docs/issues/new?title=文档问题%3A%20t-rongcloud-dify-integration-gu&body=%23%23%20问题描述%0A%3C%21--%20请简要描述您发现的问题%20--%3E%0A%0A%23%23%20页面链接%0Ahttps%3A%2F%2Fgithub.com%2Flanggenius%2Fdify-docs%2Fblob%2Fmain%2Fzh-hans/learn-more/use-cases%2Fai-bot-rongcloud-dify-integration-guide.mdx%0A%0A%23%23%20建议修改%0A%3C%21--%20如果有具体的修改建议，请在此说明%20--%3E%0A%0A%3C%21--%20感谢您对文档质量的关注！%20--%3E)
+
