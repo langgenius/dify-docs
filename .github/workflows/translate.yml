@@ -1,0 +1,68 @@
+name: Auto Translate Docs
+
+on:
+  push:
+    branches-ignore:
+      - 'main'
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for git diff
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install httpx aiofiles python-dotenv
+
+      - name: Get changed markdown files
+        id: changed-files
+        run: |
+          # Get the list of changed files between the current and previous commit
+          # We filter for .md and .mdx files that are inside the language directories
+          files=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -E '^(en|zh-hans|ja-jp|plugin-dev-en|plugin-dev-zh|plugin-dev-ja)/.*(\.md|\.mdx)$' || true)
+          if [[ -z "$files" ]]; then
+            echo "No markdown files to translate."
+            echo "files=" >> $GITHUB_OUTPUT
+          else
+            # The script expects absolute paths, but we run it from the root, so relative is fine.
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$files" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run translation script
+        if: steps.changed-files.outputs.files
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+        run: |
+          echo "Files to translate:"
+          echo "${{ steps.changed-files.outputs.files }}"
+          
+          for file in ${{ steps.changed-files.outputs.files }}; do
+            echo "Translating $file..."
+            python tools/translate/main.py "$file" "$DIFY_API_KEY"
+          done
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # Check if there are any changes to commit
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "docs: auto-translate documentation"
+            # Push to the same branch the workflow was triggered from
+            git push origin HEAD:${{ github.ref_name }}
+            echo "Translated files have been pushed to the branch."
+          else
+            echo "No new translations to commit."
+          fi
