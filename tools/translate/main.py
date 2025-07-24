@@ -14,6 +14,21 @@ docs_structure = {
         "English": "plugin-dev-en",
         "Chinese": "plugin-dev-zh",
         "Japanese": "plugin-dev-ja"
+    },
+    "version_28x": {
+        "English": "versions/2-8-x/en-us",
+        "Chinese": "versions/2-8-x/zh-cn",
+        "Japanese": "versions/2-8-x/ja-jp"
+    },
+    "version_30x": {
+        "English": "versions/3-0-x/en-us",
+        "Chinese": "versions/3-0-x/zh-cn",
+        "Japanese": "versions/3-0-x/ja-jp"
+    },
+    "version_31x": {
+        "English": "versions/3-1-x/en-us",
+        "Chinese": "versions/3-1-x/zh-cn",
+        "Japanese": "versions/3-1-x/ja-jp"
     }
 }
 
@@ -109,12 +124,23 @@ def determine_doc_type_and_language(file_path):
     Determine document type and current language based on file path
     Returns (doc_type, current_language, language_name)
     """
-    path_parts = file_path.split(os.sep)
+    # Normalize path separators
+    normalized_path = file_path.replace(os.sep, '/')
     
+    # Collect all possible matches and find the longest one
+    matches = []
     for doc_type, languages in docs_structure.items():
         for lang_name, lang_code in languages.items():
-            if lang_code in path_parts:
-                return doc_type, lang_code, lang_name
+            # Normalize lang_code path separators too
+            normalized_lang_code = lang_code.replace(os.sep, '/')
+            if normalized_lang_code in normalized_path:
+                matches.append((len(normalized_lang_code), doc_type, lang_code, lang_name))
+    
+    # Return the match with the longest lang_code (most specific)
+    if matches:
+        matches.sort(reverse=True)  # Sort by length descending
+        _, doc_type, lang_code, lang_name = matches[0]
+        return doc_type, lang_code, lang_name
     
     return None, None, None
 
