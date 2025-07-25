@@ -1,53 +1,30 @@
-# Adding OAuth to Your Tool Plugin
+---
+title: "Adding OAuth to Your Tool Plugin"
+---
 
-## Why OAuth Exists in Dify
+![b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png](/images/b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png)
 
-[OAuth](https://oauth.net/2/) (Open Authorization) is a better way to authorize tool plugins that need to access user data from third-party services like Gmail or GitHub. Instead of requiring the user to manually enter API keys, OAuth provides a secure way to act on behalf of the user with their explicit consent. You can 
+This guide teachs you how to build plugins that support [OAuth](https://oauth.net/2/). OAuth is a better way to authorize tool plugins that need to access user data from third-party services, like Gmail or GitHub. Instead of requiring the user to manually enter API keys, OAuth lets the tool to act on behalf of the user with their explicit consent.
 
-## Deployment Architecture First
+### Creating an OAuth App
 
-Your OAuth implementation depends entirely on where Dify runs. Get this wrong and you'll waste days debugging redirect URIs.
+You usually need to register an OAuth app at the third-party service so the service knows who (i.e. your Dify instance) is requesting authorizations. Here we use Gmail as an example. Other platforms may be different.
 
-### Dify Cloud (SaaS)
-
-- **Dify manages OAuth apps** for verified plugins
-- Users just click "Add OAuth" → authorize → done
-- Your redirect URI: `https://cloud.dify.ai/console/api/oauth/plugin/{plugin-id}/{provider-name}/{tool-name}/callback`
-- Zero OAuth app setup for users
-
-### Self-Hosted
-
-- **Users manage their own OAuth apps** (Google Cloud Console, GitHub Apps, etc.)
-- Must configure client_id/client_secret before any OAuth works
-- Your redirect URI: `https://their-domain.com/console/api/oauth/plugin/{plugin-id}/{provider-name}/{tool-name}/callback`
-- Users see "Setup OAuth Client" button before they can authorize
-
-### Custom Mode (SaaS override)
-
-- Users can override Dify's managed keys with their own
-- Same setup as Self-Hosted but optional
-
-## Multi-Credential Reality
-
-**Critical**: Dify supports multiple OAuth credentials per plugin. Users can have work Gmail \+ personal Gmail. Your plugin needs to handle this correctly.
-
-**Default Logic**:
-
-- First credential becomes "Default"
-- Apps reference credentials by Default unless explicitly changed
-- Users can change which credential is Default
-- DSLs never store credential IDs (they stay portable)
-
-**Mixed Auth Types**:
-Plugins can offer both OAuth AND API-Key simultaneously. Users pick what works for their setup.
+1. **Create a Google Cloud Project**:
+   - Go to [Google Cloud Console](https://console.cloud.google.com) and create a new project, or select existing one
+   - Enable the required APIs (e.g., Gmail API, Google Drive API)
+2. **Configure OAuth Consent Screen**:
+   - Navigate to "APIs & Services" → "OAuth consent screen"
+   - Choose "External" user type for public plugins
+   - Fill in application name, user support email, and developer contact
+   - Add authorized domains if needed
+   - For testing: Add test users in the "Test users" section
 
 ## Implementation
 
-### 1. Define OAuth Schema in YAML
+### 1. Define OAuth Schema in provider manifest
 
-**Purpose**: Tell Dify what credentials your plugin needs and what the OAuth flow will produce.
-
-**Two schemas required**:
+The provider manifest definitions tell Dify what credentials your plugin OAuth needs and what the OAuth flow will produce. Two schemas are required for setting up OAuth:
 
 #### client_schema
 
@@ -59,19 +36,26 @@ oauth_schema:
     - name: "client_id"
       type: "secret-input"
       required: true
-      url: "https://console.cloud.google.com/apis/credentials"
+      url: "https://developers.google.com/identity/protocols/oauth2"
     - name: "client_secret"
       type: "secret-input" 
       required: true
 ```
 
-**Critical**: The `url` field links directly to where users create OAuth apps. This saves support tickets.
+<Info>
+  The `url` field links directly to help documentations for the third-party service. This helps confusing users.
+</Info>
+
+Dify manages OAuth apps for popular verified plugins on Dify Cloud. Your `client_schema` exists, but users may never see it.
+
+- **Self-Hosted**: Users must configure OAuth apps themselves. Your `url` field becomes critical.
 
 #### credentials_schema
 
 What OAuth produces (Dify manages these):
 
 ```yaml
+# also under oauth_schema
   credentials_schema:
     - name: "access_token"
       type: "secret-input"
@@ -81,7 +65,9 @@ What OAuth produces (Dify manages these):
       type: "secret-input"
 ```
 
-**Mixed Auth Support**: Include both `oauth_schema` and `credentials_for_provider` to offer OAuth \+ API key options.
+<Info>
+  Include both `oauth_schema` and `credentials_for_provider` to offer OAuth \+ API key options.
+</Info>
 
 ### 2. Implement Authorization URL Generation
 
@@ -187,8 +173,7 @@ def _validate_credentials(self, credentials: dict[str, Any]) -> None:
         raise ToolProviderCredentialValidationError("Invalid credentials")
 ```
 
-**Input**: Credentials dict containing `access_token`
-**Output**: None (raises exception if invalid)
+**Input**: Credentials dict containing `access_token` **Output**: None (raises exception if invalid)
 
 **Purpose**: Called when users connect and periodically to verify credentials still work.
 
@@ -282,11 +267,7 @@ params = {
 
 ## Production Considerations
 
-**Rate Limits**: Implement exponential backoff for API calls
-**Error Handling**: Graceful degradation when tokens expire
-**Scope Minimization**: Request only necessary permissions
-**Security**: Never log access tokens
-**User Communication**: Clear error messages for re-authorization
+**Rate Limits**: Implement exponential backoff for API calls **Error Handling**: Graceful degradation when tokens expire **Scope Minimization**: Request only necessary permissions **Security**: Never log access tokens **User Communication**: Clear error messages for re-authorization
 
 **Testing Strategy**:
 
