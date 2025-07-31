@@ -67,6 +67,9 @@ Dify instance's admin / developer first need to register an OAuth app at the thi
       ```bash
       https://{your-dify-domain}/console/api/oauth/plugin/{plugin-id}/{provider-name}/{tool-name}/callback
       ```
+
+      For self-hosted Dify, the \{your-dify-domain\} should be consistent with the `CONSOLE_WEB_URL`.
+
     </Info>
   </Accordion>
 </AccordionGroup>
@@ -141,46 +144,13 @@ from dify_plugin.entities.oauth import ToolOAuthCredentials
 from dify_plugin.errors.tool import ToolProviderCredentialValidationError, ToolProviderOAuthError
 ```
 
-Your `ToolProvider` class must implement these four OAuth methods (taking `GmailProvider`  as an example):
+Your `ToolProvider` class must implement these three OAuth methods (taking `GmailProvider`  as an example):
+
+<Warning>
+  Under no circumstances should the `client_secret` be returned in the credentials of `ToolOAuthCredentials`, as this could lead to security issues.
+</Warning>
 
 <CodeGroup>
-
-```python _validate_credentials expandable
-def _validate_credentials(self, credentials: dict[str, Any]) -> None:
-    """
-    Validate OAuth credentials by making a test API call when users connect
-    """
-    try:
-        access_token = credentials.get("access_token")
-        if not access_token:
-            raise ToolProviderCredentialValidationError("Access token is required")
-        
-        # Test with a lightweight API call
-        headers = {
-            "Authorization": f"Bearer {access_token}",
-            "Accept": "application/json"
-        }
-        
-        response = requests.get(
-            f"{self._API_BASE_URL}/user",  # Using Google Platform OAuth API's user endpoint
-            headers=headers,
-            timeout=10
-        )
-        
-        # Handle common OAuth error scenarios
-        if response.status_code == 401:
-            raise ToolProviderCredentialValidationError("Invalid or expired access token")
-        elif response.status_code == 403:
-            raise ToolProviderCredentialValidationError("Access forbidden - check scopes")
-        elif response.status_code != 200:
-            raise ToolProviderCredentialValidationError(f"API error: {response.status_code}")
-            
-    except requests.RequestException as e:
-        raise ToolProviderCredentialValidationError(f"Network error: {str(e)}")
-    except Exception as e:
-        raise ToolProviderCredentialValidationError(f"Credential validation failed: {str(e)}")
-```
-
 
 ```python _oauth_get_authorization_url expandable
 def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
@@ -274,7 +244,6 @@ def _oauth_get_credentials(
         
         # Handle token expiration - some providers don't provide expires_in
         expires_in = token_data.get("expires_in", 3600)  # Default to 1 hour
-        credentials["expires_in"] = str(expires_in)
         expires_at = int(time.time()) + expires_in
         
         return ToolOAuthCredentials(credentials=credentials, expires_at=expires_at)
@@ -337,7 +306,6 @@ def _oauth_refresh_credentials(
 
         # Handle token expiration
         expires_in = token_data.get("expires_in", 3600)
-        new_credentials["expires_in"] = str(expires_in)
 
         # update refresh token if new one provided
         new_refresh_token = token_data.get("refresh_token")
@@ -364,7 +332,8 @@ You may use OAuth credentials to make authenticated API calls in your `Tool` imp
 ```python
 class YourTool(BuiltinTool):
     def _invoke(self, user_id: str, tool_parameters: dict[str, Any]) -> ToolInvokeMessage:
-        access_token = self.runtime.credentials["access_token"]
+        if self.runtime.credential_type == CredentialType.OAUTH:
+            access_token = self.runtime.credentials["access_token"]
         
         response = requests.get("https://api.service.com/data",
                               headers={"Authorization": f"Bearer {access_token}"})
@@ -372,3 +341,28 @@ class YourTool(BuiltinTool):
 ```
 
 `self.runtime.credentials` automatically provides the current user's tokens. Dify handles refresh automatically.
+
+For plugins that support both OAuth and API_KEY authentication, you can use `self.runtime.credential_type` to differentiate between the two authentication types.
+
+### 4. Specifying the Correct Versions
+
+Previous versions of the plugin SDK and Dify do not support OAuth authentication. Therefore, you need to set the plugin SDK version to:
+
+```
+dify_plugin>=0.4.2,<0.5.0.
+```
+
+In `manifest.yaml`, add the minimum Dify version:
+
+```yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: 1.7.1
+```
