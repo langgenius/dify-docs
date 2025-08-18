@@ -1,0 +1,157 @@
+name: Auto Translate Docs
+
+on:
+  workflow_run:
+    workflows: ["Process Documentation"]
+    types:
+      - completed
+    branches-ignore:
+      - 'main'
+  push:
+    branches-ignore:
+      - 'main'
+    paths-ignore:
+      - '.github/workflows/**'
+
+jobs:
+  translate:
+    runs-on: ubuntu-latest
+    # Only run if the workflow_run event was successful, or if it's a direct push
+    if: github.event_name == 'push' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches all history for git diff
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # For workflow_run events, checkout the head of the triggering workflow
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: pip install httpx aiofiles python-dotenv
+
+      - name: Get changed markdown files
+        id: changed-files
+        run: |
+          # Get the list of newly added files between the current and previous commit
+          # We filter for .md and .mdx files that are inside the language directories
+          # Only include added (A) files, skip modified (M) and deleted (D) files
+          
+          # Determine the commit SHA to use based on event type
+          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+            current_sha="${{ github.event.workflow_run.head_sha }}"
+            echo "Using workflow_run head_sha: $current_sha"
+          else
+            current_sha="${{ github.sha }}"
+            echo "Using github.sha: $current_sha"
+          fi
+          
+          # Try different approaches to get the diff
+          if [[ -n "${{ github.event.before }}" && "${{ github.event_name }}" == "push" ]]; then
+            echo "Using github.event.before: ${{ github.event.before }}"
+            files=$(git diff --name-status ${{ github.event.before }} $current_sha | grep -E '^A\s+' | cut -f2 | grep -E '^(en|en-us|zh-hans|ja-jp|plugin-dev-en|plugin-dev-zh|plugin-dev-ja|versions)/.*(\.md|\.mdx)$' || true)
+          else
+            echo "Using HEAD~1 for comparison"
+            files=$(git diff --name-status HEAD~1 $current_sha | grep -E '^A\s+' | cut -f2 | grep -E '^(en|en-us|zh-hans|ja-jp|plugin-dev-en|plugin-dev-zh|plugin-dev-ja|versions)/.*(\.md|\.mdx)$' || true)
+          fi
+          
+          echo "Detected files (Added only):"
+          echo "$files"
+          
+          # Filter out files that don't actually exist
+          existing_files=""
+          if [[ -n "$files" ]]; then
+            while IFS= read -r file; do
+              if [[ -n "$file" && -f "$file" ]]; then
+                if [[ -z "$existing_files" ]]; then
+                  existing_files="$file"
+                else
+                  existing_files="$existing_files"$'\n'"$file"
+                fi
+              else
+                echo "Skipping non-existent file: $file"
+              fi
+            done <<< "$files"
+          fi
+          
+          echo "Final files to translate:"
+          echo "$existing_files"
+          
+          if [[ -z "$existing_files" ]]; then
+            echo "No new markdown files to translate."
+            echo "files=" >> $GITHUB_OUTPUT
+          else
+            # The script expects absolute paths, but we run it from the root, so relative is fine.
+            echo "files<<EOF" >> $GITHUB_OUTPUT
+            echo "$existing_files" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run translation script
+        if: steps.changed-files.outputs.files
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+        run: |
+          echo "Files to translate:"
+          echo "${{ steps.changed-files.outputs.files }}"
+          
+          # Create temporary file list
+          echo "${{ steps.changed-files.outputs.files }}" > /tmp/files_to_translate.txt
+          
+          # Start all translation processes in parallel
+          pids=()
+          while IFS= read -r file; do
+            if [[ -n "$file" ]]; then
+              echo "Starting translation for $file..."
+              python tools/translate/main.py "$file" "$DIFY_API_KEY" &
+              pids+=($!)
+            fi
+          done < /tmp/files_to_translate.txt
+          
+          # Wait for all background processes to complete
+          echo "Waiting for ${#pids[@]} translation processes to complete..."
+          failed=0
+          for pid in "${pids[@]}"; do
+            if ! wait "$pid"; then
+              echo "Translation process $pid failed"
+              failed=1
+            fi
+          done
+          
+          if [ $failed -eq 1 ]; then
+            echo "Some translations failed"
+            exit 1
+          fi
+          
+          echo "All translations completed successfully"
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          # Check if there are any changes to commit
+          if [[ -n $(git status --porcelain) ]]; then
+            git add .
+            git commit -m "docs: auto-translate documentation"
+            # Push to the appropriate branch based on event type
+            if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
+              # For workflow_run events, push to the head branch of the triggering workflow
+              branch_ref="${{ github.event.workflow_run.head_branch }}"
+              echo "Pushing to workflow_run head branch: $branch_ref"
+              git push origin HEAD:$branch_ref
+            else
+              # For push events, push to the same branch the workflow was triggered from
+              echo "Pushing to current branch: ${{ github.ref_name }}"
+              git push origin HEAD:${{ github.ref_name }}
+            fi
+            echo "Translated files have been pushed to the branch."
+          else
+            echo "No new translations to commit."
+          fi
