@@ -1,0 +1,121 @@
+name: Sync Documentation Structure
+
+on:
+  push:
+    branches:
+      - main
+      - revamp
+    paths:
+      - 'docs.json'
+      - 'en/**/*.md'
+      - 'en/**/*.mdx'
+  workflow_dispatch:
+    inputs:
+      since_commit:
+        description: 'Git commit to compare against (default: HEAD~1)'
+        required: false
+        default: 'HEAD~1'
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch all history for git diff
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          cd tools/translate
+          pip install httpx aiofiles python-dotenv
+
+      - name: Check for documentation changes
+        id: check-changes
+        run: |
+          # Determine the commit to compare against
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            SINCE_COMMIT="${{ github.event.inputs.since_commit }}"
+          else
+            SINCE_COMMIT="HEAD~1"
+          fi
+          
+          echo "Checking for changes since: $SINCE_COMMIT"
+          
+          # Check if there are any English doc changes
+          if git diff --name-only $SINCE_COMMIT HEAD | grep -E '^(docs\.json|en/.*\.(md|mdx))$'; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "since_commit=$SINCE_COMMIT" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "No documentation changes detected"
+          fi
+
+      - name: Run documentation synchronization
+        if: steps.check-changes.outputs.has_changes == 'true'
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+        run: |
+          cd tools/translate
+          echo "Starting documentation synchronization..."
+          echo "Since commit: ${{ steps.check-changes.outputs.since_commit }}"
+          
+          python sync_and_translate.py "$DIFY_API_KEY" "${{ steps.check-changes.outputs.since_commit }}"
+
+      - name: Check for sync results
+        if: steps.check-changes.outputs.has_changes == 'true'
+        id: check-sync-results
+        run: |
+          # Check if there are any changes to commit
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_sync_changes=true" >> $GITHUB_OUTPUT
+            echo "Sync created changes to commit"
+          else
+            echo "has_sync_changes=false" >> $GITHUB_OUTPUT
+            echo "No changes from sync"
+          fi
+
+      - name: Commit and push synchronized changes
+        if: steps.check-sync-results.outputs.has_sync_changes == 'true'
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Add all changes
+          git add .
+          
+          # Create commit message
+          COMMIT_MSG="docs: auto-sync documentation structure and translations
+
+          🤖 Generated with [Claude Code](https://claude.ai/code)
+          
+          Co-Authored-By: Claude <noreply@anthropic.com>"
+          
+          git commit -m "$COMMIT_MSG"
+          
+          # Push to the current branch
+          echo "Pushing to branch: ${{ github.ref_name }}"
+          git push origin HEAD:${{ github.ref_name }}
+          
+          echo "✓ Documentation synchronization completed and pushed"
+
+      - name: Summary
+        if: always()
+        run: |
+          if [[ "${{ steps.check-changes.outputs.has_changes }}" == "true" ]]; then
+            if [[ "${{ steps.check-sync-results.outputs.has_sync_changes }}" == "true" ]]; then
+              echo "✅ Documentation synchronization completed successfully"
+            else
+              echo "ℹ️ Documentation synchronization ran but no changes were needed"
+            fi
+          else
+            echo "ℹ️ No documentation changes detected, synchronization skipped"
+          fi
