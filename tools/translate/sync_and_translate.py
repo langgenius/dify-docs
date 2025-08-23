@@ -2,6 +2,7 @@
 """
 Documentation Auto-Sync System
 Synchronizes English documentation structure and content to Chinese and Japanese versions.
+With enhanced security for handling external PRs.
 """
 
 import json
@@ -16,6 +17,14 @@ import tempfile
 
 # Import the existing translation function
 from main import translate_text, load_md_mdx
+
+# Import security validator
+try:
+    from security_validator import SecurityValidator, create_validator
+except ImportError:
+    # Fallback if security module not available
+    SecurityValidator = None
+    create_validator = None
 
 # --- Configuration ---
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -44,12 +53,39 @@ LANGUAGES = {
 TARGET_LANGUAGES = ["zh-hans", "ja-jp"]
 
 class DocsSynchronizer:
-    def __init__(self, dify_api_key: str):
+    def __init__(self, dify_api_key: str, enable_security: bool = False):
         self.dify_api_key = dify_api_key
         self.base_dir = BASE_DIR
         self.docs_json_path = DOCS_JSON_PATH
+        self.enable_security = enable_security
+        
+        # Initialize security validator if enabled
+        self.validator = None
+        if enable_security and create_validator:
+            self.validator = create_validator(self.base_dir)
         self.config = self.load_config()
         self.notices = self.load_notices()
+    
+    def validate_file_path(self, file_path: str) -> Tuple[bool, Optional[str]]:
+        """Validate file path for security if security is enabled"""
+        if not self.enable_security or not self.validator:
+            return True, None
+        
+        return self.validator.validate_file_path(file_path)
+    
+    def validate_sync_plan(self, sync_plan: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """Validate synchronization plan for security if security is enabled"""
+        if not self.enable_security or not self.validator:
+            return True, None
+        
+        return self.validator.validate_sync_plan(sync_plan)
+    
+    def sanitize_path(self, file_path: str) -> Optional[str]:
+        """Sanitize file path if security is enabled"""
+        if not self.enable_security or not self.validator:
+            return file_path
+        
+        return self.validator.sanitize_path(file_path)
         
     def load_config(self) -> Dict[str, Any]:
         """Load configuration file with language mappings"""
@@ -142,6 +178,24 @@ class DocsSynchronizer:
     async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str) -> bool:
         """Translate a file and add AI notice at the top"""
         try:
+            # Security validation
+            if self.enable_security:
+                # Validate source path
+                valid, error = self.validate_file_path(en_file_path)
+                if not valid:
+                    print(f"Security error - invalid source path {en_file_path}: {error}")
+                    return False
+                
+                # Validate target path
+                valid, error = self.validate_file_path(target_file_path)
+                if not valid:
+                    print(f"Security error - invalid target path {target_file_path}: {error}")
+                    return False
+                
+                # Sanitize paths
+                en_file_path = self.sanitize_path(en_file_path) or en_file_path
+                target_file_path = self.sanitize_path(target_file_path) or target_file_path
+            
             print(f"Translating {en_file_path} to {target_file_path}")
             
             # Ensure target directory exists
@@ -495,6 +549,85 @@ class DocsSynchronizer:
             print(f"Critical error during sync: {e}")
         
         print("=== Synchronization Complete ===")
+        return results
+    
+    async def secure_sync_from_plan(self, sync_plan: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute synchronization from a validated sync plan (for external PRs)
+        """
+        print("=== Starting Secure Documentation Synchronization ===")
+        
+        # Validate sync plan
+        if self.enable_security:
+            valid, error = self.validate_sync_plan(sync_plan)
+            if not valid:
+                return {"errors": [f"Invalid sync plan: {error}"]}
+        
+        results = {
+            "translated": [],
+            "failed": [],
+            "skipped": [],
+            "structure_synced": False,
+            "errors": []
+        }
+        
+        try:
+            # Process files from sync plan
+            files_to_sync = sync_plan.get("files_to_sync", [])
+            
+            # Limit number of files for security
+            max_files = 10 if self.enable_security else len(files_to_sync)
+            files_to_process = files_to_sync[:max_files]
+            
+            for file_info in files_to_process:
+                file_path = file_info.get("path")
+                if not file_path:
+                    continue
+                
+                # Additional security validation per file
+                if self.enable_security:
+                    valid, error = self.validate_file_path(file_path)
+                    if not valid:
+                        results["errors"].append(f"Invalid file path {file_path}: {error}")
+                        continue
+                
+                print(f"Processing: {file_path}")
+                
+                # Check if source file exists
+                if not (self.base_dir / file_path).exists():
+                    results["skipped"].append(file_path)
+                    continue
+                
+                # Translate to target languages
+                for target_lang in TARGET_LANGUAGES:
+                    target_path = self.convert_path_to_target_language(file_path, target_lang)
+                    try:
+                        success = await self.translate_file_with_notice(
+                            file_path, target_path, target_lang
+                        )
+                        if success:
+                            results["translated"].append(target_path)
+                        else:
+                            results["failed"].append(target_path)
+                    except Exception as e:
+                        print(f"Error translating {file_path} to {target_lang}: {e}")
+                        results["failed"].append(target_path)
+            
+            # Handle structure changes
+            structure_changes = sync_plan.get("structure_changes", {})
+            if structure_changes.get("structure_changed"):
+                print("Syncing documentation structure...")
+                try:
+                    sync_log = self.sync_docs_json_structure()
+                    results["structure_synced"] = True
+                    print("Structure sync completed")
+                except Exception as e:
+                    results["errors"].append(f"Structure sync failed: {e}")
+            
+        except Exception as e:
+            results["errors"].append(f"Critical error: {e}")
+        
+        print("=== Secure Synchronization Complete ===")
         return results
 
 async def main():

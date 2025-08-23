@@ -1,0 +1,289 @@
+name: Analyze Documentation Changes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs.json'
+      - 'en/**/*.md'
+      - 'en/**/*.mdx'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Analyze documentation changes
+        id: analyze
+        run: |
+          echo "Analyzing documentation changes..."
+          
+          # Get base and head commits
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+          
+          # Detect changed files
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep -E '^(docs\.json|en/.*\.(md|mdx))$' || true)
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No documentation changes detected"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          
+          # Count changes for security limits
+          FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+          echo "Changed files count: $FILE_COUNT"
+          
+          # Security check: Limit number of files
+          MAX_FILES=50
+          if [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
+            echo "Error: Too many files changed ($FILE_COUNT > $MAX_FILES)"
+            echo "error=too_many_files" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Create analysis report
+          cat > /tmp/analysis.json <<EOF
+          {
+            "pr_number": ${{ github.event.pull_request.number }},
+            "pr_title": "${{ github.event.pull_request.title }}",
+            "pr_author": "${{ github.event.pull_request.user.login }}",
+            "base_sha": "$BASE_SHA",
+            "head_sha": "$HEAD_SHA",
+            "file_count": $FILE_COUNT,
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}"
+          }
+          EOF
+          
+          # Save changed files list
+          echo "$CHANGED_FILES" > /tmp/changed_files.txt
+          
+          # Analyze file types and sizes
+          > /tmp/file_analysis.txt
+          while IFS= read -r file; do
+            if [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              echo "$file|$SIZE" >> /tmp/file_analysis.txt
+              
+              # Security check: File size limit (10MB)
+              MAX_SIZE=$((10 * 1024 * 1024))
+              if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo "Error: File $file exceeds size limit ($SIZE > $MAX_SIZE)"
+                echo "error=file_too_large" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            fi
+          done <<< "$CHANGED_FILES"
+          
+          echo "Analysis complete"
+
+      - name: Check for docs.json structure changes
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          # Check if docs.json was modified
+          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q '^docs\.json$'; then
+            echo "docs.json structure changes detected"
+            echo "true" > /tmp/docs_json_changed.txt
+            
+            # Extract English documentation structure changes
+            python3 - <<'EOF'
+          import json
+          import subprocess
+          
+          def get_docs_structure(sha):
+              try:
+                  result = subprocess.run(
+                      ["git", "show", f"{sha}:docs.json"],
+                      capture_output=True,
+                      text=True,
+                      check=True
+                  )
+                  return json.loads(result.stdout)
+              except:
+                  return None
+          
+          base_sha = "${{ github.event.pull_request.base.sha }}"
+          head_sha = "${{ github.event.pull_request.head.sha }}"
+          
+          base_docs = get_docs_structure(base_sha)
+          head_docs = get_docs_structure(head_sha)
+          
+          changes = {
+              "structure_changed": base_docs != head_docs if base_docs and head_docs else False,
+              "navigation_modified": False,
+              "languages_affected": []
+          }
+          
+          if base_docs and head_docs:
+              # Check navigation changes
+              base_nav = base_docs.get("navigation", {})
+              head_nav = head_docs.get("navigation", {})
+              
+              if base_nav != head_nav:
+                  changes["navigation_modified"] = True
+                  
+                  # Identify affected languages
+                  for lang_data in head_nav.get("languages", []):
+                      if lang_data.get("language") == "en":
+                          changes["languages_affected"] = ["zh-Hans", "jp"]
+                          break
+          
+          with open("/tmp/structure_changes.json", "w") as f:
+              json.dump(changes, f, indent=2)
+          EOF
+          else
+            echo "No docs.json changes"
+            echo "false" > /tmp/docs_json_changed.txt
+          fi
+
+      - name: Validate file paths
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          # Security: Validate all file paths
+          while IFS= read -r file; do
+            # Check for directory traversal attempts
+            if echo "$file" | grep -q '\.\./'; then
+              echo "Error: Invalid file path detected: $file"
+              exit 1
+            fi
+            
+            # Check file extension
+            if ! echo "$file" | grep -qE '\.(md|mdx|json)$'; then
+              echo "Error: Invalid file type: $file"
+              exit 1
+            fi
+            
+            # Check path starts with allowed directories
+            if ! echo "$file" | grep -qE '^(en/|docs\.json$)'; then
+              echo "Error: File outside allowed directories: $file"
+              exit 1
+            fi
+          done < /tmp/changed_files.txt
+          
+          echo "All file paths validated"
+
+      - name: Create analysis summary
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          # Create a comprehensive analysis summary
+          python3 - <<'EOF'
+          import json
+          import os
+          
+          # Load analysis data
+          with open("/tmp/analysis.json") as f:
+              analysis = json.load(f)
+          
+          # Load file analysis
+          files_to_sync = []
+          with open("/tmp/file_analysis.txt") as f:
+              for line in f:
+                  if line.strip():
+                      file_path, size = line.strip().split("|")
+                      files_to_sync.append({
+                          "path": file_path,
+                          "size": int(size),
+                          "type": "mdx" if file_path.endswith(".mdx") else "md" if file_path.endswith(".md") else "json"
+                      })
+          
+          # Load structure changes if exists
+          structure_changes = {}
+          if os.path.exists("/tmp/structure_changes.json"):
+              with open("/tmp/structure_changes.json") as f:
+                  structure_changes = json.load(f)
+          
+          # Create sync plan
+          sync_plan = {
+              "metadata": analysis,
+              "files_to_sync": files_to_sync,
+              "structure_changes": structure_changes,
+              "target_languages": ["zh-hans", "ja-jp"],
+              "sync_required": len(files_to_sync) > 0 or structure_changes.get("structure_changed", False)
+          }
+          
+          # Save sync plan
+          with open("/tmp/sync_plan.json", "w") as f:
+              json.dump(sync_plan, f, indent=2)
+          
+          print(f"Sync plan created: {len(files_to_sync)} files to sync")
+          if structure_changes.get("structure_changed"):
+              print("Documentation structure changes detected")
+          EOF
+
+      - name: Upload analysis artifacts
+        if: steps.analyze.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-analysis-${{ github.event.pull_request.number }}
+          path: |
+            /tmp/analysis.json
+            /tmp/changed_files.txt
+            /tmp/file_analysis.txt
+            /tmp/sync_plan.json
+            /tmp/docs_json_changed.txt
+            /tmp/structure_changes.json
+          retention-days: 1
+
+      - name: Comment on PR with analysis
+        if: steps.analyze.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const syncPlan = JSON.parse(fs.readFileSync('/tmp/sync_plan.json', 'utf8'));
+            
+            const fileCount = syncPlan.files_to_sync.length;
+            const structureChanged = syncPlan.structure_changes.structure_changed || false;
+            
+            let comment = '## 📋 Documentation Sync Analysis\n\n';
+            comment += `Found **${fileCount}** documentation file(s) that need synchronization.\n\n`;
+            
+            if (fileCount > 0) {
+              comment += '### Files to Sync:\n';
+              syncPlan.files_to_sync.forEach(file => {
+                const sizeKB = (file.size / 1024).toFixed(2);
+                comment += `- \`${file.path}\` (${sizeKB} KB)\n`;
+              });
+              comment += '\n';
+            }
+            
+            if (structureChanged) {
+              comment += '### Structure Changes:\n';
+              comment += '- Documentation navigation structure will be updated\n';
+              comment += '- Target languages: Chinese (zh-hans), Japanese (ja-jp)\n\n';
+            }
+            
+            comment += '### Next Steps:\n';
+            comment += '1. A maintainer will review and approve the synchronization\n';
+            comment += '2. Once approved, translations will be generated automatically\n';
+            comment += '3. Synchronized files will be added to a new branch for review\n\n';
+            
+            comment += '_This analysis was performed automatically. No code from your PR was executed._';
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });

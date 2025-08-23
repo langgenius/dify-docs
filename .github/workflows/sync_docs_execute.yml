@@ -1,0 +1,434 @@
+name: Execute Documentation Sync
+
+on:
+  workflow_run:
+    workflows: ["Analyze Documentation Changes"]
+    types:
+      - completed
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  execute-sync:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Check workflow source
+        id: check-source
+        run: |
+          echo "Checking workflow source..."
+          echo "Event: ${{ github.event.workflow_run.event }}"
+          echo "Repository: ${{ github.event.workflow_run.repository.full_name }}"
+          echo "Head Repository: ${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+          
+          # Security check: Only process PRs from the same repository or trusted forks
+          if [[ "${{ github.event.workflow_run.event }}" != "pull_request" ]]; then
+            echo "Not a pull request event, skipping"
+            echo "should_process=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if this is from a fork
+          IS_FORK="false"
+          if [[ "${{ github.event.workflow_run.repository.full_name }}" != "${{ github.event.workflow_run.head_repository.full_name }}" ]]; then
+            IS_FORK="true"
+          fi
+          
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          echo "should_process=true" >> $GITHUB_OUTPUT
+
+      - name: Download analysis artifacts
+        if: steps.check-source.outputs.should_process == 'true'
+        uses: actions/github-script@v7
+        id: download-artifacts
+        with:
+          script: |
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: ${{ github.event.workflow_run.id }}
+            });
+            
+            const matchArtifact = artifacts.data.artifacts.find(artifact => {
+              return artifact.name.startsWith('docs-sync-analysis-');
+            });
+            
+            if (!matchArtifact) {
+              console.log('No analysis artifacts found');
+              return false;
+            }
+            
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifact.id,
+              archive_format: 'zip'
+            });
+            
+            const fs = require('fs');
+            fs.writeFileSync('/tmp/artifacts.zip', Buffer.from(download.data));
+            
+            // Extract PR number from artifact name
+            const prNumber = matchArtifact.name.split('-').pop();
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('artifact_found', 'true');
+            
+            return true;
+
+      - name: Extract and validate artifacts
+        if: steps.download-artifacts.outputs.artifact_found == 'true'
+        id: extract-artifacts
+        run: |
+          echo "Extracting artifacts..."
+          
+          # Create secure temporary directory
+          WORK_DIR=$(mktemp -d /tmp/sync-XXXXXX)
+          echo "work_dir=$WORK_DIR" >> $GITHUB_OUTPUT
+          
+          # Extract to temporary directory
+          cd "$WORK_DIR"
+          unzip /tmp/artifacts.zip
+          
+          # Validate extracted files
+          REQUIRED_FILES="analysis.json sync_plan.json changed_files.txt"
+          for file in $REQUIRED_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Validate JSON structure
+          python3 -c "
+          import json
+          import sys
+          
+          try:
+              with open('analysis.json') as f:
+                  analysis = json.load(f)
+              with open('sync_plan.json') as f:
+                  sync_plan = json.load(f)
+              
+              # Validate required fields
+              assert 'pr_number' in analysis
+              assert 'files_to_sync' in sync_plan
+              assert 'target_languages' in sync_plan
+              
+              print('Artifacts validated successfully')
+          except Exception as e:
+              print(f'Validation error: {e}')
+              sys.exit(1)
+          "
+          
+          # Extract PR number and other metadata
+          PR_NUMBER=$(python3 -c "import json; print(json.load(open('analysis.json'))['pr_number'])")
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          
+          # Check if sync is required
+          SYNC_REQUIRED=$(python3 -c "import json; print(str(json.load(open('sync_plan.json'))['sync_required']).lower())")
+          echo "sync_required=$SYNC_REQUIRED" >> $GITHUB_OUTPUT
+
+      - name: Checkout base repository
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Set up Python
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        run: |
+          cd tools/translate
+          pip install httpx aiofiles python-dotenv
+
+      - name: Check for manual approval requirement
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-source.outputs.is_fork == 'true'
+        id: check-approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            
+            // Get PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const author = pr.data.user.login;
+            const authorAssociation = pr.data.author_association;
+            
+            // Check if author is trusted
+            const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const trustedContributors = process.env.TRUSTED_CONTRIBUTORS?.split(',') || [];
+            
+            const isTrusted = trustedAssociations.includes(authorAssociation) || 
+                             trustedContributors.includes(author);
+            
+            if (!isTrusted) {
+              // Check for approval from maintainer
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              const hasApproval = reviews.data.some(review => 
+                review.state === 'APPROVED' && 
+                trustedAssociations.includes(review.author_association)
+              );
+              
+              if (!hasApproval) {
+                console.log('PR requires manual approval from a maintainer');
+                core.setOutput('needs_approval', 'true');
+                
+                // Comment on PR
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: '⏸️ **Documentation sync is pending approval**\n\n' +
+                        'This PR requires approval from a maintainer before automatic synchronization can proceed.\n\n' +
+                        'Once approved, the documentation will be automatically translated and synchronized.'
+                });
+                
+                return;
+              }
+            }
+            
+            core.setOutput('needs_approval', 'false');
+
+      - name: Execute safe synchronization
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        id: sync
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+        run: |
+          echo "Executing documentation synchronization..."
+          
+          WORK_DIR="${{ steps.extract-artifacts.outputs.work_dir }}"
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          
+          # Create a new branch for the sync results
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+          git checkout -b "$SYNC_BRANCH"
+          
+          # Run synchronization with security constraints
+          cd tools/translate
+          
+          # Create a secure sync script
+          cat > secure_sync.py <<'EOF'
+          import json
+          import sys
+          import os
+          import asyncio
+          from pathlib import Path
+          
+          # Add parent directory to path
+          sys.path.append(os.path.dirname(__file__))
+          from sync_and_translate import DocsSynchronizer
+          
+          async def secure_sync():
+              work_dir = sys.argv[1]
+              
+              # Load sync plan
+              with open(f"{work_dir}/sync_plan.json") as f:
+                  sync_plan = json.load(f)
+              
+              # Security: Only sync files from the approved list
+              files_to_sync = sync_plan.get("files_to_sync", [])
+              
+              # Validate file paths again
+              for file_info in files_to_sync:
+                  file_path = file_info["path"]
+                  
+                  # Security checks
+                  if ".." in file_path or file_path.startswith("/"):
+                      print(f"Security error: Invalid path {file_path}")
+                      return False
+                  
+                  if not file_path.startswith("en/"):
+                      print(f"Security error: File outside en/ directory: {file_path}")
+                      return False
+              
+              # Initialize synchronizer
+              api_key = os.environ.get("DIFY_API_KEY")
+              if not api_key:
+                  print("Error: DIFY_API_KEY not set")
+                  return False
+              
+              synchronizer = DocsSynchronizer(api_key)
+              
+              # Perform limited sync
+              results = {
+                  "translated": [],
+                  "failed": [],
+                  "skipped": []
+              }
+              
+              for file_info in files_to_sync[:10]:  # Limit to 10 files
+                  file_path = file_info["path"]
+                  print(f"Processing: {file_path}")
+                  
+                  try:
+                      # Only translate if file exists and is safe
+                      if os.path.exists(f"../../{file_path}"):
+                          for target_lang in ["zh-hans", "ja-jp"]:
+                              target_path = file_path.replace("en/", f"{target_lang}/")
+                              success = await synchronizer.translate_file_with_notice(
+                                  file_path,
+                                  target_path,
+                                  target_lang
+                              )
+                              if success:
+                                  results["translated"].append(target_path)
+                              else:
+                                  results["failed"].append(target_path)
+                      else:
+                          results["skipped"].append(file_path)
+                  except Exception as e:
+                      print(f"Error processing {file_path}: {e}")
+                      results["failed"].append(file_path)
+              
+              # Handle docs.json structure sync if needed
+              if sync_plan.get("structure_changes", {}).get("structure_changed"):
+                  print("Syncing docs.json structure...")
+                  try:
+                      sync_log = synchronizer.sync_docs_json_structure()
+                      print("\n".join(sync_log))
+                  except Exception as e:
+                      print(f"Error syncing structure: {e}")
+              
+              # Save results
+              with open("/tmp/sync_results.json", "w") as f:
+                  json.dump(results, f, indent=2)
+              
+              return len(results["failed"]) == 0
+          
+          if __name__ == "__main__":
+              success = asyncio.run(secure_sync())
+              sys.exit(0 if success else 1)
+          EOF
+          
+          # Run the secure sync
+          python secure_sync.py "$WORK_DIR"
+          SYNC_EXIT_CODE=$?
+          
+          echo "sync_exit_code=$SYNC_EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Check for changes
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit sync results
+        if: steps.sync.outputs.has_changes == 'true'
+        id: commit
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+          
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          git add .
+          git commit -m "docs: sync translations for PR #${PR_NUMBER}
+
+          Auto-generated translations for documentation changes.
+          Review these changes carefully before merging.
+
+          🤖 Generated with GitHub Actions"
+          
+          # Push the branch
+          git push origin "$SYNC_BRANCH" --force
+          
+          echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR with results
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const hasChanges = '${{ steps.sync.outputs.has_changes }}' === 'true';
+            const branchName = '${{ steps.commit.outputs.branch_name }}';
+            
+            let comment = '## ✅ Documentation Synchronization Complete\n\n';
+            
+            if (hasChanges) {
+              // Load sync results if available
+              let results = { translated: [], failed: [], skipped: [] };
+              try {
+                results = JSON.parse(fs.readFileSync('/tmp/sync_results.json', 'utf8'));
+              } catch (e) {
+                console.log('Could not load sync results');
+              }
+              
+              comment += `Translations have been generated and pushed to branch: \`${branchName}\`\n\n`;
+              
+              if (results.translated.length > 0) {
+                comment += `### ✅ Successfully Translated (${results.translated.length}):\n`;
+                results.translated.slice(0, 10).forEach(file => {
+                  comment += `- \`${file}\`\n`;
+                });
+                if (results.translated.length > 10) {
+                  comment += `- ... and ${results.translated.length - 10} more\n`;
+                }
+                comment += '\n';
+              }
+              
+              if (results.failed.length > 0) {
+                comment += `### ⚠️ Failed Translations (${results.failed.length}):\n`;
+                results.failed.forEach(file => {
+                  comment += `- \`${file}\`\n`;
+                });
+                comment += '\n';
+              }
+              
+              comment += '### Next Steps:\n';
+              comment += '1. Review the generated translations in the sync branch\n';
+              comment += '2. Make any necessary adjustments\n';
+              comment += '3. Merge the sync branch into your PR branch if satisfied\n\n';
+              
+              comment += `[View changes](https://github.com/${{ github.repository }}/compare/${{ github.event.workflow_run.head_branch }}...${branchName})`;
+            } else {
+              comment += 'No changes were needed. All documentation is already in sync.';
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+  handle-failure:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Report analysis failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Try to extract PR number from workflow run
+            const workflowRun = context.payload.workflow_run;
+            
+            console.log('Analysis workflow failed');
+            console.log('Attempting to notify PR if possible...');
+            
+            // This is a best-effort attempt to notify
+            // In practice, you might want to store PR number differently
