@@ -7,6 +7,10 @@ on:
       - 'docs.json'
       - 'en/**/*.md'
       - 'en/**/*.mdx'
+      - 'ja-jp/**/*.md'
+      - 'ja-jp/**/*.mdx'
+      - 'zh-hans/**/*.md'
+      - 'zh-hans/**/*.mdx'
 
 permissions:
   contents: read
@@ -26,10 +30,10 @@ jobs:
         with:
           python-version: '3.9'
 
-      - name: Analyze documentation changes
-        id: analyze
+      - name: Categorize and validate PR changes
+        id: categorize
         run: |
-          echo "Analyzing documentation changes..."
+          echo "Categorizing PR changes..."
           
           # Get base and head commits
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
@@ -38,16 +42,52 @@ jobs:
           echo "Base SHA: $BASE_SHA"
           echo "Head SHA: $HEAD_SHA"
           
-          # Detect changed files
-          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA | grep -E '^(docs\.json|en/.*\.(md|mdx))$' || true)
+          # Run PR analyzer
+          cd tools/translate
+          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
           
-          if [ -z "$CHANGED_FILES" ]; then
-            echo "No documentation changes detected"
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            exit 0
+          # Parse analyzer output
+          if [ $? -eq 0 ]; then
+            # Successful analysis
+            source /tmp/pr_analysis_output.txt
+            echo "PR categorization successful"
+            echo "PR Type: $pr_type"
+            echo "Should Skip: $should_skip"
+            
+            # Set GitHub outputs
+            echo "pr_type=$pr_type" >> $GITHUB_OUTPUT
+            echo "should_skip=$should_skip" >> $GITHUB_OUTPUT
+            
+            if [ "$should_skip" = "true" ]; then
+              if [ "$pr_type" = "translation" ]; then
+                echo "✅ Translation-only PR detected. Skipping automation (direct review process)."
+              elif [ "$pr_type" = "none" ]; then
+                echo "✅ No relevant documentation changes detected. Skipping workflow."
+              fi
+              exit 0
+            fi
+          else
+            # Analysis failed - likely mixed PR
+            echo "PR categorization failed - likely mixed content PR"
+            ERROR_MESSAGE=$(cat /tmp/pr_analysis_output.txt | grep "error_message=" | cut -d'=' -f2- || echo "Mixed content PR detected")
+            echo "error=mixed_pr" >> $GITHUB_OUTPUT
+            echo "error_message<<EOF" >> $GITHUB_OUTPUT
+            echo "$ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 1
           fi
+
+      - name: Analyze English changes for translation
+        if: steps.categorize.outputs.pr_type == 'english'
+        id: analyze
+        run: |
+          echo "Analyzing English changes for automatic translation..."
           
-          echo "has_changes=true" >> $GITHUB_OUTPUT
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get all changed files (not just English ones for file analysis)
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA)
           
           # Count changes for security limits
           FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
@@ -72,17 +112,18 @@ jobs:
             "file_count": $FILE_COUNT,
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "repository": "${{ github.repository }}",
-            "ref": "${{ github.ref }}"
+            "ref": "${{ github.ref }}",
+            "pr_type": "english"
           }
           EOF
           
           # Save changed files list
           echo "$CHANGED_FILES" > /tmp/changed_files.txt
           
-          # Analyze file types and sizes
+          # Analyze file types and sizes for English files that need translation
           > /tmp/file_analysis.txt
           while IFS= read -r file; do
-            if [ -f "$file" ]; then
+            if [[ "$file" =~ ^en/.*\.(md|mdx)$ ]] && [ -f "$file" ]; then
               SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
               echo "$file|$SIZE" >> /tmp/file_analysis.txt
               
@@ -96,96 +137,73 @@ jobs:
             fi
           done <<< "$CHANGED_FILES"
           
-          echo "Analysis complete"
-
-      - name: Check for docs.json structure changes
-        if: steps.analyze.outputs.has_changes == 'true'
-        run: |
-          # Check if docs.json was modified
-          if git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }} | grep -q '^docs\.json$'; then
-            echo "docs.json structure changes detected"
+          # Check for docs.json changes
+          if echo "$CHANGED_FILES" | grep -q '^docs\.json$'; then
             echo "true" > /tmp/docs_json_changed.txt
             
-            # Extract English documentation structure changes
-            python3 - <<'EOF'
-          import json
-          import subprocess
+            # Use PR analyzer's docs.json analysis
+            cd tools/translate
+            python3 - <<EOF
+          import sys
+          sys.path.append('.')
+          from pr_analyzer import PRAnalyzer
           
-          def get_docs_structure(sha):
-              try:
-                  result = subprocess.run(
-                      ["git", "show", f"{sha}:docs.json"],
-                      capture_output=True,
-                      text=True,
-                      check=True
-                  )
-                  return json.loads(result.stdout)
-              except:
-                  return None
+          analyzer = PRAnalyzer("$BASE_SHA", "$HEAD_SHA")
+          docs_changes = analyzer.analyze_docs_json_changes()
           
-          base_sha = "${{ github.event.pull_request.base.sha }}"
-          head_sha = "${{ github.event.pull_request.head.sha }}"
-          
-          base_docs = get_docs_structure(base_sha)
-          head_docs = get_docs_structure(head_sha)
-          
-          changes = {
-              "structure_changed": base_docs != head_docs if base_docs and head_docs else False,
-              "navigation_modified": False,
-              "languages_affected": []
+          structure_changes = {
+              "structure_changed": docs_changes["any_docs_json_changes"],
+              "navigation_modified": docs_changes["english_section"],
+              "languages_affected": ["zh-hans", "ja-jp"] if docs_changes["english_section"] else []
           }
           
-          if base_docs and head_docs:
-              # Check navigation changes
-              base_nav = base_docs.get("navigation", {})
-              head_nav = head_docs.get("navigation", {})
-              
-              if base_nav != head_nav:
-                  changes["navigation_modified"] = True
-                  
-                  # Identify affected languages
-                  for lang_data in head_nav.get("languages", []):
-                      if lang_data.get("language") == "en":
-                          changes["languages_affected"] = ["zh-Hans", "jp"]
-                          break
-          
+          import json
           with open("/tmp/structure_changes.json", "w") as f:
-              json.dump(changes, f, indent=2)
+              json.dump(structure_changes, f, indent=2)
           EOF
           else
-            echo "No docs.json changes"
             echo "false" > /tmp/docs_json_changed.txt
+            echo '{"structure_changed": false, "navigation_modified": false, "languages_affected": []}' > /tmp/structure_changes.json
           fi
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Analysis complete"
 
       - name: Validate file paths
         if: steps.analyze.outputs.has_changes == 'true'
         run: |
-          # Security: Validate all file paths
-          while IFS= read -r file; do
-            # Check for directory traversal attempts
-            if echo "$file" | grep -q '\.\./'; then
-              echo "Error: Invalid file path detected: $file"
-              exit 1
-            fi
-            
-            # Check file extension
-            if ! echo "$file" | grep -qE '\.(md|mdx|json)$'; then
-              echo "Error: Invalid file type: $file"
-              exit 1
-            fi
-            
-            # Check path starts with allowed directories
-            if ! echo "$file" | grep -qE '^(en/|docs\.json$)'; then
-              echo "Error: File outside allowed directories: $file"
-              exit 1
-            fi
-          done < /tmp/changed_files.txt
+          echo "Validating English file paths for translation..."
           
-          echo "All file paths validated"
+          # Security: Validate English files that will be translated
+          while IFS='|' read -r file size; do
+            if [ -n "$file" ]; then
+              # Check for directory traversal attempts
+              if echo "$file" | grep -q '\.\./'; then
+                echo "Error: Invalid file path detected: $file"
+                exit 1
+              fi
+              
+              # Check file extension for English files
+              if ! echo "$file" | grep -qE '\.(md|mdx)$'; then
+                echo "Error: Invalid file type for translation: $file"
+                exit 1
+              fi
+              
+              # Check path starts with en/ (only English files need translation)
+              if ! echo "$file" | grep -qE '^en/'; then
+                echo "Error: Non-English file in translation list: $file"
+                exit 1
+              fi
+            fi
+          done < /tmp/file_analysis.txt
+          
+          echo "All English file paths validated for translation"
 
-      - name: Create analysis summary
+      - name: Create analysis summary  
         if: steps.analyze.outputs.has_changes == 'true'
         run: |
+          echo "Creating analysis summary for English changes..."
+          
           # Create a comprehensive analysis summary
           python3 - <<'EOF'
           import json
@@ -195,7 +213,7 @@ jobs:
           with open("/tmp/analysis.json") as f:
               analysis = json.load(f)
           
-          # Load file analysis
+          # Load file analysis (English files to translate)
           files_to_sync = []
           with open("/tmp/file_analysis.txt") as f:
               for line in f:
@@ -204,14 +222,25 @@ jobs:
                       files_to_sync.append({
                           "path": file_path,
                           "size": int(size),
-                          "type": "mdx" if file_path.endswith(".mdx") else "md" if file_path.endswith(".md") else "json"
+                          "type": "mdx" if file_path.endswith(".mdx") else "md"
                       })
           
-          # Load structure changes if exists
-          structure_changes = {}
-          if os.path.exists("/tmp/structure_changes.json"):
-              with open("/tmp/structure_changes.json") as f:
-                  structure_changes = json.load(f)
+          # Add docs.json if it changed
+          with open("/tmp/docs_json_changed.txt") as f:
+              docs_json_changed = f.read().strip() == "true"
+          
+          if docs_json_changed:
+              # Get docs.json size
+              docs_json_size = os.path.getsize("../../docs.json")
+              files_to_sync.append({
+                  "path": "docs.json",
+                  "size": docs_json_size,
+                  "type": "json"
+              })
+          
+          # Load structure changes
+          with open("/tmp/structure_changes.json") as f:
+              structure_changes = json.load(f)
           
           # Create sync plan
           sync_plan = {
@@ -226,7 +255,7 @@ jobs:
           with open("/tmp/sync_plan.json", "w") as f:
               json.dump(sync_plan, f, indent=2)
           
-          print(f"Sync plan created: {len(files_to_sync)} files to sync")
+          print(f"English sync plan created: {len(files_to_sync)} files to translate")
           if structure_changes.get("structure_changed"):
               print("Documentation structure changes detected")
           EOF
@@ -244,4 +273,26 @@ jobs:
             /tmp/docs_json_changed.txt
             /tmp/structure_changes.json
           retention-days: 1
+
+      - name: Report mixed PR error
+        if: failure() && steps.categorize.outputs.error == 'mixed_pr'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const errorMessage = `${{ steps.categorize.outputs.error_message }}`;
+            
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: errorMessage
+              });
+              console.log('Posted mixed PR error message to PR');
+            } catch (error) {
+              console.log('Could not comment on PR:', error.message);
+              console.log('Error message would have been:');
+              console.log(errorMessage);
+            }
 

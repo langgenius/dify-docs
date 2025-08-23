@@ -334,9 +334,9 @@ jobs:
             echo "has_changes=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Commit sync results
+      - name: Commit and create translation PR
         if: steps.sync.outputs.has_changes == 'true'
-        id: commit
+        id: create-translation-pr
         run: |
           PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
@@ -344,20 +344,75 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           
+          # Commit translation changes
           git add .
-          git commit -m "docs: sync translations for PR #${PR_NUMBER}
+          git commit -m "🌐 Auto-translate documentation for PR #${PR_NUMBER}
 
-          Auto-generated translations for documentation changes.
-          Review these changes carefully before merging.
-
+          Auto-generated translations for documentation changes in PR #${PR_NUMBER}.
+          
+          Original PR: #${PR_NUMBER}
+          Languages: Chinese (zh-hans), Japanese (ja-jp)
+          
           🤖 Generated with GitHub Actions"
           
-          # Push the branch
+          # Push the translation branch to main repo
           git push origin "$SYNC_BRANCH" --force
           
-          echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+          # Get original PR details for translation PR
+          ORIGINAL_PR_TITLE=$(gh pr view ${PR_NUMBER} --json title --jq '.title' 2>/dev/null || echo "Documentation changes")
+          
+          # Create translation PR body
+          cat > /tmp/translation_pr_body.md <<EOF
+          # 🌐 Auto-generated Translations
+          
+          This PR contains automatically generated translations for the documentation changes in PR #${PR_NUMBER}.
+          
+          ## Original PR
+          **Title:** ${ORIGINAL_PR_TITLE}  
+          **Link:** #${PR_NUMBER}
+          
+          ## What's included
+          - 🇨🇳 Chinese (zh-hans) translations
+          - 🇯🇵 Japanese (ja-jp) translations
+          - 📋 Updated navigation structure in docs.json
+          
+          ## Review Process
+          1. Review the generated translations for accuracy
+          2. Make any necessary adjustments
+          3. Merge this PR to apply the translations
+          
+          ## Links
+          - **Original English PR:** #${PR_NUMBER}
+          - **Translation branch:** \`${SYNC_BRANCH}\`
+          
+          ---
+          🤖 This PR was created automatically by the documentation translation workflow.
+          EOF
+          
+          # Create the translation PR
+          TRANSLATION_PR_URL=$(gh pr create \
+            --base main \
+            --head "$SYNC_BRANCH" \
+            --title "🌐 Auto-translations for PR #${PR_NUMBER}: ${ORIGINAL_PR_TITLE}" \
+            --body-file /tmp/translation_pr_body.md \
+            --label "🌐 translation" \
+            --label "🤖 automated" 2>/dev/null || echo "")
+          
+          if [ -n "$TRANSLATION_PR_URL" ]; then
+            # Extract PR number from URL
+            TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_URL" | grep -o '[0-9]\+$')
+            echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
+            echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+            echo "creation_successful=true" >> $GITHUB_OUTPUT
+            
+            echo "✅ Translation PR created successfully: #${TRANSLATION_PR_NUMBER}"
+          else
+            echo "❌ Failed to create translation PR"
+            echo "creation_successful=false" >> $GITHUB_OUTPUT
+          fi
 
-      - name: Comment on PR with results
+      - name: Comment on original PR with translation PR link
         if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-approval.outputs.needs_approval != 'true'
         uses: actions/github-script@v7
         with:
@@ -365,48 +420,74 @@ jobs:
             const fs = require('fs');
             const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
             const hasChanges = '${{ steps.sync.outputs.has_changes }}' === 'true';
-            const branchName = '${{ steps.commit.outputs.branch_name }}';
+            const translationPrNumber = '${{ steps.create-translation-pr.outputs.translation_pr_number }}';
+            const translationPrUrl = '${{ steps.create-translation-pr.outputs.translation_pr_url }}';
+            const creationSuccessful = '${{ steps.create-translation-pr.outputs.creation_successful }}' === 'true';
             
-            let comment = '## ✅ Documentation Synchronization Complete\n\n';
+            let comment = '## 🤖 Automatic Translation Status\n\n';
             
-            if (hasChanges) {
+            if (hasChanges && creationSuccessful && translationPrNumber) {
               // Load sync results if available
               let results = { translated: [], failed: [], skipped: [] };
               try {
                 results = JSON.parse(fs.readFileSync('/tmp/sync_results.json', 'utf8'));
               } catch (e) {
                 console.log('Could not load sync results');
+                results = { translated: [], failed: [], skipped: [] };
               }
               
-              comment += `Translations have been generated and pushed to branch: \`${branchName}\`\n\n`;
+              comment += `🎉 **Translation PR Created Successfully!**\n\n`;
+              comment += `Your English documentation changes have been automatically translated and a separate PR has been created.\n\n`;
+              comment += `### 🔗 Translation PR: [#${translationPrNumber}](${translationPrUrl})\n\n`;
               
-              if (results.translated.length > 0) {
-                comment += `### ✅ Successfully Translated (${results.translated.length}):\n`;
-                results.translated.slice(0, 10).forEach(file => {
+              if (results.translated && results.translated.length > 0) {
+                comment += `### ✅ Successfully Translated (${results.translated.length} files):\n`;
+                results.translated.slice(0, 8).forEach(file => {
                   comment += `- \`${file}\`\n`;
                 });
-                if (results.translated.length > 10) {
-                  comment += `- ... and ${results.translated.length - 10} more\n`;
+                if (results.translated.length > 8) {
+                  comment += `- ... and ${results.translated.length - 8} more files\n`;
                 }
                 comment += '\n';
               }
               
-              if (results.failed.length > 0) {
-                comment += `### ⚠️ Failed Translations (${results.failed.length}):\n`;
-                results.failed.forEach(file => {
+              if (results.failed && results.failed.length > 0) {
+                comment += `### ⚠️ Translation Issues (${results.failed.length}):\n`;
+                results.failed.slice(0, 5).forEach(file => {
                   comment += `- \`${file}\`\n`;
                 });
+                if (results.failed.length > 5) {
+                  comment += `- ... and ${results.failed.length - 5} more\n`;
+                }
                 comment += '\n';
               }
               
-              comment += '### Next Steps:\n';
-              comment += '1. Review the generated translations in the sync branch\n';
-              comment += '2. Make any necessary adjustments\n';
-              comment += '3. Merge the sync branch into your PR branch if satisfied\n\n';
+              comment += '### 🔄 What Happens Next:\n';
+              comment += `1. **Review**: The translation PR [#${translationPrNumber}](${translationPrUrl}) is ready for review\n`;
+              comment += '2. **Independent**: Both PRs can be reviewed and merged independently\n';
+              comment += '3. **Automatic**: Future updates to this PR will automatically update the translation PR\n\n';
               
-              comment += `[View changes](https://github.com/${{ github.repository }}/compare/${{ github.event.workflow_run.head_branch }}...${branchName})`;
+              comment += '### 📋 Languages Included:\n';
+              comment += '- 🇨🇳 **Chinese (zh-hans)**: Simplified Chinese translations\n';
+              comment += '- 🇯🇵 **Japanese (ja-jp)**: Japanese translations\n';
+              comment += '- 📋 **Navigation**: Updated docs.json structure for both languages\n\n';
+              
+              comment += '---\n';
+              comment += '_🤖 This is an automated translation workflow. The translation PR was created automatically and is ready for review._';
+              
+            } else if (hasChanges && !creationSuccessful) {
+              comment += '⚠️ **Translation PR Creation Failed**\n\n';
+              comment += 'The automatic translation process completed, but there was an issue creating the translation PR.\n\n';
+              comment += '**What you can do:**\n';
+              comment += '1. Check the workflow logs for detailed error information\n';
+              comment += '2. Contact a maintainer if the issue persists\n';
+              comment += '3. The translations may have been generated but need manual PR creation\n\n';
+              comment += '_🤖 This is an automated notification from the translation workflow._';
+              
             } else {
-              comment += 'No changes were needed. All documentation is already in sync.';
+              comment += '✅ **No Translation Changes Needed**\n\n';
+              comment += 'Your changes did not require new translations, or all translations are already up to date.\n\n';
+              comment += '_🤖 This is an automated check from the translation workflow._';
             }
             
             await github.rest.issues.createComment({
@@ -415,6 +496,44 @@ jobs:
               issue_number: prNumber,
               body: comment
             });
+
+      - name: Comment on translation PR with original PR link
+        if: steps.create-translation-pr.outputs.creation_successful == 'true' && steps.create-translation-pr.outputs.translation_pr_number
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const translationPrNumber = ${{ steps.create-translation-pr.outputs.translation_pr_number }};
+            
+            const backLinkComment = `## 🔗 Linked to Original PR
+            
+This translation PR was automatically created for the English documentation changes in **PR #${prNumber}**.
+
+### 📝 Original Changes
+- **Original PR**: #${prNumber}
+- **Type**: English documentation updates
+- **Auto-translation**: This PR contains the corresponding translations
+
+### 🔄 Synchronization
+- **Automatic Updates**: This PR will be automatically updated if the original PR changes
+- **Independent Review**: This translation PR can be reviewed and merged independently
+- **Quality Check**: Please review translations for accuracy and cultural appropriateness
+
+---
+🤖 _This PR is part of the automated translation workflow. Any updates to PR #${prNumber} will automatically update this translation PR._`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: translationPrNumber,
+                body: backLinkComment
+              });
+              console.log(`Successfully linked translation PR #${translationPrNumber} to original PR #${prNumber}`);
+            } catch (error) {
+              console.log(`Could not comment on translation PR #${translationPrNumber}:`, error.message);
+            }
 
   handle-failure:
     runs-on: ubuntu-latest
