@@ -21,32 +21,49 @@ permissions:
 jobs:
   execute-sync:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    if: |
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      github.event_name == 'workflow_dispatch'
     steps:
       - name: Check workflow source
         id: check-source
         run: |
           echo "Checking workflow source..."
-          echo "Event: ${{ github.event.workflow_run.event }}"
-          echo "Repository: ${{ github.event.workflow_run.repository.full_name }}"
-          echo "Head Repository: ${{ github.event.workflow_run.head_repository.full_name }}"
-          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+          echo "Event name: ${{ github.event_name }}"
           
-          # Security check: Only process PRs from the same repository or trusted forks
-          if [[ "${{ github.event.workflow_run.event }}" != "pull_request" ]]; then
-            echo "Not a pull request event, skipping"
-            echo "should_process=false" >> $GITHUB_OUTPUT
-            exit 0
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            # Manual trigger - bypass source checks for revamp branch
+            if [[ "${{ github.ref }}" == "refs/heads/revamp" ]]; then
+              echo "Manual workflow_dispatch on revamp branch - proceeding"
+              echo "is_fork=false" >> $GITHUB_OUTPUT
+              echo "should_process=true" >> $GITHUB_OUTPUT
+            else
+              echo "Manual workflow_dispatch not on revamp branch - skipping"
+              echo "should_process=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            # workflow_run event - use existing logic
+            echo "Event: ${{ github.event.workflow_run.event }}"
+            echo "Repository: ${{ github.event.workflow_run.repository.full_name }}"
+            echo "Head Repository: ${{ github.event.workflow_run.head_repository.full_name }}"
+            echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+            
+            # Security check: Only process PRs from the same repository or trusted forks
+            if [[ "${{ github.event.workflow_run.event }}" != "pull_request" ]]; then
+              echo "Not a pull request event, skipping"
+              echo "should_process=false" >> $GITHUB_OUTPUT
+              exit 0
+            fi
+            
+            # Check if this is from a fork
+            IS_FORK="false"
+            if [[ "${{ github.event.workflow_run.repository.full_name }}" != "${{ github.event.workflow_run.head_repository.full_name }}" ]]; then
+              IS_FORK="true"
+            fi
+            
+            echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+            echo "should_process=true" >> $GITHUB_OUTPUT
           fi
-          
-          # Check if this is from a fork
-          IS_FORK="false"
-          if [[ "${{ github.event.workflow_run.repository.full_name }}" != "${{ github.event.workflow_run.head_repository.full_name }}" ]]; then
-            IS_FORK="true"
-          fi
-          
-          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
-          echo "should_process=true" >> $GITHUB_OUTPUT
 
       - name: Download analysis artifacts
         if: steps.check-source.outputs.should_process == 'true'
