@@ -222,8 +222,26 @@ class DocsSynchronizer:
             en_relative_path = self.get_relative_en_path_for_notice(target_file_path)
             notice = self.notices.get(target_lang, "").format(en_path=en_relative_path)
             
-            # Combine notice and translated content
-            final_content = notice + translated_content
+            # Handle frontmatter and notice placement
+            if translated_content.strip().startswith('---'):
+                # Find the end of frontmatter
+                lines = translated_content.split('\n')
+                frontmatter_end = -1
+                for i, line in enumerate(lines[1:], 1):  # Skip first line (opening ---)
+                    if line.strip() == '---':
+                        frontmatter_end = i
+                        break
+                
+                if frontmatter_end != -1:
+                    # Insert notice after frontmatter
+                    frontmatter = '\n'.join(lines[:frontmatter_end + 1])
+                    content_after_frontmatter = '\n'.join(lines[frontmatter_end + 1:])
+                    final_content = frontmatter + '\n\n' + notice + content_after_frontmatter
+                else:
+                    raise ValueError("Malformed frontmatter")
+            else:
+                # No frontmatter, add notice at the beginning
+                final_content = notice + translated_content
             
             # Write to target file
             with open(self.base_dir / target_file_path, 'w', encoding='utf-8') as f:
@@ -630,24 +648,124 @@ class DocsSynchronizer:
         print("=== Secure Synchronization Complete ===")
         return results
 
+    def get_files_from_paths(self, paths: List[str]) -> List[str]:
+        """Get all documentation files from given file/directory paths"""
+        files = []
+        for path in paths:
+            full_path = self.base_dir / path
+            
+            if full_path.is_file():
+                # Single file
+                if self.is_english_doc_file(path):
+                    files.append(path)
+                else:
+                    print(f"Warning: {path} is not an English documentation file")
+            elif full_path.is_dir():
+                # Directory - find all .md/.mdx files
+                for file_path in full_path.rglob('*.md'):
+                    rel_path = str(file_path.relative_to(self.base_dir))
+                    if self.is_english_doc_file(rel_path):
+                        files.append(rel_path)
+                for file_path in full_path.rglob('*.mdx'):
+                    rel_path = str(file_path.relative_to(self.base_dir))
+                    if self.is_english_doc_file(rel_path):
+                        files.append(rel_path)
+            else:
+                print(f"Warning: {path} does not exist")
+        
+        return files
+    
+    async def run_path_translation(self, paths: List[str]) -> Dict[str, List[str]]:
+        """Run translation for specific file/directory paths"""
+        print(f"=== Starting Path-based Translation for {len(paths)} paths ===")
+        
+        # Get all files from the specified paths
+        files_to_translate = self.get_files_from_paths(paths)
+        
+        if not files_to_translate:
+            print("No valid English documentation files found in specified paths")
+            return {"errors": ["No files to translate"]}
+        
+        print(f"Found {len(files_to_translate)} files to translate")
+        for file in files_to_translate:
+            print(f"  - {file}")
+        
+        results = {
+            "translations": [],
+            "structure_sync": [],
+            "errors": []
+        }
+        
+        try:
+            # Create fake changes to trigger translation
+            changes = {
+                "added": files_to_translate,
+                "modified": [],
+                "deleted": [],
+                "renamed": []
+            }
+            
+            # Translate files
+            results["translations"] = await self.translate_new_and_modified_files(changes)
+            
+            # Always sync docs.json structure when doing path-based translation
+            results["structure_sync"] = self.sync_docs_json_structure()
+            
+        except Exception as e:
+            results["errors"].append(f"CRITICAL: {e}")
+            print(f"Critical error during translation: {e}")
+        
+        print("=== Path-based Translation Complete ===")
+        return results
+
 async def main():
     """Main entry point"""
     if len(sys.argv) < 2:
-        print("Usage: python sync_and_translate.py <dify_api_key> [since_commit]")
-        print("  since_commit: Git commit to compare against (default: HEAD~1)")
+        print("Usage: python sync_and_translate.py <dify_api_key> [options]")
+        print("")
+        print("Options:")
+        print("  --git [since_commit]    Sync based on git changes (default: HEAD~1)")
+        print("  --paths <path1> [path2] ...  Translate specific files/directories")
+        print("")
+        print("Examples:")
+        print("  python sync_and_translate.py <api_key> --git HEAD~2")
+        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/getting-started")
+        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/nodes/start.mdx")
+        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/getting-started en/documentation/pages/nodes")
         sys.exit(1)
     
     dify_api_key = sys.argv[1]
-    since_commit = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
     
     # Initialize synchronizer
     synchronizer = DocsSynchronizer(dify_api_key)
     
-    # Run synchronization
-    results = await synchronizer.run_sync(since_commit)
+    # Parse command line arguments
+    if len(sys.argv) >= 3 and sys.argv[2] == "--git":
+        # Git-based sync mode
+        since_commit = sys.argv[3] if len(sys.argv) > 3 else "HEAD~1"
+        print(f"Running git-based sync since commit: {since_commit}")
+        results = await synchronizer.run_sync(since_commit)
+    elif len(sys.argv) >= 3 and sys.argv[2] == "--paths":
+        # Path-based translation mode
+        if len(sys.argv) < 4:
+            print("Error: --paths requires at least one path argument")
+            sys.exit(1)
+        paths = sys.argv[3:]
+        print(f"Running path-based translation for: {', '.join(paths)}")
+        results = await synchronizer.run_path_translation(paths)
+    elif len(sys.argv) == 2:
+        # Default: git-based sync with HEAD~1
+        since_commit = "HEAD~1"
+        print(f"Running default git-based sync since commit: {since_commit}")
+        results = await synchronizer.run_sync(since_commit)
+    else:
+        # Legacy support: second argument as since_commit
+        since_commit = sys.argv[2]
+        print(f"Running git-based sync since commit: {since_commit}")
+        results = await synchronizer.run_sync(since_commit)
     
     # Print results
-    print("\n=== SYNCHRONIZATION RESULTS ===")
+    print("\n=== TRANSLATION RESULTS ===")
     for category, logs in results.items():
         if logs:
             print(f"\n{category.upper()}:")
@@ -655,10 +773,10 @@ async def main():
                 print(f"  {log}")
     
     # Return appropriate exit code
-    if results["errors"]:
+    if results.get("errors"):
         sys.exit(1)
     else:
-        print("\n✓ Synchronization completed successfully")
+        print("\n✓ Translation completed successfully")
         sys.exit(0)
 
 if __name__ == "__main__":

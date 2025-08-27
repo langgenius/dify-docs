@@ -1,181 +1,126 @@
 ---
-title: 変数代入
-version: '日本語'
+title: "変数アサイナー"
+description: "Manage persistent conversation variables in chatflow applications"
+icon: "pen-to-square"
 ---
 
-### 定義
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/documentation/pages/nodes/variable-assigner)を参照してください。</Note>
 
-変数代入ノードは、書き込み可能な変数に他の変数を代入するために使用されます。現在、サポートされている可書き入れの変数は：
 
-* [会話変数](/ja-jp/guides/workflow/concepts)
+変数アサイナーノードは、会話変数への書き込みによってチャットフローアプリケーションの永続的なデータを管理します。各実行でリセットされる通常のワークフロー変数とは異なり、会話変数はチャットセッション全体を通じて持続します。
 
-使用方法：このノードを使用することで、ワークフローの中で変数の値を会話変数に一時的に保存し、後続の会話でその値を参照することができます。
-
-<Frame caption="変数代入の例" width="375">
-  <img src="https://assets-docs.dify.ai/2024/11/83d0b9ef4c1fad947b124398d472d656.png" alt="変数代入の例" />
+<Frame caption="変数アサイナーノードの設定">
+  <img src="https://assets-docs.dify.ai/2024/11/83d0b9ef4c1fad947b124398d472d656.png" alt="変数アサイナーのインターフェース" />
 </Frame>
 
-***
+## 会話変数 vs ワークフロー変数
 
-### 使用シナリオの例
+**ワークフロー変数**は単一のワークフロー実行中のみ存在し、ワークフローが完了するとリセットされます。
 
-変数代入ノードを活用することで、会話中の**コンテキスト、ダイアログにアップロードされたファイル（近々配布予定）、ユーザーの好みの情報**などを会話変数に書き込み、保存された情報は後続の会話で参照され、異なる処理フローに誘導したり、返答を行ったりすることができます。
+**会話変数**は同じチャットセッション内の複数の会話ターンにわたって持続し、ステートフルなインタラクションと文脈的なメモリを可能にします。
 
-**シナリオ 1**
+この持続性により、文脈的な会話、ユーザーのパーソナライゼーション、ステートフルなワークフロー、複数のユーザーインタラクションにわたる進捗追跡が可能になります。
 
-**会話中の記録を自動的に抽出し保存します**、会話変数配列を使用してユーザーの重要な情報を記録します。その後の会話ではこれらの記録を活用し、個別の返信を行います。
+## 設定
 
-例えば：会話が始まると、LLMはユーザーの入力に必要な情報や好み、またはチャット履歴が含まれているかを自動的に判断します。情報が存在する場合、LLMはそれを先に抽出して保存し、コンテキストとして利用して応答します。もし新しい情報を覚える必要がない場合、LLMは以前の関連する記録を用いて個性化な応答を出します。
+どの会話変数を更新するかを設定し、そのソースデータを指定します。単一のノードで複数の変数を割り当てることができます。
 
-<Frame caption="会話から情報を自動的に判断、抽出、保存します">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/8f34c16783cc5a6a032d7c7751a46490.png" alt="会話から情報を自動的に判断、抽出、保存のフローチャート" />
+<Frame caption="変数割り当て設定インターフェース">
+  <img src="https://assets-docs.dify.ai/2024/11/ee15dee864107ba5a93b459ebdfc32cf.png" alt="変数割り当ての設定" />
 </Frame>
 
-**設定手順：**
+**変数** - 書き込む会話変数を選択
 
-1. **会話変数を設定**：まず、会話変数配列 `memories` を設定し、array\[object]型を持たせてユーザーの事実、好み、会話記録を保存します。
-2. **記録の判断と抽出**：
-   * 条件判断ノードを追加し、LLMを使用してユーザーの入力に新しい情報が含まれているかを判断します。
-   * 新しい情報がある場合は上流に進み、LLMノードを使用してこれらの情報を抽出します。
-   * 新しい情報がない場合は下流に進み、既存の記憶を直接使用して返答します。
-3. **変数の代入と書き込み**：
-   * 上流に進んだ後、変数代入ノードを用いて抽出した新しい情報を `memories` 配列に追加(append)します。
-   * LLMの出力テキスト文字列を適切な array\[object] 形式に変換するためにエスケープ機能を使用します。
-4. **変数の読み取りと利用**：
-   * 後続のLLMノードで、`memories` 配列の内容を文字列に変換し、LLMのプロンプトにコンテキストとして挿入します。
-   * LLMはこれらの記憶を使用して個別の返信を生成します。
+**変数設定** - 上流のワークフローノードからソースデータを選択
 
-図中のcodeノードのコードは以下の通りです：
+**操作モード** - 変数の更新方法を決定（上書き、追加、クリアなど）
 
-1. 文字列をオブジェクトに変換する
+## 操作モード
 
-```python
-import json
+異なる変数タイプは、そのデータ構造に基づいて異なる操作をサポートします：
 
-def main(arg1: str) -> object:
-    try:
-        # Parse the input JSON string
-        input_data = json.loads(arg1)
-        
-        # Extract the memory object
-        memory = input_data.get("memory", {})
-        
-        # Construct the return object
-        result = {
-            "facts": memory.get("facts", []),
-            "preferences": memory.get("preferences", []),
-            "memories": memory.get("memories", [])
-        }
-        
-        return {
-            "mem": result
-        }
-    except json.JSONDecodeError:
-        return {
-            "result": "Error: Invalid JSON string"
-        }
-    except Exception as e:
-        return {
-            "result": f"Error: {str(e)}"
-        }
-```
+<Tabs>
+  <Tab title="文字列変数">
+    **上書き** - 文字列値全体を新しいコンテンツで置き換える
+    
+    **クリア** - 変数を空にし、nullまたは空白に設定する
+    
+    **設定** - 固定値を手動で入力する
+  </Tab>
+  
+  <Tab title="数値変数">
+    **上書き** - 数値を完全に置き換える
+    
+    **クリア** - nullまたは空の状態に設定する
+    
+    **設定** - 特定の数値を手動で入力する
+    
+    **算術演算** - 現在の値に対して加算、減算、乗算、除算を行う
+  </Tab>
+  
+  <Tab title="オブジェクト変数">
+    **上書き** - オブジェクト全体を新しいデータで置き換える
+    
+    **クリア** - オブジェクトを空にし、すべてのプロパティを削除する
+    
+    **設定** - オブジェクトの構造と値を手動で定義する
+  </Tab>
+  
+  <Tab title="配列変数">
+    **上書き** - 配列全体を新しいデータで置き換える
+    
+    **クリア** - 配列を空にし、すべての要素を削除する
+    
+    **追加** - 配列の最後に1つの項目を追加する
+    
+    **拡張** - 他の配列から複数の項目を追加する
+    
+    **削除** - 最初または最後の位置から項目を削除する
+  </Tab>
+</Tabs>
 
-2. オブジェクトを文字列に変換する
+配列操作は、時間の経過とともに成長するメモリシステム、チェックリスト、会話履歴の構築において特に強力です。
 
-```python
-import json
+## 一般的な実装パターン
 
-def main(arg1: list) -> str:
-    try:
-        # Assume arg1[0] is the dictionary we need to process
-        context = arg1[0] if arg1 else {}
-        
-        # Construct the memory object
-        memory = {"memory": context}
-        
-        # Convert the object to a JSON string
-        json_str = json.dumps(memory, ensure_ascii=False, indent=2)
-        
-        # Wrap the JSON string in <answer> tags
-        result = f"<answer>{json_str}</answer>"
-        
-        return {
-            "result": result
-        }
-    except Exception as e:
-        return {
-            "result": f"<answer>Error: {str(e)}</answer>"
-        }
-```
+### スマートメモリシステム
 
-**シナリオ 2**
+会話から重要な情報を自動的に検出・
 
-**ユーザーの初期の好み情報を記録**し，会話中にユーザーが入力した言語の好みを記憶し、後続の会話でその言語を使用して返信します。
-
-例：ユーザーが会話を始める前に、`language`入力欄に「日本語」と指定した場合、その言語は会話変数に書き込まれ、LLMは後続の返信時に会話変数の情報を参照し、継続的に「日本語」を使用して返信します。
-
-<Frame caption="ユーザーの初期設定情報を記録する">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/1867d608a7d009431b73377ed65b427b.png" alt="ユーザーの初期嗜好情報を記録するフローチャート" />
+<Frame caption="スマートメモリシステムワークフロー">
+  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/8d0492814b1515f50e87b2900ff400db.png" alt="スマートメモリの実装" />
 </Frame>
 
-**設定手順：**
+システムはユーザー入力を記憶すべき事実について分析し、構造化された情報を抽出し、今後の会話で参照するために永続的なメモリ配列に追加します。
 
-**会話変数の設定**：まず、会話変数 `language` を設定し、会話の開始時にこの変数の値が空かどうかを判断する条件分岐ノードを追加します。
+### ユーザー設定の保存
 
-**変数の書き込み/代入**：最初の会話が開始された際、 `language` 変数の値が空であれば、LLMノードを使用してユーザーの言語入力を抽出し、その言語タイプを会話変数 `language` に書き込みます。
+言語設定、通知設定、表示オプションなどのユーザー設定を保存：
 
-**変数の読み取り**：後続の会話ラウンドでは、`language` 変数にユーザーの好みの言語が保存されています。以降の会話では、LLMノードがこの変数を参照し、ユーザーの好みの言語タイプを用いて返信します。
-
-**シナリオ 3**
-
-**Checklistのチェックを補助**し、会話中に会話変数にユーザーの入力項目を記録し、Checklistの内容を更新し、後続の会話で抜け漏れ項目を確認します。
-
-例：会話を始める際、LLMはユーザーにチェックリストに関連するアイテムの入力を求めます。ユーザーがチェックリストの内容を一度述べると、その内容は会話変数に更新され、及び保存されます。LLMは各会話の後に、ユーザーに不足しているアイテムの追加を促します。
-
-<Frame caption="Checklistのチェックを補助">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/jp/guides/workflow/node/c4362b01298b12e7d6fcd9e798f3165a.png" alt="Checklistのチェックを補助のフローチャート" />
+<Frame caption="ユーザー設定の管理">
+  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/1867d608a7d009431b73377ed65b427b.png" alt="ユーザー設定ワークフロー" />
 </Frame>
 
-**配置流程：**
+**上書き**モードを使用してユーザー入力から初期設定をキャプチャし、パーソナライズされたインタラクションのために後続のすべての大規模言語モデルレスポンスでそれらを参照します。
 
-* **会話変数の設定**：最初に会話変数 `ai_checklist` を設定し、これをLLM内でチェックのコンテクストとして参照します。
-* **変数の書き込み/代入**：各会話のラウンドごとに、LLMノード内の `ai_checklist` の値を確認し、ユーザーの入力と比較します。ユーザーが新しい情報を提供した場合、チェックリストを更新し、変数代入ノードを使用して出力内容を `ai_checklist` に書き込みます。
-* **変数の読み取り**：`ai_checklist`の値を読み取り、すべてのチェックリストアイテムが完了するまで、各会話のラウンドでユーザーの入力と比較します。
+### 段階的チェックリスト
 
-***
+複数の会話ターンにわたって完了状況を追跡するガイド付きワークフローの構築：
 
-### 3 操作方法
-
-**変数代入の使用：**
-
-ノードの右側の `＋` マークをクリックし、「変数代入」 ノードを選択し、「代入られた変数」 と 「設定する変数」 を入力します。
-
-<Frame caption="変数代入ノードの設定">
-  <img src="https://assets-docs.dify.ai/2024/11/ee15dee864107ba5a93b459ebdfc32cf.png" width="375px" alt="変数代入ノードの設定画面" />
+<Frame caption="段階的チェックリストの実装">
+  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/c4362b01298b12e7d6fcd9e798f3165a.png" alt="段階的チェックリストワークフロー" />
 </Frame>
 
-**変数の設定：**
+配列会話変数を使用して完了した項目を追跡します。変数アサイナーは各ターンでチェックリストを更新し、大規模言語モデルはそれを参照してユーザーを残りのタスクを通じてガイドします。
 
-代入られた変数：代入された変数を選択し、対象の会話変数を指定します
+## ベストプラクティス
 
-設定する変数：変換する必要のあるソース変数を選択します
+**適切なデータタイプを選択** - 成長するコレクションには配列を、構造化データにはオブジェクトを、単一値には単純型を使用する。
 
-上図の代入ロジック：`Language Recognition/text` を `language` に代入します。
+**説明的な変数名を使用** - 会話変数の目的と内容を示すように明確に命名する。
 
-**書き込みモード：**
+**データの成長を処理** - 長い会話での過度なメモリ使用を防ぐため、配列とオブジェクトのサイズを監視する。
 
-* Overwrite (上書き)：ソース変数の内容を対象の会話変数に上書きします
-* Append (追加)：指定された変数が配列型の場合に使用します
-* Clear (クリア)：対象の会話変数内の内容をクリアします
-* Remove（削除）：配列から要素を削除します。先頭から削除（First）または末尾から削除（Last）を選択できます。デフォルトは「先頭から削除」です
+**変数を初期化** - 未定義の動作を防ぐため、会話変数に初期値を設定する。
 
-{/*
-Contributing Section
-DO NOT edit this section!
-It will be automatically generated by the script.
-*/}
-
----
-
-[このページを編集する](https://github.com/langgenius/dify-docs/edit/main/ja-jp/guides/workflow/node/variable-assigner.mdx) | [問題を報告する](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-
+**適切な場合にクリア** - 新しいプロセスやセッションを開始する際に変数をリセットするためにクリア操作を使用する。
