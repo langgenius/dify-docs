@@ -160,9 +160,9 @@ class DocsSynchronizer:
         return en_path
     
     def get_relative_en_path_for_notice(self, target_path: str) -> str:
-        """Get relative path to English version for AI notice"""
+        """Get absolute path to English version for AI notice (without file extension)"""
         # Convert zh-hans/documentation/pages/getting-started/faq.md
-        # to ../../en/documentation/pages/getting-started/faq.md
+        # to /en/documentation/pages/getting-started/faq
         if target_path.startswith("zh-hans/"):
             en_path = target_path.replace("zh-hans/", "en/", 1)
         elif target_path.startswith("ja-jp/"):
@@ -170,10 +170,14 @@ class DocsSynchronizer:
         else:
             return ""
         
-        # Count directory levels to create relative path
-        target_dir_levels = len(Path(target_path).parent.parts)
-        relative_prefix = "../" * target_dir_levels
-        return relative_prefix + en_path
+        # Remove file extension (.md or .mdx)
+        if en_path.endswith('.md'):
+            en_path = en_path[:-3]
+        elif en_path.endswith('.mdx'):
+            en_path = en_path[:-4]
+        
+        # Return as absolute path
+        return "/" + en_path
     
     async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str) -> bool:
         """Translate a file and add AI notice at the top"""
