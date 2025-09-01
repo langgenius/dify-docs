@@ -1,0 +1,84 @@
+---
+title: Container Registry
+version: 'English'
+---
+
+## Display Helm Chart Values
+```bash
+helm show values dify/dify
+```
+
+To customize the image repository and tag, modify the values file as shown below:
+
+```yaml
+api:
+  image:
+    repository: langgenius/dify-api
+    tag: "x.x.x"
+  ... ...
+```
+
+## Syncing Images to a Private Registry
+
+Dify images support both AMD64 and ARM64 architectures. You can use the following script to sync them to your private container registry.
+
+1. Save the following script as `sync.sh`.
+
+```bash
+#!/bin/bash
+
+# Set the following environment variables
+REGISTRY_URL="xxxx"
+NAMESPACE="xxx"
+BASE_IMAGE=langgenius/$IMAGE:$VERSION
+
+echo "BASE_IMAGE: $BASE_IMAGE"
+
+# Ensure script receives required parameters
+if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: $0 <image> <version>"
+    exit 1
+fi
+
+IMAGE=$1
+VERSION=$2
+
+TARGET_IMAGE_FOR_AMD64=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION-amd64
+echo "TARGET_IMAGE_FOR_AMD64: $TARGET_IMAGE_FOR_AMD64"
+
+TARGET_IMAGE_FOR_ARM64=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION-arm64
+echo "TARGET_IMAGE_FOR_ARM64: $TARGET_IMAGE_FOR_ARM64"
+
+TARGET_IMAGE=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION
+echo "TARGET_IMAGE: $TARGET_IMAGE"
+
+docker pull --platform linux/amd64 $BASE_IMAGE
+docker tag $BASE_IMAGE $TARGET_IMAGE_FOR_AMD64
+docker push $TARGET_IMAGE_FOR_AMD64
+
+docker pull --platform linux/arm64 $BASE_IMAGE
+docker tag $BASE_IMAGE $TARGET_IMAGE_FOR_ARM64
+docker push $TARGET_IMAGE_FOR_ARM64
+
+docker manifest create $TARGET_IMAGE --amend $TARGET_IMAGE_FOR_AMD64 --amend $TARGET_IMAGE_FOR_ARM64
+docker manifest push $TARGET_IMAGE
+```
+
+2. Set Script Variables.
+
+Edit the `sync.sh` file and set the following variables:
+- `REGISTRY_URL`: The URL of your private registry.
+- `NAMESPACE`: The namespace of your private registry.
+- `BASE_IMAGE` (Optional): The base image to sync, default is `langgenius/$IMAGE:$VERSION`.
+
+3. Set Execution Permission.
+```bash
+chmod +x ./sync.sh
+```
+
+4. Execute script to sync images.
+```bash
+# ./sync.sh <image> <version>
+./sync.sh dify-api x.x.x
+```
+

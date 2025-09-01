@@ -1,0 +1,214 @@
+---
+title: 测试环境部署
+version: '简体中文'
+---
+
+## 要求
+> 这是测试环境部署或预发布环境部署的推荐配置。你可以根据自己的需求调整配置。
+
+- Kubernetes 集群
+    - 1 个工作节点：4 CPU，16 GB RAM
+- 容器镜像仓库（插件）
+    - AWS ECR（with AK/SK or IRSA）/ Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+- 持久化存储
+    - S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+    - 100 GB 存储
+- Postgres 数据库
+    - 版本 14+
+    - 2 CPU，4 GB RAM
+    - 256 GB 存储
+- Redis 数据库
+    - 版本 6+
+    - 1 GB RAM
+- [向量数据库虚拟机 - Qdrant 单节点](/versions/3-0-x/zh-cn/deployment/advanced-configuration/qdrant/single-node)
+    - 1 个虚拟机
+    - 4 CPU，8 GB RAM
+    - 100 GB 存储
+
+## 部署
+### 1. 获取 Helm 仓库信息
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+有关更多信息，请参阅 [Dify Helm Chart](/versions/3-0-x/zh-cn/deployment/advanced-configuration/dify-helm-chart)。
+
+### 2. 保存 Helm Chart 值
+- 将 Helm chart 值保存到名为 `values.yaml` 的文件中。
+- 使用你的配置更新 `values.yaml` 文件。
+
+<Warning>
+  - 请将 `#REPLACE_ME#` 占位符替换为你的实际值。
+  - 请将 "dify123456" 替换为你自己的值。
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+  innerApi:
+    apiKey: "dify123456"
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+web:
+  replicas: 1
+sandbox:
+  replicas: 1
+  apiKey: "dify123456"
+enterpriseAudit:
+  replicas: 1
+enterprise:
+  replicas: 1
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  innerApi:
+    apiKey: "dify123456"
+enterpriseFrontend:
+  replicas: 1
+ssrfProxy:
+  enabled: true
+  replicas: 1
+unstructured:
+  enabled: true
+  replicas: 1
+plugin_daemon:
+  replicas: 1
+  apiKey: "dify123456"
+plugin_controller:
+  replicas: 1
+plugin_connector:
+  replicas: 1
+  apiKey: "dify123456"
+gateway:
+  replicas: 1
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External postgres
+###################################
+externalPostgres:
+  enabled: true
+  address: "#REPLACE_ME#"
+  port: 5432
+  credentials:
+    dify:
+      database: "dify"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    plugin_daemon:
+      database: "dify_plugin_daemon"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    enterprise:
+      database: "enterprise"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    audit:
+      database: "audit"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+### 3. 配置 `容器镜像仓库`
+-  3.1 配置 `插件` 容器镜像仓库
+    - 更多信息，请参考 [插件的容器镜像仓库配置](/versions/3-0-x/zh-cn/deployment/advanced-configuration/container-registry-for-plugins)。
+- 3.2 配置 `服务` 容器镜像仓库
+    - 更多信息，请参考 [容器镜像仓库配置](/versions/3-0-x/zh-cn/deployment/advanced-configuration/container-registry)。
+
+### 4. 配置 `Persistence Storage`
+- 更多信息，请参考 [Persistence Storage](/versions/3-0-x/zh-cn/deployment/advanced-configuration/persistent-storage)。
+
+### 5. 配置 `External postgres`
+- 更多信息，请参考 [External postgres](/versions/3-0-x/zh-cn/deployment/advanced-configuration/postgresql-database)。
+
+### 6. 配置 `External Redis`
+- 更多信息，请参考 [External Redis](/versions/3-0-x/zh-cn/deployment/advanced-configuration/redis)。
+
+### 7. 配置 `External Qdrant`
+- 更多信息，请参考 [External Qdrant Single Node](/versions/3-0-x/zh-cn/deployment/advanced-configuration/qdrant/single-node)。
+
+### 8. 配置 `Ingress Controller`
+- 更多信息，请参考 [Ingress Controller 配置](/versions/3-0-x/zh-cn/deployment/advanced-configuration/nginx-ingress-controller)。
+
+### 9. 安装 Dify Helm Chart
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. 验证安装结果
+- 更多信息，请参考 [服务状态验证](/versions/3-0-x/zh-cn/deployment/verify-services-status)。
+
+
+## 高级配置
+### 1. 域名与 SSL 证书
+- 更多信息，请参考 [域名与 SSL 证书配置](/versions/3-0-x/zh-cn/deployment/advanced-configuration/domain-and-ssl-certificate)。
+
+### 2. 邮件服务提供商
+- 更多信息，请参考 [邮件服务配置](/versions/3-0-x/zh-cn/deployment/advanced-configuration/email-provider)。
+
+### 3. 性能调优
+- 更多信息，请参考 [性能调优](/versions/3-0-x/zh-cn/deployment/advanced-configuration/performance)。

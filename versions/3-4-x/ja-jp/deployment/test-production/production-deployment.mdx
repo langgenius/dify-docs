@@ -1,0 +1,371 @@
+---
+title: 本番環境でのデプロイ
+---
+
+> このページは先行公開版です。内容は今後予告なく更新される可能性があります。
+
+## 要件
+
+> この構成では、**1日あたり最大 3000 人のアクティブユーザー** に対応可能です。さらに多くのユーザーがいる場合は、必要に応じてリソースをスケーリングしてください。
+
+* **Kubernetes クラスター**
+
+  * ワーカーノード 6 台（各 8 CPU、32 GB RAM）
+* **コンテナレジストリ**
+
+  * AWS ECR（with AK/SK or IRSA）/ Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+* **永続ストレージ**
+
+  * S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+  * 512 GB ストレージ
+* **PostgreSQL データベース**
+
+  * バージョン 14 以上
+  * 4 CPU、8 GB RAM
+  * 512 GB `SSD` ストレージ
+* **Redis データベース**
+
+  * バージョン 6 以上
+  * 2 GB RAM
+* **[ベクトルDB 仮想マシン - Qdrant クラスタ](/versions/3-0-x/ja-jp/deployment/advanced-configuration/qdrant/qdrant-cluster)**
+
+  * 仮想マシン 3 台
+  * 各 8 CPU、64 GB RAM
+  * 各 100 GB ストレージ
+
+
+## Dify 各サービスのリソース上限（limits）
+
+<Warning>
+`workerBeat` は常に単一のレプリカとして実行されます。
+</Warning>
+
+| Services                 | Replicas  | CPU  | RAM - GB  | Total CPU | Total RAM - GB |
+| ------------------------ | --------- | ---- | --------- | --------- | -------------- |
+| api                      | 3         | 3    | 10        | 9         | 30             |
+| worker                   | 3         | 2    | 10        | 6         | 30             |
+| workerBeat               | 1         | 1    | 1         | 1         | 1              |
+| web                      | 3         | 1    | 1         | 3         | 3              |
+| sandbox                  | 3         | 1    | 2         | 3         | 6              |
+| enterprise               | 3         | 1    | 2         | 3         | 6              |
+| enterpriseAudit          | 3         | 1    | 2         | 3         | 6              |
+| enterpriseFrontend       | 3         | 1    | 1         | 3         | 3              |
+| ssrfProxy                | 3         | 1    | 1         | 3         | 3              |
+| unstructured             | 3         | 1    | 2         | 3         | 6              |
+| plugin_daemon            | 3         | 1    | 3         | 3         | 9              |
+| plugin_controller        | 3         | 1    | 2         | 3         | 6              |
+| plugin_connector         | 3         | 1    | 2         | 3         | 6              |
+| gateway                  | 3         | 1    | 2         | 3         | 6              |
+| minio                    | 1         | 1    | 2         | 1         | 2              |
+|                          |           |      | **Total** | 50        | 123            |
+
+---
+
+## デプロイ手順
+
+### 1. Helm リポジトリ情報の取得
+
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+詳細は [Dify Helm Chart](/versions/3-0-x/ja-jp/deployment/advanced-configuration/dify-helm-chart) をご確認ください。
+
+### 2. `values.yaml` を保存・編集
+
+* Helm の設定ファイル `values.yaml` を作成し、必要な値を記入してください。
+
+<Warning>
+- `#REPLACE_ME#` はすべて実際の値に置き換えてください。  
+- `"dify123456"` などのプレースホルダーも独自の値に変更してください。  
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+  innerApi:
+    apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 3000m
+      memory: 10240Mi
+    requests:
+      cpu: 1500m
+      memory: 5120Mi
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 10240Mi
+    requests:
+      cpu: 1000m
+      memory: 5120Mi
+workerBeat:
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+web:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+sandbox:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+enterprise:
+  replicas: 3
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  innerApi:
+    apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+enterpriseAudit:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+enterpriseFrontend:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+ssrfProxy:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+unstructured:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+plugin_daemon:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 3072Mi
+    requests:
+      cpu: 500m
+      memory: 1536Mi
+plugin_controller:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+plugin_connector:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+gateway:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+minio:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External postgres
+###################################
+externalPostgres:
+  enabled: true
+  address: "#REPLACE_ME#"
+  port: 5432
+  credentials:
+    dify:
+      database: "dify"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    plugin_daemon:
+      database: "dify_plugin_daemon"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    enterprise:
+      database: "enterprise"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    audit:
+      database: "audit"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+## その他の構成ステップ
+
+### 3. `Container Registry` の設定
+
+* 詳細: [Container Registry for Plugins](/versions/3-0-x/ja-jp/deployment/advanced-configuration/container-registry-for-plugins)、[Container Registry](/versions/3-0-x/ja-jp/deployment/advanced-configuration/container-registry)
+
+### 4. `永続ストレージ` の設定
+
+* 詳細: [Persistent Storage](/versions/3-0-x/ja-jp/deployment/advanced-configuration/persistent-storage)
+
+### 5. `外部 PostgreSQL` の設定
+
+* 詳細: [PostgreSQL Database](/versions/3-0-x/ja-jp/deployment/advanced-configuration/postgresql-database)
+
+### 6. `外部 Redis` の設定
+
+* 詳細: [External Redis](/versions/3-0-x/ja-jp/deployment/advanced-configuration/redis)
+
+### 7. `外部 Qdrant（クラスタ）` の設定
+
+* 詳細: [Qdrant Cluster](/versions/3-0-x/ja-jp/deployment/advanced-configuration/qdrant/qdrant-cluster)
+
+### 8. `Ingress Controller` の設定
+
+* 詳細: [Ingress Controller](/versions/3-0-x/ja-jp/deployment/advanced-configuration/nginx-ingress-controller)
+
+### 9. Helm で Dify をインストール
+
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. インストール確認
+
+* 詳細: [サービス状態の確認方法](/versions/3-0-x/ja-jp/deployment/verify-services-status)
+
+
+## 高度な設定項目
+
+### 1. ドメインと SSL 証明書
+
+* 詳細: [Domain and SSL Certificate](/versions/3-0-x/ja-jp/deployment/advanced-configuration/domain-and-ssl-certificate)
+
+### 2. メールプロバイダー設定
+
+* 詳細: [Email Provider](/versions/3-0-x/ja-jp/deployment/advanced-configuration/email-provider)
+
+### 3. パフォーマンス最適化
+
+* 詳細: [Performance Tuning](/versions/3-0-x/ja-jp/deployment/advanced-configuration/performance)

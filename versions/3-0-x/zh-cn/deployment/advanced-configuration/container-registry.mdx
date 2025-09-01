@@ -1,0 +1,87 @@
+---
+title: 容器镜像仓库
+version: '简体中文'
+---
+
+## 显示 Helm Chart 值
+
+```bash
+helm show values dify/dify
+```
+
+如需自定义镜像仓库和标签，请修改 values 文件，例如：
+
+```yaml
+api:
+  image:
+    repository: langgenius/dify-api
+    tag: "x.x.x"
+  ... ...
+```
+
+## 同步镜像到私有仓库
+
+Dify 镜像同时支持 AMD64 和 ARM64 架构。你可以使用以下脚本将镜像同步到你的私有容器仓库。
+
+1. 将以下脚本保存为 `sync.sh`：
+
+```bash
+#!/bin/bash
+
+# Set the following environment variables
+REGISTRY_URL="xxxx"
+NAMESPACE="xxx"
+BASE_IMAGE=langgenius/$IMAGE:$VERSION
+
+echo "BASE_IMAGE: $BASE_IMAGE"
+
+# Ensure script receives required parameters
+if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: $0 <image> <version>"
+    exit 1
+fi
+
+IMAGE=$1
+VERSION=$2
+
+TARGET_IMAGE_FOR_AMD64=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION-amd64
+echo "TARGET_IMAGE_FOR_AMD64: $TARGET_IMAGE_FOR_AMD64"
+
+TARGET_IMAGE_FOR_ARM64=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION-arm64
+echo "TARGET_IMAGE_FOR_ARM64: $TARGET_IMAGE_FOR_ARM64"
+
+TARGET_IMAGE=$REGISTRY_URL/$NAMESPACE/$IMAGE:$VERSION
+echo "TARGET_IMAGE: $TARGET_IMAGE"
+
+docker pull --platform linux/amd64 $BASE_IMAGE
+docker tag $BASE_IMAGE $TARGET_IMAGE_FOR_AMD64
+docker push $TARGET_IMAGE_FOR_AMD64
+
+docker pull --platform linux/arm64 $BASE_IMAGE
+docker tag $BASE_IMAGE $TARGET_IMAGE_FOR_ARM64
+docker push $TARGET_IMAGE_FOR_ARM64
+
+docker manifest create $TARGET_IMAGE --amend $TARGET_IMAGE_FOR_AMD64 --amend $TARGET_IMAGE_FOR_ARM64
+docker manifest push $TARGET_IMAGE
+```
+
+2. 设置脚本变量
+
+编辑 `sync.sh` 文件，配置以下变量：
+
+* `REGISTRY_URL`：你的私有镜像仓库地址
+* `NAMESPACE`：私有镜像仓库的命名空间
+* `BASE_IMAGE`（可选）：默认使用 `langgenius/$IMAGE:$VERSION` 作为基础镜像
+
+3. 赋予执行权限：
+
+```bash
+chmod +x ./sync.sh
+```
+
+4. 执行脚本，同步镜像：
+
+```bash
+# ./sync.sh <镜像名称> <版本号>
+./sync.sh dify-api x.x.x
+```

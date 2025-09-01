@@ -1,0 +1,133 @@
+---
+title: Qdrant クラスターのデプロイ
+---
+
+## 必要条件
+- Dockerがインストールされた3つのVM
+- Dockerのインストール
+  - [Dockerのインストール](https://docs.docker.com/engine/install/ubuntu/#install-using-the-repository)
+  - [非rootユーザーとしてDockerを管理](https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user)
+- VM上でポート6333と6335を開放
+  - 6333: qdrantノードとの外部通信用ポート。
+  - 6335: qdrantノード間の内部通信用ポート。公開しないでください。
+
+## インストール
+### `QDRANT__SERVICE__API_KEY`は必須の環境変数です
+以下のコマンドを使用してランダムな32バイトの16進文字列を生成してください。これは、QdrantクラスターのAPIキーとして使用されます。:
+
+```bash
+openssl rand -hex 32
+```
+
+生成された文字列をコピーして、`docker-compose.yml`ファイルの`#REPLACE_ME#`を置き換えてください。
+
+### [First VM] `docker-compose.yml`ファイルを作成
+- コマンドを現在のVMアドレスに`--uri`オプションで置き換えます
+
+```bash
+version: "3.8"
+services:
+  qdrant:
+    image: langgenius/qdrant:v1.7.3
+    command: "./qdrant --uri 'http://dify-qdrant-node-01:6335'"
+    network_mode: "host"
+    restart: always
+    volumes:
+      - /data/qdrant/data/:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: #REPLACE_ME#
+      QDRANT__CLUSTER__ENABLED: 'true'
+```
+
+
+### [Second VM] `docker-compose.yml`ファイルを作成
+- コマンドを`--bootstrap`オプションで最初のVMアドレスに、`--uri`オプションで現在のVMアドレスに置き換えます
+
+```bash
+version: "3.8"
+services:
+  qdrant:
+    image: langgenius/qdrant:v1.7.3
+    command: "./qdrant --bootstrap 'http://dify-qdrant-node-01:6335' --uri 'http://dify-qdrant-node-02:6335'"
+    network_mode: "host"
+    restart: always
+    volumes:
+      - /data/qdrant/data/:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: #REPLACE_ME#
+      QDRANT__CLUSTER__ENABLED: 'true'
+```
+
+
+### [Third VM] `docker-compose.yml` ファイルを作成
+- コマンド内の `--bootstrap` オプションを最初の仮想マシンのアドレスに、`--uri` オプションを現在の仮想マシンのアドレスに置き換えます
+
+```bash
+version: "3.8"
+services:
+  qdrant:
+    image: langgenius/qdrant:v1.7.3
+    command: "./qdrant --bootstrap 'http://dify-qdrant-node-01:6335' --uri 'http://dify-qdrant-node-03:6335'"
+    network_mode: "host"
+    restart: always
+    volumes:
+      - /data/qdrant/data/:/qdrant/storage
+    environment:
+      QDRANT__SERVICE__API_KEY: #REPLACE_ME#
+      QDRANT__CLUSTER__ENABLED: 'true'
+```
+
+
+## クラスターのステータスを確認する
+VMの1つにログインし、以下のコマンドを実行してクラスターのステータスを確認します。
+```bash
+curl -H 'api-key: <QDRANT__SERVICE__API_KEY>' localhost:6333/cluster | python3 -m json.tool
+```
+
+
+上記のコマンドを実行すると、以下のような出力が表示されます:
+
+
+```json
+{
+    "result": {
+        "status": "enabled",
+        "peer_id": 2978525476254873,
+        "peers": {
+            "8497171801402828": {
+                "uri": "http://172.206.68.136:6335/"
+            },
+            "2978525476254873": {
+                "uri": "http://172.206.71.251:6335/"
+            },
+            "530461904384369": {
+                "uri": "http://20.85.121.81:6335/"
+            }
+        },
+        "raft_info": {
+            "term": 1,
+            "commit": 7,
+            "pending_operations": 0,
+            "leader": 530461904384369,
+            "role": "Follower",
+            "is_voter": true
+        },
+        "consensus_thread_status": {
+            "consensus_thread_status": "working",
+            "last_update": "2024-06-30T15:13:23.508350153Z"
+        },
+        "message_send_failures": {}
+    },
+    "status": "ok",
+    "time": 8.7e-06
+}
+```
+
+
+## ロードバランサーの追加
+- qdrantクラスターをデプロイした後、リクエストをqdrantノードに分散させるためにロードバランサーを追加できます。
+- ロードバランサーは、ポート6333でqdrantノードにリクエストを分散するように構成する必要があります。
+- 6335は内部通信専用であり、公開する必要はありません。
+
+## 参考文献
+- [qdrant distributed deployment](https://qdrant.tech/documentation/guides/distributed_deployment/)

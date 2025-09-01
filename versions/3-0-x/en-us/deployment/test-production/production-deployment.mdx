@@ -1,0 +1,309 @@
+---
+title: Production Deployment
+version: 'English'
+---
+
+## Requirements
+> This requirements can support up to `3000 active users daily`. If you have more users, you can scale the resources as needed.
+
+- Kubernetes Cluster
+    - 6 Worker Nodes: Each one 8 CPU, 32 GB RAM
+- Container Registry (Plugins)
+    - AWS ECR（with AK/SK or IRSA）/ Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+- Persistence Storage
+    - S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+    - 512 GB Storage
+- Postgres Database
+    - Version 14+
+    - 4 CPU, 8 GB RAM
+    - 512 GB `SSD` Storage
+- Redis Database
+    - Version 6+
+    - 2 GB RAM
+- [Vector DB Virtual Machine - Qdrant Cluster](/versions/3-0-x/en-us/deployment/advanced-configuration/qdrant/qdrant-cluster)
+    - 3 Virtual Machines
+    - 8 CPU, 64 GB RAM
+    - 100 GB Storage
+
+## The `limits` of Dify Services Resources
+
+| Services                 | Replicas  | CPU  | RAM - GB  | Total CPU | Total RAM - GB |
+| ------------------------ | --------- | ---- | --------- | --------- | -------------- |
+| api                      | 3         | 3    | 10        | 9         | 30             |
+| worker                   | 3         | 2    | 10        | 6         | 30             |
+| web                      | 3         | 1    | 1         | 3         | 3              |
+| sandbox                  | 3         | 1    | 2         | 3         | 6              |
+| enterprise               | 3         | 1    | 2         | 3         | 6              |
+| enterpriseFrontend       | 3         | 1    | 1         | 3         | 3              |
+| ssrfProxy                | 3         | 1    | 1         | 3         | 3              |
+| unstructured             | 3         | 1    | 2         | 3         | 6              |
+| plugin_daemon            | 3         | 1    | 3         | 3         | 9              |
+| plugin_controller        | 3         | 1    | 2         | 3         | 6              |
+| plugin_connector         | 3         | 1    | 2         | 3         | 6              |
+| minio                    | 1         | 1    | 2         | 1         | 2              |
+|                          |           |      | **Total** | 43        | 110            |
+
+
+## Deployment
+### 1. Get Helm Repository Info
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+For more information, please refer to the [Dify Helm Chart](/versions/3-0-x/en-us/deployment/advanced-configuration/dify-helm-chart).
+
+### 2. Save Helm Chart Values
+- Save Helm chart values to a file named `values.yaml`.
+- Update the `values.yaml` file with your configuration.
+
+<Warning>
+  - Please replace the `#REPLACE_ME#` placeholders with your actual values.
+  - Please replace "dify123456" with your own value.
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+  innerApi:
+    apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 3000m
+      memory: 10240Mi
+    requests:
+      cpu: 1500m
+      memory: 5120Mi
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+  resources:
+    limits:
+      cpu: 2000m
+      memory: 10240Mi
+    requests:
+      cpu: 1000m
+      memory: 5120Mi
+web:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+sandbox:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+enterprise:
+  replicas: 3
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  innerApi:
+    apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+enterpriseFrontend:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+ssrfProxy:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 1024Mi
+    requests:
+      cpu: 500m
+      memory: 512Mi
+unstructured:
+  enabled: true
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+plugin_daemon:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 3072Mi
+    requests:
+      cpu: 500m
+      memory: 1536Mi
+plugin_controller:
+  replicas: 3
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+plugin_connector:
+  replicas: 3
+  apiKey: "dify123456"
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+minio:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1000m
+      memory: 2048Mi
+    requests:
+      cpu: 500m
+      memory: 1024Mi
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External postgres
+###################################
+externalPostgres:
+  enabled: true
+  address: "#REPLACE_ME#"
+  port: 5432
+  credentials:
+    dify:
+      database: "dify"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    plugin_daemon:
+      database: "dify_plugin_daemon"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+    enterprise:
+      database: "enterprise"
+      username: "postgres"
+      password: "#REPLACE_ME#"
+      sslmode: "require"
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+### 3. Configure `Container Registry`
+- 3.1 Container Registry for Plugins
+    - For more information, please refer to the [Container Registry for Plugins](/versions/3-0-x/en-us/deployment/advanced-configuration/container-registry-for-plugins).
+- 3.2 Container Registry for Services
+    - For more information, please refer to the [Container Registry](/versions/3-0-x/en-us/deployment/advanced-configuration/container-registry).
+
+### 4. Configure `Persistence Storage`
+- For more information, please refer to the [Persistence Storage](/versions/3-0-x/en-us/deployment/advanced-configuration/persistent-storage).
+
+### 5. Configure `External postgres`
+- For more information, please refer to the [External Postgres](/versions/3-0-x/en-us/deployment/advanced-configuration/postgresql-database).
+
+### 6. Configure `External Redis`
+- For more information, please refer to the [External Redis](/versions/3-0-x/en-us/deployment/advanced-configuration/redis).
+
+### 7. Configure `External Qdrant`
+- For more information, please refer to the [External Qdrant Cluster](/versions/3-0-x/en-us/deployment/advanced-configuration/qdrant/qdrant-cluster).
+
+### 8. Configure `Ingress Controller`
+- For more information, please refer to the [Ingress Controller](/versions/3-0-x/en-us/deployment/advanced-configuration/nginx-ingress-controller).
+
+### 9. Install Dify Helm Chart
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. Verify Installation
+- For more information, please refer to the [Verify Services Status](/versions/3-0-x/en-us/deployment/verify-services-status).
+
+## Advanced Configuration
+### 1. Domain and SSL Certificate
+- For more information, please refer to the [Domain and SSL Certificate](/versions/3-0-x/en-us/deployment/advanced-configuration/domain-and-ssl-certificate).
+
+### 2. Email Provider
+- For more information, please refer to the [Email Provider](/versions/3-0-x/en-us/deployment/advanced-configuration/email-provider).
+
+### 3. Performance Tuning
+- For more information, please refer to the [Performance Tuning](/versions/3-0-x/en-us/deployment/advanced-configuration/performance).
