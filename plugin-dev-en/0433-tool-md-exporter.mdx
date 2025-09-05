@@ -1,0 +1,257 @@
+---
+dimensions:
+  type:
+    primary: reference
+    detail: examples
+  level: intermediate
+standard_title: Plugin
+language: en
+title: Markdown Exporter Tools Plugin
+description: |
+    Author [Bowen Liang](https://github.com/bowenliang123).
+     Taking the tool plugin [Markdown Exporter](https://marketplace.dify.ai/plugins/bowenliang123/md_exporter)
+     as example, this document demonstrate how we concept, build, step-though debug a tool plugin.
+---
+
+# Conception
+
+"Research, Review, Rebuild."
+
+Before building a plugin, we need to have a clear concept for its definition.
+
+[Markdown Exporter](https://marketplace.dify.ai/plugins/bowenliang123/md_exporter) plugin is designed to export the Markdown text to various formats, such as PDF, HTML, DOCX, etc.
+The in-advance conception would be the key to make it as one of most popular plugins in [Dify Marketplace](https://marketplace.dify.ai).
+
+And it satisfies the following scopes and requirements:
+
+### **Decide Dify Plugin Type To Build**
+    - Tool plugin in this case. It provides in high-code skills and leverages the existed Python runtime libraries and SDK
+   for specific tasks in transforming, conversion, generation, and also to ensure minimized the gap and enjoys
+   third-party library maintenance in version updates.
+
+### **Provide Unique User Values**
+    - Fill the last-mile gap for delivering the final content to end-users,
+    entering the downstream application or process which have concrete value deliver in real life and systems.
+
+### **Proper Approaches and Libraries**
+    - Spend time to research in and choose Python libraries for specific tasks,
+    e.g. Pandas is decided for Markdown table extraction from HTML text and file generation instead of manual raw extraction.
+    - Back on Dify plugin system, hands on [Tool Plugin Development Guide](/plugin-dev-en/0211-getting-started-dify-tool).
+
+# Build
+
+### Scaffold the backbone
+
+- For for general tools development, use the `dify` cli to build a tool plugin with template.
+```
+./dify plugin init
+```
+
+To demonstrate a real plugin practices, we clone or fork the [Markdown Exporter](https://github.com/bowenliang123/md_exporter)
+Github repo to local.
+
+```
+git clone git@github.com:bowenliang123/md_exporter.git
+```
+
+As all the file structure ready in hand, we focus and repeated access on the key files and folders:
+- `manifest.yaml` decides the plugin's metadata
+- `provider/provider.yaml` provides entry for grouping tools for user prospective
+- the tools grouped in `md_to_XXXX` folder for each tools
+- `utils` for common helper scripts
+
+For the auxiliary doc files, such as `README.md`, `GUIDE.md`, `LICENSE.txt`, `PRIVACY.md`, they are
+also critical for user to understand the plugin and its policy.
+
+```
+.
+├── GUIDE.md
+├── LICENSE.txt
+├── PRIVACY.md
+├── README.md
+├── _assets
+│   └── XXX.png
+├── main.py
+├── manifest.yaml
+├── provider
+│   ├── md_exporter.py
+│   └── md_exporter.yaml
+├── requirements.txt
+└── tools
+    ├── ...
+    ├── md_to_csv
+    ├── md_to_docx
+    ├── md_to_html
+    ├── md_to_json
+    ├── md_to_md
+    ├── md_to_pdf
+    ├── md_to_png
+    ├── md_to_pptx
+    ├── md_to_xlsx
+    └── utils
+```
+
+### Tool Manifest Preparation
+
+1. Create the tool folder, e.g. `md_to_pdf`
+
+2. Prepare the manifests
+    - add the tool manifest file in `md_to_pdf/md_to_pdf.yaml"
+    - add the tool manifest file into `provider/md_exporter.py`
+```
+tools:
+  - tools/md_to_pdf/md_to_pdf.yaml
+```
+
+3. Create the tool logic in `md_to_pdf/md_to_pdf.py`
+```
+class MarkdownToPdfTool(Tool):
+    logger = get_logger(__name__)
+
+    def _invoke(self, tool_parameters: dict) -> Generator[ToolInvokeMessage, None, None]:
+        ...
+```
+
+And make sure it's ready for import by adding it to the provider script `provider/md_exporter.py`
+```python
+from tools.md_to_pdf.md_to_pdf import MarkdownToPdfTool
+
+class MdExporterProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+        try:
+            """
+            IMPLEMENT YOUR VALIDATION HERE
+            """
+            tools = [
+                MarkdownToPptxTool,
+                ...,
+            ]
+            for tool in tools:
+                tool.from_credentials({})
+```
+
+### Tool Implementation
+
+#### Overall Logic
+Take `md_to_pdf` as example, the core logic is separated into two steps:
+
+- Step 0:  properly parse the parameters, for input markdown text and output control configs of the output filename
+
+- Step 1.  Convert Markdown text to HTML text, by using the `markdown`
+
+- Step 2.  Convert HTML text to PDF file, by using the `xhtml2pdf` library.
+
+#### Prepare libraries
+Adding all the required libraries in `requirements.txt` file:
+```
+dify_plugin ~= X.X.X
+markdown ~= X.X.X
+xhtml2pdf ~= X.X.X
+```
+And run `pip install -r requirements.txt` to install them.
+
+#### Message Generation
+
+As for result generation, various messages or exceptions to feedback the user.
+- `self.create_blob_message()` for sending the binary file
+    - the blob array of the binary file
+    - use `metadata` field to specify the mime type and custom output filename
+- `self.create_text_message()` for sending text message of warning or consequence
+
+#### Final code
+
+```python
+class MarkdownToPdfTool(Tool):
+    logger = get_logger(__name__)
+
+    def _invoke(self, tool_parameters: dict) -> Generator[ToolInvokeMessage, None, None]:
+        """
+        invoke tools
+        """
+        from xhtml2pdf import pisa
+
+        # get parameters
+        md_text = get_md_text(tool_parameters, is_strip_wrapper=True)
+        try:
+            html_str = self._convert_to_html(md_text)
+            result_file_bytes = pisa.CreatePDF(
+                src=html_str,
+                dest_bytes=True,  # pass the generated bytes in return
+                encoding="utf-8",
+                capacity=500 * 1024 * 1024,  # 500 MB capacity limit
+            )
+        except Exception as e:
+            self.logger.exception("Failed to convert file")
+            yield self.create_text_message(f"Failed to convert markdown text to PDF file, error: {str(e)}")
+            return
+
+        yield self.create_blob_message(
+            blob=result_file_bytes,
+            meta=get_meta_data(
+                mime_type=MimeType.PDF,
+                output_filename=tool_parameters.get("output_filename"),
+            ),
+        )
+        return
+
+```
+# Debugging
+
+### Set up development configs
+
+Getting URL and keys from `/plugins` page in Dify app:
+<img
+    src="/images/tool_md_exporter_1.png"
+    className="mr-auto"
+/>
+
+Set `.env` file content as:
+```
+INSTALL_METHOD=remote
+REMOTE_INSTALL_URL=localhost:5003
+REMOTE_INSTALL_KEY=0989c1f3-XXXX-XXXX-XXXX-5a443815
+```
+
+### Debug and testing the plugin
+
+1. Run the script `python -m main` to register the local plugin to Dify service:
+
+```
+$ python -m main
+
+{"event": "log", "data": {"level": "INFO", "message": "Installed tool: md_exporter", "timestamp": 1757060702.2690392}}
+INFO:dify_plugin.plugin:Installed tool: md_exporter
+```
+
+2. And now the plugin is now registered to Dify and ready for further remote debugging:
+
+<img src="/images/tool_md_exporter_4.png" className="mr-auto" />
+
+3. Build a workflow or chatflow to test the tool
+<img src="/images/tool_md_exporter_6.png" className="mr-auto" />
+
+4. Use the `Preview` button in Dify app demonstrate the tool usage and result
+
+<img src="/images/tool_md_exporter_7.png" className="mr-auto" />
+
+
+
+## Related Resources
+
+*   [Basic Concepts of Plugin Development](/plugin-dev-en/0111-getting-started-dify-plugin.mdx) - Understand the overall architecture of plugin development.
+*   [Neko Cat Example](/plugin-dev-en/9231-extension-plugin.mdx) - An example of extension plugin development.
+*   [General Specifications Definition](/plugin-dev-en/0411-general-specifications.mdx) - Understand common structures like ProviderConfig.
+*   [Develop a Slack Bot Plugin Example](/plugin-dev-en/0432-develop-a-slack-bot-plugin.mdx) - Another plugin development example.
+*   [Getting Started with Plugin Development](/plugin-dev-en/0211-getting-started-dify-tool.mdx) - Develop a plugin from scratch.
+*   [Reverse Invocation of Dify Services](/plugin-dev-en/9241-reverse-invocation-app.mdx) - Learn how to use the reverse invocation feature. (Note: Link updated to closest available English document)
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-en/0432-endpoint.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
+
