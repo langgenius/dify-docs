@@ -1,0 +1,380 @@
+---
+title: "为工具插件添加 OAuth 支持"
+---
+
+![b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png](/images/b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png)
+
+本文档介绍如何为你的工具插件添加 [OAuth](https://oauth.net/2/) 支持。
+
+对于需要通过第三方服务（如 Gmail 或 GitHub）访问用户数据的工具插件而言，OAuth 是一种更好的授权方式：在获得用户明确同意的情况下，允许工具插件代表用户执行操作，而无需用户手动输入 API 密钥。
+
+## 介绍
+
+Dify 的 OAuth 配置涉及两个独立流程，开发者应当充分理解并根据流程进行设计。
+
+### 流程一：OAuth 客户端设置（由管理员 / 开发者完成）
+
+<Note>
+  在 Dify Cloud 上，Dify 团队会为热门工具插件创建 OAuth 应用并设置 OAuth 客户端，为用户节省自行配置的麻烦。
+
+  而对于自托管的 Dify 实例，管理员需自行完成此设置流程。
+</Note>
+
+首先，Dify 实例的管理员或开发者需要在第三方服务中将 OAuth 应用注册为受信任应用，以获得将 Dify 工具供应商配置为 OAuth 客户端所需的必要凭证。
+
+下面以 Dify 的 Gmail 工具供应商为例。
+
+<AccordionGroup>
+  <Accordion title="创建 Google Cloud 项目">
+    1. 前往 [Google Cloud Console](https://console.cloud.google.com) ，创建新项目或选择现有项目。
+    2. 启用所需的 API（如 Gmail API）。
+  </Accordion>
+  <Accordion title="配置 OAuth 权限请求页面">
+    1. 前往 **API 和服务** \> **OAuth 权限请求页面**。
+    2. 对于公开插件，选择 **外部** 受众群体类型。
+    3. 填写应用名称、用户支持邮箱和开发者联系方式。
+    4. （可选）添加授权域名。
+    5. 选择 **目标对象** \> **测试用户**，添加测试用户以进行测试。
+  </Accordion>
+  <Accordion title="创建 OAuth 2.0 凭证">
+    1. 前往 **API 和服务** \> **凭证**。
+    2. 点击 **创建凭证** \> **OAuth 客户端 ID**。
+    3. 选择 **Web 应用**，点击 **创建**。
+    4. 保存生成的凭证信息，包括客户端 ID 和客户端密钥。
+  </Accordion>
+  <Accordion title="在 Dify 中输入凭证">
+    在 OAuth 客户端配置窗口中，输入客户端 ID（client_ID）和客户端密钥（client_secret），以将工具供应商设置为客户端。
+
+    <img
+      src="/images/acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      alt="acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      title="acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      className="mx-auto"
+      style={{ width:"66%" }}
+    />
+  </Accordion>
+  <Accordion title="授权重定向 URI">
+    在 Google OAuth 客户端页面，填写由 Dify 生成的重定向 URI。
+
+    <img
+      src="/images/dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      alt="dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      title="dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      className="mx-auto"
+      style={{ width:"77%" }}
+    />
+
+    <Info>
+      Dify 在 OAuth 客户端配置弹窗中显示`redirect_uri`，通常遵循以下格式：
+
+      ```bash
+      https://{your-dify-domain}/console/api/oauth/plugin/{plugin-id}/{provider-name}/{tool-name}/callback
+      ```
+
+      对于自托管的 Dify 实例，`your-dify-domain` 应与 `CONSOLE_WEB_URL` 保持一致。
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  不同第三方服务的要求各异，请务必查阅目标集成服务的特定 OAuth 文档。
+</Tip>
+
+### 流程二：用户授权（由 Dify 用户完成）
+
+OAuth 客户端配置完成后，Dify 用户即可授权插件访问他们的个人账户。
+
+<img
+  src="/images/833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  alt="833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  title="833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  className="mx-auto"
+  style={{ width:"67%" }}
+/>
+
+## 步骤
+
+### 1. 在供应商的 Manifest 文件中定义 OAuth 的参数架构
+
+供应商的 Manifest 文件中的 `oauth_schema` 字段为插件 OAuth 定义凭证需求及授权流程产出，涉及以下两种参数架构。
+
+#### client_schema
+
+定义 OAuth 客户端设置所需的输入参数架构。
+
+```yaml gmail.yaml
+oauth_schema:
+  client_schema:
+    - name: "client_id"
+      type: "secret-input"
+      required: true
+      url: "https://developers.google.com/identity/protocols/oauth2"
+    - name: "client_secret"
+      type: "secret-input" 
+      required: true
+```
+
+<Info>
+  `url` 字段直接链接至第三方服务的帮助文档，有助于为管理员/开发人员解惑。
+</Info>
+
+#### credentials_schema
+
+定义用户授权流程产生的凭证参数架构（由 Dify 自动管理）。
+
+```yaml
+# 同样在 oauth_schema 下
+  credentials_schema:
+    - name: "access_token"
+      type: "secret-input"
+    - name: "refresh_token"
+      type: "secret-input"
+    - name: "expires_at"
+      type: "secret-input"
+```
+
+<Info>
+  同时包含 `oauth_schema` 和 `credentials_for_provider` 字段，为用户提供 OAuth 和 API 密钥两种认证选项。
+</Info>
+
+### 2. 在工具供应商中完成所需的 OAuth 方法实现
+
+在实现 `ToolProvider` 的位置，添加以下代码：
+
+```python
+from dify_plugin.entities.oauth import ToolOAuthCredentials
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError, ToolProviderOAuthError
+```
+
+`ToolProvider` 类必须实现以下三个 OAuth 方法（以 `GmailProvider` 为例）：
+
+<Warning>
+  为避免安全隐患，在任何情况下都不应在 `ToolOAuthCredentials` 的凭证中返回 `client_secret`（客户端密钥）。
+</Warning>
+
+<CodeGroup>
+
+```python _oauth_get_authorization_url expandable
+def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+	"""
+	使用 OAuth 客户端设置流程中的凭据生成授权 URL。 
+    此 URL 是用户授权应用程序访问其资源的地址。
+    """
+    # 生成随机状态值用于 CSRF 保护（建议所有 OAuth 流程使用）
+    state = secrets.token_urlsafe(16)
+    
+    # 定义 Gmail 特定的作用域范围。请求最小必要权限
+    scope = "read:user read:data"  # 替换为所需的权限范围
+    
+    # 组装 Gmail 特定的请求参数
+    params = {
+        "client_id": system_credentials["client_id"],    # 来自 OAuth 客户端设置
+        "redirect_uri": redirect_uri,                    # 由 Dify 生成，请勿修改
+        "scope": scope,                                  
+        "response_type": "code",                         # 标准 OAuth 授权码流程
+        "access_type": "offline",                        # 关键：获取刷新令牌（若支持）
+        "prompt": "consent",                             # 当权限范围变更时强制重新授权（若支持）
+        "state": state,                                  # CSRF 保护
+    }
+    
+    return f"{self._AUTH_URL}?{urllib.parse.urlencode(params)}"
+```
+
+
+```python _oauth_get_credentials expandable
+def _oauth_get_credentials(
+    self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+) -> ToolOAuthCredentials:
+    """
+    将授权码交换为访问令牌和刷新令牌。
+	此方法用于为单个账户连接创建一套凭证。
+    """
+    # 从 OAuth 回调中提取授权码
+    code = request.args.get("code")
+    if not code:
+        raise ToolProviderOAuthError("Authorization code not provided")
+    
+    # 检查来自 OAuth 提供程序的授权错误
+    error = request.args.get("error")
+    if error:
+        error_description = request.args.get("error_description", "")
+        raise ToolProviderOAuthError(f"OAuth authorization failed: {error} - {error_description}")
+    
+    # 使用 OAuth 客户端设置凭据将授权码交换为令牌
+
+	# 组装 Gmail 特定的请求载荷
+    data = {
+        "client_id": system_credentials["client_id"],        # 来自 OAuth 客户端设置
+        "client_secret": system_credentials["client_secret"], # 来自 OAuth 客户端设置
+        "code": code,                                        # 来自用户授权
+        "grant_type": "authorization_code",                  # 标准 OAuth 流程类型
+        "redirect_uri": redirect_uri,                        # 必须与授权 URL 完全匹配
+    }
+    
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    
+    try:
+        response = requests.post(
+            self._TOKEN_URL,
+            data=data,
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        token_data = response.json()
+        
+        # 处理响应中的 OAuth 提供商错误
+        if "error" in token_data:
+            error_desc = token_data.get('error_description', token_data['error'])
+            raise ToolProviderOAuthError(f"Token exchange failed: {error_desc}")
+        
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise ToolProviderOAuthError("No access token received from provider")
+        
+        # 构建与你的 credentials_schema 匹配的凭据字典
+        credentials = {
+            "access_token": access_token,
+            "token_type": token_data.get("token_type", "Bearer"),
+        }
+        
+        # 若支持刷新令牌，则需包含（对长期访问至关重要）
+        refresh_token = token_data.get("refresh_token")
+        if refresh_token:
+            credentials["refresh_token"] = refresh_token
+        
+        # 处理令牌过期时间。某些提供程序不提供 expires_in
+        expires_in = token_data.get("expires_in", 3600)  # Default to 1 hour
+        expires_at = int(time.time()) + expires_in
+        
+        return ToolOAuthCredentials(credentials=credentials, expires_at=expires_at)
+        
+    except requests.RequestException as e:
+        raise ToolProviderOAuthError(f"Network error during token exchange: {str(e)}")
+    except Exception as e:
+        raise ToolProviderOAuthError(f"Failed to exchange authorization code: {str(e)}")
+```
+
+
+```python _oauth_refresh_credentials
+def _oauth_refresh_credentials(
+    self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+) -> ToolOAuthCredentials:
+    """
+    使用刷新令牌刷新凭证。 
+	当令牌过期时，Dify 将自动调用此方法。
+    """
+    refresh_token = credentials.get("refresh_token")
+    if not refresh_token:
+        raise ToolProviderOAuthError("No refresh token available")
+
+    # 标准 OAuth 刷新令牌流程
+    data = {
+        "client_id": system_credentials["client_id"],       # 来自 OAuth 客户端设置
+        "client_secret": system_credentials["client_secret"], # 来自 OAuth 客户端设置
+        "refresh_token": refresh_token,                     # 来自先前的授权
+        "grant_type": "refresh_token",                      # OAuth 刷新流程
+    }
+
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+    try:
+        response = requests.post(
+            self._TOKEN_URL,
+            data=data,
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+
+        token_data = response.json()
+
+        # 处理刷新错误
+        if "error" in token_data:
+            error_desc = token_data.get('error_description', token_data['error'])
+            raise ToolProviderOAuthError(f"Token refresh failed: {error_desc}")
+
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise ToolProviderOAuthError("No access token received from provider")
+
+        # 构建新凭证，保留现有的刷新令牌
+            "access_token": access_token,
+            "token_type": token_data.get("token_type", "Bearer"),
+            "refresh_token": refresh_token,  # 保留现有的刷新令牌
+        }
+
+        # 处理令牌过期时间
+        expires_in = token_data.get("expires_in", 3600)
+
+        # 若提供了新的刷新令牌，则进行更新
+        new_refresh_token = token_data.get("refresh_token")
+        if new_refresh_token:
+            new_credentials["refresh_token"] = new_refresh_token
+
+        # 为 Dify 的令牌管理计算新的过期时间戳
+        expires_at = int(time.time()) + expires_in
+
+        return ToolOAuthCredentials(credentials=new_credentials, expires_at=expires_at)
+
+    except requests.RequestException as e:
+        raise ToolProviderOAuthError(f"Network error during token refresh: {str(e)}")
+    except Exception as e:
+        raise ToolProviderOAuthError(f"Failed to refresh credentials: {str(e)}")
+```
+
+</CodeGroup>
+
+### 3. 在工具中访问令牌
+
+你可以在 `Tool` 实现中使用 OAuth 凭证进行经过身份验证的 API 调用，示例如下：
+
+```python
+class YourTool(BuiltinTool):
+    def _invoke(self, user_id: str, tool_parameters: dict[str, Any]) -> ToolInvokeMessage:
+        if self.runtime.credential_type == CredentialType.OAUTH:
+            access_token = self.runtime.credentials["access_token"]
+        
+        response = requests.get("https://api.service.com/data",
+                              headers={"Authorization": f"Bearer {access_token}"})
+        return self.create_text_message(response.text)
+```
+
+`self.runtime.credentials` 自动提供当前用户的令牌。Dify 自动处理令牌刷新机制。
+
+对于同时支持 OAuth 和 API 密钥认证的插件，可使用 `self.runtime.credential_type` 来区分两种认证类型。
+
+### 4. 指定正确的版本
+
+插件 SDK 和 Dify 的早期版本不支持 OAuth 认证。因此，需将插件 SDK 版本设置如下：
+
+```
+dify_plugin>=0.4.2,<0.5.0.
+```
+
+在 `manifest.yaml`中， 添加最低 Dify 版本要求：
+
+```yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: 1.7.1
+```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[编辑此页面](https://github.com/langgenius/dify-docs/edit/main/zh-hans/plugins/quick-start/develop-plugins/tool-oauth.mdx) | [提交问题](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
+
