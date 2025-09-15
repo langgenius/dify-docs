@@ -1,0 +1,332 @@
+---
+title: 对话型应用
+version: '简体中文'
+---
+
+## 概述
+文本生成应用无会话支持，适合用于翻译/文章写作/总结 AI 等等。
+
+## 基础信息
+
+### 基础 URL
+```
+https://api.dify.ai/v1
+```
+
+### 鉴权
+Service API 提供 API-Key 鉴权方式。
+
+> **重要提示**: 强烈建议开发者把 API Key 放在后端存储，而非分享或者放在客户端存储，以免 API-Key 泄露，导致财产损失。
+
+所有 API 请求都应在 Authorization HTTP Header 中包含你的 API Key，如下所示：
+```
+Authorization: Bearer {API_KEY}
+```
+
+## API 端点
+
+### 发送消息
+`POST /completion-messages`
+
+发送请求给文本生成型应用。
+
+#### Request Body
+- **inputs** (object) Required
+  - 允许传入 App 定义的各变量值
+  - inputs 参数包含了多组键值对（Key/Value pairs），每组的键对应一个特定变量，每组的值则是该变量的具体值
+  - 文本生成型应用要求至少传入一组键值对
+
+- **response_mode** (string) Required
+  返回响应模式，支持：
+  - `streaming` 流式模式（推荐），基于 SSE（Server-Sent Events）实现类似打字机输出方式的流式返回
+  - `blocking` 阻塞模式，等待执行完毕后返回结果（请求若流程较长可能会被中断）
+    > 注：由于 Cloudflare 限制，请求会在 100 秒超时无返回后中断
+
+- **user** (string) Required
+  - 用户标识，用于定义终端用户的身份，方便检索、统计
+  - 由开发者定义规则，需保证用户标识在应用内唯一
+
+- **files** (array[object]) Optional
+  文件列表，适用于传入文件（图片）结合文本理解并回答问题，仅当模型支持 Vision 能力时可用
+  - `type` (string) 支持类型：图片 image（目前仅支持图片格式）
+  - `transfer_method` (string) 传递方式，remote_url 图片地址 / local_file 上传文件
+  - `url` (string) 图片地址（仅当传递方式为 remote_url 时）
+  - `upload_file_id` (string) 上传文件 ID（仅当传递方式为 local_file 时）
+
+#### Response
+
+##### CompletionResponse
+当 `response_mode` 为 `blocking` 时返回，Content-Type 为 application/json
+
+- `message_id` (string) 消息唯一 ID
+- `mode` (string) App 模式，固定为 workflow
+- `answer` (string) 完整回复内容
+- `metadata` (object) 元数据
+  - `usage` (Usage) 模型用量信息
+- `created_at` (int) 消息创建时间戳
+
+##### ChunkCompletionResponse
+当 `response_mode` 为 `streaming` 时返回，Content-Type 为 text/event-stream
+
+流式事件类型：
+- **event: message** - LLM 返回文本块事件
+  - `task_id` (string) 任务 ID
+  - `message_id` (string) 消息唯一 ID
+  - `answer` (string) LLM 返回文本块内容
+  - `created_at` (int) 创建时间戳
+
+- **event: message_end** - 消息结束事件
+  - `task_id` (string) 任务 ID
+  - `message_id` (string) 消息唯一 ID
+  - `metadata` (object) 元数据
+    - `usage` (Usage) 模型用量信息
+
+- **event: message_replace** - 消息内容替换事件
+  - `task_id` (string) 任务 ID
+  - `message_id` (string) 消息唯一 ID
+  - `answer` (string) 替换内容
+  - `created_at` (int) 创建时间戳
+
+- **event: error** - 错误事件
+  - `task_id` (string) 任务 ID
+  - `message_id` (string) 消息唯一 ID
+  - `status` (int) HTTP 状态码
+  - `code` (string) 错误码
+  - `message` (string) 错误消息
+
+- **event: ping** - 心跳事件
+  每 10s 一次的 ping 事件，保持连接存活
+
+#### 错误码
+- 400 `invalid_param` - 传入参数异常
+- 400 `app_unavailable` - App 配置不可用
+- 400 `provider_not_initialize` - 无可用模型凭据配置
+- 400 `provider_quota_exceeded` - 模型调用额度不足
+- 400 `model_currently_not_support` - 当前模型不可用
+- 400 `completion_request_error` - 文本生成失败
+- 500 - 服务内部异常
+
+#### 示例
+
+请求示例:
+```curl
+curl -X POST 'https://api.dify.ai/v1/completion-messages' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "inputs": {
+        "query": "hello world."
+    },
+    "response_mode": "streaming",
+    "user": "abc-123",
+    "files": [
+      {
+        "type": "image",
+        "transfer_method": "remote_url",
+        "url": "https://cloud.dify.ai/logo/logo-site.png"
+      }
+    ]
+}'
+```
+
+响应示例（阻塞模式）:
+```json
+{
+    "event": "message",
+    "message_id": "9da23599-e713-473b-982c-4328d4f5c78a",
+    "mode": "completion",
+    "answer": "Hello World!...",
+    "metadata": {
+        "usage": {
+            "prompt_tokens": 1033,
+            "prompt_unit_price": "0.001",
+            "prompt_price_unit": "0.001",
+            "prompt_price": "0.0010330",
+            "completion_tokens": 128,
+            "completion_unit_price": "0.002",
+            "completion_price_unit": "0.001",
+            "completion_price": "0.0002560",
+            "total_tokens": 1161,
+            "total_price": "0.0012890",
+            "currency": "USD",
+            "latency": 0.7682376249867957
+        }
+    },
+    "created_at": 1705407629
+}
+```
+
+### 上传文件
+`POST /files/upload`
+
+上传文件（目前仅支持图片）并在发送消息时使用，可实现图文多模态理解。
+支持 png, jpg, jpeg, webp, gif 格式。上传的文件仅供当前终端用户使用。
+
+#### Request Body
+该接口需使用 multipart/form-data 进行请求。
+
+- **file** (File) Required - 要上传的文件
+- **user** (string) Required - 用户标识，必须和发送消息接口传入 user 保持一致
+
+#### Response
+- `id` (uuid) ID
+- `name` (string) 文件名
+- `size` (int) 文件大小（byte）
+- `extension` (string) 文件后缀
+- `mime_type` (string) 文件 mime-type
+- `created_by` (uuid) 上传人 ID
+- `created_at` (timestamp) 上传时间
+
+#### 错误码
+- 400 `no_file_uploaded` - 必须提供文件
+- 400 `too_many_files` - 目前只接受一个文件
+- 400 `unsupported_preview` - 该文件不支持预览
+- 400 `unsupported_estimate` - 该文件不支持估算
+- 413 `file_too_large` - 文件太大
+- 415 `unsupported_file_type` - 不支持的扩展名
+- 503 `s3_connection_failed` - 无法连接到 S3 服务
+- 503 `s3_permission_denied` - 无权限上传文件到 S3
+- 503 `s3_file_too_large` - 文件超出 S3 大小限制
+
+#### 示例
+
+请求示例:
+```curl
+curl -X POST 'https://cloud.dify.ai/v1/files/upload' \
+-H 'Authorization: Bearer {api_key}' \
+-H "Content-Type: multipart/form-data" \
+-F 'file=@"/path/to/example.png"' \
+-F 'user="abc-123"'
+```
+
+响应示例:
+```json
+{
+  "id": "72fa9618-8f89-4a37-9b33-7e1178a24a67",  
+  "name": "example.png",
+  "size": 1024,
+  "extension": "png",
+  "mime_type": "image/png",
+  "created_by": 123,  
+  "created_at": 1577836800
+}
+```
+
+### 停止响应
+`POST /completion-messages/:task_id/stop`
+
+仅支持流式模式。
+
+#### Path 参数
+- **task_id** (string) 任务 ID，可在流式返回 Chunk 中获取
+
+#### Request Body
+- **user** (string) Required - 用户标识，必须和发送消息接口传入 user 保持一致
+
+#### Response
+- `result` (string) 固定返回 "success"
+
+#### 示例
+
+请求示例:
+```curl
+curl -X POST 'https://cloud.dify.ai/v1/completion-messages/:task_id/stop' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "user": "abc-123"
+}'
+```
+
+### 消息反馈（点赞）
+`POST /messages/:message_id/feedbacks`
+
+消息终端用户反馈、点赞，方便应用开发者优化输出预期。
+
+#### Path 参数
+- **message_id** (string) 消息 ID
+
+#### Request Body
+- **rating** (string) Required - 点赞 like, 点踩 dislike, 撤销点赞 null
+- **user** (string) Required - 用户标识，需保证用户标识在应用内唯一
+
+#### Response
+- `result` (string) 固定返回 "success"
+
+#### 示例
+
+请求示例:
+```curl
+curl -X POST 'https://api.dify.ai/v1/messages/{message_id}/feedbacks' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "rating": "like",
+    "user": "abc-123"
+}'
+```
+
+### 获取应用参数信息
+`GET /parameters`
+
+用于进入页面一开始，获取功能开关、输入参数名称、类型及默认值等使用。
+
+#### Query 参数
+- **user** (string) Required - 用户标识，需保证用户标识在应用内唯一
+
+#### Response
+- **more_like_this** (object) 启用 More Like This 功能
+  - `enabled` (bool) 是否开启
+
+- **user_input_form** (array[object]) 用户输入表单配置
+  - `text-input` (object) 文本输入控件
+    - `label` (string) 控件展示标签名
+    - `variable` (string) 控件 ID
+    - `required` (bool) 是否必填
+    - `default` (string) 默认值
+  - `paragraph` (object) 段落文本输入控件
+    - `label` (string) 控件展示标签名
+    - `variable` (string) 控件 ID
+    - `required` (bool) 是否必填
+    - `default` (string) 默认值
+  - `select` (object) 下拉控件
+    - `label` (string) 控件展示标签名
+    - `variable` (string) 控件 ID
+    - `required` (bool) 是否必填
+    - `default` (string) 默认值
+    - `options` (array[string]) 选项值
+
+- **file_upload** (object) 文件上传配置
+  - `image` (object) 图片设置
+    - `enabled` (bool) 是否开启
+    - `number_limits` (int) 图片数量限制，默认 3
+    - `transfer_methods` (array[string]) 传递方式列表
+
+- **system_parameters** (object) 系统参数
+  - `image_file_size_limit` (string) 图片文件上传大小限制（MB）
+
+#### 示例
+
+请求示例:
+```curl
+curl -X GET 'https://cloud.dify.ai/v1/parameters?user=abc-123' \
+-H 'Authorization: Bearer {api_key}'
+```
+
+## 数据结构
+
+### Usage
+模型用量信息
+
+- `prompt_tokens` (int) LLM 传入 Prompt 消耗 token
+- `prompt_unit_price` (string) Prompt 单价
+- `prompt_price_unit` (string) Prompt 单价单位，若为 0.001 则表示为每 1000 token 单价
+- `prompt_price` (string) Prompt 消耗费用（预估）
+- `completion_tokens` (int) LLM 返回消耗 token
+- `completion_unit_price` (string) LLM 返回单价
+- `completion_price_unit` (string) LLM 返回单位，若为 0.001 则表示为每 1000 token 单价
+- `completion_price` (string) LLM 返回消耗费用（预估）
+- `total_tokens` (int) 消耗总 token（Prompt + LLM 返回）
+- `total_price` (string) 消耗总费用（预估）
+- `currency` (string) 费用单位，如：USD, RMB
+- `latency` (float) 延迟 (s)

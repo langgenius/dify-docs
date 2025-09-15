@@ -1,0 +1,332 @@
+---
+title: テキスト生成アプリケーション
+version: '日本語'
+---
+
+## 概要
+テキスト生成アプリケーションは、会話サポートがなく、翻訳や記事作成、要約AIなどに適しています。
+
+## 基本情報
+
+### ベース URL
+```
+https://api.dify.ai/v1
+```
+
+### 認証
+サービスAPIはAPI-Keyによる認証方式を提供します。
+
+> **重要**: APIキーはバックエンドに保存し、共有せず、クライアントに保存しないことを強くお勧めします。APIキーの漏洩は財産的損失を引き起こす可能性があります。
+
+すべてのAPIリクエストには、Authorization HTTPヘッダーにAPIキーを含める必要があります。以下の形式になります：
+```
+Authorization: Bearer {API_KEY}
+```
+
+## APIエンドポイント
+
+### メッセージの送信
+`POST /completion-messages`
+
+テキスト生成アプリケーションにリクエストを送信するためのエンドポイントです。
+
+#### リクエストボディ
+- **inputs** (object) 必須
+  - アプリで定義された各変数の値を渡すことができます。
+  - inputsパラメータには、複数のキー/値ペアが含まれ、各グループのキーは特定の変数を表し、値はその変数の具体的な値です。
+  - テキスト生成アプリケーションでは、少なくとも1つのキー/値ペアを渡す必要があります。
+
+- **response_mode** (string) 必須
+  レスポンスモードを指定します。サポートされているのは以下の通りです：
+  - `streaming` ストリーミングモード（推奨）、SSE（Server-Sent Events）に基づいて、タイプライター出力のようなストリーミングレスポンスを実現します。
+  - `blocking` ブロッキングモード、完了後に結果を返します（リクエストが長い場合は中断される可能性があります）。
+    > 注意：Cloudflareの制限により、100秒のタイムアウト後にリクエストが中断されます。
+
+- **user** (string) 必須
+  - ユーザー識別子、エンドユーザーの身元を定義するために使用され、検索や統計を容易にします。
+  - 開発者はルールを定義し、ユーザー識別子がアプリ内で一意であることを保証する必要があります。
+
+- **files** (array[object]) オプション
+  ファイルリスト、画像を含むファイルを渡してテキスト理解と質問に回答する場合に使用します。モデルがビジョン機能をサポートしている場合のみ使用できます。
+  - `type` (string) サポートされるタイプ：画像（現在は画像形式のみサポートされています）。
+  - `transfer_method` (string) 転送方法、remote_url（画像のアドレス）/ local_file（ファイルのアップロード）。
+  - `url` (string) 画像のアドレス（転送方法がremote_urlの場合のみ）。
+  - `upload_file_id` (string) アップロードファイルのID（転送方法がlocal_fileの場合のみ）。
+
+#### レスポンス
+
+##### CompletionResponse
+`response_mode`が`blocking`の場合に返される、Content-Typeがapplication/jsonであるレスポンス。
+
+- `message_id` (string) メッセージの唯一なID。
+- `mode` (string) アプリケーションモード、workflowに固定。
+- `answer` (string) 完全な回答内容。
+- `metadata` (object) メタデータ。
+  - `usage` (Usage) モデルの使用量情報。
+- `created_at` (int) メッセージの作成タイムスタンプ。
+
+##### ChunkCompletionResponse
+`response_mode`が`streaming`の場合に返される、Content-Typeがtext/event-streamであるレスポンス。
+
+ストリーミングイベントタイプ：
+- **event: message** - LLMがテキストブロックを返すイベント。
+  - `task_id` (string) タスクID。
+  - `message_id` (string) メッセージの唯一なID。
+  - `answer` (string) LLMが返すテキストブロックの内容。
+  - `created_at` (int) 作成タイムスタンプ。
+
+- **event: message_end** - メッセージ終了イベント。
+  - `task_id` (string) タスクID。
+  - `message_id` (string) メッセージの唯一なID。
+  - `metadata` (object) メタデータ。
+    - `usage` (Usage) モデルの使用量情報。
+
+- **event: message_replace** - メッセージ内容置換イベント。
+  - `task_id` (string) タスクID。
+  - `message_id` (string) メッセージの唯一なID。
+  - `answer` (string) 置換内容。
+  - `created_at` (int) 作成タイムスタンプ。
+
+- **event: error** - エラーイベント。
+  - `task_id` (string) タスクID。
+  - `message_id` (string) メッセージの唯一なID。
+  - `status` (int) HTTPステータスコード。
+  - `code` (string) エラーコード。
+  - `message` (string) エラーメッセージ。
+
+- **event: ping** - ピングイベント。
+  接続を維持するための10秒ごとのピングイベント。
+
+#### エラーコード
+- 400 `invalid_param` - パラメータが無効です。
+- 400 `app_unavailable` - アプリが利用できません。
+- 400 `provider_not_initialize` - 利用可能なモデル資格情報がありません。
+- 400 `provider_quota_exceeded` - モデル呼び出しクォータが超過しています。
+- 400 `model_currently_not_support` - 現在のモデルは使用できません。
+- 400 `completion_request_error` - テキスト生成に失敗しました。
+- 500 - サービス内部エラー。
+
+#### 例
+
+Request例:
+```curl
+curl -X POST 'https://api.dify.ai/v1/completion-messages' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "inputs": {
+        "query": "hello world."
+    },
+    "response_mode": "streaming",
+    "user": "abc-123",
+    "files": [
+      {
+        "type": "image",
+        "transfer_method": "remote_url",
+        "url": "https://cloud.dify.ai/logo/logo-site.png"
+      }
+    ]
+}'
+```
+
+Response例（ブロッキングモード）:
+```json
+{
+    "event": "message",
+    "message_id": "9da23599-e713-473b-982c-4328d4f5c78a",
+    "mode": "completion",
+    "answer": "Hello World!...",
+    "metadata": {
+        "usage": {
+            "prompt_tokens": 1033,
+            "prompt_unit_price": "0.001",
+            "prompt_price_unit": "0.001",
+            "prompt_price": "0.0010330",
+            "completion_tokens": 128,
+            "completion_unit_price": "0.002",
+            "completion_price_unit": "0.001",
+            "completion_price": "0.0002560",
+            "total_tokens": 1161,
+            "total_price": "0.0012890",
+            "currency": "USD",
+            "latency": 0.7682376249867957
+        }
+    },
+    "created_at": 1705407629
+}
+```
+
+### ファイルをアップロード
+`POST /files/upload`
+
+現在、画像のみをサポートしており、メッセージ送信時に使用して、画像とテキストを組み合わせた理解が可能です。
+対応ファイル形式：png、jpg、jpeg、webp、gif。アップロードされたファイルは、現在の端末ユーザーのみが使用できます。
+
+#### Request Body
+このエンドポイントでは、`multipart/form-data` を使用してリクエストする必要があります。
+
+- **file** (File) 必須 - アップロードするファイル
+- **user** (string) 必須 - ユーザー識別子。メッセージ送信エンドポイントで指定されたユーザーと一致している必要があります。
+
+#### Response
+- `id` (uuid) ID
+- `name` (string) ファイル名
+- `size` (int) ファイルサイズ（字節）
+- `extension` (string) ファイルの後綴
+- `mime_type` (string) ファイルの MIME タイプ
+- `created_by` (uuid) アップロード者のID
+- `created_at` (timestamp) アップロード時間
+
+#### エラーコード
+- 400 `no_file_uploaded` - ファイルを指定する必要があります
+- 400 `too_many_files` - 現時点では1つのファイルのみを受け付けます
+- 400 `unsupported_preview` - このファイルはプレビューをサポートしていません
+- 400 `unsupported_estimate` - このファイルは推定をサポートしていません
+- 413 `file_too_large` - ファイルが大きすぎます
+- 415 `unsupported_file_type` - サポートされていないファイル形式です
+- 503 `s3_connection_failed` - S3 サービスに接続できません
+- 503 `s3_permission_denied` - S3 へのファイルのアップロードが許可されていません
+- 503 `s3_file_too_large` - ファイルが S3 のサイズ制限を超えています
+
+#### 例
+
+Request例:
+```curl
+curl -X POST 'https://cloud.dify.ai/v1/files/upload' \
+-H 'Authorization: Bearer {api_key}' \
+-H "Content-Type: multipart/form-data" \
+-F 'file=@"/path/to/example.png"' \
+-F 'user="abc-123"'
+```
+
+Response例:
+```json
+{
+  "id": "72fa9618-8f89-4a37-9b33-7e1178a24a67",  
+  "name": "example.png",
+  "size": 1024,
+  "extension": "png",
+  "mime_type": "image/png",
+  "created_by": 123,  
+  "created_at": 1577836800
+}
+```
+
+### 停止リクエスト
+`POST /completion-messages/:task_id/stop`
+
+ストリームモードのみ対応しています。
+
+#### パスパラメータ
+- **task_id** (string) タスクID。ストリーム返り値のChunkから取得できます。
+
+#### リクエストボディ
+- **user** (string) Required - ユーザー識別。メッセージ送信APIに入力されたユーザーと一致している必要があります。
+
+#### レスポンス
+- `result` (string) "success" が固定で返されます。
+
+#### 例
+
+Request例:
+```curl
+curl -X POST 'https://cloud.dify.ai/v1/completion-messages/:task_id/stop' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "user": "abc-123"
+}'
+```
+
+### ### メッセージフィードバック（いいね!ボタン）
+`POST /messages/:message_id/feedbacks`
+
+このエンドポイントでは、メッセージに対するエンドユーザーのフィードバックを提供します。いいね!ボタン、ディスライク、またはいいねの取り消しが可能であり、アプリケーション開発者は出力を最適化できます。
+
+#### Pathパラメータ
+- **message_id** (string) メッセージID
+
+#### Request Body
+- **rating** (string) Required - いいねの場合は "like"、ヤダネの場合は "dislike"、いいねを取り消す場合は "null"。
+- **user** (string) Required - ユーザー識別子。アプリ内で一意であることが求められます。
+
+#### Response
+- `result` (string) 常に"success"を返します。
+
+#### 例
+
+Request例:
+```curl
+curl -X POST 'https://api.dify.ai/v1/messages/{message_id}/feedbacks' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "rating": "like",
+    "user": "abc-123"
+}'
+```
+
+### アプリケーションパラメータ情報の取得
+`GET /parameters`
+
+このエンドポイントは、ページに最初にアクセスした際に、機能の有効/無効、入力パラメータ名、タイプ、デフォルト値などの情報を取得するために使用されます。
+
+#### クエリパラメータ
+- **user** (string) 必須 - ユーザー識別子。ユーザー識別子はアプリ内で一意である必要があります。
+
+#### レスポンス
+- **more_like_this** (object) More Like This 機能の有効/無効状態
+  - `enabled` (bool) 機能の有効/無効
+
+- **user_input_form** (array[object]) ユーザー入力フォームの設定
+  - `text-input` (object) テキスト入力コントロール
+    - `label` (string) コントロールの表示ラベル
+    - `variable` (string) コントロールID
+    - `required` (bool) 必須かどうか
+    - `default` (string) デフォルト値
+  - `paragraph` (object) 段落テキスト入力コントロール
+    - `label` (string) コントロールの表示ラベル
+    - `variable` (string) コントロールID
+    - `required` (bool) 必須かどうか
+    - `default` (string) デフォルト値
+  - `select` (object) ドロップダウンコントロール
+    - `label` (string) コントロールの表示ラベル
+    - `variable` (string) コントロールID
+    - `required` (bool) 必須かどうか
+    - `default` (string) デフォルト値
+    - `options` (array[string]) 選択肢
+
+- **file_upload** (object) ファイルアップロードの設定
+  - `image` (object) 画像の設定
+    - `enabled` (bool) 画像の有効/無効
+    - `number_limits` (int) 画像の数量制限（デフォルトは3）
+    - `transfer_methods` (array[string]) 転送方法のリスト
+
+- **system_parameters** (object) システムパラメータ
+  - `image_file_size_limit` (string) 画像ファイルのアップロードサイズ制限（MB）
+
+#### 例
+
+Request例:
+```curl
+curl -X GET 'https://cloud.dify.ai/v1/parameters?user=abc-123' \
+-H 'Authorization: Bearer {api_key}'
+```
+
+## データ構造
+
+### 使用方法
+モデルの利用情報
+
+- `prompt_tokens` (int) LLM に入力されるプロンプトによって消費されるトークン数
+- `prompt_unit_price` (string) プロンプトの単価
+- `prompt_price_unit` (string) プロンプトの単価単位。0.001 の場合、1000 トークンあたりの単価を示します。
+- `prompt_price` (string) プロンプトの消費費用（見積もり）
+- `completion_tokens` (int) LLM が返すトークンの消費数
+- `completion_unit_price` (string) LLM の返す単価
+- `completion_price_unit` (string) LLM の返す単位。0.001 の場合、1000 トークンあたりの単価を示します。
+- `completion_price` (string) LLM の返す消費費用（見積もり）
+- `total_tokens` (int) 総トークン消費量（プロンプト + LLM の返り値）
+- `total_price` (string) 総費用（見積もり）
+- `currency` (string) 通貨単位（例：USD、RMB）
+- `latency` (float) レイテンシ（秒）

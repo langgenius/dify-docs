@@ -1,0 +1,268 @@
+---
+title: API拡張
+version: '日本語'
+---
+
+開発者はAPI拡張モジュールの機能を強化することができます。現在サポートされているモジュール拡張は以下の通りです：
+
+* `moderation` コンテンツの審査
+* `external_data_tool` 外部データの利用
+
+モジュールの拡張機能を有効にするには、APIと認証用のAPIキー（Difyによって自動生成されることも可能、オプション）を準備する必要があります。
+
+モジュールの機能を開発するだけではなく、DifyがAPIを正しく呼び出すためには以下の仕様に従う必要があります。
+
+### API仕様 <a href="#usercontentapi-gui-fan" id="usercontentapi-gui-fan"></a>
+
+Difyは以下の仕様に従ってあなたのAPIを呼び出します：
+
+```
+POST {Your-API-Endpoint}
+```
+
+#### Header <a href="#user-content-header" id="user-content-header"></a>
+
+| ヘッダー          | 値                  | 説明                                                                  |
+| ----------------- | ------------------- | --------------------------------------------------------------------- |
+| `Content-Type`    | application/json     | リクエストの内容はJSON形式であることを示します。                                   |
+| `Authorization`   | Bearer {api_key}    | APIキーはトークン形式で送信され、`api_key`を検証して提供されたAPIキーと一致するかを確認し、インターフェースのセキュリティを確保します。 |
+
+#### Request Body <a href="#user-content-request-body" id="user-content-request-body"></a>
+
+```
+{
+    "point":  string, //  拡張ポイント、異なるモジュールに複数の拡張ポイントが含まれる場合があります
+    "params": {
+        ...  // 各モジュールの拡張ポイントに渡されるパラメータ
+    }
+}
+```
+
+#### API Response <a href="#usercontentapi-fan-hui" id="usercontentapi-fan-hui"></a>
+
+```
+{
+    ...  // APIの応答内容、異なる拡張ポイントの応答は各モジュールの設計仕様をご覧ください
+}
+```
+
+### 検証 <a href="#usercontent-xiao-yan" id="usercontent-xiao-yan"></a>
+
+DifyがAPIベースの拡張機能を設定する際、DifyはAPIエンドポイントにリクエストを送信してAPIの利用可能性を確認します。
+
+APIエンドポイントが`point=ping`を受け取った場合、インターフェースは`result=pong`を返す必要があります。具体的には以下の通りです：
+
+#### Header <a href="#user-content-header-1" id="user-content-header-1"></a>
+
+```
+Content-Type: application/json
+Authorization: Bearer {api_key}
+```
+
+#### Request Body <a href="#user-content-request-body-1" id="user-content-request-body-1"></a>
+
+```
+{
+    "point": "ping"
+}
+```
+
+#### API 期待返答 <a href="#usercontentapi-qi-wang-fan-hui" id="usercontentapi-qi-wang-fan-hui"></a>
+
+```
+{
+    "result": "pong"
+}
+```
+
+### 例 <a href="#usercontent-fan-li" id="usercontent-fan-li"></a>
+
+ここでは外部データツールを例に、特定地域の外部天気情報を取得するシナリオを示します。
+
+#### API例 <a href="#usercontentapi-fan-li" id="usercontentapi-fan-li"></a>
+
+```
+POST https://fake-domain.com/api/dify/receive
+```
+
+**Header**
+
+```
+Content-Type: application/json
+Authorization: Bearer 123456
+```
+
+**Request Body**
+
+```
+{
+    "point": "app.external_data_tool.query",
+    "params": {
+        "app_id": "61248ab4-1125-45be-ae32-0ce91334d021",
+        "tool_variable": "weather_retrieve",
+        "inputs": {
+            "location": "London"
+        },
+        "query": "How's the weather today?"
+    }
+}
+```
+
+**API 返答**
+
+```
+{
+    "result": "City: London\nTemperature: 10°C\nRealFeel®: 8°C\nAir Quality: Poor\nWind Direction: ENE\nWind Speed: 8 km/h\nWind Gusts: 14 km/h\nPrecipitation: Light rain"
+}
+```
+
+#### コード例 <a href="#usercontent-dai-ma-fan-li" id="usercontent-dai-ma-fan-li"></a>
+
+このコードはPythonのFastAPIフレームワークに基づいています。
+
+1.  必要な依存関係をインストールします。
+
+    ```
+    pip install fastapi[all] uvicorn
+    ```
+2.  インターフェース仕様に従ってコードを作成します。
+
+    ```
+    from fastapi import FastAPI, Body, HTTPException, Header
+    from pydantic import BaseModel
+
+    app = FastAPI()
+
+
+    class InputData(BaseModel):
+        point: str
+        params: dict = {}
+
+
+    @app.post("/api/dify/receive")
+    async def dify_receive(data: InputData = Body(...), authorization: str = Header(None)):
+        """
+        Receive API query data from Dify.
+        """
+        expected_api_key = "123456"  # TODO Your API key of this API
+        auth_scheme, _, api_key = authorization.partition(' ')
+
+        if auth_scheme.lower() != "bearer" or api_key != expected_api_key:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+        point = data.point
+
+        # for debug
+        print(f"point: {point}")
+
+        if point == "ping":
+            return {
+                "result": "pong"
+            }
+        if point == "app.external_data_tool.query":
+            return handle_app_external_data_tool_query(params=data.params)
+        # elif point == "{point name}":
+            # TODO other point implementation here
+
+        raise HTTPException(status_code=400, detail="Not implemented")
+
+
+    def handle_app_external_data_tool_query(params: dict):
+        app_id = params.get("app_id")
+        tool_variable = params.get("tool_variable")
+        inputs = params.get("inputs")
+        query = params.get("query")
+
+        # for debug
+        print(f"app_id: {app_id}")
+        print(f"tool_variable: {tool_variable}")
+        print(f"inputs: {inputs}")
+        print(f"query: {query}")
+
+        # TODO your external data tool query implementation here, 
+        #  return must be a dict with key "result", and the value is the query result
+        if inputs.get("location") == "London":
+            return {
+                "result": "City: London\nTemperature: 10°C\nRealFeel®: 8°C\nAir Quality: Poor\nWind Direction: ENE\nWind "
+                          "Speed: 8 km/h\nWind Gusts: 14 km/h\nPrecipitation: Light rain"
+            }
+        else:
+            return {"result": "Unknown city"}
+    ```
+3.  APIサービスを起動します。デフォルトポートは8000で、APIの完全なアドレスは`http://127.0.0.1:8000/api/dify/receive`です。設定したAPIキーは`123456`です。
+
+    ```
+    uvicorn main:app --reload --host 0.0.0.0
+    ```
+4. Dify にこの API を設定します。
+
+5. アプリケーション内でこの API 拡張を選択します。
+
+アプリケーションのデバッグ中に、Dify は設定された API を呼び出し、以下の内容を送信します（例）：
+
+```
+{
+    "point": "app.external_data_tool.query",
+    "params": {
+        "app_id": "61248ab4-1125-45be-ae32-0ce91334d021",
+        "tool_variable": "weather_retrieve",
+        "inputs": {
+            "location": "London"
+        },
+        "query": "How's the weather today?"
+    }
+}
+```
+
+API は以下のように返答します：
+
+```
+{
+    "result": "City: London\nTemperature: 10°C\nRealFeel®: 8°C\nAir Quality: Poor\nWind Direction: ENE\nWind Speed: 8 km/h\nWind Gusts: 14 km/h\nPrecipitation: Light rain"
+}
+```
+
+### ローカルデバッグ
+
+APIサービスをローカルでデバッグするためには、[Ngrok](https://ngrok.com) を使用してAPIサービスのエンドポイントをパブリックネットワークに公開し、クラウドでローカルコードをデバッグすることができます。操作手順は以下の通りです。
+
+1. ngrokの[公式サイト(https://ngrok.com)](https://ngrok.com) にアクセスし、Ngrokファイルを登録してダウンロードします。
+
+<Frame caption="ダウンロード">
+  <img src="/ja-jp/user-guide/.gitbook/assets/download.png" alt="Download" />
+</Frame>
+
+2. ダウンロードが完了したら、ダウンロードディレクトリに移動し、以下の手順に従って圧縮ファイルを解凍し、指示に従って初期化スクリプトを実行します。
+   * ```Shell
+     $ unzip /path/to/ngrok.zip
+     $ ./ngrok config add-authtoken あなたのトークン
+     ```
+3. ローカルAPIサービスのポートを確認してください：
+
+<Frame caption="ポート確認">
+  <img src="/ja-jp/user-guide/.gitbook/assets/8000.png" alt="ポート確認" />
+</Frame>
+
+次に、以下のコマンドを実行して起動します：
+
+*   ```Shell
+    $ ./ngrok http ポート番号
+    ```
+
+    起動に成功すると以下のような表示があります：
+
+<Frame caption="Ngrok 起動">
+  <img src="/ja-jp/user-guide/.gitbook/assets/ngrock.png" alt="Ngrok 起動" />
+</Frame>
+
+4. Forwardingのセクションで、上記の画像のように、`https://177e-159-223-41-52.ngrok-free.app`（これは例です。ご自身のものに置き換えてください）が公開されたドメインになります。
+
+* 上記の例に従って、ローカルで起動したサービスエンドポイントを公開し、コード例のエンドポイント：`http://127.0.0.1:8000/api/dify/receive` を `https://177e-159-223-41-52.ngrok-free.app/api/dify/receive` に置き換えます。
+
+このAPIエンドポイントはパブリックネットワークからアクセス可能です。これにより、DifyでこのAPIエンドポイントを設定してローカルコードをデバッグすることができます。構成手順については、[外部データツール](../../knowledge-base/external-data-tool.md "mention") をご参照ください。
+
+### Cloudflare Workersを使用したAPI拡張のデプロイメント
+
+API拡張をデプロイする際には、Cloudflare Workersを使用することをお勧めします。Cloudflare Workersを利用することで、簡単にパブリックアドレスを提供でき、また無料で使用することができます。
+
+詳細については、[Cloudflare Workersを使用したAPI Toolsのデプロイ](/ja-jp/user-guide/tools/extensions/api-based/cloudflare-workers) をご参照ください。

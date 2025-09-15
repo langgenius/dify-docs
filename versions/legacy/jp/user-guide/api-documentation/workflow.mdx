@@ -1,0 +1,244 @@
+---
+title: ワークフローアプリ
+version: '日本語'
+---
+
+## ワークフローの実行
+`POST /workflows/run`
+
+ワークフローを実行するには、公開されているワークフローが必要です。
+
+### リクエストボディ
+- **inputs** (object) 必須
+  - アプリで定義された各変数の値を渡すことができます。
+  - inputs パラメータには複数のキー/値ペア(（Key/Value pairs）)が含まれます。
+  - テキスト生成型アプリでは、少なくとも1組のキー/値ペアを渡す必要があります。
+
+- **response_mode** (string) 必須
+  レスポンスモードを指定します。サポートされているモードは以下の通りです：
+  - `streaming` ストリーミングモード（推奨）
+  - `blocking` ブロッキングモード
+
+- **user** (string) 必須
+  - ユーザー識別子で、エンドユーザーの身元を定義するために使用します。
+  - 開発者は規則を定義し、アプリ内でユーザー識別子が一意であることを保証する必要があります。
+
+- **files** (array[object]) 任意
+  ファイルのリストで、画像を渡してテキスト理解や質問に回答する場合に適用されます。
+  - `type` (string) サポートされるタイプ：画像 image
+  - `transfer_method` (string) 転送方法、`remote_url` または `local_file`
+  - `url` (string) 画像のURL
+  - `upload_file_id` (string) アップロードされたファイルのID
+
+### Response
+
+#### CompletionResponse (ブロッキングモード)
+- `task_id` (string) タスクID
+- `workflow_run_id` (string) ワークフロー実行ID
+- `data` (object)
+  - `id` (string) ワークフロー実行ID
+  - `workflow_id` (string) 関連するワークフローID
+  - `status` (string) 実行ステータス
+  - `outputs` (json) 出力内容
+  - `error` (string) エラー理由
+  - `elapsed_time` (float) 経過時間
+  - `total_tokens` (int) 総使用トークン数
+  - `total_steps` (int) 総ステップ数
+  - `created_at` (timestamp) 実行時間
+  - `finished_at` (timestamp) 終了時間
+
+#### ChunkCompletionResponse (ストリーミングモード)
+ストリーミングイベントタイプには以下の内容が含まれます：
+
+1. **workflow_started**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "workflow_started",
+  "data": {
+    "id": "string",
+    "workflow_id": "string",
+    "sequence_number": 1,
+    "created_at": "timestamp"
+  }
+}
+```
+
+2. **node_started**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "node_started",
+  "data": {
+    "id": "string",
+    "node_id": "string",
+    "node_type": "string",
+    "index": 0,
+    "predecessor_node_id": "string",
+    "inputs": [],
+    "parallel_id": "string",
+    "parallel_start_node_id": "string",
+    "created_at": "timestamp"
+  }
+}
+```
+
+3. **node_finished**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "node_finished",
+  "data": {
+    "id": "string",
+    "node_id": "string",
+    "node_type": "string",
+    "index": 0,
+    "predecessor_node_id": "string",
+    "inputs": [],
+    "process_data": {},
+    "outputs": {},
+    "status": "string",
+    "error": "string",
+    "elapsed_time": 0.0,
+    "execution_metadata": {
+      "total_tokens": 0,
+      "total_price": "0.00",
+      "currency": "USD"
+    },
+    "parallel_id": "string",
+    "parallel_start_node_id": "string",
+    "created_at": "timestamp"
+  }
+}
+```
+
+4. **parallel_branch_started/finished**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "parallel_branch_started",
+  "data": {
+    "parallel_id": "string",
+    "parallel_start_node_id": "string",
+    "parent_parallel_id": "string",
+    "parent_parallel_start_node_id": "string", 
+    "iteration_id": "string",
+    "created_at": "timestamp"
+  }
+}
+```
+
+5. **iteration_started/next/completed**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "iteration_started",
+  "data": {
+    "id": "string",
+    "node_id": "string",
+    "node_type": "string",
+    "title": "string",
+    "metadata": {},
+    "inputs": [],
+    "parallel_id": "string",
+    "parallel_start_node_id": "string",
+    "created_at": "timestamp"
+  }
+}
+```
+
+6. **workflow_finished**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "workflow_finished",
+  "data": {
+    "id": "string",
+    "workflow_id": "string",
+    "status": "string",
+    "outputs": {},
+    "error": "string",
+    "elapsed_time": 0.0,
+    "total_tokens": 0,
+    "total_steps": 0,
+    "created_at": "timestamp",
+    "finished_at": "timestamp"
+  }
+}
+```
+
+7. **text_chunk/text_replace**
+```json
+{
+  "task_id": "string",
+  "workflow_run_id": "string",
+  "event": "text_chunk",
+  "data": {
+    "text": "string"
+  }
+}
+```
+
+### エラーコード
+- 400 `invalid_param` - 送信されたパラメータに異常があります
+- 400 `app_unavailable` - アプリケーションの設定が利用できません
+- 400 `provider_not_initialize` - 利用可能なモデルの資格情報が設定されていません
+- 400 `provider_quota_exceeded` - モデル呼び出しのクォータを超過しています
+- 400 `model_currently_not_support` - 現在のモデルは利用できません
+- 400 `completion_request_error` - テキスト生成に失敗しました
+- 500 - サービス内部エラー
+
+### 例
+
+Request例：
+```curl
+curl -X POST 'https://api.dify.ai/v1/workflows/run' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "inputs": {
+        "query": "hello world."
+    },
+    "response_mode": "streaming",
+    "user": "abc-123",
+    "files": [
+      {
+        "type": "image",
+        "transfer_method": "remote_url",
+        "url": "https://cloud.dify.ai/logo/logo-site.png"
+      }
+    ]
+}'
+```
+
+## ワークフローを停止する
+`POST /workflows/:task_id/stop`
+
+ストリーミングモードのみがサポートされています。
+
+### パスパラメータ
+- **task_id** (string) タスクID
+
+### リクエストボディ
+- **user** (string) 必須 - ユーザー識別子。ワークフロー実行時に指定されたユーザーと一致している必要があります。
+
+### レスポンス
+- `result` (string) 常に "success" が返されます
+
+### 例
+
+Request例：
+```curl
+curl -X POST 'https://cloud.dify.ai/v1/workflows/:task_id/stop' \
+-H 'Authorization: Bearer {api_key}' \
+-H 'Content-Type: application/json' \
+--data-raw '{
+    "user": "abc-123"
+}'
+```
