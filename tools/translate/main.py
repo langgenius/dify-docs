@@ -3,12 +3,13 @@ import os
 import sys
 import asyncio
 import aiofiles
+import json
 
 docs_structure = {
     "general_help": {
         "English": "en",
-        "Chinese": "zh-hans",
-        "Japanese": "ja-jp"
+        "Chinese": "cn",
+        "Japanese": "jp"
     },
     "plugin_dev": {
         "English": "plugin-dev-en",
@@ -68,11 +69,12 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
         try:
             # Add delay to avoid concurrent pressure
             if attempt > 0:
-                delay = attempt * 2  # Incremental delay: 2s, 4s, 6s
+                delay = attempt * 10  # Incremental delay: 2s, 4s, 6s
                 print(f"Retrying in {delay} seconds... (attempt {attempt + 1}/{max_retries})")
                 await asyncio.sleep(delay)
 
             async with httpx.AsyncClient(timeout=120.0) as client:  # Increase timeout to 120 seconds
+                print(f"sending request attempt {attempt + 1}/{max_retries}")
                 response = await client.post(url, json=payload, headers=headers)
 
             # Check HTTP status code
@@ -159,7 +161,72 @@ def generate_target_path(file_path, current_lang_code, target_lang_code):
     """
     Generate target language file path
     """
-    return file_path.replace(current_lang_code, target_lang_code)
+    # Only replace the language code in the path after 'dify-docs/'
+    base_path = "/Users/guchenhe/Desktop/werk/projects/dify-docs/"
+    if file_path.startswith(base_path):
+        relative_path = file_path[len(base_path):]
+        # Replace only the first occurrence of the language code
+        new_relative_path = relative_path.replace(f"{current_lang_code}/", f"{target_lang_code}/", 1)
+        return base_path + new_relative_path
+    else:
+        # Fallback to simple replacement if path structure is different
+        return file_path.replace(f"/{current_lang_code}/", f"/{target_lang_code}/", 1)
+
+
+def load_translation_notices():
+    """
+    Load translation notices from notices.json
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    notices_path = os.path.join(script_dir, "notices.json")
+
+    try:
+        with open(notices_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Warning: Could not load notices.json: {str(e)}")
+        return {}
+
+
+def add_translation_notice(content, target_lang_code, source_file_path):
+    """
+    Add translation notice after frontmatter
+    """
+    notices = load_translation_notices()
+
+    # Map language codes to notice keys
+    lang_map = {
+        'cn': 'zh-hans',
+        'jp': 'ja-jp'
+    }
+
+    notice_key = lang_map.get(target_lang_code)
+    if not notice_key or notice_key not in notices:
+        return content
+
+    # Generate English path from source file path
+    en_path = source_file_path.replace('/Users/guchenhe/Desktop/werk/projects/dify-docs', '')
+    notice = notices[notice_key].replace('{en_path}', en_path)
+
+    # Find the end of frontmatter (second ---)
+    lines = content.split('\n')
+    frontmatter_count = 0
+    insert_position = 0
+
+    for i, line in enumerate(lines):
+        if line.strip() == '---':
+            frontmatter_count += 1
+            if frontmatter_count == 2:
+                insert_position = i + 1
+                break
+
+    if insert_position > 0:
+        # Insert notice after frontmatter
+        lines.insert(insert_position, '')
+        lines.insert(insert_position + 1, notice.rstrip())
+        return '\n'.join(lines)
+
+    return content
 
 
 async def save_translated_content(content, file_path):
@@ -215,8 +282,10 @@ async def translate_single_file(file_path, dify_api_key, current_lang_name, targ
             )
             
             print(f"Translation result length: {len(translated_content)} characters")
-            
+
             if translated_content and translated_content.strip():
+                # Add translation notice after frontmatter
+                translated_content = add_translation_notice(translated_content, target_lang_code, file_path)
                 # Save translation result
                 await save_translated_content(translated_content, target_file_path)
             else:
