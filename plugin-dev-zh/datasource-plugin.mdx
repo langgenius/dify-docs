@@ -4,7 +4,7 @@ title: "数据源插件"
 
 数据源（Data Source）插件是 Dify 1.9.0 新引入的一种插件类型。在知识流水线（Knowledge Pipeline）中，其作为文档数据的来源并充当整个流水线的起始点。
 
-本文介绍如何开发数据源插件（包括插件结构、代码示例、调试方法及发布流程等），帮助你快速完成插件开发与上线。
+本文介绍如何开发数据源插件（包括插件结构、代码示例、调试方法等），帮助你快速完成插件开发与上线。
 
 ## 前置准备
 
@@ -18,10 +18,10 @@ title: "数据源插件"
 Dify 支持三种数据源插件：在线网盘、在线文档和网页爬虫。在具体实现插件代码时，实现插件功能的类需要继承不同的数据源类，三种插件类型对应三种父类。
 
 <Info>
-  了解如何继承父类以实现插件功能，请阅读 [Dify 插件开发：Hello World 指南-4.4 实现工具（Tool）逻辑](/plugin-dev-zh/0211-getting-started-dify-tool#4-4-实现工具-tool-逻辑) 章节。
+  了解如何继承父类以实现插件功能，请阅读 [Dify 插件开发：Hello World 指南-4.4 实现工具（Tool）逻辑](/plugin-dev-zh/0211-getting-started-dify-tool#4-4-实现工具-tool-逻辑)。
 </Info>
 
-每个数据源插件类型支持多种数据源，例如：
+每个数据源插件类型支持配置多种数据源，例如：
 
 - 网页爬虫：Jina Reader，FireCrawl
 - 在线网盘：Onedrive，Google Drive，Box，AWS S3，Tencent COS
@@ -31,11 +31,11 @@ Dify 支持三种数据源插件：在线网盘、在线文档和网页爬虫。
 
 ![Data Source Type Pn](/images/data_source_type.png)
 
-## 插件开发
+## 开发插件
 
 ### 创建数据源插件
 
-和其他插件一样，你可以使用脚手架命令行工具来创建数据源插件，并选择 `datasource` 类型。
+你可以使用脚手架命令行工具来创建数据源插件，并选择 `datasource` 类型。
 
 ```powershell
 dify plugin init
@@ -43,7 +43,7 @@ dify plugin init
 
 ![Datasource Plugin Init Pn](/images/datasource_plugin_init.png)
 
-一般情况下，数据源插件无需使用 Dify 平台的其他功能，因此无需为其设置额外权限。完成设置后，命令行工具将自动生成插件项目代码。
+一般情况下，数据源插件不使用 Dify 平台的其他功能，因此无需为其设置额外权限。完成设置后，命令行工具将自动生成插件项目代码。
 
 #### 数据源插件结构
 
@@ -104,7 +104,7 @@ datasources:
 ```
 
 <Info>
-  了解更多创建供应商 YAML 文件的信息，请阅读 [Dify 插件开发：Hello World 指南 - Dify Docs](/plugin-dev-zh/0211-getting-started-dify-tool#4-3-配置-provider-凭证)。
+  了解更多创建供应商 YAML 文件的信息，请阅读 [Dify 插件开发：Hello World 指南-4.3 配置 Provider 凭证](/plugin-dev-zh/0211-getting-started-dify-tool#4-3-配置-provider-凭证)。
 </Info>
 
 <Info>
@@ -113,7 +113,7 @@ datasources:
 
 #### 创建供应商代码文件
 
-- 使用 API Key 认证模式时，数据源插件的供应商代码文件与工具插件完全相同，仅需将供应商类继承的父类修改为 `DatasourceProvider` 即可。
+- **若使用 API Key 认证模式**，数据源插件的供应商代码文件与工具插件完全相同，仅需将供应商类继承的父类修改为 `DatasourceProvider` 即可。
 
   ```python
   class YourDatasourceProvider(DatasourceProvider):
@@ -126,79 +126,77 @@ datasources:
           except Exception as e:
               raise ToolProviderCredentialValidationError(str(e))
   ```
-- 使用 OAuth 认证模式时，数据源插件则与工具插件略有不同。使用 OAuth 获取访问权限时，数据源插件可同时返回用户名和头像并显示在前端。因此，`_oauth_get_credentials` 和 `_oauth_refresh_credentials` 需要返回包含 `name`、`avatar_url`、`expires_at` 和 `credentials` 的 `DatasourceOAuthCredentials` 类型。
+- **若使用 OAuth 认证模式**，数据源插件则与工具插件略有不同。使用 OAuth 获取访问权限时，数据源插件可同时返回用户名和头像并显示在前端。因此，`_oauth_get_credentials` 和 `_oauth_refresh_credentials` 需要返回包含 `name`、`avatar_url`、`expires_at` 和 `credentials` 的 `DatasourceOAuthCredentials` 类型。
+  - `DatasourceOAuthCredentials` 类的定义如下，返回时需设置为对应的类型：
 
-  `DatasourceOAuthCredentials` 类的定义如下，返回时需设置为对应的类型：
+    ```python
+    class DatasourceOAuthCredentials(BaseModel):
+        name: str | None = Field(None, description="The name of the OAuth credential")
+        avatar_url: str | None = Field(None, description="The avatar url of the OAuth")
+        credentials: Mapping[str, Any] = Field(..., description="The credentials of the OAuth")
+        expires_at: int | None = Field(
+            default=-1,
+            description="""The expiration timestamp (in seconds since Unix epoch, UTC) of the credentials.
+            Set to -1 or None if the credentials do not expire.""",
+        )
+    ```
+  - `_oauth_get_authorization_url`，`_oauth_get_credentials` 和 `_oauth_refresh_credentials` 的函数签名如下：
 
-  ```python
-  class DatasourceOAuthCredentials(BaseModel):
-      name: str | None = Field(None, description="The name of the OAuth credential")
-      avatar_url: str | None = Field(None, description="The avatar url of the OAuth")
-      credentials: Mapping[str, Any] = Field(..., description="The credentials of the OAuth")
-      expires_at: int | None = Field(
-          default=-1,
-          description="""The expiration timestamp (in seconds since Unix epoch, UTC) of the credentials.
-          Set to -1 or None if the credentials do not expire.""",
-      )
-  ```
-
-  `_oauth_get_authorization_url`，`_oauth_get_credentials` 和 `_oauth_refresh_credentials` 的函数签名如下：
-
-  <Tabs>
-    <Tab title="_oauth_get_authorization_url">
-      ```python
-      def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
-      """
-      Generate the authorization URL for {{ .PluginName }} OAuth.
-      """
-      try:
-          """
-          IMPLEMENT YOUR AUTHORIZATION URL GENERATION HERE
-          """
-      except Exception as e:
-          raise DatasourceOAuthError(str(e))
-      return ""
-      ```
-    </Tab>
-    <Tab title="_oauth_get_credentials">
-      ```python
-      def _oauth_get_credentials(
-      self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
-      ) -> DatasourceOAuthCredentials:
-      """
-      Exchange code for access_token.
-      """
-      try:
-          """
-          IMPLEMENT YOUR CREDENTIALS EXCHANGE HERE
-          """
-      except Exception as e:
-          raise DatasourceOAuthError(str(e))
-      return DatasourceOAuthCredentials(
-          name="",
-          avatar_url="",
-          expires_at=-1,
-          credentials={},
-      )
-      ```
-    </Tab>
-    <Tab title="_oauth_refresh_credentials">
-      ```python
-      def _oauth_refresh_credentials(
-      self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
-      ) -> DatasourceOAuthCredentials:
-      """
-      Refresh the credentials
-      """
-      return DatasourceOAuthCredentials(
-          name="",
-          avatar_url="",
-          expires_at=-1,
-          credentials={},
-      )
-      ```
-    </Tab>
-  </Tabs>
+    <Tabs>
+      <Tab title="_oauth_get_authorization_url">
+        ```python
+        def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+        """
+        Generate the authorization URL for {{ .PluginName }} OAuth.
+        """
+        try:
+            """
+            IMPLEMENT YOUR AUTHORIZATION URL GENERATION HERE
+            """
+        except Exception as e:
+            raise DatasourceOAuthError(str(e))
+        return ""
+        ```
+      </Tab>
+      <Tab title="_oauth_get_credentials">
+        ```python
+        def _oauth_get_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+        ) -> DatasourceOAuthCredentials:
+        """
+        Exchange code for access_token.
+        """
+        try:
+            """
+            IMPLEMENT YOUR CREDENTIALS EXCHANGE HERE
+            """
+        except Exception as e:
+            raise DatasourceOAuthError(str(e))
+        return DatasourceOAuthCredentials(
+            name="",
+            avatar_url="",
+            expires_at=-1,
+            credentials={},
+        )
+        ```
+      </Tab>
+      <Tab title="_oauth_refresh_credentials">
+        ```python
+        def _oauth_refresh_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+        ) -> DatasourceOAuthCredentials:
+        """
+        Refresh the credentials
+        """
+        return DatasourceOAuthCredentials(
+            name="",
+            avatar_url="",
+            expires_at=-1,
+            credentials={},
+        )
+        ```
+      </Tab>
+    </Tabs>
 
 ### 添加数据源
 
@@ -206,7 +204,7 @@ datasources:
 
 #### 网络爬虫（Web Crawler）
 
-在网页爬虫类型插件的供应商 YAML 文件中， `output_schema` 需固定返回四个参数：`source_url`、`content`、`title` 和 `description`。
+在网页爬虫类插件的供应商 YAML 文件中， `output_schema` 需固定返回四个参数：`source_url`、`content`、`title` 和 `description`。
 
 ```yaml
 output_schema:
@@ -226,7 +224,7 @@ output_schema:
         description: the description of the website
 ```
 
-在 `Webcrawl` 类型数据源的主逻辑代码中，需继承 `WebsiteCrawlDatasource` 类并实现 `_get_website_crawl` 方法，然后使用 `create_crawl_message` 方法返回网页爬虫消息。
+在网页爬虫类插件的主逻辑代码中，需继承 `WebsiteCrawlDatasource` 类并实现 `_get_website_crawl` 方法，然后使用 `create_crawl_message` 方法返回网页爬虫消息。
 
 如需爬取多个网页并分批返回，可将 `WebSiteInfo.status` 设置为 `processing`，然后使用 `create_crawl_message` 方法返回每一批网页爬虫消息。当所有网页均爬取完成后，再将 `WebSiteInfo.status` 设置为 `completed`。
 
@@ -260,7 +258,7 @@ class YourDataSource(WebsiteCrawlDatasource):
 
 #### 在线文档（Online Document）
 
-在线文档类型插件的返回值至少需包含 `content` 字段用于表示文档内容，示例如下：
+在线文档类插件的返回值至少需包含 `content` 字段用于表示文档内容，示例如下：
 
 ```yaml
 output_schema:
@@ -277,7 +275,7 @@ output_schema:
         description: page content
 ```
 
-在线文档类型数据源插件的主逻辑代码中，需继承 `OnlineDocumentDatasource` 类并实现 `_get_pages` 和 `_get_content` 两个方法。当用户运行插件时，首先通过 `_get_pages` 方法获取文档列表；当用户从列表中选择某个文档后，再通过 `_get_content` 方法获取文档内容。
+在线文档类插件的主逻辑代码中，需继承 `OnlineDocumentDatasource` 类并实现 `_get_pages` 和 `_get_content` 两个方法。当用户运行插件时，首先通过 `_get_pages` 方法获取文档列表；当用户从列表中选择某个文档后，再通过 `_get_content` 方法获取文档内容。
 
 <Tabs>
   <Tab title="_get_pages">
@@ -321,7 +319,7 @@ output_schema:
 
 #### 在线网盘（Online Drive）
 
-在线网盘类型数据源插件的返回值类型为一个文件，需遵循以下规范：
+在线网盘类插件的返回值类型为一个文件，需遵循以下规范：
 
 ```yaml
 output_schema:
@@ -331,7 +329,7 @@ output_schema:
         $ref: "https://dify.ai/schemas/v1/file.json"
 ```
 
-在线网盘类型数据源插件的主逻辑代码中，需继承 `OnlineDriveDatasource` 类并实现 `_browse_files` 和 `_download_file` 两个方法。
+在线网盘类插件的主逻辑代码中，需继承 `OnlineDriveDatasource` 类并实现 `_browse_files` 和 `_download_file` 两个方法。
 
 当用户运行插件时，首先通过 `_browse_files` 方法获取文件列表。此时 `prefix` 为空，表示获取根目录下的文件列表。文件列表中包含文件夹与文件两种类型的变量。当用户继续打开文件夹时，将再次运行 `_browse_files` 方法。此时， `OnlineDriveBrowseFilesRequest` 中的 `prefix` 为文件夹 ID，用于获取该文件夹内的文件列表。
 
@@ -414,7 +412,7 @@ output_schema:
 
 ## 最终检查
 
-在打包与发布前，请确认以下事项已全部完成：
+在打包与发布前，确认以下事项已全部完成：
 
 - 设置支持的最低 Dify 版本为 `1.9.0`
 - 设置 SDK 版本为 `dify-plugin>=0.5.0,<0.6.0`
