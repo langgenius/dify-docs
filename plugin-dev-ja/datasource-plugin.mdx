@@ -1,0 +1,439 @@
+---
+title: "データソースプラグイン"
+---
+
+データソース（Data Source）プラグインは、Dify 1.9.0で新たに導入されたプラグインタイプです。ナレッジパイプライン（Knowledge Pipeline）において、ドキュメントデータのソースとして機能し、パイプライン全体の開始点となります。
+
+この記事では、データソースプラグインの開発方法（プラグインの構造、コード例、デバッグ方法など）を紹介し、プラグインの開発と公開を迅速に完了させるお手伝いをします。
+
+## 事前準備
+
+この記事を読む前に、ナレッジパイプラインのプロセスに関する基本的な理解と、プラグイン開発に関する一定の知識があることを確認してください。関連する内容は、以下のドキュメントで確認できます：
+
+- [ステップ2：ナレッジパイプラインのオーケストレーション](/ja-jp/guides/knowledge-base/knowledge-pipeline/knowledge-pipeline-orchestration)
+- [Dify プラグイン開発：Hello World ガイド](/plugin-dev-ja/0211-getting-started-dify-tool)
+
+## データソースプラグインのタイプ
+
+Difyは、オンラインストレージ、オンラインドキュメント、Webクローラーの3種類のデータソースプラグインをサポートしています。プラグインのコードを具体的に実装する際には、プラグイン機能を実現するクラスが異なるデータソースクラスを継承する必要があります。3つのプラグインタイプは、3つの親クラスに対応しています。
+
+<Info>
+  親クラスを継承してプラグイン機能を実現する方法については、 [Dify プラグイン開発：Hello World ガイド-4.4 ツール (Tool) ロジックの実装](/plugin-dev-ja/0211-getting-started-dify-tool#4-4-ツール-tool-ロジックの実装)をお読みください。。
+</Info>
+
+各データソースプラグインタイプは、複数のデータソースの設定をサポートしています。例：
+
+- Webクローラー：Jina Reader，FireCrawl
+- オンラインストレージ：Onedrive，Google Drive，Box，AWS S3，Tencent COS
+- オンラインドキュメント：Notion，Confluence，GitHub
+
+データソースのタイプとデータソースプラグインのタイプの関係は、以下の図の通りです：
+
+![](/images/data_source_type.png)
+
+## プラグインの開発
+
+### データソースプラグインの作成
+
+スキャフォールディング（scaffolding）コマンドラインツールを使用してデータソースプラグインを作成し、`datasource` タイプを選択できます。
+
+```powershell
+dify plugin init
+```
+
+![](/images/datasource_plugin_init.png)
+
+通常、データソースプラグインはDifyプラットフォームの他の機能を使用しないため、追加の権限を設定する必要はありません。設定が完了すると、コマンドラインツールが自動的にプラグインのプロジェクトコードを生成します。
+
+#### データソースプラグインの構造
+
+データソースプラグインは、主に3つの部分で構成されています。
+
+- `manifest.yaml` ファイル：プラグインの基本情報を記述します
+- `provider` ディレクトリ：プラグインプロバイダーの説明と認証を実装するコードが含まれます
+- `datasources` ディレクトリ：データソースを取得するコアロジックを実装する説明とコードが含まれます
+
+```
+├── _assets
+│   └── icon.svg
+├── datasources
+│   ├── your_datasource.py
+│   └── your_datasource.yaml
+├── main.py
+├── manifest.yaml
+├── PRIVACY.md
+├── provider
+│   ├── your_datasource.py
+│   └── your_datasource.yaml
+├── README.md
+└── requirements.txt
+```
+
+#### 正しいバージョンとタグの設定
+
+- `manifest.yaml` ファイルでは、プラグインがサポートするDifyの最低バージョンを次のように設定する必要があります：
+
+  ```yaml
+  minimum_dify_version: 1.9.0
+  ```
+- `manifest.yaml` ファイルで、プラグインに以下のデータソースタグを追加し、プラグインがDify Marketplaceでデータソースとして分類・表示されるようにする必要があります：
+
+  ```yaml
+  tags:
+    - rag
+  ```
+- `requirements.txt` ファイルでは、プラグイン開発に使用するプラグインSDKのバージョンを次のように設定する必要があります：
+
+  ```yaml
+  dify-plugin>=0.5.0,<0.6.0
+  ```
+
+### プロバイダーの追加
+
+#### プロバイダーYAMLファイルの作成
+
+プロバイダーYAMLファイルの定義と記述は、ツールプラグインと基本的に同じですが、以下の2点のみ異なります。
+
+```yaml
+# データソースのプロバイダータイプを指定します。online_drive、online_document、または website_crawl に設定できます
+provider_type: online_drive # online_document, website_crawl
+
+# データソースを指定します
+datasources:
+  - datasources/PluginName.yaml
+```
+
+<Info>
+  プロバイダーYAMLファイルの作成に関する詳細については、[Dify プラグイン開発：Hello World ガイド-
+  4.3 プロバイダー認証情報の設定](/plugin-dev-ja/0211-getting-started-dify-tool#4-3-プロバイダー認証情報の設定)をお読みください。
+</Info>
+
+<Info>
+  データソースプラグインは、OAuth 2.0 または API キーの2つの方法で認証をサポートしています。OAuth の設定方法については、[为工具插件添加 OAuth 支持](/plugin-dev-en/tool-oauth)をお読みください。
+</Info>
+
+#### プロバイダーコードファイルの作成
+
+- **APIキー認証モードを使用する場合**、データソースプラグインのプロバイダーコードファイルはツールプラグインと完全に同じですが、プロバイダークラスが継承する親クラスを `DatasourceProvider` に変更するだけで済みます。
+
+  ```python
+  class YourDatasourceProvider(DatasourceProvider):
+  
+      def _validate_credentials(self, credentials: Mapping[str, Any]) -> None:
+          try:
+              """
+              IMPLEMENT YOUR VALIDATION HERE
+              """
+          except Exception as e:
+              raise ToolProviderCredentialValidationError(str(e))
+  ```
+- **OAuth認証モードを使用する場合**、データソースプラグインはツールプラグインと若干異なります。OAuthを使用してアクセス権限を取得する際、データソースプラグインは同時にユーザー名とアバターを返し、フロントエンドに表示することができます。そのため、`_oauth_get_credentials` と `_oauth_refresh_credentials` は、`name`、`avatar_url`、`expires_at`、および `credentials` を含む `DatasourceOAuthCredentials` 型を返す必要があります。
+  - `DatasourceOAuthCredentials` クラスの定義は以下の通りです。返す際には対応する型に設定する必要があります：
+
+    ```python
+    class DatasourceOAuthCredentials(BaseModel):
+        name: str | None = Field(None, description="The name of the OAuth credential")
+        avatar_url: str | None = Field(None, description="The avatar url of the OAuth")
+        credentials: Mapping[str, Any] = Field(..., description="The credentials of the OAuth")
+        expires_at: int | None = Field(
+            default=-1,
+            description="""The expiration timestamp (in seconds since Unix epoch, UTC) of the credentials.
+            Set to -1 or None if the credentials do not expire.""",
+        )
+    ```
+  - `_oauth_get_authorization_url`、`_oauth_get_credentials`、および `_oauth_refresh_credentials` の関数シグネチャは以下の通りです：
+
+    <Tabs>
+      <Tab title="_oauth_get_authorization_url">
+        ```python
+        def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+        """
+        Generate the authorization URL for {{ .PluginName }} OAuth.
+        """
+        try:
+            """
+            IMPLEMENT YOUR AUTHORIZATION URL GENERATION HERE
+            """
+        except Exception as e:
+            raise DatasourceOAuthError(str(e))
+        return ""
+        ```
+      </Tab>
+      <Tab title="_oauth_get_credentials">
+        ```python
+        def _oauth_get_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+        ) -> DatasourceOAuthCredentials:
+        """
+        Exchange code for access_token.
+        """
+        try:
+            """
+            IMPLEMENT YOUR CREDENTIALS EXCHANGE HERE
+            """
+        except Exception as e:
+            raise DatasourceOAuthError(str(e))
+        return DatasourceOAuthCredentials(
+            name="",
+            avatar_url="",
+            expires_at=-1,
+            credentials={},
+        )
+        ```
+      </Tab>
+      <Tab title="_oauth_refresh_credentials">
+        ```python
+        def _oauth_refresh_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+        ) -> DatasourceOAuthCredentials:
+        """
+        Refresh the credentials
+        """
+        return DatasourceOAuthCredentials(
+            name="",
+            avatar_url="",
+            expires_at=-1,
+            credentials={},
+        )
+        ```
+      </Tab>
+    </Tabs>
+
+### データソースの追加
+
+3種類のデータソースプラグインでは、作成するYAMLファイル形式とデータソースコード形式が異なります。以下でそれぞれ説明します。
+
+#### ウェブクローラー（Web Crawler）
+
+ウェブクローラー系プラグインのプロバイダーYAMLファイルでは、`output_schema` は `source_url`、`content`、`title`、`description` の4つのパラメータを固定で返す必要があります。
+
+```yaml
+output_schema:
+    type: object
+    properties:
+      source_url:
+        type: string
+        description: the source url of the website
+      content:
+        type: string
+        description: the content from the website
+      title:
+        type: string
+        description: the title of the website
+      "description":
+        type: string
+        description: the description of the website
+```
+
+ウェブクローラー系プラグインのメインロジックコードでは、`WebsiteCrawlDatasource` クラスを継承し、`_get_website_crawl` メソッドを実装した上で、`create_crawl_message` メソッドを使用してウェブクローラーメッセージを返す必要があります。
+
+複数のウェブページをクロールし、バッチで返す必要がある場合は、`WebSiteInfo.status` を `processing` に設定し、`create_crawl_message` メソッドを使用して各バッチのウェブクローラーメッセージを返すことができます。すべてのウェブページのクロールが完了したら、`WebSiteInfo.status` を `completed` に設定します。
+
+```python
+class YourDataSource(WebsiteCrawlDatasource):
+
+    def _get_website_crawl(
+        self, datasource_parameters: dict[str, Any]
+    ) -> Generator[ToolInvokeMessage, None, None]:
+
+        crawl_res = WebSiteInfo(web_info_list=[], status="", total=0, completed=0)
+        crawl_res.status = "processing"
+        yield self.create_crawl_message(crawl_res)
+        
+        ### your crawl logic
+           ...
+        crawl_res.status = "completed"
+        crawl_res.web_info_list = [
+            WebSiteInfoDetail(
+                title="",
+                source_url="",
+                description="",
+                content="",
+            )
+        ]
+        crawl_res.total = 1
+        crawl_res.completed = 1
+
+        yield self.create_crawl_message(crawl_res)
+```
+
+#### オンラインドキュメント（（Online Document）
+
+オンラインドキュメント系プラグインの戻り値には、ドキュメントの内容を表す `content` フィールドを少なくとも含める必要があります。以下に例を示します。
+
+```yaml
+output_schema:
+    type: object
+    properties:
+      workspace_id:
+        type: string
+        description: workspace id
+      page_id:
+        type: string
+        description: page id
+      content:
+        type: string
+        description: page content
+```
+
+オンラインドキュメント系プラグインのメインロジックコードでは、`OnlineDocumentDatasource` クラスを継承し、`_get_pages` と `_get_content` の2つのメソッドを実装する必要があります。ユーザーがプラグインを実行すると、まず `_get_pages` メソッドを介してドキュメントリストを取得します。ユーザーがリストから特定のドキュメントを選択すると、次に `_get_content` メソッドを介してドキュメントの内容を取得します。
+
+<Tabs>
+  <Tab title="_get_pages">
+    ```python
+    def _get_pages(self, datasource_parameters: dict[str, Any]) -> DatasourceGetPagesResponse:
+        # your get pages logic
+        response = requests.get(url, headers=headers, params=params, timeout=30)
+        pages = []
+        for item in  response.json().get("results", []):
+            page = OnlineDocumentPage(
+                page_name=item.get("title", ""),
+                page_id=item.get("id", ""),
+                type="page",  
+                last_edited_time=item.get("version", {}).get("createdAt", ""),
+                parent_id=item.get("parentId", ""),
+                page_icon=None, 
+            )
+            pages.append(page)
+        online_document_info = OnlineDocumentInfo(
+            workspace_name=workspace_name,
+            workspace_icon=workspace_icon,
+            workspace_id=workspace_id,
+            pages=[page],
+            total=pages.length(),
+        )
+        return DatasourceGetPagesResponse(result=[online_document_info])
+    ```
+  </Tab>
+  <Tab title="_get_content">
+    ```python
+    def _get_content(self, page: GetOnlineDocumentPageContentRequest) -> Generator[DatasourceMessage, None, None]:
+    # your fetch content logic, example
+    response = requests.get(url, headers=headers, params=params, timeout=30)
+    ...
+    yield self.create_variable_message("content", "")
+    yield self.create_variable_message("page_id", "")
+    yield self.create_variable_message("workspace_id", "")
+    ```
+  </Tab>
+</Tabs>
+
+#### オンラインストレージ（Online Drive）
+
+オンラインストレージ系プラグインの戻り値の型はファイルであり、以下の仕様に従う必要があります。
+
+```yaml
+output_schema:
+    type: object
+    properties:
+      file:
+        $ref: "https://dify.ai/schemas/v1/file.json"
+```
+
+オンラインストレージ系プラグインのメインロジックコードでは、`OnlineDriveDatasource` クラスを継承し、`_browse_files` と `_download_file` の2つのメソッドを実装する必要があります。
+
+ユーザーがプラグインを実行すると、まず `_browse_files` メソッドを介してファイルリストを取得します。このとき `prefix` は空で、ルートディレクトリ直下のファイルリストを取得することを示します。ファイルリストには、フォルダとファイルの2種類の変数が含まれます。ユーザーがさらにフォルダを開くと、`_browse_files` メソッドが再度実行されます。このとき、`OnlineDriveBrowseFilesRequest` の中の `prefix` はフォルダIDとなり、そのフォルダ内のファイルリストを取得するために使用されます。
+
+ユーザーが特定のファイルを選択すると、プラグインは `_download_file` メソッドとファイルIDを介してファイルの内容を取得します。`_get_mime_type_from_filename` メソッドを使用してファイルのMIMEタイプを取得し、パイプラインで異なるファイルタイプに対して異なる処理を行うことができます。
+
+ファイルリストに複数のファイルが含まれる場合、`OnlineDriveFileBucket.is_truncated` を `True` に設定し、`OnlineDriveFileBucket.next_page_parameters` をファイルリストの取得を続行するためのパラメータ（例えば、次のページの要求IDやURLなど、サービスプロバイダーによって異なります）に設定することができます。
+
+<Tabs>
+  <Tab title="_browse_files">
+    ```python
+    def _browse_files(
+    self, request: OnlineDriveBrowseFilesRequest
+    ) -> OnlineDriveBrowseFilesResponse:
+    
+    credentials = self.runtime.credentials
+    bucket_name = request.bucket
+    prefix = request.prefix or ""  # Allow empty prefix for root folder; When you browse the folder, the prefix is the folder id
+    max_keys = request.max_keys or 10
+    next_page_parameters = request.next_page_parameters or {}
+    
+    files = []
+    files.append(OnlineDriveFile(
+        id="", 
+        name="", 
+        size=0, 
+        type="folder" # or "file"
+    ))
+    
+    return OnlineDriveBrowseFilesResponse(result=[
+        OnlineDriveFileBucket(
+            bucket="", 
+            files=files, 
+            is_truncated=False, 
+            next_page_parameters={}
+        )
+    ])
+    ```
+  </Tab>
+  <Tab title="_download_file">
+    ```python
+    def _download_file(self, request: OnlineDriveDownloadFileRequest) -> Generator[DatasourceMessage, None, None]:
+    credentials = self.runtime.credentials
+    file_id = request.id
+    
+    file_content = bytes()
+    file_name = ""
+    
+    mime_type = self._get_mime_type_from_filename(file_name)
+    
+    yield self.create_blob_message(file_content, meta={
+        "file_name": file_name,
+        "mime_type": mime_type
+    })
+    
+    def _get_mime_type_from_filename(self, filename: str) -> str:
+    """Determine MIME type from file extension."""
+    import mimetypes
+    mime_type, _ = mimetypes.guess_type(filename)
+    return mime_type or "application/octet-stream"
+    ```
+  </Tab>
+</Tabs>
+
+AWS S3などのストレージサービスプロバイダーでは、`prefix`、`bucket`、`id` の各変数に特別な使用方法があり、実際の開発では必要に応じて柔軟に適用できます。
+
+- `prefix`: ファイルパスのプレフィックスを表します。例えば、`prefix=container1/folder1/` は、`container1` バケット内の `folder1` フォルダにあるファイルまたはファイルリストを取得することを示します。
+- `bucket`: ファイルバケットを表します。例えば、`bucket=container1` は、`container1` バケット直下のファイルまたはファイルリストを取得することを示します（非標準のS3プロトコルのオンラインストレージの場合、このフィールドは空にすることができます）。
+- `id`: `_download_file` メソッドは prefix 変数を使用しないため、ファイルパスを id に連結する必要があります。例えば、`id=container1/folder1/file1.txt` は、`container1` バケット内の folder1 フォルダにある `file1.txt` ファイルを取得することを示します。
+
+<Tip>
+  詳細については、 [公式 Google Drive プラグイン](https://github.com/langgenius/dify-official-plugins/blob/main/datasources/google_cloud_storage/datasources/google_cloud_storage.py) および [公式 AWS S3 プラグイン](https://github.com/langgenius/dify-official-plugins/blob/main/datasources/aws_s3_storage/datasources/aws_s3_storage.py)の具体的な実装を参照してください。
+</Tip>
+
+## プラグインのデバッグ
+
+データソースプラグインは、リモートデバッグとローカルプラグインとしてのインストールの2つのデバッグ方法をサポートしています。注意点：
+
+- プラグインがOAuth認証モードを使用している場合、リモートデバッグ時の `redirect_uri` はローカルプラグインの設定と一致しないため、サービスプロバイダーのOAuth App関連設定を変更する必要があります。
+- データソースプラグインはステップ実行デバッグをサポートしていますが、機能の正確性を保証するため、完全なナレッジパイプラインでテストすることをお勧めします。
+
+## 最終チェック
+
+パッケージ化して公開する前に、以下の項目がすべて完了していることを確認してください：
+
+- サポートする最低Difyバージョンを `1.9.0` に設定する
+- SDKバージョンを `dify-plugin>=0.5.0,<0.6.0` に設定する
+- `README.md` と `PRIVACY.md` ファイルを作成する
+- コードファイルには英語のコンテンツのみが含まれていることを確認する
+- デフォルトのアイコンをデータソースプロバイダーのロゴに置き換える
+
+## パッケージ化と公開
+
+プラグインディレクトリで以下のコマンドを実行すると、`.difypkg` プラグインパッケージが生成されます：
+
+```
+dify plugin package . -o your_datasource.difypkg
+```
+
+次に、以下のいずれかを行うことができます：
+
+- あなたのDify環境にプラグインをインポートして使用する
+- プルリクエストを送信して、Dify Marketplaceにプラグインを公開する
+
+<Info>
+  プラグインの公開プロセスについては、[プラグインのリリース](/plugin-dev-ja/0321-release-overview)。
+</Info>
