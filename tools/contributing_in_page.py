@@ -204,15 +204,15 @@ def main_remove_help_cip():
         "ja_help": {
             "target_dir_relative": "jp",
         },
-        "zh_plugin_dev": {
-            "target_dir_relative": "plugin-dev-zh",
-        },
-        "en_plugin_dev": {
-            "target_dir_relative": "plugin-dev-en",
-        },
-        "ja_plugin_dev": {
-            "target_dir_relative": "plugin-dev-ja",
-        },
+        # "zh_plugin_dev": {
+        #     "target_dir_relative": "plugin-dev-zh",
+        # },
+        # "en_plugin_dev": {
+        #     "target_dir_relative": "plugin-dev-en",
+        # },
+        # "ja_plugin_dev": {
+        #     "target_dir_relative": "plugin-dev-ja",
+        # },
     }
     try:
         for config_name, config_data in help_docs.items():
@@ -224,25 +224,25 @@ def main_remove_help_cip():
 
 def main_contributing_in_page():
     process = {
-        # Help Documentation
-        "zh_help": {
-            "target_dir_relative": "cn",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "zh",
-        },
-        "en_help": {
-            "target_dir_relative": "en",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "en",
-        },
-        "ja_help": {
-            "target_dir_relative": "jp",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "ja",
-        },
+        # # Help Documentation
+        # "zh_help": {
+        #     "target_dir_relative": "cn",
+        #     "repo_owner": "langgenius",
+        #     "repo_name": "dify-docs",
+        #     "language": "zh",
+        # },
+        # "en_help": {
+        #     "target_dir_relative": "en",
+        #     "repo_owner": "langgenius",
+        #     "repo_name": "dify-docs",
+        #     "language": "en",
+        # },
+        # "ja_help": {
+        #     "target_dir_relative": "jp",
+        #     "repo_owner": "langgenius",
+        #     "repo_name": "dify-docs",
+        #     "language": "ja",
+        # },
         # Plugin Development
         "zh_plugin_dev": {
             "target_dir_relative": "plugin-dev-zh",
@@ -271,6 +271,6 @@ def main_contributing_in_page():
     
 if __name__ == "__main__":
     result_message = main_remove_help_cip()
-    # result_message = main_contributing_in_page()
+    result_message = main_contributing_in_page()
     print("\n--- Script Execution Result ---")
     print(result_message)
