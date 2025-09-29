@@ -193,11 +193,40 @@ def loop(dict):
         )
 
 
+def main_remove_help_cip():
+    help_docs = {
+        "zh_help": {
+            "target_dir_relative": "cn",
+        },
+        "en_help": {
+            "target_dir_relative": "en",
+        },
+        "ja_help": {
+            "target_dir_relative": "jp",
+        },
+        "zh_plugin_dev": {
+            "target_dir_relative": "plugin-dev-zh",
+        },
+        "en_plugin_dev": {
+            "target_dir_relative": "plugin-dev-en",
+        },
+        "ja_plugin_dev": {
+            "target_dir_relative": "plugin-dev-ja",
+        },
+    }
+    try:
+        for config_name, config_data in help_docs.items():
+            remove_contributing_section(config_data["target_dir_relative"])
+        return "Successfully removed CIP from help documentation"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
 def main_contributing_in_page():
     process = {
         # Help Documentation
         "zh_help": {
-            "target_dir_relative": "zh-hans",
+            "target_dir_relative": "cn",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs",
             "language": "zh",
@@ -209,7 +238,7 @@ def main_contributing_in_page():
             "language": "en",
         },
         "ja_help": {
-            "target_dir_relative": "ja-jp",
+            "target_dir_relative": "jp",
             "repo_owner": "langgenius",
             "repo_name": "dify-docs",
             "language": "ja",
@@ -241,6 +270,7 @@ def main_contributing_in_page():
         return (f"{str(e)}")
     
 if __name__ == "__main__":
-    result_message = main_contributing_in_page()
+    result_message = main_remove_help_cip()
+    # result_message = main_contributing_in_page()
     print("\n--- Script Execution Result ---")
     print(result_message)
