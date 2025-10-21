@@ -48,43 +48,43 @@ When defining plugins, there are some data structures that can be shared between
 `ProviderConfig` is a common provider form structure, applicable to both `Tool` and `Endpoint`
 
 <ParamField path="name" type="string">
-  Form item name
-</ParamField>
-
-<ParamField path="label" type="I18nObject" required>
-  Display labels following [IETF BCP 47](https://tools.ietf.org/html/bcp47) standard
+  Optional internal name for the form item. When omitted, the CLI uses the map key.
 </ParamField>
 
 <ParamField path="type" type="provider_config_type" required>
-  Form field type - determines how the field will be rendered in the UI
+  Field widget type. The available options map directly to the constants defined in the plugin daemon (see list below).
 </ParamField>
 
 <ParamField path="scope" type="provider_config_scope">
-  Optional range specification, varies based on the value of `type`
+  Optional scope for selector-style inputs. Multiple scopes can be combined with `&` (for example `llm&vision`).
 </ParamField>
 
 <ParamField path="required" type="boolean">
-  Whether the field cannot be empty
+  Whether the configuration must be provided before the plugin can be saved.
 </ParamField>
 
 <ParamField path="default" type="any">
-  Default value, only supports basic types: `float`, `int`, `string`
+  Default value. Only primitive Go types (string, bool, integer, float) are accepted.
 </ParamField>
 
 <ParamField path="options" type="array[provider_config_option]">
-  Available options, only used when type is `select`
+  Static options for `select` inputs. Ignored by other types.
 </ParamField>
 
-<ParamField path="helper" type="object">
-  Help document link label, following [IETF BCP 47](https://tools.ietf.org/html/bcp47)
+<ParamField path="label" type="I18nObject" required>
+  Display label shown in the UI.
+</ParamField>
+
+<ParamField path="help" type="I18nObject">
+  Optional inline help copy that appears under the field.
 </ParamField>
 
 <ParamField path="url" type="string">
-  Help document link
+  Optional external link for extended documentation.
 </ParamField>
 
-<ParamField path="placeholder" type="object">
-  Placeholder text in multiple languages, following [IETF BCP 47](https://tools.ietf.org/html/bcp47)
+<ParamField path="placeholder" type="I18nObject">
+  Optional placeholder text rendered inside the input.
 </ParamField>
 
 #### ProviderConfigOption(object)
@@ -100,7 +100,7 @@ When defining plugins, there are some data structures that can be shared between
 #### ProviderConfigType(string)
 
 <ParamField path="secret-input" type="string">
-  Configuration information that will be encrypted
+  Secrets such as API keys. Values are encrypted at rest.
 </ParamField>
 
 <ParamField path="text-input" type="string">
@@ -115,20 +115,20 @@ When defining plugins, there are some data structures that can be shared between
   Switch/toggle control
 </ParamField>
 
+<ParamField path="array[tools]" type="array">
+  Multi-selection of installed tools. Returns an array of tool descriptors (used by agent strategies).
+</ParamField>
+
 <ParamField path="model-selector" type="object">
-  Model configuration selector, including provider name, model name, model parameters, etc.
+  Model selector. Returns the provider, model name, mode, and any completion parameters.
 </ParamField>
 
 <ParamField path="app-selector" type="object">
-  Application ID selector
+  Application selector. Returns an app identifier and metadata.
 </ParamField>
 
-<ParamField path="tool-selector" type="object">
-  Tool configuration selector, including tool provider, name, parameters, etc.
-</ParamField>
-
-<ParamField path="dataset-selector" type="string">
-  Dataset selector (TBD)
+<ParamField path="any" type="object">
+  Flexible selector used in agent strategies to request primitive values, objects, or arrays (see scope table).
 </ParamField>
 
 #### ProviderConfigScope(string)
@@ -158,6 +158,12 @@ When `type` is `model-selector`:
 <ParamField path="vision" type="string">
   Vision models only
 </ParamField>
+<ParamField path="document" type="string">
+  Document-understanding models only
+</ParamField>
+<ParamField path="tool-call" type="string">
+  Models that support structured tool calling
+</ParamField>
 
 When `type` is `app-selector`:
 <ParamField path="all" type="string">
@@ -173,32 +179,45 @@ When `type` is `app-selector`:
   Completion applications only
 </ParamField>
 
-When `type` is `tool-selector`:
-<ParamField path="all" type="string">
-  All tool types
+When `type` is `any`:
+<ParamField path="string" type="string">
+  Free-form string value
 </ParamField>
-<ParamField path="plugin" type="string">
-  Plugin tools only
+<ParamField path="number" type="string">
+  Numeric value
 </ParamField>
-<ParamField path="api" type="string">
-  API tools only
+<ParamField path="object" type="string">
+  JSON object
 </ParamField>
-<ParamField path="workflow" type="string">
-  Workflow tools only
+<ParamField path="array[string]" type="string">
+  Array of strings
+</ParamField>
+<ParamField path="array[number]" type="string">
+  Array of numbers
+</ParamField>
+<ParamField path="array[object]" type="string">
+  Array of JSON objects
+</ParamField>
+<ParamField path="array[file]" type="string">
+  Array of file handles
 </ParamField>
 
 #### ModelConfig
 
 <ParamField path="provider" type="string">
-  Model provider name containing plugin_id, in the form of `langgenius/openai/openai`
+  Model provider identifier in the form `author/plugin/provider`.
 </ParamField>
 
-<ParamField path="model" type="string">
-  Specific model name
+<ParamField path="name" type="string">
+  Dify model name or identifier requested by the workflow.
 </ParamField>
 
-<ParamField path="model_type" type="enum">
-  Enumeration of model types, refer to the [Model Design Rules](/plugin-dev-en/0411-model-designing-rules#modeltype) document
+<ParamField path="mode" type="string">
+  Invocation mode (for example `chat` or `completion`). Matches the `mode` value defined in your model declaration.
+</ParamField>
+
+<ParamField path="completion_params" type="object">
+  Runtime parameters requested by the workflow (temperature, top_p, etc.). Only present when the model exposes configurable parameters.
 </ParamField>
 
 #### NodeResponse
@@ -217,47 +236,35 @@ When `type` is `tool-selector`:
 
 #### ToolSelector
 
-<ParamField path="provider_id" type="string">
-  Tool provider name
-</ParamField>
-
-<ParamField path="tool_name" type="string">
-  Tool name
-</ParamField>
-
-<ParamField path="tool_description" type="string">
-  Tool description
-</ParamField>
-
-<ParamField path="tool_configuration" type="dict[string, any]">
-  Tool configuration information
-</ParamField>
-
-<ParamField path="tool_parameters" type="dict[string, dict]">
-  Parameters that need LLM reasoning
-  
-  <ParamField path="name" type="string">
-    Parameter name
-  </ParamField>
+<ParamField path="[ ]" type="array">
+  Each selection contains the metadata Dify needs to invoke a tool.
   
   <ParamField path="type" type="string">
-    Parameter type
+    Tool source (`builtin`, `plugin`, or `workflow`).
   </ParamField>
   
-  <ParamField path="required" type="boolean">
-    Whether the parameter is required
+  <ParamField path="provider_name" type="string">
+    Provider identifier for plugin tools.
   </ParamField>
   
-  <ParamField path="description" type="string">
-    Parameter description
+  <ParamField path="tool_name" type="string">
+    Concrete tool name to invoke.
   </ParamField>
   
-  <ParamField path="default" type="any">
-    Default value
+  <ParamField path="settings" type="dict[string, any]">
+    Provider credential values captured from the configuration form.
   </ParamField>
   
-  <ParamField path="options" type="array[string]">
-    Available options for the parameter
+  <ParamField path="parameters" type="dict[string, any]">
+    Parameter defaults supplied by the user. Parameters left to the LLM will be `None`.
+  </ParamField>
+  
+  <ParamField path="credential_id" type="string">
+    Saved credential record to use when invoking the tool (optional).
+  </ParamField>
+  
+  <ParamField path="plugin_unique_identifier" type="string">
+    Marketplace identifier for plugin tools.
   </ParamField>
 </ParamField>
 

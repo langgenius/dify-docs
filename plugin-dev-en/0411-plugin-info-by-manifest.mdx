@@ -23,23 +23,25 @@ Below is a simple example of a Manifest file. The meaning and function of each d
 For reference code of other plugins, please refer to the [GitHub code repository](https://github.com/langgenius/dify-official-plugins/blob/main/tools/google/manifest.yaml).
 
 ```yaml
-version: 0.0.1
+version: 0.2.0
 type: "plugin"
-author: "Yeuoly"
-name: "neko"
+author: "acme-labs"
+name: "sentiment-analyzer"
 label:
-  en_US: "Neko"
-created_at: "2024-07-12T08:03:44.658609186Z"
-icon: "icon.svg"
+  en_US: "Sentiment Analyzer"
+  zh_Hans: "情绪分析"
+description:
+  en_US: "Adds sentiment scoring to your customer-support workflow."
+  zh_Hans: "为客户支持流程提供情绪分析能力。"
+created_at: "2025-02-10T10:05:32Z"
+icon: "_assets/icon.svg"
+icon_dark: "_assets/icon-dark.svg"
+tags:
+  - "productivity"
 resource:
   memory: 1048576
   permission:
     tool:
-      enabled: true
-    model:
-      enabled: true
-      llm: true
-    endpoint:
       enabled: true
     app:
       enabled: true
@@ -47,18 +49,20 @@ resource:
       enabled: true
       size: 1048576
 plugins:
-  endpoints:
-    - "provider/neko.yaml"
+  tools:
+    - "provider/sentiment.yaml"
 meta:
-  version: 0.0.1
+  version: "0.2.0"
   arch:
     - "amd64"
     - "arm64"
+  minimum_dify_version: "1.1.0"
   runner:
     language: "python"
-    version: "3.10"
+    version: "3.12"
     entrypoint: "main"
-privacy: "./privacy.md"
+privacy: "PRIVACY.md"
+repo: "https://github.com/acme-labs/dify-plugin-sentiment"
 ```
 
 ### Structure
@@ -68,23 +72,39 @@ privacy: "./privacy.md"
 </ParamField>
 
 <ParamField path="type" type="string" required>
-  Plugin type, currently only `plugin` is supported, `bundle` will be supported in the future.
+  Manifest classification (`plugin` or `bundle`).
 </ParamField>
 
 <ParamField path="author" type="string" required>
-  Author, defined as the organization name in the Marketplace.
+  Plugin author namespace (lowercase letters, numbers, `_`, `-`, max 64 characters).
+</ParamField>
+
+<ParamField path="name" type="string" required>
+  Plugin slug (lowercase letters, numbers, `_`, `-`, max 128 characters).
 </ParamField>
 
 <ParamField path="label" type="object" required>
-  Multilingual name.
+  Multilingual display name.
+</ParamField>
+
+<ParamField path="description" type="object" required>
+  Multilingual description shown in the Marketplace.
 </ParamField>
 
 <ParamField path="created_at" type="RFC3339" required>
-  Creation time, required by the Marketplace not to be later than the current time.
+  Creation timestamp. Must not be later than the packaging time.
 </ParamField>
 
 <ParamField path="icon" type="string" required>
-  Icon path.
+  Light-theme icon path.
+</ParamField>
+
+<ParamField path="icon_dark" type="string">
+  Optional dark-theme icon path.
+</ParamField>
+
+<ParamField path="tags" type="array[string]">
+  Marketplace tags. Allowed values: `search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `other`.
 </ParamField>
 
 <ParamField path="resource" type="object">
@@ -179,27 +199,15 @@ privacy: "./privacy.md"
   A list of `yaml` files for the specific capabilities extended by the plugin. Absolute path within the plugin package. For example, if you need to extend a model, you need to define a file similar to `openai.yaml`, fill in the file path here, and the file at this path must actually exist, otherwise packaging will fail.
 
   <Warning>
-    Extending both tools and models simultaneously is not allowed.
-  </Warning>
-  
-  <Warning>
     Having no extensions is not allowed.
   </Warning>
 
-  <Warning>
-    Extending both models and Endpoints simultaneously is not allowed.
-  </Warning>
-  
-  <Warning>
-    Currently, only one provider is supported for each type of extension.
-  </Warning>
-  
   <ParamField path="tools" type="array[string]">
     Plugin extension for [Tool](/plugin-dev-en/0222-tool-plugin) providers.
   </ParamField>
   
   <ParamField path="models" type="array[string]">
-    Plugin extension for [Model](/plugin-dev-en/0411-model-plugin-introduction) providers.
+    Plugin extension for [Model](/plugin-dev-en/0222-creating-new-model-provider) providers.
   </ParamField>
   
   <ParamField path="endpoints" type="array[string]">
@@ -209,38 +217,58 @@ privacy: "./privacy.md"
   <ParamField path="agent_strategies" type="array[string]">
     Plugin extension for [Agent Strategy](/plugin-dev-en/9433-agent-strategy-plugin) providers.
   </ParamField>
+
+  <ParamField path="datasources" type="array[string]">
+    Plugin extension for datasource providers.
+  </ParamField>
+
+  <Warning>
+    You cannot declare model, datasource, or agent-strategy providers alongside any other provider type.
+  </Warning>
+
+  <Warning>
+    Currently only one provider file per type is supported.
+  </Warning>
 </ParamField>
 
 <ParamField path="meta" type="object" required>
-  Metadata for the plugin.
+  Metadata for runtime packaging and compatibility.
   
   <ParamField path="version" type="version" required>
-    `manifest` format version, initial version `0.0.1`.
+    Manifest schema version (use semantic versioning, e.g., `0.2.0`).
   </ParamField>
   
   <ParamField path="arch" type="array[string]" required>
-    Supported architectures, currently only `amd64` and `arm64` are supported.
+    Supported CPU architectures. The CLI currently validates `amd64` and `arm64`.
   </ParamField>
   
   <ParamField path="runner" type="object" required>
     Runtime configuration.
     
     <ParamField path="language" type="string" required>
-      Programming language. Currently only Python is supported.
+      Plugin runtime language. Validation presently allows only `python`.
     </ParamField>
     
     <ParamField path="version" type="string" required>
-      Language version, currently only `3.12` is supported.
+      Language runtime version. For Python plugins the CLI enforces `3.12`.
     </ParamField>
     
     <ParamField path="entrypoint" type="string" required>
-      Program entry point, should be `main` under Python.
+      Module name passed to `python -m`. Defaults to `main` in generated templates.
     </ParamField>
+  </ParamField>
+
+  <ParamField path="minimum_dify_version" type="string">
+    Optional semantic version that guards installation on older Dify releases.
   </ParamField>
 </ParamField>
 
 <ParamField path="privacy" type="string">
   Specifies the relative path or URL of the plugin's privacy policy file, e.g., `"./privacy.md"` or `"https://your-web/privacy"`. If you plan to list the plugin on the Dify Marketplace, **this field is required** to provide clear user data usage and privacy statements. For detailed filling guidelines, please refer to [Plugin Privacy Data Protection Guidelines](/plugin-dev-en/0312-privacy-protection-guidelines).
+</ParamField>
+
+<ParamField path="repo" type="string">
+  Optional URL pointing to the public source repository for your plugin.
 </ParamField>
 
 {/*
