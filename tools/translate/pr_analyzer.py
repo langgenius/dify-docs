@@ -51,15 +51,21 @@ class PRAnalyzer:
         """Extract navigation structure for a specific language from docs.json."""
         if not docs_data or 'navigation' not in docs_data:
             return None
-        
+
         navigation = docs_data['navigation']
-        if 'languages' not in navigation:
+
+        # Handle both direct languages and versions structure
+        if 'languages' in navigation:
+            languages = navigation['languages']
+        elif 'versions' in navigation and len(navigation['versions']) > 0:
+            languages = navigation['versions'][0].get('languages', [])
+        else:
             return None
-        
-        for lang_data in navigation['languages']:
+
+        for lang_data in languages:
             if lang_data.get('language') == language:
                 return lang_data
-        
+
         return None
     
     def analyze_docs_json_changes(self) -> Dict[str, bool]:
@@ -87,7 +93,7 @@ class PRAnalyzer:
             changes['english_section'] = True
         
         # Check translation sections
-        for lang in ['ja-jp', 'zh-hans']:
+        for lang in ['jp', 'cn']:
             base_lang = self.extract_language_navigation(base_docs, lang)
             head_lang = self.extract_language_navigation(head_docs, lang)
             if base_lang != head_lang:
@@ -113,7 +119,7 @@ class PRAnalyzer:
                     categories['english'].append(file)
                 else:
                     categories['other'].append(file)
-            elif file.startswith(('ja-jp/', 'zh-hans/')):
+            elif file.startswith(('jp/', 'cn/')):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
                 else:
@@ -197,7 +203,7 @@ class PRAnalyzer:
             if changes['english_section']:
                 parts.append("   - ✅ English navigation section")
             if changes['translation_sections']:
-                parts.append("   - ✅ Translation navigation sections (ja-jp, zh-hans)")
+                parts.append("   - ✅ Translation navigation sections (jp, cn)")
             if not parts:
                 parts.append("   - (no navigation changes)")
             return '\n'.join(parts)
@@ -218,8 +224,8 @@ Create a PR containing only:
 
 ### 2️⃣ **Translation Improvement PR**
 Create a PR containing only:
-- Changes to `ja-jp/` and `zh-hans/` files
-- Changes to translation navigation sections in `docs.json`  
+- Changes to `jp/` and `cn/` files
+- Changes to translation navigation sections in `docs.json`
 - This will go through direct review (no automation)
 
 ---

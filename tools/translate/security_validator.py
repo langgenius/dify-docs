@@ -25,7 +25,7 @@ class SecurityValidator:
     ALLOWED_EXTENSIONS = {'.md', '.mdx', '.json'}
     
     # Allowed base directories
-    ALLOWED_BASE_DIRS = {'en', 'zh-hans', 'ja-jp'}
+    ALLOWED_BASE_DIRS = {'en', 'cn', 'jp'}
     
     # Dangerous patterns to block
     DANGEROUS_PATTERNS = [
@@ -206,7 +206,7 @@ class SecurityValidator:
                     return False, f"File too large: {file_path}"
         
         # Validate target languages
-        valid_languages = {'zh-hans', 'ja-jp'}
+        valid_languages = {'cn', 'jp'}
         target_langs = sync_plan.get('target_languages', [])
         for lang in target_langs:
             if lang not in valid_languages:
@@ -360,7 +360,7 @@ if __name__ == "__main__":
         "../../../etc/passwd",  # Invalid - directory traversal
         "/etc/passwd",  # Invalid - absolute path
         "en/test.exe",  # Invalid - wrong extension
-        "zh-hans/docs/test.mdx",  # Valid
+        "cn/docs/test.mdx",  # Valid
         "docs.json",  # Valid - special case
     ]
     

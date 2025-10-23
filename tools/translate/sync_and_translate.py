@@ -10,6 +10,7 @@ import os
 import sys
 import asyncio
 import shutil
+import re
 from pathlib import Path
 from typing import Dict, List, Set, Tuple, Optional, Any
 import subprocess
@@ -38,19 +39,19 @@ LANGUAGES = {
         "base_path": "en",
         "code": "en"
     },
-    "zh-hans": {
+    "cn": {
         "name": "Chinese",
-        "base_path": "zh-hans", 
-        "code": "zh-Hans"
+        "base_path": "cn",
+        "code": "cn"
     },
-    "ja-jp": {
+    "jp": {
         "name": "Japanese",
-        "base_path": "ja-jp",
+        "base_path": "jp",
         "code": "jp"
     }
 }
 
-TARGET_LANGUAGES = ["zh-hans", "ja-jp"]
+TARGET_LANGUAGES = ["cn", "jp"]
 
 class DocsSynchronizer:
     def __init__(self, dify_api_key: str, enable_security: bool = False):
@@ -95,7 +96,7 @@ class DocsSynchronizer:
                 return json.load(f)
         return {
             "path_mappings": {
-                "en": ["zh-hans", "ja-jp"]
+                "en": ["cn", "jp"]
             },
             "label_translations": {}
         }
@@ -107,8 +108,8 @@ class DocsSynchronizer:
             with open(notices_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {
-            "zh-hans": "> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版]({en_path})。\n\n",
-            "ja-jp": "> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版]({en_path})を参照してください。\n\n"
+            "cn": "> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版]({en_path})。\n\n",
+            "jp": "> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版]({en_path})を参照してください。\n\n"
         }
     
     def get_changed_files(self, since_commit: str = "HEAD~1") -> Dict[str, List[str]]:
@@ -160,25 +161,71 @@ class DocsSynchronizer:
         return en_path
     
     def get_relative_en_path_for_notice(self, target_path: str) -> str:
-        """Get absolute path to English version for AI notice (without file extension)"""
-        # Convert zh-hans/documentation/pages/getting-started/faq.md
-        # to /en/documentation/pages/getting-started/faq
-        if target_path.startswith("zh-hans/"):
-            en_path = target_path.replace("zh-hans/", "en/", 1)
-        elif target_path.startswith("ja-jp/"):
-            en_path = target_path.replace("ja-jp/", "en/", 1) 
+        """Get relative path to English version for AI notice"""
+        # Convert cn/documentation/pages/getting-started/faq.md
+        # to ../../en/documentation/pages/getting-started/faq.md
+        if target_path.startswith("cn/"):
+            en_path = target_path.replace("cn/", "en/", 1)
+        elif target_path.startswith("jp/"):
+            en_path = target_path.replace("jp/", "en/", 1)
         else:
             return ""
-        
-        # Remove file extension (.md or .mdx)
-        if en_path.endswith('.md'):
-            en_path = en_path[:-3]
-        elif en_path.endswith('.mdx'):
-            en_path = en_path[:-4]
-        
-        # Return as absolute path
-        return "/" + en_path
+
+        # Count directory levels to create relative path
+        target_dir_levels = len(Path(target_path).parent.parts)
+        relative_prefix = "../" * target_dir_levels
+        return relative_prefix + en_path
     
+    def insert_notice_under_title(self, content: str, notice: str) -> str:
+        """Insert notice after frontmatter or first heading to keep it under the doc title."""
+        if not notice.strip():
+            return content
+
+        if not content:
+            return notice
+
+        bom_prefix = ""
+        if content.startswith("\ufeff"):
+            bom_prefix = "\ufeff"
+            content = content[len("\ufeff"):]
+
+        notice_block = notice if notice.endswith("\n") else f"{notice}\n"
+
+        frontmatter_match = re.match(r"^(---\s*\n.*?\n---\s*\n?)", content, flags=re.DOTALL)
+        if frontmatter_match:
+            frontmatter = frontmatter_match.group(1)
+            remainder = content[frontmatter_match.end():].lstrip("\n")
+
+            final = frontmatter
+            if not final.endswith("\n"):
+                final += "\n"
+            final += notice_block
+            if remainder:
+                final += remainder
+            return bom_prefix + final
+
+        heading_match = re.search(r"(?m)^(#{1,6}\s+.+)$", content)
+        if heading_match:
+            line_start = heading_match.start()
+            line_end = content.find("\n", line_start)
+            if line_end == -1:
+                line_end = len(content)
+            else:
+                line_end += 1
+
+            heading_section = content[:line_end]
+            remainder = content[line_end:].lstrip("\n")
+
+            final = heading_section
+            if not final.endswith("\n"):
+                final += "\n"
+            final += notice_block
+            if remainder:
+                final += remainder
+            return bom_prefix + final
+
+        return bom_prefix + notice_block + content.lstrip("\n")
+
     async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str) -> bool:
         """Translate a file and add AI notice at the top"""
         try:
@@ -226,26 +273,8 @@ class DocsSynchronizer:
             en_relative_path = self.get_relative_en_path_for_notice(target_file_path)
             notice = self.notices.get(target_lang, "").format(en_path=en_relative_path)
             
-            # Handle frontmatter and notice placement
-            if translated_content.strip().startswith('---'):
-                # Find the end of frontmatter
-                lines = translated_content.split('\n')
-                frontmatter_end = -1
-                for i, line in enumerate(lines[1:], 1):  # Skip first line (opening ---)
-                    if line.strip() == '---':
-                        frontmatter_end = i
-                        break
-                
-                if frontmatter_end != -1:
-                    # Insert notice after frontmatter
-                    frontmatter = '\n'.join(lines[:frontmatter_end + 1])
-                    content_after_frontmatter = '\n'.join(lines[frontmatter_end + 1:])
-                    final_content = frontmatter + '\n\n' + notice + content_after_frontmatter
-                else:
-                    raise ValueError("Malformed frontmatter")
-            else:
-                # No frontmatter, add notice at the beginning
-                final_content = notice + translated_content
+            # Combine notice and translated content
+            final_content = self.insert_notice_under_title(translated_content, notice)
             
             # Write to target file
             with open(self.base_dir / target_file_path, 'w', encoding='utf-8') as f:
@@ -360,7 +389,7 @@ class DocsSynchronizer:
         """Save docs.json file"""
         try:
             with open(self.docs_json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=4)
+                json.dump(data, f, ensure_ascii=False, indent=2)
             return True
         except Exception as e:
             print(f"Error saving docs.json: {e}")
@@ -370,13 +399,26 @@ class DocsSynchronizer:
         """Check if docs.json was modified"""
         return "docs.json" in changes["modified"] or "docs.json" in changes["added"]
     
+    def get_dropdown_translation(self, en_dropdown_name: str, target_lang: str) -> str:
+        """
+        Get translated dropdown name from config.json label_translations.
+        Falls back to English name if not found.
+        """
+        label_translations = self.config.get("label_translations", {})
+        if en_dropdown_name in label_translations:
+            translation = label_translations[en_dropdown_name].get(target_lang)
+            if translation:
+                return translation
+        # Fallback to English name
+        return en_dropdown_name
+
     def get_basic_label_translation(self, en_label: str, target_lang: str) -> str:
         """Get basic translation for common labels"""
         basic_translations = {
-            "zh-hans": {
+            "cn": {
                 "Getting Started": "快速开始",
                 "Documentation": "文档",
-                "Build": "构建", 
+                "Build": "构建",
                 "Debug": "调试",
                 "Publish": "发布",
                 "Monitor": "监控",
@@ -388,9 +430,9 @@ class DocsSynchronizer:
                 "Quick Start": "快速开始",
                 "Key Concepts": "核心概念"
             },
-            "ja-jp": {
+            "jp": {
                 "Getting Started": "はじめに",
-                "Documentation": "ドキュメント", 
+                "Documentation": "ドキュメント",
                 "Build": "ビルド",
                 "Debug": "デバッグ",
                 "Publish": "公開",
@@ -404,116 +446,190 @@ class DocsSynchronizer:
                 "Key Concepts": "主要概念"
             }
         }
-        
+
         return basic_translations.get(target_lang, {}).get(en_label, en_label)
     
     def sync_docs_json_structure(self) -> List[str]:
-        """Sync docs.json structure across languages"""
+        """Sync docs.json structure across languages - syncs ALL dropdowns"""
         sync_log = []
-        
+
         try:
             docs_data = self.load_docs_json()
             if not docs_data or "navigation" not in docs_data:
                 sync_log.append("ERROR: Invalid docs.json structure")
                 return sync_log
-            
+
             navigation = docs_data["navigation"]
-            if "languages" not in navigation or not isinstance(navigation["languages"], list):
+
+            # Handle both direct languages and versions structure
+            languages_array = None
+            if "languages" in navigation and isinstance(navigation["languages"], list):
+                languages_array = navigation["languages"]
+            elif "versions" in navigation and len(navigation["versions"]) > 0:
+                if "languages" in navigation["versions"][0]:
+                    languages_array = navigation["versions"][0]["languages"]
+
+            if not languages_array:
                 sync_log.append("ERROR: No languages found in navigation")
                 return sync_log
-            
+
             # Find language sections
             en_section = None
-            zh_section = None 
+            zh_section = None
             ja_section = None
-            
-            for lang_data in navigation["languages"]:
+
+            for lang_data in languages_array:
                 if lang_data.get("language") == "en":
                     en_section = lang_data
-                elif lang_data.get("language") == "zh-Hans":
+                elif lang_data.get("language") == "cn":
                     zh_section = lang_data
                 elif lang_data.get("language") == "jp":
                     ja_section = lang_data
-            
+
             if not en_section:
                 sync_log.append("ERROR: English section not found")
                 return sync_log
-            
-            # Extract Documentation dropdown from English section
-            en_doc_dropdown = None
-            for dropdown in en_section.get("dropdowns", []):
-                if dropdown.get("dropdown") == "Documentation":
-                    en_doc_dropdown = dropdown
-                    break
-            
-            if not en_doc_dropdown:
-                sync_log.append("INFO: No Documentation dropdown found in English section")
+
+            # Get all English dropdowns
+            en_dropdowns = en_section.get("dropdowns", [])
+            if not en_dropdowns:
+                sync_log.append("INFO: No dropdowns found in English section")
                 return sync_log
-            
-            # Sync structure for Chinese and Japanese sections
-            for target_section, target_lang, target_dropdown_name in [
-                (zh_section, "zh-hans", "文档"),
-                (ja_section, "ja-jp", "ドキュメント")
-            ]:
+
+            sync_log.append(f"INFO: Found {len(en_dropdowns)} English dropdowns to sync")
+
+            # Sync each English dropdown to target languages
+            for target_section, target_lang in [(zh_section, "cn"), (ja_section, "jp")]:
                 if not target_section:
                     sync_log.append(f"WARNING: {target_lang} section not found")
                     continue
-                
-                # Find existing Documentation dropdown (check both new and old names)
-                target_doc_dropdown = None
-                dropdown_index = -1
-                old_names = ["使用文档"] if target_lang == "zh-hans" else ["ドキュメント"] if target_lang == "ja-jp" else []
-                
-                for i, dropdown in enumerate(target_section.get("dropdowns", [])):
-                    dropdown_name = dropdown.get("dropdown", "")
-                    if dropdown_name == target_dropdown_name or dropdown_name in old_names:
-                        target_doc_dropdown = dropdown
-                        dropdown_index = i
-                        break
-                
-                if not target_doc_dropdown:
-                    # Create new Documentation dropdown
-                    target_doc_dropdown = {
-                        "dropdown": target_dropdown_name,
-                        "icon": "book-open", 
-                        "pages": []
-                    }
-                    target_section.setdefault("dropdowns", [])
-                    target_section["dropdowns"].append(target_doc_dropdown)
-                    sync_log.append(f"INFO: Created new Documentation dropdown for {target_lang}")
-                else:
-                    # Update existing dropdown to new structure
-                    target_doc_dropdown["dropdown"] = target_dropdown_name  # Update name if needed
-                    target_doc_dropdown["icon"] = "book-open"  # Ensure icon is set
-                    # Remove old structure fields if they exist
-                    if "groups" in target_doc_dropdown:
-                        del target_doc_dropdown["groups"]
-                    sync_log.append(f"INFO: Updated existing Documentation dropdown for {target_lang}")
-                
-                # Sync the structure by converting English paths to target language paths
-                if "pages" in en_doc_dropdown:
-                    synced_pages = self.convert_pages_structure(en_doc_dropdown["pages"], target_lang)
-                    target_doc_dropdown["pages"] = synced_pages
-                    sync_log.append(f"INFO: Synced documentation structure for {target_lang}")
-            
+
+                # Ensure dropdowns array exists
+                target_section.setdefault("dropdowns", [])
+
+                # Process each English dropdown
+                for en_dropdown in en_dropdowns:
+                    en_dropdown_name = en_dropdown.get("dropdown", "")
+                    if not en_dropdown_name:
+                        continue
+
+                    # Get translated dropdown name from config.json
+                    target_dropdown_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+
+                    # Find existing dropdown in target language by translated name
+                    target_dropdown = None
+                    dropdown_index = -1
+                    for i, dropdown in enumerate(target_section["dropdowns"]):
+                        if dropdown.get("dropdown") == target_dropdown_name:
+                            target_dropdown = dropdown
+                            dropdown_index = i
+                            break
+
+                    if not target_dropdown:
+                        # Create new dropdown
+                        target_dropdown = {
+                            "dropdown": target_dropdown_name,
+                            "icon": en_dropdown.get("icon", "book-open"),
+                            "pages": []
+                        }
+                        target_section["dropdowns"].append(target_dropdown)
+                        sync_log.append(f"INFO: Created new '{target_dropdown_name}' dropdown for {target_lang}")
+                    else:
+                        # Update existing dropdown
+                        target_dropdown["dropdown"] = target_dropdown_name
+                        if "icon" in en_dropdown:
+                            target_dropdown["icon"] = en_dropdown["icon"]
+                        # Remove old structure fields if they exist
+                        if "groups" in target_dropdown:
+                            del target_dropdown["groups"]
+                        sync_log.append(f"INFO: Updated existing '{target_dropdown_name}' dropdown for {target_lang}")
+
+                    # Sync the pages structure
+                    if "pages" in en_dropdown:
+                        existing_pages = target_dropdown.get("pages", [])
+                        synced_pages = self.convert_pages_structure(
+                            en_dropdown["pages"],
+                            target_lang,
+                            existing_pages
+                        )
+                        target_dropdown["pages"] = synced_pages
+                        sync_log.append(f"INFO: Synced pages structure for '{target_dropdown_name}' ({target_lang})")
+
             # Save the updated docs.json
             if self.save_docs_json(docs_data):
                 sync_log.append("INFO: Updated docs.json with synced structure")
             else:
                 sync_log.append("ERROR: Failed to save updated docs.json")
-            
+
         except Exception as e:
             sync_log.append(f"ERROR: Exception in docs.json sync: {e}")
             import traceback
             sync_log.append(f"TRACE: {traceback.format_exc()}")
-        
+
         return sync_log
     
-    def convert_pages_structure(self, pages_structure, target_lang: str):
-        """Recursively convert English page paths to target language paths"""
+    def extract_page_paths(self, structure, normalize_lang=True):
+        """
+        Extract all page paths from a structure recursively.
+        Returns a set of normalized paths (without language prefix) for comparison.
+        """
+        paths = set()
+
+        if not structure:
+            return paths
+
+        for item in structure:
+            if isinstance(item, str):
+                # Normalize path by removing language prefix
+                if normalize_lang:
+                    normalized = re.sub(r'^(en|cn|jp)/', '', item)
+                    paths.add(normalized)
+                else:
+                    paths.add(item)
+            elif isinstance(item, dict) and "pages" in item:
+                # Recursively extract from nested pages
+                nested_paths = self.extract_page_paths(item["pages"], normalize_lang)
+                paths.update(nested_paths)
+
+        return paths
+
+    def find_matching_group(self, en_group_item, existing_structure, target_lang):
+        """
+        Find a matching group in existing structure based on page content.
+        Groups match if they contain the same normalized page paths.
+        """
+        if not existing_structure or not isinstance(en_group_item, dict):
+            return None
+
+        if "pages" not in en_group_item:
+            return None
+
+        # Extract normalized paths from English group
+        en_paths = self.extract_page_paths(en_group_item["pages"], normalize_lang=True)
+
+        if not en_paths:
+            return None
+
+        # Search through existing structure for matching group
+        for existing_item in existing_structure:
+            if isinstance(existing_item, dict) and "pages" in existing_item:
+                existing_paths = self.extract_page_paths(existing_item["pages"], normalize_lang=True)
+
+                # Groups match if they have identical page sets
+                if en_paths == existing_paths:
+                    return existing_item
+
+        return None
+
+    def convert_pages_structure(self, pages_structure, target_lang: str, existing_structure=None):
+        """
+        Recursively convert English page paths to target language paths.
+        Uses content-based matching to preserve existing group translations.
+        Groups are matched by their page content, not by position.
+        """
         if not pages_structure:
             return []
-        
+
         converted = []
         for item in pages_structure:
             if isinstance(item, str):
@@ -525,19 +641,40 @@ class DocsSynchronizer:
                     converted.append(item)
             elif isinstance(item, dict):
                 converted_item = {}
+
+                # For groups, use content-based matching instead of index-based
+                existing_match = None
+                if "group" in item and existing_structure:
+                    existing_match = self.find_matching_group(item, existing_structure, target_lang)
+
                 for key, value in item.items():
                     if key == "pages" and isinstance(value, list):
-                        converted_item[key] = self.convert_pages_structure(value, target_lang)
+                        # Recursively convert nested pages
+                        # Pass existing nested structure if we found a matching group
+                        existing_nested = None
+                        if existing_match and "pages" in existing_match:
+                            existing_nested = existing_match["pages"]
+
+                        converted_item[key] = self.convert_pages_structure(
+                            value,
+                            target_lang,
+                            existing_nested
+                        )
                     elif key == "group":
-                        # Translate group names
-                        translated_group = self.get_basic_label_translation(value, target_lang)
-                        converted_item[key] = translated_group
+                        # Preserve existing human-translated group name if we found a match
+                        if existing_match and "group" in existing_match:
+                            # Use existing translated group name from matched group
+                            converted_item[key] = existing_match["group"]
+                        else:
+                            # New group or no match - use basic translation
+                            translated_group = self.get_basic_label_translation(value, target_lang)
+                            converted_item[key] = translated_group
                     else:
                         converted_item[key] = value
                 converted.append(converted_item)
             else:
                 converted.append(item)
-        
+
         return converted
     
     async def run_sync(self, since_commit: str = "HEAD~1") -> Dict[str, List[str]]:
@@ -652,124 +789,24 @@ class DocsSynchronizer:
         print("=== Secure Synchronization Complete ===")
         return results
 
-    def get_files_from_paths(self, paths: List[str]) -> List[str]:
-        """Get all documentation files from given file/directory paths"""
-        files = []
-        for path in paths:
-            full_path = self.base_dir / path
-            
-            if full_path.is_file():
-                # Single file
-                if self.is_english_doc_file(path):
-                    files.append(path)
-                else:
-                    print(f"Warning: {path} is not an English documentation file")
-            elif full_path.is_dir():
-                # Directory - find all .md/.mdx files
-                for file_path in full_path.rglob('*.md'):
-                    rel_path = str(file_path.relative_to(self.base_dir))
-                    if self.is_english_doc_file(rel_path):
-                        files.append(rel_path)
-                for file_path in full_path.rglob('*.mdx'):
-                    rel_path = str(file_path.relative_to(self.base_dir))
-                    if self.is_english_doc_file(rel_path):
-                        files.append(rel_path)
-            else:
-                print(f"Warning: {path} does not exist")
-        
-        return files
-    
-    async def run_path_translation(self, paths: List[str]) -> Dict[str, List[str]]:
-        """Run translation for specific file/directory paths"""
-        print(f"=== Starting Path-based Translation for {len(paths)} paths ===")
-        
-        # Get all files from the specified paths
-        files_to_translate = self.get_files_from_paths(paths)
-        
-        if not files_to_translate:
-            print("No valid English documentation files found in specified paths")
-            return {"errors": ["No files to translate"]}
-        
-        print(f"Found {len(files_to_translate)} files to translate")
-        for file in files_to_translate:
-            print(f"  - {file}")
-        
-        results = {
-            "translations": [],
-            "structure_sync": [],
-            "errors": []
-        }
-        
-        try:
-            # Create fake changes to trigger translation
-            changes = {
-                "added": files_to_translate,
-                "modified": [],
-                "deleted": [],
-                "renamed": []
-            }
-            
-            # Translate files
-            results["translations"] = await self.translate_new_and_modified_files(changes)
-            
-            # Always sync docs.json structure when doing path-based translation
-            results["structure_sync"] = self.sync_docs_json_structure()
-            
-        except Exception as e:
-            results["errors"].append(f"CRITICAL: {e}")
-            print(f"Critical error during translation: {e}")
-        
-        print("=== Path-based Translation Complete ===")
-        return results
-
 async def main():
     """Main entry point"""
     if len(sys.argv) < 2:
-        print("Usage: python sync_and_translate.py <dify_api_key> [options]")
-        print("")
-        print("Options:")
-        print("  --git [since_commit]    Sync based on git changes (default: HEAD~1)")
-        print("  --paths <path1> [path2] ...  Translate specific files/directories")
-        print("")
-        print("Examples:")
-        print("  python sync_and_translate.py <api_key> --git HEAD~2")
-        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/getting-started")
-        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/nodes/start.mdx")
-        print("  python sync_and_translate.py <api_key> --paths en/documentation/pages/getting-started en/documentation/pages/nodes")
+        print("Usage: python sync_and_translate.py <dify_api_key> [since_commit]")
+        print("  since_commit: Git commit to compare against (default: HEAD~1)")
         sys.exit(1)
     
     dify_api_key = sys.argv[1]
+    since_commit = sys.argv[2] if len(sys.argv) > 2 else "HEAD~1"
     
     # Initialize synchronizer
     synchronizer = DocsSynchronizer(dify_api_key)
     
-    # Parse command line arguments
-    if len(sys.argv) >= 3 and sys.argv[2] == "--git":
-        # Git-based sync mode
-        since_commit = sys.argv[3] if len(sys.argv) > 3 else "HEAD~1"
-        print(f"Running git-based sync since commit: {since_commit}")
-        results = await synchronizer.run_sync(since_commit)
-    elif len(sys.argv) >= 3 and sys.argv[2] == "--paths":
-        # Path-based translation mode
-        if len(sys.argv) < 4:
-            print("Error: --paths requires at least one path argument")
-            sys.exit(1)
-        paths = sys.argv[3:]
-        print(f"Running path-based translation for: {', '.join(paths)}")
-        results = await synchronizer.run_path_translation(paths)
-    elif len(sys.argv) == 2:
-        # Default: git-based sync with HEAD~1
-        since_commit = "HEAD~1"
-        print(f"Running default git-based sync since commit: {since_commit}")
-        results = await synchronizer.run_sync(since_commit)
-    else:
-        # Legacy support: second argument as since_commit
-        since_commit = sys.argv[2]
-        print(f"Running git-based sync since commit: {since_commit}")
-        results = await synchronizer.run_sync(since_commit)
+    # Run synchronization
+    results = await synchronizer.run_sync(since_commit)
     
     # Print results
-    print("\n=== TRANSLATION RESULTS ===")
+    print("\n=== SYNCHRONIZATION RESULTS ===")
     for category, logs in results.items():
         if logs:
             print(f"\n{category.upper()}:")
@@ -777,10 +814,10 @@ async def main():
                 print(f"  {log}")
     
     # Return appropriate exit code
-    if results.get("errors"):
+    if results["errors"]:
         sys.exit(1)
     else:
-        print("\n✓ Translation completed successfully")
+        print("\n✓ Synchronization completed successfully")
         sys.exit(0)
 
 if __name__ == "__main__":

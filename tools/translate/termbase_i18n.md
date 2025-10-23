@@ -1,64 +1,23 @@
-# Dify Termbase (EN/CN/JP)
+# Translation Termbase for i18n
 
-| English Term                             | 中文 (简体)      | 日本語                         | Definition                                                                                                                                                |
-| :--------------------------------------- | :--------------- | :----------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Agent**                                | 智能代理         | エージェント                   | An autonomous AI system capable of making decisions and executing tasks based on environmental information.                                               |
-| **Agentic Workflow**                     | 智能体工作流     | エージェンティックワークフロー | A task orchestration method that allows AI systems to autonomously solve complex problems through multiple steps.                                         |
-| **Automatic Speech Recognition (ASR)**   | 自动语音识别     | 自動音声認識                   | Technology that converts human speech into text and serves as the foundation for voice interaction applications.                                          |
-| **Backbone of Thought (BoT)**            | 思维骨架         | 思考の骨格                     | A structured thinking framework that provides the main structure for reasoning in large language models.                                                  |
-| **Chain of Thought (CoT)**               | 思维链           | 思考の連鎖                     | A prompting technique that guides large language models to display their step-by-step thinking process.                                                   |
-| **Chatflow**                             | 对话流           | チャットフロー                 | 一种面向对话场景的工作流编排模式，专为需要多步逻辑处理的交互式应用设计。(CN)                                                                              |
-| **Chunking**                             | 分段             | チャンキング                   | A processing technique that splits long text into smaller content blocks, enabling retrieval systems to find relevant information more precisely.         |
-| **Citation and Attribution**             | 引用与归属       | 引用と帰属                     | Features that allow AI systems to clearly indicate the sources of information, increasing the credibility and transparency of responses.                  |
-| **Domain-Specific Language (DSL)**       | 领域特定语言     | ドメイン固有言語               | A programming language or configuration format designed for a specific application domain.                                                                |
-| **Extract, Transform, Load (ETL)**       | 提取、转换、加载 | 抽出・変換・読み込み           | A classic data processing workflow: extracting raw data, transforming it into a format suitable for analysis, and then loading it into the target system. |
-| **Frequency Penalty**                    | 频率惩罚         | 頻度ペナルティ                 | A text generation control parameter that increases output diversity by reducing the probability of generating frequently occurring vocabulary.            |
-| **Full-text Search**                     | 全文检索         | 全文検索                       | 索引文档中的所有词汇，从而允许用户查询任意词汇，并返回包含这些词汇的文本片段。(CN)                                                                        |
-| **Function Calling**                     | 函数调用         | 関数呼び出し                   | The capability of large language models to recognize when to call specific functions and provide the required parameters.                                 |
-| **General Chunking Pattern**             | 通用分段模式     | 一般的なチャンキングパターン   | A simple text splitting strategy that divides documents into mutually independent content blocks.                                                         |
-| **Graph of Thought (GoT)**               | 思维图           | 思考のグラフ                   | A method of representing the thinking process as a network structure, capturing complex relationships between concepts.                                   |
-| **Hybrid Search**                        | 混合检索         | ハイブリッド検索               | A search method that combines the advantages of keyword matching and semantic search to provide more comprehensive retrieval results.                     |
-| **Inverted Index**                       | 倒排索引         | 転置インデックス               | A core data structure of search engines that records which documents each word appears in.                                                                |
-| **Keyword Search**                       | 关键词检索       | キーワード検索                 | A search method based on exact matching that finds documents containing specific vocabulary.                                                              |
-| **Knowledge Base**                       | 知识库           | 知識ベース                     | A database that stores structured information in AI applications, providing a source of professional knowledge for models.                                |
-| **Knowledge Retrieval**                  | 知识检索         | 知識検索                       | The process of finding information from a knowledge base that is most relevant to a user's question.                                                      |
-| **Large Language Model (LLM)**           | 大型语言模型     | 大規模言語モデル               | An AI model trained on massive amounts of text that can understand and generate human language.                                                           |
-| **Local Model Inference**                | 本地模型推理     | ローカルモデル推論             | The process of running AI models on a user's own device rather than relying on cloud services.                                                            |
-| **Max_tokens**                           | 最大标记数       | 最大トークン数                 | A parameter that controls the maximum number of characters the model generates in a single response.                                                      |
-| **Memory**                               | 记忆             | メモリ                         | The ability of AI systems to save and use historical interaction information, keeping multi-turn conversations coherent.                                  |
-| **Metadata**                             | 元数据           | メタデータ                     | 描述数据的数据，提供关于内容的结构化信息，如文档的创建时间、作者、标题、标签、文件格式等属性信息等。(CN)                                                  |
-| **Metadata Filtering**                   | 元数据筛选       | メタデータフィルタリング       | A technique that utilizes document attribute information for content filtering.                                                                           |
-| **Model-as-a-Service (MaaS)**            | 模型即服务       | サービスとしてのモデル         | A cloud service model where providers offer access to pre-trained models through APIs.                                                                    |
-| **Multimodal Model**                     | 多模态模型       | マルチモーダルモデル           | A model capable of processing multiple types of input data, such as text, images, audio, etc.                                                             |
-| **Multi-path Retrieval**                 | 多路召回         | マルチパス検索                 | A strategy for obtaining information in parallel through multiple retrieval methods.                                                                      |
-| **Multi-tool-call**                      | 多工具调用       | マルチツール呼び出し           | The ability of a model to call multiple different tools in a single response.                                                                             |
-| **Parent-Child Chunking**                | 父子分段模式     | 親子チャンキング               | An advanced text splitting strategy that creates two levels of content blocks.                                                                            |
-| **Predefined Model**                     | 预定义模型       | 事前定義モデル                 | A ready-made model trained and provided by AI vendors that users can directly call without training themselves.                                           |
-| **Presence Penalty**                     | 存在惩罚         | 存在ペナルティ                 | A parameter setting that prevents language models from repeating content.                                                                                 |
-| **Prompt**                               | 提示词           | プロンプト                     | Input text that guides AI models to generate specific responses.                                                                                          |
-| **Q\&A Mode**                            | 问答模式         | Q\&A モード                    | A special indexing strategy that automatically generates question-answer pairs for document content.                                                      |
-| **Reasoning and Acting (ReAct)**         | 推理与行动       | 推論と行動                     | An AI agent framework that enables models to alternate between thinking and executing operations.                                                         |
-| **ReRank**                               | 重排序           | 再ランキング                   | A technique for secondary sorting of preliminary retrieval results to improve the relevance of final results.                                             |
-| **Rerank Model**                         | 重新排序模型     | 再ランキングモデル             | A model specifically designed to evaluate the relevance of retrieval results to queries and reorder them.                                                 |
-| **Response_format**                      | 响应格式         | レスポンス形式                 | A specification of the structure type for model output, such as plain text, JSON, or HTML.                                                                |
-| **Retrieval Test**                       | 召回测试         | 検索テスト                     | A functionality for verifying the effectiveness of knowledge base retrieval.                                                                              |
-| **Retrieval-Augmented Generation (RAG)** | 检索增强生成     | 検索拡張生成                   | A technical architecture that combines external knowledge retrieval and language generation.                                                              |
-| **Reverse Calling**                      | 反向调用         | リバースコーリング             | A bidirectional mechanism for plugins to interact with platforms, allowing plugins to actively call platform functionality.                               |
-| **Score Threshold**                      | 分数阈值         | スコア閾値                     | A similarity threshold for filtering retrieval results.                                                                                                   |
-| **Software Development Kit (SDK)**       | 软件开发工具包   | (N/A)                          | 一组用于开发特定平台或服务应用程序的工具集合。(CN)                                                                                                        |
-| **Semantic Search**                      | 语义检索         | セマンティック検索             | A retrieval method based on understanding and matching text meaning rather than simple keyword matching.                                                  |
-| **Session Variables**                    | 会话变量         | セッション変数                 | A mechanism for storing multi-turn dialogue context information.                                                                                          |
-| **Speech-to-Text (STT)**                 | 语音转文字       | 音声からテキスト変換           | Technology that converts users' voice input into text data.                                                                                               |
-| **Stream-tool-call**                     | 流式工具调用     | ストリームツール呼び出し       | A real-time processing mode that allows AI systems to call external tools while generating responses.                                                     |
-| **Streaming Response**                   | 流式结果返回     | ストリーミングレスポンス       | A real-time response mechanism where AI systems return content to users as it is generated.                                                               |
-| **Temperature**                          | 温度             | 温度                           | A parameter controlling the randomness of language model output.                                                                                          |
-| **Text Embedding**                       | 文本嵌入         | テキスト埋め込み               | The process of converting text into numerical vectors.                                                                                                    |
-| **Text-to-Speech (TTS)**                 | 文本转语音       | テキスト音声変換               | Technology that converts written text into natural speech.                                                                                                |
-| **Tool Calling**                         | 工具调用         | ツール呼び出し                 | The ability of AI systems to identify and use external functionality.                                                                                     |
-| **TopK**                                 | TopK             | TopK                           | A parameter controlling the number of retrieval results returned.                                                                                         |
-| **TopP (Nucleus Sampling)**              | 核采样           | 核サンプリング                 | A text generation control method that selects the next word from a probability-weighted subset of vocabulary.                                             |
-| **Tree of Thought (ToT)**                | 思维树           | 思考の木                       | A thinking method for exploring multiple reasoning paths.                                                                                                 |
-| **Vector Database**                      | 向量数据库       | ベクトルデータベース           | A database system specialized in storing and searching vector embeddings.                                                                                 |
-| **Vector Retrieval**                     | 向量检索         | ベクトル検索                   | A search method based on text vector embedding similarity.                                                                                                |
-| **Vision**                               | 视觉能力         | ビジョン機能                   | The functionality of multimodal LLMs to understand and process images.                                                                                    |
-| **Workflow**                             | 工作流           | ワークフロー                   | A task orchestration method that breaks down complex AI applications into multiple independent nodes.                                                     |
+This termbase provides consistent terminology for translating Dify documentation.
+
+## Technical Terms
+
+- **Workflow** → 工作流 (CN) / ワークフロー (JP)
+- **Agent** → 智能体 (CN) / エージェント (JP)
+- **Knowledge Base** → 知识库 (CN) / ナレッジベース (JP)
+- **Model** → 模型 (CN) / モデル (JP)
+- **Node** → 节点 (CN) / ノード (JP)
+- **Variable** → 变量 (CN) / 変数 (JP)
+- **Parameter** → 参数 (CN) / パラメータ (JP)
+- **API** → API (CN) / API (JP)
+- **Token** → 令牌 (CN) / トークン (JP)
+- **Prompt** → 提示词 (CN) / プロンプト (JP)
+
+## General Guidelines
+
+- Maintain technical accuracy while adapting to local conventions
+- Keep code examples and technical identifiers in English
+- Preserve markdown formatting and structure
+- Maintain a professional and clear tone

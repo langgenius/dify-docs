@@ -16,8 +16,10 @@ permissions:
 jobs:
   update-translation:
     runs-on: ubuntu-latest
-    # Only run if this is an English-only PR update
-    if: github.event.pull_request.draft == false
+    # Only run if this is an English-only PR update, not a translation PR
+    if: |
+      github.event.pull_request.draft == false &&
+      !startsWith(github.event.pull_request.head.ref, 'docs-sync-pr-')
     steps:
       - name: Checkout PR
         uses: actions/checkout@v4
@@ -109,20 +111,26 @@ jobs:
           
           PR_NUMBER=${{ github.event.pull_request.number }}
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+          PR_BRANCH="${{ github.event.pull_request.head.ref }}"
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
+
           # Switch to translation branch
           git fetch origin "$SYNC_BRANCH:$SYNC_BRANCH" || {
             echo "❌ Could not fetch translation branch $SYNC_BRANCH"
             echo "update_successful=false" >> $GITHUB_OUTPUT
             exit 0
           }
-          
+
           git checkout "$SYNC_BRANCH"
-          
-          # Reset translation branch to latest main to get fresh translations
-          git reset --hard origin/main
+
+          # Reset translation branch to main (keep working directory)
+          git reset --soft origin/main
+          git reset
+
+          # Checkout English files from PR to translate
+          git fetch origin "$PR_BRANCH:refs/remotes/origin/$PR_BRANCH"
+          git checkout "origin/$PR_BRANCH" -- en/ || echo "No English files to checkout"
           
           # Re-run translation analysis and generation
           cd tools/translate
@@ -174,9 +182,9 @@ jobs:
               # Translate English files
               for file_path in english_files[:10]:  # Limit to 10 files for safety
                   print(f"Updating translations for: {file_path}")
-                  
+
                   try:
-                      for target_lang in ["zh-hans", "ja-jp"]:
+                      for target_lang in ["cn", "jp"]:
                           target_path = file_path.replace("en/", f"{target_lang}/")
                           success = await synchronizer.translate_file_with_notice(
                               file_path,
@@ -236,8 +244,9 @@ jobs:
           
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          git add .
+
+          # Commit only translation changes (not English files)
+          git add cn/ jp/ docs.json
           git commit -m "🔄 Update translations for PR #${PR_NUMBER}
           
           Updated translations following changes in PR #${PR_NUMBER}.
@@ -270,13 +279,16 @@ jobs:
               console.log('Could not load update results');
             }
             
-            let comment = `## 🔄 Translation PR Updated
+            let comment = `## 🔄 Translation PR Updated\n\n`
+            comment += `Your English documentation changes have been automatically translated and the translation PR has been updated.\n\n`
+                        
+            comment += `### 📝 Original Changes\n\n`;
+            comment += `- **Original PR**: #${prNumber}\n`;
+            comment += `- **Type**: English documentation updates\n`;
             
-Your English documentation changes have been automatically translated and the translation PR has been updated.
-
-### 🔗 Updated Translation PR: [#${translationPrNumber}](${translationPrUrl})
-
-`;
+            comment += `### 🔄 Synchronization\n\n`;
+            comment += `- **Automatic Updates**: This PR will be automatically updated if the original PR changes\n`;
+            comment += `- **Independent Review**: This translation PR can be reviewed and merged independently\n`;
             
             if (results.translated && results.translated.length > 0) {
               comment += `### ✅ Updated Translations (${results.translated.length} files):\n`;
@@ -298,8 +310,8 @@ Your English documentation changes have been automatically translated and the tr
             }
             
             comment += `### 🔄 What's Updated:
-- **Translation Files**: All corresponding zh-hans and ja-jp files
-- **Navigation Structure**: Updated docs.json if needed  
+- **Translation Files**: All corresponding cn and jp files
+- **Navigation Structure**: Updated docs.json if needed
 - **Automatic**: This update happened automatically when you updated your PR
 
 ---
@@ -341,7 +353,7 @@ This translation PR has been automatically updated following changes in the orig
 ### 📝 What Was Updated:
 - **Source**: Changes from PR #${prNumber}
 - **Updated Files**: ${results.translated ? results.translated.length : 0} translation files
-- **Languages**: Chinese (zh-hans) and Japanese (ja-jp)
+- **Languages**: Chinese (cn) and Japanese (jp)
 
 ### ✅ Translation Status:
 ${results.translated && results.translated.length > 0 ? 

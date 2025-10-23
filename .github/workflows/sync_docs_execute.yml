@@ -5,7 +5,6 @@ on:
     workflows: ["Analyze Documentation Changes"]
     types:
       - completed
-    branches: [main, revamp]
   workflow_dispatch:
     inputs:
       pr_number:
@@ -21,7 +20,7 @@ permissions:
 jobs:
   execute-sync:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success'
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
     steps:
       - name: Check workflow source
         id: check-source
@@ -49,41 +48,98 @@ jobs:
           echo "should_process=true" >> $GITHUB_OUTPUT
 
       - name: Download analysis artifacts
-        if: steps.check-source.outputs.should_process == 'true'
+        if: steps.check-source.outputs.should_process == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/github-script@v7
         id: download-artifacts
         with:
           script: |
+            const fs = require('fs');
+
+            // Determine which workflow run to get artifacts from
+            let runId;
+            let prNumber;
+
+            if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger - use the pr_number input
+              prNumber = '${{ github.event.inputs.pr_number }}';
+              console.log(`Manual trigger for PR #${prNumber}`);
+
+              // Find the most recent analyze workflow run for this specific PR
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'sync_docs_analyze.yml',
+                per_page: 100
+              });
+
+              // Find run that matches our specific PR number
+              let matchingRun = null;
+              for (const run of runs.data.workflow_runs) {
+                if (run.conclusion === 'success' && run.event === 'pull_request' && run.pull_requests.length > 0) {
+                  const pullRequest = run.pull_requests[0];
+                  if (pullRequest.number.toString() === prNumber) {
+                    matchingRun = run;
+                    break;
+                  }
+                }
+              }
+
+              if (!matchingRun) {
+                console.log(`No successful analyze workflow run found for PR #${prNumber}`);
+                return false;
+              }
+
+              runId = matchingRun.id;
+              console.log(`Found analyze workflow run: ${runId} for PR #${prNumber}`);
+            } else {
+              // Triggered by workflow_run
+              runId = context.payload.workflow_run.id;
+              console.log(`Workflow run trigger, run ID: ${runId}`);
+            }
+
+            // List artifacts from the analyze workflow run
             const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
               owner: context.repo.owner,
               repo: context.repo.repo,
-              run_id: ${{ github.event.workflow_run.id }}
+              run_id: runId
             });
-            
+
+            console.log(`Found ${artifacts.data.artifacts.length} artifacts`);
+            artifacts.data.artifacts.forEach(a => console.log(`  - ${a.name}`));
+
             const matchArtifact = artifacts.data.artifacts.find(artifact => {
-              return artifact.name.startsWith('docs-sync-analysis-');
+              if (context.eventName === 'workflow_dispatch') {
+                return artifact.name === `docs-sync-analysis-${prNumber}`;
+              } else {
+                return artifact.name.startsWith('docs-sync-analysis-');
+              }
             });
-            
+
             if (!matchArtifact) {
-              console.log('No analysis artifacts found');
+              console.log('No matching analysis artifact found');
               return false;
             }
-            
+
+            console.log(`Downloading artifact: ${matchArtifact.name}`);
+
             const download = await github.rest.actions.downloadArtifact({
               owner: context.repo.owner,
               repo: context.repo.repo,
               artifact_id: matchArtifact.id,
               archive_format: 'zip'
             });
-            
-            const fs = require('fs');
+
             fs.writeFileSync('/tmp/artifacts.zip', Buffer.from(download.data));
-            
+            console.log('Artifact downloaded successfully');
+
             // Extract PR number from artifact name
-            const prNumber = matchArtifact.name.split('-').pop();
+            if (!prNumber) {
+              prNumber = matchArtifact.name.split('-').pop();
+            }
+
             core.setOutput('pr_number', prNumber);
             core.setOutput('artifact_found', 'true');
-            
+
             return true;
 
       - name: Extract and validate artifacts
@@ -134,17 +190,22 @@ jobs:
           # Extract PR number and other metadata
           PR_NUMBER=$(python3 -c "import json; print(json.load(open('analysis.json'))['pr_number'])")
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-          
+
+          # Extract head SHA to checkout the PR branch (needed for new files)
+          HEAD_SHA=$(python3 -c "import json; print(json.load(open('analysis.json'))['head_sha'])")
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+
           # Check if sync is required
           SYNC_REQUIRED=$(python3 -c "import json; print(str(json.load(open('sync_plan.json'))['sync_required']).lower())")
           echo "sync_required=$SYNC_REQUIRED" >> $GITHUB_OUTPUT
 
-      - name: Checkout base repository
+      - name: Checkout PR branch
         if: steps.extract-artifacts.outputs.sync_required == 'true'
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
+          ref: ${{ steps.extract-artifacts.outputs.head_sha }}  # Checkout PR's head commit to access new files
 
       - name: Set up Python
         if: steps.extract-artifacts.outputs.sync_required == 'true'
@@ -230,7 +291,13 @@ jobs:
           # Create a new branch for the sync results
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
           git checkout -b "$SYNC_BRANCH"
-          
+
+          # Reset branch to main to avoid including English file changes from PR
+          # Use --soft to keep working directory with PR files (needed for translation)
+          git reset --soft origin/main
+          # Unstage everything
+          git reset
+
           # Run synchronization with security constraints
           cd tools/translate
           
@@ -259,13 +326,14 @@ jobs:
               # Validate file paths again
               for file_info in files_to_sync:
                   file_path = file_info["path"]
-                  
+
                   # Security checks
                   if ".." in file_path or file_path.startswith("/"):
                       print(f"Security error: Invalid path {file_path}")
                       return False
-                  
-                  if not file_path.startswith("en/"):
+
+                  # Allow en/ files and docs.json
+                  if not (file_path.startswith("en/") or file_path == "docs.json"):
                       print(f"Security error: File outside en/ directory: {file_path}")
                       return False
               
@@ -287,11 +355,21 @@ jobs:
               for file_info in files_to_sync[:10]:  # Limit to 10 files
                   file_path = file_info["path"]
                   print(f"Processing: {file_path}")
-                  
+
+                  # Skip docs.json - it's handled separately in structure sync
+                  if file_path == "docs.json":
+                      results["skipped"].append(f"{file_path} (structure file - handled separately)")
+                      continue
+
+                  # Skip versioned directories (frozen/archived docs)
+                  if file_path.startswith("versions/"):
+                      results["skipped"].append(f"{file_path} (versioned - not auto-translated)")
+                      continue
+
                   try:
                       # Only translate if file exists and is safe
                       if os.path.exists(f"../../{file_path}"):
-                          for target_lang in ["zh-hans", "ja-jp"]:
+                          for target_lang in ["cn", "jp"]:
                               target_path = file_path.replace("en/", f"{target_lang}/")
                               success = await synchronizer.translate_file_with_notice(
                                   file_path,
@@ -344,21 +422,23 @@ jobs:
       - name: Commit and create translation PR
         if: steps.sync.outputs.has_changes == 'true'
         id: create-translation-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
           
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
-          
-          # Commit translation changes
-          git add .
+
+          # Commit translation changes only (not English files from PR)
+          git add cn/ jp/ docs.json
           git commit -m "🌐 Auto-translate documentation for PR #${PR_NUMBER}
 
           Auto-generated translations for documentation changes in PR #${PR_NUMBER}.
           
           Original PR: #${PR_NUMBER}
-          Languages: Chinese (zh-hans), Japanese (ja-jp)
+          Languages: Chinese (cn), Japanese (jp)
           
           🤖 Generated with GitHub Actions"
           
@@ -379,8 +459,8 @@ jobs:
           **Link:** #${PR_NUMBER}
           
           ## What's included
-          - 🇨🇳 Chinese (zh-hans) translations
-          - 🇯🇵 Japanese (ja-jp) translations
+          - 🇨🇳 Chinese (cn) translations
+          - 🇯🇵 Japanese (jp) translations
           - 📋 Updated navigation structure in docs.json
           
           ## Review Process
@@ -401,9 +481,11 @@ jobs:
             --base main \
             --head "$SYNC_BRANCH" \
             --title "🌐 Auto-translations for PR #${PR_NUMBER}: ${ORIGINAL_PR_TITLE}" \
-            --body-file /tmp/translation_pr_body.md \
-            --label "🌐 translation" \
-            --label "🤖 automated" 2>/dev/null || echo "")
+            --body-file /tmp/translation_pr_body.md 2>&1 || echo "")
+
+          if [ -z "$TRANSLATION_PR_URL" ]; then
+            echo "❌ Failed to create translation PR"
+          fi
           
           if [ -n "$TRANSLATION_PR_URL" ]; then
             # Extract PR number from URL
@@ -475,8 +557,8 @@ jobs:
               comment += '3. **Automatic**: Future updates to this PR will automatically update the translation PR\n\n';
               
               comment += '### 📋 Languages Included:\n';
-              comment += '- 🇨🇳 **Chinese (zh-hans)**: Simplified Chinese translations\n';
-              comment += '- 🇯🇵 **Japanese (ja-jp)**: Japanese translations\n';
+              comment += '- 🇨🇳 **Chinese (cn)**: Simplified Chinese translations\n';
+              comment += '- 🇯🇵 **Japanese (jp)**: Japanese translations\n';
               comment += '- 📋 **Navigation**: Updated docs.json structure for both languages\n\n';
               
               comment += '---\n';
@@ -530,7 +612,7 @@ jobs:
               '',
               '---',
               `🤖 _This PR is part of the automated translation workflow. Any updates to PR #${prNumber} will automatically update this translation PR._`
-            ].join('\\n');
+            ].join('\n\n');
 
             try {
               await github.rest.issues.createComment({

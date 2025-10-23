@@ -3,7 +3,6 @@ import os
 import sys
 import asyncio
 import aiofiles
-import json
 
 docs_structure = {
     "general_help": {
@@ -19,31 +18,32 @@ docs_structure = {
     "version_28x": {
         "English": "versions/2-8-x/en-us",
         "Chinese": "versions/2-8-x/zh-cn",
-        "Japanese": "versions/2-8-x/ja-jp"
+        "Japanese": "versions/2-8-x/jp"
     },
     "version_30x": {
         "English": "versions/3-0-x/en-us",
         "Chinese": "versions/3-0-x/zh-cn",
-        "Japanese": "versions/3-0-x/ja-jp"
+        "Japanese": "versions/3-0-x/jp"
     },
     "version_31x": {
         "English": "versions/3-1-x/en-us",
         "Chinese": "versions/3-1-x/zh-cn",
-        "Japanese": "versions/3-1-x/ja-jp"
+        "Japanese": "versions/3-1-x/jp"
     }
 }
 
 
-async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=3):
+async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=5):
     """
     Translate text using Dify API with termbase from `tools/translate/termbase_i18n.md`
+    Includes retry logic with exponential backoff for handling API timeouts and gateway errors.
     """
     if termbase_path is None:
         # Get project root directory
         script_dir = os.path.dirname(os.path.abspath(__file__))
         base_dir = os.path.dirname(os.path.dirname(script_dir))  # Two levels up
         termbase_path = os.path.join(base_dir, "tools", "translate", "termbase_i18n.md")
-    
+
     url = "https://api.dify.ai/v1/workflows/run"
 
     termbase = await load_md_mdx(termbase_path)
@@ -64,54 +64,90 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
         "Content-Type": "application/json"
     }
 
-    # Retry mechanism
+    # Retry mechanism with exponential backoff
     for attempt in range(max_retries):
         try:
-            # Add delay to avoid concurrent pressure
+            # Add exponential backoff with jitter for retries
             if attempt > 0:
-                delay = attempt * 10  # Incremental delay: 2s, 4s, 6s
-                print(f"Retrying in {delay} seconds... (attempt {attempt + 1}/{max_retries})")
+                # Exponential backoff: 5s, 10s, 20s, 40s, 80s with ±20% jitter
+                import random
+                base_delay = min(5 * (2 ** (attempt - 1)), 120)  # Cap at 120s
+                jitter = random.uniform(0.8, 1.2)
+                delay = base_delay * jitter
+                print(f"⏳ Retry attempt {attempt + 1}/{max_retries} after {delay:.1f}s delay...")
                 await asyncio.sleep(delay)
 
-            async with httpx.AsyncClient(timeout=120.0) as client:  # Increase timeout to 120 seconds
-                print(f"sending request attempt {attempt + 1}/{max_retries}")
+            # Longer timeout for translation API: 180 seconds (3 minutes)
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 response = await client.post(url, json=payload, headers=headers)
 
-            # Check HTTP status code
+            # Check for gateway errors (502, 503, 504) - these are retryable
+            if response.status_code in [502, 503, 504]:
+                print(f"⚠️  Gateway error {response.status_code} - API backend timeout or overload")
+                if attempt < max_retries - 1:
+                    print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
+                    continue
+                else:
+                    print(f"❌ All {max_retries} attempts exhausted due to gateway errors")
+                    return ""
+
+            # Check for other HTTP errors
             if response.status_code != 200:
-                print(f"HTTP Error: {response.status_code}")
-                print(f"Response: {response.text}")
-                if attempt == max_retries - 1:  # Last attempt
+                print(f"❌ HTTP Error: {response.status_code}")
+                print(f"Response: {response.text[:500]}")  # Limit output
+                if attempt == max_retries - 1:
                     return ""
                 continue
 
+            # Parse successful response
             try:
                 response_data = response.json()
-                print(f"API Response: {response_data}")  # Debug info
-                
+
                 # Extract output1
                 output1 = response_data.get("data", {}).get("outputs", {}).get("output1", "")
                 if not output1:
-                    print("Warning: No output1 found in response")
-                    print(f"Full response: {response_data}")
+                    print("⚠️  Warning: No output1 found in response")
+                    print(f"Response keys: {response_data.keys()}")
+                    if attempt < max_retries - 1:
+                        continue
+                    return ""
+
+                print(f"✅ Translation completed successfully")
                 return output1
+
             except Exception as e:
-                print(f"Error parsing response: {e}")
-                print(f"Response text: {response.text}")
-                if attempt == max_retries - 1:  # Last attempt
+                print(f"❌ Error parsing response: {e}")
+                print(f"Response text (first 500 chars): {response.text[:500]}")
+                if attempt == max_retries - 1:
                     return ""
                 continue
-                
+
         except httpx.ReadTimeout as e:
-            print(f"Request timeout (attempt {attempt + 1}/{max_retries}): {str(e)}")
-            if attempt == max_retries - 1:  # Last attempt
-                print(f"All {max_retries} attempts failed due to timeout")
+            print(f"⏱️  Request timeout after 180s (attempt {attempt + 1}/{max_retries})")
+            if attempt < max_retries - 1:
+                print(f"Will retry with longer backoff... ({max_retries - attempt - 1} attempts remaining)")
+            else:
+                print(f"❌ All {max_retries} attempts failed due to timeout")
                 return ""
+
+        except httpx.ConnectTimeout as e:
+            print(f"🔌 Connection timeout (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            if attempt == max_retries - 1:
+                print(f"❌ All {max_retries} attempts failed due to connection timeout")
+                return ""
+
+        except httpx.HTTPError as e:
+            print(f"🌐 HTTP error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            if attempt == max_retries - 1:
+                print(f"❌ All {max_retries} attempts failed due to HTTP errors")
+                return ""
+
         except Exception as e:
-            print(f"Unexpected error (attempt {attempt + 1}/{max_retries}): {str(e)}")
-            if attempt == max_retries - 1:  # Last attempt
+            print(f"❌ Unexpected error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            if attempt == max_retries - 1:
+                print(f"❌ All {max_retries} attempts failed due to unexpected errors")
                 return ""
-    
+
     return ""
 
 
@@ -161,72 +197,7 @@ def generate_target_path(file_path, current_lang_code, target_lang_code):
     """
     Generate target language file path
     """
-    # Only replace the language code in the path after 'dify-docs/'
-    base_path = "/Users/guchenhe/Desktop/werk/projects/dify-docs/"
-    if file_path.startswith(base_path):
-        relative_path = file_path[len(base_path):]
-        # Replace only the first occurrence of the language code
-        new_relative_path = relative_path.replace(f"{current_lang_code}/", f"{target_lang_code}/", 1)
-        return base_path + new_relative_path
-    else:
-        # Fallback to simple replacement if path structure is different
-        return file_path.replace(f"/{current_lang_code}/", f"/{target_lang_code}/", 1)
-
-
-def load_translation_notices():
-    """
-    Load translation notices from notices.json
-    """
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    notices_path = os.path.join(script_dir, "notices.json")
-
-    try:
-        with open(notices_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        print(f"Warning: Could not load notices.json: {str(e)}")
-        return {}
-
-
-def add_translation_notice(content, target_lang_code, source_file_path):
-    """
-    Add translation notice after frontmatter
-    """
-    notices = load_translation_notices()
-
-    # Map language codes to notice keys
-    lang_map = {
-        'cn': 'zh-hans',
-        'jp': 'ja-jp'
-    }
-
-    notice_key = lang_map.get(target_lang_code)
-    if not notice_key or notice_key not in notices:
-        return content
-
-    # Generate English path from source file path
-    en_path = source_file_path.replace('/Users/guchenhe/Desktop/werk/projects/dify-docs', '')
-    notice = notices[notice_key].replace('{en_path}', en_path)
-
-    # Find the end of frontmatter (second ---)
-    lines = content.split('\n')
-    frontmatter_count = 0
-    insert_position = 0
-
-    for i, line in enumerate(lines):
-        if line.strip() == '---':
-            frontmatter_count += 1
-            if frontmatter_count == 2:
-                insert_position = i + 1
-                break
-
-    if insert_position > 0:
-        # Insert notice after frontmatter
-        lines.insert(insert_position, '')
-        lines.insert(insert_position + 1, notice.rstrip())
-        return '\n'.join(lines)
-
-    return content
+    return file_path.replace(current_lang_code, target_lang_code)
 
 
 async def save_translated_content(content, file_path):
@@ -282,10 +253,8 @@ async def translate_single_file(file_path, dify_api_key, current_lang_name, targ
             )
             
             print(f"Translation result length: {len(translated_content)} characters")
-
+            
             if translated_content and translated_content.strip():
-                # Add translation notice after frontmatter
-                translated_content = add_translation_notice(translated_content, target_lang_code, file_path)
                 # Save translation result
                 await save_translated_content(translated_content, target_file_path)
             else:
