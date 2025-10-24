@@ -1,0 +1,384 @@
+---
+title: "触发器插件"
+---
+
+## 简介
+
+Dify v1.10.0 引入了触发器（Trigger）类型的开始节点。区别于代码（Code）、工具（Tool）、知识检索（Knowledge Retrieval）等功能性节点，触发器的作用是**将第三方事件转化为 Dify 能够接收的输入参数格式**。
+
+![Trigger Plugin Intro](/images/trigger_plugin_intro.PNG)
+
+例如，在 Gmail 中将事件的接收方配置为 Dify 后，每当你收到一封新邮件，Gmail 就会向 Dify 发送一个事件，可用于触发工作流。然而：
+
+- Gmail 的原始请求格式不是 Dify 可接收的标准格式；
+
+- 全世界有成千上万的平台，每个平台的格式都不尽相同。
+
+因此，我们需要触发器来定义和解析这些来自不同平台、不同格式的事件，并将它们统一转换为 Dify 可接收的标准入参格式。
+
+## 技术原理
+
+Dify 触发器基于 Webhook 实现。Webhook 是互联网中广泛应用的机制，主流 SaaS 平台（如 Github、Slack、Linear 等）均支持 Webhook 并配有详细的开发文档。
+
+Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事件接收地址后，这些 SaaS 平台会在指定事件发生时自动将其推送至目标服务器。**
+
+为了统一处理来自不同平台的 Webhook 事件，Dify 抽象出两个核心概念：订阅（Subscription） 和事件（Event）。
+
+- **订阅**：如前所述，基于 Webhook 的事件派发有一个前提条件——需要将 Dify 的网络地址作为目标服务器，配置在第三方平台的开发者后台中。这个配置过程在 Dify 中称为「订阅」。
+
+- **事件**：一个平台可能会发送多种类型的事件，例如 *新邮件*、*邮件删除*、*邮件已读* 等，所有事件均会被推送至预先配置的地址。在一个触发器插件中，可配置多个事件以处理不同类型的事件，一个事件对应 Dify 工作流中的一个触发器节点。
+
+## 插件开发
+
+触发器插件的开发方式与工具（Tool）、数据源（Data Source）、模型（Model）等插件类型一致，均可通过 `dify plugin init` 命令创建开发模板，文件结构遵循统一的插件格式规范：
+
+- `manifest.yaml`：描述插件的基本信息。
+
+- `provider` 目录：包含插件供应商的描述信息、创建订阅的代码，以及接收 Webhook 请求后对事件进行分类的代码。
+
+- `events` 目录：包含事件处理和筛选功能的代码，支持在节点端对事件进行本地筛选；每个目录下可创建二级目录，以便对事件进行分组。
+
+```
+├── _assets
+│   └── icon.svg
+├── events
+│   └── star
+│       ├── star_created.py
+│       └── star_created.yaml
+├── main.py
+├── manifest.yaml
+├── provider
+│   ├── github.py
+│   └── github.yaml
+├── README.md
+├── PRIVACY.md
+└── requirements.txt
+```
+
+<Note>
+    在触发器插件中，最低 Dify 版本需设置为 `1.10.0`，SDK 版本需设置为大于等于 `0.6.0`。
+</Note>
+
+下面以 GitHub 为例，介绍触发器插件的具体开发方法。
+
+### 订阅创建
+
+在主流 SaaS 平台中，Webhook 的配置方式差异较大：
+
+- 部分平台（如 GitHub）支持通过 API 配置 Webhook。此类平台在 Dify 中完成 OAuth 鉴权后，Dify 即可自动完成 Webhook 配置。
+
+- 另一类平台（如 Notion）不仅不提供 Webhook API 配置功能，还要求用户手动完成部分校验工作。
+
+因此，我们将订阅过程分为两个部分：Subscription Constructor 和 Subscription。
+
+对于 Notion 这类平台，订阅的创建需要用户手动将 Dify 提供的回调地址（Callback URL）复制粘贴到 Notion 后台中，以完成 Webhook 配置。此流程对应 Dify 界面上的 **粘贴 URL 以创建新订阅（Paste URL to create a new subscription）** 选项。
+
+<Columns cols={2}>
+    <img src="/images/trigger_plugin_manual_webhook_setup.PNG" alt="Manually Create Subscription" />
+    <img src="/images/trigger_plugin_manual_webhook_setup_config.PNG" alt="Manual Configuration" />
+</Columns>
+
+若要实现通过手动复制 Callback URL 的方式创建订阅，需要修改 `github.yaml` 和 `github.py` 两个文件。
+
+<Tabs>
+    <Tab title="github.yaml">
+        由于 Github Webhook 存在加密机制，解密和校验请求需要使用密钥，因此需在 `github.yaml` 中声明 `webhook_secret`。
+
+        ```YAML
+        subscription_schema:
+        - name: "webhook_secret"
+        type: "secret-input"
+        required: false
+        label:
+            zh_Hans: "Webhook Secret"
+            en_US: "Webhook Secret"
+            ja_JP: "Webhookシークレット"
+        help:
+            en_US: "Optional webhook secret for validating GitHub webhook requests"
+            ja_JP: "GitHub Webhookリクエストの検証用のオプションのWebhookシークレット"
+            zh_Hans: "可选的用于验证 GitHub webhook 请求的 webhook 密钥"
+        ```
+    </Tab>
+    <Tab title="github.py">
+        在右图中可以看到，界面下方有一个 **Request Logs** 区域。首先，我们需要编写 `dispatch_event` 接口。所有发送到 Callback URL 的请求都会先经过该接口处理，处理后的事件将显示在 Request Logs 中，便于调试与验证。
+
+        在代码中，可通过 `subscription.properties` 获取在 YAML 文件中声明的 `webhook_secret`。
+
+        `dispatch_event` 方法需要根据请求内容判断该请求对应的事件类型。在以下示例中，事件提取由 `_dispatch_trigger_event` 方法完成。
+
+        <Tip>
+            完整代码示例，请参考 [Dify GitHub 插件代码](https://github.com/langgenius/dify-plugin-sdks/tree/feat/trigger/python/examples/github_trigger)。
+        </Tip>
+
+        ```Python
+        class GithubTrigger(Trigger):
+            """Handle GitHub webhook event dispatch."""
+
+            def _dispatch_event(self, subscription: Subscription, request: Request) -> EventDispatch:
+                webhook_secret = subscription.properties.get("webhook_secret")
+                if webhook_secret:
+                    self._validate_signature(request=request, webhook_secret=webhook_secret)
+
+                event_type: str | None = request.headers.get("X-GitHub-Event")
+                if not event_type:
+                    raise TriggerDispatchError("Missing GitHub event type header")
+
+                payload: Mapping[str, Any] = self._validate_payload(request)
+                response = Response(response='{"status": "ok"}', status=200, mimetype="application/json")
+                event: str = self._dispatch_trigger_event(event_type=event_type, payload=payload)
+                return EventDispatch(events=[event] if event else [], response=response)
+        ```
+    </Tab>
+</Tabs>
+
+### 事件处理
+
+提取出对应事件后，需要由相应的事件实现对原始 HTTP 请求进行过滤，并将其转换为 Dify 工作流可接收的入参。
+
+以 `Issue` 事件为例，可分别通过 `issue_open.yaml` 和 `issue_open.py` 来定义事件与实现事件。事件的输出可在 `output_schema` 中定义，与工具类型插件相同，遵循 JSON Schema 规范。
+
+<Tabs>
+    <Tab title="issue_open.yaml">
+        ```YAML
+        identity:
+        name: issue_opened
+        author: langgenius
+        label:
+            en_US: Issue Opened
+            zh_Hans: Issue 打开
+            ja_JP: Issue 開かれた
+        description:
+        en_US: Triggers when a new issue is opened
+        zh_Hans: 当新 issue 打开时触发
+        ja_JP: 新しい issue が開かれたときにトリガーがアクティブになります。
+        output_schema:
+        type: object
+        properties:
+            issue:
+            type: object
+            description: The issue itself
+            properties:
+                id:
+                type: integer
+                format: int64
+                description: Unique identifier of the issue
+        extra:
+        python:
+            source: events/issues/issue_opened.py
+        ```
+    </Tab>
+    <Tab title="issue_open.py">
+        ```Python
+        class IssueOpenedEvent(Event):
+            """
+            GitHub Issue Opened Event
+
+            This event transforms GitHub issue opened webhook events and extracts relevant
+            information from the webhook payload to provide as variables to the workflow.
+            """
+            def _on_event(self, request: Request, parameters: Mapping[str, Any]) -> Variables:
+                """
+                Transform GitHub issue opened webhook event into structured Variables
+                """
+                payload = request.get_json()
+                if not payload:
+                    raise ValueError("No payload received")
+
+                issue = payload.get("issue")
+                if not issue:
+                    raise ValueError("No issue data in payload")
+
+                return Variables(variables={**payload})
+        ```
+    </Tab>
+</Tabs>
+
+### 事件过滤
+
+若希望插件能够筛选掉部分事件，例如只关注具有某个特定标签的 Issue 事件，可在事件定义中为 `issue` 添加 `parameters`。在 `_on_event` 方法中，通过抛出 `EventIgnoreError` 异常，即可在实际运行中根据配置的参数过滤掉不符合条件的事件。
+
+<Tabs>
+    <Tab title="YAML">
+        ```YAML
+        parameters:
+        - name: added_label
+        label:
+            en_US: Added Label
+            zh_Hans: 添加的标签
+            ja_JP: 追加されたラベル
+        type: string
+        required: false
+        description:
+            en_US: "Only trigger if these specific labels were added (e.g., critical, priority-high, security, comma-separated). Leave empty to trigger for any label addition."
+            zh_Hans: "仅当添加了这些特定标签时触发（例如：critical, priority-high, security，逗号分隔）。留空则对任何标签添加触发。"
+            ja_JP: "これらの特定のラベルが追加された場合のみトリガー（例: critical, priority-high, security，カンマ区切り）。空の場合は任意のラベル追加でトリガー。"
+        ```
+    </Tab>
+    <Tab title="Python">
+        ```Python
+        def _check_added_label(self, payload: Mapping[str, Any], added_label_param: str | None) -> None:
+            """Check if the added label matches the allowed labels"""
+            if not added_label_param:
+                return
+
+            allowed_labels = [label.strip() for label in added_label_param.split(",") if label.strip()]
+            if not allowed_labels:
+                return
+
+            # The payload contains the label that was added
+            label = payload.get("label", {})
+            label_name = label.get("name", "")
+
+            if label_name not in allowed_labels:
+                raise EventIgnoreError()
+                
+        def _on_event(self, request: Request, parameters: Mapping[str, Any]) -> Variables:
+            # ...
+            # Apply all filters
+            self._check_added_label(payload, parameters.get("added_label"))
+
+            return Variables(variables={**payload})
+        ```
+    </Tab>
+</Tabs>
+
+### 通过 OAuth 或 API Key 创建订阅
+
+若要实现通过 OAuth 或 API Key 自动创建订阅，同样需要修改 `github.yaml` 和 `github.py` 两个文件。
+
+<Tabs>
+    <Tab title="github.yaml">
+        在 `github.yaml` 中，添加如下字段。
+
+        ```YAML
+        subscription_constructor:
+        parameters:
+        - name: "repository"
+            label:
+            en_US: "Repository"
+            zh_Hans: "仓库"
+            ja_JP: "リポジトリ"
+            type: "dynamic-select"
+            required: true
+            placeholder:
+            en_US: "owner/repo"
+            zh_Hans: "owner/repo"
+            ja_JP: "owner/repo"
+            help:
+            en_US: "GitHub repository in format owner/repo (e.g., microsoft/vscode)"
+            zh_Hans: "GitHub 仓库，格式为 owner/repo（例如：microsoft/vscode）"
+            ja_JP: "GitHubリポジトリは owner/repo 形式で入力してください（例: microsoft/vscode）"
+        credentials_schema:
+            access_tokens:
+            help:
+                en_US: Get your Access Tokens from GitHub
+                ja_JP: GitHub からアクセストークンを取得してください
+                zh_Hans: 从 GitHub 获取您的 Access Tokens
+            label:
+                en_US: Access Tokens
+                ja_JP: アクセストークン
+                zh_Hans: Access Tokens
+            placeholder:
+                en_US: Please input your GitHub Access Tokens
+                ja_JP: GitHub のアクセストークンを入力してください
+                zh_Hans: 请输入你的 GitHub Access Tokens
+            required: true
+            type: secret-input
+            url: https://github.com/settings/tokens?type=beta
+        extra:
+            python:
+            source: provider/github.py
+        ```
+        `subscription_constructor` 是 Dify 抽象出的一个概念，用于定义如何构建订阅，包含以下字段：
+
+        - `parameters`（可选）：用于定义创建订阅时所需的参数，例如想要订阅的事件类型或目标 GitHub 仓库等。
+
+        - `credentials_schema`（可选）：通过 API Key 创建订阅时，需要声明所需的密钥，例如在 GitHub 中定义 `access_tokens`。
+
+        - `oauth_schema`（可选）：通过 OAuth 创建订阅时，必须填写该字段。具体定义方式，可参考 [为插件添加 OAuth 支持](/plugin-dev-zh/0222-tool-oauth)。
+    </Tab>
+    <Tab title="github.py">
+        在 `github.py` 中创建一个 `Constructor` 类，以实现自动化订阅逻辑。
+
+        ```Python
+        class GithubSubscriptionConstructor(TriggerSubscriptionConstructor):
+            """Manage GitHub trigger subscriptions."""
+            def _validate_api_key(self, credentials: Mapping[str, Any]) -> None:
+                # ...
+
+            def _create_subscription(
+                self,
+                endpoint: str,
+                parameters: Mapping[str, Any],
+                credentials: Mapping[str, Any],
+                credential_type: CredentialType,
+            ) -> Subscription:
+                repository = parameters.get("repository")
+                if not repository:
+                    raise ValueError("repository is required (format: owner/repo)")
+
+                try:
+                    owner, repo = repository.split("/")
+                except ValueError:
+                    raise ValueError("repository must be in format 'owner/repo'") from None
+
+                events: list[str] = parameters.get("events", [])
+                webhook_secret = uuid.uuid4().hex
+                url = f"https://api.github.com/repos/{owner}/{repo}/hooks"
+                headers = {
+                    "Authorization": f"Bearer {credentials.get('access_tokens')}",
+                    "Accept": "application/vnd.github+json",
+                }
+
+                webhook_data = {
+                    "name": "web",
+                    "active": True,
+                    "events": events,
+                    "config": {"url": endpoint, "content_type": "json", "insecure_ssl": "0", "secret": webhook_secret},
+                }
+
+                try:
+                    response = requests.post(url, json=webhook_data, headers=headers, timeout=10)
+                except requests.RequestException as exc:
+                    raise SubscriptionError(f"Network error while creating webhook: {exc}", error_code="NETWORK_ERROR") from exc
+
+                if response.status_code == 201:
+                    webhook = response.json()
+                    return Subscription(
+                        expires_at=int(time.time()) + self._WEBHOOK_TTL,
+                        endpoint=endpoint,
+                        parameters=parameters,
+                        properties={
+                            "external_id": str(webhook["id"]),
+                            "repository": repository,
+                            "events": events,
+                            "webhook_secret": webhook_secret,
+                            "active": webhook.get("active", True),
+                        },
+                    )
+
+                response_data: dict[str, Any] = response.json() if response.content else {}
+                error_msg = response_data.get("message", "Unknown error")
+                error_details = response_data.get("errors", [])
+                detailed_error = f"Failed to create GitHub webhook: {error_msg}"
+                if error_details:
+                    detailed_error += f" Details: {error_details}"
+
+                raise SubscriptionError(
+                    detailed_error,
+                    error_code="WEBHOOK_CREATION_FAILED",
+                    external_response=response_data,
+                )
+        ```
+    </Tab>
+</Tabs>
+
+完成以上配置后，你将在 Dify 的前端界面中看到 **Create with API Key** 选项。
+
+通过 OAuth 的订阅自动创建也可以在 Constructor 中实现：在 `subscription_constructor` 中添加 `oauth_schema` 字段，即可启用 OAuth 认证方式。
+
+![OAuth & API Key Options](/images/trigger_plugin_oauth_apikey.png)
+
+## 探索更多
+
+受篇幅所限，本文档仅展示最基础的实现示例。更多详细的接口说明，请参考以下接口文档。
