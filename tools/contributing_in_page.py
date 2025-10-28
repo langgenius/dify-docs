@@ -193,6 +193,26 @@ def loop(dict):
         )
 
 
+def main_remove_help_cip():
+    help_docs = {
+        "zh_help": {
+            "target_dir_relative": "cn",
+        },
+        "en_help": {
+            "target_dir_relative": "en",
+        },
+        "ja_help": {
+            "target_dir_relative": "jp",
+        },
+    }
+    try:
+        for config_name, config_data in help_docs.items():
+            remove_contributing_section(config_data["target_dir_relative"])
+        return "Successfully removed CIP from help documentation"
+    except Exception as e:
+        return f"Error: {str(e)}"
+
+
 def main_contributing_in_page():
     process = {
         # Plugin Development
@@ -222,6 +242,7 @@ def main_contributing_in_page():
         return (f"{str(e)}")
     
 if __name__ == "__main__":
-    result_message = main_contributing_in_page()
+    result_message = main_remove_help_cip()
+    # result_message = main_contributing_in_page()
     print("\n--- Script Execution Result ---")
     print(result_message)
