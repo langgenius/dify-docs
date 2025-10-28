@@ -137,6 +137,139 @@
         }
       }
     },
+    "/files/{file_id}/preview": {
+      "get": {
+        "summary": "File Preview",
+        "description": "Preview or download uploaded files. This endpoint allows you to access files that have been previously uploaded via the File Upload API. Files can only be accessed if they belong to messages within the requesting application.",
+        "operationId": "previewChatFlowFile",
+        "tags": ["Files"],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "description": "The unique identifier of the file to preview, obtained from the File Upload API response.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "as_attachment",
+            "in": "query",
+            "required": false,
+            "description": "Whether to force download the file as an attachment. Default is `false` (preview in browser).",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "File content returned successfully. Headers set based on file type and request parameters.",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Type": {
+                "description": "MIME type of the file",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Length": {
+                "description": "File size in bytes (if available)",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "Content-Disposition": {
+                "description": "Set to 'attachment' if as_attachment=true",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "Caching headers for performance",
+                "schema": {
+                  "type": "string",
+                  "example": "public, max-age=3600"
+                }
+              },
+              "Accept-Ranges": {
+                "description": "Set to 'bytes' for audio/video files",
+                "schema": {
+                  "type": "string",
+                  "example": "bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request. Possible error codes:\n- `invalid_param`: Abnormal parameter input.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Possible error codes:\n- `file_access_denied`: File access denied or file does not belong to current application.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Possible error codes:\n- `file_not_found`: File not found or has been deleted.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "Stop Advanced Chat Message Generation",
@@ -678,13 +811,27 @@
             "enum": ["document", "image", "audio", "video", "custom"],
             "description": "Type of the file. 'document' covers TXT, MD, PDF, HTML, XLSX, DOCX, CSV, EML, MSG, PPTX, XML, EPUB. 'image' covers JPG, PNG, GIF, WEBP, SVG. 'audio' covers MP3, M4A, WAV, WEBM, AMR. 'video' covers MP4, MOV, MPEG, MPGA."
           },
-          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"] },
-          "url": { "type": "string", "format": "url", "description": "URL (if `transfer_method` is `remote_url`)." },
-          "upload_file_id": { "type": "string", "description": "Uploaded file ID (if `transfer_method` is `local_file`)." }
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "Transfer method, `remote_url` for file URL / `local_file` for file upload" },
+          "url": { "type": "string", "format": "url", "description": "File URL (when the transfer method is `remote_url`)" },
+          "upload_file_id": { "type": "string", "description": "Uploaded file ID, which must be obtained by uploading through the File Upload API in advance (when the transfer method is `local_file`)" }
         },
-        "oneOf": [
-            {"required": ["url"]},
-            {"required": ["upload_file_id"]}
+        "anyOf": [
+          {
+            "properties": { 
+              "transfer_method": { "enum": ["remote_url"] },
+              "url": { "type": "string", "format": "url" }
+            },
+            "required": ["url"],
+            "not": { "required": ["upload_file_id"] }
+          },
+          {
+            "properties": { 
+              "transfer_method": { "enum": ["local_file"] },
+              "upload_file_id": { "type": "string" }
+            },
+            "required": ["upload_file_id"],
+            "not": { "required": ["url"] }
+          }
         ],
         "example": { "type": "image", "transfer_method": "remote_url", "url": "https://example.com/image.png" }
       },
@@ -983,7 +1130,7 @@
   },
   "tags": [
     { "name": "Chatflow", "description": "Advanced chat operations with workflow events." },
-    { "name": "Files", "description": "File upload operations for advanced chat." },
+    { "name": "Files", "description": "File upload and preview operations for advanced chat." },
     { "name": "Feedback", "description": "User feedback operations for advanced chat." },
     { "name": "Conversations", "description": "Conversation management for advanced chat." },
     { "name": "TTS", "description": "Speech and Text conversion for advanced chat." },

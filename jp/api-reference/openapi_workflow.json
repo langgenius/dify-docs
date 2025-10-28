@@ -188,6 +188,139 @@
         }
       }
     },
+    "/files/{file_id}/preview": {
+      "get": {
+        "summary": "ファイルプレビュー",
+        "description": "アップロードされたファイルのプレビューまたはダウンロード。このエンドポイントは、ファイルアップロードAPIを通じて事前にアップロードされたファイルにアクセスすることができます。ファイルは、リクエストしているアプリケーション内のメッセージに属している場合のみアクセス可能です。",
+        "operationId": "previewWorkflowFileJp",
+        "tags": ["ファイル操作 (ワークフロー)"],
+        "parameters": [
+          {
+            "name": "file_id",
+            "in": "path",
+            "required": true,
+            "description": "プレビューするファイルの一意識別子、ファイルアップロードAPIのレスポンスから取得されます。",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "as_attachment",
+            "in": "query",
+            "required": false,
+            "description": "ファイルを添付ファイルとして強制ダウンロードするかどうか。デフォルトは`false`（ブラウザでプレビュー）です。",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "ファイルコンテンツが正常に返されました。ヘッダーはファイルタイプとリクエストパラメータに基づいて設定されます。",
+            "content": {
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Type": {
+                "description": "ファイルのMIMEタイプ",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Content-Length": {
+                "description": "ファイルサイズ（バイト単位、利用可能な場合）",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "Content-Disposition": {
+                "description": "as_attachment=trueの場合、'attachment'に設定されます",
+                "schema": {
+                  "type": "string"
+                }
+              },
+              "Cache-Control": {
+                "description": "パフォーマンス用キャッシュヘッダー",
+                "schema": {
+                  "type": "string",
+                  "example": "public, max-age=3600"
+                }
+              },
+              "Accept-Ranges": {
+                "description": "オーディオ/ビデオファイルの場合は'bytes'に設定されます",
+                "schema": {
+                  "type": "string",
+                  "example": "bytes"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "不正なリクエスト。可能なエラーコード:\n- `invalid_param`: 異常なパラメータ入力。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+              }
+            }
+          },
+          "403": {
+            "description": "禁止。可能なエラーコード:\n- `file_access_denied`: ファイルアクセス拒否またはファイルが現在のアプリケーションに属していません。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+              }
+            }
+          },
+          "404": {
+            "description": "見つかりません。可能なエラーコード:\n- `file_not_found`: ファイルが見つからないか削除されています。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+              }
+            }
+          },
+          "500": {
+            "description": "内部サーバーエラー。",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+              }
+            }
+          }
+        }
+      }
+    },
     "/workflows/logs": {
         "get": {
             "summary": "ワークフローログを取得",
@@ -266,11 +399,28 @@
         "required": ["type", "transfer_method"],
         "properties": {
           "type": { "type": "string", "enum": ["document", "image", "audio", "video", "custom"], "description": "ファイルタイプ。document: TXT,MD,PDF等; image: JPG,PNG等; audio: MP3,WAV等; video: MP4,MOV等; custom: その他。" },
-          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "転送方法。" },
-          "url": { "type": "string", "format": "url", "description": "画像URL (`remote_url`の場合)。" },
-          "upload_file_id": { "type": "string", "format": "uuid", "description": "アップロードされたファイルID (`local_file`の場合)。" }
+          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "転送方法。remote_url は画像URL / local_file はファイルアップロード用" },
+          "url": { "type": "string", "format": "url", "description": "画像URL（転送方法が remote_url の場合）" },
+          "upload_file_id": { "type": "string", "format": "uuid", "description": "アップロードされたファイルID、事前にファイルアップロードAPIで取得する必要があります（転送方法が local_file の場合）" }
         },
-        "oneOf": [ {"required": ["url"]}, {"required": ["upload_file_id"]} ]
+        "anyOf": [
+          {
+            "properties": { 
+              "transfer_method": { "enum": ["remote_url"] },
+              "url": { "type": "string", "format": "url" }
+            },
+            "required": ["url"],
+            "not": { "required": ["upload_file_id"] }
+          },
+          {
+            "properties": { 
+              "transfer_method": { "enum": ["local_file"] },
+              "upload_file_id": { "type": "string", "format": "uuid" }
+            },
+            "required": ["upload_file_id"],
+            "not": { "required": ["url"] }
+          }
+        ]
       },
       "WorkflowCompletionResponseJp": {
         "type": "object", "description": "ブロッキングモードでのワークフロー実行結果。",
@@ -379,7 +529,7 @@
   },
   "tags": [
     { "name": "ワークフロー実行", "description": "ワークフローの実行と管理に関連する操作。" },
-    { "name": "ファイル操作 (ワークフロー)", "description": "ワークフロー固有のファイルアップロード操作。" },
+    { "name": "ファイル操作 (ワークフロー)", "description": "ワークフロー固有のファイルアップロードとプレビュー操作。" },
     { "name": "アプリケーション設定 (ワークフロー)", "description": "ワークフローアプリのアプリケーション設定と情報。" }
   ]
 }
