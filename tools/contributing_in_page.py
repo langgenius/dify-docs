@@ -242,7 +242,7 @@ def main_contributing_in_page():
         return (f"{str(e)}")
     
 if __name__ == "__main__":
-    result_message = main_remove_help_cip()
-    # result_message = main_contributing_in_page()
+    # result_message = main_remove_help_cip()
+    result_message = main_contributing_in_page()
     print("\n--- Script Execution Result ---")
     print(result_message)
