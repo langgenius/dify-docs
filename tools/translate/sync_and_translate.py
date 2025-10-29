@@ -19,6 +19,9 @@ import tempfile
 # Import the existing translation function
 from main import translate_text, load_md_mdx
 
+# Import format-preserving JSON serialization
+from json_formatter import save_json_with_preserved_format
+
 # Import security validator
 try:
     from security_validator import SecurityValidator, create_validator
