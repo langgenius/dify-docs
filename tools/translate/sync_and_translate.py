@@ -386,16 +386,22 @@ class DocsSynchronizer:
             return {}
     
     def save_docs_json(self, data: Dict[str, Any]) -> bool:
-        """Save docs.json file with consistent formatting"""
+        """Save docs.json file while preserving original formatting"""
         try:
-            with open(self.docs_json_path, 'w', encoding='utf-8') as f:
-                # Use 4-space indentation to match existing docs.json format
-                json.dump(data, f, ensure_ascii=False, indent=4)
-                # Ensure file ends with newline
-                f.write('\n')
-            return True
+            # Use format-preserving serialization
+            # Pass the same file as both target and reference since we're overwriting
+            success = save_json_with_preserved_format(
+                self.docs_json_path,
+                data,
+                reference_file=self.docs_json_path
+            )
+            if success:
+                print("✓ Saved docs.json with preserved formatting")
+            return success
         except Exception as e:
             print(f"Error saving docs.json: {e}")
+            import traceback
+            traceback.print_exc()
             return False
     
     def extract_english_structure_changes(self, changes: Dict[str, List[str]]) -> bool:
