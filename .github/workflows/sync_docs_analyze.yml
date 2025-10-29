@@ -1,0 +1,291 @@
+name: Analyze Documentation Changes
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'docs.json'
+      - 'en/**/*.md'
+      - 'en/**/*.mdx'
+      - 'cn/**/*.md'
+      - 'cn/**/*.mdx'
+      - 'jp/**/*.md'
+      - 'jp/**/*.mdx'
+      - 'versions/**/*.md'
+      - 'versions/**/*.mdx'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Categorize and validate PR changes
+        id: categorize
+        run: |
+          echo "Categorizing PR changes..."
+          
+          # Get base and head commits
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+          
+          # Run PR analyzer
+          cd tools/translate
+          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
+          
+          # Parse analyzer output
+          if [ $? -eq 0 ]; then
+            # Successful analysis
+            source /tmp/pr_analysis_output.txt
+            echo "PR categorization successful"
+            echo "PR Type: $pr_type"
+            echo "Should Skip: $should_skip"
+            
+            # Set GitHub outputs
+            echo "pr_type=$pr_type" >> $GITHUB_OUTPUT
+            echo "should_skip=$should_skip" >> $GITHUB_OUTPUT
+            
+            if [ "$should_skip" = "true" ]; then
+              if [ "$pr_type" = "translation" ]; then
+                echo "✅ Translation-only PR detected. Skipping automation (direct review process)."
+              elif [ "$pr_type" = "none" ]; then
+                echo "✅ No relevant documentation changes detected. Skipping workflow."
+              fi
+              exit 0
+            fi
+          else
+            # Analysis failed - likely mixed PR
+            echo "PR categorization failed - likely mixed content PR"
+            ERROR_MESSAGE=$(cat /tmp/pr_analysis_output.txt | grep "error_message=" | cut -d'=' -f2- || echo "Mixed content PR detected")
+            echo "error=mixed_pr" >> $GITHUB_OUTPUT
+            echo "error_message<<EOF" >> $GITHUB_OUTPUT
+            echo "$ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Analyze English changes for translation
+        if: steps.categorize.outputs.pr_type == 'english'
+        id: analyze
+        run: |
+          echo "Analyzing English changes for automatic translation..."
+          
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          
+          # Get all changed files (not just English ones for file analysis)
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA)
+          
+          # Count changes for security limits
+          FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+          echo "Changed files count: $FILE_COUNT"
+          
+          # Security check: Limit number of files
+          MAX_FILES=50
+          if [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
+            echo "Error: Too many files changed ($FILE_COUNT > $MAX_FILES)"
+            echo "error=too_many_files" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Create analysis report
+          cat > /tmp/analysis.json <<EOF
+          {
+            "pr_number": ${{ github.event.pull_request.number }},
+            "pr_title": "${{ github.event.pull_request.title }}",
+            "pr_author": "${{ github.event.pull_request.user.login }}",
+            "base_sha": "$BASE_SHA",
+            "head_sha": "$HEAD_SHA",
+            "file_count": $FILE_COUNT,
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "pr_type": "english"
+          }
+          EOF
+          
+          # Save changed files list
+          echo "$CHANGED_FILES" > /tmp/changed_files.txt
+          
+          # Analyze file types and sizes for English files that need translation
+          > /tmp/file_analysis.txt
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^en/.*\.(md|mdx)$ ]] && [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              echo "$file|$SIZE" >> /tmp/file_analysis.txt
+              
+              # Security check: File size limit (10MB)
+              MAX_SIZE=$((10 * 1024 * 1024))
+              if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo "Error: File $file exceeds size limit ($SIZE > $MAX_SIZE)"
+                echo "error=file_too_large" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            fi
+          done <<< "$CHANGED_FILES"
+          
+          # Check for docs.json changes
+          if echo "$CHANGED_FILES" | grep -q '^docs\.json$'; then
+            echo "true" > /tmp/docs_json_changed.txt
+            
+            # Use PR analyzer's docs.json analysis
+            cd tools/translate
+            python3 - <<EOF
+          import sys
+          sys.path.append('.')
+          from pr_analyzer import PRAnalyzer
+          
+          analyzer = PRAnalyzer("$BASE_SHA", "$HEAD_SHA")
+          docs_changes = analyzer.analyze_docs_json_changes()
+          
+          structure_changes = {
+              "structure_changed": docs_changes["any_docs_json_changes"],
+              "navigation_modified": docs_changes["english_section"],
+              "languages_affected": ["cn", "jp"] if docs_changes["english_section"] else []
+          }
+          
+          import json
+          with open("/tmp/structure_changes.json", "w") as f:
+              json.dump(structure_changes, f, indent=2)
+          EOF
+          else
+            echo "false" > /tmp/docs_json_changed.txt
+            echo '{"structure_changed": false, "navigation_modified": false, "languages_affected": []}' > /tmp/structure_changes.json
+          fi
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Analysis complete"
+
+      - name: Validate file paths
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          echo "Validating English file paths for translation..."
+          
+          # Security: Validate English files that will be translated
+          while IFS='|' read -r file size; do
+            if [ -n "$file" ]; then
+              # Check for directory traversal attempts
+              if echo "$file" | grep -q '\.\./'; then
+                echo "Error: Invalid file path detected: $file"
+                exit 1
+              fi
+              
+              # Check file extension for English files
+              if ! echo "$file" | grep -qE '\.(md|mdx)$'; then
+                echo "Error: Invalid file type for translation: $file"
+                exit 1
+              fi
+              
+              # Check path starts with en/ (only English files need translation)
+              if ! echo "$file" | grep -qE '^en/'; then
+                echo "Error: Non-English file in translation list: $file"
+                exit 1
+              fi
+            fi
+          done < /tmp/file_analysis.txt
+          
+          echo "All English file paths validated for translation"
+
+      - name: Create analysis summary  
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          echo "Creating analysis summary for English changes..."
+          
+          # Create a comprehensive analysis summary
+          python3 - <<'EOF'
+          import json
+          import os
+          
+          # Load analysis data
+          with open("/tmp/analysis.json") as f:
+              analysis = json.load(f)
+          
+          # Load file analysis (English files to translate)
+          files_to_sync = []
+          with open("/tmp/file_analysis.txt") as f:
+              for line in f:
+                  if line.strip():
+                      file_path, size = line.strip().split("|")
+                      files_to_sync.append({
+                          "path": file_path,
+                          "size": int(size),
+                          "type": "mdx" if file_path.endswith(".mdx") else "md"
+                      })
+          
+          # Note: docs.json is NOT added to files_to_sync
+          # It's handled separately via structure_changes and sync_docs_json_structure()
+          # because it needs structure syncing, not translation
+          
+          # Load structure changes
+          with open("/tmp/structure_changes.json") as f:
+              structure_changes = json.load(f)
+          
+          # Create sync plan
+          sync_plan = {
+              "metadata": analysis,
+              "files_to_sync": files_to_sync,
+              "structure_changes": structure_changes,
+              "target_languages": ["cn", "jp"],
+              "sync_required": len(files_to_sync) > 0 or structure_changes.get("structure_changed", False)
+          }
+          
+          # Save sync plan
+          with open("/tmp/sync_plan.json", "w") as f:
+              json.dump(sync_plan, f, indent=2)
+          
+          print(f"English sync plan created: {len(files_to_sync)} files to translate")
+          if structure_changes.get("structure_changed"):
+              print("Documentation structure changes detected")
+          EOF
+
+      - name: Upload analysis artifacts
+        if: steps.analyze.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-analysis-${{ github.event.pull_request.number }}
+          path: |
+            /tmp/analysis.json
+            /tmp/changed_files.txt
+            /tmp/file_analysis.txt
+            /tmp/sync_plan.json
+            /tmp/docs_json_changed.txt
+            /tmp/structure_changes.json
+          retention-days: 1
+
+      - name: Report mixed PR error
+        if: failure() && steps.categorize.outputs.error == 'mixed_pr'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const errorMessage = `${{ steps.categorize.outputs.error_message }}`;
+            
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: errorMessage
+              });
+              console.log('Posted mixed PR error message to PR');
+            } catch (error) {
+              console.log('Could not comment on PR:', error.message);
+              console.log('Error message would have been:');
+              console.log(errorMessage);
+            }
+
