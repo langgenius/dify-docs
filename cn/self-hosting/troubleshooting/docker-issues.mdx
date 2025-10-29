@@ -1,0 +1,125 @@
+---
+title: Docker 问题
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-hosting/troubleshooting/docker-issues)。</Note>
+
+## 网络与连接
+
+### 502 Bad Gateway
+
+Nginx 正在转发到错误的容器 IP。获取当前容器 IP：
+
+```bash
+docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+```
+
+找到这些行：
+```
+/docker-web-1: 172.19.0.5
+/docker-api-1: 172.19.0.7
+```
+
+更新 `dify/docker/nginx/conf.d`：
+- 将 `http://api:5001` 替换为 `http://172.19.0.7:5001`
+- 将 `http://web:3000` 替换为 `http://172.19.0.5:3000`
+
+重启 nginx 或重新加载配置。注意：IP 在容器重启时会发生变化。
+
+### 无法访问 localhost 服务
+
+Docker 容器无法通过 `127.0.0.1` 访问主机服务。请使用你机器的本地网络 IP。
+
+示例：对于在主机上运行的 OpenLLM，使用 `http://192.168.1.100:port`（你的实际本地 IP）配置 Dify。
+
+### 页面一直加载并出现 CORS 错误
+
+域名/URL 更改会导致跨源问题。在 `docker-compose.yml` 中更新：
+
+- `CONSOLE_API_URL` - 控制台 API 的后端 URL
+- `CONSOLE_WEB_URL` - 控制台 Web 的前端 URL
+- `SERVICE_API_URL` - 服务 API URL
+- `APP_API_URL` - WebApp API 后端 URL
+- `APP_WEB_URL` - WebApp URL
+
+## 挂载与卷
+
+### Nginx 配置挂载失败
+
+错误信息：
+```
+Error mounting "/run/desktop/mnt/host/d/Documents/docker/nginx/nginx.conf" to rootfs at "/etc/nginx/nginx.conf": not a directory
+```
+
+克隆完整项目并从 docker 目录运行：
+
+```bash
+git clone https://github.com/langgenius/dify.git
+cd dify/docker
+docker compose up -d
+```
+
+### 端口冲突
+
+端口 80 已被使用？可选择：
+
+1. 停止冲突的服务（通常是 Apache/Nginx）：
+   ```bash
+   sudo service nginx stop
+   sudo service apache2 stop
+   ```
+
+2. 或在 `docker-compose.yaml` 中更改端口映射：
+   ```yaml
+   ports:
+     - "8080:80"  # 映射到不同端口
+   ```
+
+## 容器管理
+
+### 查看后台 shell 输出
+
+列出运行中的 shell：
+```bash
+docker exec -it docker-api-1 ls /tmp/shells/
+```
+
+检查 shell 输出：
+```bash
+docker exec -it docker-api-1 cat /tmp/shells/[shell-id]/output.log
+```
+
+### 容器重启问题
+
+系统重启后，容器可能无法连接。确保正确的启动顺序：
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+等待所有服务健康后再访问。
+
+## SSRF 代理
+
+`ssrf_proxy` 容器防止服务器端请求伪造攻击。
+
+### 自定义代理规则
+
+编辑 `docker/volumes/ssrf_proxy/squid.conf` 添加 ACL 规则：
+
+```
+# 阻止访问敏感内部 IP
+acl restricted_ip dst 192.168.101.19
+acl localnet src 192.168.101.0/24
+
+http_access deny restricted_ip
+http_access allow localnet
+http_access deny all
+```
+
+更改后重启代理容器。
+
+### 为什么需要 SSRF_PROXY？
+
+防止服务向内网资源发出未授权请求。代理会拦截并过滤来自沙盒服务的所有出站请求。

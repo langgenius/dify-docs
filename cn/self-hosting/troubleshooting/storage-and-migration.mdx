@@ -1,0 +1,153 @@
+---
+title: 存储与迁移
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-hosting/troubleshooting/storage-and-migration)。</Note>
+
+## 向量数据库迁移
+
+### 从 Weaviate 迁移到其他数据库
+
+1. **更新配置**
+
+   源码部署 (`.env`):
+   ```
+   VECTOR_STORE=qdrant
+   ```
+
+   Docker Compose (`docker-compose.yaml`):
+   ```yaml
+   VECTOR_STORE: qdrant
+   ```
+
+2. **运行迁移**
+
+   ```bash
+   # 源码
+   flask vdb-migrate
+
+   # Docker
+   docker exec -it docker-api-1 flask vdb-migrate
+   ```
+
+已测试的数据库：Qdrant、Milvus、AnalyticDB
+
+## 存储迁移
+
+### 从本地存储迁移到云存储
+
+将文件从本地存储迁移到云服务提供商（例如阿里云 OSS）：
+
+1. **配置云存储**
+
+   `.env` 或 `docker-compose.yaml`:
+   ```
+   STORAGE_TYPE=aliyun-oss
+   # 添加 OSS 凭据
+   ```
+
+2. **迁移数据**
+
+   源码：
+   ```bash
+   flask upload-private-key-file-to-cloud-storage
+   flask upload-local-files-to-cloud-storage
+   ```
+
+   Docker：
+   ```bash
+   docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
+   docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
+   ```
+
+## 数据清理
+
+### 删除旧日志
+
+1. **获取租户 ID**
+   ```bash
+   docker exec -it docker-api-1 bash -c "echo 'from models import Tenant; db.session.query(Tenant.id, Tenant.name).all(); quit()' | flask shell"
+   ```
+
+2. **删除 X 天前的日志**
+   ```bash
+   docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs \
+     --days 30 \
+     --batch 100 \
+     --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ```
+
+3. **移除导出的日志**（可选）
+   ```bash
+   docker exec -it docker-api-1 bash -c 'rm -rf ${OPENDAL_FS_ROOT}/free_plan_tenant_expired_logs'
+   ```
+
+### 移除孤立文件
+
+**警告**：运行前备份数据库和存储。在维护窗口期间运行。
+
+1. **清理数据库记录**
+   ```bash
+   docker exec -it docker-api-1 flask clear-orphaned-file-records
+   # 使用 -f 标志跳过确认
+   ```
+
+2. **从存储中删除孤立文件**
+   ```bashd-files-on-storage
+   # 使用 -f 标志跳过确认
+   ```
+
+注意：仅适用于 OpenDAL 存储（`STORAGE_TYPE=opendal`）。
+
+## 备份与恢复
+
+### 升级前创建备份
+
+```bash
+cp -r dify "dify.bak.$(date +%Y%m%d%H%M%S)"
+```
+
+### 备份内容
+
+对于 Docker Compose 部署：
+- 整个 `dify/docker/volumes` 目录
+
+对于源码部署：
+- 数据库
+- 存储配置
+- 向量数据库数据
+- 环境文件
+
+### 数据库维护
+
+删除日志后，回收存储空间：
+
+PostgreSQL：
+```sql
+VACUUM FULL;
+```
+
+## 升级流程
+
+### 版本升级
+
+镜像部署：
+```bash
+docker compose pull
+docker compose up -d
+```
+
+源码：
+```bash
+git pull
+cd api
+flask db upgrade
+```
+
+### 数据库架构迁移
+
+源码更新始终需要：
+```bash
+cd api
+flask db upgrade
+```
