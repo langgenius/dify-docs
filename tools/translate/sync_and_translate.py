@@ -386,10 +386,13 @@ class DocsSynchronizer:
             return {}
     
     def save_docs_json(self, data: Dict[str, Any]) -> bool:
-        """Save docs.json file"""
+        """Save docs.json file with consistent formatting"""
         try:
             with open(self.docs_json_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, ensure_ascii=False, indent=2)
+                # Use 4-space indentation to match existing docs.json format
+                json.dump(data, f, ensure_ascii=False, indent=4)
+                # Ensure file ends with newline
+                f.write('\n')
             return True
         except Exception as e:
             print(f"Error saving docs.json: {e}")
