@@ -629,7 +629,21 @@ class DocsSynchronizer:
         if "pages" not in current_target:
             current_target["pages"] = []
 
-        current_target["pages"].append(page_path_no_ext)
+        # Get the insertion index from file_location (last element)
+        # file_location is like ["pages", 1] or ["pages", 0, "pages", 3]
+        # The last element is the index where the file should be inserted
+        if file_location and isinstance(file_location[-1], int):
+            insert_index = file_location[-1]
+            # Insert at the same index position as in English structure
+            # If index is beyond current length, append to end
+            if insert_index <= len(current_target["pages"]):
+                current_target["pages"].insert(insert_index, page_path_no_ext)
+            else:
+                current_target["pages"].append(page_path_no_ext)
+        else:
+            # Fallback: append if we can't determine index
+            current_target["pages"].append(page_path_no_ext)
+
         return True
 
     def remove_page_from_structure(self, pages: List, page_path: str) -> bool:
