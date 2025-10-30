@@ -466,11 +466,18 @@ class DocsSynchronizer:
         Find a file path in a dropdown's pages structure.
         Returns the path to the item as a list of keys/indices, or None if not found.
         Example: ["pages", 0, "pages", 2] means dropdown["pages"][0]["pages"][2] == file_path
+
+        Note: docs.json stores paths without file extensions, so we strip them for comparison.
         """
+        # Strip file extension for comparison (docs.json doesn't include .md/.mdx extensions)
+        file_path_no_ext = re.sub(r'\.(mdx?|md)$', '', file_path)
+
         def search_pages(pages: List, current_path: List) -> Optional[List[str]]:
             for i, item in enumerate(pages):
                 if isinstance(item, str):
-                    if item == file_path:
+                    # Compare without extensions
+                    item_no_ext = re.sub(r'\.(mdx?|md)$', '', item)
+                    if item_no_ext == file_path_no_ext:
                         return current_path + [i]
                 elif isinstance(item, dict) and "pages" in item:
                     result = search_pages(item["pages"], current_path + [i, "pages"])
@@ -499,12 +506,19 @@ class DocsSynchronizer:
         """
         Add a page to a pages array, attempting to maintain position relative to reference structure.
         Returns True if added, False if already exists.
+
+        Note: Strips file extensions before adding (docs.json doesn't include .md/.mdx extensions).
         """
+        # Strip file extension (docs.json doesn't include extensions)
+        page_path_no_ext = re.sub(r'\.(mdx?|md)$', '', page_path)
+
         # First pass: check if page already exists anywhere in the structure
         def page_exists(pages_to_check):
             for item in pages_to_check:
-                if isinstance(item, str) and item == page_path:
-                    return True
+                if isinstance(item, str):
+                    item_no_ext = re.sub(r'\.(mdx?|md)$', '', item)
+                    if item_no_ext == page_path_no_ext:
+                        return True
                 elif isinstance(item, dict) and "pages" in item:
                     if page_exists(item["pages"]):
                         return True
@@ -513,19 +527,26 @@ class DocsSynchronizer:
         if page_exists(pages):
             return False
 
-        # Page doesn't exist - add it to the top level
-        pages.append(page_path)
+        # Page doesn't exist - add it to the top level (without extension)
+        pages.append(page_path_no_ext)
         return True
 
     def remove_page_from_structure(self, pages: List, page_path: str) -> bool:
         """
         Remove a page from a pages array recursively.
         Returns True if removed, False if not found.
+
+        Note: Strips file extensions for comparison (docs.json doesn't include .md/.mdx extensions).
         """
+        # Strip file extension for comparison
+        page_path_no_ext = re.sub(r'\.(mdx?|md)$', '', page_path)
+
         for i, item in enumerate(pages):
-            if isinstance(item, str) and item == page_path:
-                pages.pop(i)
-                return True
+            if isinstance(item, str):
+                item_no_ext = re.sub(r'\.(mdx?|md)$', '', item)
+                if item_no_ext == page_path_no_ext:
+                    pages.pop(i)
+                    return True
             elif isinstance(item, dict) and "pages" in item:
                 if self.remove_page_from_structure(item["pages"], page_path):
                     # Clean up empty groups
