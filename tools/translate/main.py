@@ -33,10 +33,20 @@ docs_structure = {
 }
 
 
-async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=5):
+async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=5, the_doc_exist=None, diff_original=None):
     """
     Translate text using Dify API with termbase from `tools/translate/termbase_i18n.md`
     Includes retry logic with exponential backoff for handling API timeouts and gateway errors.
+
+    Args:
+        file_path: Path to the document to translate
+        dify_api_key: Dify API key
+        original_language: Source language name
+        target_language1: Target language name
+        termbase_path: Optional path to terminology database
+        max_retries: Maximum number of retry attempts
+        the_doc_exist: Optional existing translation (for modified files)
+        diff_original: Optional git diff of the original file (for modified files)
     """
     if termbase_path is None:
         # Get project root directory
@@ -48,15 +58,25 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
 
     termbase = await load_md_mdx(termbase_path)
     the_doc = await load_md_mdx(file_path)
+
+    # Build inputs - always include base inputs
+    inputs = {
+        "original_language": original_language,
+        "output_language1": target_language1,
+        "the_doc": the_doc,
+        "termbase": termbase
+    }
+
+    # Add optional inputs for modified files
+    if the_doc_exist is not None:
+        inputs["the_doc_exist"] = the_doc_exist
+    if diff_original is not None:
+        inputs["diff_original"] = diff_original
+
     payload = {
         "response_mode": "blocking",
         "user": "Dify",
-        "inputs": {
-            "original_language": original_language,
-            "output_language1": target_language1,
-            "the_doc": the_doc,
-            "termbase": termbase
-        }
+        "inputs": inputs
     }
 
     headers = {

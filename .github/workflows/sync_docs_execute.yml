@@ -353,6 +353,42 @@ jobs:
                   "skipped": []
               }
 
+              # Get metadata for diff detection
+              metadata = sync_plan.get("metadata", {})
+              base_sha = metadata.get("base_sha", "")
+              head_sha = metadata.get("head_sha", "")
+
+              # Detect modified vs added files
+              added_files = []
+              modified_files = []
+
+              if base_sha and head_sha:
+                  try:
+                      # Get list of added files (A) and modified files (M)
+                      result = subprocess.run([
+                          "git", "diff", "--name-status", "--diff-filter=AM",
+                          base_sha, head_sha
+                      ], capture_output=True, text=True, cwd="../../")
+
+                      if result.returncode == 0:
+                          for line in result.stdout.strip().split('\n'):
+                              if line and '\t' in line:
+                                  status, file_path = line.split('\t', 1)
+                                  if status == 'A':
+                                      added_files.append(file_path)
+                                  elif status == 'M':
+                                      modified_files.append(file_path)
+                  except Exception as e:
+                      print(f"Warning: Could not detect file status: {e}")
+                      # Fallback: treat all as added
+                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith("en/")]
+
+              # If we couldn't detect, treat all as added (safe fallback)
+              if not added_files and not modified_files:
+                  added_files = [f["path"] for f in files_to_sync if f["path"].startswith("en/")]
+
+              print(f"Detected {len(added_files)} added files, {len(modified_files)} modified files")
+
               for file_info in files_to_sync[:10]:  # Limit to 10 files
                   file_path = file_info["path"]
                   print(f"Processing: {file_path}")
@@ -370,21 +406,56 @@ jobs:
                   try:
                       # Only translate if file exists and is safe
                       if os.path.exists(f"../../{file_path}"):
+                          # Determine if this is a modified file
+                          is_modified = file_path in modified_files
+
+                          # Get diff for modified files
+                          diff_original = None
+                          if is_modified and base_sha and head_sha:
+                              try:
+                                  diff_result = subprocess.run([
+                                      "git", "diff", base_sha, head_sha, "--", file_path
+                                  ], capture_output=True, text=True, cwd="../../")
+                                  if diff_result.returncode == 0:
+                                      diff_original = diff_result.stdout
+                                      print(f"  Retrieved diff for {file_path} ({len(diff_original)} chars)")
+                              except Exception as e:
+                                  print(f"  Warning: Could not get diff for {file_path}: {e}")
+
                           for target_lang in ["cn", "jp"]:
                               target_path = file_path.replace("en/", f"{target_lang}/")
+
+                              # Load existing translation for modified files
+                              the_doc_exist = None
+                              if is_modified:
+                                  target_full_path = Path(f"../../{target_path}")
+                                  if target_full_path.exists():
+                                      try:
+                                          with open(target_full_path, 'r', encoding='utf-8') as f:
+                                              the_doc_exist = f.read()
+                                          print(f"  Loaded existing translation: {target_path} ({len(the_doc_exist)} chars)")
+                                      except Exception as e:
+                                          print(f"  Warning: Could not read existing translation {target_path}: {e}")
+
+                              # Translate with appropriate inputs
                               success = await synchronizer.translate_file_with_notice(
                                   file_path,
                                   target_path,
-                                  target_lang
+                                  target_lang,
+                                  the_doc_exist=the_doc_exist,
+                                  diff_original=diff_original
                               )
                               if success:
-                                  results["translated"].append(target_path)
+                                  change_type = "modified" if is_modified else "added"
+                                  results["translated"].append(f"{target_path} ({change_type})")
                               else:
                                   results["failed"].append(target_path)
                       else:
                           results["skipped"].append(file_path)
                   except Exception as e:
                       print(f"Error processing {file_path}: {e}")
+                      import traceback
+                      traceback.print_exc()
                       results["failed"].append(file_path)
 
               # Handle docs.json structure sync if needed (INCREMENTAL MODE)

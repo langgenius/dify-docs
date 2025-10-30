@@ -122,21 +122,21 @@ class DocsSynchronizer:
             result = subprocess.run([
                 "git", "diff", "--name-status", since_commit, "HEAD"
             ], capture_output=True, text=True, cwd=self.base_dir)
-            
+
             changes = {
                 "added": [],
                 "modified": [],
                 "deleted": [],
                 "renamed": []
             }
-            
+
             for line in result.stdout.strip().split('\n'):
                 if not line:
                     continue
-                    
+
                 parts = line.split('\t')
                 status = parts[0]
-                
+
                 if status == 'A':
                     changes["added"].append(parts[1])
                 elif status == 'M':
@@ -145,11 +145,27 @@ class DocsSynchronizer:
                     changes["deleted"].append(parts[1])
                 elif status.startswith('R'):
                     changes["renamed"].append((parts[1], parts[2]))
-            
+
             return changes
         except subprocess.CalledProcessError as e:
             print(f"Error getting git changes: {e}")
             return {"added": [], "modified": [], "deleted": [], "renamed": []}
+
+    def get_file_diff(self, file_path: str, since_commit: str = "HEAD~1") -> Optional[str]:
+        """Get git diff for a specific file"""
+        try:
+            result = subprocess.run([
+                "git", "diff", since_commit, "HEAD", "--", file_path
+            ], capture_output=True, text=True, cwd=self.base_dir)
+
+            if result.returncode == 0:
+                return result.stdout
+            else:
+                print(f"Warning: Could not get diff for {file_path}")
+                return None
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting diff for {file_path}: {e}")
+            return None
     
     def is_english_doc_file(self, file_path: str) -> bool:
         """Check if file is an English documentation file that should be synced"""
@@ -229,8 +245,17 @@ class DocsSynchronizer:
 
         return bom_prefix + notice_block + content.lstrip("\n")
 
-    async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str) -> bool:
-        """Translate a file and add AI notice at the top"""
+    async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str,
+                                        the_doc_exist: Optional[str] = None, diff_original: Optional[str] = None) -> bool:
+        """Translate a file and add AI notice at the top
+
+        Args:
+            en_file_path: English source file path
+            target_file_path: Target translation file path
+            target_lang: Target language code (cn, jp)
+            the_doc_exist: Optional existing translation content (for modified files)
+            diff_original: Optional git diff of original file (for modified files)
+        """
         try:
             # Security validation
             if self.enable_security:
@@ -239,53 +264,55 @@ class DocsSynchronizer:
                 if not valid:
                     print(f"Security error - invalid source path {en_file_path}: {error}")
                     return False
-                
+
                 # Validate target path
                 valid, error = self.validate_file_path(target_file_path)
                 if not valid:
                     print(f"Security error - invalid target path {target_file_path}: {error}")
                     return False
-                
+
                 # Sanitize paths
                 en_file_path = self.sanitize_path(en_file_path) or en_file_path
                 target_file_path = self.sanitize_path(target_file_path) or target_file_path
-            
+
             print(f"Translating {en_file_path} to {target_file_path}")
-            
+
             # Ensure target directory exists
             target_dir = Path(self.base_dir / target_file_path).parent
             target_dir.mkdir(parents=True, exist_ok=True)
-            
+
             # Get language names for translation API
             en_lang_name = LANGUAGES["en"]["name"]
             target_lang_name = LANGUAGES[target_lang]["name"]
-            
+
             # Translate content
             translated_content = await translate_text(
                 str(self.base_dir / en_file_path),
                 self.dify_api_key,
                 en_lang_name,
-                target_lang_name
+                target_lang_name,
+                the_doc_exist=the_doc_exist,
+                diff_original=diff_original
             )
-            
+
             if not translated_content or not translated_content.strip():
                 print(f"Warning: No translated content received for {en_file_path}")
                 return False
-            
+
             # Prepare AI notice
             en_relative_path = self.get_relative_en_path_for_notice(target_file_path)
             notice = self.notices.get(target_lang, "").format(en_path=en_relative_path)
-            
+
             # Combine notice and translated content
             final_content = self.insert_notice_under_title(translated_content, notice)
-            
+
             # Write to target file
             with open(self.base_dir / target_file_path, 'w', encoding='utf-8') as f:
                 f.write(final_content)
-            
+
             print(f"✓ Successfully created {target_file_path}")
             return True
-            
+
         except Exception as e:
             print(f"Error translating {en_file_path} to {target_file_path}: {e}")
             return False
@@ -330,53 +357,91 @@ class DocsSynchronizer:
         
         return operations_log
     
-    async def translate_new_and_modified_files(self, changes: Dict[str, List[str]]) -> List[str]:
-        """Translate new and modified files"""
+    async def translate_new_and_modified_files(self, changes: Dict[str, List[str]], since_commit: str = "HEAD~1") -> List[str]:
+        """Translate new and modified files
+
+        Args:
+            changes: Dictionary with 'added', 'modified', 'deleted', 'renamed' file lists
+            since_commit: Git commit to compare against for diffs
+        """
         translation_log = []
         tasks = []
-        
-        # Collect translation tasks
-        for file_path in changes["added"] + changes["modified"]:
+
+        # Handle added files (no existing translation)
+        for file_path in changes["added"]:
             if self.is_english_doc_file(file_path):
                 for target_lang in TARGET_LANGUAGES:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
+                    # New files - no existing translation or diff needed
                     task = self.translate_file_with_notice(file_path, target_path, target_lang)
-                    tasks.append((task, file_path, target_path))
-        
+                    tasks.append((task, file_path, target_path, "added"))
+
+        # Handle modified files (may have existing translation)
+        for file_path in changes["modified"]:
+            if self.is_english_doc_file(file_path):
+                # Get diff for this file
+                diff_original = self.get_file_diff(file_path, since_commit)
+
+                for target_lang in TARGET_LANGUAGES:
+                    target_path = self.convert_path_to_target_language(file_path, target_lang)
+                    target_full_path = self.base_dir / target_path
+
+                    # Check if target translation exists
+                    the_doc_exist = None
+                    if target_full_path.exists():
+                        try:
+                            with open(target_full_path, 'r', encoding='utf-8') as f:
+                                the_doc_exist = f.read()
+                            print(f"Found existing translation for {target_path} ({len(the_doc_exist)} chars)")
+                        except Exception as e:
+                            print(f"Warning: Could not read existing translation {target_path}: {e}")
+                            the_doc_exist = None
+
+                    # Modified files - pass existing translation and diff if available
+                    task = self.translate_file_with_notice(
+                        file_path,
+                        target_path,
+                        target_lang,
+                        the_doc_exist=the_doc_exist,
+                        diff_original=diff_original
+                    )
+                    tasks.append((task, file_path, target_path, "modified"))
+
         # Handle renamed files that need translation
         for old_path, new_path in changes["renamed"]:
             if self.is_english_doc_file(new_path):
                 for target_lang in TARGET_LANGUAGES:
                     target_path = self.convert_path_to_target_language(new_path, target_lang)
+                    # Renamed files treated as new
                     task = self.translate_file_with_notice(new_path, target_path, target_lang)
-                    tasks.append((task, new_path, target_path))
-        
+                    tasks.append((task, new_path, target_path, "renamed"))
+
         # Execute translations with concurrency control
         semaphore = asyncio.Semaphore(2)  # Limit concurrent translations
-        
-        async def bounded_translate(task, en_path, target_path):
+
+        async def bounded_translate(task, en_path, target_path, change_type):
             async with semaphore:
                 success = await task
-                return success, en_path, target_path
-        
+                return success, en_path, target_path, change_type
+
         # Run translations
         if tasks:
             print(f"Starting {len(tasks)} translation tasks...")
             results = await asyncio.gather(*[
-                bounded_translate(task, en_path, target_path) 
-                for task, en_path, target_path in tasks
+                bounded_translate(task, en_path, target_path, change_type)
+                for task, en_path, target_path, change_type in tasks
             ], return_exceptions=True)
-            
+
             for result in results:
                 if isinstance(result, Exception):
                     translation_log.append(f"ERROR: {result}")
                 else:
-                    success, en_path, target_path = result
+                    success, en_path, target_path, change_type = result
                     if success:
-                        translation_log.append(f"TRANSLATED: {en_path} -> {target_path}")
+                        translation_log.append(f"TRANSLATED ({change_type}): {en_path} -> {target_path}")
                     else:
-                        translation_log.append(f"FAILED: {en_path} -> {target_path}")
-        
+                        translation_log.append(f"FAILED ({change_type}): {en_path} -> {target_path}")
+
         return translation_log
     
     def load_docs_json(self) -> Dict[str, Any]:
@@ -1078,33 +1143,33 @@ class DocsSynchronizer:
     async def run_sync(self, since_commit: str = "HEAD~1") -> Dict[str, List[str]]:
         """Run the complete synchronization process"""
         print("=== Starting Documentation Synchronization ===")
-        
+
         # Get file changes
         changes = self.get_changed_files(since_commit)
         print(f"Detected changes: {changes}")
-        
+
         results = {
             "file_operations": [],
             "translations": [],
             "structure_sync": [],
             "errors": []
         }
-        
+
         try:
             # 1. Sync file operations (delete, rename)
             results["file_operations"] = self.sync_file_operations(changes)
-            
-            # 2. Translate new and modified files
-            results["translations"] = await self.translate_new_and_modified_files(changes)
-            
+
+            # 2. Translate new and modified files (pass since_commit for diffs)
+            results["translations"] = await self.translate_new_and_modified_files(changes, since_commit)
+
             # 3. Sync docs.json structure if needed
             if self.extract_english_structure_changes(changes):
                 results["structure_sync"] = self.sync_docs_json_structure()
-            
+
         except Exception as e:
             results["errors"].append(f"CRITICAL: {e}")
             print(f"Critical error during sync: {e}")
-        
+
         print("=== Synchronization Complete ===")
         return results
     
