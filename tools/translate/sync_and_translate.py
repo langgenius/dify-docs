@@ -531,6 +531,108 @@ class DocsSynchronizer:
         pages.append(page_path_no_ext)
         return True
 
+    def add_page_at_location(self, target_dropdown: Dict, page_path: str, file_location: List, en_dropdown: Dict) -> bool:
+        """
+        Add a page to target dropdown at the same nested location as in English dropdown.
+        Uses the file_location path to navigate to the correct nested group.
+
+        Args:
+            target_dropdown: Target language dropdown structure
+            page_path: Path of the file to add (e.g., "cn/documentation/pages/...")
+            file_location: Location path from find_file_in_dropdown_structure
+                         (e.g., ["pages", 0, "pages", 0, "pages", 3])
+            en_dropdown: English dropdown structure for reference
+
+        Returns:
+            True if added, False if already exists
+        """
+        # Strip file extension (docs.json doesn't include extensions)
+        page_path_no_ext = re.sub(r'\.(mdx?|md)$', '', page_path)
+
+        # Check if page already exists anywhere in target
+        def page_exists(pages_to_check):
+            if not pages_to_check:
+                return False
+            for item in pages_to_check:
+                if isinstance(item, str):
+                    item_no_ext = re.sub(r'\.(mdx?|md)$', '', item)
+                    if item_no_ext == page_path_no_ext:
+                        return True
+                elif isinstance(item, dict) and "pages" in item:
+                    if page_exists(item["pages"]):
+                        return True
+            return False
+
+        if "pages" in target_dropdown and page_exists(target_dropdown["pages"]):
+            return False
+
+        # Navigate to the correct nested location
+        # file_location is like ["pages", 0, "pages", 0, "pages", 3]
+        # We navigate through the path, creating groups as needed
+
+        current_target = target_dropdown
+        current_en = en_dropdown
+
+        # Process path in pairs: "pages" key, then index
+        i = 0
+        while i < len(file_location) - 1:  # Stop before final element (insertion point)
+            key = file_location[i]
+
+            if key == "pages":
+                # Ensure pages array exists
+                if "pages" not in current_target:
+                    current_target["pages"] = []
+
+                # Check if next element is an index
+                if i + 1 < len(file_location):
+                    next_elem = file_location[i + 1]
+
+                    if isinstance(next_elem, int):
+                        # Navigate to group at this index
+                        idx = next_elem
+
+                        # Get corresponding English item
+                        en_pages = current_en.get("pages", [])
+                        if idx < len(en_pages):
+                            en_item = en_pages[idx]
+
+                            # Ensure target has items up to this index
+                            while len(current_target["pages"]) <= idx:
+                                current_target["pages"].append(None)
+
+                            # If English item is a group, ensure target has matching group
+                            if isinstance(en_item, dict) and "pages" in en_item:
+                                target_item = current_target["pages"][idx]
+
+                                if not isinstance(target_item, dict) or "pages" not in target_item:
+                                    # Create group structure (preserve existing group name if present)
+                                    if isinstance(target_item, dict) and "group" in target_item:
+                                        existing_group = target_item["group"]
+                                    else:
+                                        existing_group = en_item.get("group", "")
+
+                                    current_target["pages"][idx] = {
+                                        "group": existing_group,
+                                        "pages": target_item.get("pages", []) if isinstance(target_item, dict) else []
+                                    }
+                                    if "icon" in en_item:
+                                        current_target["pages"][idx]["icon"] = en_item["icon"]
+
+                                # Navigate into this group
+                                current_target = current_target["pages"][idx]
+                                current_en = en_item
+                                i += 2  # Skip "pages" and index
+                                continue
+
+            i += 1
+
+        # Add the page at the final location
+        if "pages" not in current_target:
+            current_target["pages"] = []
+
+        current_target["pages"].append(page_path_no_ext)
+        return True
+
     def remove_page_from_structure(self, pages: List, page_path: str) -> bool:
         """
         Remove a page from a pages array recursively.
@@ -616,7 +718,20 @@ class DocsSynchronizer:
                     continue
 
                 en_dropdown_name, file_location = result
-                sync_log.append(f"INFO: Found {en_file} in '{en_dropdown_name}' dropdown")
+                sync_log.append(f"INFO: Found {en_file} in '{en_dropdown_name}' dropdown at location {file_location}")
+
+                # Get the English dropdown for reference
+                en_dropdown = None
+                en_dropdown_index = -1
+                for i, dropdown in enumerate(en_section.get("dropdowns", [])):
+                    if dropdown.get("dropdown") == en_dropdown_name:
+                        en_dropdown = dropdown
+                        en_dropdown_index = i
+                        break
+
+                if not en_dropdown:
+                    sync_log.append(f"WARNING: Could not find English dropdown '{en_dropdown_name}'")
+                    continue
 
                 # Add to each target language
                 for target_lang, target_section in target_sections.items():
@@ -629,13 +744,6 @@ class DocsSynchronizer:
                     # Strategy: Try to find the dropdown by matching index position first,
                     # then by translated name. This preserves correct dropdown associations.
                     target_dropdowns = target_section.get("dropdowns", [])
-
-                    # Get the index of the English dropdown
-                    en_dropdown_index = -1
-                    for i, dropdown in enumerate(en_section.get("dropdowns", [])):
-                        if dropdown.get("dropdown") == en_dropdown_name:
-                            en_dropdown_index = i
-                            break
 
                     # Try to use same index in target language (assuming dropdowns are in same order)
                     if en_dropdown_index >= 0 and en_dropdown_index < len(target_dropdowns):
@@ -654,16 +762,10 @@ class DocsSynchronizer:
                     # If still not found, create new dropdown
                     if not target_dropdown:
                         translated_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
-                        # Find the English dropdown to get icon
-                        en_dropdown = None
-                        for dropdown in en_section.get("dropdowns", []):
-                            if dropdown.get("dropdown") == en_dropdown_name:
-                                en_dropdown = dropdown
-                                break
 
                         target_dropdown = {
                             "dropdown": translated_name,
-                            "icon": en_dropdown.get("icon", "book-open") if en_dropdown else "book-open",
+                            "icon": en_dropdown.get("icon", "book-open"),
                             "pages": []
                         }
                         target_section.setdefault("dropdowns", [])
@@ -671,13 +773,14 @@ class DocsSynchronizer:
                         target_dropdown_name = translated_name
                         sync_log.append(f"INFO: Created new dropdown '{translated_name}' for {target_lang}")
 
-                    # Add the page to the dropdown (preserving existing structure)
+                    # Add the page to the dropdown at the correct nested location
                     if "pages" not in target_dropdown:
                         target_dropdown["pages"] = []
 
-                    added = self.add_page_to_structure(target_dropdown["pages"], target_file)
+                    # Use the new method that preserves group structure
+                    added = self.add_page_at_location(target_dropdown, target_file, file_location, en_dropdown)
                     if added:
-                        sync_log.append(f"INFO: Added {target_file} to '{target_dropdown_name}' ({target_lang})")
+                        sync_log.append(f"INFO: Added {target_file} to '{target_dropdown_name}' at nested location ({target_lang})")
                     else:
                         sync_log.append(f"INFO: {target_file} already exists in '{target_dropdown_name}' ({target_lang})")
 
