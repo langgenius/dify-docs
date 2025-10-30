@@ -596,12 +596,11 @@ class DocsSynchronizer:
                         if idx < len(en_pages):
                             en_item = en_pages[idx]
 
-                            # Ensure target has items up to this index
-                            while len(current_target["pages"]) <= idx:
-                                current_target["pages"].append(None)
-
                             # If English item is a group, ensure target has matching group
                             if isinstance(en_item, dict) and "pages" in en_item:
+                                # Ensure target has items up to this index (only for groups we'll navigate through)
+                                while len(current_target["pages"]) <= idx:
+                                    current_target["pages"].append(None)
                                 target_item = current_target["pages"][idx]
 
                                 if not isinstance(target_item, dict) or "pages" not in target_item:
