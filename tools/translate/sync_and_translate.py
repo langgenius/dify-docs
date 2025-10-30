@@ -790,22 +790,30 @@ class DocsSynchronizer:
 
                 sync_log.append(f"INFO: Processing deletion of {en_file}")
 
-                # Remove from each target language
+                # Remove from each target language (cn, jp)
                 for target_lang, target_section in target_sections.items():
                     target_file = self.convert_path_to_target_language(en_file, target_lang)
+                    sync_log.append(f"INFO: Attempting to remove {target_file} from {target_lang} section")
 
                     # Find and remove from all dropdowns
                     removed = False
-                    for dropdown in target_section.get("dropdowns", []):
+                    dropdowns = target_section.get("dropdowns", [])
+                    sync_log.append(f"INFO: Searching through {len(dropdowns)} dropdowns in {target_lang} section")
+
+                    for idx, dropdown in enumerate(dropdowns):
                         dropdown_name = dropdown.get("dropdown", "")
+                        sync_log.append(f"INFO: Checking dropdown {idx + 1}/{len(dropdowns)}: '{dropdown_name}'")
+
                         if "pages" in dropdown:
                             if self.remove_page_from_structure(dropdown["pages"], target_file):
-                                sync_log.append(f"INFO: Removed {target_file} from '{dropdown_name}' ({target_lang})")
+                                sync_log.append(f"SUCCESS: Removed {target_file} from '{dropdown_name}' ({target_lang})")
                                 removed = True
                                 break
+                        else:
+                            sync_log.append(f"INFO: Dropdown '{dropdown_name}' has no pages array")
 
                     if not removed:
-                        sync_log.append(f"WARNING: Could not find {target_file} in {target_lang} navigation")
+                        sync_log.append(f"WARNING: Could not find {target_file} in {target_lang} navigation - file may not exist in navigation")
 
             # Save the updated docs.json
             if self.save_docs_json(docs_data):
