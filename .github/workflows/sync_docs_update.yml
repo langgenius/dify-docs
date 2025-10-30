@@ -141,44 +141,45 @@ jobs:
           import sys
           import os
           import asyncio
+          import subprocess
           from pathlib import Path
-          
+
           # Add parent directory to path
           sys.path.append(os.path.dirname(__file__))
           from sync_and_translate import DocsSynchronizer
           from pr_analyzer import PRAnalyzer
-          
+
           async def update_translations():
               base_sha = sys.argv[1]
               head_sha = sys.argv[2]
-              
+
               # Analyze changes
               analyzer = PRAnalyzer(base_sha, head_sha)
               result = analyzer.categorize_pr()
-              
+
               if result['type'] != 'english':
                   print(f"PR type is {result['type']}, not english - skipping")
                   return False
-              
+
               # Initialize synchronizer
               api_key = os.environ.get("DIFY_API_KEY")
               if not api_key:
                   print("Error: DIFY_API_KEY not set")
                   return False
-              
+
               synchronizer = DocsSynchronizer(api_key)
-              
+
               # Get English files that need translation
               file_categories = result['files']
               english_files = file_categories['english']
-              
+
               results = {
                   "translated": [],
                   "failed": [],
                   "skipped": [],
                   "updated": True
               }
-              
+
               # Translate English files
               for file_path in english_files[:10]:  # Limit to 10 files for safety
                   print(f"Updating translations for: {file_path}")
@@ -198,23 +199,51 @@ jobs:
                   except Exception as e:
                       print(f"Error processing {file_path}: {e}")
                       results["failed"].append(file_path)
-              
-              # Handle docs.json structure sync if needed
+
+              # Handle docs.json structure sync if needed (INCREMENTAL MODE)
               docs_changes = result['docs_json_changes']
               if docs_changes['any_docs_json_changes']:
-                  print("Updating docs.json structure...")
+                  print("Updating docs.json structure (incremental mode)...")
                   try:
-                      sync_log = synchronizer.sync_docs_json_structure()
+                      # Get added files
+                      added_files = english_files
+
+                      # Get deleted files from git diff
+                      deleted_files = []
+                      try:
+                          result_git = subprocess.run([
+                              "git", "diff", "--name-status", "--diff-filter=D",
+                              base_sha, head_sha
+                          ], capture_output=True, text=True, cwd="../../")
+
+                          for line in result_git.stdout.strip().split('\n'):
+                              if line and line.startswith('D\t'):
+                                  file_path = line.split('\t')[1]
+                                  if file_path.startswith("en/"):
+                                      deleted_files.append(file_path)
+                      except Exception as e:
+                          print(f"Warning: Could not get deleted files: {e}")
+
+                      print(f"Added files: {added_files}")
+                      print(f"Deleted files: {deleted_files}")
+
+                      # Use incremental sync
+                      sync_log = synchronizer.sync_docs_json_incremental(
+                          added_files=added_files,
+                          deleted_files=deleted_files
+                      )
                       print("\n".join(sync_log))
                   except Exception as e:
                       print(f"Error syncing docs.json structure: {e}")
-              
+                      import traceback
+                      traceback.print_exc()
+
               # Save results
               with open("/tmp/update_results.json", "w") as f:
                   json.dump(results, f, indent=2)
-              
+
               return len(results["failed"]) == 0
-          
+
           if __name__ == "__main__":
               success = asyncio.run(update_translations())
               sys.exit(0 if success else 1)

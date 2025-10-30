@@ -461,9 +461,250 @@ class DocsSynchronizer:
 
         return basic_translations.get(target_lang, {}).get(en_label, en_label)
     
-    def sync_docs_json_structure(self) -> List[str]:
-        """Sync docs.json structure across languages - syncs ALL dropdowns"""
+    def find_file_in_dropdown_structure(self, file_path: str, dropdown: Dict) -> Optional[List[str]]:
+        """
+        Find a file path in a dropdown's pages structure.
+        Returns the path to the item as a list of keys/indices, or None if not found.
+        Example: ["pages", 0, "pages", 2] means dropdown["pages"][0]["pages"][2] == file_path
+        """
+        def search_pages(pages: List, current_path: List) -> Optional[List[str]]:
+            for i, item in enumerate(pages):
+                if isinstance(item, str):
+                    if item == file_path:
+                        return current_path + [i]
+                elif isinstance(item, dict) and "pages" in item:
+                    result = search_pages(item["pages"], current_path + [i, "pages"])
+                    if result:
+                        return result
+            return None
+
+        if "pages" not in dropdown:
+            return None
+        return search_pages(dropdown["pages"], ["pages"])
+
+    def find_dropdown_containing_file(self, file_path: str, lang_section: Dict) -> Optional[Tuple[str, List[str]]]:
+        """
+        Find which dropdown contains a specific file path.
+        Returns (dropdown_name, path_to_file) or None if not found.
+        """
+        dropdowns = lang_section.get("dropdowns", [])
+        for dropdown in dropdowns:
+            dropdown_name = dropdown.get("dropdown", "")
+            file_location = self.find_file_in_dropdown_structure(file_path, dropdown)
+            if file_location:
+                return (dropdown_name, file_location)
+        return None
+
+    def add_page_to_structure(self, pages: List, page_path: str, reference_structure: List = None) -> bool:
+        """
+        Add a page to a pages array, attempting to maintain position relative to reference structure.
+        Returns True if added, False if already exists.
+        """
+        # First pass: check if page already exists anywhere in the structure
+        def page_exists(pages_to_check):
+            for item in pages_to_check:
+                if isinstance(item, str) and item == page_path:
+                    return True
+                elif isinstance(item, dict) and "pages" in item:
+                    if page_exists(item["pages"]):
+                        return True
+            return False
+
+        if page_exists(pages):
+            return False
+
+        # Page doesn't exist - add it to the top level
+        pages.append(page_path)
+        return True
+
+    def remove_page_from_structure(self, pages: List, page_path: str) -> bool:
+        """
+        Remove a page from a pages array recursively.
+        Returns True if removed, False if not found.
+        """
+        for i, item in enumerate(pages):
+            if isinstance(item, str) and item == page_path:
+                pages.pop(i)
+                return True
+            elif isinstance(item, dict) and "pages" in item:
+                if self.remove_page_from_structure(item["pages"], page_path):
+                    # Clean up empty groups
+                    if not item["pages"]:
+                        pages.pop(i)
+                    return True
+        return False
+
+    def sync_docs_json_incremental(self, added_files: List[str] = None, deleted_files: List[str] = None) -> List[str]:
+        """
+        Incrementally sync docs.json structure - only processes changed files.
+        Preserves existing dropdown names and only updates affected pages.
+        """
         sync_log = []
+        added_files = added_files or []
+        deleted_files = deleted_files or []
+
+        if not added_files and not deleted_files:
+            sync_log.append("INFO: No file changes to sync")
+            return sync_log
+
+        try:
+            docs_data = self.load_docs_json()
+            if not docs_data or "navigation" not in docs_data:
+                sync_log.append("ERROR: Invalid docs.json structure")
+                return sync_log
+
+            navigation = docs_data["navigation"]
+
+            # Handle both direct languages and versions structure
+            languages_array = None
+            if "languages" in navigation and isinstance(navigation["languages"], list):
+                languages_array = navigation["languages"]
+            elif "versions" in navigation and len(navigation["versions"]) > 0:
+                if "languages" in navigation["versions"][0]:
+                    languages_array = navigation["versions"][0]["languages"]
+
+            if not languages_array:
+                sync_log.append("ERROR: No languages found in navigation")
+                return sync_log
+
+            # Find language sections
+            en_section = None
+            target_sections = {}
+
+            for lang_data in languages_array:
+                if lang_data.get("language") == "en":
+                    en_section = lang_data
+                elif lang_data.get("language") in ["cn", "jp"]:
+                    target_sections[lang_data.get("language")] = lang_data
+
+            if not en_section:
+                sync_log.append("ERROR: English section not found")
+                return sync_log
+
+            sync_log.append(f"INFO: Processing {len(added_files)} added, {len(deleted_files)} deleted files")
+
+            # Process added files
+            for en_file in added_files:
+                if not en_file.startswith("en/"):
+                    continue
+
+                # Find which dropdown contains this file in English section
+                result = self.find_dropdown_containing_file(en_file, en_section)
+                if not result:
+                    sync_log.append(f"WARNING: Could not find {en_file} in English navigation")
+                    continue
+
+                en_dropdown_name, file_location = result
+                sync_log.append(f"INFO: Found {en_file} in '{en_dropdown_name}' dropdown")
+
+                # Add to each target language
+                for target_lang, target_section in target_sections.items():
+                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+
+                    # Find or create corresponding dropdown
+                    target_dropdown = None
+                    target_dropdown_name = None
+
+                    # Strategy: Try to find the dropdown by matching index position first,
+                    # then by translated name. This preserves correct dropdown associations.
+                    target_dropdowns = target_section.get("dropdowns", [])
+
+                    # Get the index of the English dropdown
+                    en_dropdown_index = -1
+                    for i, dropdown in enumerate(en_section.get("dropdowns", [])):
+                        if dropdown.get("dropdown") == en_dropdown_name:
+                            en_dropdown_index = i
+                            break
+
+                    # Try to use same index in target language (assuming dropdowns are in same order)
+                    if en_dropdown_index >= 0 and en_dropdown_index < len(target_dropdowns):
+                        target_dropdown = target_dropdowns[en_dropdown_index]
+                        target_dropdown_name = target_dropdown.get("dropdown", "")
+
+                    # If index-based match failed, try matching by translated name
+                    if not target_dropdown:
+                        translated_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+                        for dropdown in target_dropdowns:
+                            if dropdown.get("dropdown") == translated_name:
+                                target_dropdown = dropdown
+                                target_dropdown_name = translated_name
+                                break
+
+                    # If still not found, create new dropdown
+                    if not target_dropdown:
+                        translated_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+                        # Find the English dropdown to get icon
+                        en_dropdown = None
+                        for dropdown in en_section.get("dropdowns", []):
+                            if dropdown.get("dropdown") == en_dropdown_name:
+                                en_dropdown = dropdown
+                                break
+
+                        target_dropdown = {
+                            "dropdown": translated_name,
+                            "icon": en_dropdown.get("icon", "book-open") if en_dropdown else "book-open",
+                            "pages": []
+                        }
+                        target_section.setdefault("dropdowns", [])
+                        target_section["dropdowns"].append(target_dropdown)
+                        target_dropdown_name = translated_name
+                        sync_log.append(f"INFO: Created new dropdown '{translated_name}' for {target_lang}")
+
+                    # Add the page to the dropdown (preserving existing structure)
+                    if "pages" not in target_dropdown:
+                        target_dropdown["pages"] = []
+
+                    added = self.add_page_to_structure(target_dropdown["pages"], target_file)
+                    if added:
+                        sync_log.append(f"INFO: Added {target_file} to '{target_dropdown_name}' ({target_lang})")
+                    else:
+                        sync_log.append(f"INFO: {target_file} already exists in '{target_dropdown_name}' ({target_lang})")
+
+            # Process deleted files
+            for en_file in deleted_files:
+                if not en_file.startswith("en/"):
+                    continue
+
+                sync_log.append(f"INFO: Processing deletion of {en_file}")
+
+                # Remove from each target language
+                for target_lang, target_section in target_sections.items():
+                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+
+                    # Find and remove from all dropdowns
+                    removed = False
+                    for dropdown in target_section.get("dropdowns", []):
+                        dropdown_name = dropdown.get("dropdown", "")
+                        if "pages" in dropdown:
+                            if self.remove_page_from_structure(dropdown["pages"], target_file):
+                                sync_log.append(f"INFO: Removed {target_file} from '{dropdown_name}' ({target_lang})")
+                                removed = True
+                                break
+
+                    if not removed:
+                        sync_log.append(f"WARNING: Could not find {target_file} in {target_lang} navigation")
+
+            # Save the updated docs.json
+            if self.save_docs_json(docs_data):
+                sync_log.append("INFO: Updated docs.json with incremental changes")
+            else:
+                sync_log.append("ERROR: Failed to save updated docs.json")
+
+        except Exception as e:
+            sync_log.append(f"ERROR: Exception in incremental sync: {e}")
+            import traceback
+            sync_log.append(f"TRACE: {traceback.format_exc()}")
+
+        return sync_log
+
+    def sync_docs_json_structure(self) -> List[str]:
+        """
+        DEPRECATED: Full sync of docs.json structure across languages.
+        This method syncs ALL dropdowns and is only kept for backward compatibility.
+        Use sync_docs_json_incremental() for new code.
+        """
+        sync_log = []
+        sync_log.append("WARNING: Using deprecated full sync method")
 
         try:
             docs_data = self.load_docs_json()
@@ -538,7 +779,7 @@ class DocsSynchronizer:
                             break
 
                     if not target_dropdown:
-                        # Create new dropdown
+                        # Create new dropdown - SET translated name
                         target_dropdown = {
                             "dropdown": target_dropdown_name,
                             "icon": en_dropdown.get("icon", "book-open"),
@@ -547,14 +788,14 @@ class DocsSynchronizer:
                         target_section["dropdowns"].append(target_dropdown)
                         sync_log.append(f"INFO: Created new '{target_dropdown_name}' dropdown for {target_lang}")
                     else:
-                        # Update existing dropdown
-                        target_dropdown["dropdown"] = target_dropdown_name
+                        # Update existing dropdown - PRESERVE existing name, only update icon
+                        # Do NOT overwrite target_dropdown["dropdown"] to preserve existing translations
                         if "icon" in en_dropdown:
                             target_dropdown["icon"] = en_dropdown["icon"]
                         # Remove old structure fields if they exist
                         if "groups" in target_dropdown:
                             del target_dropdown["groups"]
-                        sync_log.append(f"INFO: Updated existing '{target_dropdown_name}' dropdown for {target_lang}")
+                        sync_log.append(f"INFO: Updated existing '{target_dropdown.get('dropdown')}' dropdown for {target_lang}")
 
                     # Sync the pages structure
                     if "pages" in en_dropdown:
@@ -565,7 +806,7 @@ class DocsSynchronizer:
                             existing_pages
                         )
                         target_dropdown["pages"] = synced_pages
-                        sync_log.append(f"INFO: Synced pages structure for '{target_dropdown_name}' ({target_lang})")
+                        sync_log.append(f"INFO: Synced pages structure for '{target_dropdown.get('dropdown')}' ({target_lang})")
 
             # Save the updated docs.json
             if self.save_docs_json(docs_data):
