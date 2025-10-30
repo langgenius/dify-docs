@@ -24,7 +24,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 
 为了统一处理来自不同平台的 Webhook 事件，Dify 抽象出两个核心概念：订阅（Subscription） 和事件（Event）。
 
-- **订阅**：如前所述，基于 Webhook 的事件派发有一个前提条件——需要将 Dify 的网络地址作为目标服务器，配置在第三方平台的开发者后台中。这个配置过程在 Dify 中称为「订阅」。
+- **订阅**：如前所述，基于 Webhook 的事件派发有一个前提条件——**需要将 Dify 的网络地址作为目标服务器，配置在第三方平台的开发者后台中。这个配置过程在 Dify 中称为「订阅」。**
 
 - **事件**：一个平台可能会发送多种类型的事件，例如 *新邮件*、*邮件删除*、*邮件已读* 等，这些事件均会被推送至预先配置的地址。一个触发器插件可配置多个事件，一个事件对应 Dify 工作流中的一个触发器节点。
 
@@ -52,7 +52,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 
 - `provider` 目录：包含插件供应商的描述信息、创建订阅的代码，以及接收 Webhook 请求后对事件进行分类的代码。
 
-- `events` 目录：包含事件处理和筛选功能的代码，支持在节点端对事件进行本地筛选；每个目录下可创建二级目录，以便对事件进行分组。
+- **`events` 目录：包含事件处理和筛选功能的代码，支持在节点端对事件进行本地筛选；每个目录下可创建二级目录，以便对事件进行分组。**
 
 <Note>
     在触发器插件中，最低 Dify 版本需设置为 `1.10.0`，SDK 版本需设置为大于等于 `0.6.0`。
@@ -72,7 +72,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 
 对于 Notion 这类平台，订阅的创建需要用户手动将 Dify 提供的回调地址（Callback URL）复制粘贴到 Notion 后台中，以完成 Webhook 配置。此流程对应 Dify 界面中的 **粘贴 URL 以创建新订阅** 选项。
 
-![Paste URL to create a new subscription](/images/trigger_plugin_manual_webhook_setup.PNG)
+<img src="/images/trigger_plugin_manual_webhook_setup.PNG" alt="Paste URL to Create a New Subscription" width="563" />
 
 若要实现通过手动复制 Callback URL 的方式创建订阅，需要修改 `github.yaml` 和 `github.py` 两个文件。
 
@@ -97,9 +97,9 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
     </Tab>
     <Tab title="github.py">
 
-        ![Manual Setup](/images/trigger_plugin_manual_webhook_setup_config.PNG)
-
        首先，我们需要编写 `dispatch_event` 接口。所有发送到 Callback URL 的请求都会先经过该接口处理，处理后的事件将显示在界面上的 **请求日志** 中，便于调试与验证。
+
+       <img src="/images/trigger_plugin_manual_webhook_setup_config.PNG" alt="Manual Setup" width="500" />
 
         在代码中，可通过 `subscription.properties` 获取在 `github.yaml` 中声明的 `webhook_secret`。
 
@@ -134,58 +134,62 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 
 提取出事件后，需要由相应的事件实现对原始 HTTP 请求进行过滤，并将其转换为 Dify 工作流可接受的入参。
 
-以 Issue 事件为例，可分别通过 `issue_open.yaml` 和 `issue_open.py` 来定义事件与实现事件。事件的输出可在 `issue_open.yaml` 的 `output_schema` 中定义，与工具类型插件相同，遵循 JSON Schema 规范。
+以 Issue 事件为例，可分别通过 `events/issues/issues.yaml` 和 `events/issues/issues.py` 来定义事件与实现事件。事件的输出可在 `issues.yaml` 的 `output_schema` 中定义，与工具类型插件相同，遵循 JSON Schema 规范。
 
 <Tabs>
-    <Tab title="issue_open.yaml">
+    <Tab title="issues.yaml">
         ```YAML
         identity:
-          name: issue_opened
+          name: issues
           author: langgenius
           label:
-            en_US: Issue Opened
-            zh_Hans: Issue 打开
-            ja_JP: Issue 開かれた
+            en_US: Issues
+            zh_Hans: 议题
+            ja_JP: イシュー
         description:
-          en_US: Triggers when a new issue is opened
-          zh_Hans: 当新 issue 打开时触发
-          ja_JP: 新しい issue が開かれたときにトリガーがアクティブになります。
+          en_US: Unified issues event with actions filter
+          zh_Hans: 带 actions 过滤的统一 issues 事件
+          ja_JP: アクションフィルタ付きの統合イシューイベント
         output_schema:
           type: object
           properties:
+            action:
+              type: string
             issue:
               type: object
               description: The issue itself
-              properties:
-                id:
-                  type: integer
-                  format: int64
-                  description: Unique identifier of the issue
         extra:
           python:
-            source: events/issues/issue_opened.py
+            source: events/issues/issues.py
         ```
     </Tab>
-    <Tab title="issue_open.py">
+    <Tab title="issues.py">
         ```Python
-        class IssueOpenedEvent(Event):
-            """
-            GitHub Issue Opened Event
+        from collections.abc import Mapping
+        from typing import Any
 
-            This event transforms GitHub issue opened webhook events and extracts relevant
-            information from the webhook payload to provide as variables to the workflow.
-            """
-            def _on_event(self, request: Request, parameters: Mapping[str, Any]) -> Variables:
-                """
-                Transform GitHub issue opened webhook event into structured Variables
-                """
+        from werkzeug import Request
+
+        from dify_plugin.entities.trigger import Variables
+        from dify_plugin.errors.trigger import EventIgnoreError
+        from dify_plugin.interfaces.trigger import Event
+
+        class IssuesUnifiedEvent(Event):
+            """Unified Issues event. Filters by actions and common issue attributes."""
+
+            def _on_event(self, request: Request, parameters: Mapping[str, Any], payload: Mapping[str, Any]) -> Variables:
                 payload = request.get_json()
                 if not payload:
                     raise ValueError("No payload received")
 
+                allowed_actions = parameters.get("actions") or []
+                action = payload.get("action")
+                if allowed_actions and action not in allowed_actions:
+                    raise EventIgnoreError()
+
                 issue = payload.get("issue")
-                if not issue:
-                    raise ValueError("No issue data in payload")
+                if not isinstance(issue, Mapping):
+                    raise ValueError("No issue in payload")
 
                 return Variables(variables={**payload})
         ```
@@ -197,7 +201,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 若希望插件能够筛选掉部分事件，例如只关注具有某个特定标签的 Issue 事件，可在事件定义中为 Issue 事件添加 `parameters`。在 `_on_event` 方法中，通过抛出 `EventIgnoreError` 异常，即可在实际运行中根据配置的参数过滤掉不符合条件的事件。
 
 <Tabs>
-    <Tab title="issue_open.yaml">
+    <Tab title="issues.yaml">
         ```YAML
         parameters:
         - name: added_label
@@ -213,7 +217,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
             ja_JP: "これらの特定のラベルが追加された場合のみトリガー（例: critical, priority-high, security，カンマ区切り）。空の場合は任意のラベル追加でトリガー。"
         ```
     </Tab>
-    <Tab title="issue_open.py">
+    <Tab title="issues.py">
         ```Python
         def _check_added_label(self, payload: Mapping[str, Any], added_label_param: str | None) -> None:
             """Check if the added label matches the allowed labels"""
@@ -231,7 +235,7 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
             if label_name not in allowed_labels:
                 raise EventIgnoreError()
                 
-        def _on_event(self, request: Request, parameters: Mapping[str, Any]) -> Variables:
+        def _on_event(self, request: Request, parameters: Mapping[str, Any], payload: Mapping[str, Any]) -> Variables:
             # ...
             # Apply all filters
             self._check_added_label(payload, parameters.get("added_label"))
@@ -382,4 +386,274 @@ Webhook 可理解为基于 HTTP 协议的事件派发中心。**当配置好事�
 
 ## 探索更多
 
-受篇幅所限，本文仅展示最基础的实现示例。更多详细的接口说明，请参考以下接口文档。
+触发器插件开发中核心类的接口定义和实现方法如下。
+
+### Trigger
+
+```Python
+class Trigger(ABC):
+    @abstractmethod
+    def _dispatch_event(self, subscription: Subscription, request: Request) -> EventDispatch:
+        """
+        Internal method to implement event dispatch logic.
+
+        Subclasses must override this method to handle incoming webhook events.
+
+        Implementation checklist:
+        1. Validate the webhook request:
+           - Check signature/HMAC using properties when you create the subscription from subscription.properties
+           - Verify request is from expected source
+        2. Extract event information:
+           - Parse event type from headers or body
+           - Extract relevant payload data
+        3. Return EventDispatch with:
+           - events: List of Event names to invoke (can be single or multiple)
+           - response: Appropriate HTTP response for the webhook
+
+        Args:
+            subscription: The Subscription object with endpoint and properties fields
+            request: Incoming webhook HTTP request
+
+        Returns:
+            EventDispatch: Event dispatch routing information
+
+        Raises:
+            TriggerValidationError: For security validation failures
+            TriggerDispatchError: For parsing or routing errors
+        """
+        raise NotImplementedError("This plugin should implement `_dispatch_event` method to enable event dispatch")
+
+```
+
+### TriggerSubscriptionConstructor
+
+```Python
+class TriggerSubscriptionConstructor(ABC, OAuthProviderProtocol):
+    # OPTIONAL
+    def _validate_api_key(self, credentials: Mapping[str, Any]) -> None:
+        raise NotImplementedError(
+            "This plugin should implement `_validate_api_key` method to enable credentials validation"
+        )
+        
+    # OPTIONAL
+    def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+        raise NotImplementedError(
+            "The trigger you are using does not support OAuth, please implement `_oauth_get_authorization_url` method"
+        )
+    
+    # OPTIONAL
+    def _oauth_get_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+    ) -> TriggerOAuthCredentials:
+        raise NotImplementedError(
+            "The trigger you are using does not support OAuth, please implement `_oauth_get_credentials` method"
+        )
+    
+    # OPTIONAL
+    def _oauth_refresh_credentials(
+        self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+    ) -> OAuthCredentials:
+        raise NotImplementedError(
+            "The trigger you are using does not support OAuth, please implement `_oauth_refresh_credentials` method"
+        )
+
+    @abstractmethod
+    def _create_subscription(
+        self,
+        endpoint: str,
+        parameters: Mapping[str, Any],
+        credentials: Mapping[str, Any],
+        credential_type: CredentialType,
+    ) -> Subscription:
+        """
+        Internal method to implement subscription logic.
+
+        Subclasses must override this method to handle subscription creation.
+
+        Implementation checklist:
+        1. Use the endpoint parameter provided by Dify
+        2. Register webhook with external service using their API
+        3. Store all necessary information in Subscription.properties for future operations(e.g., dispatch_event)
+        4. Return Subscription with:
+           - expires_at: Set appropriate expiration time
+           - endpoint: The webhook endpoint URL allocated by Dify for receiving events, same with the endpoint parameter
+           - parameters: The parameters of the subscription
+           - properties: All configuration and external IDs
+
+        Args:
+            endpoint: The webhook endpoint URL allocated by Dify for receiving events
+            parameters: Subscription creation parameters
+            credentials: Authentication credentials
+            credential_type: The type of the credentials, e.g., "api-key", "oauth2", "unauthorized"
+
+        Returns:
+            Subscription: Subscription details with metadata for future operations
+
+        Raises:
+            SubscriptionError: For operational failures (API errors, invalid credentials)
+            ValueError: For programming errors (missing required params)
+        """
+        raise NotImplementedError(
+            "This plugin should implement `_create_subscription` method to enable event subscription"
+        )
+
+    @abstractmethod
+    def _delete_subscription(
+        self, subscription: Subscription, credentials: Mapping[str, Any], credential_type: CredentialType
+    ) -> UnsubscribeResult:
+        """
+        Internal method to implement unsubscription logic.
+
+        Subclasses must override this method to handle subscription removal.
+
+        Implementation guidelines:
+        1. Extract necessary IDs from subscription.properties (e.g., external_id)
+        2. Use credentials and credential_type to call external service API to delete the webhook
+        3. Handle common errors (not found, unauthorized, etc.)
+        4. Always return UnsubscribeResult with detailed status
+        5. Never raise exceptions for operational failures - use UnsubscribeResult.success=False
+
+        Args:
+            subscription: The Subscription object with endpoint and properties fields
+
+        Returns:
+            UnsubscribeResult: Always returns result, never raises for operational failures
+        """
+        raise NotImplementedError(
+            "This plugin should implement `_delete_subscription` method to enable event unsubscription"
+        )
+
+    @abstractmethod
+    def _refresh_subscription(
+        self, subscription: Subscription, credentials: Mapping[str, Any], credential_type: CredentialType
+    ) -> Subscription:
+        """
+        Internal method to implement subscription refresh logic.
+
+        Subclasses must override this method to handle simple expiration extension.
+
+        Implementation patterns:
+        1. For webhooks without expiration (e.g., GitHub):
+           - Update the Subscription.expires_at=-1 then Dify will never call this method again
+
+        2. For lease-based subscriptions (e.g., Microsoft Graph):
+           - Use the information in Subscription.properties to call service's lease renewal API if available
+           - Handle renewal limits (some services limit renewal count)
+           - Update the Subscription.properties and Subscription.expires_at for next time renewal if needed
+
+        Args:
+            subscription: Current subscription with properties
+            credential_type: The type of the credentials, e.g., "api-key", "oauth2", "unauthorized"
+            credentials: Current authentication credentials from credentials_schema.
+                        For API key auth, according to `credentials_schema` defined in the YAML.
+                        For OAuth auth, according to `oauth_schema.credentials_schema` defined in the YAML.
+                        For unauthorized auth, there is no credentials.
+
+        Returns:
+            Subscription: Same subscription with extended expiration
+                        or new properties and expires_at for next time renewal
+
+        Raises:
+            SubscriptionError: For operational failures (API errors, invalid credentials)
+        """
+        raise NotImplementedError("This plugin should implement `_refresh` method to enable subscription refresh")
+    
+    # OPTIONAL
+    def _fetch_parameter_options(
+        self, parameter: str, credentials: Mapping[str, Any], credential_type: CredentialType
+    ) -> list[ParameterOption]:
+        """
+        Fetch the parameter options of the trigger.
+
+        Implementation guidelines:
+        When you need to fetch parameter options from an external service, use the credentials
+        and credential_type to call the external service API, then return the options to Dify
+        for user selection.
+
+        Args:
+            parameter: The parameter name for which to fetch options
+            credentials: Authentication credentials for the external service
+            credential_type: The type of credentials (e.g., "api-key", "oauth2", "unauthorized")
+
+        Returns:
+            list[ParameterOption]: A list of available options for the parameter
+
+        Examples:
+            GitHub Repositories:
+            >>> result = provider.fetch_parameter_options(parameter="repository")
+            >>> print(result)  # [ParameterOption(label="owner/repo", value="owner/repo")]
+
+            Slack Channels:
+            >>> result = provider.fetch_parameter_options(parameter="channel")
+            >>> print(result)
+```
+
+### Event
+
+```Python
+class Event(ABC):
+    @abstractmethod
+    def _on_event(self, request: Request, parameters: Mapping[str, Any], payload: Mapping[str, Any]) -> Variables:
+        """
+        Transform the incoming webhook request into structured Variables.
+
+        This method should:
+        1. Parse the webhook payload from the request
+        2. Apply filtering logic based on parameters
+        3. Extract relevant data matching the output_schema
+        4. Return a structured Variables object
+
+        Args:
+            request: The incoming webhook HTTP request containing the raw payload.
+                    Use request.get_json() to parse JSON body.
+            parameters: User-configured parameters for filtering and transformation
+                       (e.g., label filters, regex patterns, threshold values).
+                       These come from the subscription configuration.
+            payload: The decoded payload from previous step `Trigger.dispatch_event`.
+                     It will be delivered into `_on_event` method.
+        Returns:
+            Variables: Structured variables matching the output_schema
+                      defined in the event's YAML configuration.
+
+        Raises:
+            EventIgnoreError: When the event should be filtered out based on parameters
+            ValueError: When the payload is invalid or missing required fields
+
+        Example:
+            >>> def _on_event(self, request, parameters):
+            ...     payload = request.get_json()
+            ...
+            ...     # Apply filters
+            ...     if not self._matches_filters(payload, parameters):
+            ...         raise EventIgnoreError()
+            ...
+            ...     # Transform data
+            ...     return Variables(variables={
+            ...         "title": payload["issue"]["title"],
+            ...         "author": payload["issue"]["user"]["login"],
+            ...         "url": payload["issue"]["html_url"],
+            ...     })
+        """
+
+    def _fetch_parameter_options(self, parameter: str) -> list[ParameterOption]:
+        """
+        Fetch the parameter options of the trigger.
+
+        To be implemented by subclasses.
+
+        Also, it's optional to implement, that's why it's not an abstract method.
+        """
+        raise NotImplementedError(
+            "This plugin should implement `_fetch_parameter_options` method to enable dynamic select parameter"
+        )
+```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[编辑此页面](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-zh/0222-trigger-plugin.mdx) | [提交问题](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
