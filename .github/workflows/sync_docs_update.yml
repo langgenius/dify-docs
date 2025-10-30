@@ -3,10 +3,6 @@ name: Update Translation PR
 on:
   pull_request:
     types: [synchronize]
-    paths:
-      - 'docs.json'
-      - 'en/**/*.md'
-      - 'en/**/*.mdx'
 
 permissions:
   contents: write
@@ -17,17 +13,33 @@ jobs:
   check-event-type:
     runs-on: ubuntu-latest
     outputs:
-      should_run: ${{ steps.check.outputs.should_run }}
+      should_run: ${{ steps.check-paths.outputs.should_run }}
     steps:
-      - name: Check if this is a synchronize event
-        id: check
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if relevant files changed
+        id: check-paths
         run: |
-          if [ "${{ github.event.action }}" = "synchronize" ]; then
+          echo "Checking if relevant files changed..."
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Check if docs.json or en/ files changed
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
+          RELEVANT_FILES=$(echo "$CHANGED_FILES" | grep -E '^(docs\.json|en/.*\.(md|mdx))$' || true)
+
+          if [ -n "$RELEVANT_FILES" ]; then
             echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ This is a PR update (synchronize) - proceeding with translation update"
+            echo "✅ Relevant files changed - proceeding with translation update"
+            echo "Changed files:"
+            echo "$RELEVANT_FILES"
           else
             echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ This workflow only runs on PR updates, not on PR creation"
+            echo "ℹ️ No relevant files changed (docs.json or en/**/*.md|mdx)"
+            echo "ℹ️ Skipping translation update"
           fi
 
   update-translation:
