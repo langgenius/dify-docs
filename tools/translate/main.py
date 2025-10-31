@@ -89,16 +89,18 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
         try:
             # Add exponential backoff with jitter for retries
             if attempt > 0:
-                # Exponential backoff: 5s, 10s, 20s, 40s, 80s with ±20% jitter
+                # Exponential backoff: 30s, 60s, 120s, 240s, 300s with ±20% jitter
+                # Modified files take 2-3 minutes, so we need longer waits
                 import random
-                base_delay = min(5 * (2 ** (attempt - 1)), 120)  # Cap at 120s
+                base_delay = min(30 * (2 ** (attempt - 1)), 300)  # Cap at 300s (5 min)
                 jitter = random.uniform(0.8, 1.2)
                 delay = base_delay * jitter
                 print(f"⏳ Retry attempt {attempt + 1}/{max_retries} after {delay:.1f}s delay...")
                 await asyncio.sleep(delay)
 
-            # Longer timeout for translation API: 180 seconds (3 minutes)
-            async with httpx.AsyncClient(timeout=180.0) as client:
+            # Longer timeout for translation API: 420 seconds (7 minutes)
+            # Modified files can take 2-3 minutes, so we need generous timeout
+            async with httpx.AsyncClient(timeout=420.0) as client:
                 response = await client.post(url, json=payload, headers=headers)
 
             # Check for gateway errors (502, 503, 504) - these are retryable
@@ -143,7 +145,7 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
                 continue
 
         except httpx.ReadTimeout as e:
-            print(f"⏱️  Request timeout after 180s (attempt {attempt + 1}/{max_retries})")
+            print(f"⏱️  Request timeout after 420s (attempt {attempt + 1}/{max_retries})")
             if attempt < max_retries - 1:
                 print(f"Will retry with longer backoff... ({max_retries - attempt - 1} attempts remaining)")
             else:
