@@ -3,34 +3,67 @@ import os
 import sys
 import asyncio
 import aiofiles
+import json
+from pathlib import Path
 
-docs_structure = {
-    "general_help": {
-        "English": "en",
-        "Chinese": "cn",
-        "Japanese": "jp"
-    },
-    "plugin_dev": {
+# Load translation config
+SCRIPT_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = SCRIPT_DIR / "config.json"
+
+def load_translation_config():
+    """Load language configuration"""
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return None
+
+TRANSLATION_CONFIG = load_translation_config()
+
+def build_docs_structure():
+    """Build docs structure from config and hardcoded plugin-dev paths"""
+    structure = {}
+
+    # General docs from config
+    if TRANSLATION_CONFIG and "languages" in TRANSLATION_CONFIG:
+        general_help = {}
+        for lang_code, lang_info in TRANSLATION_CONFIG["languages"].items():
+            general_help[lang_info["name"]] = lang_info["directory"]
+        structure["general_help"] = general_help
+    else:
+        # Fallback if config not available
+        structure["general_help"] = {
+            "English": "en",
+            "Chinese": "cn",
+            "Japanese": "jp"
+        }
+
+    # Plugin dev paths (keep hardcoded for now as requested)
+    structure["plugin_dev"] = {
         "English": "plugin-dev-en",
         "Chinese": "plugin-dev-zh",
         "Japanese": "plugin-dev-ja"
-    },
-    "version_28x": {
+    }
+
+    # Versioned docs (keep hardcoded)
+    structure["version_28x"] = {
         "English": "versions/2-8-x/en-us",
         "Chinese": "versions/2-8-x/zh-cn",
         "Japanese": "versions/2-8-x/jp"
-    },
-    "version_30x": {
+    }
+    structure["version_30x"] = {
         "English": "versions/3-0-x/en-us",
         "Chinese": "versions/3-0-x/zh-cn",
         "Japanese": "versions/3-0-x/jp"
-    },
-    "version_31x": {
+    }
+    structure["version_31x"] = {
         "English": "versions/3-1-x/en-us",
         "Chinese": "versions/3-1-x/zh-cn",
         "Japanese": "versions/3-1-x/jp"
     }
-}
+
+    return structure
+
+docs_structure = build_docs_structure()
 
 
 async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=5, the_doc_exist=None, diff_original=None):
