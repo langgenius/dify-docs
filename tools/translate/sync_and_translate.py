@@ -541,9 +541,10 @@ class DocsSynchronizer:
     
     def find_file_in_dropdown_structure(self, file_path: str, dropdown: Dict) -> Optional[List[str]]:
         """
-        Find a file path in a dropdown's pages structure.
+        Find a file path in a dropdown's pages structure or groups with openapi fields.
         Returns the path to the item as a list of keys/indices, or None if not found.
         Example: ["pages", 0, "pages", 2] means dropdown["pages"][0]["pages"][2] == file_path
+        Example: ["groups", 1, "openapi"] means dropdown["groups"][1]["openapi"] == file_path
 
         Note: docs.json stores paths without file extensions, so we strip them for comparison.
         """
@@ -563,9 +564,22 @@ class DocsSynchronizer:
                         return result
             return None
 
-        if "pages" not in dropdown:
-            return None
-        return search_pages(dropdown["pages"], ["pages"])
+        # Search in pages array (markdown files)
+        if "pages" in dropdown:
+            result = search_pages(dropdown["pages"], ["pages"])
+            if result:
+                return result
+
+        # Search in groups array (OpenAPI files)
+        if "groups" in dropdown:
+            groups = dropdown["groups"]
+            for i, group in enumerate(groups):
+                if isinstance(group, dict) and "openapi" in group:
+                    # Compare OpenAPI file paths (no extension stripping needed for .json)
+                    if group["openapi"] == file_path:
+                        return ["groups", i, "openapi"]
+
+        return None
 
     def find_dropdown_containing_file(self, file_path: str, lang_section: Dict) -> Optional[Tuple[str, List[str]]]:
         """
@@ -609,6 +623,60 @@ class DocsSynchronizer:
         pages.append(page_path_no_ext)
         return True
 
+    def _add_openapi_group(self, target_dropdown: Dict, openapi_path: str, file_location: List, en_dropdown: Dict) -> bool:
+        """
+        Add an OpenAPI group to target dropdown.
+        file_location is like ["groups", 1, "openapi"]
+
+        Args:
+            target_dropdown: Target language dropdown structure
+            openapi_path: Path to OpenAPI file (e.g., "cn/api-reference/openapi_test.json")
+            file_location: Location path like ["groups", 1, "openapi"]
+            en_dropdown: English dropdown structure for reference
+
+        Returns:
+            True if added, False if already exists
+        """
+        if len(file_location) < 3 or file_location[0] != "groups" or file_location[2] != "openapi":
+            return False
+
+        group_index = file_location[1]
+
+        # Ensure groups array exists
+        if "groups" not in target_dropdown:
+            target_dropdown["groups"] = []
+
+        # Check if this OpenAPI file already exists in target
+        for group in target_dropdown.get("groups", []):
+            if isinstance(group, dict) and group.get("openapi") == openapi_path:
+                return False  # Already exists
+
+        # Get the English group structure
+        en_groups = en_dropdown.get("groups", [])
+        if group_index >= len(en_groups):
+            return False
+
+        en_group = en_groups[group_index]
+
+        # Create the target group with the same structure but translated path
+        target_group = {
+            "group": en_group.get("group", ""),  # Keep English group name for now (could translate later)
+            "openapi": openapi_path
+        }
+
+        # Ensure we have enough slots in target groups
+        while len(target_dropdown["groups"]) <= group_index:
+            target_dropdown["groups"].append(None)
+
+        # Insert at the same index position
+        if target_dropdown["groups"][group_index] is None:
+            target_dropdown["groups"][group_index] = target_group
+        else:
+            # Index already occupied, append instead
+            target_dropdown["groups"].append(target_group)
+
+        return True
+
     def add_page_at_location(self, target_dropdown: Dict, page_path: str, file_location: List, en_dropdown: Dict) -> bool:
         """
         Add a page to target dropdown at the same nested location as in English dropdown.
@@ -616,14 +684,18 @@ class DocsSynchronizer:
 
         Args:
             target_dropdown: Target language dropdown structure
-            page_path: Path of the file to add (e.g., "cn/documentation/pages/...")
+            page_path: Path of the file to add (e.g., "cn/documentation/pages/..." or "cn/api-reference/openapi_test.json")
             file_location: Location path from find_file_in_dropdown_structure
-                         (e.g., ["pages", 0, "pages", 0, "pages", 3])
+                         (e.g., ["pages", 0, "pages", 0, "pages", 3] or ["groups", 1, "openapi"])
             en_dropdown: English dropdown structure for reference
 
         Returns:
             True if added, False if already exists
         """
+        # Handle OpenAPI groups structure (e.g., ["groups", 1, "openapi"])
+        if file_location and file_location[0] == "groups":
+            return self._add_openapi_group(target_dropdown, page_path, file_location, en_dropdown)
+
         # Strip file extension (docs.json doesn't include extensions)
         page_path_no_ext = re.sub(r'\.(mdx?|md)$', '', page_path)
 
@@ -896,13 +968,27 @@ class DocsSynchronizer:
                         dropdown_name = dropdown.get("dropdown", "")
                         sync_log.append(f"INFO: Checking dropdown {idx + 1}/{len(dropdowns)}: '{dropdown_name}'")
 
+                        # Check pages array for markdown files
                         if "pages" in dropdown:
                             if self.remove_page_from_structure(dropdown["pages"], target_file):
                                 sync_log.append(f"SUCCESS: Removed {target_file} from '{dropdown_name}' ({target_lang})")
                                 removed = True
                                 break
-                        else:
-                            sync_log.append(f"INFO: Dropdown '{dropdown_name}' has no pages array")
+
+                        # Check groups array for OpenAPI files
+                        if "groups" in dropdown:
+                            groups = dropdown["groups"]
+                            for i, group in enumerate(groups):
+                                if isinstance(group, dict) and group.get("openapi") == target_file:
+                                    groups.pop(i)
+                                    sync_log.append(f"SUCCESS: Removed OpenAPI {target_file} from '{dropdown_name}' ({target_lang})")
+                                    removed = True
+                                    break
+                            if removed:
+                                break
+
+                        if "pages" not in dropdown and "groups" not in dropdown:
+                            sync_log.append(f"INFO: Dropdown '{dropdown_name}' has no pages or groups array")
 
                     if not removed:
                         sync_log.append(f"WARNING: Could not find {target_file} in {target_lang} navigation - file may not exist in navigation")
