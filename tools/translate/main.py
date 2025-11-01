@@ -158,16 +158,59 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
             try:
                 response_data = response.json()
 
-                # Extract output1
-                output1 = response_data.get("data", {}).get("outputs", {}).get("output1", "")
-                if not output1:
-                    print("⚠️  Warning: No output1 found in response")
-                    print(f"Response keys: {response_data.keys()}")
+                # Debug: Log full response structure when debugging
+                print(f"📥 Response status: {response.status_code}")
+                print(f"📋 Response top-level keys: {list(response_data.keys())}")
+
+                # Check workflow execution status
+                workflow_run_id = response_data.get("data", {}).get("workflow_run_id", "unknown")
+                status = response_data.get("data", {}).get("status", "unknown")
+                print(f"🔄 Workflow run ID: {workflow_run_id}, Status: {status}")
+
+                # Check for non-successful statuses - fail fast without retry
+                if status in ["failed", "stopped", "unknown"] or status is None:
+                    error_msg = response_data.get("data", {}).get("error", "Unknown error")
+                    print(f"❌ Workflow execution not successful (status: {status}): {error_msg}")
+                    return ""
+
+                # Only proceed if status is "succeeded"
+                if status != "succeeded":
+                    print(f"⚠️ Unexpected workflow status: {status}")
                     if attempt < max_retries - 1:
+                        print(f"Will retry due to unexpected status... ({max_retries - attempt - 1} attempts remaining)")
                         continue
                     return ""
 
-                print(f"✅ Translation completed successfully")
+                # Extract output1
+                data_section = response_data.get("data", {})
+                outputs_section = data_section.get("outputs", {})
+                output1 = outputs_section.get("output1", "")
+
+                # Enhanced debugging when output1 is missing or empty
+                if not output1:
+                    print("⚠️  Warning: No output1 found in response")
+                    print(f"Response structure:")
+                    print(f"  - Top level keys: {list(response_data.keys())}")
+                    if "data" in response_data:
+                        print(f"  - data keys: {list(data_section.keys())}")
+                        if "outputs" in data_section:
+                            print(f"  - outputs keys: {list(outputs_section.keys())}")
+                            print(f"  - outputs content preview: {str(outputs_section)[:200]}")
+                        else:
+                            print(f"  - outputs MISSING, data content: {str(data_section)[:200]}")
+                    else:
+                        print(f"  - data MISSING, response: {str(response_data)[:500]}")
+
+                    # Check if maybe the output is in a different field
+                    if "outputs" in data_section and outputs_section:
+                        print(f"  - Available output fields: {list(outputs_section.keys())}")
+
+                    if attempt < max_retries - 1:
+                        print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
+                        continue
+                    return ""
+
+                print(f"✅ Translation completed successfully (length: {len(output1)} chars)")
                 return output1
 
             except Exception as e:
