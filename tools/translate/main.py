@@ -3,34 +3,82 @@ import os
 import sys
 import asyncio
 import aiofiles
+import json
+from pathlib import Path
 
-docs_structure = {
-    "general_help": {
-        "English": "en",
-        "Chinese": "cn",
-        "Japanese": "jp"
-    },
-    "plugin_dev": {
+# Load translation config
+SCRIPT_DIR = Path(__file__).resolve().parent
+CONFIG_PATH = SCRIPT_DIR / "config.json"
+
+def load_translation_config():
+    """Load language configuration"""
+    if CONFIG_PATH.exists():
+        with open(CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return None
+
+TRANSLATION_CONFIG = load_translation_config()
+
+def build_docs_structure():
+    """Build docs structure from config and hardcoded plugin-dev paths"""
+    structure = {}
+
+    # General docs from config
+    if TRANSLATION_CONFIG and "languages" in TRANSLATION_CONFIG:
+        general_help = {}
+        for lang_code, lang_info in TRANSLATION_CONFIG["languages"].items():
+            general_help[lang_info["name"]] = lang_info["directory"]
+        structure["general_help"] = general_help
+    else:
+        # Fallback if config not available
+        structure["general_help"] = {
+            "English": "en",
+            "Chinese": "cn",
+            "Japanese": "jp"
+        }
+
+    # Plugin dev paths (keep hardcoded for now as requested)
+    structure["plugin_dev"] = {
         "English": "plugin-dev-en",
         "Chinese": "plugin-dev-zh",
         "Japanese": "plugin-dev-ja"
-    },
-    "version_28x": {
-        "English": "versions/2-8-x/en-us",
-        "Chinese": "versions/2-8-x/zh-cn",
-        "Japanese": "versions/2-8-x/jp"
-    },
-    "version_30x": {
-        "English": "versions/3-0-x/en-us",
-        "Chinese": "versions/3-0-x/zh-cn",
-        "Japanese": "versions/3-0-x/jp"
-    },
-    "version_31x": {
-        "English": "versions/3-1-x/en-us",
-        "Chinese": "versions/3-1-x/zh-cn",
-        "Japanese": "versions/3-1-x/jp"
     }
-}
+
+    # Versioned docs from config
+    if TRANSLATION_CONFIG and "versioned_docs" in TRANSLATION_CONFIG:
+        for version_key, version_paths in TRANSLATION_CONFIG["versioned_docs"].items():
+            # Convert version key (e.g., "2-8-x") to structure key (e.g., "version_28x")
+            structure_key = f"version_{version_key.replace('-', '')}"
+            version_structure = {}
+
+            # Map language codes to language names
+            for lang_code, path in version_paths.items():
+                if lang_code in TRANSLATION_CONFIG["languages"]:
+                    lang_name = TRANSLATION_CONFIG["languages"][lang_code]["name"]
+                    version_structure[lang_name] = path
+
+            structure[structure_key] = version_structure
+    else:
+        # Fallback if versioned_docs not in config
+        structure["version_28x"] = {
+            "English": "versions/2-8-x/en-us",
+            "Chinese": "versions/2-8-x/zh-cn",
+            "Japanese": "versions/2-8-x/jp"
+        }
+        structure["version_30x"] = {
+            "English": "versions/3-0-x/en-us",
+            "Chinese": "versions/3-0-x/zh-cn",
+            "Japanese": "versions/3-0-x/jp"
+        }
+        structure["version_31x"] = {
+            "English": "versions/3-1-x/en-us",
+            "Chinese": "versions/3-1-x/zh-cn",
+            "Japanese": "versions/3-1-x/jp"
+        }
+
+    return structure
+
+docs_structure = build_docs_structure()
 
 
 async def translate_text(file_path, dify_api_key, original_language, target_language1, termbase_path=None, max_retries=5, the_doc_exist=None, diff_original=None):
@@ -125,16 +173,59 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
             try:
                 response_data = response.json()
 
-                # Extract output1
-                output1 = response_data.get("data", {}).get("outputs", {}).get("output1", "")
-                if not output1:
-                    print("⚠️  Warning: No output1 found in response")
-                    print(f"Response keys: {response_data.keys()}")
+                # Debug: Log full response structure when debugging
+                print(f"📥 Response status: {response.status_code}")
+                print(f"📋 Response top-level keys: {list(response_data.keys())}")
+
+                # Check workflow execution status
+                workflow_run_id = response_data.get("data", {}).get("workflow_run_id", "unknown")
+                status = response_data.get("data", {}).get("status", "unknown")
+                print(f"🔄 Workflow run ID: {workflow_run_id}, Status: {status}")
+
+                # Check for non-successful statuses - fail fast without retry
+                if status in ["failed", "stopped", "unknown"] or status is None:
+                    error_msg = response_data.get("data", {}).get("error", "Unknown error")
+                    print(f"❌ Workflow execution not successful (status: {status}): {error_msg}")
+                    return ""
+
+                # Only proceed if status is "succeeded"
+                if status != "succeeded":
+                    print(f"⚠️ Unexpected workflow status: {status}")
                     if attempt < max_retries - 1:
+                        print(f"Will retry due to unexpected status... ({max_retries - attempt - 1} attempts remaining)")
                         continue
                     return ""
 
-                print(f"✅ Translation completed successfully")
+                # Extract output1
+                data_section = response_data.get("data", {})
+                outputs_section = data_section.get("outputs", {})
+                output1 = outputs_section.get("output1", "")
+
+                # Enhanced debugging when output1 is missing or empty
+                if not output1:
+                    print("⚠️  Warning: No output1 found in response")
+                    print(f"Response structure:")
+                    print(f"  - Top level keys: {list(response_data.keys())}")
+                    if "data" in response_data:
+                        print(f"  - data keys: {list(data_section.keys())}")
+                        if "outputs" in data_section:
+                            print(f"  - outputs keys: {list(outputs_section.keys())}")
+                            print(f"  - outputs content preview: {str(outputs_section)[:200]}")
+                        else:
+                            print(f"  - outputs MISSING, data content: {str(data_section)[:200]}")
+                    else:
+                        print(f"  - data MISSING, response: {str(response_data)[:500]}")
+
+                    # Check if maybe the output is in a different field
+                    if "outputs" in data_section and outputs_section:
+                        print(f"  - Available output fields: {list(outputs_section.keys())}")
+
+                    if attempt < max_retries - 1:
+                        print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
+                        continue
+                    return ""
+
+                print(f"✅ Translation completed successfully (length: {len(output1)} chars)")
                 return output1
 
             except Exception as e:

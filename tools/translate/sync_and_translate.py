@@ -35,27 +35,6 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 BASE_DIR = SCRIPT_DIR.parent.parent
 DOCS_JSON_PATH = BASE_DIR / "docs.json"
 
-# Language configurations
-LANGUAGES = {
-    "en": {
-        "name": "English",
-        "base_path": "en",
-        "code": "en"
-    },
-    "cn": {
-        "name": "Chinese",
-        "base_path": "cn",
-        "code": "cn"
-    },
-    "jp": {
-        "name": "Japanese",
-        "base_path": "jp",
-        "code": "jp"
-    }
-}
-
-TARGET_LANGUAGES = ["cn", "jp"]
-
 class DocsSynchronizer:
     def __init__(self, dify_api_key: str, enable_security: bool = False):
         self.dify_api_key = dify_api_key
@@ -68,7 +47,6 @@ class DocsSynchronizer:
         if enable_security and create_validator:
             self.validator = create_validator(self.base_dir)
         self.config = self.load_config()
-        self.notices = self.load_notices()
     
     def validate_file_path(self, file_path: str) -> Tuple[bool, Optional[str]]:
         """Validate file path for security if security is enabled"""
@@ -96,25 +74,55 @@ class DocsSynchronizer:
         config_path = SCRIPT_DIR / "config.json"
         if config_path.exists():
             with open(config_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return {
-            "path_mappings": {
-                "en": ["cn", "jp"]
-            },
-            "label_translations": {}
-        }
-    
-    def load_notices(self) -> Dict[str, str]:
-        """Load AI translation notice templates"""
-        notices_path = SCRIPT_DIR / "notices.json"
-        if notices_path.exists():
-            with open(notices_path, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return {
-            "cn": "> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版]({en_path})。\n\n",
-            "jp": "> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版]({en_path})を参照してください。\n\n"
-        }
-    
+                config = json.load(f)
+
+            # Validate required fields
+            required = ["source_language", "target_languages", "languages"]
+            for field in required:
+                if field not in config:
+                    raise ValueError(f"Missing required field in config.json: {field}")
+
+            # Validate all referenced languages exist
+            all_langs = [config["source_language"]] + config["target_languages"]
+            for lang in all_langs:
+                if lang not in config["languages"]:
+                    raise ValueError(f"Language '{lang}' referenced but not defined in languages")
+
+            # Validate target languages have translation_notice
+            for lang in config["target_languages"]:
+                if "translation_notice" not in config["languages"][lang]:
+                    raise ValueError(f"Target language '{lang}' missing translation_notice")
+
+            return config
+
+        raise FileNotFoundError(f"Config file not found: {config_path}")
+
+    @property
+    def source_language(self) -> str:
+        """Get source language code from config"""
+        return self.config["source_language"]
+
+    @property
+    def target_languages(self) -> List[str]:
+        """Get list of target language codes from config"""
+        return self.config["target_languages"]
+
+    def get_language_info(self, lang_code: str) -> Dict[str, Any]:
+        """Get full language information for a language code"""
+        return self.config["languages"].get(lang_code, {})
+
+    def get_language_name(self, lang_code: str) -> str:
+        """Get human-readable language name (e.g., 'English', 'Chinese')"""
+        return self.get_language_info(lang_code).get("name", "")
+
+    def get_language_directory(self, lang_code: str) -> str:
+        """Get directory path for a language (e.g., 'en', 'cn')"""
+        return self.get_language_info(lang_code).get("directory", lang_code)
+
+    def get_translation_notice(self, lang_code: str) -> str:
+        """Get AI translation notice template for a target language"""
+        return self.get_language_info(lang_code).get("translation_notice", "")
+
     def get_changed_files(self, since_commit: str = "HEAD~1") -> Dict[str, List[str]]:
         """Get changed files using git diff"""
         try:
@@ -168,32 +176,34 @@ class DocsSynchronizer:
             return None
     
     def is_english_doc_file(self, file_path: str) -> bool:
-        """Check if file is an English documentation file that should be synced"""
-        return (file_path.startswith("en/") and 
+        """Check if file is a source language documentation file that should be synced"""
+        source_dir = self.get_language_directory(self.source_language)
+        return (file_path.startswith(f"{source_dir}/") and
                 (file_path.endswith('.md') or file_path.endswith('.mdx')) and
-                not file_path.startswith("en/api-reference/"))
+                not file_path.startswith(f"{source_dir}/api-reference/"))
     
-    def convert_path_to_target_language(self, en_path: str, target_lang: str) -> str:
-        """Convert English path to target language path"""
-        if en_path.startswith("en/"):
-            return en_path.replace("en/", f"{target_lang}/", 1)
-        return en_path
+    def convert_path_to_target_language(self, source_path: str, target_lang: str) -> str:
+        """Convert source language path to target language path"""
+        source_dir = self.get_language_directory(self.source_language)
+        target_dir = self.get_language_directory(target_lang)
+        if source_path.startswith(f"{source_dir}/"):
+            return source_path.replace(f"{source_dir}/", f"{target_dir}/", 1)
+        return source_path
     
-    def get_relative_en_path_for_notice(self, target_path: str) -> str:
-        """Get relative path to English version for AI notice"""
-        # Convert cn/documentation/pages/getting-started/faq.md
-        # to ../../en/documentation/pages/getting-started/faq.md
-        if target_path.startswith("cn/"):
-            en_path = target_path.replace("cn/", "en/", 1)
-        elif target_path.startswith("jp/"):
-            en_path = target_path.replace("jp/", "en/", 1)
-        else:
-            return ""
+    def get_relative_source_path_for_notice(self, target_path: str) -> str:
+        """Get relative path to source language version for AI notice"""
+        source_dir = self.get_language_directory(self.source_language)
 
-        # Count directory levels to create relative path
-        target_dir_levels = len(Path(target_path).parent.parts)
-        relative_prefix = "../" * target_dir_levels
-        return relative_prefix + en_path
+        # Find which target language directory this path is in
+        for target_lang in self.target_languages:
+            target_dir = self.get_language_directory(target_lang)
+            if target_path.startswith(f"{target_dir}/"):
+                source_path = target_path.replace(f"{target_dir}/", f"{source_dir}/", 1)
+                target_dir_levels = len(Path(target_path).parent.parts)
+                relative_prefix = "../" * target_dir_levels
+                return relative_prefix + source_path
+
+        return ""
     
     def insert_notice_under_title(self, content: str, notice: str) -> str:
         """Insert notice after frontmatter or first heading to keep it under the doc title."""
@@ -282,14 +292,14 @@ class DocsSynchronizer:
             target_dir.mkdir(parents=True, exist_ok=True)
 
             # Get language names for translation API
-            en_lang_name = LANGUAGES["en"]["name"]
-            target_lang_name = LANGUAGES[target_lang]["name"]
+            source_lang_name = self.get_language_name(self.source_language)
+            target_lang_name = self.get_language_name(target_lang)
 
             # Translate content
             translated_content = await translate_text(
                 str(self.base_dir / en_file_path),
                 self.dify_api_key,
-                en_lang_name,
+                source_lang_name,
                 target_lang_name,
                 the_doc_exist=the_doc_exist,
                 diff_original=diff_original
@@ -300,8 +310,8 @@ class DocsSynchronizer:
                 return False
 
             # Prepare AI notice
-            en_relative_path = self.get_relative_en_path_for_notice(target_file_path)
-            notice = self.notices.get(target_lang, "").format(en_path=en_relative_path)
+            source_relative_path = self.get_relative_source_path_for_notice(target_file_path)
+            notice = self.get_translation_notice(target_lang).format(source_path=source_relative_path)
 
             # Combine notice and translated content
             final_content = self.insert_notice_under_title(translated_content, notice)
@@ -324,25 +334,25 @@ class DocsSynchronizer:
         # Handle added files
         for file_path in changes["added"]:
             if self.is_english_doc_file(file_path):
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     # We'll translate these in the async part
                     operations_log.append(f"WILL_TRANSLATE: {file_path} -> {target_path}")
-        
+
         # Handle deleted files
         for file_path in changes["deleted"]:
             if self.is_english_doc_file(file_path):
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     target_full_path = self.base_dir / target_path
                     if target_full_path.exists():
                         target_full_path.unlink()
                         operations_log.append(f"DELETED: {target_path}")
         
-        # Handle renamed files  
+        # Handle renamed files
         for old_path, new_path in changes["renamed"]:
             if self.is_english_doc_file(old_path) or self.is_english_doc_file(new_path):
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     old_target = self.convert_path_to_target_language(old_path, target_lang)
                     new_target = self.convert_path_to_target_language(new_path, target_lang)
                     
@@ -370,7 +380,7 @@ class DocsSynchronizer:
         # Handle added files (no existing translation)
         for file_path in changes["added"]:
             if self.is_english_doc_file(file_path):
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     # New files - no existing translation or diff needed
                     task = self.translate_file_with_notice(file_path, target_path, target_lang)
@@ -382,7 +392,7 @@ class DocsSynchronizer:
                 # Get diff for this file
                 diff_original = self.get_file_diff(file_path, since_commit)
 
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     target_full_path = self.base_dir / target_path
 
@@ -410,7 +420,7 @@ class DocsSynchronizer:
         # Handle renamed files that need translation
         for old_path, new_path in changes["renamed"]:
             if self.is_english_doc_file(new_path):
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(new_path, target_lang)
                     # Renamed files treated as new
                     task = self.translate_file_with_notice(new_path, target_path, target_lang)
@@ -1219,9 +1229,9 @@ class DocsSynchronizer:
                 if not (self.base_dir / file_path).exists():
                     results["skipped"].append(file_path)
                     continue
-                
+
                 # Translate to target languages
-                for target_lang in TARGET_LANGUAGES:
+                for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     try:
                         success = await self.translate_file_with_notice(

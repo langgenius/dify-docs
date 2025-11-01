@@ -317,6 +317,16 @@ jobs:
           async def secure_sync():
               work_dir = sys.argv[1]
 
+              # Load translation config
+              config_path = Path("../../tools/translate/config.json")
+              with open(config_path, 'r', encoding='utf-8') as f:
+                  translation_config = json.load(f)
+
+              # Get language settings from config
+              SOURCE_LANGUAGE = translation_config.get("source_language", "en")
+              TARGET_LANGUAGES = translation_config.get("target_languages", ["cn", "jp"])
+              source_dir = translation_config["languages"][SOURCE_LANGUAGE]["directory"]
+
               # Load sync plan
               with open(f"{work_dir}/sync_plan.json") as f:
                   sync_plan = json.load(f)
@@ -333,9 +343,9 @@ jobs:
                       print(f"Security error: Invalid path {file_path}")
                       return False
 
-                  # Allow en/ files and docs.json
-                  if not (file_path.startswith("en/") or file_path == "docs.json"):
-                      print(f"Security error: File outside en/ directory: {file_path}")
+                  # Allow source language files and docs.json
+                  if not (file_path.startswith(f"{source_dir}/") or file_path == "docs.json"):
+                      print(f"Security error: File outside {source_dir}/ directory: {file_path}")
                       return False
 
               # Initialize synchronizer
@@ -381,11 +391,11 @@ jobs:
                   except Exception as e:
                       print(f"Warning: Could not detect file status: {e}")
                       # Fallback: treat all as added
-                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith("en/")]
+                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
 
               # If we couldn't detect, treat all as added (safe fallback)
               if not added_files and not modified_files:
-                  added_files = [f["path"] for f in files_to_sync if f["path"].startswith("en/")]
+                  added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
 
               print(f"Detected {len(added_files)} added files, {len(modified_files)} modified files")
 
@@ -422,8 +432,9 @@ jobs:
                               except Exception as e:
                                   print(f"  Warning: Could not get diff for {file_path}: {e}")
 
-                          for target_lang in ["cn", "jp"]:
-                              target_path = file_path.replace("en/", f"{target_lang}/")
+                          for target_lang in TARGET_LANGUAGES:
+                              target_dir = translation_config["languages"][target_lang]["directory"]
+                              target_path = file_path.replace(f"{source_dir}/", f"{target_dir}/")
 
                               # Load existing translation for modified files
                               the_doc_exist = None
@@ -463,7 +474,7 @@ jobs:
                   print("Syncing docs.json structure (incremental mode)...")
                   try:
                       # Get added files (those we just translated)
-                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith("en/")]
+                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
 
                       # Get deleted files from git diff
                       # Use the metadata to get base and head SHAs
@@ -490,7 +501,7 @@ jobs:
                                   for line in result.stdout.strip().split('\n'):
                                       if line and line.startswith('D\t'):
                                           file_path = line.split('\t')[1]
-                                          if file_path.startswith("en/"):
+                                          if file_path.startswith(f"{source_dir}/"):
                                               deleted_files.append(file_path)
                                               print(f"  Found deleted file: {file_path}")
                           except Exception as e:
@@ -505,10 +516,11 @@ jobs:
 
                       # Delete corresponding translation files
                       if deleted_files:
-                          print(f"\nDeleting corresponding translation files for {len(deleted_files)} deleted English files...")
-                          for en_file in deleted_files:
-                              for target_lang in ["cn", "jp"]:
-                                  target_file = en_file.replace("en/", f"{target_lang}/")
+                          print(f"\nDeleting corresponding translation files for {len(deleted_files)} deleted source files...")
+                          for source_file in deleted_files:
+                              for target_lang in TARGET_LANGUAGES:
+                                  target_dir = translation_config["languages"][target_lang]["directory"]
+                                  target_file = source_file.replace(f"{source_dir}/", f"{target_dir}/")
                                   target_path = Path(f"../../{target_file}")
 
                                   if target_path.exists():
