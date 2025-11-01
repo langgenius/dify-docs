@@ -44,22 +44,37 @@ def build_docs_structure():
         "Japanese": "plugin-dev-ja"
     }
 
-    # Versioned docs (keep hardcoded)
-    structure["version_28x"] = {
-        "English": "versions/2-8-x/en-us",
-        "Chinese": "versions/2-8-x/zh-cn",
-        "Japanese": "versions/2-8-x/jp"
-    }
-    structure["version_30x"] = {
-        "English": "versions/3-0-x/en-us",
-        "Chinese": "versions/3-0-x/zh-cn",
-        "Japanese": "versions/3-0-x/jp"
-    }
-    structure["version_31x"] = {
-        "English": "versions/3-1-x/en-us",
-        "Chinese": "versions/3-1-x/zh-cn",
-        "Japanese": "versions/3-1-x/jp"
-    }
+    # Versioned docs from config
+    if TRANSLATION_CONFIG and "versioned_docs" in TRANSLATION_CONFIG:
+        for version_key, version_paths in TRANSLATION_CONFIG["versioned_docs"].items():
+            # Convert version key (e.g., "2-8-x") to structure key (e.g., "version_28x")
+            structure_key = f"version_{version_key.replace('-', '')}"
+            version_structure = {}
+
+            # Map language codes to language names
+            for lang_code, path in version_paths.items():
+                if lang_code in TRANSLATION_CONFIG["languages"]:
+                    lang_name = TRANSLATION_CONFIG["languages"][lang_code]["name"]
+                    version_structure[lang_name] = path
+
+            structure[structure_key] = version_structure
+    else:
+        # Fallback if versioned_docs not in config
+        structure["version_28x"] = {
+            "English": "versions/2-8-x/en-us",
+            "Chinese": "versions/2-8-x/zh-cn",
+            "Japanese": "versions/2-8-x/jp"
+        }
+        structure["version_30x"] = {
+            "English": "versions/3-0-x/en-us",
+            "Chinese": "versions/3-0-x/zh-cn",
+            "Japanese": "versions/3-0-x/jp"
+        }
+        structure["version_31x"] = {
+            "English": "versions/3-1-x/en-us",
+            "Chinese": "versions/3-1-x/zh-cn",
+            "Japanese": "versions/3-1-x/jp"
+        }
 
     return structure
 
