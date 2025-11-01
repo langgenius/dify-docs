@@ -469,12 +469,60 @@ jobs:
                       traceback.print_exc()
                       results["failed"].append(file_path)
 
+              # Process OpenAPI JSON files
+              openapi_files_to_sync = sync_plan.get("openapi_files_to_sync", [])
+              print(f"\nProcessing {len(openapi_files_to_sync)} OpenAPI files...")
+
+              # Import OpenAPI translation function
+              from openapi import translate_openapi_file
+
+              for file_info in openapi_files_to_sync[:5]:  # Limit to 5 OpenAPI files
+                  file_path = file_info["path"]
+                  print(f"Processing OpenAPI: {file_path}")
+
+                  try:
+                      source_full_path = Path(f"../../{file_path}")
+                      if not source_full_path.exists():
+                          results["skipped"].append(f"{file_path} (source file not found)")
+                          continue
+
+                      for target_lang in TARGET_LANGUAGES:
+                          target_dir = translation_config["languages"][target_lang]["directory"]
+                          target_path = file_path.replace(f"{source_dir}/", f"{target_dir}/")
+                          target_full_path = Path(f"../../{target_path}")
+
+                          # Ensure target directory exists
+                          target_full_path.parent.mkdir(parents=True, exist_ok=True)
+
+                          # Run OpenAPI translation pipeline
+                          success = translate_openapi_file(
+                              source_file=str(source_full_path),
+                              target_lang=target_lang,
+                              output_file=str(target_full_path),
+                              dify_api_key=api_key
+                          )
+
+                          if success:
+                              results["translated"].append(f"{target_path} (openapi)")
+                              print(f"✅ Successfully translated OpenAPI: {file_path} → {target_path}")
+                          else:
+                              results["failed"].append(target_path)
+                              print(f"❌ Failed to translate OpenAPI: {file_path} → {target_path}")
+
+                  except Exception as e:
+                      print(f"Error processing OpenAPI {file_path}: {e}")
+                      import traceback
+                      traceback.print_exc()
+                      results["failed"].append(file_path)
+
               # Handle docs.json structure sync if needed (INCREMENTAL MODE)
               if sync_plan.get("structure_changes", {}).get("structure_changed"):
                   print("Syncing docs.json structure (incremental mode)...")
                   try:
                       # Get added files (those we just translated)
+                      # Include both markdown files and OpenAPI files
                       added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
+                      added_files += [f["path"] for f in openapi_files_to_sync if f["path"].startswith(f"{source_dir}/")]
 
                       # Get deleted files from git diff
                       # Use the metadata to get base and head SHAs
