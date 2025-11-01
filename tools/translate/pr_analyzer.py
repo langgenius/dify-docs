@@ -21,6 +21,15 @@ class PRAnalyzer:
         self.head_sha = head_sha
         self.repo_root = Path(repo_root) if repo_root else Path(__file__).parent.parent.parent
         self.docs_json_path = self.repo_root / "docs.json"
+        self.config = self._load_config()
+
+    def _load_config(self) -> Dict:
+        """Load translation configuration."""
+        config_path = Path(__file__).parent / "config.json"
+        if config_path.exists():
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return {}
     
     def get_changed_files(self) -> List[str]:
         """Get list of changed files between base and head commits."""
@@ -102,31 +111,69 @@ class PRAnalyzer:
         
         return changes
     
+    def is_openapi_file(self, file_path: str) -> bool:
+        """Check if file matches OpenAPI patterns from config."""
+        openapi_config = self.config.get('openapi', {})
+
+        if not openapi_config.get('enabled', False):
+            return False
+
+        patterns = openapi_config.get('file_patterns', [])
+        directories = openapi_config.get('directories', [])
+
+        # Check if in allowed directory
+        path_parts = Path(file_path).parts
+        if len(path_parts) < 3:  # e.g., en/api-reference/file.json
+            return False
+
+        dir_name = path_parts[1]  # Get directory after language code
+        if dir_name not in directories:
+            return False
+
+        # Check if matches any pattern
+        file_name = Path(file_path).name
+        for pattern in patterns:
+            if self._match_pattern(file_name, pattern):
+                return True
+
+        return False
+
+    def _match_pattern(self, filename: str, pattern: str) -> bool:
+        """Simple glob-like pattern matching."""
+        regex = pattern.replace('*', '.*').replace('?', '.')
+        return bool(re.match(f'^{regex}$', filename))
+
     def categorize_files(self, files: List[str]) -> Dict[str, List[str]]:
         """Categorize changed files by type."""
         categories = {
             'english': [],
+            'english_openapi': [],      # NEW category
             'translation': [],
+            'translation_openapi': [],  # NEW category
             'docs_json': [],
             'other': []
         }
-        
+
         for file in files:
             if file == 'docs.json':
                 categories['docs_json'].append(file)
             elif file.startswith('en/'):
                 if file.endswith(('.md', '.mdx')):
                     categories['english'].append(file)
+                elif self.is_openapi_file(file):  # NEW
+                    categories['english_openapi'].append(file)
                 else:
                     categories['other'].append(file)
             elif file.startswith(('jp/', 'cn/')):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
+                elif self.is_openapi_file(file):  # NEW
+                    categories['translation_openapi'].append(file)
                 else:
                     categories['other'].append(file)
             else:
                 categories['other'].append(file)
-        
+
         return categories
     
     def categorize_pr(self) -> Dict[str, any]:
@@ -143,13 +190,13 @@ class PRAnalyzer:
         
         file_categories = self.categorize_files(changed_files)
         docs_json_changes = self.analyze_docs_json_changes()
-        
-        # Determine if there are English content changes
-        has_english_files = len(file_categories['english']) > 0
+
+        # Determine if there are English content changes (including OpenAPI)
+        has_english_files = len(file_categories['english']) > 0 or len(file_categories['english_openapi']) > 0
         has_english_docs_changes = docs_json_changes['english_section']
-        
-        # Determine if there are translation changes
-        has_translation_files = len(file_categories['translation']) > 0  
+
+        # Determine if there are translation changes (including OpenAPI)
+        has_translation_files = len(file_categories['translation']) > 0 or len(file_categories['translation_openapi']) > 0
         has_translation_docs_changes = docs_json_changes['translation_sections']
         
         # Filter out non-documentation changes from consideration

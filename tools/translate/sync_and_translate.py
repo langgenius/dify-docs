@@ -22,6 +22,9 @@ from main import translate_text, load_md_mdx
 # Import format-preserving JSON serialization
 from json_formatter import save_json_with_preserved_format
 
+# Import OpenAPI translation pipeline
+from openapi import translate_openapi_file
+
 # Import security validator
 try:
     from security_validator import SecurityValidator, create_validator
@@ -1244,7 +1247,62 @@ class DocsSynchronizer:
                     except Exception as e:
                         print(f"Error translating {file_path} to {target_lang}: {e}")
                         results["failed"].append(target_path)
-            
+
+            # Process OpenAPI JSON files
+            openapi_files_to_sync = sync_plan.get("openapi_files_to_sync", [])
+
+            # Limit number of OpenAPI files for security
+            max_openapi_files = 5 if self.enable_security else len(openapi_files_to_sync)
+            openapi_files_to_process = openapi_files_to_sync[:max_openapi_files]
+
+            for file_info in openapi_files_to_process:
+                file_path = file_info.get("path")
+                if not file_path:
+                    continue
+
+                # Additional security validation per file
+                if self.enable_security:
+                    valid, error = self.validate_file_path(file_path)
+                    if not valid:
+                        results["errors"].append(f"Invalid OpenAPI file path {file_path}: {error}")
+                        continue
+
+                print(f"Processing OpenAPI: {file_path}")
+
+                # Check if source file exists
+                source_full_path = self.base_dir / file_path
+                if not source_full_path.exists():
+                    results["skipped"].append(file_path)
+                    continue
+
+                # Translate to target languages
+                for target_lang in self.target_languages:
+                    target_path = self.convert_path_to_target_language(file_path, target_lang)
+                    target_full_path = self.base_dir / target_path
+
+                    try:
+                        # Ensure target directory exists
+                        target_full_path.parent.mkdir(parents=True, exist_ok=True)
+
+                        # Run OpenAPI translation pipeline
+                        success = translate_openapi_file(
+                            source_file=str(source_full_path),
+                            target_lang=target_lang,
+                            output_file=str(target_full_path),
+                            dify_api_key=self.dify_api_key
+                        )
+
+                        if success:
+                            results["translated"].append(target_path)
+                            print(f"✅ Successfully translated OpenAPI: {file_path} → {target_path}")
+                        else:
+                            results["failed"].append(target_path)
+                            print(f"❌ Failed to translate OpenAPI: {file_path} → {target_path}")
+
+                    except Exception as e:
+                        print(f"Error translating OpenAPI {file_path} to {target_lang}: {e}")
+                        results["failed"].append(target_path)
+
             # Handle structure changes
             structure_changes = sync_plan.get("structure_changes", {})
             if structure_changes.get("structure_changed"):
