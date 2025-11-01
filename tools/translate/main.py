@@ -122,7 +122,7 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
         inputs["diff_original"] = diff_original
 
     payload = {
-        "response_mode": "blocking",
+        "response_mode": "streaming",  # Use streaming to avoid gateway timeouts
         "user": "Dify",
         "inputs": inputs
     }
@@ -146,99 +146,81 @@ async def translate_text(file_path, dify_api_key, original_language, target_lang
                 print(f"⏳ Retry attempt {attempt + 1}/{max_retries} after {delay:.1f}s delay...")
                 await asyncio.sleep(delay)
 
-            # Longer timeout for translation API: 420 seconds (7 minutes)
-            # Modified files can take 2-3 minutes, so we need generous timeout
-            async with httpx.AsyncClient(timeout=420.0) as client:
-                response = await client.post(url, json=payload, headers=headers)
+            # Streaming mode: no gateway timeout issues
+            # Set timeout to 600s (10 min) for the entire stream
+            async with httpx.AsyncClient(timeout=600.0) as client:
+                async with client.stream("POST", url, json=payload, headers=headers) as response:
+                    # Check initial response status
+                    if response.status_code != 200:
+                        print(f"❌ HTTP Error: {response.status_code}")
+                        error_text = await response.aread()
+                        print(f"Response: {error_text.decode('utf-8')[:500]}")
+                        if response.status_code in [502, 503, 504]:
+                            if attempt < max_retries - 1:
+                                print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
+                                continue
+                        return ""
 
-            # Check for gateway errors (502, 503, 504) - these are retryable
-            if response.status_code in [502, 503, 504]:
-                print(f"⚠️  Gateway error {response.status_code} - API backend timeout or overload")
+                    # Parse streaming response (Server-Sent Events format)
+                    print(f"📥 Receiving streaming response...")
+                    output1 = None
+                    workflow_run_id = None
+                    final_status = None
+
+                    async for line in response.aiter_lines():
+                        line = line.strip()
+                        if not line or not line.startswith("data: "):
+                            continue
+
+                        try:
+                            # Remove "data: " prefix and parse JSON
+                            json_str = line[6:]  # Remove "data: "
+                            event_data = json.loads(json_str)
+                            event_type = event_data.get("event", "")
+
+                            # Track workflow ID
+                            if "workflow_run_id" in event_data:
+                                workflow_run_id = event_data["workflow_run_id"]
+
+                            # Handle different event types
+                            if event_type == "workflow_started":
+                                print(f"🔄 Workflow started: {workflow_run_id}")
+                            elif event_type == "workflow_finished":
+                                final_status = event_data.get("data", {}).get("status", "unknown")
+                                print(f"🔄 Workflow finished with status: {final_status}")
+                                # Extract output1 from final event
+                                outputs = event_data.get("data", {}).get("outputs", {})
+                                output1 = outputs.get("output1", "")
+                            elif event_type == "node_started":
+                                node_type = event_data.get("data", {}).get("node_type", "")
+                                print(f"  ⚙️  Node started: {node_type}")
+                            elif event_type == "error":
+                                error_msg = event_data.get("message", "Unknown error")
+                                print(f"❌ Workflow error: {error_msg}")
+                                return ""
+                        except json.JSONDecodeError as e:
+                            # Skip invalid JSON lines
+                            continue
+
+            # Check final status and output
+            if final_status == "failed":
+                print(f"❌ Workflow execution failed")
+                return ""
+
+            if not output1:
+                print(f"⚠️  Warning: No output1 found in workflow_finished event")
                 if attempt < max_retries - 1:
                     print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
                     continue
-                else:
-                    print(f"❌ All {max_retries} attempts exhausted due to gateway errors")
-                    return ""
+                return ""
 
-            # Check for other HTTP errors
-            if response.status_code != 200:
-                print(f"❌ HTTP Error: {response.status_code}")
-                print(f"Response: {response.text[:500]}")  # Limit output
-                if attempt == max_retries - 1:
-                    return ""
-                continue
-
-            # Parse successful response
-            try:
-                response_data = response.json()
-
-                # Debug: Log full response structure when debugging
-                print(f"📥 Response status: {response.status_code}")
-                print(f"📋 Response top-level keys: {list(response_data.keys())}")
-
-                # Check workflow execution status
-                workflow_run_id = response_data.get("data", {}).get("workflow_run_id", "unknown")
-                status = response_data.get("data", {}).get("status", "unknown")
-                print(f"🔄 Workflow run ID: {workflow_run_id}, Status: {status}")
-
-                # Check for non-successful statuses - fail fast without retry
-                if status in ["failed", "stopped", "unknown"] or status is None:
-                    error_msg = response_data.get("data", {}).get("error", "Unknown error")
-                    print(f"❌ Workflow execution not successful (status: {status}): {error_msg}")
-                    return ""
-
-                # Only proceed if status is "succeeded"
-                if status != "succeeded":
-                    print(f"⚠️ Unexpected workflow status: {status}")
-                    if attempt < max_retries - 1:
-                        print(f"Will retry due to unexpected status... ({max_retries - attempt - 1} attempts remaining)")
-                        continue
-                    return ""
-
-                # Extract output1
-                data_section = response_data.get("data", {})
-                outputs_section = data_section.get("outputs", {})
-                output1 = outputs_section.get("output1", "")
-
-                # Enhanced debugging when output1 is missing or empty
-                if not output1:
-                    print("⚠️  Warning: No output1 found in response")
-                    print(f"Response structure:")
-                    print(f"  - Top level keys: {list(response_data.keys())}")
-                    if "data" in response_data:
-                        print(f"  - data keys: {list(data_section.keys())}")
-                        if "outputs" in data_section:
-                            print(f"  - outputs keys: {list(outputs_section.keys())}")
-                            print(f"  - outputs content preview: {str(outputs_section)[:200]}")
-                        else:
-                            print(f"  - outputs MISSING, data content: {str(data_section)[:200]}")
-                    else:
-                        print(f"  - data MISSING, response: {str(response_data)[:500]}")
-
-                    # Check if maybe the output is in a different field
-                    if "outputs" in data_section and outputs_section:
-                        print(f"  - Available output fields: {list(outputs_section.keys())}")
-
-                    if attempt < max_retries - 1:
-                        print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
-                        continue
-                    return ""
-
-                print(f"✅ Translation completed successfully (length: {len(output1)} chars)")
-                return output1
-
-            except Exception as e:
-                print(f"❌ Error parsing response: {e}")
-                print(f"Response text (first 500 chars): {response.text[:500]}")
-                if attempt == max_retries - 1:
-                    return ""
-                continue
+            print(f"✅ Translation completed successfully (length: {len(output1)} chars)")
+            return output1
 
         except httpx.ReadTimeout as e:
-            print(f"⏱️  Request timeout after 420s (attempt {attempt + 1}/{max_retries})")
+            print(f"⏱️  Stream timeout after 600s (attempt {attempt + 1}/{max_retries})")
             if attempt < max_retries - 1:
-                print(f"Will retry with longer backoff... ({max_retries - attempt - 1} attempts remaining)")
+                print(f"Will retry... ({max_retries - attempt - 1} attempts remaining)")
             else:
                 print(f"❌ All {max_retries} attempts failed due to timeout")
                 return ""
