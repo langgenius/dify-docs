@@ -7,10 +7,13 @@ on:
       - 'docs.json'
       - 'en/**/*.md'
       - 'en/**/*.mdx'
+      - 'en/**/openapi*.json'
       - 'cn/**/*.md'
       - 'cn/**/*.mdx'
+      - 'cn/**/openapi*.json'
       - 'jp/**/*.md'
       - 'jp/**/*.mdx'
+      - 'jp/**/openapi*.json'
       - 'versions/**/*.md'
       - 'versions/**/*.mdx'
 
@@ -124,15 +127,27 @@ jobs:
           
           # Analyze file types and sizes for English files that need translation
           > /tmp/file_analysis.txt
+          > /tmp/openapi_analysis.txt
           while IFS= read -r file; do
             if [[ "$file" =~ ^en/.*\.(md|mdx)$ ]] && [ -f "$file" ]; then
               SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
-              echo "$file|$SIZE" >> /tmp/file_analysis.txt
-              
+              echo "$file|$SIZE|markdown" >> /tmp/file_analysis.txt
+
               # Security check: File size limit (10MB)
               MAX_SIZE=$((10 * 1024 * 1024))
               if [ "$SIZE" -gt "$MAX_SIZE" ]; then
                 echo "Error: File $file exceeds size limit ($SIZE > $MAX_SIZE)"
+                echo "error=file_too_large" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            elif [[ "$file" =~ ^en/.*/openapi.*\.json$ ]] && [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              echo "$file|$SIZE|openapi_json" >> /tmp/openapi_analysis.txt
+
+              # Security check: File size limit for OpenAPI JSON (10MB)
+              MAX_SIZE=$((10 * 1024 * 1024))
+              if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo "Error: OpenAPI file $file exceeds size limit ($SIZE > $MAX_SIZE)"
                 echo "error=file_too_large" >> $GITHUB_OUTPUT
                 exit 1
               fi
@@ -198,7 +213,38 @@ jobs:
               fi
             fi
           done < /tmp/file_analysis.txt
-          
+
+          # Validate OpenAPI JSON files
+          if [ -f "/tmp/openapi_analysis.txt" ] && [ -s "/tmp/openapi_analysis.txt" ]; then
+            while IFS='|' read -r file size file_type; do
+              if [ -n "$file" ]; then
+                # Check for directory traversal
+                if echo "$file" | grep -q '\.\./'; then
+                  echo "Error: Invalid file path: $file"
+                  exit 1
+                fi
+
+                # Check file extension
+                if ! echo "$file" | grep -qE '\.json$'; then
+                  echo "Error: Invalid OpenAPI file type: $file"
+                  exit 1
+                fi
+
+                # Check path starts with en/
+                if ! echo "$file" | grep -qE '^en/'; then
+                  echo "Error: Non-English OpenAPI file in translation list: $file"
+                  exit 1
+                fi
+
+                # Check pattern match (configurable via openapi*.json)
+                if ! echo "$file" | grep -qE 'openapi.*\.json$'; then
+                  echo "Error: File doesn't match OpenAPI pattern: $file"
+                  exit 1
+                fi
+              fi
+            done < /tmp/openapi_analysis.txt
+          fi
+
           echo "All English file paths validated for translation"
 
       - name: Create analysis summary  
@@ -215,18 +261,34 @@ jobs:
           with open("/tmp/analysis.json") as f:
               analysis = json.load(f)
           
-          # Load file analysis (English files to translate)
+          # Load file analysis (English markdown files to translate)
           files_to_sync = []
           with open("/tmp/file_analysis.txt") as f:
               for line in f:
                   if line.strip():
-                      file_path, size = line.strip().split("|")
+                      parts = line.strip().split("|")
+                      file_path, size = parts[0], int(parts[1])
+                      file_type = parts[2] if len(parts) > 2 else ("mdx" if file_path.endswith(".mdx") else "md")
                       files_to_sync.append({
                           "path": file_path,
-                          "size": int(size),
-                          "type": "mdx" if file_path.endswith(".mdx") else "md"
+                          "size": size,
+                          "type": file_type
                       })
-          
+
+          # Load OpenAPI file analysis (English OpenAPI JSON files to translate)
+          openapi_files_to_sync = []
+          if os.path.exists("/tmp/openapi_analysis.txt"):
+              with open("/tmp/openapi_analysis.txt") as f:
+                  for line in f:
+                      if line.strip():
+                          parts = line.strip().split("|")
+                          file_path, size, file_type = parts[0], int(parts[1]), parts[2]
+                          openapi_files_to_sync.append({
+                              "path": file_path,
+                              "size": size,
+                              "type": file_type
+                          })
+
           # Note: docs.json is NOT added to files_to_sync
           # It's handled separately via structure_changes and sync_docs_json_structure()
           # because it needs structure syncing, not translation
@@ -239,18 +301,21 @@ jobs:
           sync_plan = {
               "metadata": analysis,
               "files_to_sync": files_to_sync,
+              "openapi_files_to_sync": openapi_files_to_sync,
               "structure_changes": structure_changes,
               "target_languages": ["cn", "jp"],
-              "sync_required": len(files_to_sync) > 0 or structure_changes.get("structure_changed", False)
+              "sync_required": len(files_to_sync) > 0 or len(openapi_files_to_sync) > 0 or structure_changes.get("structure_changed", False)
           }
           
           # Save sync plan
           with open("/tmp/sync_plan.json", "w") as f:
               json.dump(sync_plan, f, indent=2)
           
-          print(f"English sync plan created: {len(files_to_sync)} files to translate")
+          print(f"English sync plan created:")
+          print(f"  - {len(files_to_sync)} markdown files to translate")
+          print(f"  - {len(openapi_files_to_sync)} OpenAPI JSON files to translate")
           if structure_changes.get("structure_changed"):
-              print("Documentation structure changes detected")
+              print("  - Documentation structure changes detected")
           EOF
 
       - name: Upload analysis artifacts
@@ -262,6 +327,7 @@ jobs:
             /tmp/analysis.json
             /tmp/changed_files.txt
             /tmp/file_analysis.txt
+            /tmp/openapi_analysis.txt
             /tmp/sync_plan.json
             /tmp/docs_json_changed.txt
             /tmp/structure_changes.json
