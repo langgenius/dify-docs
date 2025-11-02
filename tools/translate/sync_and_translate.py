@@ -23,7 +23,7 @@ from main import translate_text, load_md_mdx
 from json_formatter import save_json_with_preserved_format
 
 # Import OpenAPI translation pipeline
-from openapi import translate_openapi_file
+from openapi import translate_openapi_file, translate_openapi_file_async
 
 # Import security validator
 try:
@@ -1370,8 +1370,8 @@ class DocsSynchronizer:
                         # Ensure target directory exists
                         target_full_path.parent.mkdir(parents=True, exist_ok=True)
 
-                        # Run OpenAPI translation pipeline
-                        success = translate_openapi_file(
+                        # Run OpenAPI translation pipeline (use async version)
+                        success = await translate_openapi_file_async(
                             source_file=str(source_full_path),
                             target_lang=target_lang,
                             output_file=str(target_full_path),

@@ -14,9 +14,9 @@ from pathlib import Path
 import tempfile
 
 
-def translate_openapi_file(source_file: str, target_lang: str, output_file: str, dify_api_key: str = None) -> bool:
+async def translate_openapi_file_async(source_file: str, target_lang: str, output_file: str, dify_api_key: str = None) -> bool:
     """
-    Complete pipeline to translate an OpenAPI JSON file.
+    Complete pipeline to translate an OpenAPI JSON file (async version).
 
     Pipeline stages:
     1. Extract: Pull all translatable fields into markdown
@@ -57,10 +57,10 @@ def translate_openapi_file(source_file: str, target_lang: str, output_file: str,
         print(f"   ✓ Saved extraction map: {extraction_map_path}")
         print(f"   ✓ Saved markdown for translation: {markdown_path}")
 
-        # Step 2: Translate via Dify API
+        # Step 2: Translate via Dify API (use async version)
         print(f"\n🌐 Step 2/3: Translating to {target_lang}...")
         translator = OpenAPITranslator(markdown_path, target_lang, dify_api_key)
-        translated_text = translator.translate()
+        translated_text = await translator.translate_async()
 
         translator.save_translation(translated_md_path, translated_text)
         print(f"   ✓ Translation complete")
@@ -107,5 +107,27 @@ def translate_openapi_file(source_file: str, target_lang: str, output_file: str,
         print(f"🗂️  Temp files kept for debugging: {temp_dir}")
 
 
-# Export main function
-__all__ = ['translate_openapi_file', 'OpenAPIExtractor', 'OpenAPITranslator', 'OpenAPIRehydrator']
+def translate_openapi_file(source_file: str, target_lang: str, output_file: str, dify_api_key: str = None) -> bool:
+    """
+    Complete pipeline to translate an OpenAPI JSON file (sync wrapper).
+
+    Pipeline stages:
+    1. Extract: Pull all translatable fields into markdown
+    2. Translate: Send to Dify API for translation
+    3. Re-hydrate: Merge translations back into JSON structure
+
+    Args:
+        source_file: Path to source English OpenAPI JSON file
+        target_lang: Target language code (cn, jp)
+        output_file: Path to save translated JSON file
+        dify_api_key: Optional Dify API key (if None, loads from env)
+
+    Returns:
+        True if successful, False otherwise
+    """
+    import asyncio
+    return asyncio.run(translate_openapi_file_async(source_file, target_lang, output_file, dify_api_key))
+
+
+# Export main functions
+__all__ = ['translate_openapi_file', 'translate_openapi_file_async', 'OpenAPIExtractor', 'OpenAPITranslator', 'OpenAPIRehydrator']
