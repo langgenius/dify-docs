@@ -96,21 +96,23 @@ jobs:
       - name: Find associated translation PR
         if: steps.check-pr-type.outputs.should_update == 'true'
         id: find-translation-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           echo "Looking for translation PR associated with PR #${PR_NUMBER}..."
-          
+
           # Search for translation PR by branch name pattern
           TRANSLATION_PR_DATA=$(gh pr list \
             --search "head:docs-sync-pr-${PR_NUMBER}" \
             --json number,title,url,state \
             --jq '.[0] // empty' 2>/dev/null || echo "")
-          
+
           if [ -n "$TRANSLATION_PR_DATA" ] && [ "$TRANSLATION_PR_DATA" != "null" ]; then
             TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_DATA" | jq -r '.number')
             TRANSLATION_PR_STATE=$(echo "$TRANSLATION_PR_DATA" | jq -r '.state')
             TRANSLATION_PR_URL=$(echo "$TRANSLATION_PR_DATA" | jq -r '.url')
-            
+
             if [ "$TRANSLATION_PR_STATE" = "OPEN" ]; then
               echo "✅ Found active translation PR #${TRANSLATION_PR_NUMBER}"
               echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
@@ -125,6 +127,41 @@ jobs:
             echo "found_translation_pr=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: Determine update range
+        if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
+        id: update-range
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          TRANSLATION_PR_NUMBER="${{ steps.find-translation-pr.outputs.translation_pr_number }}"
+          PR_BASE="${{ github.event.pull_request.base.sha }}"
+          PR_HEAD="${{ github.event.pull_request.head.sha }}"
+
+          echo "Determining incremental update range..."
+
+          # Get last processed commit from translation PR comments
+          LAST_PROCESSED=$(gh pr view "$TRANSLATION_PR_NUMBER" \
+            --json comments \
+            --jq '.comments | reverse | .[] | .body' 2>/dev/null \
+            | grep -oP 'Last-Processed-Commit: \K[a-f0-9]+' \
+            | head -1 || echo "")
+
+          if [ -n "$LAST_PROCESSED" ]; then
+            echo "✅ Found last processed commit: $LAST_PROCESSED"
+            COMPARE_BASE="$LAST_PROCESSED"
+          else
+            echo "⚠️ No last processed commit found, using PR base"
+            COMPARE_BASE="$PR_BASE"
+          fi
+
+          COMPARE_HEAD="$PR_HEAD"
+
+          echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
+          echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
+
+          echo "📊 Incremental update range: $COMPARE_BASE...$COMPARE_HEAD"
+
       - name: Install dependencies
         if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
         run: |
@@ -138,12 +175,14 @@ jobs:
           DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
         run: |
           echo "Updating translations for PR #${{ github.event.pull_request.number }}..."
-          
+
           PR_NUMBER=${{ github.event.pull_request.number }}
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
           PR_BRANCH="${{ github.event.pull_request.head.ref }}"
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          BASE_SHA="${{ steps.update-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.update-range.outputs.compare_head }}"
+
+          echo "Using incremental comparison: $BASE_SHA...$HEAD_SHA"
 
           # Switch to translation branch
           git fetch origin "$SYNC_BRANCH:$SYNC_BRANCH" || {
@@ -154,11 +193,7 @@ jobs:
 
           git checkout "$SYNC_BRANCH"
 
-          # Reset translation branch to main (keep working directory)
-          git reset --soft origin/main
-          git reset
-
-          # Checkout English files from PR to translate
+          # For incremental updates, checkout English files from PR HEAD
           git fetch origin "$PR_BRANCH:refs/remotes/origin/$PR_BRANCH"
           git checkout "origin/$PR_BRANCH" -- en/ || echo "No English files to checkout"
           
@@ -337,25 +372,42 @@ jobs:
       - name: Commit and push translation updates
         if: steps.update-translations.outputs.has_changes == 'true'
         id: commit-updates
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           PR_NUMBER=${{ github.event.pull_request.number }}
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
-          
+          HEAD_SHA="${{ steps.update-range.outputs.compare_head }}"
+
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
 
           # Commit only translation changes (not English files)
           git add cn/ jp/ docs.json
-          git commit -m "🔄 Update translations for PR #${PR_NUMBER}
-          
-          Updated translations following changes in PR #${PR_NUMBER}.
-          
-          Auto-updated by translation workflow.
-          🤖 Generated with GitHub Actions"
-          
-          # Push updates to translation branch
-          git push origin "$SYNC_BRANCH" --force
-          
+          git commit -m "🔄 Update translations for commit ${HEAD_SHA:0:8}
+
+Auto-generated translation updates for changes in commit ${HEAD_SHA}.
+
+Last-Processed-Commit: ${HEAD_SHA}
+Original-PR: #${PR_NUMBER}
+Languages: Chinese (cn), Japanese (jp)
+
+🤖 Generated with GitHub Actions"
+
+          # Push updates to translation branch (no force - preserve history)
+          git push origin "$SYNC_BRANCH"
+
+          # Add tracking comment to translation PR
+          TRANSLATION_PR_NUMBER="${{ steps.find-translation-pr.outputs.translation_pr_number }}"
+
+          gh pr comment "$TRANSLATION_PR_NUMBER" --body "<!-- Last-Processed-Commit: ${HEAD_SHA} -->
+🔄 **Updated for commit \`${HEAD_SHA:0:8}\`**
+
+Latest source changes from PR #${PR_NUMBER} have been translated and committed.
+
+**Source commit:** [\`${HEAD_SHA:0:8}\`](https://github.com/${{ github.repository }}/commit/${HEAD_SHA})
+**Original PR:** #${PR_NUMBER}" || echo "Failed to add comment"
+
           echo "commit_successful=true" >> $GITHUB_OUTPUT
           echo "✅ Translation updates committed and pushed"
 

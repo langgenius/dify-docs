@@ -35,18 +35,84 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Determine comparison range
+        id: determine-range
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Determining comparison range..."
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          EVENT_ACTION="${{ github.event.action }}"
+          PR_BASE="${{ github.event.pull_request.base.sha }}"
+          PR_HEAD="${{ github.event.pull_request.head.sha }}"
+
+          if [ "$EVENT_ACTION" = "synchronize" ]; then
+            echo "🔄 Synchronize event - detecting incremental changes"
+
+            # Try to get last processed commit from translation PR
+            TRANSLATION_PR=$(gh pr list \
+              --search "head:docs-sync-pr-${PR_NUMBER} state:open" \
+              --json number \
+              --jq '.[0].number // empty' 2>/dev/null || echo "")
+
+            LAST_PROCESSED=""
+            if [ -n "$TRANSLATION_PR" ]; then
+              echo "Found translation PR #${TRANSLATION_PR}"
+
+              # Extract last processed commit from comments (reverse order to get latest)
+              LAST_PROCESSED=$(gh pr view "$TRANSLATION_PR" \
+                --json comments \
+                --jq '.comments | reverse | .[] | .body' 2>/dev/null \
+                | grep -oP 'Last-Processed-Commit: \K[a-f0-9]+' \
+                | head -1 || echo "")
+
+              if [ -n "$LAST_PROCESSED" ]; then
+                echo "✅ Found tracked commit in translation PR: $LAST_PROCESSED"
+              fi
+            fi
+
+            # Use tracked commit if available, otherwise fall back to github.event.before
+            if [ -n "$LAST_PROCESSED" ]; then
+              COMPARE_BASE="$LAST_PROCESSED"
+              echo "Using last processed commit: $COMPARE_BASE"
+            elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              COMPARE_BASE="${{ github.event.before }}"
+              echo "Using github.event.before: $COMPARE_BASE"
+            else
+              # Fallback to PR base (first push after PR creation)
+              COMPARE_BASE="$PR_BASE"
+              echo "⚠️ No previous commit found, using PR base: $COMPARE_BASE"
+            fi
+
+            COMPARE_HEAD="$PR_HEAD"
+            IS_INCREMENTAL="true"
+
+          else
+            echo "🆕 New PR event - analyzing full changes"
+            COMPARE_BASE="$PR_BASE"
+            COMPARE_HEAD="$PR_HEAD"
+            IS_INCREMENTAL="false"
+          fi
+
+          echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
+          echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
+          echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
+
+          echo "📊 Comparison range: $COMPARE_BASE...$COMPARE_HEAD"
+
       - name: Categorize and validate PR changes
         id: categorize
         run: |
           echo "Categorizing PR changes..."
-          
-          # Get base and head commits
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
+
+          # Get comparison range from previous step
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+
           echo "Base SHA: $BASE_SHA"
           echo "Head SHA: $HEAD_SHA"
-          
+
           # Run PR analyzer
           cd tools/translate
           python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
@@ -87,9 +153,14 @@ jobs:
         id: analyze
         run: |
           echo "Analyzing English changes for automatic translation..."
-          
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+
+          # Use comparison range from determine-range step
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+          IS_INCREMENTAL="${{ steps.determine-range.outputs.is_incremental }}"
+
+          echo "Comparison: $BASE_SHA...$HEAD_SHA"
+          echo "Incremental: $IS_INCREMENTAL"
           
           # Get all changed files (not just English ones for file analysis)
           CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA)
@@ -114,6 +185,8 @@ jobs:
             "pr_author": "${{ github.event.pull_request.user.login }}",
             "base_sha": "$BASE_SHA",
             "head_sha": "$HEAD_SHA",
+            "is_incremental": $IS_INCREMENTAL,
+            "event_action": "${{ github.event.action }}",
             "file_count": $FILE_COUNT,
             "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
             "repository": "${{ github.repository }}",

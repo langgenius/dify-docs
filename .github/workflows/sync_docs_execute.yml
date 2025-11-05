@@ -199,6 +199,22 @@ jobs:
           SYNC_REQUIRED=$(python3 -c "import json; print(str(json.load(open('sync_plan.json'))['sync_required']).lower())")
           echo "sync_required=$SYNC_REQUIRED" >> $GITHUB_OUTPUT
 
+      - name: Check if translation branch exists
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        id: check-branch
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          # Check if translation branch exists on remote
+          if git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1; then
+            echo "✅ Translation branch exists: $SYNC_BRANCH"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🆕 Translation branch does not exist yet"
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Checkout PR branch
         if: steps.extract-artifacts.outputs.sync_required == 'true'
         uses: actions/checkout@v4
@@ -284,19 +300,34 @@ jobs:
           DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
         run: |
           echo "Executing documentation synchronization..."
-          
+
           WORK_DIR="${{ steps.extract-artifacts.outputs.work_dir }}"
           PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
-          
-          # Create a new branch for the sync results
-          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
-          git checkout -b "$SYNC_BRANCH"
+          BRANCH_EXISTS="${{ steps.check-branch.outputs.branch_exists }}"
+          HEAD_SHA="${{ steps.extract-artifacts.outputs.head_sha }}"
 
-          # Reset branch to main to avoid including English file changes from PR
-          # Use --soft to keep working directory with PR files (needed for translation)
-          git reset --soft origin/main
-          # Unstage everything
-          git reset
+          # Prepare translation branch
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            echo "✅ Fetching existing translation branch for incremental update"
+            git fetch origin "$SYNC_BRANCH:$SYNC_BRANCH"
+            git checkout "$SYNC_BRANCH"
+
+            # For incremental updates, we're already on the right base
+            # Just checkout English files from PR to translate
+            git checkout "$HEAD_SHA" -- en/ 2>/dev/null || echo "No English files to update"
+
+          else
+            echo "🆕 Creating new translation branch"
+            git checkout -b "$SYNC_BRANCH"
+
+            # Reset branch to main to avoid including English file changes from PR
+            # Use --soft to keep working directory with PR files (needed for translation)
+            git reset --soft origin/main
+            # Unstage everything
+            git reset
+          fi
 
           # Run synchronization with security constraints
           cd tools/translate
@@ -636,29 +667,51 @@ jobs:
         run: |
           PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
           SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
-          
+          BRANCH_EXISTS="${{ steps.check-branch.outputs.branch_exists }}"
+          HEAD_SHA="${{ steps.extract-artifacts.outputs.head_sha }}"
+
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
 
           # Commit translation changes only (not English files from PR)
           git add cn/ jp/ docs.json
-          git commit -m "🌐 Auto-translate documentation for PR #${PR_NUMBER}
 
-          Auto-generated translations for documentation changes in PR #${PR_NUMBER}.
-          
-          Original PR: #${PR_NUMBER}
-          Languages: Chinese (cn), Japanese (jp)
-          
-          🤖 Generated with GitHub Actions"
-          
-          # Push the translation branch to main repo
-          git push origin "$SYNC_BRANCH" --force
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            # Incremental commit
+            git commit -m "🔄 Update translations for commit ${HEAD_SHA:0:8}
+
+Auto-generated translations for changes in commit ${HEAD_SHA}.
+
+Last-Processed-Commit: ${HEAD_SHA}
+Original-PR: #${PR_NUMBER}
+Languages: Chinese (cn), Japanese (jp)
+
+🤖 Generated with GitHub Actions"
+          else
+            # Initial commit
+            git commit -m "🌐 Initial translations for PR #${PR_NUMBER}
+
+Auto-generated translations for documentation changes in PR #${PR_NUMBER}.
+
+Last-Processed-Commit: ${HEAD_SHA}
+Original-PR: #${PR_NUMBER}
+Languages: Chinese (cn), Japanese (jp)
+
+🤖 Generated with GitHub Actions"
+          fi
+
+          # Push to translation branch (no force - preserve history)
+          git push origin "$SYNC_BRANCH"
           
           # Get original PR details for translation PR
           ORIGINAL_PR_TITLE=$(gh pr view ${PR_NUMBER} --json title --jq '.title' 2>/dev/null || echo "Documentation changes")
-          
-          # Create translation PR body
-          cat > /tmp/translation_pr_body.md <<EOF
+
+          if [ "$BRANCH_EXISTS" = "false" ]; then
+            # Create new translation PR
+            echo "Creating new translation PR..."
+
+            # Create translation PR body
+            cat > /tmp/translation_pr_body.md <<EOF
           # 🌐 Auto-generated Translations
           
           This PR contains automatically generated translations for the documentation changes in PR #${PR_NUMBER}.
@@ -685,29 +738,55 @@ jobs:
           🤖 This PR was created automatically by the documentation translation workflow.
           EOF
           
-          # Create the translation PR
-          TRANSLATION_PR_URL=$(gh pr create \
-            --base main \
-            --head "$SYNC_BRANCH" \
-            --title "🌐 Auto-translations for PR #${PR_NUMBER}: ${ORIGINAL_PR_TITLE}" \
-            --body-file /tmp/translation_pr_body.md 2>&1 || echo "")
+            # Create the translation PR
+            TRANSLATION_PR_URL=$(gh pr create \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "🌐 Auto-translations for PR #${PR_NUMBER}: ${ORIGINAL_PR_TITLE}" \
+              --body-file /tmp/translation_pr_body.md 2>&1 || echo "")
 
-          if [ -z "$TRANSLATION_PR_URL" ]; then
-            echo "❌ Failed to create translation PR"
-          fi
-          
-          if [ -n "$TRANSLATION_PR_URL" ]; then
-            # Extract PR number from URL
-            TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_URL" | grep -o '[0-9]\+$')
-            echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
-            echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
-            echo "creation_successful=true" >> $GITHUB_OUTPUT
-            
-            echo "✅ Translation PR created successfully: #${TRANSLATION_PR_NUMBER}"
+            if [ -z "$TRANSLATION_PR_URL" ]; then
+              echo "❌ Failed to create translation PR"
+              echo "creation_successful=false" >> $GITHUB_OUTPUT
+            else
+              # Extract PR number from URL
+              TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_URL" | grep -o '[0-9]\+$')
+              echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
+              echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+              echo "creation_successful=true" >> $GITHUB_OUTPUT
+
+              echo "✅ Translation PR created successfully: #${TRANSLATION_PR_NUMBER}"
+            fi
+
           else
-            echo "❌ Failed to create translation PR"
-            echo "creation_successful=false" >> $GITHUB_OUTPUT
+            # Translation PR already exists - just add update comment
+            echo "Translation PR already exists, adding update comment..."
+
+            # Find existing translation PR
+            TRANSLATION_PR_NUMBER=$(gh pr list \
+              --search "head:$SYNC_BRANCH state:open" \
+              --json number \
+              --jq '.[0].number // empty' 2>/dev/null || echo "")
+
+            if [ -n "$TRANSLATION_PR_NUMBER" ]; then
+              echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "creation_successful=true" >> $GITHUB_OUTPUT
+
+              # Add tracking comment with last processed commit
+              gh pr comment "$TRANSLATION_PR_NUMBER" --body "<!-- Last-Processed-Commit: ${HEAD_SHA} -->
+🔄 **Updated for commit \`${HEAD_SHA:0:8}\`**
+
+Latest source changes have been translated and committed to this PR.
+
+**Source commit:** [\`${HEAD_SHA:0:8}\`](https://github.com/${{ github.repository }}/commit/${HEAD_SHA})
+**Original PR:** #${PR_NUMBER}" || echo "Failed to add comment"
+
+              echo "✅ Translation PR updated: #${TRANSLATION_PR_NUMBER}"
+            else
+              echo "❌ Could not find translation PR"
+              echo "creation_successful=false" >> $GITHUB_OUTPUT
+            fi
           fi
 
       - name: Comment on original PR with translation PR link
@@ -721,9 +800,11 @@ jobs:
             const translationPrNumber = '${{ steps.create-translation-pr.outputs.translation_pr_number }}';
             const translationPrUrl = '${{ steps.create-translation-pr.outputs.translation_pr_url }}';
             const creationSuccessful = '${{ steps.create-translation-pr.outputs.creation_successful }}' === 'true';
-            
+            const branchExists = '${{ steps.check-branch.outputs.branch_exists }}' === 'true';
+            const headSha = '${{ steps.extract-artifacts.outputs.head_sha }}';
+
             let comment = '## 🤖 Automatic Translation Status\n\n';
-            
+
             if (hasChanges && creationSuccessful && translationPrNumber) {
               // Load sync results if available
               let results = { translated: [], failed: [], skipped: [] };
@@ -733,10 +814,18 @@ jobs:
                 console.log('Could not load sync results');
                 results = { translated: [], failed: [], skipped: [] };
               }
-              
-              comment += `🎉 **Translation PR Created Successfully!**\n\n`;
-              comment += `Your English documentation changes have been automatically translated and a separate PR has been created.\n\n`;
-              comment += `### 🔗 Translation PR: [#${translationPrNumber}](${translationPrUrl})\n\n`;
+
+              if (branchExists) {
+                // Translation PR was updated
+                comment += `🔄 **Translation PR Updated!**\n\n`;
+                comment += `Your latest changes (commit \`${headSha.substring(0, 8)}\`) have been automatically translated and added to the translation PR.\n\n`;
+              } else {
+                // Translation PR was created
+                comment += `🎉 **Translation PR Created Successfully!**\n\n`;
+                comment += `Your English documentation changes have been automatically translated and a separate PR has been created.\n\n`;
+              }
+
+              comment += `### 🔗 Translation PR: [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
               
               if (results.translated && results.translated.length > 0) {
                 comment += `### ✅ Successfully Translated (${results.translated.length} files):\n`;
@@ -796,7 +885,7 @@ jobs:
             });
 
       - name: Comment on translation PR with original PR link
-        if: steps.create-translation-pr.outputs.creation_successful == 'true' && steps.create-translation-pr.outputs.translation_pr_number
+        if: steps.create-translation-pr.outputs.creation_successful == 'true' && steps.create-translation-pr.outputs.translation_pr_number && steps.check-branch.outputs.branch_exists == 'false'
         uses: actions/github-script@v7
         continue-on-error: true
         with:
