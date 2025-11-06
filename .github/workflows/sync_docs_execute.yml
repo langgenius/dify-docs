@@ -507,6 +507,89 @@ jobs:
               console.log(`Could not comment on translation PR #${translationPrNumber}:`, error.message);
             }
 
+  handle-cancellation:
+    runs-on: ubuntu-latest
+    needs: execute-sync
+    if: always() && needs.execute-sync.result == 'cancelled'
+    steps:
+      - name: Notify about cancelled workflow
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            console.log('⚠️ Execute workflow was cancelled - likely due to newer commit');
+
+            // Try to get PR number from workflow run artifacts
+            const workflowRunId = context.payload.workflow_run.id;
+            const headBranch = context.payload.workflow_run.head_branch;
+
+            try {
+              // List artifacts from the analyze workflow
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflowRunId
+              });
+
+              // Find analysis artifact
+              const analysisArtifact = artifacts.data.artifacts.find(a =>
+                a.name.startsWith('docs-sync-analysis-')
+              );
+
+              if (!analysisArtifact) {
+                console.log('No analysis artifact found - cannot determine PR number');
+                return;
+              }
+
+              // Extract PR number from artifact name (format: docs-sync-analysis-PR_NUMBER)
+              const prNumber = analysisArtifact.name.split('-').pop();
+
+              console.log(`Found PR #${prNumber} for cancelled workflow`);
+
+              // Get repository info for workflow dispatch link
+              const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
+              const workflowDispatchUrl = `${repoUrl}/actions/workflows/sync_docs_execute.yml`;
+
+              const comment = `## ⚠️ Translation Workflow Skipped
+
+This commit's translation workflow was cancelled because a newer commit was pushed to this PR.
+
+### What happened:
+- A newer commit arrived while this commit's translation was queued
+- GitHub Actions automatically cancelled the queued workflow to save resources
+- **Your changes were not translated**
+
+### What you should do:
+
+**Option 1: Do nothing** (Recommended)
+If you're still making changes, just keep working. The latest commit will always get translated.
+
+**Option 2: Manually re-run translation**
+If you need this specific commit translated:
+1. Go to [Actions → Execute Documentation Sync](${workflowDispatchUrl})
+2. Click "Run workflow"
+3. Enter PR number: **${prNumber}**
+4. Click "Run workflow" button
+
+### Why this happens:
+When you push multiple commits rapidly (within 2-3 minutes), only the first and last commits get translated. Middle commits are skipped to prevent translation backlog. This is intentional behavior.
+
+---
+🤖 _Automatic notification from translation workflow_`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                body: comment
+              });
+
+              console.log(`✅ Posted cancellation notice to PR #${prNumber}`);
+
+            } catch (error) {
+              console.log(`Failed to notify PR: ${error.message}`);
+            }
+
   handle-failure:
     runs-on: ubuntu-latest
     if: github.event.workflow_run.conclusion == 'failure'
@@ -517,9 +600,9 @@ jobs:
           script: |
             // Try to extract PR number from workflow run
             const workflowRun = context.payload.workflow_run;
-            
+
             console.log('Analysis workflow failed');
             console.log('Attempting to notify PR if possible...');
-            
+
             // This is a best-effort attempt to notify
             // In practice, you might want to store PR number differently
