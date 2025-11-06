@@ -1,9 +1,13 @@
 # Workflow for updating translation PRs on sync events
+# Triggered by Analyze workflow for security validation
 name: Update Translation PR
 
 on:
-  pull_request:
-    types: [synchronize]
+  workflow_run:
+    workflows: ["Analyze Documentation Changes"]
+    types: [completed]
+    branches-ignore:
+      - 'docs-sync-pr-*'
 
 permissions:
   contents: write
@@ -11,96 +15,82 @@ permissions:
   actions: read
 
 jobs:
-  check-event-type:
+  update-translation:
     runs-on: ubuntu-latest
-    outputs:
-      should_run: ${{ steps.check-paths.outputs.should_run }}
+    # Only run if analyze workflow succeeded
+    if: github.event.workflow_run.conclusion == 'success'
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Download analysis artifacts
+        uses: actions/download-artifact@v4
         with:
-          fetch-depth: 0
+          name: docs-sync-analysis-${{ github.event.workflow_run.event.pull_request.number }}
+          path: /tmp/analysis
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
 
-      - name: Check if relevant files changed
-        id: check-paths
+      - name: Load and validate analysis
+        id: load-analysis
         run: |
-          echo "Checking if relevant files changed..."
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "Loading validated analysis from secure workflow..."
 
-          # Check if docs.json or en/ files changed
-          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")
-          RELEVANT_FILES=$(echo "$CHANGED_FILES" | grep -E '^(docs\.json|en/.*\.(md|mdx))$' || true)
-
-          if [ -n "$RELEVANT_FILES" ]; then
-            echo "should_run=true" >> $GITHUB_OUTPUT
-            echo "✅ Relevant files changed - proceeding with translation update"
-            echo "Changed files:"
-            echo "$RELEVANT_FILES"
-          else
-            echo "should_run=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No relevant files changed (docs.json or en/**/*.md|mdx)"
-            echo "ℹ️ Skipping translation update"
+          # Check if sync_plan.json exists (created by analyze workflow)
+          if [ ! -f "/tmp/analysis/sync_plan.json" ]; then
+            echo "❌ No sync plan found - analyze workflow may have skipped this PR"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
           fi
 
-  update-translation:
-    needs: check-event-type
-    runs-on: ubuntu-latest
-    # dummy job to avoid getting error when no job is executed
-    if: |
-      needs.check-event-type.outputs.should_run == 'true' &&
-      github.event.pull_request.draft == false &&
-      !startsWith(github.event.pull_request.head.ref, 'docs-sync-pr-')
-    steps:
+          # Load analysis metadata
+          PR_NUMBER=$(jq -r '.metadata.pr_number' /tmp/analysis/sync_plan.json)
+          PR_TYPE=$(jq -r '.metadata.pr_type' /tmp/analysis/sync_plan.json)
+          IS_INCREMENTAL=$(jq -r '.metadata.is_incremental' /tmp/analysis/sync_plan.json)
+          BASE_SHA=$(jq -r '.metadata.base_sha' /tmp/analysis/sync_plan.json)
+          HEAD_SHA=$(jq -r '.metadata.head_sha' /tmp/analysis/sync_plan.json)
+
+          # Verify this is an English-only PR (already validated by analyze workflow)
+          if [ "$PR_TYPE" != "english" ]; then
+            echo "ℹ️ Not an English-only PR (type: $PR_TYPE) - skipping translation update"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Validated analysis loaded from secure workflow"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
+          echo "base_sha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+          # Display summary
+          FILE_COUNT=$(jq -r '.metadata.file_count // 0' /tmp/analysis/sync_plan.json)
+          echo "📊 Analysis Summary:"
+          echo "  - PR: #$PR_NUMBER"
+          echo "  - Type: $PR_TYPE"
+          echo "  - Files: $FILE_COUNT"
+          echo "  - Incremental: $IS_INCREMENTAL"
+          echo "  - Range: ${BASE_SHA:0:8}...${HEAD_SHA:0:8}"
+
       - name: Checkout PR
+        if: steps.load-analysis.outputs.should_proceed == 'true'
         uses: actions/checkout@v4
         with:
+          ref: ${{ steps.load-analysis.outputs.head_sha }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
+        if: steps.load-analysis.outputs.should_proceed == 'true'
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      - name: Check if PR is English-only
-        id: check-pr-type
-        run: |
-          echo "Checking if this PR contains only English changes..."
-          
-          BASE_SHA="${{ github.event.pull_request.base.sha }}"
-          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          
-          # Use PR analyzer to check PR type
-          cd tools/translate
-          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
-          
-          if [ $? -eq 0 ]; then
-            # Parse analyzer output
-            source /tmp/pr_analysis_output.txt
-            echo "PR Type: $pr_type"
-            echo "pr_type=$pr_type" >> $GITHUB_OUTPUT
-            
-            if [ "$pr_type" = "english" ]; then
-              echo "✅ English-only PR detected - proceeding with translation update"
-              echo "should_update=true" >> $GITHUB_OUTPUT
-            else
-              echo "ℹ️ Not an English-only PR (type: $pr_type) - skipping translation update"
-              echo "should_update=false" >> $GITHUB_OUTPUT
-            fi
-          else
-            echo "❌ PR analysis failed - likely mixed content, skipping translation update"
-            echo "should_update=false" >> $GITHUB_OUTPUT
-            echo "pr_type=unknown" >> $GITHUB_OUTPUT
-          fi
-
       - name: Find associated translation PR
-        if: steps.check-pr-type.outputs.should_update == 'true'
+        if: steps.load-analysis.outputs.should_proceed == 'true'
         id: find-translation-pr
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
           echo "Looking for translation PR associated with PR #${PR_NUMBER}..."
 
           # Search for translation PR by branch name pattern
@@ -134,10 +124,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
-          TRANSLATION_PR_NUMBER="${{ steps.find-translation-pr.outputs.translation_pr_number }}"
-          PR_BASE="${{ github.event.pull_request.base.sha }}"
-          PR_HEAD="${{ github.event.pull_request.head.sha }}"
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
+          HEAD_SHA="${{ steps.load-analysis.outputs.head_sha }}"
+          BASE_SHA="${{ steps.load-analysis.outputs.base_sha }}"
 
           echo "Determining incremental update range..."
 
@@ -153,11 +142,11 @@ jobs:
             echo "✅ Found last processed commit: $LAST_PROCESSED"
             COMPARE_BASE="$LAST_PROCESSED"
           else
-            echo "⚠️ No last processed commit found, using PR base"
-            COMPARE_BASE="$PR_BASE"
+            echo "⚠️ No last processed commit found, using analysis base SHA"
+            COMPARE_BASE="$BASE_SHA"
           fi
 
-          COMPARE_HEAD="$PR_HEAD"
+          COMPARE_HEAD="$HEAD_SHA"
 
           echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
           echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
@@ -170,7 +159,6 @@ jobs:
           cd tools/translate
           pip install httpx aiofiles python-dotenv
 
-
       - name: Run translation and commit
         if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
         id: update-translations
@@ -178,15 +166,18 @@ jobs:
           DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          echo "Running incremental translation update..."
+          echo "Running incremental translation update with validated inputs..."
 
-          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
           HEAD_SHA="${{ steps.update-range.outputs.compare_head }}"
           BASE_SHA="${{ steps.update-range.outputs.compare_base }}"
-          PR_TITLE="${{ github.event.pull_request.title }}"
+
+          # Get PR title from workflow run event
+          PR_TITLE="${{ github.event.workflow_run.pull_requests[0].title }}"
 
           echo "PR: #${PR_NUMBER}"
           echo "Comparison: ${BASE_SHA:0:8}...${HEAD_SHA:0:8}"
+          echo "Using validated sync plan from analyze workflow"
 
           # Call the Python script for incremental translation
           cd tools/translate
@@ -209,7 +200,6 @@ jobs:
             # Parse outputs
             SUCCESS=$(echo "$RESULT_JSON" | jq -r '.success')
             HAS_CHANGES=$(echo "$RESULT_JSON" | jq -r '.has_changes // false')
-            TRANSLATION_PR_NUMBER=$(echo "$RESULT_JSON" | jq -r '.translation_pr_number // ""')
 
             echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
             echo "commit_successful=$([ "$SUCCESS" = "true" ] && echo true || echo false)" >> $GITHUB_OUTPUT
@@ -227,8 +217,6 @@ jobs:
 
           exit $SCRIPT_EXIT_CODE
 
-
-
       - name: Comment on original PR about update
         if: steps.update-translations.outputs.has_changes == 'true' && steps.update-translations.outputs.commit_successful == 'true'
         uses: actions/github-script@v7
@@ -236,10 +224,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const prNumber = ${{ github.event.pull_request.number }};
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
             const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
             const translationPrUrl = '${{ steps.find-translation-pr.outputs.translation_pr_url }}';
-            
+
             // Load update results
             let results = { translated: [], failed: [], skipped: [] };
             try {
@@ -247,18 +235,18 @@ jobs:
             } catch (e) {
               console.log('Could not load update results');
             }
-            
+
             let comment = `## 🔄 Translation PR Updated\n\n`
             comment += `Your English documentation changes have been automatically translated and the translation PR has been updated.\n\n`
-                        
+
             comment += `### 📝 Original Changes\n\n`;
             comment += `- **Original PR**: #${prNumber}\n`;
             comment += `- **Type**: English documentation updates\n`;
-            
+
             comment += `### 🔄 Synchronization\n\n`;
             comment += `- **Automatic Updates**: This PR will be automatically updated if the original PR changes\n`;
             comment += `- **Independent Review**: This translation PR can be reviewed and merged independently\n`;
-            
+
             if (results.translated && results.translated.length > 0) {
               comment += `### ✅ Updated Translations (${results.translated.length} files):\n`;
               results.translated.slice(0, 6).forEach(file => {
@@ -269,7 +257,7 @@ jobs:
               }
               comment += '\n';
             }
-            
+
             if (results.failed && results.failed.length > 0) {
               comment += `### ⚠️ Update Issues (${results.failed.length}):\n`;
               results.failed.slice(0, 3).forEach(file => {
@@ -277,7 +265,7 @@ jobs:
               });
               comment += '\n';
             }
-            
+
             comment += `### 🔄 What's Updated:
             - **Translation Files**: All corresponding cn and jp files
             - **Navigation Structure**: Updated docs.json if needed
@@ -285,7 +273,7 @@ jobs:
 
             ---
             🤖 _Automatic update from the translation workflow._`;
-            
+
             try {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -304,9 +292,9 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const prNumber = ${{ github.event.pull_request.number }};
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
             const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
-            
+
             // Load update results
             let results = { translated: [], failed: [], skipped: [] };
             try {
@@ -314,7 +302,7 @@ jobs:
             } catch (e) {
               console.log('Could not load update results');
             }
-            
+
             const updateComment = `## 🔄 Automatic Translation Update
 
             This translation PR has been automatically updated following changes in the original PR #${prNumber}.
@@ -341,7 +329,7 @@ jobs:
 
             ---
             🤖 _This update was triggered automatically by changes to PR #${prNumber}._`;
-            
+
             try {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
@@ -359,9 +347,9 @@ jobs:
         continue-on-error: true
         with:
           script: |
-            const prNumber = ${{ github.event.pull_request.number }};
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
             const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
-            
+
             const comment = `## ✅ Translation PR Already Up to Date
 
             Your changes to PR #${prNumber} did not require translation updates.
@@ -369,7 +357,7 @@ jobs:
             The translation PR [#${translationPrNumber}](https://github.com/${{ github.repository }}/pull/${translationPrNumber}) remains current.
 
             🤖 _Automatic check from the translation workflow._`;
-            
+
             try {
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
