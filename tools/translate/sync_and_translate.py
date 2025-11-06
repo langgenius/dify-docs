@@ -1138,8 +1138,21 @@ class DocsSynchronizer:
         # Parse group_path to find the target group (e.g., "Documentation >   > Nodes")
         group_path = location_info.get("group_path", "")
 
-        # Split group path to get individual group names (skip the dropdown name itself)
-        group_parts = [part.strip() for part in group_path.split(">") if part.strip()]
+        # Split by ">" and strip each part, keeping track of which were originally empty/whitespace
+        raw_parts = group_path.split(">")
+        group_parts = []
+
+        for part in raw_parts:
+            stripped = part.strip()
+            # Keep all parts, but mark whitespace-only ones specially
+            # This handles groups named " " (single space) which appear as empty after strip
+            group_parts.append(stripped if stripped else None)  # None represents whitespace-only group
+
+        # Filter out truly empty parts from start/end, but keep None (whitespace groups)
+        while group_parts and group_parts[0] == "":
+            group_parts.pop(0)
+        while group_parts and group_parts[-1] == "":
+            group_parts.pop()
 
         # Start from dropdown's pages
         if "pages" not in target_dropdown:
@@ -1154,15 +1167,24 @@ class DocsSynchronizer:
 
         # Navigate through nested groups to find the target location
         for group_name in group_parts:
-            if not group_name:  # Empty group name (like the "  " we saw)
-                continue
-
             # Find the group in current_pages
             found_group = None
             for item in current_pages:
-                if isinstance(item, dict) and item.get("group") == group_name:
-                    found_group = item
-                    break
+                if isinstance(item, dict):
+                    item_group = item.get("group", "")
+                    # Match logic:
+                    # - If group_name is None, we're looking for whitespace-only group (like " ")
+                    # - Otherwise, match by stripped comparison
+                    if group_name is None:
+                        # Looking for whitespace-only group
+                        if item_group and not item_group.strip():
+                            found_group = item
+                            break
+                    else:
+                        # Normal group name match
+                        if item_group.strip() == group_name:
+                            found_group = item
+                            break
 
             if found_group:
                 # Navigate into this group
