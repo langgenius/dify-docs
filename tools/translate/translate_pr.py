@@ -453,8 +453,8 @@ class TranslationPRManager:
                 print(f"❌ Error checking out translation branch: {e}")
                 raise
         else:
-            # Create new branch from current HEAD
-            self.run_git("checkout", "-b", self.sync_branch)
+            # Branch was already created in setup_translation_branch(), just checkout
+            self.run_git("checkout", self.sync_branch)
 
         # Remove English files before staging
         self.remove_english_files()
