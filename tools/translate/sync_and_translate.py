@@ -877,7 +877,7 @@ class DocsSynchronizer:
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd=self.repo_root
+                cwd=self.base_dir
             )
             base_docs = json.loads(base_docs_result.stdout)
 
@@ -886,7 +886,7 @@ class DocsSynchronizer:
                 capture_output=True,
                 text=True,
                 check=True,
-                cwd=self.repo_root
+                cwd=self.base_dir
             )
             head_docs = json.loads(head_docs_result.stdout)
 
