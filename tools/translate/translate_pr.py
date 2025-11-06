@@ -134,9 +134,9 @@ class TranslationPRManager:
             self.run_git("fetch", "origin", f"{self.sync_branch}:{self.sync_branch}")
             self.run_git("checkout", self.sync_branch)
 
-            # For incremental updates, checkout English files from PR
-            print(f"Checking out English files from {self.head_sha[:8]}...")
-            self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", check=False)
+            # For incremental updates, checkout English files and docs.json from PR
+            print(f"Checking out English files and docs.json from {self.head_sha[:8]}...")
+            self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", "docs.json", check=False)
         else:
             print(f"🆕 Creating new translation branch: {self.sync_branch}")
             self.run_git("checkout", "-b", self.sync_branch)
