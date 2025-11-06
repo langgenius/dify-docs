@@ -49,3 +49,12 @@ When this change is pushed:
 ✅ Proper separation: validation (read-only) → execution (write)
 ✅ Artifacts ensure validated inputs are used
 ✅ Defense in depth with sequential workflow execution
+
+## Artifact Naming Fix
+
+After testing, we discovered that `workflow_run` events don't include PR information in the `pull_requests` array. The solution was to use the workflow run ID instead:
+
+- **Analyze workflow**: Creates artifact named `docs-sync-analysis-${{ github.run_id }}`
+- **Update workflow**: Downloads artifact using `docs-sync-analysis-${{ github.event.workflow_run.id }}`
+
+This ensures the artifact can be reliably located regardless of PR context availability.
