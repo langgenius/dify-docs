@@ -487,7 +487,9 @@ class TranslationPRManager:
         # Sync docs.json incrementally
         sync_log = synchronizer.sync_docs_json_incremental(
             added_files=added_files,
-            deleted_files=deleted_files
+            deleted_files=deleted_files,
+            base_sha=base_sha,
+            head_sha=head_sha
         )
         print("\n".join(sync_log))
 

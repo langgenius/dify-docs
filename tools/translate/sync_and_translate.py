@@ -820,7 +820,240 @@ class DocsSynchronizer:
                     return True
         return False
 
-    def sync_docs_json_incremental(self, added_files: List[str] = None, deleted_files: List[str] = None) -> List[str]:
+    def extract_file_locations(self, section_data) -> Dict[str, Dict]:
+        """
+        Extract all file paths and their locations in the navigation structure.
+        Returns dict mapping file path to location metadata.
+        """
+        locations = {}
+
+        if not section_data or "dropdowns" not in section_data:
+            return locations
+
+        def traverse_structure(pages, dropdown_name, dropdown_idx, path_prefix=""):
+            """Recursively traverse pages structure to extract file locations."""
+            for idx, item in enumerate(pages):
+                if isinstance(item, str):
+                    # Direct page reference
+                    locations[item] = {
+                        "dropdown": dropdown_name,
+                        "dropdown_idx": dropdown_idx,
+                        "path": f"{path_prefix}[{idx}]",
+                        "type": "page"
+                    }
+                elif isinstance(item, dict):
+                    if "pages" in item:
+                        # Nested group
+                        group_name = item.get("group", item.get("label", ""))
+                        traverse_structure(
+                            item["pages"],
+                            dropdown_name,
+                            dropdown_idx,
+                            f"{path_prefix}[{idx}].pages"
+                        )
+
+        for dropdown_idx, dropdown in enumerate(section_data.get("dropdowns", [])):
+            dropdown_name = dropdown.get("dropdown", "")
+
+            # Check pages array
+            if "pages" in dropdown:
+                traverse_structure(dropdown["pages"], dropdown_name, dropdown_idx, "pages")
+
+        return locations
+
+    def reconcile_docs_json_structural_changes(self, base_sha: str, head_sha: str) -> List[str]:
+        """
+        Detect and apply specific structural changes (moves, renames) from English section.
+        Compares base vs head English sections and applies only those changes to cn/jp.
+        """
+        reconcile_log = []
+
+        try:
+            # Get docs.json from both commits
+            import subprocess
+
+            base_docs_result = subprocess.run(
+                ["git", "show", f"{base_sha}:docs.json"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=self.repo_root
+            )
+            base_docs = json.loads(base_docs_result.stdout)
+
+            head_docs_result = subprocess.run(
+                ["git", "show", f"{head_sha}:docs.json"],
+                capture_output=True,
+                text=True,
+                check=True,
+                cwd=self.repo_root
+            )
+            head_docs = json.loads(head_docs_result.stdout)
+
+            # Extract English sections
+            def get_english_section(docs_data):
+                nav = docs_data.get("navigation", {})
+                if "versions" in nav and nav["versions"]:
+                    languages = nav["versions"][0].get("languages", [])
+                else:
+                    languages = nav.get("languages", [])
+
+                for lang in languages:
+                    if lang.get("language") == "en":
+                        return lang
+                return None
+
+            base_en = get_english_section(base_docs)
+            head_en = get_english_section(head_docs)
+
+            if not base_en or not head_en:
+                reconcile_log.append("ERROR: Could not find English sections for comparison")
+                return reconcile_log
+
+            # Extract file locations from both versions
+            base_locations = self.extract_file_locations(base_en)
+            head_locations = self.extract_file_locations(head_en)
+
+            base_files = set(base_locations.keys())
+            head_files = set(head_locations.keys())
+
+            # Detect operations
+            added = head_files - base_files
+            deleted = base_files - head_files
+            possibly_moved = base_files & head_files
+
+            # Check for actual moves (same file, different location)
+            moved_files = []
+            for file_path in possibly_moved:
+                base_loc = base_locations[file_path]
+                head_loc = head_locations[file_path]
+
+                # Check if location changed (dropdown or path within dropdown)
+                if (base_loc["dropdown"] != head_loc["dropdown"] or
+                    base_loc["path"] != head_loc["path"]):
+                    moved_files.append({
+                        "file": file_path,
+                        "from": base_loc,
+                        "to": head_loc
+                    })
+
+            if not moved_files and not added and not deleted:
+                reconcile_log.append("INFO: No structural changes detected")
+                return reconcile_log
+
+            reconcile_log.append(f"INFO: Detected {len(moved_files)} moves, {len(added)} adds, {len(deleted)} deletes")
+
+            # Load current docs.json
+            docs_data = self.load_docs_json()
+            if not docs_data:
+                reconcile_log.append("ERROR: Could not load docs.json")
+                return reconcile_log
+
+            # Apply moves to cn/jp sections
+            for move_op in moved_files:
+                en_file = move_op["file"]
+                from_loc = move_op["from"]
+                to_loc = move_op["to"]
+
+                reconcile_log.append(f"INFO: Moving {en_file} from '{from_loc['dropdown']}' to '{to_loc['dropdown']}'")
+
+                # Apply to each target language
+                for target_lang in ["cn", "jp"]:
+                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+
+                    # Remove from old location
+                    removed = self.remove_file_from_navigation(docs_data, target_file, target_lang)
+
+                    if removed:
+                        # Add to new location
+                        added = self.add_file_to_navigation(docs_data, target_file, target_lang, to_loc)
+
+                        if added:
+                            reconcile_log.append(f"SUCCESS: Moved {target_file} to new location")
+                        else:
+                            reconcile_log.append(f"WARNING: Could not add {target_file} to new location")
+                    else:
+                        reconcile_log.append(f"WARNING: Could not remove {target_file} from old location")
+
+            # Save updated docs.json
+            if moved_files:
+                self.save_docs_json(docs_data)
+                reconcile_log.append("SUCCESS: Applied structural changes to docs.json")
+
+            return reconcile_log
+
+        except Exception as e:
+            reconcile_log.append(f"ERROR: Failed to reconcile structural changes: {e}")
+            return reconcile_log
+
+    def remove_file_from_navigation(self, docs_data: Dict, file_path: str, target_lang: str) -> bool:
+        """Remove a file from target language navigation structure."""
+        nav = docs_data.get("navigation", {})
+
+        # Find target language section
+        if "versions" in nav and nav["versions"]:
+            languages = nav["versions"][0].get("languages", [])
+        else:
+            languages = nav.get("languages", [])
+
+        target_section = None
+        for lang in languages:
+            if lang.get("language") == target_lang:
+                target_section = lang
+                break
+
+        if not target_section:
+            return False
+
+        # Remove from dropdowns
+        for dropdown in target_section.get("dropdowns", []):
+            if "pages" in dropdown:
+                if self.remove_page_from_structure(dropdown["pages"], file_path):
+                    return True
+
+        return False
+
+    def add_file_to_navigation(self, docs_data: Dict, file_path: str, target_lang: str, location_info: Dict) -> bool:
+        """Add a file to target language navigation at specified location."""
+        nav = docs_data.get("navigation", {})
+
+        # Find target language section
+        if "versions" in nav and nav["versions"]:
+            languages = nav["versions"][0].get("languages", [])
+        else:
+            languages = nav.get("languages", [])
+
+        target_section = None
+        for lang in languages:
+            if lang.get("language") == target_lang:
+                target_section = lang
+                break
+
+        if not target_section:
+            return False
+
+        # Find target dropdown by index
+        dropdown_idx = location_info["dropdown_idx"]
+        dropdowns = target_section.get("dropdowns", [])
+
+        if dropdown_idx >= len(dropdowns):
+            return False
+
+        target_dropdown = dropdowns[dropdown_idx]
+
+        # For simplicity, append to dropdown's pages array
+        # More sophisticated logic could parse the path to insert at exact location
+        if "pages" not in target_dropdown:
+            target_dropdown["pages"] = []
+
+        # Only add if not already present
+        if file_path not in str(target_dropdown["pages"]):
+            target_dropdown["pages"].append(file_path)
+            return True
+
+        return False
+
+    def sync_docs_json_incremental(self, added_files: List[str] = None, deleted_files: List[str] = None, base_sha: str = None, head_sha: str = None) -> List[str]:
         """
         Incrementally sync docs.json structure - only processes changed files.
         Preserves existing dropdown names and only updates affected pages.
@@ -829,8 +1062,14 @@ class DocsSynchronizer:
         added_files = added_files or []
         deleted_files = deleted_files or []
 
+        # If no file adds/deletes but we have git refs, check for structural changes
         if not added_files and not deleted_files:
-            sync_log.append("INFO: No file changes to sync")
+            if base_sha and head_sha:
+                sync_log.append("INFO: No file adds/deletes, checking for structural changes...")
+                reconcile_log = self.reconcile_docs_json_structural_changes(base_sha, head_sha)
+                sync_log.extend(reconcile_log)
+            else:
+                sync_log.append("INFO: No file changes to sync")
             return sync_log
 
         try:
