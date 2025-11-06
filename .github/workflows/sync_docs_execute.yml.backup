@@ -1,0 +1,941 @@
+# Workflow for executing documentation translations
+name: Execute Documentation Sync
+
+on:
+  workflow_run:
+    workflows: ["Analyze Documentation Changes"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+jobs:
+  execute-sync:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Check workflow source
+        id: check-source
+        run: |
+          echo "Checking workflow source..."
+          echo "Event: ${{ github.event.workflow_run.event }}"
+          echo "Repository: ${{ github.event.workflow_run.repository.full_name }}"
+          echo "Head Repository: ${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+          
+          # Security check: Only process PRs from the same repository or trusted forks
+          if [[ "${{ github.event.workflow_run.event }}" != "pull_request" ]]; then
+            echo "Not a pull request event, skipping"
+            echo "should_process=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if this is from a fork
+          IS_FORK="false"
+          if [[ "${{ github.event.workflow_run.repository.full_name }}" != "${{ github.event.workflow_run.head_repository.full_name }}" ]]; then
+            IS_FORK="true"
+          fi
+          
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          echo "should_process=true" >> $GITHUB_OUTPUT
+
+      - name: Download analysis artifacts
+        if: steps.check-source.outputs.should_process == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        id: download-artifacts
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Determine which workflow run to get artifacts from
+            let runId;
+            let prNumber;
+
+            if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger - use the pr_number input
+              prNumber = '${{ github.event.inputs.pr_number }}';
+              console.log(`Manual trigger for PR #${prNumber}`);
+
+              // Find the most recent analyze workflow run for this specific PR
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'sync_docs_analyze.yml',
+                per_page: 100
+              });
+
+              // Find run that matches our specific PR number
+              let matchingRun = null;
+              for (const run of runs.data.workflow_runs) {
+                if (run.conclusion === 'success' && run.event === 'pull_request' && run.pull_requests.length > 0) {
+                  const pullRequest = run.pull_requests[0];
+                  if (pullRequest.number.toString() === prNumber) {
+                    matchingRun = run;
+                    break;
+                  }
+                }
+              }
+
+              if (!matchingRun) {
+                console.log(`No successful analyze workflow run found for PR #${prNumber}`);
+                return false;
+              }
+
+              runId = matchingRun.id;
+              console.log(`Found analyze workflow run: ${runId} for PR #${prNumber}`);
+            } else {
+              // Triggered by workflow_run
+              runId = context.payload.workflow_run.id;
+              console.log(`Workflow run trigger, run ID: ${runId}`);
+            }
+
+            // List artifacts from the analyze workflow run
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            console.log(`Found ${artifacts.data.artifacts.length} artifacts`);
+            artifacts.data.artifacts.forEach(a => console.log(`  - ${a.name}`));
+
+            const matchArtifact = artifacts.data.artifacts.find(artifact => {
+              if (context.eventName === 'workflow_dispatch') {
+                return artifact.name === `docs-sync-analysis-${prNumber}`;
+              } else {
+                return artifact.name.startsWith('docs-sync-analysis-');
+              }
+            });
+
+            if (!matchArtifact) {
+              console.log('No matching analysis artifact found');
+              return false;
+            }
+
+            console.log(`Downloading artifact: ${matchArtifact.name}`);
+
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifact.id,
+              archive_format: 'zip'
+            });
+
+            fs.writeFileSync('/tmp/artifacts.zip', Buffer.from(download.data));
+            console.log('Artifact downloaded successfully');
+
+            // Extract PR number from artifact name
+            if (!prNumber) {
+              prNumber = matchArtifact.name.split('-').pop();
+            }
+
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('artifact_found', 'true');
+
+            return true;
+
+      - name: Extract and validate artifacts
+        if: steps.download-artifacts.outputs.artifact_found == 'true'
+        id: extract-artifacts
+        run: |
+          echo "Extracting artifacts..."
+          
+          # Create secure temporary directory
+          WORK_DIR=$(mktemp -d /tmp/sync-XXXXXX)
+          echo "work_dir=$WORK_DIR" >> $GITHUB_OUTPUT
+          
+          # Extract to temporary directory
+          cd "$WORK_DIR"
+          unzip /tmp/artifacts.zip
+          
+          # Validate extracted files
+          REQUIRED_FILES="analysis.json sync_plan.json changed_files.txt"
+          for file in $REQUIRED_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Validate JSON structure
+          python3 -c "
+          import json
+          import sys
+          
+          try:
+              with open('analysis.json') as f:
+                  analysis = json.load(f)
+              with open('sync_plan.json') as f:
+                  sync_plan = json.load(f)
+              
+              # Validate required fields
+              assert 'pr_number' in analysis
+              assert 'files_to_sync' in sync_plan
+              assert 'target_languages' in sync_plan
+              
+              print('Artifacts validated successfully')
+          except Exception as e:
+              print(f'Validation error: {e}')
+              sys.exit(1)
+          "
+          
+          # Extract PR number and other metadata
+          PR_NUMBER=$(python3 -c "import json; print(json.load(open('analysis.json'))['pr_number'])")
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Extract head SHA to checkout the PR branch (needed for new files)
+          HEAD_SHA=$(python3 -c "import json; print(json.load(open('analysis.json'))['head_sha'])")
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+
+          # Check if sync is required
+          SYNC_REQUIRED=$(python3 -c "import json; print(str(json.load(open('sync_plan.json'))['sync_required']).lower())")
+          echo "sync_required=$SYNC_REQUIRED" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ steps.extract-artifacts.outputs.head_sha }}  # Checkout PR's head commit to access new files
+
+      - name: Check if translation branch exists
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        id: check-branch
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          # Check if translation branch exists on remote (after repo checkout)
+          if git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1; then
+            echo "✅ Translation branch exists: $SYNC_BRANCH"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🆕 Translation branch does not exist yet"
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set up Python
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        run: |
+          cd tools/translate
+          pip install httpx aiofiles python-dotenv
+
+      - name: Check for manual approval requirement
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-source.outputs.is_fork == 'true'
+        id: check-approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            
+            // Get PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const author = pr.data.user.login;
+            const authorAssociation = pr.data.author_association;
+            
+            // Check if author is trusted
+            const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const trustedContributors = process.env.TRUSTED_CONTRIBUTORS?.split(',') || [];
+            
+            const isTrusted = trustedAssociations.includes(authorAssociation) || 
+                             trustedContributors.includes(author);
+            
+            if (!isTrusted) {
+              // Check for approval from maintainer
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              const hasApproval = reviews.data.some(review => 
+                review.state === 'APPROVED' && 
+                trustedAssociations.includes(review.author_association)
+              );
+              
+              if (!hasApproval) {
+                console.log('PR requires manual approval from a maintainer');
+                core.setOutput('needs_approval', 'true');
+                
+                // Comment on PR
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: '⏸️ **Documentation sync is pending approval**\n\n' +
+                        'This PR requires approval from a maintainer before automatic synchronization can proceed.\n\n' +
+                        'Once approved, the documentation will be automatically translated and synchronized.'
+                });
+                
+                return;
+              }
+            }
+            
+            core.setOutput('needs_approval', 'false');
+
+      - name: Execute safe synchronization
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        id: sync
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+        run: |
+          echo "Executing documentation synchronization..."
+
+          WORK_DIR="${{ steps.extract-artifacts.outputs.work_dir }}"
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          BRANCH_EXISTS="${{ steps.check-branch.outputs.branch_exists }}"
+          HEAD_SHA="${{ steps.extract-artifacts.outputs.head_sha }}"
+
+          # Prepare translation branch
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            echo "✅ Fetching existing translation branch for incremental update"
+            git fetch origin "$SYNC_BRANCH:$SYNC_BRANCH"
+            git checkout "$SYNC_BRANCH"
+
+            # For incremental updates, we're already on the right base
+            # Just checkout English files from PR to translate
+            git checkout "$HEAD_SHA" -- en/ 2>/dev/null || echo "No English files to update"
+
+          else
+            echo "🆕 Creating new translation branch"
+            git checkout -b "$SYNC_BRANCH"
+
+            # Reset branch to main to avoid including English file changes from PR
+            # Use --soft to keep working directory with PR files (needed for translation)
+            git reset --soft origin/main
+            # Unstage everything
+            git reset
+          fi
+
+          # Run synchronization with security constraints
+          cd tools/translate
+          
+          # Create a secure sync script
+          cat > secure_sync.py <<'EOF'
+          import json
+          import sys
+          import os
+          import asyncio
+          import subprocess
+          from pathlib import Path
+
+          # Add parent directory to path
+          sys.path.append(os.path.dirname(__file__))
+          from sync_and_translate import DocsSynchronizer
+
+          async def secure_sync():
+              work_dir = sys.argv[1]
+
+              # Load translation config
+              config_path = Path("../../tools/translate/config.json")
+              with open(config_path, 'r', encoding='utf-8') as f:
+                  translation_config = json.load(f)
+
+              # Get language settings from config
+              SOURCE_LANGUAGE = translation_config.get("source_language", "en")
+              TARGET_LANGUAGES = translation_config.get("target_languages", ["cn", "jp"])
+              source_dir = translation_config["languages"][SOURCE_LANGUAGE]["directory"]
+
+              # Load sync plan
+              with open(f"{work_dir}/sync_plan.json") as f:
+                  sync_plan = json.load(f)
+
+              # Security: Only sync files from the approved list
+              files_to_sync = sync_plan.get("files_to_sync", [])
+
+              # Validate file paths again
+              for file_info in files_to_sync:
+                  file_path = file_info["path"]
+
+                  # Security checks
+                  if ".." in file_path or file_path.startswith("/"):
+                      print(f"Security error: Invalid path {file_path}")
+                      return False
+
+                  # Allow source language files and docs.json
+                  if not (file_path.startswith(f"{source_dir}/") or file_path == "docs.json"):
+                      print(f"Security error: File outside {source_dir}/ directory: {file_path}")
+                      return False
+
+              # Initialize synchronizer
+              api_key = os.environ.get("DIFY_API_KEY")
+              if not api_key:
+                  print("Error: DIFY_API_KEY not set")
+                  return False
+
+              synchronizer = DocsSynchronizer(api_key)
+
+              # Perform limited sync
+              results = {
+                  "translated": [],
+                  "failed": [],
+                  "skipped": []
+              }
+
+              # Get metadata for diff detection
+              metadata = sync_plan.get("metadata", {})
+              base_sha = metadata.get("base_sha", "")
+              head_sha = metadata.get("head_sha", "")
+
+              # Detect modified vs added files
+              added_files = []
+              modified_files = []
+
+              if base_sha and head_sha:
+                  try:
+                      # Get list of added files (A) and modified files (M)
+                      result = subprocess.run([
+                          "git", "diff", "--name-status", "--diff-filter=AM",
+                          base_sha, head_sha
+                      ], capture_output=True, text=True, cwd="../../")
+
+                      if result.returncode == 0:
+                          for line in result.stdout.strip().split('\n'):
+                              if line and '\t' in line:
+                                  status, file_path = line.split('\t', 1)
+                                  if status == 'A':
+                                      added_files.append(file_path)
+                                  elif status == 'M':
+                                      modified_files.append(file_path)
+                  except Exception as e:
+                      print(f"Warning: Could not detect file status: {e}")
+                      # Fallback: treat all as added
+                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
+
+              # If we couldn't detect, treat all as added (safe fallback)
+              if not added_files and not modified_files:
+                  added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
+
+              print(f"Detected {len(added_files)} added files, {len(modified_files)} modified files")
+
+              for file_info in files_to_sync[:10]:  # Limit to 10 files
+                  file_path = file_info["path"]
+                  print(f"Processing: {file_path}")
+
+                  # Skip docs.json - it's handled separately in structure sync
+                  if file_path == "docs.json":
+                      results["skipped"].append(f"{file_path} (structure file - handled separately)")
+                      continue
+
+                  # Skip versioned directories (frozen/archived docs)
+                  if file_path.startswith("versions/"):
+                      results["skipped"].append(f"{file_path} (versioned - not auto-translated)")
+                      continue
+
+                  try:
+                      # Only translate if file exists and is safe
+                      if os.path.exists(f"../../{file_path}"):
+                          # Determine if this is a modified file
+                          is_modified = file_path in modified_files
+
+                          # Get diff for modified files
+                          diff_original = None
+                          if is_modified and base_sha and head_sha:
+                              try:
+                                  diff_result = subprocess.run([
+                                      "git", "diff", base_sha, head_sha, "--", file_path
+                                  ], capture_output=True, text=True, cwd="../../")
+                                  if diff_result.returncode == 0:
+                                      diff_original = diff_result.stdout
+                                      print(f"  Retrieved diff for {file_path} ({len(diff_original)} chars)")
+                              except Exception as e:
+                                  print(f"  Warning: Could not get diff for {file_path}: {e}")
+
+                          for target_lang in TARGET_LANGUAGES:
+                              target_dir = translation_config["languages"][target_lang]["directory"]
+                              target_path = file_path.replace(f"{source_dir}/", f"{target_dir}/")
+
+                              # Load existing translation for modified files
+                              the_doc_exist = None
+                              if is_modified:
+                                  target_full_path = Path(f"../../{target_path}")
+                                  if target_full_path.exists():
+                                      try:
+                                          with open(target_full_path, 'r', encoding='utf-8') as f:
+                                              the_doc_exist = f.read()
+                                          print(f"  Loaded existing translation: {target_path} ({len(the_doc_exist)} chars)")
+                                      except Exception as e:
+                                          print(f"  Warning: Could not read existing translation {target_path}: {e}")
+
+                              # Translate with appropriate inputs
+                              success = await synchronizer.translate_file_with_notice(
+                                  file_path,
+                                  target_path,
+                                  target_lang,
+                                  the_doc_exist=the_doc_exist,
+                                  diff_original=diff_original
+                              )
+                              if success:
+                                  change_type = "modified" if is_modified else "added"
+                                  results["translated"].append(f"{target_path} ({change_type})")
+                              else:
+                                  results["failed"].append(target_path)
+                      else:
+                          results["skipped"].append(file_path)
+                  except Exception as e:
+                      print(f"Error processing {file_path}: {e}")
+                      import traceback
+                      traceback.print_exc()
+                      results["failed"].append(file_path)
+
+              # Process OpenAPI JSON files
+              openapi_files_to_sync = sync_plan.get("openapi_files_to_sync", [])
+              print(f"\nProcessing {len(openapi_files_to_sync)} OpenAPI files...")
+
+              # Import OpenAPI translation function (async version)
+              from openapi import translate_openapi_file_async
+
+              for file_info in openapi_files_to_sync[:5]:  # Limit to 5 OpenAPI files
+                  file_path = file_info["path"]
+                  print(f"Processing OpenAPI: {file_path}")
+
+                  try:
+                      source_full_path = Path(f"../../{file_path}")
+                      if not source_full_path.exists():
+                          results["skipped"].append(f"{file_path} (source file not found)")
+                          continue
+
+                      for target_lang in TARGET_LANGUAGES:
+                          target_dir = translation_config["languages"][target_lang]["directory"]
+                          target_path = file_path.replace(f"{source_dir}/", f"{target_dir}/")
+                          target_full_path = Path(f"../../{target_path}")
+
+                          # Ensure target directory exists
+                          target_full_path.parent.mkdir(parents=True, exist_ok=True)
+
+                          # Run OpenAPI translation pipeline (use await for async version)
+                          success = await translate_openapi_file_async(
+                              source_file=str(source_full_path),
+                              target_lang=target_lang,
+                              output_file=str(target_full_path),
+                              dify_api_key=api_key
+                          )
+
+                          if success:
+                              results["translated"].append(f"{target_path} (openapi)")
+                              print(f"✅ Successfully translated OpenAPI: {file_path} → {target_path}")
+                          else:
+                              results["failed"].append(target_path)
+                              print(f"❌ Failed to translate OpenAPI: {file_path} → {target_path}")
+
+                  except Exception as e:
+                      print(f"Error processing OpenAPI {file_path}: {e}")
+                      import traceback
+                      traceback.print_exc()
+                      results["failed"].append(file_path)
+
+              # Handle docs.json structure sync if needed (INCREMENTAL MODE)
+              if sync_plan.get("structure_changes", {}).get("structure_changed"):
+                  print("Syncing docs.json structure (incremental mode)...")
+                  try:
+                      # Get added files (those we just translated)
+                      # Include both markdown files and OpenAPI files
+                      added_files = [f["path"] for f in files_to_sync if f["path"].startswith(f"{source_dir}/")]
+                      added_files += [f["path"] for f in openapi_files_to_sync if f["path"].startswith(f"{source_dir}/")]
+
+                      # Get deleted files from git diff
+                      # Use the metadata to get base and head SHAs
+                      metadata = sync_plan.get("metadata", {})
+                      base_sha = metadata.get("base_sha", "")
+                      head_sha = metadata.get("head_sha", "")
+
+                      deleted_files = []
+                      if base_sha and head_sha:
+                          try:
+                              print(f"Detecting deleted files between {base_sha[:8]} and {head_sha[:8]}...")
+
+                              # Get deleted files from git
+                              result = subprocess.run([
+                                  "git", "diff", "--name-status", "--diff-filter=D",
+                                  base_sha, head_sha
+                              ], capture_output=True, text=True, cwd="../../")
+
+                              if result.returncode != 0:
+                                  print(f"Git diff failed: {result.stderr}")
+                              else:
+                                  print(f"Git diff output:\n{result.stdout}")
+
+                                  for line in result.stdout.strip().split('\n'):
+                                      if line and line.startswith('D\t'):
+                                          file_path = line.split('\t')[1]
+                                          if file_path.startswith(f"{source_dir}/"):
+                                              deleted_files.append(file_path)
+                                              print(f"  Found deleted file: {file_path}")
+                          except Exception as e:
+                              print(f"Warning: Could not get deleted files: {e}")
+                              import traceback
+                              traceback.print_exc()
+                      else:
+                          print(f"Warning: Missing SHAs (base: {base_sha}, head: {head_sha})")
+
+                      print(f"Added files: {added_files}")
+                      print(f"Deleted files: {deleted_files}")
+
+                      # Delete corresponding translation files
+                      if deleted_files:
+                          print(f"\nDeleting corresponding translation files for {len(deleted_files)} deleted source files...")
+                          for source_file in deleted_files:
+                              for target_lang in TARGET_LANGUAGES:
+                                  target_dir = translation_config["languages"][target_lang]["directory"]
+                                  target_file = source_file.replace(f"{source_dir}/", f"{target_dir}/")
+                                  target_path = Path(f"../../{target_file}")
+
+                                  if target_path.exists():
+                                      target_path.unlink()
+                                      print(f"✓ Deleted {target_file}")
+                                      results["translated"].append(f"deleted:{target_file}")
+
+                                      # Remove empty parent directories
+                                      parent = target_path.parent
+                                      repo_root = Path("../../").resolve()
+                                      while parent.resolve() != repo_root:
+                                          try:
+                                              # Only remove if directory is empty
+                                              if not any(parent.iterdir()):
+                                                  parent.rmdir()
+                                                  print(f"✓ Removed empty directory {parent.relative_to(repo_root)}")
+                                                  parent = parent.parent
+                                              else:
+                                                  break
+                                          except (OSError, ValueError):
+                                              break
+                                  else:
+                                      print(f"  Skipped {target_file} (doesn't exist)")
+
+                      # Use incremental sync to update docs.json
+                      sync_log = synchronizer.sync_docs_json_incremental(
+                          added_files=added_files,
+                          deleted_files=deleted_files
+                      )
+                      print("\n".join(sync_log))
+                  except Exception as e:
+                      print(f"Error syncing structure: {e}")
+                      import traceback
+                      traceback.print_exc()
+
+              # Save results
+              with open("/tmp/sync_results.json", "w") as f:
+                  json.dump(results, f, indent=2)
+
+              return len(results["failed"]) == 0
+
+          if __name__ == "__main__":
+              success = asyncio.run(secure_sync())
+              sys.exit(0 if success else 1)
+          EOF
+          
+          # Run the secure sync
+          python secure_sync.py "$WORK_DIR"
+          SYNC_EXIT_CODE=$?
+          
+          echo "sync_exit_code=$SYNC_EXIT_CODE" >> $GITHUB_OUTPUT
+          
+          # Check for changes
+          if [[ -n $(git status --porcelain) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and create translation PR
+        if: steps.sync.outputs.has_changes == 'true'
+        id: create-translation-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+          BRANCH_EXISTS="${{ steps.check-branch.outputs.branch_exists }}"
+          HEAD_SHA="${{ steps.extract-artifacts.outputs.head_sha }}"
+
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+
+          # Setup branch
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            # Fetch and checkout existing translation branch
+            echo "Checking out existing translation branch: $SYNC_BRANCH"
+            git fetch origin "$SYNC_BRANCH"
+            git checkout -B "$SYNC_BRANCH" "origin/$SYNC_BRANCH"
+          else
+            # Create new translation branch (use -B to handle local branch conflicts)
+            echo "Creating new translation branch: $SYNC_BRANCH"
+            git checkout -B "$SYNC_BRANCH"
+          fi
+
+          # Remove English source files from working directory (they shouldn't be in translation PR)
+          # These files exist from line 320 where we checkout en/ files for translation
+          rm -rf en/*.md en/*.mdx 2>/dev/null || true
+          # Also ensure any staged en/ files are unstaged
+          git reset HEAD -- en/ 2>/dev/null || true
+          echo "✓ Removed English source files from working directory and staging area"
+
+          # Commit translation changes only (not English files from PR)
+          git add cn/ jp/ docs.json
+
+          if [ "$BRANCH_EXISTS" = "true" ]; then
+            # Incremental commit
+            git commit -m "🔄 Update translations for commit ${HEAD_SHA:0:8}"$'\n\n'"Auto-generated translations for changes in commit ${HEAD_SHA}."$'\n\n'"Last-Processed-Commit: ${HEAD_SHA}"$'\n'"Original-PR: #${PR_NUMBER}"$'\n'"Languages: Chinese (cn), Japanese (jp)"$'\n\n'"🤖 Generated with GitHub Actions"
+          else
+            # Initial commit
+            git commit -m "🌐 Initial translations for PR #${PR_NUMBER}"$'\n\n'"Auto-generated translations for documentation changes in PR #${PR_NUMBER}."$'\n\n'"Last-Processed-Commit: ${HEAD_SHA}"$'\n'"Original-PR: #${PR_NUMBER}"$'\n'"Languages: Chinese (cn), Japanese (jp)"$'\n\n'"🤖 Generated with GitHub Actions"
+          fi
+
+          # Push to translation branch (no force - preserve history)
+          git push origin "$SYNC_BRANCH"
+          
+          # Get original PR details for translation PR
+          ORIGINAL_PR_TITLE=$(gh pr view ${PR_NUMBER} --json title --jq '.title' 2>/dev/null || echo "Documentation changes")
+
+          if [ "$BRANCH_EXISTS" = "false" ]; then
+            # Create new translation PR
+            echo "Creating new translation PR..."
+
+            # Create translation PR body
+            cat > /tmp/translation_pr_body.md <<EOF
+          # 🌐 Auto-generated Translations
+          
+          This PR contains automatically generated translations for the documentation changes in PR #${PR_NUMBER}.
+          
+          ## Original PR
+          **Title:** ${ORIGINAL_PR_TITLE}  
+          **Link:** #${PR_NUMBER}
+          
+          ## What's included
+          - 🇨🇳 Chinese (cn) translations
+          - 🇯🇵 Japanese (jp) translations
+          - 📋 Updated navigation structure in docs.json
+          
+          ## Review Process
+          1. Review the generated translations for accuracy
+          2. Make any necessary adjustments
+          3. Merge this PR to apply the translations
+          
+          ## Links
+          - **Original English PR:** #${PR_NUMBER}
+          - **Translation branch:** \`${SYNC_BRANCH}\`
+          
+          ---
+          🤖 This PR was created automatically by the documentation translation workflow.
+          EOF
+          
+            # Create the translation PR
+            TRANSLATION_PR_URL=$(gh pr create \
+              --base main \
+              --head "$SYNC_BRANCH" \
+              --title "🌐 Auto-translations for PR #${PR_NUMBER}: ${ORIGINAL_PR_TITLE}" \
+              --body-file /tmp/translation_pr_body.md 2>&1 || echo "")
+
+            if [ -z "$TRANSLATION_PR_URL" ]; then
+              echo "❌ Failed to create translation PR"
+              echo "creation_successful=false" >> $GITHUB_OUTPUT
+            else
+              # Extract PR number from URL
+              TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_URL" | grep -o '[0-9]\+$')
+              echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
+              echo "branch_name=$SYNC_BRANCH" >> $GITHUB_OUTPUT
+              echo "creation_successful=true" >> $GITHUB_OUTPUT
+
+              echo "✅ Translation PR created successfully: #${TRANSLATION_PR_NUMBER}"
+            fi
+
+          else
+            # Translation PR already exists - just add update comment
+            echo "Translation PR already exists, adding update comment..."
+
+            # Find existing translation PR
+            TRANSLATION_PR_NUMBER=$(gh pr list \
+              --search "head:$SYNC_BRANCH state:open" \
+              --json number \
+              --jq '.[0].number // empty' 2>/dev/null || echo "")
+
+            if [ -n "$TRANSLATION_PR_NUMBER" ]; then
+              echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "creation_successful=true" >> $GITHUB_OUTPUT
+
+              # Add tracking comment with last processed commit
+              COMMENT_BODY="<!-- Last-Processed-Commit: ${HEAD_SHA} -->"$'\n'"🔄 **Updated for commit \`${HEAD_SHA:0:8}\`**"$'\n\n'"Latest source changes have been translated and committed to this PR."$'\n\n'"**Source commit:** [\`${HEAD_SHA:0:8}\`](https://github.com/${{ github.repository }}/commit/${HEAD_SHA})"$'\n'"**Original PR:** #${PR_NUMBER}"
+              gh pr comment "$TRANSLATION_PR_NUMBER" --body "$COMMENT_BODY" || echo "Failed to add comment"
+
+              echo "✅ Translation PR updated: #${TRANSLATION_PR_NUMBER}"
+            else
+              echo "❌ Could not find translation PR"
+              echo "creation_successful=false" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+      - name: Comment on original PR with translation PR link
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const hasChanges = '${{ steps.sync.outputs.has_changes }}' === 'true';
+            const translationPrNumber = '${{ steps.create-translation-pr.outputs.translation_pr_number }}';
+            const translationPrUrl = '${{ steps.create-translation-pr.outputs.translation_pr_url }}';
+            const creationSuccessful = '${{ steps.create-translation-pr.outputs.creation_successful }}' === 'true';
+            const branchExists = '${{ steps.check-branch.outputs.branch_exists }}' === 'true';
+            const headSha = '${{ steps.extract-artifacts.outputs.head_sha }}';
+
+            let comment = '## 🤖 Automatic Translation Status\n\n';
+
+            if (hasChanges && creationSuccessful && translationPrNumber) {
+              // Load sync results if available
+              let results = { translated: [], failed: [], skipped: [] };
+              try {
+                results = JSON.parse(fs.readFileSync('/tmp/sync_results.json', 'utf8'));
+              } catch (e) {
+                console.log('Could not load sync results');
+                results = { translated: [], failed: [], skipped: [] };
+              }
+
+              if (branchExists) {
+                // Translation PR was updated
+                comment += `🔄 **Translation PR Updated!**\n\n`;
+                comment += `Your latest changes (commit \`${headSha.substring(0, 8)}\`) have been automatically translated and added to the translation PR.\n\n`;
+              } else {
+                // Translation PR was created
+                comment += `🎉 **Translation PR Created Successfully!**\n\n`;
+                comment += `Your English documentation changes have been automatically translated and a separate PR has been created.\n\n`;
+              }
+
+              comment += `### 🔗 Translation PR: [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
+              
+              if (results.translated && results.translated.length > 0) {
+                comment += `### ✅ Successfully Translated (${results.translated.length} files):\n`;
+                results.translated.slice(0, 8).forEach(file => {
+                  comment += `- \`${file}\`\n`;
+                });
+                if (results.translated.length > 8) {
+                  comment += `- ... and ${results.translated.length - 8} more files\n`;
+                }
+                comment += '\n';
+              }
+              
+              if (results.failed && results.failed.length > 0) {
+                comment += `### ⚠️ Translation Issues (${results.failed.length}):\n`;
+                results.failed.slice(0, 5).forEach(file => {
+                  comment += `- \`${file}\`\n`;
+                });
+                if (results.failed.length > 5) {
+                  comment += `- ... and ${results.failed.length - 5} more\n`;
+                }
+                comment += '\n';
+              }
+              
+              comment += '### 🔄 What Happens Next:\n';
+              comment += `1. **Review**: The translation PR [#${translationPrNumber}](${translationPrUrl}) is ready for review\n`;
+              comment += '2. **Independent**: Both PRs can be reviewed and merged independently\n';
+              comment += '3. **Automatic**: Future updates to this PR will automatically update the translation PR\n\n';
+              
+              comment += '### 📋 Languages Included:\n';
+              comment += '- 🇨🇳 **Chinese (cn)**: Simplified Chinese translations\n';
+              comment += '- 🇯🇵 **Japanese (jp)**: Japanese translations\n';
+              comment += '- 📋 **Navigation**: Updated docs.json structure for both languages\n\n';
+              
+              comment += '---\n';
+              comment += '_🤖 This is an automated translation workflow. The translation PR was created automatically and is ready for review._';
+              
+            } else if (hasChanges && !creationSuccessful) {
+              comment += '⚠️ **Translation PR Creation Failed**\n\n';
+              comment += 'The automatic translation process completed, but there was an issue creating the translation PR.\n\n';
+              comment += '**What you can do:**\n';
+              comment += '1. Check the workflow logs for detailed error information\n';
+              comment += '2. Contact a maintainer if the issue persists\n';
+              comment += '3. The translations may have been generated but need manual PR creation\n\n';
+              comment += '_🤖 This is an automated notification from the translation workflow._';
+              
+            } else {
+              comment += '✅ **No Translation Changes Needed**\n\n';
+              comment += 'Your changes did not require new translations, or all translations are already up to date.\n\n';
+              comment += '_🤖 This is an automated check from the translation workflow._';
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+      - name: Comment on translation PR with original PR link
+        if: steps.create-translation-pr.outputs.creation_successful == 'true' && steps.create-translation-pr.outputs.translation_pr_number && steps.check-branch.outputs.branch_exists == 'false'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const translationPrNumber = ${{ steps.create-translation-pr.outputs.translation_pr_number }};
+            
+            const backLinkComment = [
+              '## 🔗 Linked to Original PR',
+              '',
+              `This translation PR was automatically created for the English documentation changes in **PR #${prNumber}**.`,
+              '',
+              '### 📝 Original Changes',
+              `- **Original PR**: #${prNumber}`,
+              '- **Type**: English documentation updates',
+              '- **Auto-translation**: This PR contains the corresponding translations',
+              '',
+              '### 🔄 Synchronization',
+              '- **Automatic Updates**: This PR will be automatically updated if the original PR changes',
+              '- **Independent Review**: This translation PR can be reviewed and merged independently',
+              '- **Quality Check**: Please review translations for accuracy and cultural appropriateness',
+              '',
+              '---',
+              `🤖 _This PR is part of the automated translation workflow. Any updates to PR #${prNumber} will automatically update this translation PR._`
+            ].join('\n\n');
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: translationPrNumber,
+                body: backLinkComment
+              });
+              console.log(`Successfully linked translation PR #${translationPrNumber} to original PR #${prNumber}`);
+            } catch (error) {
+              console.log(`Could not comment on translation PR #${translationPrNumber}:`, error.message);
+            }
+
+  handle-failure:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Report analysis failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Try to extract PR number from workflow run
+            const workflowRun = context.payload.workflow_run;
+            
+            console.log('Analysis workflow failed');
+            console.log('Attempting to notify PR if possible...');
+            
+            // This is a best-effort attempt to notify
+            // In practice, you might want to store PR number differently
