@@ -203,18 +203,28 @@ jobs:
       - name: Check if translation branch exists
         if: steps.extract-artifacts.outputs.sync_required == 'true'
         id: check-branch
-        run: |
-          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
-          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = '${{ steps.extract-artifacts.outputs.pr_number }}';
+            const branchName = `docs-sync-pr-${prNumber}`;
 
-          # Check if translation branch exists on remote
-          if git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1; then
-            echo "✅ Translation branch exists: $SYNC_BRANCH"
-            echo "branch_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "🆕 Translation branch does not exist yet"
-            echo "branch_exists=false" >> $GITHUB_OUTPUT
-          fi
+            try {
+              await github.rest.repos.getBranch({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                branch: branchName
+              });
+              console.log(`✅ Translation branch exists: ${branchName}`);
+              core.setOutput('branch_exists', 'true');
+            } catch (error) {
+              if (error.status === 404) {
+                console.log(`🆕 Translation branch does not exist yet`);
+                core.setOutput('branch_exists', 'false');
+              } else {
+                throw error;
+              }
+            }
 
       - name: Checkout PR branch
         if: steps.extract-artifacts.outputs.sync_required == 'true'
