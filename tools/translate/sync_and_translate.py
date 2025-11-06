@@ -823,14 +823,14 @@ class DocsSynchronizer:
     def extract_file_locations(self, section_data) -> Dict[str, Dict]:
         """
         Extract all file paths and their locations in the navigation structure.
-        Returns dict mapping file path to location metadata.
+        Returns dict mapping file path to location metadata including full group path.
         """
         locations = {}
 
         if not section_data or "dropdowns" not in section_data:
             return locations
 
-        def traverse_structure(pages, dropdown_name, dropdown_idx, path_prefix=""):
+        def traverse_structure(pages, dropdown_name, dropdown_idx, group_path, path_prefix=""):
             """Recursively traverse pages structure to extract file locations."""
             for idx, item in enumerate(pages):
                 if isinstance(item, str):
@@ -838,6 +838,7 @@ class DocsSynchronizer:
                     locations[item] = {
                         "dropdown": dropdown_name,
                         "dropdown_idx": dropdown_idx,
+                        "group_path": group_path,  # Full group path for accurate location tracking
                         "path": f"{path_prefix}[{idx}]",
                         "type": "page"
                     }
@@ -845,10 +846,12 @@ class DocsSynchronizer:
                     if "pages" in item:
                         # Nested group
                         group_name = item.get("group", item.get("label", ""))
+                        new_group_path = f"{group_path} > {group_name}" if group_path else group_name
                         traverse_structure(
                             item["pages"],
                             dropdown_name,
                             dropdown_idx,
+                            new_group_path,
                             f"{path_prefix}[{idx}].pages"
                         )
 
@@ -857,7 +860,7 @@ class DocsSynchronizer:
 
             # Check pages array
             if "pages" in dropdown:
-                traverse_structure(dropdown["pages"], dropdown_name, dropdown_idx, "pages")
+                traverse_structure(dropdown["pages"], dropdown_name, dropdown_idx, dropdown_name, "pages")
 
         return locations
 
@@ -928,20 +931,57 @@ class DocsSynchronizer:
                 base_loc = base_locations[file_path]
                 head_loc = head_locations[file_path]
 
-                # Check if location changed (dropdown or path within dropdown)
-                if (base_loc["dropdown"] != head_loc["dropdown"] or
-                    base_loc["path"] != head_loc["path"]):
+                # Check if location changed (use group_path for accurate comparison)
+                if base_loc["group_path"] != head_loc["group_path"]:
                     moved_files.append({
                         "file": file_path,
                         "from": base_loc,
                         "to": head_loc
                     })
 
-            if not moved_files and not added and not deleted:
+            # Detect renames: files that were deleted and added might be renames
+            # Match by looking at the base filename (without language prefix)
+            renamed_files = []
+            deleted_normalized = {}
+            added_normalized = {}
+
+            for deleted_file in deleted:
+                # Normalize: en/foo/bar.md -> foo/bar.md
+                normalized = re.sub(r'^en/', '', deleted_file)
+                deleted_normalized[normalized] = deleted_file
+
+            for added_file in added:
+                # Normalize: en/foo/baz.md -> foo/baz.md
+                normalized = re.sub(r'^en/', '', added_file)
+                added_normalized[normalized] = added_file
+
+            # Check for renames: different paths but same location
+            # This is a simple heuristic - if added and deleted have different normalized paths
+            # but appear in similar locations, treat as rename
+            for del_norm, del_file in deleted_normalized.items():
+                for add_norm, add_file in added_normalized.items():
+                    if del_norm != add_norm:
+                        # Different paths - potential rename
+                        del_loc = base_locations[del_file]
+                        add_loc = head_locations[add_file]
+
+                        # If they're in the same location group, it's likely a rename
+                        if del_loc["group_path"] == add_loc["group_path"]:
+                            renamed_files.append({
+                                "from_file": del_file,
+                                "to_file": add_file,
+                                "location": add_loc
+                            })
+                            # Remove from added/deleted to avoid processing twice
+                            added.discard(add_file)
+                            deleted.discard(del_file)
+                            break
+
+            if not moved_files and not added and not deleted and not renamed_files:
                 reconcile_log.append("INFO: No structural changes detected")
                 return reconcile_log
 
-            reconcile_log.append(f"INFO: Detected {len(moved_files)} moves, {len(added)} adds, {len(deleted)} deletes")
+            reconcile_log.append(f"INFO: Detected {len(moved_files)} moves, {len(renamed_files)} renames, {len(added)} adds, {len(deleted)} deletes")
 
             # Load current docs.json
             docs_data = self.load_docs_json()
@@ -949,13 +989,15 @@ class DocsSynchronizer:
                 reconcile_log.append("ERROR: Could not load docs.json")
                 return reconcile_log
 
+            changes_made = False
+
             # Apply moves to cn/jp sections
             for move_op in moved_files:
                 en_file = move_op["file"]
                 from_loc = move_op["from"]
                 to_loc = move_op["to"]
 
-                reconcile_log.append(f"INFO: Moving {en_file} from '{from_loc['dropdown']}' to '{to_loc['dropdown']}'")
+                reconcile_log.append(f"INFO: Moving {en_file} from '{from_loc['group_path']}' to '{to_loc['group_path']}'")
 
                 # Apply to each target language
                 for target_lang in ["cn", "jp"]:
@@ -970,13 +1012,53 @@ class DocsSynchronizer:
 
                         if added:
                             reconcile_log.append(f"SUCCESS: Moved {target_file} to new location")
+                            changes_made = True
                         else:
                             reconcile_log.append(f"WARNING: Could not add {target_file} to new location")
                     else:
                         reconcile_log.append(f"WARNING: Could not remove {target_file} from old location")
 
+            # Apply renames to cn/jp sections
+            for rename_op in renamed_files:
+                from_file = rename_op["from_file"]
+                to_file = rename_op["to_file"]
+                location = rename_op["location"]
+
+                reconcile_log.append(f"INFO: Renaming {from_file} to {to_file}")
+
+                # Apply to each target language
+                for target_lang in ["cn", "jp"]:
+                    old_target_file = self.convert_path_to_target_language(from_file, target_lang)
+                    new_target_file = self.convert_path_to_target_language(to_file, target_lang)
+
+                    # Rename physical file
+                    old_file_path = self.base_dir / old_target_file
+                    new_file_path = self.base_dir / new_target_file
+
+                    if old_file_path.exists():
+                        # Create parent directories if needed
+                        new_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                        # Rename the file
+                        old_file_path.rename(new_file_path)
+                        reconcile_log.append(f"SUCCESS: Renamed file {old_target_file} to {new_target_file}")
+
+                        # Update docs.json: remove old entry, add new entry
+                        removed = self.remove_file_from_navigation(docs_data, old_target_file, target_lang)
+                        if removed:
+                            added = self.add_file_to_navigation(docs_data, new_target_file, target_lang, location)
+                            if added:
+                                reconcile_log.append(f"SUCCESS: Updated docs.json for {target_lang} rename")
+                                changes_made = True
+                            else:
+                                reconcile_log.append(f"WARNING: Could not add {new_target_file} to docs.json")
+                        else:
+                            reconcile_log.append(f"WARNING: Could not remove {old_target_file} from docs.json")
+                    else:
+                        reconcile_log.append(f"WARNING: File {old_target_file} not found for rename")
+
             # Save updated docs.json
-            if moved_files:
+            if changes_made:
                 self.save_docs_json(docs_data)
                 reconcile_log.append("SUCCESS: Applied structural changes to docs.json")
 
