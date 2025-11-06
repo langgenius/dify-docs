@@ -166,29 +166,29 @@ class TranslationPRManager:
         return await self.run_translation_from_sync_plan(sync_plan)
 
     async def run_translation_from_pr_analysis(self) -> Dict:
-        """Run translation by analyzing PR changes directly (used by update workflow)."""
-        print(f"Analyzing PR changes: {self.base_sha[:8]}...{self.head_sha[:8]}")
+        """Run translation by generating sync plan on-the-fly (used by update workflow)."""
+        print(f"Generating sync plan for PR changes: {self.base_sha[:8]}...{self.head_sha[:8]}")
 
-        analyzer = PRAnalyzer(self.base_sha, self.head_sha)
-        result = analyzer.categorize_pr()
+        # Import here to avoid circular dependency
+        from pr_analyzer import SyncPlanGenerator
 
-        if result['type'] != 'english':
-            print(f"PR type is {result['type']}, not english - skipping translation")
-            return {"translated": [], "failed": [], "skipped": ["wrong_pr_type"]}
+        # Generate sync plan with identical logic to analyze workflow
+        generator = SyncPlanGenerator(self.base_sha, self.head_sha)
+        sync_plan = generator.generate_sync_plan()
 
-        # Get English files from PR analysis
-        files_to_sync = result['files']['english']
+        # Log what we're syncing
+        files_count = len(sync_plan.get("files_to_sync", []))
+        openapi_count = len(sync_plan.get("openapi_files_to_sync", []))
+        structure_changed = sync_plan.get("structure_changes", {}).get("structure_changed", False)
 
-        # Create a minimal sync plan
-        sync_plan = {
-            "files_to_sync": [{"path": f} for f in files_to_sync],
-            "openapi_files_to_sync": [],
-            "structure_changes": {"structure_changed": True},
-            "metadata": {
-                "base_sha": self.base_sha,
-                "head_sha": self.head_sha
-            }
-        }
+        print(f"Sync plan generated:")
+        print(f"  - {files_count} markdown files to translate")
+        print(f"  - {openapi_count} OpenAPI files to translate")
+        print(f"  - Structure changed: {structure_changed}")
+
+        if not sync_plan.get("sync_required", False):
+            print("No sync required - no changes to translate")
+            return {"translated": [], "failed": [], "skipped": ["no_changes"]}
 
         return await self.run_translation_from_sync_plan(sync_plan)
 

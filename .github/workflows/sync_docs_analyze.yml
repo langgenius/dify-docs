@@ -320,74 +320,52 @@ jobs:
 
           echo "All English file paths validated for translation"
 
-      - name: Create analysis summary  
+      - name: Create analysis summary
         if: steps.analyze.outputs.has_changes == 'true'
         run: |
           echo "Creating analysis summary for English changes..."
-          
-          # Create a comprehensive analysis summary
-          python3 - <<'EOF'
+
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Use SyncPlanGenerator for consistent logic across workflows
+          cd tools/translate
+          python3 - <<EOF
           import json
-          import os
-          
-          # Load analysis data
-          with open("/tmp/analysis.json") as f:
-              analysis = json.load(f)
-          
-          # Load file analysis (English markdown files to translate)
-          files_to_sync = []
-          with open("/tmp/file_analysis.txt") as f:
-              for line in f:
-                  if line.strip():
-                      parts = line.strip().split("|")
-                      file_path, size = parts[0], int(parts[1])
-                      file_type = parts[2] if len(parts) > 2 else ("mdx" if file_path.endswith(".mdx") else "md")
-                      files_to_sync.append({
-                          "path": file_path,
-                          "size": size,
-                          "type": file_type
-                      })
+          import sys
+          sys.path.append('.')
+          from pr_analyzer import SyncPlanGenerator
 
-          # Load OpenAPI file analysis (English OpenAPI JSON files to translate)
-          openapi_files_to_sync = []
-          if os.path.exists("/tmp/openapi_analysis.txt"):
-              with open("/tmp/openapi_analysis.txt") as f:
-                  for line in f:
-                      if line.strip():
-                          parts = line.strip().split("|")
-                          file_path, size, file_type = parts[0], int(parts[1]), parts[2]
-                          openapi_files_to_sync.append({
-                              "path": file_path,
-                              "size": size,
-                              "type": file_type
-                          })
+          # Generate sync plan using centralized logic
+          generator = SyncPlanGenerator("$BASE_SHA", "$HEAD_SHA")
+          sync_plan = generator.generate_sync_plan()
 
-          # Note: docs.json is NOT added to files_to_sync
-          # It's handled separately via structure_changes and sync_docs_json_structure()
-          # because it needs structure syncing, not translation
-          
-          # Load structure changes
-          with open("/tmp/structure_changes.json") as f:
-              structure_changes = json.load(f)
-          
-          # Create sync plan
-          sync_plan = {
-              "metadata": analysis,
-              "files_to_sync": files_to_sync,
-              "openapi_files_to_sync": openapi_files_to_sync,
-              "structure_changes": structure_changes,
-              "target_languages": ["cn", "jp"],
-              "sync_required": len(files_to_sync) > 0 or len(openapi_files_to_sync) > 0 or structure_changes.get("structure_changed", False)
-          }
-          
+          # Add PR metadata to sync plan
+          sync_plan["metadata"].update({
+              "pr_number": $PR_NUMBER,
+              "pr_title": "${{ github.event.pull_request.title }}",
+              "pr_author": "${{ github.event.pull_request.user.login }}",
+              "event_action": "${{ github.event.action }}",
+              "file_count": len(sync_plan["files_to_sync"]) + len(sync_plan["openapi_files_to_sync"]),
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "repository": "${{ github.repository }}",
+              "ref": "${{ github.ref }}",
+              "pr_type": "english"
+          })
+
+          # Save analysis.json (for backward compatibility)
+          with open("/tmp/analysis.json", "w") as f:
+              json.dump(sync_plan["metadata"], f, indent=2)
+
           # Save sync plan
           with open("/tmp/sync_plan.json", "w") as f:
               json.dump(sync_plan, f, indent=2)
-          
+
           print(f"English sync plan created:")
-          print(f"  - {len(files_to_sync)} markdown files to translate")
-          print(f"  - {len(openapi_files_to_sync)} OpenAPI JSON files to translate")
-          if structure_changes.get("structure_changed"):
+          print(f"  - {len(sync_plan['files_to_sync'])} markdown files to translate")
+          print(f"  - {len(sync_plan['openapi_files_to_sync'])} OpenAPI JSON files to translate")
+          if sync_plan['structure_changes'].get('structure_changed'):
               print("  - Documentation structure changes detected")
           EOF
 

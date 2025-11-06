@@ -307,6 +307,160 @@ Please separate your changes and resubmit as two focused PRs. Thank you! 🙏"""
 
         return error_msg
 
+
+class SyncPlanGenerator:
+    """
+    Generates sync_plan.json with identical logic for both execute and update workflows.
+
+    Extracts the sync plan generation logic from the analyze workflow to ensure
+    both workflows use the same file filtering and structure change detection.
+    """
+
+    def __init__(self, base_sha: str, head_sha: str, repo_root: Optional[str] = None):
+        self.base_sha = base_sha
+        self.head_sha = head_sha
+        self.repo_root = Path(repo_root) if repo_root else Path(__file__).parent.parent.parent
+        self.analyzer = PRAnalyzer(base_sha, head_sha, repo_root)
+        self.config = self.analyzer.config
+
+    def get_changed_files_with_status(self) -> List[Tuple[str, str]]:
+        """
+        Get list of changed files with their status (A=added, M=modified, D=deleted, etc).
+
+        Returns list of tuples: [(status, filepath), ...]
+        Only returns A (added) and M (modified) files for translation.
+        """
+        try:
+            result = subprocess.run([
+                "git", "diff", "--name-status", "--diff-filter=AM",
+                self.base_sha, self.head_sha
+            ], capture_output=True, text=True, check=True, cwd=self.repo_root)
+
+            files_with_status = []
+            for line in result.stdout.strip().split('\n'):
+                if line.strip():
+                    parts = line.split('\t', 1)
+                    if len(parts) == 2:
+                        status, filepath = parts[0], parts[1]
+                        files_with_status.append((status, filepath))
+
+            return files_with_status
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting changed files with status: {e}")
+            return []
+
+    def get_file_size(self, filepath: str) -> int:
+        """Get file size in bytes."""
+        full_path = self.repo_root / filepath
+        try:
+            return full_path.stat().st_size if full_path.exists() else 0
+        except:
+            return 0
+
+    def is_openapi_file(self, filepath: str) -> bool:
+        """Check if file matches OpenAPI JSON pattern."""
+        openapi_config = self.config.get("openapi", {})
+        if not openapi_config.get("enabled", False):
+            return False
+
+        file_patterns = openapi_config.get("file_patterns", ["openapi*.json"])
+        directories = openapi_config.get("directories", ["api-reference"])
+
+        # Check if file is in allowed directories
+        if not any(f"/{dir}/" in filepath or filepath.startswith(f"{dir}/") for dir in directories):
+            return False
+
+        # Check if filename matches patterns
+        filename = Path(filepath).name
+        for pattern in file_patterns:
+            regex = pattern.replace('*', '.*').replace('?', '.')
+            if re.match(f'^{regex}$', filename):
+                return True
+
+        return False
+
+    def generate_sync_plan(self) -> Dict:
+        """
+        Generate sync plan with identical logic to analyze workflow.
+
+        Returns sync_plan dict with:
+        - metadata: PR context and commit info
+        - files_to_sync: English markdown files (A/M only)
+        - openapi_files_to_sync: English OpenAPI JSON files (A/M only)
+        - structure_changes: docs.json change analysis
+        - target_languages: Languages to translate to
+        - sync_required: Whether any sync is needed
+        """
+        # Get changed files with status
+        files_with_status = self.get_changed_files_with_status()
+
+        # Categorize files for translation
+        files_to_sync = []
+        openapi_files_to_sync = []
+        docs_json_changed = False
+
+        for status, filepath in files_with_status:
+            # Check for docs.json
+            if filepath == 'docs.json':
+                docs_json_changed = True
+                continue
+
+            # Process English markdown files
+            if filepath.startswith('en/') and filepath.endswith(('.md', '.mdx')):
+                file_size = self.get_file_size(filepath)
+                file_type = 'mdx' if filepath.endswith('.mdx') else 'md'
+                files_to_sync.append({
+                    "path": filepath,
+                    "size": file_size,
+                    "type": file_type,
+                    "status": status
+                })
+
+            # Process English OpenAPI JSON files
+            elif filepath.startswith('en/') and self.is_openapi_file(filepath):
+                file_size = self.get_file_size(filepath)
+                openapi_files_to_sync.append({
+                    "path": filepath,
+                    "size": file_size,
+                    "type": "openapi_json",
+                    "status": status
+                })
+
+        # Analyze docs.json changes (if changed)
+        if docs_json_changed:
+            docs_changes = self.analyzer.analyze_docs_json_changes()
+            structure_changes = {
+                "structure_changed": docs_changes["any_docs_json_changes"],
+                "navigation_modified": docs_changes["english_section"],
+                "languages_affected": ["cn", "jp"] if docs_changes["english_section"] else []
+            }
+        else:
+            structure_changes = {
+                "structure_changed": False,
+                "navigation_modified": False,
+                "languages_affected": []
+            }
+
+        # Create metadata
+        metadata = {
+            "base_sha": self.base_sha,
+            "head_sha": self.head_sha,
+            "comparison": f"{self.base_sha[:8]}...{self.head_sha[:8]}"
+        }
+
+        # Build sync plan
+        sync_plan = {
+            "metadata": metadata,
+            "files_to_sync": files_to_sync,
+            "openapi_files_to_sync": openapi_files_to_sync,
+            "structure_changes": structure_changes,
+            "target_languages": self.config.get("target_languages", ["cn", "jp"]),
+            "sync_required": len(files_to_sync) > 0 or len(openapi_files_to_sync) > 0 or structure_changes.get("structure_changed", False)
+        }
+
+        return sync_plan
+
+
 def main():
     """Main entry point for command line usage."""
     if len(sys.argv) != 3:
