@@ -127,6 +127,71 @@ class TranslationPRManager:
         )
         return result.returncode == 0
 
+    def merge_docs_json_for_incremental_update(self) -> None:
+        """
+        Merge docs.json for incremental updates:
+        - English section from PR HEAD (latest structure)
+        - cn/jp sections from translation branch (preserve existing translations)
+        """
+        print("Merging docs.json: English from PR, cn/jp from translation branch...")
+
+        # Get docs.json from PR HEAD (has latest English structure)
+        result = self.run_git("show", f"{self.head_sha}:docs.json")
+        pr_docs = json.loads(result.stdout)
+
+        # Get docs.json from translation branch (has cn/jp translations)
+        docs_json_path = self.repo_root / "docs.json"
+        with open(docs_json_path, 'r', encoding='utf-8') as f:
+            translation_docs = json.load(f)
+
+        # Merge strategy: Replace English section from PR, keep cn/jp from translation branch
+        # Navigate to language sections
+        pr_navigation = pr_docs.get("navigation", {})
+        translation_navigation = translation_docs.get("navigation", {})
+
+        # Handle both direct languages and versions structure
+        if "versions" in pr_navigation:
+            pr_languages = pr_navigation["versions"][0].get("languages", [])
+            translation_languages = translation_navigation.get("versions", [{}])[0].get("languages", [])
+        else:
+            pr_languages = pr_navigation.get("languages", [])
+            translation_languages = translation_navigation.get("languages", [])
+
+        # Build language lookup from translation branch
+        translation_langs_by_code = {}
+        for lang_data in translation_languages:
+            lang_code = lang_data.get("language")
+            if lang_code:
+                translation_langs_by_code[lang_code] = lang_data
+
+        # Merge: Use English from PR, cn/jp from translation branch
+        merged_languages = []
+        for pr_lang in pr_languages:
+            lang_code = pr_lang.get("language")
+
+            if lang_code == self.source_language:
+                # Use English section from PR (latest structure)
+                merged_languages.append(pr_lang)
+            elif lang_code in translation_langs_by_code:
+                # Use cn/jp from translation branch (preserve existing translations)
+                merged_languages.append(translation_langs_by_code[lang_code])
+            else:
+                # Fallback: use from PR
+                merged_languages.append(pr_lang)
+
+        # Update the merged docs.json
+        merged_docs = pr_docs.copy()
+        if "versions" in pr_navigation:
+            merged_docs["navigation"]["versions"][0]["languages"] = merged_languages
+        else:
+            merged_docs["navigation"]["languages"] = merged_languages
+
+        # Write merged docs.json to working directory
+        with open(docs_json_path, 'w', encoding='utf-8') as f:
+            json.dump(merged_docs, f, indent=2, ensure_ascii=False)
+
+        print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, cn/jp from {self.sync_branch}")
+
     def setup_translation_branch(self, branch_exists: bool) -> None:
         """Setup the translation branch (create or checkout existing)."""
         if branch_exists:
@@ -134,9 +199,12 @@ class TranslationPRManager:
             self.run_git("fetch", "origin", f"{self.sync_branch}:{self.sync_branch}")
             self.run_git("checkout", self.sync_branch)
 
-            # For incremental updates, checkout English files and docs.json from PR
-            print(f"Checking out English files and docs.json from {self.head_sha[:8]}...")
-            self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", "docs.json", check=False)
+            # For incremental updates, checkout English files only (not docs.json)
+            print(f"Checking out English files from {self.head_sha[:8]}...")
+            self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", check=False)
+
+            # Merge docs.json: English from PR HEAD, cn/jp from translation branch
+            self.merge_docs_json_for_incremental_update()
         else:
             print(f"🆕 Creating new translation branch: {self.sync_branch}")
             self.run_git("checkout", "-b", self.sync_branch)
