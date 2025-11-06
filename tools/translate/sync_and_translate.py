@@ -823,14 +823,14 @@ class DocsSynchronizer:
     def extract_file_locations(self, section_data) -> Dict[str, Dict]:
         """
         Extract all file paths and their locations in the navigation structure.
-        Returns dict mapping file path to location metadata including full group path.
+        Returns dict mapping file path to location metadata including group indices for language-independent navigation.
         """
         locations = {}
 
         if not section_data or "dropdowns" not in section_data:
             return locations
 
-        def traverse_structure(pages, dropdown_name, dropdown_idx, group_path, path_prefix=""):
+        def traverse_structure(pages, dropdown_name, dropdown_idx, group_path, group_indices, path_prefix=""):
             """Recursively traverse pages structure to extract file locations."""
             for idx, item in enumerate(pages):
                 if isinstance(item, str):
@@ -838,7 +838,8 @@ class DocsSynchronizer:
                     locations[item] = {
                         "dropdown": dropdown_name,
                         "dropdown_idx": dropdown_idx,
-                        "group_path": group_path,  # Full group path for accurate location tracking
+                        "group_path": group_path,  # Full group path for logging/debugging
+                        "group_indices": group_indices.copy(),  # Index-based path for language-independent navigation
                         "path": f"{path_prefix}[{idx}]",
                         "type": "page"
                     }
@@ -847,11 +848,13 @@ class DocsSynchronizer:
                         # Nested group
                         group_name = item.get("group", item.get("label", ""))
                         new_group_path = f"{group_path} > {group_name}" if group_path else group_name
+                        new_group_indices = group_indices + [idx]  # Track the index of this group
                         traverse_structure(
                             item["pages"],
                             dropdown_name,
                             dropdown_idx,
                             new_group_path,
+                            new_group_indices,
                             f"{path_prefix}[{idx}].pages"
                         )
 
@@ -860,7 +863,7 @@ class DocsSynchronizer:
 
             # Check pages array
             if "pages" in dropdown:
-                traverse_structure(dropdown["pages"], dropdown_name, dropdown_idx, dropdown_name, "pages")
+                traverse_structure(dropdown["pages"], dropdown_name, dropdown_idx, dropdown_name, [], "pages")
 
         return locations
 
@@ -1107,7 +1110,7 @@ class DocsSynchronizer:
         return False
 
     def add_file_to_navigation(self, docs_data: Dict, file_path: str, target_lang: str, location_info: Dict) -> bool:
-        """Add a file to target language navigation at specified location."""
+        """Add a file to target language navigation at specified location using index-based navigation."""
         nav = docs_data.get("navigation", {})
 
         # Find target language section
@@ -1134,68 +1137,31 @@ class DocsSynchronizer:
 
         target_dropdown = dropdowns[dropdown_idx]
 
-        # Navigate to the correct group within the dropdown
-        # Parse group_path to find the target group (e.g., "Documentation >   > Nodes")
-        group_path = location_info.get("group_path", "")
-
-        # Split by ">" and strip each part, keeping track of which were originally empty/whitespace
-        raw_parts = group_path.split(">")
-        group_parts = []
-
-        for part in raw_parts:
-            stripped = part.strip()
-            # Keep all parts, but mark whitespace-only ones specially
-            # This handles groups named " " (single space) which appear as empty after strip
-            group_parts.append(stripped if stripped else None)  # None represents whitespace-only group
-
-        # Filter out truly empty parts from start/end, but keep None (whitespace groups)
-        while group_parts and group_parts[0] == "":
-            group_parts.pop(0)
-        while group_parts and group_parts[-1] == "":
-            group_parts.pop()
-
         # Start from dropdown's pages
         if "pages" not in target_dropdown:
             target_dropdown["pages"] = []
 
         current_pages = target_dropdown["pages"]
 
-        # Skip the first part if it matches the dropdown name
-        dropdown_name = target_dropdown.get("dropdown", "")
-        if group_parts and group_parts[0] == dropdown_name:
-            group_parts = group_parts[1:]
+        # Navigate through nested groups using indices (language-independent)
+        group_indices = location_info.get("group_indices", [])
 
-        # Navigate through nested groups to find the target location
-        for group_name in group_parts:
-            # Find the group in current_pages
-            found_group = None
-            for item in current_pages:
-                if isinstance(item, dict):
-                    item_group = item.get("group", "")
-                    # Match logic:
-                    # - If group_name is None, we're looking for whitespace-only group (like " ")
-                    # - Otherwise, match by stripped comparison
-                    if group_name is None:
-                        # Looking for whitespace-only group
-                        if item_group and not item_group.strip():
-                            found_group = item
-                            break
-                    else:
-                        # Normal group name match
-                        if item_group.strip() == group_name:
-                            found_group = item
-                            break
+        for group_idx in group_indices:
+            # Navigate to the group at this index
+            if group_idx >= len(current_pages):
+                # Index out of bounds - structure mismatch between languages
+                return False
 
-            if found_group:
+            item = current_pages[group_idx]
+
+            if isinstance(item, dict) and "pages" in item:
                 # Navigate into this group
-                if "pages" not in found_group:
-                    found_group["pages"] = []
-                current_pages = found_group["pages"]
+                if "pages" not in item:
+                    item["pages"] = []
+                current_pages = item["pages"]
             else:
-                # Group doesn't exist yet - shouldn't happen for moves, but handle it
-                # For now, fall back to appending at dropdown level
-                current_pages = target_dropdown["pages"]
-                break
+                # Expected a group but found something else - structure mismatch
+                return False
 
         # Add file to the target location if not already present
         if file_path not in str(current_pages):
