@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 
 from sync_and_translate import DocsSynchronizer
 from pr_analyzer import PRAnalyzer
+from json_formatter import save_json_with_preserved_format
 
 
 class TranslationPRManager:
@@ -186,11 +187,21 @@ class TranslationPRManager:
         else:
             merged_docs["navigation"]["languages"] = merged_languages
 
-        # Write merged docs.json to working directory
-        with open(docs_json_path, 'w', encoding='utf-8') as f:
-            json.dump(merged_docs, f, indent=2, ensure_ascii=False)
+        # Write merged docs.json preserving original formatting
+        # Use translation branch's docs.json as reference for format detection
+        success = save_json_with_preserved_format(
+            str(docs_json_path),
+            merged_docs,
+            reference_file=str(docs_json_path)  # Current file from translation branch
+        )
 
-        print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, cn/jp from {self.sync_branch}")
+        if success:
+            print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, cn/jp from {self.sync_branch}")
+        else:
+            print(f"⚠️  Warning: Could not preserve formatting, using default")
+            # Fallback to standard json.dump if format preservation fails
+            with open(docs_json_path, 'w', encoding='utf-8') as f:
+                json.dump(merged_docs, f, indent=2, ensure_ascii=False)
 
     def setup_translation_branch(self, branch_exists: bool) -> None:
         """Setup the translation branch (create or checkout existing)."""
