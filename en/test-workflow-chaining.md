@@ -58,3 +58,10 @@ After testing, we discovered that `workflow_run` events don't include PR informa
 - **Update workflow**: Downloads artifact using `docs-sync-analysis-${{ github.event.workflow_run.id }}`
 
 This ensures the artifact can be reliably located regardless of PR context availability.
+
+### Why This Works
+
+The workflow_run trigger uses the workflow definition from the **target branch** (main), not the source branch. This means:
+1. Workflow fixes must be merged to main before they take effect
+2. The `github.event.workflow_run.id` is always available in workflow_run context
+3. Artifact naming becomes deterministic and reliable across workflow boundaries
