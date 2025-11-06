@@ -1031,17 +1031,28 @@ class DocsSynchronizer:
                     old_target_file = self.convert_path_to_target_language(from_file, target_lang)
                     new_target_file = self.convert_path_to_target_language(to_file, target_lang)
 
-                    # Rename physical file
-                    old_file_path = self.base_dir / old_target_file
-                    new_file_path = self.base_dir / new_target_file
+                    # Find the actual file with extension (docs.json entries don't have extensions)
+                    old_file_path = None
+                    file_extension = None
 
-                    if old_file_path.exists():
+                    # Try common extensions
+                    for ext in ['.md', '.mdx', '']:
+                        test_path = self.base_dir / f"{old_target_file}{ext}"
+                        if test_path.exists():
+                            old_file_path = test_path
+                            file_extension = ext
+                            break
+
+                    if old_file_path and old_file_path.exists():
+                        # Create new file path with same extension
+                        new_file_path = self.base_dir / f"{new_target_file}{file_extension}"
+
                         # Create parent directories if needed
                         new_file_path.parent.mkdir(parents=True, exist_ok=True)
 
                         # Rename the file
                         old_file_path.rename(new_file_path)
-                        reconcile_log.append(f"SUCCESS: Renamed file {old_target_file} to {new_target_file}")
+                        reconcile_log.append(f"SUCCESS: Renamed file {old_target_file}{file_extension} to {new_target_file}{file_extension}")
 
                         # Update docs.json: remove old entry, add new entry
                         removed = self.remove_file_from_navigation(docs_data, old_target_file, target_lang)
@@ -1055,7 +1066,7 @@ class DocsSynchronizer:
                         else:
                             reconcile_log.append(f"WARNING: Could not remove {old_target_file} from docs.json")
                     else:
-                        reconcile_log.append(f"WARNING: File {old_target_file} not found for rename")
+                        reconcile_log.append(f"WARNING: File {old_target_file} not found for rename (tried .md, .mdx, and no extension)")
 
             # Save updated docs.json
             if changes_made:
@@ -1123,14 +1134,50 @@ class DocsSynchronizer:
 
         target_dropdown = dropdowns[dropdown_idx]
 
-        # For simplicity, append to dropdown's pages array
-        # More sophisticated logic could parse the path to insert at exact location
+        # Navigate to the correct group within the dropdown
+        # Parse group_path to find the target group (e.g., "Documentation >   > Nodes")
+        group_path = location_info.get("group_path", "")
+
+        # Split group path to get individual group names (skip the dropdown name itself)
+        group_parts = [part.strip() for part in group_path.split(">") if part.strip()]
+
+        # Start from dropdown's pages
         if "pages" not in target_dropdown:
             target_dropdown["pages"] = []
 
-        # Only add if not already present
-        if file_path not in str(target_dropdown["pages"]):
-            target_dropdown["pages"].append(file_path)
+        current_pages = target_dropdown["pages"]
+
+        # Skip the first part if it matches the dropdown name
+        dropdown_name = target_dropdown.get("dropdown", "")
+        if group_parts and group_parts[0] == dropdown_name:
+            group_parts = group_parts[1:]
+
+        # Navigate through nested groups to find the target location
+        for group_name in group_parts:
+            if not group_name:  # Empty group name (like the "  " we saw)
+                continue
+
+            # Find the group in current_pages
+            found_group = None
+            for item in current_pages:
+                if isinstance(item, dict) and item.get("group") == group_name:
+                    found_group = item
+                    break
+
+            if found_group:
+                # Navigate into this group
+                if "pages" not in found_group:
+                    found_group["pages"] = []
+                current_pages = found_group["pages"]
+            else:
+                # Group doesn't exist yet - shouldn't happen for moves, but handle it
+                # For now, fall back to appending at dropdown level
+                current_pages = target_dropdown["pages"]
+                break
+
+        # Add file to the target location if not already present
+        if file_path not in str(current_pages):
+            current_pages.append(file_path)
             return True
 
         return False
