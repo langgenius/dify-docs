@@ -1,125 +1,195 @@
 # Automatic Document Translation
 
-Multi-language document auto-translation system based on GitHub Actions and Dify AI, supporting English, Chinese, and Japanese trilingual translation.
+Multi-language document auto-translation system based on GitHub Actions and Dify AI, supporting English, Chinese, and Japanese.
 
-> **Other Languages**: [中文](README.md) | [日本語](README_JA.md)
+> **Other Languages**: [中文](README_CN.md) | [日本語](README_JA.md)
 
 ## How It Works
 
-1. **Trigger Condition**: Automatically runs when pushing to non-main branches
-2. **Smart Detection**: Automatically identifies modified `.md/.mdx` files and determines source language
-3. **Translation Logic**:
-    - ✅ Translates new documents to other languages
-    - ❌ Skips existing translation files (avoids overwriting manual edits)
-4. **Auto Commit**: Translation results are automatically pushed to the current branch
+### Workflow Triggers
+
+1. **Execute Workflow** (New PRs):
+   - Triggers when PR is opened with `.md/.mdx` changes in `en/` directory
+   - Creates translation PR with fresh translations for all changed files
+   - Translation PR tracks the source PR
+
+2. **Update Workflow** (Incremental Changes):
+   - Triggers on new commits to source PR
+   - Updates existing translation PR with incremental changes
+   - **Context-aware translation**: Uses existing translation + git diff for modified files
+   - **Surgical reconciliation**: Detects and applies move/rename operations
+
+### Translation Operations
+
+- ✅ **New files**: Fresh translation to all target languages
+- ✅ **Modified files**: Context-aware update using existing translation + git diff
+- ✅ **Deleted files**: Removed from all language sections + physical files
+- ✅ **Moved files**: Detected via `group_path` changes, applied with index-based navigation
+- ✅ **Renamed files**: Detected when deleted+added in same location, preserves file extensions
+
+### Surgical Reconciliation
+
+Automatically detects structural changes in `docs.json`:
+
+- **Move detection**: Same file, different `group_path` → moves cn/jp files to same nested location using index-based navigation
+- **Rename detection**: File deleted+added in same location → renames cn/jp files with extension preserved
+- **Index-based navigation**: Groups matched by position, not name (works across translations: "Nodes" ≠ "节点")
 
 ## System Features
 
-- 🌐 **Multi-language Support**: Configuration-based language mapping, theoretically supports any language extension
-- 📚 **Terminology Consistency**: Built-in professional terminology database, LLM intelligently follows terminology to ensure unified technical vocabulary translation
-- 🔄 **Concurrent Processing**: Smart concurrency control, translates multiple target languages simultaneously
-- 🛡️ **Fault Tolerance**: 3-retry mechanism with exponential backoff strategy
-- ⚡ **Incremental Translation**: Only processes changed files, avoids redundant work
-- 🧠 **High-Performance Models**: Uses high-performance LLM models to ensure translation quality
+- 🌐 **Multi-language Support**: Configuration-based language mapping (`config.json`)
+- 📚 **Terminology Consistency**: Built-in professional terminology database (`termbase_i18n.md`)
+- 🔄 **Incremental Updates**: Context-aware translation using git diff for modified files
+- 🎯 **Surgical Reconciliation**: Automatic detection and application of move/rename operations
+- 🛡️ **Fault Tolerance**: Retry mechanism with exponential backoff
+- ⚡ **Efficient Processing**: Only processes changed files since last commit
+
+## Language Directories
+
+- **General docs**: `en/` (source) → `cn/`, `jp/` (targets)
+- **Plugin dev docs**: `plugin-dev-en/` → `plugin-dev-zh/`, `plugin-dev-ja/`
+- **Versioned docs**: `versions/{version}/en-us/` → `versions/{version}/zh-cn/`, `versions/{version}/jp/`
+
+Configuration in `tools/translate/config.json`.
 
 ## Usage
 
 ### For Document Writers
 
-1. Write/modify documents in any language directory
-2. Push to branch (non-main)
-3. Wait 0.5-1 minute for automatic translation completion
-4. **View Translation Results**:
-    - Create Pull Request for local viewing and subsequent editing
-    - Or view Actions push commit details on GitHub to directly review translation quality
+1. Create branch from main
+2. Add/modify/delete files in `en/` directory
+3. Update `docs.json` if adding/removing/moving/renaming files
+4. Push to branch → workflow creates translation PR automatically
+5. Make additional changes → workflow updates translation PR incrementally
+6. Review and merge translation PR
 
-### Supported Language Directories
+### Testing Moves & Renames
 
-- **General Documentation**: `en/` ↔ `zh-hans/` ↔ `ja-jp/`
-- **Plugin Development Documentation**: `plugin-dev-en/` ↔ `plugin-dev-zh/` ↔ `plugin-dev-ja/`
+**Move**: Edit `docs.json` to move file between groups (e.g., Getting Started → Nodes)
+```json
+// Before: en/test-file in "Getting Started" group
+// After: en/test-file in "Nodes" group
+```
 
-Note: System architecture supports extending more languages, just modify configuration files
+**Rename**: Rename file + update `docs.json` entry
+```bash
+git mv en/old-name.md en/new-name.md
+# Update docs.json: "en/old-name" → "en/new-name"
+```
 
-## Important Notes
+Logs will show:
+```
+INFO: Detected 1 moves, 0 renames, 0 adds, 0 deletes
+INFO: Moving en/test-file from 'Dropdown > GroupA' to 'Dropdown > GroupB'
+SUCCESS: Moved cn/test-file to new location
+SUCCESS: Moved jp/test-file to new location
+```
 
-- System only translates new documents, won't overwrite existing translations
-- To update existing translations, manually delete target files then retrigger
-- Terminology translation follows professional vocabulary in `termbase_i18n.md`, LLM has intelligent terminology recognition capabilities
-- Translation quality depends on configured high-performance models, recommend using high-performance base models in Dify Studio
+## Configuration
 
-### System Configuration
+### Language Settings
 
-#### Terminology Database
+Edit `tools/translate/config.json`:
 
-Edit `tools/translate/termbase_i18n.md` to update professional terminology translation reference table.
+```json
+{
+  "source_language": "en",
+  "target_languages": ["cn", "jp"],
+  "languages": {
+    "en": {"code": "en", "name": "English", "directory": "en"},
+    "cn": {
+      "code": "cn",
+      "name": "Chinese",
+      "directory": "cn",
+      "translation_notice": "<Note>⚠️ AI translation...</Note>"
+    }
+  }
+}
+```
 
-#### Translation Model
+### Terminology Database
 
-Visit Dify Studio to adjust translation prompts or change base models.
+Edit `tools/translate/termbase_i18n.md` to update professional terminology translations.
 
----
+### Translation Model
 
-## 🔧 Development and Deployment Configuration
+Configure in Dify Studio - adjust prompts or change base models.
 
-### Local Development Environment
+## Local Development
 
-#### 1. Create Virtual Environment
+### Setup
 
 ```bash
 # Create virtual environment
 python -m venv venv
+source venv/bin/activate  # macOS/Linux
+# venv\Scripts\activate   # Windows
 
-# Activate virtual environment
-# macOS/Linux:
-source venv/bin/activate
-# Windows:
-# venv\Scripts\activate
-```
-
-#### 2. Install Dependencies
-
-```bash
+# Install dependencies
 pip install -r tools/translate/requirements.txt
+
+# Configure API key
+echo "DIFY_API_KEY=your_key" > tools/translate/.env
 ```
 
-#### 3. Configure API Key
-
-Create `.env` file in `tools/translate/` directory:
+### Run Translation
 
 ```bash
-DIFY_API_KEY=your_dify_api_key_here
-```
-
-#### 4. Run Translation
-
-```bash
-# Interactive mode (recommended for beginners)
+# Interactive mode
 python tools/translate/main.py
 
-# Command line mode (specify file)
-python tools/translate/main.py path/to/file.mdx [DIFY_API_KEY]
+# Specify file
+python tools/translate/main.py path/to/file.mdx
 ```
 
-> **Tip**: Right-click in IDE and select "Copy Relative Path" to use as parameter
+### Test Surgical Reconciliation
 
-### Deploy to Other Repositories
+```bash
+# Test locally with git refs
+cd tools/translate
+python -c "
+from sync_and_translate import DocsSynchronizer
+import asyncio
+import os
 
-1. **Copy Files**:
-    - `.github/workflows/translate.yml`
-    - `tools/translate/` entire directory
+api_key = os.getenv('DIFY_API_KEY')
+sync = DocsSynchronizer(api_key)
 
-2. **Configure GitHub Secrets**:
-    - Repository Settings → Secrets and variables → Actions
-    - Add `DIFY_API_KEY` secret
+# Test with specific commits
+logs = sync.reconcile_docs_json_structural_changes('base_sha', 'head_sha')
+for log in logs:
+    print(log)
+"
+```
 
-3. **Test**: Modify documents in branch to verify automatic translation functionality
+## Troubleshooting
 
-### Technical Details
+### Translation Issues
 
-- Concurrent translation limited to 2 tasks to avoid excessive API pressure
+- **HTTP 504**: Verify `response_mode: "streaming"` in `main.py`
+- **Missing output**: Check Dify workflow has output variable `output1`
+- **Failed workflow**: Review Dify workflow logs for node errors
+
+### Move/Rename Issues
+
+- **Not detected**: Check logs for "INFO: Detected X moves, Y renames" - verify `group_path` changed
+- **Wrong location**: Structure mismatch between languages - verify group indices align
+- **File not found**: Ensure file has .md or .mdx extension
+
+## Key Files
+
+- `config.json` - Language configuration (single source of truth)
+- `termbase_i18n.md` - Translation terminology database
+- `sync_and_translate.py` - Core translation + surgical reconciliation logic
+- `main.py` - Local translation tool with Dify API integration
+- `translate_pr.py` - PR workflow orchestration
+- `.github/workflows/sync_docs_execute.yml` - Execute workflow (new PRs)
+- `.github/workflows/sync_docs_update.yml` - Update workflow (incremental changes)
+
+## Technical Details
+
+- Concurrent translation limited to 2 tasks for API stability
 - Supports `.md` and `.mdx` file formats
-- Based on Dify API workflow mode
-
-## TODO
-
-- [ ] Support updating existing translations
+- Based on Dify API streaming mode
+- Index-based navigation for language-independent group matching
+- Extension detection and preservation for rename operations
