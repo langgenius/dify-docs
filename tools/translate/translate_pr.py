@@ -594,36 +594,25 @@ Languages: Chinese (cn), Japanese (jp)
             # Create new PR
             print("Creating new translation PR...")
 
-            pr_body = f"""# 🌐 Auto-generated Translations
+            pr_body = f"""Syncs PR #{self.pr_number} to other languages.
 
-This PR contains automatically generated translations for the documentation changes in PR #{self.pr_number}.
+**Original:** {self.pr_title}
 
-## Original PR
-**Title:** {self.pr_title}
-**Link:** #{self.pr_number}
+### What's synced
+- 🇨🇳 Chinese (cn)
+- 🇯🇵 Japanese (jp)
+- 📋 Navigation (docs.json)
 
-## What's included
-- 🇨🇳 Chinese (cn) translations
-- 🇯🇵 Japanese (jp) translations
-- 📋 Updated navigation structure in docs.json
-
-## Review Process
-1. Review the generated translations for accuracy
-2. Make any necessary adjustments
-3. Merge this PR to apply the translations
-
-## Links
-- **Original English PR:** #{self.pr_number}
-- **Translation branch:** `{self.sync_branch}`
+Review translations and merge when ready. Both PRs can merge independently.
 
 ---
-🤖 This PR was created automatically by the documentation translation workflow."""
+🤖 Auto-synced from PR #{self.pr_number}"""
 
             result = self.run_gh(
                 "pr", "create",
                 "--base", "main",
                 "--head", self.sync_branch,
-                "--title", f"🌐 Auto-translations for PR #{self.pr_number}: {self.pr_title}",
+                "--title", f"🌐 Sync PR #{self.pr_number} to cn/jp: {self.pr_title}",
                 "--body", pr_body
             )
 

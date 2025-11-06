@@ -386,7 +386,7 @@ jobs:
             const branchExists = '${{ steps.check-branch.outputs.branch_exists }}' === 'true';
             const headSha = '${{ steps.extract-artifacts.outputs.head_sha }}';
 
-            let comment = '## 🤖 Automatic Translation Status\n\n';
+            let comment = '## 🌐 Multi-language Sync\n\n';
 
             if (hasChanges && creationSuccessful && translationPrNumber) {
               // Load sync results if available
@@ -394,70 +394,37 @@ jobs:
               try {
                 results = JSON.parse(fs.readFileSync('/tmp/sync_results.json', 'utf8'));
               } catch (e) {
-                console.log('Could not load sync results');
                 results = { translated: [], failed: [], skipped: [] };
               }
 
               if (branchExists) {
-                // Translation PR was updated
-                comment += `🔄 **Translation PR Updated!**\n\n`;
-                comment += `Your latest changes (commit \`${headSha.substring(0, 8)}\`) have been automatically translated and added to the translation PR.\n\n`;
+                comment += `✅ Synced to PR [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
               } else {
-                // Translation PR was created
-                comment += `🎉 **Translation PR Created Successfully!**\n\n`;
-                comment += `Your English documentation changes have been automatically translated and a separate PR has been created.\n\n`;
+                comment += `✅ Created sync PR [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
               }
 
-              comment += `### 🔗 Translation PR: [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
-              
               if (results.translated && results.translated.length > 0) {
-                comment += `### ✅ Successfully Translated (${results.translated.length} files):\n`;
-                results.translated.slice(0, 8).forEach(file => {
-                  comment += `- \`${file}\`\n`;
-                });
-                if (results.translated.length > 8) {
-                  comment += `- ... and ${results.translated.length - 8} more files\n`;
-                }
-                comment += '\n';
+                comment += `**Synced ${results.translated.length} file${results.translated.length > 1 ? 's' : ''}** to cn + jp\n\n`;
               }
-              
+
               if (results.failed && results.failed.length > 0) {
-                comment += `### ⚠️ Translation Issues (${results.failed.length}):\n`;
-                results.failed.slice(0, 5).forEach(file => {
+                comment += `⚠️ **${results.failed.length} file${results.failed.length > 1 ? 's' : ''} failed:**\n`;
+                results.failed.slice(0, 3).forEach(file => {
                   comment += `- \`${file}\`\n`;
                 });
-                if (results.failed.length > 5) {
-                  comment += `- ... and ${results.failed.length - 5} more\n`;
+                if (results.failed.length > 3) {
+                  comment += `- ... and ${results.failed.length - 3} more\n`;
                 }
                 comment += '\n';
               }
-              
-              comment += '### 🔄 What Happens Next:\n';
-              comment += `1. **Review**: The translation PR [#${translationPrNumber}](${translationPrUrl}) is ready for review\n`;
-              comment += '2. **Independent**: Both PRs can be reviewed and merged independently\n';
-              comment += '3. **Automatic**: Future updates to this PR will automatically update the translation PR\n\n';
-              
-              comment += '### 📋 Languages Included:\n';
-              comment += '- 🇨🇳 **Chinese (cn)**: Simplified Chinese translations\n';
-              comment += '- 🇯🇵 **Japanese (jp)**: Japanese translations\n';
-              comment += '- 📋 **Navigation**: Updated docs.json structure for both languages\n\n';
-              
-              comment += '---\n';
-              comment += '_🤖 This is an automated translation workflow. The translation PR was created automatically and is ready for review._';
-              
+
+              comment += '_Both PRs can merge independently. Future commits here will auto-update the sync PR._';
+
             } else if (hasChanges && !creationSuccessful) {
-              comment += '⚠️ **Translation PR Creation Failed**\n\n';
-              comment += 'The automatic translation process completed, but there was an issue creating the translation PR.\n\n';
-              comment += '**What you can do:**\n';
-              comment += '1. Check the workflow logs for detailed error information\n';
-              comment += '2. Contact a maintainer if the issue persists\n';
-              comment += '3. The translations may have been generated but need manual PR creation\n\n';
-              comment += '_🤖 This is an automated notification from the translation workflow._';
-              
+              comment += '⚠️ **Sync PR creation failed**\n\nCheck workflow logs or contact a maintainer.';
+
             } else {
-              comment += '✅ **No Translation Changes Needed**\n\n';
-              comment += 'Your changes did not require new translations, or all translations are already up to date.\n\n';
-              comment += '_🤖 This is an automated check from the translation workflow._';
+              comment += '✅ **No sync needed** - translations are up to date.';
             }
             
             await github.rest.issues.createComment({
@@ -476,24 +443,8 @@ jobs:
             const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
             const translationPrNumber = ${{ steps.translate.outputs.translation_pr_number }};
             
-            const backLinkComment = [
-              '## 🔗 Linked to Original PR',
-              '',
-              `This translation PR was automatically created for the English documentation changes in **PR #${prNumber}**.`,
-              '',
-              '### 📝 Original Changes',
-              `- **Original PR**: #${prNumber}`,
-              '- **Type**: English documentation updates',
-              '- **Auto-translation**: This PR contains the corresponding translations',
-              '',
-              '### 🔄 Synchronization',
-              '- **Automatic Updates**: This PR will be automatically updated if the original PR changes',
-              '- **Independent Review**: This translation PR can be reviewed and merged independently',
-              '- **Quality Check**: Please review translations for accuracy and cultural appropriateness',
-              '',
-              '---',
-              `🤖 _This PR is part of the automated translation workflow. Any updates to PR #${prNumber} will automatically update this translation PR._`
-            ].join('\n\n');
+            const backLinkComment = `🔗 Auto-synced from PR #${prNumber}\n\n` +
+              `Updates to #${prNumber} will automatically update this PR. Both can merge independently.`;
 
             try {
               await github.rest.issues.createComment({
@@ -550,25 +501,11 @@ jobs:
               const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
               const workflowDispatchUrl = `${repoUrl}/actions/workflows/sync_docs_execute.yml`;
 
-              const comment = '## ⚠️ Translation Workflow Skipped\n\n' +
-                'This commit\'s translation workflow was cancelled because a newer commit was pushed to this PR.\n\n' +
-                '### What happened:\n' +
-                '- A newer commit arrived while this commit\'s translation was queued\n' +
-                '- GitHub Actions automatically cancelled the queued workflow to save resources\n' +
-                '- **Your changes were not translated**\n\n' +
-                '### What you should do:\n\n' +
-                '**Option 1: Do nothing** (Recommended)\n' +
-                'If you\'re still making changes, just keep working. The latest commit will always get translated.\n\n' +
-                '**Option 2: Manually re-run translation**\n' +
-                'If you need this specific commit translated:\n' +
-                `1. Go to [Actions → Execute Documentation Sync](${workflowDispatchUrl})\n` +
-                '2. Click "Run workflow"\n' +
-                `3. Enter PR number: **${prNumber}**\n` +
-                '4. Click "Run workflow" button\n\n' +
-                '### Why this happens:\n' +
-                'When you push multiple commits rapidly (within 2-3 minutes), only the first and last commits get translated. Middle commits are skipped to prevent translation backlog. This is intentional behavior.\n\n' +
-                '---\n' +
-                '🤖 _Automatic notification from translation workflow_';
+              const comment = '## ⚠️ Sync Skipped\n\n' +
+                'This commit was not synced because a newer commit arrived. **Your latest commit will be synced automatically.**\n\n' +
+                '**If you need this specific commit synced:**\n' +
+                `Go to [Actions → Execute Documentation Sync](${workflowDispatchUrl}) and manually run with PR number **${prNumber}**\n\n` +
+                '_When you push multiple commits quickly, only the first and last get synced to avoid backlog._';
 
               await github.rest.issues.createComment({
                 owner: context.repo.owner,
