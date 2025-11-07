@@ -2,8 +2,6 @@
 
 Multi-language document auto-translation system based on GitHub Actions and Dify AI, supporting English, Chinese, and Japanese.
 
-> **Other Languages**: [中文](README_CN.md) | [日本語](README_JA.md)
-
 ## How It Works
 
 ### Workflow Triggers
