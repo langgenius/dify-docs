@@ -905,7 +905,7 @@ class DocsSynchronizer:
                     languages = nav.get("languages", [])
 
                 for lang in languages:
-                    if lang.get("language") == "en":
+                    if lang.get("language") == self.source_language:
                         return lang
                 return None
 
@@ -948,14 +948,17 @@ class DocsSynchronizer:
             deleted_normalized = {}
             added_normalized = {}
 
+            source_dir = self.get_language_directory(self.source_language)
+            source_prefix = f"^{source_dir}/"
+
             for deleted_file in deleted:
-                # Normalize: en/foo/bar.md -> foo/bar.md
-                normalized = re.sub(r'^en/', '', deleted_file)
+                # Normalize: {source_dir}/foo/bar.md -> foo/bar.md
+                normalized = re.sub(source_prefix, '', deleted_file)
                 deleted_normalized[normalized] = deleted_file
 
             for added_file in added:
-                # Normalize: en/foo/baz.md -> foo/baz.md
-                normalized = re.sub(r'^en/', '', added_file)
+                # Normalize: {source_dir}/foo/baz.md -> foo/baz.md
+                normalized = re.sub(source_prefix, '', added_file)
                 added_normalized[normalized] = added_file
 
             # Check for renames: different paths but same location
@@ -1003,7 +1006,7 @@ class DocsSynchronizer:
                 reconcile_log.append(f"INFO: Moving {en_file} from '{from_loc['group_path']}' to '{to_loc['group_path']}'")
 
                 # Apply to each target language
-                for target_lang in ["cn", "jp"]:
+                for target_lang in self.target_languages:
                     target_file = self.convert_path_to_target_language(en_file, target_lang)
 
                     # Remove from old location
@@ -1030,7 +1033,7 @@ class DocsSynchronizer:
                 reconcile_log.append(f"INFO: Renaming {from_file} to {to_file}")
 
                 # Apply to each target language
-                for target_lang in ["cn", "jp"]:
+                for target_lang in self.target_languages:
                     old_target_file = self.convert_path_to_target_language(from_file, target_lang)
                     new_target_file = self.convert_path_to_target_language(to_file, target_lang)
 
@@ -1214,9 +1217,9 @@ class DocsSynchronizer:
             target_sections = {}
 
             for lang_data in languages_array:
-                if lang_data.get("language") == "en":
+                if lang_data.get("language") == self.source_language:
                     en_section = lang_data
-                elif lang_data.get("language") in ["cn", "jp"]:
+                elif lang_data.get("language") in self.target_languages:
                     target_sections[lang_data.get("language")] = lang_data
 
             if not en_section:
@@ -1393,16 +1396,13 @@ class DocsSynchronizer:
 
             # Find language sections
             en_section = None
-            zh_section = None
-            ja_section = None
+            target_sections = {}
 
             for lang_data in languages_array:
-                if lang_data.get("language") == "en":
+                if lang_data.get("language") == self.source_language:
                     en_section = lang_data
-                elif lang_data.get("language") == "cn":
-                    zh_section = lang_data
-                elif lang_data.get("language") == "jp":
-                    ja_section = lang_data
+                elif lang_data.get("language") in self.target_languages:
+                    target_sections[lang_data.get("language")] = lang_data
 
             if not en_section:
                 sync_log.append("ERROR: English section not found")
@@ -1417,7 +1417,7 @@ class DocsSynchronizer:
             sync_log.append(f"INFO: Found {len(en_dropdowns)} English dropdowns to sync")
 
             # Sync each English dropdown to target languages
-            for target_section, target_lang in [(zh_section, "cn"), (ja_section, "jp")]:
+            for target_lang, target_section in target_sections.items():
                 if not target_section:
                     sync_log.append(f"WARNING: {target_lang} section not found")
                     continue

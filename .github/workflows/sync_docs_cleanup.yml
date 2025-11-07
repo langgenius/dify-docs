@@ -15,22 +15,28 @@ jobs:
     # Skip if this IS a sync PR (don't want infinite loops)
     if: "!startsWith(github.event.pull_request.head.ref, 'docs-sync-pr-')"
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Check if PR has English docs changes
         id: check-english
         run: |
-          # Quick check if this PR touched English docs
+          # Quick check if this PR touched source language docs
           PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Get source language directory from config.json (single source of truth)
+          SOURCE_DIR=$(python3 -c "import json; config = json.load(open('tools/translate/config.json')); print(config['languages'][config['source_language']]['directory'])")
 
           # Get list of changed files
           CHANGED_FILES=$(gh pr view $PR_NUMBER --json files --jq '.files[].path')
 
-          # Check if any English docs were changed
-          if echo "$CHANGED_FILES" | grep -qE '^(docs\.json|en/.*\.(md|mdx))$'; then
+          # Check if any source language docs were changed
+          if echo "$CHANGED_FILES" | grep -qE "^(docs\.json|${SOURCE_DIR}/.*\.(md|mdx))$"; then
             echo "has_english_changes=true" >> $GITHUB_OUTPUT
-            echo "✅ PR has English docs changes - checking for sync PR"
+            echo "✅ PR has ${SOURCE_DIR}/ docs changes - checking for sync PR"
           else
             echo "has_english_changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️ No English docs changes - skipping"
+            echo "ℹ️ No ${SOURCE_DIR}/ docs changes - skipping"
           fi
         env:
           GH_TOKEN: ${{ github.token }}

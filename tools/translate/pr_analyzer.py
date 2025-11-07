@@ -95,14 +95,15 @@ class PRAnalyzer:
         if base_docs != head_docs:
             changes['any_docs_json_changes'] = True
         
-        # Check English navigation section
-        base_en = self.extract_language_navigation(base_docs, 'en')
-        head_en = self.extract_language_navigation(head_docs, 'en')
+        # Check source language navigation section
+        source_lang = self.config['source_language']
+        base_en = self.extract_language_navigation(base_docs, source_lang)
+        head_en = self.extract_language_navigation(head_docs, source_lang)
         if base_en != head_en:
             changes['english_section'] = True
         
         # Check translation sections
-        for lang in ['jp', 'cn']:
+        for lang in self.config['target_languages']:
             base_lang = self.extract_language_navigation(base_docs, lang)
             head_lang = self.extract_language_navigation(head_docs, lang)
             if base_lang != head_lang:
@@ -432,7 +433,7 @@ class SyncPlanGenerator:
             structure_changes = {
                 "structure_changed": docs_changes["any_docs_json_changes"],
                 "navigation_modified": docs_changes["english_section"],
-                "languages_affected": ["cn", "jp"] if docs_changes["english_section"] else []
+                "languages_affected": self.config["target_languages"] if docs_changes["english_section"] else []
             }
         else:
             structure_changes = {
@@ -454,7 +455,7 @@ class SyncPlanGenerator:
             "files_to_sync": files_to_sync,
             "openapi_files_to_sync": openapi_files_to_sync,
             "structure_changes": structure_changes,
-            "target_languages": self.config.get("target_languages", ["cn", "jp"]),
+            "target_languages": self.config["target_languages"],
             "sync_required": len(files_to_sync) > 0 or len(openapi_files_to_sync) > 0 or structure_changes.get("structure_changed", False)
         }
 

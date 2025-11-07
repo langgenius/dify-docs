@@ -57,8 +57,8 @@ class TranslationPRManager:
         with open(config_path, 'r', encoding='utf-8') as f:
             self.translation_config = json.load(f)
 
-        self.source_language = self.translation_config.get("source_language", "en")
-        self.target_languages = self.translation_config.get("target_languages", ["cn", "jp"])
+        self.source_language = self.translation_config["source_language"]
+        self.target_languages = self.translation_config["target_languages"]
         self.source_dir = self.translation_config["languages"][self.source_language]["directory"]
 
         # Load processing limits
