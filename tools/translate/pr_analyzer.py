@@ -330,6 +330,7 @@ class SyncPlanGenerator:
 
         Returns list of tuples: [(status, filepath), ...]
         Only returns A (added) and M (modified) files for translation.
+        Filters out files that don't exist at head_sha (handles add-then-delete scenario).
         """
         try:
             result = subprocess.run([
@@ -343,12 +344,27 @@ class SyncPlanGenerator:
                     parts = line.split('\t', 1)
                     if len(parts) == 2:
                         status, filepath = parts[0], parts[1]
-                        files_with_status.append((status, filepath))
+
+                        # Verify file exists at head_sha (handles add-then-delete scenario)
+                        if self._file_exists_at_commit(filepath, self.head_sha):
+                            files_with_status.append((status, filepath))
+                        else:
+                            print(f"Skipping {filepath}: added then deleted in same PR")
 
             return files_with_status
         except subprocess.CalledProcessError as e:
             print(f"Error getting changed files with status: {e}")
             return []
+
+    def _file_exists_at_commit(self, filepath: str, commit_sha: str) -> bool:
+        """Check if a file exists at a specific commit."""
+        try:
+            subprocess.run([
+                "git", "cat-file", "-e", f"{commit_sha}:{filepath}"
+            ], capture_output=True, check=True, cwd=self.repo_root)
+            return True
+        except subprocess.CalledProcessError:
+            return False
 
     def get_file_size(self, filepath: str) -> int:
         """Get file size in bytes."""
