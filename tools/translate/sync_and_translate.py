@@ -194,17 +194,19 @@ class DocsSynchronizer:
         return source_path
     
     def get_relative_source_path_for_notice(self, target_path: str) -> str:
-        """Get relative path to source language version for AI notice"""
+        """Get absolute path to source language version for AI notice (without file extension)"""
         source_dir = self.get_language_directory(self.source_language)
 
         # Find which target language directory this path is in
         for target_lang in self.target_languages:
             target_dir = self.get_language_directory(target_lang)
             if target_path.startswith(f"{target_dir}/"):
+                # Replace target dir with source dir
                 source_path = target_path.replace(f"{target_dir}/", f"{source_dir}/", 1)
-                target_dir_levels = len(Path(target_path).parent.parts)
-                relative_prefix = "../" * target_dir_levels
-                return relative_prefix + source_path
+                # Remove file extension (.md or .mdx)
+                source_path = source_path.rsplit('.', 1)[0] if '.' in source_path else source_path
+                # Return absolute path starting with /
+                return f"/{source_path}"
 
         return ""
     
