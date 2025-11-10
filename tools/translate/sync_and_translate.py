@@ -210,6 +210,25 @@ class DocsSynchronizer:
 
         return ""
     
+    def _build_notice_removal_pattern(self) -> str:
+        """Build regex pattern to match any translation notice from config templates."""
+        # Collect all translation notice templates from target languages
+        notice_templates = []
+        for lang in self.target_languages:
+            template = self.get_translation_notice(lang)
+            if template:
+                # Escape regex special chars, but replace {source_path} with a wildcard
+                # First, escape the template for regex
+                escaped = re.escape(template.strip())
+                # Replace escaped placeholder with pattern that matches any path
+                escaped = escaped.replace(r'\{source_path\}', r'[^\]]+')
+                notice_templates.append(escaped)
+
+        # Build pattern that matches any of the templates, followed by optional whitespace/newlines
+        if notice_templates:
+            return '(?:' + '|'.join(notice_templates) + r')\s*\n*'
+        return ''
+
     def insert_notice_under_title(self, content: str, notice: str) -> str:
         """Insert notice after frontmatter or first heading to keep it under the doc title."""
         if not notice.strip():
@@ -222,6 +241,12 @@ class DocsSynchronizer:
         if content.startswith("\ufeff"):
             bom_prefix = "\ufeff"
             content = content[len("\ufeff"):]
+
+        # Remove any existing translation notice to prevent duplicates
+        # Pattern dynamically built from config templates
+        existing_notice_pattern = self._build_notice_removal_pattern()
+        if existing_notice_pattern:
+            content = re.sub(existing_notice_pattern, '', content, flags=re.DOTALL)
 
         notice_block = notice if notice.endswith("\n") else f"{notice}\n"
 
