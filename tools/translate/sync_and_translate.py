@@ -867,6 +867,7 @@ class DocsSynchronizer:
                         "dropdown_idx": dropdown_idx,
                         "group_path": group_path,  # Full group path for logging/debugging
                         "group_indices": group_indices.copy(),  # Index-based path for language-independent navigation
+                        "page_index": idx,  # Position within parent pages array
                         "path": f"{path_prefix}[{idx}]",
                         "type": "page"
                     }
@@ -1195,7 +1196,14 @@ class DocsSynchronizer:
 
         # Add file to the target location if not already present
         if file_path not in str(current_pages):
-            current_pages.append(file_path)
+            # Insert at the same position as in the source language
+            page_index = location_info.get("page_index", len(current_pages))
+
+            # Ensure index is within bounds (append if beyond end)
+            if page_index > len(current_pages):
+                page_index = len(current_pages)
+
+            current_pages.insert(page_index, file_path)
             return True
 
         return False
