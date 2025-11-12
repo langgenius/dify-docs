@@ -895,10 +895,21 @@ class DocsSynchronizer:
 
         return locations
 
-    def reconcile_docs_json_structural_changes(self, base_sha: str, head_sha: str) -> List[str]:
+    def reconcile_docs_json_structural_changes(
+        self,
+        base_sha: str,
+        head_sha: str,
+        skip_rename_detection: bool = False
+    ) -> List[str]:
         """
-        Detect and apply specific structural changes (moves, renames) from English section.
+        Detect and apply specific structural changes (moves) from English section.
         Compares base vs head English sections and applies only those changes to cn/jp.
+
+        Args:
+            base_sha: Base commit SHA
+            head_sha: Head commit SHA
+            skip_rename_detection: If True, skip the broken rename detection logic
+                                   (renames should be handled by git-based detection instead)
         """
         reconcile_log = []
 
@@ -971,45 +982,51 @@ class DocsSynchronizer:
                     })
 
             # Detect renames: files that were deleted and added might be renames
-            # Match by looking at the base filename (without language prefix)
+            # NOTE: This heuristic-based rename detection is BROKEN and causes false positives.
+            # It can incorrectly treat "delete file A + add unrelated file B" as a rename.
+            # Use git-based rename detection (--find-renames=100%) instead.
             renamed_files = []
-            deleted_normalized = {}
-            added_normalized = {}
 
-            source_dir = self.get_language_directory(self.source_language)
-            source_prefix = f"^{source_dir}/"
+            if not skip_rename_detection:
+                # DEPRECATED: This logic is kept for backward compatibility but should not be used
+                reconcile_log.append("WARNING: Using deprecated heuristic-based rename detection")
+                deleted_normalized = {}
+                added_normalized = {}
 
-            for deleted_file in deleted:
-                # Normalize: {source_dir}/foo/bar.md -> foo/bar.md
-                normalized = re.sub(source_prefix, '', deleted_file)
-                deleted_normalized[normalized] = deleted_file
+                source_dir = self.get_language_directory(self.source_language)
+                source_prefix = f"^{source_dir}/"
 
-            for added_file in added:
-                # Normalize: {source_dir}/foo/baz.md -> foo/baz.md
-                normalized = re.sub(source_prefix, '', added_file)
-                added_normalized[normalized] = added_file
+                for deleted_file in deleted:
+                    # Normalize: {source_dir}/foo/bar.md -> foo/bar.md
+                    normalized = re.sub(source_prefix, '', deleted_file)
+                    deleted_normalized[normalized] = deleted_file
 
-            # Check for renames: different paths but same location
-            # This is a simple heuristic - if added and deleted have different normalized paths
-            # but appear in similar locations, treat as rename
-            for del_norm, del_file in deleted_normalized.items():
-                for add_norm, add_file in added_normalized.items():
-                    if del_norm != add_norm:
-                        # Different paths - potential rename
-                        del_loc = base_locations[del_file]
-                        add_loc = head_locations[add_file]
+                for added_file in added:
+                    # Normalize: {source_dir}/foo/baz.md -> foo/baz.md
+                    normalized = re.sub(source_prefix, '', added_file)
+                    added_normalized[normalized] = added_file
 
-                        # If they're in the same location group, it's likely a rename
-                        if del_loc["group_path"] == add_loc["group_path"]:
-                            renamed_files.append({
-                                "from_file": del_file,
-                                "to_file": add_file,
-                                "location": add_loc
-                            })
-                            # Remove from added/deleted to avoid processing twice
-                            added.discard(add_file)
-                            deleted.discard(del_file)
-                            break
+                # Check for renames: different paths but same location
+                # This is a simple heuristic - if added and deleted have different normalized paths
+                # but appear in similar locations, treat as rename
+                for del_norm, del_file in deleted_normalized.items():
+                    for add_norm, add_file in added_normalized.items():
+                        if del_norm != add_norm:
+                            # Different paths - potential rename
+                            del_loc = base_locations[del_file]
+                            add_loc = head_locations[add_file]
+
+                            # If they're in the same location group, it's likely a rename
+                            if del_loc["group_path"] == add_loc["group_path"]:
+                                renamed_files.append({
+                                    "from_file": del_file,
+                                    "to_file": add_file,
+                                    "location": add_loc
+                                })
+                                # Remove from added/deleted to avoid processing twice
+                                added.discard(add_file)
+                                deleted.discard(del_file)
+                                break
 
             if not moved_files and not added and not deleted and not renamed_files:
                 reconcile_log.append("INFO: No structural changes detected")
@@ -1208,7 +1225,65 @@ class DocsSynchronizer:
 
         return False
 
-    def sync_docs_json_incremental(self, added_files: List[str] = None, deleted_files: List[str] = None, base_sha: str = None, head_sha: str = None) -> List[str]:
+    def _handle_rename(self, old_en_path: str, new_en_path: str) -> Tuple[List[str], List[str]]:
+        """
+        Handle file rename operation for target languages.
+
+        If the old translation file exists, rename it.
+        If it doesn't exist, return the new path for fresh translation.
+
+        Args:
+            old_en_path: Old English file path (e.g., "en/docs/old.mdx")
+            new_en_path: New English file path (e.g., "en/docs/new.mdx")
+
+        Returns:
+            Tuple of (log_messages, files_needing_translation)
+            files_needing_translation contains new paths that need fresh translation
+        """
+        log = []
+        files_needing_translation = []
+
+        log.append(f"INFO: Processing rename {old_en_path} -> {new_en_path}")
+
+        for target_lang in self.target_languages:
+            old_target = self.convert_path_to_target_language(old_en_path, target_lang)
+            new_target = self.convert_path_to_target_language(new_en_path, target_lang)
+
+            # Find old file with extension (.md, .mdx, or no extension)
+            old_file_path = None
+            file_extension = None
+            for ext in ['.md', '.mdx', '']:
+                test_path = self.base_dir / f"{old_target}{ext}"
+                if test_path.exists():
+                    old_file_path = test_path
+                    file_extension = ext
+                    break
+
+            if old_file_path and old_file_path.exists():
+                # Old file exists - rename it
+                new_file_path = self.base_dir / f"{new_target}{file_extension}"
+
+                # Create parent directories if needed
+                new_file_path.parent.mkdir(parents=True, exist_ok=True)
+
+                # Rename the physical file
+                old_file_path.rename(new_file_path)
+                log.append(f"SUCCESS: Renamed {old_target}{file_extension} -> {new_target}{file_extension}")
+            else:
+                # Old file not found - need fresh translation
+                log.append(f"INFO: Old file {old_target} not found, will generate new translation")
+                files_needing_translation.append(new_en_path)
+
+        return log, files_needing_translation
+
+    def sync_docs_json_incremental(
+        self,
+        added_files: List[str] = None,
+        deleted_files: List[str] = None,
+        renamed_files: List[Tuple[str, str]] = None,
+        base_sha: str = None,
+        head_sha: str = None
+    ) -> List[str]:
         """
         Incrementally sync docs.json structure - only processes changed files.
         Preserves existing dropdown names and only updates affected pages.
@@ -1216,15 +1291,33 @@ class DocsSynchronizer:
         sync_log = []
         added_files = added_files or []
         deleted_files = deleted_files or []
+        renamed_files = renamed_files or []
 
-        # If no file adds/deletes but we have git refs, check for structural changes
+        # Process renames first (before adds/deletes)
+        # Renamed files that couldn't be renamed will be added to added_files for fresh translation
+        for old_path, new_path in renamed_files:
+            if old_path.startswith(f"{self.get_language_directory(self.source_language)}/"):
+                rename_log, files_to_translate = self._handle_rename(old_path, new_path)
+                sync_log.extend(rename_log)
+
+                # If any translations need to be generated (old file didn't exist), add to added_files
+                if new_path in files_to_translate:
+                    if new_path not in added_files:
+                        added_files.append(new_path)
+                        sync_log.append(f"INFO: Added {new_path} to translation queue (old translation not found)")
+
+        # Check for structural changes (moves only, not renames since we handled those)
+        if base_sha and head_sha:
+            sync_log.append("INFO: Checking for structural changes (moves)...")
+            reconcile_log = self.reconcile_docs_json_structural_changes(
+                base_sha, head_sha,
+                skip_rename_detection=True  # Skip broken rename detection - we handle renames properly above
+            )
+            sync_log.extend(reconcile_log)
+
+        # If no file adds/deletes after rename processing, we're done
         if not added_files and not deleted_files:
-            if base_sha and head_sha:
-                sync_log.append("INFO: No file adds/deletes, checking for structural changes...")
-                reconcile_log = self.reconcile_docs_json_structural_changes(base_sha, head_sha)
-                sync_log.extend(reconcile_log)
-            else:
-                sync_log.append("INFO: No file changes to sync")
+            sync_log.append("INFO: No file adds/deletes to sync")
             return sync_log
 
         try:

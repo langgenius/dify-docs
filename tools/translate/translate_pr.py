@@ -286,10 +286,10 @@ class TranslationPRManager:
         base_sha = metadata.get("base_sha", self.base_sha)
         head_sha = metadata.get("head_sha", self.head_sha)
 
-        # Detect added vs modified files
-        added_files, modified_files = self.detect_file_changes(base_sha, head_sha)
+        # Detect added vs modified files and renames
+        added_files, modified_files, renamed_files = self.detect_file_changes(base_sha, head_sha)
 
-        print(f"Detected {len(added_files)} added files, {len(modified_files)} modified files")
+        print(f"Detected {len(added_files)} added files, {len(modified_files)} modified files, {len(renamed_files)} renamed files")
 
         # Translate each file with configurable limit
         if len(files_to_sync) > self.max_files_per_run:
@@ -356,33 +356,47 @@ class TranslationPRManager:
 
         # Sync docs.json structure
         if sync_plan.get("structure_changes", {}).get("structure_changed"):
-            self.sync_docs_json_structure(synchronizer, added_files, base_sha, head_sha)
+            self.sync_docs_json_structure(synchronizer, added_files, renamed_files, base_sha, head_sha)
 
         return results
 
-    def detect_file_changes(self, base_sha: str, head_sha: str) -> Tuple[List[str], List[str]]:
-        """Detect added and modified files between two commits."""
+    def detect_file_changes(self, base_sha: str, head_sha: str) -> Tuple[List[str], List[str], List[Tuple[str, str]]]:
+        """Detect added, modified, and renamed files between two commits.
+
+        Returns:
+            Tuple of (added_files, modified_files, renamed_files)
+            renamed_files is a list of (old_path, new_path) tuples for exact renames (100% content match)
+        """
         added_files = []
         modified_files = []
+        renamed_files = []
 
         try:
             result = self.run_git(
-                "diff", "--name-status", "--diff-filter=AM",
+                "diff", "--name-status", "--find-renames=100%",
                 base_sha, head_sha
             )
 
             for line in result.stdout.strip().split('\n'):
                 if line and '\t' in line:
-                    status, file_path = line.split('\t', 1)
+                    parts = line.split('\t')
+                    status = parts[0]
+
                     if status == 'A':
-                        added_files.append(file_path)
+                        added_files.append(parts[1])
                     elif status == 'M':
-                        modified_files.append(file_path)
+                        modified_files.append(parts[1])
+                    elif status.startswith('R'):  # R100 = 100% identical content
+                        old_path = parts[1]
+                        new_path = parts[2]
+                        renamed_files.append((old_path, new_path))
+                    # Note: 'D' (deleted) is handled separately via docs.json comparison
+
         except subprocess.CalledProcessError as e:
             print(f"⚠️  Warning: Could not detect file status: {e}")
             # Fallback: treat all as added
 
-        return added_files, modified_files
+        return added_files, modified_files, renamed_files
 
     def get_file_diff(self, base_sha: str, head_sha: str, file_path: str) -> Optional[str]:
         """Get the diff for a specific file between two commits."""
@@ -436,6 +450,7 @@ class TranslationPRManager:
         self,
         synchronizer: DocsSynchronizer,
         added_files: List[str],
+        renamed_files: List[Tuple[str, str]],
         base_sha: str,
         head_sha: str
     ) -> None:
@@ -488,6 +503,7 @@ class TranslationPRManager:
         sync_log = synchronizer.sync_docs_json_incremental(
             added_files=added_files,
             deleted_files=deleted_files,
+            renamed_files=renamed_files,
             base_sha=base_sha,
             head_sha=head_sha
         )
