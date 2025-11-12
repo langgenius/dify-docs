@@ -47,7 +47,7 @@ The weaviate-client v4 introduces several breaking changes:
 | Dify Version | weaviate-client Version | Compatible Weaviate Server Versions |
 |--------------|-------------------------|-------------------------------------|
 | ≤ 1.9.1      | v3.x                    | 1.19.0 - 1.26.x                     |
-| ≥ 1.9.2*     | v4.17.0                 | 1.27.0+ (tested up to 1.32.11)      |
+| ≥ 1.9.2*     | v4.17.0                 | 1.27.0+ (tested up to 1.33.1)      |
 
 <Info>
 *The exact Dify version with weaviate-client v4 may vary. Check the release notes for your specific version. This migration applies to any Dify version using weaviate-client v4.17.0 or higher.
@@ -84,197 +84,265 @@ Before starting the migration, complete these steps:
 
 ## Migration Paths
 
-Choose the migration path that matches your deployment setup:
+Choose the migration path that matches your deployment setup and current Weaviate version.
 
-### Path A: Docker Compose Users (Recommended)
+### Choose Your Path
 
-This is the simplest path for users running Dify via Docker Compose with the bundled Weaviate instance.
-
-<Info>
-If you're using Dify's standard Docker Compose setup, the Weaviate version is automatically updated when you upgrade Dify. No manual configuration is required.
-</Info>
-
-#### Step 1: Backup Your Data
-
-Navigate to your Dify project directory and backup your Docker volumes:
-
-```bash
-cd /path/to/dify/docker
-docker compose down
-tar -cvf ../weaviate-backup-$(date +%s).tgz volumes/weaviate
-```
-
-<Info>
-Store the backup file in a safe location outside the project directory. You'll need it if the migration fails and you need to rollback.
-</Info>
-
-#### Step 2: Update Dify
-
-Pull the latest Dify version that includes weaviate-client v4 and Weaviate 1.27.0+:
-
-```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>  # Check release notes for the correct version
-cd docker
-docker compose pull
-docker compose up -d
-```
-
-The updated Docker Compose configuration includes:
-- Weaviate server 1.27.0+ image
-- weaviate-client v4.17.0 (installed automatically in Dify containers)
-- Proper gRPC port configuration (50051)
-
-#### Step 3: Monitor Startup
-
-Watch the logs to ensure services start correctly:
-
-```bash
-# Watch Weaviate startup
-docker compose logs -f weaviate
-
-# Watch Dify API startup
-docker compose logs -f api
-```
-
-Wait for Weaviate to show "ready to serve requests" and Dify API to connect successfully.
-
-#### Step 4: Verify Migration
-
-See the [Verification Steps](#verification-steps) section below.
-
-### Path B: External/Self-Hosted Weaviate
-
-For users running Weaviate on a separate server, managed instance, or Weaviate Cloud.
+- **Path A – Migration with Backup (from 1.19):** Recommended if you are still on Weaviate 1.19. You will create a backup, upgrade to 1.27+, repair any orphaned data, and then migrate the schema.
+- **Path B – Direct Recovery (already on 1.27+):** Use this if you already upgraded to 1.27+ and your knowledge bases stopped working. This path focuses on repairing the data layout and running the schema migration.
 
 <Warning>
-This path is for users who manage their own Weaviate instance separately from Dify. If you're using Dify's bundled Weaviate via Docker Compose, use Path A instead.
+Do **not** attempt to downgrade back to 1.19. The schema format is incompatible and will lead to data loss.
 </Warning>
 
-#### Step 1: Backup Weaviate Data
-
-Use Weaviate's backup API to create a complete backup:
-
-```bash
-# Create backup
-curl -X POST \
-  "http://your-weaviate-host:8080/v1/backups/filesystem" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "dify-backup-'$(date +%s)'",
-    "include": ["*"]
-  }'
-
-# Check backup status
-curl "http://your-weaviate-host:8080/v1/backups/filesystem/{backup-id}"
-```
+### Path A: Migration with Backup (From 1.19)
 
 <Info>
-For detailed backup instructions, refer to the [Weaviate backup documentation](https://weaviate.io/developers/weaviate/configuration/backups).
+Safest path. Creates a backup before upgrading so you can restore if anything goes wrong.
 </Info>
 
-#### Step 2: Stop Your Weaviate Instance
+#### Prerequisites
 
-```bash
-# For Docker users
-docker stop weaviate
+- Currently running Weaviate 1.19
+- Docker + Docker Compose installed
+- Python 3.11+ available for the schema migration script
 
-# For systemd users
-sudo systemctl stop weaviate
+#### Step A1: Enable the Backup Module on Weaviate 1.19
 
-# For Kubernetes users
-kubectl scale deployment weaviate --replicas=0
-```
-
-#### Step 3: Upgrade Weaviate Server
-
-**For Docker:**
-
-```bash
-docker pull cr.weaviate.io/semitechnologies/weaviate:1.27.0
-docker run -d \
-  --name weaviate \
-  -p 8080:8080 \
-  -p 50051:50051 \
-  -v /path/to/data:/var/lib/weaviate \
-  -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false \
-  -e AUTHENTICATION_APIKEY_ENABLED=true \
-  -e AUTHENTICATION_APIKEY_ALLOWED_KEYS=your-secret-key \
-  -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
-  -e QUERY_DEFAULTS_LIMIT=20 \
-  -e DEFAULT_VECTORIZER_MODULE=none \
-  cr.weaviate.io/semitechnologies/weaviate:1.27.0
-```
-
-**For Kubernetes:**
-
-Update your Helm values or manifest:
+Edit `docker/docker-compose.yaml` so the `weaviate` service includes backup configuration:
 
 ```yaml
-image:
-  registry: cr.weaviate.io
-  repository: semitechnologies/weaviate
-  tag: 1.27.0
+  weaviate:
+    image: semitechnologies/weaviate:1.19.0
+    volumes:
+      - ./volumes/weaviate:/var/lib/weaviate
+      - ./volumes/weaviate_backups:/var/lib/weaviate/backups
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      ENABLE_MODULES: backup-filesystem
+      BACKUP_FILESYSTEM_PATH: /var/lib/weaviate/backups
+      # ... rest of your environment variables
 ```
 
-Then apply:
+Restart Weaviate to apply the change:
 
 ```bash
-helm upgrade weaviate weaviate/weaviate -f values.yaml
-# Or
-kubectl apply -f weaviate-deployment.yaml
+cd docker
+docker compose down
+docker compose --profile up -d
+sleep 10
 ```
 
-**For Binary Installation:**
+#### Step A2: Create a Backup
 
-Download and install the new version from the [Weaviate releases page](https://github.com/weaviate/weaviate/releases).
+1. **List your collections:**
 
-#### Step 4: Verify Weaviate Upgrade
+   ```bash
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/schema" | \
+     python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   print("Collections:")
+   for cls in data.get('classes', []):
+       print(f"  - {cls['class']}")
+   "
+   ```
 
-Check that Weaviate is running the correct version:
+2. **Trigger the backup:** include specific collection names if you prefer.
+
+   ```bash
+   curl -X POST \
+     -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     -H "Content-Type: application/json" \
+     "http://localhost:8080/v1/backups/filesystem" \
+     -d '{
+       "id": "kb-backup",
+       "include": ["Vector_index_COLLECTION1_Node", "Vector_index_COLLECTION2_Node"]
+     }'
+   ```
+
+3. **Check backup status:**
+
+   ```bash
+   sleep 5
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/backups/filesystem/kb-backup" | \
+     python3 -m json.tool | grep status
+   ```
+
+4. **Verify backup files exist:**
+
+   ```bash
+   ls -lh docker/volumes/weaviate_backups/kb-backup/
+   ```
+
+#### Step A3: Upgrade to Weaviate 1.27+
+
+1. **Upgrade Dify to a version that ships Weaviate 1.27+:**
+
+   ```bash
+   cd /path/to/dify
+   git fetch origin
+   git checkout main  # or a tagged release that includes the upgrade
+   ```
+
+2. **Confirm the new Weaviate image:**
+
+   ```bash
+   grep "image: semitechnologies/weaviate" docker/docker-compose.yaml
+   ```
+
+3. **Restart with the new version:**
+
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   sleep 20
+   ```
+
+#### Step A4: Fix Orphaned LSM Data (if present)
 
 ```bash
-curl http://your-weaviate-host:8080/v1/meta | jq '.version'
+cd docker/volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
+
+cd ../../
+docker compose restart weaviate
+sleep 15
 ```
 
-You should see version 1.27.0 or higher.
+#### Step A5: Migrate the Schema
 
-#### Step 5: Update Dify Configuration
+1. **Install dependencies** (in a temporary virtualenv is fine):
 
-Update your Dify environment variables to configure the external Weaviate connection:
+   ```bash
+   cd /path/to/dify
+   python3 -m venv weaviate_migration_env
+   source weaviate_migration_env/bin/activate
+   pip install weaviate-client requests
+   ```
 
-```bash
-VECTOR_STORE=weaviate
-WEAVIATE_ENDPOINT=http://your-weaviate-host:8080
-WEAVIATE_API_KEY=your-api-key
-WEAVIATE_GRPC_ENABLED=true
-WEAVIATE_GRPC_ENDPOINT=your-weaviate-host:50051
-```
+2. **Run the migration script:**
+
+   ```bash
+   python3 migrate_weaviate_collections.py
+   ```
+
+3. **Restart Dify services:**
+
+   ```bash
+   cd docker
+   docker compose restart api worker worker_beat
+   sleep 15
+   ```
+
+4. **Verify in the UI:** open Dify, test retrieval against your migrated knowledge bases.
 
 <Info>
-The `WEAVIATE_GRPC_ENDPOINT` should be in the format `hostname:port` without any protocol prefix (no `grpc://` or `http://`).
+After confirming a healthy migration, you can delete `weaviate_migration_env` and the backup files to reclaim disk space.
 </Info>
 
-#### Step 6: Update Dify
+### Path B: Direct Recovery (Already on 1.27+)
+
+<Warning>
+Only use this path if you already upgraded to 1.27+ and your knowledge bases stopped working. You cannot create a 1.19 backup anymore, so you must repair the data in place.
+</Warning>
+
+#### Prerequisites
+
+- Currently running Weaviate 1.27+ (including 1.33)
+- Docker + Docker Compose installed
+- Python 3.11+ for the migration script
+
+#### Step B1: Repair Orphaned LSM Data
 
 ```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>
 cd docker
-docker compose pull
-docker compose up -d
+docker compose stop weaviate
+
+cd volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
 ```
 
-#### Step 7: Verify Migration
+Restart Weaviate:
 
-See the [Verification Steps](#verification-steps) section below.
+```bash
+cd ../..
+docker compose start weaviate
+sleep 15
+```
+
+List collections and confirm object counts are non-zero:
+
+```bash
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/schema" | python3 -c "
+import sys, json
+for cls in json.load(sys.stdin).get('classes', []):
+    if cls['class'].startswith('Vector_index_'):
+        print(cls['class'])
+"
+
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/objects?class=YOUR_COLLECTION_NAME&limit=0" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin).get('totalResults', 0))"
+```
+
+#### Step B2: Run the Schema Migration
+
+Follow the same commands as [Step A5](#step-a5-migrate-the-schema). Create the virtualenv if needed, install `weaviate-client` 4.x, run `migrate_weaviate_collections.py`, then restart `api`, `worker`, and `worker_beat`.
+
+#### Step B3: Verify in Dify
+
+- Open Dify’s Knowledge Base UI.
+- Use Retrieval Testing to confirm queries return results.
+- If errors persist, inspect `docker compose logs weaviate` for additional repair steps (see [Troubleshooting](#troubleshooting)).
 
 ## Data Migration for Legacy Versions
 
 <Warning>
-If upgrading from Weaviate 1.19.0 to 1.27.0+, the version gap is significant. While Weaviate typically handles schema migrations automatically, you should monitor the upgrade carefully and have backups ready.
+### CRITICAL: Data Migration Required
+
+**Your existing knowledge bases will NOT work after upgrade without migration!**
+
+### Why Migration is Needed:
+- Old data: Created with Weaviate v3 client (simple schema)
+- New code: Requires Weaviate v4 format (extended schema)
+- **Incompatible**: Old data missing required properties
+
+### Migration Options:
+
+##### Option A: Use Weaviate Backup/Restore
+
+##### Option B: Re-index from Original Documents
+
+##### Option C: Keep Old Weaviate (Don't Upgrade Yet) If you can't afford downtime or data loss.
 </Warning>
 
 ### Automatic Migration
@@ -377,6 +445,8 @@ WEAVIATE_GRPC_ENDPOINT=weaviate:50051
 # Batch Import Settings
 WEAVIATE_BATCH_SIZE=100
 ```
+
+
 
 ## Verification Steps
 
