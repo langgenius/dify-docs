@@ -1295,10 +1295,18 @@ class DocsSynchronizer:
 
         # Extract file location from English section (use new path since English already renamed)
         file_locations = self.extract_file_locations(en_section)
-        location = file_locations.get(new_en_path)
+
+        # Strip file extension from path since docs.json entries don't include extensions
+        new_en_path_no_ext = new_en_path
+        if new_en_path.endswith('.mdx'):
+            new_en_path_no_ext = new_en_path[:-4]
+        elif new_en_path.endswith('.md'):
+            new_en_path_no_ext = new_en_path[:-3]
+
+        location = file_locations.get(new_en_path_no_ext)
 
         if not location:
-            log.append(f"WARNING: Could not find location for {new_en_path} in English section")
+            log.append(f"WARNING: Could not find location for {new_en_path_no_ext} in English section")
             # Continue without updating docs.json entries
             location = None
 
