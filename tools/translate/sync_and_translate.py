@@ -1254,7 +1254,7 @@ class DocsSynchronizer:
         """
         Handle file rename operation for target languages.
 
-        If the old translation file exists, rename it.
+        If the old translation file exists, rename it and update docs.json.
         If it doesn't exist, return the new path for fresh translation.
 
         Args:
@@ -1269,6 +1269,40 @@ class DocsSynchronizer:
         files_needing_translation = []
 
         log.append(f"INFO: Processing rename {old_en_path} -> {new_en_path}")
+
+        # Load docs.json to get location info and update entries
+        docs_data = self.load_docs_json()
+        if not docs_data:
+            log.append("ERROR: Could not load docs.json for rename operation")
+            return log, files_needing_translation
+
+        # Get English section to find the location of the new file
+        nav = docs_data.get("navigation", {})
+        if "versions" in nav and nav["versions"]:
+            languages = nav["versions"][0].get("languages", [])
+        else:
+            languages = nav.get("languages", [])
+
+        en_section = None
+        for lang in languages:
+            if lang.get("language") == self.source_language:
+                en_section = lang
+                break
+
+        if not en_section:
+            log.append("ERROR: Could not find English section in docs.json")
+            return log, files_needing_translation
+
+        # Extract file location from English section (use new path since English already renamed)
+        file_locations = self.extract_file_locations(en_section)
+        location = file_locations.get(new_en_path)
+
+        if not location:
+            log.append(f"WARNING: Could not find location for {new_en_path} in English section")
+            # Continue without updating docs.json entries
+            location = None
+
+        docs_changed = False
 
         for target_lang in self.target_languages:
             old_target = self.convert_path_to_target_language(old_en_path, target_lang)
@@ -1294,10 +1328,30 @@ class DocsSynchronizer:
                 # Rename the physical file
                 old_file_path.rename(new_file_path)
                 log.append(f"SUCCESS: Renamed {old_target}{file_extension} -> {new_target}{file_extension}")
+
+                # Update docs.json entry if we have location info
+                if location:
+                    # Remove old entry
+                    removed = self.remove_file_from_navigation(docs_data, old_target, target_lang)
+                    if removed:
+                        # Add new entry at same location
+                        added = self.add_file_to_navigation(docs_data, new_target, target_lang, location)
+                        if added:
+                            log.append(f"SUCCESS: Updated docs.json entry {old_target} -> {new_target} for {target_lang}")
+                            docs_changed = True
+                        else:
+                            log.append(f"WARNING: Could not add {new_target} to docs.json for {target_lang}")
+                    else:
+                        log.append(f"WARNING: Could not remove {old_target} from docs.json for {target_lang}")
             else:
                 # Old file not found - need fresh translation
                 log.append(f"INFO: Old file {old_target} not found, will generate new translation")
                 files_needing_translation.append(new_en_path)
+
+        # Save docs.json if we made changes
+        if docs_changed:
+            self.save_docs_json(docs_data)
+            log.append("SUCCESS: Saved updated docs.json with rename entries")
 
         return log, files_needing_translation
 
