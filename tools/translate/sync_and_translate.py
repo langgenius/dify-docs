@@ -1119,6 +1119,31 @@ class DocsSynchronizer:
                     else:
                         reconcile_log.append(f"WARNING: File {old_target_file} not found for rename (tried .md, .mdx, and no extension)")
 
+            # Apply deletes to cn/jp sections
+            for en_file in deleted:
+                reconcile_log.append(f"INFO: Deleting {en_file}")
+
+                # Apply to each target language
+                for target_lang in self.target_languages:
+                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+
+                    # Remove from docs.json navigation
+                    removed = self.remove_file_from_navigation(docs_data, target_file, target_lang)
+
+                    if removed:
+                        reconcile_log.append(f"SUCCESS: Removed {target_file} from docs.json")
+                        changes_made = True
+
+                        # Delete physical file
+                        for ext in ['.md', '.mdx', '']:
+                            file_path = self.base_dir / f"{target_file}{ext}"
+                            if file_path.exists():
+                                file_path.unlink()
+                                reconcile_log.append(f"SUCCESS: Deleted physical file {target_file}{ext}")
+                                break
+                    else:
+                        reconcile_log.append(f"WARNING: Could not remove {target_file} from docs.json")
+
             # Save updated docs.json
             if changes_made:
                 self.save_docs_json(docs_data)
