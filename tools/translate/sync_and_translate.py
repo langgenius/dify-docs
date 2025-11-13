@@ -1339,16 +1339,23 @@ class DocsSynchronizer:
 
                 # Update docs.json entry if we have location info
                 if location:
+                    # Strip extension from new_target for docs.json (docs.json doesn't store extensions)
+                    new_target_no_ext = new_target
+                    if new_target.endswith('.mdx'):
+                        new_target_no_ext = new_target[:-4]
+                    elif new_target.endswith('.md'):
+                        new_target_no_ext = new_target[:-3]
+
                     # Remove old entry
                     removed = self.remove_file_from_navigation(docs_data, old_target, target_lang)
                     if removed:
-                        # Add new entry at same location
-                        added = self.add_file_to_navigation(docs_data, new_target, target_lang, location)
+                        # Add new entry at same location (without extension)
+                        added = self.add_file_to_navigation(docs_data, new_target_no_ext, target_lang, location)
                         if added:
-                            log.append(f"SUCCESS: Updated docs.json entry {old_target} -> {new_target} for {target_lang}")
+                            log.append(f"SUCCESS: Updated docs.json entry {old_target} -> {new_target_no_ext} for {target_lang}")
                             docs_changed = True
                         else:
-                            log.append(f"WARNING: Could not add {new_target} to docs.json for {target_lang}")
+                            log.append(f"WARNING: Could not add {new_target_no_ext} to docs.json for {target_lang}")
                     else:
                         log.append(f"WARNING: Could not remove {old_target} from docs.json for {target_lang}")
             else:
