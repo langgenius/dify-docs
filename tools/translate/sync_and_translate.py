@@ -1393,12 +1393,18 @@ class DocsSynchronizer:
                         added_files.append(new_path)
                         sync_log.append(f"INFO: Added {new_path} to translation queue (old translation not found)")
 
-        # Check for structural changes (moves only, not renames since we handled those)
+        # Check for structural changes (moves and possibly renames)
         if base_sha and head_sha:
-            sync_log.append("INFO: Checking for structural changes (moves)...")
+            # Only skip rename detection if we actually processed renames via git
+            skip_renames = len(renamed_files) > 0
+            if skip_renames:
+                sync_log.append("INFO: Checking for structural changes (moves only, renames already handled)...")
+            else:
+                sync_log.append("INFO: Checking for structural changes (moves and renames)...")
+
             reconcile_log = self.reconcile_docs_json_structural_changes(
                 base_sha, head_sha,
-                skip_rename_detection=True  # Skip broken rename detection - we handle renames properly above
+                skip_rename_detection=skip_renames
             )
             sync_log.extend(reconcile_log)
 
