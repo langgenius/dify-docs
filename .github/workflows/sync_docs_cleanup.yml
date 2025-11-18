@@ -1,0 +1,84 @@
+# Workflow for cleaning up sync PRs when original PR is closed
+name: Cleanup Sync PR
+
+on:
+  pull_request:
+    branches: [main, revamp]
+    types: [closed]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  cleanup-sync-pr:
+    runs-on: ubuntu-latest
+    # Skip if this IS a sync PR (don't want infinite loops)
+    if: "!startsWith(github.event.pull_request.head.ref, 'docs-sync-pr-')"
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check if PR has English docs changes
+        id: check-english
+        run: |
+          # Quick check if this PR touched source language docs
+          PR_NUMBER=${{ github.event.pull_request.number }}
+
+          # Get source language directory from config.json (single source of truth)
+          SOURCE_DIR=$(python3 -c "import json; config = json.load(open('tools/translate/config.json')); print(config['languages'][config['source_language']]['directory'])")
+
+          # Get list of changed files
+          CHANGED_FILES=$(gh pr view $PR_NUMBER --json files --jq '.files[].path')
+
+          # Check if any source language docs were changed
+          if echo "$CHANGED_FILES" | grep -qE "^(docs\.json|${SOURCE_DIR}/.*\.(md|mdx))$"; then
+            echo "has_english_changes=true" >> $GITHUB_OUTPUT
+            echo "✅ PR has ${SOURCE_DIR}/ docs changes - checking for sync PR"
+          else
+            echo "has_english_changes=false" >> $GITHUB_OUTPUT
+            echo "ℹ️ No ${SOURCE_DIR}/ docs changes - skipping"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Find and close sync PR
+        if: steps.check-english.outputs.has_english_changes == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_MERGED=${{ github.event.pull_request.merged }}
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          echo "Looking for sync PR with branch: $SYNC_BRANCH"
+
+          # Search for sync PR
+          SYNC_PR_DATA=$(gh pr list \
+            --search "head:${SYNC_BRANCH}" \
+            --json number,state \
+            --jq '.[0] // empty' 2>/dev/null || echo "")
+
+          if [ -z "$SYNC_PR_DATA" ] || [ "$SYNC_PR_DATA" = "null" ]; then
+            echo "ℹ️ No sync PR found for PR #${PR_NUMBER}"
+            exit 0
+          fi
+
+          SYNC_PR_NUMBER=$(echo "$SYNC_PR_DATA" | jq -r '.number')
+          SYNC_PR_STATE=$(echo "$SYNC_PR_DATA" | jq -r '.state')
+
+          if [ "$SYNC_PR_STATE" != "OPEN" ]; then
+            echo "ℹ️ Sync PR #${SYNC_PR_NUMBER} is already ${SYNC_PR_STATE}"
+            exit 0
+          fi
+
+          echo "Found open sync PR #${SYNC_PR_NUMBER}"
+
+          # Comment and close sync PR
+          if [ "$PR_MERGED" = "true" ]; then
+            gh pr close ${SYNC_PR_NUMBER} --comment "✅ Original PR #${PR_NUMBER} was merged. You can still merge this sync PR independently if translations are ready."
+          else
+            gh pr close ${SYNC_PR_NUMBER} --comment "❌ Original PR #${PR_NUMBER} was closed. If it reopens, sync will resume automatically."
+          fi
+
+          echo "✅ Closed sync PR #${SYNC_PR_NUMBER}"
