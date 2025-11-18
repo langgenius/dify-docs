@@ -1,0 +1,382 @@
+# Workflow for updating translation PRs on sync events
+# Triggered by Analyze workflow for security validation
+name: Update Translation PR
+
+on:
+  workflow_run:
+    workflows: ["Analyze Documentation Changes"]
+    types: [completed]
+    branches-ignore:
+      - 'docs-sync-pr-*'
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: docs-translation-${{ github.event.workflow_run.head_branch }}
+  cancel-in-progress: false
+
+jobs:
+  update-translation:
+    runs-on: ubuntu-latest
+    # Only run if analyze workflow succeeded
+    if: github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Download analysis artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-sync-analysis-${{ github.event.workflow_run.id }}
+          path: /tmp/analysis
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Load and validate analysis
+        id: load-analysis
+        run: |
+          echo "Loading validated analysis from secure workflow..."
+
+          # Check if sync_plan.json exists (created by analyze workflow)
+          if [ ! -f "/tmp/analysis/sync_plan.json" ]; then
+            echo "❌ No sync plan found - analyze workflow may have skipped this PR"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Load analysis metadata
+          PR_NUMBER=$(jq -r '.metadata.pr_number' /tmp/analysis/sync_plan.json)
+          PR_TYPE=$(jq -r '.metadata.pr_type' /tmp/analysis/sync_plan.json)
+          IS_INCREMENTAL=$(jq -r '.metadata.is_incremental' /tmp/analysis/sync_plan.json)
+          BASE_SHA=$(jq -r '.metadata.base_sha' /tmp/analysis/sync_plan.json)
+          HEAD_SHA=$(jq -r '.metadata.head_sha' /tmp/analysis/sync_plan.json)
+
+          # Verify this is an English-only PR (already validated by analyze workflow)
+          if [ "$PR_TYPE" != "english" ]; then
+            echo "ℹ️ Not an English-only PR (type: $PR_TYPE) - skipping translation update"
+            echo "should_proceed=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "✅ Validated analysis loaded from secure workflow"
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
+          echo "base_sha=$BASE_SHA" >> $GITHUB_OUTPUT
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+          echo "should_proceed=true" >> $GITHUB_OUTPUT
+
+          # Display summary
+          FILE_COUNT=$(jq -r '.metadata.file_count // 0' /tmp/analysis/sync_plan.json)
+          echo "📊 Analysis Summary:"
+          echo "  - PR: #$PR_NUMBER"
+          echo "  - Type: $PR_TYPE"
+          echo "  - Files: $FILE_COUNT"
+          echo "  - Incremental: $IS_INCREMENTAL"
+          echo "  - Range: ${BASE_SHA:0:8}...${HEAD_SHA:0:8}"
+
+      - name: Checkout PR
+        if: steps.load-analysis.outputs.should_proceed == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.load-analysis.outputs.head_sha }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        if: steps.load-analysis.outputs.should_proceed == 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Find associated translation PR
+        if: steps.load-analysis.outputs.should_proceed == 'true'
+        id: find-translation-pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
+          echo "Looking for translation PR associated with PR #${PR_NUMBER}..."
+
+          # Search for translation PR by branch name pattern
+          TRANSLATION_PR_DATA=$(gh pr list \
+            --search "head:docs-sync-pr-${PR_NUMBER}" \
+            --json number,title,url,state \
+            --jq '.[0] // empty' 2>/dev/null || echo "")
+
+          if [ -n "$TRANSLATION_PR_DATA" ] && [ "$TRANSLATION_PR_DATA" != "null" ]; then
+            TRANSLATION_PR_NUMBER=$(echo "$TRANSLATION_PR_DATA" | jq -r '.number')
+            TRANSLATION_PR_STATE=$(echo "$TRANSLATION_PR_DATA" | jq -r '.state')
+            TRANSLATION_PR_URL=$(echo "$TRANSLATION_PR_DATA" | jq -r '.url')
+
+            if [ "$TRANSLATION_PR_STATE" = "OPEN" ]; then
+              echo "✅ Found active translation PR #${TRANSLATION_PR_NUMBER}"
+              echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
+              echo "found_translation_pr=true" >> $GITHUB_OUTPUT
+            else
+              echo "ℹ️ Found translation PR #${TRANSLATION_PR_NUMBER} but it's ${TRANSLATION_PR_STATE} - skipping update"
+              echo "found_translation_pr=false" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "ℹ️ No translation PR found for PR #${PR_NUMBER} - this might be the first update"
+            echo "found_translation_pr=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine update range
+        if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
+        id: update-range
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
+          HEAD_SHA="${{ steps.load-analysis.outputs.head_sha }}"
+          BASE_SHA="${{ steps.load-analysis.outputs.base_sha }}"
+
+          echo "Determining incremental update range..."
+
+          # Get last processed commit from translation branch commit messages
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+          git fetch origin "$SYNC_BRANCH" 2>/dev/null || true
+
+          LAST_PROCESSED=$(git log "origin/$SYNC_BRANCH" --format=%B -1 \
+            | grep -oP 'Last-Processed-Commit: \K[a-f0-9]+' \
+            | head -1 || echo "")
+
+          if [ -n "$LAST_PROCESSED" ]; then
+            echo "✅ Found last processed commit: $LAST_PROCESSED"
+            COMPARE_BASE="$LAST_PROCESSED"
+          else
+            echo "⚠️ No last processed commit found, using analysis base SHA"
+            COMPARE_BASE="$BASE_SHA"
+          fi
+
+          COMPARE_HEAD="$HEAD_SHA"
+
+          echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
+          echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
+
+          echo "📊 Incremental update range: $COMPARE_BASE...$COMPARE_HEAD"
+
+      - name: Install dependencies
+        if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
+        run: |
+          cd tools/translate
+          pip install httpx aiofiles python-dotenv
+
+      - name: Run translation and commit
+        if: steps.find-translation-pr.outputs.found_translation_pr == 'true'
+        id: update-translations
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Running incremental translation update with validated inputs..."
+
+          PR_NUMBER="${{ steps.load-analysis.outputs.pr_number }}"
+          HEAD_SHA="${{ steps.update-range.outputs.compare_head }}"
+          BASE_SHA="${{ steps.update-range.outputs.compare_base }}"
+
+          # Get PR title from workflow run event
+          PR_TITLE="${{ github.event.workflow_run.pull_requests[0].title }}"
+
+          echo "PR: #${PR_NUMBER}"
+          echo "Comparison: ${BASE_SHA:0:8}...${HEAD_SHA:0:8}"
+          echo "Using validated sync plan from analyze workflow"
+
+          # Call the Python script for incremental translation
+          cd tools/translate
+          python translate_pr.py \
+            --pr-number "$PR_NUMBER" \
+            --head-sha "$HEAD_SHA" \
+            --base-sha "$BASE_SHA" \
+            --pr-title "$PR_TITLE" \
+            --is-incremental \
+            2>&1 | tee /tmp/translation_output.log
+
+          SCRIPT_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract JSON result
+          RESULT_JSON=$(grep -A 1000 "RESULT_JSON:" /tmp/translation_output.log | tail -n +2 | grep -B 1000 "^========" | head -n -1)
+
+          if [ -n "$RESULT_JSON" ]; then
+            echo "$RESULT_JSON" > /tmp/translation_result.json
+
+            # Parse outputs
+            SUCCESS=$(echo "$RESULT_JSON" | jq -r '.success')
+            HAS_CHANGES=$(echo "$RESULT_JSON" | jq -r '.has_changes // false')
+
+            echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+            echo "commit_successful=$([ "$SUCCESS" = "true" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+            # Extract translation results
+            echo "$RESULT_JSON" | jq -r '.translation_results' > /tmp/update_results.json 2>/dev/null || echo '{"translated":[],"failed":[],"skipped":[]}' > /tmp/update_results.json
+
+            echo "✅ Translation update completed"
+          else
+            echo "❌ Could not parse result JSON"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "commit_successful=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          exit $SCRIPT_EXIT_CODE
+
+      - name: Comment on original PR about update
+        if: steps.update-translations.outputs.has_changes == 'true' && steps.update-translations.outputs.commit_successful == 'true'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
+            const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
+            const translationPrUrl = '${{ steps.find-translation-pr.outputs.translation_pr_url }}';
+
+            // Load update results
+            let results = { translated: [], failed: [], skipped: [] };
+            try {
+              results = JSON.parse(fs.readFileSync('/tmp/update_results.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not load update results');
+            }
+
+            let comment = `## 🌐 Multi-language Sync\n\n`;
+            comment += `✅ Updated sync PR [#${translationPrNumber}](${translationPrUrl})\n\n`;
+
+            if (results.translated && results.translated.length > 0) {
+              comment += `**Synced ${results.translated.length} file${results.translated.length > 1 ? 's' : ''}** to cn + jp\n\n`;
+            }
+
+            if (results.failed && results.failed.length > 0) {
+              comment += `⚠️ **${results.failed.length} file${results.failed.length > 1 ? 's' : ''} failed**\n\n`;
+            }
+
+            comment += `_Future commits will auto-update the sync PR._`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not comment on original PR:', error.message);
+            }
+
+      - name: Comment on translation PR about update
+        if: steps.update-translations.outputs.has_changes == 'true' && steps.update-translations.outputs.commit_successful == 'true'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
+            const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
+
+            // Load update results
+            let results = { translated: [], failed: [], skipped: [] };
+            try {
+              results = JSON.parse(fs.readFileSync('/tmp/update_results.json', 'utf8'));
+            } catch (e) {
+              console.log('Could not load update results');
+            }
+
+            const fileCount = results.translated ? results.translated.length : 0;
+            const updateComment = `✅ Synced ${fileCount} file${fileCount !== 1 ? 's' : ''} from PR #${prNumber}` +
+              (results.failed && results.failed.length > 0 ? `\n\n⚠️ ${results.failed.length} file${results.failed.length !== 1 ? 's' : ''} failed` : '');
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: translationPrNumber,
+                body: updateComment
+              });
+            } catch (error) {
+              console.log('Could not comment on translation PR:', error.message);
+            }
+
+      - name: Handle no updates needed
+        if: steps.find-translation-pr.outputs.found_translation_pr == 'true' && steps.update-translations.outputs.has_changes != 'true'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const prNumber = ${{ steps.load-analysis.outputs.pr_number }};
+            const translationPrNumber = '${{ steps.find-translation-pr.outputs.translation_pr_number }}';
+
+            const comment = `✅ Sync PR [#${translationPrNumber}](https://github.com/${{ github.repository }}/pull/${translationPrNumber}) is already up to date.`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: comment
+              });
+            } catch (error) {
+              console.log('Could not comment on original PR:', error.message);
+            }
+
+  handle-cancellation:
+    runs-on: ubuntu-latest
+    needs: update-translation
+    if: always() && needs.update-translation.result == 'cancelled'
+    steps:
+      - name: Notify about cancelled workflow
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            console.log('⚠️ Update workflow was cancelled - likely due to newer commit');
+
+            // Try to get PR number from workflow run artifacts
+            const workflowRunId = context.payload.workflow_run.id;
+            const headBranch = context.payload.workflow_run.head_branch;
+
+            try {
+              // List artifacts from the analyze workflow
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflowRunId
+              });
+
+              // Find analysis artifact
+              const analysisArtifact = artifacts.data.artifacts.find(a =>
+                a.name.startsWith('docs-sync-analysis-')
+              );
+
+              if (!analysisArtifact) {
+                console.log('No analysis artifact found - cannot determine PR number');
+                return;
+              }
+
+              // Extract PR number from artifact name
+              const prNumber = analysisArtifact.name.split('-').pop();
+
+              console.log(`Found PR #${prNumber} for cancelled workflow`);
+
+              // Get repository info for workflow dispatch link
+              const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
+              const workflowDispatchUrl = `${repoUrl}/actions/workflows/sync_docs_execute.yml`;
+
+              const comment = '## ⚠️ Sync Update Skipped\n\n' +
+                'This commit was not synced because a newer commit arrived. **Your latest commit will be synced automatically.**\n\n' +
+                '**If you need this specific commit synced:**\n' +
+                `Go to [Actions → Execute Documentation Sync](${workflowDispatchUrl}) and manually run with PR number **${prNumber}**\n\n` +
+                '_When you push multiple commits quickly, only the first and last get synced to avoid backlog._';
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                body: comment
+              });
+
+              console.log(`✅ Posted cancellation notice to PR #${prNumber}`);
+
+            } catch (error) {
+              console.log(`Failed to notify PR: ${error.message}`);
+            }
