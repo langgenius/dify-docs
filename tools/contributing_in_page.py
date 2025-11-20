@@ -195,25 +195,6 @@ def loop(dict):
 
 def main_contributing_in_page():
     process = {
-        # Help Documentation
-        "zh_help": {
-            "target_dir_relative": "zh-hans",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "zh",
-        },
-        "en_help": {
-            "target_dir_relative": "en",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "en",
-        },
-        "ja_help": {
-            "target_dir_relative": "ja-jp",
-            "repo_owner": "langgenius",
-            "repo_name": "dify-docs",
-            "language": "ja",
-        },
         # Plugin Development
         "zh_plugin_dev": {
             "target_dir_relative": "plugin-dev-zh",
