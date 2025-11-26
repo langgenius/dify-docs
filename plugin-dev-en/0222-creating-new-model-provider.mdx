@@ -4,33 +4,23 @@ dimensions:
     primary: implementation
     detail: standard
   level: intermediate
-standard_title: Creating New Model Provider
+standard_title: Model Provider Plugin
 language: en
-title: Creating Model Providers
-description: This document provides detailed guidance on creating model provider plugins,
-  including project initialization, choosing model configuration methods (predefined
-  models and custom models), creating provider configuration YAML files, and the complete
-  process of writing provider code.
+title: Model Provider Plugin
+description: This comprehensive guide provides detailed instructions on creating model provider plugins,
+  covering project initialization, directory structure organization, model configuration methods,
+  writing provider code, and implementing model integration with detailed examples of core API implementations.
 ---
-
-The first step in creating a Model type plugin is to initialize the plugin project and create the model provider file, followed by integrating specific predefined/custom models. If you only want to add a new model to an existing model provider, please refer to [Quick Integration of a New Model](/plugin-dev-en/0211-getting-started-new-model).
 
 ### Prerequisites
 
-* Dify plugin scaffolding tool
-* Python environment, version ≥ 3.12
+* [Dify CLI](/plugin-dev-en/0111-cli.mdx)
+* Basic Python programming skills and understanding of object-oriented programming
+* Familiarity with the API documentation of the model provider you want to integrate
 
-For detailed instructions on preparing the plugin development scaffolding tool, please refer to [Initializing Development Tools](/plugin-dev-en/0221-initialize-development-tools). Before you begin, it's recommended that you understand the basic concepts and structure of [Model Plugins](/plugin-dev-en/0411-model-plugin-introduction).
+## Step 1: Create and Configure a New Plugin Project
 
-### Create New Project
-
-In the scaffolding command-line tool path, create a new dify plugin project.
-
-```
-./dify-plugin-darwin-arm64 plugin init
-```
-
-If you have renamed the binary file to `dify` and copied it to the `/usr/local/bin` path, you can run the following command to create a new plugin project:
+### Initialize the Project
 
 ```bash
 dify plugin init
@@ -38,113 +28,145 @@ dify plugin init
 
 ### Choose Model Plugin Template
 
-All templates in the scaffolding tool provide complete code projects. Choose the `LLM` type plugin template.
+Select the `LLM` type plugin template from the available options. This template provides a complete code structure for model integration.
 
 ![Plugin type: llm](https://assets-docs.dify.ai/2024/12/8efe646e9174164b9edbf658b5934b86.png)
 
-#### Configure Plugin Permissions
+### Configure Plugin Permissions
 
-Configure the following permissions for this LLM plugin:
+For a model provider plugin, configure the following essential permissions:
 
-* Models
-* LLM
-* Storage
+* **Models** - Base permission for model operations
+* **LLM** - Permission for large language model functionality
+* **Storage** - Permission for file operations (if needed)
 
 ![Model Plugin Permission](https://assets-docs.dify.ai/2024/12/10f3b3ee6c03a1215309f13d712455d4.png)
 
-#### Model Configuration Methods Explanation
+### Directory Structure Overview
 
-Model providers support the following two model configuration methods:
+After initialization, your plugin project will have a directory structure similar to this (assuming a provider named `my_provider` supporting LLM and Embedding):
 
-*   `predefined-model` **Predefined Models**
+```bash
+models/my_provider/
+├── models                # Model implementation and configuration directory
+│   ├── llm               # LLM type
+│   │   ├── _position.yaml  (Optional, controls sorting)
+│   │   ├── model1.yaml     # Configuration for specific model
+│   │   └── llm.py          # LLM implementation logic
+│   └── text_embedding    # Embedding type
+│       ├── _position.yaml
+│       ├── embedding-model.yaml
+│       └── text_embedding.py
+├── provider              # Provider-level code directory
+│   └── my_provider.py    # Provider credential validation
+└── manifest.yaml         # Plugin manifest file
+```
 
-    Common large model types that only require unified provider credentials to use the predefined models under the provider. For example, the `OpenAI` model provider offers a series of predefined models such as `gpt-3.5-turbo-0125` and `gpt-4o-2024-05-13`. For detailed development instructions, please refer to Integrating Predefined Models.
-*   `customizable-model` **Custom Models**
+## Step 2: Understand Model Configuration Methods
 
-    Requires manually adding credential configurations for each model. For example, `Xinference` supports both LLM and Text Embedding, but each model has a unique **model\_uid**. If you want to integrate both, you need to configure a **model\_uid** for each model. For detailed development instructions, please refer to Integrating Custom Models.
+Dify supports two model configuration methods that determine how users will interact with your provider's models:
 
-These two configuration methods **can coexist**, meaning a provider can support combinations like `predefined-model` + `customizable-model` or `predefined-model`. This means that with configured unified provider credentials, you can use predefined models and models fetched from remote sources, and if you add new models, you can additionally use custom models on top of this foundation.
+### Predefined Models (`predefined-model`)
 
-### Adding a New Model Provider
+These are models that only require unified provider credentials to use. Once a user configures their API key or other authentication details for the provider, they can immediately access all predefined models.
 
-Adding a new model provider mainly includes the following steps:
+**Example:** The `OpenAI` provider offers predefined models like `gpt-3.5-turbo-0125` and `gpt-4o-2024-05-13`. A user only needs to configure their OpenAI API key once to access all these models.
 
-1.  **Create Model Provider Configuration YAML File**
+### Custom Models (`customizable-model`)
 
-    Add a YAML file in the provider directory to describe the provider's basic information and parameter configuration. Write content according to ProviderSchema requirements to ensure consistency with system specifications.
-2.  **Write Model Provider Code**
+These require additional configuration for each specific model instance. This approach is useful when models need individual parameters beyond the provider-level credentials.
 
-    Create provider class code, implementing a Python class that meets system interface requirements for connecting with the provider's API and implementing core functionality.
+**Example:** `Xinference` supports both LLM and Text Embedding, but each model has a unique **model_uid**. Users must configure this model_uid separately for each model they want to use.
+
+These configuration methods **can coexist** within a single provider. For instance, a provider might offer some predefined models while also allowing users to add custom models with specific configurations.
+
+## Step 3: Create Model Provider Files
+
+Creating a new model provider involves two main components:
+
+1. **Provider Configuration YAML File** - Defines the provider's basic information, supported model types, and credential requirements
+2. **Provider Class Implementation** - Implements authentication validation and other provider-level functionality
 
 ***
 
-Here are the complete operation details for each step.
+### 3.1 Create Model Provider Configuration File
 
-#### 1. **Create Model Provider Configuration File**
+The provider configuration is defined in a YAML file that declares the provider's basic information, supported model types, configuration methods, and credential rules. This file will be placed in the root directory of your plugin project.
 
-Manifest is a YAML format file that declares the model provider's basic information, supported model types, configuration methods, and credential rules. The plugin project template will automatically generate configuration files under the `/providers` path.
-
-Here's an example of the `anthropic.yaml` configuration file for `Anthropic`:
+Here's an annotated example of the `anthropic.yaml` configuration file:
 
 ```yaml
-provider: anthropic
+# Basic provider identification
+provider: anthropic                # Provider ID (must be unique)
 label:
-  en_US: Anthropic
+  en_US: Anthropic                 # Display name in UI
 description:
   en_US: Anthropic's powerful models, such as Claude 3.
   zh_Hans: Anthropic 的强大模型，例如 Claude 3。
 icon_small:
-  en_US: icon_s_en.svg
+  en_US: icon_s_en.svg            # Small icon for provider (displayed in selection UI)
 icon_large:
-  en_US: icon_l_en.svg
-background: "#F0F0EB"
+  en_US: icon_l_en.svg            # Large icon (displayed in detail views)
+background: "#F0F0EB"             # Background color for provider in UI
+
+# Help information for users
 help:
   title:
     en_US: Get your API Key from Anthropic
     zh_Hans: 从 Anthropic 获取 API Key
   url:
     en_US: https://console.anthropic.com/account/keys
+
+# Supported model types and configuration approach
 supported_model_types:
-  - llm
+  - llm                           # This provider offers LLM models
 configurate_methods:
-  - predefined-model
+  - predefined-model              # Uses predefined models approach
+
+# Provider-level credential form definition
 provider_credential_schema:
   credential_form_schemas:
-    - variable: anthropic_api_key
+    - variable: anthropic_api_key  # Variable name for API key
       label:
         en_US: API Key
-      type: secret-input
+      type: secret-input           # Secure input for sensitive data
       required: true
       placeholder:
-        zh_Hans: 在此输入您的 API Key
+        zh_Hans: 在此输入你的 API Key
         en_US: Enter your API Key
     - variable: anthropic_api_url
       label:
         en_US: API URL
-      type: text-input
+      type: text-input             # Regular text input
       required: false
       placeholder:
-        zh_Hans: 在此输入您的 API URL
+        zh_Hans: 在此输入你的 API URL
         en_US: Enter your API URL
+
+# Model configuration
 models:
-  llm:
+  llm:                            # Configuration for LLM type models
     predefined:
-      - "models/llm/*.yaml"
-    position: "models/llm/_position.yaml"
+      - "models/llm/*.yaml"       # Pattern to locate model configuration files
+    position: "models/llm/_position.yaml"  # File defining display order
+
+# Implementation file locations
 extra:
   python:
-    provider_source: provider/anthropic.py
+    provider_source: provider/anthropic.py  # Provider class implementation
     model_sources:
-      - "models/llm/llm.py"
+      - "models/llm/llm.py"                 # Model implementation file
 ```
 
-If the provider you're integrating offers custom models, such as `OpenAI` providing fine-tuned models, you need to add the `model_credential_schema` field.
+### Custom Model Configuration
 
-Here's a sample code for the `OpenAI` family of models:
+If your provider supports custom models, you need to add a `model_credential_schema` section to define what additional fields users need to configure for each individual model. This is typical for providers that support fine-tuned models or require model-specific parameters.
+
+Here's an example from the OpenAI provider:
 
 ```yaml
 model_credential_schema:
-  model: # Fine-tuned model name
+  model: # Fine-tuned model name field
     label:
       en_US: Model Name
       zh_Hans: 模型名称
@@ -158,7 +180,7 @@ model_credential_schema:
     type: secret-input
     required: true
     placeholder:
-      zh_Hans: 在此输入您的 API Key
+      zh_Hans: 在此输入你的 API Key
       en_US: Enter your API Key
   - variable: openai_organization
     label:
@@ -167,26 +189,18 @@ model_credential_schema:
     type: text-input
     required: false
     placeholder:
-      zh_Hans: 在此输入您的组织 ID
+      zh_Hans: 在此输入你的组织 ID
       en_US: Enter your Organization ID
-  - variable: openai_api_base
-    label:
-      zh_Hans: API Base
-      en_US: API Base
-    type: text-input
-    required: false
-    placeholder:
-      zh_Hans: 在此输入您的 API Base
-      en_US: Enter your API Base
+  # Additional fields as needed...
 ```
 
-For more complete model provider YAML specifications, please refer to the [Model Schema](/plugin-dev-en/0412-model-schema) documentation.
+For complete model provider YAML specifications, please refer to the [Model Schema](/plugin-dev-en/0412-model-schema) documentation.
 
-#### 2. **Write Model Provider Code**
+### 3.2 Write Model Provider Code
 
-Create a python file with the same name, e.g., `anthropic.py`, in the `/providers` folder and implement a `class` that inherits from the `__base.provider.Provider` base class, e.g., `AnthropicProvider`.
+Next, create a Python file for your provider class implementation. This file should be placed in the `/provider` directory with a name matching your provider (e.g., `anthropic.py`).
 
-Here's an example code for `Anthropic`:
+The provider class must inherit from `ModelProvider` and implement at least the `validate_provider_credentials` method:
 
 ```python
 import logging
@@ -200,69 +214,242 @@ logger = logging.getLogger(__name__)
 class AnthropicProvider(ModelProvider):
     def validate_provider_credentials(self, credentials: dict) -> None:
         """
-        Validate provider credentials
-
-        if validate failed, raise exception
-
-        :param credentials: provider credentials, credentials form defined in `provider_credential_schema`.
+        Validate provider credentials by testing them against the API.
+        
+        This method should attempt to make a simple API call to verify
+        that the credentials are valid.
+        
+        :param credentials: Provider credentials as defined in the YAML schema
+        :raises CredentialsValidateFailedError: If validation fails
         """
         try:
+            # Get an instance of the LLM model type and use it to validate credentials
             model_instance = self.get_model_instance(ModelType.LLM)
-            model_instance.validate_credentials(model="claude-3-opus-20240229", credentials=credentials)
+            model_instance.validate_credentials(
+                model="claude-3-opus-20240229", 
+                credentials=credentials
+            )
         except CredentialsValidateFailedError as ex:
+            # Pass through credential validation errors
             raise ex
         except Exception as ex:
+            # Log and re-raise other exceptions
             logger.exception(f"{self.get_provider_schema().provider} credentials validate failed")
             raise ex
 ```
 
-Providers need to inherit the `__base.model_provider.ModelProvider` base class and implement the `validate_provider_credentials` method for validating unified provider credentials.
+The `validate_provider_credentials` method is crucial as it's called whenever a user tries to save their provider credentials in Dify. It should:
+
+1. Attempt to validate the credentials by making a simple API call
+2. Return silently if validation succeeds
+3. Raise `CredentialsValidateFailedError` with a helpful message if validation fails
+
+#### For Custom Model Providers
+
+For providers that exclusively use custom models (where each model requires its own configuration), you can implement a simpler provider class. For example, with `Xinference`:
 
 ```python
-def validate_provider_credentials(self, credentials: dict) -> None:
-    """
-    Validate provider credentials
-    You can choose any validate_credentials method of model type or implement validate method by yourself,
-    such as: get model list api
+from dify_plugin import ModelProvider
 
-    if validate failed, raise exception
-
-    :param credentials: provider credentials, credentials form defined in `provider_credential_schema`.
-    """
-```
-
-Of course, you can also initially reserve the `validate_provider_credentials` implementation, and reuse it directly after the model credential verification method is implemented.
-
-#### **Custom Model Providers**
-
-For other types of model providers, please refer to the following configuration methods.
-
-For custom model providers like `Xinference`, you can skip the full implementation step. Simply create an empty class called `XinferenceProvider` and implement an empty `validate_provider_credentials` method in it.
-
-**Detailed Explanation:**
-
-• `XinferenceProvider` is a placeholder class used to identify custom model providers.
-
-• While the `validate_provider_credentials` method won't be actually called, it must exist because its parent class is abstract and requires all child classes to implement this method. By providing an empty implementation, we can avoid instantiation errors that would occur from not implementing the abstract method.
-
-```python
-class XinferenceProvider(Provider):
+class XinferenceProvider(ModelProvider):
     def validate_provider_credentials(self, credentials: dict) -> None:
+        """
+        For custom-only model providers, validation happens at the model level.
+        This method exists to satisfy the abstract base class requirement.
+        """
         pass
 ```
 
-After initializing the model provider, the next step is to integrate specific llm models provided by the provider. For detailed instructions, please refer to:
+## Step 4: Implement Model-Specific Code
 
-* [Model Design Rules](/plugin-dev-en/0411-model-designing-rules) - Learn the standards for integrating predefined models
-* [Model Schema](/plugin-dev-en/0412-model-schema) - Learn the standards for integrating custom models
-* [Publishing Overview](/plugin-dev-en/0321-release-overview) - Learn the plugin publishing process
+After setting up your provider, you need to implement the model-specific code that will handle API calls for each model type you support. This involves:
+
+1. Creating model configuration YAML files for each specific model
+2. Implementing the model type classes that handle API communication
+
+For detailed instructions on these steps, please refer to:
+
+* [Model Design Rules](/plugin-dev-en/0411-model-designing-rules) - Standards for integrating predefined models
+* [Model Schema](/plugin-dev-en/0412-model-schema) - Standards for model configuration files
+
+### 4.1 Define Model Configuration (YAML)
+
+For each specific model, create a YAML file in the appropriate model type directory (e.g., `models/llm/`) to define its properties, parameters, and features.
+
+**Example (`claude-3-5-sonnet-20240620.yaml`):**
+
+```yaml
+model: claude-3-5-sonnet-20240620   # API identifier for the model
+label:
+  en_US: claude-3-5-sonnet-20240620 # Display name in UI
+model_type: llm                     # Must match directory type
+features:                           # Special capabilities
+  - agent-thought
+  - vision
+  - tool-call
+  - stream-tool-call
+  - document
+model_properties:                   # Inherent model properties
+  mode: chat                        # "chat" or "completion"
+  context_size: 200000              # Maximum context window
+parameter_rules:                    # User-adjustable parameters
+  - name: temperature
+    use_template: temperature       # Reference predefined template
+  - name: top_p
+    use_template: top_p
+  - name: max_tokens
+    use_template: max_tokens
+    required: true
+    default: 8192
+    min: 1
+    max: 8192
+pricing:                           # Optional pricing information
+  input: '3.00'
+  output: '15.00'
+  unit: '0.000001'                 # Per million tokens
+  currency: USD
+```
+
+### 4.2 Implement Model Calling Code (Python)
+
+Create a Python file for each model type you're supporting (e.g., `llm.py` in the `models/llm/` directory). This class will handle API communication, parameter transformation, and result formatting.
+
+Here's an example implementation structure for an LLM:
+
+```python
+import logging
+from typing import Union, Generator, Optional, List
+from dify_plugin.provider_kits.llm import LargeLanguageModel # Base class
+from dify_plugin.provider_kits.llm import LLMResult, LLMResultChunk, LLMUsage # Result classes
+from dify_plugin.provider_kits.llm import PromptMessage, PromptMessageTool # Message classes
+from dify_plugin.errors.provider_error import InvokeError, InvokeAuthorizationError # Error classes
+
+logger = logging.getLogger(__name__)
+
+class MyProviderLargeLanguageModel(LargeLanguageModel):
+    def _invoke(self, model: str, credentials: dict, prompt_messages: List[PromptMessage],
+                model_parameters: dict, tools: Optional[List[PromptMessageTool]] = None,
+                stop: Optional[List[str]] = None, stream: bool = True,
+                user: Optional[str] = None) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:
+        """
+        Core method for invoking the model API.
+        
+        Parameters:
+            model: The model identifier to call
+            credentials: Authentication credentials
+            prompt_messages: List of messages to send
+            model_parameters: Parameters like temperature, max_tokens
+            tools: Optional tool definitions for function calling
+            stop: Optional list of stop sequences
+            stream: Whether to stream responses (True) or return complete response (False)
+            user: Optional user identifier for API tracking
+            
+        Returns:
+            If stream=True: Generator yielding LLMResultChunk objects
+            If stream=False: Complete LLMResult object
+        """
+        # Prepare API request parameters
+        api_params = self._prepare_api_params(
+            credentials, model_parameters, prompt_messages, tools, stop
+        )
+        
+        try:
+            # Call appropriate helper method based on streaming preference
+            if stream:
+                return self._invoke_stream(model, api_params, user)
+            else:
+                return self._invoke_sync(model, api_params, user)
+        except Exception as e:
+            # Handle and map errors
+            self._handle_api_error(e)
+    
+    def _invoke_stream(self, model: str, api_params: dict, user: Optional[str]) -> Generator[LLMResultChunk, None, None]:
+        """Helper method for streaming API calls"""
+        # Implementation details for streaming calls
+        pass
+        
+    def _invoke_sync(self, model: str, api_params: dict, user: Optional[str]) -> LLMResult:
+        """Helper method for synchronous API calls"""
+        # Implementation details for synchronous calls
+        pass
+        
+    def validate_credentials(self, model: str, credentials: dict) -> None:
+        """
+        Validate that the credentials work for this specific model.
+        Called when a user tries to add or modify credentials.
+        """
+        # Implementation for credential validation
+        pass
+        
+    def get_num_tokens(self, model: str, credentials: dict, 
+                       prompt_messages: List[PromptMessage],
+                       tools: Optional[List[PromptMessageTool]] = None) -> int:
+        """
+        Estimate the number of tokens for given input.
+        Optional but recommended for accurate cost estimation.
+        """
+        # Implementation for token counting
+        pass
+        
+    @property
+    def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+        """
+        Define mapping from vendor-specific exceptions to Dify standard exceptions.
+        This helps standardize error handling across different providers.
+        """
+        return {
+            InvokeAuthorizationError: [
+                # List vendor-specific auth errors here
+            ],
+            # Other error mappings
+        }
+```
+
+The most important method to implement is `_invoke`, which handles the core API communication. This method should:
+
+1. Transform Dify's standardized inputs into the format required by the provider's API
+2. Make the API call with proper error handling
+3. Transform the API response into Dify's standardized output format
+4. Handle both streaming and non-streaming modes
+
+## Step 5: Debug and Test Your Plugin
+
+Dify provides a remote debugging capability that allows you to test your plugin during development:
+
+1. In your Dify instance, go to "Plugin Management" and click "Debug Plugin" to get your debug key and server address
+2. Configure your local environment with these values in a `.env` file:
+
+```dotenv
+INSTALL_METHOD=remote
+REMOTE_INSTALL_HOST=<your-dify-domain-or-ip>
+REMOTE_INSTALL_PORT=5003
+REMOTE_INSTALL_KEY=****-****-****-****-****
+```
+
+3. Run your plugin locally with `python -m main` and test it in Dify
+
+## Step 6: Package and Publish
+
+When your plugin is ready:
+
+1. Package it using the scaffolding tool:
+   ```bash
+   dify plugin package models/<provider_name>
+   ```
+
+2. Test the packaged plugin locally before submitting
+
+3. Submit a pull request to the [Dify official plugins repository](https://github.com/langgenius/dify-official-plugins)
+
+For more details on the publishing process, see the [Publishing Overview](/plugin-dev-en/0321-release-overview).
 
 ## Reference Resources
 
 - [Quick Integration of a New Model](/plugin-dev-en/0211-getting-started-new-model) - How to add new models to existing providers
 - [Basic Concepts of Plugin Development](/plugin-dev-en/0111-getting-started-dify-plugin) - Return to the plugin development getting started guide
-- [Creating New Model Provider Extra](/plugin-dev-en/0222-creating-new-model-provider-extra) - Learn more advanced configurations
+- [Model Schema](/plugin-dev-en/0412-model-schema) - Learn detailed model configuration specifications
 - [General Specifications](/plugin-dev-en/0411-general-specifications) - Learn about plugin manifest file configuration
+- [Dify Plugin SDK Reference](https://github.com/langgenius/dify-plugin-sdks) - Look up base classes, data structures, and error types
 
 {/*
 Contributing Section

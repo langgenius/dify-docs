@@ -1,0 +1,131 @@
+---
+title: AWS 上的 Dify Premium
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-host/platform-guides/dify-premium)。</Note>
+
+Dify Premium 是我们的 AWS AMI 产品，支持自定义品牌，可一键部署到你的 AWS VPC 作为 EC2 实例。前往 [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) 进行订阅。它在以下几种场景中很有用：
+
+* 你是中小型企业，希望创建一个或几个应用程序，并且关心数据驻留问题。
+* 你对 [Dify Cloud](https://cloud.dify.ai) 感兴趣，但你的用例需要比 [定价计划](https://dify.ai/pricing) 支持的更多资源。
+* 你希望在组织内采用 Dify Enterprise 之前运行概念验证。
+
+## 设置
+
+如果这是你首次访问 Dify，请输入管理员初始化密码（设置为你的 EC2 实例 ID）来开始设置过程。
+
+AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（默认使用 HTTP 端口 80）。
+
+## 升级
+
+在 EC2 实例中，运行以下命令：
+
+```
+git clone https://github.com/langgenius/dify.git /tmp/dify
+mv -f /tmp/dify/docker/* /dify/
+rm -rf /tmp/dify
+docker-compose down
+docker-compose pull
+docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+```
+
+<Accordion title="将社区版升级到 v1.0.0+">
+
+> 本节描述将较旧的社区版迁移到 Dify v1.0.0+。对于 Dify Premium 或社区版到此特定迁移范围之后版本的一般升级，请参考各自的主要升级说明。
+
+升级过程包括以下步骤：
+
+1. 备份你的数据
+2. 迁移插件
+3. 升级主要的 dify 项目
+
+### 1. 备份数据
+
+1.1 执行 `cd` 命令导航到你的 Dify 项目目录并创建备份分支。
+
+1.2 运行以下命令备份你的 docker-compose YAML 文件（可选）。
+
+```bash
+cd docker
+cp docker-compose.yaml docker-compose.yaml.$(date +%s).bak
+```
+
+1.3 运行命令停止 docker 服务，然后在 Docker 目录中执行备份数据命令。
+
+```bash
+docker compose down
+tar -cvf volumes-$(date +%s).tgz volumes
+```
+
+### 2. 升级版本
+
+`v1.0.0` 支持通过 Docker Compose 部署。导航到你的 Dify 项目路径并运行以下命令升级到 Dify 版本：
+
+```bash
+git checkout 1.0.0 # 切换到 1.0.0 分支
+cd docker
+docker compose -f docker-compose.yaml up -d
+```
+
+### 3. 将工具迁移到插件
+
+> **关于命令执行和包管理的重要说明（针对 v1.0.0 迁移）：**
+> *   **默认容器名称：** `docker exec` 命令示例使用 `docker-api-1`。如果你的 API 容器有不同的名称或 ID（你可以使用 `docker ps` 找到），请相应调整命令。
+> *   **Python 包管理器（`uv` vs. `poetry`）：**
+    *   Dify 从版本 [v1.3.0](https://github.com/langgenius/dify/releases/tag/1.3.0) 开始将 Python 包管理器从 `poetry` 切换到 `uv` 以提高性能。对于 Dify v1.3.0 或更新版本的一般操作，标准命令是 `uv run flask ...`。
+    *   **本节专门针对升级到 Dify v1.0.0。** 在 Dify v1.0.0 到（但不包括）v1.3.0 期间，`poetry` 是包管理器。因此，下面示例中的 `flask` 命令正确地使用 `poetry run ...`。代码示例首先在注释中强调当前的 `uv迁移范围相关的 `poetry` 命令。
+
+此步骤的目的是自动迁移之前在社区版中使用的工具和模型供应商，并将它们安装到新的插件环境中。
+
+1.	运行 `docker ps` 命令检查 API 容器名称或 ID。默认通常是 `docker-api-1`。
+
+示例：
+
+```bash
+docker ps
+CONTAINER ID   IMAGE                                       COMMAND                  CREATED       STATUS                 PORTS                                                                                                                             NAMES
+417241cd****   nginx:latest                                "sh -c 'cp /docker-e…"   3 hours ago   Up 3 hours             0.0.0.0:80->80/tcp, :::80->80/tcp, 0.0.0.0:443->443/tcp, :::443->443/tcp                                                          docker-nginx-1
+f84aa773****   langgenius/dify-api:1.0.0                   "/bin/bash /entrypoi…"   3 hours ago   Up 3 hours             5001/tcp                                                                                                                          docker-worker-1
+a3cb19c2****   langgenius/dify-api:1.0.0                   "/bin/bash /entrypoi…"   3 hours ago   Up 3 hours             5001/tcp                                                                                                                          docker-api-1
+```
+
+运行命令 `docker exec -it docker-api-1 bash` 进入容器终端（如果你的容器名称不同，请使用相应的名称），然后运行：
+
+```bash
+# 对于 Dify v1.3.0+ 环境，标准命令是 'uv run ...'。
+uv run flask extract-plugins --workers=20
+#
+# 如果此处描述的社区版部分的目标迁移版本是 Dify v1.0.0 到（但不包括）v1.3.0，请使用 'poetry'：
+# poetry run flask extract-plugins --workers=20
+```
+
+> 如果按照此 v1.0.0 迁移指南尝试执行命令时发生错误（例如，找不到 `uv` 或 `poetry`），请确保服务器上正确设置了该版本的原始先决条件的 `poetry` 环境。如果终端在运行 `poetry` 命令后要求输入，请按 **"Enter"** 键跳过。
+
+此命令将提取环境中当前使用的所有模型和工具。workers 参数控制提取过程中使用的并行进程数，可根据需要调整。命令运行后，将生成一个 `plugins.jsonl` 文件，包含当前 Dify 实例中所有工作区的插件信息。
+
+确保你的网络可以访问公共互联网并支持访问：`https://marketplace.dify.ai`。在 `docker-api-1` 容器中继续运行以下命令：
+
+```bash
+# 对于 Dify v1.3.0+ 环境，标准命令是 'uv run ...'。
+uv run flask install-plugins --workers=2
+#
+# 如果此处描述的社区版部分的目标迁移版本是 Dify v1.0.0 到（但不包括）v1.3.0，请使用 'poetry'：
+# poetry run flask install-plugins --workers=2
+```
+
+此命令将下载并安装所有必要的插件到最新的社区版中。当终端显示 `Install plugins completed.` 时，迁移完成。
+
+</Accordion>
+
+## 自定义
+
+就像自托管部署一样，你可以根据需要修改 EC2 实例中 `.env` 下的环境变量。然后，使用以下命令重启 Dify：
+
+```bash
+docker-compose down
+docker-compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+```
+
+## WebApp 标志和品牌自定义
+
+你可以在设置下的**自定义**中启用此功能，启用**移除 Powered by Dify**并上传你自己的标志。
