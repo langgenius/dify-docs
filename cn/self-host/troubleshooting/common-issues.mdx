@@ -1,0 +1,130 @@
+---
+title: 常见问题
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-host/troubleshooting/common-issues)。</Note>
+
+## 身份验证与访问
+
+### 重置管理员密码
+
+对于 Docker Compose 部署：
+
+```bash
+docker exec -it docker-api-1 flask reset-password
+```
+
+在提示时输入账户邮箱和新密码。
+
+对于源代码部署，在 `api` 目录下运行相同命令。
+
+### 登录后出现 401 错误
+
+这通常发生在更改域名之后。请更新以下环境变量：
+
+- `CONSOLE_CORS_ALLOW_ORIGINS` - 控制台 CORS 策略
+- `WEB_API_CORS_ALLOW_ORIGINS` - WebApp CORS 策略
+- `CONSOLE_API_URL` - 控制台 API 的后端 URL
+- `CONSOLE_WEB_URL` - 控制台 Web 的前端 URL
+- `SERVICE_API_URL` - 服务 API URL
+- `APP_API_URL` - WebApp API 后端 URL
+- `APP_WEB_URL` - WebApp URL
+
+更新配置后重启服务。
+
+## 配置
+
+### 更改默认端口
+
+修改 `.env` 配置：
+
+```
+EXPOSE_NGINX_PORT=80
+EXPOSE_NGINX_SSL_PORT=443
+```
+
+如需更改 API 服务端口，请更新 `docker-compose.yaml` 中的 nginx 配置。
+
+### 增加文件上传限制
+
+在 `.env` 中更新：
+
+- `UPLOAD_FILE_SIZE_LIMIT` - 最大文件大小
+- `NGINX_CLIENT_MAX_BODY_SIZE` - 必须匹配以避免问题
+
+### 工作流复杂度限制
+
+在 `web/app/components/workflow/constants.ts` 中调整 `MAX_TREE_DEPTH`（默认值：50）。
+
+注意：过大的深度会影响性能。
+
+### 节点执行超时
+
+在 `.env` 中设置 `TEXT_GENERATION_TIMEOUT_MS` 以控制每个节点的运行时间。
+
+## 邮件配置
+
+收不到密码重置邮件？请在 `.env` 中配置邮件设置：
+
+1. 设置邮件参数（SMTP 设置）
+2. 重启服务：
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+如果邮件仍未到达，请检查垃圾邮件文件夹。
+
+### 在没有邮件服务的情况下邀请成员
+
+在没有配置邮件的本地部署中，邀请页面在发送后会显示一个链接。手动复制并转发此链接给用户。
+
+## 数据库问题
+
+### pg_hba.conf 连接错误
+
+如果你看到：
+```
+FATAL: no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
+```
+
+允许来自错误中网络段的连接：
+
+```bash
+docker exec -it docker-db-1 sh -c "echo 'host all all 172.19.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
+docker-compose restart
+```
+
+### 加密密钥文件未找到错误
+
+此错误发生在更改部署方法或删除 `api/storage/privkeys` 之后：
+
+```
+FileNotFoundError: File not found
+File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
+```
+
+重置加密密钥对：
+
+Docker Compose：
+```bash
+docker exec -it docker-api-1 flask reset-encrypt-key-pair
+```
+
+源代码（在 `api` 目录下）：
+```bash
+flask reset-encrypt-key-pair
+```
+
+**警告**：此操作不可逆 - 现有加密数据将丢失。
+
+## 工作空间管理
+
+### 重命名工作空间
+
+直接修改数据库中的 `tenants` 表。
+
+### 更改应用程序访问域名
+
+在 `docker-compose.yaml` 中更新 `APP_WEB_URL`。

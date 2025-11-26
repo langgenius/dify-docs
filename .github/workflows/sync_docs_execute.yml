@@ -1,0 +1,547 @@
+# Workflow for executing documentation translations
+name: Execute Documentation Sync
+
+on:
+  workflow_run:
+    workflows: ["Analyze Documentation Changes"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to process'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: read
+
+concurrency:
+  group: docs-translation-${{ github.event.workflow_run.head_branch || github.event.inputs.pr_number }}
+  cancel-in-progress: false
+
+jobs:
+  execute-sync:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - name: Check workflow source
+        id: check-source
+        run: |
+          echo "Checking workflow source..."
+          echo "Event: ${{ github.event.workflow_run.event }}"
+          echo "Repository: ${{ github.event.workflow_run.repository.full_name }}"
+          echo "Head Repository: ${{ github.event.workflow_run.head_repository.full_name }}"
+          echo "Head Branch: ${{ github.event.workflow_run.head_branch }}"
+          
+          # Security check: Only process PRs from the same repository or trusted forks
+          if [[ "${{ github.event.workflow_run.event }}" != "pull_request" ]]; then
+            echo "Not a pull request event, skipping"
+            echo "should_process=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Check if this is from a fork
+          IS_FORK="false"
+          if [[ "${{ github.event.workflow_run.repository.full_name }}" != "${{ github.event.workflow_run.head_repository.full_name }}" ]]; then
+            IS_FORK="true"
+          fi
+          
+          echo "is_fork=$IS_FORK" >> $GITHUB_OUTPUT
+          echo "should_process=true" >> $GITHUB_OUTPUT
+
+      - name: Download analysis artifacts
+        if: steps.check-source.outputs.should_process == 'true' || github.event_name == 'workflow_dispatch'
+        uses: actions/github-script@v7
+        id: download-artifacts
+        with:
+          script: |
+            const fs = require('fs');
+
+            // Determine which workflow run to get artifacts from
+            let runId;
+            let prNumber;
+
+            if (context.eventName === 'workflow_dispatch') {
+              // Manual trigger - use the pr_number input
+              prNumber = '${{ github.event.inputs.pr_number }}';
+              console.log(`Manual trigger for PR #${prNumber}`);
+
+              // Find the most recent analyze workflow run for this specific PR
+              const runs = await github.rest.actions.listWorkflowRuns({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                workflow_id: 'sync_docs_analyze.yml',
+                per_page: 100
+              });
+
+              // Find run that matches our specific PR number
+              let matchingRun = null;
+              for (const run of runs.data.workflow_runs) {
+                if (run.conclusion === 'success' && run.event === 'pull_request' && run.pull_requests.length > 0) {
+                  const pullRequest = run.pull_requests[0];
+                  if (pullRequest.number.toString() === prNumber) {
+                    matchingRun = run;
+                    break;
+                  }
+                }
+              }
+
+              if (!matchingRun) {
+                console.log(`No successful analyze workflow run found for PR #${prNumber}`);
+                return false;
+              }
+
+              runId = matchingRun.id;
+              console.log(`Found analyze workflow run: ${runId} for PR #${prNumber}`);
+            } else {
+              // Triggered by workflow_run
+              runId = context.payload.workflow_run.id;
+              console.log(`Workflow run trigger, run ID: ${runId}`);
+            }
+
+            // List artifacts from the analyze workflow run
+            const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: runId
+            });
+
+            console.log(`Found ${artifacts.data.artifacts.length} artifacts`);
+            artifacts.data.artifacts.forEach(a => console.log(`  - ${a.name}`));
+
+            const matchArtifact = artifacts.data.artifacts.find(artifact => {
+              if (context.eventName === 'workflow_dispatch') {
+                return artifact.name === `docs-sync-analysis-${prNumber}`;
+              } else {
+                return artifact.name.startsWith('docs-sync-analysis-');
+              }
+            });
+
+            if (!matchArtifact) {
+              console.log('No matching analysis artifact found');
+              return false;
+            }
+
+            console.log(`Downloading artifact: ${matchArtifact.name}`);
+
+            const download = await github.rest.actions.downloadArtifact({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              artifact_id: matchArtifact.id,
+              archive_format: 'zip'
+            });
+
+            fs.writeFileSync('/tmp/artifacts.zip', Buffer.from(download.data));
+            console.log('Artifact downloaded successfully');
+
+            // Extract PR number from artifact name
+            if (!prNumber) {
+              prNumber = matchArtifact.name.split('-').pop();
+            }
+
+            core.setOutput('pr_number', prNumber);
+            core.setOutput('artifact_found', 'true');
+
+            return true;
+
+      - name: Extract and validate artifacts
+        if: steps.download-artifacts.outputs.artifact_found == 'true'
+        id: extract-artifacts
+        run: |
+          echo "Extracting artifacts..."
+          
+          # Create secure temporary directory
+          WORK_DIR=$(mktemp -d /tmp/sync-XXXXXX)
+          echo "work_dir=$WORK_DIR" >> $GITHUB_OUTPUT
+          
+          # Extract to temporary directory
+          cd "$WORK_DIR"
+          unzip /tmp/artifacts.zip
+          
+          # Validate extracted files
+          REQUIRED_FILES="analysis.json sync_plan.json changed_files.txt"
+          for file in $REQUIRED_FILES; do
+            if [ ! -f "$file" ]; then
+              echo "Error: Required file $file not found"
+              exit 1
+            fi
+          done
+          
+          # Validate JSON structure
+          python3 -c "
+          import json
+          import sys
+          
+          try:
+              with open('analysis.json') as f:
+                  analysis = json.load(f)
+              with open('sync_plan.json') as f:
+                  sync_plan = json.load(f)
+              
+              # Validate required fields
+              assert 'pr_number' in analysis
+              assert 'files_to_sync' in sync_plan
+              assert 'target_languages' in sync_plan
+              
+              print('Artifacts validated successfully')
+          except Exception as e:
+              print(f'Validation error: {e}')
+              sys.exit(1)
+          "
+          
+          # Extract PR number and other metadata
+          PR_NUMBER=$(python3 -c "import json; print(json.load(open('analysis.json'))['pr_number'])")
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+
+          # Extract head SHA to checkout the PR branch (needed for new files)
+          HEAD_SHA=$(python3 -c "import json; print(json.load(open('analysis.json'))['head_sha'])")
+          echo "head_sha=$HEAD_SHA" >> $GITHUB_OUTPUT
+
+          # Extract base SHA for comparison
+          BASE_SHA=$(python3 -c "import json; print(json.load(open('analysis.json'))['base_sha'])")
+          echo "base_sha=$BASE_SHA" >> $GITHUB_OUTPUT
+
+          # Extract incremental flag
+          IS_INCREMENTAL=$(python3 -c "import json; print(str(json.load(open('analysis.json'))['is_incremental']).lower())")
+          echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
+
+          # Check if sync is required
+          SYNC_REQUIRED=$(python3 -c "import json; print(str(json.load(open('sync_plan.json'))['sync_required']).lower())")
+          echo "sync_required=$SYNC_REQUIRED" >> $GITHUB_OUTPUT
+
+      - name: Checkout PR branch
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+          ref: ${{ steps.extract-artifacts.outputs.head_sha }}  # Checkout PR's head commit to access new files
+
+      - name: Check if translation branch exists
+        if: steps.extract-artifacts.outputs.sync_required == 'true'
+        id: check-branch
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          SYNC_BRANCH="docs-sync-pr-${PR_NUMBER}"
+
+          # Check if translation branch exists on remote (after repo checkout)
+          if git ls-remote --exit-code --heads origin "$SYNC_BRANCH" >/dev/null 2>&1; then
+            echo "✅ Translation branch exists: $SYNC_BRANCH"
+            echo "branch_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "🆕 Translation branch does not exist yet"
+            echo "branch_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Skip if translation PR already exists
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists == 'true'
+        run: |
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          echo "ℹ️ Translation PR already exists for PR #${PR_NUMBER}"
+          echo "The 'Update Translation PR' workflow will handle incremental updates."
+          echo "Skipping execution to prevent duplicate commits."
+          exit 0
+
+      - name: Set up Python
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists != 'true'
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists != 'true'
+        run: |
+          cd tools/translate
+          pip install httpx aiofiles python-dotenv
+
+      - name: Check for manual approval requirement
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists != 'true' && steps.check-source.outputs.is_fork == 'true'
+        id: check-approval
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            
+            // Get PR details
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+            
+            const author = pr.data.user.login;
+            const authorAssociation = pr.data.author_association;
+            
+            // Check if author is trusted
+            const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const trustedContributors = process.env.TRUSTED_CONTRIBUTORS?.split(',') || [];
+            
+            const isTrusted = trustedAssociations.includes(authorAssociation) || 
+                             trustedContributors.includes(author);
+            
+            if (!isTrusted) {
+              // Check for approval from maintainer
+              const reviews = await github.rest.pulls.listReviews({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+              
+              const hasApproval = reviews.data.some(review => 
+                review.state === 'APPROVED' && 
+                trustedAssociations.includes(review.author_association)
+              );
+              
+              if (!hasApproval) {
+                console.log('PR requires manual approval from a maintainer');
+                core.setOutput('needs_approval', 'true');
+                
+                // Comment on PR
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: '⏸️ **Documentation sync is pending approval**\n\n' +
+                        'This PR requires approval from a maintainer before automatic synchronization can proceed.\n\n' +
+                        'Once approved, the documentation will be automatically translated and synchronized.'
+                });
+                
+                return;
+              }
+            }
+            
+            core.setOutput('needs_approval', 'false');
+
+      - name: Run translation and commit
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists != 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        id: translate
+        env:
+          DIFY_API_KEY: ${{ secrets.DIFY_API_KEY }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Running translation workflow..."
+
+          WORK_DIR="${{ steps.extract-artifacts.outputs.work_dir }}"
+          PR_NUMBER="${{ steps.extract-artifacts.outputs.pr_number }}"
+          HEAD_SHA="${{ steps.extract-artifacts.outputs.head_sha }}"
+          BASE_SHA="${{ steps.extract-artifacts.outputs.base_sha }}"
+          PR_TITLE=$(gh pr view ${PR_NUMBER} --json title --jq '.title' 2>/dev/null || echo "Documentation changes")
+          IS_INCREMENTAL="${{ steps.extract-artifacts.outputs.is_incremental }}"
+
+          echo "PR: #${PR_NUMBER}"
+          echo "Comparison: ${BASE_SHA:0:8}...${HEAD_SHA:0:8}"
+          echo "Incremental: ${IS_INCREMENTAL}"
+
+          # Call the Python script to handle translation
+          cd tools/translate
+          python translate_pr.py \
+            --pr-number "$PR_NUMBER" \
+            --head-sha "$HEAD_SHA" \
+            --base-sha "$BASE_SHA" \
+            --pr-title "$PR_TITLE" \
+            --work-dir "$WORK_DIR" \
+            ${IS_INCREMENTAL:+--is-incremental} \
+            2>&1 | tee /tmp/translation_output.log
+
+          SCRIPT_EXIT_CODE=${PIPESTATUS[0]}
+
+          # Extract JSON result from output
+          RESULT_JSON=$(grep -A 1000 "RESULT_JSON:" /tmp/translation_output.log | tail -n +2 | grep -B 1000 "^========" | head -n -1)
+
+          if [ -n "$RESULT_JSON" ]; then
+            echo "$RESULT_JSON" > /tmp/translation_result.json
+
+            # Parse key fields for workflow outputs
+            SUCCESS=$(echo "$RESULT_JSON" | jq -r '.success')
+            HAS_CHANGES=$(echo "$RESULT_JSON" | jq -r '.has_changes // false')
+            TRANSLATION_PR_NUMBER=$(echo "$RESULT_JSON" | jq -r '.translation_pr_number // ""')
+            TRANSLATION_PR_URL=$(echo "$RESULT_JSON" | jq -r '.translation_pr_url // ""')
+            PR_CREATED=$(echo "$RESULT_JSON" | jq -r '.created // false')
+
+            # Set outputs for subsequent steps
+            echo "has_changes=$HAS_CHANGES" >> $GITHUB_OUTPUT
+            echo "translation_pr_number=$TRANSLATION_PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "translation_pr_url=$TRANSLATION_PR_URL" >> $GITHUB_OUTPUT
+            echo "creation_successful=$([ -n "$TRANSLATION_PR_NUMBER" ] && echo true || echo false)" >> $GITHUB_OUTPUT
+
+            # Extract translation results for comment
+            echo "$RESULT_JSON" | jq -r '.translation_results' > /tmp/sync_results.json 2>/dev/null || echo '{"translated":[],"failed":[],"skipped":[]}' > /tmp/sync_results.json
+
+            echo "✅ Translation workflow completed successfully"
+          else
+            echo "❌ Could not parse result JSON"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "creation_successful=false" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+          exit $SCRIPT_EXIT_CODE
+
+
+      - name: Comment on original PR with translation PR link
+        if: steps.extract-artifacts.outputs.sync_required == 'true' && steps.check-branch.outputs.branch_exists != 'true' && steps.check-approval.outputs.needs_approval != 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const hasChanges = '${{ steps.translate.outputs.has_changes }}' === 'true';
+            const translationPrNumber = '${{ steps.translate.outputs.translation_pr_number }}';
+            const translationPrUrl = '${{ steps.translate.outputs.translation_pr_url }}';
+            const creationSuccessful = '${{ steps.translate.outputs.creation_successful }}' === 'true';
+            const branchExists = '${{ steps.check-branch.outputs.branch_exists }}' === 'true';
+            const headSha = '${{ steps.extract-artifacts.outputs.head_sha }}';
+
+            let comment = '## 🌐 Multi-language Sync\n\n';
+
+            if (hasChanges && creationSuccessful && translationPrNumber) {
+              // Load sync results if available
+              let results = { translated: [], failed: [], skipped: [] };
+              try {
+                results = JSON.parse(fs.readFileSync('/tmp/sync_results.json', 'utf8'));
+              } catch (e) {
+                results = { translated: [], failed: [], skipped: [] };
+              }
+
+              if (branchExists) {
+                comment += `✅ Synced to PR [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
+              } else {
+                comment += `✅ Created sync PR [#${translationPrNumber}](${translationPrUrl || `https://github.com/${{ github.repository }}/pull/${translationPrNumber}`})\n\n`;
+              }
+
+              if (results.translated && results.translated.length > 0) {
+                comment += `**Synced ${results.translated.length} file${results.translated.length > 1 ? 's' : ''}** to cn + jp\n\n`;
+              }
+
+              if (results.failed && results.failed.length > 0) {
+                comment += `⚠️ **${results.failed.length} file${results.failed.length > 1 ? 's' : ''} failed:**\n`;
+                results.failed.slice(0, 3).forEach(file => {
+                  comment += `- \`${file}\`\n`;
+                });
+                if (results.failed.length > 3) {
+                  comment += `- ... and ${results.failed.length - 3} more\n`;
+                }
+                comment += '\n';
+              }
+
+              comment += '_Both PRs can merge independently. Future commits here will auto-update the sync PR._';
+
+            } else if (hasChanges && !creationSuccessful) {
+              comment += '⚠️ **Sync PR creation failed**\n\nCheck workflow logs or contact a maintainer.';
+
+            } else {
+              comment += '✅ **No sync needed** - translations are up to date.';
+            }
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+      - name: Comment on translation PR with original PR link
+        if: steps.translate.outputs.creation_successful == 'true' && steps.translate.outputs.translation_pr_number && steps.check-branch.outputs.branch_exists == 'false'
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            const prNumber = ${{ steps.extract-artifacts.outputs.pr_number }};
+            const translationPrNumber = ${{ steps.translate.outputs.translation_pr_number }};
+            
+            const backLinkComment = `🔗 Auto-synced from PR #${prNumber}\n\n` +
+              `Updates to #${prNumber} will automatically update this PR. Both can merge independently.`;
+
+            try {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: translationPrNumber,
+                body: backLinkComment
+              });
+              console.log(`Successfully linked translation PR #${translationPrNumber} to original PR #${prNumber}`);
+            } catch (error) {
+              console.log(`Could not comment on translation PR #${translationPrNumber}:`, error.message);
+            }
+
+  handle-cancellation:
+    runs-on: ubuntu-latest
+    needs: execute-sync
+    if: always() && needs.execute-sync.result == 'cancelled'
+    steps:
+      - name: Notify about cancelled workflow
+        uses: actions/github-script@v7
+        continue-on-error: true
+        with:
+          script: |
+            console.log('⚠️ Execute workflow was cancelled - likely due to newer commit');
+
+            // Try to get PR number from workflow run artifacts
+            const workflowRunId = context.payload.workflow_run.id;
+            const headBranch = context.payload.workflow_run.head_branch;
+
+            try {
+              // List artifacts from the analyze workflow
+              const artifacts = await github.rest.actions.listWorkflowRunArtifacts({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: workflowRunId
+              });
+
+              // Find analysis artifact
+              const analysisArtifact = artifacts.data.artifacts.find(a =>
+                a.name.startsWith('docs-sync-analysis-')
+              );
+
+              if (!analysisArtifact) {
+                console.log('No analysis artifact found - cannot determine PR number');
+                return;
+              }
+
+              // Extract PR number from artifact name (format: docs-sync-analysis-PR_NUMBER)
+              const prNumber = analysisArtifact.name.split('-').pop();
+
+              console.log(`Found PR #${prNumber} for cancelled workflow`);
+
+              // Get repository info for workflow dispatch link
+              const repoUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}`;
+              const workflowDispatchUrl = `${repoUrl}/actions/workflows/sync_docs_execute.yml`;
+
+              const comment = '## ⚠️ Sync Skipped\n\n' +
+                'This commit was not synced because a newer commit arrived. **Your latest commit will be synced automatically.**\n\n' +
+                '**If you need this specific commit synced:**\n' +
+                `Go to [Actions → Execute Documentation Sync](${workflowDispatchUrl}) and manually run with PR number **${prNumber}**\n\n` +
+                '_When you push multiple commits quickly, only the first and last get synced to avoid backlog._';
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: parseInt(prNumber),
+                body: comment
+              });
+
+              console.log(`✅ Posted cancellation notice to PR #${prNumber}`);
+
+            } catch (error) {
+              console.log(`Failed to notify PR: ${error.message}`);
+            }
+
+  handle-failure:
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Report analysis failure
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Try to extract PR number from workflow run
+            const workflowRun = context.payload.workflow_run;
+
+            console.log('Analysis workflow failed');
+            console.log('Attempting to notify PR if possible...');
+
+            // This is a best-effort attempt to notify
+            // In practice, you might want to store PR number differently

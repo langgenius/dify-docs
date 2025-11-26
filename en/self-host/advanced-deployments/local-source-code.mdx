@@ -1,0 +1,270 @@
+---
+title: Local Source Code Start
+---
+
+## Prerequisites
+
+### Setup Docker and Docker Compose
+
+> Before installing Dify, make sure your machine meets the following minimum system requirements:
+> - CPU >= 2 Core
+> - RAM >= 4 GiB
+
+| Operating System           | Software                                                       | Explanation                                                                                                                                                                                                                                                                                                                               |
+| -------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| macOS 10.14 or later       | Docker Desktop                                                 | Set the Docker virtual machine (VM) to use a minimum of 2 virtual CPUs (vCPUs) and 8 GB of initial memory. Otherwise, the installation may fail. For more information, please refer to the [Docker Desktop installation guide for Mac](https://docs.docker.com/desktop/mac/install/).                                                     |
+| Linux platforms            | Docker 19.03 or later Docker Compose 1.25.1 or later | Please refer to the [Docker installation guide](https://docs.docker.com/engine/install/) and [the Docker Compose installation guide](https://docs.docker.com/compose/install/) for more information on how to install Docker and Docker Compose, respectively.                                                                            |
+| Windows with WSL 2 enabled | Docker Desktop                                      | We recommend storing the source code and other data that is bound to Linux containers in the Linux file system rather than the Windows file system. For more information, please refer to the [Docker Desktop installation guide for using the WSL 2 backend on Windows.](https://docs.docker.com/desktop/windows/install/#wsl-2-backend) |
+
+> If you need to use OpenAI TTS, `FFmpeg` must be installed on the system for it to function properly. For more details, refer to: [Link](https://docs.dify.ai/getting-started/install-self-hosted/install-faq#id-14.-what-to-do-if-this-error-occurs-in-text-to-speech).
+
+### Clone Dify Repository
+Run the git command to clone the [Dify repository](https://github.com/langgenius/dify).
+```Bash
+git clone https://github.com/langgenius/dify.git
+```
+
+### Start Middlewares with Docker Compose
+
+A series of middlewares for storage (e.g. PostgreSQL / Redis / Weaviate (if not locally available)) and extended  capabilities (e.g. Dify's [sandbox](https://github.com/langgenius/dify-sandbox) and [plugin-daemon](https://github.com/langgenius/dify-plugin-daemon) services) are required by Dify backend services. Start the middlewares with Docker Compose by running these commands:
+
+```Bash
+cd docker
+cp middleware.env.example middleware.env
+docker compose -f docker-compose.middleware.yaml up -d
+```
+
+---
+
+## Setup Backend Services
+
+The backend services include
+
+1. API Service: serving API requests for Frontend service and API accessing
+2. Worker Service: serving the aync tasks for datasets processing, workspaces, cleaning-ups etc.
+
+
+### Start API service
+
+1. Navigate to the `api` directory:
+
+    ```
+    cd api
+    ```
+
+2. Prepare the environment variable config file
+
+    ```
+    cp .env.example .env
+    ```
+
+3. Generate a random secret key and replace the value of SECRET_KEY in the .env file
+
+    ```
+    awk -v key="$(openssl rand -base64 42)" '/^SECRET_KEY=/ {sub(/=.*/, "=" key)} 1' .env > temp_env && mv temp_env .env
+    ```
+
+4. Dependencies installation
+
+    [uv](https://docs.astral.sh/uv/getting-started/installation/) is used to manage dependencies.
+    Install the required dependencies with `uv` by running:
+    ```
+    uv sync
+    ```
+    > For macOS: install libmagic with `brew install libmagic`.
+
+5. Perform the database migration
+
+    Perform database migrations to the latest version:
+
+    ```
+    uv run flask db upgrade
+    ```
+
+6. Start the API service
+
+    ```
+    uv run flask run --host 0.0.0.0 --port=5001 --debug
+    ```
+
+    Expected output:
+    ```
+    * Debug mode: on
+    INFO:werkzeug:WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+     * Running on all addresses (0.0.0.0)
+     * Running on http://127.0.0.1:5001
+    INFO:werkzeug:Press CTRL+C to quit
+    INFO:werkzeug: * Restarting with stat
+    WARNING:werkzeug: * Debugger is active!
+    INFO:werkzeug: * Debugger PIN: 695-801-919
+    ```
+
+### Start the Worker service
+
+To consume asynchronous tasks from the queue, such as dataset file import and dataset document updates, follow these steps to start the Worker service
+
+- for macOS or Linux
+    ```
+    uv run celery -A app.celery worker -P gevent -c 1 --loglevel INFO -Q dataset,generation,mail,ops_trace
+    ```
+
+    If you are using a Windows system to start the Worker service, please use the following command instead:
+
+- for Windows
+    ```
+    uv run celery -A app.celery worker -P solo --without-gossip --without-mingle -Q dataset,generation,mail,ops_trace --loglevel INFO
+    ```
+
+    Expected output:
+
+    ```
+    -------------- celery@bwdeMacBook-Pro-2.local v5.4.0 (opalescent)
+    --- ***** -----
+    -- ******* ---- macOS-15.4.1-arm64-arm-64bit 2025-04-28 17:07:14
+    - *** --- * ---
+    - ** ---------- [config]
+    - ** ---------- .> app:         app_factory:0x1439e8590
+    - ** ---------- .> transport:   redis://:**@localhost:6379/1
+    - ** ---------- .> results:     postgresql://postgres:**@localhost:5432/dify
+    - *** --- * --- .> concurrency: 1 (gevent)
+      -- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+      --- ***** -----
+      -------------- [queues]
+      .> dataset          exchange=dataset(direct) key=dataset
+      .> generation       exchange=generation(direct) key=generation
+      .> mail             exchange=mail(direct) key=mail
+      .> ops_trace        exchange=ops_trace(direct) key=ops_trace
+
+    [tasks]
+    . schedule.clean_embedding_cache_task.clean_embedding_cache_task
+    . schedule.clean_messages.clean_messages
+    . schedule.clean_unused_datasets_task.clean_unused_datasets_task
+    . schedule.create_tidb_serverless_task.create_tidb_serverless_task
+    . schedule.mail_clean_document_notify_task.mail_clean_document_notify_task
+    . schedule.update_tidb_serverless_status_task.update_tidb_serverless_status_task
+    . tasks.add_document_to_index_task.add_document_to_index_task
+    . tasks.annotation.add_annotation_to_index_task.add_annotation_to_index_task
+    . tasks.annotation.batch_import_annotations_task.batch_import_annotations_task
+    . tasks.annotation.delete_annotation_index_task.delete_annotation_index_task
+    . tasks.annotation.disable_annotation_reply_task.disable_annotation_reply_task
+    . tasks.annotation.enable_annotation_reply_task.enable_annotation_reply_task
+    . tasks.annotation.update_annotation_to_index_task.update_annotation_to_index_task
+    . tasks.batch_clean_document_task.batch_clean_document_task
+    . tasks.batch_create_segment_to_index_task.batch_create_segment_to_index_task
+    . tasks.clean_dataset_task.clean_dataset_task
+    . tasks.clean_document_task.clean_document_task
+    . tasks.clean_notion_document_task.clean_notion_document_task
+    . tasks.deal_dataset_vector_index_task.deal_dataset_vector_index_task
+    . tasks.delete_account_task.delete_account_task
+    . tasks.delete_segment_from_index_task.delete_segment_from_index_task
+    . tasks.disable_segment_from_index_task.disable_segment_from_index_task
+    . tasks.disable_segments_from_index_task.disable_segments_from_index_task
+    . tasks.document_indexing_sync_task.document_indexing_sync_task
+    . tasks.document_indexing_task.document_indexing_task
+    . tasks.document_indexing_update_task.document_indexing_update_task
+    . tasks.duplicate_document_indexing_task.duplicate_document_indexing_task
+    . tasks.enable_segments_to_index_task.enable_segments_to_index_task
+    . tasks.mail_account_deletion_task.send_account_deletion_verification_code
+    . tasks.mail_account_deletion_task.send_deletion_success_task
+    . tasks.mail_email_code_login.send_email_code_login_mail_task
+    . tasks.mail_invite_member_task.send_invite_member_mail_task
+    . tasks.mail_reset_password_task.send_reset_password_mail_task
+    . tasks.ops_trace_task.process_trace_tasks
+    . tasks.recover_document_indexing_task.recover_document_indexing_task
+    . tasks.remove_app_and_related_data_task.remove_app_and_related_data_task
+    . tasks.remove_document_from_index_task.remove_document_from_index_task
+    . tasks.retry_document_indexing_task.retry_document_indexing_task
+    . tasks.sync_website_document_indexing_task.sync_website_document_indexing_task
+
+    2025-04-28 17:07:14,681 INFO [connection.py:22]  Connected to redis://:**@localhost:6379/1
+    2025-04-28 17:07:14,684 INFO [mingle.py:40]  mingle: searching for neighbors
+    2025-04-28 17:07:15,704 INFO [mingle.py:49]  mingle: all alone
+    2025-04-28 17:07:15,733 INFO [worker.py:175]  celery@bwdeMacBook-Pro-2.local ready.
+    2025-04-28 17:07:15,742 INFO [pidbox.py:111]  pidbox: Connected to redis://:**@localhost:6379/1.
+    ```
+
+---
+
+## Setup Web Service
+
+Start the web service is built for frontend pages .
+
+### Environment Preparation
+
+To start the web frontend service, [Node.js v22 (LTS)](http://nodejs.org/) and [PNPM v10](https://pnpm.io/) are requied.
+
+- Install NodeJS
+
+  Please visit [https://nodejs.org/en/download](https://nodejs.org/en/download) and choose the installation package for your respective operating system that is v18.x or higher. LTS version is recommanded for common usages.
+
+- Install PNPM
+
+  Follow the [the installation guidance](https://pnpm.io/installation) to install PNPM. Or just run this command to install `pnpm` with `npm`.
+    ```
+    npm i -g pnpm
+    ```
+
+### Start Web Service
+
+1.  Enter the web directory
+
+    ```
+    cd web
+    ```
+
+2.  Dependencies installation
+
+    ```
+    pnpm install --frozen-lockfile
+    ```
+
+3.  Prepare the environment variable config file
+
+    Create a file named `.env.local` in the current directory and copy the contents from `.env.example`. Modify the values of these environment variables according to your requirements:
+
+    ```
+    # For production release, change this to PRODUCTION
+    NEXT_PUBLIC_DEPLOY_ENV=DEVELOPMENT
+    # The deployment edition, SELF_HOSTED or CLOUD
+    NEXT_PUBLIC_EDITION=SELF_HOSTED
+    # The base URL of console application, refers to the Console base URL of WEB service if console domain is
+    # different from api or web app domain.
+    # example: http://cloud.dify.ai/console/api
+    NEXT_PUBLIC_API_PREFIX=http://localhost:5001/console/api
+    # The URL for Web APP, refers to the Web App base URL of WEB service if web app domain is different from
+    # console or api domain.
+    # example: http://udify.app/api
+    NEXT_PUBLIC_PUBLIC_API_PREFIX=http://localhost:5001/api
+
+    # SENTRY
+    NEXT_PUBLIC_SENTRY_DSN=
+    NEXT_PUBLIC_SENTRY_ORG=
+    NEXT_PUBLIC_SENTRY_PROJECT=
+    ```
+
+4.  Build the web service
+
+    ```
+    pnpm build
+    ```
+
+5.  Start the web service
+
+    ```
+    pnpm start
+    ```
+
+    Expected output：
+    ```
+       ▲ Next.js 15
+       - Local:        http://localhost:3000
+       - Network:      http://0.0.0.0:3000
+
+     ✓ Starting...
+     ✓ Ready in 73ms
+    ```
+
+### Access Dify
+
+Access [http://127.0.0.1:3000](http://127.0.0.1:3000/)  via browsers to enjoy all the exciting features of Dify.
+Cheers ! 🍻

@@ -1,0 +1,128 @@
+---
+title: Common Issues
+---
+
+## Authentication & Access
+
+### Reset admin password
+
+For Docker Compose deployments:
+
+```bash
+docker exec -it docker-api-1 flask reset-password
+```
+
+Enter the account email and new password when prompted.
+
+For source code deployments, run the same command from the `api` directory.
+
+### 401 errors after login
+
+This typically happens after changing domains. Update these environment variables:
+
+- `CONSOLE_CORS_ALLOW_ORIGINS` - Console CORS policy
+- `WEB_API_CORS_ALLOW_ORIGINS` - WebApp CORS policy
+- `CONSOLE_API_URL` - Backend URL for console API
+- `CONSOLE_WEB_URL` - Frontend URL for console web
+- `SERVICE_API_URL` - Service API URL
+- `APP_API_URL` - WebApp API backend URL
+- `APP_WEB_URL` - WebApp URL
+
+Restart after updating configuration.
+
+## Configuration
+
+### Change default port
+
+Modify `.env` configuration:
+
+```
+EXPOSE_NGINX_PORT=80
+EXPOSE_NGINX_SSL_PORT=443
+```
+
+For API service port changes, update the nginx configuration in `docker-compose.yaml`.
+
+### Increase file upload limits
+
+Update in `.env`:
+
+- `UPLOAD_FILE_SIZE_LIMIT` - Maximum file size
+- `NGINX_CLIENT_MAX_BODY_SIZE` - Must match to avoid issues
+
+### Workflow complexity limits
+
+Adjust `MAX_TREE_DEPTH` in `web/app/components/workflow/constants.ts` (default: 50).
+
+Note: Excessive depth impacts performance.
+
+### Node execution timeout
+
+Set `TEXT_GENERATION_TIMEOUT_MS` in `.env` to control runtime per node.
+
+## Email Configuration
+
+Not receiving password reset emails? Configure mail settings in `.env`:
+
+1. Set up mail parameters (SMTP settings)
+2. Restart services:
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+Check spam folder if emails still don't arrive.
+
+### Invite members without email service
+
+In local deployments without email configured, the invitation page displays a link after sending. Copy and forward this link to users manually.
+
+## Database Issues
+
+### Connection errors with pg_hba.conf
+
+If you see:
+```
+FATAL: no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
+```
+
+Allow connections from the error's network segment:
+
+```bash
+docker exec -it docker-db-1 sh -c "echo 'host all all 172.19.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
+docker-compose restart
+```
+
+### File not found error for encryption keys
+
+This error occurs after changing deployment methods or deleting `api/storage/privkeys`:
+
+```
+FileNotFoundError: File not found
+File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
+```
+
+Reset encryption key pairs:
+
+Docker Compose:
+```bash
+docker exec -it docker-api-1 flask reset-encrypt-key-pair
+```
+
+Source code (from `api` directory):
+```bash
+flask reset-encrypt-key-pair
+```
+
+**Warning**: This is irreversible - existing encrypted data will be lost.
+
+## Workspace Management
+
+### Rename workspace
+
+Modify the `tenants` table in the database directly.
+
+### Change application access domain
+
+Update `APP_WEB_URL` in `docker-compose.yaml`.

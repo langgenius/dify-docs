@@ -1,0 +1,152 @@
+---
+title: ストレージとマイグレーション
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/troubleshooting/storage-and-migration)を参照してください。</Note>
+
+## ベクトルデータベースマイグレーション
+
+### Weaviateから他のベクトルデータベースへのマイグレーション
+
+1. **設定の更新**
+
+   ソースコードデプロイ（`.env`）：
+   ```
+   VECTOR_STORE=qdrant
+   ```
+
+   Docker Compose（`docker-compose.yaml`）：
+   ```yaml
+   VECTOR_STORE: qdrant
+   ```
+
+2. **マイグレーションの実行**
+
+   ```bash
+   # ソースコード
+   flask vdb-migrate
+
+   # Docker
+   docker exec -it docker-api-1 flask vdb-migrate
+   ```
+
+テスト済みベクトルデータベース：Qdrant、Milvus、AnalyticDB
+
+## ストレージマイグレーション
+
+### ローカルストレージからクラウドストレージへの移行
+
+ローカルストレージからクラウドプロバイダー（例：Alibaba Cloud OSS）へファイルをマイグレーション：
+
+1. **クラウドストレージの設定**
+
+   `.env`または`docker-compose.yaml`：
+   ```
+   STORAGE_TYPE=aliyun-oss
+   # OSS認証情報を追加
+   ```
+
+2. **データのマイグレーション**
+
+   ソースコード：
+   ```bash
+   flask upload-private-key-file-to-cloud-storage
+   flask upload-local-files-to-cloud-storage
+   ```
+
+   Docker：
+   ```bash
+   docker exec -it docker-api-1 flask upload-private-key-file-to-cloud-storage
+   docker exec -it docker-api-1 flask upload-local-files-to-cloud-storage
+   ```
+
+## データクリーンアップ
+
+### 古いログの削除
+
+1. **テナントIDの取得**
+   ```bash
+   docker exec -it docker-api-1 bash -c "echo 'from models import Tenant; db.session.query(Tenant.id, Tenant.name).all(); quit()' | flask shell"
+   ```
+
+2. **X日以上古いログの削除**
+   ```bash
+   docker exec -it docker-api-1 flask clear-free-plan-tenant-expired-logs \
+     --days 30 \
+     --batch 100 \
+     --tenant_ids 618b5d66-a1f5-4b6b-8d12-f171182a1cb2
+   ```
+
+3. **エクスポートされたログの削除**（オプション）
+   ```bash
+   docker exec -it docker-api-1 bash -c 'rm -rf ${OPENDAL_FS_ROOT}/free_plan_tenant_expired_logs'
+   ```
+
+### 孤立ファイルの削除
+
+**警告**：実行前にデータベースとストレージをバックアップしてください。メンテナンス時間中に実行してください。
+
+1. **データベースレコードのクリーン**
+   ```bash
+   docker exec -it docker-api-1 flask clear-orphaned-file-records
+   # 確認をスキップするには-fフラグを使用
+   ```
+
+2. **ストレージから孤立ファイルを削除**
+   ```bash
+   docker exec -it docker-api-1 flask remove-orphaned-files-on-storage
+   # 確認をスキップするには-fフラグを使用
+   ```
+
+注意：OpenDALストレージ（`STORAGE_TYPE=opendal`）でのみ動作します。
+
+## バックアップとリカバリ
+
+### アップグレード前のバックアップ作成
+
+```bash
+cp -r dify "dify.bak.$(date +%Y%m%d%H%M%S)"
+```
+
+### バントの場合：
+- `dify/docker/volumes`ディレクトリ全体
+
+ソースデプロイメントの場合：
+- データベース
+- ストレージ設定
+- ベクトルデータベースデータ
+- 環境ファイル
+
+### データベースメンテナンス
+
+ログ削除後、ストレージを回収：
+
+PostgreSQL：
+```sql
+VACUUM FULL;
+```
+
+## アップグレードプロセス
+
+### バージョンアップグレード
+
+イメージデプロイメント：
+```bash
+docker compose pull
+docker compose up -d
+```
+
+ソースコード：
+```bash
+git pull
+cd api
+flask db upgrade
+```
+
+### データベーススキーママイグレーション
+
+ソースコード更新時は常に必須：
+```bash
+cd api
+flask db upgrade
+```

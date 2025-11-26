@@ -1,0 +1,391 @@
+name: Analyze Documentation Changes
+
+on:
+  pull_request:
+    branches: [main, revamp]
+    types: [opened, synchronize, reopened]
+    paths:
+      # IMPORTANT: These paths should match the language directories defined in tools/translate/config.json
+      # Currently configured for: en (source), cn, jp (targets)
+      # If you add/remove languages in config.json, update these paths accordingly
+      - 'docs.json'
+      - 'en/**/*.md'
+      - 'en/**/*.mdx'
+      - 'en/**/openapi*.json'
+      - 'cn/**/*.md'
+      - 'cn/**/*.mdx'
+      - 'cn/**/openapi*.json'
+      - 'jp/**/*.md'
+      - 'jp/**/*.mdx'
+      - 'jp/**/openapi*.json'
+      - 'versions/**/*.md'
+      - 'versions/**/*.mdx'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Determine comparison range
+        id: determine-range
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "Determining comparison range..."
+
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          EVENT_ACTION="${{ github.event.action }}"
+          PR_BASE="${{ github.event.pull_request.base.sha }}"
+          PR_HEAD="${{ github.event.pull_request.head.sha }}"
+
+          if [ "$EVENT_ACTION" = "synchronize" ]; then
+            echo "🔄 Synchronize event - detecting incremental changes"
+
+            # Try to get last processed commit from translation PR
+            TRANSLATION_PR=$(gh pr list \
+              --search "head:docs-sync-pr-${PR_NUMBER} state:open" \
+              --json number \
+              --jq '.[0].number // empty' 2>/dev/null || echo "")
+
+            LAST_PROCESSED=""
+            if [ -n "$TRANSLATION_PR" ]; then
+              echo "Found translation PR #${TRANSLATION_PR}"
+
+              # Extract last processed commit from comments (reverse order to get latest)
+              LAST_PROCESSED=$(gh pr view "$TRANSLATION_PR" \
+                --json comments \
+                --jq '.comments | reverse | .[] | .body' 2>/dev/null \
+                | grep -oP 'Last-Processed-Commit: \K[a-f0-9]+' \
+                | head -1 || echo "")
+
+              if [ -n "$LAST_PROCESSED" ]; then
+                echo "✅ Found tracked commit in translation PR: $LAST_PROCESSED"
+              fi
+            fi
+
+            # Use tracked commit if available, otherwise fall back to github.event.before
+            if [ -n "$LAST_PROCESSED" ]; then
+              COMPARE_BASE="$LAST_PROCESSED"
+              echo "Using last processed commit: $COMPARE_BASE"
+            elif [ -n "${{ github.event.before }}" ] && [ "${{ github.event.before }}" != "0000000000000000000000000000000000000000" ]; then
+              COMPARE_BASE="${{ github.event.before }}"
+              echo "Using github.event.before: $COMPARE_BASE"
+            else
+              # Fallback to PR base (first push after PR creation)
+              COMPARE_BASE="$PR_BASE"
+              echo "⚠️ No previous commit found, using PR base: $COMPARE_BASE"
+            fi
+
+            COMPARE_HEAD="$PR_HEAD"
+            IS_INCREMENTAL="true"
+
+          else
+            echo "🆕 New PR event - analyzing full changes"
+            COMPARE_BASE="$PR_BASE"
+            COMPARE_HEAD="$PR_HEAD"
+            IS_INCREMENTAL="false"
+          fi
+
+          echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
+          echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
+          echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
+
+          echo "📊 Comparison range: $COMPARE_BASE...$COMPARE_HEAD"
+
+      - name: Categorize and validate PR changes
+        id: categorize
+        run: |
+          echo "Categorizing PR changes..."
+
+          # Get comparison range from previous step
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          # Run PR analyzer
+          cd tools/translate
+          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
+          
+          # Parse analyzer output
+          if [ $? -eq 0 ]; then
+            # Successful analysis
+            source /tmp/pr_analysis_output.txt
+            echo "PR categorization successful"
+            echo "PR Type: $pr_type"
+            echo "Should Skip: $should_skip"
+            
+            # Set GitHub outputs
+            echo "pr_type=$pr_type" >> $GITHUB_OUTPUT
+            echo "should_skip=$should_skip" >> $GITHUB_OUTPUT
+            
+            if [ "$should_skip" = "true" ]; then
+              if [ "$pr_type" = "translation" ]; then
+                echo "✅ Translation-only PR detected. Skipping automation (direct review process)."
+              elif [ "$pr_type" = "none" ]; then
+                echo "✅ No relevant documentation changes detected. Skipping workflow."
+              fi
+              exit 0
+            fi
+          else
+            # Analysis failed - likely mixed PR
+            echo "PR categorization failed - likely mixed content PR"
+            ERROR_MESSAGE=$(cat /tmp/pr_analysis_output.txt | grep "error_message=" | cut -d'=' -f2- || echo "Mixed content PR detected")
+            echo "error=mixed_pr" >> $GITHUB_OUTPUT
+            echo "error_message<<EOF" >> $GITHUB_OUTPUT
+            echo "$ERROR_MESSAGE" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      - name: Analyze English changes for translation
+        if: steps.categorize.outputs.pr_type == 'english'
+        id: analyze
+        run: |
+          echo "Analyzing English changes for automatic translation..."
+
+          # Use comparison range from determine-range step
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+          IS_INCREMENTAL="${{ steps.determine-range.outputs.is_incremental }}"
+
+          echo "Comparison: $BASE_SHA...$HEAD_SHA"
+          echo "Incremental: $IS_INCREMENTAL"
+          
+          # Get all changed files (not just English ones for file analysis)
+          CHANGED_FILES=$(git diff --name-only $BASE_SHA $HEAD_SHA)
+          
+          # Count changes for security limits
+          FILE_COUNT=$(echo "$CHANGED_FILES" | wc -l)
+          echo "Changed files count: $FILE_COUNT"
+          
+          # Security check: Limit number of files
+          MAX_FILES=50
+          if [ "$FILE_COUNT" -gt "$MAX_FILES" ]; then
+            echo "Error: Too many files changed ($FILE_COUNT > $MAX_FILES)"
+            echo "error=too_many_files" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          
+          # Create analysis report
+          cat > /tmp/analysis.json <<EOF
+          {
+            "pr_number": ${{ github.event.pull_request.number }},
+            "pr_title": "${{ github.event.pull_request.title }}",
+            "pr_author": "${{ github.event.pull_request.user.login }}",
+            "base_sha": "$BASE_SHA",
+            "head_sha": "$HEAD_SHA",
+            "is_incremental": $IS_INCREMENTAL,
+            "event_action": "${{ github.event.action }}",
+            "file_count": $FILE_COUNT,
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}",
+            "pr_type": "english"
+          }
+          EOF
+          
+          # Save changed files list
+          echo "$CHANGED_FILES" > /tmp/changed_files.txt
+          
+          # Analyze file types and sizes for English files that need translation
+          > /tmp/file_analysis.txt
+          > /tmp/openapi_analysis.txt
+          while IFS= read -r file; do
+            if [[ "$file" =~ ^en/.*\.(md|mdx)$ ]] && [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              echo "$file|$SIZE|markdown" >> /tmp/file_analysis.txt
+
+              # Security check: File size limit (10MB)
+              MAX_SIZE=$((10 * 1024 * 1024))
+              if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo "Error: File $file exceeds size limit ($SIZE > $MAX_SIZE)"
+                echo "error=file_too_large" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            elif [[ "$file" =~ ^en/.*/openapi.*\.json$ ]] && [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              echo "$file|$SIZE|openapi_json" >> /tmp/openapi_analysis.txt
+
+              # Security check: File size limit for OpenAPI JSON (10MB)
+              MAX_SIZE=$((10 * 1024 * 1024))
+              if [ "$SIZE" -gt "$MAX_SIZE" ]; then
+                echo "Error: OpenAPI file $file exceeds size limit ($SIZE > $MAX_SIZE)"
+                echo "error=file_too_large" >> $GITHUB_OUTPUT
+                exit 1
+              fi
+            fi
+          done <<< "$CHANGED_FILES"
+          
+          # Check for docs.json changes
+          if echo "$CHANGED_FILES" | grep -q '^docs\.json$'; then
+            echo "true" > /tmp/docs_json_changed.txt
+            
+            # Use PR analyzer's docs.json analysis
+            cd tools/translate
+            python3 - <<EOF
+          import sys
+          sys.path.append('.')
+          from pr_analyzer import PRAnalyzer
+          
+          analyzer = PRAnalyzer("$BASE_SHA", "$HEAD_SHA")
+          docs_changes = analyzer.analyze_docs_json_changes()
+
+          structure_changes = {
+              "structure_changed": docs_changes["any_docs_json_changes"],
+              "navigation_modified": docs_changes["english_section"],
+              "languages_affected": analyzer.config["target_languages"] if docs_changes["english_section"] else []
+          }
+          
+          import json
+          with open("/tmp/structure_changes.json", "w") as f:
+              json.dump(structure_changes, f, indent=2)
+          EOF
+          else
+            echo "false" > /tmp/docs_json_changed.txt
+            echo '{"structure_changed": false, "navigation_modified": false, "languages_affected": []}' > /tmp/structure_changes.json
+          fi
+          
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Analysis complete"
+
+      - name: Validate file paths
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          echo "Validating English file paths for translation..."
+          
+          # Security: Validate English files that will be translated
+          while IFS='|' read -r file size; do
+            if [ -n "$file" ]; then
+              # Check for directory traversal attempts
+              if echo "$file" | grep -q '\.\./'; then
+                echo "Error: Invalid file path detected: $file"
+                exit 1
+              fi
+              
+              # Check file extension for English files
+              if ! echo "$file" | grep -qE '\.(md|mdx)$'; then
+                echo "Error: Invalid file type for translation: $file"
+                exit 1
+              fi
+              
+              # Check path starts with en/ (only English files need translation)
+              if ! echo "$file" | grep -qE '^en/'; then
+                echo "Error: Non-English file in translation list: $file"
+                exit 1
+              fi
+            fi
+          done < /tmp/file_analysis.txt
+
+          # Validate OpenAPI JSON files
+          if [ -f "/tmp/openapi_analysis.txt" ] && [ -s "/tmp/openapi_analysis.txt" ]; then
+            while IFS='|' read -r file size file_type; do
+              if [ -n "$file" ]; then
+                # Check for directory traversal
+                if echo "$file" | grep -q '\.\./'; then
+                  echo "Error: Invalid file path: $file"
+                  exit 1
+                fi
+
+                # Check file extension
+                if ! echo "$file" | grep -qE '\.json$'; then
+                  echo "Error: Invalid OpenAPI file type: $file"
+                  exit 1
+                fi
+
+                # Check path starts with en/
+                if ! echo "$file" | grep -qE '^en/'; then
+                  echo "Error: Non-English OpenAPI file in translation list: $file"
+                  exit 1
+                fi
+
+                # Check pattern match (configurable via openapi*.json)
+                if ! echo "$file" | grep -qE 'openapi.*\.json$'; then
+                  echo "Error: File doesn't match OpenAPI pattern: $file"
+                  exit 1
+                fi
+              fi
+            done < /tmp/openapi_analysis.txt
+          fi
+
+          echo "All English file paths validated for translation"
+
+      - name: Create analysis summary
+        if: steps.analyze.outputs.has_changes == 'true'
+        run: |
+          echo "Creating analysis summary for English changes..."
+
+          BASE_SHA="${{ steps.determine-range.outputs.compare_base }}"
+          HEAD_SHA="${{ steps.determine-range.outputs.compare_head }}"
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          IS_INCREMENTAL="${{ steps.determine-range.outputs.is_incremental }}"
+
+          # Use SyncPlanGenerator for consistent logic across workflows
+          cd tools/translate
+          python3 - <<EOF
+          import json
+          import sys
+          sys.path.append('.')
+          from pr_analyzer import SyncPlanGenerator
+
+          # Generate sync plan using centralized logic
+          generator = SyncPlanGenerator("$BASE_SHA", "$HEAD_SHA")
+          sync_plan = generator.generate_sync_plan()
+
+          # Add PR metadata to sync plan
+          sync_plan["metadata"].update({
+              "pr_number": $PR_NUMBER,
+              "pr_title": "${{ github.event.pull_request.title }}",
+              "pr_author": "${{ github.event.pull_request.user.login }}",
+              "event_action": "${{ github.event.action }}",
+              "is_incremental": "$IS_INCREMENTAL" == "true",
+              "file_count": len(sync_plan["files_to_sync"]) + len(sync_plan["openapi_files_to_sync"]),
+              "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+              "repository": "${{ github.repository }}",
+              "ref": "${{ github.ref }}",
+              "pr_type": "english"
+          })
+
+          # Save analysis.json (for backward compatibility with execute workflow)
+          with open("/tmp/analysis.json", "w") as f:
+              json.dump(sync_plan["metadata"], f, indent=2)
+
+          # Save sync plan
+          with open("/tmp/sync_plan.json", "w") as f:
+              json.dump(sync_plan, f, indent=2)
+
+          print(f"English sync plan created:")
+          print(f"  - {len(sync_plan['files_to_sync'])} markdown files to translate")
+          print(f"  - {len(sync_plan['openapi_files_to_sync'])} OpenAPI JSON files to translate")
+          if sync_plan['structure_changes'].get('structure_changed'):
+              print("  - Documentation structure changes detected")
+          EOF
+
+      - name: Upload analysis artifacts
+        if: steps.analyze.outputs.has_changes == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-sync-analysis-${{ github.run_id }}
+          path: |
+            /tmp/analysis.json
+            /tmp/changed_files.txt
+            /tmp/file_analysis.txt
+            /tmp/openapi_analysis.txt
+            /tmp/sync_plan.json
+            /tmp/docs_json_changed.txt
+            /tmp/structure_changes.json
+          retention-days: 1
