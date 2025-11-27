@@ -165,7 +165,7 @@ class PRAnalyzer:
                     categories['english_openapi'].append(file)
                 else:
                     categories['other'].append(file)
-            elif file.startswith(('jp/', 'cn/')):
+            elif file.startswith(('ja/', 'zh/')):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
                 elif self.is_openapi_file(file):  # NEW

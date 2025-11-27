@@ -33,8 +33,8 @@ def build_docs_structure():
         # Fallback if config not available
         structure["general_help"] = {
             "English": "en",
-            "Chinese": "cn",
-            "Japanese": "jp"
+            "Chinese": "zh",
+            "Japanese": "ja"
         }
 
     # Plugin dev paths (keep hardcoded for now as requested)

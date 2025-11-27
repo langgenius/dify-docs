@@ -29,8 +29,8 @@ Multi-language document auto-translation system based on GitHub Actions and Dify
 
 Automatically detects structural changes in `docs.json`:
 
-- **Move detection**: Same file, different `group_path` → moves cn/jp files to same nested location using index-based navigation
-- **Rename detection**: File deleted+added in same location → renames cn/jp files with extension preserved
+- **Move detection**: Same file, different `group_path` → moves zh/ja files to same nested location using index-based navigation
+- **Rename detection**: File deleted+added in same location → renames zh/ja files with extension preserved
 - **Index-based navigation**: Groups matched by position, not name (works across translations: "Nodes" ≠ "节点")
 
 ## System Features
@@ -44,9 +44,9 @@ Automatically detects structural changes in `docs.json`:
 
 ## Language Directories
 
-- **General docs**: `en/` (source) → `cn/`, `jp/` (targets)
+- **General docs**: `en/` (source) → `zh/`, `ja/` (targets)
 - **Plugin dev docs**: `plugin-dev-en/` → `plugin-dev-zh/`, `plugin-dev-ja/`
-- **Versioned docs**: `versions/{version}/en-us/` → `versions/{version}/zh-cn/`, `versions/{version}/jp/`
+- **Versioned docs**: `versions/{version}/en-us/` → `versions/{version}/zh-zh/`, `versions/{version}/ja/`
 
 Configuration in `tools/translate/config.json`.
 
@@ -79,8 +79,8 @@ Logs will show:
 ```
 INFO: Detected 1 moves, 0 renames, 0 adds, 0 deletes
 INFO: Moving en/test-file from 'Dropdown > GroupA' to 'Dropdown > GroupB'
-SUCCESS: Moved cn/test-file to new location
-SUCCESS: Moved jp/test-file to new location
+SUCCESS: Moved zh/test-file to new location
+SUCCESS: Moved ja/test-file to new location
 ```
 
 ## Configuration
@@ -92,13 +92,13 @@ Edit `tools/translate/config.json`:
 ```json
 {
   "source_language": "en",
-  "target_languages": ["cn", "jp"],
+  "target_languages": ["zh", "ja"],
   "languages": {
     "en": {"code": "en", "name": "English", "directory": "en"},
-    "cn": {
-      "code": "cn",
+    "zh": {
+      "code": "zh",
       "name": "Chinese",
-      "directory": "cn",
+      "directory": "zh",
       "translation_notice": "<Note>⚠️ AI translation...</Note>"
     }
   }
