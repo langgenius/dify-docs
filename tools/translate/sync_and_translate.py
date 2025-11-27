@@ -178,7 +178,7 @@ class DocsSynchronizer:
             print(f"Error getting diff for {file_path}: {e}")
             return None
     
-    def is_english_doc_file(self, file_path: str) -> bool:
+    def is_source_doc_file(self, file_path: str) -> bool:
         """Check if file is a source language documentation file that should be synced"""
         source_dir = self.get_language_directory(self.source_language)
         return (file_path.startswith(f"{source_dir}/") and
@@ -363,7 +363,7 @@ class DocsSynchronizer:
         
         # Handle added files
         for file_path in changes["added"]:
-            if self.is_english_doc_file(file_path):
+            if self.is_source_doc_file(file_path):
                 for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     # We'll translate these in the async part
@@ -371,7 +371,7 @@ class DocsSynchronizer:
 
         # Handle deleted files
         for file_path in changes["deleted"]:
-            if self.is_english_doc_file(file_path):
+            if self.is_source_doc_file(file_path):
                 for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     target_full_path = self.base_dir / target_path
@@ -409,7 +409,7 @@ class DocsSynchronizer:
 
         # Handle added files (no existing translation)
         for file_path in changes["added"]:
-            if self.is_english_doc_file(file_path):
+            if self.is_source_doc_file(file_path):
                 for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(file_path, target_lang)
                     # New files - no existing translation or diff needed
@@ -418,7 +418,7 @@ class DocsSynchronizer:
 
         # Handle modified files (may have existing translation)
         for file_path in changes["modified"]:
-            if self.is_english_doc_file(file_path):
+            if self.is_source_doc_file(file_path):
                 # Get diff for this file
                 diff_original = self.get_file_diff(file_path, since_commit)
 
@@ -512,7 +512,7 @@ class DocsSynchronizer:
             traceback.print_exc()
             return False
     
-    def extract_english_structure_changes(self, changes: Dict[str, List[str]]) -> bool:
+    def extract_source_structure_changes(self, changes: Dict[str, List[str]]) -> bool:
         """Check if docs.json was modified"""
         return "docs.json" in changes["modified"] or "docs.json" in changes["added"]
     
@@ -935,8 +935,8 @@ class DocsSynchronizer:
             )
             head_docs = json.loads(head_docs_result.stdout)
 
-            # Extract English sections
-            def get_english_section(docs_data):
+            # Extract source language sections
+            def get_source_section(docs_data):
                 nav = docs_data.get("navigation", {})
                 if "versions" in nav and nav["versions"]:
                     languages = nav["versions"][0].get("languages", [])
@@ -948,16 +948,16 @@ class DocsSynchronizer:
                         return lang
                 return None
 
-            base_en = get_english_section(base_docs)
-            head_en = get_english_section(head_docs)
+            base_source = get_source_section(base_docs)
+            head_source = get_source_section(head_docs)
 
-            if not base_en or not head_en:
-                reconcile_log.append("ERROR: Could not find English sections for comparison")
+            if not base_source or not head_source:
+                reconcile_log.append("ERROR: Could not find source language sections for comparison")
                 return reconcile_log
 
             # Extract file locations from both versions
-            base_locations = self.extract_file_locations(base_en)
-            head_locations = self.extract_file_locations(head_en)
+            base_locations = self.extract_file_locations(base_source)
+            head_locations = self.extract_file_locations(head_source)
 
             base_files = set(base_locations.keys())
             head_files = set(head_locations.keys())
@@ -1860,7 +1860,7 @@ class DocsSynchronizer:
             results["translations"] = await self.translate_new_and_modified_files(changes, since_commit)
 
             # 3. Sync docs.json structure if needed
-            if self.extract_english_structure_changes(changes):
+            if self.extract_source_structure_changes(changes):
                 results["structure_sync"] = self.sync_docs_json_structure()
 
         except Exception as e:

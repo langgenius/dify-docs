@@ -509,11 +509,11 @@ class TranslationPRManager:
         )
         print("\n".join(sync_log))
 
-    def remove_english_files(self) -> None:
-        """Remove English source files from working directory before commit."""
-        print("Removing English source files from working directory...")
+    def remove_source_files(self) -> None:
+        """Remove source language files from working directory before commit."""
+        print("Removing source language files from working directory...")
 
-        # Remove markdown and MDX files from English directory
+        # Remove markdown and MDX files from source language directory
         en_dir = self.repo_root / self.source_dir
         for pattern in ["*.md", "*.mdx"]:
             for file_path in en_dir.glob(f"**/{pattern}"):
@@ -523,10 +523,10 @@ class TranslationPRManager:
                 except Exception as e:
                     print(f"  Warning: Could not remove {file_path}: {e}")
 
-        # Unstage any English files that might have been staged
+        # Unstage any source language files that might have been staged
         self.run_git("reset", "HEAD", "--", f"{self.source_dir}/", check=False)
 
-        print("✓ English source files removed")
+        print("✓ Source language files removed")
 
     def commit_changes(self, branch_exists: bool) -> bool:
         """Commit translation changes."""
@@ -553,8 +553,8 @@ class TranslationPRManager:
             # Branch was already created in setup_translation_branch(), just checkout
             self.run_git("checkout", self.sync_branch)
 
-        # Remove English files before staging
-        self.remove_english_files()
+        # Remove source language files before staging
+        self.remove_source_files()
 
         # Stage only translation files
         target_dirs = [self.translation_config["languages"][lang]["directory"]
