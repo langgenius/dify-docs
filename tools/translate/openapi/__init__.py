@@ -25,7 +25,7 @@ async def translate_openapi_file_async(source_file: str, target_lang: str, outpu
 
     Args:
         source_file: Path to source English OpenAPI JSON file
-        target_lang: Target language code (cn, jp)
+        target_lang: Target language code (zh, ja)
         output_file: Path to save translated JSON file
         dify_api_key: Optional Dify API key (if None, loads from env)
 
@@ -118,7 +118,7 @@ def translate_openapi_file(source_file: str, target_lang: str, output_file: str,
 
     Args:
         source_file: Path to source English OpenAPI JSON file
-        target_lang: Target language code (cn, jp)
+        target_lang: Target language code (zh, ja)
         output_file: Path to save translated JSON file
         dify_api_key: Optional Dify API key (if None, loads from env)
 

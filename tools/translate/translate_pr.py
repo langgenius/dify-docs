@@ -132,20 +132,20 @@ class TranslationPRManager:
         """
         Merge docs.json for incremental updates:
         - English section from PR HEAD (latest structure)
-        - cn/jp sections from translation branch (preserve existing translations)
+        - Translation sections from translation branch (preserve existing translations)
         """
-        print("Merging docs.json: English from PR, cn/jp from translation branch...")
+        print("Merging docs.json: English from PR, translations from translation branch...")
 
         # Get docs.json from PR HEAD (has latest English structure)
         result = self.run_git("show", f"{self.head_sha}:docs.json")
         pr_docs = json.loads(result.stdout)
 
-        # Get docs.json from translation branch (has cn/jp translations)
+        # Get docs.json from translation branch (has target language translations)
         docs_json_path = self.repo_root / "docs.json"
         with open(docs_json_path, 'r', encoding='utf-8') as f:
             translation_docs = json.load(f)
 
-        # Merge strategy: Replace English section from PR, keep cn/jp from translation branch
+        # Merge strategy: Replace English section from PR, keep translations from translation branch
         # Navigate to language sections
         pr_navigation = pr_docs.get("navigation", {})
         translation_navigation = translation_docs.get("navigation", {})
@@ -165,7 +165,7 @@ class TranslationPRManager:
             if lang_code:
                 translation_langs_by_code[lang_code] = lang_data
 
-        # Merge: Use English from PR, cn/jp from translation branch
+        # Merge: Use English from PR, translations from translation branch
         merged_languages = []
         for pr_lang in pr_languages:
             lang_code = pr_lang.get("language")
@@ -174,7 +174,7 @@ class TranslationPRManager:
                 # Use English section from PR (latest structure)
                 merged_languages.append(pr_lang)
             elif lang_code in translation_langs_by_code:
-                # Use cn/jp from translation branch (preserve existing translations)
+                # Use translations from translation branch (preserve existing translations)
                 merged_languages.append(translation_langs_by_code[lang_code])
             else:
                 # Fallback: use from PR
@@ -196,7 +196,7 @@ class TranslationPRManager:
         )
 
         if success:
-            print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, cn/jp from {self.sync_branch}")
+            print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, translations from {self.sync_branch}")
         else:
             print(f"⚠️  Warning: Could not preserve formatting, using default")
             # Fallback to standard json.dump if format preservation fails
@@ -214,7 +214,7 @@ class TranslationPRManager:
             print(f"Checking out English files from {self.head_sha[:8]}...")
             self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", check=False)
 
-            # Merge docs.json: English from PR HEAD, cn/jp from translation branch
+            # Merge docs.json: English from PR HEAD, translations from translation branch
             self.merge_docs_json_for_incremental_update()
         else:
             print(f"🆕 Creating new translation branch: {self.sync_branch}")
@@ -578,7 +578,7 @@ Auto-generated translations for changes in commit {self.head_sha}.
 
 Last-Processed-Commit: {self.head_sha}
 Original-PR: #{self.pr_number}
-Languages: Chinese (cn), Japanese (jp)
+Languages: Chinese (zh), Japanese (ja)
 
 🤖 Generated with GitHub Actions"""
         else:
@@ -588,7 +588,7 @@ Auto-generated translations for documentation changes in PR #{self.pr_number}.
 
 Last-Processed-Commit: {self.head_sha}
 Original-PR: #{self.pr_number}
-Languages: Chinese (cn), Japanese (jp)
+Languages: Chinese (zh), Japanese (ja)
 
 🤖 Generated with GitHub Actions"""
 
@@ -615,8 +615,8 @@ Languages: Chinese (cn), Japanese (jp)
 **Original:** {self.pr_title}
 
 ### What's synced
-- 🇨🇳 Chinese (cn)
-- 🇯🇵 Japanese (jp)
+- 🇨🇳 Chinese (zh)
+- 🇯🇵 Japanese (ja)
 - 📋 Navigation (docs.json)
 
 Review translations and merge when ready. Both PRs can merge independently.
@@ -628,7 +628,7 @@ Review translations and merge when ready. Both PRs can merge independently.
                 "pr", "create",
                 "--base", "main",
                 "--head", self.sync_branch,
-                "--title", f"🌐 Sync PR #{self.pr_number} to cn/jp: {self.pr_title}",
+                "--title", f"🌐 Sync PR #{self.pr_number} translations: {self.pr_title}",
                 "--body", pr_body
             )
 

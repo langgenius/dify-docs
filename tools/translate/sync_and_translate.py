@@ -119,7 +119,7 @@ class DocsSynchronizer:
         return self.get_language_info(lang_code).get("name", "")
 
     def get_language_directory(self, lang_code: str) -> str:
-        """Get directory path for a language (e.g., 'en', 'cn')"""
+        """Get directory path for a language (e.g., 'en', 'zh', 'ja')"""
         return self.get_language_info(lang_code).get("directory", lang_code)
 
     def get_translation_notice(self, lang_code: str) -> str:
@@ -292,7 +292,7 @@ class DocsSynchronizer:
         Args:
             en_file_path: English source file path
             target_file_path: Target translation file path
-            target_lang: Target language code (cn, jp)
+            target_lang: Target language code (zh, ja)
             the_doc_exist: Optional existing translation content (for modified files)
             diff_original: Optional git diff of original file (for modified files)
         """
@@ -532,7 +532,7 @@ class DocsSynchronizer:
     def get_basic_label_translation(self, en_label: str, target_lang: str) -> str:
         """Get basic translation for common labels"""
         basic_translations = {
-            "cn": {
+            "zh": {
                 "Getting Started": "快速开始",
                 "Documentation": "文档",
                 "Build": "构建",
@@ -547,7 +547,7 @@ class DocsSynchronizer:
                 "Quick Start": "快速开始",
                 "Key Concepts": "核心概念"
             },
-            "jp": {
+            "ja": {
                 "Getting Started": "はじめに",
                 "Documentation": "ドキュメント",
                 "Build": "ビルド",
@@ -657,7 +657,7 @@ class DocsSynchronizer:
 
         Args:
             target_dropdown: Target language dropdown structure
-            openapi_path: Path to OpenAPI file (e.g., "cn/api-reference/openapi_test.json")
+            openapi_path: Path to OpenAPI file (e.g., "zh/api-reference/openapi_test.json")
             file_location: Location path like ["groups", 1, "openapi"]
             en_dropdown: English dropdown structure for reference
 
@@ -711,7 +711,7 @@ class DocsSynchronizer:
 
         Args:
             target_dropdown: Target language dropdown structure
-            page_path: Path of the file to add (e.g., "cn/use-dify/..." or "cn/api-reference/openapi_test.json")
+            page_path: Path of the file to add (e.g., "zh/use-dify/..." or "zh/api-reference/openapi_test.json")
             file_location: Location path from find_file_in_dropdown_structure
                          (e.g., ["pages", 0, "pages", 0, "pages", 3] or ["groups", 1, "openapi"])
             en_dropdown: English dropdown structure for reference
@@ -903,7 +903,7 @@ class DocsSynchronizer:
     ) -> List[str]:
         """
         Detect and apply specific structural changes (moves) from English section.
-        Compares base vs head English sections and applies only those changes to cn/jp.
+        Compares base vs head English sections and applies only those changes to target languages.
 
         Args:
             base_sha: Base commit SHA
@@ -1042,7 +1042,7 @@ class DocsSynchronizer:
 
             changes_made = False
 
-            # Apply moves to cn/jp sections
+            # Apply moves to target language sections
             for move_op in moved_files:
                 en_file = move_op["file"]
                 from_loc = move_op["from"]
@@ -1069,7 +1069,7 @@ class DocsSynchronizer:
                     else:
                         reconcile_log.append(f"WARNING: Could not remove {target_file} from old location")
 
-            # Apply renames to cn/jp sections
+            # Apply renames to target language sections
             for rename_op in renamed_files:
                 from_file = rename_op["from_file"]
                 to_file = rename_op["to_file"]
@@ -1119,7 +1119,7 @@ class DocsSynchronizer:
                     else:
                         reconcile_log.append(f"WARNING: File {old_target_file} not found for rename (tried .md, .mdx, and no extension)")
 
-            # Apply deletes to cn/jp sections
+            # Apply deletes to target language sections
             for en_file in deleted:
                 reconcile_log.append(f"INFO: Deleting {en_file}")
 
@@ -1541,7 +1541,7 @@ class DocsSynchronizer:
 
                 sync_log.append(f"INFO: Processing deletion of {en_file}")
 
-                # Remove from each target language (cn, jp)
+                # Remove from each target language
                 for target_lang, target_section in target_sections.items():
                     target_file = self.convert_path_to_target_language(en_file, target_lang)
                     sync_log.append(f"INFO: Attempting to remove {target_file} from {target_lang} section")
@@ -1724,11 +1724,25 @@ class DocsSynchronizer:
         if not structure:
             return paths
 
+        # Build regex pattern for all language directories
+        if normalize_lang:
+            lang_dirs = []
+            if 'languages' in self.config:
+                for lang_code, lang_info in self.config['languages'].items():
+                    if 'directory' in lang_info:
+                        lang_dirs.append(lang_info['directory'])
+
+            # Fallback if config not loaded properly
+            if not lang_dirs:
+                lang_dirs = ['en', 'zh', 'ja']
+
+            lang_pattern = r'^(' + '|'.join(re.escape(d) for d in lang_dirs) + ')/'
+
         for item in structure:
             if isinstance(item, str):
                 # Normalize path by removing language prefix
                 if normalize_lang:
-                    normalized = re.sub(r'^(en|cn|jp)/', '', item)
+                    normalized = re.sub(lang_pattern, '', item)
                     paths.add(normalized)
                 else:
                     paths.add(item)

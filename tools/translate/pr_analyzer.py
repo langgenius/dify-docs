@@ -155,17 +155,32 @@ class PRAnalyzer:
             'other': []
         }
 
+        # Get source and target language directories from config
+        source_dir = self.config.get('source_language', 'en')
+        if 'languages' in self.config and source_dir in self.config['languages']:
+            source_dir = self.config['languages'][source_dir].get('directory', 'en')
+
+        target_dirs = []
+        for lang_code in self.config.get('target_languages', []):
+            if 'languages' in self.config and lang_code in self.config['languages']:
+                target_dir = self.config['languages'][lang_code].get('directory', lang_code)
+                target_dirs.append(target_dir)
+
+        # Fallback if config not properly loaded
+        if not target_dirs:
+            target_dirs = ['zh', 'ja']
+
         for file in files:
             if file == 'docs.json':
                 categories['docs_json'].append(file)
-            elif file.startswith('en/'):
+            elif file.startswith(f'{source_dir}/'):
                 if file.endswith(('.md', '.mdx')):
                     categories['english'].append(file)
                 elif self.is_openapi_file(file):  # NEW
                     categories['english_openapi'].append(file)
                 else:
                     categories['other'].append(file)
-            elif file.startswith(('ja/', 'zh/')):
+            elif any(file.startswith(f'{target_dir}/') for target_dir in target_dirs):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
                 elif self.is_openapi_file(file):  # NEW
@@ -232,30 +247,32 @@ class PRAnalyzer:
     
     def generate_mixed_pr_error(self, file_categories: Dict[str, List[str]], docs_json_changes: Dict[str, bool]) -> str:
         """Generate comprehensive error message for mixed PRs."""
-        
+
         def format_file_list(files: List[str], max_files: int = 10) -> str:
             if not files:
                 return "   - (none)"
-            
+
             formatted = []
             for file in files[:max_files]:
                 formatted.append(f"   - `{file}`")
-            
+
             if len(files) > max_files:
                 formatted.append(f"   - ... and {len(files) - max_files} more")
-            
+
             return '\n'.join(formatted)
-        
+
         def format_docs_json_changes(changes: Dict[str, bool]) -> str:
             parts = []
             if changes['english_section']:
-                parts.append("   - ✅ English navigation section")
+                source_lang = self.config.get('source_language', 'en')
+                parts.append(f"   - ✅ {source_lang.upper()} navigation section")
             if changes['translation_sections']:
-                parts.append("   - ✅ Translation navigation sections (jp, cn)")
+                target_langs = ', '.join(self.config.get('target_languages', []))
+                parts.append(f"   - ✅ Translation navigation sections ({target_langs})")
             if not parts:
                 parts.append("   - (no navigation changes)")
             return '\n'.join(parts)
-        
+
         error_msg = f"""❌ **Mixed Content PR Detected**
 
 This PR contains changes to both English content and translations, which violates our automated workflow requirements.
@@ -272,7 +289,7 @@ Create a PR containing only:
 
 ### 2️⃣ **Translation Improvement PR**
 Create a PR containing only:
-- Changes to `jp/` and `cn/` files
+- Changes to translation language files ({self._get_translation_dirs_display()})
 - Changes to translation navigation sections in `docs.json`
 - This will go through direct review (no automation)
 
@@ -307,6 +324,19 @@ Create a PR containing only:
 Please separate your changes and resubmit as two focused PRs. Thank you! 🙏"""
 
         return error_msg
+
+    def _get_translation_dirs_display(self) -> str:
+        """Get formatted display of translation directories for error messages."""
+        dirs = []
+        for lang_code in self.config.get('target_languages', []):
+            if 'languages' in self.config and lang_code in self.config['languages']:
+                dir_name = self.config['languages'][lang_code].get('directory', lang_code)
+                dirs.append(f"`{dir_name}/`")
+
+        if not dirs:
+            dirs = ["`zh/`", "`ja/`"]  # Fallback
+
+        return ' and '.join(dirs)
 
 
 class SyncPlanGenerator:
