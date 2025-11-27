@@ -23,6 +23,10 @@ class PRAnalyzer:
         self.docs_json_path = self.repo_root / "docs.json"
         self.config = self._load_config()
 
+        # Initialize language settings from config
+        self.source_language = self.config.get('source_language', 'en')
+        self.target_languages = self.config.get('target_languages', ['zh', 'ja'])
+
     def _load_config(self) -> Dict:
         """Load translation configuration."""
         config_path = Path(__file__).parent / "config.json"
@@ -30,7 +34,13 @@ class PRAnalyzer:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
-    
+
+    def get_language_directory(self, lang_code: str) -> str:
+        """Get directory name for a language code from config."""
+        if 'languages' in self.config and lang_code in self.config['languages']:
+            return self.config['languages'][lang_code].get('directory', lang_code)
+        return lang_code
+
     def get_changed_files(self) -> List[str]:
         """Get list of changed files between base and head commits."""
         try:
