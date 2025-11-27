@@ -6,7 +6,7 @@ This script consolidates the core translation logic used by both the
 execute and update workflows. It handles:
 - Branch setup (create new or checkout existing)
 - Translation of documentation files
-- English file removal
+- Source language file removal
 - Committing and pushing changes
 - Creating/updating translation PRs
 """
@@ -131,12 +131,12 @@ class TranslationPRManager:
     def merge_docs_json_for_incremental_update(self) -> None:
         """
         Merge docs.json for incremental updates:
-        - English section from PR HEAD (latest structure)
+        - Source language section from PR HEAD (latest structure)
         - Translation sections from translation branch (preserve existing translations)
         """
-        print("Merging docs.json: English from PR, translations from translation branch...")
+        print("Merging docs.json: Source language from PR, translations from translation branch...")
 
-        # Get docs.json from PR HEAD (has latest English structure)
+        # Get docs.json from PR HEAD (has latest source language structure)
         result = self.run_git("show", f"{self.head_sha}:docs.json")
         pr_docs = json.loads(result.stdout)
 
@@ -145,7 +145,7 @@ class TranslationPRManager:
         with open(docs_json_path, 'r', encoding='utf-8') as f:
             translation_docs = json.load(f)
 
-        # Merge strategy: Replace English section from PR, keep translations from translation branch
+        # Merge strategy: Replace source language section from PR, keep translations from translation branch
         # Navigate to language sections
         pr_navigation = pr_docs.get("navigation", {})
         translation_navigation = translation_docs.get("navigation", {})
@@ -165,13 +165,13 @@ class TranslationPRManager:
             if lang_code:
                 translation_langs_by_code[lang_code] = lang_data
 
-        # Merge: Use English from PR, translations from translation branch
+        # Merge: Use source language from PR, translations from translation branch
         merged_languages = []
         for pr_lang in pr_languages:
             lang_code = pr_lang.get("language")
 
             if lang_code == self.source_language:
-                # Use English section from PR (latest structure)
+                # Use source language section from PR (latest structure)
                 merged_languages.append(pr_lang)
             elif lang_code in translation_langs_by_code:
                 # Use translations from translation branch (preserve existing translations)
@@ -196,7 +196,7 @@ class TranslationPRManager:
         )
 
         if success:
-            print(f"✓ Merged docs.json: English from PR {self.head_sha[:8]}, translations from {self.sync_branch}")
+            print(f"✓ Merged docs.json: Source language from PR {self.head_sha[:8]}, translations from {self.sync_branch}")
         else:
             print(f"⚠️  Warning: Could not preserve formatting, using default")
             # Fallback to standard json.dump if format preservation fails
@@ -210,17 +210,17 @@ class TranslationPRManager:
             self.run_git("fetch", "origin", f"{self.sync_branch}:{self.sync_branch}")
             self.run_git("checkout", self.sync_branch)
 
-            # For incremental updates, checkout English files only (not docs.json)
-            print(f"Checking out English files from {self.head_sha[:8]}...")
+            # For incremental updates, checkout source language files only (not docs.json)
+            print(f"Checking out source language files from {self.head_sha[:8]}...")
             self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", check=False)
 
-            # Merge docs.json: English from PR HEAD, translations from translation branch
+            # Merge docs.json: Source language from PR HEAD, translations from translation branch
             self.merge_docs_json_for_incremental_update()
         else:
             print(f"🆕 Creating new translation branch: {self.sync_branch}")
             self.run_git("checkout", "-b", self.sync_branch)
 
-            # Reset branch to main to avoid including English file changes from PR
+            # Reset branch to main to avoid including source language file changes from PR
             # Use --soft to keep working directory with PR files (needed for translation)
             self.run_git("reset", "--soft", "origin/main")
             # Unstage everything

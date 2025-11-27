@@ -48,6 +48,12 @@ class OpenAPITranslator:
         # Fallback to empty config
         return {}
 
+    def get_language_name(self, lang_code: str) -> str:
+        """Get language name from config"""
+        if self.config and 'languages' in self.config:
+            return self.config['languages'].get(lang_code, {}).get('name', lang_code)
+        return lang_code
+
     def _load_api_key(self) -> str:
         """Load Dify API key from environment or .env file."""
         # Try environment variable first (case-insensitive)
@@ -100,7 +106,7 @@ class OpenAPITranslator:
         url = "https://api.dify.ai/v1/workflows/run"
 
         inputs = {
-            "original_language": "English",
+            "original_language": self.get_language_name(self.config.get('source_language', 'en')) if self.config else "English",
             "output_language1": target_language_name,
             "the_doc": content,
             "termbase": termbase

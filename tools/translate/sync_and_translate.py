@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Documentation Auto-Sync System
-Synchronizes English documentation structure and content to Chinese and Japanese versions.
+Synchronizes source language documentation structure and content to target language versions.
 With enhanced security for handling external PRs.
 """
 
@@ -115,7 +115,7 @@ class DocsSynchronizer:
         return self.config["languages"].get(lang_code, {})
 
     def get_language_name(self, lang_code: str) -> str:
-        """Get human-readable language name (e.g., 'English', 'Chinese')"""
+        """Get human-readable language name (e.g., 'English', 'Chinese', 'Japanese')"""
         return self.get_language_info(lang_code).get("name", "")
 
     def get_language_directory(self, lang_code: str) -> str:
@@ -285,12 +285,12 @@ class DocsSynchronizer:
 
         return bom_prefix + notice_block + content.lstrip("\n")
 
-    async def translate_file_with_notice(self, en_file_path: str, target_file_path: str, target_lang: str,
+    async def translate_file_with_notice(self, source_file_path: str, target_file_path: str, target_lang: str,
                                         the_doc_exist: Optional[str] = None, diff_original: Optional[str] = None) -> bool:
         """Translate a file and add AI notice at the top
 
         Args:
-            en_file_path: English source file path
+            source_file_path: Source language file path
             target_file_path: Target translation file path
             target_lang: Target language code (zh, ja)
             the_doc_exist: Optional existing translation content (for modified files)
@@ -300,9 +300,9 @@ class DocsSynchronizer:
             # Security validation
             if self.enable_security:
                 # Validate source path
-                valid, error = self.validate_file_path(en_file_path)
+                valid, error = self.validate_file_path(source_file_path)
                 if not valid:
-                    print(f"Security error - invalid source path {en_file_path}: {error}")
+                    print(f"Security error - invalid source path {source_file_path}: {error}")
                     return False
 
                 # Validate target path
@@ -312,10 +312,10 @@ class DocsSynchronizer:
                     return False
 
                 # Sanitize paths
-                en_file_path = self.sanitize_path(en_file_path) or en_file_path
+                source_file_path = self.sanitize_path(source_file_path) or source_file_path
                 target_file_path = self.sanitize_path(target_file_path) or target_file_path
 
-            print(f"Translating {en_file_path} to {target_file_path}")
+            print(f"Translating {source_file_path} to {target_file_path}")
 
             # Ensure target directory exists
             target_dir = Path(self.base_dir / target_file_path).parent
@@ -327,7 +327,7 @@ class DocsSynchronizer:
 
             # Translate content
             translated_content = await translate_text(
-                str(self.base_dir / en_file_path),
+                str(self.base_dir / source_file_path),
                 self.dify_api_key,
                 source_lang_name,
                 target_lang_name,
@@ -336,7 +336,7 @@ class DocsSynchronizer:
             )
 
             if not translated_content or not translated_content.strip():
-                print(f"Warning: No translated content received for {en_file_path}")
+                print(f"Warning: No translated content received for {source_file_path}")
                 return False
 
             # Prepare AI notice
@@ -354,7 +354,7 @@ class DocsSynchronizer:
             return True
 
         except Exception as e:
-            print(f"Error translating {en_file_path} to {target_file_path}: {e}")
+            print(f"Error translating {source_file_path} to {target_file_path}: {e}")
             return False
     
     def sync_file_operations(self, changes: Dict[str, List[str]]) -> List[str]:
@@ -516,20 +516,20 @@ class DocsSynchronizer:
         """Check if docs.json was modified"""
         return "docs.json" in changes["modified"] or "docs.json" in changes["added"]
     
-    def get_dropdown_translation(self, en_dropdown_name: str, target_lang: str) -> str:
+    def get_dropdown_translation(self, source_dropdown_name: str, target_lang: str) -> str:
         """
         Get translated dropdown name from config.json label_translations.
-        Falls back to English name if not found.
+        Falls back to source language name if not found.
         """
         label_translations = self.config.get("label_translations", {})
-        if en_dropdown_name in label_translations:
-            translation = label_translations[en_dropdown_name].get(target_lang)
+        if source_dropdown_name in label_translations:
+            translation = label_translations[source_dropdown_name].get(target_lang)
             if translation:
                 return translation
-        # Fallback to English name
-        return en_dropdown_name
+        # Fallback to source language name
+        return source_dropdown_name
 
-    def get_basic_label_translation(self, en_label: str, target_lang: str) -> str:
+    def get_basic_label_translation(self, source_label: str, target_lang: str) -> str:
         """Get basic translation for common labels"""
         basic_translations = {
             "zh": {
@@ -564,7 +564,7 @@ class DocsSynchronizer:
             }
         }
 
-        return basic_translations.get(target_lang, {}).get(en_label, en_label)
+        return basic_translations.get(target_lang, {}).get(source_label, source_label)
     
     def find_file_in_dropdown_structure(self, file_path: str, dropdown: Dict) -> Optional[List[str]]:
         """
@@ -650,7 +650,7 @@ class DocsSynchronizer:
         pages.append(page_path_no_ext)
         return True
 
-    def _add_openapi_group(self, target_dropdown: Dict, openapi_path: str, file_location: List, en_dropdown: Dict) -> bool:
+    def _add_openapi_group(self, target_dropdown: Dict, openapi_path: str, file_location: List, source_dropdown: Dict) -> bool:
         """
         Add an OpenAPI group to target dropdown.
         file_location is like ["groups", 1, "openapi"]
@@ -659,7 +659,7 @@ class DocsSynchronizer:
             target_dropdown: Target language dropdown structure
             openapi_path: Path to OpenAPI file (e.g., "zh/api-reference/openapi_test.json")
             file_location: Location path like ["groups", 1, "openapi"]
-            en_dropdown: English dropdown structure for reference
+            source_dropdown: Source language dropdown structure for reference
 
         Returns:
             True if added, False if already exists
@@ -678,16 +678,16 @@ class DocsSynchronizer:
             if isinstance(group, dict) and group.get("openapi") == openapi_path:
                 return False  # Already exists
 
-        # Get the English group structure
-        en_groups = en_dropdown.get("groups", [])
-        if group_index >= len(en_groups):
+        # Get the source language group structure
+        source_groups = source_dropdown.get("groups", [])
+        if group_index >= len(source_groups):
             return False
 
-        en_group = en_groups[group_index]
+        source_group = source_groups[group_index]
 
         # Create the target group with the same structure but translated path
         target_group = {
-            "group": en_group.get("group", ""),  # Keep English group name for now (could translate later)
+            "group": source_group.get("group", ""),  # Keep source group name for now (could translate later)
             "openapi": openapi_path
         }
 
@@ -704,7 +704,7 @@ class DocsSynchronizer:
 
         return True
 
-    def add_page_at_location(self, target_dropdown: Dict, page_path: str, file_location: List, en_dropdown: Dict) -> bool:
+    def add_page_at_location(self, target_dropdown: Dict, page_path: str, file_location: List, source_dropdown: Dict) -> bool:
         """
         Add a page to target dropdown at the same nested location as in English dropdown.
         Uses the file_location path to navigate to the correct nested group.
@@ -714,14 +714,14 @@ class DocsSynchronizer:
             page_path: Path of the file to add (e.g., "zh/use-dify/..." or "zh/api-reference/openapi_test.json")
             file_location: Location path from find_file_in_dropdown_structure
                          (e.g., ["pages", 0, "pages", 0, "pages", 3] or ["groups", 1, "openapi"])
-            en_dropdown: English dropdown structure for reference
+            source_dropdown: Source language dropdown structure for reference
 
         Returns:
             True if added, False if already exists
         """
         # Handle OpenAPI groups structure (e.g., ["groups", 1, "openapi"])
         if file_location and file_location[0] == "groups":
-            return self._add_openapi_group(target_dropdown, page_path, file_location, en_dropdown)
+            return self._add_openapi_group(target_dropdown, page_path, file_location, source_dropdown)
 
         # Strip file extension (docs.json doesn't include extensions)
         page_path_no_ext = re.sub(r'\.(mdx?|md)$', '', page_path)
@@ -748,7 +748,7 @@ class DocsSynchronizer:
         # We navigate through the path, creating groups as needed
 
         current_target = target_dropdown
-        current_en = en_dropdown
+        current_source = source_dropdown
 
         # Process path in pairs: "pages" key, then index
         i = 0
@@ -768,13 +768,13 @@ class DocsSynchronizer:
                         # Navigate to group at this index
                         idx = next_elem
 
-                        # Get corresponding English item
-                        en_pages = current_en.get("pages", [])
-                        if idx < len(en_pages):
-                            en_item = en_pages[idx]
+                        # Get corresponding source language item
+                        source_pages = current_source.get("pages", [])
+                        if idx < len(source_pages):
+                            source_item = source_pages[idx]
 
-                            # If English item is a group, ensure target has matching group
-                            if isinstance(en_item, dict) and "pages" in en_item:
+                            # If source item is a group, ensure target has matching group
+                            if isinstance(source_item, dict) and "pages" in source_item:
                                 # Ensure target has items up to this index (only for groups we'll navigate through)
                                 while len(current_target["pages"]) <= idx:
                                     current_target["pages"].append(None)
@@ -785,18 +785,18 @@ class DocsSynchronizer:
                                     if isinstance(target_item, dict) and "group" in target_item:
                                         existing_group = target_item["group"]
                                     else:
-                                        existing_group = en_item.get("group", "")
+                                        existing_group = source_item.get("group", "")
 
                                     current_target["pages"][idx] = {
                                         "group": existing_group,
                                         "pages": target_item.get("pages", []) if isinstance(target_item, dict) else []
                                     }
-                                    if "icon" in en_item:
-                                        current_target["pages"][idx]["icon"] = en_item["icon"]
+                                    if "icon" in source_item:
+                                        current_target["pages"][idx]["icon"] = source_item["icon"]
 
                                 # Navigate into this group
                                 current_target = current_target["pages"][idx]
-                                current_en = en_item
+                                current_source = source_item
                                 i += 2  # Skip "pages" and index
                                 continue
 
@@ -811,7 +811,7 @@ class DocsSynchronizer:
         # The last element is the index where the file should be inserted
         if file_location and isinstance(file_location[-1], int):
             insert_index = file_location[-1]
-            # Insert at the same index position as in English structure
+            # Insert at the same index position as in source language structure
             # If index is beyond current length, append to end
             if insert_index <= len(current_target["pages"]):
                 current_target["pages"].insert(insert_index, page_path_no_ext)
@@ -902,8 +902,8 @@ class DocsSynchronizer:
         skip_rename_detection: bool = False
     ) -> List[str]:
         """
-        Detect and apply specific structural changes (moves) from English section.
-        Compares base vs head English sections and applies only those changes to target languages.
+        Detect and apply specific structural changes (moves) from source language section.
+        Compares base vs head source language sections and applies only those changes to target languages.
 
         Args:
             base_sha: Base commit SHA
@@ -1044,15 +1044,15 @@ class DocsSynchronizer:
 
             # Apply moves to target language sections
             for move_op in moved_files:
-                en_file = move_op["file"]
+                source_file = move_op["file"]
                 from_loc = move_op["from"]
                 to_loc = move_op["to"]
 
-                reconcile_log.append(f"INFO: Moving {en_file} from '{from_loc['group_path']}' to '{to_loc['group_path']}'")
+                reconcile_log.append(f"INFO: Moving {source_file} from '{from_loc['group_path']}' to '{to_loc['group_path']}'")
 
                 # Apply to each target language
                 for target_lang in self.target_languages:
-                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+                    target_file = self.convert_path_to_target_language(source_file, target_lang)
 
                     # Remove from old location
                     removed = self.remove_file_from_navigation(docs_data, target_file, target_lang)
@@ -1120,12 +1120,12 @@ class DocsSynchronizer:
                         reconcile_log.append(f"WARNING: File {old_target_file} not found for rename (tried .md, .mdx, and no extension)")
 
             # Apply deletes to target language sections
-            for en_file in deleted:
-                reconcile_log.append(f"INFO: Deleting {en_file}")
+            for source_file in deleted:
+                reconcile_log.append(f"INFO: Deleting {source_file}")
 
                 # Apply to each target language
                 for target_lang in self.target_languages:
-                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+                    target_file = self.convert_path_to_target_language(source_file, target_lang)
 
                     # Remove from docs.json navigation
                     removed = self.remove_file_from_navigation(docs_data, target_file, target_lang)
@@ -1258,8 +1258,8 @@ class DocsSynchronizer:
         If it doesn't exist, return the new path for fresh translation.
 
         Args:
-            old_en_path: Old English file path (e.g., "en/docs/old.mdx")
-            new_en_path: New English file path (e.g., "en/docs/new.mdx")
+            old_source_path: Old source language file path (e.g., "en/docs/old.mdx")
+            new_source_path: New source language file path (e.g., "en/docs/new.mdx")
 
         Returns:
             Tuple of (log_messages, files_needing_translation)
@@ -1276,25 +1276,25 @@ class DocsSynchronizer:
             log.append("ERROR: Could not load docs.json for rename operation")
             return log, files_needing_translation
 
-        # Get English section to find the location of the new file
+        # Get source language section to find the location of the new file
         nav = docs_data.get("navigation", {})
         if "versions" in nav and nav["versions"]:
             languages = nav["versions"][0].get("languages", [])
         else:
             languages = nav.get("languages", [])
 
-        en_section = None
+        source_section = None
         for lang in languages:
             if lang.get("language") == self.source_language:
-                en_section = lang
+                source_section = lang
                 break
 
-        if not en_section:
-            log.append("ERROR: Could not find English section in docs.json")
+        if not source_section:
+            log.append("ERROR: Could not find source language section in docs.json")
             return log, files_needing_translation
 
-        # Extract file location from English section (use new path since English already renamed)
-        file_locations = self.extract_file_locations(en_section)
+        # Extract file location from source language section (use new path since source already renamed)
+        file_locations = self.extract_file_locations(source_section)
 
         # Strip file extension from path since docs.json entries don't include extensions
         new_en_path_no_ext = new_en_path
@@ -1306,7 +1306,7 @@ class DocsSynchronizer:
         location = file_locations.get(new_en_path_no_ext)
 
         if not location:
-            log.append(f"WARNING: Could not find location for {new_en_path_no_ext} in English section")
+            log.append(f"WARNING: Could not find location for {new_en_path_no_ext} in source language section")
             # Continue without updating docs.json entries
             location = None
 
@@ -1441,51 +1441,51 @@ class DocsSynchronizer:
                 return sync_log
 
             # Find language sections
-            en_section = None
+            source_section = None
             target_sections = {}
 
             for lang_data in languages_array:
                 if lang_data.get("language") == self.source_language:
-                    en_section = lang_data
+                    source_section = lang_data
                 elif lang_data.get("language") in self.target_languages:
                     target_sections[lang_data.get("language")] = lang_data
 
-            if not en_section:
-                sync_log.append("ERROR: English section not found")
+            if not source_section:
+                sync_log.append("ERROR: Source language section not found")
                 return sync_log
 
             sync_log.append(f"INFO: Processing {len(added_files)} added, {len(deleted_files)} deleted files")
 
             # Process added files
-            for en_file in added_files:
-                if not en_file.startswith("en/"):
+            for source_file in added_files:
+                if not source_file.startswith("en/"):
                     continue
 
-                # Find which dropdown contains this file in English section
-                result = self.find_dropdown_containing_file(en_file, en_section)
+                # Find which dropdown contains this file in source language section
+                result = self.find_dropdown_containing_file(source_file, source_section)
                 if not result:
-                    sync_log.append(f"WARNING: Could not find {en_file} in English navigation")
+                    sync_log.append(f"WARNING: Could not find {source_file} in source language navigation")
                     continue
 
-                en_dropdown_name, file_location = result
-                sync_log.append(f"INFO: Found {en_file} in '{en_dropdown_name}' dropdown at location {file_location}")
+                source_dropdown_name, file_location = result
+                sync_log.append(f"INFO: Found {source_file} in '{source_dropdown_name}' dropdown at location {file_location}")
 
-                # Get the English dropdown for reference
-                en_dropdown = None
-                en_dropdown_index = -1
-                for i, dropdown in enumerate(en_section.get("dropdowns", [])):
-                    if dropdown.get("dropdown") == en_dropdown_name:
-                        en_dropdown = dropdown
-                        en_dropdown_index = i
+                # Get the source language dropdown for reference
+                source_dropdown = None
+                source_dropdown_index = -1
+                for i, dropdown in enumerate(source_section.get("dropdowns", [])):
+                    if dropdown.get("dropdown") == source_dropdown_name:
+                        source_dropdown = dropdown
+                        source_dropdown_index = i
                         break
 
-                if not en_dropdown:
-                    sync_log.append(f"WARNING: Could not find English dropdown '{en_dropdown_name}'")
+                if not source_dropdown:
+                    sync_log.append(f"WARNING: Could not find source language dropdown '{source_dropdown_name}'")
                     continue
 
                 # Add to each target language
                 for target_lang, target_section in target_sections.items():
-                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+                    target_file = self.convert_path_to_target_language(source_file, target_lang)
 
                     # Find or create corresponding dropdown
                     target_dropdown = None
@@ -1496,13 +1496,13 @@ class DocsSynchronizer:
                     target_dropdowns = target_section.get("dropdowns", [])
 
                     # Try to use same index in target language (assuming dropdowns are in same order)
-                    if en_dropdown_index >= 0 and en_dropdown_index < len(target_dropdowns):
-                        target_dropdown = target_dropdowns[en_dropdown_index]
+                    if source_dropdown_index >= 0 and source_dropdown_index < len(target_dropdowns):
+                        target_dropdown = target_dropdowns[source_dropdown_index]
                         target_dropdown_name = target_dropdown.get("dropdown", "")
 
                     # If index-based match failed, try matching by translated name
                     if not target_dropdown:
-                        translated_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+                        translated_name = self.get_dropdown_translation(source_dropdown_name, target_lang)
                         for dropdown in target_dropdowns:
                             if dropdown.get("dropdown") == translated_name:
                                 target_dropdown = dropdown
@@ -1511,11 +1511,11 @@ class DocsSynchronizer:
 
                     # If still not found, create new dropdown
                     if not target_dropdown:
-                        translated_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+                        translated_name = self.get_dropdown_translation(source_dropdown_name, target_lang)
 
                         target_dropdown = {
                             "dropdown": translated_name,
-                            "icon": en_dropdown.get("icon", "book-open"),
+                            "icon": source_dropdown.get("icon", "book-open"),
                             "pages": []
                         }
                         target_section.setdefault("dropdowns", [])
@@ -1528,22 +1528,22 @@ class DocsSynchronizer:
                         target_dropdown["pages"] = []
 
                     # Use the new method that preserves group structure
-                    added = self.add_page_at_location(target_dropdown, target_file, file_location, en_dropdown)
+                    added = self.add_page_at_location(target_dropdown, target_file, file_location, source_dropdown)
                     if added:
                         sync_log.append(f"INFO: Added {target_file} to '{target_dropdown_name}' at nested location ({target_lang})")
                     else:
                         sync_log.append(f"INFO: {target_file} already exists in '{target_dropdown_name}' ({target_lang})")
 
             # Process deleted files
-            for en_file in deleted_files:
-                if not en_file.startswith("en/"):
+            for source_file in deleted_files:
+                if not source_file.startswith("en/"):
                     continue
 
-                sync_log.append(f"INFO: Processing deletion of {en_file}")
+                sync_log.append(f"INFO: Processing deletion of {source_file}")
 
                 # Remove from each target language
                 for target_lang, target_section in target_sections.items():
-                    target_file = self.convert_path_to_target_language(en_file, target_lang)
+                    target_file = self.convert_path_to_target_language(source_file, target_lang)
                     sync_log.append(f"INFO: Attempting to remove {target_file} from {target_lang} section")
 
                     # Find and remove from all dropdowns
@@ -1623,28 +1623,28 @@ class DocsSynchronizer:
                 return sync_log
 
             # Find language sections
-            en_section = None
+            source_section = None
             target_sections = {}
 
             for lang_data in languages_array:
                 if lang_data.get("language") == self.source_language:
-                    en_section = lang_data
+                    source_section = lang_data
                 elif lang_data.get("language") in self.target_languages:
                     target_sections[lang_data.get("language")] = lang_data
 
-            if not en_section:
-                sync_log.append("ERROR: English section not found")
+            if not source_section:
+                sync_log.append("ERROR: Source language section not found")
                 return sync_log
 
-            # Get all English dropdowns
-            en_dropdowns = en_section.get("dropdowns", [])
-            if not en_dropdowns:
-                sync_log.append("INFO: No dropdowns found in English section")
+            # Get all source language dropdowns
+            source_dropdowns = source_section.get("dropdowns", [])
+            if not source_dropdowns:
+                sync_log.append("INFO: No dropdowns found in source language section")
                 return sync_log
 
-            sync_log.append(f"INFO: Found {len(en_dropdowns)} English dropdowns to sync")
+            sync_log.append(f"INFO: Found {len(source_dropdowns)} source language dropdowns to sync")
 
-            # Sync each English dropdown to target languages
+            # Sync each source language dropdown to target languages
             for target_lang, target_section in target_sections.items():
                 if not target_section:
                     sync_log.append(f"WARNING: {target_lang} section not found")
@@ -1653,14 +1653,14 @@ class DocsSynchronizer:
                 # Ensure dropdowns array exists
                 target_section.setdefault("dropdowns", [])
 
-                # Process each English dropdown
-                for en_dropdown in en_dropdowns:
-                    en_dropdown_name = en_dropdown.get("dropdown", "")
-                    if not en_dropdown_name:
+                # Process each source language dropdown
+                for source_dropdown in source_dropdowns:
+                    source_dropdown_name = source_dropdown.get("dropdown", "")
+                    if not source_dropdown_name:
                         continue
 
                     # Get translated dropdown name from config.json
-                    target_dropdown_name = self.get_dropdown_translation(en_dropdown_name, target_lang)
+                    target_dropdown_name = self.get_dropdown_translation(source_dropdown_name, target_lang)
 
                     # Find existing dropdown in target language by translated name
                     target_dropdown = None
@@ -1675,7 +1675,7 @@ class DocsSynchronizer:
                         # Create new dropdown - SET translated name
                         target_dropdown = {
                             "dropdown": target_dropdown_name,
-                            "icon": en_dropdown.get("icon", "book-open"),
+                            "icon": source_dropdown.get("icon", "book-open"),
                             "pages": []
                         }
                         target_section["dropdowns"].append(target_dropdown)
@@ -1683,18 +1683,18 @@ class DocsSynchronizer:
                     else:
                         # Update existing dropdown - PRESERVE existing name, only update icon
                         # Do NOT overwrite target_dropdown["dropdown"] to preserve existing translations
-                        if "icon" in en_dropdown:
-                            target_dropdown["icon"] = en_dropdown["icon"]
+                        if "icon" in source_dropdown:
+                            target_dropdown["icon"] = source_dropdown["icon"]
                         # Remove old structure fields if they exist
                         if "groups" in target_dropdown:
                             del target_dropdown["groups"]
                         sync_log.append(f"INFO: Updated existing '{target_dropdown.get('dropdown')}' dropdown for {target_lang}")
 
                     # Sync the pages structure
-                    if "pages" in en_dropdown:
+                    if "pages" in source_dropdown:
                         existing_pages = target_dropdown.get("pages", [])
                         synced_pages = self.convert_pages_structure(
-                            en_dropdown["pages"],
+                            source_dropdown["pages"],
                             target_lang,
                             existing_pages
                         )
@@ -1764,7 +1764,7 @@ class DocsSynchronizer:
         if "pages" not in en_group_item:
             return None
 
-        # Extract normalized paths from English group
+        # Extract normalized paths from source language group
         en_paths = self.extract_page_paths(en_group_item["pages"], normalize_lang=True)
 
         if not en_paths:
@@ -1783,7 +1783,7 @@ class DocsSynchronizer:
 
     def convert_pages_structure(self, pages_structure, target_lang: str, existing_structure=None):
         """
-        Recursively convert English page paths to target language paths.
+        Recursively convert source language page paths to target language paths.
         Uses content-based matching to preserve existing group translations.
         Groups are matched by their page content, not by position.
         """

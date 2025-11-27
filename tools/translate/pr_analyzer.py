@@ -3,7 +3,7 @@
 PR Analyzer for Documentation Translation Workflow
 
 This utility analyzes pull request changes to categorize them and validate
-they follow the proper workflow requirements for English vs translation content.
+they follow the proper workflow requirements for source vs translation content.
 """
 
 import json
@@ -275,16 +275,16 @@ class PRAnalyzer:
 
         error_msg = f"""❌ **Mixed Content PR Detected**
 
-This PR contains changes to both English content and translations, which violates our automated workflow requirements.
+This PR contains changes to both source language content and translations, which violates our automated workflow requirements.
 
 **🔧 Required Action: Separate into Two PRs**
 
 Please create two separate pull requests:
 
-### 1️⃣ **English Content PR** 
+### 1️⃣ **Source Language Content PR**
 Create a PR containing only:
-- Changes to `en/` files  
-- Changes to English navigation in `docs.json`
+- Changes to source language files (`{self.get_language_directory(self.source_language)}/`)
+- Changes to source language navigation in `docs.json`
 - This will trigger automatic translation generation
 
 ### 2️⃣ **Translation Improvement PR**
@@ -310,14 +310,14 @@ Create a PR containing only:
 
 **💡 Why This Separation is Required:**
 
-- **Proper Review Process**: English content and translations have different review requirements
+- **Proper Review Process**: Source language content and translations have different review requirements
 - **Automation Conflicts**: Mixed PRs break the automated translation workflow  
 - **Independent Merging**: Content and translations can be merged independently
 - **Clear History**: Maintains clean git history for content vs translation changes
 
 **🤖 What Happens Next:**
 
-1. **English PR**: Will automatically generate translations and create a linked translation PR
+1. **Source Language PR**: Will automatically generate translations and create a linked translation PR
 2. **Translation PR**: Will go through standard review process
 3. **Both PRs**: Can be reviewed and merged independently
 
@@ -432,8 +432,8 @@ class SyncPlanGenerator:
 
         Returns sync_plan dict with:
         - metadata: PR context and commit info
-        - files_to_sync: English markdown files (A/M only)
-        - openapi_files_to_sync: English OpenAPI JSON files (A/M only)
+        - files_to_sync: Source language markdown files (A/M only)
+        - openapi_files_to_sync: Source language OpenAPI JSON files (A/M only)
         - structure_changes: docs.json change analysis
         - target_languages: Languages to translate to
         - sync_required: Whether any sync is needed
@@ -452,7 +452,7 @@ class SyncPlanGenerator:
                 docs_json_changed = True
                 continue
 
-            # Process English markdown files
+            # Process source language markdown files
             if filepath.startswith('en/') and filepath.endswith(('.md', '.mdx')):
                 file_size = self.get_file_size(filepath)
                 file_type = 'mdx' if filepath.endswith('.mdx') else 'md'
@@ -463,7 +463,7 @@ class SyncPlanGenerator:
                     "status": status
                 })
 
-            # Process English OpenAPI JSON files
+            # Process source language OpenAPI JSON files
             elif filepath.startswith('en/') and self.is_openapi_file(filepath):
                 file_size = self.get_file_size(filepath)
                 openapi_files_to_sync.append({
