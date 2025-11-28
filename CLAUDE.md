@@ -128,10 +128,28 @@ SUCCESS: Moved cn/test-file to new location
 SUCCESS: Moved jp/test-file to new location
 ```
 
+## Translation A/B Testing
+
+For comparing translation quality between models or prompt variations:
+
+```bash
+cd tools/translate-test-dify
+./setup.sh
+source venv/bin/activate
+python run_test.py <spec.md>
+python compare.py results/<folder>/
+```
+
+**Important**:
+- Never commit `results/`, `mock_docs/`, or real API keys
+- Always redact keys with `app-***` before committing
+- See `tools/translate-test-dify/README.md` for details
+
 ## Key Paths
 
 - `docs.json` - Navigation structure
 - `tools/translate/config.json` - Language configuration (single source of truth)
 - `tools/translate/termbase_i18n.md` - Translation terminology database
 - `tools/translate/sync_and_translate.py` - Core translation + surgical reconciliation logic
+- `tools/translate-test-dify/` - Translation A/B testing framework
 - `.github/workflows/sync_docs_*.yml` - Auto-translation workflow triggers
