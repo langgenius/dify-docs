@@ -24,8 +24,8 @@ async def translate_openapi_file_async(source_file: str, target_lang: str, outpu
     3. Re-hydrate: Merge translations back into JSON structure
 
     Args:
-        source_file: Path to source English OpenAPI JSON file
-        target_lang: Target language code (cn, jp)
+        source_file: Path to source language OpenAPI JSON file
+        target_lang: Target language code (zh, ja)
         output_file: Path to save translated JSON file
         dify_api_key: Optional Dify API key (if None, loads from env)
 
@@ -76,7 +76,7 @@ async def translate_openapi_file_async(source_file: str, target_lang: str, outpu
         print(f"   📊 Stats: {stats['updated']}/{stats['total']} fields translated")
 
         if stats['missing'] > 0:
-            print(f"   ⚠️  {stats['missing']} fields kept in English (missing translations)")
+            print(f"   ⚠️  {stats['missing']} fields kept in source language (missing translations)")
 
         print(f"\n{'='*60}")
         print(f"✅ Translation pipeline completed successfully!")
@@ -117,8 +117,8 @@ def translate_openapi_file(source_file: str, target_lang: str, output_file: str,
     3. Re-hydrate: Merge translations back into JSON structure
 
     Args:
-        source_file: Path to source English OpenAPI JSON file
-        target_lang: Target language code (cn, jp)
+        source_file: Path to source language OpenAPI JSON file
+        target_lang: Target language code (zh, ja)
         output_file: Path to save translated JSON file
         dify_api_key: Optional Dify API key (if None, loads from env)
 

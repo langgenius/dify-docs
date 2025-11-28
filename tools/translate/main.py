@@ -33,16 +33,25 @@ def build_docs_structure():
         # Fallback if config not available
         structure["general_help"] = {
             "English": "en",
-            "Chinese": "cn",
-            "Japanese": "jp"
+            "Chinese": "zh",
+            "Japanese": "ja"
         }
 
-    # Plugin dev paths (keep hardcoded for now as requested)
-    structure["plugin_dev"] = {
-        "English": "plugin-dev-en",
-        "Chinese": "plugin-dev-zh",
-        "Japanese": "plugin-dev-ja"
-    }
+    # Plugin dev paths from config
+    if TRANSLATION_CONFIG and 'plugin_dev_paths' in TRANSLATION_CONFIG:
+        plugin_dev = {}
+        for lang_code, path in TRANSLATION_CONFIG['plugin_dev_paths'].items():
+            if lang_code in TRANSLATION_CONFIG['languages']:
+                lang_name = TRANSLATION_CONFIG['languages'][lang_code]['name']
+                plugin_dev[lang_name] = path
+        structure["plugin_dev"] = plugin_dev
+    else:
+        # Fallback for backward compatibility
+        structure["plugin_dev"] = {
+            "English": "plugin-dev-en",
+            "Chinese": "plugin-dev-zh",
+            "Japanese": "plugin-dev-ja"
+        }
 
     # Versioned docs from config
     if TRANSLATION_CONFIG and "versioned_docs" in TRANSLATION_CONFIG:
@@ -59,22 +68,8 @@ def build_docs_structure():
 
             structure[structure_key] = version_structure
     else:
-        # Fallback if versioned_docs not in config
-        structure["version_28x"] = {
-            "English": "versions/2-8-x/en-us",
-            "Chinese": "versions/2-8-x/zh-cn",
-            "Japanese": "versions/2-8-x/jp"
-        }
-        structure["version_30x"] = {
-            "English": "versions/3-0-x/en-us",
-            "Chinese": "versions/3-0-x/zh-cn",
-            "Japanese": "versions/3-0-x/jp"
-        }
-        structure["version_31x"] = {
-            "English": "versions/3-1-x/en-us",
-            "Chinese": "versions/3-1-x/zh-cn",
-            "Japanese": "versions/3-1-x/jp"
-        }
+        # No versioned docs in config - skip rather than hardcode
+        pass
 
     return structure
 

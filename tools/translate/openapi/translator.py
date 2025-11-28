@@ -22,7 +22,7 @@ class OpenAPITranslator:
 
         Args:
             markdown_path: Path to the markdown file to translate
-            target_lang: Target language code (cn, jp)
+            target_lang: Target language code (zh, ja)
             dify_api_key: Dify API key (if None, loads from env)
         """
         self.markdown_path = markdown_path
@@ -31,6 +31,28 @@ class OpenAPITranslator:
 
         # Load termbase
         self.termbase_path = Path(__file__).parent.parent / "termbase_i18n.md"
+
+        # Load config for language mappings
+        self.config = self._load_config()
+
+    def _load_config(self):
+        """Load translation configuration from config.json"""
+        config_path = Path(__file__).parent.parent / "config.json"
+        try:
+            if config_path.exists():
+                with open(config_path, 'r', encoding='utf-8') as f:
+                    return json.load(f)
+        except Exception as e:
+            print(f"Warning: Could not load config.json: {e}")
+
+        # Fallback to empty config
+        return {}
+
+    def get_language_name(self, lang_code: str) -> str:
+        """Get language name from config"""
+        if self.config and 'languages' in self.config:
+            return self.config['languages'].get(lang_code, {}).get('name', lang_code)
+        return lang_code
 
     def _load_api_key(self) -> str:
         """Load Dify API key from environment or .env file."""
@@ -70,18 +92,21 @@ class OpenAPITranslator:
             with open(self.termbase_path, 'r', encoding='utf-8') as f:
                 termbase = f.read()
 
-        # Map language codes to full names
-        lang_map = {
-            "cn": "Chinese",
-            "jp": "Japanese"
-        }
-        target_language_name = lang_map.get(self.target_lang, self.target_lang)
+        # Get target language name from config
+        target_language_name = self.target_lang
+        if self.config and 'languages' in self.config:
+            lang_info = self.config['languages'].get(self.target_lang, {})
+            target_language_name = lang_info.get('name', self.target_lang)
+        else:
+            # Fallback mapping if config not available
+            fallback_map = {"zh": "Chinese", "ja": "Japanese"}
+            target_language_name = fallback_map.get(self.target_lang, self.target_lang)
 
         # Prepare API payload
         url = "https://api.dify.ai/v1/workflows/run"
 
         inputs = {
-            "original_language": "English",
+            "original_language": self.get_language_name(self.config.get('source_language', 'en')) if self.config else "English",
             "output_language1": target_language_name,
             "the_doc": content,
             "termbase": termbase

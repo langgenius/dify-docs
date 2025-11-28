@@ -3,7 +3,7 @@
 PR Analyzer for Documentation Translation Workflow
 
 This utility analyzes pull request changes to categorize them and validate
-they follow the proper workflow requirements for English vs translation content.
+they follow the proper workflow requirements for source vs translation content.
 """
 
 import json
@@ -23,6 +23,10 @@ class PRAnalyzer:
         self.docs_json_path = self.repo_root / "docs.json"
         self.config = self._load_config()
 
+        # Initialize language settings from config
+        self.source_language = self.config.get('source_language', 'en')
+        self.target_languages = self.config.get('target_languages', ['zh', 'ja'])
+
     def _load_config(self) -> Dict:
         """Load translation configuration."""
         config_path = Path(__file__).parent / "config.json"
@@ -30,7 +34,13 @@ class PRAnalyzer:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
-    
+
+    def get_language_directory(self, lang_code: str) -> str:
+        """Get directory name for a language code from config."""
+        if 'languages' in self.config and lang_code in self.config['languages']:
+            return self.config['languages'][lang_code].get('directory', lang_code)
+        return lang_code
+
     def get_changed_files(self) -> List[str]:
         """Get list of changed files between base and head commits."""
         try:
@@ -83,7 +93,7 @@ class PRAnalyzer:
         head_docs = self.get_docs_json_at_sha(self.head_sha)
         
         changes = {
-            'english_section': False,
+            'source_section': False,
             'translation_sections': False,
             'any_docs_json_changes': False
         }
@@ -97,10 +107,10 @@ class PRAnalyzer:
         
         # Check source language navigation section
         source_lang = self.config['source_language']
-        base_en = self.extract_language_navigation(base_docs, source_lang)
-        head_en = self.extract_language_navigation(head_docs, source_lang)
-        if base_en != head_en:
-            changes['english_section'] = True
+        base_source = self.extract_language_navigation(base_docs, source_lang)
+        head_source = self.extract_language_navigation(head_docs, source_lang)
+        if base_source != head_source:
+            changes['source_section'] = True
         
         # Check translation sections
         for lang in self.config['target_languages']:
@@ -147,25 +157,40 @@ class PRAnalyzer:
     def categorize_files(self, files: List[str]) -> Dict[str, List[str]]:
         """Categorize changed files by type."""
         categories = {
-            'english': [],
-            'english_openapi': [],      # NEW category
+            'source': [],
+            'source_openapi': [],      # NEW category
             'translation': [],
             'translation_openapi': [],  # NEW category
             'docs_json': [],
             'other': []
         }
 
+        # Get source and target language directories from config
+        source_dir = self.config.get('source_language', 'en')
+        if 'languages' in self.config and source_dir in self.config['languages']:
+            source_dir = self.config['languages'][source_dir].get('directory', 'en')
+
+        target_dirs = []
+        for lang_code in self.config.get('target_languages', []):
+            if 'languages' in self.config and lang_code in self.config['languages']:
+                target_dir = self.config['languages'][lang_code].get('directory', lang_code)
+                target_dirs.append(target_dir)
+
+        # Fallback if config not properly loaded
+        if not target_dirs:
+            target_dirs = ['zh', 'ja']
+
         for file in files:
             if file == 'docs.json':
                 categories['docs_json'].append(file)
-            elif file.startswith('en/'):
+            elif file.startswith(f'{source_dir}/'):
                 if file.endswith(('.md', '.mdx')):
-                    categories['english'].append(file)
+                    categories['source'].append(file)
                 elif self.is_openapi_file(file):  # NEW
-                    categories['english_openapi'].append(file)
+                    categories['source_openapi'].append(file)
                 else:
                     categories['other'].append(file)
-            elif file.startswith(('jp/', 'cn/')):
+            elif any(file.startswith(f'{target_dir}/') for target_dir in target_dirs):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
                 elif self.is_openapi_file(file):  # NEW
@@ -185,32 +210,32 @@ class PRAnalyzer:
                 'type': 'none',
                 'should_skip': True,
                 'error': None,
-                'files': {'english': [], 'translation': [], 'docs_json': [], 'other': []},
-                'docs_json_changes': {'english_section': False, 'translation_sections': False, 'any_docs_json_changes': False}
+                'files': {'source': [], 'translation': [], 'docs_json': [], 'other': []},
+                'docs_json_changes': {'source_section': False, 'translation_sections': False, 'any_docs_json_changes': False}
             }
         
         file_categories = self.categorize_files(changed_files)
         docs_json_changes = self.analyze_docs_json_changes()
 
-        # Determine if there are English content changes (including OpenAPI)
-        has_english_files = len(file_categories['english']) > 0 or len(file_categories['english_openapi']) > 0
-        has_english_docs_changes = docs_json_changes['english_section']
+        # Determine if there are source language content changes (including OpenAPI)
+        has_source_files = len(file_categories['source']) > 0 or len(file_categories['source_openapi']) > 0
+        has_source_docs_changes = docs_json_changes['source_section']
 
         # Determine if there are translation changes (including OpenAPI)
         has_translation_files = len(file_categories['translation']) > 0 or len(file_categories['translation_openapi']) > 0
         has_translation_docs_changes = docs_json_changes['translation_sections']
-        
+
         # Filter out non-documentation changes from consideration
-        relevant_english_changes = has_english_files or has_english_docs_changes
+        relevant_source_changes = has_source_files or has_source_docs_changes
         relevant_translation_changes = has_translation_files or has_translation_docs_changes
-        
+
         # Categorize PR type
-        if relevant_english_changes and relevant_translation_changes:
+        if relevant_source_changes and relevant_translation_changes:
             pr_type = 'mixed'
             should_skip = False
             error = self.generate_mixed_pr_error(file_categories, docs_json_changes)
-        elif relevant_english_changes:
-            pr_type = 'english'
+        elif relevant_source_changes:
+            pr_type = 'source'
             should_skip = False
             error = None
         elif relevant_translation_changes:
@@ -232,47 +257,49 @@ class PRAnalyzer:
     
     def generate_mixed_pr_error(self, file_categories: Dict[str, List[str]], docs_json_changes: Dict[str, bool]) -> str:
         """Generate comprehensive error message for mixed PRs."""
-        
+
         def format_file_list(files: List[str], max_files: int = 10) -> str:
             if not files:
                 return "   - (none)"
-            
+
             formatted = []
             for file in files[:max_files]:
                 formatted.append(f"   - `{file}`")
-            
+
             if len(files) > max_files:
                 formatted.append(f"   - ... and {len(files) - max_files} more")
-            
+
             return '\n'.join(formatted)
-        
+
         def format_docs_json_changes(changes: Dict[str, bool]) -> str:
             parts = []
-            if changes['english_section']:
-                parts.append("   - ✅ English navigation section")
+            if changes['source_section']:
+                source_lang = self.config.get('source_language', 'en')
+                parts.append(f"   - ✅ {source_lang.upper()} navigation section")
             if changes['translation_sections']:
-                parts.append("   - ✅ Translation navigation sections (jp, cn)")
+                target_langs = ', '.join(self.config.get('target_languages', []))
+                parts.append(f"   - ✅ Translation navigation sections ({target_langs})")
             if not parts:
                 parts.append("   - (no navigation changes)")
             return '\n'.join(parts)
-        
+
         error_msg = f"""❌ **Mixed Content PR Detected**
 
-This PR contains changes to both English content and translations, which violates our automated workflow requirements.
+This PR contains changes to both source language content and translations, which violates our automated workflow requirements.
 
 **🔧 Required Action: Separate into Two PRs**
 
 Please create two separate pull requests:
 
-### 1️⃣ **English Content PR** 
+### 1️⃣ **Source Language Content PR**
 Create a PR containing only:
-- Changes to `en/` files  
-- Changes to English navigation in `docs.json`
+- Changes to source language files (`{self.get_language_directory(self.source_language)}/`)
+- Changes to source language navigation in `docs.json`
 - This will trigger automatic translation generation
 
 ### 2️⃣ **Translation Improvement PR**
 Create a PR containing only:
-- Changes to `jp/` and `cn/` files
+- Changes to translation language files ({self._get_translation_dirs_display()})
 - Changes to translation navigation sections in `docs.json`
 - This will go through direct review (no automation)
 
@@ -280,8 +307,8 @@ Create a PR containing only:
 
 **📋 Files Detected in This PR:**
 
-**📝 English Content Files ({len(file_categories['english'])} files):**
-{format_file_list(file_categories['english'])}
+**📝 Source Language Content Files ({len(file_categories['source'])} files):**
+{format_file_list(file_categories['source'])}
 
 **🌐 Translation Files ({len(file_categories['translation'])} files):**
 {format_file_list(file_categories['translation'])}
@@ -293,20 +320,33 @@ Create a PR containing only:
 
 **💡 Why This Separation is Required:**
 
-- **Proper Review Process**: English content and translations have different review requirements
+- **Proper Review Process**: Source language content and translations have different review requirements
 - **Automation Conflicts**: Mixed PRs break the automated translation workflow  
 - **Independent Merging**: Content and translations can be merged independently
 - **Clear History**: Maintains clean git history for content vs translation changes
 
 **🤖 What Happens Next:**
 
-1. **English PR**: Will automatically generate translations and create a linked translation PR
+1. **Source Language PR**: Will automatically generate translations and create a linked translation PR
 2. **Translation PR**: Will go through standard review process
 3. **Both PRs**: Can be reviewed and merged independently
 
 Please separate your changes and resubmit as two focused PRs. Thank you! 🙏"""
 
         return error_msg
+
+    def _get_translation_dirs_display(self) -> str:
+        """Get formatted display of translation directories for error messages."""
+        dirs = []
+        for lang_code in self.config.get('target_languages', []):
+            if 'languages' in self.config and lang_code in self.config['languages']:
+                dir_name = self.config['languages'][lang_code].get('directory', lang_code)
+                dirs.append(f"`{dir_name}/`")
+
+        if not dirs:
+            dirs = ["`zh/`", "`ja/`"]  # Fallback
+
+        return ' and '.join(dirs)
 
 
 class SyncPlanGenerator:
@@ -402,8 +442,8 @@ class SyncPlanGenerator:
 
         Returns sync_plan dict with:
         - metadata: PR context and commit info
-        - files_to_sync: English markdown files (A/M only)
-        - openapi_files_to_sync: English OpenAPI JSON files (A/M only)
+        - files_to_sync: Source language markdown files (A/M only)
+        - openapi_files_to_sync: Source language OpenAPI JSON files (A/M only)
         - structure_changes: docs.json change analysis
         - target_languages: Languages to translate to
         - sync_required: Whether any sync is needed
@@ -422,7 +462,7 @@ class SyncPlanGenerator:
                 docs_json_changed = True
                 continue
 
-            # Process English markdown files
+            # Process source language markdown files
             if filepath.startswith('en/') and filepath.endswith(('.md', '.mdx')):
                 file_size = self.get_file_size(filepath)
                 file_type = 'mdx' if filepath.endswith('.mdx') else 'md'
@@ -433,7 +473,7 @@ class SyncPlanGenerator:
                     "status": status
                 })
 
-            # Process English OpenAPI JSON files
+            # Process source language OpenAPI JSON files
             elif filepath.startswith('en/') and self.is_openapi_file(filepath):
                 file_size = self.get_file_size(filepath)
                 openapi_files_to_sync.append({
@@ -448,8 +488,8 @@ class SyncPlanGenerator:
             docs_changes = self.analyzer.analyze_docs_json_changes()
             structure_changes = {
                 "structure_changed": docs_changes["any_docs_json_changes"],
-                "navigation_modified": docs_changes["english_section"],
-                "languages_affected": self.config["target_languages"] if docs_changes["english_section"] else []
+                "navigation_modified": docs_changes["source_section"],
+                "languages_affected": self.config["target_languages"] if docs_changes["source_section"] else []
             }
         else:
             structure_changes = {
@@ -502,9 +542,9 @@ def main():
     files = result['files']
     docs_changes = result['docs_json_changes']
     
-    print(f"english_files_count={len(files['english'])}")
+    print(f"source_files_count={len(files['source'])}")
     print(f"translation_files_count={len(files['translation'])}")
-    print(f"docs_json_english_changes={str(docs_changes['english_section']).lower()}")
+    print(f"docs_json_source_changes={str(docs_changes['source_section']).lower()}")
     print(f"docs_json_translation_changes={str(docs_changes['translation_sections']).lower()}")
     print(f"any_docs_json_changes={str(docs_changes['any_docs_json_changes']).lower()}")
 
