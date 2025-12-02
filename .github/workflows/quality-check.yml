@@ -1,0 +1,288 @@
+name: Documentation Quality Check
+
+on:
+  pull_request:
+    branches: [main, revamp]
+    paths:
+      - '**/*.md'
+      - '**/*.mdx'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  quality-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+
+      - name: Get changed MDX files
+        id: get-files
+        run: |
+          CHANGED_FILES=$(git diff --name-only origin/${{ github.base_ref }} HEAD | grep -E '\.(md|mdx)$' || echo "")
+          
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No MDX files changed"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "$CHANGED_FILES" > /tmp/changed_files.txt
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+
+      - name: Create quality check script
+        if: steps.get-files.outputs.has_changes == 'true'
+        run: |
+          cat > /tmp/quality_check.py << 'EOFPYTHON'
+          import re
+          import sys
+          from pathlib import Path
+          from typing import List, Dict, Tuple
+          import yaml
+
+          class DocumentationQualityChecker:
+              def __init__(self):
+                  self.errors = []
+                  self.warnings = []
+                  
+              def extract_frontmatter(self, content: str) -> Tuple[Dict, str]:
+                  frontmatter_pattern = r'^---\s*\n(.*?)\n---\s*\n(.*)$'
+                  match = re.match(frontmatter_pattern, content, re.DOTALL)
+                  
+                  if not match:
+                      return {}, content
+                  
+                  try:
+                      frontmatter = yaml.safe_load(match.group(1))
+                      body = match.group(2)
+                      return frontmatter or {}, body
+                  except yaml.YAMLError as e:
+                      return {}, content
+
+              def check_frontmatter(self, file_path: str, content: str):
+                  frontmatter, _ = self.extract_frontmatter(content)
+                  
+                  if not frontmatter:
+                      self.errors.append(f"{file_path}: Missing frontmatter")
+                      return
+                  
+                  if 'title' not in frontmatter or not frontmatter['title']:
+                      self.errors.append(f"{file_path}: Missing or empty 'title' in frontmatter")
+                  
+                  if 'description' not in frontmatter or not frontmatter['description']:
+                      self.errors.append(f"{file_path}: Missing or empty 'description' in frontmatter")
+
+              def check_internal_links(self, file_path: str, content: str):
+                  _, body = self.extract_frontmatter(content)
+                  
+                  markdown_link_pattern = r'\[([^\]]+)\]\(([^\)]+)\)'
+                  links = re.findall(markdown_link_pattern, body)
+                  
+                  for link_text, link_url in links:
+                      if link_url.startswith(('http://', 'https://', 'mailto:', '#')):
+                          continue
+                      
+                      if link_url.startswith('/'):
+                          self.warnings.append(
+                              f"{file_path}: Absolute internal link detected: {link_url}. "
+                              "Consider using relative paths for internal links."
+                          )
+
+              def check_image_paths(self, file_path: str, content: str):
+                  _, body = self.extract_frontmatter(content)
+                  
+                  markdown_img_pattern = r'!\[([^\]]*)\]\(([^\)]+)\)'
+                  markdown_matches = re.findall(markdown_img_pattern, body)
+                  for alt_text, img_path in markdown_matches:
+                      if img_path.startswith(('http://', 'https://', 'data:')):
+                          continue
+                      
+                      resolved_path = Path(file_path).parent / img_path
+                      
+                      if not resolved_path.exists() and not img_path.startswith('/'):
+                          self.warnings.append(
+                              f"{file_path}: Image path may not exist: {img_path}"
+                          )
+                  
+                  html_img_pattern = r'<img[^>]+src=["\']([^"\']+)["\']'
+                  html_matches = re.findall(html_img_pattern, body)
+                  for img_path in html_matches:
+                      if img_path.startswith(('http://', 'https://', 'data:')):
+                          continue
+                      
+                      resolved_path = Path(file_path).parent / img_path
+                      
+                      if not resolved_path.exists() and not img_path.startswith('/'):
+                          self.warnings.append(
+                              f"{file_path}: Image path may not exist: {img_path}"
+                          )
+
+              def check_mintlify_components(self, file_path: str, content: str):
+                  _, body = self.extract_frontmatter(content)
+                  
+                  component_pattern = r'<(\w+)([^>]*)>(.*?)</\1>|<(\w+)([^>]*)/>'
+                  matches = re.finditer(component_pattern, body, re.DOTALL)
+                  
+                  known_components = {
+                      'Note', 'Info', 'Warning', 'Tip', 'Check', 'CodeGroup',
+                      'Code', 'Accordion', 'AccordionGroup', 'Card', 'CardGroup',
+                      'Steps', 'Step', 'Tabs', 'Tab', 'Frame', 'Icon'
+                  }
+                  
+                  for match in matches:
+                      component_name = match.group(1) or match.group(4)
+                      
+                      if component_name and component_name[0].isupper():
+                          if component_name not in known_components:
+                              self.warnings.append(
+                                  f"{file_path}: Unknown Mintlify component: <{component_name}>"
+                              )
+
+              def check_code_blocks(self, file_path: str, content: str):
+                  _, body = self.extract_frontmatter(content)
+                  
+                  code_block_pattern = r'```([^\n]*)\n(.*?)```'
+                  code_blocks = re.findall(code_block_pattern, body, re.DOTALL)
+                  
+                  for i, (language_tag, code_content) in enumerate(code_blocks):
+                      if not language_tag.strip():
+                          self.warnings.append(
+                              f"{file_path}: Code block #{i+1} missing language tag"
+                          )
+
+              def check_file(self, file_path: str):
+                  try:
+                      with open(file_path, 'r', encoding='utf-8') as f:
+                          content = f.read()
+                  except Exception as e:
+                      self.errors.append(f"{file_path}: Could not read file: {e}")
+                      return
+                  
+                  self.check_frontmatter(file_path, content)
+                  self.check_internal_links(file_path, content)
+                  self.check_image_paths(file_path, content)
+                  self.check_mintlify_components(file_path, content)
+                  self.check_code_blocks(file_path, content)
+
+              def run_checks(self, file_list: List[str]) -> bool:
+                  for file_path in file_list:
+                      if Path(file_path).exists():
+                          self.check_file(file_path)
+                  
+                  return len(self.errors) == 0
+
+          if __name__ == "__main__":
+              with open('/tmp/changed_files.txt', 'r') as f:
+                  files = [line.strip() for line in f if line.strip()]
+              
+              checker = DocumentationQualityChecker()
+              success = checker.run_checks(files)
+              
+              if checker.errors:
+                  print("ERRORS:")
+                  for error in checker.errors:
+                      print(f"  ❌ {error}")
+              
+              if checker.warnings:
+                  print("\nWARNINGS:")
+                  for warning in checker.warnings:
+                      print(f"  ⚠️  {warning}")
+              
+              if success:
+                  if checker.warnings:
+                      print(f"\n✅ Quality check passed with {len(checker.warnings)} warning(s)")
+                  else:
+                      print("\n✅ All quality checks passed")
+                  sys.exit(0)
+              else:
+                  print(f"\n❌ Quality check failed with {len(checker.errors)} error(s)")
+                  sys.exit(1)
+          EOFPYTHON
+
+      - name: Run quality checks
+        if: steps.get-files.outputs.has_changes == 'true'
+        id: check
+        run: |
+          python /tmp/quality_check.py 2>&1 | tee /tmp/quality_output.log
+          CHECK_EXIT_CODE=${PIPESTATUS[0]}
+          
+          if [ $CHECK_EXIT_CODE -ne 0 ]; then
+            echo "check_failed=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "check_failed=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Comment quality check results on PR
+        if: always() && steps.get-files.outputs.has_changes == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let qualityLog = '';
+            
+            try {
+              qualityLog = fs.readFileSync('/tmp/quality_output.log', 'utf8');
+            } catch (e) {
+              qualityLog = 'Could not read quality check log';
+            }
+
+            const checkFailed = '${{ steps.check.outputs.check_failed }}' === 'true';
+            const hasErrors = qualityLog.includes('ERRORS:');
+            const hasWarnings = qualityLog.includes('WARNINGS:');
+
+            if (!hasErrors && !hasWarnings) {
+              const comment = `## ✅ Documentation Quality Check Passed
+
+            All documentation quality checks passed successfully!`;
+
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body: comment
+              });
+              return;
+            }
+
+            let statusEmoji = checkFailed ? '❌' : '⚠️';
+            let statusText = checkFailed ? 'Failed' : 'Passed with Warnings';
+
+            const comment = `## ${statusEmoji} Documentation Quality Check ${statusText}
+
+            ${qualityLog}
+
+            ${checkFailed ? `
+            **Action Required**: Please fix the errors listed above before merging.
+            ` : `
+            **Warnings**: Consider addressing these warnings to improve documentation quality.
+            `}
+
+            Common fixes:
+            - Add \`title\` and \`description\` to frontmatter in all MDX files
+            - Use relative paths for internal links
+            - Add language tags to code blocks (e.g., \`\`\`python, \`\`\`javascript)
+            - Verify image paths are correct
+            - Check Mintlify component syntax`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: comment
+            });
