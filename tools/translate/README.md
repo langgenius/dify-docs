@@ -44,8 +44,7 @@ Automatically detects structural changes in `docs.json`:
 
 ## Language Directories
 
-- **General docs**: `en/` (source) → `zh/`, `ja/` (targets)
-- **Plugin dev docs**: `plugin-dev-en/` → `plugin-dev-zh/`, `plugin-dev-ja/`
+- **Latest docs**: `en/` (source) → `zh/`, `ja/` (targets)
 - **Versioned docs**: `versions/{version}/en-us/` → `versions/{version}/zh-zh/`, `versions/{version}/ja/`
 
 Configuration in `tools/translate/config.json`.

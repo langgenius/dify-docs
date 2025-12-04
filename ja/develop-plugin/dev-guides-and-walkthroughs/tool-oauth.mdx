@@ -1,0 +1,382 @@
+---
+title: "ツールプラグインにOAuthサポートを追加する"
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/tool-oauth)を参照してください。</Note>
+
+![b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png](/images/b0e673ba3e339b31ac36dc3cd004df04787bcaa64bb6d2cac6feb7152b7b515f.png)
+
+このガイドでは、ツールプラグインに[OAuth](https://oauth.net/2/)サポートを組み込む方法を説明します。
+
+OAuthは、GmailやGitHubなどのサードパーティサービスからユーザーデータにアクセスする必要があるツールプラグインを認可するためのより優れた方法です。ユーザーがAPIキーを手動で入力する必要がなく、OAuthを使用することでツールはユーザーの明示的な同意のもとでユーザーに代わって動作できます。
+
+## 背景
+
+DifyにおけるOAuthには、開発者が理解し設計すべき**2つの別々のフロー**があります。
+
+### フロー1: OAuthクライアントセットアップ（管理者/開発者フロー）
+
+<Note>
+  Dify Cloudでは、Difyチームが人気のあるツールプラグイン用のOAuthアプリを作成し、OAuthクライアントをセットアップするため、ユーザーは自分で設定する手間が省けます。
+
+  セルフホストDifyインスタンスの管理者は、このセットアップフローを実行する必要があります。
+</Note>
+
+Difyインスタンスの管理者または開発者は、まずサードパーティサービスに信頼できるアプリケーションとしてOAuthアプリを登録する必要があります。これにより、DifyツールプロバイダーをOAuthクライアントとして設定するために必要な資格情報を取得できます。
+
+例として、DifyのGmailツールプロバイダー用のOAuthクライアントをセットアップする手順を示します：
+
+<AccordionGroup>
+  <Accordion title="Google Cloudプロジェクトを作成する">
+    1. [Google Cloud Console](https://console.cloud.google.com)にアクセスし、新しいプロジェクトを作成するか、既存のプロジェクトを選択します
+    2. 必要なAPI（例：Gmail API）を有効にします
+  </Accordion>
+  <Accordion title="OAuth同意画面を設定する：">
+    1. **APIs & Services** \> **OAuth consent screen**に移動します
+    2. 公開プラグインの場合は**External**ユーザータイプを選択します
+    3. アプリケーション名、ユーザーサポートメール、開発者連絡先を入力します
+    4. 必要に応じて承認済みドメインを追加します
+    5. テストの場合：**Test users**セクションでテストユーザーを追加します
+  </Accordion>
+  <Accordion title="OAuth 2.0資格情報を作成する">
+    1. **APIs & Services** \> **Credentials**に移動します
+    2. **Create Credentials** \> **OAuth 2.0 Client IDs**をクリックします
+    3. **Web application**タイプを選択します
+    4. `client_id`と`client_secret`が生成されます。これらを資格情報として保存します。
+  </Accordion>
+  <Accordion title="Difyに資格情報を入力する">
+    OAuthクライアント設定ポップアップにclient_idとclient_secretを入力して、ツールプロバイダーをクライアントとしてセットアップします。
+
+    <img
+      src="/images/acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      alt="acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      title="acd5f5057235c3a0c554abaedcf276fb48f80567f0231eae9158a795f8e1c45d.png"
+      className="mx-auto"
+      style={{ width:"66%" }}
+    />
+  </Accordion>
+  <Accordion title="リダイレクトURIを承認する">
+    Difyが生成したリダイレクトURIをGoogle OAuthクライアントのページに登録します：
+
+    <img
+      src="/images/dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      alt="dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      title="dfe60a714a275c5bf65f814673bd2f0a0db4fda27573a2f0b28a1c39e4c61da2.png"
+      className="mx-auto"
+      style={{ width:"77%" }}
+    />
+
+    <Info>
+      Difyは`redirect_uri`をOAuthクライアント設定ポップアップに表示します。通常、次の形式に従います：
+
+      ```bash
+      https://{your-dify-domain}/console/api/oauth/plugin/{plugin-id}/{provider-name}/{tool-name}/callback
+      ```
+
+      セルフホストDifyの場合、`your-dify-domain`は`CONSOLE_WEB_URL`と一致する必要があります。
+    </Info>
+  </Accordion>
+</AccordionGroup>
+
+<Tip>
+  各サービスには固有の要件があるため、統合するサービスの特定のOAuthドキュメントを必ず参照してください。
+</Tip>
+
+### フロー2: ユーザー認可（Difyユーザーフロー）
+
+OAuthクライアントを設定した後、個々のDifyユーザーは、プラグインが自分の個人アカウントにアクセスすることを認可できるようになります。
+
+<img
+  src="/images/833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  alt="833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  title="833c205f5441910763b27d3e3ff0c4449a730a690da91abc3ce032c70da04223.png"
+  className="mx-auto"
+  style={{ width:"67%" }}
+/>
+
+## 実装
+
+### 1. プロバイダーマニフェストでOAuthスキーマを定義する
+
+プロバイダーマニフェストの`oauth_schema`セクションは、プラグインのOAuthに必要な資格情報と、OAuthフローが生成するものをDifyに伝えます。OAuthをセットアップするには、2つのスキーマが必要です：
+
+#### client_schema
+
+OAuthクライアントセットアップの入力を定義します：
+
+```yaml gmail.yaml
+oauth_schema:
+  client_schema:
+    - name: "client_id"
+      type: "secret-input"
+      required: true
+      url: "https://developers.google.com/identity/protocols/oauth2"
+    - name: "client_secret"
+      type: "secret-input" 
+      required: true
+```
+
+<Info>
+  `url`フィールドはサードパーティサービスのヘルプドキュメントに直接リンクします。これは困っている管理者/開発者の助けになります。
+</Info>
+
+#### credentials_schema
+
+ユーザー認可フローが生成するものを指定します（Difyがこれらを自動的に管理します）：
+
+```yaml
+# also under oauth_schema
+  credentials_schema:
+    - name: "access_token"
+      type: "secret-input"
+    - name: "refresh_token"
+      type: "secret-input"
+    - name: "expires_at"
+      type: "secret-input"
+```
+
+<Info>
+  OAuth \+ APIキー認証オプションを提供するには、`oauth_schema`と`credentials_for_provider`の両方を含めてください。
+</Info>
+
+### 2. ツールプロバイダーで必要なOAuthメソッドを完成させる
+
+`ToolProvider`を実装している場所に、以下のインポートを追加します：
+
+```python
+from dify_plugin.entities.oauth import ToolOAuthCredentials
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError, ToolProviderOAuthError
+```
+
+`ToolProvider`クラスは、これら3つのOAuthメソッドを実装する必要があります（例として`GmailProvider`を使用）：
+
+<Warning>
+  いかなる場合でも、`ToolOAuthCredentials`の資格情報に`client_secret`を返してはなりません。これはセキュリティ上の問題につながる可能性があります。
+</Warning>
+
+<CodeGroup>
+
+```python _oauth_get_authorization_url expandable
+def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+	"""
+	Generate the authorization URL using credentials from OAuth Client Setup Flow. 
+    This URL is where users grant permissions.
+    """
+    # Generate random state for CSRF protection (recommended for all OAuth flows)
+    state = secrets.token_urlsafe(16)
+    
+    # Define Gmail-specific scopes - request minimal necessary permissions
+    scope = "read:user read:data"  # Replace with your required scopes
+    
+    # Assemble Gmail-specific payload
+    params = {
+        "client_id": system_credentials["client_id"],    # From OAuth Client Setup
+        "redirect_uri": redirect_uri,                    # Dify generates this - DON'T modify
+        "scope": scope,                                  
+        "response_type": "code",                         # Standard OAuth authorization code flow
+        "access_type": "offline",                        # Critical: gets refresh token (if supported)
+        "prompt": "consent",                             # Forces reauth when scopes change (if supported)
+        "state": state,                                  # CSRF protection
+    }
+    
+    return f"{self._AUTH_URL}?{urllib.parse.urlencode(params)}"
+```
+
+
+```python _oauth_get_credentials expandable
+def _oauth_get_credentials(
+    self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+) -> ToolOAuthCredentials:
+    """
+    Exchange authorization code for access token and refresh token. This is called
+	to creates ONE credential set for one account connection
+    """
+    # Extract authorization code from OAuth callback
+    code = request.args.get("code")
+    if not code:
+        raise ToolProviderOAuthError("Authorization code not provided")
+    
+    # Check for authorization errors from OAuth provider
+    error = request.args.get("error")
+    if error:
+        error_description = request.args.get("error_description", "")
+        raise ToolProviderOAuthError(f"OAuth authorization failed: {error} - {error_description}")
+    
+    # Exchange authorization code for tokens using OAuth Client Setup credentials
+
+	# Assemble Gmail-specific payload
+    data = {
+        "client_id": system_credentials["client_id"],        # From OAuth Client Setup
+        "client_secret": system_credentials["client_secret"], # From OAuth Client Setup
+        "code": code,                                        # From user's authorization
+        "grant_type": "authorization_code",                  # Standard OAuth flow type
+        "redirect_uri": redirect_uri,                        # Must exactly match authorization URL
+    }
+    
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+    
+    try:
+        response = requests.post(
+            self._TOKEN_URL,
+            data=data,
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        token_data = response.json()
+        
+        # Handle OAuth provider errors in response
+        if "error" in token_data:
+            error_desc = token_data.get('error_description', token_data['error'])
+            raise ToolProviderOAuthError(f"Token exchange failed: {error_desc}")
+        
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise ToolProviderOAuthError("No access token received from provider")
+        
+        # Build credentials dict matching your credentials_schema
+        credentials = {
+            "access_token": access_token,
+            "token_type": token_data.get("token_type", "Bearer"),
+        }
+        
+        # Include refresh token if provided (critical for long-term access)
+        refresh_token = token_data.get("refresh_token")
+        if refresh_token:
+            credentials["refresh_token"] = refresh_token
+        
+        # Handle token expiration - some providers don't provide expires_in
+        expires_in = token_data.get("expires_in", 3600)  # Default to 1 hour
+        expires_at = int(time.time()) + expires_in
+        
+        return ToolOAuthCredentials(credentials=credentials, expires_at=expires_at)
+        
+    except requests.RequestException as e:
+        raise ToolProviderOAuthError(f"Network error during token exchange: {str(e)}")
+    except Exception as e:
+        raise ToolProviderOAuthError(f"Failed to exchange authorization code: {str(e)}")
+```
+
+
+```python _oauth_refresh_credentials
+def _oauth_refresh_credentials(
+    self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+) -> ToolOAuthCredentials:
+    """
+    Refresh the credentials using refresh token. 
+	Dify calls this automatically when tokens expire
+    """
+    refresh_token = credentials.get("refresh_token")
+    if not refresh_token:
+        raise ToolProviderOAuthError("No refresh token available")
+
+    # Standard OAuth refresh token flow
+    data = {
+        "client_id": system_credentials["client_id"],       # From OAuth Client Setup
+        "client_secret": system_credentials["client_secret"], # From OAuth Client Setup
+        "refresh_token": refresh_token,                     # From previous authorization
+        "grant_type": "refresh_token",                      # OAuth refresh flow
+    }
+
+    headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+    try:
+        response = requests.post(
+            self._TOKEN_URL,
+            data=data,
+            headers=headers,
+            timeout=10
+        )
+        response.raise_for_status()
+
+        token_data = response.json()
+
+        # Handle refresh errors
+        if "error" in token_data:
+            error_desc = token_data.get('error_description', token_data['error'])
+            raise ToolProviderOAuthError(f"Token refresh failed: {error_desc}")
+
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise ToolProviderOAuthError("No access token received from provider")
+
+        # Build new credentials, preserving existing refresh token
+        new_credentials = {
+            "access_token": access_token,
+            "token_type": token_data.get("token_type", "Bearer"),
+            "refresh_token": refresh_token,  # Keep existing refresh token
+        }
+
+        # Handle token expiration
+        expires_in = token_data.get("expires_in", 3600)
+
+        # update refresh token if new one provided
+        new_refresh_token = token_data.get("refresh_token")
+        if new_refresh_token:
+            new_credentials["refresh_token"] = new_refresh_token
+
+        # Calculate new expiration timestamp for Dify's token management
+        expires_at = int(time.time()) + expires_in
+
+        return ToolOAuthCredentials(credentials=new_credentials, expires_at=expires_at)
+
+    except requests.RequestException as e:
+        raise ToolProviderOAuthError(f"Network error during token refresh: {str(e)}")
+    except Exception as e:
+        raise ToolProviderOAuthError(f"Failed to refresh credentials: {str(e)}")
+```
+
+</CodeGroup>
+
+### 3. ツールでトークンにアクセスする
+
+`Tool`実装でOAuth資格情報を使用して認証済みAPI呼び出しを行うことができます：
+
+```python
+class YourTool(BuiltinTool):
+    def _invoke(self, user_id: str, tool_parameters: dict[str, Any]) -> ToolInvokeMessage:
+        if self.runtime.credential_type == CredentialType.OAUTH:
+            access_token = self.runtime.credentials["access_token"]
+        
+        response = requests.get("https://api.service.com/data",
+                              headers={"Authorization": f"Bearer {access_token}"})
+        return self.create_text_message(response.text)
+```
+
+`self.runtime.credentials`は現在のユーザーのトークンを自動的に提供します。Difyはリフレッシュを自動的に処理します。
+
+OAuthとAPI_KEY認証の両方をサポートするプラグインの場合、`self.runtime.credential_type`を使用して2つの認証タイプを区別できます。
+
+### 4. 正しいバージョンを指定する
+
+以前のバージョンのプラグインSDKとDifyはOAuth認証をサポートしていません。そのため、プラグインSDKのバージョンを以下に設定する必要があります：
+
+```
+dify_plugin>=0.4.2,<0.5.0.
+```
+
+`manifest.yaml`に、最小Difyバージョンを追加します：
+
+```yaml
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: "3.12"
+    entrypoint: main
+  minimum_dify_version: 1.7.1
+```
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/tool-oauth.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

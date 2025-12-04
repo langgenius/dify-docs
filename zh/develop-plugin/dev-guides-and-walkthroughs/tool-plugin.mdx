@@ -1,0 +1,387 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Tool Plugin
+language: en
+title: 工具插件
+description: 本文档提供了如何为 Dify 开发工具插件的详细说明，以 Google Search 为例演示完整的工具插件开发流程。内容包括插件初始化、模板选择、工具提供者配置文件定义、添加第三方服务凭据、工具功能代码实现、调试以及打包发布。
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)。</Note>
+
+工具是指可以被 Chatflow / Workflow / Agent 类型应用调用的第三方服务，提供完整的 API 实现能力来增强 Dify 应用。例如，添加在线搜索、图像生成等额外功能。
+
+![Tool Plugin Example](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
+
+在本文中，**"工具插件"**指的是一个完整的项目，包含工具提供者文件、功能代码和其他结构。一个工具提供者可以包含多个工具（可以理解为单个工具内提供的额外功能），结构如下：
+
+```
+- Tool Provider
+    - Tool A
+    - Tool B
+```
+
+![Tool Plugin Structure](https://assets-docs.dify.ai/2025/02/60c4c86a317d865133aa460592eac079.png)
+
+本文将以 `Google Search` 为例，演示如何快速开发一个工具插件。
+
+### 前置条件
+
+-   Dify 插件脚手架工具
+-   Python 环境，版本 ≥ 3.12
+
+关于如何准备插件开发脚手架工具的详细说明，请参考[初始化开发工具](/zh/develop-plugin/getting-started/cli)。如果你是首次开发插件，建议先阅读 [Dify 插件开发：Hello World 指南](/zh/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)。
+
+### 创建新项目
+
+运行脚手架命令行工具来创建一个新的 Dify 插件项目。
+
+```bash
+./dify-plugin-darwin-arm64 plugin init
+```
+
+如果你已将二进制文件重命名为 `dify` 并复制到 `/usr/local/bin` 路径，可以运行以下命令来创建新的插件项目：
+
+```bash
+dify plugin init
+```
+
+> 在后续文本中，将使用 `dify` 作为命令行示例。如果遇到任何问题，请将 `dify` 命令替换为命令行工具的路径。
+
+### 选择插件类型和模板
+
+脚手架工具中的所有模板都提供完整的代码项目。在本示例中，选择 `Tool` 插件。
+
+> 如果你已经熟悉插件开发且不需要依赖模板，可以参考[通用规范](/zh/develop-plugin/features-and-specs/plugin-types/general-specifications)指南来完成不同类型插件的开发。
+
+![Plugin Type: Tool](https://assets-docs.dify.ai/2024/12/dd3c0f9a66454e15868eabced7b74fd6.png)
+
+#### 配置插件权限
+
+插件还需要从 Dify 平台读取的权限。为本示例插件授予以下权限：
+
+-   Tools
+-   Apps
+-   启用持久化存储 Storage，分配默认大小存储
+-   允许注册 Endpoints
+
+> 在终端中使用方向键选择权限，使用"Tab"按钮授予权限。
+
+勾选所有权限项后，按 Enter 完成插件创建。系统将自动生成插件项目代码。
+
+![Plugin Permissions](https://assets-docs.dify.ai/2024/12/9cf92c2e74dce55e6e9e331d031e5a9f.png)
+
+### 开发工具插件
+
+#### 1. 创建工具提供者文件
+
+工具提供者文件是一个 yaml 格式文件，可以理解为工具插件的基本配置入口，用于向工具提供必要的授权信息。
+
+进入插件模板项目的 `/provider` 路径，将 yaml 文件重命名为 `google.yaml`。这个 `yaml` 文件将包含工具提供者的信息，包括提供者的名称、图标、作者等详细信息。这些信息将在安装插件时显示。
+
+**示例代码**
+
+```yaml
+identity: # Basic information of the tool provider
+    author: Your-name # Author
+    name: google # Name, unique, cannot have the same name as other providers
+    label: # Label, for frontend display
+        en_US: Google # English label
+        zh_Hans: Google # Chinese label
+    description: # Description, for frontend display
+        en_US: Google # English description
+        zh_Hans: Google # Chinese description
+    icon: icon.svg # Tool icon, needs to be placed in the _assets folder
+    tags: # Tags, for frontend display
+        - search
+```
+
+确保文件路径在 `/tools` 目录中，完整路径如下：
+
+```yaml
+plugins:
+    tools:
+        - 'google.yaml'
+```
+
+其中 `google.yaml` 需要使用其在插件项目中的绝对路径。在本示例中，它位于项目根目录。YAML 文件中的 identity 字段说明如下：`identity` 包含工具提供者的基本信息，包括作者、名称、标签、描述、图标等。
+
+-   图标需要是附件资源，需要放置在项目根目录的 `_assets` 文件夹中。
+-   标签可以帮助用户通过分类快速找到插件。以下是目前支持的所有标签。
+
+```python
+class ToolLabelEnum(Enum):
+  SEARCH = 'search'
+  IMAGE = 'image'
+  VIDEOS = 'videos'
+  WEATHER = 'weather'
+  FINANCE = 'finance'
+  DESIGN = 'design'
+  TRAVEL = 'travel'
+  SOCIAL = 'social'
+  NEWS = 'news'
+  MEDICAL = 'medical'
+  PRODUCTIVITY = 'productivity'
+  EDUCATION = 'education'
+  BUSINESS = 'business'
+  ENTERTAINMENT = 'entertainment'
+  UTILITIES = 'utilities'
+  OTHER = 'other'
+```
+
+#### **2. 完善第三方服务凭据**
+
+为了开发方便，我们选择使用第三方服务 `SerpApi` 提供的 Google Search API。`SerpApi` 需要 API Key 才能使用，因此我们需要在 `yaml` 文件中添加 `credentials_for_provider` 字段。
+
+完整代码如下：
+
+```yaml
+identity:
+    author: Dify
+    name: google
+    label:
+        en_US: Google
+        zh_Hans: Google
+        pt_BR: Google
+    description:
+        en_US: Google
+        zh_Hans: GoogleSearch
+        pt_BR: Google
+    icon: icon.svg
+    tags:
+        - search
+credentials_for_provider: #Add credentials_for_provider field
+    serpapi_api_key:
+        type: secret-input
+        required: true
+        label:
+            en_US: SerpApi API key
+            zh_Hans: SerpApi API key
+        placeholder:
+            en_US: Please input your SerpApi API key
+            zh_Hans: Please enter your SerpApi API key
+        help:
+            en_US: Get your SerpApi API key from SerpApi
+            zh_Hans: Get your SerpApi API key from SerpApi
+        url: https://serpapi.com/manage-api-key
+tools:
+    - tools/google_search.yaml
+extra:
+    python:
+        source: google.py
+```
+
+-   `credentials_for_provider` 的子级结构需要满足[通用规范](/zh/develop-plugin/features-and-specs/plugin-types/general-specifications)的要求。
+-   你需要指定提供者包含哪些工具。本示例只包含一个 `tools/google_search.yaml` 文件。
+-   作为提供者，除了定义其基本信息外，还需要实现一些代码逻辑，因此需要指定其实现逻辑。在本示例中，我们将功能代码文件放在 `google.py` 中，但暂时不实现它，而是先编写 `google_search` 的代码。
+
+#### 3. 填写工具 YAML 文件
+
+一个工具插件可以有多个工具功能，每个工具功能都需要一个 `yaml` 文件进行描述，包括工具功能的基本信息、参数、输出等。
+
+仍以 `GoogleSearch` 工具为例，在 `/tools` 文件夹中创建一个新的 `google_search.yaml` 文件。
+
+```yaml
+identity:
+    name: google_search
+    author: Dify
+    label:
+        en_US: GoogleSearch
+        zh_Hans: Google Search
+        pt_BR: GoogleSearch
+description:
+    human:
+        en_US: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        zh_Hans: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        pt_BR: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+    llm: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+parameters:
+    - name: query
+      type: string
+      required: true
+      label:
+          en_US: Query string
+          zh_Hans: Query string
+          pt_BR: Query string
+      human_description:
+          en_US: used for searching
+          zh_Hans: used for searching web content
+          pt_BR: used for searching
+      llm_description: key words for searching
+      form: llm
+extra:
+    python:
+        source: tools/google_search.py
+```
+
+-   `identity` 包含工具的基本信息，包括名称、作者、标签、描述等。
+-   `parameters` 参数列表
+    -   `name`（必填）参数名称，唯一，不能与其他参数同名。
+    -   `type`（必填）参数类型，目前支持 `string`、`number`、`boolean`、`select`、`secret-input` 五种类型，分别对应字符串、数字、布尔值、下拉框、加密输入框。对于敏感信息，请使用 `secret-input` 类型。
+    -   `label`（必填）参数标签，用于前端显示。
+    -   `form`（必填）表单类型，目前支持 `llm`、`form` 两种类型。
+        -   在智能体应用中，`llm` 表示该参数由 LLM 自行推断，`form` 表示参数可以预先设置以使用此工具。
+        -   在工作流应用中，`llm` 和 `form` 都需要由前端填写，但 `llm` 参数将用作工具节点的输入变量。
+    -   `required` 是否必填
+        -   在 `llm` 模式下，如果参数是必填的，智能体将被要求推断此参数。
+        -   在 `form` 模式下，如果参数是必填的，用户将被要求在对话开始前在前端填写此参数。
+    -   `options` 参数选项
+        -   在 `llm` 模式下，Dify 会将所有选项传递给 LLM，LLM 可以根据这些选项进行推断。
+        -   在 `form` 模式下，当 `type` 为 `select` 时，前端将显示这些选项。
+    -   `default` 默认值。
+    -   `min` 最小值，当参数类型为 `number` 时可以设置。
+    -   `max` 最大值，当参数类型为 `number` 时可以设置。
+    -   `human_description` 用于前端显示的介绍，支持多语言。
+    -   `placeholder` 输入字段的提示文本，当表单类型为 `form` 且参数类型为 `string`、`number`、`secret-input` 时可以设置，支持多语言。
+    -   `llm_description` 传递给 LLM 的介绍。为了让 LLM 更好地理解此参数，请在此处写尽可能详细的关于此参数的信息，以便 LLM 能够理解该参数。
+
+#### 4. 准备工具代码
+
+填写完工具的配置信息后，就可以开始编写工具功能的代码，实现工具的逻辑目的。在 `/tools` 目录中创建 `google_search.py`，内容如下：
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+import requests
+
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
+
+SERP_API_URL = "https://serpapi.com/search"
+
+class GoogleSearchTool(Tool):
+    def _parse_response(self, response: dict) -> dict:
+        result = {}
+        if "knowledge_graph" in response:
+            result["title"] = response["knowledge_graph"].get("title", "")
+            result["description"] = response["knowledge_graph"].get("description", "")
+        if "organic_results" in response:
+            result["organic_results"] = [
+                {
+                    "title": item.get("title", ""),
+                    "link": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                }
+                for item in response["organic_results"]
+            ]
+        return result
+
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        params = {
+            "api_key": self.runtime.credentials["serpapi_api_key"],
+            "q": tool_parameters["query"],
+            "engine": "google",
+            "google_domain": "google.com",
+            "gl": "us",
+            "hl": "en",
+        }
+
+        response = requests.get(url=SERP_API_URL, params=params, timeout=5)
+        response.raise_for_status()
+        valuable_res = self._parse_response(response.json())
+
+        yield self.create_json_message(valuable_res)
+```
+
+此示例表示请求 `serpapi` 并使用 `self.create_json_message` 返回格式化的 `json` 数据字符串。如果你想了解更多关于返回数据类型的信息，可以参考[远程调试插件](/zh/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin)和[持久化存储 KV](/zh/develop-plugin/features-and-specs/plugin-types/persistent-storage-kv) 文档。
+
+#### 4. 完善工具提供者代码
+
+最后，你需要为提供者创建一个实现代码来实现凭据验证逻辑。如果凭据验证失败，将抛出 `ToolProviderCredentialValidationError` 异常。验证成功后，`google_search` 工具服务将被正确请求。
+
+在 `/provider` 目录中创建 `google.py` 文件，内容如下：
+
+```python
+from typing import Any
+
+from dify_plugin import ToolProvider
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+from tools.google_search import GoogleSearchTool
+
+class GoogleProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+        try:
+            for _ in GoogleSearchTool.from_credentials(credentials).invoke(
+                tool_parameters={"query": "test", "result_type": "link"},
+            ):
+                pass
+        except Exception as e:
+            raise ToolProviderCredentialValidationError(str(e))
+```
+
+### 调试插件
+
+完成插件开发后，需要测试插件是否能正常工作。Dify 提供了便捷的远程调试方法，帮助你在测试环境中快速验证插件的功能。
+
+前往["插件管理"](https://cloud.dify.ai/plugins)页面获取远程服务器地址和调试 Key。
+
+![Remote Debug Key](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
+
+返回插件项目，复制 `.env.example` 文件并重命名为 `.env`，然后填写你获取的远程服务器地址和调试 Key 信息。
+
+`.env` 文件：
+
+```bash
+INSTALL_METHOD=remote
+REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_KEY=********-****-****-****-************
+```
+
+运行 `python -m main` 命令启动插件。在插件页面上，你可以看到插件已安装在工作区中，团队的其他成员也可以访问该插件。
+
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
+
+### 打包插件（可选）
+
+确认插件可以正常运行后，你可以使用以下命令行工具打包和命名插件。运行后，你会在当前文件夹中发现一个 `google.difypkg` 文件，这就是最终的插件包。
+
+```bash
+# Replace ./google with the actual path of the plugin project
+
+dify plugin package ./google
+```
+
+恭喜，你已经完成了工具类型插件的开发、调试和打包的整个流程！
+
+### 发布插件（可选）
+
+如果你想将插件发布到 Dify Marketplace，请确保你的插件符合[发布到 Dify Marketplace](/zh/develop-plugin/publishing/marketplace-listing/release-to-dify-marketplace) 中的规范。通过审核后，代码将被合并到主分支并自动上架到 [Dify Marketplace](https://marketplace.dify.ai/)。
+
+[发布概述](/zh/develop-plugin/publishing/marketplace-listing/release-overview)
+
+### 探索更多
+
+#### **快速开始：**
+
+-   [开发扩展插件](/zh/develop-plugin/dev-guides-and-walkthroughs/endpoint)
+-   [开发模型插件](/zh/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider)
+-   [Bundle 插件：打包多个插件](/zh/develop-plugin/features-and-specs/advanced-development/bundle)
+
+#### **插件接口文档：**
+
+-   [通用规范](/zh/develop-plugin/features-and-specs/plugin-types/general-specifications) - Manifest 结构和工具规范
+-   [Endpoint](/zh/develop-plugin/dev-guides-and-walkthroughs/endpoint) - 详细的 Endpoint 定义
+-   [反向调用](/zh/develop-plugin/features-and-specs/advanced-development/reverse-invocation) - 反向调用 Dify 能力
+-   [模型 Schema](/zh/develop-plugin/features-and-specs/plugin-types/model-schema) - 模型
+-   [智能体插件](/zh/develop-plugin/features-and-specs/advanced-development/reverse-invocation) - 扩展智能体策略
+
+## 下一步学习
+
+- [远程调试插件](/zh/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin) - 学习更多高级调试技巧
+- [持久化存储](/zh/develop-plugin/features-and-specs/plugin-types/persistent-storage-kv) - 学习如何在插件中使用数据存储
+- [Slack Bot 插件开发示例](/zh/develop-plugin/dev-guides-and-walkthroughs/develop-a-slack-bot-plugin) - 查看更复杂的插件开发案例
+- [工具插件](/zh/develop-plugin/features-and-specs/plugin-types/tool) - 探索工具插件的高级功能
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
