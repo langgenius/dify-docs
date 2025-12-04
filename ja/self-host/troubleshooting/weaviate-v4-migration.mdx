@@ -49,7 +49,7 @@ weaviate-client v4 では、いくつかの破壊的変更が導入されてい�
 | Dify バージョン | weaviate-client バージョン | 互換性のある Weaviate サーバーバージョン |
 |---------------|--------------------------|-------------------------------------|
 | ≤ 1.9.1       | v3.x                     | 1.19.0 - 1.26.x                     |
-| ≥ 1.9.2*      | v4.17.0                  | 1.27.0+（1.32.11 までテスト済み）     |
+| ≥ 1.9.2*      | v4.17.0                  | 1.27.0+（1.33.1 までテスト済み）     |
 
 <Info>
 *weaviate-client v4 を含む正確な Dify バージョンは異なる場合があります。特定のバージョンのリリースノートを確認してください。この移行は、weaviate-client v4.17.0 以降を使用する Dify バージョンに適用されます。
@@ -86,197 +86,265 @@ Weaviate サーバーバージョン 1.19.0 は 1 年以上前にリリースさ
 
 ## 移行パス
 
-デプロイメント設定に一致する移行パスを選択してください：
+デプロイメント設定と現在の Weaviate バージョンに一致する移行パスを選択してください。
 
-### パス A：Docker Compose ユーザー（推奨）
+### パスを選択
 
-これは、Docker Compose を介して Dify を実行し、バンドルされた Weaviate インスタンスを使用しているユーザーにとって最も簡単なパスです。
-
-<Info>
-Dify の標準 Docker Compose セットアップを使用している場合、Dify をアップグレードすると Weaviate バージョンが自動的に更新されます。手動構成は不要です。
-</Info>
-
-#### ステップ 1：データをバックアップ
-
-Dify プロジェクトディレクトリに移動し、Docker ボリュームをバックアップします：
-
-```bash
-cd /path/to/dify/docker
-docker compose down
-tar -cvf ../weaviate-backup-$(date +%s).tgz volumes/weaviate
-```
-
-<Info>
-バックアップファイルをプロジェクトディレクトリ外の安全な場所に保存してください。移行が失敗してロールバックする必要がある場合に必要になります。
-</Info>
-
-#### ステップ 2：Dify を更新
-
-weaviate-client v4 と Weaviate 1.27.0+ を含む最新の Dify バージョンをプル：
-
-```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>  # 正しいバージョンはリリースノートを確認
-cd docker
-docker compose pull
-docker compose up -d
-```
-
-更新された Docker Compose 構成には以下が含まれます：
-- Weaviate サーバー 1.27.0+ イメージ
-- weaviate-client v4.17.0（Dify コンテナに自動インストール）
-- 適切な gRPC ポート構成 (50051)
-
-#### ステップ 3：起動を監視
-
-ログを確認してサービスが正しく起動することを確認：
-
-```bash
-# Weaviate の起動を監視
-docker compose logs -f weaviate
-
-# Dify API の起動を監視
-docker compose logs -f api
-```
-
-Weaviate が「ready to serve requests」を表示し、Dify API が正常に接続するまで待ちます。
-
-#### ステップ 4：移行を検証
-
-以下の[検証手順](#verification-steps)セクションを参照してください。
-
-### パス B：外部/自己ホスト Weaviate
-
-別のサーバー、マネージドインスタンス、または Weaviate Cloud で Weaviate を実行しているユーザー向け。
+- **パス A – バックアップを使用した移行（1.19 から）：**まだ Weaviate 1.19 を使用している場合に推奨されます。バックアップを作成し、1.27+ にアップグレードし、孤立したデータを修復してから、スキーマを移行します。
+- **パス B – 直接リカバリ（すでに 1.27+ の場合）：**すでに 1.27+ にアップグレードしてナレッジベースが動作しなくなった場合に使用します。このパスはデータレイアウトの修復とスキーマ移行の実行に焦点を当てています。
 
 <Warning>
-このパスは、Dify とは別に独自の Weaviate インスタンスを管理しているユーザー向けです。Docker Compose を介して Dify にバンドルされた Weaviate を使用している場合は、代わりにパス A を使用してください。
+1.19 へのダウングレードを試みないでください。スキーマ形式に互換性がなく、データ損失につながります。
 </Warning>
 
-#### ステップ 1：Weaviate データをバックアップ
-
-Weaviate のバックアップ API を使用して完全バックアップを作成：
-
-```bash
-# バックアップを作成
-curl -X POST \
-  "http://your-weaviate-host:8080/v1/backups/filesystem" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "dify-backup-'$(date +%s)'",
-    "include": ["*"]
-  }'
-
-# バックアップステータスを確認
-curl "http://your-weaviate-host:8080/v1/backups/filesystem/{backup-id}"
-```
+### パス A：バックアップを使用した移行（1.19 から）
 
 <Info>
-詳細なバックアップ手順については、[Weaviate バックアップドキュメント](https://weaviate.io/developers/weaviate/configuration/backups)を参照してください。
+最も安全なパスです。アップグレード前にバックアップを作成するため、問題が発生した場合に復元できます。
 </Info>
 
-#### ステップ 2：Weaviate インスタンスを停止
+#### 前提条件
 
-```bash
-# Docker ユーザーの場合
-docker stop weaviate
+- 現在 Weaviate 1.19 を実行中
+- Docker + Docker Compose がインストール済み
+- スキーマ移行スクリプト用に Python 3.11+ が利用可能
 
-# systemd ユーザーの場合
-sudo systemctl stop weaviate
+#### ステップ A1：Weaviate 1.19 でバックアップモジュールを有効化
 
-# Kubernetes ユーザーの場合
-kubectl scale deployment weaviate --replicas=0
-```
-
-#### ステップ 3：Weaviate サーバーをアップグレード
-
-**Docker の場合：**
-
-```bash
-docker pull cr.weaviate.io/semitechnologies/weaviate:1.27.0
-docker run -d \
-  --name weaviate \
-  -p 8080:8080 \
-  -p 50051:50051 \
-  -v /path/to/data:/var/lib/weaviate \
-  -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false \
-  -e AUTHENTICATION_APIKEY_ENABLED=true \
-  -e AUTHENTICATION_APIKEY_ALLOWED_KEYS=your-secret-key \
-  -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
-  -e QUERY_DEFAULTS_LIMIT=20 \
-  -e DEFAULT_VECTORIZER_MODULE=none \
-  cr.weaviate.io/semitechnologies/weaviate:1.27.0
-```
-
-**Kubernetes の場合：**
-
-Helm 値またはマニフェストを更新：
+`docker/docker-compose.yaml` を編集して、`weaviate` サービスにバックアップ構成を含めます：
 
 ```yaml
-image:
-  registry: cr.weaviate.io
-  repository: semitechnologies/weaviate
-  tag: 1.27.0
+  weaviate:
+    image: semitechnologies/weaviate:1.19.0
+    volumes:
+      - ./volumes/weaviate:/var/lib/weaviate
+      - ./volumes/weaviate_backups:/var/lib/weaviate/backups
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      ENABLE_MODULES: backup-filesystem
+      BACKUP_FILESYSTEM_PATH: /var/lib/weaviate/backups
+      # ... 残りの環境変数
 ```
 
-次に適用：
+Weaviate を再起動して変更を適用：
 
 ```bash
-helm upgrade weaviate weaviate/weaviate -f values.yaml
-# または
-kubectl apply -f weaviate-deployment.yaml
+cd docker
+docker compose down
+docker compose --profile up -d
+sleep 10
 ```
 
-**バイナリインストールの場合：**
+#### ステップ A2：バックアップを作成
 
-[Weaviate リリースページ](https://github.com/weaviate/weaviate/releases)から新しいバージョンをダウンロードしてインストールします。
+1. **コレクションを一覧表示：**
 
-#### ステップ 4：Weaviate アップグレードを検証
+   ```bash
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/schema" | \
+     python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   print("Collections:")
+   for cls in data.get('classes', []):
+       print(f\"  - {cls['class']}\")
+   "
+   ```
 
-Weaviate が正しいバージョンで実行されていることを確認：
+2. **バックアップをトリガー：**必要に応じて特定のコレクション名を含めます。
+
+   ```bash
+   curl -X POST \
+     -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     -H "Content-Type: application/json" \
+     "http://localhost:8080/v1/backups/filesystem" \
+     -d '{
+       "id": "kb-backup",
+       "include": ["Vector_index_COLLECTION1_Node", "Vector_index_COLLECTION2_Node"]
+     }'
+   ```
+
+3. **バックアップステータスを確認：**
+
+   ```bash
+   sleep 5
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/backups/filesystem/kb-backup" | \
+     python3 -m json.tool | grep status
+   ```
+
+4. **バックアップファイルの存在を確認：**
+
+   ```bash
+   ls -lh docker/volumes/weaviate_backups/kb-backup/
+   ```
+
+#### ステップ A3：Weaviate 1.27+ にアップグレード
+
+1. **Weaviate 1.27+ を同梱する Dify バージョンにアップグレード：**
+
+   ```bash
+   cd /path/to/dify
+   git fetch origin
+   git checkout main  # またはアップグレードを含むタグ付きリリース
+   ```
+
+2. **新しい Weaviate イメージを確認：**
+
+   ```bash
+   grep "image: semitechnologies/weaviate" docker/docker-compose.yaml
+   ```
+
+3. **新しいバージョンで再起動：**
+
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   sleep 20
+   ```
+
+#### ステップ A4：孤立した LSM データを修正（存在する場合）
 
 ```bash
-curl http://your-weaviate-host:8080/v1/meta | jq '.version'
+cd docker/volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
+
+cd ../../
+docker compose restart weaviate
+sleep 15
 ```
 
-バージョン 1.27.0 以降が表示されるはずです。
+#### ステップ A5：スキーマを移行
 
-#### ステップ 5：Dify 構成を更新
+1. **依存関係をインストール**（一時的な virtualenv で問題ありません）：
 
-外部 Weaviate 接続を構成するために Dify 環境変数を更新：
+   ```bash
+   cd /path/to/dify
+   python3 -m venv weaviate_migration_env
+   source weaviate_migration_env/bin/activate
+   pip install weaviate-client requests
+   ```
 
-```bash
-VECTOR_STORE=weaviate
-WEAVIATE_ENDPOINT=http://your-weaviate-host:8080
-WEAVIATE_API_KEY=your-api-key
-WEAVIATE_GRPC_ENABLED=true
-WEAVIATE_GRPC_ENDPOINT=your-weaviate-host:50051
-```
+2. **移行スクリプトを実行：**
+
+   ```bash
+   python3 migrate_weaviate_collections.py
+   ```
+
+3. **Dify サービスを再起動：**
+
+   ```bash
+   cd docker
+   docker compose restart api worker worker_beat
+   sleep 15
+   ```
+
+4. **UI で検証：**Dify を開き、移行されたナレッジベースに対して取得をテストします。
 
 <Info>
-`WEAVIATE_GRPC_ENDPOINT` は、プロトコルプレフィックスなしの `hostname:port` 形式である必要があります（`grpc://` または `http://` なし）。
+正常な移行を確認した後、`weaviate_migration_env` とバックアップファイルを削除してディスク容量を回復できます。
 </Info>
 
-#### ステップ 6：Dify を更新
+### パス B：直接リカバリ（すでに 1.27+ の場合）
+
+<Warning>
+このパスは、すでに 1.27+ にアップグレードしてナレッジベースが動作しなくなった場合にのみ使用してください。1.19 のバックアップはもう作成できないため、データをその場で修復する必要があります。
+</Warning>
+
+#### 前提条件
+
+- 現在 Weaviate 1.27+（1.33 を含む）を実行中
+- Docker + Docker Compose がインストール済み
+- 移行スクリプト用に Python 3.11+
+
+#### ステップ B1：孤立した LSM データを修復
 
 ```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>
 cd docker
-docker compose pull
-docker compose up -d
+docker compose stop weaviate
+
+cd volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
 ```
 
-#### ステップ 7：移行を検証
+Weaviate を再起動：
 
-以下の[検証手順](#verification-steps)セクションを参照してください。
+```bash
+cd ../..
+docker compose start weaviate
+sleep 15
+```
+
+コレクションを一覧表示し、オブジェクト数がゼロでないことを確認：
+
+```bash
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/schema" | python3 -c "
+import sys, json
+for cls in json.load(sys.stdin).get('classes', []):
+    if cls['class'].startswith('Vector_index_'):
+        print(cls['class'])
+"
+
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/objects?class=YOUR_COLLECTION_NAME&limit=0" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin).get('totalResults', 0))"
+```
+
+#### ステップ B2：スキーマ移行を実行
+
+[ステップ A5](#ステップ-a5スキーマを移行) と同じコマンドに従います。必要に応じて virtualenv を作成し、`weaviate-client` 4.x をインストールし、`migrate_weaviate_collections.py` を実行してから、`api`、`worker`、`worker_beat` を再起動します。
+
+#### ステップ B3：Dify で検証
+
+- Dify のナレッジベース UI を開きます。
+- 取得テストを使用して、クエリが結果を返すことを確認します。
+- エラーが続く場合は、`docker compose logs weaviate` を確認して追加の修復手順を確認してください（[トラブルシューティング](#トラブルシューティング)を参照）。
 
 ## レガシーバージョンのデータ移行
 
 <Warning>
-Weaviate 1.19.0 から 1.27.0+ にアップグレードする場合、バージョンギャップが大きくなります。通常、Weaviate はスキーマ移行を自動的に処理しますが、アップグレードを慎重に監視し、バックアップを準備しておく必要があります。
+### 重要：データ移行が必要です
+
+**移行なしではアップグレード後に既存のナレッジベースは動作しません！**
+
+### 移行が必要な理由：
+- 古いデータ：Weaviate v3 クライアントで作成（シンプルなスキーマ）
+- 新しいコード：Weaviate v4 形式が必要（拡張スキーマ）
+- **互換性なし**：古いデータに必要なプロパティがない
+
+### 移行オプション：
+
+##### オプション A：Weaviate バックアップ/復元を使用
+
+##### オプション B：元のドキュメントから再インデックス
+
+##### オプション C：古い Weaviate を維持（まだアップグレードしない）ダウンタイムやデータ損失を許容できない場合。
 </Warning>
 
 ### 自動移行
@@ -379,6 +447,8 @@ WEAVIATE_GRPC_ENDPOINT=weaviate:50051
 # バッチインポート設定
 WEAVIATE_BATCH_SIZE=100
 ```
+
+
 
 ## 検証手順
 
@@ -666,8 +736,8 @@ docker compose logs | grep -i error
 - [Weaviate 移行ガイド](https://weaviate.io/developers/weaviate/installation/migration)
 - [Weaviate v4 クライアントドキュメント](https://weaviate.io/developers/weaviate/client-libraries/python)
 - [Weaviate バックアップと復元](https://weaviate.io/developers/weaviate/configuration/backups)
-- [Dify セルフホスティングガイド](/ja/self-host/installation/docker-compose)
-- [Dify 環境変数](/ja/self-host/configuration/environments)
+- [Dify セルフホスティングガイド](/ja/self-host/quick-start/docker-compose)
+- [Dify 環境変数](/ja/self-host/configurations/environments)
 
 ### コミュニティリソース
 

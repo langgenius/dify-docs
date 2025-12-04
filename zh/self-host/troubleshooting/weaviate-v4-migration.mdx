@@ -1,7 +1,9 @@
 ---
 title: Weaviate 迁移指南：升级到客户端 v4 和服务器 1.27+
 ---
+
 <Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-host/troubleshooting/weaviate-v4-migration)。</Note>
+
 > 本指南说明如何从 Weaviate 客户端 v3 迁移到 v4.17.0，并将 Weaviate 服务器从 1.19.0 版本升级到 1.27.0 或更高版本。此迁移适用于包含 weaviate-client v4 升级的 Dify 版本。
 
 ## 概述
@@ -47,7 +49,7 @@ weaviate-client v4 引入了几个破坏性变更：
 | Dify 版本    | weaviate-client 版本 | 兼容的 Weaviate 服务器版本        |
 |-------------|---------------------|--------------------------------|
 | ≤ 1.9.1     | v3.x                | 1.19.0 - 1.26.x                |
-| ≥ 1.9.2*    | v4.17.0             | 1.27.0+（已测试至 1.32.11）      |
+| ≥ 1.9.2*    | v4.17.0             | 1.27.0+（已测试至 1.33.1）      |
 
 <Info>
 *包含 weaviate-client v4 的确切 Dify 版本可能有所不同。请查看你特定版本的发布说明。此迁移适用于任何使用 weaviate-client v4.17.0 或更高版本的 Dify 版本。
@@ -84,197 +86,265 @@ Weaviate 服务器版本 1.19.0 在一年多前发布，现已过时。升级到
 
 ## 迁移路径
 
-选择与你的部署设置匹配的迁移路径：
+选择与你的部署设置和当前 Weaviate 版本匹配的迁移路径。
 
-### 路径 A：Docker Compose 用户（推荐）
+### 选择你的路径
 
-这是通过 Docker Compose 运行 Dify 并使用捆绑的 Weaviate 实例的用户的最简单路径。
-
-<Info>
-如果你使用 Dify 的标准 Docker Compose 设置，升级 Dify 时 Weaviate 版本会自动更新。无需手动配置。
-</Info>
-
-#### 步骤 1：备份数据
-
-导航到 Dify 项目目录并备份 Docker 卷：
-
-```bash
-cd /path/to/dify/docker
-docker compose down
-tar -cvf ../weaviate-backup-$(date +%s).tgz volumes/weaviate
-```
-
-<Info>
-将备份文件存储在项目目录外的安全位置。如果迁移失败需要回滚，你将需要它。
-</Info>
-
-#### 步骤 2：更新 Dify
-
-拉取包含 weaviate-client v4 和 Weaviate 1.27.0+ 的最新 Dify 版本：
-
-```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>  # 检查发布说明以获取正确版本
-cd docker
-docker compose pull
-docker compose up -d
-```
-
-更新的 Docker Compose 配置包括：
-- Weaviate 服务器 1.27.0+ 镜像
-- weaviate-client v4.17.0（在 Dify 容器中自动安装）
-- 正确的 gRPC 端口配置 (50051)
-
-#### 步骤 3：监控启动
-
-观察日志以确保服务正确启动：
-
-```bash
-# 观察 Weaviate 启动
-docker compose logs -f weaviate
-
-# 观察 Dify API 启动
-docker compose logs -f api
-```
-
-等待 Weaviate 显示"ready to serve requests"，Dify API 成功连接。
-
-#### 步骤 4：验证迁移
-
-请参阅下面的[验证步骤](#verification-steps)部分。
-
-### 路径 B：外部/自托管 Weaviate
-
-适用于在单独服务器、托管实例或 Weaviate Cloud 上运行 Weaviate 的用户。
+- **路径 A – 带备份的迁移（从 1.19）：**如果你仍在使用 Weaviate 1.19，推荐此路径。你将创建备份，升级到 1.27+，修复任何孤立数据，然后迁移 schema。
+- **路径 B – 直接恢复（已在 1.27+）：**如果你已经升级到 1.27+ 且知识库停止工作，请使用此路径。此路径专注于修复数据布局并运行 schema 迁移。
 
 <Warning>
-此路径适用于单独管理 Weaviate 实例的用户。如果你通过 Docker Compose 使用 Dify 捆绑的 Weaviate，请改用路径 A。
+**不要**尝试降级回 1.19。schema 格式不兼容，会导致数据丢失。
 </Warning>
 
-#### 步骤 1：备份 Weaviate 数据
-
-使用 Weaviate 的备份 API 创建完整备份：
-
-```bash
-# 创建备份
-curl -X POST \
-  "http://your-weaviate-host:8080/v1/backups/filesystem" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id": "dify-backup-'$(date +%s)'",
-    "include": ["*"]
-  }'
-
-# 检查备份状态
-curl "http://your-weaviate-host:8080/v1/backups/filesystem/{backup-id}"
-```
+### 路径 A：带备份的迁移（从 1.19）
 
 <Info>
-有关详细的备份说明，请参阅 [Weaviate 备份文档](https://weaviate.io/developers/weaviate/configuration/backups)。
+最安全的路径。在升级前创建备份，如果出现问题可以恢复。
 </Info>
 
-#### 步骤 2：停止 Weaviate 实例
+#### 前提条件
 
-```bash
-# 对于 Docker 用户
-docker stop weaviate
+- 当前运行 Weaviate 1.19
+- 已安装 Docker + Docker Compose
+- 可用 Python 3.11+ 用于 schema 迁移脚本
 
-# 对于 systemd 用户
-sudo systemctl stop weaviate
+#### 步骤 A1：在 Weaviate 1.19 上启用备份模块
 
-# 对于 Kubernetes 用户
-kubectl scale deployment weaviate --replicas=0
-```
-
-#### 步骤 3：升级 Weaviate 服务器
-
-**对于 Docker：**
-
-```bash
-docker pull cr.weaviate.io/semitechnologies/weaviate:1.27.0
-docker run -d \
-  --name weaviate \
-  -p 8080:8080 \
-  -p 50051:50051 \
-  -v /path/to/data:/var/lib/weaviate \
-  -e AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false \
-  -e AUTHENTICATION_APIKEY_ENABLED=true \
-  -e AUTHENTICATION_APIKEY_ALLOWED_KEYS=your-secret-key \
-  -e PERSISTENCE_DATA_PATH=/var/lib/weaviate \
-  -e QUERY_DEFAULTS_LIMIT=20 \
-  -e DEFAULT_VECTORIZER_MODULE=none \
-  cr.weaviate.io/semitechnologies/weaviate:1.27.0
-```
-
-**对于 Kubernetes：**
-
-更新你的 Helm 值或清单：
+编辑 `docker/docker-compose.yaml`，使 `weaviate` 服务包含备份配置：
 
 ```yaml
-image:
-  registry: cr.weaviate.io
-  repository: semitechnologies/weaviate
-  tag: 1.27.0
+  weaviate:
+    image: semitechnologies/weaviate:1.19.0
+    volumes:
+      - ./volumes/weaviate:/var/lib/weaviate
+      - ./volumes/weaviate_backups:/var/lib/weaviate/backups
+    ports:
+      - "8080:8080"
+      - "50051:50051"
+    environment:
+      ENABLE_MODULES: backup-filesystem
+      BACKUP_FILESYSTEM_PATH: /var/lib/weaviate/backups
+      # ... 其余环境变量
 ```
 
-然后应用：
+重启 Weaviate 以应用更改：
 
 ```bash
-helm upgrade weaviate weaviate/weaviate -f values.yaml
-# 或
-kubectl apply -f weaviate-deployment.yaml
+cd docker
+docker compose down
+docker compose --profile up -d
+sleep 10
 ```
 
-**对于二进制安装：**
+#### 步骤 A2：创建备份
 
-从 [Weaviate 发布页面](https://github.com/weaviate/weaviate/releases)下载并安装新版本。
+1. **列出你的集合：**
 
-#### 步骤 4：验证 Weaviate 升级
+   ```bash
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/schema" | \
+     python3 -c "
+   import json, sys
+   data = json.load(sys.stdin)
+   print("Collections:")
+   for cls in data.get('classes', []):
+       print(f"  - {cls['class']}")
+   "
+   ```
 
-检查 Weaviate 是否运行正确版本：
+2. **触发备份：**如果你愿意，可以包含特定的集合名称。
+
+   ```bash
+   curl -X POST \
+     -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     -H "Content-Type: application/json" \
+     "http://localhost:8080/v1/backups/filesystem" \
+     -d '{
+       "id": "kb-backup",
+       "include": ["Vector_index_COLLECTION1_Node", "Vector_index_COLLECTION2_Node"]
+     }'
+   ```
+
+3. **检查备份状态：**
+
+   ```bash
+   sleep 5
+   curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+     "http://localhost:8080/v1/backups/filesystem/kb-backup" | \
+     python3 -m json.tool | grep status
+   ```
+
+4. **验证备份文件是否存在：**
+
+   ```bash
+   ls -lh docker/volumes/weaviate_backups/kb-backup/
+   ```
+
+#### 步骤 A3：升级到 Weaviate 1.27+
+
+1. **升级 Dify 到包含 Weaviate 1.27+ 的版本：**
+
+   ```bash
+   cd /path/to/dify
+   git fetch origin
+   git checkout main  # 或包含升级的标记版本
+   ```
+
+2. **确认新的 Weaviate 镜像：**
+
+   ```bash
+   grep "image: semitechnologies/weaviate" docker/docker-compose.yaml
+   ```
+
+3. **使用新版本重启：**
+
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   sleep 20
+   ```
+
+#### 步骤 A4：修复孤立的 LSM 数据（如果存在）
 
 ```bash
-curl http://your-weaviate-host:8080/v1/meta | jq '.version'
+cd docker/volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
+
+cd ../../
+docker compose restart weaviate
+sleep 15
 ```
 
-你应该看到版本 1.27.0 或更高。
+#### 步骤 A5：迁移 Schema
 
-#### 步骤 5：更新 Dify 配置
+1. **安装依赖**（在临时 virtualenv 中即可）：
 
-更新 Dify 环境变量以配置外部 Weaviate 连接：
+   ```bash
+   cd /path/to/dify
+   python3 -m venv weaviate_migration_env
+   source weaviate_migration_env/bin/activate
+   pip install weaviate-client requests
+   ```
 
-```bash
-VECTOR_STORE=weaviate
-WEAVIATE_ENDPOINT=http://your-weaviate-host:8080
-WEAVIATE_API_KEY=your-api-key
-WEAVIATE_GRPC_ENABLED=true
-WEAVIATE_GRPC_ENDPOINT=your-weaviate-host:50051
-```
+2. **运行迁移脚本：**
+
+   ```bash
+   python3 migrate_weaviate_collections.py
+   ```
+
+3. **重启 Dify 服务：**
+
+   ```bash
+   cd docker
+   docker compose restart api worker worker_beat
+   sleep 15
+   ```
+
+4. **在 UI 中验证：**打开 Dify，针对迁移后的知识库测试检索功能。
 
 <Info>
-`WEAVIATE_GRPC_ENDPOINT` 应采用 `hostname:port` 格式，不带任何协议前缀（无 `grpc://` 或 `http://`）。
+确认迁移成功后，你可以删除 `weaviate_migration_env` 和备份文件以回收磁盘空间。
 </Info>
 
-#### 步骤 6：更新 Dify
+### 路径 B：直接恢复（已在 1.27+）
+
+<Warning>
+仅当你已经升级到 1.27+ 且知识库停止工作时才使用此路径。你已无法创建 1.19 备份，因此必须就地修复数据。
+</Warning>
+
+#### 前提条件
+
+- 当前运行 Weaviate 1.27+（包括 1.33）
+- 已安装 Docker + Docker Compose
+- Python 3.11+ 用于迁移脚本
+
+#### 步骤 B1：修复孤立的 LSM 数据
 
 ```bash
-cd /path/to/dify
-git fetch origin
-git checkout <version-with-weaviate-v4>
 cd docker
-docker compose pull
-docker compose up -d
+docker compose stop weaviate
+
+cd volumes/weaviate
+
+for dir in vector_index_*_node_*_lsm; do
+  [ -d "$dir" ] || continue
+
+  index_id=$(echo "$dir" | sed -n 's/vector_index_\([^_]*_[^_]*_[^_]*_[^_]*_[^_]*\)_node_.*/\1/p')
+  shard_id=$(echo "$dir" | sed -n 's/.*_node_\([^_]*\)_lsm/\1/p')
+
+  mkdir -p "vector_index_${index_id}_node/$shard_id/lsm"
+  cp -a "$dir/"* "vector_index_${index_id}_node/$shard_id/lsm/"
+
+  echo "✓ Copied $dir"
+done
 ```
 
-#### 步骤 7：验证迁移
+重启 Weaviate：
 
-请参阅下面的[验证步骤](#verification-steps)部分。
+```bash
+cd ../..
+docker compose start weaviate
+sleep 15
+```
+
+列出集合并确认对象计数非零：
+
+```bash
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/schema" | python3 -c "
+import sys, json
+for cls in json.load(sys.stdin).get('classes', []):
+    if cls['class'].startswith('Vector_index_'):
+        print(cls['class'])
+"
+
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  "http://localhost:8080/v1/objects?class=YOUR_COLLECTION_NAME&limit=0" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin).get('totalResults', 0))"
+```
+
+#### 步骤 B2：运行 Schema 迁移
+
+按照[步骤 A5](#步骤-a5迁移-schema)中的相同命令操作。如果需要，创建 virtualenv，安装 `weaviate-client` 4.x，运行 `migrate_weaviate_collections.py`，然后重启 `api`、`worker` 和 `worker_beat`。
+
+#### 步骤 B3：在 Dify 中验证
+
+- 打开 Dify 的知识库 UI。
+- 使用检索测试确认查询返回结果。
+- 如果错误持续存在，检查 `docker compose logs weaviate` 以获取额外的修复步骤（参见[故障排除](#故障排除)）。
 
 ## 旧版本的数据迁移
 
 <Warning>
-如果从 Weaviate 1.19.0 升级到 1.27.0+，版本差距很大。虽然 Weaviate 通常会自动处理架构迁移，但你应该仔细监控升级并准备好备份。
+### 重要：需要数据迁移
+
+**升级后如果不进行迁移，你现有的知识库将无法工作！**
+
+### 为什么需要迁移：
+- 旧数据：使用 Weaviate v3 客户端创建（简单 schema）
+- 新代码：需要 Weaviate v4 格式（扩展 schema）
+- **不兼容**：旧数据缺少必需的属性
+
+### 迁移选项：
+
+##### 选项 A：使用 Weaviate 备份/恢复
+
+##### 选项 B：从原始文档重新索引
+
+##### 选项 C：保留旧 Weaviate（暂不升级）如果你无法承受停机或数据丢失。
 </Warning>
 
 ### 自动迁移
@@ -377,6 +447,8 @@ WEAVIATE_GRPC_ENDPOINT=weaviate:50051
 # 批量导入设置
 WEAVIATE_BATCH_SIZE=100
 ```
+
+
 
 ## 验证步骤
 
@@ -557,9 +629,9 @@ docker compose restart worker
 
 3. 如果仍然缓慢，请检查 Dify 和 Weaviate 之间的网络延迟
 
-### 问题：架构迁移错误
+### 问题：Schema 迁移错误
 
-**原因：**Weaviate 版本之间的架构变更不兼容或数据损坏。
+**原因：**Weaviate 版本之间的 schema 变更不兼容或数据损坏。
 
 **解决方案：**
 
@@ -568,7 +640,7 @@ docker compose restart worker
    docker compose logs weaviate | tail -100
    ```
 
-2. 列出当前架构：
+2. 列出当前 schema：
    ```bash
    curl http://localhost:8080/v1/schema
    ```
@@ -579,7 +651,7 @@ docker compose restart worker
    curl -X DELETE http://localhost:8080/v1/schema/YourCollectionName
    ```
 
-4. 重启 Dify 以重新创建架构：
+4. 重启 Dify 以重新创建 schema：
    ```bash
    docker compose restart api worker
    ```
@@ -664,8 +736,8 @@ docker compose logs | grep -i error
 - [Weaviate 迁移指南](https://weaviate.io/developers/weaviate/installation/migration)
 - [Weaviate v4 客户端文档](https://weaviate.io/developers/weaviate/client-libraries/python)
 - [Weaviate 备份和恢复](https://weaviate.io/developers/weaviate/configuration/backups)
-- [Dify 自托管指南](/zh/self-host/installation/docker-compose)
-- [Dify 环境变量](/zh/self-host/configuration/environments)
+- [Dify 自托管指南](/zh/self-host/quick-start/docker-compose)
+- [Dify 环境变量](/zh/self-host/configurations/environments)
 
 ### 社区资源
 
