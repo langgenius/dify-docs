@@ -1,0 +1,393 @@
+---
+dimensions:
+  type:
+    primary: reference
+    detail: core
+  level: beginner
+standard_title: Tool
+language: ja
+title: ツールの戻り値
+description: このドキュメントでは、Difyプラグインにおけるツールのデータ構造と使用方法について詳しく紹介します。さまざまな種類のメッセージ（画像URL、リンク、テキスト、ファイル、JSON）の返し方、変数およびストリーミング変数メッセージの作成方法、ワークフローで参照するためのツール出力変数スキーマの定義方法について説明します。
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/features-and-specs/plugin-types/tool)を参照してください。</Note>
+
+## 概要
+
+<Note>
+詳細なインターフェースドキュメントに入る前に、Difyプラグインのツール統合プロセスについて全般的な理解があることを確認してください。
+</Note>
+
+<CardGroup cols={2}>
+  <Card title="メッセージタイプ" icon="comment-dots" href="#message-return">
+    テキスト、リンク、画像、JSONなど、さまざまな種類のメッセージを返す
+  </Card>
+  <Card title="変数" icon="code-branch" href="#variable">
+    ワークフロー統合のための変数を作成および操作する
+  </Card>
+  <Card title="出力スキーマ" icon="diagram-project" href="#returning-custom-variables">
+    ワークフロー参照用のカスタム出力変数を定義する
+  </Card>
+</CardGroup>
+
+## データ構造
+
+### メッセージの戻り値
+
+<Info>
+Difyは `text`、`links`、`images`、`file BLOBs`、`JSON` など、さまざまなメッセージタイプをサポートしています。これらのメッセージは専用のインターフェースを通じて返すことができます。
+</Info>
+
+デフォルトでは、ワークフロー内のツールの出力には `files`、`text`、`json` の3つの固定変数が含まれます。以下のメソッドを使用して、これらの変数に適切なコンテンツを設定できます。
+
+<Tip>
+`create_image_message` などのメソッドを使用して画像を返すことができますが、ツールはカスタム出力変数もサポートしており、ワークフロー内で特定のデータを参照するのに便利です。
+</Tip>
+
+### メッセージタイプ
+
+<CodeGroup>
+```python Image URL
+def create_image_message(self, image: str) -> ToolInvokeMessage:
+    """
+    Return an image URL message
+    
+    Dify will automatically download the image from the provided URL
+    and display it to the user.
+    
+    Args:
+        image: URL to an image file
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+
+```python Link
+def create_link_message(self, link: str) -> ToolInvokeMessage:
+    """
+    Return a clickable link message
+    
+    Args:
+        link: URL to be displayed as a clickable link
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+
+```python Text
+def create_text_message(self, text: str) -> ToolInvokeMessage:
+    """
+    Return a text message
+    
+    Args:
+        text: Text content to be displayed
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+
+```python File
+def create_blob_message(self, blob: bytes, meta: dict = None) -> ToolInvokeMessage:
+    """
+    Return a file blob message
+    
+    For returning raw file data such as images, audio, video, 
+    or documents (PPT, Word, Excel, etc.)
+    
+    Args:
+        blob: Raw file data in bytes
+        meta: File metadata dictionary. Include 'mime_type' to specify 
+              the file type, otherwise 'octet/stream' will be used
+              
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+
+```python JSON
+def create_json_message(self, json: dict) -> ToolInvokeMessage:
+    """
+    Return a formatted JSON message
+    
+    Useful for data transmission between workflow nodes.
+    In agent mode, most LLMs can read and understand JSON data.
+    
+    Args:
+        json: Python dictionary to be serialized as JSON
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+</CodeGroup>
+
+<Accordion title="パラメータ">
+  <ParamField path="image" type="string" required>
+    ダウンロードして表示される画像のURL
+  </ParamField>
+  
+  <ParamField path="link" type="string" required>
+    クリック可能なリンクとして表示されるURL
+  </ParamField>
+  
+  <ParamField path="text" type="string" required>
+    表示されるテキストコンテンツ
+  </ParamField>
+  
+  <ParamField path="blob" type="bytes" required>
+    バイト形式の生ファイルデータ
+  </ParamField>
+  
+  <ParamField path="meta" type="dict">
+    以下を含むファイルメタデータ：
+    - `mime_type`：ファイルのMIMEタイプ（例："image/png"）
+    - ファイルに関連するその他のメタデータ
+  </ParamField>
+  
+  <ParamField path="json" type="dict" required>
+    JSONとしてシリアライズされるPython辞書
+  </ParamField>
+</Accordion>
+
+<Tip>
+ファイルBLOBを扱う際は、ファイルが正しく処理されるように、`meta` 辞書に常に `mime_type` を指定してください。例：`{"mime_type": "image/png"}`。
+</Tip>
+
+### 変数
+
+<CodeGroup>
+```python Standard Variable
+from typing import Any
+
+def create_variable_message(self, variable_name: str, variable_value: Any) -> ToolInvokeMessage:
+    """
+    Create a named variable for workflow integration
+    
+    For non-streaming output variables. If multiple instances with the 
+    same name are created, the latest one overrides previous values.
+    
+    Args:
+        variable_name: Name of the variable to create
+        variable_value: Value of the variable (any Python data type)
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+
+```python Streaming Variable
+def create_stream_variable_message(
+    self, variable_name: str, variable_value: str
+) -> ToolInvokeMessage:
+    """
+    Create a streaming variable with typewriter effect
+    
+    When referenced in an answer node in a chatflow application,
+    the text will be output with a typewriter effect.
+    
+    Args:
+        variable_name: Name of the variable to create
+        variable_value: String value to stream (only strings supported)
+        
+    Returns:
+        ToolInvokeMessage: Message object for the tool response
+    """
+    pass
+```
+</CodeGroup>
+
+<Accordion title="パラメータ">
+  <ParamField path="variable_name" type="string" required>
+    作成または更新される変数の名前
+  </ParamField>
+  
+  <ParamField path="variable_value" type="Any/string" required>
+    変数に割り当てる値：
+    - 標準変数の場合：任意のPythonデータ型
+    - ストリーミング変数の場合：文字列データのみ
+  </ParamField>
+</Accordion>
+
+<Warning>
+ストリーミング変数メソッド（`create_stream_variable_message`）は現在、文字列データのみをサポートしています。複雑なデータ型はタイプライター効果でストリーミングできません。
+</Warning>
+
+## カスタム出力変数
+
+<Info>
+ワークフローアプリケーションでツールの出力変数を参照するには、どの変数が出力される可能性があるかを定義する必要があります。これはツールのマニフェストで [JSON Schema](https://json-schema.org/) 形式を使用して行います。
+</Info>
+
+### 出力スキーマの定義
+
+<CodeGroup>
+```yaml Tool Manifest with Output Schema
+identity:
+  author: example_author
+  name: example_tool
+  label:
+    en_US: Example Tool
+    zh_Hans: 示例工具
+    ja_JP: ツール例
+    pt_BR: Ferramenta de exemplo
+description:
+  human:
+    en_US: A simple tool that returns a name
+    zh_Hans: 返回名称的简单工具
+    ja_JP: 名前を返す簡単なツール
+    pt_BR: Uma ferramenta simples que retorna um nome
+  llm: A simple tool that returns a name variable
+output_schema:
+  type: object
+  properties:
+    name:
+      type: string
+      description: "The name returned by the tool"
+    age:
+      type: integer
+      description: "The age returned by the tool"
+    profile:
+      type: object
+      properties:
+        interests:
+          type: array
+          items:
+            type: string
+        location:
+          type: string
+```
+</CodeGroup>
+
+<Accordion title="スキーマ構造">
+  <ParamField path="output_schema" type="object" required>
+    ツールの出力スキーマを定義するルートオブジェクト
+  </ParamField>
+  
+  <ParamField path="type" type="string" required>
+    ツール出力スキーマでは "object" である必要があります
+  </ParamField>
+  
+  <ParamField path="properties" type="object" required>
+    すべての可能な出力変数の辞書
+  </ParamField>
+  
+  <ParamField path="properties.[variable_name]" type="object">
+    各出力変数の定義（型と説明を含む）
+  </ParamField>
+</Accordion>
+
+<Warning>
+出力スキーマを定義しても、実装コードで `create_variable_message()` を使用して実際に変数を返す必要があります。そうしないと、ワークフローはその変数に対して `None` を受け取ります。
+</Warning>
+
+### 実装例
+
+<CodeGroup>
+```python Basic Variable Example
+def run(self, inputs):
+    # Process inputs and generate a name
+    generated_name = "Alice"
+    
+    # Return the name as a variable that matches the output_schema
+    return self.create_variable_message("name", generated_name)
+```
+
+```python Complex Structure Example
+def run(self, inputs):
+    # Generate complex structured data
+    user_data = {
+        "name": "Bob",
+        "age": 30,
+        "profile": {
+            "interests": ["coding", "reading", "hiking"],
+            "location": "San Francisco"
+        }
+    }
+    
+    # Return individual variables
+    self.create_variable_message("name", user_data["name"])
+    self.create_variable_message("age", user_data["age"])
+    self.create_variable_message("profile", user_data["profile"])
+    
+    # Also return a text message for display
+    return self.create_text_message(f"User {user_data['name']} processed successfully")
+```
+</CodeGroup>
+
+<Tip>
+複雑なワークフローの場合、複数の出力変数を定義してすべてを返すことができます。これにより、ワークフロー設計者がツールを使用する際の柔軟性が向上します。
+</Tip>
+
+## 例
+
+### 完全なツール実装
+
+<CodeGroup>
+```python Weather Forecast Tool
+import requests
+from typing import Any
+
+class WeatherForecastTool:
+    def run(self, inputs: dict) -> Any:
+        # Get location from inputs
+        location = inputs.get("location", "London")
+        
+        try:
+            # Call weather API (example only)
+            weather_data = self._get_weather_data(location)
+            
+            # Create variables for workflow use
+            self.create_variable_message("temperature", weather_data["temperature"])
+            self.create_variable_message("conditions", weather_data["conditions"])
+            self.create_variable_message("forecast", weather_data["forecast"])
+            
+            # Create a JSON message for data transmission
+            self.create_json_message(weather_data)
+            
+            # Create an image message for the weather map
+            self.create_image_message(weather_data["map_url"])
+            
+            # Return a formatted text response
+            return self.create_text_message(
+                f"Weather in {location}: {weather_data['temperature']}°C, {weather_data['conditions']}. "
+                f"Forecast: {weather_data['forecast']}"
+            )
+            
+        except Exception as e:
+            # Handle errors gracefully
+            return self.create_text_message(f"Error retrieving weather data: {str(e)}")
+    
+    def _get_weather_data(self, location: str) -> dict:
+        # Mock implementation - in a real tool, this would call a weather API
+        return {
+            "location": location,
+            "temperature": 22,
+            "conditions": "Partly Cloudy",
+            "forecast": "Sunny with occasional showers tomorrow",
+            "map_url": "https://example.com/weather-map.png"
+        }
+```
+</CodeGroup>
+
+<Tip>
+ツールを設計する際は、直接出力（ユーザーが見るもの）と変数出力（他のワークフローノードが使用できるもの）の両方を考慮してください。この分離により、ツールの使用方法に柔軟性が生まれます。
+</Tip>
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-en/0411-tool.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

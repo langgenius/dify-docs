@@ -1,0 +1,349 @@
+---
+title: '10分でDifyプラグインを構築するガイド'
+description: 'わずか10分でFlomoメモサービスと連携する機能的なDifyプラグインの構築方法を学びます'
+language: en
+standard_title: 10-Minute Guide to Building Dify Plugins
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/develop-flomo-plugin)を参照してください。</Note>
+
+## 構築するもの
+
+このガイドを終えると、以下の機能を持つDifyプラグインが完成します：
+
+- Flomoメモ取りAPIへの接続
+- AIとの会話から直接Flomoにメモを保存する機能
+- 認証とエラー状態の適切な処理
+- Dify Marketplaceでの配布準備完了
+
+<CardGroup cols={2}>
+  <Card title="所要時間" icon="clock">
+    10分
+  </Card>
+  <Card title="前提条件" icon="list-check">
+    基本的なPythonの知識とFlomoアカウント
+  </Card>
+</CardGroup>
+
+## ステップ1：Dify CLIのインストールとプロジェクト作成
+
+<Steps>
+  <Step title="Dify CLIのインストール">
+    <Tabs>
+      <Tab title="Mac">
+        ```bash
+        brew tap langgenius/dify
+        brew install dify
+        ```
+      </Tab>
+      <Tab title="Linux">
+        [Dify GitHubリリースページ](https://github.com/langgenius/dify-plugin-daemon/releases)から最新のDify CLIを取得してください
+        
+        ```bash
+        # Download appropriate version
+        chmod +x dify-plugin-linux-amd64
+        mv dify-plugin-linux-amd64 dify
+        sudo mv dify /usr/local/bin/
+        ```
+      </Tab>
+    </Tabs>
+    
+    インストールを確認：
+    ```bash
+    dify version
+    ```
+  </Step>
+  
+  <Step title="プラグインプロジェクトの初期化">
+    以下のコマンドで新しいプラグインプロジェクトを作成します：
+    
+    ```bash
+    dify plugin init
+    ```
+    
+    プロンプトに従ってプラグインをセットアップします：
+    - 名前を「flomo」にする
+    - プラグインタイプとして「tool」を選択
+    - その他の必須フィールドを入力
+  </Step>
+  
+  <Step title="プロジェクトに移動">
+    ```bash
+    cd flomo
+    ```
+    
+    これにより、必要なすべてのファイルを含むプラグインの基本構造が作成されます。
+  </Step>
+</Steps>
+
+## ステップ2：プラグインマニフェストの定義
+
+<Info>
+manifest.yamlファイルはプラグインのメタデータ、権限、機能を定義します。
+</Info>
+
+`manifest.yaml`ファイルを作成します：
+
+```yaml
+version: 0.0.4
+type: plugin
+author: yourname
+label:
+  en_US: Flomo
+  zh_Hans: Flomo 浮墨笔记
+created_at: "2023-10-01T00:00:00Z"
+icon: icon.png
+
+resource:
+  memory: 67108864  # 64MB
+  permission:
+    storage:
+      enabled: false
+
+plugins:
+  tools:
+    - flomo.yaml
+  
+meta:
+  version: 0.0.1
+  arch:
+    - amd64
+    - arm64
+  runner:
+    language: python
+    version: 3.12
+    entrypoint: main
+```
+
+## ステップ3：ツール定義の作成
+
+ツールインターフェースを定義する`flomo.yaml`ファイルを作成します：
+
+```yaml
+identity:
+  author: yourname
+  name: flomo
+  label:
+    en_US: Flomo Note
+    zh_Hans: Flomo 浮墨笔记
+description:
+  human:
+    en_US: Add notes to your Flomo account directly from Dify.
+    zh_Hans: 直接从Dify添加笔记到您的Flomo账户。
+  llm: >
+    A tool that allows users to save notes to Flomo. Use this tool when users want to save important information from the conversation. The tool accepts a 'content' parameter that contains the text to be saved as a note.
+credential_schema:
+  api_url:
+    type: string
+    required: true
+    label:
+      en_US: API URL
+      zh_Hans: API URL
+    human_description:
+      en_US: Flomo API URL from your Flomo account settings.
+      zh_Hans: 从您的Flomo账户设置中获取的API URL。
+tool_schema:
+  content:
+    type: string
+    required: true
+    label:
+      en_US: Note Content
+      zh_Hans: 笔记内容
+    human_description:
+      en_US: Content to save as a note in Flomo.
+      zh_Hans: 要保存为Flomo笔记的内容。
+```
+
+## ステップ4：コアユーティリティ関数の実装
+
+API連携用のユーティリティモジュールを`utils/flomo_utils.py`に作成します：
+
+<CodeGroup>
+```python utils/flomo_utils.py
+import requests
+
+def send_flomo_note(api_url: str, content: str) -> None:
+    """
+    Send a note to Flomo via the API URL. Raises requests.RequestException on network errors,
+    and ValueError on invalid status codes or input.
+    """
+    api_url = api_url.strip()
+    if not api_url:
+        raise ValueError("API URL is required and cannot be empty.")
+    if not api_url.startswith('https://flomoapp.com/iwh/'):
+        raise ValueError(
+            "API URL should be in the format: https://flomoapp.com/iwh/{token}/{secret}/"
+        )
+    if not content:
+        raise ValueError("Content cannot be empty.")
+    
+    headers = {'Content-Type': 'application/json'}
+    response = requests.post(api_url, json={"content": content}, headers=headers, timeout=10)
+    
+    if response.status_code != 200:
+        raise ValueError(f"API URL is not valid. Received status code: {response.status_code}")
+```
+</CodeGroup>
+
+## ステップ5：ツールプロバイダーの実装
+
+ツールプロバイダーは認証情報の検証を処理します。`provider/flomo.py`を作成します：
+
+<CodeGroup>
+```python provider/flomo.py
+from typing import Any
+from dify_plugin import ToolProvider
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+import requests
+from utils.flomo_utils import send_flomo_note
+
+class FlomoProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+        try:
+            api_url = credentials.get('api_url', '').strip()
+            # Use utility for validation and sending test note
+            send_flomo_note(api_url, "Hello, #flomo https://flomoapp.com")
+        except ValueError as e:
+            raise ToolProviderCredentialValidationError(str(e))
+        except requests.RequestException as e:
+            raise ToolProviderCredentialValidationError(f"Connection error: {str(e)}")
+```
+</CodeGroup>
+
+## ステップ6：ツールの実装
+
+Toolクラスはユーザーがプラグインを呼び出したときに実際のAPI呼び出しを処理します。`tools/flomo.py`を作成します：
+
+<CodeGroup>
+```python tools/flomo.py
+from collections.abc import Generator
+from typing import Any
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
+import requests
+from utils.flomo_utils import send_flomo_note
+
+class FlomoTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        content = tool_parameters.get("content", "")
+        api_url = self.runtime.credentials.get("api_url", "")
+        
+        try:
+            send_flomo_note(api_url, content)
+        except ValueError as e:
+            yield self.create_text_message(str(e))
+            return
+        except requests.RequestException as e:
+            yield self.create_text_message(f"Connection error: {str(e)}")
+            return
+            
+        # Return success message and structured data
+        yield self.create_text_message(
+            "Note created successfully! Your content has been sent to Flomo."
+        )
+        yield self.create_json_message({
+            "status": "success",
+            "content": content,
+        })
+```
+</CodeGroup>
+
+<Warning>
+常に例外を適切に処理し、ユーザーフレンドリーなエラーメッセージを返すようにしてください。あなたのプラグインはDifyエコシステムにおけるブランドを代表するものであることを忘れないでください。
+</Warning>
+
+## ステップ7：プラグインのテスト
+
+<Steps>
+  <Step title="デバッグ環境のセットアップ">
+    サンプル環境ファイルをコピーします：
+    ```bash
+    cp .env.example .env
+    ```
+    
+    `.env`ファイルをDify環境の詳細で編集します：
+    ```
+    INSTALL_METHOD=remote
+    REMOTE_INSTALL_HOST=debug-plugin.dify.dev
+    REMOTE_INSTALL_PORT=5003
+    REMOTE_INSTALL_KEY=your_debug_key
+    ```
+    
+    デバッグキーとホストはDifyダッシュボードで確認できます：右上の「プラグイン」アイコンをクリックし、デバッグアイコンをクリックします。ポップアップウィンドウで「APIキー」と「ホストアドレス」をコピーしてください。
+  </Step>
+  
+  <Step title="依存関係のインストールと実行">
+    ```bash
+    pip install -r requirements.txt
+    python -m main
+    ```
+    
+    プラグインがデバッグモードでDifyインスタンスに接続されます。
+  </Step>
+  
+  <Step title="機能のテスト">
+    Difyインスタンスでプラグインに移動し、デバッグ中のプラグイン（「debugging」とマークされています）を見つけます。
+    Flomo APIの認証情報を追加し、メモの送信をテストします。
+  </Step>
+</Steps>
+
+## ステップ9：パッケージ化と配布
+
+プラグインを共有する準備ができたら：
+
+```bash
+dify plugin package ./
+```
+
+これにより、Dify Marketplaceにアップロードできる`plugin.difypkg`ファイルが作成されます。
+
+## FAQとトラブルシューティング
+
+<AccordionGroup title="一般的な問題とトラブルシューティング">
+<Accordion title="デバッグモードでプラグインが表示されない">
+    `.env`ファイルが正しく設定されていること、正しいデバッグキーを使用していることを確認してください。
+</Accordion>
+
+<Accordion title="API認証エラー">
+    Flomo API URLの形式を再確認してください。形式は次のようになっている必要があります：`https://flomoapp.com/iwh/{token}/{secret}/`
+</Accordion>
+
+<Accordion title="パッケージ化に失敗">
+    必要なすべてのファイルが存在し、manifest.yamlの構造が有効であることを確認してください。
+</Accordion>
+</AccordionGroup>
+
+## まとめ
+
+外部APIサービスと連携する機能的なDifyプラグインを構築しました！この同じパターンは、データベースや検索エンジンから生産性ツールやカスタムAPIまで、何千ものサービスとの統合に使用できます。
+
+<CardGroup cols={2}>
+  <Card title="ドキュメント" icon="book">
+    機能、セットアップ、使用例を説明するREADME.mdを英語（en_US）で作成してください
+  </Card>
+  <Card title="ローカライズ" icon="language">
+    他の言語用に`readme/README_zh_Hans.md`のような追加のREADMEファイルを作成してください
+  </Card>
+</CardGroup>
+
+<CheckList>
+  <CheckListItem id="privacy">
+    プラグインを公開する場合はプライバシーポリシー（PRIVACY.md）を追加してください
+  </CheckListItem>
+  <CheckListItem id="documentation">
+    ドキュメントに包括的な例を含めてください
+  </CheckListItem>
+  <CheckListItem id="testing">
+    さまざまなドキュメントサイズとフォーマットで徹底的にテストしてください
+  </CheckListItem>
+</CheckList>
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-en/0432-develop-flomo-plugin.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

@@ -1,0 +1,387 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Tool Plugin
+language: en
+title: ツールプラグイン
+description: このドキュメントでは、Dify用のツールプラグインの開発方法について詳細な手順を提供します。Google Searchを例として、完全なツールプラグイン開発プロセスを示します。内容には、プラグインの初期化、テンプレートの選択、ツールプロバイダー設定ファイルの定義、サードパーティサービス認証情報の追加、ツール機能コードの実装、デバッグ、およびリリース用のパッケージングが含まれます。
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)を参照してください。</Note>
+
+ツールとは、Chatflow / ワークフロー / エージェントタイプのアプリケーションから呼び出すことができるサードパーティサービスを指し、Difyアプリケーションを強化するための完全なAPI実装機能を提供します。例えば、オンライン検索、画像生成などの追加機能を追加できます。
+
+![Tool Plugin Example](https://assets-docs.dify.ai/2024/12/7e7bcf1f9e3acf72c6917ea9de4e4613.png)
+
+この記事では、**「ツールプラグイン」**とは、ツールプロバイダーファイル、機能コード、およびその他の構造を含む完全なプロジェクトを指します。ツールプロバイダーには複数のツール（単一のツール内で提供される追加機能として理解できます）を含めることができ、構造は以下の通りです：
+
+```
+- Tool Provider
+    - Tool A
+    - Tool B
+```
+
+![Tool Plugin Structure](https://assets-docs.dify.ai/2025/02/60c4c86a317d865133aa460592eac079.png)
+
+この記事では、`Google Search`を例として、ツールプラグインを素早く開発する方法を説明します。
+
+### 前提条件
+
+-   Difyプラグインスキャフォールディングツール
+-   Python環境、バージョン ≥ 3.12
+
+プラグイン開発スキャフォールディングツールの準備方法の詳細については、[開発ツールの初期化](/plugin-dev-en/0221-initialize-development-tools)を参照してください。初めてプラグインを開発する場合は、まず[Difyプラグイン開発：Hello Worldガイド](/plugin-dev-en/0211-getting-started-dify-tool)を読むことをお勧めします。
+
+### 新しいプロジェクトの作成
+
+スキャフォールディングコマンドラインツールを実行して、新しいDifyプラグインプロジェクトを作成します。
+
+```bash
+./dify-plugin-darwin-arm64 plugin init
+```
+
+バイナリファイルを`dify`に名前変更し、`/usr/local/bin`パスにコピーした場合は、以下のコマンドを実行して新しいプラグインプロジェクトを作成できます：
+
+```bash
+dify plugin init
+```
+
+> 以下のテキストでは、`dify`をコマンドライン例として使用します。問題が発生した場合は、`dify`コマンドをコマンドラインツールのパスに置き換えてください。
+
+### プラグインタイプとテンプレートの選択
+
+スキャフォールディングツールのすべてのテンプレートは完全なコードプロジェクトを提供します。この例では、`Tool`プラグインを選択します。
+
+> すでにプラグイン開発に精通しており、テンプレートに依存する必要がない場合は、[一般仕様](/plugin-dev-en/0411-general-specifications)ガイドを参照して、さまざまなタイプのプラグインの開発を完了できます。
+
+![Plugin Type: Tool](https://assets-docs.dify.ai/2024/12/dd3c0f9a66454e15868eabced7b74fd6.png)
+
+#### プラグイン権限の設定
+
+プラグインは、Difyプラットフォームから読み取る権限も必要です。このサンプルプラグインに以下の権限を付与します：
+
+-   Tools
+-   Apps
+-   永続ストレージStorageを有効にし、デフォルトサイズのストレージを割り当てる
+-   Endpointsの登録を許可
+
+> ターミナルの矢印キーを使用して権限を選択し、「Tab」ボタンを使用して権限を付与します。
+
+すべての権限項目をチェックした後、Enterを押してプラグインの作成を完了します。システムは自動的にプラグインプロジェクトコードを生成します。
+
+![Plugin Permissions](https://assets-docs.dify.ai/2024/12/9cf92c2e74dce55e6e9e331d031e5a9f.png)
+
+### ツールプラグインの開発
+
+#### 1. ツールプロバイダーファイルの作成
+
+ツールプロバイダーファイルはyaml形式のファイルで、ツールプラグインの基本設定エントリとして理解でき、ツールに必要な認証情報を提供するために使用されます。
+
+プラグインテンプレートプロジェクトの`/provider`パスに移動し、yamlファイルを`google.yaml`に名前変更します。この`yaml`ファイルには、プロバイダーの名前、アイコン、作者などのツールプロバイダーに関する情報が含まれます。この情報は、プラグインのインストール時に表示されます。
+
+**サンプルコード**
+
+```yaml
+identity: # Basic information of the tool provider
+    author: Your-name # Author
+    name: google # Name, unique, cannot have the same name as other providers
+    label: # Label, for frontend display
+        en_US: Google # English label
+        zh_Hans: Google # Chinese label
+    description: # Description, for frontend display
+        en_US: Google # English description
+        zh_Hans: Google # Chinese description
+    icon: icon.svg # Tool icon, needs to be placed in the _assets folder
+    tags: # Tags, for frontend display
+        - search
+```
+
+ファイルパスが`/tools`ディレクトリにあることを確認してください。完全なパスは以下の通りです：
+
+```yaml
+plugins:
+    tools:
+        - 'google.yaml'
+```
+
+`google.yaml`は、プラグインプロジェクト内の絶対パスを使用する必要があります。この例では、プロジェクトのルートディレクトリに配置されています。YAMLファイルのidentityフィールドは以下のように説明されます：`identity`には、作者、名前、ラベル、説明、アイコンなど、ツールプロバイダーに関する基本情報が含まれています。
+
+-   アイコンは添付リソースである必要があり、プロジェクトのルートディレクトリの`_assets`フォルダに配置する必要があります。
+-   タグは、ユーザーがカテゴリを通じてプラグインを素早く見つけるのに役立ちます。以下は現在サポートされているすべてのタグです。
+
+```python
+class ToolLabelEnum(Enum):
+  SEARCH = 'search'
+  IMAGE = 'image'
+  VIDEOS = 'videos'
+  WEATHER = 'weather'
+  FINANCE = 'finance'
+  DESIGN = 'design'
+  TRAVEL = 'travel'
+  SOCIAL = 'social'
+  NEWS = 'news'
+  MEDICAL = 'medical'
+  PRODUCTIVITY = 'productivity'
+  EDUCATION = 'education'
+  BUSINESS = 'business'
+  ENTERTAINMENT = 'entertainment'
+  UTILITIES = 'utilities'
+  OTHER = 'other'
+```
+
+#### **2. サードパーティサービス認証情報の完成**
+
+開発の便宜のため、サードパーティサービス`SerpApi`が提供するGoogle Search APIを使用することを選択します。`SerpApi`は使用にAPI Keyが必要なため、`yaml`ファイルに`credentials_for_provider`フィールドを追加する必要があります。
+
+完全なコードは以下の通りです：
+
+```yaml
+identity:
+    author: Dify
+    name: google
+    label:
+        en_US: Google
+        zh_Hans: Google
+        pt_BR: Google
+    description:
+        en_US: Google
+        zh_Hans: GoogleSearch
+        pt_BR: Google
+    icon: icon.svg
+    tags:
+        - search
+credentials_for_provider: #Add credentials_for_provider field
+    serpapi_api_key:
+        type: secret-input
+        required: true
+        label:
+            en_US: SerpApi API key
+            zh_Hans: SerpApi API key
+        placeholder:
+            en_US: Please input your SerpApi API key
+            zh_Hans: Please enter your SerpApi API key
+        help:
+            en_US: Get your SerpApi API key from SerpApi
+            zh_Hans: Get your SerpApi API key from SerpApi
+        url: https://serpapi.com/manage-api-key
+tools:
+    - tools/google_search.yaml
+extra:
+    python:
+        source: google.py
+```
+
+-   `credentials_for_provider`のサブレベル構造は、[一般仕様](/plugin-dev-en/0411-general-specifications)の要件を満たす必要があります。
+-   プロバイダーに含まれるツールを指定する必要があります。この例では、`tools/google_search.yaml`ファイルのみが含まれています。
+-   プロバイダーとして、基本情報を定義するだけでなく、そのコードロジックの一部を実装する必要があるため、その実装ロジックを指定する必要があります。この例では、機能のコードファイルを`google.py`に配置しますが、まだ実装せず、最初に`google_search`のコードを書きます。
+
+#### 3. ツールYAMLファイルの記入
+
+ツールプラグインには複数のツール機能を持たせることができ、各ツール機能には、ツール機能の基本情報、パラメータ、出力などを記述する`yaml`ファイルが必要です。
+
+引き続き`GoogleSearch`ツールを例として、`/tools`フォルダに新しい`google_search.yaml`ファイルを作成します。
+
+```yaml
+identity:
+    name: google_search
+    author: Dify
+    label:
+        en_US: GoogleSearch
+        zh_Hans: Google Search
+        pt_BR: GoogleSearch
+description:
+    human:
+        en_US: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        zh_Hans: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+        pt_BR: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+    llm: A tool for performing a Google SERP search and extracting snippets and webpages. Input should be a search query.
+parameters:
+    - name: query
+      type: string
+      required: true
+      label:
+          en_US: Query string
+          zh_Hans: Query string
+          pt_BR: Query string
+      human_description:
+          en_US: used for searching
+          zh_Hans: used for searching web content
+          pt_BR: used for searching
+      llm_description: key words for searching
+      form: llm
+extra:
+    python:
+        source: tools/google_search.py
+```
+
+-   `identity`には、名前、作者、ラベル、説明などのツールの基本情報が含まれています。
+-   `parameters`パラメータリスト
+    -   `name`（必須）パラメータ名、一意で、他のパラメータと同じ名前を持つことはできません。
+    -   `type`（必須）パラメータタイプ、現在`string`、`number`、`boolean`、`select`、`secret-input`の5つのタイプをサポートしており、それぞれ文字列、数値、ブール値、ドロップダウン、暗号化入力ボックスに対応しています。機密情報には`secret-input`タイプを使用してください。
+    -   `label`（必須）パラメータラベル、フロントエンド表示用。
+    -   `form`（必須）フォームタイプ、現在`llm`、`form`の2つのタイプをサポートしています。
+        -   エージェントアプリケーションでは、`llm`はパラメータがLLM自体によって推論されることを意味し、`form`はこのツールを使用するために事前にパラメータを設定できることを意味します。
+        -   ワークフローアプリケーションでは、`llm`と`form`の両方をフロントエンドで入力する必要がありますが、`llm`パラメータはツールノードの入力変数として使用されます。
+    -   `required`必須かどうか
+        -   `llm`モードでは、パラメータが必須の場合、エージェントはこのパラメータを推論する必要があります。
+        -   `form`モードでは、パラメータが必須の場合、ユーザーは会話開始前にフロントエンドでこのパラメータを入力する必要があります。
+    -   `options`パラメータオプション
+        -   `llm`モードでは、Difyはすべてのオプションをモデルに渡し、モデルはこれらのオプションに基づいて推論できます。
+        -   `form`モードでは、`type`が`select`の場合、フロントエンドはこれらのオプションを表示します。
+    -   `default`デフォルト値。
+    -   `min`最小値、パラメータタイプが`number`の場合に設定できます。
+    -   `max`最大値、パラメータタイプが`number`の場合に設定できます。
+    -   `human_description`フロントエンド表示用の説明、複数言語をサポート。
+    -   `placeholder`入力フィールドのプロンプトテキスト、フォームタイプが`form`でパラメータタイプが`string`、`number`、`secret-input`の場合に設定でき、複数言語をサポート。
+    -   `llm_description`モデルに渡される説明。モデルがこのパラメータをより良く理解できるように、このパラメータに関するできるだけ詳細な情報をここに記述して、モデルがパラメータを理解できるようにしてください。
+
+#### 4. ツールコードの準備
+
+ツールの設定情報を入力した後、ツールの機能のコードを書き始め、ツールの論理的な目的を実装できます。`/tools`ディレクトリに`google_search.py`を作成し、以下の内容を記述します：
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+import requests
+
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
+
+SERP_API_URL = "https://serpapi.com/search"
+
+class GoogleSearchTool(Tool):
+    def _parse_response(self, response: dict) -> dict:
+        result = {}
+        if "knowledge_graph" in response:
+            result["title"] = response["knowledge_graph"].get("title", "")
+            result["description"] = response["knowledge_graph"].get("description", "")
+        if "organic_results" in response:
+            result["organic_results"] = [
+                {
+                    "title": item.get("title", ""),
+                    "link": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                }
+                for item in response["organic_results"]
+            ]
+        return result
+
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        params = {
+            "api_key": self.runtime.credentials["serpapi_api_key"],
+            "q": tool_parameters["query"],
+            "engine": "google",
+            "google_domain": "google.com",
+            "gl": "us",
+            "hl": "en",
+        }
+
+        response = requests.get(url=SERP_API_URL, params=params, timeout=5)
+        response.raise_for_status()
+        valuable_res = self._parse_response(response.json())
+
+        yield self.create_json_message(valuable_res)
+```
+
+この例は、`serpapi`にリクエストを送信し、`self.create_json_message`を使用してフォーマットされた`json`データ文字列を返すことを意味します。返却データタイプの詳細については、[プラグインのリモートデバッグ](/plugin-dev-en/0411-remote-debug-a-plugin)と[永続ストレージKV](/plugin-dev-en/0411-persistent-storage-kv)ドキュメントを参照してください。
+
+#### 4. ツールプロバイダーコードの完成
+
+最後に、認証情報の検証ロジックを実装するプロバイダーの実装コードを作成する必要があります。認証情報の検証が失敗した場合、`ToolProviderCredentialValidationError`例外がスローされます。検証が成功すると、`google_search`ツールサービスが正しくリクエストされます。
+
+`/provider`ディレクトリに`google.py`ファイルを作成し、以下の内容を記述します：
+
+```python
+from typing import Any
+
+from dify_plugin import ToolProvider
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError
+from tools.google_search import GoogleSearchTool
+
+class GoogleProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict[str, Any]) -> None:
+        try:
+            for _ in GoogleSearchTool.from_credentials(credentials).invoke(
+                tool_parameters={"query": "test", "result_type": "link"},
+            ):
+                pass
+        except Exception as e:
+            raise ToolProviderCredentialValidationError(str(e))
+```
+
+### プラグインのデバッグ
+
+プラグインの開発が完了したら、プラグインが正常に機能するかどうかをテストする必要があります。Difyは、テスト環境でプラグインの機能を素早く検証するのに役立つ便利なリモートデバッグ方法を提供しています。
+
+[「プラグイン管理」](https://cloud.dify.ai/plugins)ページに移動して、リモートサーバーアドレスとデバッグキーを取得します。
+
+![Remote Debug Key](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
+
+プラグインプロジェクトに戻り、`.env.example`ファイルをコピーして`.env`に名前変更し、取得したリモートサーバーアドレスとデバッグキー情報を入力します。
+
+`.env`ファイル：
+
+```bash
+INSTALL_METHOD=remote
+REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_KEY=********-****-****-****-************
+```
+
+`python -m main`コマンドを実行してプラグインを起動します。プラグインページで、プラグインがワークスペースにインストールされていることを確認でき、チームの他のメンバーもプラグインにアクセスできます。
+
+![](https://assets-docs.dify.ai/2024/11/0fe19a8386b1234755395018bc2e0e35.png)
+
+### プラグインのパッケージング（オプション）
+
+プラグインが正常に実行できることを確認した後、以下のコマンドラインツールを使用してプラグインをパッケージ化して名前を付けることができます。実行後、現在のフォルダに`google.difypkg`ファイルが作成されます。これが最終的なプラグインパッケージです。
+
+```bash
+# Replace ./google with the actual path of the plugin project
+
+dify plugin package ./google
+```
+
+おめでとうございます！ツールタイプのプラグインの開発、デバッグ、パッケージングの全プロセスを完了しました！
+
+### プラグインの公開（オプション）
+
+プラグインをDify Marketplaceに公開したい場合は、プラグインが[Dify Marketplaceへの公開](/plugin-dev-en/0322-release-to-dify-marketplace)の仕様に従っていることを確認してください。レビューに合格すると、コードはメインブランチにマージされ、自動的に[Dify Marketplace](https://marketplace.dify.ai/)で公開されます。
+
+[公開の概要](/plugin-dev-en/0321-release-overview)
+
+### さらに探索
+
+#### **クイックスタート：**
+
+-   [拡張プラグインの開発](/plugin-dev-en/9231-extension-plugin)
+-   [モデルプラグインの開発](/plugin-dev-en/0211-getting-started-new-model)
+-   [バンドルプラグイン：複数のプラグインのパッケージング](/plugin-dev-en/9241-bundle)
+
+#### **プラグインインターフェースドキュメント：**
+
+-   [一般仕様](/plugin-dev-en/0411-general-specifications) - マニフェスト構造とツール仕様
+-   [Endpoint](/plugin-dev-en/0432-endpoint) - 詳細なEndpointの定義
+-   [リバース呼び出し](/plugin-dev-en/9241-reverse-invocation) - Dify機能のリバース呼び出し
+-   [モデルスキーマ](/plugin-dev-en/0412-model-schema) - モデル
+-   [エージェントプラグイン](/plugin-dev-en/9232-agent) - エージェント戦略の拡張
+
+## 次の学習ステップ
+
+- [プラグインのリモートデバッグ](/plugin-dev-en/0411-remote-debug-a-plugin) - より高度なデバッグテクニックを学ぶ
+- [永続ストレージ](/plugin-dev-en/0411-persistent-storage-kv) - プラグインでのデータストレージの使用方法を学ぶ
+- [Slack Botプラグイン開発例](/plugin-dev-en/0432-develop-a-slack-bot-plugin) - より複雑なプラグイン開発ケースを見る
+- [ツールプラグイン](/plugin-dev-en/0411-tool) - ツールプラグインの高度な機能を探索
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-en/0222-tool-plugin.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

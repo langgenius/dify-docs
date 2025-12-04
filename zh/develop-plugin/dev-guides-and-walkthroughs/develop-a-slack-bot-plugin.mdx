@@ -1,0 +1,358 @@
+---
+dimensions:
+  type:
+    primary: reference
+    detail: examples
+  level: intermediate
+standard_title: Develop A Slack Bot Plugin
+language: en
+title: 开发 Slack Bot 插件
+description: 本指南提供了开发 Slack Bot 插件的完整演练，涵盖项目初始化、配置表单编辑、功能实现、调试、端点设置、验证和打包。你需要 Dify 插件脚手架工具和预先创建的 Slack App 来在 Slack 上构建 AI 驱动的聊天机器人。
+---
+
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/develop-plugin/dev-guides-and-walkthroughs/develop-a-slack-bot-plugin)。</Note>
+
+**你将学到：**
+
+深入了解如何构建一个由 AI 驱动的 Slack Bot——它可以直接在 Slack 中回答用户问题。如果你之前没有开发过插件，我们建议先阅读[插件开发快速入门指南](/plugin-dev-en/0211-getting-started-dify-tool)。
+
+### 项目背景
+
+Dify 插件生态系统致力于使集成更简单、更易于访问。在本指南中，我们将以 Slack 为例，带你完成开发 Slack Bot 插件的过程。这允许你的团队直接在 Slack 中与 LLM 聊天，显著提高他们使用 AI 的效率。
+
+Slack 是一个开放的实时通信平台，拥有强大的 API。其功能之一是基于 webhook 的事件系统，开发起来非常简单。我们将利用这个系统创建一个 Slack Bot 插件，如下图所示：
+
+![Slack Bot diagram ](https://assets-docs.dify.ai/2025/01/a0865d18f1ca4051601ca53fa6f92db2.png)
+
+> 为避免混淆，以下概念作说明：
+>
+> * **Slack Bot** Slack 平台上的聊天机器人，作为一个虚拟用户，你可以与其实时交互。
+> * **Slack Bot 插件** Dify Marketplace 中的一个插件，用于连接 Dify 应用程序与 Slack。本指南重点介绍如何开发该插件。
+
+**工作原理（简要概述）：**
+
+1.  **向 Slack Bot 发送消息**
+
+    当 Slack 中的用户向 Bot 发送消息时，Slack Bot 会立即向 Dify 平台发出 webhook 请求。
+
+2.  **将消息转发给 Slack Bot 插件**
+
+    Dify 平台触发 Slack Bot 插件，该插件将详细信息转发给 Dify 应用程序——类似于在电子邮件系统中输入收件人地址。通过 Slack 的 API 设置 Slack webhook 地址并在 Slack Bot 插件中输入，即可建立此连接。然后插件处理 Slack 请求并将其发送到 Dify 应用程序，LLM 分析用户的输入并生成响应。
+
+3.  **将响应返回给 Slack**
+
+    一旦 Slack Bot 插件收到 Dify 应用程序的回复，它就会通过相同的路径将 LLM 的答案发送回 Slack Bot。Slack 中的用户就可以在他们聊天的地方看到更智能、更互动的体验。
+
+### 前提条件
+
+- **Dify 插件开发工具**：更多信息，请参阅[初始化开发工具](/plugin-dev-en/0221-initialize-development-tools)。
+- **Python 环境（版本 ≥ 3.12）**：参考此 [Python 安装教程](https://pythontest.com/python/installing-python-3-11/) 或向 LLM 询问完整的设置指南。
+- 创建 Slack App 并获取 OAuth 令牌
+
+前往 [Slack API 平台](https://api.slack.com/apps)，从头创建一个 Slack 应用，并选择将其部署到的工作区。
+
+![](https://assets-docs.dify.ai/2025/01/c1fd0ac1467faf5a3ebf3818bb234aa8.png)
+
+1.  **启用 Webhooks：**
+
+![](https://assets-docs.dify.ai/2025/01/7112e0710300f1db16827e17f3deac00.png)
+
+2.  **在你的 Slack 工作区安装应用：**
+
+![](https://assets-docs.dify.ai/2025/01/88c360ff4f7b04fea52174ce330522fa.png)
+
+3.  **获取 OAuth 令牌**以供后续插件开发使用：
+
+![](https://assets-docs.dify.ai/2025/01/dcd8ec947253f2ef9ae121ed77ec9f26.png)
+
+### 1. 开发插件
+
+现在我们将深入实际编码。在开始之前，请确保你已阅读[快速入门：开发扩展插件](/plugin-dev-en/9231-extension-plugin)或已经构建过 Dify 插件。
+
+#### 1.1 初始化项目
+
+运行以下命令来设置你的插件开发环境：
+
+```bash
+dify plugin init
+```
+
+按照提示提供基本项目信息。选择 `extension` 模板，并授予 `Apps` 和 `Endpoints` 权限。
+
+有关在插件中反向调用 Dify 服务的更多详细信息，请参阅[反向调用：App](/plugin-dev-en/9242-reverse-invocation-app)。
+
+![Plugins permission](https://assets-docs.dify.ai/2024/12/d89a6282c5584fc43a9cadeddf09c0de.png)
+
+#### 1.2 编辑配置表单
+
+此插件需要知道哪个 Dify 应用应处理回复，以及用于验证机器人响应的 Slack App 令牌。因此，你需要在插件的表单中添加这两个字段。
+
+修改 group 目录中的 YAML 文件——例如 `group/slack.yaml`。表单的文件名由你创建插件时提供的信息决定，请相应调整。
+
+**示例代码：**
+
+`slack.yaml`
+
+```yaml
+settings:
+  - name: bot_token
+    type: secret-input
+    required: true
+    label:
+      en_US: Bot Token
+      zh_Hans: Bot Token
+      pt_BR: Token do Bot
+      ja_JP: Bot Token
+    placeholder:
+      en_US: Please input your Bot Token
+      zh_Hans: 请输入你的 Bot Token
+      pt_BR: Por favor, insira seu Token do Bot
+      ja_JP: ボットトークンを入力してください
+  - name: allow_retry
+    type: boolean
+    required: false
+    label:
+      en_US: Allow Retry
+      zh_Hans: 允许重试
+      pt_BR: Permitir Retentativas
+      ja_JP: 再試行を許可
+    default: false
+  - name: app
+    type: app-selector
+    required: true
+    label:
+      en_US: App
+      zh_Hans: 应用
+      pt_BR: App
+      ja_JP: アプリ
+    placeholder:
+      en_US: the app you want to use to answer Slack messages
+      zh_Hans: 你想要用来回答 Slack 消息的应用
+      pt_BR: o app que você deseja usar para responder mensagens do Slack
+      ja_JP: あなたが Slack メッセージに回答するために使用するアプリ
+endpoints:
+  - endpoints/slack.yaml
+```
+
+配置字段说明：
+
+```
+  - name: app
+    type: app-selector
+    scope: chat
+```
+
+*   **type**：设置为 app-selector，允许用户在使用此插件时将消息转发到特定的 Dify 应用。
+
+*   **scope**：设置为 chat，意味着该插件只能与智能体、chatbot 或 chatflow 等应用类型交互。
+
+最后，在 `endpoints/slack.yaml` 文件中，将请求方法更改为 POST 以正确处理传入的 Slack 消息。
+
+**示例代码：**
+
+`endpoints/slack.yaml`
+
+```yaml
+path: "/"
+method: "POST"
+extra:
+  python:
+    source: "endpoints/slack.py"
+```
+
+#### 2. 编辑功能代码
+
+修改 `endpoints/slack.py` 文件并添加以下代码：
+
+```python
+import json
+import traceback
+from typing import Mapping
+from werkzeug import Request, Response
+from dify_plugin import Endpoint
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+
+class SlackEndpoint(Endpoint):
+    def _invoke(self, r: Request, values: Mapping, settings: Mapping) -> Response:
+        """
+        Invokes the endpoint with the given request.
+        """
+        retry_num = r.headers.get("X-Slack-Retry-Num")
+        if (not settings.get("allow_retry") and (r.headers.get("X-Slack-Retry-Reason") == "http_timeout" or ((retry_num is not None and int(retry_num) > 0)))):
+            return Response(status=200, response="ok")
+        data = r.get_json()
+
+        # Handle Slack URL verification challenge
+        if data.get("type") == "url_verification":
+            return Response(
+                response=json.dumps({"challenge": data.get("challenge")}),
+                status=200,
+                content_type="application/json"
+            )
+
+        if (data.get("type") == "event_callback"):
+            event = data.get("event")
+            if (event.get("type") == "app_mention"):
+                message = event.get("text", "")
+                if message.startswith("<@"):
+                    message = message.split("> ", 1)[1] if "> " in message else message
+                    channel = event.get("channel", "")
+                    blocks = event.get("blocks", [])
+                    blocks[0]["elements"][0]["elements"] = blocks[0].get("elements")[0].get("elements")[1:]
+                    token = settings.get("bot_token")
+                    client = WebClient(token=token)
+                    try:
+                        response = self.session.app.chat.invoke(
+                            app_id=settings["app"]["app_id"],
+                            query=message,
+                            inputs={},
+                            response_mode="blocking",
+                        )
+                        try:
+                            blocks[0]["elements"][0]["elements"][0]["text"] = response.get("answer")
+                            result = client.chat_postMessage(
+                                channel=channel,
+                                text=response.get("answer"),
+                                blocks=blocks
+                            )
+                            return Response(
+                                status=200,
+                                response=json.dumps(result),
+                                content_type="application/json"
+                            )
+                        except SlackApiError as e:
+                            raise e
+                    except Exception as e:
+                        err = traceback.format_exc()
+                        return Response(
+                            status=200,
+                            response="Sorry, I'm having trouble processing your request. Please try again later." + str(err),
+                            content_type="text/plain",
+                        )
+                else:
+                    return Response(status=200, response="ok")
+            else:
+                return Response(status=200, response="ok")
+        else:
+            return Response(status=200, response="ok")
+```
+
+### 2. 调试插件
+
+前往 Dify 平台并获取插件的远程调试地址和密钥。
+
+![](https://assets-docs.dify.ai/2025/01/8d24006f0cabf5bf61640a9023c45db8.png)
+
+回到你的插件项目，复制 `.env.example` 文件并将其重命名为 `.env`。
+
+```bash
+INSTALL_METHOD=remote
+REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_KEY=********-****-****-****-************
+```
+
+运行 `python -m main` 启动插件。你现在应该可以在 Dify 插件管理页面的工作区中看到你的插件已安装。其他团队成员也可以访问它。
+
+```bash
+python -m main
+```
+
+#### 配置插件端点
+
+从 Dify 的插件管理页面，找到新安装的测试插件并创建一个新端点。提供名称、Bot 令牌，并选择你想要连接的应用。
+
+<img
+src="https://assets-docs.dify.ai/2025/01/07f87e8a2786d6f5f05195961c5630c3.png"
+className="mx-auto"
+alt="Test Plugins"
+/>
+
+保存后，将生成一个 **POST** 请求 URL：
+
+<img
+src="https://assets-docs.dify.ai/2025/01/e6952a5798a7ae793b3fe7df6f76ea73.png"
+className="mx-auto"
+alt="Generated POST Request URL"
+/>
+
+接下来，完成 Slack App 设置：
+
+1. **启用事件订阅**
+   ![](https://assets-docs.dify.ai/2025/01/1d33bb9cde78a1b5656ad6a0b8350195.png)
+
+   粘贴你上面生成的 POST 请求 URL。
+   ![](https://assets-docs.dify.ai/2025/01/65aa41f37c3800af49e944f9ff28e121.png)
+
+2. **授予所需权限**
+   ![](https://assets-docs.dify.ai/2025/01/25c38a2cf10ec6c55ae54970d790f37e.png)
+
+---
+
+### 3. 验证插件
+
+在你的代码中，`self.session.app.chat.invoke` 用于调用 Dify 应用程序，传入 `app_id` 和 `query` 等参数。然后将响应返回给 Slack Bot。再次运行 `python -m main` 重启插件进行调试，并检查 Slack 是否正确显示 Dify App 的回复：
+
+![](https://assets-docs.dify.ai/2025/01/6fc872d1343ce8503d63c5222f7f26f9.png)
+
+---
+
+### 4. 打包插件（可选）
+
+确认插件工作正常后，你可以通过以下命令打包并命名它。运行后，你会在当前目录中找到一个 `slack_bot.difypkg` 文件——这就是你的最终插件包。有关详细的打包步骤，请参阅[打包为本地文件并分享](/plugin-dev-en/0322-release-by-file)。
+
+```bash
+# 将 ./slack_bot 替换为你实际的插件项目路径。
+
+dify plugin package ./slack_bot
+```
+
+恭喜！你已成功开发、测试和打包了一个插件！
+
+---
+
+### 5. 发布插件（可选）
+
+你现在可以将其上传到 [Dify Marketplace 仓库](https://github.com/langgenius/dify-plugins) 进行公开发布。在发布之前，请确保你的插件符合[发布到 Dify Marketplace 指南](/plugin-dev-en/0322-release-to-dify-marketplace)。一旦获得批准，你的代码将合并到主分支，插件将在 [Dify Marketplace](https://marketplace.dify.ai/) 上线。
+
+---
+
+## 相关资源
+
+- [插件开发基础](/plugin-dev-en/0111-getting-started-dify-plugin) - Dify 插件开发的全面概述
+- [插件开发快速入门指南](/plugin-dev-en/0211-getting-started-dify-tool) - 从零开始开发插件
+- [开发扩展插件](/plugin-dev-en/9231-extension-plugin) - 了解扩展插件开发
+- [反向调用 Dify 服务](/plugin-dev-en/9241-reverse-invocation) - 了解如何调用 Dify 平台功能
+- [反向调用：App](/plugin-dev-en/9242-reverse-invocation-app) - 了解如何调用平台内的应用
+- [发布插件](/plugin-dev-en/0321-release-overview) - 了解发布流程
+- [发布到 Dify Marketplace](/plugin-dev-en/0322-release-to-dify-marketplace) - Marketplace 发布指南
+- [端点详细定义](/plugin-dev-en/0432-endpoint) - 端点详细定义
+
+### 延伸阅读
+
+要获取完整的 Dify 插件项目示例，请访问 [GitHub 仓库](https://github.com/langgenius/dify-plugins)。你还可以找到包含完整源代码和实现细节的其他插件。
+
+如果你想了解更多关于插件开发的内容，请查看以下资源：
+
+**快速入门：**
+- [开发扩展插件](/plugin-dev-en/9231-extension-plugin)
+- [开发模型插件](/plugin-dev-en/0211-getting-started-new-model)
+- [Bundle 插件：打包多个插件](/plugin-dev-en/9241-bundle)
+
+**插件接口文档：**
+- [通过 Manifest 文件定义插件信息](/plugin-dev-en/0411-plugin-info-by-manifest) - Manifest 结构
+- [端点](/plugin-dev-en/0432-endpoint) - 端点详细定义
+- [反向调用](/plugin-dev-en/9241-reverse-invocation) - 反向调用 Dify 功能
+- [通用规范](/plugin-dev-en/0411-general-specifications) - 工具规范
+- [模型 Schema](/plugin-dev-en/0412-model-schema) - 模型
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/plugin-dev-en/0432-develop-a-slack-bot-plugin.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
