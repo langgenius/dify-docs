@@ -37,22 +37,6 @@ def build_docs_structure():
             "Japanese": "ja"
         }
 
-    # Plugin dev paths from config
-    if TRANSLATION_CONFIG and 'plugin_dev_paths' in TRANSLATION_CONFIG:
-        plugin_dev = {}
-        for lang_code, path in TRANSLATION_CONFIG['plugin_dev_paths'].items():
-            if lang_code in TRANSLATION_CONFIG['languages']:
-                lang_name = TRANSLATION_CONFIG['languages'][lang_code]['name']
-                plugin_dev[lang_name] = path
-        structure["plugin_dev"] = plugin_dev
-    else:
-        # Fallback for backward compatibility
-        structure["plugin_dev"] = {
-            "English": "plugin-dev-en",
-            "Chinese": "plugin-dev-zh",
-            "Japanese": "plugin-dev-ja"
-        }
-
     # Versioned docs from config
     if TRANSLATION_CONFIG and "versioned_docs" in TRANSLATION_CONFIG:
         for version_key, version_paths in TRANSLATION_CONFIG["versioned_docs"].items():
