@@ -204,9 +204,35 @@ async def sync_by_paths(
                             continue
 
                 try:
+                    # Prepare context for incremental translation if updating existing file
+                    the_doc_exist = None
+                    diff_original = None
+
+                    if is_update:
+                        # Read existing translation for context-aware update
+                        try:
+                            with open(target_path, 'r', encoding='utf-8') as f:
+                                the_doc_exist = f.read()
+                            print(f"  📝 Using incremental update (existing translation: {len(the_doc_exist)} chars)")
+                        except Exception as e:
+                            print(f"  ⚠️  Could not read existing translation: {e}")
+
+                        # Try to get git diff for additional context (optional)
+                        try:
+                            diff_original = synchronizer.get_file_diff(source_file, "HEAD~1")
+                            if diff_original:
+                                print(f"  📊 Using git diff for context ({len(diff_original)} chars)")
+                        except Exception:
+                            # Git diff is optional - not all files may be in git yet
+                            pass
+
                     print(f"Translating {source_file} → {target_file}...")
                     success = await synchronizer.translate_file_with_notice(
-                        source_file, target_file, target_lang
+                        source_file,
+                        target_file,
+                        target_lang,
+                        the_doc_exist=the_doc_exist,
+                        diff_original=diff_original
                     )
 
                     if success:
