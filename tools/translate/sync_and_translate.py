@@ -597,14 +597,21 @@ class DocsSynchronizer:
             if result:
                 return result
 
-        # Search in groups array (OpenAPI files)
+        # Search in groups array (OpenAPI files and nested pages)
         if "groups" in dropdown:
             groups = dropdown["groups"]
             for i, group in enumerate(groups):
-                if isinstance(group, dict) and "openapi" in group:
-                    # Compare OpenAPI file paths (no extension stripping needed for .json)
-                    if group["openapi"] == file_path:
-                        return ["groups", i, "openapi"]
+                if isinstance(group, dict):
+                    # Check for OpenAPI files
+                    if "openapi" in group:
+                        # Compare OpenAPI file paths (no extension stripping needed for .json)
+                        if group["openapi"] == file_path:
+                            return ["groups", i, "openapi"]
+                    # Check for nested pages within group
+                    if "pages" in group:
+                        result = search_pages(group["pages"], ["groups", i, "pages"])
+                        if result:
+                            return result
 
         return None
 
