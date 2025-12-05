@@ -157,6 +157,8 @@ async def sync_by_paths(
                     results["skipped"].append(f"{target_file} (not found)")
     else:
         print("\nStarting translation...")
+        overwrite_preference = None  # Track user's preference: 'all' or 'skip_all'
+
         for source_file in files_to_translate:
             source_path = base_dir / source_file
 
@@ -171,12 +173,35 @@ async def sync_by_paths(
                 )
                 target_path = base_dir / target_file
 
+                # Track if file is being updated or created
+                is_update = target_path.exists()
+
                 # Check if target file exists and prompt for overwrite if needed
-                if target_path.exists() and not force:
-                    if not prompt_overwrite(target_file):
+                if is_update and not force:
+                    # Use saved preference if user chose 'all' or 'skip_all'
+                    if overwrite_preference == 'all':
+                        should_overwrite = True
+                    elif overwrite_preference == 'skip_all':
                         results["skipped"].append(f"{target_file} (user skipped)")
                         print(f"⊘ Skipped {target_file}")
                         continue
+                    else:
+                        # Prompt user for this specific file
+                        response = prompt_overwrite(target_file)
+                        if response == 'all':
+                            overwrite_preference = 'all'
+                            should_overwrite = True
+                        elif response == 'skip_all':
+                            overwrite_preference = 'skip_all'
+                            results["skipped"].append(f"{target_file} (user skipped)")
+                            print(f"⊘ Skipped {target_file}")
+                            continue
+                        elif response == 'yes':
+                            should_overwrite = True
+                        else:  # 'no'
+                            results["skipped"].append(f"{target_file} (user skipped)")
+                            print(f"⊘ Skipped {target_file}")
+                            continue
 
                 try:
                     print(f"Translating {source_file} → {target_file}...")
@@ -186,7 +211,7 @@ async def sync_by_paths(
 
                     if success:
                         results["translated"].append(target_file)
-                        print(f"✓ Created {target_file}")
+                        print(f"✓ {'Updated' if is_update else 'Created'} {target_file}")
                     else:
                         results["errors"].append(f"Failed: {source_file} → {target_file}")
 
@@ -571,7 +596,7 @@ def preview_docs_json_changes(
         print(f"  ⚠️  Error previewing docs.json changes: {e}")
 
 
-def prompt_overwrite(file_path: str) -> bool:
+def prompt_overwrite(file_path: str) -> str:
     """
     Prompt user for confirmation to overwrite an existing file.
 
@@ -579,16 +604,20 @@ def prompt_overwrite(file_path: str) -> bool:
         file_path: Path to the file that already exists
 
     Returns:
-        True if user wants to overwrite, False otherwise
+        One of: 'yes', 'no', 'all', 'skip_all'
     """
     while True:
-        response = input(f"File {file_path} already exists. Overwrite? [y/n]: ").strip().lower()
+        response = input(f"File {file_path} already exists. Overwrite? [y/n/all/skip_all]: ").strip().lower()
         if response in ['y', 'yes']:
-            return True
+            return 'yes'
         elif response in ['n', 'no']:
-            return False
+            return 'no'
+        elif response in ['a', 'all']:
+            return 'all'
+        elif response in ['s', 'skip', 'skip_all', 'skip all']:
+            return 'skip_all'
         else:
-            print("Invalid input. Please enter 'y' or 'n'.")
+            print("Invalid input. Please enter 'y' (yes), 'n' (no), 'all' (overwrite all), or 'skip_all' (skip all).")
 
 
 def load_api_key_from_env() -> Optional[str]:
