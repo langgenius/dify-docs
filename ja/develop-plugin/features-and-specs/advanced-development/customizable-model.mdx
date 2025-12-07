@@ -1,0 +1,360 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: advanced
+  level: advanced
+standard_title: Customizable Model
+language: ja
+title: カスタムモデルの統合
+description: このドキュメントでは、Xinferenceモデルを例として、カスタムモデルをDifyに統合する方法を詳しく説明します。モデルプロバイダーファイルの作成、モデルタイプに基づくコードの記述、モデル呼び出しロジックの実装、例外処理、デバッグ、公開までの完全なプロセスをカバーしています。特に、LLM呼び出し、トークン計算、認証情報の検証、パラメータ生成などのコアメソッドの実装を詳しく説明します。
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/features-and-specs/advanced-development/customizable-model)を参照してください。</Note>
+
+**カスタムモデル**とは、自分でデプロイまたは設定するLLMを指します。このドキュメントでは、[Xinferenceモデル](https://inference.readthedocs.io/en/latest/)を例として、カスタムモデルを**モデルプラグイン**に統合する方法を説明します。
+
+デフォルトでは、カスタムモデルは自動的に2つのパラメータ（**モデルタイプ**と**モデル名**）を含み、プロバイダーYAMLファイルで追加の定義は必要ありません。
+
+プロバイダー設定ファイルに`validate_provider_credential`を実装する必要はありません。ランタイム中、ユーザーが選択したモデルタイプまたはモデル名に基づいて、Difyは自動的に対応するモデルレイヤーの`validate_credentials`メソッドを呼び出して認証情報を検証します。
+
+## カスタムモデルプラグインの統合
+
+以下はカスタムモデルを統合する手順です：
+
+1. **モデルプロバイダーファイルの作成**\
+   カスタムモデルに含まれるモデルタイプを特定します。
+2. **モデルタイプごとのコードファイルの作成**\
+   モデルのタイプ（例：`llm`や`text_embedding`）に応じて、別々のコードファイルを作成します。各モデルタイプが個別の論理レイヤーに整理されていることを確認し、保守と将来の拡張を容易にします。
+3. **モデル呼び出しロジックの開発**\
+   各モデルタイプモジュール内で、そのモデルタイプの名前を付けたPythonファイル（例：`llm.py`）を作成します。ファイル内でシステムのモデルインターフェース仕様に準拠した特定のモデルロジックを実装するクラスを定義します。
+4. **プラグインのデバッグ**\
+   新しいプロバイダー機能のユニットテストと統合テストを作成し、すべてのコンポーネントが意図どおりに動作することを確認します。
+
+***
+
+### 1. **モデルプロバイダーファイルの作成**
+
+プラグインの`/provider`ディレクトリに、`xinference.yaml`ファイルを作成します。
+
+`Xinference`ファミリーのモデルは**LLM**、**Text Embedding**、**Rerank**モデルタイプをサポートしているため、`xinference.yaml`にはこれら3つすべてを含める必要があります。
+
+**例：**
+
+```yaml
+provider: xinference  # Identifies the provider
+label:                # Display name; can set both en_US (English) and zh_Hans (Chinese). If zh_Hans is not set, en_US is used by default.
+  en_US: Xorbits Inference
+icon_small:           # Small icon; store in the _assets folder of this provider's directory. The same multi-language logic applies as with label.
+  en_US: icon_s_en.svg
+icon_large:           # Large icon
+  en_US: icon_l_en.svg
+help:                 # Help information
+  title:
+    en_US: How to deploy Xinference
+    zh_Hans: 如何部署 Xinference
+  url:
+    en_US: https://github.com/xorbitsai/inference
+
+supported_model_types:  # Model types Xinference supports: LLM/Text Embedding/Rerank
+- llm
+- text-embedding
+- rerank
+
+configurate_methods:     # Xinference is locally deployed and does not offer predefined models. Refer to its documentation to learn which model to use. Thus, we choose a customizable-model approach.
+- customizable-model
+
+provider_credential_schema:
+  credential_form_schemas:
+```
+
+次に、`provider_credential_schema`を定義します。`Xinference`はテキスト生成、エンベディング、リランキングモデルをサポートしているため、以下のように設定できます：
+
+```yaml
+provider_credential_schema:
+  credential_form_schemas:
+  - variable: model_type
+    type: select
+    label:
+      en_US: Model type
+      zh_Hans: 模型类型
+    required: true
+    options:
+    - value: text-generation
+      label:
+        en_US: Language Model
+        zh_Hans: 语言模型
+    - value: embeddings
+      label:
+        en_US: Text Embedding
+    - value: reranking
+      label:
+        en_US: Rerank
+```
+
+Xinferenceのすべてのモデルには`model_name`が必要です：
+
+```yaml
+  - variable: model_name
+    type: text-input
+    label:
+      en_US: Model name
+      zh_Hans: 模型名称
+    required: true
+    placeholder:
+      zh_Hans: 填写模型名称
+      en_US: Input model name
+```
+
+Xinferenceはローカルでデプロイする必要があるため、ユーザーはサーバーアドレス（server\_url）とモデルUIDを提供する必要があります。例えば：
+
+```yaml
+  - variable: server_url
+    label:
+      zh_Hans: 服务器 URL
+      en_US: Server url
+    type: text-input
+    required: true
+    placeholder:
+      zh_Hans: 在此输入 Xinference 的服务器地址，如 https://example.com/xxx
+      en_US: Enter the url of your Xinference, for example https://example.com/xxx
+
+  - variable: model_uid
+    label:
+      zh_Hans: 模型 UID
+      en_US: Model uid
+    type: text-input
+    required: true
+    placeholder:
+      zh_Hans: 在此输入你的 Model UID
+      en_US: Enter the model uid
+```
+
+これらのパラメータを定義したら、カスタムモデルプロバイダーのYAML設定は完了です。次に、この設定で定義された各モデルの機能コードファイルを作成します。
+
+### 2. モデルコードの開発
+
+Xinferenceはllm、rerank、speech2text、ttsをサポートしているため、/models下に対応するディレクトリを作成し、それぞれに機能コードを含める必要があります。
+
+以下はllmタイプのモデルの例です。llm.pyという名前のファイルを作成し、\_\_base.large\_language\_model.LargeLanguageModelを拡張するXinferenceAILargeLanguageModelなどのクラスを定義します。このクラスには以下を含める必要があります：
+
+* **LLM呼び出し**
+
+LLMを呼び出すためのコアメソッドで、ストリーミングと同期応答の両方をサポートします：
+
+```python
+def _invoke(
+    self,
+    model: str,
+    credentials: dict,
+    prompt_messages: list[PromptMessage],
+    model_parameters: dict,
+    tools: Optional[list[PromptMessageTool]] = None,
+    stop: Optional[list[str]] = None,
+    stream: bool = True,
+    user: Optional[str] = None
+) -> Union[LLMResult, Generator]:
+    """
+    Invoke the large language model.
+
+    :param model: model name
+    :param credentials: model credentials
+    :param prompt_messages: prompt messages
+    :param model_parameters: model parameters
+    :param tools: tools for tool calling
+    :param stop: stop words
+    :param stream: determines if response is streamed
+    :param user: unique user id
+    :return: full response or a chunk generator
+    """
+```
+
+ストリーミングと同期応答を処理するために2つの別々の関数が必要です。Pythonは`yield`を含む関数を`Generator`型を返すジェネレータとして扱うため、これらを分離することをお勧めします：
+
+```yaml
+def _invoke(self, stream: bool, **kwargs) -> Union[LLMResult, Generator]:
+    if stream:
+        return self._handle_stream_response(**kwargs)
+    return self._handle_sync_response(**kwargs)
+
+def _handle_stream_response(self, **kwargs) -> Generator:
+    for chunk in response:
+        yield chunk
+
+def _handle_sync_response(self, **kwargs) -> LLMResult:
+    return LLMResult(**response)
+```
+
+* **入力トークンの事前計算**
+
+モデルがトークンカウントインターフェースを提供していない場合は、単に0を返します：
+
+```python
+def get_num_tokens(
+    self,
+    model: str,
+    credentials: dict,
+    prompt_messages: list[PromptMessage],
+    tools: Optional[list[PromptMessageTool]] = None
+) -> int:
+    """
+    Get the number of tokens for the given prompt messages.
+    """
+    return 0
+```
+
+または、`AIModel`基底クラスから`self._get_num_tokens_by_gpt2(text: str)`を呼び出すことができます。これはGPT-2トークナイザーを使用します。これは近似値であり、モデルと正確に一致しない場合があることに注意してください。
+
+* **モデル認証情報の検証**
+
+プロバイダーレベルの認証情報チェックと似ていますが、単一のモデルにスコープされます：
+
+```python
+def validate_credentials(self, model: str, credentials: dict) -> None:
+    """
+    Validate model credentials.
+    """
+```
+
+* **動的モデルパラメータスキーマ**
+
+[事前定義モデル](/ja/plugins/quick-start/develop-plugins/model-plugin/predefined-model)とは異なり、モデルがサポートするパラメータを定義するYAMLはありません。パラメータスキーマを動的に生成する必要があります。
+
+例えば、Xinferenceは`max_tokens`、`temperature`、`top_p`をサポートしています。他のプロバイダー（例：`OpenLLM`）は、特定のモデルでのみ`top_k`などのパラメータをサポートする場合があります。つまり、各モデルの機能に合わせてスキーマを適応させる必要があります：
+
+```python
+def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
+    """
+        used to define customizable model schema
+    """
+    rules = [
+        ParameterRule(
+            name='temperature', type=ParameterType.FLOAT,
+            use_template='temperature',
+            label=I18nObject(
+                zh_Hans='温度', en_US='Temperature'
+            )
+        ),
+        ParameterRule(
+            name='top_p', type=ParameterType.FLOAT,
+            use_template='top_p',
+            label=I18nObject(
+                zh_Hans='Top P', en_US='Top P'
+            )
+        ),
+        ParameterRule(
+            name='max_tokens', type=ParameterType.INT,
+            use_template='max_tokens',
+            min=1,
+            default=512,
+            label=I18nObject(
+                zh_Hans='最大生成长度', en_US='Max Tokens'
+            )
+        )
+    ]
+
+    # if model is A, add top_k to rules
+    if model == 'A':
+        rules.append(
+            ParameterRule(
+                name='top_k', type=ParameterType.INT,
+                use_template='top_k',
+                min=1,
+                default=50,
+                label=I18nObject(
+                    zh_Hans='Top K', en_US='Top K'
+                )
+            )
+        )
+
+    """
+        some NOT IMPORTANT code here
+    """
+
+    entity = AIModelEntity(
+        model=model,
+        label=I18nObject(
+            en_US=model
+        ),
+        fetch_from=FetchFrom.CUSTOMIZABLE_MODEL,
+        model_type=model_type,
+        model_properties={ 
+            ModelPropertyKey.MODE:  ModelType.LLM,
+        },
+        parameter_rules=rules
+    )
+
+    return entity
+```
+
+* **エラーマッピング**
+
+モデル呼び出し中にエラーが発生した場合、ランタイムが認識する適切なInvokeErrorタイプにマッピングします。これにより、Difyは異なるエラーを標準化された方法で処理できます：
+
+ランタイムエラー：
+
+```
+•	`InvokeConnectionError`
+•	`InvokeServerUnavailableError`
+•	`InvokeRateLimitError`
+•	`InvokeAuthorizationError`
+•	`InvokeBadRequestError`
+```
+
+```python
+@property
+def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+    """
+    Map model invocation errors to unified error types.
+    The key is the error type thrown to the caller.
+    The value is the error type thrown by the model, which needs to be mapped to a
+    unified Dify error for consistent handling.
+    """
+    # return {
+    #   InvokeConnectionError: [requests.exceptions.ConnectionError],
+    #   ...
+    # }
+```
+
+インターフェースメソッドの詳細については、[モデルドキュメント](https://docs.dify.ai/zh-hans/plugins/schema-definition/model)を参照してください。
+
+このガイドで説明した完全なコードファイルを表示するには、[GitHubリポジトリ](https://github.com/langgenius/dify-official-plugins/tree/main/models/xinference)にアクセスしてください。
+
+### 3. プラグインのデバッグ
+
+開発が完了したら、プラグインをテストして正しく動作することを確認します。詳細については、以下を参照してください：
+
+<Card title="プラグインのデバッグ" icon="link" href="/en/plugins/quick-start/debug-plugin">
+</Card>
+
+### 4. プラグインの公開
+
+このプラグインをDify Marketplaceに掲載したい場合は、以下を参照してください：
+
+Dify Marketplaceに公開
+
+## さらに探索
+
+**クイックスタート：**
+
+* [拡張プラグインの開発](/ja/plugins/quick-start/develop-plugins/extension-plugin)
+* [ツールプラグインの開発](/ja/plugins/quick-start/develop-plugins/tool-plugin)
+* [バンドルプラグイン：複数のプラグインをパッケージ化](/ja/plugins/quick-start/develop-plugins/bundle)
+
+**プラグインエンドポイントドキュメント：**
+
+* [マニフェスト](/ja/plugins/schema-definition/manifest)構造
+* [エンドポイント](/ja/plugins/schema-definition/endpoint)定義
+* [Difyサービスの逆呼び出し](/ja/plugins/schema-definition/reverse-invocation-of-the-dify-service)
+* [ツール](/ja/plugins/schema-definition/tool)
+* [モデル](/ja/plugins/schema-definition/model)
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/features-and-specs/advanced-development/customizable-model.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
