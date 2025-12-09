@@ -1,0 +1,1095 @@
+---
+title: エージェント戦略プラグイン
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/agent-strategy-plugin)を参照してください。</Note>
+
+**エージェント戦略プラグイン**は、LLMが推論や意思決定などのタスクを実行する際に役立ちます。これには、ツールの選択と呼び出し、および結果の処理が含まれます。これにより、システムはより自律的に問題に対処できるようになります。
+
+以下では、現在時刻を自動的に取得するための**Function Calling**をサポートするプラグインの開発方法を説明します。
+
+### 前提条件
+
+- Difyプラグインスキャフォールディングツール
+- Python環境（バージョン ≥ 3.12）
+
+プラグイン開発ツールの準備の詳細については、[開発ツールの初期化](/ja/develop-plugin/getting-started/cli)を参照してください。
+
+<Info>
+**ヒント**: ターミナルで`dify version`を実行して、スキャフォールディングツールがインストールされていることを確認してください。
+</Info>
+
+---
+
+### 1. プラグインテンプレートの初期化
+
+以下のコマンドを実行して、エージェントプラグインの開発テンプレートを作成します：
+
+```
+dify plugin init
+```
+
+画面上のプロンプトに従い、サンプルコメントをガイダンスとして参照してください。
+
+```bash
+➜  Dify Plugins Developing dify plugin init
+Edit profile of the plugin
+Plugin name (press Enter to next step): # プラグイン名を入力
+Author (press Enter to next step): Author name # プラグイン作成者を入力
+Description (press Enter to next step): Description # プラグインの説明を入力
+---
+Select the language you want to use for plugin development, and press Enter to con
+BTW, you need Python 3.12+ to develop the Plugin if you choose Python.
+-> python # Python環境を選択
+  go (not supported yet)
+---
+Based on the ability you want to extend, we have divided the Plugin into four type
+
+- Tool: It's a tool provider, but not only limited to tools, you can implement an
+- Model: Just a model provider, extending others is not allowed.
+- Extension: Other times, you may only need a simple http service to extend the fu
+- Agent Strategy: Implement your own logics here, just by focusing on Agent itself
+
+What's more, we have provided the template for you, you can choose one of them b
+  tool
+-> agent-strategy # エージェント戦略テンプレートを選択
+  llm
+  text-embedding
+---
+Configure the permissions of the plugin, use up and down to navigate, tab to sel
+Backwards Invocation:
+Tools:
+    Enabled: [✔]  You can invoke tools inside Dify if it's enabled # デフォルトで有効
+Models:
+    Enabled: [✔]  You can invoke models inside Dify if it's enabled # デフォルトで有効
+    LLM: [✔]  You can invoke LLM models inside Dify if it's enabled # デフォルトで有効
+    Text Embedding: [✘]  You can invoke text embedding models inside Dify if it'
+    Rerank: [✘]  You can invoke rerank models inside Dify if it's enabled
+...
+```
+
+初期化後、プラグイン開発に必要なすべてのリソースを含むフォルダが作成されます。エージェント戦略プラグインの全体的な構造を理解することで、開発プロセスがスムーズになります：
+
+```text
+├── GUIDE.md               # ユーザーガイドとドキュメント
+├── PRIVACY.md             # プライバシーポリシーとデータ処理ガイドライン
+├── README.md              # プロジェクト概要とセットアップ手順
+├── _assets/               # 静的アセットディレクトリ
+│   └── icon.svg           # エージェント戦略プロバイダーのアイコン/ロゴ
+├── main.py                # メインアプリケーションエントリーポイント
+├── manifest.yaml          # 基本プラグイン設定
+├── provider/              # プロバイダー設定ディレクトリ
+│   └── basic_agent.yaml   # エージェントプロバイダー設定
+├── requirements.txt       # Python依存関係リスト
+└── strategies/            # 戦略実装ディレクトリ
+    ├── basic_agent.py     # 基本エージェント戦略の実装
+    └── basic_agent.yaml   # 基本エージェント戦略の設定
+```
+
+このプラグインのすべての主要機能は`strategies/`ディレクトリにあります。
+
+---
+
+### 2. プラグインの開発
+
+エージェント戦略プラグインの開発は、2つのファイルを中心に行われます：
+
+- **プラグイン宣言**: `strategies/basic_agent.yaml`
+- **プラグイン実装**: `strategies/basic_agent.py`
+
+#### 2.1 パラメータの定義
+
+エージェントプラグインを構築するには、まず`strategies/basic_agent.yaml`で必要なパラメータを指定します。これらのパラメータは、LLMの呼び出しやツールの使用など、プラグインのコア機能を定義します。
+
+最初に以下の4つのパラメータを含めることをお勧めします：
+
+1.  **model**: 呼び出す大規模言語モデル（例：GPT-4、GPT-4o-mini）。
+2.  **tools**: プラグインの機能を拡張するツールのリスト。
+3.  **query**: モデルに送信されるユーザー入力またはプロンプトの内容。
+4.  **maximum_iterations**: 過度な計算を防ぐための最大反復回数。
+
+サンプルコード：
+
+```yaml
+identity:
+  name: basic_agent # the name of the agent_strategy
+  author: novice # the author of the agent_strategy
+  label:
+    en_US: BasicAgent # the engilish label of the agent_strategy
+description:
+  en_US: BasicAgent # the english description of the agent_strategy
+parameters:
+  - name: model # the name of the model parameter
+    type: model-selector # model-type
+    scope: tool-call&llm # the scope of the parameter
+    required: true
+    label:
+      en_US: Model
+      zh_Hans: 模型
+      pt_BR: Model
+  - name: tools # the name of the tools parameter
+    type: array[tools] # the type of tool parameter
+    required: true
+    label:
+      en_US: Tools list
+      zh_Hans: 工具列表
+      pt_BR: Tools list
+  - name: query # the name of the query parameter
+    type: string # the type of query parameter
+    required: true
+    label:
+      en_US: Query
+      zh_Hans: 查询
+      pt_BR: Query
+  - name: maximum_iterations
+    type: number
+    required: false
+    default: 5
+    label:
+      en_US: Maxium Iterations
+      zh_Hans: 最大迭代次数
+      pt_BR: Maxium Iterations
+    max: 50 # if you set the max and min value, the display of the parameter will be a slider
+    min: 1
+extra:
+  python:
+    source: strategies/basic_agent.py
+```
+
+これらのパラメータを設定すると、プラグインは自動的にユーザーフレンドリーなインターフェースを生成し、簡単に管理できるようになります：
+
+![Agent Strategy Plugin UI](https://assets-docs.dify.ai/2025/01/d011e2eba4c37f07a9564067ba787df8.png)
+
+#### 2.2 パラメータの取得と実行
+
+ユーザーがこれらの基本フィールドを入力した後、プラグインは送信されたパラメータを処理する必要があります。`strategies/basic_agent.py`で、エージェント用のパラメータクラスを定義し、ロジック内でこれらのパラメータを取得して適用します。
+
+受信パラメータを検証：
+
+```python
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+from pydantic import BaseModel
+
+class BasicParams(BaseModel):
+    maximum_iterations: int
+    model: AgentModelConfig
+    tools: list[ToolEntity]
+    query: str
+```
+
+パラメータを取得した後、具体的なビジネスロジックが実行されます：
+
+```python
+class BasicAgentAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        params = BasicParams(**parameters)
+```
+
+### 3. モデルの呼び出し
+
+エージェント戦略プラグインでは、**モデルの呼び出し**がワークフローの中心です。SDKの`session.model.llm.invoke()`を使用して、テキスト生成、対話などを処理し、LLMを効率的に呼び出すことができます。
+
+LLMに**ツールを処理**させたい場合は、ツールのインターフェースに一致する構造化されたパラメータを出力するようにします。つまり、LLMはユーザーの指示に基づいて、ツールが受け入れられる入力引数を生成する必要があります。
+
+以下のパラメータを構築します：
+
+*   model
+*   prompt\_messages
+*   tools
+*   stop
+*   stream
+
+メソッド定義のサンプルコード：
+
+```python
+def invoke(
+        self,
+        model_config: LLMModelConfig,
+        prompt_messages: list[PromptMessage],
+        tools: list[PromptMessageTool] | None = None,
+        stop: list[str] | None = None,
+        stream: bool = True,
+    ) -> Generator[LLMResultChunk, None, None] | LLMResult:...
+```
+
+完全な機能実装を確認するには、モデル呼び出しのサンプルコードを参照してください。
+
+このコードは以下の機能を実現します：ユーザーがコマンドを入力すると、エージェント戦略プラグインは自動的にLLMを呼び出し、生成された結果に基づいてツール呼び出しに必要なパラメータを構築し、モデルが統合されたツールを柔軟にディスパッチして複雑なタスクを効率的に完了できるようにします。
+
+![ツール生成のためのリクエストパラメータ](https://assets-docs.dify.ai/2025/01/01e32c2d77150213c7c929b3cceb4dae.png)
+
+### 4. ツールの処理
+
+ツールパラメータを指定した後、エージェント戦略プラグインは実際にこれらのツールを呼び出す必要があります。`session.tool.invoke()`を使用してこれらのリクエストを行います。
+
+以下のパラメータを構築します：
+
+-   provider
+-   tool\_name
+-   parameters
+
+メソッド定義のサンプルコード：
+
+```python
+ def invoke(
+        self,
+        provider_type: ToolProviderType,
+        provider: str,
+        tool_name: str,
+        parameters: dict[str, Any],
+    ) -> Generator[ToolInvokeMessage, None, None]:...
+```
+
+LLM自体にツール呼び出しに必要なパラメータを生成させたい場合は、モデルの出力とツール呼び出しコードを組み合わせることで実現できます。
+
+```python
+tool_instances = (
+    {tool.identity.name: tool for tool in params.tools} if params.tools else {}
+)
+for tool_call_id, tool_call_name, tool_call_args in tool_calls:
+    tool_instance = tool_instances[tool_call_name]
+    self.session.tool.invoke(
+        provider_type=ToolProviderType.BUILT_IN,
+        provider=tool_instance.identity.provider,
+        tool_name=tool_instance.identity.name,
+        parameters={**tool_instance.runtime_parameters, **tool_call_args},
+    )
+```
+
+これにより、エージェント戦略プラグインは自動的に**Function Calling**を実行できるようになります。例えば、現在時刻を取得することができます。
+
+![ツール呼び出し](https://assets-docs.dify.ai/2025/01/80e5de8acc2b0ed00524e490fd611ff5.png)
+
+### 5. ログの作成
+
+**エージェント戦略プラグイン**で複雑なタスクを完了するには、複数のステップが必要になることがよくあります。開発者が各ステップの結果を追跡し、意思決定プロセスを分析し、戦略を最適化することは非常に重要です。SDKの`create_log_message`と`finish_log_message`を使用することで、呼び出しの前後のリアルタイムの状態をログに記録し、迅速な問題診断に役立てることができます。
+
+例えば：
+
+-   モデルを呼び出す前に「モデル呼び出しを開始」というメッセージをログに記録し、タスクの実行進捗を明確にします。
+-   モデルが応答したら「呼び出し成功」というメッセージをログに記録し、モデルの出力をエンドツーエンドで追跡できるようにします。
+
+```python
+model_log = self.create_log_message(
+            label=f"{params.model.model} Thought",
+            data={},
+            metadata={"start_at": model_started_at, "provider": params.model.provider},
+            status=ToolInvokeMessage.LogMessage.LogStatus.START,
+        )
+yield model_log
+self.session.model.llm.invoke(...)
+yield self.finish_log_message(
+    log=model_log,
+    data={
+        "output": response,
+        "tool_name": tool_call_names,
+        "tool_input": tool_call_inputs,
+    },
+    metadata={
+        "started_at": model_started_at,
+        "finished_at": time.perf_counter(),
+        "elapsed_time": time.perf_counter() - model_started_at,
+        "provider": params.model.provider,
+    },
+)
+```
+
+セットアップが完了すると、ワークフローログに実行結果が出力されます：
+
+![エージェント出力の実行結果](https://assets-docs.dify.ai/2025/01/96516388a4fb1da9cea85fc1804ff377.png)
+
+複数ラウンドのログが発生する場合は、ログ呼び出しで`parent`パラメータを設定することで階層構造にし、追跡しやすくすることができます。
+
+参照メソッド：
+
+```python
+function_call_round_log = self.create_log_message(
+    label="Function Call Round1 ",
+    data={},
+    metadata={},
+)
+yield function_call_round_log
+
+model_log = self.create_log_message(
+    label=f"{params.model.model} Thought",
+    data={},
+    metadata={"start_at": model_started_at, "provider": params.model.provider},
+    status=ToolInvokeMessage.LogMessage.LogStatus.START,
+    # add parent log
+    parent=function_call_round_log,
+)
+yield model_log
+```
+
+#### エージェントプラグイン機能のサンプルコード
+
+<Tabs>
+  <Tab title="モデルの呼び出し">
+    #### モデルの呼び出し
+
+以下のコードは、エージェント戦略プラグインにモデルを呼び出す機能を付与する方法を示しています：
+
+```python
+import json
+from collections.abc import Generator
+from typing import Any, cast
+
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.entities.model.llm import LLMModelConfig, LLMResult, LLMResultChunk
+from dify_plugin.entities.model.message import (
+    PromptMessageTool,
+    UserPromptMessage,
+)
+from dify_plugin.entities.tool import ToolInvokeMessage, ToolParameter, ToolProviderType
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+from pydantic import BaseModel
+
+class BasicParams(BaseModel):
+    maximum_iterations: int
+    model: AgentModelConfig
+    tools: list[ToolEntity]
+    query: str
+
+class BasicAgentAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        params = BasicParams(**parameters)
+        chunks: Generator[LLMResultChunk, None, None] | LLMResult = (
+            self.session.model.llm.invoke(
+                model_config=LLMModelConfig(**params.model.model_dump(mode="json")),
+                prompt_messages=[UserPromptMessage(content=params.query)],
+                tools=[
+                    self._convert_tool_to_prompt_message_tool(tool)
+                    for tool in params.tools
+                ],
+                stop=params.model.completion_params.get("stop", [])
+                if params.model.completion_params
+                else [],
+                stream=True,
+            )
+        )
+        response = ""
+        tool_calls = []
+        tool_instances = (
+            {tool.identity.name: tool for tool in params.tools} if params.tools else {}
+        )
+
+        for chunk in chunks:
+            # check if there is any tool call
+            if self.check_tool_calls(chunk):
+                tool_calls = self.extract_tool_calls(chunk)
+                tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
+                try:
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls},
+                        ensure_ascii=False,
+                    )
+                except json.JSONDecodeError:
+                    # ensure ascii to avoid encoding error
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls}
+                    )
+                print(tool_call_names, tool_call_inputs)
+            if chunk.delta.message and chunk.delta.message.content:
+                if isinstance(chunk.delta.message.content, list):
+                    for content in chunk.delta.message.content:
+                        response += content.data
+                        print(content.data, end="", flush=True)
+                else:
+                    response += str(chunk.delta.message.content)
+                    print(str(chunk.delta.message.content), end="", flush=True)
+
+            if chunk.delta.usage:
+                # usage of the model
+                usage = chunk.delta.usage
+
+        yield self.create_text_message(
+            text=f"{response or json.dumps(tool_calls, ensure_ascii=False)}\n"
+        )
+        result = ""
+        for tool_call_id, tool_call_name, tool_call_args in tool_calls:
+            tool_instance = tool_instances[tool_call_name]
+            tool_invoke_responses = self.session.tool.invoke(
+                provider_type=ToolProviderType.BUILT_IN,
+                provider=tool_instance.identity.provider,
+                tool_name=tool_instance.identity.name,
+                parameters={**tool_instance.runtime_parameters, **tool_call_args},
+            )
+            if not tool_instance:
+                tool_invoke_responses = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": f"there is not a tool named {tool_call_name}",
+                }
+            else:
+                # invoke tool
+                tool_invoke_responses = self.session.tool.invoke(
+                    provider_type=ToolProviderType.BUILT_IN,
+                    provider=tool_instance.identity.provider,
+                    tool_name=tool_instance.identity.name,
+                    parameters={**tool_instance.runtime_parameters, **tool_call_args},
+                )
+                result = ""
+                for tool_invoke_response in tool_invoke_responses:
+                    if tool_invoke_response.type == ToolInvokeMessage.MessageType.TEXT:
+                        result += cast(
+                            ToolInvokeMessage.TextMessage, tool_invoke_response.message
+                        ).text
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.LINK
+                    ):
+                        result += (
+                            f"result link: {cast(ToolInvokeMessage.TextMessage, tool_invoke_response.message).text}."
+                            + " please tell user to check it."
+                        )
+                    elif tool_invoke_response.type in {
+                        ToolInvokeMessage.MessageType.IMAGE_LINK,
+                        ToolInvokeMessage.MessageType.IMAGE,
+                    }:
+                        result += (
+                            "image has been created and sent to user already, "
+                            + "you do not need to create it, just tell the user to check it now."
+                        )
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.JSON
+                    ):
+                        text = json.dumps(
+                            cast(
+                                ToolInvokeMessage.JsonMessage,
+                                tool_invoke_response.message,
+                            ).json_object,
+                            ensure_ascii=False,
+                        )
+                        result += f"tool response: {text}."
+                    else:
+                        result += f"tool response: {tool_invoke_response.message!r}."
+
+                tool_response = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": result,
+                }
+        yield self.create_text_message(result)
+
+    def _convert_tool_to_prompt_message_tool(
+        self, tool: ToolEntity
+    ) -> PromptMessageTool:
+        """
+        convert tool to prompt message tool
+        """
+        message_tool = PromptMessageTool(
+            name=tool.identity.name,
+            description=tool.description.llm if tool.description else "",
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        )
+
+        parameters = tool.parameters
+        for parameter in parameters:
+            if parameter.form != ToolParameter.ToolParameterForm.LLM:
+                continue
+
+            parameter_type = parameter.type
+            if parameter.type in {
+                ToolParameter.ToolParameterType.FILE,
+                ToolParameter.ToolParameterType.FILES,
+            }:
+                continue
+            enum = []
+            if parameter.type == ToolParameter.ToolParameterType.SELECT:
+                enum = (
+                    [option.value for option in parameter.options]
+                    if parameter.options
+                    else []
+                )
+
+            message_tool.parameters["properties"][parameter.name] = {
+                "type": parameter_type,
+                "description": parameter.llm_description or "",
+            }
+
+            if len(enum) > 0:
+                message_tool.parameters["properties"][parameter.name]["enum"] = enum
+
+            if parameter.required:
+                message_tool.parameters["required"].append(parameter.name)
+
+        return message_tool
+
+    def check_tool_calls(self, llm_result_chunk: LLMResultChunk) -> bool:
+        """
+        Check if there is any tool call in llm result chunk
+        """
+        return bool(llm_result_chunk.delta.message.tool_calls)
+
+    def extract_tool_calls(
+        self, llm_result_chunk: LLMResultChunk
+    ) -> list[tuple[str, str, dict[str, Any]]]:
+        """
+        Extract tool calls from llm result chunk
+
+        Returns:
+            List[Tuple[str, str, Dict[str, Any]]]: [(tool_call_id, tool_call_name, tool_call_args)]
+        """
+        tool_calls = []
+        for prompt_message in llm_result_chunk.delta.message.tool_calls:
+            args = {}
+            if prompt_message.function.arguments != "":
+                args = json.loads(prompt_message.function.arguments)
+
+            tool_calls.append(
+                (
+                    prompt_message.id,
+                    prompt_message.function.name,
+                    args,
+                )
+            )
+
+        return tool_calls
+```
+  </Tab>
+  <Tab title="ツールの処理">
+    #### ツールの処理
+
+以下のコードは、エージェント戦略プラグインにモデル呼び出しを実装し、ツールに正規化されたリクエストを送信する方法を示しています。
+
+```python
+import json
+from collections.abc import Generator
+from typing import Any, cast
+
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.entities.model.llm import LLMModelConfig, LLMResult, LLMResultChunk
+from dify_plugin.entities.model.message import (
+    PromptMessageTool,
+    UserPromptMessage,
+)
+from dify_plugin.entities.tool import ToolInvokeMessage, ToolParameter, ToolProviderType
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+from pydantic import BaseModel
+
+class BasicParams(BaseModel):
+    maximum_iterations: int
+    model: AgentModelConfig
+    tools: list[ToolEntity]
+    query: str
+
+class BasicAgentAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        params = BasicParams(**parameters)
+        chunks: Generator[LLMResultChunk, None, None] | LLMResult = (
+            self.session.model.llm.invoke(
+                model_config=LLMModelConfig(**params.model.model_dump(mode="json")),
+                prompt_messages=[UserPromptMessage(content=params.query)],
+                tools=[
+                    self._convert_tool_to_prompt_message_tool(tool)
+                    for tool in params.tools
+                ],
+                stop=params.model.completion_params.get("stop", [])
+                if params.model.completion_params
+                else [],
+                stream=True,
+            )
+        )
+        response = ""
+        tool_calls = []
+        tool_instances = (
+            {tool.identity.name: tool for tool in params.tools} if params.tools else {}
+        )
+
+        for chunk in chunks:
+            # check if there is any tool call
+            if self.check_tool_calls(chunk):
+                tool_calls = self.extract_tool_calls(chunk)
+                tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
+                try:
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls},
+                        ensure_ascii=False,
+                    )
+                except json.JSONDecodeError:
+                    # ensure ascii to avoid encoding error
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls}
+                    )
+                print(tool_call_names, tool_call_inputs)
+            if chunk.delta.message and chunk.delta.message.content:
+                if isinstance(chunk.delta.message.content, list):
+                    for content in chunk.delta.message.content:
+                        response += content.data
+                        print(content.data, end="", flush=True)
+                else:
+                    response += str(chunk.delta.message.content)
+                    print(str(chunk.delta.message.content), end="", flush=True)
+
+            if chunk.delta.usage:
+                # usage of the model
+                usage = chunk.delta.usage
+
+        yield self.create_text_message(
+            text=f"{response or json.dumps(tool_calls, ensure_ascii=False)}\n"
+        )
+        result = ""
+        for tool_call_id, tool_call_name, tool_call_args in tool_calls:
+            tool_instance = tool_instances[tool_call_name]
+            tool_invoke_responses = self.session.tool.invoke(
+                provider_type=ToolProviderType.BUILT_IN,
+                provider=tool_instance.identity.provider,
+                tool_name=tool_instance.identity.name,
+                parameters={**tool_instance.runtime_parameters, **tool_call_args},
+            )
+            if not tool_instance:
+                tool_invoke_responses = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": f"there is not a tool named {tool_call_name}",
+                }
+            else:
+                # invoke tool
+                tool_invoke_responses = self.session.tool.invoke(
+                    provider_type=ToolProviderType.BUILT_IN,
+                    provider=tool_instance.identity.provider,
+                    tool_name=tool_instance.identity.name,
+                    parameters={**tool_instance.runtime_parameters, **tool_call_args},
+                )
+                result = ""
+                for tool_invoke_response in tool_invoke_responses:
+                    if tool_invoke_response.type == ToolInvokeMessage.MessageType.TEXT:
+                        result += cast(
+                            ToolInvokeMessage.TextMessage, tool_invoke_response.message
+                        ).text
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.LINK
+                    ):
+                        result += (
+                            f"result link: {cast(ToolInvokeMessage.TextMessage, tool_invoke_response.message).text}."
+                            + " please tell user to check it."
+                        )
+                    elif tool_invoke_response.type in {
+                        ToolInvokeMessage.MessageType.IMAGE_LINK,
+                        ToolInvokeMessage.MessageType.IMAGE,
+                    }:
+                        result += (
+                            "image has been created and sent to user already, "
+                            + "you do not need to create it, just tell the user to check it now."
+                        )
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.JSON
+                    ):
+                        text = json.dumps(
+                            cast(
+                                ToolInvokeMessage.JsonMessage,
+                                tool_invoke_response.message,
+                            ).json_object,
+                            ensure_ascii=False,
+                        )
+                        result += f"tool response: {text}."
+                    else:
+                        result += f"tool response: {tool_invoke_response.message!r}."
+
+                tool_response = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": result,
+                }
+        yield self.create_text_message(result)
+
+    def _convert_tool_to_prompt_message_tool(
+        self, tool: ToolEntity
+    ) -> PromptMessageTool:
+        """
+        convert tool to prompt message tool
+        """
+        message_tool = PromptMessageTool(
+            name=tool.identity.name,
+            description=tool.description.llm if tool.description else "",
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        )
+
+        parameters = tool.parameters
+        for parameter in parameters:
+            if parameter.form != ToolParameter.ToolParameterForm.LLM:
+                continue
+
+            parameter_type = parameter.type
+            if parameter.type in {
+                ToolParameter.ToolParameterType.FILE,
+                ToolParameter.ToolParameterType.FILES,
+            }:
+                continue
+            enum = []
+            if parameter.type == ToolParameter.ToolParameterType.SELECT:
+                enum = (
+                    [option.value for option in parameter.options]
+                    if parameter.options
+                    else []
+                )
+
+            message_tool.parameters["properties"][parameter.name] = {
+                "type": parameter_type,
+                "description": parameter.llm_description or "",
+            }
+
+            if len(enum) > 0:
+                message_tool.parameters["properties"][parameter.name]["enum"] = enum
+
+            if parameter.required:
+                message_tool.parameters["required"].append(parameter.name)
+
+        return message_tool
+
+    def check_tool_calls(self, llm_result_chunk: LLMResultChunk) -> bool:
+        """
+        Check if there is any tool call in llm result chunk
+        """
+        return bool(llm_result_chunk.delta.message.tool_calls)
+
+    def extract_tool_calls(
+        self, llm_result_chunk: LLMResultChunk
+    ) -> list[tuple[str, str, dict[str, Any]]]:
+        """
+        Extract tool calls from llm result chunk
+
+        Returns:
+            List[Tuple[str, str, Dict[str, Any]]]: [(tool_call_id, tool_call_name, tool_call_args)]
+        """
+        tool_calls = []
+        for prompt_message in llm_result_chunk.delta.message.tool_calls:
+            args = {}
+            if prompt_message.function.arguments != "":
+                args = json.loads(prompt_message.function.arguments)
+
+            tool_calls.append(
+                (
+                    prompt_message.id,
+                    prompt_message.function.name,
+                    args,
+                )
+            )
+
+        return tool_calls
+```
+  </Tab>
+  <Tab title="完全な機能コードの例">
+    #### 完全な機能コードの例
+
+**モデルの呼び出し、ツールの処理**、および**複数ラウンドのログを出力する機能**を含む完全なサンプルプラグインコード：
+
+```python
+import json
+import time
+from collections.abc import Generator
+from typing import Any, cast
+
+from dify_plugin.entities.agent import AgentInvokeMessage
+from dify_plugin.entities.model.llm import LLMModelConfig, LLMResult, LLMResultChunk
+from dify_plugin.entities.model.message import (
+    PromptMessageTool,
+    UserPromptMessage,
+)
+from dify_plugin.entities.tool import ToolInvokeMessage, ToolParameter, ToolProviderType
+from dify_plugin.interfaces.agent import AgentModelConfig, AgentStrategy, ToolEntity
+from pydantic import BaseModel
+
+class BasicParams(BaseModel):
+    maximum_iterations: int
+    model: AgentModelConfig
+    tools: list[ToolEntity]
+    query: str
+
+class BasicAgentAgentStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict[str, Any]) -> Generator[AgentInvokeMessage]:
+        params = BasicParams(**parameters)
+        function_call_round_log = self.create_log_message(
+            label="Function Call Round1 ",
+            data={},
+            metadata={},
+        )
+        yield function_call_round_log
+        model_started_at = time.perf_counter()
+        model_log = self.create_log_message(
+            label=f"{params.model.model} Thought",
+            data={},
+            metadata={"start_at": model_started_at, "provider": params.model.provider},
+            status=ToolInvokeMessage.LogMessage.LogStatus.START,
+            parent=function_call_round_log,
+        )
+        yield model_log
+        chunks: Generator[LLMResultChunk, None, None] | LLMResult = (
+            self.session.model.llm.invoke(
+                model_config=LLMModelConfig(**params.model.model_dump(mode="json")),
+                prompt_messages=[UserPromptMessage(content=params.query)],
+                tools=[
+                    self._convert_tool_to_prompt_message_tool(tool)
+                    for tool in params.tools
+                ],
+                stop=params.model.completion_params.get("stop", [])
+                if params.model.completion_params
+                else [],
+                stream=True,
+            )
+        )
+        response = ""
+        tool_calls = []
+        tool_instances = (
+            {tool.identity.name: tool for tool in params.tools} if params.tools else {}
+        )
+        tool_call_names = ""
+        tool_call_inputs = ""
+        for chunk in chunks:
+            # check if there is any tool call
+            if self.check_tool_calls(chunk):
+                tool_calls = self.extract_tool_calls(chunk)
+                tool_call_names = ";".join([tool_call[1] for tool_call in tool_calls])
+                try:
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls},
+                        ensure_ascii=False,
+                    )
+                except json.JSONDecodeError:
+                    # ensure ascii to avoid encoding error
+                    tool_call_inputs = json.dumps(
+                        {tool_call[1]: tool_call[2] for tool_call in tool_calls}
+                    )
+                print(tool_call_names, tool_call_inputs)
+            if chunk.delta.message and chunk.delta.message.content:
+                if isinstance(chunk.delta.message.content, list):
+                    for content in chunk.delta.message.content:
+                        response += content.data
+                        print(content.data, end="", flush=True)
+                else:
+                    response += str(chunk.delta.message.content)
+                    print(str(chunk.delta.message.content), end="", flush=True)
+
+            if chunk.delta.usage:
+                # usage of the model
+                usage = chunk.delta.usage
+
+        yield self.finish_log_message(
+            log=model_log,
+            data={
+                "output": response,
+                "tool_name": tool_call_names,
+                "tool_input": tool_call_inputs,
+            },
+            metadata={
+                "started_at": model_started_at,
+                "finished_at": time.perf_counter(),
+                "elapsed_time": time.perf_counter() - model_started_at,
+                "provider": params.model.provider,
+            },
+        )
+        yield self.create_text_message(
+            text=f"{response or json.dumps(tool_calls, ensure_ascii=False)}\n"
+        )
+        result = ""
+        for tool_call_id, tool_call_name, tool_call_args in tool_calls:
+            tool_instance = tool_instances[tool_call_name]
+            tool_invoke_responses = self.session.tool.invoke(
+                provider_type=ToolProviderType.BUILT_IN,
+                provider=tool_instance.identity.provider,
+                tool_name=tool_instance.identity.name,
+                parameters={**tool_instance.runtime_parameters, **tool_call_args},
+            )
+            if not tool_instance:
+                tool_invoke_responses = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": f"there is not a tool named {tool_call_name}",
+                }
+            else:
+                # invoke tool
+                tool_invoke_responses = self.session.tool.invoke(
+                    provider_type=ToolProviderType.BUILT_IN,
+                    provider=tool_instance.identity.provider,
+                    tool_name=tool_instance.identity.name,
+                    parameters={**tool_instance.runtime_parameters, **tool_call_args},
+                )
+                result = ""
+                for tool_invoke_response in tool_invoke_responses:
+                    if tool_invoke_response.type == ToolInvokeMessage.MessageType.TEXT:
+                        result += cast(
+                            ToolInvokeMessage.TextMessage, tool_invoke_response.message
+                        ).text
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.LINK
+                    ):
+                        result += (
+                            f"result link: {cast(ToolInvokeMessage.TextMessage, tool_invoke_response.message).text}."
+                            + " please tell user to check it."
+                        )
+                    elif tool_invoke_response.type in {
+                        ToolInvokeMessage.MessageType.IMAGE_LINK,
+                        ToolInvokeMessage.MessageType.IMAGE,
+                    }:
+                        result += (
+                            "image has been created and sent to user already, "
+                            + "you do not need to create it, just tell the user to check it now."
+                        )
+                    elif (
+                        tool_invoke_response.type == ToolInvokeMessage.MessageType.JSON
+                    ):
+                        text = json.dumps(
+                            cast(
+                                ToolInvokeMessage.JsonMessage,
+                                tool_invoke_response.message,
+                            ).json_object,
+                            ensure_ascii=False,
+                        )
+                        result += f"tool response: {text}."
+                    else:
+                        result += f"tool response: {tool_invoke_response.message!r}."
+
+                tool_response = {
+                    "tool_call_id": tool_call_id,
+                    "tool_call_name": tool_call_name,
+                    "tool_response": result,
+                }
+        yield self.create_text_message(result)
+
+    def _convert_tool_to_prompt_message_tool(
+        self, tool: ToolEntity
+    ) -> PromptMessageTool:
+        """
+        convert tool to prompt message tool
+        """
+        message_tool = PromptMessageTool(
+            name=tool.identity.name,
+            description=tool.description.llm if tool.description else "",
+            parameters={
+                "type": "object",
+                "properties": {},
+                "required": [],
+            },
+        )
+
+        parameters = tool.parameters
+        for parameter in parameters:
+            if parameter.form != ToolParameter.ToolParameterForm.LLM:
+                continue
+
+            parameter_type = parameter.type
+            if parameter.type in {
+                ToolParameter.ToolParameterType.FILE,
+                ToolParameter.ToolParameterType.FILES,
+            }:
+                continue
+            enum = []
+            if parameter.type == ToolParameter.ToolParameterType.SELECT:
+                enum = (
+                    [option.value for option in parameter.options]
+                    if parameter.options
+                    else []
+                )
+
+            message_tool.parameters["properties"][parameter.name] = {
+                "type": parameter_type,
+                "description": parameter.llm_description or "",
+            }
+
+            if len(enum) > 0:
+                message_tool.parameters["properties"][parameter.name]["enum"] = enum
+
+            if parameter.required:
+                message_tool.parameters["required"].append(parameter.name)
+
+        return message_tool
+
+    def check_tool_calls(self, llm_result_chunk: LLMResultChunk) -> bool:
+        """
+        Check if there is any tool call in llm result chunk
+        """
+        return bool(llm_result_chunk.delta.message.tool_calls)
+
+    def extract_tool_calls(
+        self, llm_result_chunk: LLMResultChunk
+    ) -> list[tuple[str, str, dict[str, Any]]]:
+        """
+        Extract tool calls from llm result chunk
+
+        Returns:
+            List[Tuple[str, str, Dict[str, Any]]]: [(tool_call_id, tool_call_name, tool_call_args)]
+        """
+        tool_calls = []
+        for prompt_message in llm_result_chunk.delta.message.tool_calls:
+            args = {}
+            if prompt_message.function.arguments != "":
+                args = json.loads(prompt_message.function.arguments)
+
+            tool_calls.append(
+                (
+                    prompt_message.id,
+                    prompt_message.function.name,
+                    args,
+                )
+            )
+
+        return tool_calls
+```
+  </Tab>
+</Tabs>
+
+### 6. プラグインのデバッグ
+
+プラグインの宣言ファイルと実装コードを完成させた後、プラグインディレクトリで`python -m main`を実行して再起動します。次に、プラグインが正しく動作することを確認します。Difyはリモートデバッグを提供しています。**プラグイン管理**に移動して、デバッグキーとリモートサーバーアドレスを取得してください。
+
+![](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
+
+プラグインプロジェクトに戻り、`.env.example`を`.env`にコピーし、関連するリモートサーバーとデバッグキー情報を挿入します。
+
+```bash
+INSTALL_METHOD=remote
+REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_KEY=********-****-****-****-************
+```
+
+次に実行します：
+
+```bash
+python -m main
+```
+
+ワークスペースにプラグインがインストールされ、チームメンバーもアクセスできるようになります。
+
+![プラグインのブラウズ](https://assets-docs.dify.ai/2025/01/c82ec0202e5bf914b36e06c796398dd6.png)
+
+### プラグインのパッケージング（オプション）
+
+すべてが正常に動作したら、以下を実行してプラグインをパッケージングできます：
+
+```bash
+# ./basic_agent/を実際のプラグインプロジェクトパスに置き換えてください。
+
+dify plugin package ./basic_agent/
+```
+
+現在のフォルダに`google.difypkg`（例）という名前のファイルが表示されます。これが最終的なプラグインパッケージです。
+
+**おめでとうございます！** エージェント戦略プラグインの開発、テスト、パッケージングが完了しました。
+
+### プラグインの公開（オプション）
+
+[Difyプラグインリポジトリ](https://github.com/langgenius/dify-plugins)にアップロードできます。その前に、[プラグイン公開ガイドライン](/ja/develop-plugin/publishing/marketplace-listing/release-to-dify-marketplace)を満たしていることを確認してください。承認されると、コードがメインブランチにマージされ、プラグインは自動的に[Dify Marketplace](https://marketplace.dify.ai/)で公開されます。
+
+---
+
+### さらなる探求
+
+複雑なタスクには、複数ラウンドの思考とツール呼び出しが必要になることが多く、通常は**モデル呼び出し → ツール使用**をタスクが終了するか最大反復回数に達するまで繰り返します。このプロセスでは、プロンプトを効果的に管理することが重要です。[完全なFunction Calling実装](https://github.com/langgenius/dify-official-plugins/blob/main/agent-strategies/cot_agent/strategies/function_calling.py)を参照して、モデルが外部ツールを呼び出し、その出力を処理するための標準化されたアプローチを確認してください。
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[このページを編集する](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/agent-strategy-plugin.mdx) | [問題を報告する](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
