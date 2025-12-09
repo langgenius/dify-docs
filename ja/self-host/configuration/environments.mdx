@@ -2,6 +2,809 @@
 title: 環境変数
 ---
 
-<Note>
-このドキュメントは英語版のみです。[英語ドキュメント](/en/self-host/configuration/environments)を参照してください。
-</Note>
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/configuration/environments)を参照してください。</Note>
+
+<Info>
+このドキュメントは古くなっている可能性があります。最新の設定ファイルを参照してください：
+
+- [docker-compose.yaml](https://github.com/langgenius/dify/blob/5f8d20b5b2bb51f19547467167b18d9c0f6ffbb8/docker/docker-compose.yaml)
+
+- [.env.example](https://github.com/langgenius/dify/blob/5f8d20b5b2bb51f19547467167b18d9c0f6ffbb8/docker/.env.example)
+</Info>
+
+## 共通変数
+
+### CONSOLE_API_URL
+
+コンソールAPIのバックエンドURL。認証コールバックの構築に使用されます。空の場合、アプリケーションと同じドメインがデフォルトになります。例：`https://api.console.dify.ai`
+
+### CONSOLE_WEB_URL
+
+コンソールWebインターフェースのフロントエンドURL。フロントエンドアドレスの構築とCORS設定に使用されます。空の場合、アプリケーションと同じドメインがデフォルトになります。例：`https://console.dify.ai`
+
+### SERVICE_API_URL
+
+Service API URL。フロントエンドにService API Base URLを表示するために使用されます。空の場合、アプリケーションと同じドメインがデフォルトになります。例：`https://api.dify.ai`
+
+### TRIGGER_URL
+
+webhookトリガーとプラグイントリガーの両方でwebhookコールバックURLに使用されるベースURLプレフィックス。
+
+外部システムからアクセス可能なパブリックドメインまたはIPアドレスを指定してください。
+
+### APP_API_URL
+
+WebApp APIバックエンドURL。フロントエンドAPIのバックエンドURLを指定するために使用されます。空の場合、アプリケーションと同じドメインがデフォルトになります。例：`https://app.dify.ai`
+
+### APP_WEB_URL
+
+WebApp URL。ファイルプレビューまたはダウンロードURLをフロントエンドに表示したり、マルチモデル入力として使用するために使用されます。空の場合、アプリケーションと同じドメインがデフォルトになります。例：`https://udify.app/`
+
+### FILES_URL
+
+ファイルプレビューまたはダウンロードURLのプレフィックス。これらのURLをフロントエンドに表示し、マルチモーダルモデルの入力として提供するために使用されます。偽造を防ぐため、画像プレビューURLは署名され、5分後に期限切れになります。
+
+***
+
+## サーバー
+
+### MODE
+
+起動モード：dockerを使用して起動した場合のみ利用可能です。ソースコードから実行する場合は適用されません。
+
+- api：APIサーバーを起動。
+- worker：非同期キューワーカーを起動。
+
+### DEBUG
+
+デバッグモード：デフォルトでは無効です。ローカル開発時にモンキーパッチによる問題を防ぐため、この設定を有効にすることをお勧めします。
+
+### FLASK_DEBUG
+
+Flaskデバッグモード：有効にすると、APIレスポンスにトレース情報が出力され、デバッグが容易になります。
+
+### SECRET_KEY
+
+セッションCookieの安全な署名とデータベース内の機密情報の暗号化に使用される秘密鍵。
+
+この変数は初回起動前に設定する必要があります。
+
+`openssl rand -base64 42`を実行して強力な鍵を生成してください。
+
+### DEPLOY_ENV
+
+デプロイ環境：
+
+- PRODUCTION（デフォルト）：本番環境。
+- TESTING：テスト環境。フロントエンドページに、この環境がテスト環境であることを示す色付きラベルが表示されます。
+
+### LOG_LEVEL
+
+ログ出力レベル。デフォルトはINFOです。本番環境ではERRORに設定することをお勧めします。
+
+### MIGRATION_ENABLED
+
+trueに設定すると、コンテナ起動時にデータベースマイグレーションが自動的に実行されます。dockerを使用して起動した場合のみ利用可能で、ソースコードから実行する場合は適用されません。
+
+ソースコードから起動する場合は、apiディレクトリで手動で`flask db upgrade`を実行する必要があります。
+
+### CHECK_UPDATE_URL
+
+バージョンチェックポリシーを制御します。falseに設定すると、システムは`https://updates.dify.ai`を呼び出してアップデートを確認しません。
+
+現在、CloudFlare Workerベースのバージョンチェックインターフェースは中国から直接アクセスできません。この変数を空の値に設定すると、このAPI呼び出しが無効になります。
+
+### TEXT_GENERATION_TIMEOUT_MS
+
+デフォルト値：60000（ミリ秒）。テキスト生成とワークフロープロセスのタイムアウトを指定します。この設定により、個々のプロセスが割り当てられた時間を超えることによるシステム全体のサービス中断を防ぎます。
+
+### OPENAI_API_BASE
+
+OpenAIベースアドレスを変更するために使用されます。デフォルトは[https://api.openai.com/v1](https://api.openai.com/v1)です。
+
+中国でOpenAIにアクセスできない場合は、国内ミラーアドレスに置き換えるか、ローカルモデルがOpenAI互換APIを提供している場合は置き換えることができます。
+
+### コンテナ起動関連設定
+
+dockerイメージまたはdocker-composeで起動する場合にのみ有効です。
+
+- DIFY_BIND_ADDRESS：APIサービスバインドアドレス、デフォルト：0.0.0.0、つまりすべてのアドレスからアクセス可能。
+- DIFY_PORT：APIサービスバインドポート番号、デフォルトは5001。
+- SERVER_WORKER_AMOUNT：APIサーバーワーカー数、つまりgeventワーカー数。計算式：`CPUコア数 x 2 + 1`
+
+  参考：[https://docs.gunicorn.org/en/stable/design.html#how-many-workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)
+
+- SERVER_WORKER_CLASS：デフォルトはgevent。Windowsを使用している場合は、syncまたはsoloに切り替えることができます。
+- GUNICORN_TIMEOUT：リクエスト処理タイムアウト。デフォルトは200。より長いSSE（Server-Sent Events）接続時間をサポートするために360を推奨。
+- CELERY_WORKER_CLASS：`SERVER_WORKER_CLASS`と同様。デフォルトはgevent。Windowsを使用している場合は、syncまたはsoloに切り替えることができます。
+- CELERY_WORKER_AMOUNT：Celeryワーカー数。デフォルトは1で、必要に応じて設定できます。
+- COMPOSE_PROFILES：サービスグループを選択的に起動します。デフォルト値は`${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql}`で、`VECTOR_STORE`と`DB_TYPE`から自動的に導出されます。
+
+### データベース設定
+
+データベースはPostgreSQLを使用します。publicスキーマを使用してください。
+
+- DB_TYPE：データベースタイプ。
+
+  利用可能な値：
+
+  - `postgresql`（デフォルト）
+  - `mysql`（OceanBaseやseekdbなどのMySQL互換データベースもこの値を使用できます）
+
+- DB_USERNAME：ユーザー名
+- DB_PASSWORD：パスワード
+- DB_HOST：データベースホスト
+- DB_PORT：データベースポート番号、デフォルトは5432
+- DB_DATABASE：データベース名
+- SQLALCHEMY_POOL_SIZE：データベースコネクションプールのサイズ。デフォルトは30接続で、適宜増加できます。
+- SQLALCHEMY_POOL_RECYCLE：データベースコネクションプールのリサイクル時間、デフォルトは3600秒。
+- SQLALCHEMY_ECHO：SQLを出力するかどうか、デフォルトはfalse。
+
+### Redis設定
+
+このRedis設定は、キャッシュと会話中のpub/subに使用されます。
+
+- REDIS_HOST：Redisホスト
+- REDIS_PORT：Redisポート、デフォルトは6379
+- REDIS_DB：Redisデータベース、デフォルトは0。Session RedisとCelery Brokerとは異なるデータベースを使用してください。
+- REDIS_USERNAME：Redisユーザー名、デフォルトは空
+- REDIS_PASSWORD：Redisパスワード、デフォルトは空。パスワードの設定を強く推奨します。
+- REDIS_USE_SSL：接続にSSLプロトコルを使用するかどうか、デフォルトはfalse
+- REDIS_USE_SENTINEL：Redis Sentinelを使用してRedisサーバーに接続
+- REDIS_SENTINELS：Sentinelノード、形式：`<sentinel1_ip>:<sentinel1_port>,<sentinel2_ip>:<sentinel2_port>,<sentinel3_ip>:<sentinel3_port>`
+- REDIS_SENTINEL_SERVICE_NAME：Sentinelサービス名、Master Nameと同じ
+- REDIS_SENTINEL_USERNAME：Sentinelのユーザー名
+- REDIS_SENTINEL_PASSWORD：Sentinelのパスワード
+- REDIS_SENTINEL_SOCKET_TIMEOUT：Sentinelタイムアウト、デフォルト値：0.1、単位：秒
+
+### Celery設定
+
+- CELERY_BROKER_URL
+
+  形式は以下の通り（直接接続モード）：
+
+  ```
+  redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
+  ```
+
+  例：`redis://:difyai123456@redis:6379/1`
+
+  Sentinelモード：
+
+  ```
+  sentinel://<sentinel_username>:<sentinel_password>@<sentinel_host>:<sentinel_port>/<redis_database>
+  ```
+
+  例：`sentinel://localhost:26379/1;sentinel://localhost:26380/1;sentinel://localhost:26381/1`
+
+- BROKER_USE_SSL：trueに設定すると、接続にSSLプロトコルを使用、デフォルトはfalse
+- CELERY_USE_SENTINEL：trueに設定すると、Sentinelモードが有効になります、デフォルトはfalse
+- CELERY_SENTINEL_MASTER_NAME：Sentinelのサービス名、つまりMaster Name
+- CELERY_SENTINEL_SOCKET_TIMEOUT：Sentinelへの接続タイムアウト、デフォルト値：0.1、単位：秒
+
+### CORS設定
+
+フロントエンドのクロスドメインアクセスポリシーを設定するために使用されます。
+
+- CONSOLE_CORS_ALLOW_ORIGINS\
+  コンソールCORSクロスドメインポリシー、デフォルトは`*`、つまりすべてのドメインからアクセス可能。
+
+- WEB_API_CORS_ALLOW_ORIGINS\
+  WebAPP CORSクロスドメインポリシー、デフォルトは`*`、つまりすべてのドメインからアクセス可能。
+
+- COOKIE_DOMAIN\
+  フロントエンドとバックエンドが異なるサブドメインで実行される場合、`COOKIE_DOMAIN`をサイトのトップレベルドメイン（例：`example.com`）に設定します。\
+  フロントエンドとバックエンドは認証Cookieを共有するために同じトップレベルドメイン下にある必要があります。
+
+- NEXT_PUBLIC_COOKIE_DOMAIN\
+  フロントエンドとバックエンドが異なるサブドメインで実行される場合、`NEXT_PUBLIC_COOKIE_DOMAIN`を`1`に設定します。\
+  フロントエンドとバックエンドは認証Cookieを共有するために同じトップレベルドメイン下にある必要があります。
+
+### ファイルストレージ設定
+
+アップロードされたデータセットファイル、チーム/テナント暗号化キー、その他のファイルを保存するために使用されます。
+
+- STORAGE_TYPE
+
+  ストレージ施設のタイプ
+
+  - local（デフォルト）：ローカルファイルストレージ。このオプションを選択した場合、以下の`STORAGE_LOCAL_PATH`設定を設定する必要があります。
+
+  - s3：S3オブジェクトストレージ。このオプションを選択した場合、以下のS3\_プレフィックス付き設定を設定する必要があります。
+
+  - azure-blob：Azure Blobオブジェクトストレージ。このオプションを選択した場合、以下のAZURE_BLOB\_プレフィックス付き設定を設定する必要があります。
+
+  - aliyun-oss：Alibaba Cloud OSSオブジェクトストレージ。このオプションを選択した場合、以下のALIYUN_OSS\_プレフィックス付き設定を設定する必要があります。
+
+  - huawei-obs：Huawei OBSオブジェクトストレージ。このオプションを選択した場合、以下のHUAWEI_OBS\_プレフィックス付き設定を設定する必要があります。
+
+  - volcengine-tos：Volcengine TOSオブジェクトストレージ。このオプションを選択した場合、以下のVOLCENGINE_TOS\_プレフィックス付き設定を設定する必要があります。
+
+  - tencent-cos：Tencent Cloud COSオブジェクトストレージ。このオプションを選択した場合、以下のTENCENT_COS\_プレフィックス付き設定を設定する必要があります。
+
+- STORAGE_LOCAL_PATH
+
+  デフォルトはstorageで、現在のディレクトリのstorageディレクトリに保存されます。
+
+  dockerまたはdocker-composeでデプロイする場合は、両方のコンテナで`/app/api/storage`ディレクトリを同じローカルディレクトリにマウントしてください。そうしないと、ファイルが見つからないエラーが発生する可能性があります。
+
+- S3_ENDPOINT：S3エンドポイントアドレス
+- S3_BUCKET_NAME：S3バケット名
+- S3_ACCESS_KEY：S3アクセスキー
+- S3_SECRET_KEY：S3シークレットキー
+- S3_REGION：S3リージョン情報、例：us-east-1
+- AZURE_BLOB_ACCOUNT_NAME：アカウント名、例：'difyai'
+- AZURE_BLOB_ACCOUNT_KEY：アカウントキー、例：'difyai'
+- AZURE_BLOB_CONTAINER_NAME：コンテナ名、例：'difyai-container'
+- AZURE_BLOB_ACCOUNT_URL：'https://your_account_name.blob.core.windows.net'
+- ALIYUN_OSS_BUCKET_NAME：バケット名、例：'difyai'
+- ALIYUN_OSS_ACCESS_KEY：アクセスキー、例：'difyai'
+- ALIYUN_OSS_SECRET_KEY：シークレットキー、例：'difyai'
+- ALIYUN_OSS_ENDPOINT：https://oss-ap-southeast-1-internal.aliyuncs.com # 参考：https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
+- ALIYUN_OSS_REGION：ap-southeast-1 # 参考：https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
+- ALIYUN_OSS_AUTH_VERSION：v4
+- ALIYUN_OSS_PATH：パス # '/'で始めないでください。OSSはオブジェクト名の先頭のスラッシュをサポートしていません。参考：https://www.alibabacloud.com/help/en/oss/support/0016-00000005
+- HUAWEI_OBS_BUCKET_NAME：バケット名、例：'difyai'
+- HUAWEI_OBS_SECRET_KEY：シークレットキー、例：'difyai'
+- HUAWEI_OBS_ACCESS_KEY：アクセスキー、例：'difyai'
+- HUAWEI_OBS_SERVER：サーバーURL # 参考：https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html
+- VOLCENGINE_TOS_BUCKET_NAME：バケット名、例：'difyai'
+- VOLCENGINE_TOS_SECRET_KEY：シークレットキー、例：'difyai'
+- VOLCENGINE_TOS_ACCESS_KEY：アクセスキー、例：'difyai'
+- VOLCENGINE_TOS_REGION：リージョン、例：'cn-guangzhou' # 参考：https://www.volcengine.com/docs/6349/107356
+- VOLCENGINE_TOS_ENDPOINT：エンドポイント、例：'tos-cn-guangzhou.volces.com' # 参考：https://www.volcengine.com/docs/6349/107356
+- TENCENT_COS_BUCKET_NAME：バケット名、例：'difyai'
+- TENCENT_COS_SECRET_KEY：シークレットキー、例：'difyai'
+- TENCENT_COS_SECRET_ID：シークレットID、例：'difyai'
+- TENCENT_COS_REGION：リージョン、例：'ap-guangzhou' # 参考：https://cloud.tencent.com/document/product/436/6224
+- TENCENT_COS_SCHEME：COSにアクセスするhttp/httpsプロトコルを指定
+
+### ベクトルデータベース設定
+
+- VECTOR_STORE
+
+  利用可能な値：
+
+  - `weaviate`
+  - `qdrant`
+  - `milvus`
+  - `zilliz`（`milvus`と同じ設定を共有）
+  - `myscale`
+  - `pinecone`（まだ公開されていません）
+  - `analyticdb`
+  - `couchbase`
+  - `oceanbase`
+  - `seekdb`（`oceanbase`と同じ設定を共有）
+  - `tablestore`
+  - `lindorm`
+  - `tencent`
+  - `opengauss`
+
+- WEAVIATE_ENDPOINT
+
+  Weaviateエンドポイントアドレス、例：`http://weaviate:8080`。
+
+- WEAVIATE_API_KEY
+
+  Weaviateへの接続に使用されるAPIキー認証情報。
+
+- WEAVIATE_BATCH_SIZE
+
+  Weaviateでバッチ作成されるインデックスオブジェクトの数、デフォルトは100。
+
+  このドキュメントを参照：[https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters](https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters)
+
+- WEAVIATE_GRPC_ENABLED
+
+  Weaviateとの対話にgRPCメソッドを使用するかどうか。有効にするとパフォーマンスが大幅に向上しますが、ローカルでは使用できない場合があります。デフォルトはtrue。
+
+- QDRANT_URL
+
+  Qdrantエンドポイントアドレス、例：`https://your-qdrant-cluster-url.qdrant.tech/`
+
+- QDRANT_API_KEY
+
+  Qdrantへの接続に使用されるAPIキー認証情報。
+
+- PINECONE_API_KEY
+
+  Pineconeへの接続に使用されるAPIキー認証情報。
+
+- PINECONE_ENVIRONMENT
+
+  Pineconeが配置されている環境、例：`us-east4-gcp`
+
+- MILVUS_URI
+
+  Milvus URI設定。例：`http://host.docker.internal:19530`。[Zilliz Cloud](https://docs.zilliz.com/docs/free-trials)の場合、URIとトークンをPublic EndpointとAPI Keyに調整してください。
+
+- MILVUS_TOKEN
+
+  Milvusトークン設定、デフォルトは空。
+
+- MILVUS_USER
+
+  Milvusユーザー設定、デフォルトは空。
+
+- MILVUS_PASSWORD
+
+  Milvusパスワード設定、デフォルトは空。
+
+- MYSCALE_HOST
+
+  MyScaleホスト設定。
+
+- MYSCALE_PORT
+
+  MyScaleポート設定。
+
+- MYSCALE_USER
+
+  MyScaleユーザー設定、デフォルトは`default`。
+
+- MYSCALE_PASSWORD
+
+  MyScaleパスワード設定、デフォルトは空。
+
+- MYSCALE_DATABASE
+
+  MyScaleデータベース設定、デフォルトは`default`。
+
+- MYSCALE_FTS_PARAMS
+
+  MyScaleテキスト検索パラメータ、多言語サポートについては[MyScaleドキュメント](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters)を確認してください、デフォルトは空。
+
+- ANALYTICDB_KEY_ID
+
+  Aliyun OpenAPI認証に使用されるアクセスキーID。AccessKeyを作成するには[Analyticdbドキュメント](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair)を参照してください。
+
+- ANALYTICDB_KEY_SECRET
+
+  Aliyun OpenAPI認証に使用されるアクセスキーシークレット。
+
+- ANALYTICDB_INSTANCE_ID
+
+  AnalyticDBインスタンスの一意識別子、例：`gp-xxxxxx`。インスタンスを作成するには[Analyticdbドキュメント](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1)を参照してください。
+
+- ANALYTICDB_REGION_ID
+
+  AnalyticDBインスタンスが配置されているリージョン識別子、例：`cn-hangzhou`。
+
+- ANALYTICDB_ACCOUNT
+
+  AnalyticDBインスタンスへの接続に使用されるアカウント名。アカウントを作成するには[Analyticdbドキュメント](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account)を参照してください。
+
+- ANALYTICDB_PASSWORD
+
+  AnalyticDBインスタンスへの接続に使用されるアカウントのパスワード。
+
+- ANALYTICDB_NAMESPACE
+
+  対話したいAnalyticDBインスタンス内のネームスペース（スキーマ）、例：`dify`。このネームスペースが存在しない場合、自動的に作成されます。
+
+- ANALYTICDB_NAMESPACE_PASSWORD
+
+  ネームスペース（スキーマ）のパスワード。ネームスペースが存在しない場合、このパスワードで作成されます。
+
+- COUCHBASE_CONNECTION_STRING
+
+  Couchbaseクラスターの接続文字列。
+
+- COUCHBASE_USER
+
+  データベースユーザーのユーザー名。
+
+- COUCHBASE_PASSWORD
+
+  データベースユーザーのパスワード。
+
+- COUCHBASE_BUCKET_NAME
+
+  使用するバケットの名前。
+
+- COUCHBASE_SCOPE_NAME
+
+  使用するスコープの名前。
+
+- OCEANBASE_VECTOR_HOST
+
+  OceanBaseベクトルデータベースのホスト名またはIPアドレス。
+
+- OCEANBASE_VECTOR_PORT
+
+  OceanBaseベクトルデータベースのポート。
+
+- OCEANBASE_VECTOR_USER
+
+  OceanBaseベクトルデータベースのユーザー名。
+
+- OCEANBASE_VECTOR_PASSWORD
+
+  OceanBaseベクトルデータベースユーザーのパスワード。
+
+- OCEANBASE_VECTOR_DATABASE
+
+  OceanBaseベクトルデータベースのデータベース名。
+
+- OCEANBASE_CLUSTER_NAME
+
+  OceanBaseベクトルデータベースのクラスター名、Dockerデプロイメントでのみ利用可能。
+
+- OCEANBASE_MEMORY_LIMIT
+
+  OceanBaseベクトルデータベースのメモリ制限、Dockerデプロイメントでのみ利用可能。
+
+- SEEKDB_MEMORY_LIMIT
+
+  seekdbのメモリ制限、Dockerデプロイメントでのみ利用可能。
+
+- TABLESTORE_ENDPOINT
+
+  TableStoreサーバーのエンドポイントアドレス（例：'https://instance-name.cn-hangzhou.ots.aliyuncs.com'）
+
+- TABLESTORE_INSTANCE_NAME
+
+  TableStoreサーバーにアクセスするためのインスタンス名（例：'instance-name'）
+
+- TABLESTORE_ACCESS_KEY_ID
+
+  インスタンス名のaccessKey ID
+
+- TABLESTORE_ACCESS_KEY_SECRET
+
+  インスタンス名のaccessKeyシークレット
+
+- LINDORM_URL
+
+  LINDORM検索エンジンのURL、[コンソール](https://lindorm.console.aliyun.com/)から取得できます
+
+- LINDORM_USERNAME
+
+  Lindorm検索エンジンのユーザー名
+
+- LINDORM_PASSWORD
+
+  Lindorm検索エンジンのパスワード
+
+- TENCENT_VECTOR_DB_URL
+
+  Tencent Cloud VectorDBのアクセスアドレス、[コンソール](https://console.cloud.tencent.com/vdb)から取得できます。
+
+- TENCENT_VECTOR_DB_API_KEY
+
+  VectorDBサーバーのAPIキー（パスワード）、ID認証に使用されます。[キー管理](https://cloud.tencent.com/document/product/1709/95108)。
+
+- TENCENT_VECTOR_DB_USERNAME
+
+  ベクトルデータベースアカウント、デフォルトは'root'。[アカウント管理](https://cloud.tencent.com/document/product/1709/115833)。
+
+- TENCENT_VECTOR_DB_TIMEOUT
+
+  デフォルトのリクエストタイムアウト時間を設定します。
+
+- TENCENT_VECTOR_DB_DATABASE
+
+  データを保存するためのデータベースを設定します。[データベースの作成](https://cloud.tencent.com/document/product/1709/95822)。
+
+- TENCENT_VECTOR_DB_SHARD
+
+  シャード数を指定します。
+
+- TENCENT_VECTOR_DB_REPLICAS
+
+  レプリカ数を指定します。
+
+- TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH
+
+  HybridSearchを有効にするかどうかを指定します。[スパースベクトルドキュメント](https://cloud.tencent.com/document/product/1709/110110)。
+
+- MATRIXONE_HOST
+
+  Matrixoneデータベースのホスト、デフォルト値はmatrixone。
+
+- MATRIXONE_PORT
+
+  Matrixoneデータベースのポート、デフォルト値は6001。
+
+- MATRIXONE_USER
+
+  Matrixoneデータベースのユーザー、デフォルト値はdump。
+
+- MATRIXONE_PASSWORD
+
+  Matrixoneデータベースのパスワード、デフォルト値は111。
+
+- MATRIXONE_DATABASE
+
+  Matrixoneデータベースのデータベース、デフォルト値はdify。
+
+- OPENGAUSS_HOST
+
+  openGaussベクトルデータベースのホスト名またはIPアドレス。
+
+- OPENGAUSS_PORT
+
+  openGaussベクトルデータベースのポート。
+
+- OPENGAUSS_USER
+
+  openGaussベクトルデータベースのユーザー名。
+
+- OPENGAUSS_PASSWORD
+
+  openGaussベクトルデータベースのパスワード。
+
+- OPENGAUSS_DATABASE
+
+  openGaussベクトルデータベースのデータベース名。
+
+- OPENGAUSS_MIN_CONNECTION
+
+  openGaussベクトルデータベースの最小接続数。
+
+- OPENGAUSS_MAX_CONNECTION
+
+  openGaussベクトルデータベースの最大接続数。
+
+- OPENGAUSS_ENABLE_PQ
+
+  openGaussベクトルデータベースのPQアクセラレーションを有効にします。
+
+### ナレッジベース設定
+
+- UPLOAD_FILE_SIZE_LIMIT\
+  アップロードファイルサイズ制限、デフォルト15M。
+
+- UPLOAD_FILE_BATCH_LIMIT\
+  一度にアップロードできるファイルの最大数、デフォルト5。
+
+- SINGLE_CHUNK_ATTACHMENT_LIMIT\
+  単一チャンクに添付できるファイルの最大数。デフォルト10。
+
+- ATTACHMENT_IMAGE_FILE_SIZE_LIMIT\
+  チャンクに添付できる画像の最大許容サイズ（メガバイト単位）。デフォルト2。
+
+- ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT\
+  画像添付ファイルのダウンロードタイムアウト（秒単位）。デフォルト60。
+
+- ETL_TYPE\
+  利用可能な値：
+
+  - `dify`：Dify独自のファイル抽出スキーム
+  - `Unstructured`：Unstructured.ioファイル抽出スキーム
+
+- UNSTRUCTURED_API_URL\
+  Unstructured APIパス、ETL_TYPEがUnstructuredの場合に設定する必要があります。\
+  例：`http://unstructured:8000/general/v0/general`
+
+- TOP_K_MAX_VALUE\
+  RAGの最大top-k値、デフォルト10。
+
+### マルチモーダル設定
+
+- MULTIMODAL_SEND_IMAGE_FORMAT
+
+  マルチモーダルモデル入力時に送信される画像の形式、デフォルトは`base64`、オプションで`url`。`url`モードの呼び出し遅延は`base64`モードよりも低くなります。一般的に、より互換性の高い`base64`モードの使用をお勧めします。`url`として設定する場合は、マルチモーダルモデルが画像にアクセスできるように、`FILES_URL`を外部からアクセス可能なアドレスに設定する必要があります。
+
+- UPLOAD_IMAGE_FILE_SIZE_LIMIT：アップロード画像ファイルサイズ制限、デフォルト10M。
+
+### Sentry設定
+
+アプリケーション監視とエラーログ追跡に使用されます。
+
+- SENTRY_DSN：Sentry DSNアドレス、デフォルトは空。空の場合、すべての監視情報はSentryに報告されません。
+- SENTRY_TRACES_SAMPLE_RATE：Sentryイベントの報告比率、0.01の場合は1%。
+- SENTRY_PROFILES_SAMPLE_RATE：Sentryプロファイルの報告比率、0.01の場合は1%。
+
+### Notion統合設定
+
+Notion統合設定変数は、Notion統合を申請することで取得できます：[https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+
+- NOTION_INTEGRATION_TYPE：「public」または「internal」として設定します。NotionのOAuthリダイレクトURLはHTTPSのみをサポートするため、ローカルにデプロイする場合は、Notionの内部統合を使用してください。
+- NOTION_CLIENT_SECRET：Notion OAuthクライアントシークレット（public統合タイプ用）
+- NOTION_CLIENT_ID：OAuthクライアントID（public統合タイプ用）
+- NOTION_INTERNAL_SECRET：Notion内部統合シークレット。`NOTION_INTEGRATION_TYPE`の値が「internal」の場合、この変数を設定する必要があります。
+
+### メール関連設定
+
+- MAIL_TYPE
+
+  - resend
+    - MAIL_DEFAULT_SEND_FROM：送信者のメール名、例：no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai)、必須ではありません。
+    - RESEND_API_KEY：ResendメールプロバイダーのAPIキー、API-Keyから取得できます。
+
+  - smtp
+    - SMTP_SERVER：SMTPサーバーアドレス
+    - SMTP_PORT：SMTPサーバーポート番号
+    - SMTP_USERNAME：SMTPユーザー名
+    - SMTP_PASSWORD：SMTPパスワード
+    - SMTP_USE_TLS：TLSを使用するかどうか、デフォルトはfalse
+    - MAIL_DEFAULT_SEND_FROM：送信者のメール名、例：no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai)、必須ではありません。
+
+  - sendgrid
+    - SENDGRID_API_KEY：SendGridメールプロバイダーのAPIキー。
+    - MAIL_DEFAULT_SEND_FROM：送信者のメールアドレス、例：your_email@sendgrid.com。このフィールドはSendGrid認証に必要です。
+
+SendGridメールプロバイダーの詳細については、[SendGridドキュメント](https://sendgrid.com/docs/for-developers/sending-email/)を参照してください。
+
+### モデルプロバイダー＆ツール位置設定
+
+アプリで使用できるモデルプロバイダーとツールを指定するために使用されます。これらの設定により、利用可能なツールとモデルプロバイダー、およびアプリのインターフェースでの順序と包含/除外をカスタマイズできます。
+
+利用可能な[ツール](https://github.com/langgenius/dify/blob/main/api/core/tools/provider/_position.yaml)と[モデルプロバイダー](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/model_providers/_position.yaml)のリストについては、提供されたリンクを参照してください。
+
+- POSITION_TOOL_PINS
+
+  特定のツールをリストの上部に固定し、インターフェースで最初に表示されるようにします。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_TOOL_PINS=bing,google`
+
+- POSITION_TOOL_INCLUDES
+
+  アプリに含めるツールを指定します。ここにリストされたツールのみが使用可能になります。設定されていない場合、POSITION_TOOL_EXCLUDESで指定されない限り、すべてのツールが含まれます。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_TOOL_INCLUDES=bing,google`
+
+- POSITION_TOOL_EXCLUDES
+
+  特定のツールをアプリでの表示または使用から除外します。ここにリストされたツールは、固定されたツールを除き、利用可能なオプションから除外されます。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_TOOL_EXCLUDES=yahoo,wolframalpha`
+
+- POSITION_PROVIDER_PINS
+
+  特定のモデルプロバイダーをリストの上部に固定し、インターフェースで最初に表示されるようにします。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_PROVIDER_PINS=openai,openllm`
+
+- POSITION_PROVIDER_INCLUDES
+
+  アプリに含めるモデルプロバイダーを指定します。ここにリストされたプロバイダーのみが使用可能になります。設定されていない場合、POSITION_PROVIDER_EXCLUDESで指定されない限り、すべてのプロバイダーが含まれます。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_PROVIDER_INCLUDES=cohere,upstage`
+
+- POSITION_PROVIDER_EXCLUDES
+
+  特定のモデルプロバイダーをアプリでの表示または使用から除外します。ここにリストされたプロバイダーは、固定されたプロバイダーを除き、利用可能なオプションから除外されます。（カンマ区切り値を使用し、アイテム間に**スペースを入れない**でください。）
+
+  例：`POSITION_PROVIDER_EXCLUDES=openrouter,ollama`
+
+### スケジュールタスク設定
+
+DifyはCelery Beatを使用して、システムメンテナンスとデータクリーンアップのためのさまざまなバックグラウンドスケジュールタスクを実行します。以下の環境変数はスケジュールタスク設定を構成します：
+
+- CELERY_BEAT_SCHEDULER_TIME
+
+  特定のスケジュールタスクの実行頻度を制御するCelery Beatスケジューリング時間間隔（日単位）。デフォルトは1日。
+
+- ENABLE_CLEAN_EMBEDDING_CACHE_TASK
+
+  埋め込みキャッシュクリーンアップタスクを有効にするかどうか。デフォルトはfalse。有効にすると、ストレージ使用量を削減するために毎日午前2時に期限切れの埋め込みキャッシュをクリーンアップします。
+
+- ENABLE_CLEAN_UNUSED_DATASETS_TASK
+
+  未使用データセットクリーンアップタスクを有効にするかどうか。デフォルトはfalse。有効にすると、ストレージスペースを解放するために毎日午前3時に長期間未使用のデータセットをクリーンアップします。
+
+- ENABLE_CLEAN_MESSAGES
+
+  メッセージクリーンアップタスクを有効にするかどうか。デフォルトはfalse。有効にすると、毎日午前4時に期限切れの会話メッセージレコードをクリーンアップします。
+
+- ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK
+
+  メールドキュメントクリーンアップ通知タスクを有効にするかどうか。デフォルトはfalse。有効にすると、毎週月曜日の午前10時にドキュメントクリーンアップ通知メールを送信します。
+
+- ENABLE_DATASETS_QUEUE_MONITOR
+
+  データセットキュー監視タスクを有効にするかどうか。デフォルトはfalse。有効にすると、データセット処理キューのステータスを監視し、キューのバックログがしきい値を超えるとアラートを送信します。
+
+- QUEUE_MONITOR_INTERVAL
+
+  データセットキュー監視間隔（分単位）。デフォルトは30分。キュー監視タスクが有効な場合にのみ有効です。
+
+- ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK
+
+  アップグレード可能なプラグインチェックタスクを有効にするかどうか。デフォルトはtrue。有効にすると、15分ごとにアップグレード可能なプラグインバージョンをチェックします。MARKETPLACE_ENABLEDが有効である必要があります。
+
+- MARKETPLACE_ENABLED
+
+  マーケットプレイス機能を有効にするかどうか。デフォルトはtrue。無効にすると、プラグインアップグレードチェックを含むプラグイン関連機能が利用できなくなります。
+
+- ENABLE_CREATE_TIDB_SERVERLESS_TASK
+
+  TiDB Serverless作成タスクを有効にするかどうか。デフォルトはfalse。TiDBクラウドサービス統合に使用され、毎時実行されます。
+
+- ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK
+
+  TiDB Serverlessステータス更新タスクを有効にするかどうか。デフォルトはfalse。TiDBクラウドサービスステータスの更新に使用され、10分ごとに実行されます。
+
+- WORKFLOW_LOG_CLEANUP_ENABLED
+
+  自動ワークフローログクリーンアップタスクを有効にするかどうか。デフォルトはfalse。有効にすると、毎日午前2時に保持期間を超えたワークフロー実行ログをクリーンアップします。
+
+- WORKFLOW_LOG_RETENTION_DAYS
+
+  ワークフローログ保持日数。デフォルトは30日。ワークフローログクリーンアップタスクが有効な場合にのみ有効です。
+
+- WORKFLOW_LOG_CLEANUP_BATCH_SIZE
+
+  ワークフローログクリーンアップバッチサイズ。デフォルトは100。クリーンアップ操作ごとに処理されるログエントリ数で、システムパフォーマンスに基づいて調整できます。
+
+### その他
+
+- INVITE_EXPIRY_HOURS：メンバー招待リンクの有効時間（時間）、デフォルト：72。
+- HTTP_REQUEST_NODE_MAX_TEXT_SIZE：ワークフローのHTTPリクエストノードの最大テキストサイズ、デフォルト1MB。
+- HTTP_REQUEST_NODE_MAX_BINARY_SIZE：ワークフローのHTTPリクエストノードの最大バイナリサイズ、デフォルト10MB。
+
+---
+
+## Webフロントエンド
+
+### SENTRY_DSN
+
+Sentry DSNアドレス、デフォルトは空。空の場合、すべての監視情報はSentryに報告されません。
+
+## 非推奨
+
+### CONSOLE_URL
+
+> ⚠️ 0.3.8で変更され、0.4.9で非推奨になります。`CONSOLE_API_URL`と`CONSOLE_WEB_URL`に置き換えられます。
+
+コンソールURL、認証コールバック、コンソールフロントエンドアドレス、およびCORS設定の連結に使用されます。空の場合、同じドメインです。例：`https://console.dify.ai`。
+
+### API_URL
+
+> ⚠️ 0.3.8で変更され、0.4.9で非推奨になります。`SERVICE_API_URL`に置き換えられます。
+
+API URL、フロントエンドにService API Base URLを表示するために使用されます。空の場合、同じドメインです。例：`https://api.dify.ai`
+
+### APP_URL
+
+> ⚠️ 0.3.8で変更され、0.4.9で非推奨になります。`APP_API_URL`と`APP_WEB_URL`に置き換えられます。
+
+WebApp URL、フロントエンドにWebAPP API Base URLを表示するために使用されます。空の場合、同じドメインです。例：`https://udify.app/`
+
+### セッション設定
+
+> ⚠️ この設定はv0.3.24以降無効です。
+
+APIサービスのインターフェースID検証にのみ使用されます。
+
+- SESSION_TYPE：セッションコンポーネントタイプ
+
+  - redis（デフォルト）：これを選択した場合、以下のSESSION_REDIS\_で始まる環境変数を設定する必要があります。
+  - sqlalchemy：これを選択した場合、現在のデータベース接続が使用され、sessionsテーブルを使用してセッションレコードの読み書きが行われます。
+
+- SESSION_REDIS_HOST：Redisホスト
+- SESSION_REDIS_PORT：Redisポート、デフォルトは6379
+- SESSION_REDIS_DB：Redisデータベース、デフォルトは0。RedisとCelery Brokerとは異なるデータベースを使用してください。
+- SESSION_REDIS_USERNAME：Redisユーザー名、デフォルトは空
+- SESSION_REDIS_PASSWORD：Redisパスワード、デフォルトは空。パスワードの設定を強く推奨します。
+- SESSION_REDIS_USE_SSL：接続にSSLプロトコルを使用するかどうか、デフォルトはfalse
+
+### Cookieポリシー設定
+
+> ⚠️ この設定はv0.3.24以降無効です。
+
+ID検証に使用されるセッションCookieのブラウザポリシーを設定するために使用されます。
+
+- COOKIE_HTTPONLY：Cookie HttpOnly設定、デフォルトはtrue。
+- COOKIE_SAMESITE：Cookie SameSite設定、デフォルトはLax。
+- COOKIE_SECURE：Cookie Secure設定、デフォルトはfalse。
+
+## チャンク長設定
+
+### INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
+
+ドキュメントチャンク長の設定。長いドキュメントを処理する際のテキストセグメントのサイズを制御するために使用されます。デフォルト：500。最大：4000。
+
+**大きなチャンク**
+- 各チャンク内により多くのコンテキストを保持し、テキストのより広い理解を必要とするタスクに最適です。
+- チャンクの総数を減らし、処理時間とストレージオーバーヘッドを削減します。
+
+**小さなチャンク**
+- より細かい粒度を提供し、抽出や要約などのタスクの精度を向上させます。
+- モデルのトークン制限を超えるリスクを減らし、より厳しい制約を持つモデルにとってより安全です。
+
+**設定の推奨事項**
+- 感情分析やドキュメント要約などのコンテキスト重視のタスクには大きなチャンクを選択します。
+- キーワード抽出や段落レベルの処理などの細粒度のタスクには小さなチャンクを選択します。
