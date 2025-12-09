@@ -1,0 +1,462 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: standard
+  level: intermediate
+standard_title: Model Provider Plugin
+language: en
+title: モデルプロバイダープラグイン
+description: この包括的なガイドでは、モデルプロバイダープラグインの作成について詳細な手順を提供し、プロジェクトの初期化、ディレクトリ構造の編成、モデル構成方法、プロバイダーコードの記述、およびコア API 実装の詳細な例を含むモデル統合の実装について説明します。
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider)を参照してください。</Note>
+
+### 前提条件
+
+* [Dify CLI](/ja/develop-plugin/getting-started/cli)
+* 基本的な Python プログラミングスキルとオブジェクト指向プログラミングの理解
+* 統合したいモデルプロバイダーの API ドキュメントへの精通
+
+## ステップ 1: 新しいプラグインプロジェクトの作成と設定
+
+### プロジェクトの初期化
+
+```bash
+dify plugin init
+```
+
+### モデルプラグインテンプレートの選択
+
+利用可能なオプションから `LLM` タイプのプラグインテンプレートを選択します。このテンプレートは、モデル統合のための完全なコード構造を提供します。
+
+![Plugin type: llm](https://assets-docs.dify.ai/2024/12/8efe646e9174164b9edbf658b5934b86.png)
+
+### プラグイン権限の設定
+
+モデルプロバイダープラグインには、以下の必須権限を設定します：
+
+* **Models** - モデル操作の基本権限
+* **LLM** - 大規模言語モデル機能の権限
+* **Storage** - ファイル操作の権限（必要な場合）
+
+![Model Plugin Permission](https://assets-docs.dify.ai/2024/12/10f3b3ee6c03a1215309f13d712455d4.png)
+
+### ディレクトリ構造の概要
+
+初期化後、プラグインプロジェクトは以下のようなディレクトリ構造になります（LLM と Embedding をサポートする `my_provider` という名前のプロバイダーを想定）：
+
+```bash
+models/my_provider/
+├── models                # モデル実装と設定ディレクトリ
+│   ├── llm               # LLM タイプ
+│   │   ├── _position.yaml  (オプション、ソート順を制御)
+│   │   ├── model1.yaml     # 特定モデルの設定
+│   │   └── llm.py          # LLM 実装ロジック
+│   └── text_embedding    # Embedding タイプ
+│       ├── _position.yaml
+│       ├── embedding-model.yaml
+│       └── text_embedding.py
+├── provider              # プロバイダーレベルのコードディレクトリ
+│   └── my_provider.py    # プロバイダー認証情報の検証
+└── manifest.yaml         # プラグインマニフェストファイル
+```
+
+## ステップ 2: モデル設定方法の理解
+
+Dify は、ユーザーがプロバイダーのモデルとどのようにやり取りするかを決定する 2 つのモデル設定方法をサポートしています：
+
+### 事前定義モデル（`predefined-model`）
+
+これらは、統一されたプロバイダー認証情報のみで使用できるモデルです。ユーザーがプロバイダーの API キーやその他の認証詳細を設定すると、すべての事前定義モデルにすぐにアクセスできます。
+
+**例:** `OpenAI` プロバイダーは、`gpt-3.5-turbo-0125` や `gpt-4o-2024-05-13` などの事前定義モデルを提供しています。ユーザーは OpenAI API キーを一度設定するだけで、これらすべてのモデルにアクセスできます。
+
+### カスタムモデル（`customizable-model`）
+
+これらは、各特定のモデルインスタンスに追加の設定が必要です。このアプローチは、モデルがプロバイダーレベルの認証情報以外の個別パラメータを必要とする場合に便利です。
+
+**例:** `Xinference` は LLM と Text Embedding の両方をサポートしていますが、各モデルには固有の **model_uid** があります。ユーザーは使用したい各モデルごとにこの model_uid を個別に設定する必要があります。
+
+これらの設定方法は、単一のプロバイダー内で**共存できます**。たとえば、プロバイダーがいくつかの事前定義モデルを提供しながら、ユーザーが特定の設定でカスタムモデルを追加できるようにすることができます。
+
+## ステップ 3: モデルプロバイダーファイルの作成
+
+新しいモデルプロバイダーの作成には、2 つの主要なコンポーネントが含まれます：
+
+1. **プロバイダー設定 YAML ファイル** - プロバイダーの基本情報、サポートされるモデルタイプ、認証情報要件を定義
+2. **プロバイダークラスの実装** - 認証検証やその他のプロバイダーレベルの機能を実装
+
+***
+
+### 3.1 モデルプロバイダー設定ファイルの作成
+
+プロバイダー設定は、プロバイダーの基本情報、サポートされるモデルタイプ、設定方法、認証情報ルールを宣言する YAML ファイルで定義されます。このファイルは、プラグインプロジェクトのルートディレクトリに配置されます。
+
+以下は、`anthropic.yaml` 設定ファイルの注釈付き例です：
+
+```yaml
+# 基本プロバイダー識別
+provider: anthropic                # プロバイダー ID（一意である必要があります）
+label:
+  en_US: Anthropic                 # UI での表示名
+description:
+  en_US: Anthropic's powerful models, such as Claude 3.
+  zh_Hans: Anthropic 的强大模型，例如 Claude 3。
+icon_small:
+  en_US: icon_s_en.svg            # プロバイダーの小さいアイコン（選択 UI に表示）
+icon_large:
+  en_US: icon_l_en.svg            # 大きいアイコン（詳細ビューに表示）
+background: "#F0F0EB"             # UI でのプロバイダーの背景色
+
+# ユーザー向けヘルプ情報
+help:
+  title:
+    en_US: Get your API Key from Anthropic
+    zh_Hans: 从 Anthropic 获取 API Key
+  url:
+    en_US: https://console.anthropic.com/account/keys
+
+# サポートされるモデルタイプと設定アプローチ
+supported_model_types:
+  - llm                           # このプロバイダーは LLM モデルを提供
+configurate_methods:
+  - predefined-model              # 事前定義モデルアプローチを使用
+
+# プロバイダーレベルの認証情報フォーム定義
+provider_credential_schema:
+  credential_form_schemas:
+    - variable: anthropic_api_key  # API キーの変数名
+      label:
+        en_US: API Key
+      type: secret-input           # 機密データ用のセキュア入力
+      required: true
+      placeholder:
+        zh_Hans: 在此输入你的 API Key
+        en_US: Enter your API Key
+    - variable: anthropic_api_url
+      label:
+        en_US: API URL
+      type: text-input             # 通常のテキスト入力
+      required: false
+      placeholder:
+        zh_Hans: 在此输入你的 API URL
+        en_US: Enter your API URL
+
+# モデル設定
+models:
+  llm:                            # LLM タイプモデルの設定
+    predefined:
+      - "models/llm/*.yaml"       # モデル設定ファイルを見つけるパターン
+    position: "models/llm/_position.yaml"  # 表示順序を定義するファイル
+
+# 実装ファイルの場所
+extra:
+  python:
+    provider_source: provider/anthropic.py  # プロバイダークラスの実装
+    model_sources:
+      - "models/llm/llm.py"                 # モデル実装ファイル
+```
+
+### カスタムモデル設定
+
+プロバイダーがカスタムモデルをサポートする場合、各個別モデルに対してユーザーが設定する必要がある追加フィールドを定義する `model_credential_schema` セクションを追加する必要があります。これは、ファインチューニングされたモデルをサポートするプロバイダーや、モデル固有のパラメータが必要な場合に一般的です。
+
+以下は OpenAI プロバイダーの例です：
+
+```yaml
+model_credential_schema:
+  model: # ファインチューニングされたモデル名フィールド
+    label:
+      en_US: Model Name
+      zh_Hans: 模型名称
+    placeholder:
+      en_US: Enter your model name
+      zh_Hans: 输入模型名称
+  credential_form_schemas:
+  - variable: openai_api_key
+    label:
+      en_US: API Key
+    type: secret-input
+    required: true
+    placeholder:
+      zh_Hans: 在此输入你的 API Key
+      en_US: Enter your API Key
+  - variable: openai_organization
+    label:
+        zh_Hans: 组织 ID
+        en_US: Organization
+    type: text-input
+    required: false
+    placeholder:
+      zh_Hans: 在此输入你的组织 ID
+      en_US: Enter your Organization ID
+  # 必要に応じて追加フィールド...
+```
+
+完全なモデルプロバイダー YAML 仕様については、[モデルスキーマ](/ja/develop-plugin/features-and-specs/plugin-types/model-schema)ドキュメントを参照してください。
+
+### 3.2 モデルプロバイダーコードの記述
+
+次に、プロバイダークラス実装用の Python ファイルを作成します。このファイルは、プロバイダー名に一致する名前で `/provider` ディレクトリに配置する必要があります（例：`anthropic.py`）。
+
+プロバイダークラスは `ModelProvider` を継承し、少なくとも `validate_provider_credentials` メソッドを実装する必要があります：
+
+```python
+import logging
+from dify_plugin.entities.model import ModelType
+from dify_plugin.errors.model import CredentialsValidateFailedError
+from dify_plugin import ModelProvider
+
+logger = logging.getLogger(__name__)
+
+
+class AnthropicProvider(ModelProvider):
+    def validate_provider_credentials(self, credentials: dict) -> None:
+        """
+        API に対して認証情報をテストして検証します。
+        
+        このメソッドは、認証情報が有効であることを確認するために
+        簡単な API 呼び出しを試みる必要があります。
+        
+        :param credentials: YAML スキーマで定義されたプロバイダー認証情報
+        :raises CredentialsValidateFailedError: 検証が失敗した場合
+        """
+        try:
+            # LLM モデルタイプのインスタンスを取得し、認証情報を検証
+            model_instance = self.get_model_instance(ModelType.LLM)
+            model_instance.validate_credentials(
+                model="claude-3-opus-20240229", 
+                credentials=credentials
+            )
+        except CredentialsValidateFailedError as ex:
+            # 認証情報検証エラーをそのまま渡す
+            raise ex
+        except Exception as ex:
+            # その他の例外をログに記録して再スロー
+            logger.exception(f"{self.get_provider_schema().provider} credentials validate failed")
+            raise ex
+```
+
+`validate_provider_credentials` メソッドは、ユーザーが Dify でプロバイダー認証情報を保存しようとするたびに呼び出されるため、非常に重要です。このメソッドは：
+
+1. 簡単な API 呼び出しを行って認証情報を検証しようとする
+2. 検証が成功した場合は静かに戻る
+3. 検証が失敗した場合は、役立つメッセージとともに `CredentialsValidateFailedError` をスロー
+
+#### カスタムモデルプロバイダーの場合
+
+カスタムモデルのみを使用するプロバイダー（各モデルに独自の設定が必要な場合）には、より単純なプロバイダークラスを実装できます。たとえば、`Xinference` の場合：
+
+```python
+from dify_plugin import ModelProvider
+
+class XinferenceProvider(ModelProvider):
+    def validate_provider_credentials(self, credentials: dict) -> None:
+        """
+        カスタムモデルのみのプロバイダーの場合、検証はモデルレベルで行われます。
+        このメソッドは、抽象基底クラスの要件を満たすために存在します。
+        """
+        pass
+```
+
+## ステップ 4: モデル固有のコードの実装
+
+プロバイダーの設定後、サポートする各モデルタイプの API 呼び出しを処理するモデル固有のコードを実装する必要があります。これには以下が含まれます：
+
+1. 各特定モデルのモデル設定 YAML ファイルの作成
+2. API 通信を処理するモデルタイプクラスの実装
+
+これらのステップの詳細な手順については、以下を参照してください：
+
+* [モデル設計ルール](/ja/develop-plugin/features-and-specs/plugin-types/model-designing-rules) - 事前定義モデルを統合するための標準
+* [モデルスキーマ](/ja/develop-plugin/features-and-specs/plugin-types/model-schema) - モデル設定ファイルの標準
+
+### 4.1 モデル設定の定義（YAML）
+
+各特定モデルについて、適切なモデルタイプディレクトリ（例：`models/llm/`）に YAML ファイルを作成し、そのプロパティ、パラメータ、機能を定義します。
+
+**例（`claude-3-5-sonnet-20240620.yaml`）:**
+
+```yaml
+model: claude-3-5-sonnet-20240620   # モデルの API 識別子
+label:
+  en_US: claude-3-5-sonnet-20240620 # UI での表示名
+model_type: llm                     # ディレクトリタイプと一致する必要があります
+features:                           # 特別な機能
+  - agent-thought
+  - vision
+  - tool-call
+  - stream-tool-call
+  - document
+model_properties:                   # モデル固有のプロパティ
+  mode: chat                        # "chat" または "completion"
+  context_size: 200000              # 最大コンテキストウィンドウ
+parameter_rules:                    # ユーザー調整可能なパラメータ
+  - name: temperature
+    use_template: temperature       # 事前定義テンプレートを参照
+  - name: top_p
+    use_template: top_p
+  - name: max_tokens
+    use_template: max_tokens
+    required: true
+    default: 8192
+    min: 1
+    max: 8192
+pricing:                           # オプションの価格情報
+  input: '3.00'
+  output: '15.00'
+  unit: '0.000001'                 # 100万トークンあたり
+  currency: USD
+```
+
+### 4.2 モデル呼び出しコードの実装（Python）
+
+サポートする各モデルタイプ用の Python ファイルを作成します（例：`models/llm/` ディレクトリ内の `llm.py`）。このクラスは、API 通信、パラメータ変換、結果のフォーマットを処理します。
+
+以下は LLM の実装構造の例です：
+
+```python
+import logging
+from typing import Union, Generator, Optional, List
+from dify_plugin.provider_kits.llm import LargeLanguageModel # 基底クラス
+from dify_plugin.provider_kits.llm import LLMResult, LLMResultChunk, LLMUsage # 結果クラス
+from dify_plugin.provider_kits.llm import PromptMessage, PromptMessageTool # メッセージクラス
+from dify_plugin.errors.provider_error import InvokeError, InvokeAuthorizationError # エラークラス
+
+logger = logging.getLogger(__name__)
+
+class MyProviderLargeLanguageModel(LargeLanguageModel):
+    def _invoke(self, model: str, credentials: dict, prompt_messages: List[PromptMessage],
+                model_parameters: dict, tools: Optional[List[PromptMessageTool]] = None,
+                stop: Optional[List[str]] = None, stream: bool = True,
+                user: Optional[str] = None) -> Union[LLMResult, Generator[LLMResultChunk, None, None]]:
+        """
+        モデル API を呼び出すためのコアメソッド。
+        
+        パラメータ:
+            model: 呼び出すモデル識別子
+            credentials: 認証情報
+            prompt_messages: 送信するメッセージのリスト
+            model_parameters: temperature、max_tokens などのパラメータ
+            tools: 関数呼び出し用のオプションのツール定義
+            stop: オプションの停止シーケンスのリスト
+            stream: レスポンスをストリーミングするか（True）、完全なレスポンスを返すか（False）
+            user: API トラッキング用のオプションのユーザー識別子
+            
+        戻り値:
+            stream=True の場合: LLMResultChunk オブジェクトを生成するジェネレータ
+            stream=False の場合: 完全な LLMResult オブジェクト
+        """
+        # API リクエストパラメータの準備
+        api_params = self._prepare_api_params(
+            credentials, model_parameters, prompt_messages, tools, stop
+        )
+        
+        try:
+            # ストリーミング設定に基づいて適切なヘルパーメソッドを呼び出す
+            if stream:
+                return self._invoke_stream(model, api_params, user)
+            else:
+                return self._invoke_sync(model, api_params, user)
+        except Exception as e:
+            # エラーを処理してマッピング
+            self._handle_api_error(e)
+    
+    def _invoke_stream(self, model: str, api_params: dict, user: Optional[str]) -> Generator[LLMResultChunk, None, None]:
+        """ストリーミング API 呼び出し用のヘルパーメソッド"""
+        # ストリーミング呼び出しの実装詳細
+        pass
+        
+    def _invoke_sync(self, model: str, api_params: dict, user: Optional[str]) -> LLMResult:
+        """同期 API 呼び出し用のヘルパーメソッド"""
+        # 同期呼び出しの実装詳細
+        pass
+        
+    def validate_credentials(self, model: str, credentials: dict) -> None:
+        """
+        この特定のモデルに対して認証情報が機能するかを検証します。
+        ユーザーが認証情報を追加または変更しようとするときに呼び出されます。
+        """
+        # 認証情報検証の実装
+        pass
+        
+    def get_num_tokens(self, model: str, credentials: dict, 
+                       prompt_messages: List[PromptMessage],
+                       tools: Optional[List[PromptMessageTool]] = None) -> int:
+        """
+        指定された入力のトークン数を推定します。
+        オプションですが、正確なコスト見積もりのために推奨されます。
+        """
+        # トークンカウントの実装
+        pass
+        
+    @property
+    def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]]:
+        """
+        ベンダー固有の例外から Dify 標準の例外へのマッピングを定義します。
+        これにより、異なるプロバイダー間でエラー処理を標準化できます。
+        """
+        return {
+            InvokeAuthorizationError: [
+                # ベンダー固有の認証エラーをここにリスト
+            ],
+            # その他のエラーマッピング
+        }
+```
+
+実装する最も重要なメソッドは `_invoke` で、コア API 通信を処理します。このメソッドは：
+
+1. Dify の標準化された入力をプロバイダーの API が必要とする形式に変換
+2. 適切なエラー処理で API 呼び出しを実行
+3. API レスポンスを Dify の標準化された出力形式に変換
+4. ストリーミングモードと非ストリーミングモードの両方を処理
+
+## ステップ 5: プラグインのデバッグとテスト
+
+Dify は、開発中にプラグインをテストできるリモートデバッグ機能を提供しています：
+
+1. Dify インスタンスで「プラグイン管理」に移動し、「プラグインをデバッグ」をクリックしてデバッグキーとサーバーアドレスを取得
+2. `.env` ファイルでこれらの値をローカル環境に設定：
+
+```dotenv
+INSTALL_METHOD=remote
+REMOTE_INSTALL_HOST=<your-dify-domain-or-ip>
+REMOTE_INSTALL_PORT=5003
+REMOTE_INSTALL_KEY=****-****-****-****-****
+```
+
+3. `python -m main` でプラグインをローカルで実行し、Dify でテスト
+
+## ステップ 6: パッケージ化と公開
+
+プラグインの準備ができたら：
+
+1. スキャフォールディングツールを使用してパッケージ化：
+   ```bash
+   dify plugin package models/<provider_name>
+   ```
+
+2. 提出前にパッケージ化されたプラグインをローカルでテスト
+
+3. [Dify 公式プラグインリポジトリ](https://github.com/langgenius/dify-official-plugins)にプルリクエストを提出
+
+公開プロセスの詳細については、[公開の概要](/ja/develop-plugin/publishing/marketplace-listing/release-overview)を参照してください。
+
+## 参考リソース
+
+- [新しいモデルのクイック統合](/ja/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider) - 既存のプロバイダーに新しいモデルを追加する方法
+- [プラグイン開発の基本概念](/ja/develop-plugin/getting-started/getting-started-dify-plugin) - プラグイン開発入門ガイドに戻る
+- [モデルスキーマ](/ja/develop-plugin/features-and-specs/plugin-types/model-schema) - 詳細なモデル設定仕様を学ぶ
+- [一般仕様](/ja/develop-plugin/features-and-specs/plugin-types/general-specifications) - プラグインマニフェストファイルの設定を学ぶ
+- [Dify プラグイン SDK リファレンス](https://github.com/langgenius/dify-plugin-sdks) - 基底クラス、データ構造、エラータイプを参照
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

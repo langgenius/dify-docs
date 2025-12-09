@@ -381,7 +381,7 @@ class DocsSynchronizer:
         
         # Handle renamed files
         for old_path, new_path in changes["renamed"]:
-            if self.is_english_doc_file(old_path) or self.is_english_doc_file(new_path):
+            if self.is_source_doc_file(old_path) or self.is_source_doc_file(new_path):
                 for target_lang in self.target_languages:
                     old_target = self.convert_path_to_target_language(old_path, target_lang)
                     new_target = self.convert_path_to_target_language(new_path, target_lang)
@@ -449,7 +449,7 @@ class DocsSynchronizer:
 
         # Handle renamed files that need translation
         for old_path, new_path in changes["renamed"]:
-            if self.is_english_doc_file(new_path):
+            if self.is_source_doc_file(new_path):
                 for target_lang in self.target_languages:
                     target_path = self.convert_path_to_target_language(new_path, target_lang)
                     # Renamed files treated as new
