@@ -87,56 +87,6 @@ See `example-model-comparison.md` for a complete example.
 | results/ | Output (gitignored) |
 | mock_docs/ | Temp test files (gitignored) |
 
-## Testing Prompt Changes
-
-Prompts are stored in `../translate/prompt/` (1.md, 2.md, 3.md).
-
-### Prompt-to-Workflow Mapping
-
-| File | Dify Workflow Node | Trigger |
-|------|-------------------|---------|
-| `1.md` | Template (1) | New doc (`the_doc` only) |
-| `2.md` | Template (2) | Update (`the_doc` + `the_doc_exist`) |
-| `3.md` | Template (3) | Update + diff (all three params) |
-
-### Test All Scenarios
-
-```bash
-# Scenario 1: New document
-cat > test.md << 'EOF'
-# Test
-## keys
-app-YOUR_KEY
-test
-## target_languages
-zh
-## test_file
-en/use-dify/getting-started/introduction.mdx
-EOF
-python run_test.py test.md
-
-# Scenario 2: Add existing_file section
-# Scenario 3: Add diff_content section
-
-# Verify URL mapping
-grep -o 'href="[^"]*"' results/*/variant_A/*.md | head -10
-```
-
-### Key Rule: URL Localization
-
-All prompts must map internal links:
-- `/en/` → `/zh/` or `/ja/`
-- `plugin-dev-en/` → `plugin-dev-zh/` or `plugin-dev-ja/`
-
-### API Parameters
-
-```bash
-curl -H "Authorization: Bearer $KEY" https://api.dify.ai/v1/parameters
-```
-
-Required: `original_language`, `output_language1`, `the_doc`, `termbase`
-Optional: `the_doc_exist` (→ prompt 2), `diff_original` (→ prompt 3)
-
 ## Language Policy
 
 All code and documentation in **English** (international project).

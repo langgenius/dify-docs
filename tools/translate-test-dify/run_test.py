@@ -56,8 +56,6 @@ def parse_markdown_spec(file_path: Path) -> dict:
         "target_languages": ["cn"],
         "test_content": None,
         "test_file": None,
-        "existing_file": None,  # For update scenario
-        "diff_content": None,   # For update with diff scenario
         "variants": {}
     }
 
@@ -98,16 +96,6 @@ def parse_markdown_spec(file_path: Path) -> dict:
     if file_match:
         config["test_file"] = file_match.group(1).strip().split('\n')[0].strip()
 
-    # Existing translation file (for update scenarios)
-    existing_match = re.search(r'##\s*existing_file\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.IGNORECASE)
-    if existing_match:
-        config["existing_file"] = existing_match.group(1).strip().split('\n')[0].strip()
-
-    # Diff content (for update with diff scenarios)
-    diff_match = re.search(r'##\s*diff_content\s*\n(.*?)(?=\n##|\Z)', content, re.DOTALL | re.IGNORECASE)
-    if diff_match:
-        config["diff_content"] = diff_match.group(1).strip()
-
     return config
 
 
@@ -131,24 +119,16 @@ async def save_file(file_path: Path, content: str):
         await f.write(content)
 
 
-async def translate_text(content: str, api_key: str, target_language: str, termbase: str,
-                         the_doc_exist: str = None, diff_original: str = None, max_retries: int = 3) -> str:
-    inputs = {
-        "original_language": "English",
-        "output_language1": target_language,
-        "the_doc": content,
-        "termbase": termbase
-    }
-    # Add optional params for update scenarios (triggers different prompts in Dify)
-    if the_doc_exist is not None:
-        inputs["the_doc_exist"] = the_doc_exist
-    if diff_original is not None:
-        inputs["diff_original"] = diff_original
-
+async def translate_text(content: str, api_key: str, target_language: str, termbase: str, max_retries: int = 3) -> str:
     payload = {
         "response_mode": "streaming",
         "user": "TranslationTest",
-        "inputs": inputs
+        "inputs": {
+            "original_language": "English",
+            "output_language1": target_language,
+            "the_doc": content,
+            "termbase": termbase
+        }
     }
     headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
 
@@ -214,8 +194,6 @@ async def run_test(config_path: str, dry_run: bool = False):
     variants = config.get("variants", {})
     test_content = config.get("test_content")
     test_file = config.get("test_file")
-    existing_file = config.get("existing_file")
-    diff_content = config.get("diff_content")
 
     if not variants:
         print("Error: No valid API keys found")
@@ -238,18 +216,6 @@ async def run_test(config_path: str, dry_run: bool = False):
         print("Error: Need ## test_content or ## test_file section")
         sys.exit(1)
 
-    # Load existing translation (optional - for update scenarios)
-    existing_content = None
-    if existing_file:
-        existing_path = Path(existing_file)
-        if not existing_path.is_absolute():
-            existing_path = SCRIPT_DIR.parent.parent / existing_file
-        if existing_path.exists():
-            existing_content = await load_file(existing_path)
-            print(f"Loaded existing translation: {existing_file} ({len(existing_content)} chars)")
-        else:
-            print(f"Warning: existing_file not found: {existing_file}")
-
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     result_dir = RESULTS_DIR / f"{timestamp}_{test_name}"
 
@@ -263,24 +229,11 @@ async def run_test(config_path: str, dry_run: bool = False):
 
     termbase = await load_file(TERMBASE_PATH) if TERMBASE_PATH.exists() else ""
 
-    # Determine test mode
-    if existing_content and diff_content:
-        test_mode = "update+diff (prompt 3)"
-    elif existing_content:
-        test_mode = "update (prompt 2)"
-    else:
-        test_mode = "new (prompt 1)"
-
     print(f"\n{'='*50}")
     print(f"Test: {test_name}")
-    print(f"Mode: {test_mode}")
     print(f"Variants: {', '.join(variants.keys())}")
     print(f"Languages: {', '.join(target_languages)}")
     print(f"Content: {doc_name} ({len(doc_content)} chars)")
-    if existing_content:
-        print(f"Existing: {len(existing_content)} chars")
-    if diff_content:
-        print(f"Diff: {len(diff_content)} chars")
     print(f"{'='*50}\n")
 
     all_results = {}
@@ -301,8 +254,7 @@ async def run_test(config_path: str, dry_run: bool = False):
             lang_name = LANGUAGE_NAMES.get(lang, lang)
             print(f"  → {lang_name}...", end=" ", flush=True)
 
-            translated = await translate_text(doc_content, api_key, lang_name, termbase,
-                                             the_doc_exist=existing_content, diff_original=diff_content)
+            translated = await translate_text(doc_content, api_key, lang_name, termbase)
             if translated:
                 out_file = var_dir / f"{doc_name}_{lang}.md"
                 await save_file(out_file, translated)
