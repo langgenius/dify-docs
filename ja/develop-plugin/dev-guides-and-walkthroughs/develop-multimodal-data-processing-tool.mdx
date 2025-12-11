@@ -1,0 +1,276 @@
+---
+title: ナレッジパイプラインでマルチモーダルデータを処理するツールプラグインの構築
+---
+
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/dev-guides-and-walkthroughs/develop-multimodal-data-processing-tool)を参照してください。</Note>
+
+ナレッジパイプラインでは、ナレッジベースノードは2種類のマルチモーダルデータ形式の入力をサポートしています：`multimodal-Parent-Child` と `multimodal-General`。
+
+マルチモーダルデータ処理用のツールプラグインを開発する際、プラグインの出力するマルチモーダルデータ（テキスト、画像、音声、動画など）がナレッジベースノードで正しく認識・ベクトル化されるためには、以下の設定が必要です：
+
+- **ツールコード内で**、APIを呼び出してファイルオブジェクト `files` をアップロード・構築します。
+
+- **ツールプロバイダーのYAML**ファイルで、`output_schema` を `multimodal-Parent-Child` または `multimodal-General` として宣言します。
+
+## ファイルオブジェクトのアップロードと構築
+
+マルチモーダルデータ（画像など）を処理する際は、まずDifyのツールセッションインターフェースを通じてファイルをアップロードし、ファイルのメタデータを取得する必要があります。
+
+以下にDify公式プラグインDify Extractorを例として、ファイルのアップロードとファイルオブジェクトの構築方法を示します。
+
+```python
+
+# Upload the file using the tool session
+file_res = self._tool.session.file.upload(
+    file_name,   # filename
+    file_blob,   # file binary data
+    mime_type,   # MIME type, e.g., "image/png"
+)
+
+# Generate a Markdown image reference using the file preview URL
+image_url = f"![image]({file_res.preview_url})"
+```
+
+アップロードインターフェースは、ファイルの基本情報を含む `UploadFileResponse` オブジェクトを返します：
+
+```python   
+    from enum import Enum
+    from pydantic import BaseModel
+
+    class UploadFileResponse(BaseModel):
+        class Type(str, Enum):
+            DOCUMENT = "document"
+            IMAGE = "image"
+            VIDEO = "video"
+            AUDIO = "audio"
+
+            @classmethod
+            def from_mime_type(cls, mime_type: str):
+                if mime_type.startswith("image/"):
+                    return cls.IMAGE
+                if mime_type.startswith("video/"):
+                    return cls.VIDEO
+                if mime_type.startswith("audio/"):
+                    return cls.AUDIO
+                return cls.DOCUMENT
+        id: str
+        name: str
+        size: int
+        extension: str
+        mime_type: str
+        type: Type | None = None
+        preview_url: str | None = None
+```
+
+その構造に基づき、ファイル情報（`name`、`size`、`extension`、`mime_type` など）をマルチモーダル出力構造の `files` フィールドにマッピングできます。
+
+<CodeGroup>
+    ```yaml multimodal_parent_child_structure highlight={22-62} expandable 
+    {
+        "$id": "https://dify.ai/schemas/v1/multimodal_parent_child_structure.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "version": "1.0.0",
+        "type": "object",
+        "title": "Multimodal Parent-Child Structure",
+        "description": "Schema for multimodal parent-child structure (v1)",
+        "properties": {
+            "parent_mode": {
+            "type": "string",
+            "description": "The mode of parent-child relationship"
+            },
+            "parent_child_chunks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "parent_content": {
+                    "type": "string",
+                    "description": "The parent content"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                        "type": "string",
+                        "description": "file name"
+                        },
+                        "size": {
+                        "type": "number",
+                        "description": "file size"
+                        },
+                        "extension": {
+                        "type": "string",
+                        "description": "file extension"
+                        },
+                        "type": {
+                        "type": "string",
+                        "description": "file type"
+                        },
+                        "mime_type": {
+                        "type": "string",
+                        "description": "file mime type"
+                        },
+                        "transfer_method": {
+                        "type": "string",
+                        "description": "file transfer method"
+                        },
+                        "url": {
+                        "type": "string",
+                        "description": "file url"
+                        },
+                        "related_id": {
+                        "type": "string",
+                        "description": "file related id"
+                        }
+                    },
+                    "required": ["name", "size", "extension", "type", "mime_type", "transfer_method", "url", "related_id"]
+                    },
+                    "description": "List of files"
+                },
+                "child_contents": {
+                    "type": "array",
+                    "items": {
+                    "type": "string"
+                    },
+                    "description": "List of child contents"
+                }
+                },
+                "required": ["parent_content", "child_contents"]
+            },
+            "description": "List of parent-child chunk pairs"
+            }
+        },
+        "required": ["parent_mode", "parent_child_chunks"]
+    }
+    ```
+
+    ```yaml multimodal_general_structure highlight={18-56} expandable
+    {
+        "$id": "https://dify.ai/schemas/v1/multimodal_general_structure.json",
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "version": "1.0.0",
+        "type": "array",
+        "title": "Multimodal General Structure",
+        "description": "Schema for multimodal general structure (v1) - array of objects",
+        "properties": {
+            "general_chunks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                "content": {
+                    "type": "string",
+                    "description": "The content"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                        "type": "string",
+                        "description": "file name"
+                        },
+                        "size": {
+                        "type": "number",
+                        "description": "file size"
+                        },
+                        "extension": {
+                        "type": "string",
+                        "description": "file extension"
+                        },
+                        "type": {
+                        "type": "string",
+                        "description": "file type"
+                        },
+                        "mime_type": {
+                        "type": "string",
+                        "description": "file mime type"
+                        },
+                        "transfer_method": {
+                        "type": "string",
+                        "description": "file transfer method"
+                        },
+                        "url": {
+                        "type": "string",
+                        "description": "file url"
+                        },
+                        "related_id": {
+                        "type": "string",
+                        "description": "file related id"
+                        }
+                    },
+                    "description": "List of files"
+                }
+                }
+                },
+                "required": ["content"]
+            },
+            "description": "List of content and files"
+            }
+        }
+    }
+    ```
+</CodeGroup>
+
+## マルチモーダル出力構造の宣言
+
+マルチモーダルデータの構造は、Dify公式が提供するJSON Schemaによって定義されています。
+
+ナレッジベースノードがプラグインのマルチモーダル出力タイプを認識できるようにするためには、プラグインプロバイダーのYAMLファイルで `output_schema` の `result` フィールドを対応する公式Schema URLに指定する必要があります。
+
+```yaml
+output_schema:
+  type: object
+  properties:
+    result:
+      # multimodal-Parent-Child
+      $ref: "https://dify.ai/schemas/v1/multimodal_parent_child_structure.json"
+      
+      # multimodal-General
+      # $ref: "https://dify.ai/schemas/v1/multimodal_general_structure.json"
+```
+
+`multimodal-Parent-Child` の例として、完全なYAMLファイルの設定は以下の通りです：
+
+```yaml expandable
+identity:
+  name: multimodal_tool
+  author: langgenius
+  label:
+    en_US: multimodal tool
+    zh_Hans: 多模态提取器
+    pt_BR: multimodal tool
+description:
+  human:
+    en_US: Process documents into multimodal-Parent-Child chunk structures
+    zh_Hans: 将文档处理为多模态父子分块结构
+    pt_BR: Processar documentos em estruturas de divisão pai-filho
+  llm: Processes documents into hierarchical multimodal-Parent-Child chunk structures
+
+parameters:
+  - name: input_text
+    human_description:
+      en_US: The text you want to chunk.
+      zh_Hans: 输入文本
+      pt_BR: Conteúdo de Entrada
+    label:
+      en_US: Input Content
+      zh_Hans: 输入文本
+      pt_BR: Conteúdo de Entrada
+    llm_description: The text you want to chunk.
+    required: true
+    type: string
+    form: llm
+
+output_schema:
+  type: object
+  properties:
+    result:
+      $ref: "https://dify.ai/schemas/v1/multimodal_parent_child_structure.json"
+extra:
+  python:
+    source: tools/parent_child_chunk.py
+```
