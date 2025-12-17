@@ -105,6 +105,19 @@ jobs:
             IS_INCREMENTAL="false"
           fi
 
+          # Validate COMPARE_BASE is accessible (handles force-push orphaned commits)
+          if ! git cat-file -e "${COMPARE_BASE}^{commit}" 2>/dev/null; then
+            echo "⚠️ Commit $COMPARE_BASE not accessible (likely force-pushed away)"
+            echo "Falling back to merge-base strategy"
+            COMPARE_BASE=$(git merge-base "$PR_BASE" "$PR_HEAD")
+            if ! git cat-file -e "${COMPARE_BASE}^{commit}" 2>/dev/null; then
+              echo "❌ Error: Could not determine valid comparison base"
+              exit 1
+            fi
+            IS_INCREMENTAL="false"
+            echo "Using merge-base: $COMPARE_BASE"
+          fi
+
           echo "compare_base=$COMPARE_BASE" >> $GITHUB_OUTPUT
           echo "compare_head=$COMPARE_HEAD" >> $GITHUB_OUTPUT
           echo "is_incremental=$IS_INCREMENTAL" >> $GITHUB_OUTPUT
@@ -123,9 +136,9 @@ jobs:
           echo "Base SHA: $BASE_SHA"
           echo "Head SHA: $HEAD_SHA"
 
-          # Run PR analyzer
+          # Run PR analyzer (stderr goes to console, stdout to file for sourcing)
           cd tools/translate
-          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt 2>&1
+          python pr_analyzer.py "$BASE_SHA" "$HEAD_SHA" > /tmp/pr_analysis_output.txt
           
           # Parse analyzer output
           if [ $? -eq 0 ]; then

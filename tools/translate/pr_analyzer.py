@@ -51,7 +51,7 @@ class PRAnalyzer:
             files = [f.strip() for f in result.stdout.strip().split('\n') if f.strip()]
             return files
         except subprocess.CalledProcessError as e:
-            print(f"Error getting changed files: {e}")
+            print(f"Error getting changed files: {e}", file=sys.stderr)
             return []
     
     def get_docs_json_at_sha(self, sha: str) -> Optional[Dict]:
@@ -63,7 +63,7 @@ class PRAnalyzer:
             
             return json.loads(result.stdout)
         except (subprocess.CalledProcessError, json.JSONDecodeError) as e:
-            print(f"Error loading docs.json at {sha}: {e}")
+            print(f"Error loading docs.json at {sha}: {e}", file=sys.stderr)
             return None
     
     def extract_language_navigation(self, docs_data: Dict, language: str) -> Optional[Dict]:
@@ -389,11 +389,11 @@ class SyncPlanGenerator:
                         if self._file_exists_at_commit(filepath, self.head_sha):
                             files_with_status.append((status, filepath))
                         else:
-                            print(f"Skipping {filepath}: added then deleted in same PR")
+                            print(f"Skipping {filepath}: added then deleted in same PR", file=sys.stderr)
 
             return files_with_status
         except subprocess.CalledProcessError as e:
-            print(f"Error getting changed files with status: {e}")
+            print(f"Error getting changed files with status: {e}", file=sys.stderr)
             return []
 
     def _file_exists_at_commit(self, filepath: str, commit_sha: str) -> bool:
