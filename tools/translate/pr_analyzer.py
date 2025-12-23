@@ -27,6 +27,9 @@ class PRAnalyzer:
         self.source_language = self.config.get('source_language', 'en')
         self.target_languages = self.config.get('target_languages', ['zh', 'ja'])
 
+        # Load and validate ignore files
+        self.ignore_files = self._load_ignore_files()
+
     def _load_config(self) -> Dict:
         """Load translation configuration."""
         config_path = Path(__file__).parent / "config.json"
@@ -34,6 +37,55 @@ class PRAnalyzer:
             with open(config_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
         return {}
+
+    def _load_ignore_files(self) -> List[str]:
+        """Load and validate ignore_files configuration.
+
+        Validates that:
+        - Each path starts with source language directory
+        - No directory traversal (..)
+        - Valid file extension (.md, .mdx)
+
+        Returns:
+            List of validated ignore file paths
+        """
+        ignore_files = self.config.get('ignore_files', [])
+        if not ignore_files:
+            return []
+
+        validated = []
+        source_dir = self.get_language_directory(self.source_language)
+
+        for path in ignore_files:
+            # Must start with source language directory
+            if not path.startswith(f"{source_dir}/"):
+                print(f"Warning: Ignore path must start with '{source_dir}/': {path} (skipping)")
+                continue
+
+            # No directory traversal
+            if ".." in path:
+                print(f"Warning: Invalid ignore path (contains '..'): {path} (skipping)")
+                continue
+
+            # Must have valid extension
+            if not any(path.endswith(ext) for ext in ['.md', '.mdx']):
+                print(f"Warning: Ignore path must end with .md or .mdx: {path} (skipping)")
+                continue
+
+            validated.append(path)
+
+        return validated
+
+    def _is_file_ignored(self, file_path: str) -> bool:
+        """Check if a file should be ignored from translation.
+
+        Args:
+            file_path: Path to check (e.g., 'en/guides/some-file.md')
+
+        Returns:
+            True if file is in ignore list, False otherwise
+        """
+        return file_path in self.ignore_files
 
     def get_language_directory(self, lang_code: str) -> str:
         """Get directory name for a language code from config."""
@@ -184,16 +236,19 @@ class PRAnalyzer:
             if file == 'docs.json':
                 categories['docs_json'].append(file)
             elif file.startswith(f'{source_dir}/'):
-                if file.endswith(('.md', '.mdx')):
+                # Check if file is in ignore list
+                if self._is_file_ignored(file):
+                    categories['other'].append(file)  # Treat as 'other' so it's not processed
+                elif file.endswith(('.md', '.mdx')):
                     categories['source'].append(file)
-                elif self.is_openapi_file(file):  # NEW
+                elif self.is_openapi_file(file):
                     categories['source_openapi'].append(file)
                 else:
                     categories['other'].append(file)
             elif any(file.startswith(f'{target_dir}/') for target_dir in target_dirs):
                 if file.endswith(('.md', '.mdx')):
                     categories['translation'].append(file)
-                elif self.is_openapi_file(file):  # NEW
+                elif self.is_openapi_file(file):
                     categories['translation_openapi'].append(file)
                 else:
                     categories['other'].append(file)
@@ -460,6 +515,10 @@ class SyncPlanGenerator:
             # Check for docs.json
             if filepath == 'docs.json':
                 docs_json_changed = True
+                continue
+
+            # Skip ignored files
+            if self.analyzer._is_file_ignored(filepath):
                 continue
 
             # Process source language markdown files
