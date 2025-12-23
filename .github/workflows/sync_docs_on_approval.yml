@@ -1,0 +1,286 @@
+# Workflow for retriggering translation sync when a maintainer approves a fork PR
+# This closes the gap where first-time contributors' PRs require approval,
+# but approval events don't trigger the existing workflow chain.
+name: Retrigger Sync on Approval
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to simulate approval for (for testing)'
+        required: true
+        type: string
+      skip_checks:
+        description: 'Skip fork/author checks (for testing internal PRs)'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: write  # Needed to re-run workflows
+
+jobs:
+  retrigger-on-approval:
+    runs-on: ubuntu-latest
+    # Only run for approved reviews OR manual dispatch
+    if: github.event_name == 'workflow_dispatch' || github.event.review.state == 'approved'
+
+    steps:
+      - name: Check if retrigger is needed
+        id: check
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const isManualTrigger = context.eventName === 'workflow_dispatch';
+            const skipChecks = isManualTrigger && '${{ inputs.skip_checks }}' === 'true';
+
+            let prNumber, prAuthor, prHeadRepo, prBaseRepo, reviewer, reviewerAssociation;
+
+            if (isManualTrigger) {
+              // Manual trigger - fetch PR details
+              prNumber = parseInt('${{ inputs.pr_number }}');
+              console.log(`Manual trigger for PR #${prNumber} (skip_checks: ${skipChecks})`);
+
+              const { data: pr } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: prNumber
+              });
+
+              prAuthor = pr.user.login;
+              prHeadRepo = pr.head.repo.full_name;
+              prBaseRepo = pr.base.repo.full_name;
+              reviewer = context.actor;  // Person who triggered the workflow
+              reviewerAssociation = 'MEMBER';  // Assume maintainer for manual trigger
+            } else {
+              // Pull request review trigger
+              prNumber = context.payload.pull_request.number;
+              prAuthor = context.payload.pull_request.user.login;
+              prHeadRepo = context.payload.pull_request.head.repo.full_name;
+              prBaseRepo = context.payload.pull_request.base.repo.full_name;
+              reviewer = context.payload.review.user.login;
+              reviewerAssociation = context.payload.review.author_association;
+            }
+
+            console.log(`PR #${prNumber} approved by ${reviewer} (${reviewerAssociation})`);
+            console.log(`Author: ${prAuthor}`);
+            console.log(`Head repo: ${prHeadRepo}`);
+            console.log(`Base repo: ${prBaseRepo}`);
+
+            // TODO: UNCOMMENT THESE CHECKS AFTER TESTING
+            // Check 1: Is this a fork PR?
+            // const isFork = prHeadRepo !== prBaseRepo;
+            // if (!isFork) {
+            //   console.log('Not a fork PR - approval gate not needed, skipping retrigger');
+            //   core.setOutput('should_retrigger', 'false');
+            //   core.setOutput('reason', 'not_fork');
+            //   return;
+            // }
+            // console.log('PR is from a fork - approval gate applies');
+
+            // Check 2: Is the PR author already trusted? If so, no approval gate was needed
+            // const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            // const authorAssociation = context.payload.pull_request.author_association;
+            // if (trustedAssociations.includes(authorAssociation)) {
+            //   console.log(`PR author ${prAuthor} is already trusted (${authorAssociation}) - no approval gate needed`);
+            //   core.setOutput('should_retrigger', 'false');
+            //   core.setOutput('reason', 'author_trusted');
+            //   return;
+            // }
+            // console.log(`PR author ${prAuthor} is not trusted (${authorAssociation}) - approval gate applies`);
+
+            // Check 3: Is the reviewer a trusted maintainer?
+            // if (!trustedAssociations.includes(reviewerAssociation)) {
+            //   console.log(`Reviewer ${reviewer} is not a maintainer (${reviewerAssociation}) - cannot unlock approval gate`);
+            //   core.setOutput('should_retrigger', 'false');
+            //   core.setOutput('reason', 'reviewer_not_maintainer');
+            //   return;
+            // }
+            // console.log(`Reviewer ${reviewer} is a maintainer - approval is valid`);
+            console.log('⚠️ CHECKS COMMENTED OUT FOR TESTING - skipping fork/author/reviewer checks');
+
+            // Check 4: Does translation PR already exist?
+            const syncBranch = `docs-sync-pr-${prNumber}`;
+            try {
+              const { data: branches } = await github.rest.repos.listBranches({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                per_page: 100
+              });
+
+              const branchExists = branches.some(b => b.name === syncBranch);
+              if (branchExists) {
+                console.log(`Translation branch ${syncBranch} already exists`);
+
+                // Check if there's an open PR for it
+                const { data: prs } = await github.rest.pulls.list({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  head: `${context.repo.owner}:${syncBranch}`,
+                  state: 'open'
+                });
+
+                if (prs.length > 0) {
+                  console.log(`Translation PR #${prs[0].number} already exists and is open`);
+                  core.setOutput('should_retrigger', 'false');
+                  core.setOutput('reason', 'translation_pr_exists');
+                  core.setOutput('translation_pr_number', prs[0].number.toString());
+                  core.setOutput('pr_number', prNumber.toString());
+                  return;
+                }
+              }
+            } catch (e) {
+              console.log(`Error checking for translation branch: ${e.message}`);
+              // Continue anyway - we'll try to create it
+            }
+
+            // Check 5: Find most recent Analyze run for this PR
+            console.log('Looking for Analyze workflow runs for this PR...');
+            const { data: runs } = await github.rest.actions.listWorkflowRuns({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'sync_docs_analyze.yml',
+              event: 'pull_request',
+              per_page: 100
+            });
+
+            console.log(`Found ${runs.workflow_runs.length} Analyze workflow runs`);
+
+            // Find the most recent run matching this PR
+            let matchingRun = null;
+            for (const run of runs.workflow_runs) {
+              if (run.pull_requests && run.pull_requests.some(pr => pr.number === prNumber)) {
+                matchingRun = run;
+                break;  // Runs are sorted by created_at desc, so first match is most recent
+              }
+            }
+
+            if (!matchingRun) {
+              console.log('No Analyze workflow run found for this PR');
+              console.log('This could mean the PR has no documentation changes, or the run is too old');
+              core.setOutput('should_retrigger', 'false');
+              core.setOutput('reason', 'no_analyze_run');
+              core.setOutput('pr_number', prNumber.toString());
+              return;
+            }
+
+            console.log(`Found Analyze run #${matchingRun.id}`);
+            console.log(`  Status: ${matchingRun.status}`);
+            console.log(`  Conclusion: ${matchingRun.conclusion}`);
+            console.log(`  Created: ${matchingRun.created_at}`);
+            console.log(`  Head SHA: ${matchingRun.head_sha}`);
+
+            // All checks passed - we should retrigger
+            core.setOutput('should_retrigger', 'true');
+            core.setOutput('analyze_run_id', matchingRun.id.toString());
+            core.setOutput('pr_number', prNumber.toString());
+            core.setOutput('reviewer', reviewer);
+
+      - name: Post approval received comment
+        if: steps.check.outputs.should_retrigger == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ steps.check.outputs.pr_number }}');
+            const reviewer = '${{ steps.check.outputs.reviewer }}';
+
+            const comment = `## 🌐 Multi-language Sync\n\n` +
+              `✅ **Approval received from @${reviewer}** - starting translation sync.\n\n` +
+              `Translation will begin shortly. A sync PR will be created automatically.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+            console.log(`Posted approval received comment on PR #${prNumber}`);
+
+      - name: Re-run Analyze workflow
+        if: steps.check.outputs.should_retrigger == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const runId = parseInt('${{ steps.check.outputs.analyze_run_id }}');
+
+            console.log(`Re-running Analyze workflow run #${runId}...`);
+
+            try {
+              await github.rest.actions.reRunWorkflow({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                run_id: runId
+              });
+
+              console.log('Analyze workflow re-run triggered successfully');
+              console.log('This will trigger the Execute workflow chain with fresh artifacts');
+            } catch (error) {
+              console.log(`Failed to re-run workflow: ${error.message}`);
+
+              // If re-run fails (e.g., run is too old), post a comment explaining
+              const prNumber = parseInt('${{ steps.check.outputs.pr_number }}');
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body: `## 🌐 Multi-language Sync\n\n` +
+                      `⚠️ **Could not automatically start translation**\n\n` +
+                      `The workflow run is too old to re-run. Please push a small commit ` +
+                      `(e.g., add a newline to any file) to trigger a fresh translation workflow.\n\n` +
+                      `Alternatively, a maintainer can manually trigger the workflow from the Actions tab.`
+              });
+
+              throw error;
+            }
+
+      - name: Handle translation PR already exists
+        if: steps.check.outputs.reason == 'translation_pr_exists'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ steps.check.outputs.pr_number }}');
+            const translationPrNumber = '${{ steps.check.outputs.translation_pr_number }}';
+
+            const comment = `## 🌐 Multi-language Sync\n\n` +
+              `ℹ️ Translation PR [#${translationPrNumber}](https://github.com/${context.repo.owner}/${context.repo.repo}/pull/${translationPrNumber}) already exists.\n\n` +
+              `Future commits to this PR will automatically update the translation PR.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+            console.log(`Posted info comment about existing translation PR #${translationPrNumber}`);
+
+      - name: Handle no Analyze run found
+        if: steps.check.outputs.reason == 'no_analyze_run'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prNumber = parseInt('${{ steps.check.outputs.pr_number }}');
+
+            // Only post comment if this PR likely should have had an Analyze run
+            // (i.e., it has documentation file changes)
+            // For now, we'll post a gentle informational comment
+
+            const comment = `## 🌐 Multi-language Sync\n\n` +
+              `ℹ️ **No pending translation sync found for this PR.**\n\n` +
+              `This could mean:\n` +
+              `- The PR doesn't contain source documentation changes (en/ files)\n` +
+              `- The original workflow run is too old\n\n` +
+              `If you expected translations, please push a small commit to trigger a fresh workflow run.`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body: comment
+            });
+
+            console.log(`Posted info comment about no Analyze run found`);
