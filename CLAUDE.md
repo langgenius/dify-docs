@@ -73,6 +73,28 @@ All language settings in `tools/translate/config.json` (single source of truth):
 - **Moved files**: Detected via `group_path` changes, cn/jp relocated using index-based navigation
 - **Renamed files**: Detected when deleted+added in same location, physical files renamed with extension preserved
 
+### First-Time Contributor Approval Flow
+
+For PRs from forks by contributors who are not OWNER/MEMBER/COLLABORATOR:
+
+1. **PR opened** → Analyze workflow runs → Execute workflow checks for approval
+2. **No approval found** → Execute skips translation, posts "pending approval" comment
+3. **Maintainer approves PR** → `sync_docs_on_approval.yml` triggers automatically
+4. **"Approval received" comment posted** → Analyze workflow re-runs with fresh artifacts
+5. **Execute workflow runs** → Finds approval → Creates translation PR
+
+**Approval requirements**:
+- Reviewer must have OWNER, MEMBER, or COLLABORATOR association
+- Approval triggers immediate translation (no additional push needed)
+- Each approval posts a new comment preserving the timeline
+
+**Edge cases**:
+- If translation PR already exists when approval happens → info comment posted, no re-run
+- If Analyze run is too old to re-run → error comment with instructions to push a small commit
+- Internal PRs (same repo, not fork) → no approval gate, auto-translates immediately
+
+**Manual trigger**: If approval flow fails, maintainers can manually trigger via Actions → Execute Documentation Sync → Run workflow (enter PR number)
+
 ## Development Commands
 
 ```bash
@@ -128,6 +150,12 @@ SUCCESS: Moved cn/test-file to new location
 SUCCESS: Moved jp/test-file to new location
 ```
 
+**Approval flow issues** (first-time contributors):
+- **Translation not starting after approval**: Check Actions tab for `Retrigger Sync on Approval` workflow status
+- **"Could not automatically start translation"**: Analyze run too old - push a small commit to trigger fresh workflow
+- **Approval from non-maintainer**: Only OWNER/MEMBER/COLLABORATOR approvals unlock the gate
+- **Multiple "pending approval" comments**: Normal - each commit triggers Execute which posts if no approval found
+
 ## Translation A/B Testing
 
 For comparing translation quality between models or prompt variations:
@@ -152,4 +180,8 @@ python compare.py results/<folder>/
 - `tools/translate/termbase_i18n.md` - Translation terminology database
 - `tools/translate/sync_and_translate.py` - Core translation + surgical reconciliation logic
 - `tools/translate-test-dify/` - Translation A/B testing framework
-- `.github/workflows/sync_docs_*.yml` - Auto-translation workflow triggers
+- `.github/workflows/sync_docs_analyze.yml` - Analyzes PR changes, uploads artifacts
+- `.github/workflows/sync_docs_execute.yml` - Creates translation PRs (triggered by Analyze)
+- `.github/workflows/sync_docs_update.yml` - Updates existing translation PRs
+- `.github/workflows/sync_docs_cleanup.yml` - Cleans up sync PRs when original PR closes
+- `.github/workflows/sync_docs_on_approval.yml` - Retriggers translation on maintainer approval
