@@ -6,16 +6,6 @@ name: Retrigger Sync on Approval
 on:
   pull_request_review:
     types: [submitted]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR number to simulate approval for (for testing)'
-        required: true
-        type: string
-      skip_checks:
-        description: 'Skip fork/author checks (for testing internal PRs)'
-        type: boolean
-        default: true
 
 permissions:
   contents: read
@@ -25,8 +15,8 @@ permissions:
 jobs:
   retrigger-on-approval:
     runs-on: ubuntu-latest
-    # Only run for approved reviews OR manual dispatch
-    if: github.event_name == 'workflow_dispatch' || github.event.review.state == 'approved'
+    # Only run for approved reviews
+    if: github.event.review.state == 'approved'
 
     steps:
       - name: Check if retrigger is needed
@@ -34,73 +24,47 @@ jobs:
         uses: actions/github-script@v7
         with:
           script: |
-            const isManualTrigger = context.eventName === 'workflow_dispatch';
-            const skipChecks = isManualTrigger && '${{ inputs.skip_checks }}' === 'true';
-
-            let prNumber, prAuthor, prHeadRepo, prBaseRepo, reviewer, reviewerAssociation;
-
-            if (isManualTrigger) {
-              // Manual trigger - fetch PR details
-              prNumber = parseInt('${{ inputs.pr_number }}');
-              console.log(`Manual trigger for PR #${prNumber} (skip_checks: ${skipChecks})`);
-
-              const { data: pr } = await github.rest.pulls.get({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                pull_number: prNumber
-              });
-
-              prAuthor = pr.user.login;
-              prHeadRepo = pr.head.repo.full_name;
-              prBaseRepo = pr.base.repo.full_name;
-              reviewer = context.actor;  // Person who triggered the workflow
-              reviewerAssociation = 'MEMBER';  // Assume maintainer for manual trigger
-            } else {
-              // Pull request review trigger
-              prNumber = context.payload.pull_request.number;
-              prAuthor = context.payload.pull_request.user.login;
-              prHeadRepo = context.payload.pull_request.head.repo.full_name;
-              prBaseRepo = context.payload.pull_request.base.repo.full_name;
-              reviewer = context.payload.review.user.login;
-              reviewerAssociation = context.payload.review.author_association;
-            }
+            const prNumber = context.payload.pull_request.number;
+            const prAuthor = context.payload.pull_request.user.login;
+            const prHeadRepo = context.payload.pull_request.head.repo.full_name;
+            const prBaseRepo = context.payload.pull_request.base.repo.full_name;
+            const reviewer = context.payload.review.user.login;
+            const reviewerAssociation = context.payload.review.author_association;
 
             console.log(`PR #${prNumber} approved by ${reviewer} (${reviewerAssociation})`);
             console.log(`Author: ${prAuthor}`);
             console.log(`Head repo: ${prHeadRepo}`);
             console.log(`Base repo: ${prBaseRepo}`);
 
-            // TODO: UNCOMMENT THESE CHECKS AFTER TESTING
             // Check 1: Is this a fork PR?
-            // const isFork = prHeadRepo !== prBaseRepo;
-            // if (!isFork) {
-            //   console.log('Not a fork PR - approval gate not needed, skipping retrigger');
-            //   core.setOutput('should_retrigger', 'false');
-            //   core.setOutput('reason', 'not_fork');
-            //   return;
-            // }
-            // console.log('PR is from a fork - approval gate applies');
+            const isFork = prHeadRepo !== prBaseRepo;
+            if (!isFork) {
+              console.log('Not a fork PR - approval gate not needed, skipping retrigger');
+              core.setOutput('should_retrigger', 'false');
+              core.setOutput('reason', 'not_fork');
+              return;
+            }
+            console.log('PR is from a fork - approval gate applies');
 
             // Check 2: Is the PR author already trusted? If so, no approval gate was needed
-            // const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
-            // const authorAssociation = context.payload.pull_request.author_association;
-            // if (trustedAssociations.includes(authorAssociation)) {
-            //   console.log(`PR author ${prAuthor} is already trusted (${authorAssociation}) - no approval gate needed`);
-            //   core.setOutput('should_retrigger', 'false');
-            //   core.setOutput('reason', 'author_trusted');
-            //   return;
-            // }
-            // console.log(`PR author ${prAuthor} is not trusted (${authorAssociation}) - approval gate applies`);
+            const trustedAssociations = ['OWNER', 'MEMBER', 'COLLABORATOR'];
+            const authorAssociation = context.payload.pull_request.author_association;
+            if (trustedAssociations.includes(authorAssociation)) {
+              console.log(`PR author ${prAuthor} is already trusted (${authorAssociation}) - no approval gate needed`);
+              core.setOutput('should_retrigger', 'false');
+              core.setOutput('reason', 'author_trusted');
+              return;
+            }
+            console.log(`PR author ${prAuthor} is not trusted (${authorAssociation}) - approval gate applies`);
 
             // Check 3: Is the reviewer a trusted maintainer?
-            // if (!trustedAssociations.includes(reviewerAssociation)) {
-            //   console.log(`Reviewer ${reviewer} is not a maintainer (${reviewerAssociation}) - cannot unlock approval gate`);
-            //   core.setOutput('should_retrigger', 'false');
-            //   core.setOutput('reason', 'reviewer_not_maintainer');
-            //   return;
-            // }
-            // console.log(`Reviewer ${reviewer} is a maintainer - approval is valid`);
-            console.log('⚠️ CHECKS COMMENTED OUT FOR TESTING - skipping fork/author/reviewer checks');
+            if (!trustedAssociations.includes(reviewerAssociation)) {
+              console.log(`Reviewer ${reviewer} is not a maintainer (${reviewerAssociation}) - cannot unlock approval gate`);
+              core.setOutput('should_retrigger', 'false');
+              core.setOutput('reason', 'reviewer_not_maintainer');
+              return;
+            }
+            console.log(`Reviewer ${reviewer} is a maintainer - approval is valid`);
 
             // Check 4: Does translation PR already exist?
             const syncBranch = `docs-sync-pr-${prNumber}`;
