@@ -128,103 +128,155 @@ class TranslationPRManager:
         )
         return result.returncode == 0
 
-    def merge_docs_json_for_incremental_update(self) -> None:
+    def _merge_docs_json_from_main(self) -> None:
         """
         Merge docs.json for incremental updates:
-        - Source language section from PR HEAD (latest structure)
-        - Translation sections from translation branch (preserve existing translations)
+        - Full structure from main (latest, includes changes from all merged PRs)
+        - Translation sections from translation branch (preserve our existing translations)
+
+        This fixes the issue where stale PRs would revert changes from PRs merged after them.
         """
-        print("Merging docs.json: Source language from PR, translations from translation branch...")
+        print("Merging docs.json: structure from main, translations from branch...")
 
-        # Get docs.json from PR HEAD (has latest source language structure)
-        result = self.run_git("show", f"{self.head_sha}:docs.json")
-        pr_docs = json.loads(result.stdout)
+        # Get docs.json from main (has latest structure including all merged PRs)
+        result = self.run_git("show", "origin/main:docs.json")
+        main_docs = json.loads(result.stdout)
 
-        # Get docs.json from translation branch (has target language translations)
+        # Get docs.json from translation branch (has our translations)
         docs_json_path = self.repo_root / "docs.json"
         with open(docs_json_path, 'r', encoding='utf-8') as f:
-            translation_docs = json.load(f)
+            branch_docs = json.load(f)
 
-        # Merge strategy: Replace source language section from PR, keep translations from translation branch
         # Navigate to language sections
-        pr_navigation = pr_docs.get("navigation", {})
-        translation_navigation = translation_docs.get("navigation", {})
+        main_navigation = main_docs.get("navigation", {})
+        branch_navigation = branch_docs.get("navigation", {})
 
         # Handle both direct languages and versions structure
-        if "versions" in pr_navigation:
-            pr_languages = pr_navigation["versions"][0].get("languages", [])
-            translation_languages = translation_navigation.get("versions", [{}])[0].get("languages", [])
+        if "versions" in main_navigation:
+            main_languages = main_navigation["versions"][0].get("languages", [])
+            branch_languages = branch_navigation.get("versions", [{}])[0].get("languages", [])
         else:
-            pr_languages = pr_navigation.get("languages", [])
-            translation_languages = translation_navigation.get("languages", [])
+            main_languages = main_navigation.get("languages", [])
+            branch_languages = branch_navigation.get("languages", [])
 
-        # Build language lookup from translation branch
-        translation_langs_by_code = {}
-        for lang_data in translation_languages:
+        # Build lookup from translation branch
+        branch_langs_by_code = {}
+        for lang_data in branch_languages:
             lang_code = lang_data.get("language")
             if lang_code:
-                translation_langs_by_code[lang_code] = lang_data
+                branch_langs_by_code[lang_code] = lang_data
 
-        # Merge: Use source language from PR, translations from translation branch
+        # Merge strategy:
+        # - Use main's structure for everything (includes all recent changes)
+        # - For target languages, preserve our translations from branch
         merged_languages = []
-        for pr_lang in pr_languages:
-            lang_code = pr_lang.get("language")
+        for main_lang in main_languages:
+            lang_code = main_lang.get("language")
 
-            if lang_code == self.source_language:
-                # Use source language section from PR (latest structure)
-                merged_languages.append(pr_lang)
-            elif lang_code in translation_langs_by_code:
-                # Use translations from translation branch (preserve existing translations)
-                merged_languages.append(translation_langs_by_code[lang_code])
+            if lang_code in self.target_languages and lang_code in branch_langs_by_code:
+                # For target languages, use branch's version (has our translations)
+                merged_languages.append(branch_langs_by_code[lang_code])
             else:
-                # Fallback: use from PR
-                merged_languages.append(pr_lang)
+                # For source language and others, use main's version
+                merged_languages.append(main_lang)
 
         # Update the merged docs.json
-        merged_docs = pr_docs.copy()
-        if "versions" in pr_navigation:
+        merged_docs = main_docs.copy()
+        if "versions" in main_navigation:
             merged_docs["navigation"]["versions"][0]["languages"] = merged_languages
         else:
             merged_docs["navigation"]["languages"] = merged_languages
 
         # Write merged docs.json preserving original formatting
-        # Use translation branch's docs.json as reference for format detection
         success = save_json_with_preserved_format(
             str(docs_json_path),
             merged_docs,
-            reference_file=str(docs_json_path)  # Current file from translation branch
+            reference_file=str(docs_json_path)
         )
 
         if success:
-            print(f"✓ Merged docs.json: Source language from PR {self.head_sha[:8]}, translations from {self.sync_branch}")
+            print(f"✓ Merged docs.json: structure from main, translations from {self.sync_branch}")
         else:
             print(f"⚠️  Warning: Could not preserve formatting, using default")
-            # Fallback to standard json.dump if format preservation fails
             with open(docs_json_path, 'w', encoding='utf-8') as f:
                 json.dump(merged_docs, f, indent=2, ensure_ascii=False)
 
+    def _checkout_pr_changed_files(self, files_to_sync: List) -> None:
+        """
+        Checkout only the specific source language files that the PR changed.
+
+        This prevents overwriting files from other PRs that were merged after this PR was created.
+        By only checking out the files this PR actually changed, we preserve the current state
+        of all other files (from main or translation branch).
+        """
+        source_files = []
+        for file_info in files_to_sync:
+            file_path = file_info.get("path") if isinstance(file_info, dict) else file_info
+            # Only checkout source language files (not docs.json - handled separately)
+            if file_path.startswith(f"{self.source_dir}/") and file_path != "docs.json":
+                source_files.append(file_path)
+
+        if not source_files:
+            print("No source files to checkout from PR")
+            return
+
+        print(f"Checking out {len(source_files)} changed source files from PR {self.head_sha[:8]}...")
+
+        for file_path in source_files:
+            result = self.run_git("checkout", self.head_sha, "--", file_path, check=False)
+            if result.returncode == 0:
+                print(f"  ✓ {file_path}")
+            else:
+                # File might be deleted in PR or not exist - that's OK
+                print(f"  ⚠️ {file_path} (not in PR commit - may be deleted)")
+
     def setup_translation_branch(self, branch_exists: bool) -> None:
-        """Setup the translation branch (create or checkout existing)."""
+        """
+        Setup the translation branch (create or checkout existing).
+
+        Key fix for stale PR issue:
+        - For NEW branches: Start from origin/main (not PR's working directory)
+          This ensures we have the latest state including changes from PRs merged after this PR was created.
+        - For EXISTING branches: Checkout branch, then merge main's docs.json structure
+          This preserves our translations while getting the latest navigation structure.
+
+        The actual PR files to translate are checked out selectively later in run_translation_from_sync_plan().
+        """
+        # Store for later use in run_translation_from_sync_plan
+        self._branch_existed = branch_exists
+
         if branch_exists:
             print(f"✅ Fetching existing translation branch for incremental update: {self.sync_branch}")
             self.run_git("fetch", "origin", f"{self.sync_branch}:{self.sync_branch}")
+            self.run_git("fetch", "origin", "main")
             self.run_git("checkout", self.sync_branch)
 
-            # For incremental updates, checkout source language files only (not docs.json)
-            print(f"Checking out source language files from {self.head_sha[:8]}...")
-            self.run_git("checkout", self.head_sha, "--", f"{self.source_dir}/", check=False)
+            # Merge main's docs.json structure with our translations
+            # This ensures we have the latest navigation structure from main
+            # while preserving our existing translations
+            self._merge_docs_json_from_main()
 
-            # Merge docs.json: Source language from PR HEAD, translations from translation branch
-            self.merge_docs_json_for_incremental_update()
+            # Note: Source language files will be checked out selectively later
+            # in run_translation_from_sync_plan() based on what the PR actually changed
         else:
             print(f"🆕 Creating new translation branch: {self.sync_branch}")
-            self.run_git("checkout", "-b", self.sync_branch)
 
-            # Reset branch to main to avoid including source language file changes from PR
-            # Use --soft to keep working directory with PR files (needed for translation)
-            self.run_git("reset", "--soft", "origin/main")
-            # Unstage everything
-            self.run_git("reset")
+            # CRITICAL FIX: Start from origin/main, not from the PR's working directory
+            # This ensures we have the latest state including all changes from PRs
+            # that were merged after this PR was created.
+            #
+            # Old approach (buggy):
+            #   checkout -b branch  → reset --soft origin/main → reset
+            #   This kept PR's working directory which could be stale
+            #
+            # New approach (fixed):
+            #   checkout -b branch origin/main
+            #   This starts fresh from main, then we selectively checkout PR's changed files
+            self.run_git("fetch", "origin", "main")
+            self.run_git("checkout", "-b", self.sync_branch, "origin/main")
+
+            # Note: Source language files will be checked out selectively later
+            # in run_translation_from_sync_plan() based on what the PR actually changed
 
     async def run_translation(self) -> Dict:
         """Run the translation process using sync_and_translate logic."""
@@ -285,6 +337,11 @@ class TranslationPRManager:
         metadata = sync_plan.get("metadata", {})
         base_sha = metadata.get("base_sha", self.base_sha)
         head_sha = metadata.get("head_sha", self.head_sha)
+
+        # CRITICAL: Checkout only the files that this PR actually changed
+        # This is the key fix for the stale PR issue - we only bring in the PR's
+        # changed files, not its entire working directory state which could be outdated
+        self._checkout_pr_changed_files(files_to_sync)
 
         # Detect added vs modified files and renames
         added_files, modified_files, renamed_files = self.detect_file_changes(base_sha, head_sha)
