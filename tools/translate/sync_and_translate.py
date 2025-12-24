@@ -1534,6 +1534,40 @@ class DocsSynchronizer:
                     sync_log.append(f"WARNING: Could not find source language dropdown '{source_dropdown_name}'")
                     continue
 
+                # STALE PR FIX: Also update the working directory's EN section if the file
+                # was found in reference docs.json but doesn't exist in current EN section.
+                # This happens when the translation branch is based on main but the PR's
+                # docs.json hasn't merged yet.
+                if reference_source_section != source_section:
+                    # Find or create corresponding dropdown in working directory's EN section
+                    wd_en_dropdown = None
+                    wd_en_dropdowns = source_section.get("dropdowns", [])
+                    if source_dropdown_index >= 0 and source_dropdown_index < len(wd_en_dropdowns):
+                        wd_en_dropdown = wd_en_dropdowns[source_dropdown_index]
+
+                    if not wd_en_dropdown:
+                        # Dropdown doesn't exist in working directory - create it
+                        wd_en_dropdown = {
+                            "dropdown": source_dropdown.get("dropdown", ""),
+                            "icon": source_dropdown.get("icon", "book-open"),
+                            "pages": []
+                        }
+                        source_section.setdefault("dropdowns", [])
+                        # Ensure we have enough slots
+                        while len(source_section["dropdowns"]) <= source_dropdown_index:
+                            source_section["dropdowns"].append(None)
+                        source_section["dropdowns"][source_dropdown_index] = wd_en_dropdown
+                        sync_log.append(f"INFO: Created EN dropdown '{wd_en_dropdown['dropdown']}' from PR")
+
+                    if wd_en_dropdown:
+                        # Add the page to EN section at the correct location
+                        if "pages" not in wd_en_dropdown:
+                            wd_en_dropdown["pages"] = []
+
+                        added_to_en = self.add_page_at_location(wd_en_dropdown, source_file, file_location, source_dropdown)
+                        if added_to_en:
+                            sync_log.append(f"INFO: Added {source_file} to EN section (from PR's docs.json)")
+
                 # Add to each target language
                 for target_lang, target_section in target_sections.items():
                     target_file = self.convert_path_to_target_language(source_file, target_lang)
