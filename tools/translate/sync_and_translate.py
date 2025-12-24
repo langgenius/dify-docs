@@ -1626,6 +1626,14 @@ class DocsSynchronizer:
 
                 sync_log.append(f"INFO: Processing deletion of {source_file}")
 
+                # STALE PR FIX: Also remove from EN section if it exists there
+                # This is needed when starting from main's docs.json which may still have the file
+                for en_dropdown in source_section.get("dropdowns", []):
+                    if "pages" in en_dropdown:
+                        if self.remove_page_from_structure(en_dropdown["pages"], source_file):
+                            sync_log.append(f"INFO: Removed {source_file} from EN section")
+                            break
+
                 # Remove from each target language
                 for target_lang, target_section in target_sections.items():
                     target_file = self.convert_path_to_target_language(source_file, target_lang)
