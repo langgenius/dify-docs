@@ -1383,11 +1383,19 @@ class DocsSynchronizer:
         deleted_files: List[str] = None,
         renamed_files: List[Tuple[str, str]] = None,
         base_sha: str = None,
-        head_sha: str = None
+        head_sha: str = None,
+        reference_sha: str = None
     ) -> List[str]:
         """
         Incrementally sync docs.json structure - only processes changed files.
         Preserves existing dropdown names and only updates affected pages.
+
+        Args:
+            reference_sha: If provided, use this commit's docs.json for finding file positions
+                          in the English section. This is needed when the working directory's
+                          docs.json (from main) doesn't have the new files yet (stale PR scenario).
+                          The translation sections are still modified in the working directory's
+                          docs.json.
         """
         sync_log = []
         added_files = added_files or []
@@ -1447,7 +1455,7 @@ class DocsSynchronizer:
                 sync_log.append("ERROR: No languages found in navigation")
                 return sync_log
 
-            # Find language sections
+            # Find language sections in working directory docs.json (for modifying translations)
             source_section = None
             target_sections = {}
 
@@ -1456,6 +1464,40 @@ class DocsSynchronizer:
                     source_section = lang_data
                 elif lang_data.get("language") in self.target_languages:
                     target_sections[lang_data.get("language")] = lang_data
+
+            # If reference_sha is provided, load that docs.json for finding file positions
+            # This is needed when working directory (main) doesn't have the new files yet
+            reference_source_section = source_section
+            if reference_sha and added_files:
+                try:
+                    import subprocess
+                    result = subprocess.run(
+                        ["git", "show", f"{reference_sha}:docs.json"],
+                        cwd=self.base_dir,
+                        capture_output=True,
+                        text=True,
+                        check=True
+                    )
+                    ref_docs = json.loads(result.stdout)
+                    ref_navigation = ref_docs.get("navigation", {})
+
+                    # Handle both structures
+                    ref_languages = None
+                    if "languages" in ref_navigation and isinstance(ref_navigation["languages"], list):
+                        ref_languages = ref_navigation["languages"]
+                    elif "versions" in ref_navigation and len(ref_navigation["versions"]) > 0:
+                        if "languages" in ref_navigation["versions"][0]:
+                            ref_languages = ref_navigation["versions"][0]["languages"]
+
+                    if ref_languages:
+                        for lang_data in ref_languages:
+                            if lang_data.get("language") == self.source_language:
+                                reference_source_section = lang_data
+                                sync_log.append(f"INFO: Using reference docs.json from {reference_sha[:8]} for finding file positions")
+                                break
+                except Exception as e:
+                    sync_log.append(f"WARNING: Could not load reference docs.json from {reference_sha}: {e}")
+                    # Fall back to working directory's source section
 
             if not source_section:
                 sync_log.append("ERROR: Source language section not found")
@@ -1469,7 +1511,8 @@ class DocsSynchronizer:
                     continue
 
                 # Find which dropdown contains this file in source language section
-                result = self.find_dropdown_containing_file(source_file, source_section)
+                # Use reference_source_section (from PR's docs.json) to find new file positions
+                result = self.find_dropdown_containing_file(source_file, reference_source_section)
                 if not result:
                     sync_log.append(f"WARNING: Could not find {source_file} in source language navigation")
                     continue
@@ -1478,9 +1521,10 @@ class DocsSynchronizer:
                 sync_log.append(f"INFO: Found {source_file} in '{source_dropdown_name}' dropdown at location {file_location}")
 
                 # Get the source language dropdown for reference
+                # Use reference_source_section (from PR's docs.json) for new file structure
                 source_dropdown = None
                 source_dropdown_index = -1
-                for i, dropdown in enumerate(source_section.get("dropdowns", [])):
+                for i, dropdown in enumerate(reference_source_section.get("dropdowns", [])):
                     if dropdown.get("dropdown") == source_dropdown_name:
                         source_dropdown = dropdown
                         source_dropdown_index = i

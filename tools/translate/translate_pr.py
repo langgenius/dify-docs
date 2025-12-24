@@ -557,12 +557,15 @@ class TranslationPRManager:
                                 break
 
         # Sync docs.json incrementally
+        # Pass head_sha as reference_sha so sync_docs_json_incremental can find
+        # new file positions in PR's docs.json (needed when main doesn't have them yet)
         sync_log = synchronizer.sync_docs_json_incremental(
             added_files=added_files,
             deleted_files=deleted_files,
             renamed_files=renamed_files,
             base_sha=base_sha,
-            head_sha=head_sha
+            head_sha=head_sha,
+            reference_sha=head_sha
         )
         print("\n".join(sync_log))
 
