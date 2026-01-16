@@ -1,0 +1,255 @@
+---
+title: Sensitive Content Moderation
+---
+
+This module is used to review the content input by end users and the content output by LLM in applications. It is divided into two extension point types.
+
+## Extension Points
+
+* `app.moderation.input`: End user input content review extension point
+  * Used to review variable content passed in by end users and conversation input content in conversational applications.
+* `app.moderation.output`: LLM output content review extension point
+  * Used to review content output by LLM.
+  * When the LLM output is streaming, the output content will be segmented into 100-character chunks for API requests to avoid delayed reviews when output content is lengthy.
+
+### app.moderation.input
+
+When **Content Moderation > Review Input Content** is enabled in applications such as Chatflow, Agent, or Chatbot, Dify will send the following HTTP POST request to the corresponding API extension:
+
+#### Request Body
+
+```
+{
+    "point": "app.moderation.input", // Extension point type, fixed as app.moderation.input
+    "params": {
+        "app_id": string,  // Application ID
+        "inputs": {  // Variable values passed by end user, key is variable name, value is variable value
+            "var_1": "value_1",
+            "var_2": "value_2",
+            ...
+        },
+        "query": string | null  // Current conversation input content from end user, fixed parameter for conversational applications.
+    }
+}
+```
+
+**Example**:
+
+    ```
+    {
+        "point": "app.moderation.input",
+        "params": {
+            "app_id": "61248ab4-1125-45be-ae32-0ce91334d021",
+            "inputs": {
+                "var_1": "I will kill you.",
+                "var_2": "I will fuck you."
+            },
+            "query": "Happy everydays."
+        }
+    }
+    ```
+
+#### API Response
+
+```
+{
+    "flagged": bool,  // Whether it violates validation rules
+    "action": string, // Action: direct_output outputs preset response; overridden overwrites input variable values
+    "preset_response": string,  // Preset response (returned only when action=direct_output)
+    "inputs": {  // Variable values passed by end user, key is variable name, value is variable value (returned only when action=overridden)
+        "var_1": "value_1",
+        "var_2": "value_2",
+        ...
+    },
+    "query": string | null  // Overwritten current conversation input content from end user, fixed parameter for conversational applications. (returned only when action=overridden)
+}
+```
+
+**Example**:
+
+  * `action=direct_output`
+      ```
+      {
+          "flagged": true,
+          "action": "direct_output",
+          "preset_response": "Your content violates our usage policy."
+      }
+      ```
+  * `action=overridden`
+      ```
+      {
+          "flagged": true,
+          "action": "overridden",
+          "inputs": {
+              "var_1": "I will *** you.",
+              "var_2": "I will *** you."
+          },
+          "query": "Happy everydays."
+      }
+      ```
+
+### app.moderation.output
+
+When **Content Moderation > Review Output Content** is enabled in applications such as Chatflow, Agent, or Chat Assistant, Dify will send the following HTTP POST request to the corresponding API extension:
+
+#### Request Body
+
+```
+{
+    "point": "app.moderation.output", // Extension point type, fixed as app.moderation.output
+    "params": {
+        "app_id": string,  // Application ID
+        "text": string  // LLM response content. When LLM output is streaming, this is content segmented into 100-character chunks.
+    }
+}
+```
+
+**Example**:
+    ```
+    {
+        "point": "app.moderation.output",
+        "params": {
+            "app_id": "61248ab4-1125-45be-ae32-0ce91334d021",
+            "text": "I will kill you."
+        }
+    }
+    ```
+
+#### API Response
+
+```
+{
+    "flagged": bool,  // Whether it violates validation rules
+    "action": string, // Action: direct_output outputs preset response; overridden overwrites input variable values
+    "preset_response": string,  // Preset response (returned only when action=direct_output)
+    "text": string  // Overwritten LLM response content. (returned only when action=overridden)
+}
+```
+
+**Example**:
+
+  * `action=direct_output`
+      ```
+      {
+          "flagged": true,
+          "action": "direct_output",
+          "preset_response": "Your content violates our usage policy."
+      }
+      ```
+  * `action=overridden`
+      ```
+      {
+          "flagged": true,
+          "action": "overridden",
+          "text": "I will *** you."
+      }
+      ```
+
+## Code Example
+
+Below is a piece of `src/index.ts` code that can be deployed on Cloudflare. (For complete Cloudflare usage, please refer to [this documentation](/en/use-dify/workspace/api-extension/cloudflare-worker))
+
+The code works by performing keyword matching to filter both Input (content entered by users) and Output (content returned by the model). Users can modify the matching logic according to their needs.
+```
+import { Hono } from "hono";
+import { bearerAuth } from "hono/bearer-auth";
+import { z } from "zod";
+import { zValidator } from "@hono/zod-validator";
+import { generateSchema } from '@anatine/zod-openapi';
+
+type Bindings = {
+  TOKEN: string;
+};
+
+const app = new Hono<{ Bindings: Bindings }>();
+
+// API format validation ⬇️
+const schema = z.object({
+  point: z.union([
+    z.literal("ping"),
+    z.literal("app.external_data_tool.query"),
+    z.literal("app.moderation.input"),
+    z.literal("app.moderation.output"),
+  ]), // Restricts 'point' to two specific values
+  params: z
+    .object({
+      app_id: z.string().optional(),
+      tool_variable: z.string().optional(),
+      inputs: z.record(z.any()).optional(),
+      query: z.any(),
+      text: z.any()
+    })
+    .optional(),
+});
+
+
+// Generate OpenAPI schema
+app.get("/", (c) => {
+  return c.json(generateSchema(schema));
+});
+
+app.post(
+  "/",
+  (c, next) => {
+    const auth = bearerAuth({ token: c.env.TOKEN });
+    return auth(c, next);
+  },
+  zValidator("json", schema),
+  async (c) => {
+    const { point, params } = c.req.valid("json");
+    if (point === "ping") {
+      return c.json({
+        result: "pong",
+      });
+    }
+    // ⬇️ implement your logic here ⬇️
+    // point === "app.external_data_tool.query"
+    else if (point === "app.moderation.input"){
+    // Input check ⬇️
+    const inputkeywords = ["input filter test 1", "input filter test 2", "input filter test 3"];
+
+    if (inputkeywords.some(keyword => params.query.includes(keyword))) 
+      {
+      return c.json({
+        "flagged": true,
+        "action": "direct_output",
+        "preset_response": "The input contains illegal content. Please try a different question!"
+      });
+    } else {
+      return c.json({
+        "flagged": false,
+        "action": "direct_output",
+        "preset_response": "Input is normal"
+      });
+    }
+    // Input check complete 
+    }
+    
+    else {
+      // Output check ⬇️
+      const outputkeywords = ["output filter test 1", "output filter test 2", "output filter test 3"]; 
+
+  if (outputkeywords.some(keyword => params.text.includes(keyword))) 
+    {
+      return c.json({
+        "flagged": true,
+        "action": "direct_output",
+        "preset_response": "The output contains sensitive content and has been filtered by the system. Please try a different question!"
+      });
+    }
+  
+  else {
+    return c.json({
+      "flagged": false,
+      "action": "direct_output",
+      "preset_response": "Output is normal"
+    });
+  };
+    }
+    // Output check complete 
+  }
+);
+
+export default app;
+
+```
