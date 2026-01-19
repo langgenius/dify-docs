@@ -1,129 +1,219 @@
 ---
 title: "LLM"
-description: "Invoke language models for text generation and analysis"
+description: "Invoke large language models for text generation and analysis"
 icon: "brain"
 ---
 
-The LLM node invokes language models to process text, images, and documents. It sends prompts to your configured models and captures their responses, supporting structured outputs, context management, and multimodal inputs.
+The LLM node calls a large language model to generate responses based on your instructions and inputs from upstream nodes.
 
-<Frame caption="LLM node configuration interface">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/85730fbfa1d441d12d969b89adf2670e.png" alt="LLM Node Overview" />
-</Frame>
+## Choose a Model
+
+Choose a model that best fits your task from your configured providers.
+
+After selection, you can adjust model parameters to control how it generates responses. Available parameters and presets vary by model.
+
+## Write the Prompt
+
+Instruct the model on how to process inputs and generate responses. Reference variables by typing `/` or `{`.
+
+If you're unsure where to start or want to refine existing prompts, try our AI-assisted prompt generator.
+
+<Columns>
+  <Frame caption="Prompt Generator Icon">
+  <img src="/images/prompt_generator_icon.png" alt="Prompt Generator Icon"/>
+  </Frame>
+  <Frame caption="Prompt Generator Interface">
+  <img src="/images/prompt_generator_interface.png" alt="Prompt Generator Interface"/>
+  </Frame>
+</Columns>
+
+### Specify Instructions and Messages
+
+Define the system instruction and click **Add Message** to add user/assistant messages. They are all sent to the model in order in a single prompt.
+
+Think of it as chatting directly with the model:
+
+- **System instructions** set the rules for how the model should respond—its role, tone, and behavioral guidelines.
+
+- **User messages** are what you send to the model—a question, request, or task for the model to work on.
+
+- **Assistant messages** are the model's responses.
+
+### Separate Inputs from Rules
+
+Define the role and rules in the system instruction, then pass the actual task input in a user message. For example:
+
+```bash wrap
+# System instruction
+You are a children's story writer. Write a story based on the user's input. Use simple language and a warm tone.
+
+# User message
+Write a bedtime story about a rabbit who makes friends with a shy hedgehog
+```
+
+While it may seem simpler to put everything in the system instruction, separating role definitions from task inputs gives the model clearer structure to work with.
+
+### Simulate Chat History
+
+You might wonder: if assistant messages are the model's responses, why would I add them manually?
+
+By adding alternating user and assistant messages, you create simulated chat history in the prompt. The model treats these as prior exchanges, which can help guide its behavior.
+
+### Import Chat History from Upstream LLMs
+
+Click **Add Chat History** to import chat history from an upstream Agent or LLM node. This lets the model know what happened upstream and continue from where that node left off.
+
+Chat history includes **user**, **assistant**, and <Tooltip tip="Tool messages are the results returned after the model calls a tool. For example, command execution results from the bash tool.">**tool** messages</Tooltip>. You can view it in an Agent or LLM node's `context` output variable.
 
 <Info>
-  Configure at least one model provider in **System Settings → Model Providers** before using LLM nodes.
+  System instructions are not included, as they are node-specific.
+</Info>    
+
+This is useful when chaining multiple Agent or LLM nodes:
+
+- Without importing chat history, a downstream node only receives the upstream node's final output, with no idea how it got there.
+
+- With imported chat history, it sees the entire process: what the user asked, what tools were called, what results came back, and how the model reasoned through them.
+
+**Specify your new task in the automatically added user message.** The imported history is prepended to the current node's messages, so the model sees it as one continuous conversation. Since the imported history typically ends with an assistant message, the model needs a follow-up user message to know what to do next.
+
+<Accordion title="Example: Chain Research and Report LLMs">
+  
+  Suppose two LLM nodes run in sequence: LLM A researches a topic by calling search tools, and LLM B writes a report based on the research.
+
+  If LLM B only receives LLM A's final text output, it can summarize the conclusions but can't verify them or cite specific sources. By importing LLM A's chat history, LLM B sees the raw data from each tool call and can reference it directly in the report.
+
+  Here's the complete message sequence LLM B sees after importing LLM A's chat history:
+
+  ```bash wrap
+  # LLM B's own system instruction
+  1. System: "You are a professional report writer..."
+  
+  # from LLM A         
+  2. User: "What are the new trends in the EV market?"
+  
+  # from LLM A
+  3. Tool: [search results with URLs and raw data]
+  
+  # from LLM A
+  4. Assistant: "Based on the search results, the key trends are..."
+  
+  # LLM B's own user message
+  5. User: "Write a 500-word market analysis report."
+  ```
+
+  LLM B understands: it has seen the research process (question, search, summary), and now needs to write a report based on that information—including the raw data it couldn't access through the text output alone.
+
+</Accordion>
+
+### Create Dynamic Prompts Using Jinja2
+
+Create dynamic prompts using [Jinja2](https://jinja.palletsprojects.com/en/stable/) syntax. For example, use conditionals to customize instructions based on variable values.
+
+<Accordion title="Jinja2 Example: Conditional Prompt by User Level">
+```jinja2 wrap
+You are a 
+{% if user_level == "beginner" %}patient and friendly 
+{% elif user_level == "intermediate" %}professional and efficient 
+{% else %}senior expert-level 
+{% endif %} assistant.
+
+{% if user_level == "beginner" %} 
+Please explain in simple and easy-to-understand language. Provide examples when necessary. Avoid using technical jargon. 
+{% elif user_level == "intermediate" %} You may use some technical terms, but provide appropriate explanations. Offer practical advice and best practices. 
+{% else %} You may delve into technical details and use professional terminology. Focus on advanced use cases and optimization solutions. 
+{% endif %}
+
+User question: {{ query }}
+```
+</Accordion>
+
+By default, you'd need to send all possible instructions to the model, describe the conditions, and let it decide which to follow—an approach that's often unreliable. 
+
+With Jinja2 templating, only the instructions matching the defined conditions are sent, ensuring predictable behavior and reducing token usage.
+
+## Add Context
+
+In **Advanced Settings** > **Context**, provide the LLM with additional reference information to reduce hallucination and improve response accuracy.
+
+A typical pattern: [pass retrieval results](/en/use-dify/nodes/knowledge-retrieval#use-with-llm-nodes)  from a knowledge retrieval node for Retrieval-Augmented Generation (RAG).
+
+## Enable Conversation Memory (Chatflows Only)
+
+<Note>
+    Memory is node-specific and doesn't persist between different conversations.
+</Note>
+
+Enable **Memory** to keep recent dialogues, so the LLM can answer follow-up questions coherently.
+
+A user message will be automatically added to pass the current user query and any uploaded files. This is because memory works by storing recent user-assistant exchanges. If the current query isn't passed through a user message, there's nothing to record on the user side.
+
+**Window Size** controls how many recent exchanges to retain. For example, `5` keeps the last 5 user-query and LLM-response pairs.
+
+## Add Dify Tools
+
+<Info>
+    Only models with the Tool Call tag can use Dify tools.
+
+    <Frame caption="">
+    <img src="/images/tool_call_tag.png" alt="Tool Call Tag"/>
+    </Frame>
 </Info>
 
-## Model Selection and Parameters
+Add [Dify tools](/en/use-dify/workspace/tools) to let the model to interact with external services and APIs. This is useful when tasks require real-time data or actions beyond text generation, like web searches or database queries.
 
-Choose from any model provider you've configured. Different models excel at different tasks - GPT-4 and Claude 3.5 handle complex reasoning well but cost more, while GPT-3.5 Turbo balances capability with affordability. For local deployment, use Ollama, LocalAI, or Xinference.
+You can disable or delete added tools, and modify their configuration. A clearer tool description helps the model judge when to use it.
 
-<Frame caption="Model selection and parameter configuration">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/43f81418ea70d4d79e3705505e777b1b.png" alt="LLM Node Configuration" />
-</Frame>
+**Adjust Max Iterations**
 
-Model parameters control response generation. **Temperature** ranges from 0 (deterministic) to 1 (creative). **Top P** limits word choices by probability. **Frequency Penalty** reduces repetition. **Presence Penalty** encourages new topics. You can also use presets: **Precise**, **Balanced**, or **Creative**.
+**Max Iterations** in **Advanced Settings** limits how many times the model can repeat its reasoning-and-action cycle (think, call a tool, process the result) for a single request. 
 
-## Prompt Configuration
+Increase this value for complex, multi-step tasks that require multiple tool calls. Higher values increase latency and token costs.
 
-Your interface adapts based on model type. Chat models use message roles (**System** for behavior, **User** for input, **Assistant** for examples), while completion models use simple text continuation.
+## Process Multimodal Inputs
 
-Reference workflow variables in prompts using double curly braces: `{{variable_name}}`. Variables are replaced with actual values before reaching the model.
+To let *multimodal-capable* models process images, audio, video, or documents, choose either approach:
 
-```text
-System: You are a technical documentation expert.
-User: {{user_input}}
-```
+  - Reference file variables directly in the prompt.
 
-## Context Variables
+  - Enable **Vision** in **Advanced Settings** and select the file variable there.
 
-Context variables inject external knowledge while preserving source attribution. This enables RAG applications where LLMs answer questions using your specific documents.
+      **Resolution** only controls the detail level for image processing:
 
-<Frame caption="Using context variables for RAG applications">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/5aefed96962bd994f8f05bac96b11e22.png" alt="Context Variables" />
-</Frame>
+      - **High**: Better accuracy for complex images but uses more tokens
 
-Connect a Knowledge Retrieval node's output to your LLM node's context input, then reference it:
+      - **Low**: Faster processing with fewer tokens for simple images
 
-```text
-Answer using only this context:
-{{knowledge_retrieval.result}}
+## Separate Thinking and Tool Calling from Responses
 
-Question: {{user_question}}
-```
+To get a clean response without the model's thinking process and tool calls (if any), reference the `text` output variable (with **Enable Reasoning Tag Separation** turned on) or `generation.content`.
 
-When using context variables from knowledge retrieval, Dify automatically tracks citations so users see information sources.
+The `generations` variable itself includes all intermediate steps alongside the final response.
 
-## Structured Outputs
+## Force Structured Output
 
-Force models to return specific data formats like JSON for programmatic use. Configure through three methods:
+Describing an output format in instructions can produce inconsistent results. For more reliable formatting, enable structured output to enforce a defined JSON schema.
 
-<Tabs>
-  <Tab title="Visual Editor">
-    User-friendly interface for simple structures. Add fields with names and types, mark required fields, set descriptions. The editor generates JSON Schema automatically.
-  </Tab>
-  
-  <Tab title="JSON Schema">
-    Write schemas directly for complex structures with nested objects, arrays, and validation rules.
-    
-    ```json
-    {
-      "type": "object",
-      "properties": {
-        "sentiment": {
-          "type": "string",
-          "enum": ["positive", "negative", "neutral"]
-        }
-      },
-      "required": ["sentiment"]
-    }
-    ```
-  </Tab>
-  
-  <Tab title="AI Generation">
-    Describe needs in plain language and let AI generate the schema.
-  </Tab>
-</Tabs>
+<Info>
+  For models without native JSON support, Dify includes the schema in the prompt, but strict adherence is not guaranteed.
+</Info>
 
-<Warning>
-  Models with native JSON support handle structured outputs reliably. For others, Dify includes the schema in prompts, but results may vary.
-</Warning>
+<Frame caption=""><img src="/images/structured_output.png" alt="Structured Output"/></Frame>
 
-## Memory and File Processing
+1. Next to **Output Variables**, toggle on **Structured**. A `structured_output` variable will appear at the end of the output variable list.
 
-![](/images/llm-memory.png)
-Enable Memory to maintain context across multiple LLM calls within a chatflow conversation. When enabled, previous interactions will be included in subsequent prompts as formatted user - assistant outputs. You can customize what goes into the user prompts by editing the `USER` template. Memory is node-specific and doesn't persist between different conversations.
+2. Click **Configure** to define the output schema using one of the following methods.
 
-For **File Processing**, add file variables to prompts for multimodal models. GPT-4V handles images, Claude processes PDFs directly, while other models might need preprocessing.
+    - **Visual Editor**: Define simple structures with a no-code interface. The corresponding JSON schema is generated automatically.
 
-### Vision Configuration
+    - **JSON Schema**: Directly write schemas for complex structures with nested objects, arrays, or validation rules.
 
-When processing images, you can control the detail level:
-- **High detail** - Better accuracy for complex images but uses more tokens
-- **Low detail** - Faster processing with fewer tokens for simple images
+    - **AI Generation**: Describe needs in natural language and let AI generate the schema.
 
-The default variable selector for vision is `userinput.files` which automatically picks up files from the User Input node.
+    - **JSON Import**: Paste an existing JSON object to automatically generate the corresponding schema.
 
-<Frame caption="File processing with multimodal LLMs">
-  <img src="https://assets-docs.dify.ai/2024/11/05b3d4a78038bc7afbb157078e3b2b26.png" alt="File Processing" />
-</Frame>
+## Handle Errors
 
-## Jinja2 Template Support
+Configure automatic retries for temporary issues (like network glitches) and a fallback error handling strategy to keep the workflow running if errors persist.
 
-LLM prompts support Jinja2 templating for advanced variable handling. When you use Jinja2 mode (`edition_type: "jinja2"`), you can:
-
-```jinja2
-{% for item in search_results %}
-{{ loop.index }}. {{ item.title }}: {{ item.content }}
-{% endfor %}
-```
-
-Jinja2 variables are processed separately from regular variable substitution, allowing for loops, conditionals, and complex data transformations within prompts.
-
-## Streaming Output
-
-LLM nodes support streaming output by default. Each text chunk is yielded as a `RunStreamChunkEvent`, enabling real-time response display. File outputs (images, documents) are processed and saved automatically during streaming.
-
-## Error Handling
-
-Configure retry behavior for failed LLM calls. Set maximum retry attempts, intervals between retries, and backoff multipliers. Define fallback strategies like default values, error routing, or alternative models when retries aren't sufficient.
+  <Frame caption=""><img src="/images/node_handle_errors.png" alt="Handle Errors"/></Frame>

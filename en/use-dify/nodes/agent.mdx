@@ -4,112 +4,378 @@ description: "Give LLMs autonomous control over tools for complex task execution
 icon: "robot"
 ---
 
-The Agent node gives your LLM autonomous control over tools, enabling it to iteratively decide which tools to use and when to use them. Instead of pre-planning every step, the Agent reasons through problems dynamically, calling tools as needed to complete complex tasks.
-
-<Frame caption="Agent node configuration interface">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/1f4d803ff68394d507abd3bcc13ba0f3.png" alt="Agent node interface" />
-</Frame>
-
-## Agent Strategies
-
-Agent strategies define how your Agent thinks and acts. Choose the approach that best matches your model's capabilities and task requirements.
-
-<Frame caption="Available agent strategy options">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f14082c44462ac03955e41d66ffd4cca.png" alt="Agent strategies selection" />
-</Frame>
-
 <Tabs>
-  <Tab title="Function Calling">
-    Uses the LLM's native function calling capabilities to directly pass tool definitions through the tools parameter. The LLM decides when and how to call tools using its built-in mechanism.
-    
-    Best for models like GPT-4, Claude 3.5, and other models with robust function calling support.
-  </Tab>
+  <Tab title="Sandboxed Runtime">
+
+  Within the [sandboxed runtime](/en/use-dify/build/runtime#sandboxed-runtime), the Agent node gives the LLM the ability to execute commands autonomously: calling tools, running scripts, accessing external resources, working with the [file system](/en/use-dify/build/file-system), and creating multimodal outputs. 
+
+  This comes with trade-offs: longer response times and higher token consumption. To handle simple tasks faster and more efficiently, you can disable these capabilities by turning off **[Agent Mode](#enable-command-execution)**.
+
+  ## Choose a Model
+
+  Choose a model that best fits your task from your configured providers.
+
+  After selection, you can adjust model parameters to control how it generates responses. Available parameters and presets vary by model.
+
+  ## Write the Prompt
+
+  Instruct the model on how to process inputs and generate responses. Type `/` to insert variables or resources in the file system, or `@` to reference [Dify tools](/en/use-dify/workspace/tools).
+
+  If you're unsure where to start or want to refine existing prompts, try our AI-assisted prompt generator.
+
+  <Columns>
+  <Frame caption="Prompt Generator Icon">
+  <img src="/images/prompt_generator_icon.png" alt="Prompt Generator Icon"/>
+  </Frame>
+  <Frame caption="Prompt Generator Interface">
+  <img src="/images/prompt_generator_interface.png" alt="Prompt Generator Interface"/>
+  </Frame>
+  </Columns>
+
+  ### Specify Instructions and Messages
+
+  Define the system instruction and click **Add Message** to add user/assistant messages. They are all sent to the model in order in a single prompt.
+
+  Think of it as chatting directly with the model:
+
+  - **System instructions** set the rules for how the model should respond—its role, tone, and behavioral guidelines.
+
+  - **User messages** are what you send to the model—a question, request, or task for the model to work on.
+
+  - **Assistant messages** are the model's responses.
+
+  ### Separate Inputs from Rules
+
+  Define the role and rules in the system instruction, then pass the actual task input in a user message. For example:
+
+
+  ```bash wrap
+  # System instruction
+  You are a children's story writer. Write a story based on the user's input. Use simple language and a warm tone.
+
+  # User message
+  Write a bedtime story about a rabbit who makes friends with a shy hedgehog.
+  ```
+
+  While it may seem simpler to put everything in the system instruction, separating role definitions from task inputs gives the model clearer structure to work with.
+
+  ### Simulate Chat History
+
+  You might wonder: if assistant messages are the model's responses, why would I add them manually?
+
+  By adding alternating user and assistant messages, you create simulated chat history in the prompt. The model treats these as prior exchanges, which can help guide its behavior.
+
+  ### Import Chat History from Upstream LLMs
+
+  Click **Add Chat History** to import chat history from an upstream Agent node. This lets the model know what happened upstream and continue from where that node left off.
+
+  Chat history includes **user**, **assistant**, and <Tooltip tip="Tool messages are the results returned after the model calls a tool. For example, command execution results from the bash tool.">**tool** messages</Tooltip>. You can view it in an Agent node's `context` output variable.
+
+  <Info>
+    System instructions are not included, as they are node-specific.
+  </Info>    
+
+  This is useful when chaining multiple Agent nodes:
+
+  - Without importing chat history, a downstream node only receives the upstream node's final output, with no idea how it got there.
+
+  - With imported chat history, it sees the entire process: what the user asked, what tools were called, what results came back, and how the model reasoned through them.
+
+  **Specify your new task in the automatically added user message.** The imported history is prepended to the current node's messages, so the model sees it as one continuous conversation. Since the imported history typically ends with an assistant message, the model needs a follow-up user message to know what to do next.
+
+  <Accordion title="Example 1: Process Files Generated by Upstream LLMs">
+
+  Suppose two Agent nodes run in sequence: Agent A analyzes data and generates chart images, saving them to the sandbox's output folder. Agent B creates a final report that includes these charts.
+
+  If Agent B only receives Agent A's final text output, it knows the analysis conclusions but doesn't know what files were generated or where they're stored. 
   
-  <Tab title="ReAct (Reason + Act)">
-    Uses structured prompts that guide the LLM through explicit reasoning steps. Follows a **Thought → Action → Observation** cycle for transparent decision-making.
+  By importing Agent A's chat history, Agent B sees the exact file paths from the tool messages and can access and embed the charts in its report.
+
+  Here's the complete message sequence Agent B sees after importing Agent A's chat history:
+
+  ```bash wrap
+  # Agent B's own system instruction
+  1. System: "You are a report designer. Create professional reports with embedded visuals."
+
+  # from Agent A         
+  2. User: "Analyze the Q3 sales data and create visualizations."
+
+  # from Agent A
+  3. Tool: [bash] Created bar chart: /output/q3_sales_by_region.png
+  4. Tool: [bash] Created trend line: /output/q3_monthly_trend.png
+
+  # from Agent A
+  5. Assistant: "I've analyzed the Q3 sales data and created two charts..."
+
+  # Agent B's own user message
+  6. User: "Create a PDF report incorporating the generated charts."
+  ```
+
+  Agent B knows exactly which files exist and where they are, so it can embed them directly in the report.
+
+  </Accordion>
+
+  <Accordion title="Example 2: Output Artifacts to End Users">
+
+  Building on Example 1, suppose you want to deliver the generated PDF report to end users. Since artifacts cannot be directly exposed to end users, you need a third Agent node to extract the file.
+
+  Agent C configuration:
+
+  - **Agent Mode**: Disabled
+
+  - **Structured Output**: Enabled, with a file-type output variable
+
+  - **Chat History**: Import from Agent B
+
+  - **User message**: "Output the generated PDF."
+
+  Here's the complete message sequence Agent C sees after importing Agent B's chat history:
+  ```bash wrap
+  # Agent C's own system instruction (optional)
+  1. System: (none)
+
+  # User and tool messages from Agent A (omitted for brevity)
+  2. ...
+
+  # from Agent B
+  3. User: "Create a PDF report incorporating the generated charts."
+
+  # from Agent B
+  4. Tool: [bash] Created report: /output/q3_sales_report.pdf
+
+  # from Agent B
+  5. Assistant: "I've created a PDF report with the charts embedded..."
+
+  # Agent C's own user message
+  6. User: "Output the generated PDF."
+  ```
+
+  Agent C locates the file path from the imported chat history and outputs it as a file variable. You can then reference this variable in an Answer node or Output node to deliver the file to end users.
+
+  </Accordion>
+
+  ### Create Dynamic Prompts Using Jinja2
+
+  Use [Jinja2](https://jinja.palletsprojects.com/en/stable/) templating to add conditionals, loops, and other logic to your prompts. For example, customize instructions depending on a variable's value.
+
+  <Accordion title="Example: Conditional System Instruction by User Level">
+  ```jinja2 wrap
+  You are a 
+  {% if user_level == "beginner" %}patient and friendly 
+  {% elif user_level == "intermediate" %}professional and efficient 
+  {% else %}senior expert-level 
+  {% endif %} assistant.
+
+  {% if user_level == "beginner" %} 
+  Please explain in simple and easy-to-understand language. Provide examples when necessary. Avoid using technical jargon. 
+  {% elif user_level == "intermediate" %} You may use some technical terms, but provide appropriate explanations. Offer practical advice and best practices. 
+  {% else %} You may delve into technical details and use professional terminology. Focus on advanced use cases and optimization solutions. 
+  {% endif %}
+  ```
+  </Accordion>
+
+  By default, you'd need to send all possible instructions to the model, describe the conditions, and let it decide which to follow—an approach that's often unreliable. 
+
+  With Jinja2 templating, only the instructions matching the defined conditions are sent, ensuring predictable behavior and reducing token usage.
+
+  ## Enable Command Execution (Agent Mode)
+
+  Toggle on **Agent Mode** to let the model use the built-in bash tool to execute commands in the sandboxed runtime.
+
+  This is the foundation for all advanced capabilities: when the model calls other Dify tools, performs file operations, runs scripts, or accesses external resources, it does so by calling the bash tool to execute the underlying commands.
+
+  For quick, simple tasks that don't require these capabilities, you can disable **Agent Mode** to get faster responses and lower token costs.
+
+  **Adjust Max Iterations**
+
+  **Max Iterations** in **Advanced Settings** limits how many times the model can repeat its reasoning-and-action cycle (think, call a tool, process the result) for a single request. 
+
+  Increase this value for complex, multi-step tasks that require multiple tool calls. Higher values increase latency and token costs.
+
+  ## Enable Conversation Memory (Chatflows Only)
+
+  <Note>
+      Memory is node-specific and doesn't persist between different conversations.
+  </Note>
+
+  Enable **Memory** to keep recent dialogues, so the LLM can answer follow-up questions coherently.
+
+  A user message will be automatically added to pass the current user query and any uploaded files. This is because memory works by storing recent user-assistant exchanges. If the user query isn't passed through a user message, there will be nothing to record on the user side.
+
+  **Window Size** controls how many recent exchanges to retain. For example, `5` keeps the last 5 user-query and LLM-response pairs.
+
+  ## Add Context
+
+  In **Advanced Settings** > **Context**, provide the LLM with additional reference information to reduce hallucination and improve response accuracy.
+
+  A typical pattern: [pass retrieval results](/en/use-dify/nodes/knowledge-retrieval#use-with-llm-nodes) from a knowledge retrieval node for Retrieval-Augmented Generation (RAG).
+
+  ## Process Multimodal Inputs
+
+  To let multimodal-capable models process images, audio, video, or documents, choose either approach:
+
+   - Reference file variables directly in the prompt.
+
+   - Enable **Vision** in **Advanced Settings** and select the file variable there.
+
+        **Resolution** controls the detail level for image processing only:
+
+        - **High**: Better accuracy for complex images but uses more tokens
+
+        - **Low**: Faster processing with fewer tokens for simple images
+
+  For models without relevant multimodal capabilities, use the **[Upload File to Sandbox](/en/use-dify/nodes/upload-file-to-sandbox)** node to upload files to the sandbox. Agent nodes can then execute commands to install tools and run scripts to process these files—even file types the model can't handle natively.
+
+  ## Separate Thinking and Tool Calling from Responses
+
+  To get a clean response without the model's thinking process and tool calls, use the `generations.content` output variable.
+
+  The `generations` variable itself includes all intermediate steps alongside the final response.
+
+  ## Force Structured Output
+
+  Describing an output format in instructions can produce inconsistent results. For more reliable formatting, enable structured output to enforce a defined JSON schema.
+
+  <Info>
+    For models without native JSON support, Dify includes the schema in the prompt, but strict adherence is not guaranteed.
+  </Info>
+
+  <Frame caption=""><img src="/images/structured_output.png" alt="Structured Output"/></Frame>
+
+  1. Next to **Output Variables**, toggle on **Structured**. A `structured_output` variable will appear at the end of the output variable list.
+
+  2. Click **Configure** to define the output schema using one of the following methods.
+
+      - **Visual Editor**: Define simple structures with a no-code interface. The corresponding JSON schema is generated automatically.
+
+      - **JSON Schema**: Directly write schemas for complex structures with nested objects, arrays, or validation rules.
+
+      - **AI Generation**: Describe needs in natural language and let AI generate the schema.
+
+      - **JSON Import**: Paste an existing JSON object to automatically generate the corresponding schema.
+
+  <Tip>
+    Use file-type structured output variables to extract artifacts from the sandbox and make them available for end users. See [Output Artifacts to End Users](/en/use-dify/build/file-system#output-artifacts-to-end-users) for details.
+  </Tip>
+
+  ## Handle Errors
+
+  Configure automatic retries for temporary issues (like network glitches) and a fallback error handling strategy to keep the workflow running if errors persist.
+
+  <Frame caption=""><img src="/images/node_handle_errors.png" alt="Handle Errors"/></Frame>
+
+  </Tab>
+  <Tab title="Classic Runtime">
+
+  Within the classic runtime, the Agent node gives your LLM autonomous control over tools, enabling it to iteratively decide which tools to use and when to use them. Instead of pre-planning every step, the Agent reasons through problems dynamically, calling tools as needed to complete complex tasks.
+
+  <Frame caption="Agent node configuration interface">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/1f4d803ff68394d507abd3bcc13ba0f3.png" alt="Agent node interface" />
+  </Frame>
+
+  ## Agent Strategies
+
+  Agent strategies define how your Agent thinks and acts. Choose the approach that best matches your model's capabilities and task requirements.
+
+  <Frame caption="Available agent strategy options">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f14082c44462ac03955e41d66ffd4cca.png" alt="Agent strategies selection" />
+  </Frame>
+
+  <Tabs>
+    <Tab title="Function Calling">
+      Uses the LLM's native function calling capabilities to directly pass tool definitions through the tools parameter. The LLM decides when and how to call tools using its built-in mechanism.
+      
+      Best for models like GPT-4, Claude 3.5, and other models with robust function calling support.
+    </Tab>
     
-    Works well with models that may not have native function calling or when you need explicit reasoning traces.
+    <Tab title="ReAct (Reason + Act)">
+      Uses structured prompts that guide the LLM through explicit reasoning steps. Follows a **Thought → Action → Observation** cycle for transparent decision-making.
+      
+      Works well with models that may not have native function calling or when you need explicit reasoning traces.
+    </Tab>
+  </Tabs>
+
+  <Info>
+    Install additional strategies from **Marketplace → Agent Strategies** or contribute custom strategies to the [community repository](https://github.com/langgenius/dify-plugins).
+  </Info>
+
+  <Frame caption="Function calling strategy configuration">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/10505cd7c6f0b3ba10161abb88d9e36b.png" alt="Function calling setup" />
+  </Frame>
+
+  ## Configuration
+
+  ### Model Selection
+
+  Choose an LLM that supports your selected agent strategy. More capable models handle complex reasoning better but cost more per iteration. Ensure your model supports function calling if using that strategy.
+
+  ### Tool Configuration
+
+  Configure the tools your Agent can access. Each tool requires:
+
+  **Authorization** - API keys and credentials for external services configured in your workspace
+
+  **Description** - Clear explanation of what the tool does and when to use it (this guides the Agent's decision-making)
+
+  **Parameters** - Required and optional inputs the tool accepts with proper validation
+
+  ### Instructions and Context
+
+  Define the Agent's role, goals, and context using natural language instructions. Use Jinja2 syntax to reference variables from upstream workflow nodes.
+
+  **Query** specifies the user input or task the Agent should work on. This can be dynamic content from previous workflow nodes.
+
+  <Frame caption="Agent configuration parameters">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/54c8e4f0eaa7379bd8c1b5ac6305b326.png" alt="Agent configuration interface" />
+  </Frame>
+
+  ### Execution Controls
+
+  **Maximum Iterations** sets a safety limit to prevent infinite loops. Configure based on task complexity - simple tasks need 3-5 iterations, while complex research might require 10-15.
+
+  **Memory** controls how many previous messages the Agent remembers using TokenBufferMemory. Larger memory windows provide more context but increase token costs. This enables conversational continuity where users can reference previous actions.
+
+  ### Tool Parameter Auto-Generation
+
+  Tools can have parameters configured as **auto-generated** or **manual input**. Auto-generated parameters (`auto: false`) are automatically populated by the Agent, while manual input parameters require explicit values that become part of the tool's permanent configuration.
+
+  <video controls src="https://assets-docs.dify.ai/2025/04/1801b96763eb8f22f1e2158645897885.mp4" width="100%" />
+
+  ## Output Variables
+
+  Agent nodes provide comprehensive output including:
+
+  **Final Answer** - The Agent's ultimate response to the query
+
+  **Tool Outputs** - Results from each tool invocation during execution
+
+  **Reasoning Trace** - Step-by-step decision process (especially detailed with ReAct strategy) available in the JSON output
+
+  **Iteration Count** - Number of reasoning cycles used
+
+  **Success Status** - Whether the Agent completed the task successfully
+
+  **Agent Logs** - Structured log events with metadata for debugging and monitoring tool invocations
+
+  ## Use Cases
+
+  **Research and Analysis** - Agents can autonomously search multiple sources, synthesize information, and provide comprehensive answers.
+
+  **Troubleshooting** - Diagnostic tasks where the Agent needs to gather information, test hypotheses, and adapt its approach based on findings.
+
+  **Multi-step Data Processing** - Complex workflows where the next action depends on intermediate results.
+
+  **Dynamic API Integration** - Scenarios where the sequence of API calls depends on responses and conditions that can't be predetermined.
+
+  ## Best Practices
+
+  **Clear Tool Descriptions** help the Agent understand when and how to use each tool effectively.
+
+  **Appropriate Iteration Limits** prevent runaway costs while allowing sufficient flexibility for complex tasks.
+
+  **Detailed Instructions** provide context about the Agent's role, goals, and any constraints or preferences.
+
+  **Memory Management** balance context retention with token efficiency based on your use case requirements.
+
   </Tab>
 </Tabs>
-
-<Info>
-  Install additional strategies from **Marketplace → Agent Strategies** or contribute custom strategies to the [community repository](https://github.com/langgenius/dify-plugins).
-</Info>
-
-<Frame caption="Function calling strategy configuration">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/10505cd7c6f0b3ba10161abb88d9e36b.png" alt="Function calling setup" />
-</Frame>
-
-## Configuration
-
-### Model Selection
-
-Choose an LLM that supports your selected agent strategy. More capable models handle complex reasoning better but cost more per iteration. Ensure your model supports function calling if using that strategy.
-
-### Tool Configuration
-
-Configure the tools your Agent can access. Each tool requires:
-
-**Authorization** - API keys and credentials for external services configured in your workspace
-
-**Description** - Clear explanation of what the tool does and when to use it (this guides the Agent's decision-making)
-
-**Parameters** - Required and optional inputs the tool accepts with proper validation
-
-### Instructions and Context
-
-Define the Agent's role, goals, and context using natural language instructions. Use Jinja2 syntax to reference variables from upstream workflow nodes.
-
-**Query** specifies the user input or task the Agent should work on. This can be dynamic content from previous workflow nodes.
-
-<Frame caption="Agent configuration parameters">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/54c8e4f0eaa7379bd8c1b5ac6305b326.png" alt="Agent configuration interface" />
-</Frame>
-
-### Execution Controls
-
-**Maximum Iterations** sets a safety limit to prevent infinite loops. Configure based on task complexity - simple tasks need 3-5 iterations, while complex research might require 10-15.
-
-**Memory** controls how many previous messages the Agent remembers using TokenBufferMemory. Larger memory windows provide more context but increase token costs. This enables conversational continuity where users can reference previous actions.
-
-### Tool Parameter Auto-Generation
-
-Tools can have parameters configured as **auto-generated** or **manual input**. Auto-generated parameters (`auto: false`) are automatically populated by the Agent, while manual input parameters require explicit values that become part of the tool's permanent configuration.
-
-<video controls src="https://assets-docs.dify.ai/2025/04/1801b96763eb8f22f1e2158645897885.mp4" width="100%" />
-
-## Output Variables
-
-Agent nodes provide comprehensive output including:
-
-**Final Answer** - The Agent's ultimate response to the query
-
-**Tool Outputs** - Results from each tool invocation during execution
-
-**Reasoning Trace** - Step-by-step decision process (especially detailed with ReAct strategy) available in the JSON output
-
-**Iteration Count** - Number of reasoning cycles used
-
-**Success Status** - Whether the Agent completed the task successfully
-
-**Agent Logs** - Structured log events with metadata for debugging and monitoring tool invocations
-
-## Use Cases
-
-**Research and Analysis** - Agents can autonomously search multiple sources, synthesize information, and provide comprehensive answers.
-
-**Troubleshooting** - Diagnostic tasks where the Agent needs to gather information, test hypotheses, and adapt its approach based on findings.
-
-**Multi-step Data Processing** - Complex workflows where the next action depends on intermediate results.
-
-**Dynamic API Integration** - Scenarios where the sequence of API calls depends on responses and conditions that can't be predetermined.
-
-## Best Practices
-
-**Clear Tool Descriptions** help the Agent understand when and how to use each tool effectively.
-
-**Appropriate Iteration Limits** prevent runaway costs while allowing sufficient flexibility for complex tasks.
-
-**Detailed Instructions** provide context about the Agent's role, goals, and any constraints or preferences.
-
-**Memory Management** balance context retention with token efficiency based on your use case requirements.
