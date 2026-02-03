@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "高度なチャットアプリAPI (Chatflow API)",
-    "description": "チャットアプリケーションはセッションの持続性をサポートしており、以前のチャット履歴を応答のコンテキストとして使用できます。これは、チャットボットやカスタマーサービスAIなどに適用できます。",
+    "title": "高度なチャットアプリ API",
+    "description": "チャットアプリケーションはセッションの永続化をサポートしており、以前のチャット履歴を応答のコンテキストとして使用できます。これはチャットボット、カスタマーサービス AI などに適用できます。このバージョンには、ワークフローイベントやより詳細なファイルタイプのサポートなどの高度な機能が含まれています。",
     "version": "1.0.0"
   },
   "servers": [
     {
       "url": "{api_base_url}",
-      "description": "APIのベースURL。 {api_base_url} をアプリケーション提供の実際のAPIベースURLに置き換えてください。",
+      "description": "高度なチャットアプリ API のベース URL。{api_base_url} をアプリケーションに提供された実際の API ベース URL（例：props.appDetail.api_base_url から取得）に置き換えてください。",
       "variables": {
         "api_base_url": {
           "default": "https://api.dify.ai/v1",
-          "description": "実際のAPIベースURL"
+          "description": "API の実際のベース URL"
         }
       }
     }
@@ -26,35 +26,38 @@
     "/chat-messages": {
       "post": {
         "summary": "チャットメッセージを送信",
-        "description": "チャットアプリケーションにリクエストを送信します。",
-        "operationId": "sendChatflowMessageJp",
-        "tags": ["チャットメッセージ"],
+        "description": "高度なチャットアプリケーションにリクエストを送信します。さまざまなファイルタイプとワークフローイベントをサポートしています。",
+        "operationId": "sendAdvancedChatMessage",
+        "tags": [
+          "Chatflow"
+        ],
         "requestBody": {
-          "description": "チャットメッセージ送信のリクエストボディ。",
+          "description": "高度なチャットメッセージを送信するためのリクエストボディ。",
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ChatflowRequestJp"
+                "$ref": "#/components/schemas/AdvancedChatRequest"
               },
               "examples": {
-                "streaming_with_file": {
-                  "summary": "ファイルとカスタム入力を含むストリーミングリクエストの例",
+                "streaming_with_file_and_workflow": {
+                  "summary": "画像ファイル付きストリーミングモードの例",
                   "value": {
                     "inputs": {
-                      "name": "dify"
+                      "user_name": "Alice"
                     },
-                    "query": "iPhone 13 Pro Maxの仕様は何ですか？",
+                    "query": "Analyze this document and tell me its sentiment.",
                     "response_mode": "streaming",
-                    "conversation_id": "1c7e55fb-1ba2-4e10-81b5-30addcea2276",
-                    "user": "abc-123",
+                    "conversation_id": "conv_12345",
+                    "user": "user_alice",
                     "files": [
                       {
-                        "type": "image",
+                        "type": "document",
                         "transfer_method": "remote_url",
-                        "url": "https://cloud.dify.ai/logo/logo-site.png"
+                        "url": "https://example.com/mydoc.pdf"
                       }
-                    ]
+                    ],
+                    "auto_generate_name": true
                   }
                 }
               }
@@ -63,41 +66,58 @@
         },
         "responses": {
           "200": {
-            "description": "リクエスト成功。応答のコンテントタイプと構造はリクエストの `response_mode` パラメータに依存します。\n- `response_mode` が `blocking` の場合、`application/json` 形式の `ChatCompletionResponseJp` オブジェクトを返します。\n- `response_mode` が `streaming` の場合、`text/event-stream` 形式の `ChunkChatflowEventJp` オブジェクトのストリームを返します。",
+            "description": "成功レスポンス。コンテンツタイプと構造は `response_mode` によって異なります。\n- `blocking`: `ChatCompletionResponse` を含む `application/json`。\n- `streaming`: `ChunkAdvancedChatEvent` ストリームを含む `text/event-stream`。",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ChatCompletionResponseJp"
+                  "$ref": "#/components/schemas/ChatCompletionResponse"
                 }
               },
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "SSEイベントストリーム。各イベントは 'data: ' で始まり、'\\n\\n' で終わります。詳細な構造は `ChunkChatflowEventJp` を参照してください。"
+                  "description": "Server-Sent Events のストリーム。構造については `ChunkAdvancedChatEvent` を参照してください。"
+                },
+                "examples": {
+                  "workflow_events_example": {
+                    "summary": "ワークフローイベントを含むストリームの例",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"wf_run_1\", \"workflow_id\": \"wf_def_xyz\", \"sequence_number\": 1, \"created_at\": 1705395332}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"node_run_1\", \"node_id\": \"node_start\", \"node_type\": \"start\", \"title\": \"Start Node\", \"index\": 0, \"inputs\": {}, \"created_at\": 1705395333}}\n\ndata: {\"event\": \"message\", \"task_id\": \"task_abc\", \"message_id\": \"msg_123\", \"conversation_id\": \"conv_123\", \"answer\": \"Processing... \", \"created_at\": 1705395334}\n\ndata: {\"event\": \"node_finished\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"node_run_1\", \"node_id\": \"node_start\", \"node_type\": \"start\", \"title\": \"Start Node\", \"index\": 0, \"status\": \"succeeded\", \"elapsed_time\": 0.5, \"created_at\": 1705395333}}\n\ndata: {\"event\": \"message_end\", \"task_id\": \"task_abc\", \"message_id\": \"msg_123\", \"conversation_id\": \"conv_123\", \"metadata\": {\"usage\": {\"total_tokens\": 10}}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"task_abc\", \"workflow_run_id\": \"wf_run_1\", \"data\": {\"id\": \"wf_run_1\", \"workflow_id\": \"wf_def_xyz\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 150, \"total_steps\": 3, \"created_at\": 1705395332, \"finished_at\": 1705395335}}\n\n"
+                  }
                 }
               }
             }
           },
-          "400": { "$ref": "#/components/responses/BadRequestGenericJp" },
-          "404": { "$ref": "#/components/responses/ConversationNotFoundJp" },
-          "500": { "$ref": "#/components/responses/InternalServerErrorJp" }
+          "400": {
+            "$ref": "#/components/responses/BadRequestGeneric"
+          },
+          "404": {
+            "$ref": "#/components/responses/ConversationNotFound"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
         }
       }
     },
     "/files/upload": {
       "post": {
         "summary": "ファイルアップロード",
-        "description": "メッセージ送信時に使用するファイルをアップロードし、画像とテキストのマルチモーダル理解を可能にします。アプリケーションでサポートされている形式をサポートします。アップロードされたファイルは現在のエンドユーザーのみが使用できます。",
-        "operationId": "uploadChatflowFileJp",
-        "tags": ["ファイル操作"],
+        "description": "メッセージ送信時に使用するファイルをアップロードし、マルチモーダル理解を有効にします。アプリケーションでサポートされている任意の形式をサポートしています。アップロードされたファイルは現在のエンドユーザーのみが使用できます。",
+        "operationId": "uploadAdvancedChatFile",
+        "tags": [
+          "Files"
+        ],
         "requestBody": {
-          "description": "ファイルアップロードリクエスト。`multipart/form-data` リクエストが必要です。",
+          "description": "ファイルアップロードリクエスト。multipart/form-data が必要です。",
           "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
                 "type": "object",
-                "required": ["file", "user"],
+                "required": [
+                  "file",
+                  "user"
+                ],
                 "properties": {
                   "file": {
                     "type": "string",
@@ -106,7 +126,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。開発者のルールによって定義され、アプリケーション内で一意でなければなりません。**重要な注意事項**: Service API は WebApp で作成された対話を共有しません。API を通じて作成された対話は、WebApp インターフェースで作成されたものとは分離されています。"
+                    "description": "ユーザー識別子、アプリケーション内で一意。**注意**: Service API は WebApp で作成された会話を共有しません。API を通じて作成された会話は、WebApp インターフェースで作成された会話とは分離されています。"
                   }
                 }
               }
@@ -115,39 +135,47 @@
         },
         "responses": {
           "200": {
-            "description": "ファイルアップロード成功。",
+            "description": "ファイルが正常にアップロードされました。",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/FileUploadResponseJp"
+                  "$ref": "#/components/schemas/FileUploadResponse"
                 }
               }
             }
           },
-          "201": {
-            "description": "ファイル作成成功（代替成功コード）。",
-            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/FileUploadResponseJp" } } }
+          "400": {
+            "$ref": "#/components/responses/BadRequestFile"
           },
-          "400": { "$ref": "#/components/responses/BadRequestFileJp" },
-          "413": { "$ref": "#/components/responses/FileTooLargeJp" },
-          "415": { "$ref": "#/components/responses/UnsupportedFileTypeFileJp" },
-          "503": { "$ref": "#/components/responses/S3ErrorFileJp" },
-          "500": { "$ref": "#/components/responses/InternalServerErrorJp" }
+          "413": {
+            "$ref": "#/components/responses/FileTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedFileTypeFile"
+          },
+          "503": {
+            "$ref": "#/components/responses/S3ErrorFile"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalServerError"
+          }
         }
       }
     },
     "/files/{file_id}/preview": {
       "get": {
         "summary": "ファイルプレビュー",
-        "description": "アップロードされたファイルのプレビューまたはダウンロード。このエンドポイントは、ファイルアップロードAPIを通じて事前にアップロードされたファイルにアクセスすることができます。ファイルは、リクエストしているアプリケーション内のメッセージに属している場合のみアクセス可能です。",
-        "operationId": "previewChatflowFileJp",
-        "tags": ["ファイル操作"],
+        "description": "アップロードされたファイルをプレビューまたはダウンロードします。このエンドポイントを使用すると、ファイルアップロード API を介して以前にアップロードされたファイルにアクセスできます。ファイルは、リクエストしているアプリケーション内のメッセージに属している場合にのみアクセスできます。",
+        "operationId": "previewChatFlowFile",
+        "tags": [
+          "Files"
+        ],
         "parameters": [
           {
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "プレビューするファイルの一意識別子、ファイルアップロードAPIのレスポンスから取得されます。",
+            "description": "プレビューするファイルの一意の識別子。ファイルアップロード API のレスポンスから取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -157,7 +185,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "ファイルを添付ファイルとして強制ダウンロードするかどうか。デフォルトは`false`（ブラウザでプレビュー）です。",
+            "description": "ファイルを添付ファイルとして強制ダウンロードするかどうか。デフォルトは `false`（ブラウザでプレビュー）。",
             "schema": {
               "type": "boolean",
               "default": false
@@ -201,7 +229,7 @@
             },
             "headers": {
               "Content-Type": {
-                "description": "ファイルのMIMEタイプ",
+                "description": "ファイルの MIME タイプ",
                 "schema": {
                   "type": "string"
                 }
@@ -213,20 +241,20 @@
                 }
               },
               "Content-Disposition": {
-                "description": "as_attachment=trueの場合、'attachment'に設定されます",
+                "description": "as_attachment=true の場合は 'attachment' に設定",
                 "schema": {
                   "type": "string"
                 }
               },
               "Cache-Control": {
-                "description": "パフォーマンス用キャッシュヘッダー",
+                "description": "パフォーマンス向けのキャッシュヘッダー",
                 "schema": {
                   "type": "string",
                   "example": "public, max-age=3600"
                 }
               },
               "Accept-Ranges": {
-                "description": "オーディオ/ビデオファイルの場合は'bytes'に設定されます",
+                "description": "オーディオ/ビデオファイルの場合は 'bytes' に設定",
                 "schema": {
                   "type": "string",
                   "example": "bytes"
@@ -235,26 +263,32 @@
             }
           },
           "400": {
-            "description": "不正なリクエスト。可能なエラーコード:\n- `invalid_param`: 異常なパラメータ入力。",
+            "description": "Bad Request。可能なエラーコード：\n- `invalid_param`: パラメータ入力が異常です。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
           "403": {
-            "description": "禁止。可能なエラーコード:\n- `file_access_denied`: ファイルアクセス拒否またはファイルが現在のアプリケーションに属していません。",
+            "description": "Forbidden。可能なエラーコード：\n- `file_access_denied`: ファイルアクセスが拒否されたか、ファイルが現在のアプリケーションに属していません。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
           "404": {
-            "description": "見つかりません。可能なエラーコード:\n- `file_not_found`: ファイルが見つからないか削除されています。",
+            "description": "Not Found。可能なエラーコード：\n- `file_not_found`: ファイルが見つからないか、削除されています。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           },
@@ -262,7 +296,9 @@
             "description": "内部サーバーエラー。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ErrorResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
               }
             }
           }
@@ -271,17 +307,21 @@
     },
     "/chat-messages/{task_id}/stop": {
       "post": {
-        "summary": "生成を停止",
-        "description": "チャットメッセージの生成を停止します。ストリーミングモードでのみサポートされています。",
-        "operationId": "stopChatflowMessageGenerationJp",
-        "tags": ["チャットメッセージ"],
+        "summary": "高度なチャットメッセージ生成を停止",
+        "description": "高度なチャットメッセージ生成タスクを停止します。ストリーミングモードでのみサポートされています。",
+        "operationId": "stopAdvancedChatMessageGeneration",
+        "tags": [
+          "Chatflow"
+        ],
         "parameters": [
           {
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスクID、ストリーミングチャンクの返り値から取得できます。",
-            "schema": { "type": "string", "format": "uuid" }
+            "description": "ストリーミングチャンクからのタスク ID。",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -290,11 +330,13 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["user"],
+                "required": [
+                  "user"
+                ],
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。送信メッセージインターフェースで渡されたユーザーと一致している必要があります。"
+                    "description": "ユーザー識別子、メッセージ送信呼び出しと一致させる必要があります。**注意**: Service API は WebApp で作成された会話を共有しません。API を通じて作成された会話は、WebApp インターフェースで作成された会話とは分離されています。"
                   }
                 }
               }
@@ -302,54 +344,72 @@
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/SuccessResultJp" }
+          "200": {
+            "$ref": "#/components/responses/SuccessResult"
+          }
         }
       }
     },
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "メッセージフィードバック",
-        "description": "エンドユーザーはフィードバックメッセージを提供でき、アプリケーション開発者が期待される出力を最適化するのを支援します。",
-        "operationId": "postChatflowMessageFeedbackJp",
-        "tags": ["メッセージフィードバック"],
+        "description": "メッセージにフィードバックを提供します。",
+        "operationId": "postAdvancedChatMessageFeedback",
+        "tags": [
+          "Feedback"
+        ],
         "parameters": [
           {
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "メッセージID。",
-            "schema": { "type": "string", "format": "uuid" }
+            "description": "メッセージ ID。",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/MessageFeedbackRequestJp" }
+              "schema": {
+                "$ref": "#/components/schemas/MessageFeedbackRequest"
+              }
             }
           }
         },
         "responses": {
-          "200": { "$ref": "#/components/responses/SuccessResultJp" }
+          "200": {
+            "$ref": "#/components/responses/SuccessResult"
+          }
         }
       }
     },
     "/app/feedbacks": {
       "get": {
-        "summary": "アプリのメッセージの「いいね」とフィードバックを取得",
-        "description": "アプリのエンドユーザーからのフィードバックや「いいね」を取得します。",
-        "operationId": "getChatflowAppFeedbacksJp",
-        "tags": ["メッセージフィードバック"],
+        "summary": "アプリケーションのフィードバックを取得",
+        "description": "アプリケーションのフィードバックを取得します。",
+        "operationId": "getAdvancedChatAppFeedbacks",
+        "tags": [
+          "Feedback"
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/PageQueryParamJp" },
-          { "$ref": "#/components/parameters/LimitQueryParamJp" }
+          {
+            "$ref": "#/components/parameters/PageQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQueryParam"
+          }
         ],
         "responses": {
           "200": {
-            "description": "アプリのフィードバックリストを正常に取得しました。",
+            "description": "アプリケーションフィードバックのリスト。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/AppFeedbacksResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/AppFeedbacksResponse"
+                }
               }
             }
           }
@@ -360,24 +420,32 @@
       "get": {
         "summary": "次の推奨質問",
         "description": "現在のメッセージに対する次の質問の提案を取得します。",
-        "operationId": "getChatflowSuggestedQuestionsJp",
-        "tags": ["チャットメッセージ"],
+        "operationId": "getAdvancedSuggestedQuestions",
+        "tags": [
+          "Chatflow"
+        ],
         "parameters": [
           {
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "メッセージID。",
-            "schema": { "type": "string", "format": "uuid" }
+            "description": "メッセージ ID。",
+            "schema": {
+              "type": "string"
+            }
           },
-          { "$ref": "#/components/parameters/UserQueryParamJp" }
+          {
+            "$ref": "#/components/parameters/UserQueryParam"
+          }
         ],
         "responses": {
           "200": {
-            "description": "推奨質問リストを正常に取得しました。",
+            "description": "推奨質問を正常に取得しました。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/SuggestedQuestionsResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestedQuestionsResponse"
+                }
               }
             }
           }
@@ -387,26 +455,38 @@
     "/messages": {
       "get": {
         "summary": "会話履歴メッセージを取得",
-        "description": "スクロールロード形式で履歴チャット記録を返し、最初のページは最新の`{limit}`メッセージを返します。つまり、逆順です。",
-        "operationId": "getChatflowConversationHistoryJp",
-        "tags": ["会話管理"],
+        "description": "スクロールロード形式で過去のチャット記録を返します。",
+        "operationId": "getAdvancedConversationHistory",
+        "tags": [
+          "Conversations"
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/ConversationIdQueryParamJp" },
-          { "$ref": "#/components/parameters/UserQueryParamJp" },
+          {
+            "$ref": "#/components/parameters/ConversationIdQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/UserQueryParam"
+          },
           {
             "name": "first_id",
             "in": "query",
-            "description": "現在のページの最初のチャット記録のID、デフォルトはnullです。",
-            "schema": { "type": "string", "format": "uuid", "nullable": true }
+            "description": "現在のページの最初のチャット記録の ID（ページネーション用）。",
+            "schema": {
+              "type": "string"
+            }
           },
-          { "$ref": "#/components/parameters/LimitQueryParamDefault20Jp" }
+          {
+            "$ref": "#/components/parameters/LimitQueryParamDefault20"
+          }
         ],
         "responses": {
           "200": {
-            "description": "会話履歴メッセージを正常に取得しました。",
+            "description": "会話履歴を正常に取得しました。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConversationHistoryResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationHistoryResponse"
+                }
               }
             }
           }
@@ -416,21 +496,33 @@
     "/conversations": {
       "get": {
         "summary": "会話を取得",
-        "description": "現在のユーザーの会話リストを取得し、デフォルトで最新の20件を返します。",
-        "operationId": "getChatflowConversationsListJp",
-        "tags": ["会話管理"],
+        "description": "現在のユーザーの会話リストを取得します。",
+        "operationId": "getAdvancedConversationsList",
+        "tags": [
+          "Conversations"
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/UserQueryParamJp" },
-          { "$ref": "#/components/parameters/LastIdQueryParamJp" },
-          { "$ref": "#/components/parameters/LimitQueryParamDefault20Max100Jp" },
-          { "$ref": "#/components/parameters/SortByQueryParamJp" }
+          {
+            "$ref": "#/components/parameters/UserQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LastIdQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQueryParamDefault20Max100"
+          },
+          {
+            "$ref": "#/components/parameters/SortByQueryParam"
+          }
         ],
         "responses": {
           "200": {
             "description": "会話リストを正常に取得しました。",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ConversationsListResponseJp" }
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationsListResponse"
+                }
               }
             }
           }
@@ -440,297 +532,2479 @@
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "会話を削除",
-        "description": "指定された会話を削除します。",
-        "operationId": "deleteChatflowConversationJp",
-        "tags": ["会話管理"],
-        "parameters": [ { "$ref": "#/components/parameters/ConversationIdPathParamJp" } ],
+        "description": "会話を削除します。",
+        "operationId": "deleteAdvancedConversation",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConversationIdPathParam"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object", "required": ["user"],
-                "properties": { "user": { "type": "string", "description": "ユーザー識別子。**重要な注意事項**: Service API は WebApp で作成された対話を共有しません。API を通じて作成された対話は、WebApp インターフェースで作成されたものとは分離されています。" } }
+                "type": "object",
+                "required": [
+                  "user"
+                ],
+                "properties": {
+                  "user": {
+                    "type": "string",
+                    "description": "ユーザー識別子。**注意**: Service API は WebApp で作成された会話を共有しません。API を通じて作成された会話は、WebApp インターフェースで作成された会話とは分離されています。"
+                  }
+                }
               }
             }
           }
         },
-        "responses": { "204": { "description": "会話が正常に削除されました。コンテンツはありません。" } }
+        "responses": {
+          "204": {
+            "description": "会話が正常に削除されました。No Content。"
+          }
+        }
       }
     },
     "/conversations/{conversation_id}/name": {
       "post": {
-        "summary": "会話の名前を変更",
+        "summary": "会話の名前変更",
         "description": "セッションの名前を変更します。",
-        "operationId": "renameChatflowConversationJp",
-        "tags": ["会話管理"],
-        "parameters": [ { "$ref": "#/components/parameters/ConversationIdPathParamJp" } ],
+        "operationId": "renameAdvancedConversation",
+        "tags": [
+          "Conversations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/ConversationIdPathParam"
+          }
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConversationRenameRequestJp" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRenameRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "会話の名前が正常に変更されました。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConversationRenameResponseJp" } } } }
+          "200": {
+            "description": "会話の名前が正常に変更されました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationRenameResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
-     "/conversations/{conversation_id}/variables": {
+    "/conversations/{conversation_id}/variables": {
       "get": {
-        "summary": "会話変数の取得",
-        "description": "特定の会話から変数を取得します。このエンドポイントは、会話中に取得された構造化データを抽出するのに役立ちます。",
-        "operationId": "getChatflowConversationVariablesJp",
-        "tags": ["会話管理"],
+        "summary": "会話変数を取得",
+        "description": "特定の会話から変数を取得します。",
+        "operationId": "getAdvancedConversationVariables",
+        "tags": [
+          "Conversations"
+        ],
         "parameters": [
-          { "$ref": "#/components/parameters/ConversationIdPathParamJp" },
-          { "$ref": "#/components/parameters/UserQueryParamJp" },
-          { "$ref": "#/components/parameters/LastIdQueryParamJp" },
-          { "$ref": "#/components/parameters/LimitQueryParamDefault20Max100Jp" }
+          {
+            "$ref": "#/components/parameters/ConversationIdPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/UserQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LastIdQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQueryParamDefault20Max100"
+          }
         ],
         "responses": {
-          "200": { "description": "会話変数を正常に取得しました。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ConversationVariablesResponseJp" } } } },
-          "404": { "$ref": "#/components/responses/ConversationNotFoundJp" }
+          "200": {
+            "description": "会話変数を正常に取得しました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationVariablesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ConversationNotFound"
+          }
         }
       }
     },
     "/audio-to-text": {
       "post": {
-        "summary": "音声からテキストへ",
-        "description": "オーディオファイルをテキストに変換します。サポートされている形式：mp3, mp4, mpeg, mpga, m4a, wav, webm。ファイルサイズ制限：15MB。",
-        "operationId": "chatflowAudioToTextJp",
-        "tags": ["音声・テキスト変換"],
+        "summary": "音声をテキストに変換",
+        "description": "オーディオファイルをテキストに変換します。サポートされている形式：mp3、mp4、mpeg、mpga、m4a、wav、webm。ファイルサイズ制限：15MB。",
+        "operationId": "advancedAudioToText",
+        "tags": [
+          "TTS"
+        ],
         "requestBody": {
           "required": true,
-          "content": { "multipart/form-data": { "schema": { "$ref": "#/components/schemas/AudioToTextRequestJp" } } }
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/AudioToTextRequest"
+              }
+            }
+          }
         },
         "responses": {
-          "200": { "description": "音声をテキストに正常に変換しました。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AudioToTextResponseJp" } } } }
+          "200": {
+            "description": "オーディオをテキストに正常に変換しました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AudioToTextResponse"
+                }
+              }
+            }
+          }
         }
       }
     },
     "/text-to-audio": {
       "post": {
-        "summary": "テキストから音声へ",
-        "description": "テキストコンテンツを音声に変換します。",
-        "operationId": "chatflowTextToAudioJp",
-        "tags": ["音声・テキスト変換"],
+        "summary": "テキストをオーディオに変換",
+        "description": "テキストを音声に変換します。",
+        "operationId": "advancedTextToAudio",
+        "tags": [
+          "TTS"
+        ],
         "requestBody": {
           "required": true,
-          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/TextToAudioJsonRequestJp" } } }
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextToAudioJsonRequest"
+              }
+            }
+          }
         },
         "responses": {
           "200": {
-            "description": "音声ファイルを正常に生成しました。",
-            "content": { "audio/wav": { "schema": { "type": "string", "format": "binary" } }, "audio/mp3": { "schema": { "type": "string", "format": "binary" } } },
-            "headers": { "Content-Type": { "schema": { "type": "string", "example": "audio/wav" } } }
+            "description": "オーディオファイルが正常に生成されました。",
+            "content": {
+              "audio/wav": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "audio/mp3": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            },
+            "headers": {
+              "Content-Type": {
+                "schema": {
+                  "type": "string",
+                  "example": "audio/wav"
+                }
+              }
+            }
           }
         }
       }
     },
     "/info": {
       "get": {
-        "summary": "アプリケーションの基本情報を取得",
-        "operationId": "getChatflowAppInfoJp",
-        "tags": ["アプリケーション設定"],
-        "responses": { "200": { "description": "アプリケーションの基本情報。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppInfoResponseJp" } } } } }
+        "summary": "アプリケーション基本情報を取得",
+        "operationId": "getAdvancedChatAppInfo",
+        "tags": [
+          "Application"
+        ],
+        "responses": {
+          "200": {
+            "description": "基本的なアプリケーション情報。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppInfoResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/parameters": {
       "get": {
-        "summary": "アプリケーションのパラメータ情報を取得",
-        "description": "ページに入る際に、機能、入力パラメータ名、タイプ、デフォルト値などの情報を取得するために使用されます。",
-        "operationId": "getChatflowAppParametersJp",
-        "tags": ["アプリケーション設定"],
-        "responses": { "200": { "description": "アプリケーションのパラメータ情報。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChatAppParametersResponseJp" } } } } }
+        "summary": "アプリケーションパラメータ情報を取得",
+        "operationId": "getAdvancedChatAppParameters",
+        "tags": [
+          "Application"
+        ],
+        "responses": {
+          "200": {
+            "description": "アプリケーションパラメータ。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAppParametersResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/meta": {
       "get": {
-        "summary": "アプリケーションのメタ情報を取得",
-        "description": "このアプリケーションのツールのアイコンを取得するために使用されます。",
-        "operationId": "getChatflowAppMetaJp",
-        "tags": ["アプリケーション設定"],
-        "responses": { "200": { "description": "アプリケーションのメタ情報を正常に取得しました。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/AppMetaResponseJp" } } } } }
+        "summary": "アプリケーションメタ情報を取得",
+        "operationId": "getAdvancedChatAppMeta",
+        "tags": [
+          "Application"
+        ],
+        "responses": {
+          "200": {
+            "description": "アプリケーションメタ情報（ツールアイコン）。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppMetaResponse"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/site": {
       "get": {
-        "summary": "アプリのWebApp設定を取得",
-        "description": "アプリのWebApp設定を取得するために使用します。",
-        "operationId": "getChatflowWebAppSettingsJp",
-        "tags": ["アプリケーション設定"],
-        "responses": { "200": { "description": "WebAppの設定情報。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/WebAppSettingsResponseJp" } } } } }
+        "summary": "アプリケーション WebApp 設定を取得",
+        "operationId": "getAdvancedChatWebAppSettings",
+        "tags": [
+          "Application"
+        ],
+        "responses": {
+          "200": {
+            "description": "WebApp 設定。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebAppSettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps/annotations": {
+      "get": {
+        "summary": "アノテーションリストを取得",
+        "operationId": "getAdvancedAnnotationList",
+        "tags": [
+          "Annotations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageQueryParam"
+          },
+          {
+            "$ref": "#/components/parameters/LimitQueryParamDefault20Max100"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "アノテーションリスト。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationListResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "アノテーションを作成",
+        "operationId": "createAdvancedAnnotation",
+        "tags": [
+          "Annotations"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateAnnotationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "アノテーションが作成されました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationItem"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "アノテーションが作成されました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationItem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps/annotations/{annotation_id}": {
+      "put": {
+        "summary": "アノテーションを更新",
+        "operationId": "updateAdvancedAnnotation",
+        "tags": [
+          "Annotations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AnnotationIdPathParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAnnotationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "アノテーションが更新されました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnnotationItem"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "アノテーションを削除",
+        "operationId": "deleteAdvancedAnnotation",
+        "tags": [
+          "Annotations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AnnotationIdPathParam"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "アノテーションが削除されました。"
+          }
+        }
+      }
+    },
+    "/apps/annotation-reply/{action}": {
+      "post": {
+        "summary": "アノテーション返信設定の初期化",
+        "operationId": "initialAdvancedAnnotationReplySettings",
+        "tags": [
+          "Annotations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AnnotationActionPathParam"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitialAnnotationReplySettingsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "タスクが開始されました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitialAnnotationReplySettingsResponse"
+                }
+              }
+            }
+          },
+          "202": {
+            "description": "タスクが受け入れられました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitialAnnotationReplySettingsResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps/annotation-reply/{action}/status/{job_id}": {
+      "get": {
+        "summary": "アノテーション返信設定初期化タスクのステータスを照会",
+        "operationId": "getAdvancedInitialAnnotationReplySettingsStatus",
+        "tags": [
+          "Annotations"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/AnnotationActionPathParam"
+          },
+          {
+            "$ref": "#/components/parameters/JobIdPathParam"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "タスクステータス。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InitialAnnotationReplySettingsStatusResponse"
+                }
+              }
+            }
+          }
+        }
       }
     }
   },
   "components": {
     "securitySchemes": {
-      "ApiKeyAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "API_KEY", "description": "APIキー認証。すべてのAPIリクエストには、Authorization HTTPヘッダーにAPIキーを `Bearer {API_KEY}` の形式で含めてください。APIキーはサーバー側に保存し、クライアント側で共有または保存しないことを強くお勧めします。" }
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API_KEY",
+        "description": "API キー認証。"
+      }
     },
     "parameters": {
-        "PageQueryParamJp": { "name": "page", "in": "query", "description": "（任意）ページ番号。デフォルト値：1。", "schema": { "type": "integer", "default": 1 } },
-        "LimitQueryParamJp": { "name": "limit", "in": "query", "description": "（任意）1ページあたりの件数。デフォルト値：20。", "schema": { "type": "integer", "default": 20 } },
-        "LimitQueryParamDefault20Jp": { "name": "limit", "in": "query", "description": "1回のリクエストで返す記録の数、デフォルトは20です。", "schema": { "type": "integer", "default": 20 } },
-        "LimitQueryParamDefault20Max100Jp": { "name": "limit", "in": "query", "description": "1回のリクエストで返す記録の数、デフォルトは最新の20件です。最大100、最小1。", "schema": { "type": "integer", "default": 20, "minimum": 1, "maximum": 100 } },
-        "UserQueryParamJp": { "name": "user", "in": "query", "required": true, "description": "ユーザー識別子。アプリケーション内で開発者によって一意に定義されるべきです。**重要な注意事項**: Service API は WebApp で作成された対話を共有しません。API を通じて作成された対話は、WebApp インターフェースで作成されたものとは分離されています。", "schema": { "type": "string" } },
-        "ConversationIdQueryParamJp": { "name": "conversation_id", "in": "query", "required": true, "description": "会話ID。", "schema": { "type": "string", "format": "uuid" } },
-        "LastIdQueryParamJp": { "name": "last_id", "in": "query", "description": "(Optional)現在のページの最後の記録のID、デフォルトはnullです。", "schema": { "type": "string", "format": "uuid", "nullable": true } },
-        "SortByQueryParamJp": { "name": "sort_by", "in": "query", "description": "(Optional)ソートフィールド、デフォルト：-updated_at（更新時間で降順にソート）。利用可能な値：created_at, -created_at, updated_at, -updated_at。'-'は逆順を表します。", "schema": { "type": "string", "enum": ["created_at", "-created_at", "updated_at", "-updated_at"], "default": "-updated_at" } },
-        "ConversationIdPathParamJp": { "name": "conversation_id", "in": "path", "required": true, "description": "会話ID。", "schema": { "type": "string", "format": "uuid" } }
+      "PageQueryParam": {
+        "name": "page",
+        "in": "query",
+        "description": "ページ番号。",
+        "schema": {
+          "type": "integer",
+          "default": 1
+        }
+      },
+      "LimitQueryParam": {
+        "name": "limit",
+        "in": "query",
+        "description": "1ページあたりのアイテム数。",
+        "schema": {
+          "type": "integer"
+        }
+      },
+      "LimitQueryParamDefault20": {
+        "name": "limit",
+        "in": "query",
+        "description": "1ページあたりのアイテム数。",
+        "schema": {
+          "type": "integer",
+          "default": 20
+        }
+      },
+      "LimitQueryParamDefault20Max100": {
+        "name": "limit",
+        "in": "query",
+        "description": "1ページあたりのアイテム数（デフォルト20、最大100）。",
+        "schema": {
+          "type": "integer",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "UserQueryParam": {
+        "name": "user",
+        "in": "query",
+        "required": true,
+        "description": "ユーザー識別子。**注意**: Service API は WebApp で作成された会話を共有しません。API を通じて作成された会話は、WebApp インターフェースで作成された会話とは分離されています。",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "ConversationIdQueryParam": {
+        "name": "conversation_id",
+        "in": "query",
+        "required": true,
+        "description": "会話 ID。",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "LastIdQueryParam": {
+        "name": "last_id",
+        "in": "query",
+        "description": "ページネーション用の最後のレコードの ID。",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "SortByQueryParam": {
+        "name": "sort_by",
+        "in": "query",
+        "description": "ソートフィールド（例：-updated_at）。",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "created_at",
+            "-created_at",
+            "updated_at",
+            "-updated_at"
+          ],
+          "default": "-updated_at"
+        }
+      },
+      "ConversationIdPathParam": {
+        "name": "conversation_id",
+        "in": "path",
+        "required": true,
+        "description": "会話 ID。",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "AnnotationIdPathParam": {
+        "name": "annotation_id",
+        "in": "path",
+        "required": true,
+        "description": "アノテーション ID。",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "AnnotationActionPathParam": {
+        "name": "action",
+        "in": "path",
+        "required": true,
+        "description": "アクション: 'enable' または 'disable'。",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "enable",
+            "disable"
+          ]
+        }
+      },
+      "JobIdPathParam": {
+        "name": "job_id",
+        "in": "path",
+        "required": true,
+        "description": "ジョブ ID。",
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
     },
     "responses": {
-        "BadRequestGenericJp": { "description": "リクエストパラメータエラー。考えられる原因：invalid_param, app_unavailable, provider_not_initialize, provider_quota_exceeded, model_currently_not_support, completion_request_error。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "BadRequestFileJp": { "description": "ファイル操作リクエストエラー。考えられる原因：no_file_uploaded, too_many_files, unsupported_preview, unsupported_estimate。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "FileTooLargeJp": { "description": "ファイルが大きすぎます (file_too_large)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "UnsupportedFileTypeFileJp": { "description": "サポートされていないファイルタイプ (unsupported_file_type)。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "S3ErrorFileJp": { "description": "S3ストレージサービスエラー。考えられる原因：s3_connection_failed, s3_permission_denied, s3_file_too_large。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "InternalServerErrorJp": { "description": "内部サーバーエラー。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } },
-        "SuccessResultJp": { "description": "操作成功。", "content": { "application/json": { "schema": { "type": "object", "properties": { "result": { "type": "string", "example": "success" } } } } } },
-        "ConversationNotFoundJp": { "description": "会話が存在しません。", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ErrorResponseJp" } } } }
+      "BadRequestGeneric": {
+        "description": "Bad Request。パラメータを確認してください。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "BadRequestFile": {
+        "description": "ファイル操作の Bad Request。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "FileTooLarge": {
+        "description": "ファイルが大きすぎます。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "UnsupportedFileTypeFile": {
+        "description": "アップロードがサポートされていないファイルタイプです。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "S3ErrorFile": {
+        "description": "S3 ストレージエラー。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "内部サーバーエラー。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      },
+      "SuccessResult": {
+        "description": "操作が成功しました。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "type": "string",
+                  "example": "success"
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConversationNotFound": {
+        "description": "会話が見つかりません。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        }
+      }
     },
     "schemas": {
-      "ChatflowRequestJp": {
+      "AdvancedChatRequest": {
         "type": "object",
-        "required": ["query", "user"],
+        "required": [
+          "query",
+          "user"
+        ],
         "properties": {
-          "query": { "type": "string", "description": "ユーザー入力/質問内容。" },
+          "query": {
+            "type": "string",
+            "description": "ユーザー入力/質問内容。"
+          },
           "inputs": {
             "type": "object",
-            "description": "アプリによって定義されたさまざまな変数値の入力を許可します。変数がファイルタイプの場合、InputFileObjectJp オブジェクトを指定します。",
+            "description": "アプリ変数のキー/値ペア。ファイルタイプの変数の場合、値は InputFileObject である必要があります。",
             "additionalProperties": {
-                "oneOf": [ { "type": "string" }, { "type": "number" }, { "type": "boolean" }, { "$ref": "#/components/schemas/InputFileObjectJp" } ]
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                },
+                {
+                  "$ref": "#/components/schemas/InputFileObjectAdvanced"
+                }
+              ]
             },
             "default": {}
           },
-          "response_mode": { "type": "string", "enum": ["streaming", "blocking"], "default": "streaming", "description": "応答の返却モード。streaming (推奨) はSSEを使用。blocking は実行完了後に結果を返します (Cloudflareの100秒タイムアウト制限あり)。" },
-          "user": { "type": "string", "description": "ユーザー識別子。アプリケーション内で一意であるべきです。**重要な注意事項**: Service API は WebApp で作成された対話を共有しません。API を通じて作成された対話は、WebApp インターフェースで作成されたものとは分離されています。" },
-          "conversation_id": { "type": "string", "format": "uuid", "description": "会話ID。以前のチャット記録に基づいて会話を続ける場合に必要です。" },
-          "files": { "type": "array", "items": { "$ref": "#/components/schemas/InputFileObjectJp" }, "description": "ファイルリスト。モデルがビジョン機能をサポートしている場合に利用可能です。" },
-          "auto_generate_name": { "type": "boolean", "default": true, "description": "タイトルを自動生成。デフォルトはtrue。" }
+          "response_mode": {
+            "type": "string",
+            "enum": [
+              "streaming",
+              "blocking"
+            ],
+            "default": "streaming",
+            "description": "レスポンスモード。Cloudflare のタイムアウトはブロッキングで100秒です。"
+          },
+          "user": {
+            "type": "string",
+            "description": "ユーザー識別子。**注意**: Service API は WebApp で作成された会話を共有しません。API を通じて作成された会話は、WebApp インターフェースで作成された会話とは分離されています。"
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "続行する会話 ID。"
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InputFileObjectAdvanced"
+            },
+            "description": "Vision 対応モデルまたは一般的なファイル入力用のファイルリスト。"
+          },
+          "auto_generate_name": {
+            "type": "boolean",
+            "default": true,
+            "description": "会話タイトルを自動生成。"
+          }
         }
       },
-      "InputFileObjectJp": {
+      "InputFileObjectAdvanced": {
         "type": "object",
-        "required": ["type", "transfer_method"],
+        "required": [
+          "type",
+          "transfer_method"
+        ],
         "properties": {
-          "type": { "type": "string", "enum": ["document", "image", "audio", "video", "custom"], "description": "ファイルタイプ。document: TXT,MD,PDF等; image: JPG,PNG等; audio: MP3,WAV等; video: MP4,MOV等; custom: その他。" },
-          "transfer_method": { "type": "string", "enum": ["remote_url", "local_file"], "description": "転送方法。remote_url は画像URL / local_file はファイルアップロード用" },
-          "url": { "type": "string", "format": "url", "description": "画像URL（転送方法が remote_url の場合）" },
-          "upload_file_id": { "type": "string", "format":"uuid", "description": "アップロードされたファイルID、事前にファイルアップロードAPIで取得する必要があります（転送方法が local_file の場合）" }
+          "type": {
+            "type": "string",
+            "enum": [
+              "document",
+              "image",
+              "audio",
+              "video",
+              "custom"
+            ],
+            "description": "ファイルのタイプ。'document' は TXT、MD、PDF、HTML、XLSX、DOCX、CSV、EML、MSG、PPTX、XML、EPUB をカバーします。'image' は JPG、PNG、GIF、WEBP、SVG をカバーします。'audio' は MP3、M4A、WAV、WEBM、AMR をカバーします。'video' は MP4、MOV、MPEG、MPGA をカバーします。"
+          },
+          "transfer_method": {
+            "type": "string",
+            "enum": [
+              "remote_url",
+              "local_file"
+            ],
+            "description": "転送方法、ファイル URL の場合は `remote_url` / ファイルアップロードの場合は `local_file`"
+          },
+          "url": {
+            "type": "string",
+            "format": "url",
+            "description": "ファイル URL（転送方法が `remote_url` の場合）"
+          },
+          "upload_file_id": {
+            "type": "string",
+            "description": "アップロードされたファイル ID。ファイルアップロード API を通じて事前にアップロードして取得する必要があります（転送方法が `local_file` の場合）"
+          }
         },
         "anyOf": [
           {
-            "properties": { 
-              "transfer_method": { "enum": ["remote_url"] },
-              "url": { "type": "string", "format": "url" }
+            "properties": {
+              "transfer_method": {
+                "enum": [
+                  "remote_url"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "url"
+              }
             },
-            "required": ["url"],
-            "not": { "required": ["upload_file_id"] }
+            "required": [
+              "url"
+            ],
+            "not": {
+              "required": [
+                "upload_file_id"
+              ]
+            }
           },
           {
-            "properties": { 
-              "transfer_method": { "enum": ["local_file"] },
-              "upload_file_id": { "type": "string", "format":"uuid" }
+            "properties": {
+              "transfer_method": {
+                "enum": [
+                  "local_file"
+                ]
+              },
+              "upload_file_id": {
+                "type": "string"
+              }
             },
-            "required": ["upload_file_id"],
-            "not": { "required": ["url"] }
+            "required": [
+              "upload_file_id"
+            ],
+            "not": {
+              "required": [
+                "url"
+              ]
+            }
+          }
+        ],
+        "example": {
+          "type": "image",
+          "transfer_method": "remote_url",
+          "url": "https://example.com/image.png"
+        }
+      },
+      "ChatCompletionResponse": {
+        "type": "object",
+        "description": "ブロッキングモードチャットのレスポンス。",
+        "properties": {
+          "event": {
+            "type": "string",
+            "example": "message"
+          },
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "このレスポンスイベントの一意の ID。"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "mode": {
+            "type": "string",
+            "example": "chat"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "metadata": {
+            "$ref": "#/components/schemas/ResponseMetadata"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ResponseMetadata": {
+        "type": "object",
+        "properties": {
+          "usage": {
+            "$ref": "#/components/schemas/Usage"
+          },
+          "retriever_resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrieverResource"
+            }
+          }
+        }
+      },
+      "ChunkAdvancedChatEvent": {
+        "type": "object",
+        "required": [
+          "event"
+        ],
+        "properties": {
+          "event": {
+            "type": "string",
+            "enum": [
+              "message",
+              "message_file",
+              "message_end",
+              "tts_message",
+              "tts_message_end",
+              "message_replace",
+              "workflow_started",
+              "node_started",
+              "node_finished",
+              "workflow_finished",
+              "error",
+              "ping"
+            ]
+          }
+        },
+        "discriminator": {
+          "propertyName": "event",
+          "mapping": {
+            "message": "#/components/schemas/StreamEventAdvChatMessage",
+            "message_file": "#/components/schemas/StreamEventAdvMessageFile",
+            "message_end": "#/components/schemas/StreamEventAdvMessageEnd",
+            "tts_message": "#/components/schemas/StreamEventAdvTtsMessage",
+            "tts_message_end": "#/components/schemas/StreamEventAdvTtsMessageEnd",
+            "message_replace": "#/components/schemas/StreamEventAdvMessageReplace",
+            "workflow_started": "#/components/schemas/StreamEventAdvWorkflowStarted",
+            "node_started": "#/components/schemas/StreamEventAdvNodeStarted",
+            "node_finished": "#/components/schemas/StreamEventAdvNodeFinished",
+            "workflow_finished": "#/components/schemas/StreamEventAdvWorkflowFinished",
+            "error": "#/components/schemas/StreamEventAdvError",
+            "ping": "#/components/schemas/StreamEventAdvPing"
+          }
+        }
+      },
+      "StreamEventBaseAdv": {
+        "type": "object",
+        "properties": {
+          "task_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "StreamEventAdvChatMessage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBaseAdv"
+          },
+          {
+            "type": "object",
+            "required": [
+              "answer"
+            ],
+            "properties": {
+              "answer": {
+                "type": "string"
+              }
+            }
           }
         ]
       },
-      "ChatCompletionResponseJp": {
-        "type": "object", "description": "ブロッキングモードでの完全なアプリ結果。",
+      "StreamEventAdvMessageFile": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "id",
+              "type",
+              "belongs_to",
+              "url",
+              "conversation_id"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "description": "ファイルタイプ（例：'image'）。"
+              },
+              "belongs_to": {
+                "type": "string",
+                "enum": [
+                  "assistant"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "url"
+              },
+              "conversation_id": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvMessageEnd": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBaseAdv"
+          },
+          {
+            "type": "object",
+            "required": [
+              "metadata"
+            ],
+            "properties": {
+              "metadata": {
+                "$ref": "#/components/schemas/ResponseMetadata"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvTtsMessage": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBaseAdv"
+          },
+          {
+            "type": "object",
+            "required": [
+              "audio"
+            ],
+            "properties": {
+              "audio": {
+                "type": "string",
+                "format": "byte",
+                "description": "Base64 エンコードされたオーディオ。"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvTtsMessageEnd": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBaseAdv"
+          },
+          {
+            "type": "object",
+            "required": [
+              "audio"
+            ],
+            "properties": {
+              "audio": {
+                "type": "string",
+                "description": "空の文字列。"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvMessageReplace": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBaseAdv"
+          },
+          {
+            "type": "object",
+            "required": [
+              "answer"
+            ],
+            "properties": {
+              "answer": {
+                "type": "string",
+                "description": "置換コンテンツ。"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvWorkflowStarted": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "task_id",
+              "workflow_run_id",
+              "data"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "workflow_run_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "$ref": "#/components/schemas/WorkflowStartedData"
+              }
+            }
+          }
+        ]
+      },
+      "WorkflowStartedData": {
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "sequence_number",
+          "created_at"
+        ],
         "properties": {
-          "event": { "type": "string", "example": "message", "description": "イベントタイプ、固定で `message`。" },
-          "task_id": { "type": "string", "format": "uuid", "description": "タスクID。" },
-          "id": { "type": "string", "format": "uuid", "description": "ユニークID。" },
-          "message_id": { "type": "string", "format": "uuid", "description": "一意のメッセージID。" },
-          "conversation_id": { "type": "string", "format": "uuid", "description": "会話ID。" },
-          "mode": { "type": "string", "example": "chat", "description": "アプリモード、`chat`として固定。" },
-          "answer": { "type": "string", "description": "完全な応答内容。" },
-          "metadata": { "$ref": "#/components/schemas/ResponseMetadataJp" },
-          "created_at": { "type": "integer", "format": "int64", "description": "メッセージ作成タイムスタンプ。" }
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sequence_number": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
         }
       },
-      "ResponseMetadataJp": {
-        "type": "object", "description": "メタデータ。",
-        "properties": { "usage": { "$ref": "#/components/schemas/UsageJp" }, "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResourceJp" }, "description": "引用と帰属リスト。" } }
+      "StreamEventAdvNodeStarted": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "task_id",
+              "workflow_run_id",
+              "data"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "workflow_run_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "$ref": "#/components/schemas/NodeStartedData"
+              }
+            }
+          }
+        ]
       },
-      "ChunkChatflowEventJp": {
-        "type": "object", "required": ["event"],
-        "properties": { "event": { "type": "string", "enum": ["message", "message_file", "message_end", "tts_message", "tts_message_end", "message_replace", "workflow_started", "node_started", "node_finished", "workflow_finished", "error", "ping"], "description": "イベントタイプ。" } },
-        "discriminator": { "propertyName": "event", "mapping": {
-            "message": "#/components/schemas/StreamEventChatMessageJp", "message_file": "#/components/schemas/StreamEventMessageFileJp",
-            "message_end": "#/components/schemas/StreamEventMessageEndJp", "tts_message": "#/components/schemas/StreamEventTtsMessageJp",
-            "tts_message_end": "#/components/schemas/StreamEventTtsMessageEndJp", "message_replace": "#/components/schemas/StreamEventMessageReplaceJp",
-            "workflow_started": "#/components/schemas/StreamEventWorkflowStartedJp", "node_started": "#/components/schemas/StreamEventNodeStartedJp",
-            "node_finished": "#/components/schemas/StreamEventNodeFinishedJp", "workflow_finished": "#/components/schemas/StreamEventWorkflowFinishedJp",
-            "error": "#/components/schemas/StreamEventErrorJp", "ping": "#/components/schemas/StreamEventPingJp"
-          }}
-      },
-      "StreamEventBaseChatJp": {
-        "type": "object", "properties": {
-            "task_id": { "type": "string", "format": "uuid", "description": "タスクID。" },
-            "message_id": { "type": "string", "format": "uuid", "description": "一意のメッセージID。" },
-            "conversation_id": { "type": "string", "format": "uuid", "description": "会話ID。" },
-            "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" }
+      "NodeStartedData": {
+        "type": "object",
+        "required": [
+          "id",
+          "node_id",
+          "node_type",
+          "title",
+          "index",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "このノード実行インスタンスの一意の ID。"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ノード定義の ID。"
+          },
+          "node_type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "predecessor_node_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "ノードが使用する変数。"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
         }
       },
-      "StreamEventChatMessageJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseChatJp" }, { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "LLMが返したテキストチャンク内容。" } } } ] },
-      "StreamEventMessageFileJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["id", "type", "belongs_to", "url", "conversation_id"], "properties": { "id": { "type": "string", "format": "uuid", "description": "ファイル一意ID。" }, "type": { "type": "string", "enum": ["image"], "description": "ファイルタイプ、現在はimageのみ。" }, "belongs_to": { "type": "string", "enum": ["assistant"], "description": "所属、ここではassistantのみ。" }, "url": { "type": "string", "format": "url", "description": "ファイルのリモートURL。" }, "conversation_id": { "type": "string", "format": "uuid", "description": "会話ID。" } } } ] },
-      "StreamEventMessageEndJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseChatJp" }, { "type": "object", "required": ["metadata"], "properties": { "metadata": { "$ref": "#/components/schemas/ResponseMetadataJp" } } } ] },
-      "StreamEventTtsMessageJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseChatJp" }, { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "format": "byte", "description": "Base64エンコードされたオーディオブロック。" } } } ] },
-      "StreamEventTtsMessageEndJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseChatJp" }, { "type": "object", "required": ["audio"], "properties": { "audio": { "type": "string", "description": "空の文字列。" } } } ] },
-      "StreamEventMessageReplaceJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "$ref": "#/components/schemas/StreamEventBaseChatJp" }, { "type": "object", "required": ["answer"], "properties": { "answer": { "type": "string", "description": "置換内容（すべてのLLM返信テキストを直接置き換えます）。" } } } ] },
-      "StreamEventWorkflowStartedJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["task_id", "workflow_run_id", "data"], "properties": { "task_id": { "type": "string", "format": "uuid" }, "workflow_run_id": { "type": "string", "format": "uuid" }, "data": { "$ref": "#/components/schemas/WorkflowStartedDataJp" } } } ] },
-      "WorkflowStartedDataJp": { "type": "object", "required": ["id", "workflow_id", "sequence_number", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "ワークフロー実行の一意ID。" }, "workflow_id": { "type": "string", "format": "uuid", "description": "関連ワークフローのID。" }, "sequence_number": { "type": "integer", "description": "自己増加シリアル番号、アプリ内で自己増加し、1から始まります。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" } } },
-      "StreamEventNodeStartedJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["task_id", "workflow_run_id", "data"], "properties": { "task_id": { "type": "string", "format": "uuid" }, "workflow_run_id": { "type": "string", "format": "uuid" }, "data": { "$ref": "#/components/schemas/NodeStartedDataJp" } } } ] },
-      "NodeStartedDataJp": { "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "ワークフロー実行の一意ID (文脈からノード実行IDであるべき)。" }, "node_id": { "type": "string", "format": "uuid", "description": "ノードのID。" }, "node_type": { "type": "string", "description": "ノードのタイプ。" }, "title": { "type": "string", "description": "ノードの名前。" }, "index": { "type": "integer", "description": "実行シーケンス番号。" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true, "description": "オプションのプレフィックスノードID。" }, "inputs": { "type": "object", "additionalProperties": true, "description": "ノードで使用されるすべての前のノード変数の内容。" }, "created_at": { "type": "integer", "format": "int64", "description": "開始のタイムスタンプ。" } } },
-      "StreamEventNodeFinishedJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["task_id", "workflow_run_id", "data"], "properties": { "task_id": { "type": "string", "format": "uuid" }, "workflow_run_id": { "type": "string", "format": "uuid" }, "data": { "$ref": "#/components/schemas/NodeFinishedDataJp" } } } ] },
-      "NodeFinishedDataJp": { "type": "object", "required": ["id", "node_id", "node_type", "title", "index", "status", "created_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "ノード実行の一意ID。" }, "node_id": { "type": "string", "format": "uuid", "description": "ノードのID。" }, "node_type": { "type": "string", "description": "ノードのタイプ。" }, "title": { "type": "string", "description": "ノードの名前。" }, "index": { "type": "integer", "description": "実行シーケンス番号。" }, "predecessor_node_id": { "type": "string", "format": "uuid", "nullable": true, "description": "オプションのプレフィックスノードID。" }, "inputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "ノードで使用されるすべての前のノード変数の内容。" }, "process_data": { "type": "object", "additionalProperties": true, "nullable": true, "description": "オプションのノードプロセスデータ (JSON)。" }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "オプションの出力内容 (JSON)。" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "実行の状態。" }, "error": { "type": "string", "nullable": true, "description": "オプションのエラー理由。" }, "elapsed_time": { "type": "number", "format": "float", "nullable": true, "description": "オプションの使用される合計秒数。" }, "execution_metadata": { "$ref": "#/components/schemas/NodeExecutionMetadataJp" , "nullable": true, "description": "メタデータ"}, "created_at": { "type": "integer", "format": "int64", "description": "開始のタイムスタンプ。" } } },
-      "NodeExecutionMetadataJp": { "type": "object", "description": "ノード実行メタデータ。", "properties": { "total_tokens": { "type": "integer", "nullable": true, "description": "オプションの使用されるトークン数。" }, "total_price": { "type": "number", "format": "float", "nullable": true, "description": "オプションの合計コスト (floatでdecimalを代用)。" }, "currency": { "type": "string", "nullable": true, "example": "USD", "description": "オプションの通貨。" } } },
-      "StreamEventWorkflowFinishedJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["task_id", "workflow_run_id", "data"], "properties": { "task_id": { "type": "string", "format": "uuid" }, "workflow_run_id": { "type": "string", "format": "uuid" }, "data": { "$ref": "#/components/schemas/WorkflowFinishedDataJp" } } } ] },
-      "WorkflowFinishedDataJp": { "type": "object", "required": ["id", "workflow_id", "status", "created_at", "finished_at"], "properties": { "id": { "type": "string", "format": "uuid", "description": "ワークフロー実行のID。" }, "workflow_id": { "type": "string", "format": "uuid", "description": "関連ワークフローのID。" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"], "description": "実行の状態。" }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "オプションの出力内容 (JSON)。" }, "error": { "type": "string", "nullable": true, "description": "オプションのエラー理由。" }, "elapsed_time": { "type": "number", "format": "float", "nullable": true, "description": "オプションの使用される合計秒数。" }, "total_tokens": { "type": "integer", "nullable": true, "description": "オプションの使用されるトークン数。" }, "total_steps": { "type": "integer", "default": 0, "description": "合計ステップ数、デフォルト0。" }, "created_at": { "type": "integer", "format": "int64", "description": "開始時間。" }, "finished_at": { "type": "integer", "format": "int64", "description": "終了時間。" } } },
-      "StreamEventErrorJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "required": ["task_id", "status", "code", "message"], "properties": { "task_id": { "type": "string", "format": "uuid" }, "message_id": { "type": "string", "format": "uuid", "nullable": true, "description": "一意のメッセージID（エラーイベントでは存在しない場合がある）。" }, "status": { "type": "integer", "description": "HTTPステータスコード。" }, "code": { "type": "string", "description": "エラーコード。" }, "message": { "type": "string", "description": "エラーメッセージ。" } } } ] },
-      "StreamEventPingJp": { "allOf": [ { "$ref": "#/components/schemas/ChunkChatflowEventJp" }, { "type": "object", "description": "接続を維持するために10秒ごとにpingイベントが発生します。" } ] },
-      "UsageJp": { "type": "object", "description": "モデル使用情報。", "properties": { "prompt_tokens": { "type": "integer" }, "prompt_unit_price": { "type": "string" }, "prompt_price_unit": { "type": "string" }, "prompt_price": { "type": "string" }, "completion_tokens": { "type": "integer" }, "completion_unit_price": { "type": "string" }, "completion_price_unit": { "type": "string" }, "completion_price": { "type": "string" }, "total_tokens": { "type": "integer" }, "total_price": { "type": "string" }, "currency": { "type": "string" }, "latency": { "type": "number", "format": "double" } } },
-      "RetrieverResourceJp": { "type": "object", "description": "引用と帰属リスト。", "properties": { "position": { "type": "integer" }, "dataset_id": { "type": "string", "format": "uuid" }, "dataset_name": { "type": "string" }, "document_id": { "type": "string", "format": "uuid" }, "document_name": { "type": "string" }, "segment_id": { "type": "string", "format": "uuid" }, "score": { "type": "number", "format": "float" }, "content": { "type": "string" } } },
-      "FileUploadResponseJp": { "type": "object", "description": "ファイルアップロード成功時の応答。", "properties": { "id": { "type": "string", "format": "uuid", "description": "ID。" }, "name": { "type": "string", "description": "ファイル名。" }, "size": { "type": "integer", "description": "ファイルサイズ（バイト）。" }, "extension": { "type": "string", "description": "ファイル拡張子。" }, "mime_type": { "type": "string", "description": "ファイルのMIMEタイプ。" }, "created_by": { "type": "string", "format": "uuid", "description": "エンドユーザーID。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" } } },
-      "MessageFeedbackRequestJp": { "type": "object", "required": ["user"], "properties": { "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true, "description": "アップボートは`like`、ダウンボートは`dislike`、取り消しは`null`。" }, "user": { "type": "string", "description": "ユーザー識別子。" }, "content": { "type": "string", "nullable": true, "description": "メッセージフィードバックの具体的な内容。" } } },
-      "AppFeedbacksResponseJp": { "type": "object", "properties": { "data": { "type": "array", "items": { "$ref": "#/components/schemas/FeedbackItemJp" }, "description": "このアプリの「いいね」とフィードバックの一覧。" } } },
-      "FeedbackItemJp": { "type": "object", "properties": { "id": { "type": "string", "format": "uuid" }, "app_id": { "type": "string", "format": "uuid" }, "conversation_id": { "type": "string", "format": "uuid" }, "message_id": { "type": "string", "format": "uuid" }, "rating": { "type": "string", "enum": ["like", "dislike", null], "nullable": true }, "content": { "type": "string" }, "from_source": { "type": "string" }, "from_end_user_id": { "type": "string", "format": "uuid" }, "from_account_id": { "type": "string", "format": "uuid", "nullable": true }, "created_at": { "type": "string", "format": "date-time" }, "updated_at": { "type": "string", "format": "date-time" } } },
-      "SuggestedQuestionsResponseJp": { "type": "object", "properties": { "result": { "type": "string", "example": "success" }, "data": { "type": "array", "items": { "type": "string" }, "description": "推奨質問のリスト。" } } },
-      "ConversationHistoryResponseJp": { "type": "object", "properties": { "limit": { "type": "integer", "description": "返された項目数。" }, "has_more": { "type": "boolean", "description": "次のページがあるかどうか。" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationMessageItemJp" }, "description": "メッセージリスト。" } } },
-      "ConversationMessageItemJp": { "type": "object", "description": "会話内の単一メッセージ。", "properties": { "id": { "type": "string", "format": "uuid", "description": "メッセージID。" }, "conversation_id": { "type": "string", "format": "uuid", "description": "会話ID。" }, "inputs": { "type": "object", "additionalProperties": true, "description": "ユーザー入力パラメータ。" }, "query": { "type": "string", "description": "ユーザー入力/質問内容。" }, "answer": { "type": "string", "description": "応答メッセージ内容。" }, "message_files": { "type": "array", "items": { "$ref": "#/components/schemas/MessageFileItemJp" }, "description": "メッセージファイルリスト。" }, "feedback": { "type": "object", "nullable": true, "properties": { "rating": { "type": "string", "enum": ["like", "dislike"], "description": "アップボートは`like` / ダウンボートは`dislike`。" } }, "description": "フィードバック情報。" }, "retriever_resources": { "type": "array", "items": { "$ref": "#/components/schemas/RetrieverResourceJp" }, "description": "引用と帰属リスト。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" } } },
-      "MessageFileItemJp": { "type": "object", "description": "メッセージ内のファイル項目。", "properties": { "id": { "type": "string", "format": "uuid", "description": "ID。" }, "type": { "type": "string", "description": "ファイルタイプ、例：'image'。" }, "url": { "type": "string", "format": "url", "description": "プレビュー画像URL。" }, "belongs_to": { "type": "string", "enum": ["user", "assistant"], "description": "所属。" } } },
-      "ConversationsListResponseJp": { "type": "object", "properties": { "limit": { "type": "integer", "description": "返されたエントリ数。" }, "has_more": { "type": "boolean" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationListItemJp" }, "description": "会話のリスト。" } } },
-      "ConversationListItemJp": { "type": "object", "description": "会話リスト内の単一項目。", "properties": { "id": { "type": "string", "format": "uuid", "description": "会話ID。" }, "name": { "type": "string", "description": "会話名。" }, "inputs": { "type": "object", "additionalProperties": true, "description": "ユーザー入力パラメータ。" }, "status": { "type": "string", "description": "会話状態。" }, "introduction": { "type": "string", "nullable": true, "description": "紹介。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" }, "updated_at": { "type": "integer", "format": "int64", "description": "更新タイムスタンプ。" } } },
-      "ConversationRenameRequestJp": { "type": "object", "required": ["user"], "properties": { "name": { "type": "string", "nullable": true, "description": "(Optional)会話の名前。`auto_generate`が`true`の場合省略可。" }, "auto_generate": { "type": "boolean", "default": false, "description": "(Optional)タイトルを自動生成、デフォルトは`false`。" }, "user": { "type": "string", "description": "ユーザー識別子。" } } },
-      "ConversationRenameResponseJp": { "$ref": "#/components/schemas/ConversationListItemJp" },
-      "ConversationVariablesResponseJp": { "type": "object", "properties": { "limit": { "type": "integer", "description": "ページごとのアイテム数。" }, "has_more": { "type": "boolean", "description": "さらにアイテムがあるかどうか。" }, "data": { "type": "array", "items": { "$ref": "#/components/schemas/ConversationVariableItemJp" }, "description": "変数のリスト。" } } },
-      "ConversationVariableItemJp": { "type": "object", "description": "会話内の変数項目。", "properties": { "id": { "type": "string", "format": "uuid", "description": "変数ID。" }, "name": { "type": "string", "description": "変数名。" }, "value_type": { "type": "string", "description": "変数タイプ（文字列、数値、真偽値など）。" }, "value": { "type": "string", "description": "変数値。" }, "description": { "type": "string", "nullable": true, "description": "変数の説明。" }, "created_at": { "type": "integer", "format": "int64", "description": "作成タイムスタンプ。" }, "updated_at": { "type": "integer", "format": "int64", "description": "最終更新タイムスタンプ。" } } },
-      "AudioToTextRequestJp": { "type": "object", "required": ["file", "user"], "properties": { "file": { "type": "string", "format": "binary", "description": "オーディオファイル。サポート形式：`['mp3', 'mp4', 'mpeg', 'mpga', 'm4a', 'wav', 'webm']`。サイズ制限：15MB。" }, "user": { "type": "string", "description": "ユーザー識別子。" } } },
-      "AudioToTextResponseJp": { "type": "object", "properties": { "text": { "type": "string", "description": "出力テキスト。" } } },
-      "TextToAudioJsonRequestJp": { "type": "object", "required": ["user"], "properties": { "message_id": { "type": "string", "format": "uuid", "description": "メッセージID（優先）。" }, "text": { "type": "string", "description": "音声生成コンテンツ。" }, "user": { "type": "string", "description": "ユーザー識別子。" }, "streaming": {"type": "boolean", "default": false, "description": "trueの場合、応答はオーディオチャンクのストリームになります。"} }, "description": "`user` が必要です。`message_id` または `text` を提供してください。" },
-      "AppInfoResponseJp": { "type": "object", "description": "アプリケーションの基本情報。", "properties": { "name": { "type": "string", "description": "アプリケーションの名前。" }, "description": { "type": "string", "description": "アプリケーションの説明。" }, "tags": { "type": "array", "items": { "type": "string" }, "description": "アプリケーションのタグ。" } } },
-      "ChatAppParametersResponseJp": { "type": "object", "description": "アプリケーションのパラメータ情報。", "properties": { "opening_statement": { "type": "string", "description": "開始の挨拶。" }, "suggested_questions": { "type": "array", "items": { "type": "string" }, "description": "開始時の推奨質問のリスト。" }, "suggested_questions_after_answer": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "有効かどうか。" } }, "description": "答えを有効にした後の質問を提案します。" }, "speech_to_text": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "有効かどうか。" } }, "description": "音声からテキストへ。" }, "text_to_speech": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "有効かどうか。" }, "voice": { "type": "string", "description": "音声タイプ。" }, "language": { "type": "string", "description": "言語。" }, "autoPlay": { "type": "string", "enum": ["enabled", "disabled"], "description": "自動再生：enabled 有効, disabled 無効。" } }, "description": "テキストから音声へ。" }, "retriever_resource": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "有効かどうか。" } }, "description": "引用と帰属。" }, "annotation_reply": { "type": "object", "properties": { "enabled": { "type": "boolean", "description": "有効かどうか。" } }, "description": "注釈返信。" }, "user_input_form": { "type": "array", "items": { "$ref": "#/components/schemas/UserInputFormItemJp" }, "description": "ユーザー入力フォームの設定。" }, "file_upload": { "type": "object", "properties": { "image": { "type": "object", "properties": { "enabled": { "type": "boolean" }, "number_limits": { "type": "integer" }, "detail": { "type": "string" }, "transfer_methods": { "type": "array", "items": { "type": "string", "enum": ["remote_url", "local_file"] } } }, "description": "画像設定。サポートされている画像タイプ：png, jpg, jpeg, webp, gif。" } }, "description": "ファイルアップロード設定。" }, "system_parameters": { "type": "object", "properties": { "file_size_limit": { "type": "integer", "description": "ドキュメントアップロードサイズ制限（MB）。" }, "image_file_size_limit": { "type": "integer", "description": "画像ファイルアップロードサイズ制限（MB）。" }, "audio_file_size_limit": { "type": "integer", "description": "オーディオファイルアップロードサイズ制限（MB）。" }, "video_file_size_limit": { "type": "integer", "description": "ビデオファイルアップロードサイズ制限（MB）。" } }, "description": "システムパラメータ。" } } },
-      "UserInputFormItemJp": { "type": "object", "description": "ユーザー入力フォームのコントロール項目。", "oneOf": [ { "$ref": "#/components/schemas/TextInputControlWrapperJp" }, { "$ref": "#/components/schemas/ParagraphControlWrapperJp" }, { "$ref": "#/components/schemas/SelectControlWrapperJp" } ] },
-      "TextInputControlWrapperJp": { "type": "object", "properties": { "text-input": { "$ref": "#/components/schemas/TextInputControlJp" } }, "required":["text-input"] },
-      "ParagraphControlWrapperJp": { "type": "object", "properties": { "paragraph": { "$ref": "#/components/schemas/ParagraphControlJp" } }, "required":["paragraph"] },
-      "SelectControlWrapperJp": { "type": "object", "properties": { "select": { "$ref": "#/components/schemas/SelectControlJp" } }, "required":["select"] },
-      "TextInputControlJp": { "type": "object", "description": "テキスト入力コントロール。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必須かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" } } },
-      "ParagraphControlJp": { "type": "object", "description": "段落テキスト入力コントロール。", "required": ["label", "variable", "required"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必須かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" } } },
-      "SelectControlJp": { "type": "object", "description": "ドロップダウンコントロール。", "required": ["label", "variable", "required", "options"], "properties": { "label": { "type": "string", "description": "変数表示ラベル名。" }, "variable": { "type": "string", "description": "変数ID。" }, "required": { "type": "boolean", "description": "必須かどうか。" }, "default": { "type": "string", "nullable": true, "description": "デフォルト値。" }, "options": { "type": "array", "items": { "type": "string" }, "description": "オプション値。" } } },
-      "AppMetaResponseJp": { "type": "object", "description": "アプリケーションのメタ情報。", "properties": { "tool_icons": { "type": "object", "additionalProperties": { "oneOf": [ { "type": "string", "format": "url", "description": "アイコンのURL。" }, { "$ref": "#/components/schemas/ToolIconDetailJp" } ] }, "description": "ツールアイコン。キーはツール名です。" } } },
-      "ToolIconDetailJp": { "type": "object", "description": "ツールアイコン詳細。", "properties": { "background": { "type": "string", "description": "背景色（16進数形式）。" }, "content": { "type": "string", "description": "絵文字。" } } },
-      "WebAppSettingsResponseJp": { "type": "object", "description": "アプリのWebApp設定。", "properties": { "title": { "type": "string", "description": "WebApp名。" }, "chat_color_theme": { "type": "string", "description": "チャットの色テーマ、16進数形式。" }, "chat_color_theme_inverted": { "type": "boolean", "description": "チャットの色テーマを反転するかどうか。" }, "icon_type": { "type": "string", "enum": ["emoji", "image"], "description": "アイコンタイプ。" }, "icon": { "type": "string", "description": "アイコン。`emoji`タイプの場合は絵文字、`image`タイプの場合は画像URL。" }, "icon_background": { "type": "string", "description": "16進数形式の背景色。" }, "icon_url": { "type": "string", "format": "url", "nullable": true, "description": "アイコンのURL。" }, "description": { "type": "string", "description": "説明。" }, "copyright": { "type": "string", "description": "著作権情報。" }, "privacy_policy": { "type": "string", "description": "プライバシーポリシーのリンク。" }, "custom_disclaimer": { "type": "string", "description": "カスタム免責事項。" }, "default_language": { "type": "string", "description": "デフォルト言語。" }, "show_workflow_steps": { "type": "boolean", "description": "ワークフローの詳細を表示するかどうか。" }, "use_icon_as_answer_icon": { "type": "boolean", "description": "WebAppのアイコンをチャット内のロボットアイコンに置き換えるかどうか。" } } },
-      "ErrorResponseJp": { "type": "object", "description": "エラー応答。", "properties": { "status": { "type": "integer", "nullable": true, "description": "HTTPステータスコード。" }, "code": { "type": "string", "nullable": true, "description": "エラーコード。" }, "message": { "type": "string", "description": "エラーメッセージ。" } } }
+      "StreamEventAdvNodeFinished": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "task_id",
+              "workflow_run_id",
+              "data"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "workflow_run_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "$ref": "#/components/schemas/NodeFinishedData"
+              }
+            }
+          }
+        ]
+      },
+      "NodeFinishedData": {
+        "type": "object",
+        "required": [
+          "id",
+          "node_id",
+          "node_type",
+          "title",
+          "index",
+          "status",
+          "created_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "node_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "node_type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "index": {
+            "type": "integer"
+          },
+          "predecessor_node_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true
+          },
+          "process_data": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "ノード処理データ（JSON）。"
+          },
+          "outputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "出力コンテンツ（JSON）。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "failed",
+              "stopped"
+            ]
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "elapsed_time": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "execution_metadata": {
+            "$ref": "#/components/schemas/NodeExecutionMetadata",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "NodeExecutionMetadata": {
+        "type": "object",
+        "properties": {
+          "total_tokens": {
+            "type": "integer",
+            "nullable": true
+          },
+          "total_price": {
+            "type": "number",
+            "format": "float",
+            "nullable": true,
+            "description": "価格の互換性のために float を使用。MD には decimal と記載。"
+          },
+          "currency": {
+            "type": "string",
+            "nullable": true,
+            "example": "USD"
+          }
+        }
+      },
+      "StreamEventAdvWorkflowFinished": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "task_id",
+              "workflow_run_id",
+              "data"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "workflow_run_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "data": {
+                "$ref": "#/components/schemas/WorkflowFinishedData"
+              }
+            }
+          }
+        ]
+      },
+      "WorkflowFinishedData": {
+        "type": "object",
+        "required": [
+          "id",
+          "workflow_id",
+          "status",
+          "created_at",
+          "finished_at"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workflow_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "running",
+              "succeeded",
+              "failed",
+              "stopped"
+            ]
+          },
+          "outputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "nullable": true,
+            "description": "出力コンテンツ（JSON）。"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
+          },
+          "elapsed_time": {
+            "type": "number",
+            "format": "float",
+            "nullable": true
+          },
+          "total_tokens": {
+            "type": "integer",
+            "nullable": true
+          },
+          "total_steps": {
+            "type": "integer",
+            "default": 0
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "finished_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "StreamEventAdvError": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object",
+            "required": [
+              "task_id",
+              "status",
+              "code",
+              "message"
+            ],
+            "properties": {
+              "task_id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "message_id": {
+                "type": "string",
+                "format": "uuid",
+                "nullable": true,
+                "description": "一般的なエラーでは常に存在するとは限りません。"
+              },
+              "status": {
+                "type": "integer"
+              },
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventAdvPing": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkAdvancedChatEvent"
+          },
+          {
+            "type": "object"
+          }
+        ]
+      },
+      "Usage": {
+        "type": "object",
+        "properties": {
+          "prompt_tokens": {
+            "type": "integer"
+          },
+          "prompt_unit_price": {
+            "type": "string"
+          },
+          "prompt_price_unit": {
+            "type": "string"
+          },
+          "prompt_price": {
+            "type": "string"
+          },
+          "completion_tokens": {
+            "type": "integer"
+          },
+          "completion_unit_price": {
+            "type": "string"
+          },
+          "completion_price_unit": {
+            "type": "string"
+          },
+          "completion_price": {
+            "type": "string"
+          },
+          "total_tokens": {
+            "type": "integer"
+          },
+          "total_price": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "latency": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "RetrieverResource": {
+        "type": "object",
+        "properties": {
+          "position": {
+            "type": "integer"
+          },
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dataset_name": {
+            "type": "string"
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "document_name": {
+            "type": "string"
+          },
+          "segment_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "score": {
+            "type": "number",
+            "format": "float"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "FileUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "mime_type": {
+            "type": "string"
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "MessageFeedbackRequest": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "rating": {
+            "type": "string",
+            "enum": [
+              "like",
+              "dislike",
+              null
+            ],
+            "nullable": true
+          },
+          "user": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "AppFeedbacksResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackItem"
+            }
+          }
+        }
+      },
+      "FeedbackItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "app_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "rating": {
+            "type": "string",
+            "enum": [
+              "like",
+              "dislike",
+              null
+            ],
+            "nullable": true
+          },
+          "content": {
+            "type": "string"
+          },
+          "from_source": {
+            "type": "string"
+          },
+          "from_end_user_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from_account_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SuggestedQuestionsResponse": {
+        "type": "object",
+        "properties": {
+          "result": {
+            "type": "string",
+            "example": "success"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ConversationHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationMessageItem"
+            }
+          }
+        }
+      },
+      "ConversationMessageItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "query": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "message_files": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageFileItem"
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "nullable": true,
+            "properties": {
+              "rating": {
+                "type": "string",
+                "enum": [
+                  "like",
+                  "dislike"
+                ]
+              }
+            }
+          },
+          "retriever_resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RetrieverResource"
+            }
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "MessageFileItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "url"
+          },
+          "belongs_to": {
+            "type": "string",
+            "enum": [
+              "user",
+              "assistant"
+            ]
+          }
+        }
+      },
+      "ConversationsListResponse": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationListItem"
+            }
+          }
+        }
+      },
+      "ConversationListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "status": {
+            "type": "string"
+          },
+          "introduction": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ConversationRenameRequest": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "nullable": true
+          },
+          "auto_generate": {
+            "type": "boolean",
+            "default": false
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "ConversationRenameResponse": {
+        "$ref": "#/components/schemas/ConversationListItem"
+      },
+      "ConversationVariablesResponse": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer"
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ConversationVariableItem"
+            }
+          }
+        }
+      },
+      "ConversationVariableItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "value_type": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "updated_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "AudioToTextRequest": {
+        "type": "object",
+        "required": [
+          "file",
+          "user"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "オーディオファイル。形式：mp3、mp4、mpeg、mpga、m4a、wav、webm。制限：15MB。"
+          },
+          "user": {
+            "type": "string"
+          }
+        }
+      },
+      "AudioToTextResponse": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "TextToAudioJsonRequest": {
+        "type": "object",
+        "required": [
+          "user"
+        ],
+        "properties": {
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "メッセージ ID（優先）。"
+          },
+          "text": {
+            "type": "string",
+            "description": "音声コンテンツ。"
+          },
+          "user": {
+            "type": "string"
+          },
+          "streaming": {
+            "type": "boolean",
+            "default": false,
+            "description": "true の場合、レスポンスはオーディオチャンクのストリームになります。"
+          }
+        },
+        "description": "`user` が必要です。`message_id` または `text` を提供してください。"
+      },
+      "AppInfoResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ChatAppParametersResponse": {
+        "type": "object",
+        "properties": {
+          "opening_statement": {
+            "type": "string"
+          },
+          "suggested_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "suggested_questions_after_answer": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "speech_to_text": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "text_to_speech": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "voice": {
+                "type": "string"
+              },
+              "language": {
+                "type": "string"
+              },
+              "autoPlay": {
+                "type": "string",
+                "enum": [
+                  "enabled",
+                  "disabled"
+                ]
+              }
+            }
+          },
+          "retriever_resource": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "annotation_reply": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              }
+            }
+          },
+          "user_input_form": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/UserInputFormItem"
+            }
+          },
+          "file_upload": {
+            "type": "object",
+            "properties": {
+              "image": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean"
+                  },
+                  "number_limits": {
+                    "type": "integer"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "transfer_methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "remote_url",
+                        "local_file"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "system_parameters": {
+            "type": "object",
+            "properties": {
+              "file_size_limit": {
+                "type": "integer"
+              },
+              "image_file_size_limit": {
+                "type": "integer"
+              },
+              "audio_file_size_limit": {
+                "type": "integer"
+              },
+              "video_file_size_limit": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "UserInputFormItem": {
+        "type": "object",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextInputControlWrapper"
+          },
+          {
+            "$ref": "#/components/schemas/ParagraphControlWrapper"
+          },
+          {
+            "$ref": "#/components/schemas/SelectControlWrapper"
+          }
+        ]
+      },
+      "TextInputControlWrapper": {
+        "type": "object",
+        "properties": {
+          "text-input": {
+            "$ref": "#/components/schemas/TextInputControl"
+          }
+        },
+        "required": [
+          "text-input"
+        ]
+      },
+      "ParagraphControlWrapper": {
+        "type": "object",
+        "properties": {
+          "paragraph": {
+            "$ref": "#/components/schemas/ParagraphControl"
+          }
+        },
+        "required": [
+          "paragraph"
+        ]
+      },
+      "SelectControlWrapper": {
+        "type": "object",
+        "properties": {
+          "select": {
+            "$ref": "#/components/schemas/SelectControl"
+          }
+        },
+        "required": [
+          "select"
+        ]
+      },
+      "TextInputControl": {
+        "type": "object",
+        "required": [
+          "label",
+          "variable",
+          "required"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "variable": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "default": {
+            "type": "string"
+          }
+        }
+      },
+      "ParagraphControl": {
+        "type": "object",
+        "required": [
+          "label",
+          "variable",
+          "required"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "variable": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "default": {
+            "type": "string"
+          }
+        }
+      },
+      "SelectControl": {
+        "type": "object",
+        "required": [
+          "label",
+          "variable",
+          "required",
+          "options"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "variable": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "default": {
+            "type": "string"
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "AppMetaResponse": {
+        "type": "object",
+        "properties": {
+          "tool_icons": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "type": "string",
+                  "format": "url"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolIconDetail"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "ToolIconDetail": {
+        "type": "object",
+        "properties": {
+          "background": {
+            "type": "string"
+          },
+          "content": {
+            "type": "string"
+          }
+        }
+      },
+      "WebAppSettingsResponse": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "chat_color_theme": {
+            "type": "string"
+          },
+          "chat_color_theme_inverted": {
+            "type": "boolean"
+          },
+          "icon_type": {
+            "type": "string",
+            "enum": [
+              "emoji",
+              "image"
+            ]
+          },
+          "icon": {
+            "type": "string"
+          },
+          "icon_background": {
+            "type": "string"
+          },
+          "icon_url": {
+            "type": "string",
+            "format": "url",
+            "nullable": true
+          },
+          "description": {
+            "type": "string"
+          },
+          "copyright": {
+            "type": "string"
+          },
+          "privacy_policy": {
+            "type": "string"
+          },
+          "custom_disclaimer": {
+            "type": "string"
+          },
+          "default_language": {
+            "type": "string"
+          },
+          "show_workflow_steps": {
+            "type": "boolean"
+          },
+          "use_icon_as_answer_icon": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AnnotationListResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AnnotationItem"
+            }
+          },
+          "has_more": {
+            "type": "boolean"
+          },
+          "limit": {
+            "type": "integer"
+          },
+          "total": {
+            "type": "integer"
+          },
+          "page": {
+            "type": "integer"
+          }
+        }
+      },
+      "AnnotationItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          },
+          "hit_count": {
+            "type": "integer"
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CreateAnnotationRequest": {
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
+      "UpdateAnnotationRequest": {
+        "type": "object",
+        "required": [
+          "question",
+          "answer"
+        ],
+        "properties": {
+          "question": {
+            "type": "string"
+          },
+          "answer": {
+            "type": "string"
+          }
+        }
+      },
+      "InitialAnnotationReplySettingsRequest": {
+        "type": "object",
+        "required": [
+          "score_threshold"
+        ],
+        "properties": {
+          "embedding_provider_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "embedding_model_name": {
+            "type": "string",
+            "nullable": true
+          },
+          "score_threshold": {
+            "type": "number",
+            "format": "float"
+          }
+        }
+      },
+      "InitialAnnotationReplySettingsResponse": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "job_status": {
+            "type": "string"
+          }
+        }
+      },
+      "InitialAnnotationReplySettingsStatusResponse": {
+        "type": "object",
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "job_status": {
+            "type": "string"
+          },
+          "error_msg": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "nullable": true
+          },
+          "code": {
+            "type": "string",
+            "nullable": true
+          },
+          "message": {
+            "type": "string"
+          }
+        }
+      }
     }
   },
   "tags": [
-    { "name": "チャットメッセージ", "description": "チャットメッセージとインタラクションに関連する操作。" },
-    { "name": "ファイル操作", "description": "ファイルアップロードとプレビューに関連する操作。" },
-    { "name": "メッセージフィードバック", "description": "ユーザーメッセージへのフィードバック操作。" },
-    { "name": "会話管理", "description": "会話セッションの管理に関連する操作。" },
-    { "name": "音声・テキスト変換", "description": "テキストから音声へ、音声からテキストへの変換操作。" },
-    { "name": "アプリケーション設定", "description": "アプリケーション設定と情報の取得に関連する操作。" }
+    {
+      "name": "Chatflow",
+      "description": "ワークフローイベントを含む高度なチャット操作。"
+    },
+    {
+      "name": "Files",
+      "description": "高度なチャット用のファイルアップロードとプレビュー操作。"
+    },
+    {
+      "name": "Feedback",
+      "description": "高度なチャット用のユーザーフィードバック操作。"
+    },
+    {
+      "name": "Conversations",
+      "description": "高度なチャット用の会話管理。"
+    },
+    {
+      "name": "TTS",
+      "description": "高度なチャット用の音声とテキストの変換。"
+    },
+    {
+      "name": "Application",
+      "description": "高度なチャット用のアプリケーション設定と情報。"
+    },
+    {
+      "name": "Annotations",
+      "description": "高度なチャット用のアノテーション管理。"
+    }
   ]
 }
