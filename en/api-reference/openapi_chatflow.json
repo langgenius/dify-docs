@@ -859,7 +859,7 @@
         "type": "object",
         "required": ["event"],
         "properties": {
-          "event": { "type": "string", "enum": ["message", "message_file", "message_end", "tts_message", "tts_message_end", "message_replace", "workflow_started", "node_started", "node_finished", "workflow_finished", "error", "ping"] }
+          "event": { "type": "string", "enum": ["message", "message_file", "message_end", "tts_message", "tts_message_end", "message_replace", "workflow_started", "node_started", "node_finished", "workflow_finished", "workflow_paused", "error", "ping"] }
         },
         "discriminator": {
           "propertyName": "event",
@@ -874,6 +874,7 @@
             "node_started": "#/components/schemas/StreamEventAdvNodeStarted",
             "node_finished": "#/components/schemas/StreamEventAdvNodeFinished",
             "workflow_finished": "#/components/schemas/StreamEventAdvWorkflowFinished",
+            "workflow_paused": "#/components/schemas/StreamEventAdvWorkflowPaused",
             "error": "#/components/schemas/StreamEventAdvError",
             "ping": "#/components/schemas/StreamEventAdvPing"
           }
@@ -986,7 +987,7 @@
           "inputs": { "type": "object", "additionalProperties": true, "nullable": true },
           "process_data": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Node process data (JSON)." },
           "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content (JSON)." },
-          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped", "paused"] },
           "error": { "type": "string", "nullable": true },
           "elapsed_time": { "type": "number", "format": "float", "nullable": true },
           "execution_metadata": { "$ref": "#/components/schemas/NodeExecutionMetadata" , "nullable": true},
@@ -1013,17 +1014,43 @@
         ]
       },
       "WorkflowFinishedData": {
-        "type": "object", "required": ["id", "workflow_id", "status", "created_at", "finished_at"],
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at"],
         "properties": {
           "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" },
-          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
-          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content (JSON)." },
+          "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped", "paused"] },
+          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content. Empty object when `status` is `paused`." },
           "error": { "type": "string", "nullable": true },
           "elapsed_time": { "type": "number", "format": "float", "nullable": true },
           "total_tokens": { "type": "integer", "nullable": true },
           "total_steps": { "type": "integer", "default": 0 },
           "created_at": { "type": "integer", "format": "int64" },
-          "finished_at": { "type": "integer", "format": "int64" }
+          "finished_at": { "type": "integer", "format": "int64", "nullable": true, "description": "Null when workflow is paused." }
+        }
+      },
+      "StreamEventAdvWorkflowPaused": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkAdvancedChatEvent" },
+          { "type": "object", "required": ["task_id", "workflow_run_id", "data"],
+            "properties": {
+              "task_id": { "type": "string", "format": "uuid" },
+              "workflow_run_id": { "type": "string", "format": "uuid" },
+              "data": { "$ref": "#/components/schemas/WorkflowPausedData" }
+            }
+          }
+        ]
+      },
+      "WorkflowPausedData": {
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workflow_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["paused"] },
+          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Empty object when paused." },
+          "elapsed_time": { "type": "number", "format": "float", "nullable": true },
+          "total_tokens": { "type": "integer", "nullable": true },
+          "total_steps": { "type": "integer", "default": 0 },
+          "created_at": { "type": "integer", "format": "int64" },
+          "paused_nodes": { "type": "array", "items": { "type": "string" }, "description": "List of node IDs that are paused." },
+          "reasons": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "description": "Reasons for the pause." }
         }
       },
       "StreamEventAdvError": {
