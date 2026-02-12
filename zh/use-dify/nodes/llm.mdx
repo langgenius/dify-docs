@@ -1,131 +1,221 @@
 ---
-title: "大语言模型"
-description: "调用语言模型进行文本生成和分析"
+title: "LLM"
+description: "调用大语言模型进行文本生成和分析"
 icon: "brain"
 ---
 
 <Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/use-dify/nodes/llm)。</Note>
 
-大型语言模型节点调用语言模型来处理文本、图像和文档。它向你配置的模型发送提示词并捕获其响应，支持结构化输出、上下文管理和多模态输入。
+LLM 节点调用大语言模型，根据你的指令和上游节点的输入生成响应。
 
-<Frame caption="大型语言模型节点配置界面">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/85730fbfa1d441d12d969b89adf2670e.png" alt="LLM Node Overview" />
-</Frame>
+## 选择模型
+
+从你已配置的提供商中选择最适合任务的模型。
+
+选择后，你可以调整模型参数来控制其生成响应的方式。可用的参数和预设因模型而异。
+
+## 编写提示词
+
+指导模型如何处理输入和生成响应。输入 `/` 或 `{` 来引用变量。
+
+如果你不确定从哪里开始或想优化现有的提示词，可以试试我们的 AI 辅助提示词生成器。
+
+<Columns>
+  <Frame caption="提示词生成器图标">
+  <img src="/images/prompt_generator_icon.png" alt="提示词生成器图标"/>
+  </Frame>
+  <Frame caption="提示词生成器界面">
+  <img src="/images/prompt_generator_interface.png" alt="提示词生成器界面"/>
+  </Frame>
+</Columns>
+
+### 指定指令和消息
+
+定义系统指令并点击**添加消息**来添加用户/助手消息。它们会按顺序在单个提示词中发送给模型。
+
+可以把它想象成直接与模型对话：
+
+- **系统指令**设定模型响应的规则——角色、语气和行为准则。
+
+- **用户消息**是你发送给模型的内容——问题、请求或要模型完成的任务。
+
+- **助手消息**是模型的回复。
+
+### 将输入与规则分离
+
+在系统指令中定义角色和规则，然后在用户消息中传递实际的任务输入。例如：
+
+```bash wrap
+# System instruction
+You are a children's story writer. Write a story based on the user's input. Use simple language and a warm tone.
+
+# User message
+Write a bedtime story about a rabbit who makes friends with a shy hedgehog
+```
+
+虽然将所有内容放在系统指令中看起来更简单，但将角色定义与任务输入分离可以为模型提供更清晰的结构。
+
+### 模拟对话历史
+
+你可能会想：既然助手消息是模型的回复，为什么要手动添加它们？
+
+通过交替添加用户和助手消息，你可以在提示词中创建模拟的对话历史。模型会将这些视为之前的对话，这有助于引导其行为。
+
+### 从上游 LLM 导入对话历史
+
+点击**添加对话历史**，从上游 Agent 或 LLM 节点导入对话历史。这让模型了解上游发生了什么，并从该节点中断的地方继续。
+
+对话历史包括**用户**消息、**助手**消息和<Tooltip tip="工具消息是模型调用工具后返回的结果。例如，bash 工具的命令执行结果。">**工具**消息</Tooltip>。你可以在 Agent 或 LLM 节点的 `context` 输出变量中查看。
 
 <Info>
-  在使用大型语言模型节点之前，请先在**系统设置 → 模型供应商**中配置至少一个模型供应商。
+  系统指令不包含在内，因为它们是节点特定的。
 </Info>
 
-## 模型选择和参数
+这在串联多个 Agent 或 LLM 节点时非常有用：
 
-从你已配置的任何模型供应商中进行选择。不同模型擅长不同任务 - GPT-4 和 Claude 3.5 在复杂推理方面表现良好但成本较高，而 GPT-3.5 Turbo 在能力和经济性之间取得平衡。对于本地部署，使用 Ollama、LocalAI 或 Xinference。
+- 不导入对话历史时，下游节点只接收上游节点的最终输出，不知道它是如何得出结论的。
 
-<Frame caption="模型选择和参数配置">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/43f81418ea70d4d79e3705505e777b1b.png" alt="LLM Node Configuration" />
-</Frame>
+- 导入对话历史后，它可以看到整个过程：用户问了什么、调用了哪些工具、返回了什么结果、模型是如何推理的。
 
-模型参数控制响应生成。**温度**范围从 0（确定性）到 1（创造性）。**核采样**通过概率限制词汇选择。**频率惩罚**减少重复。**存在惩罚**鼓励新话题。你也可以使用预设：**精确**、**平衡**或**创意**。
+**在自动添加的用户消息中指定你的新任务。** 导入的历史会被添加到当前节点消息的前面，因此模型将其视为一个连续的对话。由于导入的历史通常以助手消息结束，模型需要一条后续的用户消息来知道下一步该做什么。
 
-## 提示词配置
+<Accordion title="示例：串联研究和报告 LLM">
 
-你的界面根据模型类型自适应。聊天模型使用消息角色（**系统**用于行为，**用户**用于输入，**助手**用于示例），而完成模型使用简单的文本续写。
+  假设两个 LLM 节点按顺序运行：LLM A 通过调用搜索工具研究一个主题，LLM B 基于研究结果撰写报告。
 
-在提示词中使用双花括号引用工作流变量：`{{variable_name}}`。变量在到达模型之前会被实际值替换。
+  如果 LLM B 只接收 LLM A 的最终文本输出，它可以总结结论但无法验证或引用具体来源。通过导入 LLM A 的对话历史，LLM B 可以看到每次工具调用的原始数据，并在报告中直接引用。
 
-```text
-System: You are a technical documentation expert.
-User: {{user_input}}
+  以下是 LLM B 导入 LLM A 对话历史后看到的完整消息序列：
+
+  ```bash wrap
+  # LLM B's own system instruction
+  1. System: "You are a professional report writer..."
+
+  # from LLM A
+  2. User: "What are the new trends in the EV market?"
+
+  # from LLM A
+  3. Tool: [search results with URLs and raw data]
+
+  # from LLM A
+  4. Assistant: "Based on the search results, the key trends are..."
+
+  # LLM B's own user message
+  5. User: "Write a 500-word market analysis report."
+  ```
+
+  LLM B 理解：它已经看到了研究过程（问题、搜索、总结），现在需要基于这些信息撰写报告——包括仅通过文本输出无法获取的原始数据。
+
+</Accordion>
+
+### 使用 Jinja2 创建动态提示词
+
+使用 [Jinja2](https://jinja.palletsprojects.com/en/stable/) 语法创建动态提示词。例如，使用条件判断根据变量值定制不同的指令。
+
+<Accordion title="Jinja2 示例：根据用户级别设置条件提示词">
+```jinja2 wrap
+You are a
+{% if user_level == "beginner" %}patient and friendly
+{% elif user_level == "intermediate" %}professional and efficient
+{% else %}senior expert-level
+{% endif %} assistant.
+
+{% if user_level == "beginner" %}
+Please explain in simple and easy-to-understand language. Provide examples when necessary. Avoid using technical jargon.
+{% elif user_level == "intermediate" %} You may use some technical terms, but provide appropriate explanations. Offer practical advice and best practices.
+{% else %} You may delve into technical details and use professional terminology. Focus on advanced use cases and optimization solutions.
+{% endif %}
+
+User question: {{ query }}
 ```
+</Accordion>
 
-## 上下文变量
+默认情况下，你需要将所有可能的指令发送给模型，描述条件，然后让模型自行决定遵循哪些——这种方法通常不可靠。
 
-上下文变量在保持来源归属的同时注入外部知识。这使得大型语言模型可以使用你的特定文档回答问题的检索增强生成应用成为可能。
+使用 Jinja2 模板，只有符合定义条件的指令会被发送，确保行为可预测并减少 Token 使用。
 
-<Frame caption="在检索增强生成应用中使用上下文变量">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/5aefed96962bd994f8f05bac96b11e22.png" alt="Context Variables" />
-</Frame>
+## 添加上下文
 
-将知识检索节点的输出连接到你的大型语言模型节点的上下文输入，然后引用它：
+在**高级设置** > **上下文**中，为 LLM 提供额外的参考信息以减少幻觉并提高响应准确性。
 
-```text
-Answer using only this context:
-{{knowledge_retrieval.result}}
+典型模式：从知识检索节点[传递检索结果](/zh/use-dify/nodes/knowledge-retrieval#与-llm-节点搭配使用)，实现检索增强生成（RAG）。
 
-Question: {{user_question}}
-```
+## 启用对话记忆（仅对话流）
 
-当使用来自知识检索的上下文变量时，Dify 会自动跟踪引用，以便用户看到信息来源。
+<Note>
+    记忆是节点特定的，不会在不同对话之间持久保存。
+</Note>
 
-## 结构化输出
+启用**记忆**以保留最近的对话，使 LLM 能够连贯地回答后续问题。
 
-强制模型返回特定数据格式（如 JSON）以便程序化使用。通过三种方法配置：
+会自动添加一条用户消息来传递当前用户查询和任何上传的文件。这是因为记忆通过存储最近的用户-助手交互来工作。如果当前查询没有通过用户消息传递，用户侧将没有内容可记录。
 
-<Tabs>
-  <Tab title="可视化编辑器">
-    用户友好的界面适用于简单结构。添加具有名称和类型的字段，标记必需字段，设置描述。编辑器自动生成 JSON Schema。
-  </Tab>
-  
-  <Tab title="JSON Schema">
-    直接编写 Schema，适用于具有嵌套对象、数组和验证规则的复杂结构。
-    
-    ```json
-    {
-      "type": "object",
-      "properties": {
-        "sentiment": {
-          "type": "string",
-          "enum": ["positive", "negative", "neutral"]
-        }
-      },
-      "required": ["sentiment"]
-    }
-    ```
-  </Tab>
-  
-  <Tab title="AI 生成">
-    用自然语言描述需求，让 AI 生成 Schema。
-  </Tab>
-</Tabs>
+**窗口大小**控制保留多少条最近的交互。例如，`5` 保留最近 5 轮用户查询和 LLM 响应。
 
-<Warning>
-  具有原生 JSON 支持的模型可以可靠地处理结构化输出。对于其他模型，Dify 在提示词中包含 Schema，但结果可能有所不同。
-</Warning>
+## 添加 Dify 工具
 
-## 记忆和文件处理
+<Info>
+    只有带有 Tool Call 标签的模型才能使用 Dify 工具。
 
-![](/images/llm-memory.png)
-启用记忆以在聊天流对话中的多个大型语言模型调用之间维护上下文。启用后，之前的交互将作为格式化的用户-助手输出包含在后续提示词中。你可以通过编辑 `USER` 模板来自定义用户提示词的内容。记忆是节点特定的，不会在不同对话之间持续存在。
+    <Frame caption="">
+    <img src="/images/tool_call_tag.png" alt="Tool Call 标签"/>
+    </Frame>
+</Info>
 
-对于**文件处理**，将文件变量添加到多模态模型的提示词中。GPT-4V 处理图像，Claude 直接处理 PDF，而其他模型可能需要预处理。
+添加 [Dify 工具](/zh/use-dify/workspace/tools)让模型与外部服务和 API 交互。当任务需要实时数据或超出文本生成范围的操作（如网页搜索或数据库查询）时非常有用。
 
-### 视觉能力配置
+你可以禁用或删除已添加的工具，并修改其配置。更清晰的工具描述有助于模型判断何时使用它。
 
-处理图像时，你可以控制细节级别：
-- **高细节** - 对复杂图像具有更好的准确性但使用更多令牌
-- **低细节** - 对简单图像进行更快处理，使用较少令牌
+**调整最大迭代次数**
 
-视觉能力的默认变量选择器是 `userinput.files`，它会自动从用户输入节点获取文件。
+**高级设置**中的**最大迭代次数**限制了模型对单次请求可以重复其推理-行动循环（思考、调用工具、处理结果）的次数。
 
-<Frame caption="多模态模型的文件处理">
-  <img src="https://assets-docs.dify.ai/2024/11/05b3d4a78038bc7afbb157078e3b2b26.png" alt="File Processing" />
-</Frame>
+对于需要多次工具调用的复杂多步任务，增加此值。较高的值会增加延迟和 Token 成本。
 
-## Jinja2 模板支持
+## 处理多模态输入
 
-大型语言模型提示词支持 Jinja2 模板以进行高级变量处理。当你使用 Jinja2 模式（`edition_type: "jinja2"`）时，你可以：
+要让*支持多模态的*模型处理图片、音频、视频或文档，可选择以下任一方式：
 
-```jinja2
-{% for item in search_results %}
-{{ loop.index }}. {{ item.title }}: {{ item.content }}
-{% endfor %}
-```
+  - 在提示词中直接引用文件变量。
 
-Jinja2 变量与常规变量替换分别处理，允许在提示词中进行循环、条件和复杂数据转换。
+  - 在**高级设置**中启用 **Vision** 并在那里选择文件变量。
 
-## 流式结果返回
+      **分辨率**仅控制图片处理的细节级别：
 
-大型语言模型节点默认支持流式结果返回。每个文本块都作为 `RunStreamChunkEvent` 产生，实现实时响应显示。文件输出（图像、文档）在流式传输期间自动处理和保存。
+      - **高**：对复杂图片更准确，但消耗更多 Token
+
+      - **低**：对简单图片处理更快，消耗更少 Token
+
+## 将思考过程和工具调用与响应分离
+
+要获得不包含模型思考过程和工具调用（如果有）的干净响应，请引用 `text` 输出变量（开启**启用推理标签分离**）或 `generation.content`。
+
+`generations` 变量本身包含所有中间步骤和最终响应。
+
+## 强制结构化输出
+
+在指令中描述输出格式可能产生不一致的结果。要获得更可靠的格式化，启用结构化输出以强制执行定义好的 JSON schema。
+
+<Info>
+  对于不支持原生 JSON 的模型，Dify 会将 schema 包含在提示词中，但不保证严格遵循。
+</Info>
+
+<Frame caption=""><img src="/images/structured_output.png" alt="结构化输出"/></Frame>
+
+1. 在**输出变量**旁，开启**结构化**开关。一个 `structured_output` 变量将出现在输出变量列表末尾。
+
+2. 点击**配置**，使用以下方法之一定义输出 schema。
+
+    - **可视化编辑器**：使用无代码界面定义简单结构。对应的 JSON schema 会自动生成。
+
+    - **JSON Schema**：直接编写 schema，适用于包含嵌套对象、数组或验证规则的复杂结构。
+
+    - **AI 生成**：用自然语言描述需求，让 AI 生成 schema。
+
+    - **JSON 导入**：粘贴一个现有的 JSON 对象，自动生成对应的 schema。
 
 ## 错误处理
 
-为失败的大型语言模型调用配置重试行为。设置最大重试次数、重试间隔和退避乘数。当重试不足时，定义回退策略，如默认值、错误路由或替代模型。
+为临时问题（如网络波动）配置自动重试，并设置备用错误处理策略以在错误持续时保持工作流运行。
+
+  <Frame caption=""><img src="/images/node_handle_errors.png" alt="错误处理"/></Frame>

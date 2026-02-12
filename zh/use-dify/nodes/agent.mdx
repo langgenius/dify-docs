@@ -1,117 +1,383 @@
 ---
-title: "智能代理"
+title: "Agent"
+description: "赋予 LLM 自主控制工具的能力，以执行复杂任务"
 icon: "robot"
 ---
 
 <Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/use-dify/nodes/agent)。</Note>
 
-
-智能代理节点让你的大型语言模型自主控制工具，使其能够迭代决定使用哪些工具以及何时使用它们。智能代理不是预先规划每一步，而是动态地推理问题，根据需要调用工具来完成复杂任务。
-
-<Frame caption="智能代理节点配置界面">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/1f4d803ff68394d507abd3bcc13ba0f3.png" alt="Agent node interface" />
-</Frame>
-
-## 智能代理策略
-
-智能代理策略定义了你的智能代理如何思考和行动。选择最适合你的模型能力和任务需求的方法。
-
-<Frame caption="可用的智能代理策略选项">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f14082c44462ac03955e41d66ffd4cca.png" alt="Agent strategies selection" />
-</Frame>
-
 <Tabs>
-  <Tab title="函数调用">
-    使用大型语言模型的原生函数调用能力，通过工具参数直接传递工具定义。大型语言模型使用其内置机制决定何时以及如何调用工具。
-    
-    最适合像 GPT-4、Claude 3.5 和其他具有强大函数调用支持的模型。
+  <Tab title="沙盒运行时">
+
+  在[沙盒运行时](/zh/use-dify/build/runtime#沙盒运行时)中，Agent 节点赋予 LLM 自主执行命令的能力：调用工具、运行脚本、访问外部资源、操作[文件系统](/zh/use-dify/build/file-system)以及创建多模态输出。
+
+  这也带来了权衡：更长的响应时间和更高的 Token 消耗。要更快更高效地处理简单任务，可以关闭 **[Agent 模式](#启用命令执行agent-模式)** 来禁用这些功能。
+
+  ## 选择模型
+
+  从你已配置的提供商中选择最适合任务的模型。
+
+  选择后，你可以调整模型参数来控制其生成响应的方式。可用的参数和预设因模型而异。
+
+  ## 编写提示词
+
+  指导模型如何处理输入和生成响应。输入 `/` 可插入变量或文件系统中的资源，输入 `@` 可引用 [Dify 工具](/zh/use-dify/workspace/tools)。
+
+  如果你不确定从哪里开始或想优化现有的提示词，可以试试我们的 AI 辅助提示词生成器。
+
+  <Columns>
+  <Frame caption="提示词生成器图标">
+  <img src="/images/prompt_generator_icon.png" alt="提示词生成器图标"/>
+  </Frame>
+  <Frame caption="提示词生成器界面">
+  <img src="/images/prompt_generator_interface.png" alt="提示词生成器界面"/>
+  </Frame>
+  </Columns>
+
+  ### 指定指令和消息
+
+  定义系统指令并点击**添加消息**来添加用户/助手消息。它们会按顺序在单个提示词中发送给模型。
+
+  可以把它想象成直接与模型对话：
+
+  - **系统指令**设定模型响应的规则——角色、语气和行为准则。
+
+  - **用户消息**是你发送给模型的内容——问题、请求或要模型完成的任务。
+
+  - **助手消息**是模型的回复。
+
+  ### 将输入与规则分离
+
+  在系统指令中定义角色和规则，然后在用户消息中传递实际的任务输入。例如：
+
+
+  ```bash wrap
+  # System instruction
+  You are a children's story writer. Write a story based on the user's input. Use simple language and a warm tone.
+
+  # User message
+  Write a bedtime story about a rabbit who makes friends with a shy hedgehog.
+  ```
+
+  虽然将所有内容放在系统指令中看起来更简单，但将角色定义与任务输入分离可以为模型提供更清晰的结构。
+
+  ### 模拟对话历史
+
+  你可能会想：既然助手消息是模型的回复，为什么要手动添加它们？
+
+  通过交替添加用户和助手消息，你可以在提示词中创建模拟的对话历史。模型会将这些视为之前的对话，这有助于引导其行为。
+
+  ### 从上游 LLM 导入对话历史
+
+  点击**添加对话历史**，从上游 Agent 节点导入对话历史。这让模型了解上游发生了什么，并从该节点中断的地方继续。
+
+  对话历史包括**用户**消息、**助手**消息和<Tooltip tip="工具消息是模型调用工具后返回的结果。例如，bash 工具的命令执行结果。">**工具**消息</Tooltip>。你可以在 Agent 节点的 `context` 输出变量中查看。
+
+  <Info>
+    系统指令不包含在内，因为它们是节点特定的。
+  </Info>
+
+  这在串联多个 Agent 节点时非常有用：
+
+  - 不导入对话历史时，下游节点只接收上游节点的最终输出，不知道它是如何得出结论的。
+
+  - 导入对话历史后，它可以看到整个过程：用户问了什么、调用了哪些工具、返回了什么结果、模型是如何推理的。
+
+  **在自动添加的用户消息中指定你的新任务。** 导入的历史会被添加到当前节点消息的前面，因此模型将其视为一个连续的对话。由于导入的历史通常以助手消息结束，模型需要一条后续的用户消息来知道下一步该做什么。
+
+  <Accordion title="示例 1：处理上游 LLM 生成的文件">
+
+  假设两个 Agent 节点按顺序运行：Agent A 分析数据并生成图表图片，保存到沙盒的输出文件夹。Agent B 创建包含这些图表的最终报告。
+
+  如果 Agent B 只接收 Agent A 的最终文本输出，它知道分析结论但不知道生成了什么文件或文件存储在哪里。
+
+  通过导入 Agent A 的对话历史，Agent B 可以从工具消息中看到确切的文件路径，从而可以在报告中访问和嵌入这些图表。
+
+  以下是 Agent B 导入 Agent A 对话历史后看到的完整消息序列：
+
+  ```bash wrap
+  # Agent B's own system instruction
+  1. System: "You are a report designer. Create professional reports with embedded visuals."
+
+  # from Agent A
+  2. User: "Analyze the Q3 sales data and create visualizations."
+
+  # from Agent A
+  3. Tool: [bash] Created bar chart: /output/q3_sales_by_region.png
+  4. Tool: [bash] Created trend line: /output/q3_monthly_trend.png
+
+  # from Agent A
+  5. Assistant: "I've analyzed the Q3 sales data and created two charts..."
+
+  # Agent B's own user message
+  6. User: "Create a PDF report incorporating the generated charts."
+  ```
+
+  Agent B 确切地知道哪些文件存在以及它们的位置，因此可以直接将它们嵌入报告。
+
+  </Accordion>
+
+  <Accordion title="示例 2：向终端用户输出产物">
+
+  在示例 1 的基础上，假设你想将生成的 PDF 报告交付给终端用户。由于产物无法直接暴露给终端用户，你需要第三个 Agent 节点来提取文件。
+
+  Agent C 配置：
+
+  - **Agent 模式**：已关闭
+
+  - **结构化输出**：已启用，包含一个文件类型的输出变量
+
+  - **对话历史**：从 Agent B 导入
+
+  - **用户消息**："Output the generated PDF."
+
+  以下是 Agent C 导入 Agent B 对话历史后看到的完整消息序列：
+  ```bash wrap
+  # Agent C's own system instruction (optional)
+  1. System: (none)
+
+  # User and tool messages from Agent A (omitted for brevity)
+  2. ...
+
+  # from Agent B
+  3. User: "Create a PDF report incorporating the generated charts."
+
+  # from Agent B
+  4. Tool: [bash] Created report: /output/q3_sales_report.pdf
+
+  # from Agent B
+  5. Assistant: "I've created a PDF report with the charts embedded..."
+
+  # Agent C's own user message
+  6. User: "Output the generated PDF."
+  ```
+
+  Agent C 从导入的对话历史中定位文件路径，并将其作为文件变量输出。然后你可以在回答节点或输出节点中引用该变量，将文件交付给终端用户。
+
+  </Accordion>
+
+  ### 使用 Jinja2 创建动态提示词
+
+  使用 [Jinja2](https://jinja.palletsprojects.com/en/stable/) 模板在提示词中添加条件、循环和其他逻辑。例如，根据变量值定制不同的指令。
+
+  <Accordion title="示例：根据用户级别设置条件系统指令">
+  ```jinja2 wrap
+  You are a
+  {% if user_level == "beginner" %}patient and friendly
+  {% elif user_level == "intermediate" %}professional and efficient
+  {% else %}senior expert-level
+  {% endif %} assistant.
+
+  {% if user_level == "beginner" %}
+  Please explain in simple and easy-to-understand language. Provide examples when necessary. Avoid using technical jargon.
+  {% elif user_level == "intermediate" %} You may use some technical terms, but provide appropriate explanations. Offer practical advice and best practices.
+  {% else %} You may delve into technical details and use professional terminology. Focus on advanced use cases and optimization solutions.
+  {% endif %}
+  ```
+  </Accordion>
+
+  默认情况下，你需要将所有可能的指令发送给模型，描述条件，然后让模型自行决定遵循哪些——这种方法通常不可靠。
+
+  使用 Jinja2 模板，只有符合定义条件的指令会被发送，确保行为可预测并减少 Token 使用。
+
+  ## 启用命令执行（Agent 模式）
+
+  开启 **Agent 模式**，让模型使用内置的 bash 工具在沙盒运行时中执行命令。
+
+  这是所有高级功能的基础：当模型调用其他 Dify 工具、执行文件操作、运行脚本或访问外部资源时，它都是通过调用 bash 工具来执行底层命令。
+
+  对于不需要这些功能的简单快速任务，可以关闭 **Agent 模式** 以获得更快的响应和更低的 Token 成本。
+
+  **调整最大迭代次数**
+
+  **高级设置**中的**最大迭代次数**限制了模型对单次请求可以重复其推理-行动循环（思考、调用工具、处理结果）的次数。
+
+  对于需要多次工具调用的复杂多步任务，增加此值。较高的值会增加延迟和 Token 成本。
+
+  ## 启用对话记忆（仅对话流）
+
+  <Note>
+      记忆是节点特定的，不会在不同对话之间持久保存。
+  </Note>
+
+  启用**记忆**以保留最近的对话，使 LLM 能够连贯地回答后续问题。
+
+  会自动添加一条用户消息来传递当前用户查询和任何上传的文件。这是因为记忆通过存储最近的用户-助手交互来工作。如果用户查询没有通过用户消息传递，用户侧将没有内容可记录。
+
+  **窗口大小**控制保留多少条最近的交互。例如，`5` 保留最近 5 轮用户查询和 LLM 响应。
+
+  ## 添加上下文
+
+  在**高级设置** > **上下文**中，为 LLM 提供额外的参考信息以减少幻觉并提高响应准确性。
+
+  典型模式：从知识检索节点[传递检索结果](/zh/use-dify/nodes/knowledge-retrieval#与-llm-节点搭配使用)，实现检索增强生成（RAG）。
+
+  ## 处理多模态输入
+
+  要让支持多模态的模型处理图片、音频、视频或文档，可选择以下任一方式：
+
+   - 在提示词中直接引用文件变量。
+
+   - 在**高级设置**中启用 **Vision** 并在那里选择文件变量。
+
+        **分辨率**仅控制图片处理的细节级别：
+
+        - **高**：对复杂图片更准确，但消耗更多 Token
+
+        - **低**：对简单图片处理更快，消耗更少 Token
+
+  对于不具备相关多模态能力的模型，使用**[上传文件至沙盒](/zh/use-dify/nodes/upload-file-to-sandbox)**节点将文件上传到沙盒。Agent 节点随后可以执行命令来安装工具和运行脚本处理这些文件——即使是模型原生不支持的文件类型。
+
+  ## 将思考过程和工具调用与响应分离
+
+  要获得不包含模型思考过程和工具调用的干净响应，请使用 `generations.content` 输出变量。
+
+  `generations` 变量本身包含所有中间步骤和最终响应。
+
+  ## 强制结构化输出
+
+  在指令中描述输出格式可能产生不一致的结果。要获得更可靠的格式化，启用结构化输出以强制执行定义好的 JSON schema。
+
+  <Info>
+    对于不支持原生 JSON 的模型，Dify 会将 schema 包含在提示词中，但不保证严格遵循。
+  </Info>
+
+  <Frame caption=""><img src="/images/structured_output.png" alt="结构化输出"/></Frame>
+
+  1. 在**输出变量**旁，开启**结构化**开关。一个 `structured_output` 变量将出现在输出变量列表末尾。
+
+  2. 点击**配置**，使用以下方法之一定义输出 schema。
+
+      - **可视化编辑器**：使用无代码界面定义简单结构。对应的 JSON schema 会自动生成。
+
+      - **JSON Schema**：直接编写 schema，适用于包含嵌套对象、数组或验证规则的复杂结构。
+
+      - **AI 生成**：用自然语言描述需求，让 AI 生成 schema。
+
+      - **JSON 导入**：粘贴一个现有的 JSON 对象，自动生成对应的 schema。
+
+  <Tip>
+    使用文件类型的结构化输出变量从沙盒中提取产物，使其可供终端用户使用。详见[向终端用户输出产物](/zh/use-dify/build/file-system#向终端用户输出产物)。
+  </Tip>
+
+  ## 错误处理
+
+  为临时问题（如网络波动）配置自动重试，并设置备用错误处理策略以在错误持续时保持工作流运行。
+
+  <Frame caption=""><img src="/images/node_handle_errors.png" alt="错误处理"/></Frame>
+
   </Tab>
-  
-  <Tab title="推理与行动 (ReAct)">
-    使用结构化提示词来引导大型语言模型通过明确的推理步骤。遵循**思维 → 行动 → 观察**循环进行透明的决策制定。
-    
-    适用于可能没有原生函数调用能力的模型，或者当你需要明确推理轨迹时。
+  <Tab title="经典运行时">
+
+  在经典运行时中，Agent 节点赋予 LLM 对工具的自主控制能力，使其能够迭代决定使用哪些工具以及何时使用。Agent 不是预先规划每一步，而是动态推理问题，根据需要调用工具来完成复杂任务。
+
+  <Frame caption="Agent 节点配置界面">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/1f4d803ff68394d507abd3bcc13ba0f3.png" alt="Agent node interface" />
+  </Frame>
+
+  ## Agent 策略
+
+  Agent 策略定义了 Agent 如何思考和行动。选择最适合你的模型能力和任务需求的方法。
+
+  <Frame caption="可用的 Agent 策略选项">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/f14082c44462ac03955e41d66ffd4cca.png" alt="Agent strategies selection" />
+  </Frame>
+
+  <Tabs>
+    <Tab title="函数调用（Function Calling）">
+      使用 LLM 的原生函数调用能力，通过 tools 参数直接传递工具定义。LLM 使用其内置机制决定何时以及如何调用工具。
+
+      最适合 GPT-4、Claude 3.5 等具有强大函数调用支持的模型。
+    </Tab>
+
+    <Tab title="ReAct（推理 + 行动）">
+      使用结构化提示词引导 LLM 通过明确的推理步骤。遵循**思考 → 行动 → 观察**循环进行透明的决策。
+
+      适用于可能没有原生函数调用能力的模型，或者当你需要明确的推理轨迹时。
+    </Tab>
+  </Tabs>
+
+  <Info>
+    从**市场 → Agent 策略**安装其他策略，或向[社区仓库](https://github.com/langgenius/dify-plugins)贡献自定义策略。
+  </Info>
+
+  <Frame caption="函数调用策略配置">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/10505cd7c6f0b3ba10161abb88d9e36b.png" alt="Function calling setup" />
+  </Frame>
+
+  ## 配置
+
+  ### 模型选择
+
+  选择支持你所选 Agent 策略的 LLM。更强大的模型能更好地处理复杂推理，但每次迭代成本更高。如果使用函数调用策略，请确保你的模型支持函数调用。
+
+  ### 工具配置
+
+  配置 Agent 可以访问的工具。每个工具需要：
+
+  **授权** - 在工作区中配置的外部服务的 API 密钥和凭据
+
+  **描述** - 清楚说明工具的作用以及何时使用（这指导 Agent 的决策）
+
+  **参数** - 工具接受的必需和可选输入，带有适当的验证
+
+  ### 指令和上下文
+
+  使用自然语言指令定义 Agent 的角色、目标和上下文。使用 Jinja2 语法引用上游工作流节点的变量。
+
+  **查询**指定 Agent 应处理的用户输入或任务。这可以是来自先前工作流节点的动态内容。
+
+  <Frame caption="Agent 配置参数">
+    <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/54c8e4f0eaa7379bd8c1b5ac6305b326.png" alt="Agent configuration interface" />
+  </Frame>
+
+  ### 执行控制
+
+  **最大迭代次数**设置安全限制以防止无限循环。根据任务复杂性进行配置——简单任务需要 3-5 次迭代，而复杂研究可能需要 10-15 次。
+
+  **记忆**控制 Agent 使用 TokenBufferMemory 记住多少条先前消息。更大的记忆窗口提供更多上下文，但会增加 Token 成本。这使得对话连续性成为可能，用户可以引用之前的操作。
+
+  ### 工具参数自动生成
+
+  工具可以将参数配置为**自动生成**或**手动输入**。自动生成的参数（`auto: false`）由 Agent 自动填充，而手动输入参数需要明确的值，这些值成为工具永久配置的一部分。
+
+  <video controls src="https://assets-docs.dify.ai/2025/04/1801b96763eb8f22f1e2158645897885.mp4" width="100%" />
+
+  ## 输出变量
+
+  Agent 节点提供全面的输出，包括：
+
+  **最终答案** - Agent 对查询的最终响应
+
+  **工具输出** - 执行期间每次工具调用的结果
+
+  **推理轨迹** - 逐步决策过程（使用 ReAct 策略时特别详细），在 JSON 输出中可用
+
+  **迭代计数** - 使用的推理循环次数
+
+  **成功状态** - Agent 是否成功完成任务
+
+  **Agent 日志** - 带有元数据的结构化日志事件，用于调试和监控工具调用
+
+  ## 用例
+
+  **研究与分析** - Agent 可以自主搜索多个来源，综合信息，并提供全面的答案。
+
+  **故障排除** - 诊断任务，Agent 需要收集信息、测试假设，并根据发现调整方法。
+
+  **多步数据处理** - 复杂的工作流，其中下一个操作取决于中间结果。
+
+  **动态 API 集成** - API 调用序列取决于无法预先确定的响应和条件的场景。
+
+  ## 最佳实践
+
+  **清晰的工具描述**帮助 Agent 了解何时以及如何有效使用每个工具。
+
+  **适当的迭代限制**防止成本失控，同时为复杂任务提供足够的灵活性。
+
+  **详细的指令**提供关于 Agent 角色、目标以及任何约束或偏好的上下文。
+
+  **记忆管理**根据你的用例需求平衡上下文保留与 Token 效率。
+
   </Tab>
 </Tabs>
-
-<Info>
-  从**应用市场 → 智能代理策略**安装其他策略，或向[社区仓库](https://github.com/langgenius/dify-plugins)贡献自定义策略。
-</Info>
-
-<Frame caption="函数调用策略配置">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/10505cd7c6f0b3ba10161abb88d9e36b.png" alt="Function calling setup" />
-</Frame>
-
-## 配置
-
-### 模型选择
-
-选择支持你所选智能代理策略的大型语言模型。更强大的模型能更好地处理复杂推理，但每次迭代成本更高。如果使用函数调用策略，请确保你的模型支持函数调用。
-
-### 工具配置
-
-配置你的智能代理可以访问的工具。每个工具需要：
-
-**授权** - 在工作空间中配置的外部服务的 API 密钥和凭据
-
-**描述** - 清楚说明工具的作用以及何时使用它（这指导智能代理的决策制定）
-
-**参数** - 工具接受的必需和可选输入，带有适当的验证
-
-### 指令和上下文
-
-使用自然语言指令定义智能代理的角色、目标和上下文。使用 Jinja2 语法引用上游工作流节点的变量。
-
-**查询**指定智能代理应该处理的用户输入或任务。这可以是来自先前工作流节点的动态内容。
-
-<Frame caption="智能代理配置参数">
-  <img src="https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/54c8e4f0eaa7379bd8c1b5ac6305b326.png" alt="Agent configuration interface" />
-</Frame>
-
-### 执行控制
-
-**最大迭代次数**设置安全限制以防止无限循环。根据任务复杂性进行配置 - 简单任务需要 3-5 次迭代，而复杂研究可能需要 10-15 次。
-
-**记忆**控制智能代理使用 TokenBufferMemory 记提供更多上下文，但会增加标记成本。这使得对话连续性成为可能，用户可以引用以前的行动。
-
-### 工具参数自动生成
-
-工具可以将参数配置为**自动生成**或**手动输入**。自动生成的参数（`auto: false`）由智能代理自动填充，而手动输入参数需要明确的值，这些值成为工具永久配置的一部分。
-
-<video controls src="https://assets-docs.dify.ai/2025/04/1801b96763eb8f22f1e2158645897885.mp4" width="100%" />
-
-## 输出变量
-
-智能代理节点提供全面的输出，包括：
-
-**最终答案** - 智能代理对查询的最终响应
-
-**工具输出** - 执行期间每次工具调用的结果
-
-**推理轨迹** - 逐步决策过程（推理与行动策略特别详细）在 JSON 输出中可用
-
-**迭代计数** - 使用的推理循环次数
-
-**成功状态** - 智能代理是否成功完成任务
-
-**智能代理日志** - 带有元数据的结构化日志事件，用于调试和监控工具调用
-
-## 用例
-
-**研究与分析** - 智能代理可以自主搜索多个来源，综合信息，并提供全面的答案。
-
-**故障排除** - 诊断任务，智能代理需要收集信息、测试假设，并根据发现调整其方法。
-
-**多步数据处理** - 复杂的工作流，其中下一个行动取决于中间结果。
-
-**动态 API 集成** - API 调用序列取决于无法预先确定的响应和条件的场景。
-
-## 最佳实践
-
-**清晰的工具描述**帮助智能代理了解何时以及如何有效使用每个工具。
-
-**适当的迭代限制**防止失控成本，同时为复杂任务提供足够的灵活性。
-
-**详细的指令**提供关于智能代理角色、目标以及任何约束或偏好的上下文。
-
-**记忆管理**根据你的用例要求平衡上下文保留与标记效率。
