@@ -202,7 +202,7 @@
             "tags": ["Workflow Execution"],
             "parameters": [
                 { "name": "keyword", "in": "query", "description": "Keyword to search.", "schema": { "type": "string" } },
-                { "name": "status", "in": "query", "description": "Filter by status.", "schema": { "type": "string", "enum": ["succeeded", "failed", "stopped", "running"] } },
+                { "name": "status", "in": "query", "description": "Filter by status.", "schema": { "type": "string", "enum": ["succeeded", "failed", "stopped", "running", "paused"] } },
                 { "name": "page", "in": "query", "description": "Current page.", "schema": { "type": "integer", "default": 1 } },
                 { "name": "limit", "in": "query", "description": "Number of items per page.", "schema": { "type": "integer", "default": 20 } }
             ],
@@ -319,7 +319,7 @@
         "type": "object",
         "required": ["event"],
         "properties": {
-          "event": { "type": "string", "enum": ["workflow_started", "node_started", "text_chunk", "node_finished", "workflow_finished", "tts_message", "tts_message_end", "ping"] }
+          "event": { "type": "string", "enum": ["workflow_started", "node_started", "text_chunk", "node_finished", "workflow_finished", "workflow_paused", "tts_message", "tts_message_end", "ping"] }
         },
         "discriminator": {
           "propertyName": "event",
@@ -329,6 +329,7 @@
             "text_chunk": "#/components/schemas/StreamEventWfTextChunk",
             "node_finished": "#/components/schemas/StreamEventWfNodeFinished",
             "workflow_finished": "#/components/schemas/StreamEventWfWorkflowFinished",
+            "workflow_paused": "#/components/schemas/StreamEventWfWorkflowPaused",
             "tts_message": "#/components/schemas/StreamEventWfTtsMessage",
             "tts_message_end": "#/components/schemas/StreamEventWfTtsMessageEnd",
             "ping": "#/components/schemas/StreamEventWfPing"
@@ -382,8 +383,27 @@
           { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowFinishedData" } } } ]
       },
       "WorkflowFinishedData": {
-        "type": "object", "required": ["id", "workflow_id", "status", "created_at", "finished_at"],
-        "properties": { "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true }, "error": { "type": "string", "nullable": true }, "elapsed_time": { "type": "number", "format": "float", "nullable": true }, "total_tokens": { "type": "integer", "nullable": true }, "total_steps": { "type": "integer", "default": 0 }, "created_at": { "type": "integer", "format": "int64" }, "finished_at": { "type": "integer", "format": "int64" } }
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at"],
+        "properties": { "id": { "type": "string", "format": "uuid" }, "workflow_id": { "type": "string", "format": "uuid" }, "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped", "paused"] }, "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Output content. Empty object when `status` is `paused`." }, "error": { "type": "string", "nullable": true }, "elapsed_time": { "type": "number", "format": "float", "nullable": true }, "total_tokens": { "type": "integer", "nullable": true }, "total_steps": { "type": "integer", "default": 0 }, "created_at": { "type": "integer", "format": "int64" }, "finished_at": { "type": "integer", "format": "int64", "nullable": true, "description": "Null when workflow is paused." } }
+      },
+      "StreamEventWfWorkflowPaused": {
+        "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
+          { "type": "object", "required": ["data"], "properties": { "data": { "$ref": "#/components/schemas/WorkflowPausedData" } } } ]
+      },
+      "WorkflowPausedData": {
+        "type": "object", "required": ["id", "workflow_id", "status", "created_at"],
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "workflow_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "enum": ["paused"] },
+          "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "Empty object when paused." },
+          "elapsed_time": { "type": "number", "format": "float", "nullable": true },
+          "total_tokens": { "type": "integer", "nullable": true },
+          "total_steps": { "type": "integer", "default": 0 },
+          "created_at": { "type": "integer", "format": "int64" },
+          "paused_nodes": { "type": "array", "items": { "type": "string" }, "description": "List of node IDs that are paused." },
+          "reasons": { "type": "array", "items": { "type": "object", "additionalProperties": true }, "description": "Reasons for the pause." }
+        }
       },
       "StreamEventWfTtsMessage": {
         "allOf": [ { "$ref": "#/components/schemas/ChunkWorkflowEvent" }, { "$ref": "#/components/schemas/StreamEventBaseWf" },
@@ -403,7 +423,7 @@
         "properties": {
             "id": { "type": "string", "format": "uuid" },
             "workflow_id": { "type": "string", "format": "uuid" },
-            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped", "paused"] },
             "inputs": { "type": "string", "description": "JSON string of input content." },
             "outputs": { "type": "object", "additionalProperties": true, "nullable": true, "description": "JSON object of output content." },
             "error": { "type": "string", "nullable": true },
@@ -444,7 +464,7 @@
         "properties": {
             "id": { "type": "string", "format": "uuid" },
             "version": { "type": "string" },
-            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped"] },
+            "status": { "type": "string", "enum": ["running", "succeeded", "failed", "stopped", "paused"] },
             "error": { "type": "string", "nullable": true },
             "elapsed_time": { "type": "number", "format": "float" },
             "total_tokens": { "type": "integer" },
