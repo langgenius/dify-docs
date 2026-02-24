@@ -1,0 +1,402 @@
+---
+title: 在 Render 上部署
+---
+
+使用 `render.yaml` Blueprint 将 Dify 部署到 [Render](https://render.com)。本指南将引导您在 Render 云平台上部署 Dify 的核心服务。
+
+## 前提条件
+
+- 一个 [Render 账户](https://dashboard.render.com/register)
+- 一个 GitHub 账户（用于 fork Dify 仓库）
+
+## 架构概述
+
+Render 上的 Dify 包含以下服务：
+
+| 服务 | 类型 | 描述 |
+|------|------|------|
+| `dify-api` | Web 服务 | 后端 API 服务器（Python/Flask） |
+| `dify-worker` | 后台 Worker | 用于异步任务的 Celery worker |
+| `dify-web` | Web 服务 | 前端应用（Next.js） |
+| `dify-db` | PostgreSQL | 主数据库 |
+| `dify-redis` | Redis | 缓存和消息代理 |
+
+> **注意：** 此基础部署不包含 sandbox 服务和 SSRF 代理。如需在生产环境中使用代码执行功能，需要额外配置。
+
+## 快速部署
+
+### 方式一：一键部署
+
+点击下方按钮将 Dify 部署到 Render：
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/langgenius/dify)
+
+### 方式二：手动 Blueprint 设置
+
+1. 将 [Dify 仓库](https://github.com/langgenius/dify) fork 到您的 GitHub 账户
+
+2. 在 fork 的仓库根目录创建 `render.yaml` 文件：
+
+```yaml
+services:
+  # Dify API 服务
+  - type: web
+    name: dify-api
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-api:latest
+    plan: standard
+    envVars:
+      - key: MODE
+        value: api
+      - key: SECRET_KEY
+        generateValue: true
+      - key: INIT_PASSWORD
+        generateValue: true
+      - key: CONSOLE_WEB_URL
+        fromService:
+          name: dify-web
+          type: web
+          property: host
+      - key: SERVICE_API_URL
+        fromService:
+          name: dify-api
+          type: web
+          property: host
+      - key: APP_WEB_URL
+        fromService:
+          name: dify-web
+          type: web
+          property: host
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: dify-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: dify-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: dify-redis
+          type: redis
+          property: password
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: dify-redis
+          type: redis
+          property: connectionString
+      - key: STORAGE_TYPE
+        value: s3
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: PGVECTOR_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: PGVECTOR_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: PGVECTOR_USER
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: PGVECTOR_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: PGVECTOR_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+    healthCheckPath: /health
+    disk:
+      name: dify-storage
+      mountPath: /app/api/storage
+      sizeGB: 10
+
+  # Dify Worker 服务
+  - type: worker
+    name: dify-worker
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-api:latest
+    plan: standard
+    envVars:
+      - key: MODE
+        value: worker
+      - key: SECRET_KEY
+        fromService:
+          name: dify-api
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: dify-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: dify-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: dify-redis
+          type: redis
+          property: password
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: dify-redis
+          type: redis
+          property: connectionString
+      - key: STORAGE_TYPE
+        value: s3
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: PGVECTOR_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: PGVECTOR_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: PGVECTOR_USER
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: PGVECTOR_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: PGVECTOR_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+    disk:
+      name: dify-worker-storage
+      mountPath: /app/api/storage
+      sizeGB: 10
+
+  # Dify Web 前端
+  - type: web
+    name: dify-web
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-web:latest
+    plan: starter
+    envVars:
+      - key: CONSOLE_API_URL
+        fromService:
+          name: dify-api
+          type: web
+          property: host
+      - key: APP_API_URL
+        fromService:
+          name: dify-api
+          type: web
+          property: host
+
+  # Redis 缓存
+  - type: redis
+    name: dify-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+databases:
+  # PostgreSQL 数据库（支持 pgvector）
+  - name: dify-db
+    plan: starter
+    postgresMajorVersion: 15
+    ipAllowList: []
+```
+
+3. 进入 [Render 控制台](https://dashboard.render.com)
+
+4. 点击 **New** → **Blueprint**
+
+5. 连接您的 GitHub 账户并选择 fork 的 Dify 仓库
+
+6. Render 将自动检测 `render.yaml` 并创建所有服务
+
+## 部署后设置
+
+### 1. 启用 pgvector 扩展
+
+部署完成后，连接到 PostgreSQL 数据库并启用 pgvector 扩展：
+
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
+```
+
+您可以通过 Render 控制台执行此操作：
+1. 进入您的 `dify-db` 数据库
+2. 点击 **Shell** 标签
+3. 运行上述 SQL 命令
+
+### 2. 访问 Dify
+
+所有服务运行后：
+
+1. 在 Render 控制台中找到您的 `dify-web` 服务 URL
+2. 访问 `https://your-dify-web-url.onrender.com/install`
+3. 使用环境变量中的 `INIT_PASSWORD` 设置管理员账户
+
+### 3. 配置存储（推荐）
+
+对于生产部署，建议配置 S3 兼容存储：
+
+1. 在 Render 控制台中进入您的 `dify-api` 服务
+2. 添加以下环境变量：
+
+```
+S3_ENDPOINT=your-s3-endpoint
+S3_BUCKET_NAME=your-bucket-name
+S3_ACCESS_KEY=your-access-key
+S3_SECRET_KEY=your-secret-key
+S3_REGION=your-region
+```
+
+## 环境变量
+
+您可能需要自定义的关键环境变量：
+
+| 变量 | 描述 | 默认值 |
+|------|------|--------|
+| `SECRET_KEY` | 应用密钥 | 自动生成 |
+| `INIT_PASSWORD` | 初始管理员密码 | 自动生成 |
+| `LOG_LEVEL` | 日志级别 | `INFO` |
+| `VECTOR_STORE` | 向量数据库类型 | `pgvector` |
+| `STORAGE_TYPE` | 文件存储类型 | `local` |
+
+完整的环境变量列表，请参阅[环境变量文档](/zh/self-host/configuration/environments)。
+
+## 扩展
+
+### 水平扩展
+
+处理更多流量：
+
+1. 在 Render 控制台中进入您的服务
+2. 点击 **Settings** → **Instance Type**
+3. 升级到更高的计划或增加实例数量
+
+### 数据库扩展
+
+处理更大的数据集：
+
+1. 进入您的 `dify-db` 数据库
+2. 点击 **Settings** → **Plan**
+3. 升级到更高的层级
+
+## 故障排除
+
+### 服务无法启动
+
+1. 在 Render 控制台中检查每个服务的 **Logs** 标签
+2. 验证所有环境变量是否正确设置
+3. 确保数据库连接已建立
+
+### 数据库连接问题
+
+1. 验证数据库处于 `Running` 状态
+2. 检查 pgvector 扩展是否已启用
+3. 如果使用私有网络，确认 IP 允许列表设置
+
+### 存储问题
+
+如果文件上传失败：
+1. 验证磁盘是否正确挂载
+2. 检查存储权限
+3. 考虑在生产环境中切换到 S3 存储
+
+## 成本估算
+
+Render 上的预估月度成本（截至 2024 年）：
+
+| 服务 | 计划 | 预估成本 |
+|------|------|----------|
+| dify-api | Standard | $25/月 |
+| dify-worker | Standard | $25/月 |
+| dify-web | Starter | $7/月 |
+| dify-redis | Starter | $10/月 |
+| dify-db | Starter | $7/月 |
+| **总计** | | **约 $74/月** |
+
+> 成本可能因使用量、地区和计划变更而异。请查看 [Render 定价页面](https://render.com/pricing) 了解当前费率。
+
+## 升级 Dify
+
+升级到新版本：
+
+1. 更新 `render.yaml` 中的镜像标签：
+
+```yaml
+image:
+  url: docker.io/langgenius/dify-api:1.13.0  # 指定版本
+```
+
+2. 提交并推送更改
+3. Render 将自动使用新版本重新部署
+
+或者，从 Render 控制台触发手动部署。
+
+## 限制
+
+- **Sandbox 服务**：此基础设置不包含代码执行沙箱
+- **SSRF 代理**：未包含；外部 API 调用可能具有不同的安全特性
+- **插件守护进程**：需要额外配置才能支持插件
+
+如需完整功能部署，请考虑在专用服务器上使用 Docker Compose 或 Kubernetes。
+
+## 资源
+
+- [Render 文档](https://render.com/docs)
+- [Dify 文档](https://docs.dify.ai)
+- [Dify GitHub 仓库](https://github.com/langgenius/dify)
+- [Render Blueprints 指南](https://render.com/docs/infrastructure-as-code)
