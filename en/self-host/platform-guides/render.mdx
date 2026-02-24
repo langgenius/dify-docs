@@ -2,44 +2,26 @@
 title: Deploy on Render
 ---
 
-Deploy Dify to [Render](https://render.com) using Infrastructure as Code with a `render.yaml` Blueprint. This guide walks you through deploying Dify's core services on Render's cloud platform.
+Deploy Dify to [Render](https://render.com) using a Blueprint. Render is a cloud platform that makes it easy to deploy and scale applications.
 
 ## Prerequisites
+
+> Before installing Dify, make sure your machine meets the following minimum system requirements:
+>
+> * CPU >= 2 Core
+> * RAM >= 4 GiB
 
 - A [Render account](https://dashboard.render.com/register)
 - A GitHub account (to fork the Dify repository)
 
-## Architecture Overview
-
-Dify on Render consists of the following services:
-
-| Service | Type | Description |
-|---------|------|-------------|
-| `dify-api` | Web Service | Backend API server (Python/Flask) |
-| `dify-worker` | Background Worker | Celery worker for async tasks |
-| `dify-web` | Web Service | Frontend application (Next.js) |
-| `dify-db` | PostgreSQL | Primary database |
-| `dify-redis` | Redis | Cache and message broker |
-
-> **Note:** The sandbox service and SSRF proxy are not included in this basic deployment. For production use with code execution features, additional configuration is required.
-
-## Quick Deploy
-
-### Option 1: One-Click Deploy
-
-Click the button below to deploy Dify to Render:
-
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/langgenius/dify)
-
-### Option 2: Manual Blueprint Setup
+## Deployment
 
 1. Fork the [Dify repository](https://github.com/langgenius/dify) to your GitHub account
 
-2. Create a `render.yaml` file in the root of your forked repository:
+2. Create a `render.yaml` file in the root of your forked repository with the following content:
 
 ```yaml
 services:
-  # Dify API Service
   - type: web
     name: dify-api
     runtime: image
@@ -51,23 +33,6 @@ services:
         value: api
       - key: SECRET_KEY
         generateValue: true
-      - key: INIT_PASSWORD
-        generateValue: true
-      - key: CONSOLE_WEB_URL
-        fromService:
-          name: dify-web
-          type: web
-          property: host
-      - key: SERVICE_API_URL
-        fromService:
-          name: dify-api
-          type: web
-          property: host
-      - key: APP_WEB_URL
-        fromService:
-          name: dify-web
-          type: web
-          property: host
       - key: DB_USERNAME
         fromDatabase:
           name: dify-db
@@ -108,8 +73,6 @@ services:
           name: dify-redis
           type: redis
           property: connectionString
-      - key: STORAGE_TYPE
-        value: s3
       - key: VECTOR_STORE
         value: pgvector
       - key: PGVECTOR_HOST
@@ -138,7 +101,6 @@ services:
       mountPath: /app/api/storage
       sizeGB: 10
 
-  # Dify Worker Service
   - type: worker
     name: dify-worker
     runtime: image
@@ -193,36 +155,7 @@ services:
           name: dify-redis
           type: redis
           property: connectionString
-      - key: STORAGE_TYPE
-        value: s3
-      - key: VECTOR_STORE
-        value: pgvector
-      - key: PGVECTOR_HOST
-        fromDatabase:
-          name: dify-db
-          property: host
-      - key: PGVECTOR_PORT
-        fromDatabase:
-          name: dify-db
-          property: port
-      - key: PGVECTOR_USER
-        fromDatabase:
-          name: dify-db
-          property: user
-      - key: PGVECTOR_PASSWORD
-        fromDatabase:
-          name: dify-db
-          property: password
-      - key: PGVECTOR_DATABASE
-        fromDatabase:
-          name: dify-db
-          property: database
-    disk:
-      name: dify-worker-storage
-      mountPath: /app/api/storage
-      sizeGB: 10
 
-  # Dify Web Frontend
   - type: web
     name: dify-web
     runtime: image
@@ -241,162 +174,57 @@ services:
           type: web
           property: host
 
-  # Redis Cache
   - type: redis
     name: dify-redis
     plan: starter
     maxmemoryPolicy: allkeys-lru
-    ipAllowList: []
 
 databases:
-  # PostgreSQL Database with pgvector
   - name: dify-db
     plan: starter
     postgresMajorVersion: 15
-    ipAllowList: []
 ```
 
-3. Go to the [Render Dashboard](https://dashboard.render.com)
+3. Go to the [Render Dashboard](https://dashboard.render.com) and click **New** → **Blueprint**
 
-4. Click **New** → **Blueprint**
+4. Connect your GitHub account and select your forked Dify repository
 
-5. Connect your GitHub account and select your forked Dify repository
-
-6. Render will detect the `render.yaml` and create all services automatically
+5. Render will detect the `render.yaml` and create all services automatically
 
 ## Post-Deployment Setup
 
-### 1. Enable pgvector Extension
+After deployment, enable the pgvector extension in your PostgreSQL database:
 
-After deployment, connect to your PostgreSQL database and enable the pgvector extension:
+1. Go to your `dify-db` database in the Render Dashboard
+2. Click the **Shell** tab
+3. Run: `CREATE EXTENSION IF NOT EXISTS vector;`
 
-```sql
-CREATE EXTENSION IF NOT EXISTS vector;
+### Access Dify
+
+Once all services are running, find your `dify-web` service URL in the Render Dashboard:
+
+```bash
+https://your-dify-web-url.onrender.com/install
 ```
 
-You can do this via the Render Dashboard:
-1. Go to your `dify-db` database
-2. Click **Shell** tab
-3. Run the SQL command above
+Set up your admin account to complete the initialization.
 
-### 2. Access Dify
+## Upgrading
 
-Once all services are running:
-
-1. Find your `dify-web` service URL in the Render Dashboard
-2. Navigate to `https://your-dify-web-url.onrender.com/install`
-3. Set up your admin account using the `INIT_PASSWORD` from your environment variables
-
-### 3. Configure Storage (Recommended)
-
-For production deployments, configure S3-compatible storage:
-
-1. Go to your `dify-api` service in the Render Dashboard
-2. Add the following environment variables:
-
-```
-S3_ENDPOINT=your-s3-endpoint
-S3_BUCKET_NAME=your-bucket-name
-S3_ACCESS_KEY=your-access-key
-S3_SECRET_KEY=your-secret-key
-S3_REGION=your-region
-```
-
-## Environment Variables
-
-Key environment variables you may want to customize:
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Application secret key | Auto-generated |
-| `INIT_PASSWORD` | Initial admin password | Auto-generated |
-| `LOG_LEVEL` | Logging level | `INFO` |
-| `VECTOR_STORE` | Vector database type | `pgvector` |
-| `STORAGE_TYPE` | File storage type | `local` |
-
-For a complete list of environment variables, see the [Environment Variables documentation](/en/self-host/configuration/environments).
-
-## Scaling
-
-### Horizontal Scaling
-
-To handle more traffic:
-
-1. Go to your service in the Render Dashboard
-2. Click **Settings** → **Instance Type**
-3. Upgrade to a higher plan or increase instance count
-
-### Database Scaling
-
-For larger datasets:
-
-1. Go to your `dify-db` database
-2. Click **Settings** → **Plan**
-3. Upgrade to a higher tier
-
-## Troubleshooting
-
-### Services Not Starting
-
-1. Check the **Logs** tab for each service in the Render Dashboard
-2. Verify all environment variables are correctly set
-3. Ensure database connections are established
-
-### Database Connection Issues
-
-1. Verify the database is in a `Running` state
-2. Check that the pgvector extension is enabled
-3. Confirm IP allow list settings if using private networking
-
-### Storage Issues
-
-If file uploads fail:
-1. Verify disk is properly mounted
-2. Check storage permissions
-3. Consider switching to S3 storage for production
-
-## Cost Estimation
-
-Estimated monthly costs on Render (as of 2024):
-
-| Service | Plan | Estimated Cost |
-|---------|------|----------------|
-| dify-api | Standard | $25/month |
-| dify-worker | Standard | $25/month |
-| dify-web | Starter | $7/month |
-| dify-redis | Starter | $10/month |
-| dify-db | Starter | $7/month |
-| **Total** | | **~$74/month** |
-
-> Costs may vary based on usage, region, and plan changes. Check [Render's pricing page](https://render.com/pricing) for current rates.
-
-## Upgrading Dify
-
-To upgrade to a new version:
-
-1. Update the image tags in your `render.yaml`:
+To upgrade to a new version, update the image tags in your `render.yaml`:
 
 ```yaml
 image:
-  url: docker.io/langgenius/dify-api:1.13.0  # Specify version
+  url: docker.io/langgenius/dify-api:1.13.0
 ```
 
-2. Commit and push the changes
-3. Render will automatically redeploy with the new version
-
-Alternatively, trigger a manual deploy from the Render Dashboard.
+Commit and push the changes. Render will automatically redeploy with the new version.
 
 ## Limitations
 
-- **Sandbox Service**: Code execution sandbox is not included in this basic setup
-- **SSRF Proxy**: Not included; external API calls may have different security characteristics
-- **Plugin Daemon**: Requires additional configuration for plugin support
+This basic deployment does not include:
+- Sandbox service (code execution)
+- SSRF proxy
+- Plugin daemon
 
-For a full-featured deployment with all services, consider using Docker Compose on a dedicated server or Kubernetes.
-
-## Resources
-
-- [Render Documentation](https://render.com/docs)
-- [Dify Documentation](https://docs.dify.ai)
-- [Dify GitHub Repository](https://github.com/langgenius/dify)
-- [Render Blueprints Guide](https://render.com/docs/infrastructure-as-code)
+For a full-featured deployment, consider using Docker Compose on a dedicated server.
