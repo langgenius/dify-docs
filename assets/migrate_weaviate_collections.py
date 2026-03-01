@@ -24,11 +24,35 @@ import sys
 import time
 from typing import List, Dict, Any
 
-# Configuration
+# =============================================================================
+# Connection Configuration
+# =============================================================================
+# This script reads Weaviate connection info from environment variables,
+# making it suitable for running inside the Dify Worker container where
+# these variables are already set.
+#
+# If running outside the container (e.g. locally with kubectl port-forward),
+# set the environment variables before running:
+#
+#   export WEAVIATE_ENDPOINT="http://localhost:18080"
+#   export WEAVIATE_GRPC_ENDPOINT="grpc://localhost:50051"
+#   export WEAVIATE_API_KEY="your-api-key"
+#   python migrate_weaviate_collections.py
+#
+# Or override the defaults directly below:
+#
+# WEAVIATE_ENDPOINT format:   http://<host>:<port>   (REST API endpoint)
+# WEAVIATE_GRPC_ENDPOINT format: grpc://<host>:<port>  (gRPC endpoint)
+# WEAVIATE_API_KEY: The API key configured in your Weaviate instance
+# BATCH_SIZE: Number of objects per batch during migration (default: 1000)
+# =============================================================================
 WEAVIATE_ENDPOINT = os.getenv("WEAVIATE_ENDPOINT", "http://weaviate:8080")
 WEAVIATE_GRPC_ENDPOINT = os.getenv("WEAVIATE_GRPC_ENDPOINT", "grpc://weaviate:50051")
 WEAVIATE_API_KEY = os.getenv("WEAVIATE_API_KEY", "WVF5YThaHlkYwhGUSmCRgsX3tD5ngdN8pkih")
 BATCH_SIZE = 1000
+
+# Derived values — parsed from the endpoints above.
+# These are used by the Weaviate Python client (connect_to_local) and REST calls.
 WEAVIATE_HOST = WEAVIATE_ENDPOINT.split("//")[-1].split(":")[0]
 WEAVIATE_PORT = int(WEAVIATE_ENDPOINT.split(":")[-1])
 WEAVIATE_GRPC_PORT = int(WEAVIATE_GRPC_ENDPOINT.split(":")[-1])
