@@ -17,6 +17,7 @@ Note:
 """
 
 import os
+import requests
 import weaviate
 from weaviate.classes.config import Configure, VectorDistances
 import sys
@@ -33,8 +34,31 @@ WEAVIATE_PORT = int(WEAVIATE_ENDPOINT.split(":")[-1])
 WEAVIATE_GRPC_PORT = int(WEAVIATE_GRPC_ENDPOINT.split(":")[-1])
 
 
+def check_properties_need_migration(schema: Dict[str, Any]) -> bool:
+    """
+    Check if collection properties need migration:
+    - document_id or doc_id has uuid type (should be text)
+    - chunk_index has moduleConfig (should not have it)
+    """
+    properties = schema.get("properties", [])
+    for prop in properties:
+        prop_name = prop.get("name", "")
+
+        # Check if document_id or doc_id is uuid type
+        if prop_name in ["document_id", "doc_id"]:
+            if prop.get("dataType") == ["uuid"]:
+                return True
+
+        # Check if chunk_index has moduleConfig
+        if prop_name == "chunk_index":
+            if "moduleConfig" in prop:
+                return True
+
+    return False
+
+
 def identify_old_collections(client: weaviate.WeaviateClient) -> List[str]:
-    """Identify collections that need migration (those without vectorConfig)"""
+    """Identify collections that need migration (those without vectorConfig OR with wrong property types)"""
     collections_to_migrate = []
 
     all_collections = client.collections.list_all()
@@ -48,12 +72,29 @@ def identify_old_collections(client: weaviate.WeaviateClient) -> List[str]:
         collection = client.collections.get(collection_name)
         config = collection.config.get()
 
-        # Check if this collection has the old schema
+        # Check if this collection has the old schema (no vectorConfig)
         if config.vector_config is None:
             collections_to_migrate.append(collection_name)
-            print(f"  - {collection_name}: OLD SCHEMA (needs migration)")
-        else:
-            print(f"  - {collection_name}: NEW SCHEMA (skip)")
+            print(f"  - {collection_name}: OLD SCHEMA - no vectorConfig (needs migration)")
+            continue
+
+        # Also check if properties need migration (uuid -> text conversion)
+        try:
+            response = requests.get(
+                f"{WEAVIATE_ENDPOINT}/v1/schema/{collection_name}",
+                headers={"Authorization": f"Bearer {WEAVIATE_API_KEY}"},
+            )
+
+            if response.status_code == 200:
+                schema = response.json()
+                if check_properties_need_migration(schema):
+                    collections_to_migrate.append(collection_name)
+                    print(f"  - {collection_name}: PROPERTY TYPE MISMATCH (needs migration)")
+                    continue
+        except Exception as e:
+            print(f"  - {collection_name}: Error checking schema: {e}")
+
+        print(f"  - {collection_name}: OK (skip)")
 
     return collections_to_migrate
 
@@ -62,8 +103,6 @@ def get_collection_schema(
     client: weaviate.WeaviateClient, collection_name: str
 ) -> Dict[str, Any]:
     """Get the full schema of a collection via REST API"""
-    import requests
-
     response = requests.get(
         f"http://{WEAVIATE_HOST}:{WEAVIATE_PORT}/v1/schema/{collection_name}",
         headers={"Authorization": f"Bearer {WEAVIATE_API_KEY}"},
@@ -75,12 +114,58 @@ def get_collection_schema(
         raise Exception(f"Failed to get schema: {response.text}")
 
 
+def transform_properties(properties: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Transform properties to match the new schema format:
+    - document_id: uuid -> text, indexFilterable=true, indexSearchable=true, tokenization="word"
+    - doc_id: uuid -> text, indexFilterable=true, indexSearchable=true, tokenization="word"
+    - chunk_index: remove moduleConfig, ensure indexFilterable=true, indexSearchable=false
+    """
+    transformed = []
+
+    for prop in properties:
+        new_prop = prop.copy()
+        prop_name = prop.get("name", "")
+
+        # Convert document_id and doc_id from uuid to text
+        if prop_name in ["document_id", "doc_id"]:
+            if prop.get("dataType") == ["uuid"]:
+                print(f"    Converting {prop_name}: uuid -> text (with text search enabled)")
+                new_prop["dataType"] = ["text"]
+                new_prop["indexFilterable"] = True
+                new_prop["indexRangeFilters"] = False
+                new_prop["indexSearchable"] = True
+                new_prop["tokenization"] = "word"
+
+                # Remove auto-schema description
+                if "description" in new_prop:
+                    del new_prop["description"]
+
+        # Fix chunk_index: remove moduleConfig, ensure proper index settings
+        if prop_name == "chunk_index":
+            if "moduleConfig" in new_prop:
+                print(f"    Removing moduleConfig from {prop_name}")
+                del new_prop["moduleConfig"]
+
+            # Ensure correct index settings
+            new_prop["indexFilterable"] = True
+            new_prop["indexRangeFilters"] = False
+            new_prop["indexSearchable"] = False
+
+        # Remove moduleConfig from any other properties if present
+        elif "moduleConfig" in new_prop:
+            print(f"    Removing moduleConfig from {prop_name}")
+            del new_prop["moduleConfig"]
+
+        transformed.append(new_prop)
+
+    return transformed
+
+
 def create_new_collection(
     client: weaviate.WeaviateClient, old_name: str, schema: Dict[str, Any]
 ) -> str:
     """Create a new collection with updated schema using REST API"""
-    import requests
-
     # Generate new collection name
     new_name = f"{old_name}_migrated"
 
@@ -107,9 +192,10 @@ def create_new_collection(
         "properties": [],
     }
 
-    # Copy properties from old schema
+    # Copy and transform properties from old schema
     if "properties" in schema:
-        new_schema["properties"] = schema["properties"]
+        print("  Transforming properties...")
+        new_schema["properties"] = transform_properties(schema["properties"])
 
     # Create collection via REST API
     response = requests.post(
@@ -125,11 +211,32 @@ def create_new_collection(
     return new_name
 
 
+def transform_property_values(properties: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Transform property values during migration:
+    - Convert UUID objects to strings for document_id and doc_id
+    """
+    from uuid import UUID
+
+    transformed = {}
+
+    for key, value in properties.items():
+        # Convert UUID to string for document_id and doc_id
+        if key in ["document_id", "doc_id"] and value is not None:
+            if isinstance(value, UUID):
+                transformed[key] = str(value)
+            else:
+                transformed[key] = str(value) if value else value
+        else:
+            transformed[key] = value
+
+    return transformed
+
+
 def migrate_collection_data(
     client: weaviate.WeaviateClient, old_collection_name: str, new_collection_name: str
 ) -> int:
     """Migrate data from old collection to new collection using cursor-based pagination"""
-
     old_collection = client.collections.get(old_collection_name)
     new_collection = client.collections.get(new_collection_name)
 
@@ -159,8 +266,8 @@ def migrate_collection_data(
         # Use batch insert for efficiency
         with new_collection.batch.dynamic() as batch:
             for obj in objects:
-                # Prepare properties
-                properties = obj.properties
+                # Prepare and transform properties (uuid -> text conversion)
+                properties = transform_property_values(obj.properties)
 
                 # Add object with vector
                 batch.add_object(
@@ -223,8 +330,6 @@ def replace_old_collection(
     client: weaviate.WeaviateClient, old_collection_name: str, new_collection_name: str
 ):
     """Replace old collection with migrated one by recreating with original name"""
-    import requests
-
     print(f"\nReplacing old collection with migrated data...")
 
     # Step 1: Delete old collection
