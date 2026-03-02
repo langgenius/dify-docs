@@ -1,0 +1,230 @@
+---
+title: Deploy on Render
+---
+
+Deploy Dify to [Render](https://render.com) using a Blueprint. Render is a cloud platform that makes it easy to deploy and scale applications.
+
+## Prerequisites
+
+> Before installing Dify, make sure your machine meets the following minimum system requirements:
+>
+> * CPU >= 2 Core
+> * RAM >= 4 GiB
+
+- A [Render account](https://dashboard.render.com/register)
+- A GitHub account (to fork the Dify repository)
+
+## Deployment
+
+1. Fork the [Dify repository](https://github.com/langgenius/dify) to your GitHub account
+
+2. Create a `render.yaml` file in the root of your forked repository with the following content:
+
+```yaml
+services:
+  - type: web
+    name: dify-api
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-api:latest
+    plan: standard
+    envVars:
+      - key: MODE
+        value: api
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: dify-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: dify-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: dify-redis
+          type: redis
+          property: password
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: dify-redis
+          type: redis
+          property: connectionString
+      - key: VECTOR_STORE
+        value: pgvector
+      - key: PGVECTOR_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: PGVECTOR_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: PGVECTOR_USER
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: PGVECTOR_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: PGVECTOR_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+    healthCheckPath: /health
+    disk:
+      name: dify-storage
+      mountPath: /app/api/storage
+      sizeGB: 10
+
+  - type: worker
+    name: dify-worker
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-api:latest
+    plan: standard
+    envVars:
+      - key: MODE
+        value: worker
+      - key: SECRET_KEY
+        fromService:
+          name: dify-api
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DB_USERNAME
+        fromDatabase:
+          name: dify-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: dify-db
+          property: password
+      - key: DB_HOST
+        fromDatabase:
+          name: dify-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: dify-db
+          property: port
+      - key: DB_DATABASE
+        fromDatabase:
+          name: dify-db
+          property: database
+      - key: REDIS_HOST
+        fromService:
+          name: dify-redis
+          type: redis
+          property: host
+      - key: REDIS_PORT
+        fromService:
+          name: dify-redis
+          type: redis
+          property: port
+      - key: REDIS_PASSWORD
+        fromService:
+          name: dify-redis
+          type: redis
+          property: password
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: dify-redis
+          type: redis
+          property: connectionString
+
+  - type: web
+    name: dify-web
+    runtime: image
+    image:
+      url: docker.io/langgenius/dify-web:latest
+    plan: starter
+    envVars:
+      - key: CONSOLE_API_URL
+        fromService:
+          name: dify-api
+          type: web
+          property: host
+      - key: APP_API_URL
+        fromService:
+          name: dify-api
+          type: web
+          property: host
+
+  - type: redis
+    name: dify-redis
+    plan: starter
+    maxmemoryPolicy: allkeys-lru
+
+databases:
+  - name: dify-db
+    plan: starter
+    postgresMajorVersion: 15
+```
+
+3. Go to the [Render Dashboard](https://dashboard.render.com) and click **New** → **Blueprint**
+
+4. Connect your GitHub account and select your forked Dify repository
+
+5. Render will detect the `render.yaml` and create all services automatically
+
+## Post-Deployment Setup
+
+After deployment, enable the pgvector extension in your PostgreSQL database:
+
+1. Go to your `dify-db` database in the Render Dashboard
+2. Click the **Shell** tab
+3. Run: `CREATE EXTENSION IF NOT EXISTS vector;`
+
+### Access Dify
+
+Once all services are running, find your `dify-web` service URL in the Render Dashboard:
+
+```bash
+https://your-dify-web-url.onrender.com/install
+```
+
+Set up your admin account to complete the initialization.
+
+## Upgrading
+
+To upgrade to a new version, update the image tags in your `render.yaml`:
+
+```yaml
+image:
+  url: docker.io/langgenius/dify-api:1.13.0
+```
+
+Commit and push the changes. Render will automatically redeploy with the new version.
+
+## Limitations
+
+This basic deployment does not include:
+- Sandbox service (code execution)
+- SSRF proxy
+- Plugin daemon
+
+For a full-featured deployment, consider using Docker Compose on a dedicated server.
