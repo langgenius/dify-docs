@@ -30,7 +30,7 @@ sidebarTitle: "第 7 课：增强工作流"
 <Steps>
   <Step title="检查知识检索节点">
     1. 找到迭代内的子流程，仅保留知识检索节点，删除其他所有节点。
-    2. 点击知识检索节点，在右侧面板内，将查询变量设置为当前迭代下的 `{x} item`。
+    2. 点击知识检索节点，在右侧面板内，确保查询变量为当前迭代下的 `{x} item`。
   </Step>
   <Step title="新增 LLM 节点">
     在知识检索节点后，新增一个 LLM 节点，这个节点用来判断知识库能否回答提取出来的问题。
@@ -38,10 +38,15 @@ sidebarTitle: "第 7 课：增强工作流"
     - 上下文选择知识检索中的 `{x} result Array [Object]`。
     - 在 System 内，填入提示词：
 
+      ```plaintext wrap
+      Based on the `Context`, determine if the answer contain enough information to answer the questions. If the information is insufficient, you MUST reply with: "Information not found in knowledge base.
       ```
-      Based on the context, determine if the answer contain enough information to answer the questions. If the information is insufficient, you MUST reply with: "Information not found in knowledge base."
-      ```
+    - 在 User 内，引用对应的变量：
 
+      ```plaintext wrap
+      questions: Iteration/{x} item
+      ```
+      
       <Frame>
         ![填写提示词](/images/difyworkflow101-lesson07-llmsettings.png)
       </Frame>
@@ -82,7 +87,7 @@ sidebarTitle: "第 7 课：增强工作流"
     </Frame>
   </Step>
   <Step title="获取 API Key">
-    当你第一次尝试让邮件助理使用谷歌搜索时，它可能会突然\_卡住\_，提示你需要先进行 API Key 授权配置，就像在上网前输入 Wi-Fi 密码，只有输入正确的密钥，Dify 才能安全地帮你访问外部世界的信息。
+    当你第一次尝试让邮件助理使用谷歌搜索时，它可能会突然*卡住*，提示你需要先进行 API Key 授权配置，就像在上网前输入 Wi-Fi 密码，只有输入正确的密钥，Dify 才能安全地帮你访问外部世界的信息。
 
     <Frame>
       ![谷歌搜索设置](/images/difyworkflow101-lesson07-googlesearchsetup.png)
@@ -103,25 +108,40 @@ sidebarTitle: "第 7 课：增强工作流"
     </Frame>
   </Step>
   <Step title="配置两条路径">
-    由于我们有两条路径（搜索或知识库），我们需要确保它们在循环结束时汇合。
+    现在，我们需要根据不同的路径使用不同的方式来回答问题。
 
-    **搜索回答（LLM 2）**
+    **搜索回答路径**
 
-    将此节点连接到 Google Search 节点，将提示词填入 System 中。
+    在 Google Search 节点后连接一个新的 LLM 节点，用于根据搜索结果回答问题。
+
+    **System**:
 
     ```plaintext wrap
-    You are a Web Research Specialist. Based on the search results `(x) GoogleSearch / (x)text`, concisely answer the user's question `Iteration/{x}item`. Please do not mention the knowledge base in your response.
+    You are a Web Research Specialist. Based on Google Search, concisely answer the user's questions. Please do not mention the knowledge base in your response.
+    ```
+    **User Message**:
+
+    ```plaintext wrap
+    results: GOOGLESEARCH/{x} text
+    questions: Iteration/{x} item
     ```
 
     <Frame>
       ![LLM 2 的提示词](/images/difyworkflow101-lesson07-llm2prompt.png)
     </Frame>
-    **根据知识库回答（LLM 3）**
+    **知识库回答路径**
 
-    在 Else 后新增一个 LLM 节点，将提示词填入 System 中。
+    在 Else 节点后，新增一个 LLM 节点来处理基于知识库的回答。
+
+    **System**:
 
     ```plaintext wrap
-    You are a professional Dify Customer Service Manager. Strictly follow the context to reply to `Iteration/{x}item`.
+    You are a professional Dify Customer Service Manager. Strictly follow the `Context` to reply to questions.
+    ```
+    **User Message**:
+
+    ```plaintext wrap
+    questions: Iteration/{x} item
     ```
 
     <Frame>
@@ -129,9 +149,10 @@ sidebarTitle: "第 7 课：增强工作流"
     </Frame>
   </Step>
   <Step title="汇总信息">
-    在子流程中（迭代框内部），在最后添加一个变量聚合器节点，将它与 LLM 2 和 LLM 3 连接，并将变量赋值设置成 LLM 2 和 LLM 3。
+    1. 在子流程中（迭代框内部），在最后添加一个变量聚合器节点，将它与 LLM 2 和 LLM 3 连接。
+    2. 在变量聚合器面板中，将变量赋值设置为 `LLM 2/{x}text String` 和 `LLM 3/{x}text String`。
 
-    这样做可以将两个可能的答案\_合并\_成一个单一变量，无论流程走的是哪条路径。
+    这样做可以将两个可能的答案合并到一条路径上。
 
     <Frame>
       ![变量聚合器设置](/images/difyworkflow101-lesson07-variableaggregatorsetup.png)
@@ -151,23 +172,28 @@ sidebarTitle: "第 7 课：增强工作流"
 
 <Steps>
   <Step title="配置迭代输出变量">
-    点击迭代节点，在右侧面板的输出变量中，选择我们在子流程内部添加的那个变量聚合器的输出。
+    点击迭代节点，将输出变量设置为 `{x}Variable Aggregator/{x}output String`。
 
     <Frame>
       ![迭代输出](/images/difyworkflow101-lesson07-iterationoutput.png)
     </Frame>
   </Step>
   <Step title="连接总结 LLM">
-    在迭代节点后，连接一个新的 LLM 节点，用来总结所有的输出内容。点击该节点，在右侧面板中输入提示词：
+    在迭代节点后，连接一个新的 LLM 节点，用来总结所有的输出内容。你可以参考下面的提示词。
 
-    ```text
-    You are a professional Customer Service Manager.
-    Please answer each question from `Parameter Extractor /{x} question_list` based on the
-    `Iteration /{x} output`, and organize a clear and complete email reply for
-    `User Input / {x} customer_name`.
-    Do not include content where the knowledge base could not find relevant
-    information.
+    **System**:
+
+    ```plaintext wrap
+    You are a professional Customer Service Manager. Summarize all the answers of the questions, and organize a clear and complete email reply for the customer.
+    Do not include content where the knowledge base could not find relevant information.
     Signature: Anne.
+    ```
+
+    **User Message**:
+
+    ```plaintext wrap
+    questions: Iteration/ {x} output
+    customer: User Input / {x} customer_name
     ```
 
     <Frame>
@@ -175,7 +201,7 @@ sidebarTitle: "第 7 课：增强工作流"
     </Frame>
   </Step>
   <Step title="添加输出节点">
-    在 LLM 节点后，添加输出节点，将输出变量设置为 `LLM 4/{x}text String`。
+    在 LLM 节点后，添加输出节点。将输出变量设置为 `LLM 4/{x}text String`。
 
     <Frame>
       ![输出设置](/images/difyworkflow101-lesson07-outputsetup.png)
@@ -188,6 +214,8 @@ sidebarTitle: "第 7 课：增强工作流"
 <Frame>
   ![最终工作流预览](/images/difyworkflow101-lesson07-finalworkflowpreview.png)
 </Frame>
+
+尝试发送一封包含知识库中肯定没有答案的问题的邮件，看看 AI 是否能够成功使用谷歌搜索找到相关答案。
 
 ## 小挑战
 
