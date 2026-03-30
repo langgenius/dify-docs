@@ -1,27 +1,31 @@
 ---
 name: dify-docs-release-sync
 description: >
-  Use when a Dify release milestone is ready and documentation needs
-  pre-release sync. User provides the milestone name manually. Covers
-  API reference, help documentation, and environment variable changes.
+  Use when preparing documentation updates for a Dify release. User provides
+  two version references to compare (e.g., v1.13.2 and v1.13.3, or v1.13.2
+  and main). Covers API reference, help documentation, environment variable
+  changes, and UI i18n glossary impact.
 ---
 
 # Dify Release Documentation Sync
 
 ## Overview
 
-Analyzes a GitHub milestone's merged PRs to identify documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference (→ `dify-docs-api-reference`), help documentation (→ `dify-docs-guides`), and environment variables (→ `dify-docs-env-vars`).
+Compares code changes between two Dify releases (or a release and current HEAD), identifies documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference (→ `dify-docs-api-reference`), help documentation (→ `dify-docs-guides`), and environment variables (→ `dify-docs-env-vars`).
 
-**Input**: Milestone name, provided by the user exactly as it appears on GitHub (e.g., `v1.14.0`). Never auto-detect — always ask if not provided.
+**Input**: Two version references, provided by the user. Always ask if not provided.
+- Post-release: `v1.13.2` and `v1.13.3` (both tags)
+- Pre-release: `v1.13.2` and `main` (tag and branch HEAD)
 
 ## Workflow
 
 ```dot
 digraph {
   rankdir=TB;
-  "User provides milestone name" -> "Fetch merged PRs from GitHub";
-  "Fetch merged PRs from GitHub" -> "Categorize PRs by doc impact";
-  "Categorize PRs by doc impact" -> "Generate report";
+  "User provides two version refs" -> "Diff changed files between refs";
+  "Diff changed files between refs" -> "Fetch PR context for changes";
+  "Fetch PR context for changes" -> "Categorize changes by doc impact";
+  "Categorize changes by doc impact" -> "Generate report";
   "Generate report" -> "Present report, STOP";
   "Present report, STOP" -> "User approves / adjusts" [style=dashed];
   "User approves / adjusts" -> "Execute API spec updates";
@@ -35,22 +39,36 @@ digraph {
 
 ## Phase 1: Analysis
 
-### 1.1 Fetch Milestone PRs
+### 1.1 Diff Between Versions
+
+In the Dify codebase (configured as an additional working directory):
 
 ```bash
-# Get milestone number from name
+git fetch --tags origin
+# All changed files between the two versions
+git diff <from>..<to> --stat
+# Commit log with PR references for context
+git log <from>..<to> --oneline --grep="(#"
+```
+
+This captures every change between the two versions, regardless of whether PRs were tagged to a milestone.
+
+For context on specific changes, fetch the relevant PR details:
+```bash
+# Extract PR numbers from commit messages
+git log <from>..<to> --oneline | grep -oP '#\d+' | sort -u
+# Then for each PR
+gh pr view PR_NUMBER --repo langgenius/dify --json number,title,body,labels,files
+```
+
+**Alternative (milestone-based)**: If the user specifically wants to scope by milestone instead of tags, use:
+```bash
 MILESTONE_NUM=$(gh api repos/langgenius/dify/milestones --paginate \
   --jq '.[] | select(.title=="MILESTONE_NAME") | .number')
-
-# List closed issues/PRs for that milestone
 gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=closed&per_page=100" \
   --paginate --jq '.[] | select(.pull_request) | {number, title}'
 ```
-
-For each PR, fetch changed files and description:
-```bash
-gh pr view PR_NUMBER --repo langgenius/dify --json number,title,body,labels,files
-```
+Note: milestones may miss PRs not tagged to them. Tag comparison is preferred.
 
 ### 1.2 Categorize PRs
 
@@ -134,6 +152,19 @@ Check PRs that touch `web/i18n/en-US/` files:
 
 i18n source files: `web/i18n/{en-US,zh-Hans,ja-JP}/` (~30 JSON files each, ~4,875 keys total). Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`—these contain the most documentation-relevant UI labels.
 
+### 1.3 Check Documentation Status
+
+Before generating the report, verify each identified change against the **current documentation** in this repository branch. For each item:
+
+1. Read the affected doc page(s) in the docs repo
+2. Check whether the code change is already reflected in the documentation
+3. Assign a doc status:
+   - **Already documented**: The current docs accurately describe the new behavior. No update needed.
+   - **Partially documented**: The docs cover the area but are missing or inaccurate on the specific change.
+   - **Not yet documented**: The docs don't reflect this change at all.
+
+This step prevents the report from listing changes that have already been addressed in previous documentation updates.
+
 ## Phase 2: Report
 
 Generate the report and **STOP**. Do not execute until the user reviews and approves.
@@ -141,43 +172,43 @@ Generate the report and **STOP**. Do not execute until the user reviews and appr
 ### Report Template
 
 ```markdown
-# Pre-Release Doc Sync Report: [milestone]
+# Doc Sync Report: [from] → [to]
 
 ## Summary
-- **PRs analyzed**: X merged PRs in milestone
-- **API reference impact**: Y PRs → Z spec files
-- **Help documentation impact**: W PRs → V doc pages
-- **Environment variable impact**: E PRs → F variables
-- **UI i18n changes**: G PRs → H glossary entries affected
+- **Comparison**: `<from>..<to>` (X commits, Y PRs)
+- **API reference impact**: Y PRs → Z spec files (A already documented, B need updates)
+- **Help documentation impact**: W PRs → V doc pages (C already documented, D need updates)
+- **Environment variable impact**: E PRs → F variables (G already documented, H need updates)
+- **UI i18n changes**: I PRs → J glossary entries affected
 - **No doc impact**: N PRs
 
 ## API Reference Changes
 
 ### openapi_chat.json / openapi_chatflow.json
 
-| PR | Title | Change Type | Details |
-|---|---|---|---|
-| #1234 | Add streaming retry | New parameter | `retry_count` on `/chat-messages` |
-| #1235 | Fix error handling | Error codes | New `rate_limit_exceeded` on `/chat-messages` |
+| PR | Title | Change Type | Details | Doc Status |
+|---|---|---|---|---|
+| #1234 | Add streaming retry | New parameter | `retry_count` on `/chat-messages` | Not yet documented |
+| #1235 | Fix error handling | Error codes | New `rate_limit_exceeded` on `/chat-messages` | Already documented |
 
 ### openapi_knowledge.json
-| PR | Title | Change Type | Details |
-|---|---|---|---|
-| #1240 | Add metadata filter | New parameter | `metadata_filter` on list segments |
+| PR | Title | Change Type | Details | Doc Status |
+|---|---|---|---|---|
+| #1240 | Add metadata filter | New parameter | `metadata_filter` on list segments | Not yet documented |
 
 ## Help Documentation Changes
 
-| PR | Title | Affected Doc(s) | Priority | Change Needed |
-|---|---|---|---|---|
-| #1250 | Add semantic chunking | `knowledge/chunking.mdx` | High | Doc describes chunking strategies — new option must be added |
-| #1251 | New HTTP node timeout | `workflow/nodes/http.mdx` | Low | Doc doesn't cover timeout config at this level of detail |
+| PR | Title | Affected Doc(s) | Priority | Change Needed | Doc Status |
+|---|---|---|---|---|---|
+| #1250 | Add semantic chunking | `knowledge/chunking.mdx` | High | New chunking option must be added | Not yet documented |
+| #1251 | New HTTP node timeout | `workflow/nodes/http.mdx` | Low | Timeout config not covered | Already documented |
 
 ## Environment Variable Changes
 
-| PR | Title | Variables | Change Type | Priority |
-|---|---|---|---|---|
-| #1270 | Add Redis sentinel | `REDIS_SENTINEL_*` (3 new) | New variables | High |
-| #1271 | Change default log level | `LOG_LEVEL` default INFO→WARNING | Default change | Medium |
+| PR | Title | Variables | Change Type | Priority | Doc Status |
+|---|---|---|---|---|---|
+| #1270 | Add Redis sentinel | `REDIS_SENTINEL_*` (3 new) | New variables | High | Not yet documented |
+| #1271 | Change default log level | `LOG_LEVEL` default INFO→WARNING | Default change | Medium | Already documented |
 
 ## UI i18n Changes (Glossary Impact)
 
@@ -200,10 +231,10 @@ After user approval (they may add, remove, or adjust items):
 
 ### Codebase Preparation
 
-Checkout the release tag/branch in the Dify codebase (configured as an additional working directory) before auditing:
+Checkout the target version in the Dify codebase (configured as an additional working directory) before auditing:
 ```bash
-git fetch --tags
-git checkout v1.14.0  # or the release branch
+git fetch --tags origin
+git checkout <to>  # the target release tag or branch
 ```
 
 ### API Reference Updates
@@ -230,7 +261,9 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 1. Trace the variable in the release codebase
 2. Update `en/self-host/configuration/environments.mdx`
 3. Run the verification script to confirm zero mismatches
-4. Translation is handled automatically by the Dify workflow on PR push
+4. Update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` with the same changes
+
+**Important**: `environments.mdx` is in the translation pipeline's ignore list (`tools/translate/config.json`). It is **not** auto-translated on PR push. ZH and JA env var docs must be updated manually.
 
 ### Parallel Execution
 
@@ -251,10 +284,11 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 
 | Mistake | Fix |
 |---|---|
-| Auto-detecting milestone name | Always ask the user — naming is non-standard |
+| Auto-detecting version references | Always ask the user for the two versions to compare |
+| Using only milestones | Milestones miss untagged PRs — prefer tag comparison |
 | Executing before report approval | STOP after report — user must review |
 | Missing shared endpoint propagation | Fix in one spec → check all 4 app specs |
 | Ignoring PR description | File paths are heuristic for non-API — description has the real context |
 | Skipping Pydantic model changes | A model change may affect multiple endpoints — trace which controllers use it |
-| Forgetting to checkout release tag | Audit against the release code, not main HEAD |
-| Manually translating after EN fixes | Translation is automatic on PR push — never run manual translation scripts |
+| Forgetting to checkout target version | Audit against the target release code, not whatever is currently checked out |
+| Manually translating after EN fixes | Translation is automatic on PR push — never run manual translation scripts. **Exception**: `environments.mdx` is in the ignore list and must be translated manually. |
