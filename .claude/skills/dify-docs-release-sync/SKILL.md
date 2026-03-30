@@ -33,7 +33,7 @@ digraph {
   "User approves / adjusts" -> "Execute env var updates";
   "Execute API spec updates" -> "Auto-translated on PR push";
   "Execute help doc updates" -> "Auto-translated on PR push";
-  "Execute env var updates" -> "Auto-translated on PR push";
+  "Execute env var updates" -> "Manually update ZH/JA (not auto-translated)";
 }
 ```
 
@@ -56,7 +56,7 @@ This captures every change between the two versions, regardless of whether PRs w
 For context on specific changes, fetch the relevant PR details:
 ```bash
 # Extract PR numbers from commit messages
-git log <from>..<to> --oneline | grep -oP '#\d+' | sort -u
+git log <from>..<to> --oneline | grep -oE '#[0-9]+' | sort -u
 # Then for each PR
 gh pr view PR_NUMBER --repo langgenius/dify --json number,title,body,labels,files
 ```

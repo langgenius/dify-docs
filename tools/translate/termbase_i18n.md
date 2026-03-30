@@ -185,14 +185,16 @@
 | API Extension | API 扩展 | API 拡張 |
 | Billing | 账单 | 請求 |
 | Integrations | 集成 | 統合 |
-| System Model Settings | 系统模型设置 | システムモデル設定 |
+| Default Model Settings | 默认模型设置 | デフォルトモデル設定 |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
-| Message Credits | 消息额度 | クレジット |
+| AI Credits | AI Credits | AI クレジット |
+| Usage Priority | 使用优先级 | 利用優先度 |
+| API Key | API 密钥 | API キー |
 
 ### Workspace Roles
 

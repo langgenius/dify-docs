@@ -192,14 +192,16 @@ Terms in this section must match the Dify product interface exactly. When these 
 | API Extension | API 扩展 | API 拡張 | common.settings.apiBasedExtension | |
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Integrations | 集成 | 統合 | common.settings.integrations | |
-| System Model Settings | 系统模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | |
+| Default Model Settings | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | Renamed from "System Model Settings" in v1.13.1. EN/ZH UI updated; JA UI still shows "システムモデル設定" until i18n update. Planned JA label:「デフォルトモデル設定」. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| Message Credits | 消息额度 | クレジット | common.modelProvider.credits | |
+| AI Credits | AI Credits | AI クレジット | common.modelProvider.quota | Renamed from "Message Credits" in v1.13.1. ZH uses English "AI Credits" in UI. |
+| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI Credits. |
+| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI Credits. |
 
 ### Workspace Roles
 
