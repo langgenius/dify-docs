@@ -1,7 +1,1571 @@
 ---
 title: 環境変数
+description: Difyセルフホストデプロイで使用されるすべての環境変数のリファレンス。
 ---
 
+<Note> ⚠️ このドキュメントはAIによって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/configuration/environments)を参照してください。</Note>
+
+Difyはデフォルト設定でそのまま動作します。`.env`ファイルの環境変数を変更することで、デプロイをカスタマイズできます。
+
+<Tip>
+Difyをアップグレードした後、`docker`ディレクトリで`diff .env .env.example`を実行して、新しく追加または変更された変数を確認し、`.env`ファイルを適宜更新してください。
+</Tip>
+
+## 共通変数
+
+これらのURL変数は、Difyの各サービスのアドレスを設定します。
+
+Nginx背後のシングルドメインデプロイ（デフォルトのDocker Compose構成）の場合、これらは空のままで構いません。システムがリクエストから自動検出します。カスタムドメイン、マルチドメインデプロイ、またはリバースプロキシを使用する場合に設定してください。
+
+### CONSOLE_API_URL
+
+デフォルト値：（空）
+
+Difyバックエンド APIの公開URL。OAuthログイン（GitHub、Google）、Notion連携、またはOAuthを必要とするプラグインを使用する場合に設定してください。これらの機能は、認証後にユーザーをリダイレクトするための絶対コールバックURLを必要とします。また、セキュア（HTTPSのみ）Cookieを使用するかどうかも決定します。
+
+例：`https://api.console.dify.ai`
+
+### CONSOLE_WEB_URL
+
+デフォルト値：（空）
+
+Difyコンソールフロントエンドの公開URL。すべてのシステムメール（招待、パスワードリセット、通知）のリンク構築、およびOAuthログイン後のコンソールへのリダイレクトに使用されます。`CONSOLE_CORS_ALLOW_ORIGINS`が設定されていない場合、デフォルトのCORS許可オリジンとしても機能します。
+
+空の場合、メールリンクが正しく機能しません。シングルドメインデプロイでも、メール機能を使用する場合はこの変数を設定してください。
+
+例：`https://console.dify.ai`
+
+### SERVICE_API_URL
+
+デフォルト値：（空）
+
+DifyコンソールでDeveloperに表示されるAPI Base URL。DeveloperがDify APIを呼び出すためにコードにコピーするURLです。空の場合、現在のリクエストから自動検出されます（例：`http://localhost/v1`）。サーバーが複数のアドレスでアクセス可能な場合、この変数を設定して一貫したURLを確保してください。
+
+例：`https://api.dify.ai`
+
+### APP_API_URL
+
+デフォルト値：（空）
+
+WebAppフロントエンド（公開アプリ）のバックエンドAPI URL。この変数はWebフロントエンドコンテナでのみ使用され、Pythonバックエンドには影響しません。空の場合、Dockerイメージのデフォルトは`http://127.0.0.1:5001`です。
+
+例：`https://api.app.dify.ai`
+
+### APP_WEB_URL
+
+デフォルト値：（空）
+
+公開WebAppのアクセスURL。ワークフローの**人間の入力ノード**に必要です。メール通知のフォームリンクは`{APP_WEB_URL}/form/{token}`形式で構築されます。空の場合、人間の入力メールに有効なフォームリンクが含まれません。
+
+例：`https://app.dify.ai`
+
+### TRIGGER_URL
+
+デフォルト値：`http://localhost`
+
+WebhookおよびプラグイントリガーエンドポイントのアクセスURL。外部システムがこのアドレスを使用してワークフローを呼び出します。DifyはトリガーコールバックURLを`{TRIGGER_URL}/triggers/webhook/{id}`の形式で構築し、コンソールに表示します。
+
+外部システムからトリガーが動作するようにするには、それらがアクセスできるパブリックドメインまたはIPアドレスを指定する必要があります。
+
+### FILES_URL
+
+デフォルト値：（空；`CONSOLE_API_URL`にフォールバック）
+
+ファイルプレビューおよびダウンロードリンクのベースURL。Difyはすべてのファイル（アップロードされたドキュメント、ツール出力、ワークスペースロゴ）に対して署名付き時間制限URLを生成し、フロントエンドとマルチモーダルモデルに提供します。
+
+ファイル処理プラグインを使用する場合、またはファイルURLを専用ドメインで使用したい場合に設定してください。`FILES_URL`と`CONSOLE_API_URL`の両方が空の場合、ファイルプレビューが機能しません。
+
+例：`https://upload.example.com`または`http://<your-ip>:5001`
+
+### INTERNAL_FILES_URL
+
+デフォルト値：（空；`FILES_URL`にフォールバック）
+
+Dockerネットワーク内のサービス間通信で使用されるファイルアクセスURL（例：プラグインデーモン、PDF/Word抽出器）。これらの内部サービスは、NginxやパブリックドメインをNginx経由する外部`FILES_URL`にアクセスできない場合があります。
+
+空の場合、内部サービスは`FILES_URL`を使用します。内部サービスが外部URLにアクセスできない場合に設定してください。
+
+例：`http://api:5001`
+
+### FILES_ACCESS_TIMEOUT
+
+デフォルト値：`300`（5分）
+
+署名付きファイルURLの有効期間（秒）。この時間を過ぎるとURLは拒否され、ファイルを再リクエストする必要があります。長時間実行プロセスの場合は増加し、セキュリティを強化する場合は減少させてください。
+
+### システムエンコーディング
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `LANG` | `C.UTF-8` | システムロケール設定。UTF-8エンコーディングを保証します。 |
+| `LC_ALL` | `C.UTF-8` | すべてのカテゴリのロケールオーバーライド。 |
+| `PYTHONIOENCODING` | `utf-8` | Python I/Oエンコーディング。 |
+| `UV_CACHE_DIR` | `/tmp/.uv-cache` | UVパッケージマネージャーのキャッシュディレクトリ。存在しないホームディレクトリによる権限問題を回避します。 |
+
+## サーバー設定
+
+### ログ
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `LOG_LEVEL` | `INFO` | 最小ログレベル。すべてのハンドラー（ファイル＋コンソール）のログ記録内容を制御します。レベル（低→高）：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 |
+| `LOG_OUTPUT_FORMAT` | `text` | `text`はタイムスタンプ、レベル、スレッド、トレースIDを含む人間可読な形式を出力します。`json`はログ集約ツール（ELK、Datadogなど）向けの構造化JSONを出力します。 |
+| `LOG_FILE` | `/app/logs/server.log` | ログファイルパス。設定するとファイルベースのログ記録が有効になり、自動ローテーションされます。ディレクトリは自動作成されます。空の場合はコンソールにのみ出力されます。 |
+| `LOG_FILE_MAX_SIZE` | `20` | ローテーション前のログファイル最大サイズ（MB）。超過すると現在のファイルが`.1`にリネームされ、新しいファイルが作成されます。 |
+| `LOG_FILE_BACKUP_COUNT` | `5` | 保持するローテーションログファイル数。デフォルト設定では最大6ファイル（現在のファイル＋5バックアップ）が存在します。 |
+| `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | テキスト形式ログのタイムスタンプフォーマット（strftimeコード）。JSON形式では無視されます。 |
+| `LOG_TZ` | `UTC` | ログタイムスタンプのタイムゾーン（pytz形式、例：`Asia/Shanghai`）。テキスト形式にのみ適用されます。JSONは常にUTCを使用します。Celeryのタスクスケジューリングタイムゾーンも設定します。 |
+
+### 一般
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DEBUG` | `false` | 詳細ログを有効化：ワークフローノードの入出力、ツール実行の詳細、完全なLLMプロンプトとレスポンス、アプリ起動時間。ローカル開発に有用です。ログに機密データが出力される可能性があるため、本番環境では推奨しません。 |
+| `FLASK_DEBUG` | `false` | 標準Flaskデバッグモードフラグ。Difyでは積極的に使用されていません。`DEBUG`が主要な制御変数です。 |
+| `ENABLE_REQUEST_LOGGING` | `false` | すべてのHTTPリクエストに対してコンパクトなアクセスログ（`METHOD PATH STATUS DURATION TRACE_ID`）を記録します。`LOG_LEVEL`が`DEBUG`に設定されている場合、完全なリクエストとレスポンスボディもJSON形式で記録されます。 |
+| `DEPLOY_ENV` | `PRODUCTION` | SentryとOpenTelemetryの監視データにタグ付けし、環境別にエラーとトレースをフィルタリングできるようにします。`X-Env`レスポンスヘッダーとしても送信されます。アプリケーションの動作は変更しません。 |
+| `MIGRATION_ENABLED` | `true` | `true`の場合、コンテナ起動時にデータベーススキーママイグレーション（`flask upgrade-db`）を自動実行します。Dockerのみ。マイグレーションを別途実行する場合は`false`に設定してください。ソースコードからの起動では、`flask db upgrade`を手動で実行してください。 |
+| `CHECK_UPDATE_URL` | `https://updates.dify.ai` | コンソールがこのURLでDifyの新バージョンを確認します。空に設定すると無効化されます。エアギャップ環境や外部HTTPコールを防止したい場合に有用です。 |
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | レガシー変数。Dify自身のコードでは積極的に使用されていません。環境に存在する場合、OpenAI Python SDKに読み取られる可能性があります。 |
+
+### SECRET_KEY
+
+デフォルト値：（`.env.example`にプリセット；本番環境では必ず置き換えてください）
+
+セッションCookie署名、JWT認証トークン、ファイルURL署名（HMAC-SHA256）、およびサードパーティOAuth資格情報の暗号化（AES-256）に使用されます。初回起動前に強力なキーを生成してください：
+
+```bash
+openssl rand -base64 42
+```
+
+<Warning>
+デプロイ後にこのキーを変更すると、すべてのユーザーが即座にログアウトされ、すべてのファイルURLが無効になり、OAuthを使用するプラグイン連携が壊れます。暗号化された資格情報は復元できなくなります。
+</Warning>
+
+### INIT_PASSWORD
+
+デフォルト値：（空）
+
+初回セットアップ時のオプションのセキュリティゲート。設定すると、`/install`ページで管理者アカウント作成前にこのパスワードの入力が必要になります。サーバーが公開されている場合の不正なセットアップを防止します。セットアップ完了後、この変数は効力を失います。最大長：30文字。
+
+### トークンとリクエスト制限
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | ログインセッションのアクセストークンの有効期間（分）。期限切れ後、ブラウザがリフレッシュトークンを使用してサイレントに更新します。ユーザーはログアウトされません。 |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 資格情報を再入力せずにログイン状態を維持できる期間（日）。この期間内にアクセスがない場合、再ログインが必要です。 |
+| `APP_MAX_EXECUTION_TIME` | `1200` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME`と連動し、両方ともデフォルトは20分ですが、これはアプリキューレベルで適用され、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増加してください。 |
+| `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | アプリごとのデフォルト同時リクエスト制限。UIでカスタム制限が設定されていないアプリに使用されます。`0`は無制限を意味します。有効な制限はこの値と`APP_MAX_ACTIVE_REQUESTS`の小さい方になります。 |
+| `APP_MAX_ACTIVE_REQUESTS` | `0` | アプリごとのグローバル同時リクエスト上限。アプリのカスタム設定がこの値を超える場合、オーバーライドされます。`0`は無制限を意味します。 |
+
+### コンテナ起動設定
+
+DockerイメージまたはDocker Composeで起動する場合にのみ有効です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DIFY_BIND_ADDRESS` | `0.0.0.0` | APIサーバーがバインドするネットワークインターフェース。`0.0.0.0`はすべてのインターフェースでリッスンします。`127.0.0.1`に設定するとローカルホストのみに制限されます。 |
+| `DIFY_PORT` | `5001` | APIサーバーのリッスンポート。 |
+| `SERVER_WORKER_AMOUNT` | `1` | Gunicornワーカープロセス数。gevent（デフォルト）使用時は各ワーカーがgreenletで複数の同時接続を処理するため、通常1で十分です。同期ワーカーの場合は`(2 x CPUコア数) + 1`を使用してください。[参考ドキュメント](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)。 |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicornワーカータイプ。Geventは軽量な非同期並行処理を提供します。この設定を変更するとpsycopg2とgRPCのパッチが壊れます。変更は強く非推奨です。 |
+| `SERVER_WORKER_CONNECTIONS` | `10` | ワーカーごとの最大同時接続数。非同期ワーカー（gevent）にのみ適用されます。高負荷時に接続拒否やレスポンス遅延が発生する場合は、この値を増加してください。 |
+| `GUNICORN_TIMEOUT` | `360` | ワーカーがこの秒数以内に応答しない場合、Gunicornはそのワーカーを終了して再起動します。ストリーミングLLMレスポンスに使用される長時間SSE接続をサポートするため、360（6分）に設定されています。 |
+| `CELERY_WORKER_CLASS` | （空；デフォルトはgevent） | Celeryワーカータイプ。`SERVER_WORKER_CLASS`と同じgeventパッチ要件があります。変更は強く非推奨です。 |
+| `CELERY_WORKER_AMOUNT` | （空；デフォルトは1） | Celeryワーカープロセス数。オートスケーリング無効時のみ使用されます。 |
+| `CELERY_AUTO_SCALE` | `false` | 動的オートスケーリングを有効化。有効時、Celeryはキュー深度を監視し、`CELERY_MIN_WORKERS`から`CELERY_MAX_WORKERS`の間でワーカーを動的に生成/終了します。 |
+| `CELERY_MAX_WORKERS` | （空；デフォルトはCPU数） | オートスケーリング有効時の最大ワーカー数。 |
+| `CELERY_MIN_WORKERS` | （空；デフォルトは1） | オートスケーリング有効時の最小ワーカー数。 |
+
+### APIツール設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `API_TOOL_DEFAULT_CONNECT_TIMEOUT` | `10` | APIツールノードが外部APIを呼び出す際のTCP接続確立の最大待機時間（秒）。 |
+| `API_TOOL_DEFAULT_READ_TIMEOUT` | `60` | APIツールノードが外部APIからレスポンスデータを受信する最大待機時間（秒）。 |
+
+### データベース設定
+
+データベースはデフォルトでPostgreSQLを使用します。OceanBase、MySQL、seekdbもサポートされています。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DB_TYPE` | `postgresql` | データベースタイプ。サポートされる値：`postgresql`、`mysql`、`oceanbase`、`seekdb`。TiDBなどのMySQL互換データベースは`mysql`を使用できます。 |
+| `DB_USERNAME` | `postgres` | データベースユーザー名。接続文字列でURLエンコードされるため、特殊文字も安全に使用できます。 |
+| `DB_PASSWORD` | `difyai123456` | データベースパスワード。接続文字列でURLエンコードされるため、`@`、`:`、`%`などの文字も安全に使用できます。 |
+| `DB_HOST` | `db_postgres` | データベースサーバーのホスト名。 |
+| `DB_PORT` | `5432` | データベースサーバーのポート。MySQLを使用する場合は`3306`に設定してください。 |
+| `DB_DATABASE` | `dify` | データベース名。 |
+
+#### コネクションプール
+
+Difyがデータベースコネクションプールを管理する方法を制御します。デフォルト設定はほとんどのデプロイで問題なく動作します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SQLALCHEMY_POOL_SIZE` | `30` | プール内に保持する永続接続数。 |
+| `SQLALCHEMY_MAX_OVERFLOW` | `10` | プールが満杯の場合に許可される追加の一時接続数。デフォルト設定では、最大40接続（30 + 10）が同時に存在できます。 |
+| `SQLALCHEMY_POOL_RECYCLE` | `3600` | この秒数の後に接続をリサイクルし、古い接続を防止します。 |
+| `SQLALCHEMY_POOL_TIMEOUT` | `30` | プールが枯渇した場合の接続待機時間。この時間内に接続が解放されない場合、リクエストはタイムアウトエラーで失敗します。 |
+| `SQLALCHEMY_POOL_PRE_PING` | `false` | 使用前に軽量クエリで接続をテストします。「接続切断」エラーを防止しますが、わずかなレイテンシーが追加されます。不安定なネットワークの本番環境で推奨されます。 |
+| `SQLALCHEMY_POOL_USE_LIFO` | `false` | 均等ローテーション（FIFO）の代わりに、最後に返却された接続を再利用します（LIFO）。LIFOはより少ない接続を「ウォーム」状態に保ち、オーバーヘッドを削減できます。 |
+| `SQLALCHEMY_ECHO` | `false` | すべてのSQL文をログに出力します。クエリ問題のデバッグに有用です。 |
+
+#### PostgreSQLパフォーマンスチューニング
+
+これらはPostgreSQLコンテナへの起動引数として渡されます。Difyアプリケーションではなく、データベースサーバーの設定です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `POSTGRES_MAX_CONNECTIONS` | `100` | 最大データベース接続数。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) |
+| `POSTGRES_SHARED_BUFFERS` | `128MB` | バッファ用共有メモリ。推奨値：利用可能メモリの25%。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-SHARED-BUFFERS) |
+| `POSTGRES_WORK_MEM` | `4MB` | データベースワーカーごとの作業メモリ。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM) |
+| `POSTGRES_MAINTENANCE_WORK_MEM` | `64MB` | メンテナンス作業用に予約されるメモリ。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM) |
+| `POSTGRES_EFFECTIVE_CACHE_SIZE` | `4096MB` | プランナーの有効キャッシュサイズの推定値。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-query.html#GUC-EFFECTIVE-CACHE-SIZE) |
+| `POSTGRES_STATEMENT_TIMEOUT` | `0` | ステートメント終了前の最大実行時間（ミリ秒）。`0`はタイムアウトなし。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) |
+| `POSTGRES_IDLE_IN_TRANSACTION_SESSION_TIMEOUT` | `0` | トランザクション内アイドルセッションの最大時間（ミリ秒）。`0`はタイムアウトなし。[参考ドキュメント](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT) |
+
+#### MySQLパフォーマンスチューニング
+
+これらはMySQLコンテナへの起動引数として渡されます。Difyアプリケーションではなく、データベースサーバーの設定です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MYSQL_MAX_CONNECTIONS` | `1000` | 最大MySQL接続数。 |
+| `MYSQL_INNODB_BUFFER_POOL_SIZE` | `512M` | InnoDBバッファプールサイズ。推奨値：専用MySQLサーバーの利用可能メモリの70-80%。[参考ドキュメント](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_buffer_pool_size) |
+| `MYSQL_INNODB_LOG_FILE_SIZE` | `128M` | InnoDBログファイルサイズ。[参考ドキュメント](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_log_file_size) |
+| `MYSQL_INNODB_FLUSH_LOG_AT_TRX_COMMIT` | `2` | トランザクションコミット時のInnoDBログフラッシュ方式。オプション：`0`（フラッシュなし）、`1`（フラッシュ＆同期）、`2`（OSキャッシュへフラッシュ）。[参考ドキュメント](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit) |
+
+### Redis設定
+
+これらの変数を設定して、DifyをRedisインスタンスに接続します。Difyはスタンドアロン（デフォルト）、Sentinel、Clusterの3つのデプロイモードをサポートしています。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `REDIS_HOST` | `redis` | Redisサーバーのホスト名。スタンドアロンモードでのみ使用されます。SentinelまたはClusterモード有効時は無視されます。 |
+| `REDIS_PORT` | `6379` | Redisサーバーのポート。スタンドアロンモードでのみ使用されます。 |
+| `REDIS_USERNAME` | （空） | Redis 6.0+ ACLユーザー名。すべてのモード（スタンドアロン、Sentinel、Cluster）に適用されます。 |
+| `REDIS_PASSWORD` | `difyai123456` | Redis認証パスワード。Clusterモードの場合は、代わりに`REDIS_CLUSTERS_PASSWORD`を使用してください。 |
+| `REDIS_DB` | `0` | Redisデータベース番号（0-15）。スタンドアロンおよびSentinelモードにのみ適用されます。Celeryのデータベース（`CELERY_BROKER_URL`で設定；デフォルトはDB 1）と衝突しないようにしてください。 |
+| `REDIS_USE_SSL` | `false` | Redis接続のSSL/TLSを有効化。Sentinelプロトコルには自動適用されません。 |
+| `REDIS_MAX_CONNECTIONS` | （空） | Redisプール内の最大接続数。空のままでライブラリのデフォルトを使用します。必要に応じてRedisサーバーの`maxclients`に合わせて設定してください。 |
+
+#### Redis SSL設定
+
+`REDIS_USE_SSL=true`の場合にのみ適用されます。Celery brokerのURLが`rediss://`スキームを使用する場合、これらの設定はCelery brokerにも適用されます。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `REDIS_SSL_CERT_REQS` | `CERT_NONE` | 証明書検証レベル：`CERT_NONE`（検証なし）、`CERT_OPTIONAL`（オプション検証）、または`CERT_REQUIRED`（完全検証）。 |
+| `REDIS_SSL_CA_CERTS` | （空） | Redisサーバー検証用のCA証明書ファイルパス。 |
+| `REDIS_SSL_CERTFILE` | （空） | 相互TLS認証用のクライアント証明書パス。 |
+| `REDIS_SSL_KEYFILE` | （空） | 相互TLS認証用のクライアント秘密鍵パス。 |
+
+#### Redis Sentinelモード
+
+Sentinelは高可用性のための自動マスター検出とフェイルオーバーを提供します。Clusterモードとは相互に排他的です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `REDIS_USE_SENTINEL` | `false` | Redis Sentinelモードを有効化。有効時、`REDIS_HOST`/`REDIS_PORT`は無視されます。DifyはSentinelノードに接続し、現在のマスターを問い合わせます。 |
+| `REDIS_SENTINELS` | （空） | Sentinelノードのアドレス。形式：`<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>`。これらはSentinelインスタンスであり、Redisサーバーではありません。 |
+| `REDIS_SENTINEL_SERVICE_NAME` | （空） | Sentinelが監視する論理サービス名（`sentinel.conf`で設定）。Difyは`master_for(service_name)`を呼び出して現在のマスターを検出します。 |
+| `REDIS_SENTINEL_USERNAME` | （空） | Sentinelノードの認証ユーザー名。`REDIS_USERNAME`とは別です。後者はRedisマスター/レプリカの認証に使用されます。 |
+| `REDIS_SENTINEL_PASSWORD` | （空） | Sentinelノードの認証パスワード。`REDIS_PASSWORD`とは別です。 |
+| `REDIS_SENTINEL_SOCKET_TIMEOUT` | `0.1` | Sentinelノードとの通信のSocketタイムアウト（秒）。デフォルトの0.1秒は高速なローカルネットワークを想定しています。クラウド/WANデプロイでは、断続的なタイムアウトを防止するために1.0-5.0秒に増加してください。 |
+
+#### Redis Clusterモード
+
+Clusterモードは複数のRedisノード間での自動シャーディングを提供します。Sentinelモードとは相互に排他的です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `REDIS_USE_CLUSTERS` | `false` | Redis Clusterモードを有効化。 |
+| `REDIS_CLUSTERS` | （空） | Clusterノード。形式：`<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>` |
+| `REDIS_CLUSTERS_PASSWORD` | （空） | Redis Clusterのパスワード。 |
+
+### Celery設定
+
+データセットインデックス作成、メール送信、定期ジョブに使用されるバックグラウンドタスクキューを設定します。
+
+### CELERY_BROKER_URL
+
+デフォルト値：`redis://:difyai123456@redis:6379/1`
+
+CeleryメッセージブローカーのRedis接続URL。
+
+直接接続形式：
+```
+redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
+```
+
+Sentinelモード形式（複数ノードはセミコロンで区切り）：
+```
+sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<redis_database>
+```
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CELERY_BACKEND` | `redis` | Celeryがタスク結果を保存する場所。オプション：`redis`（高速、インメモリ）または`database`（メインデータベースに保存）。 |
+| `BROKER_USE_SSL` | `false` | `CELERY_BROKER_URL`が`rediss://`スキームを使用する場合に自動有効化。Redis SSL証明書設定をbroker接続に適用します。 |
+| `CELERY_USE_SENTINEL` | `false` | Celery brokerのRedis Sentinelモードを有効化。 |
+| `CELERY_SENTINEL_MASTER_NAME` | （空） | Sentinelサービス名（Master Name）。 |
+| `CELERY_SENTINEL_PASSWORD` | （空） | Sentinel認証パスワード。`REDIS_SENTINEL_PASSWORD`とは別です。キャッシュとタスクキューで異なるSentinelクラスターを使用する場合に異なる値を設定できます。 |
+| `CELERY_SENTINEL_SOCKET_TIMEOUT` | `0.1` | Sentinelへの接続タイムアウト（秒）。 |
+| `CELERY_TASK_ANNOTATIONS` | `null` | 特定のタスクにランタイム設定（例：レート制限）を適用します。形式：JSON辞書。例：`{"tasks.add": {"rate_limit": "10/s"}}`。ほとんどのユーザーはこの設定を必要としません。 |
+
+### CORS設定
+
+フロントエンドのクロスドメインアクセスポリシーを制御します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WEB_API_CORS_ALLOW_ORIGINS` | `*` | Web APIへのクロスオリジンリクエストの許可オリジン。例：`https://dify.app` |
+| `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | コンソールAPIへのクロスオリジンリクエストの許可オリジン。設定されていない場合、`CONSOLE_WEB_URL`にフォールバックします。 |
+| `COOKIE_DOMAIN` | （空） | フロントエンドとバックエンドが異なるサブドメインで実行される場合、共有トップレベルドメイン（例：`example.com`）に設定します。これにより認証Cookieをサブドメイン間で共有できます。空の場合、Cookieは最もセキュアな`__Host-`プレフィックスを使用し、単一ドメインにロックされます。 |
+| `NEXT_PUBLIC_COOKIE_DOMAIN` | （空） | クロスサブドメインCookieのフロントエンドフラグ。`1`（または任意の非空値）に設定して有効化します。実際のドメインはバックエンドで`COOKIE_DOMAIN`から読み取られます。 |
+| `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | フロントエンドのみ。バッチ操作時にUIが発行する同時APIコール数を制御します。 |
+
+### ファイルストレージ設定
+
+Difyがアップロードファイル、データセットドキュメント、暗号化キーを保存する場所を設定します。各ストレージタイプには独自の資格情報変数があります。使用するもののみを設定してください。
+
+### STORAGE_TYPE
+
+デフォルト値：`opendal`
+
+ファイルストレージバックエンドを選択します。サポートされる値：`opendal`、`s3`、`azure-blob`、`aliyun-oss`、`google-storage`、`huawei-obs`、`volcengine-tos`、`tencent-cos`、`baidu-obs`、`oci-storage`、`supabase`、`clickzetta-volume`、`local`（非推奨；内部的にOpenDALのファイルシステムスキームを使用）。
+
+<AccordionGroup>
+<Accordion title="OpenDAL（デフォルト）">
+
+[Apache OpenDAL](https://opendal.apache.org/)を使用するデフォルトのストレージバックエンド。多くのストレージサービスをサポートする統一インターフェースです。Difyは`OPENDAL_<SCHEME>_*`に一致する環境変数を自動スキャンし、OpenDALに渡します。例えば、`OPENDAL_SCHEME=s3`の場合、`OPENDAL_S3_ACCESS_KEY_ID`、`OPENDAL_S3_SECRET_ACCESS_KEY`などを設定します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OPENDAL_SCHEME` | `fs` | 使用するストレージサービス。例：`fs`（ローカルファイルシステム）、`s3`、`gcs`、`azblob`。 |
+
+デフォルトの`fs`スキームの場合：
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OPENDAL_FS_ROOT` | `storage` | ローカルファイルシステムストレージのルートディレクトリ。存在しない場合は自動作成されます。 |
+
+利用可能なすべてのスキームとその設定オプションについては、[OpenDALサービスドキュメント](https://github.com/apache/opendal/tree/main/core/src/services)を参照してください。
+
+</Accordion>
+
+<Accordion title="S3">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `S3_ENDPOINT` | （空） | S3エンドポイントアドレス。AWS以外のS3互換サービス（MinIOなど）では必須です。 |
+| `S3_REGION` | `us-east-1` | S3リージョン。 |
+| `S3_BUCKET_NAME` | `difyai` | S3バケット名。 |
+| `S3_ACCESS_KEY` | （空） | S3 Access Key。IAMロール使用時は不要です。 |
+| `S3_SECRET_KEY` | （空） | S3 Secret Key。IAMロール使用時は不要です。 |
+| `S3_USE_AWS_MANAGED_IAM` | `false` | 明示的なaccess key/secret keyの代わりにAWS IAMロール（EC2インスタンスプロファイル、ECSタスクロール）を使用します。有効時、boto3がインスタンスメタデータから資格情報を自動検出します。 |
+
+</Accordion>
+
+<Accordion title="Azure Blob">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `AZURE_BLOB_ACCOUNT_NAME` | `difyai` | Azureストレージアカウント名。 |
+| `AZURE_BLOB_ACCOUNT_KEY` | `difyai` | Azureストレージアカウントキー。 |
+| `AZURE_BLOB_CONTAINER_NAME` | `difyai-container` | Azure Blobコンテナ名。 |
+| `AZURE_BLOB_ACCOUNT_URL` | `https://<your_account_name>.blob.core.windows.net` | Azure BlobアカウントURL。 |
+
+</Accordion>
+
+<Accordion title="Google Cloud Storage">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `GOOGLE_STORAGE_BUCKET_NAME` | （空） | Google Cloud Storageバケット名。 |
+| `GOOGLE_STORAGE_SERVICE_ACCOUNT_JSON_BASE64` | （空） | Base64エンコードされたサービスアカウントJSONキー。 |
+
+</Accordion>
+
+<Accordion title="Alibaba Cloud OSS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ALIYUN_OSS_BUCKET_NAME` | （空） | OSSバケット名。 |
+| `ALIYUN_OSS_ACCESS_KEY` | （空） | OSS access key。 |
+| `ALIYUN_OSS_SECRET_KEY` | （空） | OSS secret key。 |
+| `ALIYUN_OSS_ENDPOINT` | `https://oss-ap-southeast-1-internal.aliyuncs.com` | OSSエンドポイント。[リージョンとエンドポイントのリファレンス](https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints)。 |
+| `ALIYUN_OSS_REGION` | `ap-southeast-1` | OSSリージョン。 |
+| `ALIYUN_OSS_AUTH_VERSION` | `v4` | OSS認証バージョン。 |
+| `ALIYUN_OSS_PATH` | （空） | オブジェクトパスプレフィックス。`/`で始めないでください。[参考ドキュメント](https://www.alibabacloud.com/help/en/oss/support/0016-00000005)。 |
+| `ALIYUN_CLOUDBOX_ID` | （空） | CloudBoxベースのOSSデプロイ用のCloudBox ID。 |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud COS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `TENCENT_COS_BUCKET_NAME` | （空） | COSバケット名。 |
+| `TENCENT_COS_SECRET_KEY` | （空） | COS secret key。 |
+| `TENCENT_COS_SECRET_ID` | （空） | COS secret ID。 |
+| `TENCENT_COS_REGION` | （空） | COSリージョン（例：`ap-guangzhou`）。[参考ドキュメント](https://cloud.tencent.com/document/product/436/6224)。 |
+| `TENCENT_COS_SCHEME` | （空） | COSアクセス用プロトコル（`http`または`https`）。 |
+| `TENCENT_COS_CUSTOM_DOMAIN` | （空） | COSアクセス用カスタムドメイン。 |
+
+</Accordion>
+
+<Accordion title="OCI Object Storage">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OCI_ENDPOINT` | （空） | OCIエンドポイントURL。 |
+| `OCI_BUCKET_NAME` | （空） | OCIバケット名。 |
+| `OCI_ACCESS_KEY` | （空） | OCI access key。 |
+| `OCI_SECRET_KEY` | （空） | OCI secret key。 |
+| `OCI_REGION` | `us-ashburn-1` | OCIリージョン。 |
+
+</Accordion>
+
+<Accordion title="Huawei OBS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `HUAWEI_OBS_BUCKET_NAME` | （空） | OBSバケット名。 |
+| `HUAWEI_OBS_ACCESS_KEY` | （空） | OBS access key。 |
+| `HUAWEI_OBS_SECRET_KEY` | （空） | OBS secret key。 |
+| `HUAWEI_OBS_SERVER` | （空） | OBSサーバーURL。[参考ドキュメント](https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html)。 |
+| `HUAWEI_OBS_PATH_STYLE` | `false` | 仮想ホスト型の代わりにパス型URLを使用。 |
+
+</Accordion>
+
+<Accordion title="Volcengine TOS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `VOLCENGINE_TOS_BUCKET_NAME` | （空） | TOSバケット名。 |
+| `VOLCENGINE_TOS_ACCESS_KEY` | （空） | TOS access key。 |
+| `VOLCENGINE_TOS_SECRET_KEY` | （空） | TOS secret key。 |
+| `VOLCENGINE_TOS_ENDPOINT` | （空） | TOSエンドポイントURL。[参考ドキュメント](https://www.volcengine.com/docs/6349/107356)。 |
+| `VOLCENGINE_TOS_REGION` | （空） | TOSリージョン（例：`cn-guangzhou`）。 |
+
+</Accordion>
+
+<Accordion title="Baidu OBS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `BAIDU_OBS_BUCKET_NAME` | （空） | Baidu OBSバケット名。 |
+| `BAIDU_OBS_ACCESS_KEY` | （空） | Baidu OBS access key。 |
+| `BAIDU_OBS_SECRET_KEY` | （空） | Baidu OBS secret key。 |
+| `BAIDU_OBS_ENDPOINT` | （空） | Baidu OBSサーバーURL。 |
+
+</Accordion>
+
+<Accordion title="Supabase">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SUPABASE_BUCKET_NAME` | （空） | Supabaseストレージバケット名。 |
+| `SUPABASE_API_KEY` | （空） | Supabase APIキー。 |
+| `SUPABASE_URL` | （空） | SupabaseサーバーURL。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta Volume">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CLICKZETTA_VOLUME_TYPE` | `user` | ボリュームタイプ。オプション：`user`（個人/小規模チーム）、`table`（エンタープライズマルチテナント）、`external`（データレイク統合）。 |
+| `CLICKZETTA_VOLUME_NAME` | （空） | 外部ボリューム名（`TYPE=external`の場合のみ必要）。 |
+| `CLICKZETTA_VOLUME_TABLE_PREFIX` | `dataset_` | テーブルボリュームのテーブルプレフィックス（`TYPE=table`の場合のみ使用）。 |
+| `CLICKZETTA_VOLUME_DIFY_PREFIX` | `dify_km` | 他のアプリから分離するためのDifyファイルディレクトリプレフィックス。 |
+
+ClickZetta Volumeは、ベクトルデータベースセクションで設定された`CLICKZETTA_*`接続パラメータを再利用します。
+
+</Accordion>
+</AccordionGroup>
+
+#### アーカイブストレージ
+
+ワークフロー実行ログをアーカイブするための別のS3互換ストレージ。有料プランのリテンションシステムが保持期間を超えたワークフロー実行をJSONL形式でアーカイブするために使用されます。`BILLING_ENABLED=true`が必要です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ARCHIVE_STORAGE_ENABLED` | `false` | ワークフローログアーカイブ用のアーカイブストレージを有効化。 |
+| `ARCHIVE_STORAGE_ENDPOINT` | （空） | S3互換エンドポイントURL。 |
+| `ARCHIVE_STORAGE_ARCHIVE_BUCKET` | （空） | アーカイブされたワークフロー実行ログ用バケット。 |
+| `ARCHIVE_STORAGE_EXPORT_BUCKET` | （空） | ワークフロー実行エクスポート用バケット。 |
+| `ARCHIVE_STORAGE_ACCESS_KEY` | （空） | Access key。 |
+| `ARCHIVE_STORAGE_SECRET_KEY` | （空） | Secret key。 |
+| `ARCHIVE_STORAGE_REGION` | `auto` | ストレージリージョン。 |
+
+### ベクトルデータベース設定
+
+ナレッジベースのエンベディング保存と類似検索に使用するベクトルデータベースを設定します。各プロバイダーには独自の資格情報変数があります。使用するもののみを設定してください。
+
+### VECTOR_STORE
+
+デフォルト値：`weaviate`
+
+ベクトルデータベースバックエンドを選択します。データセットに既にインデックスがある場合、データセットに保存されたタイプがこの設定より優先されます。Docker Composeでプロバイダーを切り替える場合、`COMPOSE_PROFILES`がこの値に基づいて対応するコンテナを自動起動します。
+
+サポートされる値：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `VECTOR_INDEX_NAME_PREFIX` | `Vector_index` | ベクトルデータベースのコレクション名に追加されるプレフィックス。複数のDifyデプロイでベクトルデータベースインスタンスを共有する場合に変更してください。 |
+
+<AccordionGroup>
+<Accordion title="Weaviate">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST APIエンドポイント。 |
+| `WEAVIATE_API_KEY` | （空） | Weaviate認証用APIキー。 |
+| `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 高性能バイナリプロトコル用の別のgRPCエンドポイント。バッチ操作が大幅に高速になります。未設定の場合、HTTPエンドポイントから推測されます。 |
+| `WEAVIATE_TOKENIZATION` | `word` | テキストフィールドのトークン化方法。オプション：`word`（空白と句読点で分割）、`whitespace`（空白のみで分割）、`character`（文字レベル、CJK言語に適しています）。 |
+
+</Accordion>
+
+<Accordion title="OceanBase / seekdb">
+
+seekdbはOceanBaseのライト版であり、同じ接続設定を共有します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` | ホスト名またはIPアドレス。 |
+| `OCEANBASE_VECTOR_PORT` | `2881` | ポート番号。 |
+| `OCEANBASE_VECTOR_USER` | `root@test` | データベースユーザー名。 |
+| `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | データベースパスワード。 |
+| `OCEANBASE_VECTOR_DATABASE` | `test` | データベース名。 |
+| `OCEANBASE_CLUSTER_NAME` | `difyai` | クラスター名（Dockerデプロイのみ）。 |
+| `OCEANBASE_MEMORY_LIMIT` | `6G` | OceanBaseのメモリ制限（Dockerデプロイのみ）。 |
+| `SEEKDB_MEMORY_LIMIT` | `2G` | seekdbのメモリ制限（Dockerデプロイのみ）。 |
+| `OCEANBASE_ENABLE_HYBRID_SEARCH` | `false` | ベクトル検索と併用するBM25クエリ用の全文インデックスを有効化。OceanBase >= 4.3.5.1が必要です。有効化後にコレクションを再作成する必要があります。 |
+| `OCEANBASE_FULLTEXT_PARSER` | `ik` | 全文パーサー。組み込み：`ngram`、`beng`、`space`、`ngram2`、`ik`。外部（プラグインが必要）：`japanese_ftparser`、`thai_ftparser`。 |
+
+</Accordion>
+
+<Accordion title="Qdrant">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `QDRANT_URL` | `http://qdrant:6333` | Qdrantエンドポイントアドレス。 |
+| `QDRANT_API_KEY` | `difyai123456` | Qdrant用APIキー。 |
+| `QDRANT_CLIENT_TIMEOUT` | `20` | クライアントタイムアウト（秒）。 |
+| `QDRANT_GRPC_ENABLED` | `false` | gRPC通信を有効化。 |
+| `QDRANT_GRPC_PORT` | `6334` | gRPCポート。 |
+| `QDRANT_REPLICATION_FACTOR` | `1` | シャードごとのレプリカ数。 |
+
+</Accordion>
+
+<Accordion title="Milvus">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI。[Zilliz Cloud](https://docs.zilliz.com/docs/free-trials)の場合はPublic Endpointを使用してください。 |
+| `MILVUS_DATABASE` | （空） | データベース名。 |
+| `MILVUS_TOKEN` | （空） | 認証トークン。Zilliz Cloudの場合はAPI Keyを使用してください。 |
+| `MILVUS_USER` | （空） | ユーザー名。 |
+| `MILVUS_PASSWORD` | （空） | パスワード。 |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | ベクトル類似検索と併用するBM25スパースインデックスによる全文検索を有効化。Milvus >= 2.5.0が必要です。この機能を有効にせずに作成されたコレクションは再作成が必要です。 |
+| `MILVUS_ANALYZER_PARAMS` | （空） | テキストフィールドのアナライザーパラメータ。 |
+
+</Accordion>
+
+<Accordion title="MyScale">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MYSCALE_HOST` | `myscale` | MyScaleホスト。 |
+| `MYSCALE_PORT` | `8123` | MyScaleポート。 |
+| `MYSCALE_USER` | `default` | ユーザー名。 |
+| `MYSCALE_PASSWORD` | （空） | パスワード。 |
+| `MYSCALE_DATABASE` | `dify` | データベース名。 |
+| `MYSCALE_FTS_PARAMS` | （空） | 全文検索パラメータ。[多言語サポートリファレンス](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters)。 |
+
+</Accordion>
+
+<Accordion title="Couchbase">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `COUCHBASE_CONNECTION_STRING` | `couchbase://couchbase-server` | Couchbaseクラスターの接続文字列。 |
+| `COUCHBASE_USER` | `Administrator` | ユーザー名。 |
+| `COUCHBASE_PASSWORD` | `password` | パスワード。 |
+| `COUCHBASE_BUCKET_NAME` | `Embeddings` | バケット名。 |
+| `COUCHBASE_SCOPE_NAME` | `_default` | スコープ名。 |
+
+</Accordion>
+
+<Accordion title="Hologres">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `HOLOGRES_HOST` | （空） | ホスト名。 |
+| `HOLOGRES_PORT` | `80` | ポート番号。 |
+| `HOLOGRES_DATABASE` | （空） | データベース名。 |
+| `HOLOGRES_ACCESS_KEY_ID` | （空） | Access Key ID（PGユーザー名として使用）。 |
+| `HOLOGRES_ACCESS_KEY_SECRET` | （空） | Access Key Secret（PGパスワードとして使用）。 |
+| `HOLOGRES_SCHEMA` | `public` | スキーマ名。 |
+| `HOLOGRES_TOKENIZER` | `jieba` | テキストフィールドのトークナイザー。 |
+| `HOLOGRES_DISTANCE_METHOD` | `Cosine` | 距離メソッド。 |
+| `HOLOGRES_BASE_QUANTIZATION_TYPE` | `rabitq` | 量子化タイプ。 |
+| `HOLOGRES_MAX_DEGREE` | `64` | HNSWの最大次数。 |
+| `HOLOGRES_EF_CONSTRUCTION` | `400` | HNSWのef_constructionパラメータ。 |
+
+</Accordion>
+
+<Accordion title="PGVector">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PGVECTOR_HOST` | `pgvector` | ホスト名。 |
+| `PGVECTOR_PORT` | `5432` | ポート番号。 |
+| `PGVECTOR_USER` | `postgres` | ユーザー名。 |
+| `PGVECTOR_PASSWORD` | `difyai123456` | パスワード。 |
+| `PGVECTOR_DATABASE` | `dify` | データベース名。 |
+| `PGVECTOR_MIN_CONNECTION` | `1` | 最小プール接続数。 |
+| `PGVECTOR_MAX_CONNECTION` | `5` | 最大プール接続数。 |
+| `PGVECTOR_PG_BIGM` | `false` | 全文検索用のpg_bigm拡張を有効化。 |
+
+</Accordion>
+
+<Accordion title="Vastbase">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `VASTBASE_HOST` | `vastbase` | ホスト名。 |
+| `VASTBASE_PORT` | `5432` | ポート番号。 |
+| `VASTBASE_USER` | `dify` | ユーザー名。 |
+| `VASTBASE_PASSWORD` | `Difyai123456` | パスワード。 |
+| `VASTBASE_DATABASE` | `dify` | データベース名。 |
+| `VASTBASE_MIN_CONNECTION` | `1` | 最小プール接続数。 |
+| `VASTBASE_MAX_CONNECTION` | `5` | 最大プール接続数。 |
+
+</Accordion>
+
+<Accordion title="PGVecto.RS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PGVECTO_RS_HOST` | `pgvecto-rs` | ホスト名。 |
+| `PGVECTO_RS_PORT` | `5432` | ポート番号。 |
+| `PGVECTO_RS_USER` | `postgres` | ユーザー名。 |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | パスワード。 |
+| `PGVECTO_RS_DATABASE` | `dify` | データベース名。 |
+
+</Accordion>
+
+<Accordion title="AnalyticDB">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ANALYTICDB_KEY_ID` | （空） | Aliyun access key ID。[AccessKeyの作成](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair)。 |
+| `ANALYTICDB_KEY_SECRET` | （空） | Aliyun access key secret。 |
+| `ANALYTICDB_REGION_ID` | `cn-hangzhou` | リージョン識別子。 |
+| `ANALYTICDB_INSTANCE_ID` | （空） | インスタンスID（例：`gp-xxxxxx`）。[インスタンスの作成](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1)。 |
+| `ANALYTICDB_ACCOUNT` | （空） | アカウント名。[アカウントの作成](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account)。 |
+| `ANALYTICDB_PASSWORD` | （空） | アカウントパスワード。 |
+| `ANALYTICDB_NAMESPACE` | `dify` | 名前空間（スキーマ）。存在しない場合は自動作成されます。 |
+| `ANALYTICDB_NAMESPACE_PASSWORD` | （空） | 名前空間パスワード。新しい名前空間作成時に使用されます。 |
+| `ANALYTICDB_HOST` | （空） | 直接接続ホスト（APIベースのアクセスの代替）。 |
+| `ANALYTICDB_PORT` | `5432` | 直接接続ポート。 |
+| `ANALYTICDB_MIN_CONNECTION` | `1` | 最小プール接続数。 |
+| `ANALYTICDB_MAX_CONNECTION` | `5` | 最大プール接続数。 |
+
+</Accordion>
+
+<Accordion title="TiDB Vector">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `TIDB_VECTOR_HOST` | `tidb` | ホスト名。 |
+| `TIDB_VECTOR_PORT` | `4000` | ポート番号。 |
+| `TIDB_VECTOR_USER` | （空） | ユーザー名。 |
+| `TIDB_VECTOR_PASSWORD` | （空） | パスワード。 |
+| `TIDB_VECTOR_DATABASE` | `dify` | データベース名。 |
+
+</Accordion>
+
+<Accordion title="MatrixOne">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MATRIXONE_HOST` | `matrixone` | ホスト名。 |
+| `MATRIXONE_PORT` | `6001` | ポート番号。 |
+| `MATRIXONE_USER` | `dump` | ユーザー名。 |
+| `MATRIXONE_PASSWORD` | `111` | パスワード。 |
+| `MATRIXONE_DATABASE` | `dify` | データベース名。 |
+
+</Accordion>
+
+<Accordion title="Chroma">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CHROMA_HOST` | `127.0.0.1` | Chromaサーバーホスト。 |
+| `CHROMA_PORT` | `8000` | Chromaサーバーポート。 |
+| `CHROMA_TENANT` | `default_tenant` | テナント名。 |
+| `CHROMA_DATABASE` | `default_database` | データベース名。 |
+| `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | 認証プロバイダークラス。 |
+| `CHROMA_AUTH_CREDENTIALS` | （空） | 認証資格情報。 |
+
+</Accordion>
+
+<Accordion title="Oracle">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ORACLE_USER` | `dify` | Oracleユーザー名。 |
+| `ORACLE_PASSWORD` | `dify` | Oracleパスワード。 |
+| `ORACLE_DSN` | `oracle:1521/FREEPDB1` | データソース名。 |
+| `ORACLE_CONFIG_DIR` | `/app/api/storage/wallet` | Oracle設定ディレクトリ。 |
+| `ORACLE_WALLET_LOCATION` | `/app/api/storage/wallet` | Autonomous DB用ウォレットの場所。 |
+| `ORACLE_WALLET_PASSWORD` | `dify` | ウォレットパスワード。 |
+| `ORACLE_IS_AUTONOMOUS` | `false` | Oracle Autonomous Databaseを使用するかどうか。 |
+
+</Accordion>
+
+<Accordion title="AlibabaCloud MySQL">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ALIBABACLOUD_MYSQL_HOST` | `127.0.0.1` | ホスト名。 |
+| `ALIBABACLOUD_MYSQL_PORT` | `3306` | ポート番号。 |
+| `ALIBABACLOUD_MYSQL_USER` | `root` | ユーザー名。 |
+| `ALIBABACLOUD_MYSQL_PASSWORD` | `difyai123456` | パスワード。 |
+| `ALIBABACLOUD_MYSQL_DATABASE` | `dify` | データベース名。 |
+| `ALIBABACLOUD_MYSQL_MAX_CONNECTION` | `5` | 最大プール接続数。 |
+| `ALIBABACLOUD_MYSQL_HNSW_M` | `6` | HNSW Mパラメータ。 |
+
+</Accordion>
+
+<Accordion title="Relyt">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `RELYT_HOST` | `db` | ホスト名。 |
+| `RELYT_PORT` | `5432` | ポート番号。 |
+| `RELYT_USER` | `postgres` | ユーザー名。 |
+| `RELYT_PASSWORD` | `difyai123456` | パスワード。 |
+| `RELYT_DATABASE` | `postgres` | データベース名。 |
+
+</Accordion>
+
+<Accordion title="OpenSearch">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OPENSEARCH_HOST` | `opensearch` | ホスト名。 |
+| `OPENSEARCH_PORT` | `9200` | ポート番号。 |
+| `OPENSEARCH_SECURE` | `true` | HTTPSを使用。 |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | SSL証明書を検証。 |
+| `OPENSEARCH_AUTH_METHOD` | `basic` | `basic`はユーザー名/パスワードを使用。`aws_managed_iam`はBoto3資格情報によるAWS SigV4リクエスト署名を使用（AWS Managed OpenSearchまたはServerless用）。 |
+| `OPENSEARCH_USER` | `admin` | ユーザー名。`basic`認証でのみ使用。 |
+| `OPENSEARCH_PASSWORD` | `admin` | パスワード。`basic`認証でのみ使用。 |
+| `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWSリージョン。`aws_managed_iam`認証でのみ使用。 |
+| `OPENSEARCH_AWS_SERVICE` | `aoss` | AWSサービスタイプ：`es`（Managed Cluster）または`aoss`（OpenSearch Serverless）。`aws_managed_iam`認証でのみ使用。 |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud VectorDB">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `TENCENT_VECTOR_DB_URL` | `http://127.0.0.1` | アクセスアドレス。[コンソール](https://console.cloud.tencent.com/vdb)。 |
+| `TENCENT_VECTOR_DB_API_KEY` | `dify` | APIキー。[キー管理](https://cloud.tencent.com/document/product/1709/95108)。 |
+| `TENCENT_VECTOR_DB_TIMEOUT` | `30` | リクエストタイムアウト（秒）。 |
+| `TENCENT_VECTOR_DB_USERNAME` | `dify` | アカウント名。[アカウント管理](https://cloud.tencent.com/document/product/1709/115833)。 |
+| `TENCENT_VECTOR_DB_DATABASE` | `dify` | データベース名。[データベースの作成](https://cloud.tencent.com/document/product/1709/95822)。 |
+| `TENCENT_VECTOR_DB_SHARD` | `1` | シャード数。 |
+| `TENCENT_VECTOR_DB_REPLICAS` | `2` | レプリカ数。 |
+| `TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH` | `false` | ハイブリッド検索を有効化。[スパースベクトルドキュメント](https://cloud.tencent.com/document/product/1709/110110)。 |
+
+</Accordion>
+
+<Accordion title="Elasticsearch">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ELASTICSEARCH_HOST` | `0.0.0.0` | ホスト名。 |
+| `ELASTICSEARCH_PORT` | `9200` | ポート番号。 |
+| `ELASTICSEARCH_USERNAME` | `elastic` | ユーザー名。 |
+| `ELASTICSEARCH_PASSWORD` | `elastic` | パスワード。 |
+| `ELASTICSEARCH_USE_CLOUD` | `false` | Elastic Cloudモードに切り替え。`true`の場合、host/port/username/passwordの代わりに`ELASTICSEARCH_CLOUD_URL`と`ELASTICSEARCH_API_KEY`を使用します。 |
+| `ELASTICSEARCH_CLOUD_URL` | （空） | Elastic CloudエンドポイントURL。`ELASTICSEARCH_USE_CLOUD=true`の場合に必要です。 |
+| `ELASTICSEARCH_API_KEY` | （空） | Elastic Cloud APIキー。`ELASTICSEARCH_USE_CLOUD=true`の場合に必要です。 |
+| `ELASTICSEARCH_VERIFY_CERTS` | `false` | SSL証明書を検証。 |
+| `ELASTICSEARCH_CA_CERTS` | （空） | CA証明書のパス。 |
+| `ELASTICSEARCH_REQUEST_TIMEOUT` | `100000` | リクエストタイムアウト（ミリ秒）。 |
+| `ELASTICSEARCH_RETRY_ON_TIMEOUT` | `true` | タイムアウト時にリトライ。 |
+| `ELASTICSEARCH_MAX_RETRIES` | `10` | 最大リトライ回数。 |
+
+</Accordion>
+
+<Accordion title="Baidu Vector DB">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `BAIDU_VECTOR_DB_ENDPOINT` | `http://127.0.0.1:5287` | エンドポイントURL。 |
+| `BAIDU_VECTOR_DB_CONNECTION_TIMEOUT_MS` | `30000` | 接続タイムアウト（ミリ秒）。 |
+| `BAIDU_VECTOR_DB_ACCOUNT` | `root` | アカウント名。 |
+| `BAIDU_VECTOR_DB_API_KEY` | `dify` | APIキー。 |
+| `BAIDU_VECTOR_DB_DATABASE` | `dify` | データベース名。 |
+| `BAIDU_VECTOR_DB_SHARD` | `1` | シャード数。 |
+| `BAIDU_VECTOR_DB_REPLICAS` | `3` | レプリカ数。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_ANALYZER` | `DEFAULT_ANALYZER` | 転置インデックスアナライザー。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_PARSER_MODE` | `COARSE_MODE` | 転置インデックスパーサーモード。 |
+
+</Accordion>
+
+<Accordion title="VikingDB">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `VIKINGDB_ACCESS_KEY` | （空） | Access key。 |
+| `VIKINGDB_SECRET_KEY` | （空） | Secret key。 |
+| `VIKINGDB_REGION` | `cn-shanghai` | リージョン。 |
+| `VIKINGDB_HOST` | `api-vikingdb.xxx.volces.com` | APIホスト。リージョン固有のエンドポイントに置き換えてください。 |
+| `VIKINGDB_SCHEMA` | `http` | プロトコルスキーム（`http`または`https`）。 |
+| `VIKINGDB_CONNECTION_TIMEOUT` | `30` | 接続タイムアウト（秒）。 |
+| `VIKINGDB_SOCKET_TIMEOUT` | `30` | Socketタイムアウト（秒）。 |
+
+</Accordion>
+
+<Accordion title="Lindorm">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `LINDORM_URL` | `http://localhost:30070` | Lindorm検索エンジンURL。[コンソール](https://lindorm.console.aliyun.com/)。 |
+| `LINDORM_USERNAME` | `admin` | ユーザー名。 |
+| `LINDORM_PASSWORD` | `admin` | パスワード。 |
+| `LINDORM_USING_UGC` | `true` | UGCモードを使用。 |
+| `LINDORM_QUERY_TIMEOUT` | `1` | クエリタイムアウト（秒）。 |
+
+</Accordion>
+
+<Accordion title="OpenGauss">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OPENGAUSS_HOST` | `opengauss` | ホスト名。 |
+| `OPENGAUSS_PORT` | `6600` | ポート番号。 |
+| `OPENGAUSS_USER` | `postgres` | ユーザー名。 |
+| `OPENGAUSS_PASSWORD` | `Dify@123` | パスワード。 |
+| `OPENGAUSS_DATABASE` | `dify` | データベース名。 |
+| `OPENGAUSS_MIN_CONNECTION` | `1` | 最小プール接続数。 |
+| `OPENGAUSS_MAX_CONNECTION` | `5` | 最大プール接続数。 |
+| `OPENGAUSS_ENABLE_PQ` | `false` | PQアクセラレーションを有効化。 |
+
+</Accordion>
+
+<Accordion title="Huawei Cloud Search">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `HUAWEI_CLOUD_HOSTS` | `https://127.0.0.1:9200` | クラスターエンドポイントURL。 |
+| `HUAWEI_CLOUD_USER` | `admin` | ユーザー名。 |
+| `HUAWEI_CLOUD_PASSWORD` | `admin` | パスワード。 |
+
+</Accordion>
+
+<Accordion title="Upstash Vector">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `UPSTASH_VECTOR_URL` | （空） | Upstash VectorエンドポイントURL。 |
+| `UPSTASH_VECTOR_TOKEN` | （空） | Upstash Vector APIトークン。 |
+
+</Accordion>
+
+<Accordion title="TableStore">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `TABLESTORE_ENDPOINT` | `https://instance-name.cn-hangzhou.ots.aliyuncs.com` | エンドポイントアドレス。`instance-name`をインスタンス名に置き換えてください。 |
+| `TABLESTORE_INSTANCE_NAME` | （空） | インスタンス名。 |
+| `TABLESTORE_ACCESS_KEY_ID` | （空） | Access Key ID。 |
+| `TABLESTORE_ACCESS_KEY_SECRET` | （空） | Access Key Secret。 |
+| `TABLESTORE_NORMALIZE_FULLTEXT_BM25_SCORE` | `false` | 全文BM25スコアを正規化。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CLICKZETTA_USERNAME` | （空） | ユーザー名。 |
+| `CLICKZETTA_PASSWORD` | （空） | パスワード。 |
+| `CLICKZETTA_INSTANCE` | （空） | インスタンス名。 |
+| `CLICKZETTA_SERVICE` | `api.clickzetta.com` | サービスエンドポイント。 |
+| `CLICKZETTA_WORKSPACE` | `quick_start` | ワークスペース名。 |
+| `CLICKZETTA_VCLUSTER` | `default_ap` | 仮想クラスター。 |
+| `CLICKZETTA_SCHEMA` | `dify` | スキーマ名。 |
+| `CLICKZETTA_BATCH_SIZE` | `100` | 操作のバッチサイズ。 |
+| `CLICKZETTA_ENABLE_INVERTED_INDEX` | `true` | 転置インデックスを有効化。 |
+| `CLICKZETTA_ANALYZER_TYPE` | `chinese` | アナライザータイプ。 |
+| `CLICKZETTA_ANALYZER_MODE` | `smart` | アナライザーモード。 |
+| `CLICKZETTA_VECTOR_DISTANCE_FUNCTION` | `cosine_distance` | 距離関数。 |
+
+</Accordion>
+
+<Accordion title="InterSystems IRIS">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `IRIS_HOST` | `iris` | ホスト名。 |
+| `IRIS_SUPER_SERVER_PORT` | `1972` | スーパーサーバーポート。 |
+| `IRIS_USER` | `_SYSTEM` | ユーザー名。 |
+| `IRIS_PASSWORD` | `Dify@1234` | パスワード。 |
+| `IRIS_DATABASE` | `USER` | データベース名。 |
+| `IRIS_SCHEMA` | `dify` | スキーマ名。 |
+| `IRIS_CONNECTION_URL` | （空） | 完全な接続URL（個別設定をオーバーライド）。 |
+| `IRIS_MIN_CONNECTION` | `1` | 最小プール接続数。 |
+| `IRIS_MAX_CONNECTION` | `3` | 最大プール接続数。 |
+| `IRIS_TEXT_INDEX` | `true` | テキストインデックスを有効化。 |
+| `IRIS_TEXT_INDEX_LANGUAGE` | `en` | テキストインデックスの言語。 |
+
+</Accordion>
+</AccordionGroup>
+
+### ナレッジベース設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `UPLOAD_FILE_SIZE_LIMIT` | `15` | ドキュメントアップロード（PDF、Wordドキュメントなど）の最大ファイルサイズ（MB）。超過するとユーザーに「ファイルが大きすぎます」エラーが表示されます。画像、動画、音声には適用されません。それらには下記の別の制限があります。 |
+| `UPLOAD_FILE_BATCH_LIMIT` | `5` | フロントエンドがアップロードバッチごとに許可する最大ファイル数。 |
+| `UPLOAD_FILE_EXTENSION_BLACKLIST` | （空） | アップロードできないファイル拡張子のセキュリティブロックリスト。カンマ区切り、小文字、ドットなし。例：`exe,bat,cmd,com,scr,vbs,ps1,msi,dll`。空の場合はすべてのタイプを許可します。 |
+| `SINGLE_CHUNK_ATTACHMENT_LIMIT` | `10` | 単一のナレッジベースセグメント（チャンク）に埋め込める最大画像数。 |
+| `IMAGE_FILE_BATCH_LIMIT` | `10` | アップロードバッチごとの最大画像ファイル数。 |
+| `ATTACHMENT_IMAGE_FILE_SIZE_LIMIT` | `2` | ナレッジベースインデックス作成時に外部URLから取得する画像の最大サイズ（MB）。これを超える画像はスキップされます。直接アップロードに適用される`UPLOAD_IMAGE_FILE_SIZE_LIMIT`とは異なります。 |
+| `ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT` | `60` | ナレッジベースインデックス作成時に外部URLから画像をダウンロードする際のタイムアウト（秒）。低速または応答しない画像サーバーはこのタイムアウト後に放棄されます。 |
+| `ETL_TYPE` | `dify` | ドキュメント抽出ライブラリ。`dify`はtxt、md、pdf、html、xlsx、docx、csvをサポートします。`Unstructured`はdoc、msg、eml、ppt、pptx、xml、epubのサポートを追加します（`UNSTRUCTURED_API_URL`が必要）。 |
+| `UNSTRUCTURED_API_URL` | （空） | Unstructured.io APIエンドポイント。`ETL_TYPE`が`Unstructured`の場合に必要です。`.ppt`ファイルのサポートにも必要です。例：`http://unstructured:8000/general/v0/general`。 |
+| `UNSTRUCTURED_API_KEY` | （空） | Unstructured.io認証用APIキー。 |
+| `SCARF_NO_ANALYTICS` | `true` | Unstructuredライブラリのテレメトリ/分析収集を無効化。 |
+| `TOP_K_MAX_VALUE` | `10` | ナレッジベース検索で`top_k`パラメータ（検索ごとの結果返却数）にユーザーが設定できる最大値。 |
+| `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | データセットAPIリクエストごとの最大セグメント数。`0`は無制限を意味します。 |
+
+#### アノテーションインポート
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ANNOTATION_IMPORT_FILE_SIZE_LIMIT` | `2` | アノテーションインポート用CSVファイルの最大サイズ（MB）。超過するとHTTP 413が返されます。 |
+| `ANNOTATION_IMPORT_MAX_RECORDS` | `10000` | アノテーションインポートごとの最大レコード数。レコードが多いファイルはバッチに分割する必要があります。 |
+| `ANNOTATION_IMPORT_MIN_RECORDS` | `1` | アノテーションインポートごとに必要な最小有効レコード数。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_MINUTE` | `5` | ワークスペースごとの1分あたりの最大アノテーションインポートリクエスト数。超過するとHTTP 429が返されます。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_HOUR` | `20` | ワークスペースごとの1時間あたりの最大アノテーションインポートリクエスト数。 |
+| `ANNOTATION_IMPORT_MAX_CONCURRENT` | `5` | ワークスペースごとの最大同時アノテーションインポートタスク数。古いタスクは2分後に自動クリーンアップされます。 |
+
+### モデル設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PROMPT_GENERATION_MAX_TOKENS` | `512` | システムがLLMを使用してプロンプトを自動生成する際の最大トークン数。APIクォータを無駄にする暴走生成を防止します。 |
+| `CODE_GENERATION_MAX_TOKENS` | `1024` | システムがLLMを使用してコードを自動生成する際の最大トークン数。 |
+| `PLUGIN_BASED_TOKEN_COUNTING_ENABLED` | `false` | 正確な使用量追跡のためにプラグインベースのトークンカウントを使用。無効の場合、トークンカウントは0を返します（高速ですがコスト追跡の精度が低下します）。 |
+
+### マルチモーダル設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MULTIMODAL_SEND_FORMAT` | `base64` | マルチモーダルLLMにファイルを送信する方法。`base64`はリクエストにファイルデータを埋め込みます（互換性が高く、オフラインで動作、ペイロードが大きい）。`url`は署名付きURLを送信してモデルに取得させます（高速、リクエストが小さいですが、モデルが`FILES_URL`にアクセスできる必要があります）。 |
+| `UPLOAD_IMAGE_FILE_SIZE_LIMIT` | `10` | 直接アップロードの最大画像ファイルサイズ（MB）（jpg、png、webp、gif、svg）。 |
+| `UPLOAD_VIDEO_FILE_SIZE_LIMIT` | `100` | 直接アップロードの最大動画ファイルサイズ（MB）（mp4、mov、mpeg、webm）。 |
+| `UPLOAD_AUDIO_FILE_SIZE_LIMIT` | `50` | 直接アップロードの最大音声ファイルサイズ（MB）（mp3、m4a、wav、amr、mpga）。 |
+
 <Note>
-このドキュメントは英語版のみです。[英語ドキュメント](/en/self-host/configuration/environments)を参照してください。
+すべてのアップロードサイズ制限は`NGINX_CLIENT_MAX_BODY_SIZE`（デフォルト`100M`）によっても制限されます。アップロード制限を100 MBを超えて増加する場合は、`NGINX_CLIENT_MAX_BODY_SIZE`も同様に増加してください。そうしないと、Nginxが413エラーでアップロードを拒否します。
 </Note>
+
+### Sentry設定
+
+Sentryはエラー追跡とパフォーマンス監視を提供します。各サービスにはエラーレポートを分離するための独自のDSNがあります。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SENTRY_DSN` | （空） | サービス間で共有されるSentry DSN。 |
+| `API_SENTRY_DSN` | （空） | APIサービス用のSentry DSN。設定されている場合、`SENTRY_DSN`をオーバーライドします。空の場合、バックエンドのSentryが無効になります。 |
+| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | パフォーマンストレーシングに含めるリクエストの割合（0.01 = 1%、1.0 = 100%）。トレースはサービス間のリクエストフローを追跡します。 |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | CPU/メモリプロファイリングに含めるリクエストの割合（0.01 = 1%）。プロファイルはコード内で時間が費やされている箇所を表示します。 |
+| `WEB_SENTRY_DSN` | （空） | Webフロントエンド（Next.js）用のSentry DSN。フロントエンドのみ。 |
+| `PLUGIN_SENTRY_ENABLED` | `false` | プラグインデーモンサービスのSentryを有効化。 |
+| `PLUGIN_SENTRY_DSN` | （空） | プラグインデーモン用のSentry DSN。 |
+
+### Notion連携設定
+
+ナレッジベースデータソースとしてDifyをNotionに接続します。[https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)で連携資格情報を取得してください。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `NOTION_INTEGRATION_TYPE` | `public` | `public`は標準OAuth 2.0を使用します（HTTPSリダイレクトURLが必要、CLIENT_ID + CLIENT_SECRETが必要）。`internal`は直接連携トークンを使用します（HTTPで動作）。ローカルデプロイには`internal`を使用してください。 |
+| `NOTION_CLIENT_SECRET` | （空） | OAuthクライアントシークレット。`public`連携に必要です。 |
+| `NOTION_CLIENT_ID` | （空） | OAuthクライアントID。`public`連携に必要です。 |
+| `NOTION_INTERNAL_SECRET` | （空） | Notionからの直接連携トークン。`internal`連携に必要です。 |
+
+### メール設定
+
+Difyはアカウント招待、パスワードリセット、ログインコード、人間の入力ノード通知のメールを送信します。サポートされる3つのプロバイダーのいずれかを設定してください。メールリンクには`CONSOLE_WEB_URL`の設定が必要です。[共通変数](#console_web_url)を参照してください。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MAIL_TYPE` | `resend` | メールプロバイダー：`resend`、`smtp`、または`sendgrid`。 |
+| `MAIL_DEFAULT_SEND_FROM` | （空） | すべての送信メールのデフォルト「From」アドレス。必須です。 |
+
+<AccordionGroup>
+<Accordion title="Resend">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `RESEND_API_URL` | `https://api.resend.com` | Resend APIエンドポイント。セルフホストResendまたはプロキシ用にオーバーライドします。 |
+| `RESEND_API_KEY` | （空） | Resend APIキー。`MAIL_TYPE=resend`の場合に必要です。 |
+
+</Accordion>
+
+<Accordion title="SMTP">
+
+3つのTLSモード：暗黙的TLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=false`、ポート465）、STARTTLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=true`、ポート587）、またはプレーン（`SMTP_USE_TLS=false`、ポート25）。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SMTP_SERVER` | （空） | SMTPサーバーアドレス。 |
+| `SMTP_PORT` | `465` | SMTPサーバーポート。STARTTLSモードの場合は`587`を使用してください。 |
+| `SMTP_USERNAME` | （空） | SMTPユーザー名。IPホワイトリストされたサーバーでは空にできます。 |
+| `SMTP_PASSWORD` | （空） | SMTPパスワード。IPホワイトリストされたサーバーでは空にできます。 |
+| `SMTP_USE_TLS` | `true` | TLSを有効化。`true`で`SMTP_OPPORTUNISTIC_TLS=false`の場合、暗黙的TLS（`SMTP_SSL`）を使用します。 |
+| `SMTP_OPPORTUNISTIC_TLS` | `false` | 暗黙的TLSの代わりにSTARTTLS（明示的TLS）を使用。`SMTP_USE_TLS=true`と併用する必要があります。 |
+| `SMTP_LOCAL_HOSTNAME` | （空） | SMTP HELO/EHLOで送信されるホスト名をオーバーライド。SMTPサーバーがコンテナホスト名を拒否する場合にDockerで必要です（Google Workspace、Microsoft 365でよく発生）。ドメインに設定してください（例：`mail.yourdomain.com`）。 |
+
+</Accordion>
+
+<Accordion title="SendGrid">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SENDGRID_API_KEY` | （空） | SendGrid APIキー。`MAIL_TYPE=sendgrid`の場合に必要です。 |
+
+詳細については、[SendGridドキュメント](https://sendgrid.com/docs/for-developers/sending-email/)を参照してください。
+
+</Accordion>
+</AccordionGroup>
+
+### その他の設定
+
+#### インデックス作成
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH` | `4000` | ナレッジベース用にドキュメントをチャンク化する際のテキストセグメントごとの最大トークン長。大きい値はチャンクあたりのコンテキストを多く保持し、小さい値はより細かい粒度を提供します。 |
+
+#### トークンと招待
+
+すべてのトークン有効期限変数は、Redisに保存されるワンタイムトークンの有効期間を制御します。期限切れ後、ユーザーは新しいトークンをリクエストする必要があります。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `INVITE_EXPIRY_HOURS` | `72` | ワークスペース招待リンクの有効期間（時間）。 |
+| `RESET_PASSWORD_TOKEN_EXPIRY_MINUTES` | `5` | パスワードリセットトークンの有効期間（分）。 |
+| `EMAIL_REGISTER_TOKEN_EXPIRY_MINUTES` | `5` | メール登録トークンの有効期間（分）。 |
+| `CHANGE_EMAIL_TOKEN_EXPIRY_MINUTES` | `5` | メール変更トークンの有効期間（分）。 |
+| `OWNER_TRANSFER_TOKEN_EXPIRY_MINUTES` | `5` | ワークスペースオーナー移譲トークンの有効期間（分）。 |
+
+#### コード実行サンドボックス
+
+サンドボックスは、Python、JavaScript、Jinja2コードノードを分離して実行する独立したサービスです。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CODE_EXECUTION_ENDPOINT` | `http://sandbox:8194` | サンドボックスサービスエンドポイント。 |
+| `CODE_EXECUTION_API_KEY` | `dify-sandbox` | サンドボックス認証用APIキー。サンドボックスサービスの`SANDBOX_API_KEY`と一致する必要があります。 |
+| `CODE_EXECUTION_SSL_VERIFY` | `true` | サンドボックス接続のSSLを検証。自己署名証明書での開発時は無効化してください。 |
+| `CODE_EXECUTION_CONNECT_TIMEOUT` | `10` | 接続タイムアウト（秒）。 |
+| `CODE_EXECUTION_READ_TIMEOUT` | `60` | 読み取りタイムアウト（秒）。 |
+| `CODE_EXECUTION_WRITE_TIMEOUT` | `10` | 書き込みタイムアウト（秒）。 |
+| `CODE_EXECUTION_POOL_MAX_CONNECTIONS` | `100` | サンドボックスサービスへの最大同時HTTP接続数。 |
+| `CODE_EXECUTION_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | サンドボックスコネクションプールで維持する最大アイドル接続数。 |
+| `CODE_EXECUTION_POOL_KEEPALIVE_EXPIRY` | `5.0` | アイドルなサンドボックス接続が閉じられるまでの秒数。 |
+| `CODE_MAX_NUMBER` | `9223372036854775807` | コードノード出力で許可される最大数値（最大64ビット符号付き整数）。 |
+| `CODE_MIN_NUMBER` | `-9223372036854775808` | コードノード出力で許可される最小数値（最小64ビット符号付き整数）。 |
+| `CODE_MAX_STRING_LENGTH` | `400000` | コードノード出力の最大文字列長。無制限の文字列生成によるメモリ枯渇を防止します。 |
+| `CODE_MAX_DEPTH` | `5` | 出力データ構造の最大ネスト深度。 |
+| `CODE_MAX_PRECISION` | `20` | 出力の浮動小数点数の最大小数桁数。 |
+| `CODE_MAX_STRING_ARRAY_LENGTH` | `30` | 文字列配列出力の最大要素数。 |
+| `CODE_MAX_OBJECT_ARRAY_LENGTH` | `30` | オブジェクト配列出力の最大要素数。 |
+| `CODE_MAX_NUMBER_ARRAY_LENGTH` | `1000` | 数値配列出力の最大要素数。 |
+| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | テンプレート変換ノード出力の最大文字数。 |
+
+#### ワークフローランタイム
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | ワークフロー実行ごとの最大ノード実行回数。超過するとワークフローが終了されます。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | ワークフロー実行ごとの最大実行時間（秒）。超過するとワークフローが終了されます。 |
+| `WORKFLOW_CALL_MAX_DEPTH` | `5` | ネストされたワークフロー呼び出しの最大深度。無限再帰を防止します。 |
+| `MAX_VARIABLE_SIZE` | `204800` | 単一のワークフロー変数の最大サイズ（バイト、200 KB）。 |
+| `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 単一のワークフロー実行でアップロードできる最大ファイル数。 |
+| `WORKFLOW_NODE_EXECUTION_STORAGE` | `rdbms` | ワークフローノード実行レコードの保存先。`rdbms`はすべてをデータベースに保存します。`hybrid`は新しいデータをオブジェクトストレージに保存し、両方から読み取ります。 |
+| `DSL_EXPORT_ENCRYPT_DATASET_ID` | `true` | DSLファイルエクスポート時にデータセットIDを暗号化。クロス環境インポートを容易にするためにプレーンIDをエクスポートする場合は`false`に設定してください。 |
+
+#### ワークフローストレージリポジトリ
+
+ワークフロー実行データを処理するバックエンド実装を選択します。デフォルトの`SQLAlchemy`リポジトリはすべてをデータベースに保存します。代替実装（例：Celery、Logstore）は異なるストレージ戦略に使用できます。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CORE_WORKFLOW_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_execution_repository.SQLAlchemyWorkflowExecutionRepository` | ワークフロー実行レコードのリポジトリ実装。 |
+| `CORE_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_node_execution_repository.SQLAlchemyWorkflowNodeExecutionRepository` | ワークフローノード実行レコードのリポジトリ実装。 |
+| `API_WORKFLOW_RUN_REPOSITORY` | `repositories.sqlalchemy_api_workflow_run_repository.DifyAPISQLAlchemyWorkflowRunRepository` | ワークフロー実行API操作のサービスレイヤーリポジトリ。 |
+| `API_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `repositories.sqlalchemy_api_workflow_node_execution_repository.DifyAPISQLAlchemyWorkflowNodeExecutionRepository` | ワークフローノード実行API操作のサービスレイヤーリポジトリ。 |
+| `LOOP_NODE_MAX_COUNT` | `100` | ループノードの最大反復回数。無限ループを防止します。 |
+| `MAX_PARALLEL_LIMIT` | `10` | ワークフロー内の最大並列ブランチ数。 |
+
+#### GraphEngineワーカープール
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `GRAPH_ENGINE_MIN_WORKERS` | `1` | GraphEngineインスタンスごとの最小ワーカー数。 |
+| `GRAPH_ENGINE_MAX_WORKERS` | `10` | GraphEngineインスタンスごとの最大ワーカー数。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 追加ワーカーの生成をトリガーするキュー深度。 |
+| `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 余剰ワーカーが削除されるまでのアイドル時間（秒）。 |
+
+#### ワークフローログクリーンアップ
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WORKFLOW_LOG_CLEANUP_ENABLED` | `false` | 毎日午前2:00にワークフロー実行ログの自動クリーンアップを有効化。 |
+| `WORKFLOW_LOG_RETENTION_DAYS` | `30` | クリーンアップ前にワークフローログを保持する日数。 |
+| `WORKFLOW_LOG_CLEANUP_BATCH_SIZE` | `100` | クリーンアップバッチごとに処理するログエントリ数。システムパフォーマンスに基づいて調整してください。 |
+| `WORKFLOW_LOG_CLEANUP_SPECIFIC_WORKFLOW_IDS` | （空） | クリーンアップを制限するワークフローIDのカンマ区切りリスト。空の場合、すべてのワークフローログがクリーンアップされます。 |
+
+#### HTTPリクエストノード
+
+ワークフローで外部APIを呼び出すために使用されるHTTPリクエストノードの設定です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `HTTP_REQUEST_NODE_MAX_TEXT_SIZE` | `1048576` | テキストレスポンスの最大サイズ（バイト、1 MB）。これを超えるレスポンスは切り詰められます。 |
+| `HTTP_REQUEST_NODE_MAX_BINARY_SIZE` | `10485760` | バイナリレスポンスの最大サイズ（バイト、10 MB）。 |
+| `HTTP_REQUEST_NODE_SSL_VERIFY` | `true` | SSL証明書を検証。自己署名証明書でのテスト時に無効化します。 |
+| `HTTP_REQUEST_MAX_CONNECT_TIMEOUT` | `10` | ワークフローエディターでユーザーが設定できる最大接続タイムアウト（秒）。ノードごとのタイムアウトはこれを超えられません。 |
+| `HTTP_REQUEST_MAX_READ_TIMEOUT` | `600` | 読み取りタイムアウトの上限（秒）。 |
+| `HTTP_REQUEST_MAX_WRITE_TIMEOUT` | `600` | 書き込みタイムアウトの上限（秒）。 |
+
+#### Webhook
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WEBHOOK_REQUEST_BODY_MAX_SIZE` | `10485760` | Webhookペイロードの最大サイズ（バイト、10 MB）。これを超えるペイロードは413エラーで拒否されます。 |
+
+#### SSRF保護
+
+DifyからのすべてのアウトバウンドHTTPリクエスト（HTTPノード、画像ダウンロードなど）は、内部/プライベートIP範囲へのリクエストをブロックするプロキシを経由し、Server-Side Request Forgery（SSRF）攻撃を防止します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SSRF_PROXY_HTTP_URL` | `http://ssrf_proxy:3128` | HTTPリクエスト用SSRFプロキシURL。 |
+| `SSRF_PROXY_HTTPS_URL` | `http://ssrf_proxy:3128` | HTTPSリクエスト用SSRFプロキシURL。 |
+| `SSRF_POOL_MAX_CONNECTIONS` | `100` | SSRF HTTPクライアントプール内の最大同時接続数。 |
+| `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | SSRFプールで維持する最大アイドル接続数。 |
+| `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | アイドルなSSRF接続が閉じられるまでの秒数。 |
+| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | リバースプロキシからのX-Forwarded-For/Proto/Portヘッダーを信頼。単一の信頼されたリバースプロキシの背後でのみ有効化してください。それ以外ではIPスプーフィングが可能になります。 |
+
+#### エージェント設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `MAX_TOOLS_NUM` | `10` | エージェントが同時に使用できる最大ツール数。 |
+| `MAX_ITERATIONS_NUM` | `99` | エージェント実行ごとの最大推論イテレーション数。無限エージェントループを防止します。 |
+
+## Webフロントエンドサービス
+
+これらの変数はNext.js Webフロントエンドコンテナのみで使用されます。Pythonバックエンドには影響しません。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `TEXT_GENERATION_TIMEOUT_MS` | `60000` | ストリーミングテキスト生成UIのフロントエンドタイムアウト。ストリームがこの時間以上停止した場合、UIはレンダリングを一時停止します。 |
+| `ALLOW_UNSAFE_DATA_SCHEME` | `false` | `data:`スキームのURLレンダリングを許可。セキュリティのためデフォルトでは無効です。 |
+| `MAX_TREE_DEPTH` | `50` | ワークフローエディターUIの最大ノードツリー深度。 |
+
+## データベースサービス
+
+Docker Composeでデータベースコンテナを直接設定します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PGDATA` | `/var/lib/postgresql/data/pgdata` | コンテナ内のPostgreSQLデータディレクトリ。 |
+| `MYSQL_HOST_VOLUME` | `./volumes/mysql/data` | MySQLデータボリュームとしてマウントされるホストパス。 |
+
+## サンドボックスサービス
+
+サンドボックスは、コードノード（Python、JavaScript、Jinja2）を実行するための隔離されたサービスです。セキュリティのためにネットワークアクセスを無効化できます。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SANDBOX_API_KEY` | `dify-sandbox` | サンドボックス認証用APIキー。APIサービスの`CODE_EXECUTION_API_KEY`と一致する必要があります。 |
+| `SANDBOX_GIN_MODE` | `release` | サンドボックスサービスモード：`release`または`debug`。 |
+| `SANDBOX_WORKER_TIMEOUT` | `15` | 単一コード実行の最大実行時間（秒）。 |
+| `SANDBOX_ENABLE_NETWORK` | `true` | コードからのアウトバウンドHTTPリクエストを許可。コードノードが外部サービスにアクセスすることを防止するには無効化してください。 |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | ネットワーク有効時のSSRF保護用HTTPプロキシ。 |
+| `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF保護用HTTPSプロキシ。 |
+| `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。 |
+
+## Nginxリバースプロキシ
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `NGINX_SERVER_NAME` | `_` | Nginxサーバー名。`_`は任意のホスト名に一致します。 |
+| `NGINX_HTTPS_ENABLED` | `false` | HTTPSを有効化。`true`の場合、SSL証明書と鍵を`./nginx/ssl/`に配置してください。 |
+| `NGINX_PORT` | `80` | HTTPポート。 |
+| `NGINX_SSL_PORT` | `443` | HTTPSポート（`NGINX_HTTPS_ENABLED=true`の場合のみ使用）。 |
+| `NGINX_SSL_CERT_FILENAME` | `dify.crt` | `./nginx/ssl/`内のSSL証明書ファイル名。 |
+| `NGINX_SSL_CERT_KEY_FILENAME` | `dify.key` | `./nginx/ssl/`内のSSL秘密鍵ファイル名。 |
+| `NGINX_SSL_PROTOCOLS` | `TLSv1.2 TLSv1.3` | 許可されるTLSプロトコルバージョン。 |
+| `NGINX_WORKER_PROCESSES` | `auto` | Nginxワーカープロセス数。`auto`はCPUコア数に一致します。 |
+| `NGINX_CLIENT_MAX_BODY_SIZE` | `100M` | 最大リクエストボディサイズ。プロキシレベルのファイルアップロード制限に影響します。 |
+| `NGINX_KEEPALIVE_TIMEOUT` | `65` | キープアライブタイムアウト（秒）。 |
+| `NGINX_PROXY_READ_TIMEOUT` | `3600s` | プロキシ読み取りタイムアウト。長時間のSSEストリームをサポートするため高く設定（1時間）されています。 |
+| `NGINX_PROXY_SEND_TIMEOUT` | `3600s` | プロキシ送信タイムアウト。 |
+| `NGINX_ENABLE_CERTBOT_CHALLENGE` | `false` | `/.well-known/acme-challenge/`でLet's Encrypt ACMEチャレンジリクエストを受け入れます。自動証明書更新のために有効化してください。 |
+
+<Note>
+HTTPSを有効化した後、[共通変数](#共通変数)のURL変数（例：`CONSOLE_API_URL`、`CONSOLE_WEB_URL`）も`https://`を使用するように更新してください。
+</Note>
+
+#### Certbot設定
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CERTBOT_EMAIL` | （空） | Let's Encryptの証明書通知に必要なメールアドレス。 |
+| `CERTBOT_DOMAIN` | （空） | SSL証明書のドメイン名。 |
+| `CERTBOT_OPTIONS` | （空） | 追加のcertbot CLIオプション（例：`--force-renewal`、`--dry-run`）。 |
+
+## SSRFプロキシ
+
+内部/プライベートネットワークへのリクエストをブロックするSquidベースのSSRFプロキシコンテナの設定です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SSRF_HTTP_PORT` | `3128` | プロキシのリッスンポート。 |
+| `SSRF_COREDUMP_DIR` | `/var/spool/squid` | コアダンプディレクトリ。 |
+| `SSRF_REVERSE_PROXY_PORT` | `8194` | サンドボックスサービスに転送されるリバースプロキシポート。 |
+| `SSRF_SANDBOX_HOST` | `sandbox` | サンドボックスサービスのホスト名。 |
+| `SSRF_DEFAULT_TIME_OUT` | `5` | プロキシされたリクエストのデフォルト全体タイムアウト（秒）。 |
+| `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | デフォルト接続タイムアウト（秒）。 |
+| `SSRF_DEFAULT_READ_TIME_OUT` | `5` | デフォルト読み取りタイムアウト（秒）。 |
+| `SSRF_DEFAULT_WRITE_TIME_OUT` | `5` | デフォルト書き込みタイムアウト（秒）。 |
+
+## Docker Compose
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql}` | データベースとベクトルストアの選択に基づいて、起動するサービスコンテナを自動選択します。例えば、`DB_TYPE=mysql`を設定するとPostgreSQLの代わりにMySQLが起動します。 |
+| `EXPOSE_NGINX_PORT` | `80` | Nginx HTTPにマッピングされるホストポート。 |
+| `EXPOSE_NGINX_SSL_PORT` | `443` | Nginx HTTPSにマッピングされるホストポート。 |
+
+## モデルプロバイダーとツールの表示順設定
+
+アプリインターフェースで利用可能なツールとモデルプロバイダーおよびその表示順をカスタマイズします。カンマ区切りの値を使用し、項目間にスペースを入れないでください。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `POSITION_TOOL_PINS` | （空） | 特定のツールをリストの先頭に固定。例：`bing,google`。 |
+| `POSITION_TOOL_INCLUDES` | （空） | リストされたツールのみ表示。未設定の場合、すべてのツールが利用可能です。 |
+| `POSITION_TOOL_EXCLUDES` | （空） | 特定のツールを非表示（固定されたツールには影響しません）。 |
+| `POSITION_PROVIDER_PINS` | （空） | 特定のモデルプロバイダーを先頭に固定。例：`openai,anthropic`。 |
+| `POSITION_PROVIDER_INCLUDES` | （空） | リストされたプロバイダーのみ表示。未設定の場合、すべてのプロバイダーが利用可能です。 |
+| `POSITION_PROVIDER_EXCLUDES` | （空） | 特定のプロバイダーを非表示（固定されたプロバイダーには影響しません）。 |
+
+## プラグインデーモン設定
+
+プラグインデーモンは、プラグインのライフサイクル（インストール、実行、アップグレード）を管理する独立したサービスです。APIはHTTP経由で通信します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | プラグインデーモンサービスURL。 |
+| `PLUGIN_DAEMON_KEY` | （自動生成） | プラグインデーモンの認証キー。 |
+| `PLUGIN_DAEMON_PORT` | `5002` | プラグインデーモンのリッスンポート。 |
+| `PLUGIN_DAEMON_TIMEOUT` | `600.0` | すべてのプラグインデーモンリクエスト（インストール、実行、リスト表示）のタイムアウト（秒）。 |
+| `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | プラグインパッケージの最大サイズ（バイト、50 MB）。マーケットプレイスダウンロード時に検証されます。 |
+| `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | プラグインモデルスキーマのキャッシュ期間（秒）。繰り返しの参照を削減します。 |
+| `PLUGIN_DIFY_INNER_API_KEY` | （自動生成） | プラグインデーモンがDify APIにコールバックする際に使用するAPIキー。プラグインデーモンサービス設定の`DIFY_INNER_API_KEY`と一致する必要があります。 |
+| `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | プラグインデーモンがコールバックする内部API URL。 |
+| `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | プラグインリモートデバッグ接続のホスト。 |
+| `PLUGIN_DEBUGGING_PORT` | `5003` | プラグインリモートデバッグ接続のポート。 |
+| `MARKETPLACE_ENABLED` | `true` | プラグインマーケットプレイスを有効化。無効の場合、ローカルにインストールされたプラグインのみ利用可能で、ブラウジングと自動アップグレードは利用できません。 |
+| `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` | プラグインのブラウジング、ダウンロード、アップグレード確認のためのマーケットプレイスAPIエンドポイント。 |
+| `FORCE_VERIFYING_SIGNATURE` | `true` | プラグインインストール前に有効な署名を要求。改ざんまたは未署名のパッケージのインストールを防止します。 |
+| `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | プラグイン実行タイムアウト（秒、プラグインデーモン側）。API側の`PLUGIN_DAEMON_TIMEOUT`と一致させる必要があります。 |
+| `PIP_MIRROR_URL` | （空） | プラグインデーモンがプラグインの依存関係をインストールする際に使用するカスタムPyPIミラーURL。高速インストールやエアギャップ環境に有用です。 |
+
+## OTLP / OpenTelemetry設定
+
+OpenTelemetryは分散トレーシングとメトリクス収集を提供します。有効時、DifyはFlaskを計装し、テレメトリデータをOTLPコレクターにエクスポートします。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ENABLE_OTEL` | `false` | OpenTelemetry計装のマスタースイッチ。 |
+| `OTLP_TRACE_ENDPOINT` | （空） | 専用トレースエンドポイントURL。未設定の場合、`{OTLP_BASE_ENDPOINT}/v1/traces`にフォールバックします。 |
+| `OTLP_METRIC_ENDPOINT` | （空） | 専用メトリクスエンドポイントURL。未設定の場合、`{OTLP_BASE_ENDPOINT}/v1/metrics`にフォールバックします。 |
+| `OTLP_BASE_ENDPOINT` | `http://localhost:4318` | ベースOTLPコレクターURL。特定のトレース/メトリクスエンドポイントが設定されていない場合のフォールバックとして使用されます。 |
+| `OTLP_API_KEY` | （空） | OTLP認証用APIキー。`Authorization: Bearer`ヘッダーとして送信されます。 |
+| `OTEL_EXPORTER_TYPE` | `otlp` | エクスポータータイプ。`otlp`はコレクターにエクスポートします。その他の値はコンソールエクスポーター（デバッグ用）を使用します。 |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | （空） | OTLPエクスポートのプロトコル。`grpc`はgRPCエクスポーターを使用します。それ以外はHTTPを使用します。 |
+| `OTEL_SAMPLING_RATE` | `0.1` | トレースするリクエストの割合（0.1 = 10%）。高トラフィックの本番環境ではオーバーヘッドを削減するために値を小さくします。 |
+| `OTEL_BATCH_EXPORT_SCHEDULE_DELAY` | `5000` | バッチエクスポート間の遅延（ミリ秒）。 |
+| `OTEL_MAX_QUEUE_SIZE` | `2048` | ドロップ前のキューに入れられる最大スパン数。 |
+| `OTEL_MAX_EXPORT_BATCH_SIZE` | `512` | エクスポートバッチごとの最大スパン数。 |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `60000` | メトリクスエクスポート間隔（ミリ秒）。 |
+| `OTEL_BATCH_EXPORT_TIMEOUT` | `10000` | バッチスパンエクスポートのタイムアウト（ミリ秒）。 |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | `30000` | メトリクスエクスポートのタイムアウト（ミリ秒）。 |
+
+## その他
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `CSP_WHITELIST` | （空） | Content Security Policyヘッダーで許可する追加ドメイン。 |
+| `ALLOW_EMBED` | `false` | Difyページのiframe埋め込みを許可。`false`の場合、クリックジャッキングを防止するため`X-Frame-Options: DENY`を設定します。 |
+| `SWAGGER_UI_ENABLED` | `false` | `SWAGGER_UI_PATH`でSwagger UIを公開し、APIドキュメントをブラウジングできるようにします。Swaggerエンドポイントは認証をバイパスします。 |
+| `SWAGGER_UI_PATH` | `/swagger-ui.html` | Swagger UIのURLパス。 |
+| `MAX_SUBMIT_COUNT` | `100` | 並列ワークフローノード実行に使用されるスレッドプール内の最大同時タスク送信数。 |
+| `TENANT_ISOLATED_TASK_CONCURRENCY` | `1` | テナントごとに同時処理されるドキュメントインデックスまたはRAGパイプラインタスク数。高速なインデックス作成のために増加できますが、データベース負荷が増加します。 |
+
+### 定期タスク設定
+
+DifyはCelery Beatを使用して、設定可能なスケジュールでバックグラウンドメンテナンスタスクを実行します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ENABLE_CLEAN_EMBEDDING_CACHE_TASK` | `false` | 毎日午前2:00に期限切れのエンベディングキャッシュレコードをデータベースから削除します。データベースサイズを管理します。 |
+| `ENABLE_CLEAN_UNUSED_DATASETS_TASK` | `false` | 保持期間内にアクティビティがなかったナレッジベースのドキュメントを無効化します。毎日午前3:00に実行されます。 |
+| `ENABLE_CLEAN_MESSAGES` | `false` | 毎日午前4:00に保持期間を超えた会話メッセージを削除します。 |
+| `ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK` | `false` | クリーンアップタスクによりドキュメントが自動無効化されたナレッジベースのリストをワークスペースオーナーにメールで送信します。毎週月曜日午前10:00に実行されます。 |
+| `ENABLE_DATASETS_QUEUE_MONITOR` | `false` | Redis内のデータセット処理キューのバックログを監視します。キューがしきい値を超えるとメールアラートを送信します。 |
+| `QUEUE_MONITOR_INTERVAL` | `30` | キューを確認する頻度（分）。 |
+| `QUEUE_MONITOR_THRESHOLD` | `200` | アラートメールをトリガーするキューサイズ。 |
+| `QUEUE_MONITOR_ALERT_EMAILS` | （空） | キューアラートを受信するメールアドレス（カンマ区切り）。 |
+| `ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK` | `true` | 15分ごとにマーケットプレイスで新しいプラグインバージョンを確認します。各テナントの自動アップグレードスケジュールに基づいてアップグレードタスクをディスパッチします。 |
+| `ENABLE_WORKFLOW_SCHEDULE_POLLER_TASK` | `true` | スケジュールされたワークフロー実行を確認してトリガーするワークフロースケジュールポーラーを有効化。 |
+| `WORKFLOW_SCHEDULE_POLLER_INTERVAL` | `1` | 期日のスケジュール済みワークフローを確認する頻度（分）。 |
+| `WORKFLOW_SCHEDULE_POLLER_BATCH_SIZE` | `100` | ポーリングサイクルごとに取得する最大期日スケジュール数。 |
+| `WORKFLOW_SCHEDULE_MAX_DISPATCH_PER_TICK` | `0` | サーキットブレーカー：ティックごとにディスパッチされる最大スケジュール数。`0`は無制限を意味します。 |
+| `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | ワークフロー実行レコードの自動クリーンアップを有効化。 |
+| `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | ベクトルデータベースプーリング用にTiDB Serverlessクラスターを事前作成。 |
+| `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | TiDB Serverlessクラスターのステータスを定期的に更新。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 期限切れの人間の入力フォームを確認し、タイムアウトしたワークフローを再開または停止します。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 期限切れの人間の入力フォームを確認する頻度（分）。 |
+
+#### レコード保持とクリーンアップ
+
+古いレコードのクリーンアップ方法を制御します。`BILLING_ENABLED`がアクティブな場合、クリーンアップは猶予期間付きでサンドボックスティアのテナントを対象とします。課金が無効（セルフホスト）の場合、クリーンアップは保持期間内のすべてのレコードに適用されます。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | この日数を超えたレコードが削除対象になります。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | サブスクリプション期限切れ後、レコードが削除されるまでの猶予期間（日、課金有効時のみ）。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | クリーンアップバッチごとに処理されるレコード数。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | データベース負荷を軽減するためのクリーンアップバッチ間の最大ランダム遅延（ミリ秒）。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | 同時クリーンアップタスク実行を防止するRedisロックTTL（秒、約25時間）。 |
+
+## Aliyun SLSログストア設定
+
+データベースの代わりにワークフロー実行ログを外部に保存するためのAliyun Simple Log Serviceとのオプション統合。ログストア実装を使用するようにリポジトリ設定変数を設定して有効化します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ALIYUN_SLS_ACCESS_KEY_ID` | （空） | SLS認証用Aliyun access key ID。 |
+| `ALIYUN_SLS_ACCESS_KEY_SECRET` | （空） | SLS認証用Aliyun access key secret。 |
+| `ALIYUN_SLS_ENDPOINT` | （空） | SLSサービスエンドポイントURL（例：`cn-hangzhou.log.aliyuncs.com`）。 |
+| `ALIYUN_SLS_REGION` | （空） | Aliyunリージョン（例：`cn-hangzhou`）。 |
+| `ALIYUN_SLS_PROJECT_NAME` | （空） | ワークフローログ保存用SLSプロジェクト名。 |
+| `ALIYUN_SLS_LOGSTORE_TTL` | `365` | SLSログストアのデータ保持期間（日）。永久保存には`3650`を使用してください。 |
+| `LOGSTORE_DUAL_WRITE_ENABLED` | `false` | ワークフローデータをSLSとPostgreSQLの両方に同時書き込み。SLSへの移行時に有用です。 |
+| `LOGSTORE_DUAL_READ_ENABLED` | `true` | SLSが結果を返さない場合にPostgreSQLにフォールバック。履歴データがデータベースにのみ存在する移行時に有用です。 |
+| `LOGSTORE_ENABLE_PUT_GRAPH_FIELD` | `true` | SLSログに完全なワークフローグラフ定義を含めます。大きなグラフデータを省略してストレージを削減するには`false`に設定してください。 |
+
+## イベントバス設定
+
+APIとCeleryワーカー間のRedisベースのイベント転送です。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `EVENT_BUS_REDIS_URL` | （空） | イベントストリーミング用Redis接続URL。空の場合、メインRedis接続設定を使用します。 |
+| `EVENT_BUS_REDIS_CHANNEL_TYPE` | `pubsub` | トランスポートタイプ：`pubsub`（Pub/Sub、at-most-once配信）、`sharded`（シャードPub/Sub）、または`streams`（Redis Streams、at-least-once配信）。 |
+| `EVENT_BUS_REDIS_USE_CLUSTERS` | `false` | イベントバスのRedis Clusterモードを有効化。大規模デプロイメントに推奨されます。 |
+
+## ベクトルデータベースサービス設定
+
+ベクトルデータベースコンテナ自体の設定です（Difyクライアント接続ではありません）。選択した`VECTOR_STORE`の変数のみが関連します。
+
+<AccordionGroup>
+<Accordion title="Weaviateサービス">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `WEAVIATE_PERSISTENCE_DATA_PATH` | `/var/lib/weaviate` | コンテナ内のデータ永続化ディレクトリ。 |
+| `WEAVIATE_QUERY_DEFAULTS_LIMIT` | `25` | デフォルトのクエリ結果制限。 |
+| `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED` | `true` | 匿名アクセスを許可。 |
+| `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | デフォルトのベクトライザーモジュール。 |
+| `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | クラスターノードのホスト名。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | APIキー認証を有効化。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （自動生成） | 許可されるAPIキー。クライアント設定の`WEAVIATE_API_KEY`と一致する必要があります。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | APIキーに関連付けられたユーザー。 |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | 管理者リスト認可を有効化。 |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | 管理者ユーザー。 |
+| `WEAVIATE_DISABLE_TELEMETRY` | `false` | Weaviateテレメトリを無効化。 |
+| `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | GSEトークナイザーを有効化（中国語）。 |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | Kagomeトークナイザーを有効化（日本語）。 |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | Kagomeトークナイザーを有効化（韓国語）。 |
+
+</Accordion>
+
+<Accordion title="Milvusサービス（ETCD + MinIO）">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ETCD_AUTO_COMPACTION_MODE` | `revision` | ETCD自動コンパクションモード。 |
+| `ETCD_AUTO_COMPACTION_RETENTION` | `1000` | リビジョン数での自動コンパクション保持。 |
+| `ETCD_QUOTA_BACKEND_BYTES` | `4294967296` | バックエンドクォータ（バイト、4 GB）。 |
+| `ETCD_SNAPSHOT_COUNT` | `50000` | スナップショットをトリガーする変更数。 |
+| `ETCD_ENDPOINTS` | `etcd:2379` | ETCDサービスエンドポイント。 |
+| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key。 |
+| `MINIO_SECRET_KEY` | `minioadmin` | MinIO secret key。 |
+| `MINIO_ADDRESS` | `minio:9000` | MinIOサービスアドレス。 |
+| `MILVUS_AUTHORIZATION_ENABLED` | `true` | Milvusセキュリティ認可を有効化。 |
+
+</Accordion>
+
+<Accordion title="OpenSearchサービス">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `OPENSEARCH_DISCOVERY_TYPE` | `single-node` | クラスター形成のディスカバリタイプ。 |
+| `OPENSEARCH_BOOTSTRAP_MEMORY_LOCK` | `true` | 起動時にメモリをロックしてスワッピングを防止。 |
+| `OPENSEARCH_JAVA_OPTS_MIN` | `512m` | 最小JVMヒープサイズ。 |
+| `OPENSEARCH_JAVA_OPTS_MAX` | `1024m` | 最大JVMヒープサイズ。 |
+| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | OpenSearchサービスの初期管理者パスワード。 |
+| `OPENSEARCH_MEMLOCK_SOFT` | `-1` | ソフトメモリロック制限（`-1`は無制限）。 |
+| `OPENSEARCH_MEMLOCK_HARD` | `-1` | ハードメモリロック制限（`-1`は無制限）。 |
+| `OPENSEARCH_NOFILE_SOFT` | `65536` | ソフトファイルディスクリプタ制限。 |
+| `OPENSEARCH_NOFILE_HARD` | `65536` | ハードファイルディスクリプタ制限。 |
+
+</Accordion>
+
+<Accordion title="PGVector / PGVecto.RSサービス">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PGVECTOR_PGUSER` | `postgres` | PGVectorコンテナのPostgreSQLユーザー。 |
+| `PGVECTOR_POSTGRES_PASSWORD` | （自動生成） | PGVectorコンテナのPostgreSQLパスワード。 |
+| `PGVECTOR_POSTGRES_DB` | `dify` | PGVectorコンテナ内のデータベース名。 |
+| `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | コンテナ内のデータディレクトリ。 |
+| `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | pg_bigm拡張のバージョン。 |
+
+</Accordion>
+
+<Accordion title="Oracle / Chroma / Elasticsearchサービス">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `ORACLE_PWD` | `Dify123456` | コンテナのOracleデータベースパスワード。 |
+| `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle文字セット。 |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | （自動生成） | Chromaサーバーコンテナの認証資格情報。 |
+| `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Chromaサーバーの認証プロバイダー。 |
+| `CHROMA_IS_PERSISTENT` | `TRUE` | Chromaの永続ストレージを有効化。 |
+| `KIBANA_PORT` | `5601` | Kibanaポート（Elasticsearch UI）。 |
+
+</Accordion>
+
+<Accordion title="IRIS / その他のサービス">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `IRIS_WEB_SERVER_PORT` | `52773` | IRIS Webサーバー管理ポート。 |
+| `IRIS_TIMEZONE` | `UTC` | IRISコンテナのタイムゾーン。 |
+| `DB_PLUGIN_DATABASE` | `dify_plugin` | プラグインデータ用の別データベース名。 |
+
+</Accordion>
+</AccordionGroup>
+
+## プラグインデーモンストレージ設定
+
+プラグインデーモンは異なるストレージバックエンドにプラグインパッケージを保存できます。`PLUGIN_STORAGE_TYPE`に一致するプロバイダーのみを設定してください。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_STORAGE_TYPE` | `local` | プラグインストレージバックエンド：`local`、`aws_s3`、`tencent_cos`、`azure_blob`、`aliyun_oss`、`volcengine_tos`。 |
+| `PLUGIN_STORAGE_LOCAL_ROOT` | `/app/storage` | ローカルプラグインストレージのルートディレクトリ。 |
+| `PLUGIN_WORKING_PATH` | `/app/storage/cwd` | プラグイン実行の作業ディレクトリ。 |
+| `PLUGIN_INSTALLED_PATH` | `plugin` | インストール済みプラグインのサブディレクトリ。 |
+| `PLUGIN_PACKAGE_CACHE_PATH` | `plugin_packages` | キャッシュされたプラグインパッケージのサブディレクトリ。 |
+| `PLUGIN_MEDIA_CACHE_PATH` | `assets` | キャッシュされたメディアアセットのサブディレクトリ。 |
+| `PLUGIN_STORAGE_OSS_BUCKET` | （空） | オブジェクトストレージバケット名（S3/COS/OSS/TOSプロバイダー間で共有）。 |
+| `PLUGIN_PPROF_ENABLED` | `false` | プラグインデーモンのGo pprofプロファイリングを有効化。 |
+| `PLUGIN_PYTHON_ENV_INIT_TIMEOUT` | `120` | プラグインのPython環境初期化のタイムアウト（秒）。 |
+| `PLUGIN_STDIO_BUFFER_SIZE` | `1024` | プラグインstdio通信のバッファサイズ（バイト）。 |
+| `PLUGIN_STDIO_MAX_BUFFER_SIZE` | `5242880` | プラグインstdio通信の最大バッファサイズ（バイト、5 MB）。 |
+| `ENFORCE_LANGGENIUS_PLUGIN_SIGNATURES` | `true` | LangGenius公式プラグインの署名検証を強制。 |
+| `ENDPOINT_URL_TEMPLATE` | `http://localhost/e/{hook_id}` | プラグインエンドポイントのURLテンプレート。`{hook_id}`は実際のフックIDに置き換えられます。 |
+| `EXPOSE_PLUGIN_DAEMON_PORT` | `5002` | プラグインデーモンにマッピングされるホストポート。 |
+| `EXPOSE_PLUGIN_DEBUGGING_HOST` | `localhost` | プラグインリモートデバッグのホスト。 |
+| `EXPOSE_PLUGIN_DEBUGGING_PORT` | `5003` | プラグインリモートデバッグのホストポート。 |
+
+<AccordionGroup>
+<Accordion title="プラグインS3ストレージ">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_S3_USE_AWS` | `false` | AWS S3を使用（S3互換サービスとの対比）。 |
+| `PLUGIN_S3_USE_AWS_MANAGED_IAM` | `false` | 明示的な資格情報の代わりにIAMロールを使用。 |
+| `PLUGIN_S3_ENDPOINT` | （空） | S3エンドポイントURL。 |
+| `PLUGIN_S3_USE_PATH_STYLE` | `false` | 仮想ホスト型の代わりにパス型URLを使用。 |
+| `PLUGIN_AWS_ACCESS_KEY` | （空） | AWS access key。 |
+| `PLUGIN_AWS_SECRET_KEY` | （空） | AWS secret key。 |
+| `PLUGIN_AWS_REGION` | （空） | AWSリージョン。 |
+
+</Accordion>
+
+<Accordion title="プラグインAzure Blobストレージ">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_AZURE_BLOB_STORAGE_CONTAINER_NAME` | （空） | Azure Blobコンテナ名。 |
+| `PLUGIN_AZURE_BLOB_STORAGE_CONNECTION_STRING` | （空） | Azure Blob接続文字列。 |
+
+</Accordion>
+
+<Accordion title="プラグインTencent COSストレージ">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_TENCENT_COS_SECRET_KEY` | （空） | Tencent COS secret key。 |
+| `PLUGIN_TENCENT_COS_SECRET_ID` | （空） | Tencent COS secret ID。 |
+| `PLUGIN_TENCENT_COS_REGION` | （空） | Tencent COSリージョン。 |
+
+</Accordion>
+
+<Accordion title="プラグインAliyun OSSストレージ">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_ALIYUN_OSS_REGION` | （空） | Aliyun OSSリージョン。 |
+| `PLUGIN_ALIYUN_OSS_ENDPOINT` | （空） | Aliyun OSSエンドポイント。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_ID` | （空） | Aliyun OSS access key ID。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_SECRET` | （空） | Aliyun OSS access key secret。 |
+| `PLUGIN_ALIYUN_OSS_AUTH_VERSION` | `v4` | Aliyun OSS認証バージョン。 |
+| `PLUGIN_ALIYUN_OSS_PATH` | （空） | Aliyun OSSパスプレフィックス。 |
+
+</Accordion>
+
+<Accordion title="プラグインVolcengine TOSストレージ">
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `PLUGIN_VOLCENGINE_TOS_ENDPOINT` | （空） | Volcengine TOSエンドポイント。 |
+| `PLUGIN_VOLCENGINE_TOS_ACCESS_KEY` | （空） | Volcengine TOS access key。 |
+| `PLUGIN_VOLCENGINE_TOS_SECRET_KEY` | （空） | Volcengine TOS secret key。 |
+| `PLUGIN_VOLCENGINE_TOS_REGION` | （空） | Volcengine TOSリージョン。 |
+
+</Accordion>
+</AccordionGroup>
