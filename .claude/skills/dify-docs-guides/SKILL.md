@@ -59,4 +59,7 @@ No overrides. Follow `writing-guides/style-guide.md` as written.
 
 ## Post-Writing Verification
 
-After completing the document, invoke `dify-docs-reader-test` to verify it from the reader's perspective.
+After completing the document:
+
+1. Invoke `dify-docs-terminology-check` to verify terminology consistency against the glossary and codebase.
+2. Invoke `dify-docs-reader-test` to verify it from the reader's perspective.
