@@ -72,7 +72,8 @@
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Plugin Trigger | 插件触发器 | プラグイントリガー |
 | Command | 命令 | コマンド |
-| Upload File to Sandbox | 上传文件至沙盒 | サンドボックスへのファイルアップロード |
+| Group | 分组 | グループ |
+| Upload File to Sandbox | 上传文件到沙盒 | サンドボックスへのファイルアップロード |
 
 ### Knowledge & Retrieval
 
@@ -121,6 +122,8 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Max Iterations | 最大迭代次数 | 最大イテレーション数 |
+| artifact | 产物 | アーティファクト |
+| chat history | 对话历史 | 対話履歴 |
 
 ### Infrastructure
 
@@ -129,7 +132,7 @@
 | self-hosted | 自托管 | セルフホスト |
 | SaaS | SaaS | SaaS |
 | Docker | Docker | Docker |
-| sandbox | 沙箱 | サンドボックス |
+| sandbox | 沙盒 | サンドボックス |
 | API | API | API |
 | runtime | 运行时 | ランタイム |
 | classic runtime | 经典运行时 | クラシックランタイム |
@@ -185,6 +188,7 @@
 | API Extension | API 扩展 | API 拡張 |
 | Billing | 账单 | 請求 |
 | Integrations | 集成 | 統合 |
+| Sandbox Provider | 沙盒供应商 | サンドボックスプロバイダー |
 | Default Model Settings | 默认模型设置 | デフォルトモデル設定 |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
@@ -227,6 +231,7 @@
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
 | Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 |
+| Clone & Upgrade Runtime | 复制并升级运行时 | Clone & Upgrade Runtime |
 
 ### Workflow Node Names
 
@@ -254,6 +259,9 @@
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Plugin Trigger | 插件触发器 | プラグイントリガー |
 | Knowledge Base | 知识库 | 知識ベース |
+| Command | 命令执行 | Command |
+| Upload File to Sandbox | 上传文件到沙盒 | Upload File to Sandbox |
+| Group | 分组 | Group |
 
 ### Workflow Controls
 
@@ -272,12 +280,15 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Artifacts | 产物 | Artifacts |
+| Files | 文件 | Files |
 
 ### Agent Node Config
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 |
+| Agent Mode | Agent 模式 | Agent Mode |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 
@@ -355,3 +366,11 @@
 
 Technical accuracy, English identifiers preserved, markdown formatting
 maintained, professional tone.
+
+### First-Mention Rule for General Terms
+
+On each page, the first time a general term appears, introduce it with a parenthetical pairing. Thereafter, use only the primary form.
+
+- **Local term is primary** (e.g., 产物, 对话历史): First mention → "产物（artifact）", thereafter → "产物"
+- **English term is primary** (e.g., Skill, Agent Mode): First mention → "Skill（技能）", thereafter → "Skill"
+- **Same across all languages** (e.g., API, Docker, Top P): Use the term directly, no parenthetical needed.

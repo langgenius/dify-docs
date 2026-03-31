@@ -8,6 +8,14 @@ Standard terminology for Dify documentation. Single source of truth for writers,
 
 Terms appear in body text exactly as written in this table. Capitalize them further only when external rules require it (start of a sentence, title case headings).
 
+### First-Mention Rule (Chinese and Japanese)
+
+On each page, the first time a general term appears, introduce it with a parenthetical pairing. Thereafter, use only the primary form.
+
+- **Local term is primary** (e.g., 产物, 对话历史): First mention → "产物（artifact）", thereafter → "产物"
+- **English term is primary** (e.g., Skill, Agent Mode): First mention → "Skill（技能）", thereafter → "Skill"
+- **Same across all languages** (e.g., API, Docker, Top P): Use the term directly, no parenthetical needed.
+
 ### Core Concepts
 
 | English | Chinese | Japanese | Notes |
@@ -77,7 +85,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | Triggers workflow execution via incoming HTTP webhook |
 | Plugin Trigger | 插件触发器 | プラグイントリガー | Triggers workflow execution from a plugin |
 | Command | 命令 | コマンド | Executes commands in the sandboxed runtime environment |
-| Upload File to Sandbox | 上传文件至沙盒 | サンドボックスへのファイルアップロード | Uploads files to the sandboxed runtime environment |
+| Upload File to Sandbox | 上传文件到沙盒 | サンドボックスへのファイルアップロード | Uploads files to the sandboxed runtime environment |
+| Group | 分组 | グループ | Groups multiple nodes together for organization |
 
 ### Knowledge & Retrieval
 
@@ -126,6 +135,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | Max Iterations | 最大迭代次数 | 最大イテレーション数 | Limits the maximum number of reasoning loops and tool actions |
+| artifact | 产物 | アーティファクト | Temporary files LLMs generate during execution (sandboxed runtime) |
+| chat history | 对话历史 | 対話履歴 | User, assistant, and tool messages generated during Agent node execution; viewable via `context` output variable |
 
 ### Infrastructure
 
@@ -134,7 +145,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | self-hosted | 自托管 | セルフホスト | |
 | SaaS | SaaS | SaaS | |
 | Docker | Docker | Docker | |
-| sandbox | 沙箱 | サンドボックス | |
+| sandbox | 沙盒 | サンドボックス | |
 | API | API | API | |
 | runtime | 运行时 | ランタイム | The execution environment for workflow nodes |
 | classic runtime | 经典运行时 | クラシックランタイム | Original lightweight execution environment focused on speed and token efficiency |
@@ -192,6 +203,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | API Extension | API 扩展 | API 拡張 | common.settings.apiBasedExtension | |
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Integrations | 集成 | 統合 | common.settings.integrations | |
+| Sandbox Provider | 沙盒供应商 | サンドボックスプロバイダー | common.settings.sandboxProvider | Sandboxed runtime |
 | Default Model Settings | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | Renamed from "System Model Settings" in v1.13.1. EN/ZH UI updated; JA UI still shows "システムモデル設定" until i18n update. Planned JA label:「デフォルトモデル設定」. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
@@ -234,6 +246,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
 | Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 | app.accessControl | |
+| Clone & Upgrade Runtime | 复制并升级运行时 | *JA pending* | app.upgradeRuntime | Upgrades classic-runtime app to sandboxed runtime |
 
 ### Workflow Node Names
 
@@ -261,6 +274,9 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
 | Plugin Trigger | 插件触发器 | プラグイントリガー | workflow.blocks.trigger-plugin | |
 | Knowledge Base | 知识库 | 知識ベース | workflow.blocks.knowledge-index | Knowledge index node |
+| Command | 命令执行 | *JA pending* | workflow.blocks.command | Sandboxed runtime node |
+| Upload File to Sandbox | 上传文件到沙盒 | *JA pending* | workflow.blocks.file-upload | Sandboxed runtime node |
+| Group | 分组 | *JA pending* | workflow.blocks.group | Sandboxed runtime node |
 
 ### Workflow Controls
 
@@ -279,12 +295,15 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
+| Artifacts | 产物 | *JA pending* | workflow.debug.variableInspect.tab.artifacts | Sandboxed runtime; files generated during execution |
+| Files | 文件 | *JA pending* | workflow.viewPicker.files | Canvas sidebar tab (formerly "Skill") |
 
 ### Agent Node Config
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
+| Agent Mode | Agent 模式 | エージェントモード | nodes.llm.computerUse.title | Toggle for command execution in sandboxed Agent nodes |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
 
