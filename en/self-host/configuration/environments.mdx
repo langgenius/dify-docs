@@ -1,865 +1,1569 @@
 ---
-title: Environments
+title: Environment Variables
+description: Reference for all environment variables used by Dify self-hosted deployments.
 ---
 
-<Info>
-This document may be outdated. Please refer to the latest configuration files:
+Dify works out of the box with default settings. You can customize your deployment by modifying the environment variables in the `.env` file.
 
-- [docker-compose.yaml](https://github.com/langgenius/dify/blob/5f8d20b5b2bb51f19547467167b18d9c0f6ffbb8/docker/docker-compose.yaml)
-
-- [.env.example](https://github.com/langgenius/dify/blob/5f8d20b5b2bb51f19547467167b18d9c0f6ffbb8/docker/.env.example)
-</Info>
+<Tip>
+After upgrading Dify, run `diff .env .env.example` in the `docker` directory to check for newly added or changed variables, then update your `.env` file accordingly.
+</Tip>
 
 ## Common Variables
 
+These URL variables configure the addresses of Dify's various services. 
+
+For single-domain deployments behind Nginx (the default Docker Compose setup), these can be left empty—the system auto-detects from the incoming request. Configure them when using custom domains, split-domain deployments, or a reverse proxy.
+
 ### CONSOLE_API_URL
 
-The backend URL for the console API. This is used to construct the authorization callback. If left empty, it defaults to the same domain as the application. Example: `https://api.console.dify.ai`
+Default: (empty)
+
+The public URL of Dify's backend API. Set this if you use OAuth login (GitHub, Google), Notion integration, or any plugin that requires OAuth—these features need an absolute callback URL to redirect users back after authorization. Also determines whether secure (HTTPS-only) cookies are used.
+
+Example: `https://api.console.dify.ai`
 
 ### CONSOLE_WEB_URL
 
-The front-end URL of the console web interface. This is used to construct front-end addresses and for CORS configuration. If left empty, it defaults to the same domain as the application. Example: `https://console.dify.ai`
+Default: (empty)
+
+The public URL of Dify's console frontend. Used to build links in all system emails (invitations, password resets, notifications) and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
+
+If empty, email links will be broken—even in single-domain setups, set this if you use email features.
+
+Example: `https://console.dify.ai`
 
 ### SERVICE_API_URL
 
-The Service API URL, used to display Service API Base URL in the front-end. If left empty, it defaults to the same domain as the application. Example: `https://api.dify.ai`
+Default: (empty)
 
-### TRIGGER_URL
+The API Base URL shown to developers in the Dify console—the URL they copy into their code to call the Dify API. If empty, auto-detects from the current request (e.g., `http://localhost/v1`). Set this to ensure a consistent URL when your server is accessible via multiple addresses.
 
-The base URL prefix used for the webhook callback URLs in both webhook triggers and plugin triggers.
-
-Ensure it points to a public domain or IP address accessible to external systems.
+Example: `https://api.dify.ai`
 
 ### APP_API_URL
 
-The WebApp API backend URL, used to specify the backend URL for the front-end API. If left empty, it defaults to the same domain as the application. Example: `https://app.dify.ai`
+Default: (empty)
+
+The backend API URL for the WebApp frontend (published apps). This variable is only used by the web frontend container, not the Python backend. If empty, the Docker image defaults to `http://127.0.0.1:5001`.
+
+Example: `https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-The WebApp URL, used to display File preview or download Url to the front-end or as Multi-model inputs; If left empty, it defaults to the same domain as the application. Example: `https://udify.app/`
+Default: (empty)
+
+The public URL where published WebApps are accessible. Required for the **Human Input node** in workflows—form links in email notifications are built as `{APP_WEB_URL}/form/{token}`. If empty, Human Input email delivery will not include valid form links.
+
+Example: `https://app.dify.ai`
+
+### TRIGGER_URL
+
+Default: `http://localhost`
+
+The publicly accessible URL for webhook and plugin trigger endpoints. External systems use this address to invoke your workflows. Dify builds trigger callback URLs like `{TRIGGER_URL}/triggers/webhook/{id}` and displays them in the console.
+
+For triggers to work from external systems, this must point to a public domain or IP address they can reach.
 
 ### FILES_URL
 
-The prefix for file preview or download URLs, used to display these URLs in the front-end and provide them as input for multi-modal models. To prevent forgery, image preview URLs are signed and expire after 5 minutes.
+Default: (empty; falls back to `CONSOLE_API_URL`)
 
-***
+The base URL for file preview and download links. Dify generates signed, time-limited URLs for all files (uploaded documents, tool outputs, workspace logos) and serves them to the frontend and multi-modal models.
 
-## Server
+Set this if you use file processing plugins, or if you want file URLs on a dedicated domain. If both `FILES_URL` and `CONSOLE_API_URL` are empty, file previews will not work.
 
-### MODE
+Example: `https://upload.example.com` or `http://<your-ip>:5001`
 
-Startup mode: This is only available when launched using docker. It is not applicable when running from source code.
+### INTERNAL_FILES_URL
 
-- api: Start API Server.
-- worker: Start asynchronous queue worker.
+Default: (empty; falls back to `FILES_URL`)
 
-### DEBUG
+The file access URL used for communication between services inside the Docker network (e.g., plugin daemon, PDF/Word extractors). These internal services may not be able to reach the external `FILES_URL` if it routes through Nginx or a public domain.
 
-Debug mode: Disabled by default. It's recommended to enable this setting during local development to prevent issues caused by monkey patching.
+If empty, internal services use `FILES_URL`. Set this when internal services can't reach the external URL.
 
-### FLASK_DEBUG
+Example: `http://api:5001`
 
-Flask debug mode: When enabled, it outputs trace information in the API responses, facilitating easier debugging.
+### FILES_ACCESS_TIMEOUT
+
+Default: `300` (5 minutes)
+
+How long signed file URLs remain valid, in seconds. After this time, the URL is rejected and the file must be re-requested. Increase for long-running processes; decrease for tighter security.
+
+### System Encoding
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANG` | `C.UTF-8` | System locale setting. Ensures UTF-8 encoding. |
+| `LC_ALL` | `C.UTF-8` | Locale override for all categories. |
+| `PYTHONIOENCODING` | `utf-8` | Python I/O encoding. |
+| `UV_CACHE_DIR` | `/tmp/.uv-cache` | UV package manager cache directory. Avoids permission issues with non-existent home directories. |
+
+## Server Configuration
+
+### Logging
+
+| Variable | Default | Description |
+|---|---|---|
+| `LOG_LEVEL` | `INFO` | Minimum log severity. Controls what gets logged across all handlers (file + console). Levels from least to most severe: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
+| `LOG_OUTPUT_FORMAT` | `text` | `text` produces human-readable lines with timestamp, level, thread, and trace ID. `json` produces structured JSON for log aggregation tools (ELK, Datadog, etc.). |
+| `LOG_FILE` | `/app/logs/server.log` | Log file path. When set, enables file-based logging with automatic rotation. The directory is created automatically. When empty, logs only go to console. |
+| `LOG_FILE_MAX_SIZE` | `20` | Maximum log file size in MB before rotation. When exceeded, the active file is renamed to `.1` and a new file is started. |
+| `LOG_FILE_BACKUP_COUNT` | `5` | Number of rotated log files to keep. With defaults, at most 6 files exist: the active file plus 5 backups. |
+| `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | Timestamp format for text-format logs (strftime codes). Ignored by JSON format. |
+| `LOG_TZ` | `UTC` | Timezone for log timestamps (pytz format, e.g., `Asia/Shanghai`). Only applies to text format—JSON always uses UTC. Also sets Celery's task scheduling timezone. |
+
+### General
+
+| Variable | Default | Description |
+|---|---|---|
+| `DEBUG` | `false` | Enables verbose logging: workflow node inputs/outputs, tool execution details, full LLM prompts and responses, and app startup timing. Useful for local development; not recommended for production as it may expose sensitive data in logs. |
+| `FLASK_DEBUG` | `false` | Standard Flask debug mode flag. Not actively used by Dify—`DEBUG` is the primary control. |
+| `ENABLE_REQUEST_LOGGING` | `false` | Logs a compact access line (`METHOD PATH STATUS DURATION TRACE_ID`) for every HTTP request. When `LOG_LEVEL` is also set to `DEBUG`, additionally logs full request and response bodies as JSON. |
+| `DEPLOY_ENV` | `PRODUCTION` | Tags monitoring data in Sentry and OpenTelemetry so you can filter errors and traces by environment. Also sent as the `X-Env` response header. Does not change application behavior. |
+| `MIGRATION_ENABLED` | `true` | When `true`, runs database schema migrations (`flask upgrade-db`) automatically on container startup. Docker only. Set to `false` if you run migrations separately. For source code launches, run `flask db upgrade` manually. |
+| `CHECK_UPDATE_URL` | `https://updates.dify.ai` | The console checks this URL for newer Dify versions. Set to empty to disable—useful for air-gapped environments or to prevent external HTTP calls. |
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | Legacy variable. Not actively used by Dify's own code. May be picked up by the OpenAI Python SDK if present in the environment. |
 
 ### SECRET_KEY
 
-A secret key used for securely signing session cookies and encrypting sensitive information in the database.
+Default: (pre-filled in `.env.example`; must be replaced for production)
 
-This variable must be set before the first launch.
+Used for session cookie signing, JWT authentication tokens, file URL signatures (HMAC-SHA256), and encrypting third-party OAuth credentials (AES-256). Generate a strong key before first launch:
 
-Run `openssl rand -base64 42` to generate a strong key for it.
+```bash
+openssl rand -base64 42
+```
 
-### DEPLOY_ENV
+<Warning>
+Changing this key after deployment will immediately log out all users, invalidate all file URLs, and break any plugin integrations that use OAuth—their encrypted credentials become unrecoverable.
+</Warning>
 
-Deployment environment:
+### INIT_PASSWORD
 
-- PRODUCTION (default): Production environment.
-- TESTING: Testing environment. There will be a distinct color label on the front-end page, indicating that this environment is a testing environment.
+Default: (empty)
 
-### LOG_LEVEL
+Optional security gate for first-time setup. When set, the `/install` page requires this password before the admin account can be created—preventing unauthorized setup if your server is exposed. Once setup is complete, this variable has no further effect. Maximum length: 30 characters.
 
-The log output level. Default is INFO. For production environments, it's recommended to set this to ERROR.
+### Token & Request Limits
 
-### MIGRATION_ENABLED
+| Variable | Default | Description |
+|---|---|---|
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | How long a login session's access token stays valid (in minutes). When it expires, the browser silently refreshes it using the refresh token—users are not logged out. |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | How long a user can stay logged in without re-entering credentials (in days). If the user doesn't visit within this period, they must log in again. |
+| `APP_MAX_EXECUTION_TIME` | `1200` | Maximum time (in seconds) an app execution can run before being terminated. Works alongside `WORKFLOW_MAX_EXECUTION_TIME`—both enforce the same default of 20 minutes, but this one applies at the app queue level while the other applies at the workflow engine level. Increase both if your workflows need more time. |
+| `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | Default concurrent request limit per app, used when an app doesn't have a custom limit set in the UI. `0` means unlimited. The effective limit is the smaller of this and `APP_MAX_ACTIVE_REQUESTS`. |
+| `APP_MAX_ACTIVE_REQUESTS` | `0` | Global ceiling for concurrent requests per app. Overrides per-app settings if they exceed this value. `0` means unlimited. |
 
-When set to true, database migrations are automatically executed on container startup. This is only available when launched using docker and does not apply when running from source code.
+### Container Startup Configuration
 
-For source code launches, you need to manually run `flask db upgrade` in the api directory.
+Only effective when starting with Docker image or Docker Compose.
 
-### CHECK_UPDATE_URL
+| Variable | Default | Description |
+|---|---|---|
+| `DIFY_BIND_ADDRESS` | `0.0.0.0` | Network interface the API server binds to. `0.0.0.0` listens on all interfaces; set to `127.0.0.1` to restrict to localhost only. |
+| `DIFY_PORT` | `5001` | Port the API server listens on. |
+| `SERVER_WORKER_AMOUNT` | `1` | Number of Gunicorn worker processes. With gevent (default), each worker handles multiple concurrent connections via greenlets, so 1 is usually sufficient. For sync workers, use `(2 x CPU cores) + 1`. [Reference](https://docs.gunicorn.org/en/stable/design.html#how-many-workers). |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn worker type. Gevent provides lightweight async concurrency. Changing this breaks psycopg2 and gRPC patching—it is strongly discouraged. |
+| `SERVER_WORKER_CONNECTIONS` | `10` | Maximum concurrent connections per worker. Only applies to async workers (gevent). If you experience connection rejections or slow responses under load, try increasing this value. |
+| `GUNICORN_TIMEOUT` | `360` | If a worker doesn't respond within this many seconds, Gunicorn kills and restarts it. Set to 360 (6 minutes) to support long-lived SSE connections used for streaming LLM responses. |
+| `CELERY_WORKER_CLASS` | (empty; defaults to gevent) | Celery worker type. Same gevent patching requirements as `SERVER_WORKER_CLASS`—it is strongly discouraged to change. |
+| `CELERY_WORKER_AMOUNT` | (empty; defaults to 1) | Number of Celery worker processes. Only used when autoscaling is disabled. |
+| `CELERY_AUTO_SCALE` | `false` | Enable dynamic autoscaling. When enabled, Celery monitors queue depth and spawns/kills workers between `CELERY_MIN_WORKERS` and `CELERY_MAX_WORKERS`. |
+| `CELERY_MAX_WORKERS` | (empty; defaults to CPU count) | Maximum workers when autoscaling is enabled. |
+| `CELERY_MIN_WORKERS` | (empty; defaults to 1) | Minimum workers when autoscaling is enabled. |
 
-Controls the version checking policy. If set to false, the system will not call `https://updates.dify.ai` to check for updates.
+### API Tool Configuration
 
-Currently, the version check interface based on CloudFlare Worker is not directly accessible in China. Setting this variable to an empty value will disable this API call.
-
-### TEXT_GENERATION_TIMEOUT_MS
-
-Default value: 60000 (milliseconds). Specifies the timeout for text generation and workflow processes. This setting prevents system-wide service disruptions caused by individual processes exceeding their allocated time.
-
-### OPENAI_API_BASE
-
-Used to change the OpenAI base address, default is [https://api.openai.com/v1](https://api.openai.com/v1).
-
-When OpenAI cannot be accessed in China, replace it with a domestic mirror address, or when a local model provides OpenAI compatible API, it can be replaced.
-
-### Container Startup Related Configuration
-
-Only effective when starting with docker image or docker-compose.
-
-- DIFY_BIND_ADDRESS: API service binding address, default: 0.0.0.0, i.e., all addresses can be accessed.
-- DIFY_PORT: API service binding port number, default to 5001.
-- SERVER_WORKER_AMOUNT: The number of API server workers, i.e., the number of gevent workers. Formula: `number of cpu cores x 2 + 1`
-
-  Reference: [https://docs.gunicorn.org/en/stable/design.html#how-many-workers](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)
-
-- SERVER_WORKER_CLASS: Defaults to gevent. If using windows, it can be switched to sync or solo.
-- GUNICORN_TIMEOUT: Request handling timeout. Default is 200. Recommended value is 360 to support longer SSE (Server-Sent Events) connection times.
-- CELERY_WORKER_CLASS: Similar to `SERVER_WORKER_CLASS`. Default is gevent. If using windows, it can be switched to sync or solo.
-- CELERY_WORKER_AMOUNT: The number of Celery workers. The default is 1, and can be set as needed.
-- COMPOSE_PROFILES: Selectively start service groups. The default value is `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql}`, which is automatically derived from `VECTOR_STORE` and `DB_TYPE`.
+| Variable | Default | Description |
+|---|---|---|
+| `API_TOOL_DEFAULT_CONNECT_TIMEOUT` | `10` | Maximum time (in seconds) to wait for establishing a TCP connection when API Tool nodes call external APIs. |
+| `API_TOOL_DEFAULT_READ_TIMEOUT` | `60` | Maximum time (in seconds) to wait for receiving response data from external APIs called by API Tool nodes. |
 
 ### Database Configuration
 
-The database uses PostgreSQL. Please use the public schema.
+The database uses PostgreSQL by default. OceanBase, MySQL, and seekdb are also supported.
 
-- DB_TYPE: Database type.
+| Variable | Default | Description |
+|---|---|---|
+| `DB_TYPE` | `postgresql` | Database type. Supported values: `postgresql`, `mysql`, `oceanbase`, `seekdb`. MySQL-compatible databases like TiDB can use `mysql`. |
+| `DB_USERNAME` | `postgres` | Database username. URL-encoded in the connection string, so special characters are safe to use. |
+| `DB_PASSWORD` | `difyai123456` | Database password. URL-encoded in the connection string, so characters like `@`, `:`, `%` are safe to use. |
+| `DB_HOST` | `db_postgres` | Database server hostname. |
+| `DB_PORT` | `5432` | Database server port. If using MySQL, set this to `3306`. |
+| `DB_DATABASE` | `dify` | Database name. |
 
-  Available values include：
+#### Connection Pool
 
-  - `postgresql`(default)
-  - `mysql` (MySQL-compatible databases like TiDB can also use this value)
-  - `oceanbase`
-  - `seekdb`
+These control how Dify manages its pool of database connections. The defaults work well for most deployments.
 
-- DB_USERNAME: username
-- DB_PASSWORD: password
-- DB_HOST: database host
-- DB_PORT: database port number, default is 5432
-- DB_DATABASE: database name
-- SQLALCHEMY_POOL_SIZE: The size of the database connection pool. The default is 30 connections, which can be appropriately increased.
-- SQLALCHEMY_POOL_RECYCLE: Database connection pool recycling time, the default is 3600 seconds.
-- SQLALCHEMY_ECHO: Whether to print SQL, default is false.
+| Variable | Default | Description |
+|---|---|---|
+| `SQLALCHEMY_POOL_SIZE` | `30` | Number of persistent connections kept in the pool. |
+| `SQLALCHEMY_MAX_OVERFLOW` | `10` | Additional temporary connections allowed when the pool is full. With default settings, up to 40 connections (30 + 10) can exist simultaneously. |
+| `SQLALCHEMY_POOL_RECYCLE` | `3600` | Recycle connections after this many seconds to prevent stale connections. |
+| `SQLALCHEMY_POOL_TIMEOUT` | `30` | How long to wait for a connection when the pool is exhausted. Requests fail with a timeout error if no connection frees up in time. |
+| `SQLALCHEMY_POOL_PRE_PING` | `false` | Test each connection with a lightweight query before using it. Prevents "connection lost" errors but adds slight latency. Recommended for production with unreliable networks. |
+| `SQLALCHEMY_POOL_USE_LIFO` | `false` | Reuse the most recently returned connection (LIFO) instead of rotating evenly (FIFO). LIFO keeps fewer connections "warm" and can reduce overhead. |
+| `SQLALCHEMY_ECHO` | `false` | Print all SQL statements to logs. Useful for debugging query issues. |
+
+#### PostgreSQL Performance Tuning
+
+These are passed as startup arguments to the PostgreSQL container—they configure the database server, not the Dify application.
+
+| Variable | Default | Description |
+|---|---|---|
+| `POSTGRES_MAX_CONNECTIONS` | `100` | Maximum number of database connections. [Reference](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) |
+| `POSTGRES_SHARED_BUFFERS` | `128MB` | Shared memory for buffers. Recommended: 25% of available memory. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-SHARED-BUFFERS) |
+| `POSTGRES_WORK_MEM` | `4MB` | Memory per database worker for working space. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM) |
+| `POSTGRES_MAINTENANCE_WORK_MEM` | `64MB` | Memory reserved for maintenance activities. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM) |
+| `POSTGRES_EFFECTIVE_CACHE_SIZE` | `4096MB` | Planner's assumption about effective cache size. [Reference](https://www.postgresql.org/docs/current/runtime-config-query.html#GUC-EFFECTIVE-CACHE-SIZE) |
+| `POSTGRES_STATEMENT_TIMEOUT` | `0` | Max statement duration before termination (ms). `0` means no timeout. [Reference](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) |
+| `POSTGRES_IDLE_IN_TRANSACTION_SESSION_TIMEOUT` | `0` | Max idle-in-transaction session duration (ms). `0` means no timeout. [Reference](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT) |
+
+#### MySQL Performance Tuning
+
+These are passed as startup arguments to the MySQL container—they configure the database server, not the Dify application.
+
+| Variable | Default | Description |
+|---|---|---|
+| `MYSQL_MAX_CONNECTIONS` | `1000` | Maximum number of MySQL connections. |
+| `MYSQL_INNODB_BUFFER_POOL_SIZE` | `512M` | InnoDB buffer pool size. Recommended: 70-80% of available memory for dedicated MySQL server. [Reference](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_buffer_pool_size) |
+| `MYSQL_INNODB_LOG_FILE_SIZE` | `128M` | InnoDB log file size. [Reference](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_log_file_size) |
+| `MYSQL_INNODB_FLUSH_LOG_AT_TRX_COMMIT` | `2` | InnoDB flush log at transaction commit. Options: `0` (no flush), `1` (flush and sync), `2` (flush to OS cache). [Reference](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit) |
 
 ### Redis Configuration
 
-This Redis configuration is used for caching and for pub/sub during conversation.
+Configure these to connect Dify to your Redis instance. Dify supports three deployment modes: standalone (default), Sentinel, and Cluster.
 
-- REDIS_HOST: Redis host
-- REDIS_PORT: Redis port, default is 6379
-- REDIS_DB: Redis Database, default is 0. Please use a different Database from Session Redis and Celery Broker.
-- REDIS_USERNAME: Redis username, default is empty
-- REDIS_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
-- REDIS_USE_SSL: Whether to use SSL protocol for connection, default is false
-- REDIS_USE_SENTINEL: Use Redis Sentinel to connect to Redis servers
-- REDIS_SENTINELS: Sentinel nodes, format: `<sentinel1_ip>:<sentinel1_port>,<sentinel2_ip>:<sentinel2_port>,<sentinel3_ip>:<sentinel3_port>`
-- REDIS_SENTINEL_SERVICE_NAME: Sentinel service name, same as Master Name
-- REDIS_SENTINEL_USERNAME: Username for Sentinel
-- REDIS_SENTINEL_PASSWORD: Password for Sentinel
-- REDIS_SENTINEL_SOCKET_TIMEOUT: Sentinel timeout, default value: 0.1, unit: seconds
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_HOST` | `redis` | Redis server hostname. Only used in standalone mode; ignored when Sentinel or Cluster mode is enabled. |
+| `REDIS_PORT` | `6379` | Redis server port. Only used in standalone mode. |
+| `REDIS_USERNAME` | (empty) | Redis 6.0+ ACL username. Applies to all modes (standalone, Sentinel, Cluster). |
+| `REDIS_PASSWORD` | `difyai123456` | Redis authentication password. For Cluster mode, use `REDIS_CLUSTERS_PASSWORD` instead. |
+| `REDIS_DB` | `0` | Redis database number (0–15). Only applies to standalone and Sentinel modes. Make sure this doesn't collide with Celery's database (configured in `CELERY_BROKER_URL`; default is DB 1). |
+| `REDIS_USE_SSL` | `false` | Enable SSL/TLS for the Redis connection. Does not automatically apply to Sentinel protocol. |
+| `REDIS_MAX_CONNECTIONS` | (empty) | Maximum connections in the Redis pool. Leave unset for the library default. Set this to match your Redis server's `maxclients` if needed. |
+
+#### Redis SSL Configuration
+
+Only applies when `REDIS_USE_SSL=true`. These same settings are also used by the Celery broker when its URL uses the `rediss://` scheme.
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_SSL_CERT_REQS` | `CERT_NONE` | Certificate verification level: `CERT_NONE` (no verification), `CERT_OPTIONAL`, or `CERT_REQUIRED` (full verification). |
+| `REDIS_SSL_CA_CERTS` | (empty) | Path to CA certificate file for verifying the Redis server. |
+| `REDIS_SSL_CERTFILE` | (empty) | Path to client certificate for mutual TLS authentication. |
+| `REDIS_SSL_KEYFILE` | (empty) | Path to client private key for mutual TLS authentication. |
+
+#### Redis Sentinel Mode
+
+Sentinel provides automatic master discovery and failover for high availability. Mutually exclusive with Cluster mode.
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_USE_SENTINEL` | `false` | Enable Redis Sentinel mode. When enabled, `REDIS_HOST`/`REDIS_PORT` are ignored; Dify connects to Sentinel nodes instead and asks for the current master. |
+| `REDIS_SENTINELS` | (empty) | Sentinel node addresses. Format: `<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>`. These are the Sentinel instances, not the Redis servers. |
+| `REDIS_SENTINEL_SERVICE_NAME` | (empty) | The logical service name Sentinel monitors (configured in `sentinel.conf`). Dify calls `master_for(service_name)` to discover the current master. |
+| `REDIS_SENTINEL_USERNAME` | (empty) | Username for authenticating with Sentinel nodes. Separate from `REDIS_USERNAME`, which authenticates with the Redis master/replicas. |
+| `REDIS_SENTINEL_PASSWORD` | (empty) | Password for authenticating with Sentinel nodes. Separate from `REDIS_PASSWORD`. |
+| `REDIS_SENTINEL_SOCKET_TIMEOUT` | `0.1` | Socket timeout (in seconds) for communicating with Sentinel nodes. Default 0.1s assumes fast local network. For cloud/WAN deployments, increase to 1.0–5.0s to prevent intermittent timeouts. |
+
+#### Redis Cluster Mode
+
+Cluster mode provides automatic sharding across multiple Redis nodes. Mutually exclusive with Sentinel mode.
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_USE_CLUSTERS` | `false` | Enable Redis Cluster mode. |
+| `REDIS_CLUSTERS` | (empty) | Cluster nodes. Format: `<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>` |
+| `REDIS_CLUSTERS_PASSWORD` | (empty) | Password for the Redis Cluster. |
 
 ### Celery Configuration
 
-- CELERY_BROKER_URL
+Configure the background task queue used for dataset indexing, email sending, and scheduled jobs.
 
-  Format as follows(direct connection mode):
+### CELERY_BROKER_URL
 
-  ```
-  redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
-  ```
+Default: `redis://:difyai123456@redis:6379/1`
 
-  Example: `redis://:difyai123456@redis:6379/1`
+Redis connection URL for the Celery message broker.
 
-  Sentinel mode:
+Direct connection format:
+```
+redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
+```
 
-  ```
-  sentinel://<sentinel_username>:<sentinel_password>@<sentinel_host>:<sentinel_port>/<redis_database>
-  ```
+Sentinel mode format (separate multiple nodes with semicolons):
+```
+sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<redis_database>
+```
 
-  Example: `sentinel://localhost:26379/1;sentinel://localhost:26380/1;sentinel://localhost:26381/1`
-
-- BROKER_USE_SSL: If set to true, use SSL protocol for connection, default is false
-- CELERY_USE_SENTINEL: If set to true, Sentinel mode will be enabled, default is false
-- CELERY_SENTINEL_MASTER_NAME: The service name of Sentinel, i.e., Master Name
-- CELERY_SENTINEL_SOCKET_TIMEOUT: Timeout for connecting to Sentinel, default value: 0.1, unit: seconds
+| Variable | Default | Description |
+|---|---|---|
+| `CELERY_BACKEND` | `redis` | Where Celery stores task results. Options: `redis` (fast, in-memory) or `database` (stores in your main database). |
+| `BROKER_USE_SSL` | `false` | Auto-enabled when `CELERY_BROKER_URL` uses `rediss://` scheme. Applies the Redis SSL certificate settings to the broker connection. |
+| `CELERY_USE_SENTINEL` | `false` | Enable Redis Sentinel mode for the Celery broker. |
+| `CELERY_SENTINEL_MASTER_NAME` | (empty) | Sentinel service name (Master Name). |
+| `CELERY_SENTINEL_PASSWORD` | (empty) | Password for Sentinel authentication. Separate from `REDIS_SENTINEL_PASSWORD`—they can differ if you use different Sentinel clusters for caching vs task queuing. |
+| `CELERY_SENTINEL_SOCKET_TIMEOUT` | `0.1` | Timeout for connecting to Sentinel in seconds. |
+| `CELERY_TASK_ANNOTATIONS` | `null` | Apply runtime settings to specific tasks (e.g., rate limits). Format: JSON dictionary. Example: `{"tasks.add": {"rate_limit": "10/s"}}`. Most users don't need this. |
 
 ### CORS Configuration
 
-Used to set the front-end cross-domain access policy.
+Controls cross-domain access policies for the frontend.
 
-- CONSOLE_CORS_ALLOW_ORIGINS\
-  Console CORS cross-domain policy, default is `*`, that is, all domains can access.
-
-- WEB_API_CORS_ALLOW_ORIGINS\
-  WebAPP CORS cross-domain policy, default is `*`, that is, all domains can access.
-
-- COOKIE_DOMAIN\
-  When the frontend and backend run on different subdomains, set `COOKIE_DOMAIN` to the site's top-level domain (e.g., `example.com`).\
-  The frontend and backend must be under the same top-level domain to share authentication cookies.
-
-- NEXT_PUBLIC_COOKIE_DOMAIN\
-  When the frontend and backend run on different subdomains, set `NEXT_PUBLIC_COOKIE_DOMAIN` to `1`.\
-  The frontend and backend must be under the same top-level domain to share authentication cookies.
+| Variable | Default | Description |
+|---|---|---|
+| `WEB_API_CORS_ALLOW_ORIGINS` | `*` | Allowed origins for cross-origin requests to the Web API. Example: `https://dify.app` |
+| `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | Allowed origins for cross-origin requests to the console API. If not set, falls back to `CONSOLE_WEB_URL`. |
+| `COOKIE_DOMAIN` | (empty) | Set to the shared top-level domain (e.g., `example.com`) when frontend and backend run on different subdomains. This allows authentication cookies to be shared across subdomains. When empty, cookies use the most secure `__Host-` prefix and are locked to a single domain. |
+| `NEXT_PUBLIC_COOKIE_DOMAIN` | (empty) | Frontend flag for cross-subdomain cookies. Set to `1` (or any non-empty value) to enable—the actual domain is read from `COOKIE_DOMAIN` on the backend. |
+| `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | Frontend-only. Controls how many concurrent API calls the UI makes during batch operations. |
 
 ### File Storage Configuration
 
-Used to store uploaded data set files, team/tenant encryption keys, and other files.
+Configure where Dify stores uploaded files, dataset documents, and encryption keys. Each storage type has its own credential variables—configure only the one you're using.
 
-- STORAGE_TYPE
+### STORAGE_TYPE
 
-  Type of storage facility
+Default: `opendal`
 
-  - local (default): Local file storage, if this option is selected, the following `STORAGE_LOCAL_PATH` configuration needs to be set.
+Selects the file storage backend. Supported values: `opendal`, `s3`, `azure-blob`, `aliyun-oss`, `google-storage`, `huawei-obs`, `volcengine-tos`, `tencent-cos`, `baidu-obs`, `oci-storage`, `supabase`, `clickzetta-volume`, `local` (deprecated; internally uses OpenDAL with filesystem scheme).
 
-  - s3: S3 object storage, if this option is selected, the following S3\_ prefixed configurations need to be set.
+<AccordionGroup>
+<Accordion title="OpenDAL (Default)">
 
-  - azure-blob: Azure Blob object storage, if this option is selected, the following AZURE_BLOB\_ prefixed configurations need to be set.
+Default storage backend using [Apache OpenDAL](https://opendal.apache.org/), a unified interface supporting many storage services. Dify automatically scans environment variables matching `OPENDAL_<SCHEME>_*` and passes them to OpenDAL. For example, with `OPENDAL_SCHEME=s3`, set `OPENDAL_S3_ACCESS_KEY_ID`, `OPENDAL_S3_SECRET_ACCESS_KEY`, etc.
 
-  - aliyun-oss: Alibaba Cloud OSS object storage, if this option is selected, the following ALIYUN_OSS\_ prefixed configurations need to be set.
+| Variable | Default | Description |
+|---|---|---|
+| `OPENDAL_SCHEME` | `fs` | Storage service to use. Examples: `fs` (local filesystem), `s3`, `gcs`, `azblob`. |
 
-  - huawei-obs: Huawei OBS object storage, if this option is selected, the following HUAWEI_OBS\_ prefixed configurations need to be set.
+For the default `fs` scheme:
 
-  - volcengine-tos: Volcengine TOS object storage, if this option is selected, the following VOLCENGINE_TOS\_ prefixed configurations need to be set.
+| Variable | Default | Description |
+|---|---|---|
+| `OPENDAL_FS_ROOT` | `storage` | Root directory for local filesystem storage. Created automatically if it doesn't exist. |
 
-  - tencent-cos: Tencent Cloud COS object storage, if this option is selected, the following TENCENT_COS\_ prefixed configurations need to be set.
+For all available schemes and their configuration options, see the [OpenDAL services documentation](https://github.com/apache/opendal/tree/main/core/src/services).
 
-- STORAGE_LOCAL_PATH
+</Accordion>
 
-  Default is storage, that is, it is stored in the storage directory of the current directory.
+<Accordion title="S3">
 
-  If you are deploying with docker or docker-compose, be sure to mount the `/app/api/storage` directory in both containers to the same local directory, otherwise, you may encounter file not found errors.
+| Variable | Default | Description |
+|---|---|---|
+| `S3_ENDPOINT` | (empty) | S3 endpoint address. Required for non-AWS S3-compatible services (MinIO, etc.). |
+| `S3_REGION` | `us-east-1` | S3 region. |
+| `S3_BUCKET_NAME` | `difyai` | S3 bucket name. |
+| `S3_ACCESS_KEY` | (empty) | S3 Access Key. Not needed when using IAM roles. |
+| `S3_SECRET_KEY` | (empty) | S3 Secret Key. Not needed when using IAM roles. |
+| `S3_USE_AWS_MANAGED_IAM` | `false` | Use AWS IAM roles (EC2 instance profile, ECS task role) instead of explicit access key/secret key. When enabled, boto3 auto-discovers credentials from the instance metadata. |
 
-- S3_ENDPOINT: S3 endpoint address
-- S3_BUCKET_NAME: S3 bucket name
-- S3_ACCESS_KEY: S3 Access Key
-- S3_SECRET_KEY: S3 Secret Key
-- S3_REGION: S3 region information, such as: us-east-1
-- AZURE_BLOB_ACCOUNT_NAME: your-account-name eg, 'difyai'
-- AZURE_BLOB_ACCOUNT_KEY: your-account-key eg, 'difyai'
-- AZURE_BLOB_CONTAINER_NAME: your-container-name eg, 'difyai-container'
-- AZURE_BLOB_ACCOUNT_URL: 'https://your_account_name.blob.core.windows.net'
-- ALIYUN_OSS_BUCKET_NAME: your-bucket-name eg, 'difyai'
-- ALIYUN_OSS_ACCESS_KEY: your-access-key eg, 'difyai'
-- ALIYUN_OSS_SECRET_KEY: your-secret-key eg, 'difyai'
-- ALIYUN_OSS_ENDPOINT: https://oss-ap-southeast-1-internal.aliyuncs.com # reference: https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
-- ALIYUN_OSS_REGION: ap-southeast-1 # reference: https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints
-- ALIYUN_OSS_AUTH_VERSION: v4
-- ALIYUN_OSS_PATH: your-path # Don't start with '/'. OSS doesn't support leading slash in object names. reference: https://www.alibabacloud.com/help/en/oss/support/0016-00000005
-- HUAWEI_OBS_BUCKET_NAME: your-bucket-name eg, 'difyai'
-- HUAWEI_OBS_SECRET_KEY: your-secret-key eg, 'difyai'
-- HUAWEI_OBS_ACCESS_KEY: your-access-key eg, 'difyai'
-- HUAWEI_OBS_SERVER: your-server-url # reference: https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html
-- VOLCENGINE_TOS_BUCKET_NAME: your-bucket-name eg, 'difyai'
-- VOLCENGINE_TOS_SECRET_KEY: your-secret-key eg, 'difyai'
-- VOLCENGINE_TOS_ACCESS_KEY: your-access-key eg, 'difyai'
-- VOLCENGINE_TOS_REGION: your-region eg, 'cn-guangzhou' # reference: https://www.volcengine.com/docs/6349/107356
-- VOLCENGINE_TOS_ENDPOINT: your-endpoint eg, 'tos-cn-guangzhou.volces.com' # reference: https://www.volcengine.com/docs/6349/107356
-- TENCENT_COS_BUCKET_NAME: your-bucket-name eg, 'difyai'
-- TENCENT_COS_SECRET_KEY: your-secret-key eg, 'difyai'
-- TENCENT_COS_SECRET_ID: your-secret-id eg, 'difyai'
-- TENCENT_COS_REGION: your-region eg, 'ap-guangzhou' # reference: https://cloud.tencent.com/document/product/436/6224
-- TENCENT_COS_SCHEME: specify http/https protocol to access COS
+</Accordion>
+
+<Accordion title="Azure Blob">
+
+| Variable | Default | Description |
+|---|---|---|
+| `AZURE_BLOB_ACCOUNT_NAME` | `difyai` | Azure storage account name. |
+| `AZURE_BLOB_ACCOUNT_KEY` | `difyai` | Azure storage account key. |
+| `AZURE_BLOB_CONTAINER_NAME` | `difyai-container` | Azure Blob container name. |
+| `AZURE_BLOB_ACCOUNT_URL` | `https://<your_account_name>.blob.core.windows.net` | Azure Blob account URL. |
+
+</Accordion>
+
+<Accordion title="Google Cloud Storage">
+
+| Variable | Default | Description |
+|---|---|---|
+| `GOOGLE_STORAGE_BUCKET_NAME` | (empty) | Google Cloud Storage bucket name. |
+| `GOOGLE_STORAGE_SERVICE_ACCOUNT_JSON_BASE64` | (empty) | Base64-encoded service account JSON key. |
+
+</Accordion>
+
+<Accordion title="Alibaba Cloud OSS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `ALIYUN_OSS_BUCKET_NAME` | (empty) | OSS bucket name. |
+| `ALIYUN_OSS_ACCESS_KEY` | (empty) | OSS access key. |
+| `ALIYUN_OSS_SECRET_KEY` | (empty) | OSS secret key. |
+| `ALIYUN_OSS_ENDPOINT` | `https://oss-ap-southeast-1-internal.aliyuncs.com` | OSS endpoint. [Regions and endpoints reference](https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints). |
+| `ALIYUN_OSS_REGION` | `ap-southeast-1` | OSS region. |
+| `ALIYUN_OSS_AUTH_VERSION` | `v4` | OSS authentication version. |
+| `ALIYUN_OSS_PATH` | (empty) | Object path prefix. Don't start with `/`. [Reference](https://www.alibabacloud.com/help/en/oss/support/0016-00000005). |
+| `ALIYUN_CLOUDBOX_ID` | (empty) | CloudBox ID for CloudBox-based OSS deployments. |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud COS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `TENCENT_COS_BUCKET_NAME` | (empty) | COS bucket name. |
+| `TENCENT_COS_SECRET_KEY` | (empty) | COS secret key. |
+| `TENCENT_COS_SECRET_ID` | (empty) | COS secret ID. |
+| `TENCENT_COS_REGION` | (empty) | COS region, e.g., `ap-guangzhou`. [Reference](https://cloud.tencent.com/document/product/436/6224). |
+| `TENCENT_COS_SCHEME` | (empty) | Protocol to access COS (`http` or `https`). |
+| `TENCENT_COS_CUSTOM_DOMAIN` | (empty) | Custom domain for COS access. |
+
+</Accordion>
+
+<Accordion title="OCI Object Storage">
+
+| Variable | Default | Description |
+|---|---|---|
+| `OCI_ENDPOINT` | (empty) | OCI endpoint URL. |
+| `OCI_BUCKET_NAME` | (empty) | OCI bucket name. |
+| `OCI_ACCESS_KEY` | (empty) | OCI access key. |
+| `OCI_SECRET_KEY` | (empty) | OCI secret key. |
+| `OCI_REGION` | `us-ashburn-1` | OCI region. |
+
+</Accordion>
+
+<Accordion title="Huawei OBS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `HUAWEI_OBS_BUCKET_NAME` | (empty) | OBS bucket name. |
+| `HUAWEI_OBS_ACCESS_KEY` | (empty) | OBS access key. |
+| `HUAWEI_OBS_SECRET_KEY` | (empty) | OBS secret key. |
+| `HUAWEI_OBS_SERVER` | (empty) | OBS server URL. [Reference](https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html). |
+| `HUAWEI_OBS_PATH_STYLE` | `false` | Use path-style URLs instead of virtual-hosted-style. |
+
+</Accordion>
+
+<Accordion title="Volcengine TOS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `VOLCENGINE_TOS_BUCKET_NAME` | (empty) | TOS bucket name. |
+| `VOLCENGINE_TOS_ACCESS_KEY` | (empty) | TOS access key. |
+| `VOLCENGINE_TOS_SECRET_KEY` | (empty) | TOS secret key. |
+| `VOLCENGINE_TOS_ENDPOINT` | (empty) | TOS endpoint URL. [Reference](https://www.volcengine.com/docs/6349/107356). |
+| `VOLCENGINE_TOS_REGION` | (empty) | TOS region, e.g., `cn-guangzhou`. |
+
+</Accordion>
+
+<Accordion title="Baidu OBS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `BAIDU_OBS_BUCKET_NAME` | (empty) | Baidu OBS bucket name. |
+| `BAIDU_OBS_ACCESS_KEY` | (empty) | Baidu OBS access key. |
+| `BAIDU_OBS_SECRET_KEY` | (empty) | Baidu OBS secret key. |
+| `BAIDU_OBS_ENDPOINT` | (empty) | Baidu OBS server URL. |
+
+</Accordion>
+
+<Accordion title="Supabase">
+
+| Variable | Default | Description |
+|---|---|---|
+| `SUPABASE_BUCKET_NAME` | (empty) | Supabase storage bucket name. |
+| `SUPABASE_API_KEY` | (empty) | Supabase API key. |
+| `SUPABASE_URL` | (empty) | Supabase server URL. |
+
+</Accordion>
+
+<Accordion title="ClickZetta Volume">
+
+| Variable | Default | Description |
+|---|---|---|
+| `CLICKZETTA_VOLUME_TYPE` | `user` | Volume type. Options: `user` (personal/small team), `table` (enterprise multi-tenant), `external` (data lake integration). |
+| `CLICKZETTA_VOLUME_NAME` | (empty) | External volume name (required only when `TYPE=external`). |
+| `CLICKZETTA_VOLUME_TABLE_PREFIX` | `dataset_` | Table volume table prefix (used only when `TYPE=table`). |
+| `CLICKZETTA_VOLUME_DIFY_PREFIX` | `dify_km` | Dify file directory prefix for isolation from other apps. |
+
+ClickZetta Volume reuses the `CLICKZETTA_*` connection parameters configured in the Vector Database section.
+
+</Accordion>
+</AccordionGroup>
+
+#### Archive Storage
+
+Separate S3-compatible storage for archiving workflow run logs. Used by the paid plan retention system to archive workflow runs older than the retention period to JSONL format. Requires `BILLING_ENABLED=true`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ARCHIVE_STORAGE_ENABLED` | `false` | Enable archive storage for workflow log archival. |
+| `ARCHIVE_STORAGE_ENDPOINT` | (empty) | S3-compatible endpoint URL. |
+| `ARCHIVE_STORAGE_ARCHIVE_BUCKET` | (empty) | Bucket for archived workflow run logs. |
+| `ARCHIVE_STORAGE_EXPORT_BUCKET` | (empty) | Bucket for workflow run exports. |
+| `ARCHIVE_STORAGE_ACCESS_KEY` | (empty) | Access key. |
+| `ARCHIVE_STORAGE_SECRET_KEY` | (empty) | Secret key. |
+| `ARCHIVE_STORAGE_REGION` | `auto` | Storage region. |
 
 ### Vector Database Configuration
 
-- VECTOR_STORE\
-  Available values include:
-  - `weaviate`
-  - `oceanbase`
-  - `seekdb`
-  - `qdrant`
-  - `milvus`
-  - `myscale`
-  - `relyt`
-  - `pgvector`
-  - `pgvecto-rs`
-  - `chroma`
-  - `opensearch`
-  - `oracle`
-  - `tencent`
-  - `elasticsearch`
-  - `elasticsearch-ja`
-  - `analyticdb`
-  - `couchbase`
-  - `vikingdb`
-  - `opengauss`
-  - `tablestore`
-  - `vastbase`
-  - `tidb`
-  - `baidu`
-  - `lindorm`
-  - `huawei_cloud`
-  - `upstash`
-  - `matrixone`
-  - `clickzetta`
-  - `alibabacloud_mysql`
-  - `iris`
+Configure the vector database used for knowledge base embedding storage and similarity search. Each provider has its own set of credential variables—configure only the one you're using.
 
-#### Weaviate Configuration
+### VECTOR_STORE
 
-- WEAVIATE_ENDPOINT
-
-  Weaviate endpoint address, such as: `http://weaviate:8080`.
-
-- WEAVIATE_API_KEY
-
-  The api-key credential used to connect to Weaviate.
-
-- WEAVIATE_BATCH_SIZE
-
-  The number of index Objects created in batches in Weaviate, default is 100.
-
-  Refer to this document: [https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters](https://weaviate.io/developers/weaviate/manage-data/import#how-to-set-batch-parameters)
-
-- WEAVIATE_GRPC_ENABLED
-
-  Whether to use the gRPC method to interact with Weaviate, performance will greatly increase when enabled, may not be usable locally, default is true.
-
-#### OceanBase/seekdb Configuration
-
-- OCEANBASE_VECTOR_HOST
-
-  The hostname or IP address of OceanBase or seekdb vector database.
-
-- OCEANBASE_VECTOR_PORT
-
-  The port of OceanBase or seekdb vector database.
-
-- OCEANBASE_VECTOR_USER
-
-  The username of OceanBase or seekdb vector database.
-
-- OCEANBASE_VECTOR_PASSWORD
-
-  The password of OceanBase or seekdb vector database user.
-
-- OCEANBASE_VECTOR_DATABASE
-
-  The database name of OceanBase or seekdb vector database.
-
-- OCEANBASE_CLUSTER_NAME
-
-  The cluster name of OceanBase or seekdb vector database, only available for Docker deployment.
-
-- OCEANBASE_MEMORY_LIMIT
-
-  The memory limit of OceanBase vector database, only available for Docker deployment.
-
-- SEEKDB_MEMORY_LIMIT
-
-  The memory limit of seekdb vector database, only available for Docker deployment.
-
-#### Qdrant Configuration
-
-- QDRANT_URL
-
-  Qdrant endpoint address, such as: `https://your-qdrant-cluster-url.qdrant.tech/`
-
-- QDRANT_API_KEY
-
-  The api-key credential used to connect to Qdrant.
-
-#### Milvus Configuration
-
-- MILVUS_URI
-
-  Milvus uri configuration. e.g. `http://host.docker.internal:19530`. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), adjust the uri and token to the Public Endpoint and API Key.
-
-- MILVUS_TOKEN
-
-  Milvus token configuration, default is empty.
-
-- MILVUS_USER
-
-  Milvus user configuration, default is empty.
-
-- MILVUS_PASSWORD
-
-  Milvus password configuration, default is empty.
-
-#### MyScale Configuration
-
-- MYSCALE_HOST
-
-  MyScale host configuration.
-
-- MYSCALE_PORT
-
-  MyScale port configuration.
-
-- MYSCALE_USER
-
-  MyScale user configuration, default is `default`.
-
-- MYSCALE_PASSWORD
-
-  MyScale password configuration, default is empty.
-
-- MYSCALE_DATABASE
-
-  MyScale database configuration, default is `default`.
-
-- MYSCALE_FTS_PARAMS
-
-  MyScale text-search params, check [MyScale docs](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters) for multi-language support, default is empty.
-
-#### Couchbase Configuration
-
-- COUCHBASE_CONNECTION_STRING
-
-  The connection string for the Couchbase cluster.
-
-- COUCHBASE_USER
-
-  The username for the database user.
-
-- COUCHBASE_PASSWORD
-
-  The password for the database user.
-
-- COUCHBASE_BUCKET_NAME
-
-  The name of the bucket to use.
-
-- COUCHBASE_SCOPE_NAME
-
-  The name of the scope to use.
-
-#### AnalyticDB Configuration
-
-- ANALYTICDB_KEY_ID
-
-  The access key ID used for Aliyun OpenAPI authentication. Read the  [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair) to create your AccessKey.
-
-- ANALYTICDB_KEY_SECRET
-
-  The access key secret used for Aliyun OpenAPI authentication.
-
-- ANALYTICDB_INSTANCE_ID
-
-  The unique identifier for your AnalyticDB instance, such as : `gp-xxxxxx`. Read the [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1) to create your instance.
-
-- ANALYTICDB_REGION_ID
-
-  The region identifier where the AnalyticDB instance is located, such as: `cn-hangzhou`.
-
-- ANALYTICDB_ACCOUNT
-
-  The account name used to connect to the AnalyticDB instance. Read the [Analyticdb documentation](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account) to create an account.
-
-- ANALYTICDB_PASSWORD
-
-  The password for the account used to connect to the AnalyticDB instance.
-
-- ANALYTICDB_NAMESPACE
-
-  The namespace(schema) within the AnalyticDB instance that you wish to interact with, such as `dify`. If this namespace does not exist, it will be created automatically.
-
-- ANALYTICDB_NAMESPACE_PASSWORD
-
-  The password for the namespace(schema). If the namespace does not exist, it will be created with this password.
-
-#### TiDB Configuration
-
-- TIDB_VECTOR_HOST
-
-  The hostname or IP address of the TiDB vector database. Default is `tidb`.
-
-- TIDB_VECTOR_PORT
-
-  The port of the TiDB vector database. Default is `4000`.
-
-- TIDB_VECTOR_USER
-
-  The username of the TiDB vector database.
-
-- TIDB_VECTOR_PASSWORD
-
-  The password of the TiDB vector database.
-
-- TIDB_VECTOR_DATABASE
-
-  The database name of the TiDB vector database. Default is `dify`.
-
-#### MatrixOne Configuration
-
-- MATRIXONE_HOST
-
-  The host of Matrixone database, default value is matrixone.
-
-- MATRIXONE_PORT
-
-  The port of Matrixone database, default value is 6001.
-
-- MATRIXONE_USER
-
-  The user of Matrixone database, default value is dump.
-
-- MATRIXONE_PASSWORD
-
-  The password of Matrixone database, default value is 111.
-
-- MATRIXONE_DATABASE
-
-  The database of Matrixone database, default value is dify.
-
-#### Tencent Cloud VectorDB Configuration
-
-- TENCENT_VECTOR_DB_URL
-
-  The access address for Tencent Cloud VectorDB can be obtained from [the console](https://console.cloud.tencent.com/vdb).
-
-- TENCENT_VECTOR_DB_API_KEY
-
-  The API key (password) for the VectorDB server is used for identity authentication. [Key Management](https://cloud.tencent.com/document/product/1709/95108).
-
-- TENCENT_VECTOR_DB_USERNAME
-
-  The vector database account, default 'root'. [Account Management](https://cloud.tencent.com/document/product/1709/115833).
-
-- TENCENT_VECTOR_DB_TIMEOUT
-
-  Set the default request timeout duration.
-
-- TENCENT_VECTOR_DB_DATABASE
-
-  Set up a Database for storing data. [Create Database](https://cloud.tencent.com/document/product/1709/95822).
-
-- TENCENT_VECTOR_DB_SHARD
-
-  Specify the number of shards.
-
-- TENCENT_VECTOR_DB_REPLICAS
-
-  Specify the number of replicas.
-
-- TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH
-
-  Specify whether to enable HybridSearch. [Sparse Vector Documentation](https://cloud.tencent.com/document/product/1709/110110).
-
-#### Lindorm Configuration
-
-- LINDORM_URL
-
-  The URL of LINDORM search engine，you can get it from [the console](https://lindorm.console.aliyun.com/)
-
-- LINDORM_USERNAME
-
-  The username of lindorm search engine
-
-- LINDORM_PASSWORD
-
-  The password of lindorm search engine
-
-#### OpenGauss Configuration
-
-- OPENGAUSS_HOST
-
-  The hostname or IP address of the openGauss vector database.
-
-- OPENGAUSS_PORT
-
-  The port of the openGauss vector database.
-
-- OPENGAUSS_USER
-
-  The username of the openGauss vector database.
-
-- OPENGAUSS_PASSWORD
-
-  The password of the openGauss vector database.
-
-- OPENGAUSS_DATABASE
-
-  The database name of the openGauss vector database.
-
-- OPENGAUSS_MIN_CONNECTION
-
-  Min connection of the openGauss vector database.
-
-- OPENGAUSS_MAX_CONNECTION
-
-  Max connection of the openGauss vector database.
-
-- OPENGAUSS_ENABLE_PQ
-
-  Enabling PQ Acceleration for the openGauss vector database.
-
-#### TableStore Configuration
-
-- TABLESTORE_ENDPOINT
-
-  The endpoint address of the TableStore server (e.g. 'https://instance-name.cn-hangzhou.ots.aliyuncs.com')
-
-- TABLESTORE_INSTANCE_NAME
-
-  The instance name to access TableStore server (e.g. 'instance-name')
-
-- TABLESTORE_ACCESS_KEY_ID
-
-  The accessKey id for the instance name
-
-- TABLESTORE_ACCESS_KEY_SECRET
-
-  The accessKey secret for the instance name
+Default: `weaviate`
+
+Selects the vector database backend. If a dataset already has an index, the dataset's stored type takes precedence over this setting. When switching providers in Docker Compose, `COMPOSE_PROFILES` automatically starts the matching container based on this value.
+
+Supported values: `weaviate`, `oceanbase`, `seekdb`, `qdrant`, `milvus`, `myscale`, `relyt`, `pgvector`, `pgvecto-rs`, `chroma`, `opensearch`, `oracle`, `tencent`, `elasticsearch`, `elasticsearch-ja`, `analyticdb`, `couchbase`, `vikingdb`, `opengauss`, `tablestore`, `vastbase`, `tidb`, `tidb_on_qdrant`, `baidu`, `lindorm`, `huawei_cloud`, `upstash`, `matrixone`, `clickzetta`, `alibabacloud_mysql`, `iris`, `hologres`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `VECTOR_INDEX_NAME_PREFIX` | `Vector_index` | Prefix added to collection names in the vector database. Change this if you share a vector database instance across multiple Dify deployments. |
+
+<AccordionGroup>
+<Accordion title="Weaviate">
+
+| Variable | Default | Description |
+|---|---|---|
+| `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API endpoint. |
+| `WEAVIATE_API_KEY` | (empty) | API key for Weaviate authentication. |
+| `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | Separate gRPC endpoint for high-performance binary protocol. Significantly faster for batch operations. Falls back to inferring from HTTP endpoint if not set. |
+| `WEAVIATE_TOKENIZATION` | `word` | Tokenization method for text fields. Options: `word` (splits on whitespace and punctuation), `whitespace` (splits on whitespace only), `character` (character-level, better for CJK languages). |
+
+</Accordion>
+
+<Accordion title="OceanBase / seekdb">
+
+seekdb is the lite version of OceanBase and shares the same connection configuration.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` | Hostname or IP address. |
+| `OCEANBASE_VECTOR_PORT` | `2881` | Port number. |
+| `OCEANBASE_VECTOR_USER` | `root@test` | Database username. |
+| `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | Database password. |
+| `OCEANBASE_VECTOR_DATABASE` | `test` | Database name. |
+| `OCEANBASE_CLUSTER_NAME` | `difyai` | Cluster name (Docker deployment only). |
+| `OCEANBASE_MEMORY_LIMIT` | `6G` | Memory limit for OceanBase (Docker deployment only). |
+| `SEEKDB_MEMORY_LIMIT` | `2G` | Memory limit for seekdb (Docker deployment only). |
+| `OCEANBASE_ENABLE_HYBRID_SEARCH` | `false` | Enable fulltext index for BM25 queries alongside vector search. Requires OceanBase >= 4.3.5.1. Collections must be recreated after enabling. |
+| `OCEANBASE_FULLTEXT_PARSER` | `ik` | Fulltext parser. Built-in: `ngram`, `beng`, `space`, `ngram2`, `ik`. External (require plugin): `japanese_ftparser`, `thai_ftparser`. |
+
+</Accordion>
+
+<Accordion title="Qdrant">
+
+| Variable | Default | Description |
+|---|---|---|
+| `QDRANT_URL` | `http://qdrant:6333` | Qdrant endpoint address. |
+| `QDRANT_API_KEY` | `difyai123456` | API key for Qdrant. |
+| `QDRANT_CLIENT_TIMEOUT` | `20` | Client timeout in seconds. |
+| `QDRANT_GRPC_ENABLED` | `false` | Enable gRPC communication. |
+| `QDRANT_GRPC_PORT` | `6334` | gRPC port. |
+| `QDRANT_REPLICATION_FACTOR` | `1` | Number of replicas per shard. |
+
+</Accordion>
+
+<Accordion title="Milvus">
+
+| Variable | Default | Description |
+|---|---|---|
+| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), use the Public Endpoint. |
+| `MILVUS_DATABASE` | (empty) | Database name. |
+| `MILVUS_TOKEN` | (empty) | Authentication token. For Zilliz Cloud, use the API Key. |
+| `MILVUS_USER` | (empty) | Username. |
+| `MILVUS_PASSWORD` | (empty) | Password. |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | Enable BM25 sparse index for full-text search alongside vector similarity. Requires Milvus >= 2.5.0. If the collection was created without this enabled, it must be recreated. |
+| `MILVUS_ANALYZER_PARAMS` | (empty) | Analyzer parameters for text fields. |
+
+</Accordion>
+
+<Accordion title="MyScale">
+
+| Variable | Default | Description |
+|---|---|---|
+| `MYSCALE_HOST` | `myscale` | MyScale host. |
+| `MYSCALE_PORT` | `8123` | MyScale port. |
+| `MYSCALE_USER` | `default` | Username. |
+| `MYSCALE_PASSWORD` | (empty) | Password. |
+| `MYSCALE_DATABASE` | `dify` | Database name. |
+| `MYSCALE_FTS_PARAMS` | (empty) | Full-text search params. [Multi-language support reference](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters). |
+
+</Accordion>
+
+<Accordion title="Couchbase">
+
+| Variable | Default | Description |
+|---|---|---|
+| `COUCHBASE_CONNECTION_STRING` | `couchbase://couchbase-server` | Connection string for the Couchbase cluster. |
+| `COUCHBASE_USER` | `Administrator` | Username. |
+| `COUCHBASE_PASSWORD` | `password` | Password. |
+| `COUCHBASE_BUCKET_NAME` | `Embeddings` | Bucket name. |
+| `COUCHBASE_SCOPE_NAME` | `_default` | Scope name. |
+
+</Accordion>
+
+<Accordion title="Hologres">
+
+| Variable | Default | Description |
+|---|---|---|
+| `HOLOGRES_HOST` | (empty) | Hostname. |
+| `HOLOGRES_PORT` | `80` | Port number. |
+| `HOLOGRES_DATABASE` | (empty) | Database name. |
+| `HOLOGRES_ACCESS_KEY_ID` | (empty) | Access key ID (used as PG username). |
+| `HOLOGRES_ACCESS_KEY_SECRET` | (empty) | Access key secret (used as PG password). |
+| `HOLOGRES_SCHEMA` | `public` | Schema name. |
+| `HOLOGRES_TOKENIZER` | `jieba` | Tokenizer for text fields. |
+| `HOLOGRES_DISTANCE_METHOD` | `Cosine` | Distance method. |
+| `HOLOGRES_BASE_QUANTIZATION_TYPE` | `rabitq` | Quantization type. |
+| `HOLOGRES_MAX_DEGREE` | `64` | HNSW max degree. |
+| `HOLOGRES_EF_CONSTRUCTION` | `400` | HNSW ef_construction parameter. |
+
+</Accordion>
+
+<Accordion title="PGVector">
+
+| Variable | Default | Description |
+|---|---|---|
+| `PGVECTOR_HOST` | `pgvector` | Hostname. |
+| `PGVECTOR_PORT` | `5432` | Port number. |
+| `PGVECTOR_USER` | `postgres` | Username. |
+| `PGVECTOR_PASSWORD` | `difyai123456` | Password. |
+| `PGVECTOR_DATABASE` | `dify` | Database name. |
+| `PGVECTOR_MIN_CONNECTION` | `1` | Minimum pool connections. |
+| `PGVECTOR_MAX_CONNECTION` | `5` | Maximum pool connections. |
+| `PGVECTOR_PG_BIGM` | `false` | Enable pg_bigm extension for full-text search. |
+
+</Accordion>
+
+<Accordion title="Vastbase">
+
+| Variable | Default | Description |
+|---|---|---|
+| `VASTBASE_HOST` | `vastbase` | Hostname. |
+| `VASTBASE_PORT` | `5432` | Port number. |
+| `VASTBASE_USER` | `dify` | Username. |
+| `VASTBASE_PASSWORD` | `Difyai123456` | Password. |
+| `VASTBASE_DATABASE` | `dify` | Database name. |
+| `VASTBASE_MIN_CONNECTION` | `1` | Minimum pool connections. |
+| `VASTBASE_MAX_CONNECTION` | `5` | Maximum pool connections. |
+
+</Accordion>
+
+<Accordion title="PGVecto.RS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `PGVECTO_RS_HOST` | `pgvecto-rs` | Hostname. |
+| `PGVECTO_RS_PORT` | `5432` | Port number. |
+| `PGVECTO_RS_USER` | `postgres` | Username. |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | Password. |
+| `PGVECTO_RS_DATABASE` | `dify` | Database name. |
+
+</Accordion>
+
+<Accordion title="AnalyticDB">
+
+| Variable | Default | Description |
+|---|---|---|
+| `ANALYTICDB_KEY_ID` | (empty) | Aliyun access key ID. [Create AccessKey](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair). |
+| `ANALYTICDB_KEY_SECRET` | (empty) | Aliyun access key secret. |
+| `ANALYTICDB_REGION_ID` | `cn-hangzhou` | Region identifier. |
+| `ANALYTICDB_INSTANCE_ID` | (empty) | Instance ID, e.g., `gp-xxxxxx`. [Create instance](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1). |
+| `ANALYTICDB_ACCOUNT` | (empty) | Account name. [Create account](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account). |
+| `ANALYTICDB_PASSWORD` | (empty) | Account password. |
+| `ANALYTICDB_NAMESPACE` | `dify` | Namespace (schema). Created automatically if not exists. |
+| `ANALYTICDB_NAMESPACE_PASSWORD` | (empty) | Namespace password. Used when creating a new namespace. |
+| `ANALYTICDB_HOST` | (empty) | Direct connection host (alternative to API-based access). |
+| `ANALYTICDB_PORT` | `5432` | Direct connection port. |
+| `ANALYTICDB_MIN_CONNECTION` | `1` | Minimum pool connections. |
+| `ANALYTICDB_MAX_CONNECTION` | `5` | Maximum pool connections. |
+
+</Accordion>
+
+<Accordion title="TiDB Vector">
+
+| Variable | Default | Description |
+|---|---|---|
+| `TIDB_VECTOR_HOST` | `tidb` | Hostname. |
+| `TIDB_VECTOR_PORT` | `4000` | Port number. |
+| `TIDB_VECTOR_USER` | (empty) | Username. |
+| `TIDB_VECTOR_PASSWORD` | (empty) | Password. |
+| `TIDB_VECTOR_DATABASE` | `dify` | Database name. |
+
+</Accordion>
+
+<Accordion title="MatrixOne">
+
+| Variable | Default | Description |
+|---|---|---|
+| `MATRIXONE_HOST` | `matrixone` | Hostname. |
+| `MATRIXONE_PORT` | `6001` | Port number. |
+| `MATRIXONE_USER` | `dump` | Username. |
+| `MATRIXONE_PASSWORD` | `111` | Password. |
+| `MATRIXONE_DATABASE` | `dify` | Database name. |
+
+</Accordion>
+
+<Accordion title="Chroma">
+
+| Variable | Default | Description |
+|---|---|---|
+| `CHROMA_HOST` | `127.0.0.1` | Chroma server host. |
+| `CHROMA_PORT` | `8000` | Chroma server port. |
+| `CHROMA_TENANT` | `default_tenant` | Tenant name. |
+| `CHROMA_DATABASE` | `default_database` | Database name. |
+| `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | Auth provider class. |
+| `CHROMA_AUTH_CREDENTIALS` | (empty) | Auth credentials. |
+
+</Accordion>
+
+<Accordion title="Oracle">
+
+| Variable | Default | Description |
+|---|---|---|
+| `ORACLE_USER` | `dify` | Oracle username. |
+| `ORACLE_PASSWORD` | `dify` | Oracle password. |
+| `ORACLE_DSN` | `oracle:1521/FREEPDB1` | Data source name. |
+| `ORACLE_CONFIG_DIR` | `/app/api/storage/wallet` | Oracle configuration directory. |
+| `ORACLE_WALLET_LOCATION` | `/app/api/storage/wallet` | Wallet location for Autonomous DB. |
+| `ORACLE_WALLET_PASSWORD` | `dify` | Wallet password. |
+| `ORACLE_IS_AUTONOMOUS` | `false` | Whether using Oracle Autonomous Database. |
+
+</Accordion>
+
+<Accordion title="AlibabaCloud MySQL">
+
+| Variable | Default | Description |
+|---|---|---|
+| `ALIBABACLOUD_MYSQL_HOST` | `127.0.0.1` | Hostname. |
+| `ALIBABACLOUD_MYSQL_PORT` | `3306` | Port number. |
+| `ALIBABACLOUD_MYSQL_USER` | `root` | Username. |
+| `ALIBABACLOUD_MYSQL_PASSWORD` | `difyai123456` | Password. |
+| `ALIBABACLOUD_MYSQL_DATABASE` | `dify` | Database name. |
+| `ALIBABACLOUD_MYSQL_MAX_CONNECTION` | `5` | Maximum pool connections. |
+| `ALIBABACLOUD_MYSQL_HNSW_M` | `6` | HNSW M parameter. |
+
+</Accordion>
+
+<Accordion title="Relyt">
+
+| Variable | Default | Description |
+|---|---|---|
+| `RELYT_HOST` | `db` | Hostname. |
+| `RELYT_PORT` | `5432` | Port number. |
+| `RELYT_USER` | `postgres` | Username. |
+| `RELYT_PASSWORD` | `difyai123456` | Password. |
+| `RELYT_DATABASE` | `postgres` | Database name. |
+
+</Accordion>
+
+<Accordion title="OpenSearch">
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENSEARCH_HOST` | `opensearch` | Hostname. |
+| `OPENSEARCH_PORT` | `9200` | Port number. |
+| `OPENSEARCH_SECURE` | `true` | Use HTTPS. |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | Verify SSL certificates. |
+| `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` uses username/password. `aws_managed_iam` uses AWS SigV4 request signing via Boto3 credentials (for AWS Managed OpenSearch or Serverless). |
+| `OPENSEARCH_USER` | `admin` | Username. Only used with `basic` auth. |
+| `OPENSEARCH_PASSWORD` | `admin` | Password. Only used with `basic` auth. |
+| `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS region. Only used with `aws_managed_iam` auth. |
+| `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS service type: `es` (Managed Cluster) or `aoss` (OpenSearch Serverless). Only used with `aws_managed_iam` auth. |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud VectorDB">
+
+| Variable | Default | Description |
+|---|---|---|
+| `TENCENT_VECTOR_DB_URL` | `http://127.0.0.1` | Access address. [Console](https://console.cloud.tencent.com/vdb). |
+| `TENCENT_VECTOR_DB_API_KEY` | `dify` | API key. [Key Management](https://cloud.tencent.com/document/product/1709/95108). |
+| `TENCENT_VECTOR_DB_TIMEOUT` | `30` | Request timeout in seconds. |
+| `TENCENT_VECTOR_DB_USERNAME` | `dify` | Account name. [Account Management](https://cloud.tencent.com/document/product/1709/115833). |
+| `TENCENT_VECTOR_DB_DATABASE` | `dify` | Database name. [Create Database](https://cloud.tencent.com/document/product/1709/95822). |
+| `TENCENT_VECTOR_DB_SHARD` | `1` | Number of shards. |
+| `TENCENT_VECTOR_DB_REPLICAS` | `2` | Number of replicas. |
+| `TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH` | `false` | Enable hybrid search. [Sparse Vector docs](https://cloud.tencent.com/document/product/1709/110110). |
+
+</Accordion>
+
+<Accordion title="Elasticsearch">
+
+| Variable | Default | Description |
+|---|---|---|
+| `ELASTICSEARCH_HOST` | `0.0.0.0` | Hostname. |
+| `ELASTICSEARCH_PORT` | `9200` | Port number. |
+| `ELASTICSEARCH_USERNAME` | `elastic` | Username. |
+| `ELASTICSEARCH_PASSWORD` | `elastic` | Password. |
+| `ELASTICSEARCH_USE_CLOUD` | `false` | Switch to Elastic Cloud mode. When `true`, uses `ELASTICSEARCH_CLOUD_URL` and `ELASTICSEARCH_API_KEY` instead of host/port/username/password. |
+| `ELASTICSEARCH_CLOUD_URL` | (empty) | Elastic Cloud endpoint URL. Required when `ELASTICSEARCH_USE_CLOUD=true`. |
+| `ELASTICSEARCH_API_KEY` | (empty) | Elastic Cloud API key. Required when `ELASTICSEARCH_USE_CLOUD=true`. |
+| `ELASTICSEARCH_VERIFY_CERTS` | `false` | Verify SSL certificates. |
+| `ELASTICSEARCH_CA_CERTS` | (empty) | Path to CA certificates. |
+| `ELASTICSEARCH_REQUEST_TIMEOUT` | `100000` | Request timeout in milliseconds. |
+| `ELASTICSEARCH_RETRY_ON_TIMEOUT` | `true` | Retry on timeout. |
+| `ELASTICSEARCH_MAX_RETRIES` | `10` | Maximum retry attempts. |
+
+</Accordion>
+
+<Accordion title="Baidu Vector DB">
+
+| Variable | Default | Description |
+|---|---|---|
+| `BAIDU_VECTOR_DB_ENDPOINT` | `http://127.0.0.1:5287` | Endpoint URL. |
+| `BAIDU_VECTOR_DB_CONNECTION_TIMEOUT_MS` | `30000` | Connection timeout in milliseconds. |
+| `BAIDU_VECTOR_DB_ACCOUNT` | `root` | Account name. |
+| `BAIDU_VECTOR_DB_API_KEY` | `dify` | API key. |
+| `BAIDU_VECTOR_DB_DATABASE` | `dify` | Database name. |
+| `BAIDU_VECTOR_DB_SHARD` | `1` | Number of shards. |
+| `BAIDU_VECTOR_DB_REPLICAS` | `3` | Number of replicas. |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_ANALYZER` | `DEFAULT_ANALYZER` | Inverted index analyzer. |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_PARSER_MODE` | `COARSE_MODE` | Inverted index parser mode. |
+
+</Accordion>
+
+<Accordion title="VikingDB">
+
+| Variable | Default | Description |
+|---|---|---|
+| `VIKINGDB_ACCESS_KEY` | (empty) | Access key. |
+| `VIKINGDB_SECRET_KEY` | (empty) | Secret key. |
+| `VIKINGDB_REGION` | `cn-shanghai` | Region. |
+| `VIKINGDB_HOST` | `api-vikingdb.xxx.volces.com` | API host. Replace with your region-specific endpoint. |
+| `VIKINGDB_SCHEMA` | `http` | Protocol scheme (`http` or `https`). |
+| `VIKINGDB_CONNECTION_TIMEOUT` | `30` | Connection timeout in seconds. |
+| `VIKINGDB_SOCKET_TIMEOUT` | `30` | Socket timeout in seconds. |
+
+</Accordion>
+
+<Accordion title="Lindorm">
+
+| Variable | Default | Description |
+|---|---|---|
+| `LINDORM_URL` | `http://localhost:30070` | Lindorm search engine URL. [Console](https://lindorm.console.aliyun.com/). |
+| `LINDORM_USERNAME` | `admin` | Username. |
+| `LINDORM_PASSWORD` | `admin` | Password. |
+| `LINDORM_USING_UGC` | `true` | Use UGC mode. |
+| `LINDORM_QUERY_TIMEOUT` | `1` | Query timeout in seconds. |
+
+</Accordion>
+
+<Accordion title="OpenGauss">
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENGAUSS_HOST` | `opengauss` | Hostname. |
+| `OPENGAUSS_PORT` | `6600` | Port number. |
+| `OPENGAUSS_USER` | `postgres` | Username. |
+| `OPENGAUSS_PASSWORD` | `Dify@123` | Password. |
+| `OPENGAUSS_DATABASE` | `dify` | Database name. |
+| `OPENGAUSS_MIN_CONNECTION` | `1` | Minimum pool connections. |
+| `OPENGAUSS_MAX_CONNECTION` | `5` | Maximum pool connections. |
+| `OPENGAUSS_ENABLE_PQ` | `false` | Enable PQ acceleration. |
+
+</Accordion>
+
+<Accordion title="Huawei Cloud Search">
+
+| Variable | Default | Description |
+|---|---|---|
+| `HUAWEI_CLOUD_HOSTS` | `https://127.0.0.1:9200` | Cluster endpoint URL. |
+| `HUAWEI_CLOUD_USER` | `admin` | Username. |
+| `HUAWEI_CLOUD_PASSWORD` | `admin` | Password. |
+
+</Accordion>
+
+<Accordion title="Upstash Vector">
+
+| Variable | Default | Description |
+|---|---|---|
+| `UPSTASH_VECTOR_URL` | (empty) | Upstash Vector endpoint URL. |
+| `UPSTASH_VECTOR_TOKEN` | (empty) | Upstash Vector API token. |
+
+</Accordion>
+
+<Accordion title="TableStore">
+
+| Variable | Default | Description |
+|---|---|---|
+| `TABLESTORE_ENDPOINT` | `https://instance-name.cn-hangzhou.ots.aliyuncs.com` | Endpoint address. Replace `instance-name` with your instance. |
+| `TABLESTORE_INSTANCE_NAME` | (empty) | Instance name. |
+| `TABLESTORE_ACCESS_KEY_ID` | (empty) | Access key ID. |
+| `TABLESTORE_ACCESS_KEY_SECRET` | (empty) | Access key secret. |
+| `TABLESTORE_NORMALIZE_FULLTEXT_BM25_SCORE` | `false` | Normalize fulltext BM25 scores. |
+
+</Accordion>
+
+<Accordion title="ClickZetta">
+
+| Variable | Default | Description |
+|---|---|---|
+| `CLICKZETTA_USERNAME` | (empty) | Username. |
+| `CLICKZETTA_PASSWORD` | (empty) | Password. |
+| `CLICKZETTA_INSTANCE` | (empty) | Instance name. |
+| `CLICKZETTA_SERVICE` | `api.clickzetta.com` | Service endpoint. |
+| `CLICKZETTA_WORKSPACE` | `quick_start` | Workspace name. |
+| `CLICKZETTA_VCLUSTER` | `default_ap` | Virtual cluster. |
+| `CLICKZETTA_SCHEMA` | `dify` | Schema name. |
+| `CLICKZETTA_BATCH_SIZE` | `100` | Batch size for operations. |
+| `CLICKZETTA_ENABLE_INVERTED_INDEX` | `true` | Enable inverted index. |
+| `CLICKZETTA_ANALYZER_TYPE` | `chinese` | Analyzer type. |
+| `CLICKZETTA_ANALYZER_MODE` | `smart` | Analyzer mode. |
+| `CLICKZETTA_VECTOR_DISTANCE_FUNCTION` | `cosine_distance` | Distance function. |
+
+</Accordion>
+
+<Accordion title="InterSystems IRIS">
+
+| Variable | Default | Description |
+|---|---|---|
+| `IRIS_HOST` | `iris` | Hostname. |
+| `IRIS_SUPER_SERVER_PORT` | `1972` | Super server port. |
+| `IRIS_USER` | `_SYSTEM` | Username. |
+| `IRIS_PASSWORD` | `Dify@1234` | Password. |
+| `IRIS_DATABASE` | `USER` | Database name. |
+| `IRIS_SCHEMA` | `dify` | Schema name. |
+| `IRIS_CONNECTION_URL` | (empty) | Full connection URL (overrides individual settings). |
+| `IRIS_MIN_CONNECTION` | `1` | Minimum pool connections. |
+| `IRIS_MAX_CONNECTION` | `3` | Maximum pool connections. |
+| `IRIS_TEXT_INDEX` | `true` | Enable text indexing. |
+| `IRIS_TEXT_INDEX_LANGUAGE` | `en` | Text index language. |
+
+</Accordion>
+</AccordionGroup>
 
 ### Knowledge Configuration
 
-- UPLOAD_FILE_SIZE_LIMIT\
-  The maximum allowed size (in megabytes) for an uploaded file. Default 15.
+| Variable | Default | Description |
+|---|---|---|
+| `UPLOAD_FILE_SIZE_LIMIT` | `15` | Maximum file size in MB for document uploads (PDFs, Word docs, etc.). Users see a "file too large" error when exceeded. Does not apply to images, videos, or audio—they have separate limits below. |
+| `UPLOAD_FILE_BATCH_LIMIT` | `5` | Maximum number of files the frontend allows per upload batch. |
+| `UPLOAD_FILE_EXTENSION_BLACKLIST` | (empty) | Security blocklist of file extensions that cannot be uploaded. Comma-separated, lowercase, no dots. Example: `exe,bat,cmd,com,scr,vbs,ps1,msi,dll`. Empty allows all types. |
+| `SINGLE_CHUNK_ATTACHMENT_LIMIT` | `10` | Maximum number of images that can be embedded in a single knowledge base segment (chunk). |
+| `IMAGE_FILE_BATCH_LIMIT` | `10` | Maximum number of image files per upload batch. |
+| `ATTACHMENT_IMAGE_FILE_SIZE_LIMIT` | `2` | Maximum size in MB for images fetched from external URLs during knowledge base indexing. Images larger than this are skipped. Different from `UPLOAD_IMAGE_FILE_SIZE_LIMIT` which applies to direct uploads. |
+| `ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT` | `60` | Timeout in seconds when downloading images from external URLs during knowledge base indexing. Slow or unresponsive image servers are abandoned after this timeout. |
+| `ETL_TYPE` | `dify` | Document extraction library. `dify` supports txt, md, pdf, html, xlsx, docx, csv. `Unstructured` adds support for doc, msg, eml, ppt, pptx, xml, epub (requires `UNSTRUCTURED_API_URL`). |
+| `UNSTRUCTURED_API_URL` | (empty) | Unstructured.io API endpoint. Required when `ETL_TYPE` is `Unstructured`. Also needed for `.ppt` file support. Example: `http://unstructured:8000/general/v0/general`. |
+| `UNSTRUCTURED_API_KEY` | (empty) | API key for Unstructured.io authentication. |
+| `SCARF_NO_ANALYTICS` | `true` | Disable Unstructured library's telemetry/analytics collection. |
+| `TOP_K_MAX_VALUE` | `10` | Maximum value users can set for the `top_k` parameter in knowledge base retrieval (how many results to return per search). |
+| `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | Maximum number of segments per dataset API request. `0` means unlimited. |
 
-- UPLOAD_FILE_BATCH_LIMIT\
-  The maximum number of files that can be uploaded in a single batch. Default 5.
+#### Annotation Import
 
-- SINGLE_CHUNK_ATTACHMENT_LIMIT\
-  The maximum number of files that can be attached to a single chunk. Default 10.
+| Variable | Default | Description |
+|---|---|---|
+| `ANNOTATION_IMPORT_FILE_SIZE_LIMIT` | `2` | Maximum CSV file size in MB for annotation import. Returns HTTP 413 when exceeded. |
+| `ANNOTATION_IMPORT_MAX_RECORDS` | `10000` | Maximum number of records per annotation import. Files with more records must be split into batches. |
+| `ANNOTATION_IMPORT_MIN_RECORDS` | `1` | Minimum number of valid records required per annotation import. |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_MINUTE` | `5` | Maximum annotation import requests per minute per workspace. Returns HTTP 429 when exceeded. |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_HOUR` | `20` | Maximum annotation import requests per hour per workspace. |
+| `ANNOTATION_IMPORT_MAX_CONCURRENT` | `5` | Maximum concurrent annotation import tasks per workspace. Stale tasks are auto-cleaned after 2 minutes. |
 
-- IMAGE_FILE_BATCH_LIMIT\
-  The maximum number of image attachments that can be uploaded in a single batch. Default 10.
+### Model Configuration
 
-- ATTACHMENT_IMAGE_FILE_SIZE_LIMIT\
-  The maximum allowed size (in megabytes) for an image attachment. Default 2.
-
-- ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT\
-  The timeout (in seconds) for downloading an image attachment. Default 60.
-
-- ETL_TYPE\
-  Available values include:
-
-  - `dify`: Dify's proprietary file extraction scheme
-  - `Unstructured`: Unstructured.io file extraction scheme
-
-- UNSTRUCTURED_API_URL\
-  Unstructured API path, needs to be configured when ETL_TYPE is Unstructured.\
-  For example: `http://unstructured:8000/general/v0/general`
-
-- TOP_K_MAX_VALUE\
-  The maximum top-k value of RAG, default 10.
+| Variable | Default | Description |
+|---|---|---|
+| `PROMPT_GENERATION_MAX_TOKENS` | `512` | Maximum tokens when the system auto-generates a prompt using an LLM. Prevents runaway generations that waste API quota. |
+| `CODE_GENERATION_MAX_TOKENS` | `1024` | Maximum tokens when the system auto-generates code using an LLM. |
+| `PLUGIN_BASED_TOKEN_COUNTING_ENABLED` | `false` | Use plugin-based token counting for accurate usage tracking. When disabled, token counting returns 0 (faster but cost tracking is less accurate). |
 
 ### Multi-modal Configuration
 
-- MULTIMODAL_SEND_IMAGE_FORMAT
+| Variable | Default | Description |
+|---|---|---|
+| `MULTIMODAL_SEND_FORMAT` | `base64` | How files are sent to multi-modal LLMs. `base64` embeds file data in the request (more compatible, works offline, larger payloads). `url` sends a signed URL for the model to fetch (faster, smaller requests, but the model must be able to reach `FILES_URL`). |
+| `UPLOAD_IMAGE_FILE_SIZE_LIMIT` | `10` | Maximum image file size in MB for direct uploads (jpg, png, webp, gif, svg). |
+| `UPLOAD_VIDEO_FILE_SIZE_LIMIT` | `100` | Maximum video file size in MB for direct uploads (mp4, mov, mpeg, webm). |
+| `UPLOAD_AUDIO_FILE_SIZE_LIMIT` | `50` | Maximum audio file size in MB for direct uploads (mp3, m4a, wav, amr, mpga). |
 
-  The format of the image sent when the multi-modal model is input, the default is `base64`, optional `url`. The delay of the call in `url` mode will be lower than that in `base64` mode. It is generally recommended to use the more compatible `base64` mode. If configured as `url`, you need to configure `FILES_URL` as an externally accessible address so that the multi-modal model can access the image.
-
-- UPLOAD_IMAGE_FILE_SIZE_LIMIT: Upload image file size limit, default 10M.
+<Note>
+All upload size limits are also gated by `NGINX_CLIENT_MAX_BODY_SIZE` (default `100M`). If you increase any upload limit above 100 MB, also increase `NGINX_CLIENT_MAX_BODY_SIZE` to match—otherwise Nginx rejects the upload with a 413 error.
+</Note>
 
 ### Sentry Configuration
 
-Used for application monitoring and error log tracking.
+Sentry provides error tracking and performance monitoring. Each service has its own DSN to separate error reporting.
 
-- SENTRY_DSN: Sentry DSN address, default is empty, when empty, all monitoring information is not reported to Sentry.
-- SENTRY_TRACES_SAMPLE_RATE: The reporting ratio of Sentry events, if it is 0.01, it is 1%.
-- SENTRY_PROFILES_SAMPLE_RATE: The reporting ratio of Sentry profiles, if it is 0.01, it is 1%.
+| Variable | Default | Description |
+|---|---|---|
+| `SENTRY_DSN` | (empty) | Sentry DSN shared across services. |
+| `API_SENTRY_DSN` | (empty) | Sentry DSN for the API service. Overrides `SENTRY_DSN` if set. Empty disables Sentry for the backend. |
+| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in performance tracing (0.01 = 1%, 1.0 = 100%). Traces track request flow across services. |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in CPU/memory profiling (0.01 = 1%). Profiles show where time is spent in code. |
+| `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend (Next.js). Frontend-only. |
+| `PLUGIN_SENTRY_ENABLED` | `false` | Enable Sentry for the plugin daemon service. |
+| `PLUGIN_SENTRY_DSN` | (empty) | Sentry DSN for the plugin daemon. |
 
 ### Notion Integration Configuration
 
-Notion integration configuration variables can be obtained by applying for Notion integration: [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations)
+Connect Dify to Notion as a knowledge base data source. Get integration credentials at [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations).
 
-- NOTION_INTEGRATION_TYPE: Configure as "public" or "internal". Since Notion's OAuth redirect URL only supports HTTPS, if deploying locally, please use Notion's internal integration.
-- NOTION_CLIENT_SECRET: Notion OAuth client secret (used for public integration type)
-- NOTION_CLIENT_ID: OAuth client ID (used for public integration type)
-- NOTION_INTERNAL_SECRET: Notion internal integration secret. If the value of `NOTION_INTEGRATION_TYPE` is "internal", you need to configure this variable.
+| Variable | Default | Description |
+|---|---|---|
+| `NOTION_INTEGRATION_TYPE` | `public` | `public` uses standard OAuth 2.0 (requires HTTPS redirect URL, needs CLIENT_ID + CLIENT_SECRET). `internal` uses a direct integration token (works with HTTP). Use `internal` for local deployments. |
+| `NOTION_CLIENT_SECRET` | (empty) | OAuth client secret. Required for `public` integration. |
+| `NOTION_CLIENT_ID` | (empty) | OAuth client ID. Required for `public` integration. |
+| `NOTION_INTERNAL_SECRET` | (empty) | Direct integration token from Notion. Required for `internal` integration. |
 
-### Mail related configuration
+### Mail Configuration
 
-- MAIL_TYPE
+Dify sends emails for account invitations, password resets, login codes, and Human Input node notifications. Configure one of the three supported providers. Email links require `CONSOLE_WEB_URL` to be set—see [Common Variables](#console_web_url).
 
-  - resend
-    - MAIL_DEFAULT_SEND_FROM: The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
-    - RESEND_API_KEY: API-Key for the Resend email provider, can be obtained from API-Key.
+| Variable | Default | Description |
+|---|---|---|
+| `MAIL_TYPE` | `resend` | Mail provider: `resend`, `smtp`, or `sendgrid`. |
+| `MAIL_DEFAULT_SEND_FROM` | (empty) | Default "From" address for all outgoing emails. Required. |
 
-  - smtp
-    - SMTP_SERVER: SMTP server address
-    - SMTP_PORT: SMTP server port number
-    - SMTP_USERNAME: SMTP username
-    - SMTP_PASSWORD: SMTP password
-    - SMTP_USE_TLS: Whether to use TLS, default is false
-    - MAIL_DEFAULT_SEND_FROM: The sender's email name, such as: no-reply [no-reply@dify.ai](mailto:no-reply@dify.ai), not mandatory.
+<AccordionGroup>
+<Accordion title="Resend">
 
-  - sendgrid
-    - SENDGRID_API_KEY: API key for the SendGrid email provider.
-    - MAIL_DEFAULT_SEND_FROM: The sender's email address, e.g., your_email@sendgrid.com. This field is required for SendGrid authentication.
+| Variable | Default | Description |
+|---|---|---|
+| `RESEND_API_URL` | `https://api.resend.com` | Resend API endpoint. Override for self-hosted Resend or proxy. |
+| `RESEND_API_KEY` | (empty) | Resend API key. Required when `MAIL_TYPE=resend`. |
 
-For more details about the SendGrid email provider, please refer to the [SendGrid documentation](https://sendgrid.com/docs/for-developers/sending-email/).
+</Accordion>
 
-### ModelProvider & Tool Position Configuration
+<Accordion title="SMTP">
 
-Used to specify the model providers and tools that can be used in the app. These settings allow you to customize which tools and model providers are available, as well as their order and inclusion/exclusion in the app's interface.
+Three TLS modes: implicit TLS (`SMTP_USE_TLS=true`, `SMTP_OPPORTUNISTIC_TLS=false`, port 465), STARTTLS (`SMTP_USE_TLS=true`, `SMTP_OPPORTUNISTIC_TLS=true`, port 587), or plain (`SMTP_USE_TLS=false`, port 25).
 
-For a list of available [tools](https://github.com/langgenius/dify/blob/main/api/core/tools/provider/_position.yaml) and [model providers](https://github.com/langgenius/dify/blob/main/api/core/model_runtime/model_providers/_position.yaml), please refer to the provided links.
+| Variable | Default | Description |
+|---|---|---|
+| `SMTP_SERVER` | (empty) | SMTP server address. |
+| `SMTP_PORT` | `465` | SMTP server port. Use `587` for STARTTLS mode. |
+| `SMTP_USERNAME` | (empty) | SMTP username. Can be empty for IP-whitelisted servers. |
+| `SMTP_PASSWORD` | (empty) | SMTP password. Can be empty for IP-whitelisted servers. |
+| `SMTP_USE_TLS` | `true` | Enable TLS. When `true` with `SMTP_OPPORTUNISTIC_TLS=false`, uses implicit TLS (`SMTP_SSL`). |
+| `SMTP_OPPORTUNISTIC_TLS` | `false` | Use STARTTLS (explicit TLS) instead of implicit TLS. Must be used with `SMTP_USE_TLS=true`. |
+| `SMTP_LOCAL_HOSTNAME` | (empty) | Override the hostname sent in SMTP HELO/EHLO. Required in Docker when your SMTP server rejects container hostnames (common with Google Workspace, Microsoft 365). Set to your domain, e.g., `mail.yourdomain.com`. |
 
-- POSITION_TOOL_PINS
+</Accordion>
 
-  Pin specific tools to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
+<Accordion title="SendGrid">
 
-  Example: `POSITION_TOOL_PINS=bing,google`
+| Variable | Default | Description |
+|---|---|---|
+| `SENDGRID_API_KEY` | (empty) | SendGrid API key. Required when `MAIL_TYPE=sendgrid`. |
 
-- POSITION_TOOL_INCLUDES
+For more details, see the [SendGrid documentation](https://sendgrid.com/docs/for-developers/sending-email/).
 
-  Specify the tools to be included in the app. Only the tools listed here will be available for use. If not set, all tools will be included unless specified in POSITION_TOOL_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
+</Accordion>
+</AccordionGroup>
 
-  Example: `POSITION_TOOL_INCLUDES=bing,google`
+### Others Configuration
 
-- POSITION_TOOL_EXCLUDES
+#### Indexing
 
-  Exclude specific tools from being displayed or used in the app. Tools listed here will be omitted from the available options, except for pinned tools. (Use comma-separated values with **no spaces** between items.)
+| Variable | Default | Description |
+|---|---|---|
+| `INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH` | `4000` | Maximum token length per text segment when chunking documents for the knowledge base. Larger values retain more context per chunk; smaller values provide finer granularity. |
 
-  Example: `POSITION_TOOL_EXCLUDES=yahoo,wolframalpha`
+#### Token & Invitation
 
-- POSITION_PROVIDER_PINS
+All token expiry variables control how long a one-time-use token stored in Redis remains valid. After expiry, the user must request a new token.
 
-  Pin specific model providers to the top of the list, ensuring they appear first in the interface. (Use comma-separated values with **no spaces** between items.)
+| Variable | Default | Description |
+|---|---|---|
+| `INVITE_EXPIRY_HOURS` | `72` | How long a workspace invitation link stays valid (in hours). |
+| `RESET_PASSWORD_TOKEN_EXPIRY_MINUTES` | `5` | Password reset token validity in minutes. |
+| `EMAIL_REGISTER_TOKEN_EXPIRY_MINUTES` | `5` | Email registration token validity in minutes. |
+| `CHANGE_EMAIL_TOKEN_EXPIRY_MINUTES` | `5` | Change email token validity in minutes. |
+| `OWNER_TRANSFER_TOKEN_EXPIRY_MINUTES` | `5` | Workspace owner transfer token validity in minutes. |
 
-  Example: `POSITION_PROVIDER_PINS=openai,openllm`
+#### Code Execution Sandbox
 
-- POSITION_PROVIDER_INCLUDES
+The sandbox is a separate service that runs Python, JavaScript, and Jinja2 code nodes in isolation.
 
-  Specify the model providers to be included in the app. Only the providers listed here will be available for use. If not set, all providers will be included unless specified in POSITION_PROVIDER_EXCLUDES. (Use comma-separated values with **no spaces** between items.)
+| Variable | Default | Description |
+|---|---|---|
+| `CODE_EXECUTION_ENDPOINT` | `http://sandbox:8194` | Sandbox service endpoint. |
+| `CODE_EXECUTION_API_KEY` | `dify-sandbox` | API key for sandbox authentication. Must match `SANDBOX_API_KEY` in the sandbox service. |
+| `CODE_EXECUTION_SSL_VERIFY` | `true` | Verify SSL for sandbox connections. Disable for development with self-signed certificates. |
+| `CODE_EXECUTION_CONNECT_TIMEOUT` | `10` | Connection timeout in seconds. |
+| `CODE_EXECUTION_READ_TIMEOUT` | `60` | Read timeout in seconds. |
+| `CODE_EXECUTION_WRITE_TIMEOUT` | `10` | Write timeout in seconds. |
+| `CODE_EXECUTION_POOL_MAX_CONNECTIONS` | `100` | Maximum concurrent HTTP connections to the sandbox service. |
+| `CODE_EXECUTION_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | Maximum idle connections kept alive in the sandbox connection pool. |
+| `CODE_EXECUTION_POOL_KEEPALIVE_EXPIRY` | `5.0` | Seconds before idle sandbox connections are closed. |
+| `CODE_MAX_NUMBER` | `9223372036854775807` | Maximum numeric value allowed in code node output (max 64-bit signed integer). |
+| `CODE_MIN_NUMBER` | `-9223372036854775808` | Minimum numeric value allowed in code node output (min 64-bit signed integer). |
+| `CODE_MAX_STRING_LENGTH` | `400000` | Maximum string length in code node output. Prevents memory exhaustion from unbounded string generation. |
+| `CODE_MAX_DEPTH` | `5` | Maximum nesting depth for output data structures. |
+| `CODE_MAX_PRECISION` | `20` | Maximum decimal places for floating-point numbers in output. |
+| `CODE_MAX_STRING_ARRAY_LENGTH` | `30` | Maximum number of elements in a string array output. |
+| `CODE_MAX_OBJECT_ARRAY_LENGTH` | `30` | Maximum number of elements in an object array output. |
+| `CODE_MAX_NUMBER_ARRAY_LENGTH` | `1000` | Maximum number of elements in a number array output. |
+| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | Maximum character length for Template Transform node output. |
 
-  Example: `POSITION_PROVIDER_INCLUDES=cohere,upstage`
+#### Workflow Runtime
 
-- POSITION_PROVIDER_EXCLUDES
+| Variable | Default | Description |
+|---|---|---|
+| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | Maximum number of node executions per workflow run. Exceeding this terminates the workflow. |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | Maximum wall-clock time in seconds per workflow run. Exceeding this terminates the workflow. |
+| `WORKFLOW_CALL_MAX_DEPTH` | `5` | Maximum depth for nested workflow-calls-workflow. Prevents infinite recursion. |
+| `MAX_VARIABLE_SIZE` | `204800` | Maximum size in bytes (200 KB) for a single workflow variable. |
+| `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | Maximum number of files that can be uploaded in a single workflow execution. |
+| `WORKFLOW_NODE_EXECUTION_STORAGE` | `rdbms` | Where workflow node execution records are stored. `rdbms` stores everything in the database. `hybrid` stores new data in object storage and reads from both. |
+| `DSL_EXPORT_ENCRYPT_DATASET_ID` | `true` | Encrypt dataset IDs when exporting DSL files. Set to `false` to export plain IDs for easier cross-environment import. |
 
-  Exclude specific model providers from being displayed or used in the app. Providers listed here will be omitted from the available options, except for pinned providers. (Use comma-separated values with **no spaces** between items.)
+#### Workflow Storage Repository
 
-  Example: `POSITION_PROVIDER_EXCLUDES=openrouter,ollama`
+These select which backend implementation handles workflow execution data. The default `SQLAlchemy` repositories store everything in the database. Alternative implementations (e.g., Celery, Logstore) can be used for different storage strategies.
+
+| Variable | Default | Description |
+|---|---|---|
+| `CORE_WORKFLOW_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_execution_repository.SQLAlchemyWorkflowExecutionRepository` | Repository implementation for workflow execution records. |
+| `CORE_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_node_execution_repository.SQLAlchemyWorkflowNodeExecutionRepository` | Repository implementation for workflow node execution records. |
+| `API_WORKFLOW_RUN_REPOSITORY` | `repositories.sqlalchemy_api_workflow_run_repository.DifyAPISQLAlchemyWorkflowRunRepository` | Service-layer repository for workflow run API operations. |
+| `API_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `repositories.sqlalchemy_api_workflow_node_execution_repository.DifyAPISQLAlchemyWorkflowNodeExecutionRepository` | Service-layer repository for workflow node execution API operations. |
+| `LOOP_NODE_MAX_COUNT` | `100` | Maximum iterations for Loop nodes. Prevents infinite loops. |
+| `MAX_PARALLEL_LIMIT` | `10` | Maximum number of parallel branches in a workflow. |
+
+#### GraphEngine Worker Pool
+
+| Variable | Default | Description |
+|---|---|---|
+| `GRAPH_ENGINE_MIN_WORKERS` | `1` | Minimum workers per GraphEngine instance. |
+| `GRAPH_ENGINE_MAX_WORKERS` | `10` | Maximum workers per GraphEngine instance. |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | Queue depth that triggers spawning additional workers. |
+| `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | Seconds of idle time before excess workers are removed. |
+
+#### Workflow Log Cleanup
+
+| Variable | Default | Description |
+|---|---|---|
+| `WORKFLOW_LOG_CLEANUP_ENABLED` | `false` | Enable automatic cleanup of workflow execution logs at 2:00 AM daily. |
+| `WORKFLOW_LOG_RETENTION_DAYS` | `30` | Number of days to retain workflow logs before cleanup. |
+| `WORKFLOW_LOG_CLEANUP_BATCH_SIZE` | `100` | Number of log entries processed per cleanup batch. Adjust based on system performance. |
+| `WORKFLOW_LOG_CLEANUP_SPECIFIC_WORKFLOW_IDS` | (empty) | Comma-separated list of workflow IDs to limit cleanup to. When empty, all workflow logs are cleaned. |
+
+#### HTTP Request Node
+
+These configure the HTTP Request node used in workflows to call external APIs.
+
+| Variable | Default | Description |
+|---|---|---|
+| `HTTP_REQUEST_NODE_MAX_TEXT_SIZE` | `1048576` | Maximum text response size in bytes (1 MB). Responses larger than this are truncated. |
+| `HTTP_REQUEST_NODE_MAX_BINARY_SIZE` | `10485760` | Maximum binary response size in bytes (10 MB). |
+| `HTTP_REQUEST_NODE_SSL_VERIFY` | `true` | Verify SSL certificates. Disable for testing with self-signed certificates. |
+| `HTTP_REQUEST_MAX_CONNECT_TIMEOUT` | `10` | Maximum connect timeout users can set in the workflow editor (in seconds). Per-node timeouts cannot exceed this. |
+| `HTTP_REQUEST_MAX_READ_TIMEOUT` | `600` | Maximum read timeout ceiling (in seconds). |
+| `HTTP_REQUEST_MAX_WRITE_TIMEOUT` | `600` | Maximum write timeout ceiling (in seconds). |
+
+#### Webhook
+
+| Variable | Default | Description |
+|---|---|---|
+| `WEBHOOK_REQUEST_BODY_MAX_SIZE` | `10485760` | Maximum webhook payload size in bytes (10 MB). Larger payloads are rejected with a 413 error. |
+
+#### SSRF Protection
+
+All outbound HTTP requests from Dify (HTTP nodes, image downloads, etc.) are routed through a proxy that blocks requests to internal/private IP ranges, preventing Server-Side Request Forgery (SSRF) attacks.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SSRF_PROXY_HTTP_URL` | `http://ssrf_proxy:3128` | SSRF proxy URL for HTTP requests. |
+| `SSRF_PROXY_HTTPS_URL` | `http://ssrf_proxy:3128` | SSRF proxy URL for HTTPS requests. |
+| `SSRF_POOL_MAX_CONNECTIONS` | `100` | Maximum concurrent connections in the SSRF HTTP client pool. |
+| `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | Maximum idle connections kept alive in the SSRF pool. |
+| `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | Seconds before idle SSRF connections are closed. |
+| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | Trust X-Forwarded-For/Proto/Port headers from reverse proxies. Only enable behind a single trusted reverse proxy—otherwise allows IP spoofing. |
+
+#### Agent Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `MAX_TOOLS_NUM` | `10` | Maximum number of tools an agent can use simultaneously. |
+| `MAX_ITERATIONS_NUM` | `99` | Maximum reasoning iterations per agent execution. Prevents infinite agent loops. |
+
+## Web Frontend Service
+
+These variables are used by the Next.js web frontend container only—they do not affect the Python backend.
+
+| Variable | Default | Description |
+|---|---|---|
+| `TEXT_GENERATION_TIMEOUT_MS` | `60000` | Frontend timeout for streaming text generation UI. If a stream stalls for longer than this, the UI pauses rendering. |
+| `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
+| `MAX_TREE_DEPTH` | `50` | Maximum node tree depth in the workflow editor UI. |
+
+## Database Service
+
+These configure the database containers directly in Docker Compose.
+
+| Variable | Default | Description |
+|---|---|---|
+| `PGDATA` | `/var/lib/postgresql/data/pgdata` | PostgreSQL data directory inside the container. |
+| `MYSQL_HOST_VOLUME` | `./volumes/mysql/data` | Host path mounted as MySQL data volume. |
+
+## Sandbox Service
+
+The sandbox is an isolated service for executing code nodes (Python, JavaScript, Jinja2). Network access can be disabled for security.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SANDBOX_API_KEY` | `dify-sandbox` | API key for sandbox authentication. Must match `CODE_EXECUTION_API_KEY` in the API service. |
+| `SANDBOX_GIN_MODE` | `release` | Sandbox service mode: `release` or `debug`. |
+| `SANDBOX_WORKER_TIMEOUT` | `15` | Maximum execution time in seconds for a single code run. |
+| `SANDBOX_ENABLE_NETWORK` | `true` | Allow code to make outbound HTTP requests. Disable to prevent code nodes from accessing external services. |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection when network is enabled. |
+| `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | HTTPS proxy for SSRF protection. |
+| `SANDBOX_PORT` | `8194` | Sandbox service port. |
+
+## Nginx Reverse Proxy
+
+| Variable | Default | Description |
+|---|---|---|
+| `NGINX_SERVER_NAME` | `_` | Nginx server name. `_` matches any hostname. |
+| `NGINX_HTTPS_ENABLED` | `false` | Enable HTTPS. When `true`, place your SSL certificate and key in `./nginx/ssl/`. |
+| `NGINX_PORT` | `80` | HTTP port. |
+| `NGINX_SSL_PORT` | `443` | HTTPS port (only used when `NGINX_HTTPS_ENABLED=true`). |
+| `NGINX_SSL_CERT_FILENAME` | `dify.crt` | SSL certificate filename in `./nginx/ssl/`. |
+| `NGINX_SSL_CERT_KEY_FILENAME` | `dify.key` | SSL private key filename in `./nginx/ssl/`. |
+| `NGINX_SSL_PROTOCOLS` | `TLSv1.2 TLSv1.3` | Allowed TLS protocol versions. |
+| `NGINX_WORKER_PROCESSES` | `auto` | Number of Nginx worker processes. `auto` matches CPU core count. |
+| `NGINX_CLIENT_MAX_BODY_SIZE` | `100M` | Maximum request body size. Affects file upload limits at the proxy level. |
+| `NGINX_KEEPALIVE_TIMEOUT` | `65` | Keepalive timeout in seconds. |
+| `NGINX_PROXY_READ_TIMEOUT` | `3600s` | Proxy read timeout. Set high (1 hour) to support long-running SSE streams. |
+| `NGINX_PROXY_SEND_TIMEOUT` | `3600s` | Proxy send timeout. |
+| `NGINX_ENABLE_CERTBOT_CHALLENGE` | `false` | Accept Let's Encrypt ACME challenge requests at `/.well-known/acme-challenge/`. Enable for automated certificate renewal. |
+
+<Note>
+After enabling HTTPS, also update the URL variables in [Common Variables](#common-variables) (e.g., `CONSOLE_API_URL`, `CONSOLE_WEB_URL`) to use `https://`.
+</Note>
+
+#### Certbot Configuration
+
+| Variable | Default | Description |
+|---|---|---|
+| `CERTBOT_EMAIL` | (empty) | Email address required by Let's Encrypt for certificate notifications. |
+| `CERTBOT_DOMAIN` | (empty) | Domain name for the SSL certificate. |
+| `CERTBOT_OPTIONS` | (empty) | Additional certbot CLI options (e.g., `--force-renewal`, `--dry-run`). |
+
+## SSRF Proxy
+
+These configure the Squid-based SSRF proxy container that blocks requests to internal/private networks.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SSRF_HTTP_PORT` | `3128` | Proxy listening port. |
+| `SSRF_COREDUMP_DIR` | `/var/spool/squid` | Core dump directory. |
+| `SSRF_REVERSE_PROXY_PORT` | `8194` | Reverse proxy port forwarded to the sandbox service. |
+| `SSRF_SANDBOX_HOST` | `sandbox` | Hostname of the sandbox service. |
+| `SSRF_DEFAULT_TIME_OUT` | `5` | Default overall timeout in seconds for proxied requests. |
+| `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | Default connection timeout in seconds. |
+| `SSRF_DEFAULT_READ_TIME_OUT` | `5` | Default read timeout in seconds. |
+| `SSRF_DEFAULT_WRITE_TIME_OUT` | `5` | Default write timeout in seconds. |
+
+## Docker Compose
+
+| Variable | Default | Description |
+|---|---|---|
+| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql}` | Automatically selects which service containers to start based on your database and vector store choices. For example, setting `DB_TYPE=mysql` starts MySQL instead of PostgreSQL. |
+| `EXPOSE_NGINX_PORT` | `80` | Host port mapped to Nginx HTTP. |
+| `EXPOSE_NGINX_SSL_PORT` | `443` | Host port mapped to Nginx HTTPS. |
+
+## ModelProvider & Tool Position Configuration
+
+Customize which tools and model providers are available in the app interface and their display order. Use comma-separated values with no spaces between items.
+
+| Variable | Default | Description |
+|---|---|---|
+| `POSITION_TOOL_PINS` | (empty) | Pin specific tools to the top of the list. Example: `bing,google`. |
+| `POSITION_TOOL_INCLUDES` | (empty) | Only show listed tools. If unset, all tools are available. |
+| `POSITION_TOOL_EXCLUDES` | (empty) | Hide specific tools (pinned tools are not affected). |
+| `POSITION_PROVIDER_PINS` | (empty) | Pin specific model providers to the top. Example: `openai,anthropic`. |
+| `POSITION_PROVIDER_INCLUDES` | (empty) | Only show listed providers. If unset, all providers are available. |
+| `POSITION_PROVIDER_EXCLUDES` | (empty) | Hide specific providers (pinned providers are not affected). |
+
+## Plugin Daemon Configuration
+
+The plugin daemon is a separate service that manages plugin lifecycle (installation, execution, upgrades). The API communicates with it via HTTP.
+
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | Plugin daemon service URL. |
+| `PLUGIN_DAEMON_KEY` | (auto-generated) | Authentication key for the plugin daemon. |
+| `PLUGIN_DAEMON_PORT` | `5002` | Plugin daemon listening port. |
+| `PLUGIN_DAEMON_TIMEOUT` | `600.0` | Timeout in seconds for all plugin daemon requests (installation, execution, listing). |
+| `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | Maximum plugin package size in bytes (50 MB). Validated during marketplace downloads. |
+| `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
+| `PLUGIN_DIFY_INNER_API_KEY` | (auto-generated) | API key the plugin daemon uses to call back to the Dify API. Must match `DIFY_INNER_API_KEY` in the plugin daemon service config. |
+| `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | Internal API URL the plugin daemon calls back to. |
+| `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | Host for plugin remote debugging connections. |
+| `PLUGIN_DEBUGGING_PORT` | `5003` | Port for plugin remote debugging connections. |
+| `MARKETPLACE_ENABLED` | `true` | Enable the plugin marketplace. When disabled, only locally installed plugins are available—browsing and auto-upgrades are unavailable. |
+| `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` | Marketplace API endpoint for plugin browsing, downloading, and upgrade checking. |
+| `FORCE_VERIFYING_SIGNATURE` | `true` | Require valid signatures before installing plugins. Prevents installing tampered or unsigned packages. |
+| `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | Plugin execution timeout in seconds (plugin daemon side). Should match `PLUGIN_DAEMON_TIMEOUT` on the API side. |
+| `PIP_MIRROR_URL` | (empty) | Custom PyPI mirror URL used by the plugin daemon when installing plugin dependencies. Useful for faster installs or air-gapped environments. |
+
+## OTLP / OpenTelemetry Configuration
+
+OpenTelemetry provides distributed tracing and metrics collection. When enabled, Dify instruments Flask and exports telemetry data to an OTLP collector.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENABLE_OTEL` | `false` | Master switch for OpenTelemetry instrumentation. |
+| `OTLP_TRACE_ENDPOINT` | (empty) | Dedicated trace endpoint URL. If unset, falls back to `{OTLP_BASE_ENDPOINT}/v1/traces`. |
+| `OTLP_METRIC_ENDPOINT` | (empty) | Dedicated metric endpoint URL. If unset, falls back to `{OTLP_BASE_ENDPOINT}/v1/metrics`. |
+| `OTLP_BASE_ENDPOINT` | `http://localhost:4318` | Base OTLP collector URL. Used as fallback when specific trace/metric endpoints are not set. |
+| `OTLP_API_KEY` | (empty) | API key for OTLP authentication. Sent as `Authorization: Bearer` header. |
+| `OTEL_EXPORTER_TYPE` | `otlp` | Exporter type. `otlp` exports to a collector; other values use a console exporter (for debugging). |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | (empty) | Protocol for OTLP export. `grpc` uses gRPC exporters; anything else uses HTTP. |
+| `OTEL_SAMPLING_RATE` | `0.1` | Fraction of requests to trace (0.1 = 10%). Lower values reduce overhead in high-traffic production environments. |
+| `OTEL_BATCH_EXPORT_SCHEDULE_DELAY` | `5000` | Delay in milliseconds between batch exports. |
+| `OTEL_MAX_QUEUE_SIZE` | `2048` | Maximum number of spans queued before dropping. |
+| `OTEL_MAX_EXPORT_BATCH_SIZE` | `512` | Maximum spans per export batch. |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `60000` | Metric export interval in milliseconds. |
+| `OTEL_BATCH_EXPORT_TIMEOUT` | `10000` | Batch span export timeout in milliseconds. |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | `30000` | Metric export timeout in milliseconds. |
+
+## Miscellaneous
+
+| Variable | Default | Description |
+|---|---|---|
+| `CSP_WHITELIST` | (empty) | Additional domains to allow in Content Security Policy headers. |
+| `ALLOW_EMBED` | `false` | Allow Dify pages to be embedded in iframes. When `false`, sets `X-Frame-Options: DENY` to prevent clickjacking. |
+| `SWAGGER_UI_ENABLED` | `false` | Expose Swagger UI at `SWAGGER_UI_PATH` for browsing API documentation. Swagger endpoints bypass authentication. |
+| `SWAGGER_UI_PATH` | `/swagger-ui.html` | URL path for Swagger UI. |
+| `MAX_SUBMIT_COUNT` | `100` | Maximum concurrent task submissions in the thread pool used for parallel workflow node execution. |
+| `TENANT_ISOLATED_TASK_CONCURRENCY` | `1` | Number of document indexing or RAG pipeline tasks processed simultaneously per tenant. Increase for faster indexing with more database load. |
 
 ### Scheduled Tasks Configuration
 
-Dify uses Celery Beat to execute various background scheduled tasks for system maintenance and data cleanup. The following environment variables configure scheduled task settings:
+Dify uses Celery Beat to run background maintenance tasks on configurable schedules.
 
-- CELERY_BEAT_SCHEDULER_TIME
+| Variable | Default | Description |
+|---|---|---|
+| `ENABLE_CLEAN_EMBEDDING_CACHE_TASK` | `false` | Delete expired embedding cache records from the database at 2:00 AM daily. Manages database size. |
+| `ENABLE_CLEAN_UNUSED_DATASETS_TASK` | `false` | Disable documents in knowledge bases that haven't had activity within the retention period. Runs at 3:00 AM daily. |
+| `ENABLE_CLEAN_MESSAGES` | `false` | Delete conversation messages older than the retention period at 4:00 AM daily. |
+| `ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK` | `false` | Email workspace owners a list of knowledge bases that had documents auto-disabled by the cleanup task. Runs every Monday at 10:00 AM. |
+| `ENABLE_DATASETS_QUEUE_MONITOR` | `false` | Monitor the dataset processing queue backlog in Redis. Sends email alerts when the queue exceeds the threshold. |
+| `QUEUE_MONITOR_INTERVAL` | `30` | How often to check the queue (in minutes). |
+| `QUEUE_MONITOR_THRESHOLD` | `200` | Queue size that triggers an alert email. |
+| `QUEUE_MONITOR_ALERT_EMAILS` | (empty) | Email addresses to receive queue alerts (comma-separated). |
+| `ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK` | `true` | Check the marketplace for newer plugin versions every 15 minutes. Dispatches upgrade tasks based on each tenant's auto-upgrade schedule. |
+| `ENABLE_WORKFLOW_SCHEDULE_POLLER_TASK` | `true` | Enable the workflow schedule poller that checks for and triggers scheduled workflow runs. |
+| `WORKFLOW_SCHEDULE_POLLER_INTERVAL` | `1` | How often to check for due scheduled workflows (in minutes). |
+| `WORKFLOW_SCHEDULE_POLLER_BATCH_SIZE` | `100` | Maximum number of due schedules fetched per poll cycle. |
+| `WORKFLOW_SCHEDULE_MAX_DISPATCH_PER_TICK` | `0` | Circuit breaker: maximum schedules dispatched per tick. `0` means unlimited. |
+| `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | Enable automatic cleanup of workflow run records. |
+| `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | Pre-create TiDB Serverless clusters for vector database pooling. |
+| `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | Update TiDB Serverless cluster status periodically. |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | How often to check for expired Human Input forms (in minutes). |
 
-  Celery Beat scheduling time interval (in days) that controls the execution frequency of certain scheduled tasks. Default is 1 day.
+#### Record Retention & Cleanup
 
-- ENABLE_CLEAN_EMBEDDING_CACHE_TASK
+These control how old records are cleaned up. When `BILLING_ENABLED` is active, cleanup targets sandbox-tier tenants with a grace period. When billing is disabled (self-hosted), cleanup applies to all records within the retention window.
 
-  Whether to enable the embedding cache cleanup task. Default is false. When enabled, it cleans expired embedding caches at 2:00 AM daily to reduce storage usage.
+| Variable | Default | Description |
+|---|---|---|
+| `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | Records older than this many days are eligible for deletion. |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | Grace period in days after subscription expiration before records are deleted (billing-enabled only). |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | Number of records processed per cleanup batch. |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | Maximum random delay in milliseconds between cleanup batches to reduce database load. |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | Redis lock TTL in seconds (~25 hours) to prevent concurrent cleanup task execution. |
 
-- ENABLE_CLEAN_UNUSED_DATASETS_TASK
+## Aliyun SLS Logstore Configuration
 
-  Whether to enable the unused datasets cleanup task. Default is false. When enabled, it cleans long-unused datasets at 3:00 AM daily to free up storage space.
+Optional integration with Aliyun Simple Log Service for storing workflow execution logs externally instead of in the database. Enable by setting the repository configuration variables to use logstore implementations.
 
-- ENABLE_CLEAN_MESSAGES
+| Variable | Default | Description |
+|---|---|---|
+| `ALIYUN_SLS_ACCESS_KEY_ID` | (empty) | Aliyun access key ID for SLS authentication. |
+| `ALIYUN_SLS_ACCESS_KEY_SECRET` | (empty) | Aliyun access key secret for SLS authentication. |
+| `ALIYUN_SLS_ENDPOINT` | (empty) | SLS service endpoint URL (e.g., `cn-hangzhou.log.aliyuncs.com`). |
+| `ALIYUN_SLS_REGION` | (empty) | Aliyun region (e.g., `cn-hangzhou`). |
+| `ALIYUN_SLS_PROJECT_NAME` | (empty) | SLS project name for storing workflow logs. |
+| `ALIYUN_SLS_LOGSTORE_TTL` | `365` | Data retention in days for SLS logstores. Use `3650` for permanent storage. |
+| `LOGSTORE_DUAL_WRITE_ENABLED` | `false` | Write workflow data to both SLS and PostgreSQL simultaneously. Useful during migration to SLS. |
+| `LOGSTORE_DUAL_READ_ENABLED` | `true` | Fall back to PostgreSQL when SLS returns no results. Useful during migration when historical data exists only in the database. |
+| `LOGSTORE_ENABLE_PUT_GRAPH_FIELD` | `true` | Include the full workflow graph definition in SLS logs. Set to `false` to reduce storage by omitting large graph data. |
 
-  Whether to enable the message cleanup task. Default is false. When enabled, it cleans expired conversation message records at 4:00 AM daily.
+## Event Bus Configuration
 
-- ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK
+Redis-based event transport between API and Celery workers.
 
-  Whether to enable the mail document cleanup notification task. Default is false. When enabled, it sends document cleanup notification emails at 10:00 AM every Monday.
+| Variable | Default | Description |
+|---|---|---|
+| `EVENT_BUS_REDIS_URL` | (empty) | Redis connection URL for event streaming. When empty, uses the main Redis connection settings. |
+| `EVENT_BUS_REDIS_CHANNEL_TYPE` | `pubsub` | Transport type: `pubsub` (Pub/Sub, at-most-once delivery), `sharded` (sharded Pub/Sub), or `streams` (Redis Streams, at-least-once delivery). |
+| `EVENT_BUS_REDIS_USE_CLUSTERS` | `false` | Enable Redis Cluster mode for event bus. Recommended for large deployments. |
 
-- ENABLE_DATASETS_QUEUE_MONITOR
+## Vector Database Service Configuration
 
-  Whether to enable the datasets queue monitoring task. Default is false. When enabled, it monitors the dataset processing queue status and sends alerts when the queue backlog exceeds the threshold.
+These configure the vector database containers themselves (not the Dify client connection). Only the variables for your chosen `VECTOR_STORE` are relevant.
 
-- QUEUE_MONITOR_INTERVAL
+<AccordionGroup>
+<Accordion title="Weaviate Service">
 
-  Dataset queue monitoring interval (in minutes). Default is 30 minutes. Only effective when the queue monitoring task is enabled.
+| Variable | Default | Description |
+|---|---|---|
+| `WEAVIATE_PERSISTENCE_DATA_PATH` | `/var/lib/weaviate` | Data persistence directory inside the container. |
+| `WEAVIATE_QUERY_DEFAULTS_LIMIT` | `25` | Default query result limit. |
+| `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED` | `true` | Allow anonymous access. |
+| `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | Default vectorizer module. |
+| `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | Cluster node hostname. |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | Enable API key authentication. |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | (auto-generated) | Allowed API keys. Must match `WEAVIATE_API_KEY` in the client config. |
+| `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | Users associated with API keys. |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | Enable admin list authorization. |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | Admin users. |
+| `WEAVIATE_DISABLE_TELEMETRY` | `false` | Disable Weaviate telemetry. |
+| `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | Enable GSE tokenizer (Chinese). |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | Enable Kagome tokenizer (Japanese). |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | Enable Kagome tokenizer (Korean). |
 
-- ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK
+</Accordion>
 
-  Whether to enable the check upgradable plugin task. Default is true. When enabled, it checks for upgradable plugin versions every 15 minutes. Requires MARKETPLACE_ENABLED to be enabled.
+<Accordion title="Milvus Service (ETCD + MinIO)">
 
-- MARKETPLACE_ENABLED
+| Variable | Default | Description |
+|---|---|---|
+| `ETCD_AUTO_COMPACTION_MODE` | `revision` | ETCD auto compaction mode. |
+| `ETCD_AUTO_COMPACTION_RETENTION` | `1000` | Auto compaction retention in number of revisions. |
+| `ETCD_QUOTA_BACKEND_BYTES` | `4294967296` | Backend quota in bytes (4 GB). |
+| `ETCD_SNAPSHOT_COUNT` | `50000` | Number of changes before triggering a snapshot. |
+| `ETCD_ENDPOINTS` | `etcd:2379` | ETCD service endpoints. |
+| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key. |
+| `MINIO_SECRET_KEY` | `minioadmin` | MinIO secret key. |
+| `MINIO_ADDRESS` | `minio:9000` | MinIO service address. |
+| `MILVUS_AUTHORIZATION_ENABLED` | `true` | Enable Milvus security authorization. |
 
-  Whether to enable the marketplace functionality. Default is true. When disabled, plugin-related features including plugin upgrade checks will be unavailable.
+</Accordion>
 
-- ENABLE_CREATE_TIDB_SERVERLESS_TASK
+<Accordion title="OpenSearch Service">
 
-  Whether to enable the create TiDB Serverless task. Default is false. Used for TiDB cloud service integration, executes every hour.
+| Variable | Default | Description |
+|---|---|---|
+| `OPENSEARCH_DISCOVERY_TYPE` | `single-node` | Discovery type for cluster formation. |
+| `OPENSEARCH_BOOTSTRAP_MEMORY_LOCK` | `true` | Lock memory on startup to prevent swapping. |
+| `OPENSEARCH_JAVA_OPTS_MIN` | `512m` | Minimum JVM heap size. |
+| `OPENSEARCH_JAVA_OPTS_MAX` | `1024m` | Maximum JVM heap size. |
+| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | Initial admin password for the OpenSearch service. |
+| `OPENSEARCH_MEMLOCK_SOFT` | `-1` | Soft memory lock limit (`-1` = unlimited). |
+| `OPENSEARCH_MEMLOCK_HARD` | `-1` | Hard memory lock limit (`-1` = unlimited). |
+| `OPENSEARCH_NOFILE_SOFT` | `65536` | Soft file descriptor limit. |
+| `OPENSEARCH_NOFILE_HARD` | `65536` | Hard file descriptor limit. |
 
-- ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK
+</Accordion>
 
-  Whether to enable the update TiDB Serverless status task. Default is false. Used to update TiDB cloud service status, executes every 10 minutes.
+<Accordion title="PGVector / PGVecto.RS Service">
 
-- WORKFLOW_LOG_CLEANUP_ENABLED
+| Variable | Default | Description |
+|---|---|---|
+| `PGVECTOR_PGUSER` | `postgres` | PostgreSQL user for the PGVector container. |
+| `PGVECTOR_POSTGRES_PASSWORD` | (auto-generated) | PostgreSQL password for the PGVector container. |
+| `PGVECTOR_POSTGRES_DB` | `dify` | Database name in the PGVector container. |
+| `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | Data directory inside the container. |
+| `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | Version of the pg_bigm extension. |
 
-  Whether to enable automatic workflow log cleanup task. Default is false. When enabled, it cleans workflow execution logs that exceed the retention period at 2:00 AM daily.
+</Accordion>
 
-- WORKFLOW_LOG_RETENTION_DAYS
+<Accordion title="Oracle / Chroma / Elasticsearch Services">
 
-  Workflow log retention days. Default is 30 days. Only effective when the workflow log cleanup task is enabled.
+| Variable | Default | Description |
+|---|---|---|
+| `ORACLE_PWD` | `Dify123456` | Oracle database password for the container. |
+| `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle character set. |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | (auto-generated) | Authentication credentials for the Chroma server container. |
+| `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Authentication provider for the Chroma server. |
+| `CHROMA_IS_PERSISTENT` | `TRUE` | Enable persistent storage for Chroma. |
+| `KIBANA_PORT` | `5601` | Kibana port (Elasticsearch UI). |
 
-- WORKFLOW_LOG_CLEANUP_BATCH_SIZE
+</Accordion>
 
-  Workflow log cleanup batch size. Default is 100. Number of log entries processed per cleanup operation, can be adjusted based on system performance.
+<Accordion title="IRIS / Other Services">
 
-### Others
+| Variable | Default | Description |
+|---|---|---|
+| `IRIS_WEB_SERVER_PORT` | `52773` | IRIS web server management port. |
+| `IRIS_TIMEZONE` | `UTC` | Timezone for the IRIS container. |
+| `DB_PLUGIN_DATABASE` | `dify_plugin` | Separate database name for plugin data. |
 
-- INVITE_EXPIRY_HOURS: Member invitation link valid time (hours), Default: 72.
-- HTTP_REQUEST_NODE_MAX_TEXT_SIZE: The maximum text size of the HTTP request node in the workflow, default 1MB。
-- HTTP_REQUEST_NODE_MAX_BINARY_SIZE: The maximum binary size of HTTP request nodes in the workflow, default 10MB。
+</Accordion>
+</AccordionGroup>
 
----
+## Plugin Daemon Storage Configuration
 
-## Web Frontend
+The plugin daemon can store plugin packages in different storage backends. Configure only the provider matching `PLUGIN_STORAGE_TYPE`.
 
-### SENTRY_DSN
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_STORAGE_TYPE` | `local` | Plugin storage backend: `local`, `aws_s3`, `tencent_cos`, `azure_blob`, `aliyun_oss`, `volcengine_tos`. |
+| `PLUGIN_STORAGE_LOCAL_ROOT` | `/app/storage` | Root directory for local plugin storage. |
+| `PLUGIN_WORKING_PATH` | `/app/storage/cwd` | Working directory for plugin execution. |
+| `PLUGIN_INSTALLED_PATH` | `plugin` | Subdirectory for installed plugins. |
+| `PLUGIN_PACKAGE_CACHE_PATH` | `plugin_packages` | Subdirectory for cached plugin packages. |
+| `PLUGIN_MEDIA_CACHE_PATH` | `assets` | Subdirectory for cached media assets. |
+| `PLUGIN_STORAGE_OSS_BUCKET` | (empty) | Object storage bucket name (shared across S3/COS/OSS/TOS providers). |
+| `PLUGIN_PPROF_ENABLED` | `false` | Enable Go pprof profiling for the plugin daemon. |
+| `PLUGIN_PYTHON_ENV_INIT_TIMEOUT` | `120` | Timeout in seconds for initializing Python environments for plugins. |
+| `PLUGIN_STDIO_BUFFER_SIZE` | `1024` | Buffer size in bytes for plugin stdio communication. |
+| `PLUGIN_STDIO_MAX_BUFFER_SIZE` | `5242880` | Maximum buffer size in bytes (5 MB) for plugin stdio communication. |
+| `ENFORCE_LANGGENIUS_PLUGIN_SIGNATURES` | `true` | Enforce signature verification for LangGenius official plugins. |
+| `ENDPOINT_URL_TEMPLATE` | `http://localhost/e/{hook_id}` | URL template for plugin endpoints. `{hook_id}` is replaced with the actual hook ID. |
+| `EXPOSE_PLUGIN_DAEMON_PORT` | `5002` | Host port mapped to the plugin daemon. |
+| `EXPOSE_PLUGIN_DEBUGGING_HOST` | `localhost` | Host for plugin remote debugging. |
+| `EXPOSE_PLUGIN_DEBUGGING_PORT` | `5003` | Host port for plugin remote debugging. |
 
-Sentry DSN address, default is empty, when empty, all monitoring information is not reported to Sentry.
+<AccordionGroup>
+<Accordion title="Plugin S3 Storage">
 
-## Deprecated
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_S3_USE_AWS` | `false` | Use AWS S3 (vs S3-compatible services). |
+| `PLUGIN_S3_USE_AWS_MANAGED_IAM` | `false` | Use IAM roles instead of explicit credentials. |
+| `PLUGIN_S3_ENDPOINT` | (empty) | S3 endpoint URL. |
+| `PLUGIN_S3_USE_PATH_STYLE` | `false` | Use path-style URLs instead of virtual-hosted. |
+| `PLUGIN_AWS_ACCESS_KEY` | (empty) | AWS access key. |
+| `PLUGIN_AWS_SECRET_KEY` | (empty) | AWS secret key. |
+| `PLUGIN_AWS_REGION` | (empty) | AWS region. |
 
-### CONSOLE_URL
+</Accordion>
 
-> ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by: `CONSOLE_API_URL` and `CONSOLE_WEB_URL`.
+<Accordion title="Plugin Azure Blob Storage">
 
-Console URL, used to concatenate the authorization callback, console front-end address, and CORS configuration use. If empty, it is the same domain. Example: `https://console.dify.ai`.
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_AZURE_BLOB_STORAGE_CONTAINER_NAME` | (empty) | Azure Blob container name. |
+| `PLUGIN_AZURE_BLOB_STORAGE_CONNECTION_STRING` | (empty) | Azure Blob connection string. |
 
-### API_URL
+</Accordion>
 
-> ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by `SERVICE_API_URL`.
+<Accordion title="Plugin Tencent COS Storage">
 
-API URL, used to display Service API Base URL to the front-end. If empty, it is the same domain. Example: `https://api.dify.ai`
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_TENCENT_COS_SECRET_KEY` | (empty) | Tencent COS secret key. |
+| `PLUGIN_TENCENT_COS_SECRET_ID` | (empty) | Tencent COS secret ID. |
+| `PLUGIN_TENCENT_COS_REGION` | (empty) | Tencent COS region. |
 
-### APP_URL
+</Accordion>
 
-> ⚠️ Modified in 0.3.8, will be deprecated in 0.4.9, replaced by `APP_API_URL` and `APP_WEB_URL`.
+<Accordion title="Plugin Aliyun OSS Storage">
 
-WebApp Url, used to display WebAPP API Base Url to the front-end. If empty, it is the same domain. Example: `https://udify.app/`
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_ALIYUN_OSS_REGION` | (empty) | Aliyun OSS region. |
+| `PLUGIN_ALIYUN_OSS_ENDPOINT` | (empty) | Aliyun OSS endpoint. |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_ID` | (empty) | Aliyun OSS access key ID. |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_SECRET` | (empty) | Aliyun OSS access key secret. |
+| `PLUGIN_ALIYUN_OSS_AUTH_VERSION` | `v4` | Aliyun OSS authentication version. |
+| `PLUGIN_ALIYUN_OSS_PATH` | (empty) | Aliyun OSS path prefix. |
 
-### Session Configuration
+</Accordion>
 
-> ⚠️ This configuration is no longer valid since v0.3.24.
+<Accordion title="Plugin Volcengine TOS Storage">
 
-Only used by the API service for interface identity verification.
+| Variable | Default | Description |
+|---|---|---|
+| `PLUGIN_VOLCENGINE_TOS_ENDPOINT` | (empty) | Volcengine TOS endpoint. |
+| `PLUGIN_VOLCENGINE_TOS_ACCESS_KEY` | (empty) | Volcengine TOS access key. |
+| `PLUGIN_VOLCENGINE_TOS_SECRET_KEY` | (empty) | Volcengine TOS secret key. |
+| `PLUGIN_VOLCENGINE_TOS_REGION` | (empty) | Volcengine TOS region. |
 
-- SESSION_TYPE: Session component type
-
-  - redis (default): If you choose this, you need to set the environment variables starting with SESSION_REDIS\_ below.
-  - sqlalchemy: If you choose this, the current database connection will be used and the sessions table will be used to read and write session records.
-
-- SESSION_REDIS_HOST: Redis host
-- SESSION_REDIS_PORT: Redis port, default is 6379
-- SESSION_REDIS_DB: Redis Database, default is 0. Please use a different Database from Redis and Celery Broker.
-- SESSION_REDIS_USERNAME: Redis username, default is empty
-- SESSION_REDIS_PASSWORD: Redis password, default is empty. It is strongly recommended to set a password.
-- SESSION_REDIS_USE_SSL: Whether to use SSL protocol for connection, default is false
-
-### Cookie Policy Configuration
-
-> ⚠️ This configuration is no longer valid since v0.3.24.
-
-Used to set the browser policy for session cookies used for identity verification.
-
-- COOKIE_HTTPONLY: Cookie HttpOnly configuration, default is true.
-- COOKIE_SAMESITE: Cookie SameSite configuration, default is Lax.
-- COOKIE_SECURE: Cookie Secure configuration, default is false.
-
-## Chunk Length Configuration
-
-### INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH
-
-Configuration for document chunk length. It is used to control the size of text segments when processing long documents. Default: 500. Maximum: 4000.
-
-**Larger Chunks**
-- Retain more context within each chunk, ideal for tasks requiring a broader understanding of the text.
-- Reduce the total number of chunks, lowering processing time and storage overhead.
-
-**Smaller Chunks**
-- Provide finer granularity, improving accuracy for tasks like extraction or summarization.
-- Reduce the risk of exceeding model token limits, making it safer for models with stricter constraints.
-
-**Configuration Recommendations**
-- Choose larger chunks for context-heavy tasks like sentiment analysis or document summarization.
-- Choose smaller chunks for fine-grained tasks such as keyword extraction or paragraph-level processing.
+</Accordion>
+</AccordionGroup>
