@@ -22,8 +22,14 @@ codebase i18n files.
    ask the user for the local filesystem path to their Dify repo and use it for
    reading i18n files.
 
-2. Detect changed `.mdx` files via `git diff` (staged + unstaged). If no
-   changes are detected, ask the user which files to check.
+2. Detect changed documentation files by combining:
+   - `git diff --name-only` (unstaged changes in tracked files)
+   - `git diff --cached --name-only` (staged changes)
+   - Untracked files from `git status --porcelain` (lines starting with `??`)
+
+   Filter for `.mdx` and `.md` files under doc content directories (`en/`, `zh/`,
+   `ja/`, `writing-guides/`). If no changed files are detected, ask the user
+   which files to check.
 
 ## Checks to Perform
 
@@ -62,13 +68,12 @@ from emphasis. UI labels typically appear in instructional context ("click
 For any UI label flagged as potentially inconsistent, or for new UI labels
 not yet in the glossary, verify against the codebase:
 
-1. Checkout the user-specified branch in the Dify repo.
-2. Search `web/i18n/en-US/`, `web/i18n/zh-Hans/`, `web/i18n/ja-JP/` for the
-   relevant i18n key.
+1. Use `git show <branch>:<path>` to read i18n files from the user-specified
+   branch without switching branches. For example:
+   `git show feat/support-agent-sandbox:web/i18n/en-US/workflow.json`
+2. Search the relevant i18n JSON for the key.
 3. Report the actual codebase values.
 4. If the glossary is outdated compared to the codebase, flag it.
-
-After checking, switch back to the original branch.
 
 ### 4. First-Mention Rule (zh/ja Only)
 
