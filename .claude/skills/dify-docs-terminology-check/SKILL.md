@@ -17,8 +17,10 @@ codebase i18n files.
 ## Before Starting
 
 1. Ask the user: **"Which branch in the Dify codebase should I check UI labels
-   against?"** (e.g., `main`, `feat/support-agent-sandbox`). The Dify codebase
-   is at the additional working directory for the Dify repo.
+   against?"** (e.g., `main`, `feat/support-agent-sandbox`). If the Dify
+   codebase is available as an additional working directory, use that. Otherwise,
+   ask the user for the local filesystem path to their Dify repo and use it for
+   reading i18n files.
 
 2. Detect changed `.mdx` files via `git diff` (staged + unstaged). If no
    changes are detected, ask the user which files to check.
