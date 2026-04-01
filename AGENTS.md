@@ -1,50 +1,44 @@
-# Mintlify documentation
+# Dify Documentation — AI Agent Instructions
 
-## Working relationship
-- You can push back on ideas-this can lead to better documentation. Cite sources and explain your reasoning when you do so
-- ALWAYS ask for clarification rather than making assumptions
-- NEVER lie, guess, or make up anything
+For documentation tasks, read these guides before starting:
 
-## Project context
-- Format: MDX files with YAML frontmatter
-- Config: docs.json for navigation, theme, settings
-- Components: Mintlify components
+1. `writing-guides/style-guide.md` — Voice, tone, writing patterns
+2. `writing-guides/formatting-guide.md` — MDX formatting, Mintlify components
+3. `writing-guides/glossary.md` — Standardized terminology
 
-## Content strategy
-- Document just enough for user success - not too much, not too little
-- Prioritize accuracy and usability
-- Make content evergreen when possible
-- Search for existing content before adding anything new. Avoid duplication unless it is done for a strategic reason
-- Check existing patterns for consistency
-- Start by making the smallest reasonable changes
+For task-specific guidance, see `writing-guides/index.md`.
 
-## docs.json
+## Key Rules
 
-- Refer to the [docs.json schema](https://mintlify.com/docs.json) when building the docs.json file and site navigation
+- Write in English only, except when specifically optimizing Chinese
+  or Japanese translations.
+- Only edit the English section in `docs.json`. Translation sections sync
+  automatically.
+- MDX files require `title` and `description` in YAML frontmatter.
+- Never use `--no-verify` when committing.
 
-## Frontmatter requirements for pages
-- title: Clear, descriptive page title
-- description: Concise summary for SEO/navigation
+## Repository Structure
 
-## Writing standards
-- Second-person voice ("you")
-- Prerequisites at start of procedural content
-- Test all code examples before publishing
-- Match style and formatting of existing pages
-- Include both basic and advanced use cases
-- Language tags on all code blocks
-- Alt text on all images
-- Relative paths for internal links
+en/, zh/, ja/         Documentation content (en is source)
+writing-guides/       Style guide, formatting guide, glossary
+tools/translate/      Translation pipeline and language-specific formatting
+.claude/skills/       Documentation writing skills (auto-discovered)
+docs.json             Navigation structure
 
-## Git workflow
-- NEVER use --no-verify when committing
-- Ask how to handle uncommitted changes before starting
-- Create a new branch when no clear branch exists for changes
-- Commit frequently throughout development
-- NEVER skip or disable pre-commit hooks
+## Development
 
-## Do not
-- Skip frontmatter on any MDX file
-- Use absolute URLs for internal links
-- Include untested code examples
-- Make assumptions - always ask for clarification
+mintlify dev          Local preview at localhost:3000
+
+## Commit and PR Title Conventions
+
+{type}: {description} — lowercase, imperative, no trailing period, under 72 chars.
+
+| Type | When | Example |
+|:-----|:-----|:--------|
+| `docs` | New or updated content | `docs: add workflow node configuration guide` |
+| `fix` | Typos, broken links, incorrect info | `fix: correct broken link in knowledge base page` |
+| `feat` | Tooling or structural changes | `feat: add search index to knowledge section` |
+| `refactor` | Reorganization without content changes | `refactor: restructure knowledge base section` |
+| `translate` | Translation additions or updates | `translate: update Japanese workflow pages` |
+| `style` | Formatting-only changes | `style: fix heading levels in plugin guide` |
+| `chore` | Dependencies, config | `chore: bump mintlify to 4.0.710` |

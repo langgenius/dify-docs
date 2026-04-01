@@ -1,7 +1,1571 @@
 ---
 title: 环境变量
+description: Dify 自托管部署使用的所有环境变量参考。
 ---
 
+<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考[英文原版](/en/self-host/configuration/environments)。</Note>
+
+Dify 使用默认配置即可开箱即用。你可以通过修改 `.env` 文件中的环境变量来自定义部署。
+
+<Tip>
+升级 Dify 后，在 `docker` 目录下运行 `diff .env .env.example` 检查新增或变更的变量，然后相应更新你的 `.env` 文件。
+</Tip>
+
+## 通用变量
+
+这些 URL 变量用于配置 Dify 各服务的访问地址。
+
+对于 Nginx 后的单域名部署（默认 Docker Compose 配置），这些变量可以留空——系统会从请求中自动检测。当使用自定义域名、多域名部署或反向代理时，需要配置这些变量。
+
+### CONSOLE_API_URL
+
+默认值：（空）
+
+Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google）、Notion 集成或任何需要 OAuth 的插件，请设置此变量——这些功能需要绝对回调 URL 才能在授权后将用户重定向回来。此变量还决定是否使用安全（仅 HTTPS）Cookie。
+
+示例：`https://api.console.dify.ai`
+
+### CONSOLE_WEB_URL
+
+默认值：（空）
+
+Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、密码重置、通知）中的链接，以及 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
+
+如果为空，邮件链接将无法正常工作——即使在单域名部署中，如果使用邮件功能也需要设置此变量。
+
+示例：`https://console.dify.ai`
+
+### SERVICE_API_URL
+
+默认值：（空）
+
+在 Dify 控制台中展示给开发者的 API Base URL——即他们复制到代码中用于调用 Dify API 的 URL。如果为空，将从当前请求自动检测（例如 `http://localhost/v1`）。当你的服务器可通过多个地址访问时，设置此变量以确保 URL 一致。
+
+示例：`https://api.dify.ai`
+
+### APP_API_URL
+
+默认值：（空）
+
+WebApp 前端（已发布应用）的后端 API URL。此变量仅由 Web 前端容器使用，不影响 Python 后端。如果为空，Docker 镜像默认使用 `http://127.0.0.1:5001`。
+
+示例：`https://api.app.dify.ai`
+
+### APP_WEB_URL
+
+默认值：（空）
+
+已发布 WebApp 的公开访问 URL。工作流中的**人工输入节点**需要此变量——邮件通知中的表单链接以 `{APP_WEB_URL}/form/{token}` 格式构建。如果为空，人工输入邮件将不包含有效的表单链接。
+
+示例：`https://app.dify.ai`
+
+### TRIGGER_URL
+
+默认值：`http://localhost`
+
+Webhook 和插件触发端点的公开访问 URL。外部系统使用此地址来调用你的工作流。Dify 构建触发回调 URL 格式为 `{TRIGGER_URL}/triggers/webhook/{id}` 并在控制台中展示。
+
+要使触发器能从外部系统正常工作，此变量必须指向它们可以访问的公共域名或 IP 地址。
+
+### FILES_URL
+
+默认值：（空；回退到 `CONSOLE_API_URL`）
+
+文件预览和下载链接的基础 URL。Dify 为所有文件（上传的文档、工具输出、工作空间 Logo）生成签名的限时 URL，并提供给前端和多模态模型使用。
+
+如果你使用文件处理插件，或希望文件 URL 使用专用域名，请设置此变量。如果 `FILES_URL` 和 `CONSOLE_API_URL` 都为空，文件预览将无法工作。
+
+示例：`https://upload.example.com` 或 `http://<your-ip>:5001`
+
+### INTERNAL_FILES_URL
+
+默认值：（空；回退到 `FILES_URL`）
+
+Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护进程、PDF/Word 提取器）。这些内部服务可能无法通过 Nginx 或公共域名访问外部的 `FILES_URL`。
+
+如果为空，内部服务使用 `FILES_URL`。当内部服务无法访问外部 URL 时，请设置此变量。
+
+示例：`http://api:5001`
+
+### FILES_ACCESS_TIMEOUT
+
+默认值：`300`（5 分钟）
+
+签名文件 URL 的有效时长（秒）。超过此时间后 URL 将被拒绝，文件需要重新请求。对于长时间运行的流程可以增大此值；对于更严格的安全要求可以减小此值。
+
+### 系统编码
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `LANG` | `C.UTF-8` | 系统区域设置，确保使用 UTF-8 编码。 |
+| `LC_ALL` | `C.UTF-8` | 覆盖所有类别的区域设置。 |
+| `PYTHONIOENCODING` | `utf-8` | Python I/O 编码。 |
+| `UV_CACHE_DIR` | `/tmp/.uv-cache` | UV 包管理器缓存目录。避免因不存在的主目录导致权限问题。 |
+
+## 服务器配置
+
+### 日志
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `LOG_LEVEL` | `INFO` | 最低日志级别。控制所有处理器（文件 + 控制台）的日志记录内容。级别从低到高：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。 |
+| `LOG_OUTPUT_FORMAT` | `text` | `text` 输出包含时间戳、级别、线程和追踪 ID 的可读格式。`json` 输出结构化 JSON，适用于日志聚合工具（ELK、Datadog 等）。 |
+| `LOG_FILE` | `/app/logs/server.log` | 日志文件路径。设置后启用基于文件的日志记录，并自动轮转。目录会自动创建。为空时日志仅输出到控制台。 |
+| `LOG_FILE_MAX_SIZE` | `20` | 日志文件轮转前的最大大小（MB）。超过后当前文件重命名为 `.1`，并创建新文件。 |
+| `LOG_FILE_BACKUP_COUNT` | `5` | 保留的轮转日志文件数量。使用默认配置时最多存在 6 个文件：当前文件加 5 个备份。 |
+| `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | 文本格式日志的时间戳格式（strftime 代码）。JSON 格式忽略此设置。 |
+| `LOG_TZ` | `UTC` | 日志时间戳的时区（pytz 格式，例如 `Asia/Shanghai`）。仅适用于文本格式——JSON 始终使用 UTC。同时设置 Celery 的任务调度时区。 |
+
+### 常规
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DEBUG` | `false` | 启用详细日志记录：工作流节点输入/输出、工具执行详情、完整 LLM 提示和响应、应用启动耗时。适用于本地开发；不建议在生产环境使用，因为可能在日志中暴露敏感数据。 |
+| `FLASK_DEBUG` | `false` | 标准 Flask 调试模式标志。Dify 未主动使用——`DEBUG` 是主要控制变量。 |
+| `ENABLE_REQUEST_LOGGING` | `false` | 为每个 HTTP 请求记录一条紧凑的访问日志（`METHOD PATH STATUS DURATION TRACE_ID`）。当 `LOG_LEVEL` 同时设为 `DEBUG` 时，还会以 JSON 格式记录完整的请求和响应体。 |
+| `DEPLOY_ENV` | `PRODUCTION` | 在 Sentry 和 OpenTelemetry 中标记监控数据，以便按环境过滤错误和追踪。也作为 `X-Env` 响应头发送。不改变应用行为。 |
+| `MIGRATION_ENABLED` | `true` | 为 `true` 时，容器启动时自动运行数据库架构迁移（`flask upgrade-db`）。仅限 Docker。如果你单独运行迁移，请设为 `false`。对于源码启动，需手动运行 `flask db upgrade`。 |
+| `CHECK_UPDATE_URL` | `https://updates.dify.ai` | 控制台通过此 URL 检查 Dify 的新版本。设为空可禁用——适用于离线环境或防止外部 HTTP 调用。 |
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | 遗留变量。Dify 自身代码未主动使用。如果存在于环境中，可能会被 OpenAI Python SDK 读取。 |
+
+### SECRET_KEY
+
+默认值：（在 `.env.example` 中预填充；生产环境必须替换）
+
+用于会话 Cookie 签名、JWT 认证令牌、文件 URL 签名（HMAC-SHA256）以及加密第三方 OAuth 凭证（AES-256）。首次启动前请生成一个强密钥：
+
+```bash
+openssl rand -base64 42
+```
+
+<Warning>
+部署后更改此密钥将立即使所有用户登出、使所有文件 URL 失效，并破坏使用 OAuth 的插件集成——其加密凭证将无法恢复。
+</Warning>
+
+### INIT_PASSWORD
+
+默认值：（空）
+
+首次安装时的可选安全门控。设置后，`/install` 页面在创建管理员账户前需要输入此密码——防止服务器暴露时被未授权设置。安装完成后此变量不再生效。最大长度：30 个字符。
+
+### 令牌与请求限制
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | 登录会话的访问令牌有效时长（分钟）。过期后浏览器使用刷新令牌静默刷新——用户不会被登出。 |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 用户无需重新输入凭证即可保持登录的时长（天）。如果用户在此期间未访问，则需要重新登录。 |
+| `APP_MAX_EXECUTION_TIME` | `1200` | 应用执行的最大运行时间（秒），超时后终止。与 `WORKFLOW_MAX_EXECUTION_TIME` 配合使用——两者默认均为 20 分钟，但此变量作用于应用队列层面，另一个作用于工作流引擎层面。如果工作流需要更多时间，请同时增大两者。 |
+| `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | 每个应用的默认并发请求限制，在应用未在 UI 中设置自定义限制时使用。`0` 表示不限制。有效限制取此值与 `APP_MAX_ACTIVE_REQUESTS` 的较小值。 |
+| `APP_MAX_ACTIVE_REQUESTS` | `0` | 每个应用的全局并发请求上限。如果应用自定义设置超过此值，将被覆盖。`0` 表示不限制。 |
+
+### 容器启动配置
+
+仅在使用 Docker 镜像或 Docker Compose 启动时生效。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_BIND_ADDRESS` | `0.0.0.0` | API 服务器绑定的网络接口。`0.0.0.0` 监听所有接口；设为 `127.0.0.1` 限制为仅本地访问。 |
+| `DIFY_PORT` | `5001` | API 服务器监听端口。 |
+| `SERVER_WORKER_AMOUNT` | `1` | Gunicorn 工作进程数。使用 gevent（默认）时，每个工作进程通过 greenlet 处理多个并发连接，因此 1 通常足够。对于同步工作进程，使用 `(2 x CPU 核心数) + 1`。[参考文档](https://docs.gunicorn.org/en/stable/design.html#how-many-workers)。 |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn 工作进程类型。Gevent 提供轻量级异步并发。更改此设置会破坏 psycopg2 和 gRPC 补丁——强烈不建议修改。 |
+| `SERVER_WORKER_CONNECTIONS` | `10` | 每个工作进程的最大并发连接数。仅适用于异步工作进程（gevent）。如果在高负载下遇到连接拒绝或响应缓慢，尝试增大此值。 |
+| `GUNICORN_TIMEOUT` | `360` | 如果工作进程在此秒数内没有响应，Gunicorn 将终止并重启它。设为 360（6 分钟）以支持用于流式 LLM 响应的长连接 SSE。 |
+| `CELERY_WORKER_CLASS` | （空；默认为 gevent） | Celery 工作进程类型。与 `SERVER_WORKER_CLASS` 有相同的 gevent 补丁要求——强烈不建议修改。 |
+| `CELERY_WORKER_AMOUNT` | （空；默认为 1） | Celery 工作进程数。仅在禁用自动扩缩时使用。 |
+| `CELERY_AUTO_SCALE` | `false` | 启用动态自动扩缩。启用后，Celery 监控队列深度，在 `CELERY_MIN_WORKERS` 和 `CELERY_MAX_WORKERS` 之间动态创建/销毁工作进程。 |
+| `CELERY_MAX_WORKERS` | （空；默认为 CPU 数量） | 自动扩缩启用时的最大工作进程数。 |
+| `CELERY_MIN_WORKERS` | （空；默认为 1） | 自动扩缩启用时的最小工作进程数。 |
+
+### API 工具配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `API_TOOL_DEFAULT_CONNECT_TIMEOUT` | `10` | API 工具节点调用外部 API 时建立 TCP 连接的最大等待时间（秒）。 |
+| `API_TOOL_DEFAULT_READ_TIMEOUT` | `60` | API 工具节点从外部 API 接收响应数据的最大等待时间（秒）。 |
+
+### 数据库配置
+
+数据库默认使用 PostgreSQL。同时支持 OceanBase、MySQL 和 seekdb。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DB_TYPE` | `postgresql` | 数据库类型。支持的值：`postgresql`、`mysql`、`oceanbase`、`seekdb`。TiDB 等 MySQL 兼容数据库可使用 `mysql`。 |
+| `DB_USERNAME` | `postgres` | 数据库用户名。在连接字符串中进行 URL 编码，因此特殊字符可以安全使用。 |
+| `DB_PASSWORD` | `difyai123456` | 数据库密码。在连接字符串中进行 URL 编码，因此 `@`、`:`、`%` 等字符可以安全使用。 |
+| `DB_HOST` | `db_postgres` | 数据库服务器主机名。 |
+| `DB_PORT` | `5432` | 数据库服务器端口。如果使用 MySQL，请设为 `3306`。 |
+| `DB_DATABASE` | `dify` | 数据库名称。 |
+
+#### 连接池
+
+这些变量控制 Dify 管理数据库连接池的方式。默认配置适用于大多数部署。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SQLALCHEMY_POOL_SIZE` | `30` | 连接池中保持的持久连接数。 |
+| `SQLALCHEMY_MAX_OVERFLOW` | `10` | 连接池满时允许的额外临时连接数。使用默认设置时，最多可同时存在 40 个连接（30 + 10）。 |
+| `SQLALCHEMY_POOL_RECYCLE` | `3600` | 在此秒数后回收连接，防止连接过期。 |
+| `SQLALCHEMY_POOL_TIMEOUT` | `30` | 连接池耗尽时等待连接的时长。如果在此时间内没有连接释放，请求将超时失败。 |
+| `SQLALCHEMY_POOL_PRE_PING` | `false` | 使用连接前通过轻量查询测试连接。防止「连接丢失」错误，但会增加少量延迟。建议在网络不稳定的生产环境中启用。 |
+| `SQLALCHEMY_POOL_USE_LIFO` | `false` | 复用最近归还的连接（LIFO）而非均匀轮转（FIFO）。LIFO 使较少的连接保持「活跃」状态，可以减少开销。 |
+| `SQLALCHEMY_ECHO` | `false` | 将所有 SQL 语句输出到日志。适用于调试查询问题。 |
+
+#### PostgreSQL 性能调优
+
+这些变量作为启动参数传递给 PostgreSQL 容器——它们配置的是数据库服务器，而非 Dify 应用。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `POSTGRES_MAX_CONNECTIONS` | `100` | 最大数据库连接数。[参考文档](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) |
+| `POSTGRES_SHARED_BUFFERS` | `128MB` | 缓冲区共享内存。建议设为可用内存的 25%。[参考文档](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-SHARED-BUFFERS) |
+| `POSTGRES_WORK_MEM` | `4MB` | 每个数据库工作进程的工作内存。[参考文档](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM) |
+| `POSTGRES_MAINTENANCE_WORK_MEM` | `64MB` | 维护操作预留的内存。[参考文档](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM) |
+| `POSTGRES_EFFECTIVE_CACHE_SIZE` | `4096MB` | 查询规划器对有效缓存大小的估计值。[参考文档](https://www.postgresql.org/docs/current/runtime-config-query.html#GUC-EFFECTIVE-CACHE-SIZE) |
+| `POSTGRES_STATEMENT_TIMEOUT` | `0` | 语句执行超时前的最大时长（毫秒）。`0` 表示不超时。[参考文档](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-STATEMENT-TIMEOUT) |
+| `POSTGRES_IDLE_IN_TRANSACTION_SESSION_TIMEOUT` | `0` | 事务内空闲会话的最大时长（毫秒）。`0` 表示不超时。[参考文档](https://www.postgresql.org/docs/current/runtime-config-client.html#GUC-IDLE-IN-TRANSACTION-SESSION-TIMEOUT) |
+
+#### MySQL 性能调优
+
+这些变量作为启动参数传递给 MySQL 容器——它们配置的是数据库服务器，而非 Dify 应用。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MYSQL_MAX_CONNECTIONS` | `1000` | 最大 MySQL 连接数。 |
+| `MYSQL_INNODB_BUFFER_POOL_SIZE` | `512M` | InnoDB 缓冲池大小。建议值：专用 MySQL 服务器可用内存的 70-80%。[参考文档](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_buffer_pool_size) |
+| `MYSQL_INNODB_LOG_FILE_SIZE` | `128M` | InnoDB 日志文件大小。[参考文档](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_log_file_size) |
+| `MYSQL_INNODB_FLUSH_LOG_AT_TRX_COMMIT` | `2` | 事务提交时的 InnoDB 刷写日志方式。选项：`0`（不刷写）、`1`（刷写并同步）、`2`（刷写到操作系统缓存）。[参考文档](https://dev.mysql.com/doc/refman/8.0/en/innodb-parameters.html#sysvar_innodb_flush_log_at_trx_commit) |
+
+### Redis 配置
+
+配置这些变量以将 Dify 连接到你的 Redis 实例。Dify 支持三种部署模式：单机（默认）、哨兵和集群。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `REDIS_HOST` | `redis` | Redis 服务器主机名。仅在单机模式下使用；启用哨兵或集群模式时忽略。 |
+| `REDIS_PORT` | `6379` | Redis 服务器端口。仅在单机模式下使用。 |
+| `REDIS_USERNAME` | （空） | Redis 6.0+ ACL 用户名。适用于所有模式（单机、哨兵、集群）。 |
+| `REDIS_PASSWORD` | `difyai123456` | Redis 认证密码。集群模式请使用 `REDIS_CLUSTERS_PASSWORD` 代替。 |
+| `REDIS_DB` | `0` | Redis 数据库编号（0–15）。仅适用于单机和哨兵模式。确保不与 Celery 的数据库冲突（在 `CELERY_BROKER_URL` 中配置；默认为 DB 1）。 |
+| `REDIS_USE_SSL` | `false` | 启用 Redis 连接的 SSL/TLS。不会自动应用于哨兵协议。 |
+| `REDIS_MAX_CONNECTIONS` | （空） | Redis 连接池中的最大连接数。留空使用库默认值。如需要，可设置为与 Redis 服务器的 `maxclients` 匹配。 |
+
+#### Redis SSL 配置
+
+仅在 `REDIS_USE_SSL=true` 时适用。当 Celery broker URL 使用 `rediss://` 协议时，这些设置也适用于 Celery broker。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `REDIS_SSL_CERT_REQS` | `CERT_NONE` | 证书验证级别：`CERT_NONE`（不验证）、`CERT_OPTIONAL`（可选验证）或 `CERT_REQUIRED`（完整验证）。 |
+| `REDIS_SSL_CA_CERTS` | （空） | 用于验证 Redis 服务器的 CA 证书文件路径。 |
+| `REDIS_SSL_CERTFILE` | （空） | 用于双向 TLS 认证的客户端证书路径。 |
+| `REDIS_SSL_KEYFILE` | （空） | 用于双向 TLS 认证的客户端私钥路径。 |
+
+#### Redis 哨兵模式
+
+哨兵提供自动主节点发现和故障转移以实现高可用。与集群模式互斥。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `REDIS_USE_SENTINEL` | `false` | 启用 Redis 哨兵模式。启用后 `REDIS_HOST`/`REDIS_PORT` 被忽略；Dify 连接到哨兵节点并查询当前主节点。 |
+| `REDIS_SENTINELS` | （空） | 哨兵节点地址。格式：`<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>`。这些是哨兵实例，而非 Redis 服务器。 |
+| `REDIS_SENTINEL_SERVICE_NAME` | （空） | 哨兵监控的逻辑服务名称（在 `sentinel.conf` 中配置）。Dify 调用 `master_for(service_name)` 来发现当前主节点。 |
+| `REDIS_SENTINEL_USERNAME` | （空） | 哨兵节点的认证用户名。与 `REDIS_USERNAME` 分开——后者用于 Redis 主/副本的认证。 |
+| `REDIS_SENTINEL_PASSWORD` | （空） | 哨兵节点的认证密码。与 `REDIS_PASSWORD` 分开。 |
+| `REDIS_SENTINEL_SOCKET_TIMEOUT` | `0.1` | 与哨兵节点通信的 Socket 超时（秒）。默认 0.1 秒假定快速本地网络。对于云/广域网部署，建议增大到 1.0–5.0 秒以防止间歇性超时。 |
+
+#### Redis 集群模式
+
+集群模式提供跨多个 Redis 节点的自动分片。与哨兵模式互斥。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `REDIS_USE_CLUSTERS` | `false` | 启用 Redis 集群模式。 |
+| `REDIS_CLUSTERS` | （空） | 集群节点。格式：`<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>` |
+| `REDIS_CLUSTERS_PASSWORD` | （空） | Redis 集群的密码。 |
+
+### Celery 配置
+
+配置用于数据集索引、邮件发送和定时任务的后台任务队列。
+
+### CELERY_BROKER_URL
+
+默认值：`redis://:difyai123456@redis:6379/1`
+
+Celery 消息代理的 Redis 连接 URL。
+
+直连格式：
+```
+redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
+```
+
+哨兵模式格式（多个节点用分号分隔）：
+```
+sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<redis_database>
+```
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CELERY_BACKEND` | `redis` | Celery 存储任务结果的位置。选项：`redis`（快速，内存存储）或 `database`（存储在主数据库中）。 |
+| `BROKER_USE_SSL` | `false` | 当 `CELERY_BROKER_URL` 使用 `rediss://` 协议时自动启用。将 Redis SSL 证书设置应用于 broker 连接。 |
+| `CELERY_USE_SENTINEL` | `false` | 为 Celery broker 启用 Redis 哨兵模式。 |
+| `CELERY_SENTINEL_MASTER_NAME` | （空） | 哨兵服务名称（Master Name）。 |
+| `CELERY_SENTINEL_PASSWORD` | （空） | 哨兵认证密码。与 `REDIS_SENTINEL_PASSWORD` 分开——如果缓存和任务队列使用不同的哨兵集群，它们可以不同。 |
+| `CELERY_SENTINEL_SOCKET_TIMEOUT` | `0.1` | 连接哨兵的超时时间（秒）。 |
+| `CELERY_TASK_ANNOTATIONS` | `null` | 为特定任务应用运行时设置（例如速率限制）。格式：JSON 字典。示例：`{"tasks.add": {"rate_limit": "10/s"}}`。大多数用户不需要此设置。 |
+
+### CORS 配置
+
+控制前端的跨域访问策略。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WEB_API_CORS_ALLOW_ORIGINS` | `*` | Web API 跨域请求的允许来源。示例：`https://dify.app` |
+| `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | 控制台 API 跨域请求的允许来源。如果未设置，回退到 `CONSOLE_WEB_URL`。 |
+| `COOKIE_DOMAIN` | （空） | 当前端和后端运行在不同子域上时，设为共享的顶级域名（例如 `example.com`）。这允许认证 Cookie 在子域间共享。为空时 Cookie 使用最安全的 `__Host-` 前缀，并锁定到单个域。 |
+| `NEXT_PUBLIC_COOKIE_DOMAIN` | （空） | 跨子域 Cookie 的前端标志。设为 `1`（或任何非空值）启用——后端从 `COOKIE_DOMAIN` 读取实际域名。 |
+| `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | 仅前端。控制 UI 在批量操作时发起的并发 API 调用数。 |
+
+### 文件存储配置
+
+配置 Dify 存储上传文件、数据集文档和加密密钥的位置。每种存储类型有各自的凭证变量——仅配置你使用的那种。
+
+### STORAGE_TYPE
+
+默认值：`opendal`
+
+选择文件存储后端。支持的值：`opendal`、`s3`、`azure-blob`、`aliyun-oss`、`google-storage`、`huawei-obs`、`volcengine-tos`、`tencent-cos`、`baidu-obs`、`oci-storage`、`supabase`、`clickzetta-volume`、`local`（已弃用；内部使用 OpenDAL 的文件系统方案）。
+
+<AccordionGroup>
+<Accordion title="OpenDAL（默认）">
+
+使用 [Apache OpenDAL](https://opendal.apache.org/) 的默认存储后端，一个支持众多存储服务的统一接口。Dify 自动扫描匹配 `OPENDAL_<SCHEME>_*` 的环境变量并传递给 OpenDAL。例如，使用 `OPENDAL_SCHEME=s3` 时，设置 `OPENDAL_S3_ACCESS_KEY_ID`、`OPENDAL_S3_SECRET_ACCESS_KEY` 等。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OPENDAL_SCHEME` | `fs` | 使用的存储服务。示例：`fs`（本地文件系统）、`s3`、`gcs`、`azblob`。 |
+
+对于默认的 `fs` 方案：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OPENDAL_FS_ROOT` | `storage` | 本地文件系统存储的根目录。如不存在将自动创建。 |
+
+有关所有可用方案及其配置选项，请参阅 [OpenDAL 服务文档](https://github.com/apache/opendal/tree/main/core/src/services)。
+
+</Accordion>
+
+<Accordion title="S3">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `S3_ENDPOINT` | （空） | S3 端点地址。非 AWS S3 兼容服务（MinIO 等）必填。 |
+| `S3_REGION` | `us-east-1` | S3 区域。 |
+| `S3_BUCKET_NAME` | `difyai` | S3 存储桶名称。 |
+| `S3_ACCESS_KEY` | （空） | S3 Access Key。使用 IAM 角色时不需要。 |
+| `S3_SECRET_KEY` | （空） | S3 Secret Key。使用 IAM 角色时不需要。 |
+| `S3_USE_AWS_MANAGED_IAM` | `false` | 使用 AWS IAM 角色（EC2 实例配置文件、ECS 任务角色）代替显式的 access key/secret key。启用后 boto3 从实例元数据自动发现凭证。 |
+
+</Accordion>
+
+<Accordion title="Azure Blob">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `AZURE_BLOB_ACCOUNT_NAME` | `difyai` | Azure 存储账户名称。 |
+| `AZURE_BLOB_ACCOUNT_KEY` | `difyai` | Azure 存储账户密钥。 |
+| `AZURE_BLOB_CONTAINER_NAME` | `difyai-container` | Azure Blob 容器名称。 |
+| `AZURE_BLOB_ACCOUNT_URL` | `https://<your_account_name>.blob.core.windows.net` | Azure Blob 账户 URL。 |
+
+</Accordion>
+
+<Accordion title="Google Cloud Storage">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `GOOGLE_STORAGE_BUCKET_NAME` | （空） | Google Cloud Storage 存储桶名称。 |
+| `GOOGLE_STORAGE_SERVICE_ACCOUNT_JSON_BASE64` | （空） | Base64 编码的服务账号 JSON 密钥。 |
+
+</Accordion>
+
+<Accordion title="阿里云 OSS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ALIYUN_OSS_BUCKET_NAME` | （空） | OSS 存储桶名称。 |
+| `ALIYUN_OSS_ACCESS_KEY` | （空） | OSS access key。 |
+| `ALIYUN_OSS_SECRET_KEY` | （空） | OSS secret key。 |
+| `ALIYUN_OSS_ENDPOINT` | `https://oss-ap-southeast-1-internal.aliyuncs.com` | OSS 端点。[区域和端点参考](https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints)。 |
+| `ALIYUN_OSS_REGION` | `ap-southeast-1` | OSS 区域。 |
+| `ALIYUN_OSS_AUTH_VERSION` | `v4` | OSS 认证版本。 |
+| `ALIYUN_OSS_PATH` | （空） | 对象路径前缀。不要以 `/` 开头。[参考文档](https://www.alibabacloud.com/help/en/oss/support/0016-00000005)。 |
+| `ALIYUN_CLOUDBOX_ID` | （空） | 基于 CloudBox 的 OSS 部署的 CloudBox ID。 |
+
+</Accordion>
+
+<Accordion title="腾讯云 COS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TENCENT_COS_BUCKET_NAME` | （空） | COS 存储桶名称。 |
+| `TENCENT_COS_SECRET_KEY` | （空） | COS secret key。 |
+| `TENCENT_COS_SECRET_ID` | （空） | COS secret ID。 |
+| `TENCENT_COS_REGION` | （空） | COS 区域，例如 `ap-guangzhou`。[参考文档](https://cloud.tencent.com/document/product/436/6224)。 |
+| `TENCENT_COS_SCHEME` | （空） | 访问 COS 的协议（`http` 或 `https`）。 |
+| `TENCENT_COS_CUSTOM_DOMAIN` | （空） | COS 访问的自定义域名。 |
+
+</Accordion>
+
+<Accordion title="OCI Object Storage">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OCI_ENDPOINT` | （空） | OCI 端点 URL。 |
+| `OCI_BUCKET_NAME` | （空） | OCI 存储桶名称。 |
+| `OCI_ACCESS_KEY` | （空） | OCI access key。 |
+| `OCI_SECRET_KEY` | （空） | OCI secret key。 |
+| `OCI_REGION` | `us-ashburn-1` | OCI 区域。 |
+
+</Accordion>
+
+<Accordion title="华为 OBS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `HUAWEI_OBS_BUCKET_NAME` | （空） | OBS 存储桶名称。 |
+| `HUAWEI_OBS_ACCESS_KEY` | （空） | OBS access key。 |
+| `HUAWEI_OBS_SECRET_KEY` | （空） | OBS secret key。 |
+| `HUAWEI_OBS_SERVER` | （空） | OBS 服务器 URL。[参考文档](https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html)。 |
+| `HUAWEI_OBS_PATH_STYLE` | `false` | 使用路径风格 URL 代替虚拟主机风格。 |
+
+</Accordion>
+
+<Accordion title="火山引擎 TOS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `VOLCENGINE_TOS_BUCKET_NAME` | （空） | TOS 存储桶名称。 |
+| `VOLCENGINE_TOS_ACCESS_KEY` | （空） | TOS access key。 |
+| `VOLCENGINE_TOS_SECRET_KEY` | （空） | TOS secret key。 |
+| `VOLCENGINE_TOS_ENDPOINT` | （空） | TOS 端点 URL。[参考文档](https://www.volcengine.com/docs/6349/107356)。 |
+| `VOLCENGINE_TOS_REGION` | （空） | TOS 区域，例如 `cn-guangzhou`。 |
+
+</Accordion>
+
+<Accordion title="百度 OBS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `BAIDU_OBS_BUCKET_NAME` | （空） | 百度 OBS 存储桶名称。 |
+| `BAIDU_OBS_ACCESS_KEY` | （空） | 百度 OBS access key。 |
+| `BAIDU_OBS_SECRET_KEY` | （空） | 百度 OBS secret key。 |
+| `BAIDU_OBS_ENDPOINT` | （空） | 百度 OBS 服务器 URL。 |
+
+</Accordion>
+
+<Accordion title="Supabase">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SUPABASE_BUCKET_NAME` | （空） | Supabase 存储桶名称。 |
+| `SUPABASE_API_KEY` | （空） | Supabase API key。 |
+| `SUPABASE_URL` | （空） | Supabase 服务器 URL。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta Volume">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CLICKZETTA_VOLUME_TYPE` | `user` | Volume 类型。选项：`user`（个人/小团队）、`table`（企业多租户）、`external`（数据湖集成）。 |
+| `CLICKZETTA_VOLUME_NAME` | （空） | 外部 volume 名称（仅 `TYPE=external` 时必填）。 |
+| `CLICKZETTA_VOLUME_TABLE_PREFIX` | `dataset_` | Table volume 表前缀（仅 `TYPE=table` 时使用）。 |
+| `CLICKZETTA_VOLUME_DIFY_PREFIX` | `dify_km` | Dify 文件目录前缀，用于与其他应用隔离。 |
+
+ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参数。
+
+</Accordion>
+</AccordionGroup>
+
+#### 归档存储
+
+用于归档工作流运行日志的独立 S3 兼容存储。付费方案的保留系统使用此存储将超过保留期的工作流运行记录归档为 JSONL 格式。需要 `BILLING_ENABLED=true`。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ARCHIVE_STORAGE_ENABLED` | `false` | 启用工作流日志归档存储。 |
+| `ARCHIVE_STORAGE_ENDPOINT` | （空） | S3 兼容端点 URL。 |
+| `ARCHIVE_STORAGE_ARCHIVE_BUCKET` | （空） | 归档工作流运行日志的存储桶。 |
+| `ARCHIVE_STORAGE_EXPORT_BUCKET` | （空） | 工作流运行导出的存储桶。 |
+| `ARCHIVE_STORAGE_ACCESS_KEY` | （空） | Access key。 |
+| `ARCHIVE_STORAGE_SECRET_KEY` | （空） | Secret key。 |
+| `ARCHIVE_STORAGE_REGION` | `auto` | 存储区域。 |
+
+### 向量数据库配置
+
+配置用于知识库嵌入存储和相似性搜索的向量数据库。每个提供商有各自的凭证变量——仅配置你使用的那个。
+
+### VECTOR_STORE
+
+默认值：`weaviate`
+
+选择向量数据库后端。如果数据集已有索引，数据集存储的类型优先于此设置。在 Docker Compose 中切换提供商时，`COMPOSE_PROFILES` 会根据此值自动启动匹配的容器。
+
+支持的值：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `VECTOR_INDEX_NAME_PREFIX` | `Vector_index` | 向量数据库中集合名称的前缀。如果在多个 Dify 部署间共享向量数据库实例，请更改此值。 |
+
+<AccordionGroup>
+<Accordion title="Weaviate">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API 端点。 |
+| `WEAVIATE_API_KEY` | （空） | Weaviate 认证的 API key。 |
+| `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 独立的 gRPC 端点，用于高性能二进制协议。批量操作显著更快。如未设置，将从 HTTP 端点推断。 |
+| `WEAVIATE_TOKENIZATION` | `word` | 文本字段的分词方法。选项：`word`（按空格和标点分割）、`whitespace`（仅按空格分割）、`character`（字符级别，更适合中日韩语言）。 |
+
+</Accordion>
+
+<Accordion title="OceanBase / seekdb">
+
+seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` | 主机名或 IP 地址。 |
+| `OCEANBASE_VECTOR_PORT` | `2881` | 端口号。 |
+| `OCEANBASE_VECTOR_USER` | `root@test` | 数据库用户名。 |
+| `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | 数据库密码。 |
+| `OCEANBASE_VECTOR_DATABASE` | `test` | 数据库名称。 |
+| `OCEANBASE_CLUSTER_NAME` | `difyai` | 集群名称（仅 Docker 部署）。 |
+| `OCEANBASE_MEMORY_LIMIT` | `6G` | OceanBase 内存限制（仅 Docker 部署）。 |
+| `SEEKDB_MEMORY_LIMIT` | `2G` | seekdb 内存限制（仅 Docker 部署）。 |
+| `OCEANBASE_ENABLE_HYBRID_SEARCH` | `false` | 启用全文索引用于 BM25 查询，配合向量搜索使用。需要 OceanBase >= 4.3.5.1。启用后需重新创建集合。 |
+| `OCEANBASE_FULLTEXT_PARSER` | `ik` | 全文解析器。内置：`ngram`、`beng`、`space`、`ngram2`、`ik`。外部（需要插件）：`japanese_ftparser`、`thai_ftparser`。 |
+
+</Accordion>
+
+<Accordion title="Qdrant">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `QDRANT_URL` | `http://qdrant:6333` | Qdrant 端点地址。 |
+| `QDRANT_API_KEY` | `difyai123456` | Qdrant API key。 |
+| `QDRANT_CLIENT_TIMEOUT` | `20` | 客户端超时（秒）。 |
+| `QDRANT_GRPC_ENABLED` | `false` | 启用 gRPC 通信。 |
+| `QDRANT_GRPC_PORT` | `6334` | gRPC 端口。 |
+| `QDRANT_REPLICATION_FACTOR` | `1` | 每个分片的副本数。 |
+
+</Accordion>
+
+<Accordion title="Milvus">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI。对于 [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials)，使用 Public Endpoint。 |
+| `MILVUS_DATABASE` | （空） | 数据库名称。 |
+| `MILVUS_TOKEN` | （空） | 认证令牌。对于 Zilliz Cloud，使用 API Key。 |
+| `MILVUS_USER` | （空） | 用户名。 |
+| `MILVUS_PASSWORD` | （空） | 密码。 |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | 启用 BM25 稀疏索引用于全文搜索，配合向量相似性搜索使用。需要 Milvus >= 2.5.0。如果集合在未启用时创建，则需重新创建。 |
+| `MILVUS_ANALYZER_PARAMS` | （空） | 文本字段的分析器参数。 |
+
+</Accordion>
+
+<Accordion title="MyScale">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MYSCALE_HOST` | `myscale` | MyScale 主机。 |
+| `MYSCALE_PORT` | `8123` | MyScale 端口。 |
+| `MYSCALE_USER` | `default` | 用户名。 |
+| `MYSCALE_PASSWORD` | （空） | 密码。 |
+| `MYSCALE_DATABASE` | `dify` | 数据库名称。 |
+| `MYSCALE_FTS_PARAMS` | （空） | 全文搜索参数。[多语言支持参考](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters)。 |
+
+</Accordion>
+
+<Accordion title="Couchbase">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `COUCHBASE_CONNECTION_STRING` | `couchbase://couchbase-server` | Couchbase 集群的连接字符串。 |
+| `COUCHBASE_USER` | `Administrator` | 用户名。 |
+| `COUCHBASE_PASSWORD` | `password` | 密码。 |
+| `COUCHBASE_BUCKET_NAME` | `Embeddings` | 存储桶名称。 |
+| `COUCHBASE_SCOPE_NAME` | `_default` | Scope 名称。 |
+
+</Accordion>
+
+<Accordion title="Hologres">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `HOLOGRES_HOST` | （空） | 主机名。 |
+| `HOLOGRES_PORT` | `80` | 端口号。 |
+| `HOLOGRES_DATABASE` | （空） | 数据库名称。 |
+| `HOLOGRES_ACCESS_KEY_ID` | （空） | Access key ID（用作 PG 用户名）。 |
+| `HOLOGRES_ACCESS_KEY_SECRET` | （空） | Access key secret（用作 PG 密码）。 |
+| `HOLOGRES_SCHEMA` | `public` | Schema 名称。 |
+| `HOLOGRES_TOKENIZER` | `jieba` | 文本字段的分词器。 |
+| `HOLOGRES_DISTANCE_METHOD` | `Cosine` | 距离计算方法。 |
+| `HOLOGRES_BASE_QUANTIZATION_TYPE` | `rabitq` | 量化类型。 |
+| `HOLOGRES_MAX_DEGREE` | `64` | HNSW 最大度数。 |
+| `HOLOGRES_EF_CONSTRUCTION` | `400` | HNSW ef_construction 参数。 |
+
+</Accordion>
+
+<Accordion title="PGVector">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PGVECTOR_HOST` | `pgvector` | 主机名。 |
+| `PGVECTOR_PORT` | `5432` | 端口号。 |
+| `PGVECTOR_USER` | `postgres` | 用户名。 |
+| `PGVECTOR_PASSWORD` | `difyai123456` | 密码。 |
+| `PGVECTOR_DATABASE` | `dify` | 数据库名称。 |
+| `PGVECTOR_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
+| `PGVECTOR_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
+| `PGVECTOR_PG_BIGM` | `false` | 启用 pg_bigm 扩展用于全文搜索。 |
+
+</Accordion>
+
+<Accordion title="Vastbase">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `VASTBASE_HOST` | `vastbase` | 主机名。 |
+| `VASTBASE_PORT` | `5432` | 端口号。 |
+| `VASTBASE_USER` | `dify` | 用户名。 |
+| `VASTBASE_PASSWORD` | `Difyai123456` | 密码。 |
+| `VASTBASE_DATABASE` | `dify` | 数据库名称。 |
+| `VASTBASE_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
+| `VASTBASE_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
+
+</Accordion>
+
+<Accordion title="PGVecto.RS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PGVECTO_RS_HOST` | `pgvecto-rs` | 主机名。 |
+| `PGVECTO_RS_PORT` | `5432` | 端口号。 |
+| `PGVECTO_RS_USER` | `postgres` | 用户名。 |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | 密码。 |
+| `PGVECTO_RS_DATABASE` | `dify` | 数据库名称。 |
+
+</Accordion>
+
+<Accordion title="AnalyticDB">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ANALYTICDB_KEY_ID` | （空） | 阿里云 access key ID。[创建 AccessKey](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair)。 |
+| `ANALYTICDB_KEY_SECRET` | （空） | 阿里云 access key secret。 |
+| `ANALYTICDB_REGION_ID` | `cn-hangzhou` | 区域标识。 |
+| `ANALYTICDB_INSTANCE_ID` | （空） | 实例 ID，例如 `gp-xxxxxx`。[创建实例](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1)。 |
+| `ANALYTICDB_ACCOUNT` | （空） | 账户名称。[创建账户](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account)。 |
+| `ANALYTICDB_PASSWORD` | （空） | 账户密码。 |
+| `ANALYTICDB_NAMESPACE` | `dify` | 命名空间（schema）。如不存在将自动创建。 |
+| `ANALYTICDB_NAMESPACE_PASSWORD` | （空） | 命名空间密码。创建新命名空间时使用。 |
+| `ANALYTICDB_HOST` | （空） | 直连主机（替代基于 API 的访问）。 |
+| `ANALYTICDB_PORT` | `5432` | 直连端口。 |
+| `ANALYTICDB_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
+| `ANALYTICDB_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
+
+</Accordion>
+
+<Accordion title="TiDB Vector">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TIDB_VECTOR_HOST` | `tidb` | 主机名。 |
+| `TIDB_VECTOR_PORT` | `4000` | 端口号。 |
+| `TIDB_VECTOR_USER` | （空） | 用户名。 |
+| `TIDB_VECTOR_PASSWORD` | （空） | 密码。 |
+| `TIDB_VECTOR_DATABASE` | `dify` | 数据库名称。 |
+
+</Accordion>
+
+<Accordion title="MatrixOne">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MATRIXONE_HOST` | `matrixone` | 主机名。 |
+| `MATRIXONE_PORT` | `6001` | 端口号。 |
+| `MATRIXONE_USER` | `dump` | 用户名。 |
+| `MATRIXONE_PASSWORD` | `111` | 密码。 |
+| `MATRIXONE_DATABASE` | `dify` | 数据库名称。 |
+
+</Accordion>
+
+<Accordion title="Chroma">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CHROMA_HOST` | `127.0.0.1` | Chroma 服务器主机。 |
+| `CHROMA_PORT` | `8000` | Chroma 服务器端口。 |
+| `CHROMA_TENANT` | `default_tenant` | 租户名称。 |
+| `CHROMA_DATABASE` | `default_database` | 数据库名称。 |
+| `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | 认证提供者类。 |
+| `CHROMA_AUTH_CREDENTIALS` | （空） | 认证凭证。 |
+
+</Accordion>
+
+<Accordion title="Oracle">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ORACLE_USER` | `dify` | Oracle 用户名。 |
+| `ORACLE_PASSWORD` | `dify` | Oracle 密码。 |
+| `ORACLE_DSN` | `oracle:1521/FREEPDB1` | 数据源名称。 |
+| `ORACLE_CONFIG_DIR` | `/app/api/storage/wallet` | Oracle 配置目录。 |
+| `ORACLE_WALLET_LOCATION` | `/app/api/storage/wallet` | 自治数据库的 Wallet 位置。 |
+| `ORACLE_WALLET_PASSWORD` | `dify` | Wallet 密码。 |
+| `ORACLE_IS_AUTONOMOUS` | `false` | 是否使用 Oracle 自治数据库。 |
+
+</Accordion>
+
+<Accordion title="AlibabaCloud MySQL">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ALIBABACLOUD_MYSQL_HOST` | `127.0.0.1` | 主机名。 |
+| `ALIBABACLOUD_MYSQL_PORT` | `3306` | 端口号。 |
+| `ALIBABACLOUD_MYSQL_USER` | `root` | 用户名。 |
+| `ALIBABACLOUD_MYSQL_PASSWORD` | `difyai123456` | 密码。 |
+| `ALIBABACLOUD_MYSQL_DATABASE` | `dify` | 数据库名称。 |
+| `ALIBABACLOUD_MYSQL_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
+| `ALIBABACLOUD_MYSQL_HNSW_M` | `6` | HNSW M 参数。 |
+
+</Accordion>
+
+<Accordion title="Relyt">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `RELYT_HOST` | `db` | 主机名。 |
+| `RELYT_PORT` | `5432` | 端口号。 |
+| `RELYT_USER` | `postgres` | 用户名。 |
+| `RELYT_PASSWORD` | `difyai123456` | 密码。 |
+| `RELYT_DATABASE` | `postgres` | 数据库名称。 |
+
+</Accordion>
+
+<Accordion title="OpenSearch">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OPENSEARCH_HOST` | `opensearch` | 主机名。 |
+| `OPENSEARCH_PORT` | `9200` | 端口号。 |
+| `OPENSEARCH_SECURE` | `true` | 使用 HTTPS。 |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | 验证 SSL 证书。 |
+| `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` 使用用户名/密码。`aws_managed_iam` 通过 Boto3 凭证使用 AWS SigV4 请求签名（适用于 AWS 托管的 OpenSearch 或 Serverless）。 |
+| `OPENSEARCH_USER` | `admin` | 用户名。仅在 `basic` 认证下使用。 |
+| `OPENSEARCH_PASSWORD` | `admin` | 密码。仅在 `basic` 认证下使用。 |
+| `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS 区域。仅在 `aws_managed_iam` 认证下使用。 |
+| `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS 服务类型：`es`（托管集群）或 `aoss`（OpenSearch Serverless）。仅在 `aws_managed_iam` 认证下使用。 |
+
+</Accordion>
+
+<Accordion title="腾讯云向量数据库">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TENCENT_VECTOR_DB_URL` | `http://127.0.0.1` | 访问地址。[控制台](https://console.cloud.tencent.com/vdb)。 |
+| `TENCENT_VECTOR_DB_API_KEY` | `dify` | API key。[密钥管理](https://cloud.tencent.com/document/product/1709/95108)。 |
+| `TENCENT_VECTOR_DB_TIMEOUT` | `30` | 请求超时（秒）。 |
+| `TENCENT_VECTOR_DB_USERNAME` | `dify` | 账户名称。[账户管理](https://cloud.tencent.com/document/product/1709/115833)。 |
+| `TENCENT_VECTOR_DB_DATABASE` | `dify` | 数据库名称。[创建数据库](https://cloud.tencent.com/document/product/1709/95822)。 |
+| `TENCENT_VECTOR_DB_SHARD` | `1` | 分片数量。 |
+| `TENCENT_VECTOR_DB_REPLICAS` | `2` | 副本数量。 |
+| `TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH` | `false` | 启用混合搜索。[稀疏向量文档](https://cloud.tencent.com/document/product/1709/110110)。 |
+
+</Accordion>
+
+<Accordion title="Elasticsearch">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ELASTICSEARCH_HOST` | `0.0.0.0` | 主机名。 |
+| `ELASTICSEARCH_PORT` | `9200` | 端口号。 |
+| `ELASTICSEARCH_USERNAME` | `elastic` | 用户名。 |
+| `ELASTICSEARCH_PASSWORD` | `elastic` | 密码。 |
+| `ELASTICSEARCH_USE_CLOUD` | `false` | 切换到 Elastic Cloud 模式。为 `true` 时使用 `ELASTICSEARCH_CLOUD_URL` 和 `ELASTICSEARCH_API_KEY` 代替 host/port/username/password。 |
+| `ELASTICSEARCH_CLOUD_URL` | （空） | Elastic Cloud 端点 URL。`ELASTICSEARCH_USE_CLOUD=true` 时必填。 |
+| `ELASTICSEARCH_API_KEY` | （空） | Elastic Cloud API key。`ELASTICSEARCH_USE_CLOUD=true` 时必填。 |
+| `ELASTICSEARCH_VERIFY_CERTS` | `false` | 验证 SSL 证书。 |
+| `ELASTICSEARCH_CA_CERTS` | （空） | CA 证书路径。 |
+| `ELASTICSEARCH_REQUEST_TIMEOUT` | `100000` | 请求超时（毫秒）。 |
+| `ELASTICSEARCH_RETRY_ON_TIMEOUT` | `true` | 超时后重试。 |
+| `ELASTICSEARCH_MAX_RETRIES` | `10` | 最大重试次数。 |
+
+</Accordion>
+
+<Accordion title="百度向量数据库">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `BAIDU_VECTOR_DB_ENDPOINT` | `http://127.0.0.1:5287` | 端点 URL。 |
+| `BAIDU_VECTOR_DB_CONNECTION_TIMEOUT_MS` | `30000` | 连接超时（毫秒）。 |
+| `BAIDU_VECTOR_DB_ACCOUNT` | `root` | 账户名称。 |
+| `BAIDU_VECTOR_DB_API_KEY` | `dify` | API key。 |
+| `BAIDU_VECTOR_DB_DATABASE` | `dify` | 数据库名称。 |
+| `BAIDU_VECTOR_DB_SHARD` | `1` | 分片数量。 |
+| `BAIDU_VECTOR_DB_REPLICAS` | `3` | 副本数量。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_ANALYZER` | `DEFAULT_ANALYZER` | 倒排索引分析器。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_PARSER_MODE` | `COARSE_MODE` | 倒排索引解析模式。 |
+
+</Accordion>
+
+<Accordion title="VikingDB">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `VIKINGDB_ACCESS_KEY` | （空） | Access key。 |
+| `VIKINGDB_SECRET_KEY` | （空） | Secret key。 |
+| `VIKINGDB_REGION` | `cn-shanghai` | 区域。 |
+| `VIKINGDB_HOST` | `api-vikingdb.xxx.volces.com` | API 主机。替换为你所在区域的端点。 |
+| `VIKINGDB_SCHEMA` | `http` | 协议方案（`http` 或 `https`）。 |
+| `VIKINGDB_CONNECTION_TIMEOUT` | `30` | 连接超时（秒）。 |
+| `VIKINGDB_SOCKET_TIMEOUT` | `30` | Socket 超时（秒）。 |
+
+</Accordion>
+
+<Accordion title="Lindorm">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `LINDORM_URL` | `http://localhost:30070` | Lindorm 搜索引擎 URL。[控制台](https://lindorm.console.aliyun.com/)。 |
+| `LINDORM_USERNAME` | `admin` | 用户名。 |
+| `LINDORM_PASSWORD` | `admin` | 密码。 |
+| `LINDORM_USING_UGC` | `true` | 使用 UGC 模式。 |
+| `LINDORM_QUERY_TIMEOUT` | `1` | 查询超时（秒）。 |
+
+</Accordion>
+
+<Accordion title="OpenGauss">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OPENGAUSS_HOST` | `opengauss` | 主机名。 |
+| `OPENGAUSS_PORT` | `6600` | 端口号。 |
+| `OPENGAUSS_USER` | `postgres` | 用户名。 |
+| `OPENGAUSS_PASSWORD` | `Dify@123` | 密码。 |
+| `OPENGAUSS_DATABASE` | `dify` | 数据库名称。 |
+| `OPENGAUSS_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
+| `OPENGAUSS_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
+| `OPENGAUSS_ENABLE_PQ` | `false` | 启用 PQ 加速。 |
+
+</Accordion>
+
+<Accordion title="华为云搜索">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `HUAWEI_CLOUD_HOSTS` | `https://127.0.0.1:9200` | 集群端点 URL。 |
+| `HUAWEI_CLOUD_USER` | `admin` | 用户名。 |
+| `HUAWEI_CLOUD_PASSWORD` | `admin` | 密码。 |
+
+</Accordion>
+
+<Accordion title="Upstash Vector">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `UPSTASH_VECTOR_URL` | （空） | Upstash Vector 端点 URL。 |
+| `UPSTASH_VECTOR_TOKEN` | （空） | Upstash Vector API 令牌。 |
+
+</Accordion>
+
+<Accordion title="TableStore">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TABLESTORE_ENDPOINT` | `https://instance-name.cn-hangzhou.ots.aliyuncs.com` | 端点地址。将 `instance-name` 替换为你的实例名称。 |
+| `TABLESTORE_INSTANCE_NAME` | （空） | 实例名称。 |
+| `TABLESTORE_ACCESS_KEY_ID` | （空） | Access key ID。 |
+| `TABLESTORE_ACCESS_KEY_SECRET` | （空） | Access key secret。 |
+| `TABLESTORE_NORMALIZE_FULLTEXT_BM25_SCORE` | `false` | 标准化全文 BM25 分数。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CLICKZETTA_USERNAME` | （空） | 用户名。 |
+| `CLICKZETTA_PASSWORD` | （空） | 密码。 |
+| `CLICKZETTA_INSTANCE` | （空） | 实例名称。 |
+| `CLICKZETTA_SERVICE` | `api.clickzetta.com` | 服务端点。 |
+| `CLICKZETTA_WORKSPACE` | `quick_start` | 工作空间名称。 |
+| `CLICKZETTA_VCLUSTER` | `default_ap` | 虚拟集群。 |
+| `CLICKZETTA_SCHEMA` | `dify` | Schema 名称。 |
+| `CLICKZETTA_BATCH_SIZE` | `100` | 操作批量大小。 |
+| `CLICKZETTA_ENABLE_INVERTED_INDEX` | `true` | 启用倒排索引。 |
+| `CLICKZETTA_ANALYZER_TYPE` | `chinese` | 分析器类型。 |
+| `CLICKZETTA_ANALYZER_MODE` | `smart` | 分析器模式。 |
+| `CLICKZETTA_VECTOR_DISTANCE_FUNCTION` | `cosine_distance` | 距离函数。 |
+
+</Accordion>
+
+<Accordion title="InterSystems IRIS">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `IRIS_HOST` | `iris` | 主机名。 |
+| `IRIS_SUPER_SERVER_PORT` | `1972` | Super Server 端口。 |
+| `IRIS_USER` | `_SYSTEM` | 用户名。 |
+| `IRIS_PASSWORD` | `Dify@1234` | 密码。 |
+| `IRIS_DATABASE` | `USER` | 数据库名称。 |
+| `IRIS_SCHEMA` | `dify` | Schema 名称。 |
+| `IRIS_CONNECTION_URL` | （空） | 完整连接 URL（覆盖单独设置）。 |
+| `IRIS_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
+| `IRIS_MAX_CONNECTION` | `3` | 最大连接池连接数。 |
+| `IRIS_TEXT_INDEX` | `true` | 启用文本索引。 |
+| `IRIS_TEXT_INDEX_LANGUAGE` | `en` | 文本索引语言。 |
+
+</Accordion>
+</AccordionGroup>
+
+### 知识库配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `UPLOAD_FILE_SIZE_LIMIT` | `15` | 文档上传的最大文件大小（MB），包括 PDF、Word 文档等。超过时用户会看到「文件过大」错误。不适用于图片、视频或音频——它们有各自的大小限制（见下文）。 |
+| `UPLOAD_FILE_BATCH_LIMIT` | `5` | 前端每次上传批次允许的最大文件数。 |
+| `UPLOAD_FILE_EXTENSION_BLACKLIST` | （空） | 禁止上传的文件扩展名安全黑名单。逗号分隔，小写，不含点号。示例：`exe,bat,cmd,com,scr,vbs,ps1,msi,dll`。为空允许所有类型。 |
+| `SINGLE_CHUNK_ATTACHMENT_LIMIT` | `10` | 单个知识库段落（chunk）中可嵌入的最大图片数量。 |
+| `IMAGE_FILE_BATCH_LIMIT` | `10` | 每次上传批次的最大图片文件数。 |
+| `ATTACHMENT_IMAGE_FILE_SIZE_LIMIT` | `2` | 知识库索引过程中从外部 URL 获取图片的最大大小（MB）。超过此大小的图片将被跳过。不同于 `UPLOAD_IMAGE_FILE_SIZE_LIMIT`（适用于直接上传）。 |
+| `ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT` | `60` | 知识库索引过程中从外部 URL 下载图片的超时时间（秒）。响应缓慢或无响应的图片服务器在此超时后将被放弃。 |
+| `ETL_TYPE` | `dify` | 文档提取库。`dify` 支持 txt、md、pdf、html、xlsx、docx、csv。`Unstructured` 额外支持 doc、msg、eml、ppt、pptx、xml、epub（需要 `UNSTRUCTURED_API_URL`）。 |
+| `UNSTRUCTURED_API_URL` | （空） | Unstructured.io API 端点。`ETL_TYPE` 为 `Unstructured` 时必填。`.ppt` 文件支持也需要此设置。示例：`http://unstructured:8000/general/v0/general`。 |
+| `UNSTRUCTURED_API_KEY` | （空） | Unstructured.io 认证的 API key。 |
+| `SCARF_NO_ANALYTICS` | `true` | 禁用 Unstructured 库的遥测/分析收集。 |
+| `TOP_K_MAX_VALUE` | `10` | 知识库检索中用户可设置的 `top_k` 参数最大值（每次搜索返回的结果数）。 |
+| `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | 每个数据集 API 请求的最大段落数。`0` 表示不限制。 |
+
+#### 标注导入
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ANNOTATION_IMPORT_FILE_SIZE_LIMIT` | `2` | 标注导入的最大 CSV 文件大小（MB）。超过时返回 HTTP 413。 |
+| `ANNOTATION_IMPORT_MAX_RECORDS` | `10000` | 每次标注导入的最大记录数。超过的文件必须分批导入。 |
+| `ANNOTATION_IMPORT_MIN_RECORDS` | `1` | 每次标注导入所需的最少有效记录数。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_MINUTE` | `5` | 每个工作空间每分钟的最大标注导入请求数。超过时返回 HTTP 429。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_HOUR` | `20` | 每个工作空间每小时的最大标注导入请求数。 |
+| `ANNOTATION_IMPORT_MAX_CONCURRENT` | `5` | 每个工作空间的最大并发标注导入任务数。过期任务在 2 分钟后自动清理。 |
+
+### 模型配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PROMPT_GENERATION_MAX_TOKENS` | `512` | 系统使用 LLM 自动生成提示时的最大 token 数。防止失控生成浪费 API 配额。 |
+| `CODE_GENERATION_MAX_TOKENS` | `1024` | 系统使用 LLM 自动生成代码时的最大 token 数。 |
+| `PLUGIN_BASED_TOKEN_COUNTING_ENABLED` | `false` | 使用基于插件的 token 计数以实现精确用量跟踪。禁用时 token 计数返回 0（更快但成本跟踪不够精确）。 |
+
+### 多模态配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MULTIMODAL_SEND_FORMAT` | `base64` | 文件发送到多模态 LLM 的方式。`base64` 将文件数据嵌入请求（兼容性更好，支持离线，负载更大）。`url` 发送签名 URL 让模型获取（更快，请求更小，但模型必须能访问 `FILES_URL`）。 |
+| `UPLOAD_IMAGE_FILE_SIZE_LIMIT` | `10` | 直接上传图片的最大文件大小（MB），支持 jpg、png、webp、gif、svg。 |
+| `UPLOAD_VIDEO_FILE_SIZE_LIMIT` | `100` | 直接上传视频的最大文件大小（MB），支持 mp4、mov、mpeg、webm。 |
+| `UPLOAD_AUDIO_FILE_SIZE_LIMIT` | `50` | 直接上传音频的最大文件大小（MB），支持 mp3、m4a、wav、amr、mpga。 |
+
 <Note>
-此文档当前仅提供英文版本。请参阅[英文文档](/en/self-host/configuration/environments)。
+所有上传大小限制还受 `NGINX_CLIENT_MAX_BODY_SIZE`（默认 `100M`）限制。如果你将任何上传限制增大到超过 100 MB，还需要相应增大 `NGINX_CLIENT_MAX_BODY_SIZE`——否则 Nginx 会以 413 错误拒绝上传。
 </Note>
+
+### Sentry 配置
+
+Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分离错误报告。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SENTRY_DSN` | （空） | 跨服务共享的 Sentry DSN。 |
+| `API_SENTRY_DSN` | （空） | API 服务的 Sentry DSN。如果设置，覆盖 `SENTRY_DSN`。为空则禁用后端的 Sentry。 |
+| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | 包含在性能追踪中的请求比例（0.01 = 1%，1.0 = 100%）。追踪跨服务跟踪请求流。 |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 包含在 CPU/内存性能分析中的请求比例（0.01 = 1%）。分析显示代码中时间花费在哪里。 |
+| `WEB_SENTRY_DSN` | （空） | Web 前端（Next.js）的 Sentry DSN。仅前端使用。 |
+| `PLUGIN_SENTRY_ENABLED` | `false` | 为插件守护进程服务启用 Sentry。 |
+| `PLUGIN_SENTRY_DSN` | （空） | 插件守护进程的 Sentry DSN。 |
+
+### Notion 集成配置
+
+将 Dify 连接到 Notion 作为知识库数据源。在 [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations) 获取集成凭证。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `NOTION_INTEGRATION_TYPE` | `public` | `public` 使用标准 OAuth 2.0（需要 HTTPS 重定向 URL，需要 CLIENT_ID + CLIENT_SECRET）。`internal` 使用直接集成令牌（支持 HTTP）。本地部署建议使用 `internal`。 |
+| `NOTION_CLIENT_SECRET` | （空） | OAuth 客户端密钥。`public` 集成必填。 |
+| `NOTION_CLIENT_ID` | （空） | OAuth 客户端 ID。`public` 集成必填。 |
+| `NOTION_INTERNAL_SECRET` | （空） | Notion 的直接集成令牌。`internal` 集成必填。 |
+
+### 邮件配置
+
+Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输入节点通知。配置三个支持的提供商之一。邮件链接需要设置 `CONSOLE_WEB_URL`——参见[通用变量](#console_web_url)。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MAIL_TYPE` | `resend` | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
+| `MAIL_DEFAULT_SEND_FROM` | （空） | 所有外发邮件的默认「发件人」地址。必填。 |
+
+<AccordionGroup>
+<Accordion title="Resend">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `RESEND_API_URL` | `https://api.resend.com` | Resend API 端点。用于自托管 Resend 或代理时覆盖。 |
+| `RESEND_API_KEY` | （空） | Resend API key。`MAIL_TYPE=resend` 时必填。 |
+
+</Accordion>
+
+<Accordion title="SMTP">
+
+三种 TLS 模式：隐式 TLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=false`，端口 465）、STARTTLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=true`，端口 587）或明文（`SMTP_USE_TLS=false`，端口 25）。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SMTP_SERVER` | （空） | SMTP 服务器地址。 |
+| `SMTP_PORT` | `465` | SMTP 服务器端口。STARTTLS 模式使用 `587`。 |
+| `SMTP_USERNAME` | （空） | SMTP 用户名。IP 白名单服务器可留空。 |
+| `SMTP_PASSWORD` | （空） | SMTP 密码。IP 白名单服务器可留空。 |
+| `SMTP_USE_TLS` | `true` | 启用 TLS。为 `true` 且 `SMTP_OPPORTUNISTIC_TLS=false` 时使用隐式 TLS（`SMTP_SSL`）。 |
+| `SMTP_OPPORTUNISTIC_TLS` | `false` | 使用 STARTTLS（显式 TLS）代替隐式 TLS。必须与 `SMTP_USE_TLS=true` 配合使用。 |
+| `SMTP_LOCAL_HOSTNAME` | （空） | 覆盖 SMTP HELO/EHLO 中发送的主机名。在 Docker 中当 SMTP 服务器拒绝容器主机名时必填（常见于 Google Workspace、Microsoft 365）。设为你的域名，例如 `mail.yourdomain.com`。 |
+
+</Accordion>
+
+<Accordion title="SendGrid">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SENDGRID_API_KEY` | （空） | SendGrid API key。`MAIL_TYPE=sendgrid` 时必填。 |
+
+更多详情请参阅 [SendGrid 文档](https://sendgrid.com/docs/for-developers/sending-email/)。
+
+</Accordion>
+</AccordionGroup>
+
+### 其他配置
+
+#### 索引
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH` | `4000` | 知识库文档分块时每个文本段落的最大 token 长度。值越大每个块保留的上下文越多；值越小提供更细的粒度。 |
+
+#### 令牌与邀请
+
+所有令牌过期变量控制存储在 Redis 中的一次性令牌的有效时长。过期后用户必须请求新令牌。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `INVITE_EXPIRY_HOURS` | `72` | 工作空间邀请链接的有效时长（小时）。 |
+| `RESET_PASSWORD_TOKEN_EXPIRY_MINUTES` | `5` | 密码重置令牌的有效时长（分钟）。 |
+| `EMAIL_REGISTER_TOKEN_EXPIRY_MINUTES` | `5` | 邮箱注册令牌的有效时长（分钟）。 |
+| `CHANGE_EMAIL_TOKEN_EXPIRY_MINUTES` | `5` | 更改邮箱令牌的有效时长（分钟）。 |
+| `OWNER_TRANSFER_TOKEN_EXPIRY_MINUTES` | `5` | 工作空间所有者转让令牌的有效时长（分钟）。 |
+
+#### 代码执行沙箱
+
+沙箱是一个独立的服务，在隔离环境中运行 Python、JavaScript 和 Jinja2 代码节点。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CODE_EXECUTION_ENDPOINT` | `http://sandbox:8194` | 沙箱服务端点。 |
+| `CODE_EXECUTION_API_KEY` | `dify-sandbox` | 沙箱认证的 API key。必须与沙箱服务中的 `SANDBOX_API_KEY` 匹配。 |
+| `CODE_EXECUTION_SSL_VERIFY` | `true` | 验证沙箱连接的 SSL。开发环境使用自签名证书时可禁用。 |
+| `CODE_EXECUTION_CONNECT_TIMEOUT` | `10` | 连接超时（秒）。 |
+| `CODE_EXECUTION_READ_TIMEOUT` | `60` | 读取超时（秒）。 |
+| `CODE_EXECUTION_WRITE_TIMEOUT` | `10` | 写入超时（秒）。 |
+| `CODE_EXECUTION_POOL_MAX_CONNECTIONS` | `100` | 到沙箱服务的最大并发 HTTP 连接数。 |
+| `CODE_EXECUTION_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | 沙箱连接池中保持的最大空闲连接数。 |
+| `CODE_EXECUTION_POOL_KEEPALIVE_EXPIRY` | `5.0` | 空闲沙箱连接关闭前的等待秒数。 |
+| `CODE_MAX_NUMBER` | `9223372036854775807` | 代码节点输出允许的最大数值（64 位有符号整数最大值）。 |
+| `CODE_MIN_NUMBER` | `-9223372036854775808` | 代码节点输出允许的最小数值（64 位有符号整数最小值）。 |
+| `CODE_MAX_STRING_LENGTH` | `400000` | 代码节点输出的最大字符串长度。防止无限字符串生成导致的内存耗尽。 |
+| `CODE_MAX_DEPTH` | `5` | 输出数据结构的最大嵌套深度。 |
+| `CODE_MAX_PRECISION` | `20` | 输出中浮点数的最大小数位数。 |
+| `CODE_MAX_STRING_ARRAY_LENGTH` | `30` | 字符串数组输出的最大元素数。 |
+| `CODE_MAX_OBJECT_ARRAY_LENGTH` | `30` | 对象数组输出的最大元素数。 |
+| `CODE_MAX_NUMBER_ARRAY_LENGTH` | `1000` | 数字数组输出的最大元素数。 |
+| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | 模板转换节点输出的最大字符长度。 |
+
+#### 工作流运行时
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 每次工作流运行的最大节点执行数。超过此值将终止工作流。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。 |
+| `WORKFLOW_CALL_MAX_DEPTH` | `5` | 嵌套工作流调用工作流的最大深度。防止无限递归。 |
+| `MAX_VARIABLE_SIZE` | `204800` | 单个工作流变量的最大大小（字节，200 KB）。 |
+| `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 单次工作流执行中可上传的最大文件数。 |
+| `WORKFLOW_NODE_EXECUTION_STORAGE` | `rdbms` | 工作流节点执行记录的存储位置。`rdbms` 将所有内容存储在数据库中。`hybrid` 将新数据存储在对象存储中，并从两者读取。 |
+| `DSL_EXPORT_ENCRYPT_DATASET_ID` | `true` | 导出 DSL 文件时加密数据集 ID。设为 `false` 以导出明文 ID，便于跨环境导入。 |
+
+#### 工作流存储仓库
+
+这些变量选择处理工作流执行数据的后端实现。默认的 `SQLAlchemy` 仓库将所有内容存储在数据库中。也可使用其他实现（例如 Celery、Logstore）实现不同的存储策略。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CORE_WORKFLOW_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_execution_repository.SQLAlchemyWorkflowExecutionRepository` | 工作流执行记录的仓库实现。 |
+| `CORE_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_node_execution_repository.SQLAlchemyWorkflowNodeExecutionRepository` | 工作流节点执行记录的仓库实现。 |
+| `API_WORKFLOW_RUN_REPOSITORY` | `repositories.sqlalchemy_api_workflow_run_repository.DifyAPISQLAlchemyWorkflowRunRepository` | 工作流运行 API 操作的服务层仓库。 |
+| `API_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `repositories.sqlalchemy_api_workflow_node_execution_repository.DifyAPISQLAlchemyWorkflowNodeExecutionRepository` | 工作流节点执行 API 操作的服务层仓库。 |
+| `LOOP_NODE_MAX_COUNT` | `100` | 循环节点的最大迭代次数。防止无限循环。 |
+| `MAX_PARALLEL_LIMIT` | `10` | 工作流中并行分支的最大数量。 |
+
+#### GraphEngine 工作线程池
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `GRAPH_ENGINE_MIN_WORKERS` | `1` | 每个 GraphEngine 实例的最小工作线程数。 |
+| `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的最大工作线程数。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 触发创建额外工作线程的队列深度。 |
+| `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 多余工作线程在空闲此秒数后被移除。 |
+
+#### 工作流日志清理
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WORKFLOW_LOG_CLEANUP_ENABLED` | `false` | 启用每天凌晨 2:00 自动清理工作流执行日志。 |
+| `WORKFLOW_LOG_RETENTION_DAYS` | `30` | 清理前保留工作流日志的天数。 |
+| `WORKFLOW_LOG_CLEANUP_BATCH_SIZE` | `100` | 每次清理批次处理的日志条目数。根据系统性能调整。 |
+| `WORKFLOW_LOG_CLEANUP_SPECIFIC_WORKFLOW_IDS` | （空） | 限制清理范围的工作流 ID 列表（逗号分隔）。为空时清理所有工作流日志。 |
+
+#### HTTP 请求节点
+
+这些变量配置工作流中用于调用外部 API 的 HTTP 请求节点。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `HTTP_REQUEST_NODE_MAX_TEXT_SIZE` | `1048576` | 最大文本响应大小（字节，1 MB）。超过此大小的响应将被截断。 |
+| `HTTP_REQUEST_NODE_MAX_BINARY_SIZE` | `10485760` | 最大二进制响应大小（字节，10 MB）。 |
+| `HTTP_REQUEST_NODE_SSL_VERIFY` | `true` | 验证 SSL 证书。测试自签名证书时可禁用。 |
+| `HTTP_REQUEST_MAX_CONNECT_TIMEOUT` | `10` | 用户在工作流编辑器中可设置的最大连接超时（秒）。每个节点的超时不能超过此值。 |
+| `HTTP_REQUEST_MAX_READ_TIMEOUT` | `600` | 最大读取超时上限（秒）。 |
+| `HTTP_REQUEST_MAX_WRITE_TIMEOUT` | `600` | 最大写入超时上限（秒）。 |
+
+#### Webhook
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WEBHOOK_REQUEST_BODY_MAX_SIZE` | `10485760` | 最大 webhook 负载大小（字节，10 MB）。超过的负载以 413 错误拒绝。 |
+
+#### SSRF 防护
+
+Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代理路由，该代理阻止对内部/私有 IP 范围的请求，防止服务端请求伪造（SSRF）攻击。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SSRF_PROXY_HTTP_URL` | `http://ssrf_proxy:3128` | HTTP 请求的 SSRF 代理 URL。 |
+| `SSRF_PROXY_HTTPS_URL` | `http://ssrf_proxy:3128` | HTTPS 请求的 SSRF 代理 URL。 |
+| `SSRF_POOL_MAX_CONNECTIONS` | `100` | SSRF HTTP 客户端连接池的最大并发连接数。 |
+| `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | SSRF 连接池中保持的最大空闲连接数。 |
+| `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | 空闲 SSRF 连接关闭前的等待秒数。 |
+| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | 信任来自反向代理的 X-Forwarded-For/Proto/Port 头。仅在单个受信反向代理后启用——否则允许 IP 欺骗。 |
+
+#### Agent 配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `MAX_TOOLS_NUM` | `10` | Agent 可同时使用的最大工具数。 |
+| `MAX_ITERATIONS_NUM` | `99` | 每次 Agent 执行的最大推理迭代次数。防止 Agent 无限循环。 |
+
+## Web 前端服务
+
+这些变量仅由 Next.js Web 前端容器使用——不影响 Python 后端。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `TEXT_GENERATION_TIMEOUT_MS` | `60000` | 流式文本生成 UI 的前端超时。如果流中断超过此时间，UI 暂停渲染。 |
+| `ALLOW_UNSAFE_DATA_SCHEME` | `false` | 允许渲染 `data:` 协议的 URL。出于安全考虑默认禁用。 |
+| `MAX_TREE_DEPTH` | `50` | 工作流编辑器 UI 中的最大节点树深度。 |
+
+## 数据库服务
+
+这些变量直接在 Docker Compose 中配置数据库容器。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PGDATA` | `/var/lib/postgresql/data/pgdata` | 容器内 PostgreSQL 数据目录。 |
+| `MYSQL_HOST_VOLUME` | `./volumes/mysql/data` | 挂载为 MySQL 数据卷的宿主机路径。 |
+
+## 沙箱服务
+
+沙箱是用于执行代码节点（Python、JavaScript、Jinja2）的隔离服务。可以禁用网络访问以增强安全性。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SANDBOX_API_KEY` | `dify-sandbox` | 沙箱认证的 API key。必须与 API 服务中的 `CODE_EXECUTION_API_KEY` 匹配。 |
+| `SANDBOX_GIN_MODE` | `release` | 沙箱服务模式：`release` 或 `debug`。 |
+| `SANDBOX_WORKER_TIMEOUT` | `15` | 单次代码运行的最大执行时间（秒）。 |
+| `SANDBOX_ENABLE_NETWORK` | `true` | 允许代码发起出站 HTTP 请求。禁用可防止代码节点访问外部服务。 |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 网络启用时用于 SSRF 防护的 HTTP 代理。 |
+| `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
+| `SANDBOX_PORT` | `8194` | 沙箱服务端口。 |
+
+## Nginx 反向代理
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `NGINX_SERVER_NAME` | `_` | Nginx 服务器名称。`_` 匹配任何主机名。 |
+| `NGINX_HTTPS_ENABLED` | `false` | 启用 HTTPS。为 `true` 时将 SSL 证书和密钥放在 `./nginx/ssl/` 中。 |
+| `NGINX_PORT` | `80` | HTTP 端口。 |
+| `NGINX_SSL_PORT` | `443` | HTTPS 端口（仅在 `NGINX_HTTPS_ENABLED=true` 时使用）。 |
+| `NGINX_SSL_CERT_FILENAME` | `dify.crt` | `./nginx/ssl/` 中的 SSL 证书文件名。 |
+| `NGINX_SSL_CERT_KEY_FILENAME` | `dify.key` | `./nginx/ssl/` 中的 SSL 私钥文件名。 |
+| `NGINX_SSL_PROTOCOLS` | `TLSv1.2 TLSv1.3` | 允许的 TLS 协议版本。 |
+| `NGINX_WORKER_PROCESSES` | `auto` | Nginx 工作进程数。`auto` 匹配 CPU 核心数。 |
+| `NGINX_CLIENT_MAX_BODY_SIZE` | `100M` | 最大请求体大小。影响代理级别的文件上传限制。 |
+| `NGINX_KEEPALIVE_TIMEOUT` | `65` | Keepalive 超时（秒）。 |
+| `NGINX_PROXY_READ_TIMEOUT` | `3600s` | 代理读取超时。设置较高（1 小时）以支持长时间运行的 SSE 流。 |
+| `NGINX_PROXY_SEND_TIMEOUT` | `3600s` | 代理发送超时。 |
+| `NGINX_ENABLE_CERTBOT_CHALLENGE` | `false` | 在 `/.well-known/acme-challenge/` 接受 Let's Encrypt ACME 验证请求。启用以支持自动证书续期。 |
+
+<Note>
+启用 HTTPS 后，还需要将[通用变量](#通用变量)中的 URL 变量（例如 `CONSOLE_API_URL`、`CONSOLE_WEB_URL`）更新为使用 `https://`。
+</Note>
+
+#### Certbot 配置
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CERTBOT_EMAIL` | （空） | Let's Encrypt 用于证书通知的邮箱地址。 |
+| `CERTBOT_DOMAIN` | （空） | SSL 证书的域名。 |
+| `CERTBOT_OPTIONS` | （空） | 额外的 certbot CLI 选项（例如 `--force-renewal`、`--dry-run`）。 |
+
+## SSRF 代理
+
+这些变量配置基于 Squid 的 SSRF 代理容器，该容器阻止对内部/私有网络的请求。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SSRF_HTTP_PORT` | `3128` | 代理监听端口。 |
+| `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
+| `SSRF_REVERSE_PROXY_PORT` | `8194` | 转发到沙箱服务的反向代理端口。 |
+| `SSRF_SANDBOX_HOST` | `sandbox` | 沙箱服务的主机名。 |
+| `SSRF_DEFAULT_TIME_OUT` | `5` | 代理请求的默认总超时（秒）。 |
+| `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | 默认连接超时（秒）。 |
+| `SSRF_DEFAULT_READ_TIME_OUT` | `5` | 默认读取超时（秒）。 |
+| `SSRF_DEFAULT_WRITE_TIME_OUT` | `5` | 默认写入超时（秒）。 |
+
+## Docker Compose
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql}` | 根据你的数据库和向量存储选择自动决定启动哪些服务容器。例如设置 `DB_TYPE=mysql` 将启动 MySQL 而非 PostgreSQL。 |
+| `EXPOSE_NGINX_PORT` | `80` | 映射到 Nginx HTTP 的宿主机端口。 |
+| `EXPOSE_NGINX_SSL_PORT` | `443` | 映射到 Nginx HTTPS 的宿主机端口。 |
+
+## 模型提供商与工具位置配置
+
+自定义应用界面中可用的工具和模型提供商及其显示顺序。使用逗号分隔的值，项目之间不要有空格。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `POSITION_TOOL_PINS` | （空） | 将特定工具固定在列表顶部。示例：`bing,google`。 |
+| `POSITION_TOOL_INCLUDES` | （空） | 仅显示列出的工具。如未设置，所有工具可用。 |
+| `POSITION_TOOL_EXCLUDES` | （空） | 隐藏特定工具（固定的工具不受影响）。 |
+| `POSITION_PROVIDER_PINS` | （空） | 将特定模型提供商固定在顶部。示例：`openai,anthropic`。 |
+| `POSITION_PROVIDER_INCLUDES` | （空） | 仅显示列出的提供商。如未设置，所有提供商可用。 |
+| `POSITION_PROVIDER_EXCLUDES` | （空） | 隐藏特定提供商（固定的提供商不受影响）。 |
+
+## 插件守护进程配置
+
+插件守护进程是一个独立的服务，管理插件的生命周期（安装、执行、升级）。API 通过 HTTP 与其通信。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | 插件守护进程服务 URL。 |
+| `PLUGIN_DAEMON_KEY` | （自动生成） | 插件守护进程的认证密钥。 |
+| `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
+| `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
+| `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
+| `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 Schema 的时间（秒）。减少重复查找。 |
+| `PLUGIN_DIFY_INNER_API_KEY` | （自动生成） | 插件守护进程回调 Dify API 使用的 API key。必须与插件守护进程服务配置中的 `DIFY_INNER_API_KEY` 匹配。 |
+| `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | 插件守护进程回调的内部 API URL。 |
+| `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | 插件远程调试连接的主机。 |
+| `PLUGIN_DEBUGGING_PORT` | `5003` | 插件远程调试连接的端口。 |
+| `MARKETPLACE_ENABLED` | `true` | 启用插件市场。禁用时仅本地安装的插件可用——浏览和自动升级不可用。 |
+| `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` | 用于插件浏览、下载和升级检查的市场 API 端点。 |
+| `FORCE_VERIFYING_SIGNATURE` | `true` | 安装插件前要求有效签名。防止安装被篡改或未签名的包。 |
+| `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | 插件执行超时（秒，插件守护进程侧）。应与 API 侧的 `PLUGIN_DAEMON_TIMEOUT` 匹配。 |
+| `PIP_MIRROR_URL` | （空） | 插件守护进程安装插件依赖时使用的自定义 PyPI 镜像 URL。适用于加速安装或离线环境。 |
+
+## OTLP / OpenTelemetry 配置
+
+OpenTelemetry 提供分布式追踪和指标收集。启用后，Dify 对 Flask 进行仪器化并将遥测数据导出到 OTLP 收集器。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ENABLE_OTEL` | `false` | OpenTelemetry 仪器化的主开关。 |
+| `OTLP_TRACE_ENDPOINT` | （空） | 专用追踪端点 URL。如未设置，回退到 `{OTLP_BASE_ENDPOINT}/v1/traces`。 |
+| `OTLP_METRIC_ENDPOINT` | （空） | 专用指标端点 URL。如未设置，回退到 `{OTLP_BASE_ENDPOINT}/v1/metrics`。 |
+| `OTLP_BASE_ENDPOINT` | `http://localhost:4318` | OTLP 收集器基础 URL。当未设置特定追踪/指标端点时作为回退使用。 |
+| `OTLP_API_KEY` | （空） | OTLP 认证的 API key。以 `Authorization: Bearer` 头发送。 |
+| `OTEL_EXPORTER_TYPE` | `otlp` | 导出器类型。`otlp` 导出到收集器；其他值使用控制台导出器（用于调试）。 |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | （空） | OTLP 导出协议。`grpc` 使用 gRPC 导出器；其他值使用 HTTP。 |
+| `OTEL_SAMPLING_RATE` | `0.1` | 追踪的请求比例（0.1 = 10%）。在高流量生产环境中降低此值可减少开销。 |
+| `OTEL_BATCH_EXPORT_SCHEDULE_DELAY` | `5000` | 批次导出之间的延迟（毫秒）。 |
+| `OTEL_MAX_QUEUE_SIZE` | `2048` | 丢弃前可排队的最大 span 数。 |
+| `OTEL_MAX_EXPORT_BATCH_SIZE` | `512` | 每次导出批次的最大 span 数。 |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `60000` | 指标导出间隔（毫秒）。 |
+| `OTEL_BATCH_EXPORT_TIMEOUT` | `10000` | 批次 span 导出超时（毫秒）。 |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | `30000` | 指标导出超时（毫秒）。 |
+
+## 杂项
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `CSP_WHITELIST` | （空） | 在 Content Security Policy 头中允许的额外域名。 |
+| `ALLOW_EMBED` | `false` | 允许 Dify 页面在 iframe 中嵌入。为 `false` 时设置 `X-Frame-Options: DENY` 以防止点击劫持。 |
+| `SWAGGER_UI_ENABLED` | `false` | 在 `SWAGGER_UI_PATH` 暴露 Swagger UI 以浏览 API 文档。Swagger 端点绕过认证。 |
+| `SWAGGER_UI_PATH` | `/swagger-ui.html` | Swagger UI 的 URL 路径。 |
+| `MAX_SUBMIT_COUNT` | `100` | 线程池中用于并行工作流节点执行的最大并发任务提交数。 |
+| `TENANT_ISOLATED_TASK_CONCURRENCY` | `1` | 每个租户同时处理的文档索引或 RAG 管道任务数。增大可加快索引速度但增加数据库负载。 |
+
+### 定时任务配置
+
+Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ENABLE_CLEAN_EMBEDDING_CACHE_TASK` | `false` | 每天凌晨 2:00 从数据库中删除过期的嵌入缓存记录。管理数据库大小。 |
+| `ENABLE_CLEAN_UNUSED_DATASETS_TASK` | `false` | 禁用在保留期内没有活动的知识库中的文档。每天凌晨 3:00 运行。 |
+| `ENABLE_CLEAN_MESSAGES` | `false` | 每天凌晨 4:00 删除超过保留期的对话消息。 |
+| `ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK` | `false` | 向工作空间所有者发送邮件，列出被清理任务自动禁用文档的知识库。每周一上午 10:00 运行。 |
+| `ENABLE_DATASETS_QUEUE_MONITOR` | `false` | 监控 Redis 中的数据集处理队列积压。当队列超过阈值时发送邮件警报。 |
+| `QUEUE_MONITOR_INTERVAL` | `30` | 检查队列的频率（分钟）。 |
+| `QUEUE_MONITOR_THRESHOLD` | `200` | 触发警报邮件的队列大小。 |
+| `QUEUE_MONITOR_ALERT_EMAILS` | （空） | 接收队列警报的邮箱地址（逗号分隔）。 |
+| `ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK` | `true` | 每 15 分钟检查市场中是否有更新的插件版本。根据每个租户的自动升级计划分发升级任务。 |
+| `ENABLE_WORKFLOW_SCHEDULE_POLLER_TASK` | `true` | 启用工作流调度轮询器，检查并触发计划的工作流运行。 |
+| `WORKFLOW_SCHEDULE_POLLER_INTERVAL` | `1` | 检查到期计划工作流的频率（分钟）。 |
+| `WORKFLOW_SCHEDULE_POLLER_BATCH_SIZE` | `100` | 每次轮询周期获取的最大到期计划数。 |
+| `WORKFLOW_SCHEDULE_MAX_DISPATCH_PER_TICK` | `0` | 熔断器：每个周期分发的最大计划数。`0` 表示不限制。 |
+| `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | 启用工作流运行记录的自动清理。 |
+| `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | 预创建 TiDB Serverless 集群用于向量数据库池。 |
+| `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工输入表单，恢复或停止超时的工作流。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工输入表单的频率（分钟）。 |
+
+#### 记录保留与清理
+
+这些变量控制旧记录的清理方式。当 `BILLING_ENABLED` 激活时，清理针对沙箱层租户并有宽限期。当计费禁用时（自托管），清理适用于保留窗口内的所有记录。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | 超过此天数的记录有资格被删除。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | 订阅到期后删除记录前的宽限期天数（仅计费启用时）。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | 每次清理批次处理的记录数。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | 清理批次间的最大随机延迟（毫秒），用于减少数据库负载。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | Redis 锁 TTL（秒，约 25 小时），防止清理任务并发执行。 |
+
+## 阿里云 SLS 日志存储配置
+
+与阿里云简单日志服务（SLS）的可选集成，用于将工作流执行日志存储在外部而非数据库中。通过将仓库配置变量设置为使用 logstore 实现来启用。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ALIYUN_SLS_ACCESS_KEY_ID` | （空） | 阿里云 SLS 认证的 access key ID。 |
+| `ALIYUN_SLS_ACCESS_KEY_SECRET` | （空） | 阿里云 SLS 认证的 access key secret。 |
+| `ALIYUN_SLS_ENDPOINT` | （空） | SLS 服务端点 URL（例如 `cn-hangzhou.log.aliyuncs.com`）。 |
+| `ALIYUN_SLS_REGION` | （空） | 阿里云区域（例如 `cn-hangzhou`）。 |
+| `ALIYUN_SLS_PROJECT_NAME` | （空） | 存储工作流日志的 SLS 项目名称。 |
+| `ALIYUN_SLS_LOGSTORE_TTL` | `365` | SLS logstore 的数据保留天数。使用 `3650` 表示永久存储。 |
+| `LOGSTORE_DUAL_WRITE_ENABLED` | `false` | 同时将工作流数据写入 SLS 和 PostgreSQL。迁移到 SLS 时有用。 |
+| `LOGSTORE_DUAL_READ_ENABLED` | `true` | 当 SLS 无结果时回退到 PostgreSQL。迁移期间历史数据仅存在于数据库中时有用。 |
+| `LOGSTORE_ENABLE_PUT_GRAPH_FIELD` | `true` | 在 SLS 日志中包含完整的工作流图定义。设为 `false` 可通过省略大型图数据来减少存储。 |
+
+## 事件总线配置
+
+API 和 Celery 工作进程之间基于 Redis 的事件传输。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `EVENT_BUS_REDIS_URL` | （空） | 事件流的 Redis 连接 URL。为空时使用主 Redis 连接设置。 |
+| `EVENT_BUS_REDIS_CHANNEL_TYPE` | `pubsub` | 传输类型：`pubsub`（Pub/Sub，至多一次投递）、`sharded`（分片 Pub/Sub）或 `streams`（Redis Streams，至少一次投递）。 |
+| `EVENT_BUS_REDIS_USE_CLUSTERS` | `false` | 为事件总线启用 Redis 集群模式。建议在大规模部署中使用。 |
+
+## 向量数据库服务配置
+
+这些变量配置向量数据库容器本身（而非 Dify 客户端连接）。仅与你选择的 `VECTOR_STORE` 相关的变量有效。
+
+<AccordionGroup>
+<Accordion title="Weaviate 服务">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `WEAVIATE_PERSISTENCE_DATA_PATH` | `/var/lib/weaviate` | 容器内的数据持久化目录。 |
+| `WEAVIATE_QUERY_DEFAULTS_LIMIT` | `25` | 默认查询结果限制。 |
+| `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED` | `true` | 允许匿名访问。 |
+| `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | 默认向量化模块。 |
+| `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | 集群节点主机名。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | 启用 API key 认证。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （自动生成） | 允许的 API key。必须与客户端配置中的 `WEAVIATE_API_KEY` 匹配。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | 与 API key 关联的用户。 |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | 启用管理员列表授权。 |
+| `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | 管理员用户。 |
+| `WEAVIATE_DISABLE_TELEMETRY` | `false` | 禁用 Weaviate 遥测。 |
+| `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | 启用 GSE 分词器（中文）。 |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | 启用 Kagome 分词器（日文）。 |
+| `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | 启用 Kagome 分词器（韩文）。 |
+
+</Accordion>
+
+<Accordion title="Milvus 服务（ETCD + MinIO）">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ETCD_AUTO_COMPACTION_MODE` | `revision` | ETCD 自动压缩模式。 |
+| `ETCD_AUTO_COMPACTION_RETENTION` | `1000` | 自动压缩保留的修订数。 |
+| `ETCD_QUOTA_BACKEND_BYTES` | `4294967296` | 后端配额（字节，4 GB）。 |
+| `ETCD_SNAPSHOT_COUNT` | `50000` | 触发快照前的变更数。 |
+| `ETCD_ENDPOINTS` | `etcd:2379` | ETCD 服务端点。 |
+| `MINIO_ACCESS_KEY` | `minioadmin` | MinIO access key。 |
+| `MINIO_SECRET_KEY` | `minioadmin` | MinIO secret key。 |
+| `MINIO_ADDRESS` | `minio:9000` | MinIO 服务地址。 |
+| `MILVUS_AUTHORIZATION_ENABLED` | `true` | 启用 Milvus 安全授权。 |
+
+</Accordion>
+
+<Accordion title="OpenSearch 服务">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `OPENSEARCH_DISCOVERY_TYPE` | `single-node` | 集群形成的发现类型。 |
+| `OPENSEARCH_BOOTSTRAP_MEMORY_LOCK` | `true` | 启动时锁定内存以防止交换。 |
+| `OPENSEARCH_JAVA_OPTS_MIN` | `512m` | JVM 最小堆大小。 |
+| `OPENSEARCH_JAVA_OPTS_MAX` | `1024m` | JVM 最大堆大小。 |
+| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | OpenSearch 服务的初始管理员密码。 |
+| `OPENSEARCH_MEMLOCK_SOFT` | `-1` | 软内存锁限制（`-1` = 无限制）。 |
+| `OPENSEARCH_MEMLOCK_HARD` | `-1` | 硬内存锁限制（`-1` = 无限制）。 |
+| `OPENSEARCH_NOFILE_SOFT` | `65536` | 软文件描述符限制。 |
+| `OPENSEARCH_NOFILE_HARD` | `65536` | 硬文件描述符限制。 |
+
+</Accordion>
+
+<Accordion title="PGVector / PGVecto.RS 服务">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PGVECTOR_PGUSER` | `postgres` | PGVector 容器的 PostgreSQL 用户。 |
+| `PGVECTOR_POSTGRES_PASSWORD` | （自动生成） | PGVector 容器的 PostgreSQL 密码。 |
+| `PGVECTOR_POSTGRES_DB` | `dify` | PGVector 容器中的数据库名称。 |
+| `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | 容器内的数据目录。 |
+| `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | pg_bigm 扩展版本。 |
+
+</Accordion>
+
+<Accordion title="Oracle / Chroma / Elasticsearch 服务">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ORACLE_PWD` | `Dify123456` | 容器的 Oracle 数据库密码。 |
+| `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle 字符集。 |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | （自动生成） | Chroma 服务器容器的认证凭证。 |
+| `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Chroma 服务器的认证提供者。 |
+| `CHROMA_IS_PERSISTENT` | `TRUE` | 为 Chroma 启用持久化存储。 |
+| `KIBANA_PORT` | `5601` | Kibana 端口（Elasticsearch UI）。 |
+
+</Accordion>
+
+<Accordion title="IRIS / 其他服务">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `IRIS_WEB_SERVER_PORT` | `52773` | IRIS Web 服务器管理端口。 |
+| `IRIS_TIMEZONE` | `UTC` | IRIS 容器的时区。 |
+| `DB_PLUGIN_DATABASE` | `dify_plugin` | 插件数据的独立数据库名称。 |
+
+</Accordion>
+</AccordionGroup>
+
+## 插件守护进程存储配置
+
+插件守护进程可以在不同的存储后端中存储插件包。仅配置与 `PLUGIN_STORAGE_TYPE` 匹配的提供商。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_STORAGE_TYPE` | `local` | 插件存储后端：`local`、`aws_s3`、`tencent_cos`、`azure_blob`、`aliyun_oss`、`volcengine_tos`。 |
+| `PLUGIN_STORAGE_LOCAL_ROOT` | `/app/storage` | 本地插件存储的根目录。 |
+| `PLUGIN_WORKING_PATH` | `/app/storage/cwd` | 插件执行的工作目录。 |
+| `PLUGIN_INSTALLED_PATH` | `plugin` | 已安装插件的子目录。 |
+| `PLUGIN_PACKAGE_CACHE_PATH` | `plugin_packages` | 缓存插件包的子目录。 |
+| `PLUGIN_MEDIA_CACHE_PATH` | `assets` | 缓存媒体资源的子目录。 |
+| `PLUGIN_STORAGE_OSS_BUCKET` | （空） | 对象存储桶名称（跨 S3/COS/OSS/TOS 提供商共享）。 |
+| `PLUGIN_PPROF_ENABLED` | `false` | 为插件守护进程启用 Go pprof 性能分析。 |
+| `PLUGIN_PYTHON_ENV_INIT_TIMEOUT` | `120` | 初始化插件 Python 环境的超时时间（秒）。 |
+| `PLUGIN_STDIO_BUFFER_SIZE` | `1024` | 插件标准 I/O 通信的缓冲区大小（字节）。 |
+| `PLUGIN_STDIO_MAX_BUFFER_SIZE` | `5242880` | 插件标准 I/O 通信的最大缓冲区大小（字节，5 MB）。 |
+| `ENFORCE_LANGGENIUS_PLUGIN_SIGNATURES` | `true` | 强制验证 LangGenius 官方插件的签名。 |
+| `ENDPOINT_URL_TEMPLATE` | `http://localhost/e/{hook_id}` | 插件端点的 URL 模板。`{hook_id}` 将被替换为实际的 hook ID。 |
+| `EXPOSE_PLUGIN_DAEMON_PORT` | `5002` | 映射到插件守护进程的宿主机端口。 |
+| `EXPOSE_PLUGIN_DEBUGGING_HOST` | `localhost` | 插件远程调试的主机。 |
+| `EXPOSE_PLUGIN_DEBUGGING_PORT` | `5003` | 插件远程调试的宿主机端口。 |
+
+<AccordionGroup>
+<Accordion title="插件 S3 存储">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_S3_USE_AWS` | `false` | 使用 AWS S3（相对于 S3 兼容服务）。 |
+| `PLUGIN_S3_USE_AWS_MANAGED_IAM` | `false` | 使用 IAM 角色代替显式凭证。 |
+| `PLUGIN_S3_ENDPOINT` | （空） | S3 端点 URL。 |
+| `PLUGIN_S3_USE_PATH_STYLE` | `false` | 使用路径风格 URL 代替虚拟主机风格。 |
+| `PLUGIN_AWS_ACCESS_KEY` | （空） | AWS access key。 |
+| `PLUGIN_AWS_SECRET_KEY` | （空） | AWS secret key。 |
+| `PLUGIN_AWS_REGION` | （空） | AWS 区域。 |
+
+</Accordion>
+
+<Accordion title="插件 Azure Blob 存储">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_AZURE_BLOB_STORAGE_CONTAINER_NAME` | （空） | Azure Blob 容器名称。 |
+| `PLUGIN_AZURE_BLOB_STORAGE_CONNECTION_STRING` | （空） | Azure Blob 连接字符串。 |
+
+</Accordion>
+
+<Accordion title="插件腾讯 COS 存储">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_TENCENT_COS_SECRET_KEY` | （空） | 腾讯 COS secret key。 |
+| `PLUGIN_TENCENT_COS_SECRET_ID` | （空） | 腾讯 COS secret ID。 |
+| `PLUGIN_TENCENT_COS_REGION` | （空） | 腾讯 COS 区域。 |
+
+</Accordion>
+
+<Accordion title="插件阿里云 OSS 存储">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_ALIYUN_OSS_REGION` | （空） | 阿里云 OSS 区域。 |
+| `PLUGIN_ALIYUN_OSS_ENDPOINT` | （空） | 阿里云 OSS 端点。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_ID` | （空） | 阿里云 OSS access key ID。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_SECRET` | （空） | 阿里云 OSS access key secret。 |
+| `PLUGIN_ALIYUN_OSS_AUTH_VERSION` | `v4` | 阿里云 OSS 认证版本。 |
+| `PLUGIN_ALIYUN_OSS_PATH` | （空） | 阿里云 OSS 路径前缀。 |
+
+</Accordion>
+
+<Accordion title="插件火山引擎 TOS 存储">
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `PLUGIN_VOLCENGINE_TOS_ENDPOINT` | （空） | 火山引擎 TOS 端点。 |
+| `PLUGIN_VOLCENGINE_TOS_ACCESS_KEY` | （空） | 火山引擎 TOS access key。 |
+| `PLUGIN_VOLCENGINE_TOS_SECRET_KEY` | （空） | 火山引擎 TOS secret key。 |
+| `PLUGIN_VOLCENGINE_TOS_REGION` | （空） | 火山引擎 TOS 区域。 |
+
+</Accordion>
+</AccordionGroup>
