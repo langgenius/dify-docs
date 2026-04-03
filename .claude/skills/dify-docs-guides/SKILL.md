@@ -52,6 +52,7 @@ This is a team effort. The user brings documentation expertise and user empathy;
 - For existing features: verify against the `main` branch of the Dify codebase. The user will provide the codebase path or it will be configured as an additional working directory.
 - For new features: the user may specify a development branch. Code may be in flux—when behavior is ambiguous, ask rather than assume.
 - Trust the codebase over existing documentation. Existing docs may be outdated or inaccurate.
+- **Code presence ≠ working feature.** A code path existing does not guarantee the feature functions end to end. When behavior is inferred from code analysis rather than observed in the running product, flag it as unverified and ask the user to test before documenting it as fact.
 
 ## Style Overrides
 

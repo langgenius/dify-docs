@@ -13,11 +13,12 @@ Every MDX file must start with YAML frontmatter containing at least `title` and 
 ```yaml
 ---
 title: "Page Title"
-description: "A concise summary of what this page covers."
+description: "A concise summary of what this page covers"
 ---
 ```
 
 - `title` is **required**. `description` is required for new pages; existing pages should be updated over time.
+- `description` should not end with a period.
 - `sidebarTitle` is optional. Add it when the title is too long for the sidebar, or when other pages in the same group follow a specific `sidebarTitle` convention.
 - Use double quotes around values that contain special characters.
 - Leave one blank line after the closing `---` before the document body.
@@ -46,6 +47,8 @@ Use bold for:
 - **Key terms** when first introduced or when emphasis is critical.
 
 Do not use bold for general emphasis in running text. If everything is bold, nothing stands out.
+
+Do not include trailing punctuation (colons, commas, periods) inside bold markup. Write `**Upload Method**:` not `**Upload Method:**`.
 
 ### Italic (`*text*`)
 
@@ -115,13 +118,20 @@ Do not use backticks for product names, UI labels, or general English words.
 ### Preferred Format (Frame Component)
 
 ```mdx
-<Frame caption="LLM node configuration interface">
-  <img src="https://assets-docs.dify.ai/.../image.png" alt="LLM Node Overview" />
+<Frame>
+  ![LLM Node Overview](https://assets-docs.dify.ai/.../image.png)
 </Frame>
 ```
 
-- Include a `caption` for images that need a title or description.
-- Always include a descriptive `alt` attribute.
+- Use a `<Frame>` component wrapping `![]()` markdown syntax by default.
+- Always include a descriptive `alt` attribute in **title case**.
+- Only add a `caption` when the image's meaning is not clear from context—captions are visible to all readers, while alt text only displays if the image fails to load. Use **title case** for captions.
+
+```mdx
+<Frame caption="LLM Node Configuration Interface">
+  ![LLM Node Configuration Interface](https://assets-docs.dify.ai/.../image.png)
+</Frame>
+```
 
 ---
 

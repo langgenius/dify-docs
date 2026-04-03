@@ -75,6 +75,10 @@ These are principles, not absolute rules. Apply them when they improve clarity; 
 
 **Repeating the UI.** Don't describe interface elements users can see directly—default values, field labels, button names. Documentation provides context and rationale not visible in the UI.
 
+**Information noise.** If content doesn't provide value beyond what the reader already knows or can see, it hinders rather than helps. Before including a detail, ask: does the reader need this to accomplish their goal? If the UI already communicates it, or it restates what the previous sentence implied, cut it.
+
+**Unnecessary second sentences.** When two sentences can be merged into one without losing readability, combine them. If the "how it works" can be folded into the "what it does," a separate sentence is noise. Apply case-by-case—don't sacrifice clarity for brevity.
+
 **Repetitive structures.** Vary sentence patterns across related sections to avoid a mechanical feel.
 
 **Over-simplification.** Don't sacrifice clarity for brevity. Choose precision when a specific term prevents confusion, even if it's longer.

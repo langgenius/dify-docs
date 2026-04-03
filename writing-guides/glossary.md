@@ -280,6 +280,48 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
 
+### Variable Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Short Text | 文本 | 短文 | app-debug.variableConfig.string | Variable type |
+| Paragraph | 段落 | 段落 | app-debug.variableConfig.paragraph | Variable type |
+| Select | 下拉选项 | 選択 | app-debug.variableConfig.select | Variable type |
+| Number | 数字 | 数値 | app-debug.variableConfig.number | Variable type |
+| Checkbox | 复选框 | チェックボックス | app-debug.variableConfig.checkbox | Variable type |
+| API-based Variable | 基于 API 的变量 | API ベースの変数 | app-debug.variableConfig.apiBasedVar | Variable type |
+| Label Name | 显示名称 | ラベル名 | app-debug.variableConfig.labelName | Display name field for variables |
+
+### Prompt Generation
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Generate | 生成 | 生成 | app-debug.generate.generate | AI prompt generation button |
+| Ideal Output | 理想输出 | 理想的な出力 | app-debug.generate.idealOutput | Example output for prompt generation |
+
+### Vision & File Upload
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Vision | 视觉 | ビジョン | app-debug.vision.name | File type toggle |
+| Audio | 音频 | 音声 | app-debug.feature.audioUpload.title | File type toggle |
+| Document | 文档 | ドキュメント | app-debug.feature.documentUpload.title | File type toggle |
+| Settings | 设置 | 設定 | app-debug.vision.settings | Vision settings button |
+| Resolution | 分辨率 | 解像度 | app-debug.vision.visionSettings.resolution | Image detail level |
+| High | 高 | 高 | app-debug.vision.visionSettings.high | Resolution option |
+| Low | 低 | 低 | app-debug.vision.visionSettings.low | Resolution option |
+| Upload Method | 上传方式 | アップロード方法 | app-debug.vision.visionSettings.uploadMethod | |
+| Upload Limit | 上传数量限制 | アップロード制限 | app-debug.vision.visionSettings.uploadLimit | |
+
+### Debug Controls
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Debug as Multiple Models | 多个模型进行调试 | 複数モデルでデバッグ | app-debug.debugAsMultipleModel | |
+| Function Calling | Function Calling | 関数呼び出し | app-debug.agent.agentModeType.functionCall | Agent mode; ZH keeps English |
+| ReAct | ReAct | ReAct | app-debug.agent.agentModeType.ReACT | Agent mode |
+| Agent Settings | Agent 设置 | エージェント設定 | app-debug.agent.setting.name | |
+
 ### Agent Node Config
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
