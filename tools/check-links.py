@@ -299,7 +299,7 @@ def check_external_links():
             if len(locations) > 3:
                 print(f"    ... and {len(locations) - 3} more")
 
-    return 0  # External link check is non-blocking
+    return len(broken)
 
 
 def main():
@@ -316,7 +316,7 @@ def main():
         exit_code = check_internal_links()
 
     if args.external or args.all:
-        check_external_links()  # Always returns 0 (non-blocking)
+        exit_code += check_external_links()
 
     sys.exit(1 if exit_code > 0 else 0)
 
