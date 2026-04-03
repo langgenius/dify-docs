@@ -275,8 +275,10 @@ def check_external_links():
                         headers={"User-Agent": "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"}
                     )
                     resp = urllib.request.urlopen(req, timeout=10)
-                except Exception:
-                    broken.append((url, f"HTTP {e.code}", urls_to_check[url]))
+                except urllib.error.HTTPError as get_e:
+                    broken.append((url, f"HTTP {get_e.code}", urls_to_check[url]))
+                except Exception as get_e:
+                    broken.append((url, f"GET fallback error: {get_e}", urls_to_check[url]))
             elif e.code == 403:
                 # Many sites block automated requests — don't report as broken
                 skipped += 1
