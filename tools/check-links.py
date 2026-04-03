@@ -276,7 +276,10 @@ def check_external_links():
                     )
                     resp = urllib.request.urlopen(req, timeout=10)
                 except urllib.error.HTTPError as get_e:
-                    broken.append((url, f"HTTP {get_e.code}", urls_to_check[url]))
+                    if get_e.code == 403:
+                        skipped += 1
+                    else:
+                        broken.append((url, f"HTTP {get_e.code}", urls_to_check[url]))
                 except Exception as get_e:
                     broken.append((url, f"GET fallback error: {get_e}", urls_to_check[url]))
             elif e.code == 403:
