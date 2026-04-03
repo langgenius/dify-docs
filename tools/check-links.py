@@ -65,6 +65,14 @@ def extract_links(file_path: Path) -> list[tuple[int, str, str]]:
 def classify_link(url: str) -> str:
     """Classify a link as internal, external, anchor, or skip."""
     if url.startswith(("http://", "https://")):
+        # Skip localhost/loopback URLs
+        from urllib.parse import urlparse
+        try:
+            host = urlparse(url).hostname or ""
+            if host in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
+                return "skip"
+        except Exception:
+            pass
         return "external"
     if url.startswith("#"):
         return "anchor"
@@ -142,8 +150,24 @@ def check_docs_json() -> list[tuple[str, str]]:
                 sub_pages = item.get("pages", [])
                 check_pages(sub_pages, f"{context}{group_name} > ")
 
-    # Check each language section
-    if "tabs" in data:
+    # Traverse the docs.json structure
+    # Supports: navigation.languages[].versions[].dropdowns[].pages (Mintlify v2)
+    # Also supports: tabs[].pages (legacy)
+    nav = data.get("navigation", {})
+    languages = nav.get("languages", [])
+    if languages:
+        for lang in languages:
+            lang_code = lang.get("language", "?")
+            for version in lang.get("versions", []):
+                ver_name = version.get("version", "?")
+                for dropdown in version.get("dropdowns", []):
+                    dd_name = dropdown.get("dropdown", "(unnamed)")
+                    check_pages(
+                        dropdown.get("pages", []),
+                        f"[{lang_code}/{ver_name}/{dd_name}] ",
+                    )
+    elif "tabs" in data:
+        # Legacy flat structure
         for tab in data["tabs"]:
             tab_name = tab.get("tab", "(unnamed tab)")
             check_pages(tab.get("pages", []), f"[{tab_name}] ")
