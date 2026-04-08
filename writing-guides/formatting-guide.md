@@ -56,6 +56,11 @@ Do not include trailing punctuation (colons, commas, periods) inside bold markup
 - Use sparingly — for semantic emphasis, alternative phrasings, or example values.
   - Example: `Both plugin triggers and webhook triggers make your workflow *event-driven*.`
 
+### Quotation Marks
+
+- Do not use double quotation marks for emphasis. Use italics instead.
+- Reserve double quotation marks for direct citations.
+
 ---
 
 ## Lists
@@ -86,6 +91,7 @@ Use backticks for:
 - File paths and extensions: `` `.env` ``, `` `docker-compose.yml` ``
 - Configuration values: `` `streaming` ``, `` `true` ``
 - Special characters and delimiters: `` `\n\n` ``
+- Exact strings a user must type or match
 
 Do not use backticks for product names, UI labels, or general English words.
 
