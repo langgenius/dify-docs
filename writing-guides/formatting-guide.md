@@ -59,7 +59,7 @@ Do not include trailing punctuation (colons, commas, periods) inside bold markup
 ### Quotation Marks
 
 - Do not use double quotation marks for emphasis. Use italics instead.
-- Reserve double quotation marks for direct citations.
+- Use double quotation marks for direct quotations and for referring to literal words or phrases when backticks are not more appropriate.
 
 ---
 
@@ -91,7 +91,7 @@ Use backticks for:
 - File paths and extensions: `` `.env` ``, `` `docker-compose.yml` ``
 - Configuration values: `` `streaming` ``, `` `true` ``
 - Special characters and delimiters: `` `\n\n` ``
-- Exact strings a user must type or match
+- Exact strings a user must type or match: `` `yes` ``, `` `DELETE` ``
 
 Do not use backticks for product names, UI labels, or general English words.
 
