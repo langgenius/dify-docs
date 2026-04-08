@@ -120,6 +120,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | input field | 输入字段 | 入力フィールド | Form fields where people provide requested information |
 | request form | 请求表单 | リクエストフォーム | The form sent to recipients asking for input/review; use "request form" not "request page" |
 | Assemble Variable | 变量组装 | 変数アセンブル | On-demand data transformation using natural language descriptions |
+| blocking mode | 阻塞式返回 | ブロッキングモード | API `response_mode` value; returns results after execution completes |
+| streaming mode | 流式返回 | ストリーミングモード | API `response_mode` value; returns results progressively via SSE |
 
 ### Agent
 
