@@ -4,6 +4,7 @@
 
 | Task | Skill | Paths | References |
 |:-----|:------|:------|:-----------|
+| Research a feature before writing | dify-docs-feature-research | Dify codebase, GitHub Issues | — |
 | Write or improve a user guide | dify-docs-guides | `en/use-dify/`, `en/develop-plugin/`, `en/self-host/` | style-guide, formatting-guide, glossary |
 | Write or audit API reference specs | dify-docs-api-reference | `en/api-reference/` | style-guide, formatting-guide, glossary |
 | Write or audit env var docs | dify-docs-env-vars | `en/self-host/configuration/environments.mdx` | style-guide, formatting-guide, glossary |
