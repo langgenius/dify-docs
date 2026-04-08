@@ -49,6 +49,7 @@ This is a team effort. The user brings documentation expertise and user empathy;
 
 ## Verifying Feature Behavior
 
+- Pull the latest code before verifying. In the Dify codebase directory, run `git fetch origin && git checkout main && git pull origin main`. If the user specifies a different branch, substitute accordingly.
 - For existing features: verify against the `main` branch of the Dify codebase. The user will provide the codebase path or it will be configured as an additional working directory.
 - For new features: the user may specify a development branch. Code may be in flux—when behavior is ambiguous, ask rather than assume.
 - Trust the codebase over existing documentation. Existing docs may be outdated or inaccurate.

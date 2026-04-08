@@ -19,6 +19,11 @@ Read these shared guides:
 
 ## Four-Step Process
 
+**Pull the latest Dify code** before tracing. In the Dify codebase directory:
+```bash
+git fetch origin && git checkout main && git pull origin main
+```
+
 **This process applies to every variable without exception.** Do not skip variables because they seem "obvious" — every variable must be traced, explained, and described.
 
 ### Step 1: Trace the Variable in the Codebase

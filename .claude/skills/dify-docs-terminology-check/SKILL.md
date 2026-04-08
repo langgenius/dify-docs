@@ -22,6 +22,11 @@ codebase i18n files.
    ask the user for the local filesystem path to their Dify repo and use it for
    reading i18n files.
 
+   Pull the latest code before checking. In the Dify codebase directory:
+   ```bash
+   git fetch origin && git checkout <branch> && git pull origin <branch>
+   ```
+
 2. Detect changed documentation files by combining:
    - `git diff --name-only` (unstaged changes in tracked files)
    - `git diff --cached --name-only` (staged changes)

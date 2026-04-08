@@ -30,6 +30,11 @@ Backend developers integrating Dify apps or knowledge bases into their own appli
 
 ## Code Fidelity (Non-Negotiable)
 
+**Pull the latest Dify code** before auditing. In the Dify codebase directory:
+```bash
+git fetch origin && git checkout main && git pull origin main
+```
+
 **Every detail in the spec MUST be verifiable against the codebase.** When the spec disagrees with the code, the spec is wrong.
 
 ### What must match the code exactly
