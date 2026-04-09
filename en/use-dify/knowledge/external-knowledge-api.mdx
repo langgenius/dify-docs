@@ -1,168 +1,171 @@
 ---
 title: External Knowledge API
+description: API specification that your external knowledge service must implement to integrate with Dify
 ---
 
-## Endpoint
+This page defines the API contract your external knowledge service must implement for Dify to retrieve content from it. Once your API is ready, see [Connect to External Knowledge Base](/en/use-dify/knowledge/connect-external-knowledge-base) to register it in Dify.
 
-```
-POST <your-endpoint>/retrieval
-```
+## Authentication
 
-## Header
+Dify sends the API Key you configured as a Bearer token in every request:
 
-This API is used to connect to a knowledge base that is independent of the Dify and maintained by developers. For more details, please refer to [Connecting to an External Knowledge Base](/en/use-dify/knowledge/connect-external-knowledge-base). You can use `API-Key` in the `Authorization` HTTP Header to verify permissions. The authentication logic is defined by you in the retrieval API, as shown below:
-
-```
+```text
 Authorization: Bearer {API_KEY}
 ```
 
-## Request Body Elements
+You define the authentication logic on your side. Dify only passes the key—it does not validate it.
 
-The request accepts the following data in JSON format.
+## Request
 
-| Property | Required | Type | Description | Example value |
-|----------|----------|------|-------------|---------------|
-| knowledge_id | TRUE | string | Your knowledge's unique ID | AAA-BBB-CCC |
-| query | TRUE | string | User's query | What is Dify? |
-| retrieval_setting | TRUE | object | Knowledge's retrieval parameters | See below |
-| metadata_condition | FALSE | Object | Original array filtering | See below |
+```text
+POST {your-endpoint}/retrieval
+Content-Type: application/json
+Authorization: Bearer {API_KEY}
+```
 
-The `retrieval_setting` property is an object containing the following keys:
+Dify appends `/retrieval` to the endpoint URL you configured. If you registered `https://your-service.com`, Dify sends requests to `https://your-service.com/retrieval`.
 
-| Property | Required | Type | Description | Example value |
-|----------|----------|------|-------------|---------------|
-| top_k | TRUE | int | Maximum number of retrieved results | 5 |
-| score_threshold | TRUE | float | The score limit of relevance of the result to the query, scope: 0~1 | 0.5 |
+### Body
 
-The `metadata_condition` property is an object containing the following keys:
+| Property | Required | Type | Description |
+|:---------|:---------|:-----|:------------|
+| `knowledge_id` | Yes | string | The identifier of the knowledge source in your external system. This is the value you entered in the **External Knowledge ID** field when connecting. Use it to route queries to the correct knowledge source. |
+| `query` | Yes | string | The user's search query. |
+| `retrieval_setting` | Yes | object | Retrieval parameters. See [below](#retrieval_setting). |
+| `metadata_condition` | No | object | Metadata filtering conditions. See [below](#metadata_condition). |
 
-| Attribute | Required | Type | Description | Example Value |
-|-----------|----------|------|-------------|--------------|
-| logical_operator | No | String | Logical operator, values can be `and` or `or`, default is `and` | and |
-| conditions | Yes | Array (Object) | List of conditions | See below |
+#### `retrieval_setting`
 
-Each object in the `conditions` array contains the following keys:
+| Property | Required | Type | Description |
+|:---------|:---------|:-----|:------------|
+| `top_k` | Yes | int | Maximum number of results to return. |
+| `score_threshold` | Yes | float | Minimum similarity score (0-1). When score threshold is disabled in Dify, this value is `0.0`. |
 
-| Attribute | Required | Type | Description | Example Value |
-|-----------|----------|------|-------------|--------------|
-| name | Yes | Array (String) | Names of the metadata to filter | `["category", "tag"]` |
-| comparison_operator | Yes | String | Comparison operator | `contains` |
-| value | No | String | Comparison value, can be omitted when the operator is `empty`, `not empty`, `null`, or `not null` | `"AI"` |
+#### `metadata_condition`
 
-Supported `comparison_operator` operators:
+<Info>
+Dify passes metadata conditions to your API but does not currently provide a UI for users to configure them. This parameter is available for programmatic use only.
+</Info>
 
-- `contains`: Contains a certain value  
-- `not contains`: Does not contain a certain value  
-- `start with`: Starts with a certain value  
-- `end with`: Ends with a certain value  
-- `is`: Equals a certain value  
-- `is not`: Does not equal a certain value  
-- `empty`: Is empty  
-- `not empty`: Is not empty  
-- `=`: Equals  
-- `≠`: Not equal  
-- `>`: Greater than  
-- `<`: Less than  
-- `≥`: Greater than or equal to  
-- `≤`: Less than or equal to  
-- `before`: Before a certain date  
-- `after`: After a certain date  
+| Property | Required | Type | Description |
+|:---------|:---------|:-----|:------------|
+| `logical_operator` | No | string | `and` or `or`. Default: `and`. |
+| `conditions` | Yes | array[object] | List of filter conditions. |
 
-## Request Syntax
+Each object in `conditions`:
+
+| Property | Required | Type | Description |
+|:---------|:---------|:-----|:------------|
+| `name` | Yes | string | Metadata field name to filter on. |
+| `comparison_operator` | Yes | string | Comparison operator. See supported values below. |
+| `value` | No | string, number, or array[string] | Comparison value. Omit when using `empty`, `not empty`, `null`, or `not null`. |
+
+<Accordion title="Supported Comparison Operators">
+
+| Operator | Description |
+|:---------|:------------|
+| `contains` | Contains a value |
+| `not contains` | Does not contain a value |
+| `start with` | Starts with a value |
+| `end with` | Ends with a value |
+| `is` | Equals a value |
+| `is not` | Does not equal a value |
+| `in` | Matches any value in a list |
+| `not in` | Does not match any value in a list |
+| `empty` | Is empty |
+| `not empty` | Is not empty |
+| `=` | Equals (numeric) |
+| `≠` | Not equal (numeric) |
+| `>` | Greater than |
+| `<` | Less than |
+| `≥` | Greater than or equal to |
+| `≤` | Less than or equal to |
+| `before` | Before a date |
+| `after` | After a date |
+
+</Accordion>
+
+### Example Request
 
 ```json
-POST <your-endpoint>/retrieval HTTP/1.1
--- header
-Content-Type: application/json
-Authorization: Bearer your-api-key
--- data
 {
     "knowledge_id": "your-knowledge-id",
-    "query": "your question",
-    "retrieval_setting":{
-        "top_k": 2,
+    "query": "What is Dify?",
+    "retrieval_setting": {
+        "top_k": 3,
         "score_threshold": 0.5
     }
 }
 ```
 
-## Response Elements
+## Response
 
-If the action is successful, the service sends back an HTTP 200 response.
+Return HTTP 200 with a JSON body containing a `records` array. If no results match the query, return an empty array: `{"records": []}`.
 
-The following data is returned in JSON format by the service.
+### `records`
 
-| Property | Required | Type | Description | Example value |
-|----------|----------|------|-------------|---------------|
-| records | TRUE | List[Object] | A list of records from querying the knowledge base. | See below |
+| Property | Type | Description |
+|:---------|:-----|:------------|
+| `content` | string | The retrieved text chunk. Dify uses this as the context passed to the LLM. |
+| `score` | float | Similarity score (0–1). Used for score threshold filtering and result ranking. |
+| `title` | string | Source document title. |
+| `metadata` | object | Arbitrary key-value pairs preserved by Dify. |
 
-The `records` property is a list object containing the following keys:
+Dify does not reject records with missing fields, but omitting `content` or `score` will produce incomplete or unranked results.
 
-| Property | Required | Type | Description | Example value |
-|----------|----------|------|-------------|---------------|
-| content | TRUE | string | Contains a chunk of text from a data source in the knowledge base. | Dify:The Innovation Engine for GenAI Applications |
-| score | TRUE | float | The score of relevance of the result to the query, scope: 0~1 | 0.5 |
-| title | TRUE | string | Document title | Dify Introduction |
-| metadata | FALSE | json | Contains metadata attributes and their values for the document in the data source. | See example |
+<Warning>
+If you include `metadata` in a record, it must be an object (`{}`), not `null`. A `null` metadata value causes errors in Dify's retrieval pipeline.
+</Warning>
 
-## Response Syntax
+### Example Response
 
 ```json
-HTTP/1.1 200
-Content-type: application/json
 {
-    "records": [{
-                    "metadata": {
-                            "path": "s3://dify/knowledge.txt",
-                            "description": "dify knowledge document"
-                    },
-                    "score": 0.98,
-                    "title": "knowledge.txt",
-                    "content": "This is the document for external knowledge."
-            },
-            {
-                    "metadata": {
-                            "path": "s3://dify/introduce.txt",
-                            "description": "dify introduce"
-                    },
-                    "score": 0.66,
-                    "title": "introduce.txt",
-                    "content": "The Innovation Engine for GenAI Applications"
+    "records": [
+        {
+            "content": "This is the document for external knowledge.",
+            "score": 0.98,
+            "title": "knowledge.txt",
+            "metadata": {
+                "path": "s3://dify/knowledge.txt",
+                "description": "dify knowledge document"
             }
+        },
+        {
+            "content": "The Innovation Engine for GenAI Applications",
+            "score": 0.66,
+            "title": "introduce.txt",
+            "metadata": {}
+        }
     ]
 }
 ```
 
-## Errors
+## Error Handling
 
-If the action fails, the service sends back the following error information in JSON format:
+Dify checks the HTTP status code of your response. A non-200 status raises an error that surfaces to the user.
 
-| Property | Required | Type | Description | Example value |
-|----------|----------|------|-------------|---------------|
-| error_code | TRUE | int | Error code | 1001 |
-| error_msg | TRUE | string | The description of API exception | Invalid Authorization header format. Expected 'Bearer `<api-key>`' format. |
+You can optionally return structured error information in JSON:
 
-The `error_code` property has the following types:
+| Property | Type | Description |
+|:---------|:-----|:------------|
+| `error_code` | int | An application-level error code you define. |
+| `error_msg` | string | A human-readable error description. |
 
-| Code | Description |
-|------|-------------|
-| 1001 | Invalid Authorization header format. |
+The following are suggested error codes. These are conventions, not enforced by Dify:
+
+| Code | Suggested Usage |
+|:-----|:----------------|
+| 1001 | Invalid Authorization header format |
 | 1002 | Authorization failed |
-| 2001 | The knowledge does not exist |
+| 2001 | Knowledge base not found |
 
-### HTTP Status Codes
+### Example Error Response
 
-**AccessDeniedException**
-The request is denied because of missing access permissions. Check your permissions and retry your request.
-HTTP Status Code: 403
+```json
+{
+    "error_code": 1002,
+    "error_msg": "Authorization failed. Please check your API key."
+}
+```
 
-**InternalServerException**
-An internal server error occurred. Retry your request.
-HTTP Status Code: 500
-
-## Development Example
-
-You can learn how to develop external knowledge base plugins through the following video tutorial using LlamaCloud as an example:
-
-
-For more information about how it works, please refer to the plugin's [GitHub repository](https://github.com/langgenius/dify-official-plugins/tree/main/extensions/llamacloud).
