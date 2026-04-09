@@ -104,7 +104,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | pre-processing | 预处理 | 前処理 | Text cleaning operations before chunking; use "pre-processing" (noun) or "pre-process" (verb) |
 | Summary Auto-Gen | 摘要自动生成| 要約自動生成 | Feature that automatically generates summaries for chunks |
 | Top K | Top K | Top K | Number of most relevant chunks to retrieve |
-| score threshold | 分数阈值 | スコアしきい値 | Minimum relevance score required for chunks to be included |
+| score threshold | 分数阈值 | スコアしきい値 | Minimum similarity score required for chunks to be included |
+| similarity score | 相似度分数 | 類似度スコア | Use "similarity score" consistently; avoid "relevance score" |
 
 ### Configuration & Parameters
 
@@ -345,6 +346,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | External Knowledge Base | 外部知识库 | 外部知識ベース | dataset.externalKnowledgeBase | |
+| External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID | dataset.externalKnowledgeId | Identifier for a specific knowledge source in an external system |
 | External API | 外部 API | 外部 API | dataset.externalAPI | |
 | Service API | 服务 API | サービスAPI | dataset.serviceApi.title | |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
