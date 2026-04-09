@@ -2,6 +2,7 @@
 
 Documentation for Dify, built with Mintlify. English is the source language;
 Chinese and Japanese translations are generated automatically.
+Exception: `en/self-host/configuration/environments.mdx` is excluded from the translation pipeline and must be translated manually.
 
 ## Before Any Documentation Task
 

@@ -137,6 +137,10 @@ The script reports:
 
 Use `.env.example` defaults (what Docker Compose users actually get), not Pydantic code defaults.
 
+## Translation
+
+The automated translation pipeline does not cover environment variable documentation. After editing the English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.
+
 ## Post-Writing Verification
 
 After completing the document:

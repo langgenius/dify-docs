@@ -97,7 +97,7 @@ This repository includes Claude Code skills in `.claude/skills/` that provide wr
 ### Guidelines
 
 - **One topic per PR.** Don't combine unrelated changes.
-- **English only.** Translations are handled automatically.
+- **English only.** Translations are handled automatically, except for `en/self-host/configuration/environments.mdx` which must be translated manually.
 - **Update navigation.** If you add a new page, add it to the English section of `docs.json`.
 - **Test locally.** Run `mintlify dev` to verify your changes render correctly before opening a PR.
 - **No secrets.** Never commit API keys, credentials, or `.env` files.
