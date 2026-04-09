@@ -59,6 +59,8 @@ These are principles, not absolute rules. Apply them when they improve clarity; 
 
 **Decision-making information.** Provide applicable scenarios and trade-offs rather than prescribing specific configurations. Users have diverse needs; give them what they need to make informed choices.
 
+**Adjustable parameter guidance.** When documenting parameters users can tune (thresholds, limits, intervals), describe the trade-off direction—not a recommended value. Tell users what happens when they go higher vs. lower so they can decide based on their own context. For example: "Higher thresholds return fewer, more relevant results; lower thresholds include broader matches."
+
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
 ## Patterns to Avoid
