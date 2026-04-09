@@ -139,7 +139,7 @@ Use `.env.example` defaults (what Docker Compose users actually get), not Pydant
 
 ## Translation
 
-The automated translation pipeline does not cover environment variable documentation. After editing the English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.
+The automated translation pipeline does not cover `en/self-host/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.
 
 ## Post-Writing Verification
 
