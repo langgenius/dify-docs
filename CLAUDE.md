@@ -16,7 +16,11 @@ references for your task.
   automatically.
 - MDX files require `title` and `description` in YAML frontmatter.
 - When writing about a feature, verify behavior against the Dify codebase,
-  not just existing docs. Existing docs may be outdated.
+  not just existing docs. Existing docs may be outdated or completely wrong.
+  When rewriting a page, treat every claim in the original as unverified.
+  Check field names, types, required/optional status, and behavior
+  descriptions against the current code. Never carry forward details from
+  legacy docs without independent verification.
 - For new features, the user may specify a development branch. Code on
   development branches may be in flux—when behavior is ambiguous, ask
   rather than assume.
