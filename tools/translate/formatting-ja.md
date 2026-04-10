@@ -148,7 +148,14 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
-- **Cross-reference heading anchors:** When a link includes `#heading-slug`, update the slug to match the translated heading.
+## Cross-Reference Heading Anchors
+
+When a link includes `#heading-slug`, the slug must match the **translated** heading, not the English original. Mintlify generates slugs from the heading text, so an untranslated anchor will break the link.
+
+| English source | Japanese translation |
+|:---------------|:---------------------|
+| `external-knowledge-api#response` | `external-knowledge-api#レスポンス` |
+| `setting-indexing-methods#setting-the-retrieval-setting` | `setting-indexing-methods#検索設定の構成` |
 
 ## Em Dashes
 
