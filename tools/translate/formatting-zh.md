@@ -127,7 +127,7 @@ When a link includes `#heading-slug`, the slug must match the **translated** hea
 | English source | Chinese translation |
 |:---------------|:--------------------|
 | `external-knowledge-api#response` | `external-knowledge-api#响应` |
-| `setting-indexing-methods#setting-the-retrieval-setting` | `setting-indexing-methods#设置检索方式` |
+| `setting-indexing-methods#setting-the-retrieval-setting` | `setting-indexing-methods#指定检索设置` |
 
 ## Em Dashes
 

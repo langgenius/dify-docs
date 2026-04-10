@@ -155,7 +155,7 @@ When a link includes `#heading-slug`, the slug must match the **translated** hea
 | English source | Japanese translation |
 |:---------------|:---------------------|
 | `external-knowledge-api#response` | `external-knowledge-api#レスポンス` |
-| `setting-indexing-methods#setting-the-retrieval-setting` | `setting-indexing-methods#検索設定の構成` |
+| `setting-indexing-methods#setting-the-retrieval-setting` | `setting-indexing-methods#検索設定の指定` |
 
 ## Em Dashes
 
