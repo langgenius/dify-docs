@@ -139,7 +139,7 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/zh-Hans/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.
-- **Cross-reference heading anchors:** When a link includes `#heading-slug`, update the slug to match the translated heading.
+- **Cross-reference anchors:** When a link includes `#slug`, update the slug to match the translated text. This applies to both heading anchors and Tab title anchors (Mintlify generates anchors from `<Tab title="...">` values).
 
 ## Em Dashes
 

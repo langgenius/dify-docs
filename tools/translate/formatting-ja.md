@@ -75,6 +75,15 @@ No space is needed when bold text is adjacent to punctuation or the start of a l
 
 ## Links
 
+When link text is adjacent to Japanese characters, insert a space on each side:
+
+| Correct | Incorrect |
+|:--------|:----------|
+| 詳細は [環境変数](/path) を参照してください | 詳細は[環境変数](/path)を参照してください |
+| 代わりに [回答](/path) ノードを使用 | 代わりに[回答](/path)ノードを使用 |
+
+No space is needed when link text is adjacent to punctuation.
+
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/ja/`.
 
 ### API Reference Cross-Links
@@ -166,7 +175,7 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
-- **Cross-reference heading anchors:** When a link includes `#heading-slug`, update the slug to match the translated heading.
+- **Cross-reference anchors:** When a link includes `#slug`, update the slug to match the translated text. This applies to both heading anchors and Tab title anchors (Mintlify generates anchors from `<Tab title="...">` values).
 
 ## Em Dashes
 
