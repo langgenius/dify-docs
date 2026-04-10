@@ -138,3 +138,9 @@ Avoid these common issues in EN→ZH translation:
 - **Passive voice retention:** Prefer active voice. Write `已启用该功能` instead of `该功能已被启用`.
 - **Translationese (翻译腔):** Avoid overuse of `的`, `被`, `和`, and long modifier chains before nouns. Break into shorter clauses.
 - **Half-width punctuation leakage:** Ensure all Chinese punctuation is full-width; do not carry over half-width commas or periods from the English source.
+
+### Standard Phrase Translations
+
+| English | Chinese |
+|:--------|:--------|
+| See xx for details / for more information | 详见 xx |
