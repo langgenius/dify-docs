@@ -15,6 +15,15 @@ Always insert a space between Chinese characters and adjacent Latin letters, num
 | 设置 `Temperature` 参数 | 设置`Temperature`参数 |
 | 支持 3 种模型 | 支持3种模型 |
 
+**Exception:** No space between two adjacent punctuation marks. Punctuation includes full-width CJK marks (。、，；：）, backticks, and markdown brackets (`[`, `]`, `(`, `)`).
+
+| Correct | Incorrect |
+|:--------|:----------|
+| 默认为 `"untitled"`。 | 默认为 `"untitled"` 。 |
+| `"page"`、`"database"` | `"page"` 、 `"database"` |
+| 详见（[链接](/path)）。 | 详见（ [链接](/path) ）。 |
+| 返回。`streaming` 模式 | 返回。 `streaming` 模式 |
+
 ## Punctuation
 
 Use full-width punctuation in Chinese text:
@@ -88,6 +97,16 @@ When link text is adjacent to Chinese characters, insert a space on each side:
 No space is needed when link text is adjacent to punctuation.
 
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/zh/`.
+
+### API Reference Cross-Links
+
+In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
+
+| English | Chinese |
+|:--------|:--------|
+| `/api-reference/knowledge-pipeline/upload-pipeline-file` | `/api-reference/知识流水线/上传流水线文件` |
+
+The translated tag and summary must match the `tags` and `summary` fields in the corresponding endpoint of the zh OpenAPI spec.
 
 ## Numbers
 

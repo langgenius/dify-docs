@@ -30,6 +30,14 @@ Insert a space between Japanese characters and adjacent Latin letters, numbers, 
 
 This rule also applies before Japanese particles (を、は、が、の、に、で、と) when they follow Latin text.
 
+**Exception:** No space between two adjacent punctuation marks. Punctuation includes full-width CJK marks (。、：）, backticks, and markdown brackets (`[`, `]`, `(`, `)`).
+
+| Correct | Incorrect |
+|:--------|:----------|
+| `"page"`、`"database"` | `"page"` 、 `"database"` |
+| 参照（[リンク](/path)）。 | 参照（ [リンク](/path) ）。 |
+| です。`streaming` モード | です。 `streaming` モード |
+
 ## Punctuation
 
 Use full-width punctuation in Japanese text:
@@ -68,6 +76,16 @@ No space is needed when bold text is adjacent to punctuation or the start of a l
 ## Links
 
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/ja/`.
+
+### API Reference Cross-Links
+
+In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
+
+| English | Japanese |
+|:--------|:---------|
+| `/api-reference/knowledge-pipeline/upload-pipeline-file` | `/api-reference/ナレッジパイプライン/パイプラインファイルをアップロード` |
+
+The translated tag and summary must match the `tags` and `summary` fields in the corresponding endpoint of the ja OpenAPI spec.
 
 ## Katakana Conventions
 
