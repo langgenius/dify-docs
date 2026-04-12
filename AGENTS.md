@@ -15,6 +15,9 @@ For task-specific guidance, see `writing-guides/index.md`.
 - Only edit the English section in `docs.json`. Translation sections sync
   automatically.
 - MDX files require `title` and `description` in YAML frontmatter.
+- When adding or updating internal-only instructions, tooling, configs, or
+  other non-public files, ensure all paths that should not be exposed by
+  Mintlify are covered in `.mintignore`.
 - Never use `--no-verify` when committing.
 
 ## Repository Structure
