@@ -1,5 +1,7 @@
 # Dify Documentation — AI Agent Instructions
 
+Documentation for Dify, built with Mintlify. English is the source language; Chinese and Japanese translations are generated automatically. Exception: `en/self-host/configuration/environments.mdx` is excluded from the translation pipeline and must be translated manually.
+
 For documentation tasks, read these guides before starting:
 
 1. `writing-guides/style-guide.md` — Voice, tone, writing patterns
@@ -10,14 +12,12 @@ For task-specific guidance, see `writing-guides/index.md`.
 
 ## Key Rules
 
-- Write in English only, except when specifically optimizing Chinese
-  or Japanese translations.
-- Only edit the English section in `docs.json`. Translation sections sync
-  automatically.
+- Write in English only, except when specifically optimizing Chinese or Japanese translations.
+- Only edit the English section in `docs.json`. Translation sections sync automatically.
 - MDX files require `title` and `description` in YAML frontmatter.
-- When adding or updating internal-only instructions, tooling, configs, or
-  other non-public files, ensure all paths that should not be exposed by
-  Mintlify are covered in `.mintignore`.
+- When writing about a feature, verify behavior against the Dify codebase, not just existing docs. Existing docs may be outdated.
+- For new features, the user may specify a development branch. Code on development branches may be in flux—when behavior is ambiguous, ask rather than assume.
+- When adding or updating internal-only instructions, tooling, configs, or other non-public files, ensure all paths that should not be exposed by Mintlify are covered in `.mintignore`.
 - Never use `--no-verify` when committing.
 
 ## Repository Structure
