@@ -14,6 +14,8 @@ Express ideas clearly and concisely. Every sentence should add value. Cut unnece
 
 Choose precision when it prevents confusion. A specific, descriptive term is better than a shorthand that assumes shared context with the reader.
 
+Keep paragraphs under 50 words. On Mintlify's content width, longer paragraphs exceed four rendered lines and become visually dense. When a paragraph runs long, split it at a natural boundary—typically where the topic shifts from setup to payoff, or from problem to solution.
+
 When a heading already states the topic, the first sentence should add new information—not restate the heading.
 
 ## Formatting Principles
