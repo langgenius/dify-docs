@@ -5753,25 +5753,129 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "Input variables for the pipeline."
+                    "description": "Key-value pairs for pipeline input variables defined in the workflow. Pass `{}` if the pipeline has no input variables."
                   },
                   "datasource_type": {
                     "type": "string",
                     "enum": [
-                      "online_document",
                       "local_file",
+                      "online_document",
                       "website_crawl",
                       "online_drive"
                     ],
-                    "description": "Type of the datasource."
+                    "description": "Type of the datasource. Determines which fields are expected in `datasource_info_list` items."
                   },
                   "datasource_info_list": {
                     "type": "array",
+                    "description": "List of datasource objects to process. The expected item structure depends on `datasource_type`.",
                     "items": {
-                      "type": "object",
-                      "additionalProperties": true
-                    },
-                    "description": "List of datasource information objects for the pipeline to process."
+                      "oneOf": [
+                        {
+                          "title": "Local File",
+                          "type": "object",
+                          "required": [
+                            "reference"
+                          ],
+                          "properties": {
+                            "reference": {
+                              "type": "string",
+                              "description": "Use the `id` returned by the [Upload Pipeline File](/api-reference/knowledge-pipeline/upload-pipeline-file) endpoint. `related_id` is accepted as an alias."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "Document title. Defaults to `\"untitled\"`."
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Document",
+                          "type": "object",
+                          "required": [
+                            "workspace_id",
+                            "page"
+                          ],
+                          "properties": {
+                            "workspace_id": {
+                              "type": "string",
+                              "description": "ID of the workspace or database in the external platform (e.g., a Notion workspace ID)."
+                            },
+                            "page": {
+                              "type": "object",
+                              "description": "Page details.",
+                              "required": [
+                                "page_id",
+                                "type"
+                              ],
+                              "properties": {
+                                "page_id": {
+                                  "type": "string",
+                                  "description": "Page identifier."
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "Page type defined by the datasource plugin (e.g., `\"page\"`, `\"database\"`)."
+                                },
+                                "page_name": {
+                                  "type": "string",
+                                  "description": "Display name. Defaults to `\"untitled\"`."
+                                }
+                              }
+                            },
+                            "credential_id": {
+                              "type": "string",
+                              "description": "Credential for authenticating with the external platform. Managed via the Dify console. If omitted, the provider's default credential is used."
+                            }
+                          }
+                        },
+                        {
+                          "title": "Website Crawl",
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "URL to crawl."
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "Used as the document name. Defaults to `\"untitled\"`."
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Drive",
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "File or folder ID."
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "file",
+                                "folder"
+                              ],
+                              "description": "Whether this entry is a single file or a folder to expand."
+                            },
+                            "bucket": {
+                              "type": "string",
+                              "description": "Storage bucket name. Required by some drive providers (e.g., S3-compatible stores); omit if the provider does not use buckets."
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "File name. Defaults to `\"untitled\"`."
+                            }
+                          }
+                        }
+                      ]
+                    }
                   },
                   "start_node_id": {
                     "type": "string",
@@ -5779,7 +5883,7 @@
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "Whether to run the published or draft version of the pipeline. `true` runs the published version, `false` runs the draft."
+                    "description": "Whether to run the published or draft version of the pipeline. `true` runs the latest published version; `false` runs the current draft (useful for testing unpublished changes)."
                   },
                   "response_mode": {
                     "type": "string",
@@ -5788,6 +5892,79 @@
                       "blocking"
                     ],
                     "description": "Response mode for the pipeline execution. `streaming` returns a Server-Sent Events stream, `blocking` waits and returns the complete result."
+                  }
+                }
+              },
+              "examples": {
+                "local_file": {
+                  "summary": "Request Example—Local file",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "local_file",
+                    "datasource_info_list": [
+                      {
+                        "reference": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "name": "quarterly-report.pdf"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_document": {
+                  "summary": "Request Example—Online document",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_document",
+                    "datasource_info_list": [
+                      {
+                        "workspace_id": "ws-abc123",
+                        "page": {
+                          "page_id": "pg-def456",
+                          "type": "page",
+                          "page_name": "Product Roadmap"
+                        },
+                        "credential_id": "cred-789xyz"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "streaming"
+                  }
+                },
+                "website_crawl": {
+                  "summary": "Request Example—Website crawl",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "website_crawl",
+                    "datasource_info_list": [
+                      {
+                        "url": "https://example.com/docs/getting-started",
+                        "title": "Getting Started Guide"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_drive": {
+                  "summary": "Request Example—Online drive",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_drive",
+                    "datasource_info_list": [
+                      {
+                        "id": "file-abc123",
+                        "type": "file",
+                        "bucket": "my-bucket",
+                        "name": "meeting-notes.docx"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
                   }
                 }
               }
@@ -5801,7 +5978,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events stream containing pipeline execution progress and results. Returned when `response_mode` is `streaming`."
+                  "description": "Server-Sent Events stream. Returned when `response_mode` is `streaming`.\n\nEach line is `data: {JSON}\\n\\n`. Key events: `workflow_started` (execution began), `node_started` / `node_finished` (per-node progress with `node_id`, `node_type`, `status`, `inputs`, `outputs`), `workflow_finished` (final result with `status`, `outputs`, `total_tokens`, `elapsed_time`), `ping` (keepalive)."
                 }
               },
               "application/json": {

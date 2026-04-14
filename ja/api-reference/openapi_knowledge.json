@@ -5753,25 +5753,129 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "パイプラインの入力変数です。"
+                    "description": "パイプライン入力変数のキーと値のペア。ワークフローで定義されたパイプライン変数に対応します。入力変数がない場合は `{}` を渡してください。"
                   },
                   "datasource_type": {
                     "type": "string",
                     "enum": [
-                      "online_document",
                       "local_file",
+                      "online_document",
                       "website_crawl",
                       "online_drive"
                     ],
-                    "description": "データソースの種類です。"
+                    "description": "データソースのタイプ。`datasource_info_list` の各項目に必要なフィールドを決定します。"
                   },
                   "datasource_info_list": {
                     "type": "array",
+                    "description": "処理対象のデータソースオブジェクトのリストです。項目の構造は `datasource_type` によって異なります。",
                     "items": {
-                      "type": "object",
-                      "additionalProperties": true
-                    },
-                    "description": "パイプラインが処理するデータソース情報オブジェクトのリストです。"
+                      "oneOf": [
+                        {
+                          "title": "Local File",
+                          "type": "object",
+                          "required": [
+                            "reference"
+                          ],
+                          "properties": {
+                            "reference": {
+                              "type": "string",
+                              "description": "[パイプラインファイルアップロード](/api-reference/ナレッジパイプライン/パイプラインファイルをアップロード) エンドポイントから返される `id` を使用してください。`related_id` もエイリアスとして使用可能です。"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "ドキュメントのタイトルです。デフォルトは `\"untitled\"` です。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Document",
+                          "type": "object",
+                          "required": [
+                            "workspace_id",
+                            "page"
+                          ],
+                          "properties": {
+                            "workspace_id": {
+                              "type": "string",
+                              "description": "外部プラットフォームのワークスペースまたはデータベース ID（例：Notion のワークスペース ID）。"
+                            },
+                            "page": {
+                              "type": "object",
+                              "description": "ページの詳細です。",
+                              "required": [
+                                "page_id",
+                                "type"
+                              ],
+                              "properties": {
+                                "page_id": {
+                                  "type": "string",
+                                  "description": "ページ識別子です。"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "データソースプラグインで定義されたページタイプ（例：`\"page\"`、`\"database\"`）。"
+                                },
+                                "page_name": {
+                                  "type": "string",
+                                  "description": "表示名です。デフォルトは `\"untitled\"` です。"
+                                }
+                              }
+                            },
+                            "credential_id": {
+                              "type": "string",
+                              "description": "外部プラットフォームとの認証用クレデンシャルです。Dify コンソールで管理します。省略した場合、プロバイダーのデフォルトクレデンシャルが使用されます。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Website Crawl",
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "クロール対象の URL です。"
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "ドキュメント名として使用されます。デフォルトは `\"untitled\"` です。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Drive",
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "ファイルまたはフォルダの ID です。"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "file",
+                                "folder"
+                              ],
+                              "description": "この項目が単一ファイルか、展開対象のフォルダかを指定します。"
+                            },
+                            "bucket": {
+                              "type": "string",
+                              "description": "ストレージバケット名です。一部のドライブプロバイダー（S3 互換ストレージなど）で必要です。プロバイダーがバケットを使用しない場合は省略できます。"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "ファイル名です。デフォルトは `\"untitled\"` です。"
+                            }
+                          }
+                        }
+                      ]
+                    }
                   },
                   "start_node_id": {
                     "type": "string",
@@ -5779,7 +5883,7 @@
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "パイプラインの公開バージョンとドラフトバージョンのどちらを実行するかを指定します。`true` は公開バージョン、`false` はドラフトを実行します。"
+                    "description": "パイプラインの公開版またはドラフト版のどちらを実行するかを指定します。`true` は最新の公開版を実行し、`false` は現在のドラフトを実行します（未公開の変更をテストする場合に便利です）。"
                   },
                   "response_mode": {
                     "type": "string",
@@ -5787,7 +5891,80 @@
                       "streaming",
                       "blocking"
                     ],
-                    "description": "パイプライン実行のレスポンスモードです。`streaming` はサーバー送信イベントストリームを返し、`blocking` は完了を待って完全な結果を返します。"
+                    "description": "パイプライン実行のレスポンスモードです。`streaming` は Server-Sent Events ストリームを返し、`blocking` は完了まで待機して完全な結果を返します。"
+                  }
+                }
+              },
+              "examples": {
+                "local_file": {
+                  "summary": "リクエスト例—ローカルファイル",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "local_file",
+                    "datasource_info_list": [
+                      {
+                        "reference": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "name": "quarterly-report.pdf"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_document": {
+                  "summary": "リクエスト例—オンラインドキュメント",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_document",
+                    "datasource_info_list": [
+                      {
+                        "workspace_id": "ws-abc123",
+                        "page": {
+                          "page_id": "pg-def456",
+                          "type": "page",
+                          "page_name": "Product Roadmap"
+                        },
+                        "credential_id": "cred-789xyz"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "streaming"
+                  }
+                },
+                "website_crawl": {
+                  "summary": "リクエスト例—ウェブサイトクロール",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "website_crawl",
+                    "datasource_info_list": [
+                      {
+                        "url": "https://example.com/docs/getting-started",
+                        "title": "Getting Started Guide"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_drive": {
+                  "summary": "リクエスト例—オンラインドライブ",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_drive",
+                    "datasource_info_list": [
+                      {
+                        "id": "file-abc123",
+                        "type": "file",
+                        "bucket": "my-bucket",
+                        "name": "meeting-notes.docx"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
                   }
                 }
               }
@@ -5801,7 +5978,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "パイプライン実行の進捗と結果を含むサーバー送信イベントストリームです。`response_mode` が `streaming` の場合に返されます。"
+                  "description": "Server-Sent Events ストリームです。各行は `data: {JSON}\\n\\n` 形式です。主要なイベント：`workflow_started`（実行開始）、`node_started` / `node_finished`（ノードごとの進捗、`node_id`、`node_type`、`status`、`inputs`、`outputs` を含む）、`workflow_finished`（最終結果、`status`、`outputs`、`total_tokens`、`elapsed_time` を含む）、`ping`（キープアライブ）。"
                 }
               },
               "application/json": {

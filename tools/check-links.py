@@ -12,6 +12,7 @@ import json
 import re
 import sys
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -66,9 +67,8 @@ def classify_link(url: str) -> str:
     """Classify a link as internal, external, anchor, or skip."""
     if url.startswith(("http://", "https://")):
         # Skip localhost/loopback URLs
-        from urllib.parse import urlparse
         try:
-            host = urlparse(url).hostname or ""
+            host = urllib.parse.urlparse(url).hostname or ""
             if host in ("localhost", "127.0.0.1", "0.0.0.0", "::1"):
                 return "skip"
         except Exception:
@@ -246,18 +246,34 @@ def check_external_links():
     broken = []
     skipped = 0
 
+    # Domains that reliably block automated requests or are geo-restricted
+    skip_domains = {"assets-docs.dify.ai", "volcengine.com", "twitter.com", "x.com"}
+
     for i, url in enumerate(unique_urls):
         if (i + 1) % 50 == 0:
             print(f"  Progress: {i + 1}/{len(unique_urls)}")
 
-        # Skip asset CDN URLs (usually reliable, many of them)
-        if "assets-docs.dify.ai" in url:
-            skipped += 1
-            continue
+        # Skip unreliable domains by checking parsed hostname
+        try:
+            host = urllib.parse.urlparse(url).hostname or ""
+            if any(host == d or host.endswith("." + d) for d in skip_domains):
+                skipped += 1
+                continue
+        except Exception:
+            pass
+
+        # Encode non-ASCII characters in URL path, preserving existing percent-escapes
+        try:
+            parsed = urllib.parse.urlparse(url)
+            encoded_url = urllib.parse.urlunparse(parsed._replace(
+                path=urllib.parse.quote(parsed.path, safe="/:@!$&'()*+,;=-._~%")
+            ))
+        except Exception:
+            encoded_url = url
 
         try:
             req = urllib.request.Request(
-                url,
+                encoded_url,
                 method="HEAD",
                 headers={"User-Agent": "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"}
             )
@@ -270,7 +286,7 @@ def check_external_links():
             if e.code == 405:
                 try:
                     req = urllib.request.Request(
-                        url,
+                        encoded_url,
                         method="GET",
                         headers={"User-Agent": "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"}
                     )

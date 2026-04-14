@@ -15,6 +15,15 @@ Always insert a space between Chinese characters and adjacent Latin letters, num
 | 设置 `Temperature` 参数 | 设置`Temperature`参数 |
 | 支持 3 种模型 | 支持3种模型 |
 
+**Exception:** No space between two adjacent punctuation marks. Punctuation includes full-width CJK marks (。、，；：）, backticks, and markdown brackets (`[`, `]`, `(`, `)`).
+
+| Correct | Incorrect |
+|:--------|:----------|
+| 默认为 `"untitled"`。 | 默认为 `"untitled"` 。 |
+| `"page"`、`"database"` | `"page"` 、 `"database"` |
+| 详见（[链接](/path)）。 | 详见（ [链接](/path) ）。 |
+| 返回。`streaming` 模式 | 返回。 `streaming` 模式 |
+
 ## Punctuation
 
 Use full-width punctuation in Chinese text:
@@ -89,6 +98,16 @@ No space is needed when link text is adjacent to punctuation.
 
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/zh/`.
 
+### API Reference Cross-Links
+
+In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
+
+| English | Chinese |
+|:--------|:--------|
+| `/api-reference/knowledge-pipeline/upload-pipeline-file` | `/api-reference/知识流水线/上传流水线文件` |
+
+The translated tag and summary must match the `tags` and `summary` fields in the corresponding endpoint of the zh OpenAPI spec.
+
 ## Numbers
 
 - Use Arabic numerals (1, 2, 3), not Chinese numerals (一、二、三), for
@@ -120,9 +139,9 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/zh-Hans/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.
-## Cross-Reference Heading Anchors
+## Cross-Reference Anchors
 
-When a link includes `#heading-slug`, the slug must match the **translated** heading, not the English original. Mintlify generates slugs from the heading text, so an untranslated anchor will break the link.
+When a link includes `#slug`, the slug must match the **translated** text, not the English original. Mintlify generates slugs from the source text, so an untranslated anchor will break the link. This applies to both heading anchors and Tab title anchors (`<Tab title="...">` values).
 
 | English source | Chinese translation |
 |:---------------|:--------------------|

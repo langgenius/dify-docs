@@ -5753,33 +5753,137 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "流水线的输入变量。"
+                    "description": "流水线输入变量的键值对，对应工作流中定义的流水线变量。如果流水线没有输入变量，传 `{}`。"
                   },
                   "datasource_type": {
                     "type": "string",
                     "enum": [
-                      "online_document",
                       "local_file",
+                      "online_document",
                       "website_crawl",
                       "online_drive"
                     ],
-                    "description": "数据源类型。"
+                    "description": "数据源类型。决定 `datasource_info_list` 中条目所需的字段。"
                   },
                   "datasource_info_list": {
                     "type": "array",
+                    "description": "待处理的数据源对象列表。条目结构取决于 `datasource_type`。",
                     "items": {
-                      "type": "object",
-                      "additionalProperties": true
-                    },
-                    "description": "供流水线处理的数据源信息对象列表。"
+                      "oneOf": [
+                        {
+                          "title": "Local File",
+                          "type": "object",
+                          "required": [
+                            "reference"
+                          ],
+                          "properties": {
+                            "reference": {
+                              "type": "string",
+                              "description": "使用 [上传流水线文件](/api-reference/知识流水线/上传流水线文件) 端点返回的 `id`。`related_id` 可作为别名使用。"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "文档标题。默认为 `\"untitled\"`。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Document",
+                          "type": "object",
+                          "required": [
+                            "workspace_id",
+                            "page"
+                          ],
+                          "properties": {
+                            "workspace_id": {
+                              "type": "string",
+                              "description": "外部平台中的工作空间或数据库 ID（例如 Notion 工作空间 ID）。"
+                            },
+                            "page": {
+                              "type": "object",
+                              "description": "页面详情。",
+                              "required": [
+                                "page_id",
+                                "type"
+                              ],
+                              "properties": {
+                                "page_id": {
+                                  "type": "string",
+                                  "description": "页面标识符。"
+                                },
+                                "type": {
+                                  "type": "string",
+                                  "description": "由数据源插件定义的页面类型（例如 `\"page\"`、`\"database\"`）。"
+                                },
+                                "page_name": {
+                                  "type": "string",
+                                  "description": "显示名称。默认为 `\"untitled\"`。"
+                                }
+                              }
+                            },
+                            "credential_id": {
+                              "type": "string",
+                              "description": "用于与外部平台认证的凭证。通过 Dify 控制台管理。如省略，则使用该供应商的默认凭证。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Website Crawl",
+                          "type": "object",
+                          "required": [
+                            "url"
+                          ],
+                          "properties": {
+                            "url": {
+                              "type": "string",
+                              "description": "待爬取的 URL。"
+                            },
+                            "title": {
+                              "type": "string",
+                              "description": "用作文档名称。默认为 `\"untitled\"`。"
+                            }
+                          }
+                        },
+                        {
+                          "title": "Online Drive",
+                          "type": "object",
+                          "required": [
+                            "id",
+                            "type"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "description": "文件或文件夹 ID。"
+                            },
+                            "type": {
+                              "type": "string",
+                              "enum": [
+                                "file",
+                                "folder"
+                              ],
+                              "description": "该条目是单个文件还是待展开的文件夹。"
+                            },
+                            "bucket": {
+                              "type": "string",
+                              "description": "存储桶名称。部分存储供应商需要此字段（例如 S3 兼容存储）；如果供应商不使用存储桶，可省略。"
+                            },
+                            "name": {
+                              "type": "string",
+                              "description": "文件名称。默认为 `\"untitled\"`。"
+                            }
+                          }
+                        }
+                      ]
+                    }
                   },
                   "start_node_id": {
                     "type": "string",
-                    "description": "流水线开始执行的节点 ID。"
+                    "description": "流水线开始执行的数据源节点 ID。"
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "运行流水线的已发布版本还是草稿版本。`true` 运行已发布版本，`false` 运行草稿版本。"
+                    "description": "运行流水线的已发布版本还是草稿版本。`true` 运行最新已发布版本；`false` 运行当前草稿（适用于测试未发布的更改）。"
                   },
                   "response_mode": {
                     "type": "string",
@@ -5788,6 +5892,79 @@
                       "blocking"
                     ],
                     "description": "流水线执行的响应模式。`streaming` 返回服务器发送事件流，`blocking` 等待并返回完整结果。"
+                  }
+                }
+              },
+              "examples": {
+                "local_file": {
+                  "summary": "请求示例—本地文件",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "local_file",
+                    "datasource_info_list": [
+                      {
+                        "reference": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                        "name": "quarterly-report.pdf"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_document": {
+                  "summary": "请求示例—在线文档",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_document",
+                    "datasource_info_list": [
+                      {
+                        "workspace_id": "ws-abc123",
+                        "page": {
+                          "page_id": "pg-def456",
+                          "type": "page",
+                          "page_name": "Product Roadmap"
+                        },
+                        "credential_id": "cred-789xyz"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "streaming"
+                  }
+                },
+                "website_crawl": {
+                  "summary": "请求示例—网站爬取",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "website_crawl",
+                    "datasource_info_list": [
+                      {
+                        "url": "https://example.com/docs/getting-started",
+                        "title": "Getting Started Guide"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
+                  }
+                },
+                "online_drive": {
+                  "summary": "请求示例—在线存储",
+                  "value": {
+                    "inputs": {},
+                    "datasource_type": "online_drive",
+                    "datasource_info_list": [
+                      {
+                        "id": "file-abc123",
+                        "type": "file",
+                        "bucket": "my-bucket",
+                        "name": "meeting-notes.docx"
+                      }
+                    ],
+                    "start_node_id": "1719288585006",
+                    "is_published": true,
+                    "response_mode": "blocking"
                   }
                 }
               }
@@ -5801,7 +5978,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "包含流水线执行进度和结果的服务器发送事件流。当 `response_mode` 为 `streaming` 时返回。"
+                  "description": "服务器发送事件流。每行格式为 `data: {JSON}\\n\\n`。主要事件：`workflow_started`（执行开始）、`node_started` / `node_finished`（逐节点进度，包含 `node_id`、`node_type`、`status`、`inputs`、`outputs`）、`workflow_finished`（最终结果，包含 `status`、`outputs`、`total_tokens`、`elapsed_time`）、`ping`（心跳保活）。"
                 }
               },
               "application/json": {

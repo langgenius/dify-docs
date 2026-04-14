@@ -30,6 +30,14 @@ Insert a space between Japanese characters and adjacent Latin letters, numbers, 
 
 This rule also applies before Japanese particles (を、は、が、の、に、で、と) when they follow Latin text.
 
+**Exception:** No space between two adjacent punctuation marks. Punctuation includes full-width CJK marks (。、：）, backticks, and markdown brackets (`[`, `]`, `(`, `)`).
+
+| Correct | Incorrect |
+|:--------|:----------|
+| `"page"`、`"database"` | `"page"` 、 `"database"` |
+| 参照（[リンク](/path)）。 | 参照（ [リンク](/path) ）。 |
+| です。`streaming` モード | です。 `streaming` モード |
+
 ## Punctuation
 
 Use full-width punctuation in Japanese text:
@@ -67,7 +75,26 @@ No space is needed when bold text is adjacent to punctuation or the start of a l
 
 ## Links
 
+When link text is adjacent to Japanese characters, insert a space on each side:
+
+| Correct | Incorrect |
+|:--------|:----------|
+| 詳細は [環境変数](/path) を参照してください | 詳細は[環境変数](/path)を参照してください |
+| 代わりに [回答](/path) ノードを使用 | 代わりに[回答](/path)ノードを使用 |
+
+No space is needed when link text is adjacent to punctuation.
+
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/ja/`.
+
+### API Reference Cross-Links
+
+In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
+
+| English | Japanese |
+|:--------|:---------|
+| `/api-reference/knowledge-pipeline/upload-pipeline-file` | `/api-reference/ナレッジパイプライン/パイプラインファイルをアップロード` |
+
+The translated tag and summary must match the `tags` and `summary` fields in the corresponding endpoint of the ja OpenAPI spec.
 
 ## Katakana Conventions
 
@@ -148,9 +175,9 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
-## Cross-Reference Heading Anchors
+## Cross-Reference Anchors
 
-When a link includes `#heading-slug`, the slug must match the **translated** heading, not the English original. Mintlify generates slugs from the heading text, so an untranslated anchor will break the link.
+When a link includes `#slug`, the slug must match the **translated** text, not the English original. Mintlify generates slugs from the source text, so an untranslated anchor will break the link. This applies to both heading anchors and Tab title anchors (`<Tab title="...">` values).
 
 | English source | Japanese translation |
 |:---------------|:---------------------|
