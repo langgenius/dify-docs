@@ -93,6 +93,22 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 
 签名文件 URL 的有效时长（秒）。超过此时间后 URL 将被拒绝，文件需要重新请求。对于长时间运行的流程可以增大此值；对于更严格的安全要求可以减小此值。
 
+### ENABLE_COLLABORATION_MODE
+
+默认值：`false`
+
+工作流画布实时协作的总开关，涵盖多人同时编辑、画布评论和 @ 提及。设为 `true` 时，前端激活协作 UI。
+
+仅设置此变量还不够。协作通过 WebSocket 运行，还需要：
+
+- 将 `SERVER_WORKER_CLASS` 设为 `geventwebsocket.gunicorn.workers.GeventWebSocketWorker`，使 Gunicorn 能够接受 WebSocket 升级（参见 [容器启动配置](#容器启动配置)）。
+- 将 `NEXT_PUBLIC_SOCKET_URL` 设为浏览器可访问的 WebSocket URL（参见 [CORS 配置](#cors-配置)）。
+
+**运维注意事项：**
+
+- **反向代理**：如果你通过自己的 nginx、traefik 或云负载均衡器（而非 Dify 内置 nginx）终止 TLS 或转发流量，请在 `/socket.io/` 路径上转发 `Upgrade` 与 `Connection` 请求头。Dify 自带的 `docker/nginx/conf.d/default.conf.template` 已包含此配置。
+- **API 多副本部署**：socket.io 服务端按会话保存内存状态。运行多个 API 副本时，需在负载均衡层启用会话保持（sticky sessions），避免客户端在不同副本间跳转。
+
 ### 系统编码
 
 | 变量 | 默认值 | 说明 |
@@ -167,7 +183,7 @@ openssl rand -base64 42
 | `DIFY_BIND_ADDRESS` | `0.0.0.0` | API 服务器绑定的网络接口。`0.0.0.0` 监听所有接口；设为 `127.0.0.1` 限制为仅本地访问。 |
 | `DIFY_PORT` | `5001` | API 服务器监听端口。 |
 | `SERVER_WORKER_AMOUNT` | `1` | Gunicorn 工作进程数。使用 gevent（默认）时，每个工作进程通过 greenlet 处理多个并发连接，因此 1 通常足够。对于同步工作进程，使用 `(2 x CPU 核心数) + 1`。[参考文档](https://gunicorn.org/design/#how-many-workers)。 |
-| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn 工作进程类型。Gevent 提供轻量级异步并发。更改此设置会破坏 psycopg2 和 gRPC 补丁——强烈不建议修改。 |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn 工作进程类型。`gevent` 提供轻量级异步并发。当 `ENABLE_COLLABORATION_MODE` 为 `true` 时，需设为 `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` 以接受 WebSocket 升级；若仍保留 `gevent`，协作客户端将在 WebSocket 握手阶段失败，且不会抛出启动错误。其他值会破坏 psycopg2 和 gRPC 补丁，不受支持。 |
 | `SERVER_WORKER_CONNECTIONS` | `10` | 每个工作进程的最大并发连接数。仅适用于异步工作进程（gevent）。如果在高负载下遇到连接拒绝或响应缓慢，尝试增大此值。 |
 | `GUNICORN_TIMEOUT` | `360` | 如果工作进程在此秒数内没有响应，Gunicorn 将终止并重启它。设为 360（6 分钟）以支持用于流式 LLM 响应的长连接 SSE。 |
 | `CELERY_WORKER_CLASS` | （空；默认为 gevent） | Celery 工作进程类型。与 `SERVER_WORKER_CLASS` 有相同的 gevent 补丁要求——强烈不建议修改。 |
@@ -323,6 +339,7 @@ sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<re
 | `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | 控制台 API 跨域请求的允许来源。如果未设置，回退到 `CONSOLE_WEB_URL`。 |
 | `COOKIE_DOMAIN` | （空） | 当前端和后端运行在不同子域上时，设为共享的顶级域名（例如 `example.com`）。这允许认证 Cookie 在子域间共享。为空时 Cookie 使用最安全的 `__Host-` 前缀，并锁定到单个域。 |
 | `NEXT_PUBLIC_COOKIE_DOMAIN` | （空） | 跨子域 Cookie 的前端标志。设为 `1`（或任何非空值）启用——后端从 `COOKIE_DOMAIN` 读取实际域名。 |
+| `NEXT_PUBLIC_SOCKET_URL` | `ws://localhost` | 实时协作的浏览器端 WebSocket 端点。当 `ENABLE_COLLABORATION_MODE` 为 `true` 时，工作流画布通过此地址进行实时编辑和评论。仅填写协议 + 主机 + 端口（路径 `/socket.io/` 由客户端固定），把 `http(s)://` 替换为 `ws(s)://`。示例：`wss://dify.example.com`。默认值 `ws://localhost` 在浏览器中解析为 80 端口，对应 Dify 自带 nginx。通过运行时环境注入生效，修改后容器重启即可应用，无需重新构建镜像。 |
 | `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | 仅前端。控制 UI 在批量操作时发起的并发 API 调用数。 |
 
 ### 文件存储配置
