@@ -107,6 +107,10 @@ def classify_link(url: str) -> str:
 def resolve_internal_link(url: str, source_file: Path) -> Path | None:
     """Resolve an internal link to a file path. Returns None if unresolved.
 
+    Absolute links (`/foo/bar`) resolve against the repo root.
+    Relative links (`./foo`, `../bar`) resolve against source_file's
+    parent directory.
+
     Returns REPO_ROOT for the bare root URL "/" (treated as valid but
     has no associated file for anchor lookup).
     """
@@ -116,23 +120,27 @@ def resolve_internal_link(url: str, source_file: Path) -> Path | None:
     if not url or url == "/":
         return REPO_ROOT
 
-    # Remove leading slash
-    clean = url.lstrip("/")
+    if url.startswith("./") or url.startswith("../"):
+        base = source_file.parent
+        clean = url
+    else:
+        base = REPO_ROOT
+        clean = url.lstrip("/")
 
     # Try exact path
-    candidate = REPO_ROOT / clean
+    candidate = (base / clean).resolve()
     if candidate.exists():
         return candidate
 
     # Try with common extensions
     for ext in [".mdx", ".md", ".json"]:
-        candidate = REPO_ROOT / (clean + ext)
+        candidate = (base / (clean + ext)).resolve()
         if candidate.exists():
             return candidate
 
     # Try as directory with index
     for ext in [".mdx", ".md"]:
-        candidate = REPO_ROOT / clean / ("index" + ext)
+        candidate = (base / clean / ("index" + ext)).resolve()
         if candidate.exists():
             return candidate
 
@@ -338,7 +346,7 @@ def check_internal_links():
     print(f"Files scanned: {len(files)}")
     print(f"Internal links checked: {total}")
     print(f"Anchors checked: {anchor_total}")
-    print(f"Anchors skipped (API reference): {skipped_anchors}")
+    print(f"Anchors skipped (non-MDX targets): {skipped_anchors}")
     print(f"Broken links: {len(broken)}")
     print(f"Broken anchors: {len(broken_anchors)}")
     print(f"docs.json issues: {len(docs_json_issues)}")
