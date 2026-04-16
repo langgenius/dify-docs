@@ -7,6 +7,8 @@ Usage:
     python3 tools/check-links.py --all          # Check both
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import re
@@ -24,6 +26,19 @@ DOCS_JSON = REPO_ROOT / "docs.json"
 MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
 HTML_SRC_RE = re.compile(r'src="([^"]+)"')
+HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+CUSTOM_ID_RE = re.compile(r"\{#([\w-]+)\}")
+HTML_ID_RE = re.compile(r"""<a\s+[^>]*\bid=["']([\w-]+)["']""", re.IGNORECASE)
+CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
+# Mintlify components whose `title=` attribute generates an anchor (e.g.,
+# `<Tab title="Workflow Tool">` → `#workflow-tool`).
+TAB_TITLE_RE = re.compile(
+    r"""<(?:Tab|Accordion)\b[^>]*\btitle=["']([^"']+)["']""",
+    re.IGNORECASE,
+)
+
+# Per-file anchor cache: file path -> set of valid anchor slugs
+_anchor_cache: dict[Path, set[str]] = {}
 
 
 def find_mdx_files() -> list[Path]:
@@ -89,33 +104,126 @@ def classify_link(url: str) -> str:
     return "skip"
 
 
-def resolve_internal_link(url: str, source_file: Path) -> bool:
-    """Check if an internal link resolves to an existing file."""
-    # Strip anchor
-    url = url.split("#")[0]
-    # Strip query params
-    url = url.split("?")[0]
+def resolve_internal_link(url: str, source_file: Path) -> Path | None:
+    """Resolve an internal link to a file path. Returns None if unresolved.
+
+    Returns REPO_ROOT for the bare root URL "/" (treated as valid but
+    has no associated file for anchor lookup).
+    """
+    # Strip anchor and query
+    url = url.split("#")[0].split("?")[0]
 
     if not url or url == "/":
-        return True
+        return REPO_ROOT
 
     # Remove leading slash
     clean = url.lstrip("/")
 
     # Try exact path
-    if (REPO_ROOT / clean).exists():
-        return True
+    candidate = REPO_ROOT / clean
+    if candidate.exists():
+        return candidate
 
     # Try with common extensions
     for ext in [".mdx", ".md", ".json"]:
-        if (REPO_ROOT / (clean + ext)).exists():
-            return True
+        candidate = REPO_ROOT / (clean + ext)
+        if candidate.exists():
+            return candidate
 
     # Try as directory with index
     for ext in [".mdx", ".md"]:
-        if (REPO_ROOT / clean / ("index" + ext)).exists():
-            return True
+        candidate = REPO_ROOT / clean / ("index" + ext)
+        if candidate.exists():
+            return candidate
 
+    return None
+
+
+def slugify(text: str) -> str:
+    """Convert heading text to a Mintlify-style anchor slug.
+
+    Mirrors the GitHub Flavored Markdown convention: lowercase, drop
+    punctuation other than hyphen/underscore, replace whitespace with
+    hyphens, collapse and trim.
+    """
+    s = text.lower().strip()
+    # Strip inline markdown formatting markers (backticks and asterisks).
+    # Underscores are preserved — they appear in identifier headings like
+    # `retrieval_setting` and Mintlify keeps them in the slug.
+    s = re.sub(r"[`*]", "", s)
+    # Strip Pandoc/kramdown custom-id syntax if embedded in heading text
+    s = CUSTOM_ID_RE.sub("", s)
+    # Drop characters that aren't word chars, hyphens, or whitespace
+    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    # Whitespace → hyphen
+    s = re.sub(r"\s+", "-", s)
+    # Collapse hyphens, trim
+    s = re.sub(r"-+", "-", s).strip("-")
+    return s
+
+
+def extract_anchors(file_path: Path) -> set[str]:
+    """Extract the set of valid anchor slugs in a file (cached)."""
+    if file_path in _anchor_cache:
+        return _anchor_cache[file_path]
+
+    anchors: set[str] = set()
+    if not file_path.is_file():
+        _anchor_cache[file_path] = anchors
+        return anchors
+
+    try:
+        content = file_path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        _anchor_cache[file_path] = anchors
+        return anchors
+
+    # Strip fenced code blocks so `# comment` lines aren't picked up as headings
+    content = CODE_FENCE_RE.sub("", content)
+
+    counts: dict[str, int] = {}
+    for match in HEADING_RE.finditer(content):
+        text = match.group(2)
+        custom = CUSTOM_ID_RE.search(text)
+        if custom:
+            anchors.add(custom.group(1))
+            continue
+        slug = slugify(text)
+        if not slug:
+            continue
+        if slug not in counts:
+            counts[slug] = 1
+            anchors.add(slug)
+        else:
+            anchors.add(f"{slug}-{counts[slug]}")
+            counts[slug] += 1
+
+    # Standalone <a id="..."> anchors
+    for match in HTML_ID_RE.finditer(content):
+        anchors.add(match.group(1))
+
+    # Mintlify Tab/Accordion titles also produce anchors
+    for match in TAB_TITLE_RE.finditer(content):
+        slug = slugify(match.group(1))
+        if slug:
+            anchors.add(slug)
+
+    _anchor_cache[file_path] = anchors
+    return anchors
+
+
+def anchor_check_skipped(url: str, resolved: Path) -> bool:
+    """Whether to skip anchor validation for a resolved target.
+
+    Skip API reference pages (anchors derived from OpenAPI spec, not the
+    file itself) and any non-MDX/MD target.
+    """
+    if "/api-reference/" in url:
+        return True
+    if resolved == REPO_ROOT:
+        return True
+    if resolved.suffix.lower() not in (".mdx", ".md"):
+        return True
     return False
 
 
@@ -176,20 +284,51 @@ def check_docs_json() -> list[tuple[str, str]]:
 
 
 def check_internal_links():
-    """Check all internal links and docs.json entries."""
+    """Check all internal links, anchors, and docs.json entries."""
     files = find_mdx_files()
-    broken = []
+    broken: list[tuple[str, int, str]] = []
+    broken_anchors: list[tuple[str, int, str]] = []
+    skipped_anchors = 0
     total = 0
+    anchor_total = 0
 
     for f in files:
         links = extract_links(f)
         for line_num, text, url in links:
-            if classify_link(url) != "internal":
+            cls = classify_link(url)
+
+            # Same-page anchor: validate against the source file's anchors
+            if cls == "anchor":
+                anchor = url.lstrip("#").split("?")[0]
+                if not anchor:
+                    continue
+                anchor_total += 1
+                if anchor not in extract_anchors(f):
+                    rel_path = str(f.relative_to(REPO_ROOT))
+                    broken_anchors.append((rel_path, line_num, url))
+                continue
+
+            if cls != "internal":
                 continue
             total += 1
-            if not resolve_internal_link(url, f):
-                rel_path = f.relative_to(REPO_ROOT)
-                broken.append((str(rel_path), line_num, url))
+
+            resolved = resolve_internal_link(url, f)
+            rel_path = str(f.relative_to(REPO_ROOT))
+            if resolved is None:
+                broken.append((rel_path, line_num, url))
+                continue
+
+            # If the URL has an anchor, validate it against the resolved file
+            if "#" in url:
+                anchor = url.split("#", 1)[1].split("?")[0]
+                if not anchor:
+                    continue
+                if anchor_check_skipped(url, resolved):
+                    skipped_anchors += 1
+                    continue
+                anchor_total += 1
+                if anchor not in extract_anchors(resolved):
+                    broken_anchors.append((rel_path, line_num, url))
 
     # Check docs.json
     docs_json_issues = check_docs_json()
@@ -198,7 +337,10 @@ def check_internal_links():
     print(f"\n=== Internal Link Check ===")
     print(f"Files scanned: {len(files)}")
     print(f"Internal links checked: {total}")
+    print(f"Anchors checked: {anchor_total}")
+    print(f"Anchors skipped (API reference): {skipped_anchors}")
     print(f"Broken links: {len(broken)}")
+    print(f"Broken anchors: {len(broken_anchors)}")
     print(f"docs.json issues: {len(docs_json_issues)}")
 
     if broken:
@@ -213,12 +355,23 @@ def check_internal_links():
             for line_num, url in by_file[file_path]:
                 print(f"    L{line_num}: {url}")
 
+    if broken_anchors:
+        print(f"\n--- Broken Anchors ---\n")
+        by_file_a: dict[str, list] = {}
+        for file_path, line_num, url in broken_anchors:
+            by_file_a.setdefault(file_path, []).append((line_num, url))
+
+        for file_path in sorted(by_file_a):
+            print(f"  {file_path}:")
+            for line_num, url in by_file_a[file_path]:
+                print(f"    L{line_num}: {url}")
+
     if docs_json_issues:
         print(f"\n--- docs.json Issues ---\n")
         for source, issue in docs_json_issues:
             print(f"  {issue}")
 
-    return len(broken) + len(docs_json_issues)
+    return len(broken) + len(broken_anchors) + len(docs_json_issues)
 
 
 def check_external_links():
