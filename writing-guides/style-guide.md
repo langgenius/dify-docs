@@ -41,7 +41,6 @@ Only add the image when the answer to the first two is no and the answer to the 
 When an image is warranted:
 
 - Prefer highlight marks (fills, color overlays) over bounding boxes to draw attention. Boxes pile up and age poorly; highlights integrate with the screenshot.
-- Use right angles, not rounded corners, so screenshots match the actual product UI.
 - Crop tightly to the relevant area. A full-window screenshot where only a panel matters is visual noise.
 
 For the mechanics of image syntax, alt text, captions, and storage, see the [Formatting Guide](./formatting-guide.md#images).
