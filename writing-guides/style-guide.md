@@ -26,6 +26,26 @@ Prefer prose over bullet points when explaining concepts or processes. Use bulle
 
 Use tabs (not numbered lists) when presenting parallel options users choose between. Numbered lists imply sequence; tabs signal alternatives.
 
+## Images
+
+An image should clarify something text cannot, not decorate the page. Documentation readers are trying to accomplish a task, and every visual element competes with the text for their attention. Images that repeat what the prose already says dilute the content rather than reinforce it.
+
+Before adding an image, ask three questions in order:
+
+1. Can the reader understand this section without it?
+2. If not, can rewording or restructuring the prose solve the problem?
+3. Is the image the only way to convey this information?
+
+Only add the image when the answer to the first two is no and the answer to the third is yes. Screenshots of obvious UI, decorative banners, and illustrations that restate the heading all belong in the cut column.
+
+When an image is warranted:
+
+- Prefer highlight marks (fills, color overlays) over bounding boxes to draw attention. Boxes pile up and age poorly; highlights integrate with the screenshot.
+- Use right angles, not rounded corners, so screenshots match the actual product UI.
+- Crop tightly to the relevant area. A full-window screenshot where only a panel matters is visual noise.
+
+For the mechanics of image syntax, alt text, captions, and storage, see the [Formatting Guide](./formatting-guide.md#images).
+
 ## Callout Usage
 
 - **Info**: General informational content—helpful context, version-specific or deployment-specific details

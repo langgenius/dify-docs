@@ -121,23 +121,142 @@ Do not use backticks for product names, UI labels, or general English words.
 
 ## Images
 
-### Preferred Format (Frame Component)
+For editorial guidance on whether to include an image at all, see the [Style Guide](./style-guide.md#images). The rules below cover mechanics only.
+
+### Syntax
+
+Use a `<Frame>` component wrapping a markdown image. This gives responsive sizing, consistent visual styling, and proper caption support. Do not use raw `<img>` tags.
 
 ```mdx
 <Frame>
-  ![LLM Node Overview](https://assets-docs.dify.ai/.../image.png)
+  ![LLM Node Overview](/images/use-dify/workflow/llm-node-overview.png)
 </Frame>
 ```
 
-- Use a `<Frame>` component wrapping `![]()` markdown syntax by default.
-- Always include a descriptive `alt` attribute in **title case**.
-- Only add a `caption` when the image's meaning is not clear from context—captions are visible to all readers, while alt text only displays if the image fails to load. Use **title case** for captions.
+### Alt Text
+
+Every image must have descriptive alt text. Alt text is read by screen readers and shown when an image fails to load.
+
+- Use **Title Case**, matching the convention for headings and UI element references.
+- Describe what the image communicates in context, not its visual appearance. "LLM Node Configuration Panel" is better than "Screenshot of a form with dropdowns."
+- Keep alt text under 125 characters. Screen readers truncate beyond that length.
+- Use `alt=""` (empty) for purely decorative images that carry no information. This is rare in documentation.
+
+### Captions
+
+Captions are visible to every reader; alt text is a fallback for screen readers and broken-image cases. They differ in visibility, but they describe the same image, so they should say the same thing.
+
+- Required when two or more images are presented together for comparison. Each image in the set needs a caption identifying what it shows, so readers can tell the images apart without inferring from context.
+- Optional elsewhere.
+- Use **Title Case** for captions.
+- **When a Frame has a caption, the alt text must match the caption exactly.** If you cannot think of a reason the two should differ, they should be identical.
 
 ```mdx
-<Frame caption="LLM Node Configuration Interface">
-  ![LLM Node Configuration Interface](https://assets-docs.dify.ai/.../image.png)
+<Frame caption="Correct: Highlight Used for Emphasis">
+  ![Correct: Highlight Used for Emphasis](/images/shared/emphasis-highlight.png)
+</Frame>
+
+<Frame caption="Incorrect: Bounding Box Used for Emphasis">
+  ![Incorrect: Bounding Box Used for Emphasis](/images/shared/emphasis-box.png)
 </Frame>
 ```
+
+### Storage
+
+All new images go in `/images/`, organized by **content domain**, not by where the image is referenced from. A content domain is a stable topical area that outlives nav reshuffles and physical folder refactors.
+
+### Tier 1: top-level dropdown
+
+Matches the four top-level dropdowns in `docs.json`, plus `shared/` for cross-section assets:
+
+- `images/use-dify/`
+- `images/develop-plugin/`
+- `images/self-host/`
+- `images/api-reference/`
+- `images/shared/`
+
+### Tier 2: content domain
+
+A **closed list** of topical subfolders within each tier-1 section. Contributors choose from this list. Adding a new tier-2 folder requires a writing team discussion; do not create ad-hoc folders.
+
+**`images/use-dify/`**
+
+- `get-started/` — introductions, concepts, onboarding visuals
+- `workflow/` — workflow and chatflow authoring, nodes (including agent nodes), debug
+- `basic-app/` — agent apps, chatbot apps, completion apps, and other non-workflow app types
+- `knowledge/` — knowledge bases, documents, retrieval, indexing
+- `monitor/` — monitoring dashboards, logs, analytics
+- `publish/` — publishing apps, WebApp chrome, API access, conversation features
+- `tutorial/` — step-by-step guides, multi-lesson series
+- `workspace/` — team settings, credentials, model providers, billing
+
+**`images/develop-plugin/`**
+
+- `get-started/`
+- `dev-guide/` — plugin development walkthroughs
+- `specs/` — schemas, manifests, specifications
+- `publish/` — marketplace listing and release
+
+**`images/self-host/`** and **`images/api-reference/`**
+
+Flat within the tier-1 folder for now. Tier-2 will be added when content volume justifies it.
+
+### Tier 3: per-tutorial subfolders and rare promotions
+
+Tier-3 subfolders apply in two cases.
+
+**Tutorials always get their own tier-3 subfolder, regardless of image count.** Each tutorial is a self-contained unit, and its images do not mix with images from other tutorials. For multi-lesson series like Workflow 101, each lesson is its own tier-3 subfolder.
+
+- `images/use-dify/tutorial/simple-chatbot/` — single-page tutorial, one folder
+- `images/use-dify/tutorial/workflow-101-lesson-01/` — multi-lesson series, one folder per lesson
+
+**Other tier-2 folders may earn a tier-3 promotion** when they accumulate roughly 30 or more images AND the excess is a self-contained sub-area. For smaller sub-areas, use a filename prefix instead of a new folder. For example, `workflow/trigger-schedule-config.png` rather than `workflow/trigger/schedule-config.png` when there are only a handful of trigger images.
+
+Promotions to tier-3 require updating every reference to every image in the affected sub-area, across `en/`, `zh/`, and `ja/`. Use the migration tooling at `tools/image-migration/` if it exists, or script the rename pass to keep references in sync.
+
+### When a folder path provides context, do not repeat it in filenames
+
+When an image lives inside a descriptive subfolder, the filename should not duplicate the folder's context. Inside `images/use-dify/tutorial/workflow-101-lesson-02/`, the file is `start-node.png`, not `workflow-101-lesson-02-start-node.png`. The folder path already says what lesson and series the image belongs to.
+
+This applies most strongly to tier-3 tutorial folders where the folder name encodes the tutorial identity. In tier-2 folders where the subfolder is a broad domain like `workflow/`, filenames may still need a domain-specific prefix for grep-friendliness.
+
+### Legacy CDN images
+
+Do not commit new images from external CDNs to the repo. Existing CDN-hosted images (`assets-docs.dify.ai`) remain as legacy; all new images are local.
+
+### Naming
+
+Format: `[descriptive-name].[extension]`, optionally with a module prefix and a two-digit sequence suffix.
+
+- **kebab-case, lowercase, ASCII only.** No underscores, spaces, Chinese characters, parentheses, or special characters (`@`, `&`, and so on).
+- **Lowercase file extensions.** `.png`, not `.PNG`. `.jpg`, not `.JPG`.
+- **No retina suffixes in filenames.** Strip `@2x`, `@3x`, and similar designators. They describe display metadata, not content. The file may still be a 2x asset; the filename does not need to advertise it.
+- **Descriptive and specific.** `workflow-llm-node-parameters.png` beats `workflow-01.png` or `screenshot.png`.
+- **Base-form verbs.** `configure-load-balance`, not `configuring-load-balance`. Matches the heading convention.
+- **Module prefix is optional** when the subfolder already provides scope. Use a prefix when the filename alone would be ambiguous out of context, or when you want grep-friendly grouping within a subfolder.
+- **Numeric suffix only for genuine sequences.** Use `01`, `02`, `03` (zero-padded to two digits) only when multiple images share the same module and description and need ordering. Zero-padding ensures natural sort order. Do not use numeric suffixes as a shortcut for lazy naming.
+
+Examples:
+
+- ✅ `images/use-dify/workflow/llm-node-overview.png`
+- ✅ `images/use-dify/workflow/llm-configure-parameters-01.png`
+- ✅ `images/use-dify/tutorial/workflow-101-lesson-02/start-node.png`
+- ✅ `images/develop-plugin/publish/marketplace-submit-form.png`
+- ❌ `images/use-dify/workflow/llm_node_overview.png` (underscores)
+- ❌ `images/use-dify/workflow/CleanShot2025-07-07at07.28.04@2x.png` (default tool name, retina suffix, special characters)
+- ❌ `images/use-dify/workflow/llm-node-overview.PNG` (uppercase extension)
+- ❌ `images/use-dify/workflow/screenshot-01.png` (not descriptive)
+
+Rename default tool outputs (`CleanShot*`, `Screenshot*`, `IMG_*`) before committing.
+
+### File Format and Size
+
+- **PNG** for UI screenshots.
+- **SVG** for icons, logos, and diagrams.
+- **MP4 or WebP** for motion. Avoid GIF for static images; use GIF only when you need autoplay in contexts that do not support video.
+- Avoid JPEG for documentation screenshots. JPEG compression artifacts degrade UI detail.
+- Capture screenshots at **2x resolution** (Retina) so they render sharply on high-DPI displays.
+- Compress before committing (TinyPNG, squoosh, or equivalent). Target under 500 KB per image where feasible.
 
 ---
 
@@ -285,6 +404,9 @@ Before submitting, verify:
 - [ ] Lists use dashes (`-`), not asterisks (`*`)
 - [ ] Code blocks have language tags
 - [ ] Internal links use absolute paths (`/en/...`)
-- [ ] Images have `alt` attributes
+- [ ] Images use `<Frame>` wrapping markdown `![]()`; alt text is in title case and under 125 characters
+- [ ] Image files are stored under the correct `images/<section>/` subfolder
+- [ ] Image filenames use kebab-case, are descriptive, and contain no default tool names
+- [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
