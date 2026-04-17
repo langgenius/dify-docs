@@ -12,15 +12,15 @@ Every MDX file must start with YAML frontmatter containing at least `title` and 
 
 ```yaml
 ---
-title: "Page Title"
-description: "A concise summary of what this page covers"
+title: Page Title
+description: A concise summary of what this page covers
 ---
 ```
 
 - `title` is **required**. `description` is required for new pages; existing pages should be updated over time.
 - `description` should not end with a period.
 - `sidebarTitle` is optional. Add it when the title is too long for the sidebar, or when other pages in the same group follow a specific `sidebarTitle` convention.
-- Use double quotes around values that contain special characters.
+- Leave values unquoted by default. Wrap a value in double quotes only when it contains a colon followed by a space, for example `title: "Step 1: Create Knowledge Pipeline"`. Without the quotes, YAML will misread everything after the colon.
 - Leave one blank line after the closing `---` before the document body.
 
 ---
