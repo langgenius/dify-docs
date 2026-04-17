@@ -35,19 +35,11 @@ FM_FIELD_RE = re.compile(r'^([A-Za-z][\w-]*)\s*:\s*(.*?)\s*$')
 # ---------- frontmatter ----------
 
 def _yaml_needs_quotes(value: str) -> bool:
-    v = value.rstrip()
-    if not v:
-        return True
-    if v[:1] in (':', '-', '?', '#', '[', ']', '{', '}', '&', '*', '!', '|',
-                 '>', "'", '"', '%', '@', '`'):
-        return True
-    if re.search(r':\s|:$', v):
-        return True
-    if v.lower() in ('yes', 'no', 'true', 'false', 'on', 'off', 'null', '~'):
-        return True
-    if re.match(r'^-?\d+(\.\d+)?$', v):
-        return True
-    return False
+    """Match the documented rule: quote only when the value contains a colon
+    followed by a space. Other YAML edge cases (leading special chars,
+    reserved words, numeric-looking values) are not flagged because the
+    formatting guide intentionally restricts the rule to the `: ` case."""
+    return ': ' in value
 
 
 def _unquote(v: str) -> tuple[str, str]:

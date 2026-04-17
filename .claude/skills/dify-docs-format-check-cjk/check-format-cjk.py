@@ -65,19 +65,10 @@ def _strip_code_and_urls(line: str) -> str:
 
 
 def _yaml_needs_quotes(value: str) -> bool:
-    v = value.rstrip()
-    if not v:
-        return True
-    if v[:1] in (':', '-', '?', '#', '[', ']', '{', '}', '&', '*', '!', '|',
-                 '>', "'", '"', '%', '@', '`'):
-        return True
-    if re.search(r':\s|:$', v):
-        return True
-    if v.lower() in ('yes', 'no', 'true', 'false', 'on', 'off', 'null', '~'):
-        return True
-    if re.match(r'^-?\d+(\.\d+)?$', v):
-        return True
-    return False
+    """Match the documented rule: quote only when the value contains a colon
+    followed by a space. Other YAML edge cases are intentionally not flagged
+    because the formatting guide restricts the rule to the `: ` case."""
+    return ': ' in value
 
 
 def _unquote(v: str) -> tuple[str, str]:
