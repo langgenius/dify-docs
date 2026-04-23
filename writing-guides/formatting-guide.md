@@ -381,7 +381,6 @@ Use for showing multiple code variants of the same operation:
 
 - **One blank line** between paragraphs, before/after headings, before/after components, before/after code blocks.
 - **No double blank lines** anywhere in the file.
-- Do not leave trailing whitespace at the end of lines.
 
 ---
 
@@ -389,6 +388,14 @@ Use for showing multiple code variants of the same operation:
 
 - **Em dashes**: No spaces around em dashes — write `word—word`, not `word — word`.
 - **En dashes**: No spaces around en dashes in ranges — write `2–4`, not `2 – 4`.
+
+---
+
+## Escaping Special Characters
+
+- **Dollar signs**: Mintlify's MDX has remark-math enabled, so paired `$` in prose renders as a LaTeX math span. Escape literal `$` as `\$`, including inside bold, lists, and Mintlify components. No escape needed inside code blocks or inline code.
+  - ✅ `The Yearly plan costs \$590/year, not \$59/month.`
+  - ❌ `The Yearly plan costs $590/year, not $59/month.`
 
 ---
 
@@ -410,3 +417,4 @@ Before submitting, verify:
 - [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
+- [ ] Dollar signs in prose are escaped as `\$` (not needed inside code)

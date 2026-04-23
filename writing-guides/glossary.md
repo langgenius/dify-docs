@@ -194,6 +194,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Data Source | 数据来源 | データソース | common.settings.dataSource | |
 | API Extension | API 扩展 | API 拡張 | common.settings.apiBasedExtension | |
 | Billing | 账单 | 請求 | common.settings.billing | |
+| Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
 | Integrations | 集成 | 統合 | common.settings.integrations | |
 | Default Model Settings | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | Renamed from "System Model Settings" in v1.13.1. EN/ZH UI updated; JA UI still shows "システムモデル設定" until i18n update. Planned JA label:「デフォルトモデル設定」. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
@@ -205,6 +206,15 @@ Terms in this section must match the Dify product interface exactly. When these 
 | AI Credits | AI Credits | AI クレジット | common.modelProvider.quota | Renamed from "Message Credits" in v1.13.1. ZH uses English "AI Credits" in UI. |
 | Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI Credits. |
 | API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI Credits. |
+
+### Billing
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Sandbox | Sandbox | Sandbox | billing.plans.sandbox.name | Free tier plan name; kept English in all locales. External materials may call this "Free" |
+| Professional | Professional | Professional | billing.plans.professional.name | Paid tier; kept English in all locales |
+| Team | Team | Team | billing.plans.team.name | Paid tier; kept English in all locales |
+| Upgrade | 升级 | アップグレード | billing.upgradeBtn.encourageShort | Short variant; "Upgrade Now" is the full label (`encourage` key) |
 
 ### Workspace Roles
 
