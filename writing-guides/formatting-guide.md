@@ -393,9 +393,9 @@ Use for showing multiple code variants of the same operation:
 
 ## Escaping Special Characters
 
-- **Dollar signs**: Mintlify's MDX has remark-math enabled, so paired `$` in prose renders as a LaTeX math span. Escape literal `$` as `\$`, including inside bold, lists, and Mintlify components. No escape needed inside code blocks or inline code.
-  - ✅ `The Yearly plan costs \$590/year, not \$59/month.`
-  - ❌ `The Yearly plan costs $590/year, not $59/month.`
+- **Dollar signs**: Mintlify's MDX has remark-math enabled, so paired `$` in prose renders as a LaTeX math span. In source markdown, escape literal `$` as `\$`, including inside bold, lists, and Mintlify components. No escape is needed to display `$` inside code blocks or inline code.
+  - ✅ Source markdown: `The Yearly plan costs \$590/year, not \$59/month.`
+  - ❌ Source markdown: `The Yearly plan costs $590/year, not $59/month.`
 
 ---
 
