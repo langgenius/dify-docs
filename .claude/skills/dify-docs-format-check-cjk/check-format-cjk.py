@@ -57,6 +57,9 @@ def _strip_inline_code(line: str) -> str:
 
 def _strip_code_and_urls(line: str) -> str:
     s = INLINE_CODE_RE.sub('', line)
+    # collapse markdown image syntax ![alt](url) -> alt first so the leading
+    # `!` doesn't survive as prose punctuation adjacent to the alt text
+    s = re.sub(r'!\[([^\]\n]+)\]\([^)\n]+\)', r'\1', s)
     # collapse markdown link syntax [text](url) -> text so the bracket and
     # paren characters don't count as prose punctuation
     s = re.sub(r'\[([^\]\n]+)\]\([^)\n]+\)', r'\1', s)
@@ -500,9 +503,11 @@ def check_cjk_bold_spacing(lines: list[str]) -> list[Violation]:
     vs: list[Violation] = []
     in_fence = False
     # Bold adjacent to CJK without space: X**bold** or **bold**X where X is
-    # CJK and no space between.
-    pat_after = re.compile(rf'{CJK}\*\*[^*\n]+?\*\*')
-    pat_before = re.compile(rf'\*\*[^*\n]+?\*\*{CJK}')
+    # CJK and no space between. Match each complete **bold** span first, then
+    # inspect its outer neighbors so the closing `**` of one bold is never
+    # mistaken for the opening `**` of a later bold on the same line.
+    bold_pat = re.compile(r'\*\*[^*\n]+?\*\*')
+    cjk_re = re.compile(CJK)
     for i, line in enumerate(lines, 1):
         if FENCE_RE.match(line):
             in_fence = not in_fence
@@ -510,7 +515,16 @@ def check_cjk_bold_spacing(lines: list[str]) -> list[Violation]:
         if in_fence:
             continue
         s = _strip_inline_code(line)
-        if pat_after.search(s) or pat_before.search(s):
+        flagged = False
+        for m in bold_pat.finditer(s):
+            start, end = m.span()
+            if start > 0 and cjk_re.match(s[start - 1]):
+                flagged = True
+                break
+            if end < len(s) and cjk_re.match(s[end]):
+                flagged = True
+                break
+        if flagged:
             vs.append(Violation(
                 i, 'CJK-bold-no-space',
                 'Bold adjacent to CJK without space on that side.'))
