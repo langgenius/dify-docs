@@ -11,17 +11,17 @@ description: >
 
 ## Purpose
 
-Verify changed English documentation against every rule in `writing-guides/formatting-guide.md`. Mechanical rules are enforced by a linter script (`check-format-en.py`); judgment-call rules are checked by reading the file.
+Verify English documentation against every rule in `writing-guides/formatting-guide.md`. Mechanical rules are enforced by a linter script (`check-format-en.py`); judgment-call rules are checked by reading the file.
 
 ## Before Starting
 
-Detect changed documentation files by combining:
+Audit the entire file, not just the diff. Default to files currently under review, detected via:
 
 - `git diff --name-only` (unstaged changes in tracked files)
 - `git diff --cached --name-only` (staged changes)
 - Untracked files from `git status --porcelain` (lines starting with `??`)
 
-Filter for `.mdx` and `.md` files under `en/`. If no changed files are detected, ask the user which files to check.
+Filter for `.mdx` and `.md` files under `en/`. If no files are detected, ask the user which files to check.
 
 ## Checks
 

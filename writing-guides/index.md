@@ -26,7 +26,7 @@ After completing a writing task, run these checks in order. Each is a self-conta
 | 3 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels. |
 | 4 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
 
-Steps 1 and 3 apply to any English doc change. Step 2 applies after the zh/ja translations are produced. Step 4 is always the last step because it depends on the others passing.
+Steps 1 and 3 apply to any English doc change. Step 2 applies after the zh/ja translations are produced. Steps 1, 2, and 3 audit the whole document, not just the diff. Step 4 is always the last step because it depends on the others passing.
 
 ## Reference Files
 
