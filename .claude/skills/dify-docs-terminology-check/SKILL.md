@@ -76,7 +76,6 @@ with the codebase, propose an update to `writing-guides/glossary.md` in the
 report. Note that `tools/translate/derive-termbase.py` should be run
 afterward so `tools/translate/termbase_i18n.md` stays in sync.
 
-
 ## Output Format
 
 ```
@@ -93,11 +92,6 @@ afterward so `tools/translate/termbase_i18n.md` stays in sync.
 - ✅ All UI labels (bolded terms and feature section headings) match codebase
   OR
 - ⚠️ Line {n}: **{label}** — codebase says "{expected}"
-
-**First-Mention Rule** (zh/ja only)
-- ✅ All terms properly introduced
-  OR
-- ⚠️ Line {n}: "{term}" — missing first-mention parenthetical
 
 **Glossary Gaps**
 - Terms used in docs but missing from glossary: {list}
