@@ -293,6 +293,14 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
 
+### Collaboration
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Add Comment | 添加评论 | コメントを追加 | workflow.comments.actions.addComment | Right-click menu item on canvas |
+| Edit comment | 编辑评论 | コメントを編集 | workflow.comments.actions.editComment | REVIEW: EN uses lowercase "comment" unlike sibling actions |
+| Comment Mode | 评论模式 | コメントモード | workflow.common.commentMode | Entered by pressing `C` on the canvas |
+
 ### Variable Config
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |

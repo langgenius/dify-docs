@@ -6,25 +6,13 @@ Use **active voice** whenever natural and clear. Passive voice is acceptable whe
 
 Be conversational but professional. Prefer everyday language over formal equivalents—"ask questions" over "submit queries". Avoid robotic, AI-sounding phrasing.
 
-This documentation serves both developers and non-technical users. Write to be accessible to both.
-
 ## Clarity and Conciseness
 
-Express ideas clearly and concisely. Every sentence should add value. Cut unnecessary words without losing meaning, but don't sacrifice readability for minimalism—the goal is the shortest version that still reads naturally.
+Express ideas clearly and concisely. Every sentence should add value. Cut unnecessary words without losing meaning.
 
 Choose precision when it prevents confusion. A specific, descriptive term is better than a shorthand that assumes shared context with the reader.
 
-Keep paragraphs under 50 words. On Mintlify's content width, longer paragraphs exceed four rendered lines and become visually dense. When a paragraph runs long, split it at a natural boundary—typically where the topic shifts from setup to payoff, or from problem to solution.
-
-When a heading already states the topic, the first sentence should add new information—not restate the heading.
-
-## Formatting Principles
-
-Use **Title Case** for all headings.
-
-Prefer prose over bullet points when explaining concepts or processes. Use bullet points only for genuinely discrete, enumerable items. Write in paragraphs when ideas connect.
-
-Use tabs (not numbered lists) when presenting parallel options users choose between. Numbered lists imply sequence; tabs signal alternatives.
+Keep paragraphs under 50 words. On Mintlify's content width, longer paragraphs exceed four rendered lines and become visually dense. When a paragraph runs long, split it at a natural boundary, typically where the topic shifts from setup to payoff, or from problem to solution.
 
 ## Images
 
@@ -47,16 +35,9 @@ For the mechanics of image syntax, alt text, captions, and storage, see the [For
 
 ## Callout Usage
 
-- **Info**: General informational content—helpful context, version-specific or deployment-specific details
-- **Tip**: Helpful suggestions or shortcuts
-- **Note**: Important information that requires attention—missing it could lead to potential complications
-- **Warning**: Actions that could cause errors or data loss
-
 Place critical limitations at the start of a section when users need them before taking action, not only at the end.
 
 **Avoid overuse.** Too many callouts dilute their importance and interrupt reading flow. When a section accumulates multiple callouts, restructure into flowing paragraphs with inline bold text instead. Reserve callout visual weight for genuinely critical information.
-
-These are principles, not absolute rules. Apply them when they improve clarity; use editorial judgment when they don't.
 
 ## Patterns to Use
 
@@ -86,15 +67,17 @@ These are principles, not absolute rules. Apply them when they improve clarity; 
 
 ## Patterns to Avoid
 
-**Excessive bullets.** Don't fragment continuous reasoning into bullet lists. If the items connect, use prose.
+**Excessive bullets.** Use bullet points only for genuinely discrete, enumerable items. When explaining concepts or processes, or when ideas connect, write in paragraphs. Don't fragment continuous reasoning into bullet lists.
 
 **Passive voice overuse.** "The file is uploaded by the user" → "You upload the file."
 
 **Feature-centric framing.** "This feature allows you to..." → "You can..." When an action is optional, "you can" is preferable; when it's required, use the imperative.
 
+**Feature names users don't see.** If a feature's official name doesn't appear in the product UI, don't use it as a sentence subject in body text. Describe what users do instead. "Collaboration lets workspace members edit..." → "You can edit the same workflow alongside your teammates..." Section headings and navigation labels can still use the name.
+
 **Redundant phrases.** Cut "in order to", "it should be noted that", "please note that", and similar filler.
 
-**Repeating context.** Don't restate the scenario conditions established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks."
+**Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading.
 
 **Repeating the UI.** Don't describe interface elements users can see directly—default values, field labels, button names. Documentation provides context and rationale not visible in the UI.
 

@@ -55,6 +55,55 @@ This is a team effort. The user brings documentation expertise and user empathy;
 - Trust the codebase over existing documentation. Existing docs may be outdated or inaccurate.
 - **Code presence ≠ working feature.** A code path existing does not guarantee the feature functions end to end. When behavior is inferred from code analysis rather than observed in the running product, flag it as unverified and ask the user to test before documenting it as fact.
 
+## Environment Variables in User Guides
+
+When a feature is gated by or configured through environment variables (feature toggles, endpoints, self-host-only switches, worker classes), coordinate with the reference doc instead of duplicating it.
+
+### Investigate first
+
+During feature research, check whether the feature has related environment variables:
+
+- Grep `docker/.env.example`, `api/configs/`, and the feature's PR for any `ENABLE_*`, `*_URL`, worker, or socket settings tied to the feature.
+- Note which variables are mandatory vs. optional, and what their defaults are.
+
+If the feature has related variables, use the `dify-docs-env-vars` skill to update `en/self-host/configuration/environments.mdx` in the same session. The reference doc is the single source of truth for variable semantics.
+
+### Division of responsibility
+
+- **Environment Variable Reference** (`en/self-host/configuration/environments.mdx`): exhaustive. Every variable gets a description covering purpose, defaults, interactions, and failure modes. Maintained via the `dify-docs-env-vars` skill.
+- **User Guide**: functional only. Name the mandatory variables and the values to set, then link to the reference. Do not re-explain the mechanism (WebSocket paths, worker classes, scheme rules, fallback behavior). Those details live in the reference.
+
+### How to present in the User Guide
+
+User Guides serve both SaaS (Dify Cloud) and self-hosted readers. Place self-host-only configuration in a callout rather than a dedicated H2 section. The callout surfaces the information clearly for self-hosters while letting SaaS readers skip past it without breaking the flow of the guide.
+
+Choose the callout type by what the variables do:
+
+- **`<Note>`** — when the variables are **mandatory** for the feature to work. Without them, self-hosters will not be able to use the feature at all. Example: `ENABLE_COLLABORATION_MODE` gates the entire collaboration feature.
+- **`<Info>`** — when the variables only **customize** existing behavior (tuning a default, switching backends, adjusting an endpoint). The feature works without them; these are optional knobs.
+
+Pattern (substitute `<Note>` or `<Info>` per the rule above):
+
+```mdx
+<Note>
+On self-hosted deployments, [feature] is turned off by default. Enable it by setting:
+
+- `VAR_NAME` = `value`
+- ...
+
+See [Environment Variables](/en/self-host/configuration/environments#var_name) for details.
+</Note>
+```
+
+Do not promote self-host config to an H2 section. Giving deployment-specific content equal weight with product-facing content clutters the guide for SaaS readers, who are the majority of the audience.
+
+### What to exclude from the User Guide
+
+- Default values already covered in the reference.
+- The "why" behind each variable: worker types, proxy paths, scheme rules, fallback behavior.
+- Custom-domain examples, deployment-specific mechanics, or variable interactions.
+- Anything a reader could find by clicking through to the reference.
+
 ## Style Overrides
 
 No overrides. Follow `writing-guides/style-guide.md` as written.
