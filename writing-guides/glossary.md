@@ -14,6 +14,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 |:--------|:--------|:---------|:------|
 | Workflow | 工作流 | ワークフロー | |
 | Chatflow | 对话流 | チャットフロー | |
+| workflow | 工作流 | ワークフロー | Always lowercase in English. Collective term covering both Workflow and Chatflow apps. Chinese and Japanese reuse the Workflow app-type translation. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools|
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
@@ -73,6 +74,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | List Operator | 列表操作 | リスト処理 | Filters, sorts, and limits list data |
 | Agent | Agent | Agent | Workflow node (distinct from Agent app type above) |
 | Human Input | 人工介入 | 人間の入力 | Pauses workflow execution to request human review or decisions |
+| Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Plugin Trigger. |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | Triggers workflow execution on a cron schedule |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | Triggers workflow execution via incoming HTTP webhook |
 | Plugin Trigger | 插件触发器 | プラグイントリガー | Triggers workflow execution from a plugin |
