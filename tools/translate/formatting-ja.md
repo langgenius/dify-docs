@@ -172,7 +172,7 @@ Use minimal honorifics. Be polite but not overly formal.
 Every translated page must include the translation disclaimer directly below the frontmatter, before any body content:
 
 ```mdx
-<Note> ⚠️ このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/path/to/page)を参照してください。</Note>
+<Note> ⚠️ このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/path/to/page) を参照してください。</Note>
 ```
 
 Keep the disclaimer regardless of whether the page has been human-reviewed. The English source is always the canonical version, and readers benefit from a consistent pointer to it on every translated page.
