@@ -119,12 +119,16 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE). Each event is a JSON object prefixed with `data: ` and terminated by two newlines. See `ChunkWorkflowEvent` for possible event structures.\n\n**SSE Parsing Guide:** Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing JSON. The `event` field inside the JSON determines the event type. The stream ends when a `workflow_finished` or `error` event is received. Ignore `ping` events (sent every 10 seconds to keep the connection alive). If an `error` event is received mid-stream, the stream terminates — parse the error object for details. Note that the HTTP status code is always `200` even when an error event occurs within the stream."
+                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each line begins with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which fire every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
                 },
                 "examples": {
                   "streamingResponse": {
                     "summary": "Response Example - Streaming mode",
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"query\": \"Translate this\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_1\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 1, \"created_at\": 1705407629}} data: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour le monde\"}, \"elapsed_time\": 1.23, \"total_tokens\": 150, \"total_steps\": 3, \"created_at\": 1705407629, \"finished_at\": 1705407630}}"
+                  },
+                  "humanInputPause": {
+                    "summary": "Response Example - Human Input pause",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
                   }
                 }
               }
@@ -308,7 +312,13 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE). Each event is a JSON object prefixed with `data: ` and terminated by two newlines. See `ChunkWorkflowEvent` for possible event structures.\n\n**SSE Parsing Guide:** Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing JSON. The `event` field inside the JSON determines the event type. The stream ends when a `workflow_finished` or `error` event is received. Ignore `ping` events (sent every 10 seconds to keep the connection alive). If an `error` event is received mid-stream, the stream terminates — parse the error object for details. Note that the HTTP status code is always `200` even when an error event occurs within the stream."
+                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each line begins with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which fire every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
+                },
+                "examples": {
+                  "humanInputPause": {
+                    "summary": "Response Example - Human Input pause",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
+                  }
                 }
               }
             }
@@ -1531,6 +1541,443 @@
                       "status": 403,
                       "code": "forbidden",
                       "message": "Forbidden."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/form/human_input/{form_token}": {
+      "get": {
+        "tags": [
+          "Human Input"
+        ],
+        "summary": "Get Human Input Form",
+        "description": "Retrieve a paused Human Input form's contents using the `form_token` from a `human_input_required` event. Requires **WebApp** delivery.",
+        "operationId": "getWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Access token for the paused form, returned in the `human_input_required` event from [Run Workflow](/api-reference/workflows/run-workflow) in streaming mode."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Form contents retrieved successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "form_content": {
+                      "type": "string",
+                      "description": "Pre-rendered form body with workflow variables substituted."
+                    },
+                    "inputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "Form input control type. Available values: `text_input` (single-line text field) and `paragraph` (multi-line text area)."
+                          },
+                          "output_variable_name": {
+                            "type": "string",
+                            "description": "Variable name used to reference this input's submitted value inside the workflow. Corresponds to the key in the submission `inputs` object."
+                          },
+                          "default": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "Default value resolved from the workflow context. `null` when no default is configured.",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "Source of the default. `constant` means `value` is used as a literal string; `variable` means `selector` points to a workflow variable."
+                              },
+                              "selector": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "Variable reference path (for example, `[\"node_id\", \"var_name\"]`) when `type` is `variable`. Must contain at least two elements."
+                              },
+                              "value": {
+                                "type": "string",
+                                "description": "Literal default value when `type` is `constant`. Always a string."
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "Form input field definitions."
+                    },
+                    "resolved_default_values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "Pre-filled default values, keyed by input `output_variable_name`. All values are stringified."
+                    },
+                    "user_actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "maxLength": 20,
+                            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                            "description": "Identifier of the action button. Pass as `action` on [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) when the recipient selects this button."
+                          },
+                          "title": {
+                            "type": "string",
+                            "maxLength": 100,
+                            "description": "Button label shown to the recipient."
+                          },
+                          "button_style": {
+                            "type": "string",
+                            "description": "Visual style of the button. Available values: `primary`, `default`, `accent`, `ghost`."
+                          }
+                        }
+                      },
+                      "description": "Available submission actions."
+                    },
+                    "expiration_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "Unix timestamp (seconds) after which this form can no longer be submitted."
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {
+                      "form_content": "Please review the draft and confirm or request changes.",
+                      "inputs": [
+                        {
+                          "type": "text_input",
+                          "output_variable_name": "comment",
+                          "default": {
+                            "type": "constant",
+                            "selector": [],
+                            "value": ""
+                          }
+                        }
+                      ],
+                      "resolved_default_values": {
+                        "comment": ""
+                      },
+                      "user_actions": [
+                        {
+                          "id": "approve",
+                          "title": "Approve",
+                          "button_style": "primary"
+                        },
+                        {
+                          "id": "reject",
+                          "title": "Request changes",
+                          "button_style": "default"
+                        }
+                      ],
+                      "expiration_time": 1745510400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Human Input"
+        ],
+        "summary": "Submit Human Input Form",
+        "description": "Submit the recipient's response to a paused Human Input form. The workflow resumes on acceptance; use [Stream Workflow Events](/api-reference/human-input/stream-workflow-events) to follow subsequent events. Requires **WebApp** delivery.",
+        "operationId": "submitWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Access token for the paused form, returned in the `human_input_required` event from [Run Workflow](/api-reference/workflows/run-workflow) in streaming mode."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "inputs",
+                  "action",
+                  "user"
+                ],
+                "properties": {
+                  "inputs": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "Recipient-supplied values keyed by input `output_variable_name`."
+                  },
+                  "action": {
+                    "type": "string",
+                    "description": "ID of the action button the recipient selected. Must match one of the `id` values from the form's `user_actions` list (returned by [Get Human Input Form](/api-reference/human-input/get-human-input-form)).",
+                    "maxLength": 20,
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "End-user identifier for the submitter."
+                  }
+                }
+              },
+              "examples": {
+                "approve": {
+                  "summary": "Request Example",
+                  "value": {
+                    "inputs": {
+                      "comment": "Looks good to ship"
+                    },
+                    "action": "approve",
+                    "user": "abc-123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Form submitted successfully. The response body is an empty object.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "- `bad_request` : Form recipient type is invalid.\n- `invalid_form_data` : Submission failed validation against the form definition.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "bad_request": {
+                    "summary": "bad_request",
+                    "value": {
+                      "status": 400,
+                      "code": "bad_request",
+                      "message": "Form recipient type is invalid"
+                    }
+                  },
+                  "invalid_form_data": {
+                    "summary": "invalid_form_data",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_form_data",
+                      "message": "Missing required inputs: comment"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow/{task_id}/events": {
+      "get": {
+        "tags": [
+          "Human Input"
+        ],
+        "summary": "Stream Workflow Events",
+        "description": "Resume the Server-Sent Events stream for a workflow run after a pause or a dropped SSE connection. For runs that have already finished, the stream emits a single `workflow_finished` event and closes.",
+        "operationId": "streamWorkflowEvents",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "Workflow run ID returned by the original workflow run request."
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "End-user identifier that originally triggered the run. Must match the creator of the workflow run."
+          },
+          {
+            "name": "include_state_snapshot",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "When `true`, replay from the persisted state snapshot to include a status summary of already-executed nodes before streaming new events."
+          },
+          {
+            "name": "continue_on_pause",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Set to `true` to keep the stream open across multiple `workflow_paused` events (useful when the workflow has more than one Human Input node in sequence). Default closes the stream after the first pause."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events stream. Each event is delivered as `data: {JSON}\\n\\n`. Event payloads follow the same schemas as the original streaming response.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "SSE stream of workflow events."
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_workflow_app` : Please check if your app mode matches the right API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_workflow_app": {
+                    "summary": "not_workflow_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_workflow_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Workflow run not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Workflow run not found"
                     }
                   }
                 }
@@ -3694,54 +4141,103 @@
                 "properties": {
                   "form_id": {
                     "type": "string",
-                    "description": "Form ID."
+                    "description": "Identifier for the form instance, surfaced in error messages and logs. Use `form_token` for Service API calls."
                   },
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID requesting input."
+                    "description": "ID of the Human Input node that produced this form."
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Display title of the Human Input node."
                   },
                   "form_content": {
                     "type": "string",
-                    "description": "Form content description."
+                    "description": "Pre-rendered form body with workflow variables substituted."
                   },
                   "inputs": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "description": "Form input control type. Available values: `text_input` (single-line text field) and `paragraph` (multi-line text area)."
+                        },
+                        "output_variable_name": {
+                          "type": "string",
+                          "description": "Variable name used to reference this input's submitted value inside the workflow. Corresponds to the key in the submission `inputs` object."
+                        },
+                        "default": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "Default value resolved from the workflow context. `null` when no default is configured.",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "description": "Source of the default. `constant` means `value` is used as a literal string; `variable` means `selector` points to a workflow variable."
+                            },
+                            "selector": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "Variable reference path (for example, `[\"node_id\", \"var_name\"]`) when `type` is `variable`. Must contain at least two elements."
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "Literal default value when `type` is `constant`. Always a string."
+                            }
+                          }
+                        }
+                      }
                     },
-                    "description": "Form input field definitions."
+                    "description": "Form input fields the recipient fills in."
                   },
                   "actions": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 20,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                          "description": "Identifier of the action button. Pass as `action` on [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) when the recipient selects this button."
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "description": "Button label shown to the recipient."
+                        },
+                        "button_style": {
+                          "type": "string",
+                          "description": "Visual style of the button. Available values: `primary`, `default`, `accent`, `ghost`."
+                        }
+                      }
                     },
-                    "description": "Available user actions."
+                    "description": "Available user actions (buttons) the recipient can select when submitting."
                   },
                   "display_in_ui": {
                     "type": "boolean",
-                    "description": "Whether to display the form in the UI."
+                    "description": "Whether the form is also shown in the Dify console UI."
                   },
                   "form_token": {
                     "type": "string",
                     "nullable": true,
-                    "description": "Token for form submission."
+                    "description": "Access token for [Get Human Input Form](/api-reference/human-input/get-human-input-form) and [Submit Human Input Form](/api-reference/human-input/submit-human-input-form). `null` when the Human Input node uses Email or Console delivery (the Service API can only operate on WebApp-delivered forms)."
                   },
                   "resolved_default_values": {
                     "type": "object",
-                    "additionalProperties": true,
-                    "description": "Pre-resolved default values for form fields."
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "Pre-filled default values for the form inputs, keyed by input `output_variable_name`. All values are stringified."
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Unix timestamp in seconds when the form expires."
+                    "description": "Unix timestamp (seconds) after which the form can no longer be submitted."
                   }
                 }
               }
@@ -3765,23 +4261,23 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "ID of the Human Input node whose form was filled."
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Display title of the Human Input node."
                   },
                   "rendered_content": {
                     "type": "string",
-                    "description": "Rendered content after form submission."
+                    "description": "Form body rendered with the recipient's submitted values (`form_content` on `human_input_required` is the unfilled template)."
                   },
                   "action_id": {
                     "type": "string",
-                    "description": "ID of the action taken."
+                    "description": "Identifier of the action the recipient selected (matches the `action` value passed to [Submit Human Input Form](/api-reference/human-input/submit-human-input-form))."
                   },
                   "action_text": {
                     "type": "string",
-                    "description": "Text of the action taken."
+                    "description": "Display text of the selected action."
                   }
                 }
               }
@@ -3805,16 +4301,16 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "ID of the Human Input node whose form expired."
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Display title of the Human Input node."
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Unix timestamp when the form expired."
+                    "description": "Unix timestamp (seconds) when the form expired."
                   }
                 }
               }
@@ -3844,6 +4340,10 @@
     {
       "name": "Applications",
       "description": "Application settings, parameters, and metadata."
+    },
+    {
+      "name": "Human Input",
+      "description": "Endpoints for resuming paused workflows that require human input and for streaming workflow events."
     }
   ]
 }

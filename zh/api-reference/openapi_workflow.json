@@ -119,12 +119,16 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。每个事件是一个以 `data: ` 为前缀的 JSON 对象，以两个换行符终止。\n\n**SSE 解析指南：**每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀。JSON 内的 `event` 字段决定事件类型。当收到终止事件（如 `message_end`、`workflow_finished` 或 `error`）时流结束。忽略 `ping` 事件（每 10 秒发送一次以保持连接活跃）。注意即使流中出现错误事件，HTTP 状态码仍为 `200`。"
+                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每行以 `data: ` 开头，后接一个 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，该事件每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/api-reference/人工介入/获取人工介入表单) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
                 },
                 "examples": {
                   "streamingResponse": {
                     "summary": "响应示例 - 流式模式",
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"query\": \"Translate this\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_1\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 1, \"created_at\": 1705407629}} data: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour le monde\"}, \"elapsed_time\": 1.23, \"total_tokens\": 150, \"total_steps\": 3, \"created_at\": 1705407629, \"finished_at\": 1705407630}}"
+                  },
+                  "humanInputPause": {
+                    "summary": "响应示例 - 人工介入暂停",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
                   }
                 }
               }
@@ -308,7 +312,13 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。每个事件是一个以 `data: ` 为前缀的 JSON 对象，以两个换行符终止。\n\n**SSE 解析指南：**每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀。JSON 内的 `event` 字段决定事件类型。当收到终止事件（如 `message_end`、`workflow_finished` 或 `error`）时流结束。忽略 `ping` 事件（每 10 秒发送一次以保持连接活跃）。注意即使流中出现错误事件，HTTP 状态码仍为 `200`。"
+                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每行以 `data: ` 开头，后接一个 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，该事件每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/api-reference/人工介入/获取人工介入表单) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
+                },
+                "examples": {
+                  "humanInputPause": {
+                    "summary": "响应示例 - 人工介入暂停",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
+                  }
                 }
               }
             }
@@ -1531,6 +1541,443 @@
                       "status": 403,
                       "code": "forbidden",
                       "message": "Forbidden."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/form/human_input/{form_token}": {
+      "get": {
+        "tags": [
+          "人工介入"
+        ],
+        "summary": "获取人工介入表单",
+        "description": "使用 `human_input_required` 事件返回的 `form_token` 获取暂停中的人工介入表单内容。需要 **WebApp** 送达方式。",
+        "operationId": "getWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "暂停表单的访问令牌，由流式模式下 [执行工作流](/api-reference/工作流/执行工作流) 返回的 `human_input_required` 事件提供。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "表单内容获取成功。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "form_content": {
+                      "type": "string",
+                      "description": "已替换工作流变量的预渲染表单正文。"
+                    },
+                    "inputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "表单输入控件类型。可用值：`text_input`（单行文本输入框）和 `paragraph`（多行文本区域）。"
+                          },
+                          "output_variable_name": {
+                            "type": "string",
+                            "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。"
+                          },
+                          "default": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。"
+                              },
+                              "selector": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。"
+                              },
+                              "value": {
+                                "type": "string",
+                                "description": "当 `type` 为 `constant` 时的字面默认值。始终为字符串。"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "表单输入字段定义。"
+                    },
+                    "resolved_default_values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "预填充默认值，按输入的 `output_variable_name` 分组。所有值均为字符串。"
+                    },
+                    "user_actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "maxLength": 20,
+                            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                            "description": "操作按钮的标识。当接收者选择该按钮时，作为 `action` 传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单)。"
+                          },
+                          "title": {
+                            "type": "string",
+                            "maxLength": 100,
+                            "description": "显示给接收者的按钮文本。"
+                          },
+                          "button_style": {
+                            "type": "string",
+                            "description": "按钮视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
+                          }
+                        }
+                      },
+                      "description": "可用的提交操作。"
+                    },
+                    "expiration_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "Unix 时间戳（秒），超过后无法再提交该表单。"
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {
+                      "form_content": "Please review the draft and confirm or request changes.",
+                      "inputs": [
+                        {
+                          "type": "text_input",
+                          "output_variable_name": "comment",
+                          "default": {
+                            "type": "constant",
+                            "selector": [],
+                            "value": ""
+                          }
+                        }
+                      ],
+                      "resolved_default_values": {
+                        "comment": ""
+                      },
+                      "user_actions": [
+                        {
+                          "id": "approve",
+                          "title": "Approve",
+                          "button_style": "primary"
+                        },
+                        {
+                          "id": "reject",
+                          "title": "Request changes",
+                          "button_style": "default"
+                        }
+                      ],
+                      "expiration_time": 1745510400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "人工介入"
+        ],
+        "summary": "提交人工介入表单",
+        "description": "提交接收者对暂停中人工介入表单的响应。表单被接受后工作流恢复执行；可订阅 [流式获取工作流事件](/api-reference/人工介入/流式获取工作流事件) 接收后续事件。需要 **WebApp** 送达方式。",
+        "operationId": "submitWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "暂停表单的访问令牌，由流式模式下 [执行工作流](/api-reference/工作流/执行工作流) 返回的 `human_input_required` 事件提供。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "inputs",
+                  "action",
+                  "user"
+                ],
+                "properties": {
+                  "inputs": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "接收者提交的值，按输入的 `output_variable_name` 分组。"
+                  },
+                  "action": {
+                    "type": "string",
+                    "description": "接收者选择的操作按钮 ID。必须与 [获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 返回的 `user_actions` 列表中的某个 `id` 值匹配。",
+                    "maxLength": 20,
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "提交者的终端用户标识。"
+                  }
+                }
+              },
+              "examples": {
+                "approve": {
+                  "summary": "请求示例",
+                  "value": {
+                    "inputs": {
+                      "comment": "Looks good to ship"
+                    },
+                    "action": "approve",
+                    "user": "abc-123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "表单提交成功。响应体为空对象。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "- `bad_request` : Form recipient type is invalid.\n- `invalid_form_data` : Submission failed validation against the form definition.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "bad_request": {
+                    "summary": "bad_request",
+                    "value": {
+                      "status": 400,
+                      "code": "bad_request",
+                      "message": "Form recipient type is invalid"
+                    }
+                  },
+                  "invalid_form_data": {
+                    "summary": "invalid_form_data",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_form_data",
+                      "message": "Missing required inputs: comment"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow/{task_id}/events": {
+      "get": {
+        "tags": [
+          "人工介入"
+        ],
+        "summary": "流式获取工作流事件",
+        "description": "在工作流运行暂停或原始 SSE 连接断开后恢复 Server-Sent Events 流。对于已结束的运行，流仅发送单个 `workflow_finished` 事件后关闭。",
+        "operationId": "streamWorkflowEvents",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "原始工作流运行请求返回的工作流运行 ID。"
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "最初触发该运行的终端用户标识。必须与工作流运行的创建者一致。"
+          },
+          {
+            "name": "include_state_snapshot",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "为 `true` 时，从持久化状态快照重放，在流式发送新事件前附带已执行节点的状态摘要。"
+          },
+          {
+            "name": "continue_on_pause",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "设为 `true` 时，流会在多次 `workflow_paused` 事件之间保持打开（适用于工作流包含多个连续人工介入节点的场景）。默认在首次暂停时关闭流。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events 流。每个事件以 `data: {JSON}\\n\\n` 形式送达。事件载荷结构与原始流式响应一致。",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "工作流事件的 SSE 流。"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_workflow_app` : Please check if your app mode matches the right API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_workflow_app": {
+                    "summary": "not_workflow_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_workflow_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Workflow run not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Workflow run not found"
                     }
                   }
                 }
@@ -3694,54 +4141,103 @@
                 "properties": {
                   "form_id": {
                     "type": "string",
-                    "description": "Form ID."
+                    "description": "表单实例的标识符，会在错误消息和日志中出现。Service API 调用请使用 `form_token`。"
                   },
                   "node_id": {
                     "type": "string",
-                    "description": "请求输入的节点 ID。"
+                    "description": "产生该表单的 Human Input 节点 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input 节点的显示标题。"
                   },
                   "form_content": {
                     "type": "string",
-                    "description": "表单内容描述。"
+                    "description": "已替换工作流变量的预渲染表单正文。"
                   },
                   "inputs": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "description": "表单输入控件类型。可用值：`text_input`（单行文本输入框）和 `paragraph`（多行文本区域）。"
+                        },
+                        "output_variable_name": {
+                          "type": "string",
+                          "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。"
+                        },
+                        "default": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。"
+                            },
+                            "selector": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。"
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "当 `type` 为 `constant` 时的字面默认值。始终为字符串。"
+                            }
+                          }
+                        }
+                      }
                     },
-                    "description": "表单输入字段定义。"
+                    "description": "接收者需要填写的表单输入字段。"
                   },
                   "actions": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 20,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                          "description": "操作按钮的标识。当接收者选择该按钮时，作为 `action` 传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单)。"
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "description": "显示给接收者的按钮文本。"
+                        },
+                        "button_style": {
+                          "type": "string",
+                          "description": "按钮视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
+                        }
+                      }
                     },
-                    "description": "可用的用户操作。"
+                    "description": "接收者提交时可选择的用户操作（按钮）。"
                   },
                   "display_in_ui": {
                     "type": "boolean",
-                    "description": "是否在 UI 中显示表单。"
+                    "description": "表单是否也在 Dify 控制台中显示。"
                   },
                   "form_token": {
                     "type": "string",
                     "nullable": true,
-                    "description": "表单提交令牌。"
+                    "description": "[获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 和 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 的访问令牌。当人工介入节点使用邮件或控制台送达时为 `null`（Service API 仅能处理 WebApp 送达的表单）。"
                   },
                   "resolved_default_values": {
                     "type": "object",
-                    "additionalProperties": true,
-                    "description": "表单字段的预解析默认值。"
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "按输入的 `output_variable_name` 分组的预填充默认值。所有值均为字符串。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "表单过期时的 Unix 时间戳（秒）。"
+                    "description": "Unix 时间戳（秒），超过后表单无法再被提交。"
                   }
                 }
               }
@@ -3765,23 +4261,23 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "表单被填写的 Human Input 节点 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input 节点的显示标题。"
                   },
                   "rendered_content": {
                     "type": "string",
-                    "description": "表单提交后的渲染内容。"
+                    "description": "包含接收者提交值的渲染后表单内容（`human_input_required` 上的 `form_content` 是未填写的模板）。"
                   },
                   "action_id": {
                     "type": "string",
-                    "description": "已执行操作的 ID。"
+                    "description": "接收者所选操作的标识（与传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 的 `action` 一致）。"
                   },
                   "action_text": {
                     "type": "string",
-                    "description": "已执行操作的文本。"
+                    "description": "所选操作的显示文本。"
                   }
                 }
               }
@@ -3805,16 +4301,16 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "表单过期的 Human Input 节点 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input 节点的显示标题。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "表单过期的 Unix 时间戳。"
+                    "description": "Unix 时间戳（秒），表示表单过期时刻。"
                   }
                 }
               }
@@ -3844,6 +4340,10 @@
     {
       "name": "应用配置",
       "description": "应用设置、参数和元数据。"
+    },
+    {
+      "name": "人工介入",
+      "description": "暂停等待人工输入的工作流恢复操作，以及工作流事件流式获取。"
     }
   ]
 }

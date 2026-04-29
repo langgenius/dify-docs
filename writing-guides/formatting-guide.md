@@ -109,6 +109,7 @@ Do not use backticks for product names, UI labels, or general English words.
 ### Internal Links
 
 - Use absolute paths from the language root: `[Link text](/en/path/to/page)`
+- API reference links omit the language prefix: `[Link text](/api-reference/<tag>/<endpoint>)`
 - Include anchor references when linking to a specific section: `[Retrieval Settings](/en/use-dify/knowledge/create-knowledge/setting-indexing-methods#setting-the-retrieval-setting)`
 - Use descriptive link text. Never use "click here" or "here" as link text.
 
