@@ -137,6 +137,16 @@ The script reports:
 
 Use `.env.example` defaults (what Docker Compose users actually get), not Pydantic code defaults.
 
+### Intentionally ignored variables
+
+Some variables in `.env.example` are deliberately not documented (Cloud-only, experimental, or verifier false positives). The verifier reads these from `ignored-vars.md` (same directory) and filters them out. When you:
+
+- Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)** in `ignored-vars.md`.
+- Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
+- Document a supported variable whose `.env.example` entry is commented out → add it under **Verifier false positives**.
+
+Every entry must include a source reference (PR, commit, or audit date).
+
 ## Translation
 
 The automated translation pipeline does not cover `en/self-host/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.

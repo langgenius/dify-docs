@@ -109,6 +109,7 @@ Do not use backticks for product names, UI labels, or general English words.
 ### Internal Links
 
 - Use absolute paths from the language root: `[Link text](/en/path/to/page)`
+- API reference links omit the language prefix: `[Link text](/api-reference/<tag>/<endpoint>)`
 - Include anchor references when linking to a specific section: `[Retrieval Settings](/en/use-dify/knowledge/create-knowledge/setting-indexing-methods#setting-the-retrieval-setting)`
 - Use descriptive link text. Never use "click here" or "here" as link text.
 
@@ -386,8 +387,9 @@ Use for showing multiple code variants of the same operation:
 
 ## Punctuation
 
-- **Em dashes**: No spaces around em dashes — write `word—word`, not `word — word`.
-- **En dashes**: No spaces around en dashes in ranges — write `2–4`, not `2 – 4`.
+- **Em dashes**: No spaces around em dashes. Write `word—word`, not `word — word`.
+- **En dashes**: No spaces around en dashes in ranges. Write `2–4`, not `2 – 4`.
+- **Avoid overusing em dashes.** Em dashes work well for an emphatic aside, but lose impact when stacked. Use at most one per paragraph; reach for a comma, colon, or new sentence before a second. If you find yourself wanting two dashes in one sentence, rewrite.
 
 ---
 
@@ -417,4 +419,5 @@ Before submitting, verify:
 - [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
+- [ ] No more than one em dash per paragraph
 - [ ] Dollar signs in prose are escaped as `\$` (not needed inside code)

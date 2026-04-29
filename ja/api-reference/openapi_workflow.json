@@ -119,12 +119,16 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。各イベントは `data: ` プレフィックス付きの JSON オブジェクトで、2 つの改行で終了します。\n\n**SSE パースガイド：**各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去してください。JSON 内の `event` フィールドがイベントタイプを決定します。終了イベント（`message_end`、`workflow_finished`、`error` など）を受信するとストリームは終了します。`ping` イベント（10 秒ごとに接続維持のために送信）は無視してください。ストリーム内でエラーイベントが発生しても HTTP ステータスコードは常に `200` です。"
+                  "description": "Server-Sent Events (SSE) のストリーム。\n\n**パース**：各行は `data: ` で始まり JSON オブジェクトが続き、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベント（接続維持のため 10 秒ごとに送信）は無視してください。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/api-reference/人間の入力/人間の入力フォームを取得) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
                 },
                 "examples": {
                   "streamingResponse": {
                     "summary": "レスポンス例 - ストリーミングモード",
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"query\": \"Translate this\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_1\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 1, \"created_at\": 1705407629}} data: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour le monde\"}, \"elapsed_time\": 1.23, \"total_tokens\": 150, \"total_steps\": 3, \"created_at\": 1705407629, \"finished_at\": 1705407630}}"
+                  },
+                  "humanInputPause": {
+                    "summary": "レスポンス例 - 人間の入力での一時停止",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
                   }
                 }
               }
@@ -308,7 +312,13 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。各イベントは `data: ` プレフィックス付きの JSON オブジェクトで、2 つの改行で終了します。\n\n**SSE パースガイド：**各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去してください。JSON 内の `event` フィールドがイベントタイプを決定します。終了イベント（`message_end`、`workflow_finished`、`error` など）を受信するとストリームは終了します。`ping` イベント（10 秒ごとに接続維持のために送信）は無視してください。ストリーム内でエラーイベントが発生しても HTTP ステータスコードは常に `200` です。"
+                  "description": "Server-Sent Events (SSE) のストリーム。\n\n**パース**：各行は `data: ` で始まり JSON オブジェクトが続き、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベント（接続維持のため 10 秒ごとに送信）は無視してください。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/api-reference/人間の入力/人間の入力フォームを取得) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
+                },
+                "examples": {
+                  "humanInputPause": {
+                    "summary": "レスポンス例 - 人間の入力での一時停止",
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
+                  }
                 }
               }
             }
@@ -1531,6 +1541,443 @@
                       "status": 403,
                       "code": "forbidden",
                       "message": "Forbidden."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/form/human_input/{form_token}": {
+      "get": {
+        "tags": [
+          "人間の入力"
+        ],
+        "summary": "人間の入力フォームを取得",
+        "description": "`human_input_required` イベントの `form_token` を用いて、一時停止中の人間の入力フォームの内容を取得します。**WebApp** 配信が必要です。",
+        "operationId": "getWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "一時停止フォームのアクセストークン。ストリーミングモードで [ワークフローを実行](/api-reference/ワークフロー/ワークフローを実行) が返す `human_input_required` イベントから取得します。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "フォーム内容の取得に成功しました。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "form_content": {
+                      "type": "string",
+                      "description": "ワークフロー変数が置換された、事前レンダリング済みのフォーム本文。"
+                    },
+                    "inputs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "description": "フォーム入力コントロールの種類。使用可能な値：`text_input`（単一行テキスト）と `paragraph`（複数行テキスト）。"
+                          },
+                          "output_variable_name": {
+                            "type": "string",
+                            "description": "この入力の送信値をワークフロー内で参照する変数名。送信時の `inputs` オブジェクトのキーに対応します。"
+                          },
+                          "default": {
+                            "type": "object",
+                            "nullable": true,
+                            "description": "ワークフローコンテキストから解決されるデフォルト値。デフォルトが設定されていない場合は `null`。",
+                            "properties": {
+                              "type": {
+                                "type": "string",
+                                "description": "デフォルト値のソース。`constant` は `value` をリテラル文字列として使用します。`variable` は `selector` がワークフロー変数を指します。"
+                              },
+                              "selector": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                },
+                                "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも 2 要素を含みます。"
+                              },
+                              "value": {
+                                "type": "string",
+                                "description": "`type` が `constant` の場合のリテラルデフォルト値。常に文字列です。"
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "description": "フォーム入力フィールドの定義。"
+                    },
+                    "resolved_default_values": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      },
+                      "description": "事前入力デフォルト値。入力の `output_variable_name` をキーとします。すべての値は文字列化されます。"
+                    },
+                    "user_actions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "maxLength": 20,
+                            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                            "description": "アクションボタンの識別子。受信者がこのボタンを選択したら、`action` として [人間の入力フォームを送信](/api-reference/人間の入力/人間の入力フォームを送信) に渡します。"
+                          },
+                          "title": {
+                            "type": "string",
+                            "maxLength": 100,
+                            "description": "受信者に表示されるボタンのラベル。"
+                          },
+                          "button_style": {
+                            "type": "string",
+                            "description": "ボタンの視覚スタイル。使用可能な値：`primary`、`default`、`accent`、`ghost`。"
+                          }
+                        }
+                      },
+                      "description": "利用可能な送信アクション。"
+                    },
+                    "expiration_time": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "Unix タイムスタンプ（秒）。これを過ぎるとフォームは送信できなくなります。"
+                    }
+                  }
+                },
+                "examples": {
+                  "success": {
+                    "summary": "レスポンス例",
+                    "value": {
+                      "form_content": "Please review the draft and confirm or request changes.",
+                      "inputs": [
+                        {
+                          "type": "text_input",
+                          "output_variable_name": "comment",
+                          "default": {
+                            "type": "constant",
+                            "selector": [],
+                            "value": ""
+                          }
+                        }
+                      ],
+                      "resolved_default_values": {
+                        "comment": ""
+                      },
+                      "user_actions": [
+                        {
+                          "id": "approve",
+                          "title": "Approve",
+                          "button_style": "primary"
+                        },
+                        {
+                          "id": "reject",
+                          "title": "Request changes",
+                          "button_style": "default"
+                        }
+                      ],
+                      "expiration_time": 1745510400
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "人間の入力"
+        ],
+        "summary": "人間の入力フォームを送信",
+        "description": "一時停止中の人間の入力フォームに対する受信者の応答を送信します。フォームが受理されるとワークフローが再開するため、後続のイベントは [ワークフローイベントをストリーム](/api-reference/人間の入力/ワークフローイベントをストリーム) で受信してください。**WebApp** 配信が必要です。",
+        "operationId": "submitWorkflowHumanInputForm",
+        "parameters": [
+          {
+            "name": "form_token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "一時停止フォームのアクセストークン。ストリーミングモードで [ワークフローを実行](/api-reference/ワークフロー/ワークフローを実行) が返す `human_input_required` イベントから取得します。"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "inputs",
+                  "action",
+                  "user"
+                ],
+                "properties": {
+                  "inputs": {
+                    "type": "object",
+                    "additionalProperties": true,
+                    "description": "受信者が提供した値。入力の `output_variable_name` をキーとします。"
+                  },
+                  "action": {
+                    "type": "string",
+                    "description": "受信者が選択したアクションボタンの ID。[人間の入力フォームを取得](/api-reference/人間の入力/人間の入力フォームを取得) で返される `user_actions` リストに含まれるいずれかの `id` 値と一致する必要があります。",
+                    "maxLength": 20,
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "送信者のエンドユーザー識別子。"
+                  }
+                }
+              },
+              "examples": {
+                "approve": {
+                  "summary": "リクエスト例",
+                  "value": {
+                    "inputs": {
+                      "comment": "Looks good to ship"
+                    },
+                    "action": "approve",
+                    "user": "abc-123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "フォームの送信に成功しました。レスポンスボディは空オブジェクトです。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "レスポンス例",
+                    "value": {}
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "- `bad_request` : Form recipient type is invalid.\n- `invalid_form_data` : Submission failed validation against the form definition.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "bad_request": {
+                    "summary": "bad_request",
+                    "value": {
+                      "status": 400,
+                      "code": "bad_request",
+                      "message": "Form recipient type is invalid"
+                    }
+                  },
+                  "invalid_form_data": {
+                    "summary": "invalid_form_data",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_form_data",
+                      "message": "Missing required inputs: comment"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Form not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Form not found"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "human_input_form_submitted": {
+                    "summary": "human_input_form_submitted",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_submitted",
+                      "message": "This form has already been submitted by another user, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  },
+                  "human_input_form_expired": {
+                    "summary": "human_input_form_expired",
+                    "value": {
+                      "status": 412,
+                      "code": "human_input_form_expired",
+                      "message": "This form has expired, form_id=a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/workflow/{task_id}/events": {
+      "get": {
+        "tags": [
+          "人間の入力"
+        ],
+        "summary": "ワークフローイベントをストリーム",
+        "description": "一時停止後または元の SSE 接続が切断された後にワークフロー実行の Server-Sent Events ストリームを再開します。すでに完了している実行に対しては、`workflow_finished` イベントを 1 つ送信してストリームを閉じます。",
+        "operationId": "streamWorkflowEvents",
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "元のワークフロー実行リクエストで返されたワークフロー実行 ID。"
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "この実行を最初にトリガーしたエンドユーザー識別子。ワークフロー実行の作成者と一致している必要があります。"
+          },
+          {
+            "name": "include_state_snapshot",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "`true` の場合、永続化された状態スナップショットからリプレイし、新しいイベントのストリーミング開始前に実行済みノードのステータスサマリーを含めます。"
+          },
+          {
+            "name": "continue_on_pause",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "`true` に設定すると、複数の `workflow_paused` イベントを跨いでストリームを開いたままにします（ワークフローに複数の人間の入力ノードが連続する場合に有用）。デフォルトでは最初の一時停止で閉じます。"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Server-Sent Events ストリーム。各イベントは `data: {JSON}\\n\\n` として配信されます。イベントペイロードは元のストリーミングレスポンスと同じスキーマに従います。",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "ワークフローイベントの SSE ストリーム。"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_workflow_app` : Please check if your app mode matches the right API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_workflow_app": {
+                    "summary": "not_workflow_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_workflow_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Workflow run not found.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Workflow run not found"
                     }
                   }
                 }
@@ -3694,54 +4141,103 @@
                 "properties": {
                   "form_id": {
                     "type": "string",
-                    "description": "Form ID."
+                    "description": "フォームインスタンスの識別子。エラーメッセージやログに含まれます。Service API の呼び出しには `form_token` を使用してください。"
                   },
                   "node_id": {
                     "type": "string",
-                    "description": "入力を要求しているノード ID です。"
+                    "description": "このフォームを生成した Human Input ノードの ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input ノードの表示タイトル。"
                   },
                   "form_content": {
                     "type": "string",
-                    "description": "フォーム内容の説明です。"
+                    "description": "ワークフロー変数が置換された、事前レンダリング済みのフォーム本文。"
                   },
                   "inputs": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "type": {
+                          "type": "string",
+                          "description": "フォーム入力コントロールの種類。使用可能な値：`text_input`（単一行テキスト）と `paragraph`（複数行テキスト）。"
+                        },
+                        "output_variable_name": {
+                          "type": "string",
+                          "description": "この入力の送信値をワークフロー内で参照する変数名。送信時の `inputs` オブジェクトのキーに対応します。"
+                        },
+                        "default": {
+                          "type": "object",
+                          "nullable": true,
+                          "description": "ワークフローコンテキストから解決されるデフォルト値。デフォルトが設定されていない場合は `null`。",
+                          "properties": {
+                            "type": {
+                              "type": "string",
+                              "description": "デフォルト値のソース。`constant` は `value` をリテラル文字列として使用します。`variable` は `selector` がワークフロー変数を指します。"
+                            },
+                            "selector": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも 2 要素を含みます。"
+                            },
+                            "value": {
+                              "type": "string",
+                              "description": "`type` が `constant` の場合のリテラルデフォルト値。常に文字列です。"
+                            }
+                          }
+                        }
+                      }
                     },
-                    "description": "フォーム入力フィールドの定義です。"
+                    "description": "受信者が記入するフォーム入力フィールド。"
                   },
                   "actions": {
                     "type": "array",
                     "items": {
                       "type": "object",
-                      "additionalProperties": true
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "maxLength": 20,
+                          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+                          "description": "アクションボタンの識別子。受信者がこのボタンを選択したら、`action` として [人間の入力フォームを送信](/api-reference/人間の入力/人間の入力フォームを送信) に渡します。"
+                        },
+                        "title": {
+                          "type": "string",
+                          "maxLength": 100,
+                          "description": "受信者に表示されるボタンのラベル。"
+                        },
+                        "button_style": {
+                          "type": "string",
+                          "description": "ボタンの視覚スタイル。使用可能な値：`primary`、`default`、`accent`、`ghost`。"
+                        }
+                      }
                     },
-                    "description": "利用可能なユーザーアクションです。"
+                    "description": "送信時に受信者が選択できるアクション（ボタン）。"
                   },
                   "display_in_ui": {
                     "type": "boolean",
-                    "description": "UI にフォームを表示するかどうかです。"
+                    "description": "フォームが Dify コンソール UI にも表示されるかどうか。"
                   },
                   "form_token": {
                     "type": "string",
                     "nullable": true,
-                    "description": "フォーム送信用のトークンです。"
+                    "description": "[人間の入力フォームを取得](/api-reference/人間の入力/人間の入力フォームを取得) と [人間の入力フォームを送信](/api-reference/人間の入力/人間の入力フォームを送信) のアクセストークン。人間の入力ノードがメール配信またはコンソール配信を使用する場合は `null` になります（Service API は WebApp 配信のフォームのみ操作できます）。"
                   },
                   "resolved_default_values": {
                     "type": "object",
-                    "additionalProperties": true,
-                    "description": "フォームフィールドの事前解決されたデフォルト値です。"
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "description": "入力の `output_variable_name` をキーとする事前入力デフォルト値。すべての値は文字列化されます。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "フォームが期限切れになる Unix タイムスタンプ（秒）です。"
+                    "description": "Unix タイムスタンプ（秒）。これを過ぎるとフォームは送信できなくなります。"
                   }
                 }
               }
@@ -3765,23 +4261,23 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "フォームが記入された Human Input ノードの ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input ノードの表示タイトル。"
                   },
                   "rendered_content": {
                     "type": "string",
-                    "description": "フォーム送信後のレンダリングされた内容です。"
+                    "description": "受信者の入力値で描画されたフォーム本文（`human_input_required` の `form_content` は未入力のテンプレートです）。"
                   },
                   "action_id": {
                     "type": "string",
-                    "description": "実行されたアクションの ID です。"
+                    "description": "受信者が選択したアクションの識別子（[人間の入力フォームを送信](/api-reference/人間の入力/人間の入力フォームを送信) に渡された `action` の値と一致します）。"
                   },
                   "action_text": {
                     "type": "string",
-                    "description": "実行されたアクションのテキストです。"
+                    "description": "選択されたアクションの表示テキスト。"
                   }
                 }
               }
@@ -3805,16 +4301,16 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "Node ID."
+                    "description": "フォームが期限切れとなった Human Input ノードの ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "Human Input ノードの表示タイトル。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "フォームが期限切れになった Unix タイムスタンプです。"
+                    "description": "Unix タイムスタンプ（秒）。フォームが期限切れとなった時刻。"
                   }
                 }
               }
@@ -3844,6 +4340,10 @@
     {
       "name": "アプリケーション設定",
       "description": "アプリケーションの設定、パラメータ、メタデータです。"
+    },
+    {
+      "name": "人間の入力",
+      "description": "人間の入力を要する一時停止中のワークフローの再開、およびワークフローイベントのストリーミング操作です。"
     }
   ]
 }

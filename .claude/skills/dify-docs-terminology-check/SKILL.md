@@ -1,18 +1,19 @@
 ---
 name: dify-docs-terminology-check
 description: >
-  Check terminology consistency in changed documentation against the glossary
-  and codebase UI labels. Use after finalizing a draft, or when the user says
-  "check terminology", "check terms", "verify glossary", or "terminology audit".
+  Audit terminology consistency across documentation against the codebase UI
+  labels and the glossary. Covers full files, not just diffs; excludes env var
+  docs. Use after finalizing a draft, or when the user says "check
+  terminology", "check terms", "verify glossary", or "terminology audit".
 ---
 
 # Terminology Consistency Check
 
 ## Purpose
 
-Verify that changed documentation uses terms consistently with the glossary
-(`writing-guides/glossary.md`) and that bolded UI labels match the Dify
-codebase i18n files.
+Verify that documentation uses terms consistently with the codebase i18n
+(source of truth for UI labels) and the glossary (source of truth for general
+terms). Covers the whole file, not just the diff.
 
 ## Before Starting
 
@@ -27,14 +28,16 @@ codebase i18n files.
    git fetch origin && git checkout <branch> && git pull origin <branch>
    ```
 
-2. Detect changed documentation files by combining:
-   - `git diff --name-only` (unstaged changes in tracked files)
-   - `git diff --cached --name-only` (staged changes)
-   - Untracked files from `git status --porcelain` (lines starting with `??`)
+2. Determine the audit scope. Default to the whole file(s) currently under
+   review (not just the diff), plus their zh/ja siblings when they exist.
+   Expand to a directory or the full docs tree if the user specifies.
+   Always exclude:
+   - `en/self-host/configuration/environments.mdx`
+   - `zh/self-host/configuration/environments.mdx`
+   - `ja/self-host/configuration/environments.mdx`
 
-   Filter for `.mdx` and `.md` files under doc content directories (`en/`, `zh/`,
-   `ja/`, `writing-guides/`). If no changed files are detected, ask the user
-   which files to check.
+   Environment variable names are not UI labels and do not belong in the
+   terminology check.
 
 ## Checks to Perform
 
@@ -42,12 +45,10 @@ codebase i18n files.
 
 Read `writing-guides/glossary.md` — General Terms section.
 
-For each changed file, verify:
+For each file in scope, verify:
 
-- **English docs**: Terms match the English column. Flag any deviations
-  (e.g., "sandbox runtime" instead of "sandboxed runtime").
-- **Chinese docs**: Terms match the Chinese column. Flag mismatches
-  (e.g., 沙箱 instead of 沙盒).
+- **English docs**: Terms match the English column. Flag any deviations.
+- **Chinese docs**: Terms match the Chinese column. Flag mismatches.
 - **Japanese docs**: Terms match the Japanese column. Flag mismatches.
 
 Skip zh/ja checks if the corresponding translation files don't exist locally
@@ -55,41 +56,25 @@ Skip zh/ja checks if the corresponding translation files don't exist locally
 
 ### 2. UI Label Consistency
 
-Read `writing-guides/glossary.md` — UI Labels section.
+For each file in scope, collect:
 
-For each changed file, find all **bolded terms** (text wrapped in `**...**`).
-Cross-reference against the UI Labels tables:
+- Every **bolded term** (text wrapped in `**...**`) that refers to a UI element.
+- Every section heading (`##`, `###`) that names a product feature.
 
-- The bolded text in English docs must match the English (UI) column.
-- The bolded text in Chinese docs must match the Chinese (UI) column.
-- The bolded text in Japanese docs must match the Japanese (UI) column.
+Use judgment to skip bolds that are pure emphasis (e.g., `**semantically**`).
 
-Not all bolded terms are UI labels — use judgment to distinguish UI references
-from emphasis. UI labels typically appear in instructional context ("click
-**Publish**", "enable **Agent Mode**").
+Verify every collected term against the codebase i18n as the source of truth:
+`web/i18n/en-US/`, `web/i18n/zh-Hans/`, `web/i18n/ja-JP/`. Read files with
+`git show <branch>:<path>` so you don't need to switch branches. The
+glossary (`writing-guides/glossary.md`) is a convenience lookup; the
+codebase wins when they disagree.
 
-### 3. Codebase Verification (UI Labels Only)
+### 3. Glossary Updates
 
-For any UI label flagged as potentially inconsistent, or for new UI labels
-not yet in the glossary, verify against the codebase:
-
-1. Use `git show <branch>:<path>` to read i18n files from the user-specified
-   branch without switching branches. For example:
-   `git show feat/support-agent-sandbox:web/i18n/en-US/workflow.json`
-2. Search the relevant i18n JSON for the key.
-3. Report the actual codebase values.
-4. If the glossary is outdated compared to the codebase, flag it.
-
-### 4. First-Mention Rule (zh/ja Only)
-
-For Chinese and Japanese docs, check that general terms follow the
-first-mention parenthetical rule (defined in the glossary):
-
-- **Local term is primary**: First mention should be "本地术语（English term）"
-- **English term is primary**: First mention should be "English Term（本地术语）"
-- **Same across all languages**: No parenthetical needed
-
-Scope is per document — each page resets.
+When the audit surfaces a UI label that is new, renamed, or inconsistent
+with the codebase, propose an update to `writing-guides/glossary.md` in the
+report. Note that `tools/translate/derive-termbase.py` should be run
+afterward so `tools/translate/termbase_i18n.md` stays in sync.
 
 ## Output Format
 
@@ -104,14 +89,9 @@ Scope is per document — each page resets.
 - ⚠️ Line {n}: "{found}" should be "{expected}" per glossary
 
 **UI Labels**
-- ✅ All bolded UI labels match glossary
+- ✅ All UI labels (bolded terms and feature section headings) match codebase
   OR
-- ⚠️ Line {n}: **{label}** — glossary says "{expected}", codebase says "{actual}"
-
-**First-Mention Rule** (zh/ja only)
-- ✅ All terms properly introduced
-  OR
-- ⚠️ Line {n}: "{term}" — missing first-mention parenthetical
+- ⚠️ Line {n}: **{label}** — codebase says "{expected}"
 
 **Glossary Gaps**
 - Terms used in docs but missing from glossary: {list}
@@ -122,5 +102,5 @@ Scope is per document — each page resets.
 
 - Do NOT modify any files. This is a read-only audit.
 - Report findings to the user for review.
-- If the glossary and codebase disagree, report both values and let the user
-  decide which to update.
+- Codebase i18n is the source of truth for UI labels. When the glossary
+  disagrees, update the glossary.

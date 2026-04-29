@@ -145,7 +145,7 @@ Keep the disclaimer regardless of whether the page has been human-reviewed. The 
 
 These elements must be translated, not left in English:
 
-- **Tab titles:** `<Tab title="...">` values must use the Chinese UI label from the glossary.
+- **Tab titles:** Translate `<Tab title="...">` values. If the tab title contains a UI label, use the official Chinese UI label.
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/zh-Hans/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.
@@ -206,6 +206,7 @@ Specific words to drop or shorten when context allows:
 - **Passive voice retention:** Prefer active voice. Write `已启用该功能` instead of `该功能已被启用`.
 - **Translationese (翻译腔):** Avoid overuse of `的`, `被`, `和`, and long modifier chains before nouns. Break into shorter clauses.
 - **Half-width punctuation leakage:** Ensure all Chinese punctuation is full-width; do not carry over half-width commas or periods from the English source.
+- **Avoid `请` in refer-to phrases.** Write `参见 X` or `参考 X`, not `请参见 X` or `请参考 X`. Documentation voice is direct; `请` adds unnecessary deference and does not map from the English source.
 
 ### Standard Phrase Translations
 

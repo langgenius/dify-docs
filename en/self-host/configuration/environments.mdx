@@ -1,6 +1,6 @@
 ---
 title: Environment Variables
-description: Reference for all environment variables used by Dify self-hosted deployments.
+description: Reference for all environment variables used by Dify self-hosted deployments
 ---
 
 Dify works out of the box with default settings. You can customize your deployment by modifying the environment variables in the `.env` file.
@@ -11,7 +11,7 @@ After upgrading Dify, run `diff .env .env.example` in the `docker` directory to 
 
 ## Common Variables
 
-These URL variables configure the addresses of Dify's various services. 
+These URL variables configure the addresses of Dify's various services.
 
 For single-domain deployments behind Nginx (the default Docker Compose setup), these can be left empty—the system auto-detects from the incoming request. Configure them when using custom domains, split-domain deployments, or a reverse proxy.
 
@@ -91,6 +91,19 @@ Default: `300` (5 minutes)
 
 How long signed file URLs remain valid, in seconds. After this time, the URL is rejected and the file must be re-requested. Increase for long-running processes; decrease for tighter security.
 
+### ENABLE_COLLABORATION_MODE
+
+Default: `false`
+
+Master switch for real-time collaboration on the Workflow canvas, covering simultaneous editing, in-canvas comments, and @mentions.
+
+Setting this alone is not sufficient. Collaboration runs over WebSocket, which also requires:
+
+- `SERVER_WORKER_CLASS` set to `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` (see [Container Startup Configuration](#container-startup-configuration)).
+- `NEXT_PUBLIC_SOCKET_URL` set to a WebSocket URL your browser can reach (see [CORS Configuration](#cors-configuration)).
+
+If you use your own reverse proxy, forward `Upgrade` and `Connection` headers on `/socket.io/` (the bundled nginx template already does this). Running multiple API replicas requires sticky sessions.
+
 ### System Encoding
 
 | Variable | Default | Description |
@@ -119,7 +132,7 @@ How long signed file URLs remain valid, in seconds. After this time, the URL is 
 | Variable | Default | Description |
 |---|---|---|
 | `DEBUG` | `false` | Enables verbose logging: workflow node inputs/outputs, tool execution details, full LLM prompts and responses, and app startup timing. Useful for local development; not recommended for production as it may expose sensitive data in logs. |
-| `FLASK_DEBUG` | `false` | Standard Flask debug mode flag. Not actively used by Dify—`DEBUG` is the primary control. |
+| `FLASK_DEBUG` | `false` | Standard Flask debug mode flag. Not actively used by Dify; `DEBUG` is the primary control. |
 | `ENABLE_REQUEST_LOGGING` | `false` | Logs a compact access line (`METHOD PATH STATUS DURATION TRACE_ID`) for every HTTP request. When `LOG_LEVEL` is also set to `DEBUG`, additionally logs full request and response bodies as JSON. |
 | `DEPLOY_ENV` | `PRODUCTION` | Tags monitoring data in Sentry and OpenTelemetry so you can filter errors and traces by environment. Also sent as the `X-Env` response header. Does not change application behavior. |
 | `MIGRATION_ENABLED` | `true` | When `true`, runs database schema migrations (`flask upgrade-db`) automatically on container startup. Docker only. Set to `false` if you run migrations separately. For source code launches, run `flask db upgrade` manually. |
@@ -152,7 +165,7 @@ Optional security gate for first-time setup. When set, the `/install` page requi
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | How long a login session's access token stays valid (in minutes). When it expires, the browser silently refreshes it using the refresh token—users are not logged out. |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | How long a user can stay logged in without re-entering credentials (in days). If the user doesn't visit within this period, they must log in again. |
-| `APP_MAX_EXECUTION_TIME` | `1200` | Maximum time (in seconds) an app execution can run before being terminated. Works alongside `WORKFLOW_MAX_EXECUTION_TIME`—both enforce the same default of 20 minutes, but this one applies at the app queue level while the other applies at the workflow engine level. Increase both if your workflows need more time. |
+| `APP_MAX_EXECUTION_TIME` | `1200` | Maximum time (in seconds) an app execution can run before being terminated. Works alongside `WORKFLOW_MAX_EXECUTION_TIME`: both enforce the same default of 20 minutes, but this one applies at the app queue level while the other applies at the workflow engine level. Increase both if your workflows need more time. |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | Default concurrent request limit per app, used when an app doesn't have a custom limit set in the UI. `0` means unlimited. The effective limit is the smaller of this and `APP_MAX_ACTIVE_REQUESTS`. |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | Global ceiling for concurrent requests per app. Overrides per-app settings if they exceed this value. `0` means unlimited. |
 
@@ -165,14 +178,17 @@ Only effective when starting with Docker image or Docker Compose.
 | `DIFY_BIND_ADDRESS` | `0.0.0.0` | Network interface the API server binds to. `0.0.0.0` listens on all interfaces; set to `127.0.0.1` to restrict to localhost only. |
 | `DIFY_PORT` | `5001` | Port the API server listens on. |
 | `SERVER_WORKER_AMOUNT` | `1` | Number of Gunicorn worker processes. With gevent (default), each worker handles multiple concurrent connections via greenlets, so 1 is usually sufficient. For sync workers, use `(2 x CPU cores) + 1`. [Reference](https://gunicorn.org/design/#how-many-workers). |
-| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn worker type. Gevent provides lightweight async concurrency. Changing this breaks psycopg2 and gRPC patching—it is strongly discouraged. |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn worker type. `gevent` provides lightweight async concurrency. Set to `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` when `ENABLE_COLLABORATION_MODE` is `true`; left at `gevent`, WebSocket handshakes fail silently. Other values break psycopg2 and gRPC patching. |
 | `SERVER_WORKER_CONNECTIONS` | `10` | Maximum concurrent connections per worker. Only applies to async workers (gevent). If you experience connection rejections or slow responses under load, try increasing this value. |
 | `GUNICORN_TIMEOUT` | `360` | If a worker doesn't respond within this many seconds, Gunicorn kills and restarts it. Set to 360 (6 minutes) to support long-lived SSE connections used for streaming LLM responses. |
 | `CELERY_WORKER_CLASS` | (empty; defaults to gevent) | Celery worker type. Same gevent patching requirements as `SERVER_WORKER_CLASS`—it is strongly discouraged to change. |
-| `CELERY_WORKER_AMOUNT` | (empty; defaults to 1) | Number of Celery worker processes. Only used when autoscaling is disabled. |
+| `CELERY_WORKER_AMOUNT` | `4` | Number of Celery worker processes. Only used when autoscaling is disabled. Lower it on constrained VMs; for elastic throughput, enable `CELERY_AUTO_SCALE` instead of raising this. |
 | `CELERY_AUTO_SCALE` | `false` | Enable dynamic autoscaling. When enabled, Celery monitors queue depth and spawns/kills workers between `CELERY_MIN_WORKERS` and `CELERY_MAX_WORKERS`. |
 | `CELERY_MAX_WORKERS` | (empty; defaults to CPU count) | Maximum workers when autoscaling is enabled. |
 | `CELERY_MIN_WORKERS` | (empty; defaults to 1) | Minimum workers when autoscaling is enabled. |
+| `COMPOSE_WORKER_HEALTHCHECK_DISABLED` | `true` | Disable the Docker Compose health check for the Celery worker container. Disabled by default because `celery inspect ping` can be expensive on busy workers. Set to `false` to enable. Only applies to Docker Compose deployments. |
+| `COMPOSE_WORKER_HEALTHCHECK_INTERVAL` | `30s` | Interval between Celery worker health checks. Only used when `COMPOSE_WORKER_HEALTHCHECK_DISABLED=false`. Accepts Docker Compose duration values (e.g., `30s`, `1m`). |
+| `COMPOSE_WORKER_HEALTHCHECK_TIMEOUT` | `30s` | Timeout for each Celery worker health check. Only used when `COMPOSE_WORKER_HEALTHCHECK_DISABLED=false`. |
 
 ### API Tool Configuration
 
@@ -214,7 +230,7 @@ These are passed as startup arguments to the PostgreSQL container—they configu
 
 | Variable | Default | Description |
 |---|---|---|
-| `POSTGRES_MAX_CONNECTIONS` | `100` | Maximum number of database connections. [Reference](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) |
+| `POSTGRES_MAX_CONNECTIONS` | `200` | Maximum number of database connections. Keep at least `SERVER_WORKER_AMOUNT × SERVER_WORKER_CONNECTIONS + CELERY_WORKER_AMOUNT + headroom` to avoid `too many connections` errors when API and Celery workers both open pools. [Reference](https://www.postgresql.org/docs/current/runtime-config-connection.html#GUC-MAX-CONNECTIONS) |
 | `POSTGRES_SHARED_BUFFERS` | `128MB` | Shared memory for buffers. Recommended: 25% of available memory. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-SHARED-BUFFERS) |
 | `POSTGRES_WORK_MEM` | `4MB` | Memory per database worker for working space. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-WORK-MEM) |
 | `POSTGRES_MAINTENANCE_WORK_MEM` | `64MB` | Memory reserved for maintenance activities. [Reference](https://www.postgresql.org/docs/current/runtime-config-resource.html#GUC-MAINTENANCE-WORK-MEM) |
@@ -244,6 +260,7 @@ Configure these to connect Dify to your Redis instance. Dify supports three depl
 | `REDIS_USERNAME` | (empty) | Redis 6.0+ ACL username. Applies to all modes (standalone, Sentinel, Cluster). |
 | `REDIS_PASSWORD` | `difyai123456` | Redis authentication password. For Cluster mode, use `REDIS_CLUSTERS_PASSWORD` instead. |
 | `REDIS_DB` | `0` | Redis database number (0–15). Only applies to standalone and Sentinel modes. Make sure this doesn't collide with Celery's database (configured in `CELERY_BROKER_URL`; default is DB 1). |
+| `REDIS_KEY_PREFIX` | (empty) | Optional global prefix applied to all Redis keys, pub/sub channels, Redis Streams names, and Celery broker queues and result-backend keys. Dify automatically inserts a colon between the prefix and the key, so setting `staging` produces keys like `staging:session:abc`. Useful when multiple Dify instances share one Redis deployment (for example, staging and production) to prevent key collisions. Leave empty to preserve unprefixed behavior. Turning the prefix on for an existing deployment strands any keys written under the previous (empty or different) prefix. |
 | `REDIS_USE_SSL` | `false` | Enable SSL/TLS for the Redis connection. Does not automatically apply to Sentinel protocol. |
 | `REDIS_MAX_CONNECTIONS` | (empty) | Maximum connections in the Redis pool. Leave unset for the library default. Set this to match your Redis server's `maxclients` if needed. |
 
@@ -281,6 +298,19 @@ Cluster mode provides automatic sharding across multiple Redis nodes. Mutually e
 | `REDIS_CLUSTERS` | (empty) | Cluster nodes. Format: `<ip1>:<port1>,<ip2>:<port2>,<ip3>:<port3>` |
 | `REDIS_CLUSTERS_PASSWORD` | (empty) | Password for the Redis Cluster. |
 
+#### Redis Connection Resilience
+
+These tune client-side retry, timeout, and health-check behavior for Redis connections. Defaults are conservative; increase timeouts for cloud or WAN deployments where network latency is higher.
+
+| Variable | Default | Description |
+|---|---|---|
+| `REDIS_RETRY_RETRIES` | `3` | Maximum retries per Redis command on transient failures (`ConnectionError`, `TimeoutError`, `socket.timeout`). Set to `0` to disable retries. Uses exponential backoff with jitter. |
+| `REDIS_RETRY_BACKOFF_BASE` | `1.0` | Base delay in seconds for exponential backoff between retries. |
+| `REDIS_RETRY_BACKOFF_CAP` | `10.0` | Maximum backoff delay in seconds between retries. |
+| `REDIS_SOCKET_TIMEOUT` | `5.0` | Socket timeout in seconds for Redis read/write operations. Increase if you see intermittent command timeouts under load. |
+| `REDIS_SOCKET_CONNECT_TIMEOUT` | `5.0` | Socket timeout in seconds for establishing a Redis connection. |
+| `REDIS_HEALTH_CHECK_INTERVAL` | `30` | Interval in seconds between client-side health checks on idle connections. Set to `0` to disable. Not applied in Cluster mode (silently stripped by `redis-py`). |
+
 ### Celery Configuration
 
 Configure the background task queue used for dataset indexing, email sending, and scheduled jobs.
@@ -292,12 +322,14 @@ Default: `redis://:difyai123456@redis:6379/1`
 Redis connection URL for the Celery message broker.
 
 Direct connection format:
-```
+
+```text
 redis://<redis_username>:<redis_password>@<redis_host>:<redis_port>/<redis_database>
 ```
 
 Sentinel mode format (separate multiple nodes with semicolons):
-```
+
+```text
 sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<redis_database>
 ```
 
@@ -307,7 +339,7 @@ sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<re
 | `BROKER_USE_SSL` | `false` | Auto-enabled when `CELERY_BROKER_URL` uses `rediss://` scheme. Applies the Redis SSL certificate settings to the broker connection. |
 | `CELERY_USE_SENTINEL` | `false` | Enable Redis Sentinel mode for the Celery broker. |
 | `CELERY_SENTINEL_MASTER_NAME` | (empty) | Sentinel service name (Master Name). |
-| `CELERY_SENTINEL_PASSWORD` | (empty) | Password for Sentinel authentication. Separate from `REDIS_SENTINEL_PASSWORD`—they can differ if you use different Sentinel clusters for caching vs task queuing. |
+| `CELERY_SENTINEL_PASSWORD` | (empty) | Password for Sentinel authentication. Separate from `REDIS_SENTINEL_PASSWORD`; the two can differ if caching and task queuing use different Sentinel clusters. |
 | `CELERY_SENTINEL_SOCKET_TIMEOUT` | `0.1` | Timeout for connecting to Sentinel in seconds. |
 | `CELERY_TASK_ANNOTATIONS` | `null` | Apply runtime settings to specific tasks (e.g., rate limits). Format: JSON dictionary. Example: `{"tasks.add": {"rate_limit": "10/s"}}`. Most users don't need this. |
 
@@ -321,6 +353,7 @@ Controls cross-domain access policies for the frontend.
 | `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | Allowed origins for cross-origin requests to the console API. If not set, falls back to `CONSOLE_WEB_URL`. |
 | `COOKIE_DOMAIN` | (empty) | Set to the shared top-level domain (e.g., `example.com`) when frontend and backend run on different subdomains. This allows authentication cookies to be shared across subdomains. When empty, cookies use the most secure `__Host-` prefix and are locked to a single domain. |
 | `NEXT_PUBLIC_COOKIE_DOMAIN` | (empty) | Frontend flag for cross-subdomain cookies. Set to `1` (or any non-empty value) to enable—the actual domain is read from `COOKIE_DOMAIN` on the backend. |
+| `NEXT_PUBLIC_SOCKET_URL` | `ws://localhost` | Browser-side WebSocket endpoint for real-time collaboration. Scheme + host + port only (path `/socket.io/` is fixed). Swap `http(s)://` for `ws(s)://`. Example: `wss://dify.example.com`. The default targets the bundled nginx on port 80. Applied at runtime; container restart picks up changes. |
 | `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | Frontend-only. Controls how many concurrent API calls the UI makes during batch operations. |
 
 ### File Storage Configuration
@@ -816,6 +849,9 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 | `BAIDU_VECTOR_DB_REPLICAS` | `3` | Number of replicas. |
 | `BAIDU_VECTOR_DB_INVERTED_INDEX_ANALYZER` | `DEFAULT_ANALYZER` | Inverted index analyzer. |
 | `BAIDU_VECTOR_DB_INVERTED_INDEX_PARSER_MODE` | `COARSE_MODE` | Inverted index parser mode. |
+| `BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT` | `500` | Absolute row-count increment that triggers an automatic index rebuild on the Baidu Vector DB side. Works alongside `_RATIO`; whichever threshold is crossed first wins. |
+| `BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT_RATIO` | `0.05` | Relative growth (new rows / existing rows) that triggers an automatic index rebuild. Whichever threshold is crossed first wins. |
+| `BAIDU_VECTOR_DB_REBUILD_INDEX_TIMEOUT_IN_SECONDS` | `300` | Maximum time the client waits for an index rebuild to complete. On timeout, the client call fails but the server-side rebuild may still finish; retrying the query after a delay typically succeeds. |
 
 </Accordion>
 
@@ -1179,13 +1215,14 @@ All outbound HTTP requests from Dify (HTTP nodes, image downloads, etc.) are rou
 
 ## Web Frontend Service
 
-These variables are used by the Next.js web frontend container only—they do not affect the Python backend.
+These variables are used by the Next.js web frontend container only, and do not affect the Python backend.
 
 | Variable | Default | Description |
 |---|---|---|
 | `TEXT_GENERATION_TIMEOUT_MS` | `60000` | Frontend timeout for streaming text generation UI. If a stream stalls for longer than this, the UI pauses rendering. |
+| `ALLOW_INLINE_STYLES` | `false` | Allow inline `style` attributes and `<style>` blocks in user-generated Markdown content. Disabled by default for security (inline styles can be used for phishing). Enable only if you need rich styling from trusted content sources. |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
-| `MAX_TREE_DEPTH` | `50` | Maximum node tree depth in the workflow editor UI. |
+| `MAX_TREE_DEPTH` | `50` | Maximum number of nodes along a single execution path. Longer paths cannot be published. Changes apply only to newly published workflows. |
 
 ## Database Service
 
@@ -1232,7 +1269,7 @@ The sandbox is an isolated service for executing code nodes (Python, JavaScript,
 After enabling HTTPS, also update the URL variables in [Common Variables](#common-variables) (e.g., `CONSOLE_API_URL`, `CONSOLE_WEB_URL`) to use `https://`.
 </Note>
 
-#### Certbot Configuration
+### Certbot Configuration
 
 | Variable | Default | Description |
 |---|---|---|

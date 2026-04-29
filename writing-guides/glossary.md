@@ -14,6 +14,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 |:--------|:--------|:---------|:------|
 | Workflow | 工作流 | ワークフロー | |
 | Chatflow | 对话流 | チャットフロー | |
+| workflow | 工作流 | ワークフロー | Always lowercase in English. Collective term covering both Workflow and Chatflow apps. Chinese and Japanese reuse the Workflow app-type translation. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools|
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
@@ -73,6 +74,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | List Operator | 列表操作 | リスト処理 | Filters, sorts, and limits list data |
 | Agent | Agent | Agent | Workflow node (distinct from Agent app type above) |
 | Human Input | 人工介入 | 人間の入力 | Pauses workflow execution to request human review or decisions |
+| Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Plugin Trigger. |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | Triggers workflow execution on a cron schedule |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | Triggers workflow execution via incoming HTTP webhook |
 | Plugin Trigger | 插件触发器 | プラグイントリガー | Triggers workflow execution from a plugin |
@@ -292,6 +294,14 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
+
+### Collaboration
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Add Comment | 添加评论 | コメントを追加 | workflow.comments.actions.addComment | Right-click menu item on canvas |
+| Edit comment | 编辑评论 | コメントを編集 | workflow.comments.actions.editComment | REVIEW: EN uses lowercase "comment" unlike sibling actions |
+| Comment Mode | 评论模式 | コメントモード | workflow.common.commentMode | Entered by pressing `C` on the canvas |
 
 ### Variable Config
 

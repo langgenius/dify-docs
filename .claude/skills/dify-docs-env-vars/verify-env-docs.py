@@ -35,6 +35,23 @@ def parse_env_example(path: str) -> dict[str, str]:
     return variables
 
 
+def parse_ignored_vars(path: str) -> set[str]:
+    """Parse the ignored-vars markdown file and return the set of ignored names.
+
+    Table rows beginning with `| \`VARIABLE_NAME\` |` register an ignore entry.
+    The header row `| Variable | ...` is skipped naturally because it isn't backticked.
+    """
+    ignored: set[str] = set()
+    if not Path(path).exists():
+        return ignored
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            match = re.match(r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|", line)
+            if match:
+                ignored.add(match.group(1))
+    return ignored
+
+
 def parse_mdx_docs(path: str) -> dict[str, str]:
     """Parse MDX documentation and extract documented defaults.
 
@@ -156,6 +173,9 @@ def normalize(value: str) -> str:
     return v
 
 
+DEFAULT_IGNORED_PATH = Path(__file__).parent / "ignored-vars.md"
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Verify env var documentation against .env.example"
@@ -170,6 +190,11 @@ def main():
         required=True,
         help="Path to MDX documentation file (e.g., en/self-host/configuration/environments.mdx)",
     )
+    parser.add_argument(
+        "--ignored",
+        default=str(DEFAULT_IGNORED_PATH),
+        help=f"Path to ignored-vars markdown file (default: {DEFAULT_IGNORED_PATH}).",
+    )
     args = parser.parse_args()
 
     if not Path(args.env_example).exists():
@@ -181,13 +206,17 @@ def main():
 
     env_vars = parse_env_example(args.env_example)
     doc_vars = parse_mdx_docs(args.docs)
+    ignored = parse_ignored_vars(args.ignored)
 
     print(f"Parsed {len(env_vars)} variables from .env.example")
     print(f"Parsed {len(doc_vars)} variables from documentation")
+    print(f"Loaded {len(ignored)} ignored variables from {args.ignored}")
     print()
 
     # --- Check 1: Variables in .env.example but missing from docs ---
-    missing_from_docs = sorted(set(env_vars.keys()) - set(doc_vars.keys()))
+    missing_from_docs = sorted(
+        (set(env_vars.keys()) - set(doc_vars.keys())) - ignored
+    )
     if missing_from_docs:
         print(f"=== MISSING FROM DOCS ({len(missing_from_docs)}) ===")
         for name in missing_from_docs:
@@ -195,7 +224,9 @@ def main():
         print()
 
     # --- Check 2: Variables in docs but not in .env.example ---
-    extra_in_docs = sorted(set(doc_vars.keys()) - set(env_vars.keys()))
+    extra_in_docs = sorted(
+        (set(doc_vars.keys()) - set(env_vars.keys())) - ignored
+    )
     if extra_in_docs:
         print(f"=== IN DOCS BUT NOT IN .env.example ({len(extra_in_docs)}) ===")
         for name in extra_in_docs:

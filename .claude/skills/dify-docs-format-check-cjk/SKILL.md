@@ -12,7 +12,7 @@ description: >
 
 ## Purpose
 
-Verify changed Chinese (`zh/`) and Japanese (`ja/`) documentation against every rule in:
+Verify Chinese (`zh/`) and Japanese (`ja/`) documentation against every rule in:
 
 - `writing-guides/formatting-guide.md` — general rules
 - `tools/translate/formatting-zh.md` — Chinese-specific rules
@@ -22,13 +22,13 @@ Mechanical rules are enforced by the linter script (`check-format-cjk.py`); judg
 
 ## Before Starting
 
-Detect changed documentation files by combining:
+Audit the entire file, not just the diff. Default to files currently under review, detected via:
 
 - `git diff --name-only`
 - `git diff --cached --name-only`
 - Untracked files from `git status --porcelain` (lines starting with `??`)
 
-Filter for `.mdx` and `.md` files under `zh/` or `ja/`. If no changed files are detected, ask the user which files to check.
+Filter for `.mdx` and `.md` files under `zh/` or `ja/`. If no files are detected, ask the user which files to check.
 
 Because translations are typically produced as a zh/ja pair from the same English source, it is natural to audit both languages in a single session.
 

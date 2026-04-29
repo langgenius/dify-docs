@@ -1277,3 +1277,205 @@ Two modes: `basic` (username/password via http_auth) and `aws_managed_iam` (SigV
 ### OCEANBASE_ENABLE_HYBRID_SEARCH
 
 Similar to Milvus—enables fulltext index creation for BM25 queries alongside vector search. Requires OceanBase >= 4.3.5.1. Collections must be recreated after enabling.
+
+---
+
+## 1.14 Additions (traced 2026-04-22)
+
+### REDIS_KEY_PREFIX
+
+**Default:** `""` (empty)
+
+**What it actually does:** Prepends a string namespace to every Redis key that Dify writes, so multiple Dify deployments can safely share one Redis server. When set to `staging:`, a `get("session_token:abc")` call becomes `GET staging:session_token:abc` on the wire.
+
+The prefix is threaded through `RedisClientWrapper` in `api/extensions/ext_redis.py` via helpers in `api/extensions/redis_names.py` (`serialize_redis_name`, `serialize_redis_name_arg`, `serialize_redis_name_args`, `normalize_redis_key_prefix`). Every wrapper method — `get`, `set`, `setex`, `delete`, `incr`, `expire`, `exists`, `ttl`, `lock`, `hset`, `zadd`, and so on — prefixes its name argument before forwarding. `delete(*names)` and `exists(*names)` prefix every name.
+
+Beyond direct key operations, the prefix is also applied to:
+
+- **Pub/Sub channels** — `libs/broadcast_channel/redis/channel.py`, `sharded_channel.py`
+- **Redis Streams** — `libs/broadcast_channel/redis/streams_channel.py`
+- **Celery Redis transport** — applied as Celery's `global_keyprefix` transport option in `api/extensions/ext_celery.py`, so broker queues and result-backend keys follow the same namespace
+- **DB migration locks** — `libs/db_migration_lock.py`
+
+`normalize_redis_key_prefix()` strips whitespace; whitespace-only values are treated as empty (no prefixing).
+
+**If left empty:** Keys are written unprefixed (backward-compatible with existing deployments). Correct choice when Dify has Redis to itself.
+
+**If set:** Every key, channel, stream, and Celery artifact is namespaced. Existing data written without the prefix becomes invisible to the new client — plan a wipe or dual-run when switching.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/cache/redis_config.py`
+- Wrapper plumbing: `api/extensions/ext_redis.py`, `api/extensions/redis_names.py`
+- Celery: `api/extensions/ext_celery.py`
+- Broadcast channels: `api/libs/broadcast_channel/redis/{channel,sharded_channel,streams_channel}.py`
+- Migration lock: `api/libs/db_migration_lock.py`
+
+**Source:** PR #35139 (issue #35138), merged 2026-04-14.
+
+---
+
+### REDIS_RETRY_RETRIES / REDIS_RETRY_BACKOFF_BASE / REDIS_RETRY_BACKOFF_CAP
+
+**Defaults:** `3`, `1.0`, `10.0`
+
+**What they actually do:** `_get_retry_policy()` in `api/extensions/ext_redis.py` constructs a shared `redis.retry.Retry` object with `ExponentialWithJitterBackoff(base=BACKOFF_BASE, cap=BACKOFF_CAP)` and `retries=RETRIES`. The policy is attached to every standalone, Sentinel, and Cluster client (via `_get_connection_health_params()` / `_get_cluster_connection_health_params()`), and also to pub/sub clients built by `_create_pubsub_client()`.
+
+When `redis-py` encounters transient failures (`ConnectionError`, `TimeoutError`, `socket.timeout`), it calls `Retry.call_with_retry()`, which sleeps `min(base * (2^attempt) + jitter, cap)` seconds between attempts, up to `retries` attempts. With the defaults, worst-case wait before surfacing the error is roughly `1s + 2s + 4s = 7s` plus jitter, capped at 10s per sleep.
+
+**If left at default:** Most transient hiccups (master failover, brief DNS blip, half-open socket) are invisible to callers. Worst-case latency cost on a bad command is bounded.
+
+**If `REDIS_RETRY_RETRIES=0`:** No retry; every transient error propagates immediately. Matches pre-1.14 behavior.
+
+**If backoff values are raised:** Longer tails but more patience for slow failovers. Lowered: faster failure but less resilience.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/cache/redis_config.py`
+- Policy construction: `_get_retry_policy()` in `api/extensions/ext_redis.py`
+- Applied via: `_get_connection_health_params()`, `_get_cluster_connection_health_params()`, `_get_base_redis_params()`, `_create_pubsub_client()`
+
+**Source:** PR #34566 (issue #34557), merged 2026-04-09.
+
+---
+
+### REDIS_SOCKET_TIMEOUT / REDIS_SOCKET_CONNECT_TIMEOUT
+
+**Defaults:** `5.0`, `5.0`
+
+**What they actually do:** `socket_timeout` bounds how long each Redis command waits on a read/write on an already-established connection; `socket_connect_timeout` bounds how long the TCP handshake phase can take. Both are part of `RedisBaseParamsDict` in `_get_base_redis_params()` and flow into every client type — `redis.ConnectionPool`, `Sentinel.master_for()`, `RedisCluster`, and pub/sub clients all receive them.
+
+Before PR #34566, the main backend clients built through `ConnectionPool(**redis_params)` / `sentinel.master_for(...)` / `RedisCluster.from_url(...)` used `redis-py`'s internal default (no socket timeout on standalone), which meant commands could block indefinitely on a silently-dropped connection.
+
+**If left at default:** Stuck connections surface as timeouts after 5 seconds. Appropriate for most local or same-region deployments.
+
+**If increased:** Necessary for cloud or WAN deployments where p99 network latency exceeds 5s under load. The existing `REDIS_SENTINEL_SOCKET_TIMEOUT` doc already notes this pattern for Sentinel; the same reasoning applies to the main client.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/cache/redis_config.py`
+- Used in: `_get_connection_health_params()`, `_get_cluster_connection_health_params()` in `api/extensions/ext_redis.py`
+
+**Source:** PR #34566, merged 2026-04-09.
+
+---
+
+### REDIS_HEALTH_CHECK_INTERVAL
+
+**Default:** `30` (seconds)
+
+**What it actually does:** `redis-py`'s `Connection` class sends a PING on a connection if it has been idle longer than this many seconds before reusing it. Catches half-open sockets that the kernel hasn't noticed yet (e.g., after a NAT rebind or a silent LB timeout). Set to `0` to disable.
+
+**Important asymmetry:** The parameter is passed only in `_get_connection_health_params()` (standalone + Sentinel). `_get_cluster_connection_health_params()` explicitly drops it — see the inline comment in `ext_redis.py`:
+
+> "RedisCluster does not support `health_check_interval` as a constructor keyword (it is silently stripped by `cleanup_kwargs`), so it is excluded here. Only `retry`, `socket_timeout`, and `socket_connect_timeout` are passed through."
+
+This is a known `redis-py` quirk. The doc row explicitly flags it so cluster users don't waste time tuning a no-op.
+
+**If left at default:** Background PINGs every 30s on idle connections prevent stale-connection errors.
+
+**If set to 0:** No background health checks. Saves a tiny bit of traffic; acceptable if load is high enough that every connection is used constantly.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/cache/redis_config.py`
+- Application: `_get_connection_health_params()` in `api/extensions/ext_redis.py`
+- Cluster exclusion: `_get_cluster_connection_health_params()` in the same file
+
+**Source:** PR #34566, merged 2026-04-09.
+
+---
+
+### BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT / BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT_RATIO
+
+**Defaults:** `500`, `0.05`
+
+**What they actually do:** Control when the Baidu Vector DB backend rebuilds its ANN index automatically. The Baidu SDK treats them as the "absolute row increase" and "relative row increase" thresholds; when either is exceeded, the index is rebuilt in the background.
+
+Defined in `api/configs/middleware/vdb/baidu_vector_config.py` on `BaiduVectorDBConfig`; passed to the Baidu backend factory when initializing a collection. Only meaningful when `VECTOR_STORE=baidu`.
+
+**If left at default:** Index rebuilds are triggered by 500 new rows OR a 5% increase, whichever happens first. Keeps search quality high for typical workloads.
+
+**If raised:** Fewer rebuilds, lower CPU churn, but search quality degrades between rebuilds.
+
+**If lowered:** More frequent rebuilds, higher background load, freshest index.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/vdb/baidu_vector_config.py`
+- Factory: `api/providers/vdb/vdb-baidu/src/dify_vdb_baidu/baidu_vector.py` (post 1.14 workspace refactor)
+
+---
+
+### BAIDU_VECTOR_DB_REBUILD_INDEX_TIMEOUT_IN_SECONDS
+
+**Default:** `300`
+
+**Code inconsistency to flag:** The Pydantic `Field` description in `baidu_vector_config.py` reads "default is 3600 seconds" but the actual `default=300`. `docker/.env.example` also uses 300. Document 300 (what users actually get); the description string is stale and should be flagged upstream.
+
+**What it actually does:** Maximum wall-clock time the client waits for a Baidu VDB index rebuild before raising a timeout. 300 seconds (5 minutes) is adequate for small-to-medium collections; large collections (millions of rows) may need more.
+
+**If it times out:** The client-side call fails, but the rebuild may still complete on the server. Re-querying after the rebuild succeeds typically resolves the error.
+
+**Key code locations:**
+- Definition: `api/configs/middleware/vdb/baidu_vector_config.py`
+
+---
+
+### COMPOSE_WORKER_HEALTHCHECK_DISABLED / _INTERVAL / _TIMEOUT
+
+**Defaults:** `true`, `30s`, `30s`
+
+**What they actually do:** Purely Docker Compose concerns. In `docker/docker-compose.yaml`, the `worker` service's `healthcheck:` block resolves to:
+
+```yaml
+test: ["CMD-SHELL", "celery -A celery_healthcheck.celery inspect ping"]
+interval: ${COMPOSE_WORKER_HEALTHCHECK_INTERVAL:-30s}
+timeout: ${COMPOSE_WORKER_HEALTHCHECK_TIMEOUT:-30s}
+retries: 3
+start_period: 60s
+disable: ${COMPOSE_WORKER_HEALTHCHECK_DISABLED:-true}
+```
+
+`celery inspect ping` is a synchronous command that round-trips through the broker to ask every worker "are you alive?" and waits for replies. Under heavy load it can itself take significant time and contribute to broker contention, which is why the health check is **disabled by default**.
+
+**If disabled (default):** Compose marks the worker container healthy based on process liveness only (PID 1 running). Lighter but won't detect a hung worker that's still alive at the process level.
+
+**If enabled (`COMPOSE_WORKER_HEALTHCHECK_DISABLED=false`):** Compose runs `celery inspect ping` every `INTERVAL` with a `TIMEOUT` per attempt. Three consecutive failures mark the container unhealthy, which triggers Compose restart policies or orchestration reactions. Useful when operators have observed hung-worker incidents and the added broker traffic is acceptable.
+
+`INTERVAL` and `TIMEOUT` accept Docker Compose duration strings (`30s`, `1m`, `1m30s`).
+
+**Key code locations:**
+- Definition: `docker/.env.example`, `docker/docker-compose.yaml`
+- No Pydantic config; these are Compose-only, not read by Python code.
+
+---
+
+### ALLOW_INLINE_STYLES
+
+**Default:** `false`
+
+**What it actually does:** Frontend-only security toggle. `web/docker/entrypoint.sh` maps the operator-facing `ALLOW_INLINE_STYLES` (set in `docker/.env`) to `NEXT_PUBLIC_ALLOW_INLINE_STYLES` for the Next.js runtime:
+
+```bash
+export NEXT_PUBLIC_ALLOW_INLINE_STYLES=${ALLOW_INLINE_STYLES:-false}
+```
+
+The frontend's Markdown sanitizer reads `NEXT_PUBLIC_ALLOW_INLINE_STYLES` to decide whether to allow inline `style="..."` attributes and `<style>` tags in user-generated Markdown (chat responses, knowledge base content, and so on). Disabled by default because inline styles can be abused for phishing (e.g., hiding a malicious link behind a styled block that overlays trusted UI).
+
+**If disabled (default):** Markdown rendering strips inline styles. User-authored content still renders, just without custom styling.
+
+**If enabled:** Inline styles pass through. Enable only if your content pipeline is trusted and you need rich visual control from Markdown authors.
+
+**Key code locations:**
+- Mapping: `web/docker/entrypoint.sh`
+- Default: `docker/.env.example` (root) and `web/.env.example` (source-code deployments)
+
+---
+
+### CELERY_WORKER_AMOUNT — default correction
+
+The existing entry near line 937 describes behavior correctly, but the stated default ("1") no longer matches `docker/.env.example`, which sets `CELERY_WORKER_AMOUNT=4` (consumed by `docker-compose.yaml` via `${CELERY_WORKER_AMOUNT:-4}`). Docs updated to `4`.
+
+**Why the change matters:** 4 is a better out-of-the-box baseline for a machine with a few cores; users with lighter workloads can still set it lower, and `CELERY_AUTO_SCALE=true` overrides it entirely.
+
+---
+
+### POSTGRES_MAX_CONNECTIONS — default correction
+
+Covered in the "PostgreSQL / MySQL Performance Tuning Variables" section. `docker/.env.example` bumped the default from `100` to `200` upstream (`docker-compose.yaml` passes it as `-c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}` to the Postgres container). The higher default is safer for Dify's multi-worker + Celery + async-task traffic shape; operators can still lower it on constrained hosts.
