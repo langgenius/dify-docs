@@ -287,9 +287,9 @@ This is primarily a developer/debugging tool. Not recommended for production due
 
 **Key code locations:**
 - Definition: `api/configs/deploy/__init__.py`
-- Workflow debug: `api/core/workflow/workflow_entry.py`
+- Workflow debug: `api/core/workflow/workflow_entry.py` (entry); `graphon/src/graphon/graph_engine/layers/debug_logging.py` (DebugLoggingLayer; lives in the graphon repo)
 - Tool callbacks: `api/core/callback_handler/agent_tool_callback_handler.py`
-- LLM logging: `api/dify_graph/model_runtime/model_providers/__base/large_language_model.py`
+- LLM logging: `graphon/src/graphon/model_runtime/model_providers/base/large_language_model.py` (graphon repo)
 
 ---
 
@@ -1479,3 +1479,35 @@ The existing entry near line 937 describes behavior correctly, but the stated de
 ### POSTGRES_MAX_CONNECTIONS — default correction
 
 Covered in the "PostgreSQL / MySQL Performance Tuning Variables" section. `docker/.env.example` bumped the default from `100` to `200` upstream (`docker-compose.yaml` passes it as `-c max_connections=${POSTGRES_MAX_CONNECTIONS:-200}` to the Postgres container). The higher default is safer for Dify's multi-worker + Celery + async-task traffic shape; operators can still lower it on constrained hosts.
+
+---
+
+### CREATORS_PLATFORM_FEATURES_ENABLED, CREATORS_PLATFORM_API_URL, CREATORS_PLATFORM_OAUTH_CLIENT_ID
+
+Creator Center is the submission portal where users upload Dify apps as DSL templates. Submitted templates are reviewed and, once approved, listed on Dify Marketplace. The console's **Publish to Marketplace** button (i18n key `common.publishToMarketplace` in `web/i18n/{en-US,zh-Hans,ja-JP}/workflow.json`) drives this flow.
+
+**Flow:**
+
+1. User clicks **Publish to Marketplace** in the app builder. The button is gated on `systemFeatures.enable_creators_platform` (frontend: `web/app/components/app/app-publisher/index.tsx`).
+2. Frontend calls `POST /apps/{app_id}/publish-to-creators-platform`.
+3. Endpoint (`api/controllers/console/app/app.py: AppPublishToCreatorsPlatformApi`) returns 403 when `CREATORS_PLATFORM_FEATURES_ENABLED` is false. Otherwise it exports the app DSL via `AppDslService.export_dsl(include_secret=False)`.
+4. `core/helper/creators.upload_dsl()` POSTs the DSL to `{CREATORS_PLATFORM_API_URL}/api/v1/templates/anonymous-upload` and receives a `claim_code`.
+5. `get_redirect_url()` builds the redirect with `?dsl_claim_code=...`. If `CREATORS_PLATFORM_OAUTH_CLIENT_ID` is non-empty, it also signs an OAuth authorization code via `OAuthServerService.sign_oauth_authorization_code(client_id, user_account_id)` and adds `&oauth_code=...`.
+6. Frontend opens the redirect URL in a new tab, taking the user into Creator Center to fill in template details.
+
+**Behavior by var state:**
+
+- `CREATORS_PLATFORM_FEATURES_ENABLED=false`: button hidden, console API returns 403. Self-hosters use this to remove the one-click publish path.
+- `CREATORS_PLATFORM_API_URL` overridden: only meaningful with a self-hosted Creator Center instance. Default `https://creators.dify.ai`.
+- `CREATORS_PLATFORM_OAUTH_CLIENT_ID` empty (default): anonymous upload — the receiving Creator Center cannot attribute the template to the publishing user.
+
+**Key code locations:**
+
+- Pydantic config: `api/configs/feature/__init__.py` (`CreatorsPlatformConfig`)
+- Service exposure: `api/services/feature_service.py` (`enable_creators_platform`)
+- Console controller: `api/controllers/console/app/app.py` (`AppPublishToCreatorsPlatformApi`)
+- Upload helper: `api/core/helper/creators.py`
+- Frontend trigger: `web/app/components/app/app-publisher/index.tsx`
+- UI labels: `common.publishToMarketplace` in `web/i18n/{en-US,zh-Hans,ja-JP}/workflow.json`
+
+**Naming note:** Env var prefix is `CREATORS_PLATFORM_*` and the backend Pydantic class is `CreatorsPlatformConfig`, but the user-facing product name is **Creator Center** and the UI button reads "Publish to Marketplace" (templates appear on Marketplace after Creator Center review). Use "Creator Center" in user-facing prose; the prefix is a backend-only artifact.

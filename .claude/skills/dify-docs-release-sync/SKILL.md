@@ -102,17 +102,21 @@ Also check: Pydantic models and `fields/` serializers used by Service API contro
 
 Read the PR description for context. Map changed source paths to likely doc areas:
 
-| Source path pattern | Likely doc area |
-|---|---|
-| `api/core/workflow/nodes/` | `en/use-dify/workflow/nodes/` |
-| `api/core/rag/` | `en/use-dify/knowledge/` |
-| `api/core/model_runtime/` | `en/use-dify/model-providers/` |
-| `api/core/tools/` | `en/use-dify/tools/` or workflow tool node docs |
-| `api/core/agent/` | `en/use-dify/build-apps/agent.mdx` |
-| `api/core/app/` | `en/use-dify/build-apps/` |
-| `web/app/components/` | UI-related docs (check PR description for specifics) |
-| `docker/`, deployment configs | `en/getting-started/install/` |
-| `api/configs/` | Configuration/environment variable docs |
+| Repo | Source path pattern | Likely doc area |
+|---|---|---|
+| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/use-dify/workflow/nodes/` |
+| dify | `api/core/rag/` | `en/use-dify/knowledge/` |
+| dify | `api/core/tools/` | `en/use-dify/tools/` or workflow tool node docs |
+| dify | `api/core/agent/` | `en/use-dify/build-apps/agent.mdx` |
+| dify | `api/core/app/` | `en/use-dify/build-apps/` |
+| dify | `web/app/components/` | UI-related docs (check PR description for specifics) |
+| dify | `docker/`, deployment configs | `en/getting-started/install/` |
+| dify | `api/configs/` | Configuration/environment variable docs |
+| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/use-dify/workflow/nodes/` |
+| graphon | `src/graphon/model_runtime/` | `en/use-dify/model-providers/` |
+| graphon | `src/graphon/graph_engine/`, `src/graphon/runtime/` | workflow engine behavior, execution semantics |
+
+When checking dify PRs, also scan recent merges in `langgenius/graphon` for the same release window. A user-visible workflow change may ship as a graphon release plus a dify pin bump (look for changes to `api/pyproject.toml` and `api/uv.lock`).
 
 **Important**: These mappings are heuristic. For every candidate match:
 

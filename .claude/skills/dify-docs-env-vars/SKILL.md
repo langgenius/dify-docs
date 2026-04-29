@@ -17,6 +17,18 @@ Read these shared guides:
 2. `writing-guides/formatting-guide.md`
 3. `writing-guides/glossary.md`
 
+## Source of Truth: `docker/.env.example`
+
+The doc mirrors `docker/.env.example`, the supported self-host knob surface.
+
+| Var location | Action |
+|---|---|
+| In `.env.example`, uncommented | Document. |
+| In `.env.example`, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `ignored-vars.md` (the verifier can't parse defaults from comments). |
+| Only in `api/configs/` Pydantic, not in `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to `.env.example` first. |
+
+The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.
+
 ## Four-Step Process
 
 **Pull the latest Dify code** before tracing. In the Dify codebase directory:
@@ -143,7 +155,7 @@ Some variables in `.env.example` are deliberately not documented (Cloud-only, ex
 
 - Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)** in `ignored-vars.md`.
 - Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
-- Document a supported variable whose `.env.example` entry is commented out → add it under **Verifier false positives**.
+- Document a supported variable whose `.env.example` entry is **commented out** (e.g., `#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars that exist in `.env.example` in commented form. Do not use it to suppress verifier signal for vars that are absent from `.env.example` entirely — those are upstream-deferred (see [Source of Truth](#source-of-truth-docker-env-example)) and must not be documented.
 
 Every entry must include a source reference (PR, commit, or audit date).
 
