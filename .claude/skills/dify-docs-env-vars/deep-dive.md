@@ -287,9 +287,9 @@ This is primarily a developer/debugging tool. Not recommended for production due
 
 **Key code locations:**
 - Definition: `api/configs/deploy/__init__.py`
-- Workflow debug: `api/core/workflow/workflow_entry.py`
+- Workflow debug: `api/core/workflow/workflow_entry.py` (entry); `graphon/src/graphon/graph_engine/layers/debug_logging.py` (DebugLoggingLayer; lives in the graphon repo)
 - Tool callbacks: `api/core/callback_handler/agent_tool_callback_handler.py`
-- LLM logging: `api/dify_graph/model_runtime/model_providers/__base/large_language_model.py`
+- LLM logging: `graphon/src/graphon/model_runtime/model_providers/base/large_language_model.py` (graphon repo)
 
 ---
 
