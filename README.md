@@ -2,6 +2,11 @@
 
 Official documentation for [Dify](https://dify.ai), available in English, Chinese, and Japanese.
 
+## Table of Contents
+
+- [Contributing](#contributing)
+- [Viewing Previous Versions](#viewing-previous-versions)
+
 ---
 
 ## Contributing
@@ -101,3 +106,19 @@ This repository includes Claude Code skills in `.claude/skills/` that provide wr
 - **Update navigation.** If you add a new page, add it to the English section of `docs.json`.
 - **Test locally.** Run `mintlify dev` to verify your changes render correctly before opening a PR.
 - **No secrets.** Never commit API keys, credentials, or `.env` files.
+
+---
+
+## Viewing Previous Versions
+
+Our published documentation site only hosts the latest version of Dify. To view docs for an earlier release, check out the matching `release/*` branch and preview it locally with the Mintlify CLI.
+
+```bash
+git clone https://github.com/langgenius/dify-docs.git
+cd dify-docs
+git checkout release/1.14   # replace with the version you want
+npm i -g mintlify
+mintlify dev
+```
+
+This serves the historical docs at `http://localhost:3000`. See the [branches list](https://github.com/langgenius/dify-docs/branches/all?query=release) for available `release/*` versions.
