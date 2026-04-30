@@ -56,8 +56,8 @@ The script selects zh or ja rules based on the file path. Rules fall into three 
 - `C-no-language`, `C-blank-before`, `C-blank-after` — code block rules.
 - `Li-click-here`, `Li-http-external` — link rules.
 - `I-raw-img-tag`, `I-alt-too-long`, `I-caption-alt-mismatch`, `I-filename-*` — image rules (same set as the EN skill).
-- `M-tab-no-title`, `M-component-blank-before`, `M-component-blank-after` — Mintlify component rules.
-- `S-double-blank`, `S-trailing-whitespace` — spacing.
+- `M-tab-no-title` — Mintlify component rules.
+- `S-double-blank` — spacing.
 - `P-em-dash-spaces`, `P-en-dash-spaces` — general punctuation.
 
 **Shared CJK rules (zh + ja)**

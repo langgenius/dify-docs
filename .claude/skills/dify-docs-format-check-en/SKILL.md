@@ -88,7 +88,6 @@ The script checks these rules. Each violation includes the file path, line numbe
 **Mintlify Components**
 
 - `M-tab-no-title` — `<Tab>` without a `title` attribute.
-- `M-component-blank-before` / `M-component-blank-after` — missing blank line around `<Info>`, `<Tip>`, `<Note>`, or `<Warning>`.
 
 **UI Element References**
 
@@ -97,7 +96,6 @@ The script checks these rules. Each violation includes the file path, line numbe
 **Spacing**
 
 - `S-double-blank` — two or more consecutive blank lines.
-- `S-trailing-whitespace` — line ends with whitespace.
 
 **Punctuation**
 

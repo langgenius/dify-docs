@@ -282,7 +282,6 @@ Configure at least one model provider in **System Settings** > **Model Providers
 </Info>
 ```
 
-- One blank line before and after the component.
 - Content inside can include bold, links, and other inline formatting.
 
 ### Tabs
@@ -380,7 +379,7 @@ Use for showing multiple code variants of the same operation:
 
 ## Spacing
 
-- **One blank line** between paragraphs, before/after headings, before/after components, before/after code blocks.
+- **One blank line** between paragraphs, before/after headings, before/after code blocks.
 - **No double blank lines** anywhere in the file.
 
 ---
