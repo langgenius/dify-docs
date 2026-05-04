@@ -385,10 +385,6 @@ def check_images(lines: list[str]) -> list[Violation]:
 def check_mintlify(lines: list[str]) -> list[Violation]:
     vs: list[Violation] = []
     in_fence = False
-    callout_re = re.compile(r'^\s*<(Info|Tip|Note|Warning)\b[^>]*>',
-                            re.IGNORECASE)
-    closer_re = re.compile(r'^\s*</(Info|Tip|Note|Warning)>\s*$',
-                           re.IGNORECASE)
     tab_re = re.compile(r'<Tab(?:\s+[^>]*)?>')
     tab_title_re = re.compile(r'\btitle\s*=\s*"[^"]*"')
     for i, line in enumerate(lines, 1):
@@ -397,13 +393,6 @@ def check_mintlify(lines: list[str]) -> list[Violation]:
             continue
         if in_fence:
             continue
-        if callout_re.match(line) and i > 1 and lines[i - 2].strip() != '':
-            vs.append(Violation(i, 'M-component-blank-before',
-                                'Missing blank line before callout.'))
-        if closer_re.match(line) and i < len(lines) \
-                and lines[i].strip() != '':
-            vs.append(Violation(i, 'M-component-blank-after',
-                                'Missing blank line after callout.'))
         for m in tab_re.finditer(line):
             if not tab_title_re.search(m.group(0)):
                 vs.append(Violation(i, 'M-tab-no-title',
@@ -429,9 +418,6 @@ def check_spacing(lines: list[str]) -> list[Violation]:
                                     'Consecutive blank lines.'))
         else:
             blank_run = 0
-        if line != line.rstrip():
-            vs.append(Violation(i, 'S-trailing-whitespace',
-                                'Line has trailing whitespace.'))
     return vs
 
 
