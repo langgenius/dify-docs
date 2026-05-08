@@ -173,7 +173,15 @@ Avoid using `——` in Chinese text. Restructure instead:
 
 The single most important rule: after understanding what an English sentence says, write the Chinese from scratch as if you were writing it natively. Do not preserve English clause order, modifier chains, or connector words just because they appear in the source. Fidelity to natural Chinese always outranks fidelity to English structure.
 
-Before finalizing any sentence, ask: "Would a Chinese technical writer actually write this?" If the answer is no, rewrite.
+Three macro principles guide this:
+
+1. **Voice it, don't transcribe it.** Internalize the meaning of the source sentence, then write the Chinese as if explaining the concept to a colleague, not as if translating each clause. Looking back at the source pulls you toward its structure; looking away frees you to write natural Chinese.
+
+2. **Trust short verbal clauses over long noun phrases.** Chinese reads more naturally as sequences of short actions than as stacked noun phrases. When you find yourself building chains of `的` or piling up nominal connectors (`X 的 Y 的形式`, `Z 的回退`), restructure into shorter sentences with concrete verbs.
+
+3. **Match register to the document's audience.** Documentation Chinese is professional-conversational, not formal-literary. When a colloquial-natural word and a formal-translated word convey the same meaning, choose the colloquial one. You're writing instructions for engineers, not legal text.
+
+Before finalizing any sentence, read it aloud (silently, in your head). If it wouldn't pass as a native Chinese explanation spoken to a colleague, restructure.
 
 ### Patterns to Eliminate
 
