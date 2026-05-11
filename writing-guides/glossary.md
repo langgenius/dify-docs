@@ -23,6 +23,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | workspace | 工作区 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | WebApp | WebApp | WebApp | |
+| end user | 终端用户 | エンドユーザー | Person interacting with a published WebApp; not a workspace member |
 
 ### Models
 
