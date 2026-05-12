@@ -17,15 +17,21 @@ Read these shared guides:
 2. `writing-guides/formatting-guide.md`
 3. `writing-guides/glossary.md`
 
-## Source of Truth: `docker/.env.example`
+## Source of Truth: `docker/.env.example` + `docker/envs/**/*.env.example`
 
-The doc mirrors `docker/.env.example`, the supported self-host knob surface.
+After Dify PR #31586, the supported self-host knob surface is split across:
+
+- `docker/.env.example` — essential startup values
+- `docker/envs/**/*.env.example` — categorized optional vars (core-services, databases, infrastructure, security, vectorstores, middleware)
+
+The verifier reads both. Pass `--env-example docker/.env.example --env-example docker/envs` (the second arg is a directory; the verifier globs `**/*.env.example` recursively).
 
 | Var location | Action |
 |---|---|
-| In `.env.example`, uncommented | Document. |
-| In `.env.example`, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `ignored-vars.md` (the verifier can't parse defaults from comments). |
-| Only in `api/configs/` Pydantic, not in `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to `.env.example` first. |
+| In any `.env.example` file, uncommented | Document. |
+| In any `.env.example` file, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `ignored-vars.md` (the verifier can't parse defaults from comments). |
+| Only in `api/configs/` Pydantic, not in any `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate `.env.example` file first. |
+| Removed from `.env.example` because the code no longer reads it | **Remove from docs.** Documenting unreferenced vars implies they still take effect. Discoverability for upgraders belongs in upstream Dify release notes, not this docs site. |
 
 The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.
 
