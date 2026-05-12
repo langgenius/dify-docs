@@ -15,7 +15,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Workflow | 工作流 | ワークフロー | |
 | Chatflow | 对话流 | チャットフロー | |
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective term covering both Workflow and Chatflow apps. Chinese and Japanese reuse the Workflow app-type translation. |
-| Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools|
+| Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
+| Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | |
