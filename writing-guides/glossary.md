@@ -23,6 +23,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | workspace | 工作区 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | WebApp | WebApp | WebApp | |
+| end user | 终端用户 | エンドユーザー | Person interacting with a published WebApp; not a workspace member |
 
 ### Models
 
@@ -352,6 +353,14 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
+
+### Question Classifier Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Class Name | 分类名称 | クラス名 | workflow.nodes.questionClassifiers.outputVars.className | Output variable; classifier-facing description used in the LLM prompt |
+| Class Label | 分类标签 | クラスラベル | workflow.nodes.questionClassifiers.outputVars.classLabel | Output variable; user-facing branch title |
+| CLASS {{index}} | 分类 {{index}} | クラス {{index}} | workflow.nodes.questionClassifiers.defaultLabel | Default class title; index is 1-based |
 
 ### Knowledge Retrieval Methods
 

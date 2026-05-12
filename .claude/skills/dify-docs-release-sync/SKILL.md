@@ -53,6 +53,23 @@ git log <from>..<to> --oneline --grep="(#"
 
 This captures every change between the two versions, regardless of whether PRs were tagged to a milestone.
 
+**Do not pre-filter the diff to a hand-picked path list.** Run `git diff --stat` over the full change set, then categorize in 1.2. Pre-filtering hides files like new `docker/dify-compose*` scripts, `docker/.env.default`, `docker/README.md`, or root `README.md` that drive deployment-doc updates.
+
+### 1.1a Cross-check existing docs PRs
+
+Before generating the report, check whether dify-docs already has open or recently-merged PRs covering the same source PRs. This prevents duplicate work and reveals doc paths you might miss:
+
+```bash
+# Search by source-PR number(s) you plan to flag
+gh pr list --repo langgenius/dify-docs --state all --search "#<dify-PR-number>" \
+  --json number,title,state,files
+# Or scan recent docs PRs for the release window
+gh pr list --repo langgenius/dify-docs --state all --limit 30 \
+  --json number,title,state,mergedAt,files
+```
+
+If a docs PR already covers an item, mark it **Already addressed (PR #N)** in the report and exclude it from execution.
+
 For context on specific changes, fetch the relevant PR details:
 ```bash
 # Extract PR numbers from commit messages
@@ -110,8 +127,8 @@ Read the PR description for context. Map changed source paths to likely doc area
 | dify | `api/core/agent/` | `en/use-dify/build-apps/agent.mdx` |
 | dify | `api/core/app/` | `en/use-dify/build-apps/` |
 | dify | `web/app/components/` | UI-related docs (check PR description for specifics) |
-| dify | `docker/`, deployment configs | `en/getting-started/install/` |
-| dify | `api/configs/` | Configuration/environment variable docs |
+| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/configuration/environments.mdx` (env var docs) |
+| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/quick-start/docker-compose.mdx` and `en/self-host/quick-start/faqs.mdx` (deployment workflow docs) |
 | graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/use-dify/workflow/nodes/` |
 | graphon | `src/graphon/model_runtime/` | `en/use-dify/model-providers/` |
 | graphon | `src/graphon/graph_engine/`, `src/graphon/runtime/` | workflow engine behavior, execution semantics |
@@ -296,3 +313,6 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | Skipping Pydantic model changes | A model change may affect multiple endpoints — trace which controllers use it |
 | Forgetting to checkout target version | Audit against the target release code, not whatever is currently checked out |
 | Manually translating after EN fixes | Translation is automatic on PR push — never run manual translation scripts. **Exception**: `environments.mdx` is in the ignore list and must be translated manually. |
+| Pre-filtering the diff to a hand-picked path list | Run the full `git diff --stat` first; categorize after. Pre-filtering hides deployment scripts, new docker files, and root README changes. |
+| Trusting the `chore:` / `fix:` prefix as a no-doc-impact signal | Read the PR title and body. "chore: easier and simpler deploy" is a deployment workflow change. Prefix is not a category. |
+| Skipping the dify-docs PR cross-check | Always run `gh pr list --repo langgenius/dify-docs` against the source PR numbers before reporting. Avoids duplicate work and surfaces doc paths the heuristic mapping missed. |
