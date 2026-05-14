@@ -1,0 +1,123 @@
+---
+title: Human Input API Integration Flow
+sidebarTitle: API Integration Flow
+description: End-to-end sequence for handling a paused Human Input form via the API
+---
+
+When a workflow reaches a Human Input node, it pauses and emits a `human_input_required` event in the streaming response. The event carries a `form_token` that your integration uses to drive the form lifecycle until the workflow resumes.
+
+For per-endpoint reference, see the [Human Input API](/api-reference/human-input/get-human-input-form).
+
+## Sequence
+
+The sequence below applies to both Workflow and Chatflow apps. Only the entry endpoint in Step 1 and the resume endpoint in Step 6 differ between the two.
+
+<Steps>
+  <Step title="Start the app in streaming mode">
+
+    1. Call [Run Workflow](/api-reference/workflows/run-workflow) (Workflow apps) or [Send Chat Message](/api-reference/chatflows/send-chat-message) (Chatflow apps). 
+    2. Watch for the `human_input_required` event in the SSE stream and capture `form_token`, `form_id`, and `task_id` from the payload. 
+    
+        You'll use `task_id` in Step 6 if the stream closes before the workflow resumes.
+  </Step>
+  <Step title="Get the form definition">
+    Call [Get Human Input Form](/api-reference/human-input/get-human-input-form) with `form_token`. The response includes the rendered Markdown, input field definitions, available actions, and any pre-filled default values. Render the form for the recipient.
+  </Step>
+  <Step title="(File inputs only) Issue an upload token">
+    If the form has `file` or `file-list` inputs, call [Issue Upload Token](/api-reference/human-input/issue-upload-token) for a short-lived `upload_token`. Reuse the token across multiple uploads on the same form.
+  </Step>
+  <Step title="(File inputs only) Upload files">
+    For each file the recipient attaches, call one of:
+
+    - [Upload Local File](/api-reference/human-input/upload-local-file) for files from the recipient's device (multipart).
+    - [Upload Remote File](/api-reference/human-input/upload-remote-file) for files at a public URL that you want the backend to fetch and validate before submission.
+
+    Both return an `id` you'll reference as `upload_file_id` in the submit payload.
+  </Step>
+  <Step title="Submit the response">
+    Call [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) with the recipient's input values and the selected action.
+
+    File inputs accept either a `{transfer_method: local_file, upload_file_id}` mapping (from Step 4) or an inline `{transfer_method: remote_url, url}` mapping. See [Upload First vs. Inline Remote URL](#upload-first-vs-inline-remote-url) for the trade-off.
+
+    On success, the workflow resumes along the matching action branch.
+  </Step>
+  <Step title="Resume listening to the workflow">
+    If the original SSE stream closed, reopen it via the [Workflow](/api-reference/workflows/stream-workflow-events) or [Chatflow](/api-reference/chatflows/stream-workflow-events) Stream Workflow Events API with the `task_id` from Step 1.
+  </Step>
+</Steps>
+
+## Upload First vs. Inline Remote URL
+
+Both submission patterns work for file inputs:
+
+- **Pre-upload, then reference `upload_file_id`** (recommended)
+
+  The backend validates file size, type, and extension at upload time, so the recipient gets immediate feedback and can retry before committing the whole submission.
+
+- **Submit inline with `transfer_method: remote_url`**
+
+  The backend fetches the file at submit time. Faster to integrate, but any size, type, or fetch failure rejects the entire submission, forcing the recipient to redo other fields.
+
+<Tip>
+  For interactive forms with recipient feedback, prefer the pre-upload pattern. The trade-off only pays off when the integration is fully programmatic and no human is waiting to retype anything.
+</Tip>
+
+## Authentication
+
+The form-facing endpoints, [Get Human Input Form](/api-reference/human-input/get-human-input-form) and [Submit Human Input Form](/api-reference/human-input/submit-human-input-form), are unauthenticated. The `form_token` itself is the credential, and the endpoints are rate-limited per client IP.
+
+The file-upload endpoints require the `Bearer` `upload_token` from Step 3.
+
+## Delivery Method Requirement
+
+The Human Input API works only with forms delivered via the Human Input node's WebApp method. Email-only delivery doesn't expose a `form_token`.
+
+## Example: File-Attached Submission
+
+This example uses a form with a `feedback` paragraph input, an `attachments` file-list input, and `approve` / `revise` actions.
+
+1. Call [Get Human Input Form](/api-reference/human-input/get-human-input-form) to get the form definition:
+
+    ```http
+    GET /form/human_input/<form_token>
+    ```
+
+2. Call [Issue Upload Token](/api-reference/human-input/issue-upload-token) to get an upload token:
+
+    ```http
+    POST /form/human_input/<form_token>/upload-token
+    ```
+
+    Returns `{"upload_token": "hitl_upload_...", "expires_at": ...}`.
+
+3. For each local file, call [Upload Local File](/api-reference/human-input/upload-local-file):
+
+    ```http
+    POST /form/human_input/files/upload
+    Authorization: Bearer hitl_upload_...
+    Content-Type: multipart/form-data
+
+    file=<binary>
+    ```
+
+    Returns `{"id": "1a77f0df-...", ...}`.
+
+4. Call [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) with the recipient's input and selected action:
+
+    ```http
+    POST /form/human_input/<form_token>
+    Content-Type: application/json
+
+    {
+      "inputs": {
+        "feedback": "Looks good to ship",
+        "attachments": [
+          {"transfer_method": "local_file", "upload_file_id": "1a77f0df-..."}
+        ]
+      },
+      "action": "approve",
+      "user": "abc-123"
+    }
+    ```
+
+    Returns `{}`. The workflow resumes along the `approve` branch.
