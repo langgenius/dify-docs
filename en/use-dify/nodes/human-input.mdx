@@ -1,15 +1,15 @@
 ---
 title: Human Input
-description: Pause workflows to request human input, review, or decisions
+description: Pause workflows to request human input
 ---
 
 The Human Input node pauses workflows at key points to deliver a customizable request form. Recipients can use the form to review information, provide input, and choose from predefined decisions that determine how the workflow proceeds.
 
-By embedding human judgement directly where it matters, you can **balance automated efficiency with human oversight**.
+By embedding human judgement directly where it matters, you can *balance automated efficiency with human oversight*.
 
-<Frame caption="Request Form Example">
-  ![Request Form Example](/images/use-dify/workflow/human-input-request-form-example.png)
-</Frame>
+<Tip>
+  For a workflow design example, see [Example: Content Review Workflow](#example-content-review-workflow).
+</Tip>
 
 ## Configuration
 
@@ -27,7 +27,7 @@ Configure the following to define how the node requests and processes human inpu
 
 Choose the channel through which the request is delivered. Currently available methods:
 
-- **Web app**: Displays the request form to the WebApp end user. Not available in workflows started by a Trigger.
+- WebApp: Displays the request form to the WebApp end user. Not available in workflows started by a Trigger.
 
   <Info>
     External clients can also retrieve and submit WebApp forms through the Service API. See [Get Human Input Form](/api-reference/human-input/get-human-input-form).
@@ -51,17 +51,27 @@ Customize the form recipients see and interact with:
 
   Reference workflow variables to show dynamic content, such as AI-generated text for review or any needed contextual information from upstream nodes.
 
+  In WebApp delivery, the form itself displays to end users. Any variables you reference render their values directly in the form, so **no Answer or Output node is needed before the Human Input node**.
+
     <Tip>
         Reasoning models emit their thinking process alongside the final answer. Referencing the `text` output variable shows both by default.
 
         To show only the answer, toggle on **Enable Reasoning Tag Separation** for the corresponding LLM node.
     </Tip>
 
-- **Collect input with input fields**
+- **Collect input with form fields**
 
-  Input fields can start empty or pre-filled with variables (e.g., LLM output to refine) or static text (e.g., example or default values) that recipients can edit.
+  Add fields into the request form to capture different types of input from recipients. Each field becomes a variable for downstream use. 
+  
+  For example, in a blog review workflow, you can pass recipient feedback to a downstream LLM node for content revision.
 
-  Each input field becomes a variable for downstream use. For instance, pass edited content for further processing or send feedback to an LLM for content revision.
+  | Field Type | Description |
+  |:-----------|:------------|
+  | Paragraph | Text input. Can start empty, or pre-filled with variables (e.g., LLM output to refine) or static text (examples or default values). <br></br><br></br>No maximum length, but very long inputs may exceed downstream LLM context windows. |
+  | Select | Single-choice selection from a list of options. Define options manually, or reference an `array[string]` variable to use its items as options. |
+  | Single File / File List | Single or multiple file uploads. <Info>On self-hosted deployments, file upload limits are tunable via environment variables: <ul><li>`UPLOAD_FILE_SIZE_LIMIT`, `UPLOAD_IMAGE_FILE_SIZE_LIMIT`, `UPLOAD_VIDEO_FILE_SIZE_LIMIT`, and `UPLOAD_AUDIO_FILE_SIZE_LIMIT` cap per-file size by extension.</li><li>`WORKFLOW_FILE_UPLOAD_LIMIT` caps the max files a File List field can be configured to accept.</li></ul>See [Environment Variables](/en/self-host/configuration/environments) for defaults.</Info> |
+
+  <Note>Only Paragraph is optional; Select, Single File, and File List are mandatory. The form's action buttons stay disabled until all mandatory fields are filled.</Note>
 
 After the recipient responds, the form content with all values filled in is available downstream as the `__rendered_content` variable.
 
@@ -90,3 +100,89 @@ Configure how long the request stays open before it expires. The default is 3 da
 If no recipient responds before the timeout, the workflow follows the timeout branch from the node. Wire this branch to a fallback path, such as a notification or a retry loop. 
 
 If no timeout branch is connected, the workflow ends.
+
+## Example: Content Review Workflow
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+  <Frame caption="Workflow Example">
+    ![Workflow Example](/images/use-dify/workflow/human-input-workflow-example.png)
+  </Frame>
+  <Frame caption="Request Form Example">
+    ![Request Form Example](/images/use-dify/workflow/human-input-request-form-example.png)
+  </Frame>
+</div>
+
+This workflow drafts a blog post from the `topic` and `language` that a workflow initiator inputs, emails the draft to a reviewer, and finalizes the output based on the reviewer's choice.
+
+It is designed around three things the reviewer should be able to do:
+
+1. **See the AI-generated draft**: Reference the upstream LLM node's `text` variable in the form so the rendered form displays the draft directly.
+
+2. **Edit the draft directly if needed**: Add a Paragraph field named `edits` in the form, pre-filled with the same `text` variable, so the reviewer sees the draft as starting content and can edit in place.
+
+   Because blog posts are long, the form's Markdown display (point 1) reads better than a Paragraph field on its own. For shorter content, the pre-filled Paragraph field alone can handle both reading and editing.
+
+3. **Provide feedback for an AI revision**:
+
+    1. Add a Paragraph field named `feedback` in the form for the reviewer's feedback.
+    2. Connect two downstream LLM nodes in sequence:
+        1. A Regenerate node that takes the original draft `text` and the reviewer's `feedback` to produce a revised draft.
+        2. A Check Revision node that takes `feedback` and the revised draft to verify whether the revision addresses the feedback. The verified result is what flows downstream.
+
+On the received request form, the reviewer fills the relevant Paragraph fields (or leaves them blank) based on their judgment, then clicks the matching action button. Each action wires to a different output:
+
+- **Approve**: the original draft from the upstream LLM
+- **Apply Edit**: the reviewer's edited content from the `edits` field
+- **Regenerate**: the revised draft from the downstream LLM pipeline
+
+<Accordion
+  title="LLM Node Prompts for Reference"
+><Tabs>
+  <Tab title="Generate Draft">
+    **System**
+
+    ```text wrap
+    Write a marketing blog post around the given topic in the specified language.
+    ```
+
+    **User**
+
+    ```text
+    Topic: {{#user_input.topic#}}
+    Language: {{#user_input.language#}}
+    ```
+
+  </Tab>
+  <Tab title="Regenerate">
+    **System**
+
+    ```text wrap
+    Regenerate the draft based on user feedback.
+    ```
+
+    **User**
+
+    ```text
+    Draft: {{#generate_draft.text#}}
+    User Feedback: {{#human_input.feedback#}}
+    ```
+
+  </Tab>
+  <Tab title="Check Revision">
+    **System**
+
+    ```text wrap
+    Check whether the draft below addresses the user's feedback. Return the draft unchanged if it does; revise it to address the feedback if it doesn't.
+    ```
+
+    **User**
+
+    ```text
+    User Feedback: {{#human_input.feedback#}}
+    Regenerated Draft: {{#regenerate.text#}}
+    ```
+
+  </Tab>
+</Tabs>
+  
+</Accordion>
