@@ -39,6 +39,40 @@ Place critical limitations at the start of a section when users need them before
 
 **Avoid overuse.** Too many callouts dilute their importance and interrupt reading flow. When a section accumulates multiple callouts, restructure into flowing paragraphs with inline bold text instead. Reserve callout visual weight for genuinely critical information.
 
+## Paid Feature Callouts
+
+Use one of three patterns based on the scope of the gated feature.
+
+**Plan badges:**
+
+- `<Badge color="blue">Professional</Badge>`
+- `<Badge color="blue">Team</Badge>`
+- `<Badge color="blue">Enterprise</Badge>`
+
+**1. Whole section is the paid feature.** Place the badge inline with the section heading. No additional callout needed.
+
+```mdx
+## Configure Model Load Balancing <Badge color="blue">Enterprise</Badge>
+```
+
+**2. Paid feature is one item within a section that also covers standard features.** Place the `<Info>` callout AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
+
+```mdx
+Sign in with your email address and password.
+
+Single sign-on via OAuth and SAML can be configured by the workspace administrator to supplement or replace email-and-password login.
+
+<Info>
+SSO is available on <Badge color="blue">Enterprise</Badge>. [Learn more](https://dify.ai/pricing).
+</Info>
+```
+
+**3. Paid feature mentioned in body prose alongside standard features.** Use an inline badge directly in the sentence.
+
+```mdx
+Creating additional workspaces beyond the one provisioned at install time is available on <Badge color="blue">Enterprise</Badge>.
+```
+
 ## Patterns to Use
 
 **Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice.
