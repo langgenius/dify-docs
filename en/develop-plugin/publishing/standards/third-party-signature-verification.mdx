@@ -7,101 +7,122 @@ dimensions:
 standard_title: Third-Party Signature Verification
 language: en
 title: Sign Plugins for Third-Party Signature Verification
-description: This document describes how to enable and use the third-party signature verification feature in the Dify Community Edition, including key pair generation, plugin signing and verification, and environment configuration steps, enabling administrators to securely install plugins not available on the Dify Marketplace.
+description: Enable signed `.difypkg` installation in Dify Community Edition without disabling signature verification entirely (generate keys, sign packages, distribute the public key)
 ---
 
-<Warning>This feature is available only in the Dify Community Edition. Third-party signature verification is not currently supported on Dify Cloud Edition.</Warning>
+<Warning>
+Third-party signature verification is a **Dify Community Edition** feature. Dify Cloud manages signatures centrally and does not expose these controls.
+</Warning>
 
-Third-party signature verification allows Dify administrators to safely approve the installation of plugins not listed on the Dify Marketplace without completely disabling signature verification. This supports the following scenarios for example:
+Self-hosted Dify enforces signature verification by default. Third-party signature verification lets administrators safely install plugins that are not on the Marketplace without disabling verification entirely.
 
-* Dify administrators can add a signature to a plugin sent by the developer once it has been approved.
-* Plugin developers can add a signature to their plugin and publish it along with the public key for Dify administrators who cannot disable signature verification.
+Two scenarios:
 
-Both Dify administrators and plugin developers can add a signature to a plugin using a pre-generated key pair. Additionally, administrators can configure Dify to enforce signature verification using specific public keys during plugin installation.
+<CardGroup cols={2}>
+  <Card title="Admin signs an approved plugin" icon="user-shield">
+    The admin reviews a `.difypkg` from a trusted developer and signs it with their own key before installing.
+  </Card>
+  <Card title="Developer ships a signed plugin" icon="key">
+    The developer signs the `.difypkg` and publishes the matching public key. Admins who trust the developer add that public key to the verification list.
+  </Card>
+</CardGroup>
 
-## Generate a Key Pair for Signing and Verification
+The mechanics are the same in both cases: generate a key pair, sign with the private key, verify with the public key.
 
-Generate a new key pair for adding and verifying the plugin's signature with the following command:
+## Generate a key pair
 
 ```bash
 dify signature generate -f your_key_pair
 ```
 
-After running this command, two files will be generated in the current directory:
+Two files appear in the current directory:
 
-* **Private Key**: `your_key_pair.private.pem`
-* **Public Key**: `your_key_pair.public.pem`
+| File | Use |
+| :--- | :--- |
+| `your_key_pair.private.pem` | Sign plugins (keep secret) |
+| `your_key_pair.public.pem` | Verify signatures (share publicly) |
 
-The private key is used to sign the plugin, and the public key is used to verify the plugin's signature.
+<Warning>
+Guard the private key. Anyone who has it can sign plugins that pass verification on installations trusting your public key.
+</Warning>
 
-<Warning>Keep the private key secure. If it is compromised, an attacker could add a valid signature to any plugin, which would compromise Dify's security.</Warning>
+## Sign and verify a plugin
 
-## Add a Signature to the Plugin and Verify It
+<Steps>
+  <Step title="Sign the package">
+    ```bash
+    dify signature sign your_plugin_project.difypkg -p your_key_pair.private.pem
+    ```
 
-Add a signature to your plugin by running the following command. Note that you must specify the **plugin file to sign** and the **private key**:
+    Produces `your_plugin_project.signed.difypkg` in the same directory.
+  </Step>
+  <Step title="Verify the signed package">
+    ```bash
+    dify signature verify your_plugin_project.signed.difypkg -p your_key_pair.public.pem
+    ```
 
-```bash
-dify signature sign your_plugin_project.difypkg -p your_key_pair.private.pem
-```
+    Confirms the signature matches before you distribute or install.
+  </Step>
+</Steps>
 
-After executing the command, a new plugin file will be generated in the same directory with `signed` added to its original filename: `your_plugin_project.signed.difypkg`
+<Info>
+If you omit `-p`, `dify signature verify` checks against the Dify Marketplace public key. Any plugin not signed by Dify will fail verification in that mode.
+</Info>
 
-You can verify that the plugin has been correctly signed using this command. Here, you need to specify the **signed plugin file** and the **public key**:
+## Enable verification on the daemon
 
-```bash
-dify signature verify your_plugin_project.signed.difypkg -p your_key_pair.public.pem
-```
+Admins install signed plugins by giving the plugin daemon a list of trusted public keys.
 
-<Info>If you omit the public key argument, verification will use the Dify Marketplace public key. In that case, signature verification will fail for any plugin file not downloaded from the Dify Marketplace.</Info>
+<Steps>
+  <Step title="Place the public key">
+    Put the `.public.pem` file somewhere the daemon container can reach it. For Docker Compose installs:
 
-## Enable Third-Party Signature Verification
+    ```bash
+    mkdir -p docker/volumes/plugin_daemon/public_keys
+    cp your_key_pair.public.pem docker/volumes/plugin_daemon/public_keys/
+    ```
+  </Step>
+  <Step title="Configure the daemon environment">
+    Set these variables on the `plugin_daemon` service:
 
-Dify administrators can enforce signature verification using pre-approved public keys before installing a plugin.
+    | Variable | Value |
+    | :--- | :--- |
+    | `FORCE_VERIFYING_SIGNATURE` | `true` |
+    | `THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED` | `true` |
+    | `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS` | Comma-separated paths to public keys inside the container |
 
-### Place the Public Key
+    A `docker-compose.override.yaml` snippet:
 
-Place the **public key** corresponding to the private key used for signing in a location that the plugin daemon can access.
+    ```yaml
+    services:
+      plugin_daemon:
+        environment:
+          FORCE_VERIFYING_SIGNATURE: true
+          THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED: true
+          THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS: /app/storage/public_keys/your_key_pair.public.pem
+    ```
 
-For example, create a `public_keys` directory under `docker/volumes/plugin_daemon` and copy the public key file there:
+    <Note>
+    `docker/volumes/plugin_daemon` mounts to `/app/storage` inside the container, so the path in `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS` must use the in-container path.
+    </Note>
+  </Step>
+  <Step title="Restart Dify">
+    ```bash
+    cd docker
+    docker compose down
+    docker compose up -d
+    ```
 
-```bash
-mkdir docker/volumes/plugin_daemon/public_keys
-cp your_key_pair.public.pem docker/volumes/plugin_daemon/public_keys
-```
+    Verified installs are now enforced: signed `.difypkg` files matching the configured public keys install cleanly; unsigned or mismatched ones are rejected.
+  </Step>
+</Steps>
 
-### Environment Variable Configuration
+## Related resources
 
-In the `plugin_daemon` container, configure the following environment variables:
-
-* `THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED`
-  * Enables third-party signature verification.
-  * Set this to `true` to enable the feature.
-* `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS`
-  * Specifies the path(s) to the public key file(s) used for signature verification.
-  * You can list multiple public key files separated by commas.
-
-Below is an example of a Docker Compose override file (`docker-compose.override.yaml`) configuring these variables:
-
-```yaml
-services:
-  plugin_daemon:
-    environment:
-      FORCE_VERIFYING_SIGNATURE: true
-      THIRD_PARTY_SIGNATURE_VERIFICATION_ENABLED: true
-      THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS: /app/storage/public_keys/your_key_pair.public.pem
-```
-
-<Info>Note that `docker/volumes/plugin_daemon` is mounted to `/app/storage` in the `plugin_daemon` container. Ensure that the path specified in `THIRD_PARTY_SIGNATURE_VERIFICATION_PUBLIC_KEYS` corresponds to the path inside the container.</Info>
-
-To apply these changes, restart the Dify service:
-
-```bash
-cd docker
-docker compose down
-docker compose up -d
-```
-
-After restarting the service, the third-party signature verification feature will be enabled in the current Community Edition environment.
+- [Package as Local File and Share](/en/develop-plugin/publishing/marketplace-listing/release-by-file)
+- [Publish to Individual GitHub Repository](/en/develop-plugin/publishing/marketplace-listing/release-to-individual-github-repo)
+- [Plugin Development Guidelines](/en/develop-plugin/publishing/standards/contributor-covenant-code-of-conduct)
+- [Publishing FAQ](/en/develop-plugin/publishing/faq/faq)
 
 {/*
 Contributing Section
@@ -112,4 +133,3 @@ It will be automatically generated by the script.
 ---
 
 [Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/publishing/standards/third-party-signature-verification.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-

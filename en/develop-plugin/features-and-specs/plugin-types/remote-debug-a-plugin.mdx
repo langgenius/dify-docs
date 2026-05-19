@@ -7,36 +7,95 @@ dimensions:
 standard_title: Remote Debug a Plugin
 language: en
 title: Plugin Debugging
-description: This document introduces how to use Dify's remote debugging feature to
-  test plugins. It provides detailed instructions on obtaining debugging information,
-  configuring environment variable files, starting plugin remote debugging, and verifying
-  plugin installation status. Through this method, developers can test plugins in
-  the Dify environment in real-time while developing locally.
+description: Run your in-development plugin locally and attach it to a live Dify workspace for end-to-end testing, no packaging required
 ---
 
-After completing plugin development, the next step is to test whether the plugin can function properly. Dify provides a convenient remote debugging method to help you quickly verify plugin functionality in a test environment.
+Remote debugging is the fastest way to iterate on a plugin. You run the plugin process on your laptop, and Dify treats it as if it were installed in the workspace. Saves, edits, and restarts take effect immediately.
 
-Go to the ["Plugin Management"](https://cloud.dify.ai/plugins) page to obtain the remote server address and debugging Key.
+## Prerequisites
+
+- A Dify workspace where you can access **Plugins** in the top-right corner.
+- A scaffolded plugin project (see [CLI](/en/develop-plugin/getting-started/cli) if you haven't created one yet).
+- Python 3.12 and the plugin's dependencies installed (`pip install -r requirements.txt`).
+
+## Step 1: Get the Debug URL and Key
+
+Open the **Plugins** page in Dify and click the debug icon (the small bug icon next to **Install Plugin**). A dialog shows the **remote install host:port** and an **API key**.
 
 <Frame>
   ![Remote Debugging Plugin](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 </Frame>
 
-Return to the plugin project, copy the `.env.example` file and rename it to `.env`, then fill in the remote server address and debugging Key information you obtained.
+<Tabs>
+  <Tab title="Dify Cloud">
+    The host is something like `debug-plugin.dify.dev:5003`. The key is unique to your workspace; anyone with the key can attach a plugin, so do not share it.
+  </Tab>
+  <Tab title="Self-hosted">
+    The host defaults to `127.0.0.1:5003` and is configured by `PLUGIN_REMOTE_INSTALLING_HOST` / `PLUGIN_REMOTE_INSTALLING_PORT` in the plugin daemon's environment. Make sure port `5003` is reachable from your dev machine. If Dify runs in Docker on the same host, use the daemon container's bridge IP (or expose the port).
+  </Tab>
+</Tabs>
 
-`.env` file:
+## Step 2: Configure the Plugin's `.env`
+
+In your plugin project, copy `.env.example` to `.env` and fill in the values:
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_URL=debug-plugin.dify.dev:5003
 REMOTE_INSTALL_KEY=********-****-****-****-************
 ```
 
-Run the `python -m main` command to start the plugin. On the plugins page, you can see that the plugin has been installed in the Workspace, and other members of the team can also access the plugin.
+<Note>
+  `REMOTE_INSTALL_URL` is the combined `host:port` from Step 1, not two separate variables.
+</Note>
+
+## Step 3: Run the Plugin
+
+From the plugin project directory:
+
+```bash
+pip install -r requirements.txt
+python -m main
+```
+
+The process stays in the foreground and logs incoming invocations. Edit your code and restart the process to apply changes.
+
+## Step 4: Verify the Install
+
+Go back to the Dify **Plugins** page. The plugin appears in the list, labelled with a debug marker. Other members of the workspace can also see and use it.
 
 <Frame>
   ![Plugin Installed to Workspace](https://assets-docs.dify.ai/2024/12/ec26e5afc57bbfeb807719638f603807.png)
 </Frame>
+
+<Check>
+The plugin tile shows a debug indicator and your local terminal logs the first registration handshake. You're attached.
+</Check>
+
+Trigger the plugin as you would any other: call it from a workflow node, run it as a tool inside an Agent, or hit an endpoint URL. Invocations land on your local process and you can attach a debugger.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Connection refused / cannot reach host">
+    The daemon is not listening on the address you put in `REMOTE_INSTALL_URL`. On self-hosted setups, confirm the daemon container has `PLUGIN_REMOTE_INSTALLING_ENABLED=true` and that port `5003` is exposed. On cloud, double-check you copied the host:port exactly as shown in the debug dialog.
+  </Accordion>
+  <Accordion title="Plugin starts but never appears in the Plugins list">
+    The most common cause is a stale or wrong `REMOTE_INSTALL_KEY`. Regenerate the key from the debug dialog and rerun `python -m main`. Also confirm the daemon log shows the incoming registration.
+  </Accordion>
+  <Accordion title="`plugin_unique_identifier is not valid`">
+    The `author` field in `manifest.yaml` or in `provider/*.yaml` doesn't match a value the daemon accepts. Set it to your GitHub handle, then restart.
+  </Accordion>
+  <Accordion title="Changes don't take effect">
+    The plugin process needs to restart after every edit; there's no hot reload. Stop with `Ctrl+C` and rerun `python -m main`.
+  </Accordion>
+</AccordionGroup>
+
+## Related Resources
+
+- [CLI](/en/develop-plugin/getting-started/cli) - Scaffold a plugin and set up `.env`
+- [Plugin Logging](/en/develop-plugin/features-and-specs/plugin-types/plugin-logging) - Emit structured logs from inside your plugin
+- [Package as Local File and Share](/en/develop-plugin/publishing/marketplace-listing/release-by-file) - Ship the plugin once debugging is done
 
 {/*
 Contributing Section
@@ -47,4 +106,3 @@ It will be automatically generated by the script.
 ---
 
 [Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-
