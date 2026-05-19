@@ -37,13 +37,11 @@ standard_title: 10-Minute Guide to Building Dify Plugins
         ```
       </Tab>
       <Tab title="Linux">
-        [Dify GitHubリリースページ](https://github.com/langgenius/dify-plugin-daemon/releases)から最新のDify CLIを取得してください
-        
+        [Dify Plugin Daemonリリースページ](https://github.com/langgenius/dify-plugin-daemon/releases)から最新のバイナリをダウンロードしてください。x86_64の場合は`dify-plugin-linux-amd64`を、ARMの場合は`dify-plugin-linux-arm64`を選択してください。
+
         ```bash
-        # Download appropriate version
         chmod +x dify-plugin-linux-amd64
-        mv dify-plugin-linux-amd64 dify
-        sudo mv dify /usr/local/bin/
+        sudo mv dify-plugin-linux-amd64 /usr/local/bin/dify
         ```
       </Tab>
     </Tabs>
@@ -102,8 +100,8 @@ resource:
 
 plugins:
   tools:
-    - flomo.yaml
-  
+    - provider/flomo.yaml
+
 meta:
   version: 0.0.1
   arch:
@@ -117,7 +115,9 @@ meta:
 
 ## ステップ3：ツール定義の作成
 
-ツールインターフェースを定義する`flomo.yaml`ファイルを作成します：
+ツールプラグインは2つのYAMLファイルを使用します：認証情報を宣言しツールをリストする**プロバイダー**ファイルと、呼び出し可能なツールごとに1つの**ツール**ファイルです。完全なスキーマについては[一般仕様](/ja/develop-plugin/features-and-specs/plugin-types/general-specifications)を参照してください。
+
+`provider/flomo.yaml`を作成します：
 
 ```yaml
 identity:
@@ -126,32 +126,61 @@ identity:
   label:
     en_US: Flomo Note
     zh_Hans: Flomo 浮墨笔记
-description:
-  human:
+  description:
     en_US: Add notes to your Flomo account directly from Dify.
-    zh_Hans: 直接从Dify添加笔记到您的Flomo账户。
-  llm: >
-    A tool that allows users to save notes to Flomo. Use this tool when users want to save important information from the conversation. The tool accepts a 'content' parameter that contains the text to be saved as a note.
-credential_schema:
+    zh_Hans: 直接从 Dify 添加笔记到您的 Flomo 账户。
+  icon: icon.png
+credentials_for_provider:
   api_url:
-    type: string
+    type: secret-input
     required: true
     label:
       en_US: API URL
       zh_Hans: API URL
-    human_description:
+    placeholder:
+      en_US: https://flomoapp.com/iwh/{token}/{secret}/
+    help:
       en_US: Flomo API URL from your Flomo account settings.
-      zh_Hans: 从您的Flomo账户设置中获取的API URL。
-tool_schema:
-  content:
+      zh_Hans: 从您的 Flomo 账户设置中获取的 API URL。
+tools:
+  - tools/flomo.yaml
+extra:
+  python:
+    source: provider/flomo.py
+```
+
+`tools/flomo.yaml`を作成します：
+
+```yaml
+identity:
+  name: flomo
+  author: yourname
+  label:
+    en_US: Save to Flomo
+    zh_Hans: 保存到 Flomo
+description:
+  human:
+    en_US: Save the conversation content as a Flomo note.
+    zh_Hans: 将对话内容保存为 Flomo 笔记。
+  llm: >
+    Saves content to the user's Flomo account. Use this tool when the user
+    asks to save, capture, or remember the current message. Takes a single
+    `content` parameter containing the text to save.
+parameters:
+  - name: content
     type: string
     required: true
     label:
-      en_US: Note Content
+      en_US: Note content
       zh_Hans: 笔记内容
     human_description:
       en_US: Content to save as a note in Flomo.
-      zh_Hans: 要保存为Flomo笔记的内容。
+      zh_Hans: 要保存为 Flomo 笔记的内容。
+    llm_description: The text to save as a Flomo note.
+    form: llm
+extra:
+  python:
+    source: tools/flomo.py
 ```
 
 ## ステップ4：コアユーティリティ関数の実装
@@ -264,12 +293,11 @@ class FlomoTool(Tool):
     `.env`ファイルをDify環境の詳細で編集します：
     ```
     INSTALL_METHOD=remote
-    REMOTE_INSTALL_HOST=debug-plugin.dify.dev
-    REMOTE_INSTALL_PORT=5003
+    REMOTE_INSTALL_URL=debug-plugin.dify.dev:5003
     REMOTE_INSTALL_KEY=your_debug_key
     ```
-    
-    デバッグキーとホストはDifyダッシュボードで確認できます：右上の「プラグイン」アイコンをクリックし、デバッグアイコンをクリックします。ポップアップウィンドウで「APIキー」と「ホストアドレス」をコピーしてください。
+
+    デバッグURLとキーはDifyダッシュボードで確認できます：右上の**プラグイン**アイコンをクリックし、デバッグアイコンをクリックします。**APIキー**と**ホストアドレス**をコピーしてください（ホストにはすでにポートが含まれています）。
   </Step>
   
   <Step title="依存関係のインストールと実行">
