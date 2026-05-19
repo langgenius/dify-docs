@@ -4,40 +4,88 @@ dimensions:
     primary: operational
     detail: maintenance
   level: beginner
-todo: Developers (Contributors) should thoroughly test before releasing; debugging
-  should not be the user's (Dify User / Consumer) responsibility.
 standard_title: Faq
 language: en
 title: Frequently Asked Questions
-description: This document answers common questions about Dify plugin development
-  and installation, including how to resolve plugin upload failures (by modifying
-  the author field) and how to handle verification exceptions during plugin installation
-  (by setting the FORCE_VERIFYING_SIGNATURE environment variable).
+description: Common issues and fixes for building, packaging, debugging, and installing Dify plugins
 ---
 
-## What should I do if the plugin upload fails during installation?
+## Package and install
 
-**Error Details**: An error message `PluginDaemonBadRequestError: plugin_unique_identifier is not valid` appears.
+### Why does `dify plugin package` fail with `plugin_unique_identifier is not valid`?
 
-**Solution**: Modify the `author` field in the `manifest.yaml` file under the plugin project and the `.yaml` file under the `/provider` path to your GitHub ID.
+The `author` field in `manifest.yaml` and any `provider/*.yaml` file must match your GitHub handle. Update it in every file, repackage with `dify plugin package`, and reinstall.
 
-Rerun the plugin packaging command and install the new plugin package.
+### Why am I seeing `plugin verification has been enabled, and the plugin you want to install has a bad signature`?
 
-## How should I handle exceptions encountered during plugin installation?
+Self-hosted Dify enforces signature verification on plugin packages by default. You have two options:
 
-**Problem Description**: An exception message is encountered during plugin installation: `plugin verification has been enabled, and the plugin you want to install has a bad signature`. How should this be handled?
+1. **Recommended for production**—sign your package. See [Third-Party Signature Verification](/en/develop-plugin/publishing/standards/third-party-signature-verification).
+2. **For development and trusted internal use**—disable verification. Add `FORCE_VERIFYING_SIGNATURE=false` to `docker/.env`, then restart:
 
-**Solution**: Add the field `FORCE_VERIFYING_SIGNATURE=false` to the end of the `/docker/.env` configuration file. Then, run the following commands to restart the Dify service:
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   ```
 
-```bash
-cd docker
-docker compose down
-docker compose up -d
-```
+   This allows installing any unsigned plugin, including ones outside the Marketplace, so only do this in environments you control.
 
-After adding this field, the Dify platform will allow the installation of all plugins not listed (reviewed) on the Dify Marketplace, which may pose security risks.
+### Is there a maximum size for a `.difypkg` file?
 
-It is recommended to install plugins in a testing/sandbox environment first and confirm their safety before installing them in a production environment.
+Yes. The plugin daemon rejects packages over a configurable limit (default `50MB`). If you ship large model weights or static assets, host them externally and download on first use, or contact Dify support about raising the limit for marketplace plugins.
+
+### My plugin needs Python 3.13. Can I change the runtime?
+
+No. Plugins run inside a managed Python 3.12 environment. Pin your dependencies to versions compatible with 3.12—the daemon does not honor a different runtime version in `manifest.yaml`.
+
+## Remote debugging
+
+### The plugin starts but never appears in the workspace.
+
+Three things to check, in order: (1) the daemon log shows an incoming registration, (2) the `REMOTE_INSTALL_KEY` matches what's shown in the debug dialog, (3) `REMOTE_INSTALL_URL` uses the `host:port` format (not separate variables). See [Plugin Debugging](/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin) for the full troubleshooting list.
+
+
+
+### Do my code changes hot-reload?
+
+No. Stop the plugin process with `Ctrl+C` and rerun `python -m main` after every change.
+
+## OAuth and credentials
+
+### What callback URL should I configure with the upstream OAuth provider?
+
+Use `https://<your-dify-host>/console/api/oauth/plugin/<author>/<plugin-name>/tool/callback` for tool plugins, replacing `tool` with `datasource` or `trigger` for those plugin types. The exact pattern is shown in your plugin's OAuth setup card inside Dify.
+
+### Why are my OAuth tokens not refreshing?
+
+The plugin SDK refreshes tokens automatically when they expire, provided your provider implementation returns a valid `refresh_token` from the initial authorization. Confirm `OAuthCredentials.refresh_token` is populated, and that your `_oauth_refresh_credentials` method is implemented.
+
+## Marketplace publishing
+
+### How long does the Marketplace review take?
+
+PRs to `langgenius/dify-plugins` are typically reviewed within a few business days. PRs that haven't seen reviewer activity in 14–30 days are marked stale; respond on the PR to reset that timer.
+
+### How do I publish an update for a plugin already on the Marketplace?
+
+Bump `version` in `manifest.yaml`, open a new PR against `langgenius/dify-plugins` with the new package. The Marketplace shows the new version once merged. See [Auto-publish PR](/en/develop-plugin/publishing/marketplace-listing/plugin-auto-publish-pr) for the GitHub Action that automates this.
+
+### Can I monetize my plugin?
+
+Not currently—the Marketplace only accepts free plugins. Future pricing policies will be announced separately.
+
+## Storage and limits
+
+### Where do plugin logs go?
+
+Self-hosted: container logs of the plugin daemon (`docker compose logs plugin_daemon`). Cloud: visible in the workspace's plugin debug panel during remote debugging only; persisted logs are not exposed in the UI. Use [Plugin Logging](/en/develop-plugin/features-and-specs/plugin-types/plugin-logging) for structured output.
+
+
+
+### Is plugin storage scoped per workspace?
+
+Yes. The KV storage API (`self.session.storage`) is isolated per workspace per plugin install. Two workspaces using the same plugin do not share keys. See [Persistent Storage (KV)](/en/develop-plugin/features-and-specs/plugin-types/persistent-storage-kv).
 
 {/*
 Contributing Section
@@ -48,4 +96,3 @@ It will be automatically generated by the script.
 ---
 
 [Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/publishing/faq/faq.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-
