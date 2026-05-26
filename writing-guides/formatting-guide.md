@@ -263,6 +263,8 @@ Rename default tool outputs (`CleanShot*`, `Screenshot*`, `IMG_*`) before commit
 
 ## Mintlify Components
 
+Prefer these native components over raw HTML or inline-styled `<div>`s for callouts, layout, and structure. Reach for raw HTML only when no component fits.
+
 ### Info, Tip, Note, Warning
 
 Use these for callouts instead of italics or raw text. Each serves a different purpose:
@@ -344,6 +346,23 @@ Use for showing multiple code variants of the same operation:
   ```
 </CodeGroup>
 ````
+
+### Columns
+
+Use to lay out content side-by-side, such as comparison screenshots. `cols` sets the number of columns, and the layout reflows to fewer columns on narrow screens. This is the default for side-by-side images; prefer it over a styled `<div>`.
+
+```mdx
+<Columns cols={2}>
+  <Frame caption="App Access">
+    ![App Access](/images/use-dify/workspace/app-access-config.png)
+  </Frame>
+  <Frame caption="Knowledge Base Access">
+    ![Knowledge Base Access](/images/use-dify/workspace/knowledge-base-access-config.png)
+  </Frame>
+</Columns>
+```
+
+- Images shown together still need captions, and each image's alt text must match its caption (see [Captions](#captions)).
 
 ---
 
