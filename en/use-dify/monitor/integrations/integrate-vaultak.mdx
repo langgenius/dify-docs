@@ -1,0 +1,133 @@
+---
+title: Integrate with Vaultak
+sidebarTitle: Vaultak
+---
+
+### What is Vaultak
+
+Vaultak is a runtime security platform for AI agents. It intercepts every agent action, tool call, and LLM query in real time — scoring risk on a 0–10 scale, enforcing policy rules, masking PII in outputs, and automatically blocking dangerous behavior before it reaches your production systems.
+
+<Info>
+  For more details, please refer to [Vaultak](https://vaultak.com).
+</Info>
+
+### How to Configure Vaultak
+
+Unlike observability-only tools, Vaultak adds an active security layer between your application and Dify. It inspects user messages before they are sent to Dify, monitors the responses coming back, and enforces your policy rules at runtime.
+
+#### 1. Register and get your API key
+
+Sign up at [vaultak.com](https://vaultak.com). After logging in, copy your API key from the dashboard. It starts with `vtk_`.
+
+#### 2. Install the Vaultak SDK
+
+```bash
+pip install vaultak
+```
+
+#### 3. Wrap your Dify API calls with Vaultak
+
+Use Vaultak to inspect user input before it reaches Dify, and scan Dify's response for PII before it returns to your users.
+
+```python
+import requests
+from vaultak import Vaultak
+
+vt = Vaultak(api_key="vtk_...")
+
+def call_dify_securely(user_message: str, dify_app_key: str) -> dict:
+    # Score the user's message before sending it to Dify
+    result = vt.score_action(
+        action="dify_chat_message",
+        context={"query": user_message},
+    )
+    if result.score >= 7.0:
+        raise RuntimeError(
+            f"Request blocked by Vaultak — risk score {result.score:.1f}/10"
+        )
+
+    # Check against your policy rules
+    vt.check_policy(tool_name="dify_app", input_data=user_message)
+
+    # Send the request to Dify
+    response = requests.post(
+        "https://api.dify.ai/v1/chat-messages",
+        headers={
+            "Authorization": f"Bearer {dify_app_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "inputs": {},
+            "query": user_message,
+            "response_mode": "blocking",
+            "user": "end-user-id",
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    # Mask PII in Dify's response before returning it to your users
+    data["answer"] = vt.mask_pii(data.get("answer", ""))
+
+    return data
+```
+
+#### 4. Monitor results in your Vaultak dashboard
+
+Every scored request is visible at [app.vaultak.com](https://app.vaultak.com) in real time:
+risk scores, blocked requests, PII masking events, and policy violations. Configure or tighten
+policy rules there without changing your application code.
+
+### Using Vaultak with the Dify Workflow API
+
+For Dify Workflow or Agent applications, wrap the workflow run endpoint the same way:
+
+```python
+from vaultak import Vaultak
+import requests
+
+vt = Vaultak(api_key="vtk_...", )
+
+def run_dify_workflow(inputs: dict, dify_app_key: str) -> dict:
+    # Check inputs against policy before running the workflow
+    for key, value in inputs.items():
+        vt.check_policy(tool_name=f"dify_workflow_input:{key}", input_data=str(value))
+
+    response = requests.post(
+        "https://api.dify.ai/v1/workflows/run",
+        headers={
+            "Authorization": f"Bearer {dify_app_key}",
+            "Content-Type": "application/json",
+        },
+        json={
+            "inputs": inputs,
+            "response_mode": "blocking",
+            "user": "end-user-id",
+        },
+    )
+    response.raise_for_status()
+    data = response.json()
+
+    # Mask PII in all output fields
+    outputs = data.get("data", {}).get("outputs", {})
+    for key, value in outputs.items():
+        outputs[key] = vt.mask_pii(str(value))
+
+    return data
+```
+
+### Configuration Reference
+
+| Parameter | Description |
+|---|---|
+| `api_key` | Your Vaultak API key (starts with `vtk_`) |
+| `score_action(action, context)` | Risk-scores an action (0–10) before it executes |
+| `check_policy(tool_name, input_data)` | Checks input against your configured policy rules |
+| `mask_pii(text)` | Scans text for PII (names, emails, phone numbers, etc.) and masks it |
+| `alert(level, message)` | Sends an alert to your Vaultak dashboard |
+
+### Links
+
+- [Vaultak documentation](https://docs.vaultak.com)
+- [Vaultak dashboard](https://app.vaultak.com)
+- [Dify API reference](https://docs.dify.ai/api-reference)
