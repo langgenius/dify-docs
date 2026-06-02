@@ -1,0 +1,126 @@
+name: Build downloadable PDFs
+
+# Generates the downloadable manual PDFs with Quire and publishes them as assets on a
+# per-version GitHub Release. Runs on main (version "latest") and on each release/*
+# branch (version = the release number), so a branch's release always carries PDFs
+# built from that branch's content.
+#
+# PUBLIC OUTPUT IS PDF ONLY. Word is internal and is not produced here, so Pandoc is
+# not installed. Fonts: the Latin brand face is Söhne (not redistributable), so CI
+# installs Inter, the brand-sanctioned fallback, and the published Latin text renders in
+# Inter (local builds with Söhne render in Söhne). For CJK, CI installs Noto Sans CJK
+# (apt), which the zh/ja themes list as their final fallback; local machines with the
+# brand CJK fonts (MiSans for zh, Noto Sans JP for ja) render in those instead.
+#
+# STATUS: not yet validated on GitHub Actions. The font and headless-Chromium install
+# steps are environment-specific and will likely need a test run to settle.
+
+on:
+  push:
+    branches: [main, "release/**"]
+    paths:
+      - "en/**"
+      - "mdx2pdf/**"
+      - ".github/workflows/build-pdfs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write # create/update releases and upload assets
+
+env:
+  NODE_OPTIONS: --max-old-space-size=8192 # the User Guide is large and image-heavy
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install fonts (Inter for Latin, Noto Sans CJK for zh/ja)
+        run: |
+          sudo apt-get update
+          # Latin: Inter, the brand-sanctioned fallback for Söhne.
+          sudo apt-get install -y fonts-inter || true
+          # Fallback if the apt package is unavailable on the runner image: fetch Inter
+          # from its official release and drop the TTFs into the user font dir.
+          if ! fc-list | grep -qi inter; then
+            curl -fsSL -o /tmp/inter.zip https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip
+            mkdir -p ~/.fonts && unzip -oj /tmp/inter.zip "extras/ttf/*.ttf" -d ~/.fonts
+          fi
+          # CJK: Noto Sans CJK covers both Chinese (SC) and Japanese (JP). The zh/ja themes
+          # list "Noto Sans CJK SC/JP" as their final fallback so this renders.
+          sudo apt-get install -y fonts-noto-cjk
+          fc-cache -f
+          fc-list | grep -i inter || (echo "Inter not installed" && exit 1)
+          fc-list | grep -qi "noto sans cjk" || (echo "Noto Sans CJK not installed" && exit 1)
+
+      - name: Install headless-Chromium system libraries (for Quire's Puppeteer)
+        run: |
+          sudo apt-get install -y \
+            libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 \
+            libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 \
+            libpango-1.0-0 libcairo2
+
+      - name: Install Quire
+        # Installs the prebuilt package from npm; Puppeteer downloads its pinned Chromium
+        # during install.
+        run: npm install -g @riskeyl/quire
+
+      - name: Derive the cover version and release tag from the branch
+        id: ver
+        # main is not a formal release: its PDFs carry NO cover version, and their assets
+        # live on a single rolling pre-release tagged `pdf-latest` (so it never shows up as
+        # the repo's latest formal release). A release/* branch is a real release: its PDFs
+        # show the release number on the cover and publish to a permanent `pdf-<version>` tag.
+        run: |
+          if [ "${GITHUB_REF_NAME}" = "main" ]; then
+            echo "cover_version=" >> "$GITHUB_OUTPUT"          # no version on the cover
+            echo "tag=pdf-latest" >> "$GITHUB_OUTPUT"
+            echo "release_title=Documentation PDFs (latest from main)" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            v="${GITHUB_REF_NAME#release/}"
+            echo "cover_version=$v" >> "$GITHUB_OUTPUT"
+            echo "tag=pdf-$v" >> "$GITHUB_OUTPUT"
+            echo "release_title=Documentation PDFs ($v)" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Regenerate manifests from docs.json (keep them in sync with the nav)
+        run: node mdx2pdf/build-manifests.mjs
+
+      - name: Build the manual PDFs for every language
+        # Override the Desktop default: in CI the PDFs go to a repo-local dir so the next
+        # step can zip them. MDX2PDF_VERSION is set explicitly (empty on main, the release
+        # number on release/*), so build.sh stamps that on the cover and never falls back to
+        # the branch name. An empty value is still "set", so no version shows on main.
+        env:
+          MDX2PDF_OUT: build
+          MDX2PDF_VERSION: ${{ steps.ver.outputs.cover_version }}
+        run: |
+          for lang in en zh ja; do
+            bash mdx2pdf/build.sh all "$lang"
+          done
+
+      - name: Bundle one zip per language
+        run: |
+          for lang in en zh ja; do
+            zip -j "build/dify-$lang-complete.zip" build/"$lang"/*.pdf
+          done
+
+      - name: Publish to a GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ steps.ver.outputs.tag }}"
+          PRERELEASE=""
+          [ "${{ steps.ver.outputs.prerelease }}" = "true" ] && PRERELEASE="--prerelease"
+          gh release view "$TAG" >/dev/null 2>&1 \
+            || gh release create "$TAG" $PRERELEASE --title "${{ steps.ver.outputs.release_title }}" \
+                 --notes "Auto-generated documentation PDFs. Built from the ${GITHUB_REF_NAME} branch."
+          gh release upload "$TAG" \
+            build/dify-en-complete.zip build/dify-zh-complete.zip build/dify-ja-complete.zip --clobber
