@@ -20,7 +20,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | |
 | Dify tool | Dify 工具 | ツール | |
-| workspace | 工作区 | ワークスペース | |
+| workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | WebApp | WebApp | WebApp | |
 
