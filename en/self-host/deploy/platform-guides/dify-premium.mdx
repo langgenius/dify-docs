@@ -1,0 +1,112 @@
+---
+title: Dify Premium on AWS
+description: Deploy, customize, and upgrade Dify Premium on AWS
+---
+
+Dify Premium is our AWS AMI offering that allows custom branding and is one-click deployable to your AWS VPC as an EC2 instance. Head to [AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) to subscribe. It's useful in a couple of scenarios:
+
+- You're looking to create one or a few applications as a small/medium business and you care about data residency.
+- You are interested in [Dify Cloud](https://cloud.dify.ai), but your use case requires more resources than supported by the [plans](https://dify.ai/pricing).
+- You'd like to run a POC before adopting Dify Enterprise within your organization.
+
+## Access & Set up
+
+After the AMI is deployed, access Dify via the instance's public IP found in the EC2 console (HTTP port 80 is used by default).
+
+If this is your first time accessing Dify, enter the Admin initialization password (your EC2's instance ID) to start the setup process.
+
+## Customize
+
+### Configuration
+
+<Steps>
+    <Step title="Edit Environment Variables">
+        Edit environment variables in the relevant file on your EC2 instance:
+
+        - **Essential startup values** live in `/dify/.env`. Edit them directly.
+
+        - **Optional or provider-specific settings** have templates under `/dify/envs/`. To override a default value, copy the matching template (drop the `.example` suffix), then edit your copy.
+
+            For example:
+
+            ```bash
+            cd /dify
+            cp envs/vectorstores/opensearch.env.example envs/vectorstores/opensearch.env
+            ```
+
+        Values in `/dify/.env` take precedence over values in any `/dify/envs/*.env` files. 
+    
+        If your AWS deployment injects variables through `docker-compose.override.yaml`, keep those settings there. Service-level `environment:` values in Compose take precedence over env-file values.
+    </Step>
+    <Step title="Restart Dify">
+        ```bash
+        docker compose down
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        ```
+    </Step>
+</Steps>
+
+### Web App Logo & Branding
+
+In **Settings** > **Customization**, you can remove the `Powered by Dify` branding or replace it with your own logo.
+
+## Upgrade
+
+<Warning>
+    - Before upgrading, check the [Release Notes](https://github.com/langgenius/dify/releases) on GitHub for version-specific upgrade instructions. Some versions may require additional steps such as database migrations or configuration changes.
+
+    - Dify's Docker Compose files now require Docker Compose 2.24.0 or later. Run `docker compose version` to confirm before upgrading.
+</Warning>
+
+In the EC2 instance, run the following commands:
+
+<Steps>
+    <Step title="Stop the Running Services">
+        ```bash
+        cd /dify
+        docker compose down
+        ```
+    </Step>
+    <Step title="Back Up Your Data">
+        Back up your `.env` file, any optional env files you created under `envs/`, and the `volumes` directory, which contains your database, storage, and other persistent data:
+
+        ```bash
+        cp /dify/.env /dify/.env.bak
+        tar -cvf envs-$(date +%s).tgz envs
+        tar -cvf volumes-$(date +%s).tgz volumes
+        ```
+    </Step>
+    <Step title="Update Dify">
+        <Warning>
+            The upgrade process will overwrite configuration templates but will not affect your `.env` file, local `/dify/envs/*.env` files, or runtime data (such as databases and uploaded files) in the `volumes/` directory.
+
+            If you have manually modified configuration files beyond `.env` and `/dify/envs/*.env`, back them up before upgrading.
+        </Warning>
+
+        Pull the latest code and sync the configuration files:
+
+        ```bash
+        git clone https://github.com/langgenius/dify.git /tmp/dify
+        rsync -av /tmp/dify/docker/ /dify/
+        rm -rf /tmp/dify
+        ```
+    </Step>
+    <Step title="Check for New Environment Variables">
+        New versions may introduce variables in `.env.example` or in optional templates under `envs/`. Compare each template with its matching local env file and add any missing variables you need:
+
+        ```bash
+        diff /dify/.env /dify/.env.example
+        find /dify/envs -name "*.env" -print | while read -r env_file; do
+          diff "$env_file" "$env_file.example"
+        done
+        ```
+
+        If you need to customize a newly added optional template, copy it beside itself without the `.example` suffix before editing it. See [Configuration](#configuration) for details.
+    </Step>
+    <Step title="Start Services">
+        ```bash
+        docker compose pull
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        ```
+    </Step>
+</Steps>
