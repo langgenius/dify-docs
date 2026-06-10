@@ -7,34 +7,25 @@ dimensions:
 standard_title: Customizable Model
 language: en
 title: Integrate Custom Models
-description: This document details how to integrate custom models into Dify, using
-  the Xinference model as an example. It covers the complete process, including creating
-  model provider files, writing code based on model type, implementing model invocation
-  logic, handling exceptions, debugging, and publishing. It specifically details the
-  implementation of core methods like LLM invocation, token calculation, credential
-  validation, and parameter generation.
+description: Integrate a custom model into Dify, using Xinference as an example
 ---
 
-A **custom model** refers to an LLM that you deploy or configure on your own. This document uses the [Xinference model](https://inference.readthedocs.io/en/latest/) as an example to demonstrate how to integrate a custom model into your **model plugin**.
+A **custom model** is an LLM that you deploy or configure yourself. This guide uses [Xinference](https://inference.readthedocs.io/en/latest/) as an example to show how to integrate a custom model into your **model plugin**.
 
-By default, a custom model automatically includes two parameters (its **model type** and **model name**) and does not require additional definitions in the provider YAML file.
+By default, a custom model automatically includes two parameters, its **model type** and **model name**, so the provider YAML file needs no additional definitions.
 
-You do not need to implement `validate_provider_credential` in your provider configuration file. During runtime, based on the user’s choice of model type or model name, Dify automatically calls the corresponding model layer’s `validate_credentials` method to verify credentials.
+You do not need to implement `validate_provider_credential` in your provider configuration file. At runtime, Dify calls the corresponding model layer's `validate_credentials` method based on the model type and model name the user selects.
 
 ## Integrate a Custom Model Plugin
 
-Below are the steps to integrate a custom model:
+Integrating a custom model takes four steps:
 
-1. **Create a Model Provider File**\
-   Identify the model types your custom model will include.
-2. **Create Code Files by Model Type**\
-   Depending on the model’s type (e.g., `llm` or `text_embedding`), create separate code files. Ensure that each model type is organized into distinct logical layers for easier maintenance and future expansion.
-3. **Develop the Model Invocation Logic**\
-   Within each model-type module, create a Python file named for that model type (for example, `llm.py`). Define a class in the file that implements the specific model logic, conforming to the system’s model interface specifications.
-4. **Debug the Plugin**\
-   Write unit and integration tests for the new provider functionality, ensuring that all components work as intended.
+1. **Create a model provider file**: Identify the model types your custom model will include.
+2. **Create code files by model type**: Create separate code files for each model type (e.g., `llm` or `text_embedding`). Keeping each model type in its own logical layer simplifies maintenance and future expansion.
+3. **Develop the model invocation logic**: Within each model-type module, create a Python file named for that model type (for example, `llm.py`). Define a class in the file that implements the model logic, conforming to the system's model interface specifications.
+4. **Debug the plugin**: Write unit and integration tests for the new provider functionality, ensuring that all components work as intended.
 
-### 1. **Create a Model Provider File**
+### 1. Create the Model Provider File
 
 In your plugin’s `/provider` directory, create a `xinference.yaml` file.
 
@@ -107,7 +98,7 @@ Every model in Xinference requires a `model_name`:
       en_US: Input model name
 ```
 
-Because Xinference must be locally deployed, users need to supply the server address (server\_url) and model UID. For instance:
+Because Xinference is locally deployed, users must also supply the server address (`server_url`) and model UID:
 
 ```yaml
   - variable: server_url
@@ -131,15 +122,15 @@ Because Xinference must be locally deployed, users need to supply the server add
       en_US: Enter the model uid
 ```
 
-Once you’ve defined these parameters, the YAML configuration for your custom model provider is complete. Next, create the functional code files for each model defined in this config.
+This completes the YAML configuration for your custom model provider. Next, create the code files for each model defined in the configuration.
 
 ### 2. Develop the Model Code
 
-Since Xinference supports llm, rerank, speech2text, and tts, you should create corresponding directories under /models, each containing its respective feature code.
+Xinference supports `llm`, `rerank`, `speech2text`, and `tts`, so create a corresponding directory under `/models` for each type, each containing its feature code.
 
-Below is an example for an llm-type model. You’d create a file named llm.py, then define a class (such as XinferenceAILargeLanguageModel) that extends \_\_base.large\_language\_model.LargeLanguageModel. This class should include:
+Below is an example for an `llm` type model. Create a file named `llm.py`, then define a class such as `XinferenceAILargeLanguageModel` that extends `__base.large_language_model.LargeLanguageModel`. The class must implement the following methods.
 
-* **LLM Invocation**
+#### LLM Invocation
 
 The core method for invoking the LLM, supporting both streaming and synchronous responses:
 
@@ -170,9 +161,9 @@ def _invoke(
     """
 ```
 
-You’ll need two separate functions to handle streaming and synchronous responses. Python treats any function containing `yield` as a generator returning type `Generator`, so it’s best to split them:
+Implement streaming and synchronous responses as separate functions. Python treats any function containing `yield` as a generator that returns `Generator`, so splitting them keeps the return types clean:
 
-```yaml
+```python
 def _invoke(self, stream: bool, **kwargs) -> Union[LLMResult, Generator]:
     if stream:
         return self._handle_stream_response(**kwargs)
@@ -186,9 +177,9 @@ def _handle_sync_response(self, **kwargs) -> LLMResult:
     return LLMResult(**response)
 ```
 
-* **Pre-calculating Input Tokens**
+#### Pre-calculate Input Tokens
 
-If your model doesn’t provide a token-counting interface, simply return 0:
+If your model doesn't provide a token-counting interface, return `0`:
 
 ```python
 def get_num_tokens(
@@ -206,7 +197,7 @@ def get_num_tokens(
 
 Alternatively, you can call `self._get_num_tokens_by_gpt2(text: str)` from the `AIModel` base class, which uses a GPT-2 tokenizer. Remember this is an approximation and may not match your model exactly.
 
-* **Validating Model Credentials**
+#### Validate Model Credentials
 
 Similar to provider-level credential checks, but scoped to a single model:
 
@@ -217,11 +208,11 @@ def validate_credentials(self, model: str, credentials: dict) -> None:
     """
 ```
 
-* **Dynamic Model Parameters Schema**
+#### Dynamic Model Parameters Schema
 
-Unlike [predefined models](/en/develop-plugin/features-and-specs/plugin-types/model-schema), no YAML is defining which parameters a model supports. You must generate a parameter schema dynamically.
+Unlike [predefined models](/en/develop-plugin/features-and-specs/plugin-types/model-schema), no YAML file defines which parameters a model supports, so you must generate the parameter schema dynamically.
 
-For example, Xinference supports `max_tokens`, `temperature`, and `top_p`. Some other providers (e.g., `OpenLLM`) may support parameters like `top_k` only for certain models. This means you need to adapt your schema to each model’s capabilities:
+For example, Xinference supports `max_tokens`, `temperature`, and `top_p`. Other providers (e.g., `OpenLLM`) may support parameters like `top_k` only for certain models, so the schema must adapt to each model's capabilities:
 
 ```python
 def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
@@ -286,19 +277,15 @@ def get_customizable_model_schema(self, model: str, credentials: dict) -> AIMode
     return entity
 ```
 
-* **Error Mapping**
+#### Error Mapping
 
-When an error occurs during model invocation, map it to the appropriate InvokeError type recognized by the runtime. This lets Dify handle different errors in a standardized manner:
+When an error occurs during model invocation, map it to one of the runtime's `InvokeError` types so Dify can handle different errors consistently:
 
-Runtime Errors:
-
-```
-•	`InvokeConnectionError`
-•	`InvokeServerUnavailableError`
-•	`InvokeRateLimitError`
-•	`InvokeAuthorizationError`
-•	`InvokeBadRequestError`
-```
+- `InvokeConnectionError`
+- `InvokeServerUnavailableError`
+- `InvokeRateLimitError`
+- `InvokeAuthorizationError`
+- `InvokeBadRequestError`
 
 ```python
 @property
@@ -317,36 +304,34 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
 
 For more details on interface methods, see the [Model Documentation](https://docs.dify.ai/zh/develop-plugin/features-and-specs/plugin-types/model-schema).
 
-To view the complete code files discussed in this guide, visit the [GitHub Repository](https://github.com/langgenius/dify-official-plugins/tree/main/models/xinference).
+For the complete code files discussed in this guide, see the [GitHub repository](https://github.com/langgenius/dify-official-plugins/tree/main/models/xinference).
 
 ### 3. Debug the Plugin
 
-After finishing development, test the plugin to ensure it runs correctly. For more details, refer to:
+After development, test the plugin to make sure it runs correctly. For details, see:
 
 <Card title="Debug Plugin" icon="link" href="/en/develop-plugin/dev-guides-and-walkthroughs/cheatsheet">
 </Card>
 
 ### 4. Publish the Plugin
 
-If you’d like to list this plugin on the Dify Marketplace, see:
-
-Publish to Dify Marketplace
+To list the plugin on the Dify Marketplace, see Publish to Dify Marketplace.
 
 ## Explore More
 
 **Quick Start**:
 
-* [Develop Extension Plugin](/en/develop-plugin/features-and-specs/plugin-types/general-specifications)
-* [Develop Tool Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
-* [Bundle Plugins: Package Multiple Plugins](/en/develop-plugin/features-and-specs/advanced-development/bundle)
+- [Develop Extension Plugin](/en/develop-plugin/features-and-specs/plugin-types/general-specifications)
+- [Develop Tool Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
+- [Bundle Plugins: Package Multiple Plugins](/en/develop-plugin/features-and-specs/advanced-development/bundle)
 
 **Plugins Endpoint Docs**:
 
-* [Manifest](/en/develop-plugin/features-and-specs/plugin-types/plugin-info-by-manifest) Structure
-* [Endpoint](/en/develop-plugin/dev-guides-and-walkthroughs/endpoint) Definitions
-* [Reverse-Invocation of the Dify Service](/en/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
-* [Tools](/en/develop-plugin/features-and-specs/plugin-types/tool)
-* [Models](/en/develop-plugin/features-and-specs/plugin-types/model-schema)
+- [Manifest](/en/develop-plugin/features-and-specs/plugin-types/plugin-info-by-manifest) Structure
+- [Endpoint](/en/develop-plugin/dev-guides-and-walkthroughs/endpoint) Definitions
+- [Reverse-Invocation of the Dify Service](/en/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
+- [Tools](/en/develop-plugin/features-and-specs/plugin-types/tool)
+- [Models](/en/develop-plugin/features-and-specs/plugin-types/model-schema)
 
 {/*
 Contributing Section
@@ -357,4 +342,3 @@ It will be automatically generated by the script.
 ---
 
 [Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/features-and-specs/advanced-development/customizable-model.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-
