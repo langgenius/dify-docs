@@ -15,7 +15,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Workflow | 工作流 | ワークフロー | |
 | Chatflow | 对话流 | チャットフロー | |
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective term covering both Workflow and Chatflow apps. Chinese and Japanese reuse the Workflow app-type translation. |
-| Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools|
+| Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
+| Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | |
@@ -23,6 +24,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | WebApp | WebApp | WebApp | |
+| end user | 终端用户 | エンドユーザー | Person interacting with a published WebApp; not a workspace member |
 
 ### Models
 
@@ -352,6 +354,14 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
+
+### Question Classifier Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Class Name | 分类名称 | クラス名 | workflow.nodes.questionClassifiers.outputVars.className | Output variable; classifier-facing description used in the LLM prompt |
+| Class Label | 分类标签 | クラスラベル | workflow.nodes.questionClassifiers.outputVars.classLabel | Output variable; user-facing branch title |
+| CLASS {{index}} | 分类 {{index}} | クラス {{index}} | workflow.nodes.questionClassifiers.defaultLabel | Default class title; index is 1-based |
 
 ### Knowledge Retrieval Methods
 

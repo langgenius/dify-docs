@@ -143,6 +143,21 @@ Pattern: `{verb}{AppType}{Resource}`
 - **Descriptions must add value**: `"Session identifier."` is a label, not a description. Instead: `"The \`user\` identifier provided in API requests."`.
 - **Nullable/conditional fields**: Explain when present or `null`.
 
+#### Endpoint vs parameter descriptions
+
+| Field | Scope |
+|---|---|
+| Endpoint `description` | What the endpoint does, plus any whole-API surprise (cascading delete, long-poll duration). One sentence when possible. |
+| Parameter `description` | Field meaning, valid values, deprecation, normalization, and rules about when to use it vs an alternative. |
+
+If the endpoint description explains a parameter, move it down.
+
+❌ "Remove one or more tag bindings from a knowledge base. Provide tag IDs in `tag_ids`. The legacy `tag_id` field is still accepted for single-tag requests and is normalized into `tag_ids` server-side; supply at least one of the two."
+
+✅ Endpoint: "Remove one or more tags from a knowledge base."
+   `tag_ids`: "Tag IDs to unbind. Required unless the legacy `tag_id` is provided."
+   `tag_id`: "Legacy single-tag form. Normalized into `tag_ids` server-side. Use `tag_ids` for new integrations."
+
 ### Cross-API Links
 
 When a description mentions another endpoint, add a markdown link. Pattern: `/api-reference/{category}/{endpoint-name}` (kebab-case from endpoint summary).

@@ -8,13 +8,13 @@
 |:--------|:--------|:---------|
 | Workflow | 工作流 | ワークフロー |
 | Chatflow | 对话流 | チャットフロー |
+| workflow | 工作流 | ワークフロー |
 | Agent | Agent | Agent |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
-| Agent app | Agent 应用 | エージェントアプリ |
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
 | Dify tool | Dify 工具 | ツール |
-| workspace | 工作区 | ワークスペース |
+| workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
 | WebApp | WebApp | WebApp |
 
@@ -66,8 +66,9 @@
 | Loop | 循环 | ループ |
 | Doc Extractor | 文档提取器 | テキスト抽出 |
 | List Operator | 列表操作 | リスト処理 |
-| Agent | Agent | エージェント |
+| Agent | Agent | Agent |
 | Human Input | 人工介入 | 人間の入力 |
+| Trigger | 触发器 | トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Plugin Trigger | 插件触发器 | プラグイントリガー |
@@ -100,6 +101,7 @@
 | Summary Auto-Gen | 摘要自动生成 | 要約自動生成 |
 | Top K | Top K | Top K |
 | score threshold | 分数阈值 | スコアしきい値 |
+| similarity score | 相似度分数 | 類似度スコア |
 
 ### Configuration & Parameters
 
@@ -115,6 +117,8 @@
 | input field | 输入字段 | 入力フィールド |
 | request form | 请求表单 | リクエストフォーム |
 | Assemble Variable | 变量组装 | 変数アセンブル |
+| blocking mode | 阻塞式返回 | ブロッキングモード |
+| streaming mode | 流式返回 | ストリーミングモード |
 
 ### Agent
 
@@ -184,8 +188,9 @@
 | Data Source | 数据来源 | データソース |
 | API Extension | API 扩展 | API 拡張 |
 | Billing | 账单 | 請求 |
+| Get Education Verified | 获取教育版认证 | 教育認証を取得 |
 | Integrations | 集成 | 統合 |
-| Default Model Settings | 默认模型设置 | デフォルトモデル設定 |
+| Default Model Settings | 默认模型设置 | システムモデル設定 |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
@@ -193,8 +198,17 @@
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
 | AI Credits | AI Credits | AI クレジット |
-| Usage Priority | 使用优先级 | 利用優先度 |
-| API Key | API 密钥 | API キー |
+| Usage Priority | 使用优先级 | 使用優先度 |
+| API Key | API Key | API キー |
+
+### Billing
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Sandbox | Sandbox | Sandbox |
+| Professional | Professional | Professional |
+| Team | Team | Team |
+| Upgrade | 升级 | アップグレード |
 
 ### Workspace Roles
 
@@ -273,6 +287,56 @@
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
 
+### Collaboration
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Add Comment | 添加评论 | コメントを追加 |
+| Edit comment | 编辑评论 | コメントを編集 |
+| Comment Mode | 评论模式 | コメントモード |
+
+### Variable Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Short Text | 文本 | 短文 |
+| Paragraph | 段落 | 段落 |
+| Select | 下拉选项 | 選択 |
+| Number | 数字 | 数値 |
+| Checkbox | 复选框 | チェックボックス |
+| API-based Variable | 基于 API 的变量 | API ベースの変数 |
+| Label Name | 显示名称 | ラベル名 |
+
+### Prompt Generation
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Generate | 生成 | 生成 |
+| Ideal Output | 理想输出 | 理想的な出力 |
+
+### Vision & File Upload
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Vision | 视觉 | ビジョン |
+| Audio | 音频 | 音声 |
+| Document | 文档 | ドキュメント |
+| Settings | 设置 | 設定 |
+| Resolution | 分辨率 | 解像度 |
+| High | 高 | 高 |
+| Low | 低 | 低 |
+| Upload Method | 上传方式 | アップロード方法 |
+| Upload Limit | 上传数量限制 | アップロード制限 |
+
+### Debug Controls
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Debug as Multiple Models | 多个模型进行调试 | 複数モデルでデバッグ |
+| Function Calling | Function Calling | 関数呼び出し |
+| ReAct | ReAct | ReAct |
+| Agent Settings | Agent 设置 | エージェント設定 |
+
 ### Agent Node Config
 
 | English | Chinese | Japanese |
@@ -280,6 +344,14 @@
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
+
+### Question Classifier Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Class Name | 分类名称 | クラス名 |
+| Class Label | 分类标签 | クラスラベル |
+| CLASS {{index}} | 分类 {{index}} | クラス {{index}} |
 
 ### Knowledge Retrieval Methods
 
@@ -296,6 +368,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | External Knowledge Base | 外部知识库 | 外部知識ベース |
+| External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
 | External API | 外部 API | 外部 API |
 | Service API | 服务 API | サービスAPI |
 | Multimodal | 多模态 | マルチモーダル |

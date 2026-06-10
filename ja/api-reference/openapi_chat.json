@@ -7,12 +7,12 @@
   },
   "servers": [
     {
-      "url": "{api_base_url}",
-      "description": "チャットアプリ API のベース URL です。{api_base_url} をアプリケーションに提供された実際の API ベース URL に置き換えてください。",
+      "url": "https://{api_base_url}",
+      "description": "チャットアプリ API のベース URL です。セルフホスト環境では、独自の API ベース URL に置き換えてください。",
       "variables": {
         "api_base_url": {
-          "default": "https://api.dify.ai/v1",
-          "description": "API の実際のベース URL"
+          "default": "api.dify.ai/v1",
+          "description": "API ベース URL のホストとパス（`https://` を除く）。"
         }
       }
     }
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "リクエスト成功。コンテンツタイプと構造はリクエストの `response_mode` パラメータに依存します。\n\n- `response_mode` が `blocking` の場合、 `application/json` で `ChatCompletionResponse` オブジェクトを返します。\n- `response_mode` が `streaming` の場合、 `text/event-stream` で `ChunkChatEvent` オブジェクトのストリームを返します。",
+            "description": "リクエスト成功。コンテンツタイプと構造はリクエストの `response_mode` パラメータに依存します。\n\n- `response_mode` が `blocking` の場合、 `application/json` で `ChatCompletionResponse` オブジェクトを返します。\n- `response_mode` が `streaming` の場合、`text/event-stream` でサーバー送信イベントのストリームを返します。",
             "content": {
               "application/json": {
                 "schema": {
@@ -128,7 +128,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。各イベントは `data: ` プレフィックス付きの JSON オブジェクトで、2 つの改行で終了します。\n\n**SSE パースガイド：**各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去してください。JSON 内の `event` フィールドがイベントタイプを決定します。終了イベント（`message_end`、`workflow_finished`、`error` など）を受信するとストリームは終了します。`ping` イベント（10 秒ごとに接続維持のために送信）は無視してください。ストリーム内でエラーイベントが発生しても HTTP ステータスコードは常に `200` です。"
+                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：回答は `message` イベント（チャットボットアプリ）、または `agent_thought` と `agent_message` イベント（Agent アプリ）としてストリーミングされ、`message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_message` | Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | チャットボット、Agent | 出力モデレーションがそれまでの回答を置き換える | `answer` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | チャットボット、Agent | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**トランスポートイベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `error` | チャットボット、Agent | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | チャットボット、Agent | 10 秒ごとのキープアライブ | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -137,7 +137,7 @@
                   },
                   "streamingResponseAgent": {
                     "summary": "Response Example - Streaming (Agent)",
-                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"conversation_id\": \"conv123\"} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
+                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"created_at\": 1705395332} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
                   }
                 }
               }
@@ -470,7 +470,8 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "file"
+                  "file",
+                  "user"
                 ],
                 "properties": {
                   "file": {
@@ -480,7 +481,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。開発者のルールで定義され、アプリケーション内で一意である必要があります。"
+                    "description": "ユーザー識別子。開発者のルールで定義され、アプリケーション内で一意である必要があります。Service API と WebApp のユーザー ID は独立しており、値が同じでも同じユーザーを指しません。"
                   }
                 }
               }
@@ -2664,7 +2665,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "アプリモード、`chat` 固定です。"
+            "description": "アプリモード。`chat` はチャットボットアプリ、`agent-chat` は Agent アプリです。"
           },
           "answer": {
             "type": "string",
@@ -2890,6 +2891,9 @@
             "$ref": "#/components/schemas/ChunkChatEvent"
           },
           {
+            "$ref": "#/components/schemas/StreamEventBase"
+          },
+          {
             "type": "object",
             "description": "メッセージファイルイベント。ツールによって作成された新しいファイルです。",
             "properties": {
@@ -2910,11 +2914,6 @@
                 "type": "string",
                 "format": "url",
                 "description": "ファイルのリモート URL。"
-              },
-              "conversation_id": {
-                "type": "string",
-                "format": "uuid",
-                "description": "会話 ID。"
               }
             }
           }
@@ -3016,7 +3015,7 @@
           },
           {
             "type": "object",
-            "description": "接続を維持するための Ping イベント。"
+            "description": "接続を維持するための Ping イベント。`event: ping` 行として送信され、`data:` ペイロードはありません。"
           }
         ]
       },
@@ -3511,7 +3510,7 @@
           },
           "extra_contents": {
             "type": "array",
-            "description": "このメッセージに関連する追加の実行コンテンツです（人的介入フォームデータなど）。",
+            "description": "このメッセージに関連する追加の実行コンテンツです（人間の入力フォームデータなど）。",
             "items": {
               "type": "object",
               "additionalProperties": true

@@ -7,12 +7,12 @@
   },
   "servers": [
     {
-      "url": "{api_base_url}",
-      "description": "The base URL for the Chat App API. Replace {api_base_url} with the actual API base URL provided for your application.",
+      "url": "https://{api_base_url}",
+      "description": "Base URL of the Chat App API. For self-hosted deployments, replace it with your own API base URL.",
       "variables": {
         "api_base_url": {
-          "default": "https://api.dify.ai/v1",
-          "description": "Actual base URL of the API"
+          "default": "api.dify.ai/v1",
+          "description": "Host and path of the API base URL, without the `https://` prefix."
         }
       }
     }
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "Successful response. The content type and structure depend on the `response_mode` parameter in the request.\n\n- If `response_mode` is `blocking`, returns `application/json` with a `ChatCompletionResponse` object.\n- If `response_mode` is `streaming`, returns `text/event-stream` with a stream of `ChunkChatEvent` objects.",
+            "description": "Successful response. The content type and structure depend on the `response_mode` parameter in the request.\n\n- If `response_mode` is `blocking`, returns `application/json` with a `ChatCompletionResponse` object.\n- If `response_mode` is `streaming`, returns `text/event-stream` with a stream of Server-Sent Events.",
             "content": {
               "application/json": {
                 "schema": {
@@ -128,7 +128,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE). Each event is a JSON object prefixed with `data: ` and terminated by two newlines. See `ChunkChatEvent` for possible event structures.\n\n**SSE Parsing Guide:** Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing JSON. The `event` field inside the JSON determines the event type. The stream ends when a `message_end` event is received. Ignore `ping` events (sent every 10 seconds to keep the connection alive). If an `error` event is received mid-stream, the stream terminates — parse the error object for details. Note that the HTTP status code is always `200` even when an error event occurs within the stream."
+                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which arrive as `event: ping` lines (no `data:` payload) every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The reply streams as `message` events (Chatbot apps), or as `agent_thought` and `agent_message` events (Agent apps), and ends with `message_end`. When text-to-speech auto-play is enabled, `tts_message` events interleave and `tts_message_end` becomes the final event.\n\n**Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot | each answer chunk (concatenate in order) | `answer` |\n| `agent_message` | Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | Chatbot, Agent | output moderation replaces the answer so far | `answer` |\n| `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | Chatbot, Agent | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Agent | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Transport events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `error` | Chatbot, Agent | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | Chatbot, Agent | keep-alive every 10 seconds | none |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -137,7 +137,7 @@
                   },
                   "streamingResponseAgent": {
                     "summary": "Response Example - Streaming (Agent)",
-                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"conversation_id\": \"conv123\"} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
+                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"created_at\": 1705395332} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
                   }
                 }
               }
@@ -470,7 +470,8 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "file"
+                  "file",
+                  "user"
                 ],
                 "properties": {
                   "file": {
@@ -480,7 +481,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "User identifier, defined by the developer's rules, must be unique within the application."
+                    "description": "Identifier for the end user, defined by your application's rules and unique within the app. Service API and WebApp user IDs are separate, even when identical."
                   }
                 }
               }
@@ -2664,7 +2665,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "App mode, fixed as `chat`."
+            "description": "App mode. `chat` for Chatbot apps, `agent-chat` for Agent apps."
           },
           "answer": {
             "type": "string",
@@ -2890,6 +2891,9 @@
             "$ref": "#/components/schemas/ChunkChatEvent"
           },
           {
+            "$ref": "#/components/schemas/StreamEventBase"
+          },
+          {
             "type": "object",
             "description": "Message file event, a new file created by a tool.",
             "properties": {
@@ -2910,11 +2914,6 @@
                 "type": "string",
                 "format": "url",
                 "description": "Remote URL of the file."
-              },
-              "conversation_id": {
-                "type": "string",
-                "format": "uuid",
-                "description": "Conversation ID."
               }
             }
           }
@@ -3016,7 +3015,7 @@
           },
           {
             "type": "object",
-            "description": "Ping event to keep connection alive."
+            "description": "Ping event to keep connection alive. Delivered as an `event: ping` line with no `data:` payload."
           }
         ]
       },

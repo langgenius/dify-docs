@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
 """
-Verify Dify environment variable documentation against .env.example.
+Verify Dify environment variable documentation against .env.example sources.
 
-Parses both files, extracts variable names and defaults, and reports
-discrepancies between what the documentation says and what .env.example defines.
+Parses one or more env-example files plus the docs MDX, extracts variable names
+and defaults, and reports discrepancies.
+
+After Dify PR #31586, env vars were split across `docker/.env.example` and
+`docker/envs/**/*.env.example`. The verifier accepts either a single file or
+a directory; passing a directory globs `**/*.env.example` recursively.
 
 Usage:
-    python3 verify-env-docs.py [--env-example PATH] [--docs PATH]
+    python3 verify-env-docs.py --env-example PATH [--env-example PATH ...] --docs PATH
 
-Both arguments are required (no defaults).
+`--env-example` may be repeated and may point to either a file or a directory.
 """
 
 import argparse
@@ -17,8 +21,8 @@ import sys
 from pathlib import Path
 
 
-def parse_env_example(path: str) -> dict[str, str]:
-    """Parse .env.example and return {VARIABLE_NAME: default_value}."""
+def parse_env_file(path: Path) -> dict[str, str]:
+    """Parse a single env-example file and return {VARIABLE_NAME: default_value}."""
     variables = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
@@ -33,6 +37,52 @@ def parse_env_example(path: str) -> dict[str, str]:
                 value = match.group(2).strip()
                 variables[name] = value
     return variables
+
+
+def collect_env_files(sources: list[str]) -> list[Path]:
+    """Resolve each source (file or directory) into a list of env-example files.
+
+    Files are returned as-is. Directories are scanned recursively for any
+    file whose name ends with `.env.example` (matches both `.env.example`
+    and `<name>.env.example`).
+    """
+    files: list[Path] = []
+    seen: set[Path] = set()
+    for source in sources:
+        p = Path(source)
+        if not p.exists():
+            print(f"ERROR: env source not found: {source}", file=sys.stderr)
+            sys.exit(1)
+        if p.is_dir():
+            for f in sorted(p.rglob("*.env.example")):
+                if f not in seen:
+                    files.append(f)
+                    seen.add(f)
+            # Also catch the bare `.env.example` filename, which rglob's
+            # `*.env.example` pattern does include via the leading wildcard,
+            # but be explicit for clarity.
+            for f in sorted(p.rglob(".env.example")):
+                if f not in seen:
+                    files.append(f)
+                    seen.add(f)
+        else:
+            if p not in seen:
+                files.append(p)
+                seen.add(p)
+    return files
+
+
+def parse_env_example(sources: list[str]) -> tuple[dict[str, str], list[Path]]:
+    """Parse all env-example files reachable from the given sources.
+
+    Later files override earlier ones for duplicate keys. Returns the merged
+    variable map plus the list of files actually parsed (for diagnostics).
+    """
+    files = collect_env_files(sources)
+    merged: dict[str, str] = {}
+    for f in files:
+        merged.update(parse_env_file(f))
+    return merged, files
 
 
 def parse_ignored_vars(path: str) -> set[str]:
@@ -183,7 +233,13 @@ def main():
     parser.add_argument(
         "--env-example",
         required=True,
-        help="Path to .env.example file (e.g., /path/to/dify/docker/.env.example)",
+        action="append",
+        help=(
+            "Path to a .env.example file or to a directory containing them. "
+            "May be repeated. When given a directory, the verifier globs "
+            "**/*.env.example recursively. Pass both `docker/.env.example` and "
+            "`docker/envs/` to capture the post-PR-#31586 layout."
+        ),
     )
     parser.add_argument(
         "--docs",
@@ -197,18 +253,17 @@ def main():
     )
     args = parser.parse_args()
 
-    if not Path(args.env_example).exists():
-        print(f"ERROR: .env.example not found at {args.env_example}")
-        sys.exit(1)
     if not Path(args.docs).exists():
         print(f"ERROR: Documentation not found at {args.docs}")
         sys.exit(1)
 
-    env_vars = parse_env_example(args.env_example)
+    env_vars, env_files = parse_env_example(args.env_example)
     doc_vars = parse_mdx_docs(args.docs)
     ignored = parse_ignored_vars(args.ignored)
 
-    print(f"Parsed {len(env_vars)} variables from .env.example")
+    print(f"Parsed {len(env_vars)} variables from {len(env_files)} env-example file(s):")
+    for f in env_files:
+        print(f"  - {f}")
     print(f"Parsed {len(doc_vars)} variables from documentation")
     print(f"Loaded {len(ignored)} ignored variables from {args.ignored}")
     print()
@@ -223,12 +278,12 @@ def main():
             print(f"  {name}={env_vars[name]}")
         print()
 
-    # --- Check 2: Variables in docs but not in .env.example ---
+    # --- Check 2: Variables in docs but not in any env-example source ---
     extra_in_docs = sorted(
         (set(doc_vars.keys()) - set(env_vars.keys())) - ignored
     )
     if extra_in_docs:
-        print(f"=== IN DOCS BUT NOT IN .env.example ({len(extra_in_docs)}) ===")
+        print(f"=== IN DOCS BUT NOT IN ANY .env.example ({len(extra_in_docs)}) ===")
         for name in extra_in_docs:
             print(f"  {name} (doc default: {doc_vars[name]!r})")
         print()

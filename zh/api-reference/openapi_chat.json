@@ -7,12 +7,12 @@
   },
   "servers": [
     {
-      "url": "{api_base_url}",
-      "description": "对话型应用 API 的基础 URL。请将 {api_base_url} 替换为你的应用实际提供的 API 基础 URL。",
+      "url": "https://{api_base_url}",
+      "description": "对话型应用 API 的基础 URL。自托管部署时，替换为你的 API 基础 URL。",
       "variables": {
         "api_base_url": {
-          "default": "https://api.dify.ai/v1",
-          "description": "API 的实际基础 URL"
+          "default": "api.dify.ai/v1",
+          "description": "API 基础 URL 的主机与路径，不含 `https://` 前缀。"
         }
       }
     }
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "请求成功。内容类型和结构取决于请求中的 `response_mode` 参数。\n\n- 如果 `response_mode` 为 `blocking`，返回 `application/json` 和 `ChatCompletionResponse` 对象。\n- 如果 `response_mode` 为 `streaming`，返回 `text/event-stream` 和 `ChunkChatEvent` 对象流。",
+            "description": "请求成功。内容类型和结构取决于请求中的 `response_mode` 参数。\n\n- 如果 `response_mode` 为 `blocking`，返回 `application/json` 和 `ChatCompletionResponse` 对象。\n- 如果 `response_mode` 为 `streaming`，返回 `text/event-stream` 和服务器发送事件流。",
             "content": {
               "application/json": {
                 "schema": {
@@ -128,7 +128,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。每个事件是一个以 `data: ` 为前缀的 JSON 对象，以两个换行符终止。\n\n**SSE 解析指南：**每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀。JSON 内的 `event` 字段决定事件类型。当收到终止事件（如 `message_end`、`workflow_finished` 或 `error`）时流结束。忽略 `ping` 事件（每 10 秒发送一次以保持连接活跃）。注意即使流中出现错误事件，HTTP 状态码仍为 `200`。"
+                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：回复以 `message` 事件（聊天助手应用）或 `agent_thought` 与 `agent_message` 事件（Agent 应用）的形式流式返回，并以 `message_end` 结束。开启文本转语音（TTS）自动播放时，`tts_message` 事件会穿插其间，`tts_message_end` 成为最后一个事件。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手 | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 聊天助手、Agent | 内容审核替换已生成的回答 | `answer` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 聊天助手、Agent | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**传输事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `error` | 聊天助手、Agent | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 聊天助手、Agent | 每 10 秒保持连接 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -137,7 +137,7 @@
                   },
                   "streamingResponseAgent": {
                     "summary": "Response Example - Streaming (Agent)",
-                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"conversation_id\": \"conv123\"} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
+                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"created_at\": 1705395332} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
                   }
                 }
               }
@@ -470,7 +470,8 @@
               "schema": {
                 "type": "object",
                 "required": [
-                  "file"
+                  "file",
+                  "user"
                 ],
                 "properties": {
                   "file": {
@@ -480,7 +481,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，由开发者定义的规则生成，必须在应用内唯一。"
+                    "description": "用户标识符，由开发者定义的规则生成，必须在应用内唯一。Service API 与 WebApp 的用户 ID 相互独立，即使取值相同也不指向同一用户。"
                   }
                 }
               }
@@ -2664,7 +2665,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "应用模式，固定为 `chat`。"
+            "description": "应用模式。`chat` 表示聊天助手应用，`agent-chat` 表示 Agent 应用。"
           },
           "answer": {
             "type": "string",
@@ -2890,6 +2891,9 @@
             "$ref": "#/components/schemas/ChunkChatEvent"
           },
           {
+            "$ref": "#/components/schemas/StreamEventBase"
+          },
+          {
             "type": "object",
             "description": "消息文件事件，由工具创建的新文件。",
             "properties": {
@@ -2910,11 +2914,6 @@
                 "type": "string",
                 "format": "url",
                 "description": "文件的远程 URL。"
-              },
-              "conversation_id": {
-                "type": "string",
-                "format": "uuid",
-                "description": "会话 ID。"
               }
             }
           }
@@ -3016,7 +3015,7 @@
           },
           {
             "type": "object",
-            "description": "Ping 事件，用于保持连接活跃。"
+            "description": "Ping 事件，用于保持连接活跃。以 `event: ping` 行的形式送达，无 `data:` 载荷。"
           }
         ]
       },

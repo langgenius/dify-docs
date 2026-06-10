@@ -62,7 +62,7 @@ Jinja2 filters transform data during template rendering:
 {{ name | upper }}
 {{ price | round(2) }}
 {{ content | replace('\n', '<br>') }}
-{{ timestamp | strftime('%B %d, %Y') }}
+{{ tags | join(', ') }}
 {{ score | default('No score available') }}
 ```
 
@@ -77,30 +77,107 @@ Handle missing or invalid data gracefully using default values and conditional c
 
 ## Interactive Forms
 
-Templates can generate interactive HTML forms for structured data collection in chat interfaces:
+Templates can generate interactive HTML forms for structured data collection in Chatflows.
+
+On submit, the form values are sent to the chat as the end user's next message. The format depends on the `<form>`'s `data-format` attribute:
+
+- **`data-format="json"`**: values are serialized as a JSON object. A downstream Code node or Parameter Extractor can `JSON.parse` it (or pattern-match it) to pull out each field.
+- **Unset (or any other value)**: values are sent as plain text, one `name: value` per line. Easier for an LLM to read.
+
+For example:
+
+<Columns>
+  <Column>
 
 ```html
 <form data-format="json">
   <label for="username">Username:</label>
-  <input type="text" name="username" required />
-  
-  <label for="priority">Priority:</label>
-  <input type="select" name="priority" data-options='["low","medium","high"]'/>
-  
-  <label for="message">Message:</label>
-  <textarea name="message" placeholder="Enter your message"></textarea>
-  
-  <input type="checkbox" name="urgent" data-tip="Mark as urgent"/>
-  <button data-variant="primary">Submit</button>
+  <input type="text" name="username" placeholder="Please enter" />
+  <label for="password">Password:</label>
+  <input type="password" name="password" placeholder="Please enter" />
+  <label for="content">Content:</label>
+  <textarea name="content"></textarea>
+  <label for="date">Date:</label>
+  <input type="date" name="date" />
+  <label for="time">Time:</label>
+  <input type="time" name="time" />
+  <label for="datetime">Datetime:</label>
+  <input type="datetime" name="datetime" />
+  <label for="select">Select:</label>
+  <input type="select" name="select" data-options='["Option A","Option B","Option C"]' />
+  <input type="checkbox" name="agreed" data-tip="By checking this means you agreed" />
+  <button data-variant="primary">Login</button>
 </form>
 ```
 
-<Frame caption="Interactive Form Rendered in Chat Interface">
-  ![Interactive Form Rendered in Chat Interface](https://assets-docs.dify.ai/2025/04/9d24e9cfa3cdde00e4eee15bd4bbea76.png)
+  </Column>
+  <Column>
+    <Frame>
+      <img src="https://assets-docs.dify.ai/2025/04/9d24e9cfa3cdde00e4eee15bd4bbea76.png" alt="Interactive Form Rendered in Chat Interface" width="100%" />
+    </Frame>
+  </Column>
+</Columns>
+
+### Supported Tags
+
+| <div style={{width: '30px'}}>Tag</div> | Attributes | Notes |
+|:---|:---|:---|
+| `<form>` | `data-format` | Container for form fields.<br></br><br></br>Set `data-format="json"` to receive submissions as JSON; any other value (or unset) sends plain text. |
+| `<label>` | `for` | Renders the inner text as a field label.<br></br><br></br>Set `for` to the field's `name` to associate them. Place the `<label>` before its field in the source so it appears above. |
+| `<input>` | `type`, `name`, `value`, `placeholder`, `checked`, `data-tip`, `data-options` | See input types below. `name` is required for the field to appear in the submission and must match `[A-Za-z][A-Za-z0-9_-]*`. |
+| `<textarea>` | `name`, `placeholder`, `value` | Multi-line text input. |
+| `<button>` | `data-variant`, `data-size` | Submits the form. <ul><li>Variants: `primary`, `warning`, `secondary`, `secondary-accent`, `ghost`, `ghost-accent`, `tertiary`.</li><li>Sizes: `small`, `medium`, `large`.</li></ul>Values outside these lists are ignored and the button falls back to the default styling.<br></br><br></br>Ignores `data-message` and `data-link`, which only apply to [quick-reply buttons](#quick-reply-buttons).|
+
+<Note>
+Do not leave blank lines between tags inside `<form>`. A blank line ends the HTML block during markdown parsing, and any tags after the break will fail to render as form fields.
+</Note>
+
+### Supported Input Types
+
+| `type` value | Renders as | Submitted as |
+|:---|:---|:---|
+| `text`, `password`, `email`, `number` | Single-line input with matching HTML semantics | String |
+| `date` | Date picker | ISO date string (e.g., `2026-01-10`) |
+| `datetime` | Date picker with time selection | ISO date-time string (e.g., `2026-01-10T14:30:00.000+08:00`) |
+| `time` | Time picker | String (includes a full date prefix, not just the time) |
+| `checkbox` | Checkbox followed by the `data-tip` text as a label | Boolean (`true` or `false`) |
+| `select` | Dropdown built from the `data-options` JSON array of strings | Selected option string |
+| `hidden` | Renders as an `<input type="hidden">` element; not visible in the UI | String |
+
+- Any other `type` value renders an "Unsupported tag" fallback in place of the field.
+
+- HTML5 validation attributes such as `required`, `min`, `max`, and `pattern` are not enforced.
+
+- Browsers may autofill `<input type="password">` and `<input type="email">` with saved credentials for the current site; use `<input type="text">` for fields that should not be prefilled.
+
+### Quick-Reply Buttons
+
+A standalone `<button>` placed outside any `<form>` renders as a clickable button in the chat. Use these to offer canned responses or external links inline with the assistant's message. For example:
+
+```html wrap
+Would you like to see more options?
+<button data-variant="primary" data-message="Yes, show me more">Yes</button> <button data-variant="secondary" data-message="No, that is enough">No</button> <button data-variant="secondary-accent" data-link="https://docs.dify.ai">Read the docs</button>
+```
+
+<Frame>
+  ![Quick Reply Button](/images/use-dify/workflow/template-quick-reply-button.png)
 </Frame>
 
-When users submit forms, responses become structured JSON data available for immediate processing in downstream workflow nodes.
+| Attribute | Click behavior |
+|:---|:---|
+| `data-message` | Sends the text as the end user's next chat message. |
+| `data-link` | Opens the URL in a new tab. Must be a valid URL. |
+
+If both are set, `data-link` takes precedence. A button with neither renders but performs no action when clicked.
+
+Apply `data-variant` and `data-size` for styling, using the same values listed for [form buttons above](#supported-tags).
+
+<Note>
+Unlike form buttons, standalone buttons pass `data-variant` and `data-size` through to the underlying component without validation. An unrecognized value can leave the button rendered as plain text rather than a styled button.
+
+Use only the values listed above.
+</Note>
 
 ## Output Limits
 
-Template output is limited to **80,000 characters** (configurable via `TEMPLATE_TRANSFORM_MAX_LENGTH`). This prevents memory issues and ensures reasonable processing times for large template outputs.
+Template output is limited to **400,000 characters** (configurable via `TEMPLATE_TRANSFORM_MAX_LENGTH`). This prevents memory issues and ensures reasonable processing times for large template outputs.
