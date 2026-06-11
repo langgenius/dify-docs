@@ -4,7 +4,7 @@ Enhanced sync script with path-based translation and additional flags.
 
 Usage:
     # Translate specific file
-    python sync_by_path.py --file en/use-dify/nodes/llm.mdx --api-key app-xxx
+    python sync_by_path.py --file en/cloud/use-dify/nodes/llm.mdx --api-key app-xxx
 
     # Translate entire directory
     python sync_by_path.py --dir en/develop-plugin --api-key app-xxx
@@ -13,7 +13,7 @@ Usage:
     python sync_by_path.py --file en/test.mdx --api-key app-xxx --dry-run
 
     # Skip docs.json sync
-    python sync_by_path.py --dir en/use-dify/nodes --api-key app-xxx --no-docs-sync
+    python sync_by_path.py --dir en/cloud/use-dify/nodes --api-key app-xxx --no-docs-sync
 
     # Force overwrite without prompting
     python sync_by_path.py --file en/test.mdx --api-key app-xxx --force
@@ -664,7 +664,7 @@ async def main():
         epilog="""
 Examples:
   # Translate a single file
-  %(prog)s --file en/use-dify/nodes/llm.mdx --api-key app-xxx
+  %(prog)s --file en/cloud/use-dify/nodes/llm.mdx --api-key app-xxx
 
   # Translate entire directory
   %(prog)s --dir en/develop-plugin --api-key app-xxx
@@ -676,7 +676,7 @@ Examples:
   %(prog)s --file en/test.mdx --dry-run
 
   # Skip docs.json sync
-  %(prog)s --dir en/use-dify/nodes --no-docs-sync
+  %(prog)s --dir en/cloud/use-dify/nodes --no-docs-sync
 
   # Delete translations
   %(prog)s --file en/old-file.mdx --delete

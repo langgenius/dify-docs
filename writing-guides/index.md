@@ -5,9 +5,9 @@
 | Task | Skill | Paths | References |
 |:-----|:------|:------|:-----------|
 | Research a feature before writing | dify-docs-feature-research | — | dify and graphon codebases (graphon owns built-in workflow nodes, engine, runtime, model_runtime; verify against the graphon version pinned in `dify/api/pyproject.toml`), GitHub Issues in both repos |
-| Write or improve a user guide | dify-docs-guides | `en/use-dify/`, `en/develop-plugin/`, `en/self-host/` | style-guide, formatting-guide, glossary |
+| Write or improve a user guide | dify-docs-guides | `en/{cloud,self-host}/use-dify/`, `en/develop-plugin/`, `en/self-host/deploy/` | style-guide, formatting-guide, glossary |
 | Write or audit API reference specs | dify-docs-api-reference | `en/api-reference/` | style-guide, formatting-guide, glossary |
-| Write or audit env var docs | dify-docs-env-vars | `en/self-host/configuration/environments.mdx` | style-guide, formatting-guide, glossary |
+| Write or audit env var docs | dify-docs-env-vars | `en/self-host/deploy/configuration/environments.mdx` | style-guide, formatting-guide, glossary |
 
 When paths overlap, the most specific match takes precedence.
 

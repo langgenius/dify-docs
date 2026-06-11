@@ -3,7 +3,7 @@ name: dify-docs-env-vars
 description: >
   Use when writing, rewriting, or auditing environment variable documentation
   for Dify self-hosted deployment. Applies to
-  en/self-host/configuration/environments.mdx. Covers the full process from
+  en/self-host/deploy/configuration/environments.mdx. Covers the full process from
   codebase tracing to user-facing descriptions.
 ---
 
@@ -106,7 +106,7 @@ The env var doc is organized into three sections following `docker/.env.example`
 
 ## Reader Persona
 
-Same audience as `en/self-host/` documentation (see `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge.
+Same audience as `en/self-host/deploy/` documentation (see `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge.
 
 **Additional context for env var docs:** Readers are actively configuring a deployment. They need to know what each variable does, when to change it, and what breaks if they get it wrong. They are not reading linearly—they are scanning for a specific variable.
 
@@ -167,7 +167,7 @@ Every entry must include a source reference (PR, commit, or audit date).
 
 ## Translation
 
-The automated translation pipeline does not cover `en/self-host/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.
+The automated translation pipeline does not cover `en/self-host/deploy/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` to match.
 
 ## Post-Writing Verification
 

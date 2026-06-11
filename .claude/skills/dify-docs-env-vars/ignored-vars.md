@@ -1,6 +1,6 @@
 # Intentionally Ignored Environment Variables
 
-Variables listed here appear in Dify's `docker/.env.example` or `api/configs/`, but are deliberately **not** documented in `en/self-host/configuration/environments.mdx`. The verifier script reads this file and skips matching variables when comparing docs against `.env.example`.
+Variables listed here appear in Dify's `docker/.env.example` or `api/configs/`, but are deliberately **not** documented in `en/self-host/deploy/configuration/environments.mdx`. The verifier script reads this file and skips matching variables when comparing docs against `.env.example`.
 
 ## When to update this list
 

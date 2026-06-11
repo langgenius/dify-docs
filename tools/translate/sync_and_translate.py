@@ -718,7 +718,7 @@ class DocsSynchronizer:
 
         Args:
             target_dropdown: Target language dropdown structure
-            page_path: Path of the file to add (e.g., "zh/use-dify/..." or "zh/api-reference/openapi_test.json")
+            page_path: Path of the file to add (e.g., "zh/cloud/use-dify/..." or "zh/api-reference/openapi_test.json")
             file_location: Location path from find_file_in_dropdown_structure
                          (e.g., ["pages", 0, "pages", 0, "pages", 3] or ["groups", 1, "openapi"])
             source_dropdown: Source language dropdown structure for reference
@@ -1886,7 +1886,7 @@ class DocsSynchronizer:
         converted = []
         for item in pages_structure:
             if isinstance(item, str):
-                # Convert path: en/use-dify/... -> target_lang/use-dify/...
+                # Convert path: en/<path>... -> target_lang/<path>...
                 if item.startswith("en/"):
                     converted_path = item.replace("en/", f"{target_lang}/", 1)
                     converted.append(converted_path)

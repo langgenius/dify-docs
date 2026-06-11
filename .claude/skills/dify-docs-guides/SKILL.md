@@ -2,7 +2,7 @@
 name: dify-docs-guides
 description: >
   Use when writing, improving, or reviewing Dify user guide documentation.
-  Covers pages in en/use-dify/, en/develop-plugin/, and en/self-host/.
+  Covers pages in en/{cloud,self-host}/use-dify/, en/develop-plugin/, and en/self-host/deploy/.
   Triggers: "write docs for [feature]", "improve this page",
   "review this documentation section".
 ---
@@ -24,10 +24,10 @@ When optimizing Chinese or Japanese translations, also read:
 
 Adjust tone and assumed knowledge based on the document path:
 
-### en/use-dify/
+### en/{cloud,self-host}/use-dify/
 Product users building AI applications on Dify. Mix of developers and non-technical users. Assume basic AI familiarity but not infrastructure or deep coding knowledge. Explain technical concepts when they appear. Prioritize task completion and outcomes.
 
-### en/self-host/
+### en/self-host/deploy/
 DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge (Docker, databases, networking, environment variables). Be precise with technical details. Don't over-explain standard operations.
 
 ### en/develop-plugin/
@@ -66,11 +66,11 @@ During feature research, check whether the feature has related environment varia
 - Grep `docker/.env.example`, `api/configs/`, and the feature's PR for any `ENABLE_*`, `*_URL`, worker, or socket settings tied to the feature.
 - Note which variables are mandatory vs. optional, and what their defaults are.
 
-If the feature has related variables, use the `dify-docs-env-vars` skill to update `en/self-host/configuration/environments.mdx` in the same session. The reference doc is the single source of truth for variable semantics.
+If the feature has related variables, use the `dify-docs-env-vars` skill to update `en/self-host/deploy/configuration/environments.mdx` in the same session. The reference doc is the single source of truth for variable semantics.
 
 ### Division of responsibility
 
-- **Environment Variable Reference** (`en/self-host/configuration/environments.mdx`): exhaustive. Every variable gets a description covering purpose, defaults, interactions, and failure modes. Maintained via the `dify-docs-env-vars` skill.
+- **Environment Variable Reference** (`en/self-host/deploy/configuration/environments.mdx`): exhaustive. Every variable gets a description covering purpose, defaults, interactions, and failure modes. Maintained via the `dify-docs-env-vars` skill.
 - **User Guide**: functional only. Name the mandatory variables and the values to set, then link to the reference. Do not re-explain the mechanism (WebSocket paths, worker classes, scheme rules, fallback behavior). Those details live in the reference.
 
 ### How to present in the User Guide
@@ -91,7 +91,7 @@ On self-hosted deployments, [feature] is turned off by default. Enable it by set
 - `VAR_NAME` = `value`
 - ...
 
-See [Environment Variables](/en/self-host/configuration/environments#var_name) for details.
+See [Environment Variables](/en/self-host/deploy/configuration/environments#var_name) for details.
 </Note>
 ```
 

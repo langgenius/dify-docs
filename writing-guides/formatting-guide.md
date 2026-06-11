@@ -110,7 +110,7 @@ Do not use backticks for product names, UI labels, or general English words.
 
 - Use absolute paths from the language root: `[Link text](/en/path/to/page)`
 - API reference links omit the language prefix: `[Link text](/api-reference/<tag>/<endpoint>)`
-- Include anchor references when linking to a specific section: `[Retrieval Settings](/en/use-dify/knowledge/create-knowledge/setting-indexing-methods#setting-the-retrieval-setting)`
+- Include anchor references when linking to a specific section: `[Retrieval Settings](/en/cloud/use-dify/knowledge/create-knowledge/setting-indexing-methods#setting-the-retrieval-setting)`
 - Use descriptive link text. Never use "click here" or "here" as link text.
 
 ### External Links
@@ -168,7 +168,7 @@ All new images go in `/images/`, organized by **content domain**, not by where t
 
 ### Tier 1: top-level dropdown
 
-Matches the four top-level dropdowns in `docs.json`, plus `shared/` for cross-section assets:
+A stable set of content domains (independent of the current navigation structure), plus `shared/` for cross-section assets:
 
 - `images/use-dify/`
 - `images/develop-plugin/`

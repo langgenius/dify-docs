@@ -117,20 +117,20 @@ Also check: Pydantic models and `fields/` serializers used by Service API contro
 
 #### Help Documentation Detection (Heuristic)
 
-Read the PR description for context. Map changed source paths to likely doc areas:
+Read the PR description for context. Map changed source paths to likely doc areas. `use-dify` content exists in two product copies (`en/cloud/...` and `en/self-host/...`); apply changes to both, then mirror zh/ja:
 
 | Repo | Source path pattern | Likely doc area |
 |---|---|---|
-| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/use-dify/workflow/nodes/` |
-| dify | `api/core/rag/` | `en/use-dify/knowledge/` |
-| dify | `api/core/tools/` | `en/use-dify/tools/` or workflow tool node docs |
-| dify | `api/core/agent/` | `en/use-dify/build-apps/agent.mdx` |
-| dify | `api/core/app/` | `en/use-dify/build-apps/` |
+| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/{cloud,self-host}/use-dify/nodes/` |
+| dify | `api/core/rag/` | `en/{cloud,self-host}/use-dify/knowledge/` |
+| dify | `api/core/tools/` | `en/{cloud,self-host}/use-dify/nodes/tools.mdx` or workflow tool node docs |
+| dify | `api/core/agent/` | `en/{cloud,self-host}/use-dify/build/agent.mdx` |
+| dify | `api/core/app/` | `en/{cloud,self-host}/use-dify/build/` |
 | dify | `web/app/components/` | UI-related docs (check PR description for specifics) |
-| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/configuration/environments.mdx` (env var docs) |
-| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/quick-start/docker-compose.mdx` and `en/self-host/quick-start/faqs.mdx` (deployment workflow docs) |
-| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/use-dify/workflow/nodes/` |
-| graphon | `src/graphon/model_runtime/` | `en/use-dify/model-providers/` |
+| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
+| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/deploy/quick-start/docker-compose.mdx` and `en/self-host/deploy/quick-start/faqs.mdx` (deployment workflow docs) |
+| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/{cloud,self-host}/use-dify/nodes/` |
+| graphon | `src/graphon/model_runtime/` | `en/{cloud,self-host}/use-dify/workspace/model-providers.mdx` |
 | graphon | `src/graphon/graph_engine/`, `src/graphon/runtime/` | workflow engine behavior, execution semantics |
 
 When checking dify PRs, also scan recent merges in `langgenius/graphon` for the same release window. A user-visible workflow change may ship as a graphon release plus a dify pin bump (look for changes to `api/pyproject.toml` and `api/uv.lock`).
@@ -280,9 +280,9 @@ For each affected doc page, use `dify-docs-guides` skill:
 
 For each affected variable group, use `dify-docs-env-vars` skill:
 1. Trace the variable in the release codebase
-2. Update `en/self-host/configuration/environments.mdx`
+2. Update `en/self-host/deploy/configuration/environments.mdx`
 3. Run the verification script to confirm zero mismatches
-4. Update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` with the same changes
+4. Update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` with the same changes
 
 **Important**: `environments.mdx` is in the translation pipeline's ignore list (`tools/translate/config.json`). It is **not** auto-translated on PR push. ZH and JA env var docs must be updated manually.
 

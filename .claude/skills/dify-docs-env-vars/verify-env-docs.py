@@ -244,7 +244,7 @@ def main():
     parser.add_argument(
         "--docs",
         required=True,
-        help="Path to MDX documentation file (e.g., en/self-host/configuration/environments.mdx)",
+        help="Path to MDX documentation file (e.g., en/self-host/deploy/configuration/environments.mdx)",
     )
     parser.add_argument(
         "--ignored",
