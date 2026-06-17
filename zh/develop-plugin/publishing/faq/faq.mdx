@@ -4,39 +4,99 @@ dimensions:
     primary: operational
     detail: maintenance
   level: beginner
-todo: Developers (Contributors) should thoroughly test before releasing; debugging
-  should not be the user's (Dify User / Consumer) responsibility.
 standard_title: Faq
-language: en
+language: zh
 title: 常见问题
-description: 本文档解答了关于 Dify 插件开发和安装的常见问题，包括如何解决插件上传失败（通过修改 author 字段）以及如何处理插件安装时的验证异常（通过设置 FORCE_VERIFYING_SIGNATURE 环境变量）。
+description: 构建、打包、调试和安装 Dify 插件时的常见问题与解决方法
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/develop-plugin/publishing/faq/faq)。
 
-## 安装时插件上传失败怎么办？
+## 打包与安装
 
-**错误详情**：出现错误信息 `PluginDaemonBadRequestError: plugin_unique_identifier is not valid`。
+### 为什么 `dify plugin package` 失败并提示 `plugin_unique_identifier is not valid`？
 
-**解决方案**：将插件项目下 `manifest.yaml` 文件和 `/provider` 路径下 `.yaml` 文件中的 `author` 字段修改为你的 GitHub ID。
+`manifest.yaml` 以及所有 `provider/*.yaml` 文件中的 `author` 字段必须与你的 GitHub 用户名一致。在每个文件中更新该字段，用 `dify plugin package` 重新打包，然后重新安装。
 
-重新运行插件打包命令并安装新的插件包。
+### 为什么出现 `plugin verification has been enabled, and the plugin you want to install has a bad signature`？
 
-## 插件安装过程中遇到异常应该如何处理？
+自托管 Dify 默认对插件包强制执行签名校验。有两种处理方式：
 
-**问题描述**：插件安装过程中遇到异常信息：`plugin verification has been enabled, and the plugin you want to install has a bad signature`。应该如何处理？
+1. **生产环境推荐**：为插件包签名。参见 [第三方签名校验](/zh/develop-plugin/publishing/standards/third-party-signature-verification)。
+2. **开发与可信的内部使用**：关闭校验。在 `docker/.env` 中添加 `FORCE_VERIFYING_SIGNATURE=false`，然后重启：
 
-**解决方案**：在 `/docker/.env` 配置文件末尾添加字段 `FORCE_VERIFYING_SIGNATURE=false`。然后，运行以下命令重启 Dify 服务：
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   ```
 
-```bash
-cd docker
-docker compose down
-docker compose up -d
-```
+   这样可安装任意未签名的插件，包括市场之外的插件，因此仅应在你可控的环境中这样做。
 
-添加此字段后，Dify 平台将允许安装所有未在 Dify Marketplace 上架（审核）的插件，这可能带来安全风险。
+### `.difypkg` 文件有大小上限吗？
 
-建议先在测试/沙盒环境中安装插件，确认其安全性后再安装到生产环境。
+有。插件守护进程会拒绝超过可配置上限（默认 `50MB`）的插件包。如果你要分发较大的模型权重或静态资源，请将其托管在外部并在首次使用时下载，或就提高市场插件的上限事宜联系 Dify 支持团队。
+
+### 我的插件需要 Python 3.13，可以更改运行时吗？
+
+不可以。插件运行在受管的 Python 3.12 环境中。请将依赖固定为兼容 3.12 的版本。守护进程不会采用 `manifest.yaml` 中指定的其他运行时版本。
+
+## 远程调试
+
+### 为什么我的插件已启动，却始终未出现在工作空间中？
+
+按顺序检查三处：(1) 守护进程日志中显示有注册请求，(2) `REMOTE_INSTALL_KEY` 与调试对话框中显示的一致，(3) `REMOTE_INSTALL_URL` 使用 `host:port` 格式（而非分开的变量）。完整排查清单参见 [插件调试](/zh/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin)。
+
+### 我的代码改动会热重载吗？
+
+不会。每次改动后，用 `Ctrl+C` 停止插件进程，再重新运行 `python -m main`。
+
+## OAuth 与凭据
+
+### 在上游 OAuth 提供方处应配置什么回调 URL？
+
+工具类插件使用 `https://<your-dify-host>/console/api/oauth/plugin/<author>/<plugin-name>/tool/callback`，对于其他插件类型，将 `tool` 替换为 `datasource` 或 `trigger`。确切的格式会显示在 Dify 内插件的 OAuth 设置卡片中。
+
+### 为什么我的 OAuth 令牌不刷新？
+
+只要你的提供方实现从首次授权中返回了有效的 `refresh_token`，插件 SDK 就会在令牌过期时自动刷新。请确认 `OAuthCredentials.refresh_token` 已被填充，且已实现 `_oauth_refresh_credentials` 方法。
+
+## 市场发布
+
+### 为什么我的市场 PR 被自动检查驳回了？
+
+审核流程会对每个 PR 运行包含 12 项检查的预检。最常见的失败原因：
+
+- **`manifest.yaml` 中的 `author` 含有 `langgenius` 或 `dify`**：这些保留给第一方插件，请使用你自己的 GitHub 用户名。
+- **`dify_plugin` SDK 固定版本低于 `0.5.0`**：在 `requirements.txt` 中提高固定版本。
+- **`README.md` 含有中文字符**：将译文移至 `readme/README_zh_Hans.md`（参见 [多语言 README](/zh/develop-plugin/features-and-specs/plugin-types/multilingual-readme)）。
+- **PR 标题或正文含有中文**：只有双语提示行在允许范围内，其余内容必须为英文。
+- **缺少 `PRIVACY.md` 或 `_assets/`**：两者均为必需，且 `PRIVACY.md` 不能为空。
+- **版本已发布**：重新提交前先在 `manifest.yaml` 中提高 `version`。
+
+完整的检查清单见 [发布到 Dify 市场](/zh/develop-plugin/publishing/marketplace-listing/release-to-dify-marketplace#审核检查清单)。
+
+### 市场审核需要多长时间？
+
+提交到 `langgenius/dify-plugins` 的 PR 通常在几个工作日内完成审核。14～30 天内无审核活动的 PR 会被标记为停滞（stale），在 PR 上回复即可重置该计时。
+
+### 如何为市场上已有的插件发布更新？
+
+在 `manifest.yaml` 中提高 `version`，用新的插件包向 `langgenius/dify-plugins` 提交一个新的 PR。合并后市场即会显示新版本。自动化此流程的 GitHub Action 参见 [自动发布 PR](/zh/develop-plugin/publishing/marketplace-listing/plugin-auto-publish-pr)。
+
+### 我可以让插件变现吗？
+
+暂时不可以。市场目前仅接受免费插件。后续的定价政策将另行公布。
+
+## 存储与限制
+
+### 插件日志在哪里？
+
+自托管：插件守护进程的容器日志（`docker compose logs plugin_daemon`）。云端：仅在远程调试期间于工作空间的插件调试面板中可见，持久化日志不会在界面中暴露。结构化输出请使用 [插件日志](/zh/develop-plugin/features-and-specs/plugin-types/plugin-logging)。
+
+### 插件存储是按工作空间隔离的吗？
+
+是。KV 存储 API（`self.session.storage`）按每个插件在每个工作空间的安装实例隔离。使用同一插件的两个工作空间不会共享键。参见 [持久化存储（KV）](/zh/develop-plugin/features-and-specs/plugin-types/persistent-storage-kv)。
 
 {/*
 Contributing Section

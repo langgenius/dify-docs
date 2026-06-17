@@ -4,39 +4,99 @@ dimensions:
     primary: operational
     detail: maintenance
   level: beginner
-todo: Developers (Contributors) should thoroughly test before releasing; debugging
-  should not be the user's (Dify User / Consumer) responsibility.
 standard_title: Faq
-language: en
+language: ja
 title: よくある質問
-description: このドキュメントでは、Difyプラグインの開発とインストールに関するよくある質問に回答します。プラグインのアップロード失敗の解決方法（authorフィールドの修正）やプラグインインストール時の検証例外の処理方法（FORCE_VERIFYING_SIGNATURE環境変数の設定）などを含みます。
+description: Dify プラグインのビルド、パッケージ化、デバッグ、インストールに関するよくある問題と解決方法
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/publishing/faq/faq) を参照してください。
 
-## インストール時にプラグインのアップロードが失敗した場合はどうすればよいですか？
+## パッケージ化とインストール
 
-**エラー詳細**： `PluginDaemonBadRequestError: plugin_unique_identifier is not valid` というエラーメッセージが表示されます。
+### `dify plugin package` が `plugin_unique_identifier is not valid` で失敗するのはなぜですか？
 
-**解決策**： プラグインプロジェクト内の `manifest.yaml` ファイルと `/provider` パス下の `.yaml` ファイルにある `author` フィールドを、ご自身のGitHub IDに変更してください。
+`manifest.yaml` とすべての `provider/*.yaml` ファイル内の `author` フィールドは、ご自身の GitHub ハンドルと一致している必要があります。すべてのファイルで更新し、`dify plugin package` で再パッケージ化してから再インストールしてください。
 
-プラグインパッケージコマンドを再実行し、新しいプラグインパッケージをインストールしてください。
+### `plugin verification has been enabled, and the plugin you want to install has a bad signature` が表示されるのはなぜですか？
 
-## プラグインのインストール中に例外が発生した場合はどのように対処すればよいですか？
+セルフホスト版 Dify は、デフォルトでプラグインパッケージに対する署名検証を強制します。対処方法は 2 つあります。
 
-**問題の説明**： プラグインのインストール中に `plugin verification has been enabled, and the plugin you want to install has a bad signature` という例外メッセージが表示されました。どのように対処すればよいですか？
+1. **本番環境での推奨**：パッケージに署名します。[サードパーティ署名検証](/ja/develop-plugin/publishing/standards/third-party-signature-verification) を参照してください。
+2. **開発および信頼できる内部利用**：検証を無効にします。`docker/.env` に `FORCE_VERIFYING_SIGNATURE=false` を追加してから、再起動します。
 
-**解決策**： `/docker/.env` 設定ファイルの末尾に `FORCE_VERIFYING_SIGNATURE=false` フィールドを追加します。その後、以下のコマンドを実行してDifyサービスを再起動してください：
+   ```bash
+   cd docker
+   docker compose down
+   docker compose up -d
+   ```
 
-```bash
-cd docker
-docker compose down
-docker compose up -d
-```
+   これにより、マーケットプレイス外のものを含むあらゆる未署名プラグインをインストールできるようになるため、自分が管理する環境でのみ行ってください。
 
-このフィールドを追加すると、DifyプラットフォームはDify Marketplaceにリスト（審査）されていないすべてのプラグインのインストールを許可するようになりますが、これはセキュリティリスクをもたらす可能性があります。
+### `.difypkg` ファイルにサイズの上限はありますか？
 
-まずテスト/サンドボックス環境でプラグインをインストールし、安全性を確認してから本番環境にインストールすることをお勧めします。
+あります。プラグインデーモンは、設定可能な上限（デフォルト `50MB`）を超えるパッケージを拒否します。大きなモデルの重みや静的アセットを同梱する場合は、外部にホストして初回利用時にダウンロードするか、マーケットプレイスプラグインの上限引き上げについて Dify サポートにお問い合わせください。
+
+### プラグインに Python 3.13 が必要です。ランタイムを変更できますか？
+
+できません。プラグインは管理された Python 3.12 環境内で実行されます。依存関係は 3.12 と互換性のあるバージョンに固定してください。デーモンは `manifest.yaml` 内の異なるランタイムバージョンを採用しません。
+
+## リモートデバッグ
+
+### プラグインは起動するのに、ワークスペースに表示されないのはなぜですか？
+
+次の 3 点を順番に確認してください。(1) デーモンログに登録リクエストが記録されている、(2) `REMOTE_INSTALL_KEY` がデバッグダイアログに表示されているものと一致している、(3) `REMOTE_INSTALL_URL` が `host:port` 形式を使用している（個別の変数ではない）。トラブルシューティングの一覧全体は [プラグインのデバッグ](/ja/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin) を参照してください。
+
+### コードの変更はホットリロードされますか？
+
+されません。変更のたびに `Ctrl+C` でプラグインプロセスを停止し、`python -m main` を再実行してください。
+
+## OAuth と認証情報
+
+### 上流の OAuth プロバイダーに設定するコールバック URL は何ですか？
+
+ツールプラグインには `https://<your-dify-host>/console/api/oauth/plugin/<author>/<plugin-name>/tool/callback` を使用し、他のプラグインタイプの場合は `tool` を `datasource` または `trigger` に置き換えます。正確な形式は、Dify 内のプラグインの OAuth 設定カードに表示されます。
+
+### OAuth トークンが更新されないのはなぜですか？
+
+プロバイダーの実装が初回認可で有効な `refresh_token` を返していれば、プラグイン SDK はトークンの期限切れ時に自動的に更新します。`OAuthCredentials.refresh_token` が設定されていること、および `_oauth_refresh_credentials` メソッドが実装されていることを確認してください。
+
+## マーケットプレイスへの公開
+
+### マーケットプレイスへの PR が自動チェックで却下されたのはなぜですか？
+
+レビューアーは、すべての PR に対して 12 項目の事前チェックを実行します。最も多い失敗の原因は次のとおりです。
+
+- **`manifest.yaml` の `author` に `langgenius` または `dify` が含まれている**：これらはファーストパーティプラグイン用に予約されています。ご自身の GitHub ハンドルを使用してください。
+- **`dify_plugin` SDK の固定バージョンが `0.5.0` 未満**：`requirements.txt` で固定バージョンを引き上げてください。
+- **`README.md` に中国語が含まれている**：翻訳を `readme/README_zh_Hans.md` に移動してください（[多言語 README](/ja/develop-plugin/features-and-specs/plugin-types/multilingual-readme) を参照）。
+- **PR のタイトルまたは本文に中国語が含まれている**：許可されているのはバイリンガルの注記行のみで、それ以外はすべて英語である必要があります。
+- **`PRIVACY.md` または `_assets/` が欠けている**：どちらも必須であり、`PRIVACY.md` は空であってはなりません。
+- **バージョンがすでに公開されている**：再提出する前に `manifest.yaml` の `version` を引き上げてください。
+
+チェックの一覧全体は [Dify マーケットプレイスへの公開](/ja/develop-plugin/publishing/marketplace-listing/release-to-dify-marketplace#レビュアーのチェックリスト) にあります。
+
+### マーケットプレイスのレビューにはどのくらいかかりますか？
+
+`langgenius/dify-plugins` への PR は、通常数営業日以内にレビューされます。14～30 日間レビューアーの動きがない PR は stale としてマークされます。PR 上で返信すると、そのタイマーがリセットされます。
+
+### マーケットプレイスにすでにあるプラグインの更新を公開するにはどうすればよいですか？
+
+`manifest.yaml` の `version` を引き上げ、新しいパッケージで `langgenius/dify-plugins` に対して新しい PR を開きます。マージされると、マーケットプレイスに新しいバージョンが表示されます。これを自動化する GitHub Action については [自動公開 PR](/ja/develop-plugin/publishing/marketplace-listing/plugin-auto-publish-pr) を参照してください。
+
+### プラグインを収益化できますか？
+
+現時点ではできません。マーケットプレイスは無料プラグインのみを受け付けています。今後の価格設定ポリシーは別途お知らせします。
+
+## ストレージと制限
+
+### プラグインのログはどこに出力されますか？
+
+セルフホスト：プラグインデーモンのコンテナログ（`docker compose logs plugin_daemon`）。クラウド：リモートデバッグ中のみワークスペースのプラグインデバッグパネルに表示され、永続化されたログは UI には公開されません。構造化された出力には [プラグインのロギング](/ja/develop-plugin/features-and-specs/plugin-types/plugin-logging) を使用してください。
+
+### プラグインのストレージはワークスペースごとにスコープされますか？
+
+されます。KV ストレージ API（`self.session.storage`）は、ワークスペースごと、プラグインのインストールごとに分離されます。同じプラグインを使用する 2 つのワークスペースがキーを共有することはありません。[永続ストレージ（KV）](/ja/develop-plugin/features-and-specs/plugin-types/persistent-storage-kv) を参照してください。
 
 {/*
 Contributing Section
