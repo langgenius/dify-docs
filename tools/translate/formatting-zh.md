@@ -136,7 +136,7 @@ Do not end headings with sentence-ending punctuation (`。，、；：`). Paired
 Every translated page must include the translation disclaimer directly below the frontmatter, before any body content:
 
 ```mdx
-<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/path/to/page)。</Note>
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/path/to/page)。
 ```
 
 Keep the disclaimer regardless of whether the page has been human-reviewed. The English source is always the canonical version, and readers benefit from a consistent pointer to it on every translated page.
