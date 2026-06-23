@@ -1,0 +1,72 @@
+---
+title: Handle Errors and Retries
+description: "Make your agent fail safely on difyctl errors: branch on exit codes, parse the error, detect paused workflows, and retry only what's safe"
+---
+
+Your agent needs four pieces of failure logic to drive `difyctl` safely: read the right channel, branch on the exit code, treat a paused workflow as success, and retry only what's safe to retry.
+
+## Read the Right Channel
+
+Run every programmatic invocation with `-o json`. The channel discipline is strict and you can build on it:
+
+- **Success**: the payload is on stdout as parseable JSON with no ANSI codes, and stderr is empty.
+- **Failure**: stdout is empty, and stderr is a structured JSON object. The entire trimmed stderr parses as JSON.
+- **Paused**: a Workflow that stops for human input also exits `0` on the success channel, with `"status": "paused"` on stdout. [Treat it as success](#a-pause-is-success-not-an-error), not failure.
+
+So the parse rule is: exit code first, then `JSON.parse(stdout)` on success and `JSON.parse(stderr)` on failure. See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes#errors) for the error object's fields and a full sample.
+
+## Branch on the Exit Code
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes#exit-codes) for the full exit-code table. For an agent, the branches that matter:
+
+- **Exit `7`—rate limited**: The server returned a 429. Back off and retry.
+- **Exit `4`—auth**: No session, or the session expired. Re-establish the session before doing anything else. Don't retry the same command as-is, which just burns calls. See [Authenticate Where Your Agent Runs](/en/cli/integrate-agents/auth-for-agent-deployments).
+- **Exit `1`—generic or server error**: Network failure, server error, app not found, or an unknown flag or command. Parse the error object and inspect `error.code`. Don't blindly retry.
+- **Exit `2`—invalid input**: The CLI rejected a value before any request went out: malformed `--inputs` JSON, a non-UUID app ID, or an out-of-range flag such as `--limit 0`. Fix the call; retrying it unchanged fails the same way.
+- **A paused run is exit `0`**: A workflow that hit a human-input step exits `0` with `"status": "paused"` on stdout, not an error. It's [handled separately](#a-pause-is-success-not-an-error).
+
+## A Pause Is Success, Not an Error
+
+A Workflow app with a human-input step pauses mid-run. The command exits `0` and reports the pause on stdout. There is nothing on stderr to catch. An agent that only checks exit codes will mistake the pause for a completed run, so the completion check must read the payload:
+
+```python
+import json, subprocess
+
+r = subprocess.run(
+    ["difyctl", "run", "app", app_id, "--inputs", json.dumps(inputs), "-o", "json"],
+    capture_output=True, text=True,
+)
+if r.returncode == 0:
+    payload = json.loads(r.stdout)
+    if payload.get("status") == "paused":
+        # Success-with-pending: collect input, then resume with
+        # payload["form_token"] and payload["workflow_run_id"].
+        ...
+```
+
+See [When a Workflow Pauses](/en/cli/reference/apps#when-a-workflow-pauses) for the full paused payload, the resume command, and the expiry rules. A resumed run can pause again at a later step, so run the same check after every `resume app`.
+
+## Branch on `error.code`
+
+The error object's `error.code` is a stable machine identifier: the same failure produces the same code across calls, so you write the branching logic once. Group your branches by recovery action rather than enumerating every code:
+
+- **Re-authenticate, then retry**: `not_logged_in`, `auth_expired`. Both exit 4.
+- **Retry with backoff**: `network_connection`, `server_5xx`. Transient infrastructure trouble.
+- **Don't retry, inspect**: `server_4xx_other`. The server rejected the request: wrong app ID, bad inputs, or insufficient permissions. The `message` carries the server's reason.
+- **Fix the invocation**: the usage codes that arrive with exit 2.
+
+The error object also carries a human-readable `hint` with a suggested recovery action. Log it to speed up debugging.
+
+When the failure came from the server, the error object may also include `error.server`, the server's own error body. Its `server.code` (for example `not_found`) distinguishes rejection reasons more finely than `server_4xx_other` if your loop needs that granularity.
+
+## Retry Deliberately
+
+`difyctl` already retries idempotent requests (GET, PUT, DELETE) on transient failures with exponential backoff. See [Global Flags](/en/cli/reference/global-flags#http-retries) for the budget and the `--http-retry` override.
+
+What it never retries automatically is POST, and that's the call that matters: every `run app` is a POST. When `run app` fails mid-flight, the CLI doesn't know whether the server already started executing, so by default it won't re-send.
+
+The one opt-in is [`run app --retry-on-limit`](/en/cli/reference/apps#run-an-app), which retries specifically on a 429 with bounded backoff. It stays off by default because an app run isn't idempotent.
+
+The same applies to your agent's logic: re-running a failed `run app` is a new execution, not a resume of the old one. For a Chatbot, that's usually acceptable (re-ask the question). For a Workflow with side effects, gate the retry on what the workflow does.
+
+Keep agent-side retries for the transient errors above, cap the attempts, and log every retry decision. An agent that silently re-runs writes is the failure mode the [`effect` labels](/en/cli/reference/help#machine-readable-help) exist to prevent. Every command in `difyctl help -o json` is tagged `read`, `write`, or `destructive`, so your loop can gate auto-retry on the tag and never re-send a `write` blindly.

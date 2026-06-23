@@ -1,0 +1,400 @@
+---
+title: Auth and Contexts
+description: Sign in, manage sessions, and switch between saved hosts and accounts
+---
+
+`difyctl` can hold sign-ins for several Dify hosts and accounts at once. Each host and account pair is a context: its metadata lives in `hosts.yml` in the [config directory](/en/cli/reference/environment-variables), and its bearer token lives in your OS credential store (with a sealed-file fallback). 
+
+Each task maps to one command:
+
+- [`difyctl auth login`](#sign-in) signs you in to a host
+- [`auth whoami`](#check-your-active-identity) prints the identity you're signed in as
+- [`auth list`](#list-your-saved-contexts) lists your saved contexts
+- [`auth logout`](#sign-out) signs you out of the active host
+- [`use host`](#switch-the-active-host) / [`use account`](#switch-the-active-account) switch the active context
+- [`auth devices list`](#list-your-active-sessions) lists your active sessions
+- [`auth devices revoke`](#revoke-sessions) revokes sessions you don't recognize
+
+For the step-by-step sign-in walkthrough, see [Authenticate](/en/cli/authenticate).
+
+## Sign In
+
+```text
+difyctl auth login [flags]
+```
+
+`auth login` runs the OAuth 2.0 device flow: it prints a one-time code and a verification URL, opens the URL in your browser, and waits for you to approve the sign-in there. The CLI never sees your password.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--host <url>` | string | none | The Dify host to sign in to. On self-hosted Dify, use the [console API URL](/en/self-host/deploy/configuration/environments#console_api_url), since `difyctl` operates against the console API. A URL without a scheme gets `https://`. In a terminal, omit it and enter your host; in a non-interactive session (script, CI, pipe), the flag is required. |
+| `--no-browser` | boolean | false | Don't auto-open the browser; print the verification URL only. |
+| `--insecure` | boolean | false | Allow `http://` hosts (local development only). |
+
+### Examples
+
+Sign in to your Dify host:
+
+```bash
+difyctl auth login --host https://dify.example.com
+```
+
+Sign in from an SSH session, opening the verification URL on another device:
+
+```bash
+difyctl auth login --no-browser
+```
+
+### Output
+
+The code prompt goes to stderr, then a spinner waits for the browser-side approval:
+
+```text
+! Copy this one-time code: WDJP-XKLM
+  Open: https://dify.example.com/device
+```
+
+On success, the confirmation goes to stdout:
+
+```text
+✓ Logged in to dify.example.com as <your-email> (<your-name>)
+  Workspace: <your-workspace>
+```
+
+The `Workspace:` line is your default workspace.
+
+Each sign-in also registers a server-side session, labeled `difyctl on <hostname>`. Run [`auth devices list`](#list-your-active-sessions) to see all your sessions. Signing in to a host you're already signed in to refreshes that context's stored token.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Signed in |
+| `1` | Network or server error |
+| `2` | Usage error, such as a missing `--host` outside a terminal or a non-`https` host without `--insecure` |
+| `4` | The sign-in was denied (`access_denied`), or the code expired before you approved it (`expired_token`) |
+| `6` | The server has no device-flow sign-in endpoint (`unsupported_endpoint`) |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Check Your Active Identity
+
+```text
+difyctl auth whoami [flags]
+```
+
+`auth whoami` prints who the active context belongs to. It reads the stored context without contacting the server, so it answers "which identity is active", not "is the token still valid". It exits `0` even if the session has expired server-side.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--json` | boolean | false | Emit JSON instead of the plain-text line. |
+
+### Examples
+
+```bash
+difyctl auth whoami
+```
+
+For scripts:
+
+```bash
+difyctl auth whoami --json
+```
+
+### Output
+
+```text
+<your-email> (<your-name>)
+```
+
+The `--json` output is a single line with `id`, `email`, and `name`:
+
+```json
+{"id":"3c90c3cc-0d44-4b50-8888-8dd25736052a","email":"<your-email>","name":"<your-name>"}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | An active context exists |
+| `4` | Not signed in (`not_logged_in`) |
+
+## List Your Saved Contexts
+
+```text
+difyctl auth list [flags]
+```
+
+`auth list` shows every stored host and account pair and marks the active one. Like `auth whoami`, it is purely local and never contacts the server.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-o <format>` | string | none | Output format: `json`, `yaml`, or `name`. Omit the flag for the default table. |
+
+### Examples
+
+```bash
+difyctl auth list
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default | A table of your contexts: host, account, and an active marker. |
+| `-o json`, `-o yaml` | A `contexts` array, each entry with `host`, `account`, `name`, and `active`. |
+| `-o name` | The account emails, one per line. |
+
+Default table:
+
+```text
+HOST                    ACCOUNT                      ACTIVE
+dify.example.com        you@company.com (Your Name)  *
+dify.internal.acme.com  you@acme.com (Your Name)
+```
+
+`-o json`:
+
+```json
+{
+  "contexts": [
+    {
+      "host": "dify.example.com",
+      "account": "you@company.com",
+      "name": "Your Name",
+      "active": true
+    },
+    {
+      "host": "dify.internal.acme.com",
+      "account": "you@acme.com",
+      "name": "Your Name",
+      "active": false
+    }
+  ]
+}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including when no contexts are stored |
+| `2` | Usage error, such as an unsupported `-o` value |
+
+## Sign Out
+
+```text
+difyctl auth logout
+```
+
+`auth logout` revokes the active context's session on the server, then deletes its token and `hosts.yml` entry from your machine. Other saved contexts are untouched.
+
+The local cleanup always happens. If the server-side revoke fails, `difyctl` prints a warning on stderr and clears your credentials anyway. The same applies when the token sits in an OS keychain that can't be read at sign-out (locked, or no desktop session): the revoke is skipped and the local cleanup still runs.
+
+### Flags
+
+None.
+
+### Examples
+
+```bash
+difyctl auth logout
+```
+
+### Output
+
+```text
+✓ Logged out of dify.example.com
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Signed out |
+| `4` | Not signed in (`not_logged_in`) |
+
+## Switch the Active Host
+
+```text
+difyctl use host [flags]
+```
+
+`use host` changes which stored host subsequent commands run against. It is local: it only re-points the active context among the sign-ins you already have. To add a new host, run [`auth login --host`](#sign-in) instead.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--domain <host>` | string | none | The stored host to switch to, written as its bare domain (`dify.example.com`), without a scheme. In a terminal, omit it and pick from your stored hosts. In a non-interactive session (script, CI, pipe), the flag is required. |
+
+### Examples
+
+Switch to a stored host by its domain:
+
+```bash
+difyctl use host --domain dify.internal.acme.com
+```
+
+### Output
+
+On success, the new active host is confirmed:
+
+```text
+✓ Active host is now dify.internal.acme.com
+```
+
+A domain you haven't signed into fails as a usage error that lists your known hosts.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Switched |
+| `2` | Usage error: an unknown host, or a missing `--domain` outside a terminal |
+| `4` | No stored sign-ins (`not_logged_in`) |
+
+## Switch the Active Account
+
+```text
+difyctl use account [flags]
+```
+
+`use account` changes which stored account is active on the current host. Like `use host`, it is local and only switches between sign-ins you already have.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--email <email>` | string | none | The account to switch to. In a terminal, omit it and pick from your stored accounts; in a non-interactive session (script, CI, pipe), the flag is required. |
+
+### Examples
+
+Switch to another account on the active host:
+
+```bash
+difyctl use account --email teammate-bot@company.com
+```
+
+### Output
+
+On success, the new active account is confirmed:
+
+```text
+✓ Active account on dify.example.com is now teammate-bot@company.com
+```
+
+An email that isn't stored on the active host fails as a usage error that lists your known accounts. An account whose stored token is gone (revoked, or cleared by a [session revoke](#revoke-sessions)) fails with a not-logged-in error and a hint to sign in again.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Switched |
+| `2` | Usage error: an unknown account, or a missing `--email` outside a terminal |
+| `4` | No stored sign-in on this host, or no credential for the chosen account |
+
+## List Your Active Sessions
+
+```text
+difyctl auth devices list [flags]
+```
+
+Every device-flow sign-in registers a server-side session, labeled `difyctl on <hostname>` by default. `auth devices list` shows the sessions active for your account so you can spot and [revoke](#revoke-sessions) ones you don't recognize.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--json` | boolean | false | Emit JSON instead of the table. |
+| `--page <n>` | integer | 1 | Page number. |
+| `--limit <n>` | integer | 20 | Page size, 1 to 200. The flag wins, then [`DIFY_LIMIT`](/en/cli/reference/environment-variables). |
+
+### Examples
+
+List the sessions active for your account:
+
+```bash
+difyctl auth devices list
+```
+
+### Output
+
+```text
+DEVICE                        CREATED               LAST USED             CURRENT
+difyctl on Yours-MacBook-Pro  2026-06-02T09:14:31Z  2026-06-11T08:02:17Z  *
+difyctl on build-runner-3     2026-05-28T11:40:09Z  2026-06-10T22:51:44Z
+```
+
+The table marks the session your current sign-in uses with `*`. `LAST USED` is empty for a session you haven't used since signing in.
+
+`--json` prints a single line of JSON: a `data` array with one entry per session, plus the paging fields `page`, `limit`, `total`, and `has_more`. Each entry carries `id`, `prefix`, `client_id`, `device_label`, `created_at`, `last_used_at`, and `expires_at`.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Network or server error |
+| `2` | Usage error, such as `--limit 0` |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+## Revoke Sessions
+
+```text
+difyctl auth devices revoke [<target>] [flags]
+```
+
+`auth devices revoke` ends sessions server-side. The target matches by exact label first, then by exact session ID, then by case-insensitive label substring. A target that matches more than one session fails with the candidates listed, so pass an exact ID to disambiguate. In a terminal, `difyctl` first asks you to confirm (`Revoke <N> session(s)? [y/N]`); pass `-y`/`--yes` to skip the prompt. Outside a terminal (a script or pipe), it revokes without prompting.
+
+If you revoke the session your current sign-in uses, `difyctl` also clears that context's local credentials: you are signed out on this machine.
+
+### Arguments
+
+- `<target>`: a device label or session ID from [`auth devices list`](#list-your-active-sessions). Required unless `--all` is passed.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--all` | boolean | false | Revoke every session except the current one. |
+| `-y, --yes` | boolean | false | Skip the confirmation prompt. |
+
+### Examples
+
+Revoke one session by its label:
+
+```bash
+difyctl auth devices revoke "difyctl on build-runner-3"
+```
+
+Sign out everywhere else, keeping this machine's session:
+
+```bash
+difyctl auth devices revoke --all
+```
+
+### Output
+
+On success, `difyctl` prints `✓ Revoked <N> session(s)`. A named target that matches nothing fails with `no session matches "<target>"`. `--all` with no other sessions prints `no sessions to revoke` and exits `0`. 
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Revoked, or nothing to revoke under `--all` |
+| `1` | Network or server error |
+| `2` | Usage error: no target and no `--all`, an ambiguous target, no matching session, or declining the confirmation prompt |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
