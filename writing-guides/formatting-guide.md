@@ -388,7 +388,7 @@ Use for showing multiple code variants of the same operation:
 
 - **Em dashes**: No spaces around em dashes. Write `word—word`, not `word — word`.
 - **En dashes**: No spaces around en dashes in ranges. Write `2–4`, not `2 – 4`.
-- **Avoid overusing em dashes.** Em dashes work well for an emphatic aside, but lose impact when stacked. Use at most one per paragraph; reach for a comma, colon, or new sentence before a second. If you find yourself wanting two dashes in one sentence, rewrite.
+- **Use em dashes sparingly, but don't avoid them entirely.** A well-placed em dash can improve readability by setting off an aside or emphasizing a clause. The problem is overuse: stacked em dashes lose their effect and read as an AI tell. Apply judgment and keep them occasional across a page. Reach for a comma, parentheses, a colon, or a new sentence if possible, but not at the cost of readability and clarity.
 
 ---
 
@@ -418,5 +418,5 @@ Before submitting, verify:
 - [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
-- [ ] No more than one em dash per paragraph
+- [ ] Em dashes used sparingly: none stacked in a single sentence, no pile-up across the page
 - [ ] Dollar signs in prose are escaped as `\$` (not needed inside code)
