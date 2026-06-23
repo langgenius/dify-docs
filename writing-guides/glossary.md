@@ -138,8 +138,12 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
-| self-hosted | 自托管 | セルフホスト | |
-| SaaS | SaaS | SaaS | |
+| self-hosted | 自部署 | セルフホスト | deployment term (not an edition); ja keeps セルフホスト, zh uses 自部署 |
+| SaaS | SaaS | SaaS | generic term; for Dify's hosted product use Dify Cloud (not "Dify SaaS" / "the SaaS version") |
+| Dify Cloud | Dify Cloud | Dify Cloud | product name; English in all languages |
+| Dify Enterprise | Dify Enterprise | Dify Enterprise | edition name; English in all languages |
+| Dify Premium | Dify Premium | Dify Premium | edition name; English in all languages |
+| Community Edition | Community Edition | Community Edition | edition name; English in all languages |
 | Docker | Docker | Docker | |
 | sandbox | 沙箱 | サンドボックス | |
 | API | API | API | |

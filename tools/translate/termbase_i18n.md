@@ -130,8 +130,12 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| self-hosted | 自托管 | セルフホスト |
+| self-hosted | 自部署 | セルフホスト |
 | SaaS | SaaS | SaaS |
+| Dify Cloud | Dify Cloud | Dify Cloud |
+| Dify Enterprise | Dify Enterprise | Dify Enterprise |
+| Dify Premium | Dify Premium | Dify Premium |
+| Community Edition | Community Edition | Community Edition |
 | Docker | Docker | Docker |
 | sandbox | 沙箱 | サンドボックス |
 | API | API | API |
