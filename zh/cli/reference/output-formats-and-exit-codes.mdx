@@ -1,0 +1,96 @@
+---
+title: 输出格式与退出码
+description: difyctl 各输出格式分别输出什么内容，stdout 与 stderr 如何分流，错误如何结构化，以及每个退出码的含义
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/reference/output-formats-and-exit-codes)。
+
+`difyctl` 专为脚本化设计：数据写入 stdout，其余内容写入 stderr，[`-o` 全局标志](/zh/cli/reference/global-flags) 用于选择输出格式，失败时以可预期的退出码退出。
+
+## 输出格式
+
+`-o <format>` 决定命令在 stdout 上如何呈现结果。每个命令支持五种格式中的一部分，具体见其 `--help` 输出及参考页上的标志表。
+
+| 格式 | stdout 输出的内容 |
+|:---|:---|
+| `json` | 以美观格式打印的 JSON 结果（2 个空格缩进）。Unicode 字符原样显示，空字段显式表示为 `null`，不会被省略。 |
+| `yaml` | 与上述相同的数据，以 YAML 形式呈现。 |
+| `name` | 仅输出资源 ID，每行一个。专为 Shell 循环设计，无需解析。 |
+| `wide` | 默认表格外加额外的列。例如 `get app -o wide` 会增加一列 `WORKSPACE`。 |
+| `text` | 人类可读的文本。`describe app`、`run app` 等单资源命令的默认格式。 |
+
+不带 `-o` 时，`get app` 等列表命令打印对齐的文本表格，其他命令打印文本。
+
+JSON 结构是稳定的：`get app` 等列表命令打印一个 JSON 对象，各行放在数组中，同一命令运行两次返回相同的顶层结构。命令的确切 JSON 结构见其参考页。
+
+## 输出通道
+
+| 通道 | 流向此处的内容 |
+|:---|:---|
+| stdout | 数据：表格、JSON 与 YAML 文档、ID、运行输出、导出的 DSL |
+| stderr | 其余一切：错误、提示、进度旋转图标、`✓ form submitted` 等状态行，以及 `--think` 流式输出的推理过程 |
+
+编写脚本时值得依据的几条规则：
+
+- 失败时 stdout 保持为空。你无需从捕获的数据中过滤错误文本。
+- 成功时，`get` 和 `describe` 命令的 stderr 为空；`run app` 和 `resume app` 可能在此处打印提示。
+- 进度旋转图标仅在终端中出现，输出到 stderr，并在 `-o json`、`-o yaml` 和 `-o name` 下被抑制。
+- 管道输出不携带 ANSI 颜色代码。
+- 若管道的下游提前退出（`difyctl get app -o name | head -2`），`difyctl` 以 `0` 退出，而非因管道中断而失败。
+
+## 错误
+
+错误输出到 stderr。在默认的人类可读格式下，一条错误是一行 `code: message`，外加可选的详情行：
+
+```text
+not_logged_in: not logged in
+hint: run 'difyctl auth login'
+```
+
+涉及 HTTP 请求时，后面会跟上 `request: <METHOD> <url>` 和 `http_status: <n>` 行。
+
+当服务器的响应携带 Dify 标准错误体时，首行显示服务器更具体的错误码（`not_found`、`invalid_param`），而非 CLI 的传输层错误码。
+
+随后是逐字段的校验详情，以缩进行的形式列出；当 `difyctl` 自身没有提示时，则显示服务器给出的提示。
+
+在 `-o json` 下，同一条错误会变成 stderr 上的单行 JSON 对象：
+
+```json
+{"error":{"code":"not_logged_in","message":"not logged in","hint":"run 'difyctl auth login'"}}
+```
+
+只有 `-o json` 会切换错误的呈现方式：`-o yaml` 失败时打印人类可读格式。
+
+| 字段 | 出现时机 | 含义 |
+|:---|:---|:---|
+| `code` | 始终 | 稳定的机器可读错误码。据此分支判断，切勿依据 message 文本。 |
+| `message` | 始终 | 人类可读的描述。 |
+| `hint` | 已知时 | 最快的修复方式，通常是可直接复制粘贴的命令。 |
+| `http_status` | HTTP 失败时 | 失败请求的状态码。 |
+| `method`、`url` | HTTP 失败时 | 失败的那个请求。 |
+| `raw_response` | 仅在 `-v` 下 | 服务器原始响应体，bearer token 已脱敏。 |
+| `server` | HTTP 失败且响应为 Dify 标准错误体时 | 服务器自身的错误：`code`、`message`、`status`，以及可选的 `hint` 和 `details`。<br></br><br></br>顶层 `code` 仍为 CLI 稳定的传输层错误码；`server.code` 携带服务器更细粒度的原因。 |
+
+各错误码的含义及修复方法，详见 [故障排查](/zh/cli/troubleshooting)。
+
+## 退出码
+
+| 退出码 | 含义 | 示例 |
+|:---|:---|:---|
+| `0` | 成功 | 也包括 `--help`、`version`，以及 [因等待人工介入而暂停](#因等待人工介入而暂停的工作流运行退出-0) 的工作流运行。 |
+| `1` | 通用失败 | 网络与服务器错误（`network_connection`、`server_5xx`、`server_4xx_other`）、未知命令、未知标志，以及无法访问的操作系统钥匙串（`keyring_unavailable`）。 |
+| `2` | 用法错误 | 无效的标志值（`-o table`、`--limit 0`）、缺少参数、非 UUID 的应用或工作空间 ID、并非 JSON 对象的 `--inputs`。 |
+| `4` | 认证错误 | `not_logged_in`、`auth_expired`、`token_expired`、`access_denied`。 |
+| `6` | 版本或兼容性错误 | `unsupported_endpoint`，或无法读取的配置文件（`config_schema_unsupported`）。 |
+| `7` | 触发限流 | HTTP 429（`rate_limited`），与 `1` 区分开，以便脚本退避后重试。 |
+| `64` | 兼容性检查未通过 | 仅 [`version --check-compat`](/zh/cli/reference/version#在脚本中根据兼容性进行控制)：服务器未确认兼容。 |
+
+对严格脚本而言有一处细节：解析器层面的错误（未知命令、未知标志、标志缺少取值）以 `1` 退出并附带纯文本消息，而已知标志的无效取值则以 `2` 退出。
+
+### 因等待人工介入而暂停的工作流运行退出 0
+
+工作流应用可在运行中途暂停以收集人工输入。这一暂停是成功的结果，而非失败：`run app` 和 `resume app` 以 `0` 退出，并向 stdout 打印暂停负载。
+
+要在脚本或 Agent 中检测暂停，使用 `-o json` 运行并检查 stdout 中是否有 `"status": "paused"`，不要依据退出码分支判断。
+
+负载结构及恢复协议，参见 Apps 参考页的 [工作流暂停时](/zh/cli/reference/apps#工作流暂停时)。

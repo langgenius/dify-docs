@@ -1,0 +1,86 @@
+---
+title: difyctl スキルのインストール
+description: 1 つのスキルファイルをインストールして、コーディングエージェントに Dify アプリへのアクセスを与える
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/integrate-agents/install-the-difyctl-skill) を参照してください。
+
+[`difyctl skills install`](/ja/cli/reference/skills#スキルのインストール) を実行して、お使いのマシンのコーディングエージェント向けにスキルファイルを書き込みます。エージェントはそれを読み取り、自身で接続を完了します。
+
+インストールされる `SKILL.md` はブートストラップであり、マニュアルではありません。エージェントに伝えるのは最も重要な 1 点だけです。[`difyctl help -o json`](/ja/cli/reference/help#機械可読ヘルプ) を実行し、その出力を信頼できる唯一の情報源として扱うことです。
+
+実行時、エージェントはインストール済みの `difyctl` から完全なコマンド一覧を読み取ります。
+
+## スキルを使う場面
+
+- お使いのエージェントランタイムがスキルを読み取る場合：Claude Code、Codex、OpenCode、Cursor、pi、またはスキルディレクトリから `SKILL.md` ファイルを読み取るその他のツール。
+- エージェントが Shell コマンドを実行できる場合。スキルはエージェントの Shell ツールを介して `difyctl` を駆動します。
+- メンテナンス不要を望む場合：スキルはコマンドを一切列挙しないため、古くなることがありません。
+
+ランタイムがスキルを読み取らない場合でも、エージェントは実行時に [`difyctl help -o json`](/ja/cli/reference/help#機械可読ヘルプ) を読み取ることで、`difyctl` を直接駆動できます。
+
+## 前提条件
+
+- エージェントが動作するマシンで `difyctl` を [インストール](/ja/cli/install) し、[サインイン](/ja/cli/authenticate) して、セッションを再利用できるようにします。サーバーやコンテナの場合は、[エージェントの動作環境で認証する](/ja/cli/integrate-agents/auth-for-agent-deployments) を参照してください。
+- スキルを読み取り、Shell コマンドを実行できるコーディングエージェントを使用します。Shell へのアクセスがないサンドボックス化されたエージェントはスキルを使用できません。
+- インストール前にエージェントを少なくとも 1 回起動し、`difyctl skills install` が見つけられるよう設定ディレクトリを作成しておきます。
+
+## 手順
+
+<Steps>
+  <Step title="スキルの書き込み先をプレビューする">
+    `--yes` を付けない場合、このコマンドはドライランです。
+
+    ```bash
+    difyctl skills install
+    ```
+
+    ```text
+    Detected 1 agent: claude-code
+
+    would write to claude-code: /Users/you/.claude/skills/difyctl/SKILL.md
+
+    Re-run with --yes to write.
+    Agent not listed? Install into its directory with `difyctl skills install <dir>`.
+    ```
+  </Step>
+
+  <Step title="スキルを書き込む">
+    `--yes` は検出されたすべてのエージェントに書き込みます。`--agent <name>` を渡すと、1 つだけに書き込みます。
+
+    ```bash
+    difyctl skills install --yes
+    ```
+
+    ```text
+    wrote /Users/you/.claude/skills/difyctl/SKILL.md
+    ```
+  </Step>
+
+  <Step title="新しいエージェントセッションを開始する">
+    新しいセッションを開始して、エージェントが受け取ったばかりのスキルをインデックス化できるようにします。
+  </Step>
+</Steps>
+
+<Info>
+  detection、エージェントごとのターゲットパス、`--agent`、`--stdout`、明示的なディレクトリ指定の形式については、[スキルリファレンスページ](/ja/cli/reference/skills) を参照してください。
+</Info>
+
+## テスト
+
+インストール時に書き込んだパスが表示されます。そのファイルを開いて、スキルが存在することを確認してください。次に、エージェントが実際にそれを使用しているか確認します。
+
+1. **検出**：新しいセッションで、エージェントに「`difyctl` で何ができますか？」と尋ねます。正しく接続されたエージェントは `difyctl help -o json` を実行し、コマンドを推測するのではなく、その出力に基づいて回答します。
+2. **エンドツーエンド**：エージェントに Dify アプリを一覧表示させ、そのうちの 1 つを実行させます。`difyctl get app -o json` の後に、一覧の実際の ID を使った `describe`/`run` のシーケンスが続くか確認します。
+3. **一時停止の処理**：人間の入力ステップを持つワークフローアプリがある場合、エージェントにそれを実行させます。一時停止した実行は [0 で終了し、stdout に `"status": "paused"` を報告します](/ja/cli/reference/apps#ワークフローが一時停止する場合)。エージェントは一時停止を認識して再開を申し出るべきであり、失敗を報告したり実行を再試行したりするべきではありません。
+
+## トラブルシューティング
+
+| 問題 | 対処方法 |
+|:---|:---|
+| エージェントが検出されない | エージェントが少なくとも 1 回実行されるまで、その設定ディレクトリ（例：`~/.claude`）は存在しません。一度起動するか、`difyctl skills install <dir> --yes` でディレクトリを明示的に指定します。 |
+| スキルはインストールされたが、エージェントが無視する | ほとんどのエージェントはセッション開始時にスキルをインデックス化するため、新しいセッションを開始します。それでも読み込まれない場合は、エージェントがスキルを読み取るディレクトリにインストーラーを向けます。 |
+| コマンドが終了コード 4 で失敗する | エージェントに再利用できるセッションがありません。まずそのマシンでサインインしてください：[エージェントの動作環境で認証する](/ja/cli/integrate-agents/auth-for-agent-deployments) を参照してください。 |
+| スキルが CLI より古い | スキルにはバージョンスタンプが付いており、エージェントに `difyctl version` との比較を指示します。異なる場合は、`difyctl skills install --yes` を再実行して上書きします。 |
+
+その他の問題については、[トラブルシューティング](/ja/cli/troubleshooting) ページ全体を参照してください。

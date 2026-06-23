@@ -1,0 +1,130 @@
+---
+title: Version
+description: difyctl のビルドと Dify サーバーとの互換性を確認する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/reference/version) を参照してください。
+
+[`difyctl version`](#クライアントとサーバーのバージョンを確認) を実行すると、現在の `difyctl` のビルドと、それが Dify サーバーで動作するかどうかを確認できます。このコマンドはクライアントのビルドを表示し、アクティブなホストを探査して、[互換性の判定](#互換性の判定) を報告します。
+
+スクリプトでは、[`--check-compat`](#スクリプトを互換性でゲートする) がその判定を終了コードに変換します。
+
+## クライアントとサーバーのバージョンを確認
+
+```text
+difyctl version [flags]
+```
+
+### フラグ
+
+| Flag | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--short` | boolean | false | クライアントの semver のみを表示し（サーバー探査なし）、終了する。 |
+| `--client` | boolean | false | サーバー探査をスキップし、判定を `unknown` として報告する。 |
+| `--check-compat` | boolean | false | 判定が `compatible` でない限り `64` で終了する。 |
+| `-o <format>` | string | text | 出力形式：`text`、`json`、`yaml`。 |
+
+### 例
+
+完全なレポートを表示します。
+
+```bash
+difyctl version
+```
+
+スクリプトやバグレポート向けに、クライアントのバージョンのみを表示します。
+
+```bash
+difyctl version --short
+```
+
+### 出力
+
+| 形式 | stdout に出力される内容 |
+|:---|:---|
+| デフォルト（`text`） | 完全なレポート：`Client` ブロック、`Server` ブロック、1 行の `Compatibility` 判定。`stable` 以外のチャンネルのビルドでは、stable チャンネルを推奨する警告が追加される。 |
+| `-o json`、`-o yaml` | 同じレポートを 3 つのオブジェクトとして出力：`client`（`version`、`commit`、`buildDate`、`channel`、`platform`、`arch`）、`server`（`endpoint`、`reachable`、成功時は `version` と `edition`）、`compat`（`minDify`、`maxDify`、`status`、`detail`）。 |
+
+デフォルトの `text` レポート：
+
+```text
+Client:
+  Version:   0.1.0-alpha (channel: alpha)
+  Commit:    9f3c2ab (built 2026-06-05)
+  Platform:  darwin/arm64
+  Compat:    dify >=1.15.0, <=1.15.0
+
+Server:
+  Endpoint:  https://dify.example.com
+  Version:   1.15.0 (self_hosted)
+
+Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
+```
+
+`--short` はクライアントの semver のみを表示します。
+
+```text
+0.1.0-alpha
+```
+
+`-o json`：
+
+```json
+{
+  "client": {
+    "version": "0.1.0-alpha",
+    "commit": "9f3c2ab",
+    "buildDate": "2026-06-05",
+    "channel": "alpha",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "server": {
+    "endpoint": "https://dify.example.com",
+    "reachable": true,
+    "version": "1.15.0",
+    "edition": "SELF_HOSTED"
+  },
+  "compat": {
+    "minDify": "1.15.0",
+    "maxDify": "1.15.0",
+    "status": "compatible",
+    "detail": "server 1.15.0 in [1.15.0, 1.15.0]"
+  }
+}
+```
+
+`--check-compat` を付けない場合、サーバーが到達不能でも互換性がなくても、コマンドは `0` で終了します。判定はエラーではなく、レポートそのものです。
+
+### 終了コード
+
+| コード | 意味 |
+|:---|:---|
+| `0` | 判定の内容にかかわらず、レポートが表示された |
+| `64` | `--check-compat` 使用時：判定が `compatible` ではなかった |
+
+完全な体系については [出力形式と終了コード](/ja/cli/reference/output-formats-and-exit-codes) を参照してください。
+
+## 互換性の判定
+
+`difyctl version` はビルドをサーバーのバージョンと比較し、3 種類の判定のいずれかを報告します。サインインは不要ですが、探査の対象として保存済みのホストが必要です。
+
+| 判定 | 意味 |
+|:---|:---|
+| `compatible` | サーバーのバージョンが、このビルドのサポート範囲内にある。 |
+| `unsupported` | サーバーのバージョンがサポート範囲外にある。 |
+| `unknown` | 判定なし：ホストが未設定、サーバーが到達不能、`--client` で探査をスキップ、またはサーバーのバージョンが解析できなかった。 |
+
+`detail` フィールドは、どのケースに該当するかを示します。例：`server 1.16.0 outside [1.15.0, 1.15.0]`。
+
+## スクリプトを互換性でゲートする
+
+`--check-compat` は判定をスクリプトで扱えるようにします。`compatible` 以外はすべて、`unknown` のあらゆるケースを含め、`64` で終了します。
+
+完全なレポートは選択した形式で stdout に出力され、1 行の理由は stderr に出力されます。そのため、どちらの結果でも `difyctl version -o json --check-compat | jq` は同じように動作します。
+
+```bash
+difyctl version --check-compat || echo "difyctl and this Dify server are not a confirmed match"
+```
+
+終了コード `64` はこの flag に固有のものです。`difyctl` の他の失敗でこのコードが使われることはありません。

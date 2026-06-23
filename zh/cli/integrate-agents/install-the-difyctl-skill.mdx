@@ -1,0 +1,86 @@
+---
+title: 安装 difyctl 技能
+description: 安装一个技能文件，让你的编码 Agent 能够访问你的 Dify 应用
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/integrate-agents/install-the-difyctl-skill)。
+
+运行 [`difyctl skills install`](/zh/cli/reference/skills#安装技能)，为本机上的编码 Agent 写入一个技能文件。Agent 会读取该文件，并据此自行完成接入。
+
+安装的 `SKILL.md` 是引导文件，而非手册。它只告诉 Agent 一件最关键的事：运行 [`difyctl help -o json`](/zh/cli/reference/help#机器可读帮助)，并将其输出视为唯一可信来源。
+
+运行时，Agent 会从已安装的 `difyctl` 读取完整的命令清单。
+
+## 何时使用该技能
+
+- 你的 Agent 运行时会读取技能：Claude Code、Codex、OpenCode、Cursor、pi，或任何会从技能目录读取 `SKILL.md` 文件的工具。
+- Agent 能运行 Shell 命令。技能通过 Agent 的 Shell 工具来驱动 `difyctl`。
+- 你想要零维护：技能不列出任何命令，因此永远不会过时。
+
+如果你的运行时不读取技能，Agent 仍可在运行时读取 [`difyctl help -o json`](/zh/cli/reference/help#机器可读帮助) 来直接驱动 `difyctl`。
+
+## 前提条件
+
+- 在 Agent 运行的机器上 [安装](/zh/cli/install) `difyctl` 并 [登录](/zh/cli/authenticate)，使其能复用你的会话。对于服务器或容器，参见 [在 Agent 运行的位置进行认证](/zh/cli/integrate-agents/auth-for-agent-deployments)。
+- 使用一个会读取技能且能运行 Shell 命令的编码 Agent。无 Shell 访问权限的沙箱 Agent 无法使用该技能。
+- 安装前至少启动一次 Agent，使其配置目录存在，以便 `difyctl skills install` 能够找到它。
+
+## 操作步骤
+
+<Steps>
+  <Step title="预览技能将写入的位置">
+    不带 `--yes` 时，该命令为试运行：
+
+    ```bash
+    difyctl skills install
+    ```
+
+    ```text
+    Detected 1 agent: claude-code
+
+    would write to claude-code: /Users/you/.claude/skills/difyctl/SKILL.md
+
+    Re-run with --yes to write.
+    Agent not listed? Install into its directory with `difyctl skills install <dir>`.
+    ```
+  </Step>
+
+  <Step title="写入技能">
+    `--yes` 会写入每一个检测到的 Agent。传入 `--agent <name>` 则只写入其中一个。
+
+    ```bash
+    difyctl skills install --yes
+    ```
+
+    ```text
+    wrote /Users/you/.claude/skills/difyctl/SKILL.md
+    ```
+  </Step>
+
+  <Step title="启动一个全新的 Agent 会话">
+    启动一个新会话，让 Agent 为新安装的技能建立索引。
+  </Step>
+</Steps>
+
+<Info>
+  detection、各 Agent 的目标路径，以及 `--agent`、`--stdout` 和显式目录写法，参见 [技能参考页](/zh/cli/reference/skills)。
+</Info>
+
+## 测试
+
+安装时会打印写入的路径；打开该文件，确认技能已写入。然后检查 Agent 是否真正用到了它：
+
+1. **发现**：在一个全新会话中，向 Agent 提问：「用 `difyctl` 能做些什么？」正确接入的 Agent 会运行 `difyctl help -o json`，并依据其输出作答，而不是凭空猜测命令。
+2. **端到端**：让 Agent 列出你的 Dify 应用并运行其中一个。留意它是否先执行 `difyctl get app -o json`，再用列表中的真实 ID 执行 `describe`/`run` 序列。
+3. **暂停处理**：如果你有一个带人工介入步骤的工作流应用，让 Agent 运行它。暂停的运行会 [以 0 退出，并在 stdout 上报告 `"status": "paused"`](/zh/cli/reference/apps#工作流暂停时)。Agent 应当识别出该暂停并主动提出恢复，而不是报告失败或重试运行。
+
+## 故障排查
+
+| 问题 | 处理方法 |
+|:---|:---|
+| 未检测到 Agent | 在 Agent 至少运行一次之前，其配置目录（例如 `~/.claude`）并不存在。先启动一次，或用 `difyctl skills install <dir> --yes` 显式指定该目录。 |
+| 技能已安装，但 Agent 忽略它 | 多数 Agent 在会话开始时为技能建立索引，因此启动一个新会话。如果仍未加载，将安装器指向 Agent 读取技能的那个目录。 |
+| 命令失败并返回退出码 4 | Agent 没有可复用的会话。先在其机器上登录：参见 [在 Agent 运行的位置进行认证](/zh/cli/integrate-agents/auth-for-agent-deployments)。 |
+| 技能版本旧于 CLI | 技能带有版本戳，并会让 Agent 将其与 `difyctl version` 比对。若两者不一致，重新运行 `difyctl skills install --yes` 覆盖它。 |
+
+其余情况，参见完整的 [故障排查](/zh/cli/troubleshooting) 页面。

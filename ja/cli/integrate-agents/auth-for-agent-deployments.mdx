@@ -1,0 +1,67 @@
+---
+title: Agent が動作する場所での認証
+sidebarTitle: 認証
+description: Agent が動作するサーバーやコンテナに difyctl のセッションを配置し、無人で Dify アプリを呼び出せるようにする
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/integrate-agents/auth-for-agent-deployments) を参照してください。
+
+Agent 自体はサインインしません。動作するマシン上の `difyctl` セッションを再利用します。セッションをそのマシンに配置する方法は、マシンの種類によって異なります。
+
+- **自分のマシン**：[サインイン](/ja/cli/authenticate) すれば完了です。
+- **サインインできるサーバーや VM**：そのマシン上でサインインします（方法 1）。
+- **コンテナ、CI ランナー、事前ビルド済みイメージ**：セッションをコピーします（方法 2）。
+
+## 方法 1：対象マシン上でサインイン
+
+Agent が動作する対象マシン上で、Agent に演じさせたいアカウントとしてサインインします。Agent はそのアカウントがアクセスできるすべてを引き継ぎます。セルフホスト環境では、`--host` に [コンソール API URL](/ja/self-host/deploy/configuration/environments#console_api_url) を指定します。
+
+マシンにブラウザがない場合は `--no-browser` を渡します。
+
+```bash
+difyctl auth login --host https://dify.example.com --no-browser
+```
+
+`difyctl` がワンタイムコードと検証 URL を表示します。任意のデバイスでその URL を開き、サインインしてコードを入力します。承認した瞬間に、セッションがマシンへ書き込まれます。詳しい手順は [認証](/ja/cli/authenticate#サインイン) を参照してください。
+
+セッションが配置されたことを確認します。
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (<your-name>)
+```
+
+## 方法 2：既存のセッションをコピー
+
+対象マシン上で直接サインインできない場合に使用します。事前ビルド済みイメージや一時的なコンテナなどです。
+
+<Steps>
+  <Step title="OS キーチェーンのないマシンでサインイン">
+    ヘッドレスの Linux サーバーまたはコンテナを使用します。キーチェーンがない場合、`difyctl` は [設定ディレクトリ](/ja/cli/authenticate#token-の保存場所) 内の `tokens.yml` に token を保存するため、ディレクトリ全体を移動できます。
+
+    コピーする前に、設定ディレクトリ（デフォルトは `~/.config/difyctl`）に `tokens.yml` があることを確認します。ファイルがない場合は、キーチェーンが token を取り込んでいます。
+  </Step>
+  <Step title="設定ディレクトリを対象マシンへコピー">
+    コピー後、[`DIFY_CONFIG_DIR`](/ja/cli/reference/environment-variables) で `difyctl` をそのディレクトリに向けます。コンテナの場合は、イメージに焼き込むのではなく、実行時にディレクトリをマウントします。
+
+    ```bash
+    docker run \
+      -v /path/to/difyctl-config:/config:ro \
+      -e DIFY_CONFIG_DIR=/config \
+      your-agent-image
+    ```
+
+    `tokens.yml` は有効な認証情報です。`0600` の権限を維持し、イメージやバージョン管理には含めないでください。マウントを読み取り専用にするのは、アプリを実行するだけの Agent が設定ディレクトリに書き込むことはないためです。
+  </Step>
+</Steps>
+
+## セッションが期限切れになったとき
+
+サーバー側で期限切れになった、または取り消されたセッションは、終了コード 4 として現れ、`error.code` は `auth_expired` になります。Agent は自力で回復できません。新しいセッションには、方法 1 と同じワンタイムコードの手順で、誰かがサインインを承認する必要があります。
+
+そのため、リトライするのではなく、処理を停止して失敗を表面化させ、人が [再サインイン](/ja/cli/authenticate#再サインイン) できるようにします。これに基づく分岐方法は、[エラーとリトライの処理](/ja/cli/integrate-agents/error-handling-and-retries-for-agents#終了コードで分岐する) を参照してください。
+
+漏洩が疑われるセッションを取り消すには、サインイン済みの任意のマシンから [`auth devices revoke`](/ja/cli/reference/auth-and-contexts#セッションを取り消す) を実行します。

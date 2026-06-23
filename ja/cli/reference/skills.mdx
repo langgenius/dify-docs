@@ -1,0 +1,115 @@
+---
+title: スキル
+description: エージェントスキルをインストールし、コーディングエージェントが difyctl を操作できるようにする
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/reference/skills) を参照してください。
+
+[`skills install`](#スキルのインストール) は、`difyctl` スキル（`SKILL.md` ファイル）を、お使いのマシン上にある各コーディングエージェントのスキルディレクトリへ書き込みます。
+
+このスキルには、あえてコマンドを一切記載していません。代わりにエージェントを `difyctl help -o json` に誘導し、利用可能なコマンド群をエージェント自身に発見させます。その発見の仕組みは [help リファレンス](/ja/cli/reference/help#機械可読ヘルプ) を、統合の全体像は [difyctl スキルをインストールする](/ja/cli/integrate-agents/install-the-difyctl-skill) を参照してください。
+
+## スキルのインストール
+
+```text
+difyctl skills install [dir] [flags]
+```
+
+このコマンドは完全にローカルで動作します。サインインは不要で、サーバーへの接続も一切行いません。
+
+### 引数
+
+- `dir`：省略可能。この単一ディレクトリにインストールし、エージェント検出をスキップします。スキルは `<dir>/SKILL.md` に書き込まれます。`--agent` とは併用できません。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `-y, --yes` | boolean | `false` | スキルを書き込みます。このフラグがない場合はドライランとなり、スキルの書き込み先を一覧表示するだけで何も書き込みません。 |
+| `--agent` | string、繰り返し可能 | なし | インストール対象を、検出済みの特定エージェントに名前で限定します。フラグを繰り返すか、カンマ区切りのリストを渡します。検出されていないエージェントを指定すると、使用方法のエラーになります。 |
+| `--stdout` | boolean | `false` | スキルを stdout に出力し、何も書き込みません。`--yes`、`--agent`、`dir` とは併用できません。 |
+
+### 例
+
+スキルのインストール先をプレビューする（ドライラン、デフォルトの動作）：
+
+```bash
+difyctl skills install
+```
+
+検出されたすべてのエージェントにインストールする：
+
+```bash
+difyctl skills install --yes
+```
+
+1 つのエージェントだけにインストールする：
+
+```bash
+difyctl skills install --yes --agent claude-code
+```
+
+CLI が検出しないエージェント向けに、明示したディレクトリへインストールする：
+
+```bash
+difyctl skills install ./my-skills/difyctl --yes
+```
+
+何も書き込まずにスキルを出力する：
+
+```bash
+difyctl skills install --stdout
+```
+
+### エージェント検出
+
+検出では、各エージェントの設定ディレクトリが存在するかどうかを確認します。CLI が `PATH` を調べたり、何かを起動したりすることはありません。スキルは、各エージェントの公式ドキュメントに記載されたユーザーレベルのスキル配置先へ書き込まれます。
+
+| エージェント | 検出条件 | スキルの配置先 |
+|:---|:---|:---|
+| `claude-code` | `~/.claude` が存在する | `~/.claude/skills/difyctl/SKILL.md` |
+| `codex` | `~/.codex` が存在する | `~/.agents/skills/difyctl/SKILL.md` |
+| `opencode` | `~/.config/opencode` が存在する | `~/.config/opencode/skills/difyctl/SKILL.md` |
+| `cursor` | `~/.cursor` が存在する | `~/.cursor/skills/difyctl/SKILL.md` |
+| `pi` | `~/.pi` が存在する | `~/.pi/agent/skills/difyctl/SKILL.md` |
+
+インストール済みでも一度も起動していないエージェントは、設定ディレクトリがまだ存在しない場合があります。その場合は `difyctl skills install <dir>` でスキルディレクトリへ明示的にインストールしてください。
+
+### 出力
+
+ドライランでは、検出されたエージェントとその対象パスを一覧表示し、続いて次の進め方を案内します。
+
+```text
+Detected 2 agents: claude-code, cursor
+
+would write to claude-code: /Users/you/.claude/skills/difyctl/SKILL.md
+would write to cursor: /Users/you/.cursor/skills/difyctl/SKILL.md
+
+Re-run with --yes to write all, or --agent <name> to write only some.
+Agent not listed? Install into its directory with `difyctl skills install <dir>`.
+```
+
+`--yes` を付けると、書き込みごとに確認が表示されます。
+
+```text
+wrote /Users/you/.claude/skills/difyctl/SKILL.md
+wrote /Users/you/.cursor/skills/difyctl/SKILL.md
+```
+
+何も検出されない場合、コマンドは代替手段を案内して 0 で終了します。
+
+```text
+No agents detected (looked for ~/.claude, ~/.codex, ~/.config/opencode, ~/.cursor, ~/.pi).
+Install into a directory manually with `difyctl skills install <dir>`, or
+print the skill with `difyctl skills install --stdout`.
+```
+
+インストールされたスキルには、それを書き込んだ CLI と一致するバージョンスタンプが付きます。アップグレード後に `skills install --yes` を再実行すると、ファイルが現在のバージョンに置き換わります。再実行は常に安全です。
+
+### 終了コード
+
+| コード | 意味 |
+|:---|:---|
+| `0` | 成功。ドライランや、何も検出されなかった場合を含む |
+| `1` | ローカルでの失敗。たとえば対象ディレクトリに書き込めない場合 |
+| `2` | 使用方法のエラー：`--stdout` と書き込みオプションの併用、`dir` と `--agent` の併用、または `--agent` で検出されていないエージェントを指定した場合 |

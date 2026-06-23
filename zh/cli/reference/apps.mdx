@@ -1,0 +1,531 @@
+---
+title: 应用
+description: 从命令行列出、查看、运行、恢复、导出和导入 Dify 应用
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/reference/apps)。
+
+每项应用操作对应一条命令，且都接受 [全局标志](/zh/cli/reference/global-flags)。
+
+- [`difyctl get app`](#列出应用) 列出应用
+- [`describe app`](#查看应用) 显示单个应用的详情和输入
+- [`run app`](#运行应用) 调用单个应用
+- [`resume app`](#恢复已暂停的工作流) 继续一个 [因人工介入而暂停](#工作流暂停时) 的工作流
+- [`export studio-app`](#导出应用) / [`import studio-app`](#导入应用) 将应用导出/导入为 DSL 文件
+
+## 列出应用
+
+```text
+difyctl get app [app-id] [flags]
+```
+
+<Tip>
+日常调用方式参见 [常见任务](/zh/cli/common-tasks) 中的 [查找应用](/zh/cli/common-tasks#查找应用)。
+</Tip>
+
+### 参数
+
+- `[app-id]`：可选。要显示的单个应用的 ID。省略则列出工作空间中的所有应用。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `--name <substring>` | string | 无 | 仅保留名称包含该文本的应用。 |
+| `--mode <mode>` | string | 无 | 按应用类型筛选，以其 API mode 命名：`chat`（聊天助手）、`advanced-chat`（对话流）、`agent-chat`（Agent）、`workflow`（工作流）、`completion`（文本生成应用）。 |
+| `--page <n>` | integer | `1` | 页码。 |
+| `--limit <n>` | integer | `20` | 每页数量，1 到 200。该标志优先，其次是 [`DIFY_LIMIT`](/zh/cli/reference/environment-variables)。 |
+| `-o <format>` | string | 无 | 输出格式：`json`、`yaml`、`name` 或 `wide`。省略该标志则输出默认表格。 |
+
+### 示例
+
+列出工作空间中的应用：
+
+```bash
+difyctl get app
+```
+
+查找名称包含 「report」 的工作流应用：
+
+```bash
+difyctl get app --name report --mode workflow
+```
+
+仅打印应用 ID，每行一个，便于 shell 循环：
+
+```bash
+difyctl get app -o name
+```
+
+### 输出
+
+| 格式 | stdout 内容 |
+|:---|:---|
+| 默认 | 一个对齐的表格。`MODE` 列是每个应用的 API mode 名称（其与应用类型的对应关系参见 [`--mode`](#列出应用)）。 |
+| `-o wide` | 表格外加一列 `WORKSPACE`。 |
+| `-o json`、`-o yaml` | 应用的 `data` 数组，以及分页字段 `page`（当前页）、`limit`（每页数量）、`total`（匹配的应用数）和 `has_more`（是否还有更多页）。 |
+| `-o name` | 应用 ID，每行一个。 |
+
+默认表格：
+
+```text
+NAME          ID                                    MODE      UPDATED
+Customer FAQ  0a1b2c3d-4e5f-6789-abcd-ef0123456789  chat      2026-06-08T03:14:27.521839
+Daily Report  7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b  workflow  2026-06-05T22:41:09.812016
+```
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | 网络或服务器错误 |
+| `2` | 用法错误，例如 `--limit` 超出 1 到 200 的范围 |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
+
+完整方案参见 [输出格式与退出码](/zh/cli/reference/output-formats-and-exit-codes)。
+
+## 查看应用
+
+```text
+difyctl describe app <app-id> [flags]
+```
+
+运行一个不熟悉的应用之前，你通常想先弄清几个问题，而 `describe app` 正是用来回答它们的：这是什么类型的应用、它的 API 是否已启用、它需要哪些输入。
+
+### 参数
+
+- `<app-id>`：必填。要查看的应用的 ID。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `--refresh` | boolean | `false` | 绕过本地的应用信息缓存，获取最新详情。在应用重新发布后使用。 |
+| `-o <format>` | string | `text` | 输出格式：`json`、`yaml` 或 `text`。 |
+
+### 示例
+
+运行前先查看应用：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+提取输入 schema，以便以编程方式构造 `--inputs`：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -o json | jq '.input_schema'
+```
+
+重新发布应用后再次获取：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --refresh
+```
+
+### 输出
+
+| 格式 | stdout 内容 |
+|:---|:---|
+| 默认（`text`） | 一个对齐的字段块，随后是应用的参数（含用户输入表单）。 |
+| `-o json`、`-o yaml` | 三个顶层键：`info`、`parameters` 和 `input_schema`（详见下文）。 |
+
+默认文本视图：
+
+```text
+Name:        Daily Report
+ID:          7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+Mode:        workflow
+Updated:     2026-06-05T22:41:09.812016
+Service API: true
+Parameters:
+  {
+    "opening_statement": null,
+    "suggested_questions": [],
+    "user_input_form": [
+      {
+        "text-input": {
+          "label": "topic",
+          "variable": "topic",
+          "required": true,
+          "default": ""
+        }
+      }
+    ],
+    "file_upload": null,
+    "system_parameters": {
+      "file_size_limit": 15,
+      "image_file_size_limit": 10,
+      "audio_file_size_limit": 50,
+      "video_file_size_limit": 100,
+      "workflow_file_upload_limit": 10
+    }
+  }
+```
+
+应用有描述时会出现 `Description:` 行，应用为 agentic 时会出现 `Agent: true` 行。
+
+在 `-o json` 下，这三个键分别是：
+- `info`：上方展示的元数据字段，从 `Name` 到 `Service API`
+- `parameters`：上方展示的参数块
+- `input_schema`：应用输入的规范化列表，也就是 `jq '.input_schema'` 示例所读取的字段
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | 网络或服务器错误，包括应用未找到 |
+| `2` | 用法错误，包括 `<app-id>` 不是 UUID |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
+
+## 运行应用
+
+```text
+difyctl run app <app-id> [message] [flags]
+```
+
+`run app` 是一条适用于所有应用类型的命令。CLI 会读取应用的类型，并分发到对应的端点。不同之处只在于输入的传递方式和响应的形态：
+
+- **聊天助手、对话流、Agent**：接收一条位置参数形式的消息，将回复打印到 stdout，并将一条会话提示打印到 stderr。
+- **文本生成应用**：接收一条位置参数形式的消息，将续写结果打印到 stdout。没有会话状态，也没有提示。
+- **工作流**：通过 `--inputs` 接收一个 JSON 对象，并将其输出打印到 stdout。输出为单个字符串的工作流会原样打印该字符串，其余情况则打印为紧凑 JSON。
+
+### 参数
+
+- `<app-id>`：必填。要运行的应用的 ID，来自 [`get app`](#列出应用)。
+- `[message]`：用户消息，适用于聊天助手、对话流、Agent 和文本生成应用。工作流应用会拒绝位置参数形式的消息，因此请用 `--inputs` 传入其输入。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `--inputs <json>` | string | 无 | 以单个 JSON 对象形式提供的输入变量，例如 `--inputs '{"topic":"Q3"}'`。工作流应用必填。与 `--inputs-file` 互斥。 |
+| `--inputs-file <path>` | string | 无 | 改为从 JSON 文件读取输入对象。 |
+| `--file <key=value>` | string，可重复 | 无 | 具名文件输入。`key=@path` 上传本地文件。`key=https://…` 传入远程 URL 而不上传。key 即输入变量名。 |
+| `--conversation <id>` | string | 无 | 继续一个已有会话。该 ID 来自上一次运行的 stderr 提示或 JSON 响应。 |
+| `--workflow-id <id>` | string | 无 | 将本次运行固定到某个已发布的工作流版本。仅适用于工作流和对话流应用。 |
+| `--stream` | boolean | `false` | 在生成过程中实时打印输出，而非在结束时一次性打印。 |
+| `--think` | boolean | `false` | 当模型暴露其思考过程时，将其打印到 stderr。不加该标志时，`<think>` 块会被静默剥离。 |
+| `--retry-on-limit` | boolean | `false` | 遇到 429 限流时，等待并重试本次运行，而非以退出码 `7` 失败。默认关闭，因为运行不具备幂等性。 |
+| `-o <format>` | string | `text` | 输出格式：`json`、`yaml` 或 `text`。 |
+
+### 示例
+
+向聊天助手、对话流、Agent 或文本生成应用发送一条消息：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?"
+```
+
+以结构化输入运行一个工作流应用：
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"quarterly report","audience":"executives"}'
+```
+
+为文件类型的输入变量附加一个本地文件：
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"contract review"}' --file document=@./contract.pdf
+```
+
+继续之前的会话：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "And on weekends?" --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+以 JSON 获取原始响应，供脚本和 Agent 使用：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?" -o json | jq -r '.answer'
+```
+
+### 输出
+
+| 格式 | stdout 内容 |
+|:---|:---|
+| 默认（`text`） | 回复（聊天助手、对话流、Agent、文本生成应用）或工作流的输出，以纯文本形式呈现。 |
+| `-o json`、`-o yaml` | 完整的服务器载荷，对话类应用还包含 `answer` 和 `conversation_id`；当模型产生推理内容时，还会在 `metadata.reasoning` 下按节点给出。 |
+
+响应体输出到 stdout。其余内容（提示、进度、错误）均输出到 stderr，从而保持管道和重定向的整洁。聊天助手、对话流或 Agent 应用回复之后，stderr 会携带会话提示：
+
+```text
+hint: continue this conversation with --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+加上 `--stream` 后，输出会随服务器的生成而逐步打印。如果应用刚刚重新发布、运行以 HTTP 422 失败，CLI 会清除其应用元数据缓存，并提示再次运行该命令。
+
+错误输出到 stderr。在 `-o json` 下，它们以带有稳定 `code` 字段的结构化 JSON 对象形式返回。错误的结构参见 [输出格式与退出码](/zh/cli/reference/output-formats-and-exit-codes)。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功，包括 [因人工介入而暂停](#工作流暂停时) 的工作流 |
+| `1` | 网络或服务器错误，包括应用未找到 |
+| `2` | 用法错误：`--inputs` JSON 无效，或向工作流应用传入了位置参数形式的消息 |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
+
+### 工作流暂停时
+
+工作流应用可包含人工介入步骤。当运行到达这一步时，它会暂停而非结束：命令 **退出码为 0**（暂停不算失败），将暂停信息打印到 stdout，并将一条可直接运行的恢复命令打印到 stderr：
+
+```text
+! Workflow paused — input required
+  Node:    Review draft
+  Message: Approve the report before it is published.
+  Actions: [approve] Approve  [reject] Reject
+  Inputs:   - comment — Reviewer comment
+
+! workflow paused — resume with:
+  difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action approve
+```
+
+加上 `-o json` 后，stdout 改为将暂停信息作为一个 JSON 对象输出：
+
+```json
+{
+  "status": "paused",
+  "app_id": "7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b",
+  "task_id": "c4a8e2f6-1b3d-4a5c-9e7f-2d8b6c0a4e1f",
+  "workflow_run_id": "8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+  "form_id": "5d9c3b7a-2e4f-4c6d-8b0a-1f3e5d7c9b2a",
+  "node_id": "1749876543210",
+  "node_title": "Review draft",
+  "form_token": "k3J9mQ2xWv8pL5nR7tY4bA",
+  "form_content": "Approve the report before it is published.",
+  "inputs": [
+    {
+      "output_variable_name": "comment",
+      "label": "Reviewer comment",
+      "type": "text-input",
+      "required": false
+    }
+  ],
+  "actions": [
+    { "id": "approve", "title": "Approve" },
+    { "id": "reject", "title": "Reject" }
+  ],
+  "display_in_ui": true,
+  "resolved_default_values": {},
+  "expiration_time": 1781712000
+}
+```
+
+对脚本和 Agent 而言：暂停的运行和完成的运行都退出码为 0，因此不要依据退出码分支。请用 `-o json` 运行工作流，并检查 stdout 中是否有 `"status": "paused"`。三个字段决定如何恢复：`form_token`、`workflow_run_id`，以及（当表单提供不止一个操作时）操作的 `id`。表单会在 `expiration_time`（Unix 纪元秒）过期。
+
+当工作流通过电子邮件或其他外部渠道下发其表单时，`form_token` 为 `null`，该运行无法从 CLI 恢复。
+
+## 恢复已暂停的工作流
+
+```text
+difyctl resume app <app-id> <form-token> --workflow-run-id <id> [flags]
+```
+
+`resume app` 提交一个已暂停工作流正在等待的表单，随后附加到该运行并打印其输出，方式与 `run app` 完全一致。
+
+### 参数
+
+- `<app-id>`：必填。来自暂停载荷的 `app_id`。
+- `<form-token>`：必填。来自暂停载荷的 `form_token`。Token 仅可使用一次，因此用已消费的 token 恢复会返回错误。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `--workflow-run-id <id>` | string | 必填 | 来自暂停载荷的 `workflow_run_id`。 |
+| `--action <id>` | string | 自动选择 | 要执行哪个表单操作，由暂停载荷 `actions` 中的 `id` 指定。表单恰好只有一个操作时可选，有多个操作时必填。 |
+| `--inputs <json>` | string | 无 | 以单个 JSON 对象形式提供的表单输入值，以每个输入的 `output_variable_name` 为键。与 `--inputs-file` 互斥。 |
+| `--inputs-file <path>` | string | 无 | 改为从 JSON 文件读取表单值。 |
+| `--with-history` | boolean | `false` | 在附加到实时流之前，回放已执行节点的输出。 |
+| `--stream` | boolean | `false` | 在生成过程中实时打印输出，而非在结束时一次性打印。 |
+| `--think` | boolean | `false` | 当模型暴露其思考过程时，将其打印到 stderr。不加该标志时，`<think>` 块会被静默剥离。 |
+| `-o <format>` | string | `text` | 输出格式：`json`、`yaml` 或 `text`。 |
+
+### 示例
+
+批准一个单操作表单，并提供其输入值：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs '{"comment":"Looks good"}'
+```
+
+当表单提供多个操作时，选择其中一个：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action reject --inputs '{"comment":"Numbers need a re-check"}'
+```
+
+从文件读取表单值：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs-file form.json
+```
+
+### 输出
+
+| 格式 | stdout 内容 |
+|:---|:---|
+| 默认（`text`） | 运行完成时工作流的输出。stderr 确认提交和完成。 |
+| `-o json`、`-o yaml` | 运行结果作为单个文档，与 `run app` 一样（若再次暂停，则为暂停载荷）。 |
+
+在默认文本输出下，stderr 确认提交，工作流的输出随运行完成打印到 stdout，stderr 确认完成：
+
+```text
+✓ form submitted
+  workflow execution resumed
+✓ workflow finished
+```
+
+恢复后的工作流可能在后续的人工介入节点再次暂停。届时你会得到一个新的暂停载荷，并用新 token 再次恢复。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功，包括运行在后续节点再次暂停 |
+| `1` | 错误，包括 token 已被消费，或在有多个操作的表单上省略了 `--action` |
+| `2` | 用法错误 |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
+
+## 导出应用
+
+```text
+difyctl export studio-app <app-id> [flags]
+```
+
+`export studio-app` 将应用的完整定义写为一个 DSL YAML 文档，用于版本管理、备份，或 [导入](#导入应用) 到别处。
+
+对于工作流和对话流应用，导出返回的是当前草稿，而非 `run app` 所执行的已发布版本。改用 `--workflow-id` 可导出指定的已发布版本。聊天助手、Agent 和文本生成应用导出的是已发布版本。
+
+### 参数
+
+- `<app-id>`：必填。要导出的应用的 ID，来自 [`get app`](#列出应用)。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `-o, --output <path>` | string | 无 | 将 DSL 写入该文件，而非 stdout。在本命令中，`-o` 是输出文件路径，而非输出格式选择器。 |
+| `--include-secret` | boolean | `false` | 在导出的 DSL 中包含加密的密文值。 |
+| `--workflow-id <id>` | string | 无 | 按 ID 导出指定的已发布工作流版本，而非默认的草稿。仅适用于工作流和对话流应用。 |
+
+### 示例
+
+将应用的 DSL 打印到 stdout：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+将其写入文件：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --output ./daily-report.yaml
+```
+
+导出指定的已发布版本：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --workflow-id c7e4a1b9-3f82-4d6a-9e15-0b8c2d7f4a63
+```
+
+导出时包含密文值：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --include-secret
+```
+
+### 输出
+
+DSL YAML 文档打印到 stdout：一个 `kind: app` 头部、一个 `version` 字段，以及完整的应用定义。加上 `--output` 后，相同内容会写入文件，并由 stderr 确认：
+
+```text
+DSL written to ./daily-report.yaml
+```
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | 网络或服务器错误，包括应用未找到 |
+| `2` | 用法错误，包括缺少 `<app-id>` |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
+
+## 导入应用
+
+```text
+difyctl import studio-app (--from-file <path> | --from-url <url>) [flags]
+```
+
+`import studio-app` 从一个 DSL YAML 文档创建应用，或用 `--app-id` 覆盖一个已有应用。对于工作流和对话流应用，它会将定义写入应用的草稿。`run app` 使用的是已发布版本，因此导入后请在 Dify 中发布应用，更改才会生效。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `-f, --from-file <path>` | string | 无 | 从本地文件导入 DSL。`--from-file` 和 `--from-url` 必须且只能提供其一。 |
+| `--from-url <url>` | string | 无 | 从 HTTP(S) URL 导入 DSL。 |
+| `--name <name>` | string | 取自 DSL | 覆盖应用名称。 |
+| `--description <text>` | string | 取自 DSL | 覆盖应用描述。 |
+| `--app-id <id>` | string | 无 | 覆盖一个已有应用，而非创建新应用。仅适用于工作流和对话流应用。 |
+| `--icon-type <type>` | string | 取自 DSL | 覆盖图标类型。 |
+| `--icon <icon>` | string | 取自 DSL | 覆盖图标。 |
+| `--icon-background <color>` | string | 取自 DSL | 覆盖图标背景色。 |
+
+### 示例
+
+从本地 DSL 文件导入应用：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml
+```
+
+以不同的名称导入：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --name "Daily Report (staging)"
+```
+
+用更新后的 DSL 覆盖一个已有应用：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+直接从 URL 导入：
+
+```bash
+difyctl import studio-app --from-url https://example.com/templates/daily-report.yaml
+```
+
+### 输出
+
+所有状态行都输出到 stderr；stdout 保持为空。成功时，stderr 报告新应用的 ID：
+
+```text
+Import completed: app 9b4f2c8e-6a1d-4e3f-b7a5-0c8d2e6f4a9b
+```
+
+如果 DSL 是为不同的 DSL 版本编写的，CLI 会为你确认，并在 stderr 上标注两个版本。
+
+如果应用依赖工作空间中尚未安装的插件，导入后 stderr 会在 `Missing plugin dependencies` 下列出它们。使用该应用前请先安装它们。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功，包括带警告的导入 |
+| `1` | 错误，包括缺少或冲突的 `--from-file`/`--from-url`，或导入失败 |
+| `2` | 用法错误，包括 `--from-file` 路径不存在 |
+| `4` | 认证失败 |
+| `7` | 触发限流（HTTP 429） |
