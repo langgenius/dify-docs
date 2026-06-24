@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "工作流编排对话型应用 API (对话流 API)",
-    "description": "对话流应用支持会话持久化，允许将之前的聊天记录作为响应的上下文。对话流应用使用 `advanced-chat` 模式，提供工作流级别的流式事件，用于详细的执行追踪，包括节点开始、完成、迭代和工作流生命周期。",
+    "title": "Chatflow 应用 API",
+    "description": "Chatflow 应用支持会话持久化，允许将之前的聊天历史记录用作响应的上下文。Chatflow 应用使用 `advanced-chat` 模式，提供工作流级别的流式事件，用于详细的执行追踪，包括节点开始、完成、迭代和工作流生命周期。",
     "version": "1.0.0"
   },
   "servers": [
     {
       "url": "https://{api_base_url}",
-      "description": "工作流编排对话型应用 API 的基础 URL。自托管部署时，替换为你的 API 基础 URL。",
+      "description": "Chatflow 应用 API 的基础 URL。对于自托管部署，请替换为您自己的 API 基础 URL。",
       "variables": {
         "api_base_url": {
           "default": "api.dify.ai/v1",
-          "description": "API 基础 URL 的主机与路径，不含 `https://` 前缀。"
+          "description": "API 基础 URL 的主机和路径，不包含 `https://` 前缀。"
         }
       }
     }
@@ -25,14 +25,14 @@
   "paths": {
     "/chat-messages": {
       "post": {
-        "summary": "发送对话消息",
-        "description": "向对话型应用发送请求。",
-        "operationId": "sendChatMessageCn",
+        "summary": "发送聊天消息",
+        "description": "向聊天应用发送请求。",
+        "operationId": "sendAdvancedChatMessage",
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "requestBody": {
-          "description": "发送对话消息的请求体。",
+          "description": "发送聊天消息的请求体。",
           "required": true,
           "content": {
             "application/json": {
@@ -41,7 +41,7 @@
               },
               "examples": {
                 "streaming_example": {
-                  "summary": "请求示例 - 流式模式",
+                  "summary": "请求示例 - 流式返回模式",
                   "value": {
                     "inputs": {
                       "city": "San Francisco"
@@ -60,7 +60,7 @@
                   }
                 },
                 "blocking_example": {
-                  "summary": "请求示例 - 阻塞模式",
+                  "summary": "请求示例 - 阻塞式返回模式",
                   "value": {
                     "inputs": {},
                     "query": "What are the specs of the iPhone 13 Pro Max?",
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "请求成功。内容类型和结构取决于请求中的 `response_mode` 参数。\n\n- 如果 `response_mode` 为 `blocking`，返回 `application/json` 和 `ChatCompletionResponse` 对象。\n- 如果 `response_mode` 为 `streaming`，返回 `text/event-stream` 和服务器发送事件流。",
+            "description": "成功响应。内容类型和结构取决于请求中的 `response_mode` 参数。\n- 如果 `response_mode` 为 `blocking`，返回 `application/json` 格式的 `ChatCompletionResponse` 对象。\n- 如果 `response_mode` 为 `streaming`，返回 `text/event-stream` 格式的服务器发送事件流。",
             "content": {
               "application/json": {
                 "schema": {
@@ -83,7 +83,7 @@
                 },
                 "examples": {
                   "blockingResponse": {
-                    "summary": "响应示例 - 阻塞模式",
+                    "summary": "响应示例 - 阻塞式返回模式",
                     "value": {
                       "event": "message",
                       "task_id": "c3800678-a077-43df-a102-53f23ed20b88",
@@ -128,15 +128,15 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `message` | 每个回答片段（按顺序拼接） | `answer` |\n| `message_replace` | 内容审核替换已生成的回答 | `answer`、`reason` |\n| `message_end` | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/api-reference/对话流/流式获取工作流事件) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
+                  "description": "服务器发送事件（SSE）流。\n**解析**：每个事件是以 `data: ` 为前缀的行，后跟 JSON 对象，以 `\\n\\n` 结束。在解析 JSON 之前先去除 `data: ` 前缀，然后读取 `event` 字段以确定事件类型。忽略 `ping` 事件，它们以 `event: ping` 行的形式每 10 秒发送一次（无 `data:` 载荷）以保持连接活跃。\n**流生命周期**：工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环变体）和 `message` 事件形式的回复进行流式传输。结束序列取决于结果：\n- **成功**：`message_end`，然后 `workflow_finished`\n- **失败**：`workflow_finished` 状态为 `failed`，然后 `error`；无 `message_end`\n- **暂停**：`human_input_required`，然后 `workflow_paused`（流在此结束；运行单独恢复）\n当启用文字转语音自动播放时，`tts_message_end` 跟随结束事件之后。\n**事件**：除了 `ping`，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，所有事件还包含 `task_id`。工作流、节点和人工介入事件还将其载荷嵌套在 `data` 下，除 `agent_log` 外，还携带顶层的 `workflow_run_id`。\n**回复事件**\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `message` | 每个回答块（按顺序连接） | `answer` |\n| `message_replace` | 输出审核替换了当前回答 | `answer`, `reason` |\n| `message_end` | 回答完成 | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | 音频块/结束，当 TTS 自动播放开启时 | `audio` |\n**工作流和节点事件**\n每个事件将其载荷嵌套在 `data` 对象下。\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`, `node_type`, `title` |\n| `node_finished` | 节点结束 | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | 迭代节点进度（信息性） | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | 循环节点进度（信息性） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`, `reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`, `form_content`, `expiration_time` |\n暂停后，此流在 `workflow_paused` 处结束。通过[提交人工介入表单](/api-reference/human-input/submit-human-input-form)提交表单或让其超时；恢复的运行，包括 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished`，从[流式获取工作流事件](/api-reference/chatflows/stream-workflow-events)进行流式传输。\n**传输事件**\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败结束流；HTTP 保持 `200` | `status`（例如 `400`）, `code`（例如 `invalid_param`）, `message` |\n| `ping` | 每 10 秒保持连接活跃 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
-                    "summary": "Response Example - Streaming (Basic)",
+                    "summary": "响应示例 - 流式返回（基础）",
                     "value": "data: {\"event\": \"message\", \"task_id\":\"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"answer\": \" I\", \"created_at\": 1679586595} data: {\"event\": \"message_end\", \"task_id\":\"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"metadata\": {\"usage\": {\"total_tokens\": 10, \"latency\": 1.0}}}"
                   },
                   "streamingResponseWorkflow": {
-                    "summary": "Response Example - Streaming (工作流)",
+                    "summary": "响应示例 - 流式返回（工作流）",
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
                   },
                   "humanInputPause": {
@@ -148,7 +148,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `not_chat_app` : App mode does not match the API route.\n- `conversation_completed` : The conversation has ended.\n- `provider_not_initialize` : 未找到有效的模型提供商凭据。\n- `provider_quota_exceeded` : 模型提供商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 文本生成失败。\n- `bad_request` : Cannot use draft 工作流 version.\n- `bad_request` : Invalid `workflow_id` format.",
+            "description": "- `app_unavailable`：应用不可用或配置错误。\n- `not_chat_app`：应用模式与 API 路由不匹配。\n- `conversation_completed`：对话已结束。\n- `provider_not_initialize`：未找到有效的模型供应商凭据。\n- `provider_quota_exceeded`：模型供应商配额已用尽。\n- `model_currently_not_support`：当前模型不可用。\n- `completion_request_error`：文本生成失败。\n- `bad_request`：无法使用草稿工作流版本。\n- `bad_request`：无效的 `workflow_id` 格式。",
             "content": {
               "application/json": {
                 "examples": {
@@ -229,7 +229,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Conversation does not exist.\n- `not_found` : 工作流 not found with the specified `workflow_id`.",
+            "description": "- `not_found`：对话不存在。\n- `not_found`：未找到指定 `workflow_id` 的工作流。",
             "content": {
               "application/json": {
                 "examples": {
@@ -254,7 +254,7 @@
             }
           },
           "429": {
-            "description": "- `too_many_requests` : 该应用的并发请求过多。\n- `rate_limit_error` : 上游模型提供商的速率限制已超出。",
+            "description": "- `too_many_requests`：此应用的并发请求过多。\n- `rate_limit_error`：上游模型供应商速率限制已超出。",
             "content": {
               "application/json": {
                 "examples": {
@@ -279,7 +279,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error` : 内部服务器错误。",
+            "description": "`internal_server_error`：内部服务器错误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -300,18 +300,18 @@
     },
     "/chat-messages/{task_id}/stop": {
       "post": {
-        "summary": "停止响应",
+        "summary": "停止聊天消息生成",
         "description": "停止聊天消息生成任务。仅在 `streaming` 模式下支持。",
-        "operationId": "stopChatMessageGenerationCn",
+        "operationId": "stopAdvancedChatMessageGeneration",
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "parameters": [
           {
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [发送对话消息](/api-reference/对话流/发送对话消息) API 的流式分块返回中获取。",
+            "description": "任务 ID，可从[发送聊天消息](/api-reference/chatflows/send-chat-message) API 的流式块返回中获取。",
             "schema": {
               "type": "string"
             }
@@ -329,7 +329,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，必须和发送消息接口传入的 user 保持一致。"
+                    "description": "用户标识符，必须与发送消息接口中传递的用户一致。"
                   }
                 }
               },
@@ -349,7 +349,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -370,11 +370,11 @@
     },
     "/messages/{message_id}/suggested": {
       "get": {
-        "summary": "获取下一轮建议问题列表",
-        "description": "获取当前消息的下一步建议问题。",
-        "operationId": "getSuggestedQuestionsCn",
+        "summary": "获取下一轮建议问题",
+        "description": "获取当前消息的下一轮建议问题。",
+        "operationId": "getAdvancedSuggestedQuestions",
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "parameters": [
           {
@@ -421,7 +421,7 @@
             }
           },
           "400": {
-            "description": "- `not_chat_app` : 应用模式与 API 路由不匹配。\n- `bad_request` : 建议问题功能已禁用。",
+            "description": "- `not_chat_app`：应用模式与 API 路由不匹配。\n- `bad_request`：建议问题功能已禁用。",
             "content": {
               "application/json": {
                 "examples": {
@@ -446,7 +446,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 消息不存在。",
+            "description": "`not_found`：消息不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -463,7 +463,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error` : 内部服务器错误。",
+            "description": "`internal_server_error`：内部服务器错误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -484,12 +484,12 @@
     },
     "/files/upload": {
       "post": {
-        "operationId": "uploadFileCn",
+        "operationId": "uploadAdvancedChatFile",
         "tags": [
-          "文件操作"
+          "Files"
         ],
         "summary": "上传文件",
-        "description": "上传文件用于发送消息时使用，支持图片、文档、音频和视频的多模态理解。上传的文件仅供当前终端用户使用。",
+        "description": "上传文件以便在发送消息时使用，支持对图片、文档、音频和视频进行多模态理解。上传的文件仅供当前终端用户使用。",
         "requestBody": {
           "description": "文件上传请求。需要 multipart/form-data 格式。",
           "required": true,
@@ -509,7 +509,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，由开发者定义的规则生成，必须在应用内唯一。Service API 与 WebApp 的用户 ID 相互独立，即使取值相同也不指向同一用户。"
+                    "description": "终端用户的标识符，由您的应用规则定义，在应用内唯一。服务 API 和 WebApp 用户 ID 是分开的，即使相同也是如此。"
                   }
                 }
               }
@@ -549,7 +549,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `too_many_files` : 每次请求仅允许上传一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。",
+            "description": "- `no_file_uploaded`：请求中未提供文件。\n- `too_many_files`：每个请求只允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。",
             "content": {
               "application/json": {
                 "examples": {
@@ -582,7 +582,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : 文件大小超出限制。",
+            "description": "`file_too_large`：文件大小超出限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -599,7 +599,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 不允许的文件类型。",
+            "description": "`unsupported_file_type`：不允许的文件类型。",
             "content": {
               "application/json": {
                 "examples": {
@@ -620,18 +620,18 @@
     },
     "/files/{file_id}/preview": {
       "get": {
-        "operationId": "previewChatFlowFileCn",
+        "operationId": "previewChatFlowFile",
         "tags": [
-          "文件操作"
+          "Files"
         ],
         "summary": "下载文件",
-        "description": "预览或下载之前通过[上传文件](/api-reference/文件操作/上传文件) API 上传的文件。仅可访问属于请求应用内消息的文件。",
+        "description": "预览或下载之前通过[上传文件](/api-reference/files/upload-file) API 上传的文件。只有文件属于请求应用内的消息时才能访问。",
         "parameters": [
           {
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "要预览的文件唯一标识符，从 [上传文件](/api-reference/文件操作/上传文件) API 响应中获取。",
+            "description": "要预览的文件的唯一标识符，从[上传文件](/api-reference/files/upload-file) API 响应中获取。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -641,7 +641,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "如果为 `true`，则强制文件以附件形式下载，而不是在浏览器中预览。",
+            "description": "如果为 `true`，强制将文件作为附件下载，而不是在浏览器中预览。",
             "schema": {
               "type": "boolean",
               "default": false
@@ -659,7 +659,7 @@
         ],
         "responses": {
           "200": {
-            "description": "返回原始文件内容。`Content-Type` 头设置为文件的 MIME 类型。如果 `as_attachment` 为 `true`，文件将以 `Content-Disposition: attachment` 方式作为下载返回。",
+            "description": "返回原始文件内容。`Content-Type` 头设置为文件的 MIME 类型。如果 `as_attachment` 为 `true`，文件将作为下载返回，带有 `Content-Disposition: attachment`。",
             "content": {
               "application/octet-stream": {
                 "schema": {
@@ -670,7 +670,7 @@
             }
           },
           "403": {
-            "description": "`file_access_denied` : 拒绝访问请求的文件。",
+            "description": "`file_access_denied`：对请求文件的访问被拒绝。",
             "content": {
               "application/json": {
                 "examples": {
@@ -687,7 +687,7 @@
             }
           },
           "404": {
-            "description": "`file_not_found` : 未找到请求的文件。",
+            "description": "`file_not_found`：未找到请求的文件。",
             "content": {
               "application/json": {
                 "examples": {
@@ -708,12 +708,12 @@
     },
     "/end-users/{end_user_id}": {
       "get": {
-        "operationId": "getEndUserChatflowCn",
+        "operationId": "getEndUserChatflow",
         "tags": [
-          "终端用户"
+          "End Users"
         ],
         "summary": "获取终端用户信息",
-        "description": "根据 ID 获取终端用户信息。当其他 API 返回终端用户 ID（例如[上传文件](/api-reference/文件操作/上传文件)返回的 `created_by`）时很有用。",
+        "description": "通过 ID 获取终端用户。当其他 API 返回终端用户 ID 时（例如，[上传文件](/api-reference/files/upload-file) 返回的 `created_by`）很有用。",
         "parameters": [
           {
             "name": "end_user_id",
@@ -755,7 +755,7 @@
             }
           },
           "404": {
-            "description": "`end_user_not_found` : 未找到终端用户。",
+            "description": "`end_user_not_found`：未找到终端用户。",
             "content": {
               "application/json": {
                 "examples": {
@@ -776,12 +776,12 @@
     },
     "/messages/{message_id}/feedbacks": {
       "post": {
-        "operationId": "postMessageFeedbackCn",
+        "operationId": "postAdvancedChatMessageFeedback",
         "tags": [
-          "消息反馈"
+          "Feedback"
         ],
         "summary": "提交消息反馈",
-        "description": "提交消息反馈。终端用户可以对消息评价 `like` 或 `dislike`，并可选择提供文字反馈。将 `rating` 设为 `null` 可撤销之前提交的反馈。",
+        "description": "为消息提交反馈。终端用户可以将消息评为 `like` 或 `dislike`，并可选择提供文字反馈。将 `rating` 传递为 `null` 可撤销之前提交的反馈。",
         "parameters": [
           {
             "name": "message_id",
@@ -818,7 +818,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "404": {
-            "description": "`not_found` : 消息不存在。",
+            "description": "`not_found`：消息不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -839,17 +839,17 @@
     },
     "/app/feedbacks": {
       "get": {
-        "operationId": "getAppFeedbacksCn",
+        "operationId": "getAdvancedChatAppFeedbacks",
         "tags": [
-          "消息反馈"
+          "Feedback"
         ],
-        "summary": "获取应用的消息反馈",
-        "description": "获取此应用中所有消息反馈的分页列表，包括终端用户和管理员反馈。",
+        "summary": "获取应用反馈列表",
+        "description": "获取此应用中消息的所有反馈的分页列表，包括终端用户和管理员反馈。",
         "parameters": [
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "分页的页码。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -921,11 +921,11 @@
     },
     "/conversations": {
       "get": {
-        "summary": "获取会话列表",
-        "description": "获取当前用户的会话列表，按最近活跃时间排序。",
-        "operationId": "getConversationsListCn",
+        "summary": "获取对话列表",
+        "description": "获取当前用户的对话列表，按最近活跃时间排序。",
+        "operationId": "getAdvancedConversationsList",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
@@ -950,7 +950,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "返回的记录数。",
+            "description": "要返回的记录数。",
             "schema": {
               "type": "integer",
               "default": 20,
@@ -977,7 +977,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功获取会话列表。",
+            "description": "成功获取对话列表。",
             "content": {
               "application/json": {
                 "schema": {
@@ -1009,7 +1009,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1026,7 +1026,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 上一个会话不存在（无效的 `last_id`）。",
+            "description": "`not_found`：最后一个对话不存在（无效的 `last_id`）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1047,18 +1047,18 @@
     },
     "/messages": {
       "get": {
-        "summary": "获取会话历史消息",
-        "description": "以滚动加载的格式返回历史聊天记录，首页返回最新的 `limit` 条消息，即按时间倒序排列。",
-        "operationId": "getConversationHistoryCn",
+        "summary": "获取对话消息列表",
+        "description": "以滚动加载格式返回历史聊天记录，第一页返回最新的 `limit` 条消息，即倒序排列。",
+        "operationId": "getAdvancedConversationHistory",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
             "name": "conversation_id",
             "in": "query",
             "required": true,
-            "description": "会话 ID。",
+            "description": "对话 ID。",
             "schema": {
               "type": "string"
             }
@@ -1076,7 +1076,7 @@
             "name": "first_id",
             "in": "query",
             "required": false,
-            "description": "当前页第一条聊天记录的 ID。默认为 `null`（获取最新消息）。获取后续页面时，使用当前列表中第一条消息的 ID 来获取更早的消息。",
+            "description": "当前页第一条聊天记录的 ID。默认为 `null`（获取最新消息）。要获取后续页面，使用当前列表中第一条消息的 ID 来获取更早的消息。",
             "schema": {
               "type": "string"
             }
@@ -1096,7 +1096,7 @@
         ],
         "responses": {
           "200": {
-            "description": "成功获取会话历史。",
+            "description": "成功获取对话历史。",
             "content": {
               "application/json": {
                 "schema": {
@@ -1136,7 +1136,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1153,7 +1153,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : 会话不存在。\n- `not_found` : 第一条消息不存在。",
+            "description": "- `not_found`：对话不存在。\n- `not_found`：第一条消息不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1182,18 +1182,18 @@
     },
     "/conversations/{conversation_id}/variables": {
       "get": {
-        "summary": "获取对话变量",
-        "description": "从特定会话中获取变量。",
-        "operationId": "getConversationVariablesCn",
+        "summary": "获取会话变量列表",
+        "description": "获取特定对话的变量。",
+        "operationId": "getAdvancedConversationVariables",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "对话 ID。",
             "schema": {
               "type": "string"
             }
@@ -1220,7 +1220,7 @@
             "name": "limit",
             "in": "query",
             "required": false,
-            "description": "返回的记录数。",
+            "description": "要返回的记录数。",
             "schema": {
               "type": "integer",
               "default": 20,
@@ -1232,7 +1232,7 @@
             "name": "variable_name",
             "in": "query",
             "required": false,
-            "description": "按指定名称筛选变量。",
+            "description": "按特定名称过滤变量。",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -1272,7 +1272,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1289,7 +1289,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 会话不存在。",
+            "description": "`not_found`：对话不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1310,18 +1310,18 @@
     },
     "/conversations/{conversation_id}/name": {
       "post": {
-        "summary": "重命名会话",
-        "description": "重命名会话或自动生成名称。会话名称用于在支持多会话的客户端上显示。",
-        "operationId": "renameConversationCn",
+        "summary": "重命名对话",
+        "description": "重命名对话或自动生成名称。对话名称用于在支持多对话的客户端上显示。",
+        "operationId": "renameAdvancedConversation",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "对话 ID。",
             "schema": {
               "type": "string"
             }
@@ -1348,7 +1348,7 @@
         },
         "responses": {
           "200": {
-            "description": "会话重命名成功。",
+            "description": "对话重命名成功。",
             "content": {
               "application/json": {
                 "schema": {
@@ -1374,7 +1374,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1391,7 +1391,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 会话不存在。",
+            "description": "`not_found`：对话不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1412,18 +1412,18 @@
     },
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
-        "summary": "更新对话变量",
+        "summary": "更新会话变量",
         "description": "更新特定会话变量的值。值必须与预期类型匹配。",
-        "operationId": "updateChatflowConversationVariableZh",
+        "operationId": "updateChatflowConversationVariable",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "对话 ID。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1433,7 +1433,7 @@
             "name": "variable_id",
             "in": "path",
             "required": true,
-            "description": "Variable ID.",
+            "description": "变量 ID。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1485,7 +1485,7 @@
             }
           },
           "400": {
-            "description": "- `not_chat_app` : 应用模式与 API 路由不匹配。\n- `bad_request` : 变量值类型不匹配。",
+            "description": "- `not_chat_app`：应用模式与 API 路由不匹配。\n- `bad_request`：变量值类型不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1510,7 +1510,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : 会话不存在。\n- `not_found` : 会话变量不存在。",
+            "description": "- `not_found`：对话不存在。\n- `not_found`：会话变量不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1539,18 +1539,18 @@
     },
     "/conversations/{conversation_id}": {
       "delete": {
-        "summary": "删除会话",
-        "description": "删除会话。",
-        "operationId": "deleteConversationCn",
+        "summary": "删除对话",
+        "description": "删除对话。",
+        "operationId": "deleteAdvancedConversation",
         "tags": [
-          "会话管理"
+          "Conversations"
         ],
         "parameters": [
           {
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "对话 ID。",
             "schema": {
               "type": "string"
             }
@@ -1582,10 +1582,10 @@
         },
         "responses": {
           "204": {
-            "description": "会话删除成功。无返回内容。"
+            "description": "对话删除成功。无返回内容。"
           },
           "400": {
-            "description": "`not_chat_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_chat_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1602,7 +1602,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 会话不存在。",
+            "description": "`not_found`：对话不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1623,11 +1623,11 @@
     },
     "/audio-to-text": {
       "post": {
-        "operationId": "audioToTextCn",
+        "operationId": "advancedAudioToText",
         "tags": [
-          "语音与文字转换"
+          "TTS"
         ],
-        "summary": "语音转文字",
+        "summary": "音频转文字",
         "description": "将音频文件转换为文字。支持的格式：`mp3`、`mp4`、`mpeg`、`mpga`、`m4a`、`wav`、`webm`。文件大小限制为 `30 MB`。",
         "requestBody": {
           "required": true,
@@ -1641,7 +1641,7 @@
         },
         "responses": {
           "200": {
-            "description": "语音转文字成功。",
+            "description": "成功将音频转换为文字。",
             "content": {
               "application/json": {
                 "schema": {
@@ -1659,7 +1659,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `no_audio_uploaded` : 未上传音频文件。\n- `provider_not_support_speech_to_text` : 模型提供商不支持语音转文字。\n- `provider_not_initialize` : 未找到有效的模型提供商凭据。\n- `provider_quota_exceeded` : 模型提供商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 语音识别请求失败。",
+            "description": "- `app_unavailable`：应用不可用或配置错误。\n- `no_audio_uploaded`：未上传音频文件。\n- `provider_not_support_speech_to_text`：模型供应商不支持语音转文字。\n- `provider_not_initialize`：未找到有效的模型供应商凭据。\n- `provider_quota_exceeded`：模型供应商配额已用尽。\n- `model_currently_not_support`：当前模型不支持此操作。\n- `completion_request_error`：语音识别请求失败。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1724,7 +1724,7 @@
             }
           },
           "413": {
-            "description": "`audio_too_large` : 音频文件大小超出限制。",
+            "description": "`audio_too_large`：音频文件大小超出限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1741,7 +1741,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_audio_type` : 不允许的音频类型。",
+            "description": "`unsupported_audio_type`：不允许的音频类型。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1758,7 +1758,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error` : 内部服务器错误。",
+            "description": "`internal_server_error`：内部服务器错误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1779,11 +1779,11 @@
     },
     "/text-to-audio": {
       "post": {
-        "operationId": "textToAudioCn",
+        "operationId": "advancedTextToAudio",
         "tags": [
-          "语音与文字转换"
+          "TTS"
         ],
-        "summary": "文字转语音",
+        "summary": "文字转音频",
         "description": "将文字转换为语音。",
         "requestBody": {
           "required": true,
@@ -1808,7 +1808,7 @@
         },
         "responses": {
           "200": {
-            "description": "返回生成的音频文件。`Content-Type` 头设置为音频 MIME 类型（例如 `audio/wav`、`audio/mp3`）。如果 `streaming` 为 `true`，音频将以分块传输编码方式流式返回。",
+            "description": "返回生成的音频文件。`Content-Type` 头设置为音频 MIME 类型（例如，`audio/wav`、`audio/mp3`）。如果 `streaming` 为 `true`，音频将以分块传输编码的方式流式传输。",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -1819,7 +1819,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `provider_not_initialize` : 未找到有效的模型提供商凭据。\n- `provider_quota_exceeded` : 模型提供商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 文字转语音请求失败。",
+            "description": "- `app_unavailable`：应用不可用或配置错误。\n- `provider_not_initialize`：未找到有效的模型供应商凭据。\n- `provider_quota_exceeded`：模型供应商配额已用尽。\n- `model_currently_not_support`：当前模型不支持此操作。\n- `completion_request_error`：文字转语音请求失败。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1868,7 +1868,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error` : 内部服务器错误。",
+            "description": "`internal_server_error`：内部服务器错误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1889,12 +1889,12 @@
     },
     "/info": {
       "get": {
-        "operationId": "getAppInfoCn",
+        "operationId": "getAdvancedChatAppInfo",
         "tags": [
-          "应用配置"
+          "Applications"
         ],
-        "summary": "获取应用基本信息",
-        "description": "获取应用的基本信息，包括名称、描述、标签和模式。",
+        "summary": "获取应用信息",
+        "description": "获取此应用的基本信息，包括名称、描述、标签和模式。",
         "responses": {
           "200": {
             "description": "应用的基本信息。",
@@ -1908,7 +1908,7 @@
                     "summary": "响应示例",
                     "value": {
                       "name": "My Chatflow App",
-                      "description": "一个有用的客服聊天机器人。",
+                      "description": "一个有帮助的客服聊天机器人。",
                       "tags": [
                         "customer-service",
                         "chatbot"
@@ -1926,9 +1926,9 @@
     },
     "/parameters": {
       "get": {
-        "operationId": "getAppParametersCn",
+        "operationId": "getAdvancedChatAppParameters",
         "tags": [
-          "应用配置"
+          "Applications"
         ],
         "summary": "获取应用参数",
         "description": "获取应用的输入表单配置，包括功能开关、输入参数名称、类型和默认值。",
@@ -2008,7 +2008,7 @@
             }
           },
           "400": {
-            "description": "`app_unavailable` : 应用不可用或配置错误。",
+            "description": "`app_unavailable`：应用不可用或配置错误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2029,15 +2029,15 @@
     },
     "/meta": {
       "get": {
-        "operationId": "getAppMetaCn",
+        "operationId": "getAdvancedChatAppMeta",
         "tags": [
-          "应用配置"
+          "Applications"
         ],
         "summary": "获取应用元数据",
-        "description": "获取应用的元数据，包括工具图标和其他配置详情。",
+        "description": "获取此应用的元数据，包括工具图标和其他配置详情。",
         "responses": {
           "200": {
-            "description": "成功获取应用元数据。",
+            "description": "成功获取应用元数据信息。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2065,12 +2065,12 @@
     },
     "/site": {
       "get": {
-        "operationId": "getWebAppSettingsCn",
+        "operationId": "getAdvancedChatWebAppSettings",
         "tags": [
-          "应用配置"
+          "Applications"
         ],
         "summary": "获取应用 WebApp 设置",
-        "description": "获取应用的 WebApp 设置，包括站点配置、主题和自定义选项。",
+        "description": "获取此应用的 WebApp 设置，包括站点配置、主题和自定义选项。",
         "responses": {
           "200": {
             "description": "应用的 WebApp 设置。",
@@ -2083,14 +2083,14 @@
                   "webAppSettings": {
                     "summary": "响应示例",
                     "value": {
-                      "title": "My Chat App",
+                      "title": "我的聊天应用",
                       "chat_color_theme": "#4A90D9",
                       "chat_color_theme_inverted": false,
                       "icon_type": "emoji",
                       "icon": "🤖",
                       "icon_background": "#FFFFFF",
                       "icon_url": null,
-                      "description": "一个有用的客服聊天机器人。",
+                      "description": "一个有帮助的客服聊天机器人。",
                       "copyright": "2025 Dify",
                       "privacy_policy": "https://example.com/privacy",
                       "custom_disclaimer": "",
@@ -2104,7 +2104,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : 未找到此应用的站点或工作空间已归档。",
+            "description": "`forbidden`：未找到此应用的站点或工作区已归档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2126,10 +2126,10 @@
     "/apps/annotations": {
       "post": {
         "summary": "创建标注",
-        "description": "创建新的标注。标注提供预定义的问答对，应用可以直接匹配并返回，而无需生成回复。",
-        "operationId": "createAnnotationCn",
+        "description": "创建新的标注。标注提供预定义的问答对，应用可以匹配并直接返回，而不是生成响应。",
+        "operationId": "createAdvancedAnnotation",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "requestBody": {
           "required": true,
@@ -2177,16 +2177,16 @@
       },
       "get": {
         "summary": "获取标注列表",
-        "description": "获取应用的标注分页列表。支持关键词搜索筛选。",
-        "operationId": "getAnnotationListCn",
+        "description": "获取应用的标注分页列表。支持关键词搜索过滤。",
+        "operationId": "getAdvancedAnnotationList",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "parameters": [
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "分页的页码。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2196,7 +2196,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "每页条目数。",
+            "description": "每页项目数。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2206,7 +2206,7 @@
           {
             "name": "keyword",
             "in": "query",
-            "description": "按问题或回答内容筛选标注的关键词。",
+            "description": "按问题或答案内容过滤标注的关键词。",
             "required": false,
             "schema": {
               "type": "string"
@@ -2250,10 +2250,10 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "更新标注",
-        "description": "更新现有标注的问题和回答。",
-        "operationId": "updateAnnotationCn",
+        "description": "更新现有标注的问题和答案。",
+        "operationId": "updateAdvancedAnnotation",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "parameters": [
           {
@@ -2310,7 +2310,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : 编辑标注的权限不足。",
+            "description": "`forbidden`：权限不足，无法编辑标注。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2327,7 +2327,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 标注不存在。",
+            "description": "`not_found`：标注不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2348,9 +2348,9 @@
       "delete": {
         "summary": "删除标注",
         "description": "删除标注及其关联的命中历史。",
-        "operationId": "deleteAnnotationCn",
+        "operationId": "deleteAdvancedAnnotation",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "parameters": [
           {
@@ -2369,7 +2369,7 @@
             "description": "标注删除成功。"
           },
           "403": {
-            "description": "`forbidden` : 编辑标注的权限不足。",
+            "description": "`forbidden`：权限不足，无法编辑标注。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2386,7 +2386,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 标注不存在。",
+            "description": "`not_found`：标注不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2408,10 +2408,10 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "配置标注回复",
-        "description": "启用或禁用标注回复功能。启用时需要配置嵌入模型。异步执行——使用 [查询标注回复配置任务状态](/api-reference/标注管理/查询标注回复配置任务状态) 跟踪进度。",
-        "operationId": "initialAnnotationReplySettingsCn",
+        "description": "启用或禁用标注回复功能。启用时需要配置嵌入模型。异步执行 — 使用[获取标注回复任务状态](/api-reference/annotations/get-annotation-reply-job-status)来跟踪进度。",
+        "operationId": "initialAdvancedAnnotationReplySettings",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "parameters": [
           {
@@ -2473,18 +2473,18 @@
     },
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
-        "summary": "查询标注回复配置任务状态",
-        "description": "获取由 [配置标注回复](/api-reference/标注管理/配置标注回复) 发起的异步标注回复配置任务的状态。",
-        "operationId": "getInitialAnnotationReplySettingsStatusCn",
+        "summary": "获取标注回复任务状态",
+        "description": "获取由[配置标注回复](/api-reference/annotations/configure-annotation-reply)启动的异步标注回复配置任务的状态。",
+        "operationId": "getAdvancedInitialAnnotationReplySettingsStatus",
         "tags": [
-          "标注管理"
+          "Annotations"
         ],
         "parameters": [
           {
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "操作类型，必须与 [配置标注回复](/api-reference/标注管理/配置标注回复) 调用中的一致。",
+            "description": "操作类型，必须与[配置标注回复](/api-reference/annotations/configure-annotation-reply)调用匹配。",
             "schema": {
               "type": "string",
               "enum": [
@@ -2497,7 +2497,7 @@
             "name": "job_id",
             "in": "path",
             "required": true,
-            "description": "由 [配置标注回复](/api-reference/标注管理/配置标注回复) 接口返回的任务 ID。",
+            "description": "由[配置标注回复](/api-reference/annotations/configure-annotation-reply)返回的任务 ID。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2526,7 +2526,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 指定的任务不存在。",
+            "description": "`invalid_param`：指定的任务不存在。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2547,11 +2547,11 @@
     },
     "/workflows/run/{workflow_run_id}": {
       "get": {
-        "summary": "获取工作流执行情况",
+        "summary": "获取工作流运行详情",
         "description": "根据工作流执行 ID 获取工作流任务的当前执行结果。",
-        "operationId": "getChatflowWorkflowRunDetailZh",
+        "operationId": "getChatflowWorkflowRunDetail",
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "parameters": [
           {
@@ -2598,7 +2598,7 @@
             }
           },
           "400": {
-            "description": "`not_workflow_app` : 应用模式与 API 路由不匹配。",
+            "description": "`not_workflow_app`：应用模式与 API 路由不匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2615,7 +2615,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到工作流运行记录。",
+            "description": "`not_found`：未找到工作流运行。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2636,11 +2636,11 @@
     },
     "/workflows/logs": {
       "get": {
-        "summary": "获取工作流日志",
-        "description": "获取分页的工作流执行日志，支持筛选选项。",
-        "operationId": "listChatflowWorkflowLogsZh",
+        "summary": "获取工作流日志列表",
+        "description": "获取带有过滤选项的分页工作流执行日志。",
+        "operationId": "listChatflowWorkflowLogs",
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "parameters": [
           {
@@ -2654,7 +2654,7 @@
           {
             "name": "status",
             "in": "query",
-            "description": "按执行状态筛选。",
+            "description": "按执行状态过滤。",
             "schema": {
               "type": "string",
               "enum": [
@@ -2667,7 +2667,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "分页的页码。",
             "schema": {
               "type": "integer",
               "default": 1,
@@ -2678,7 +2678,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "每页条目数。",
+            "description": "每页项目数。",
             "schema": {
               "type": "integer",
               "default": 20,
@@ -2689,7 +2689,7 @@
           {
             "name": "created_at__before",
             "in": "query",
-            "description": "筛选在此 ISO 8601 时间戳之前创建的日志。",
+            "description": "过滤此 ISO 8601 时间戳之前创建的日志。",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -2698,7 +2698,7 @@
           {
             "name": "created_at__after",
             "in": "query",
-            "description": "筛选在此 ISO 8601 时间戳之后创建的日志。",
+            "description": "过滤此 ISO 8601 时间戳之后创建的日志。",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -2707,7 +2707,7 @@
           {
             "name": "created_by_end_user_session_id",
             "in": "query",
-            "description": "按终端用户会话 ID 筛选。",
+            "description": "按终端用户会话 ID 过滤。",
             "schema": {
               "type": "string"
             }
@@ -2715,7 +2715,7 @@
           {
             "name": "created_by_account",
             "in": "query",
-            "description": "按账户 ID 筛选。",
+            "description": "按账户 ID 过滤。",
             "schema": {
               "type": "string"
             }
@@ -2776,10 +2776,10 @@
     "/form/human_input/{form_token}": {
       "get": {
         "tags": [
-          "人工介入"
+          "Human Input"
         ],
         "summary": "获取人工介入表单",
-        "description": "使用 `human_input_required` 事件返回的 `form_token` 获取暂停中的人工介入表单内容。需要 **WebApp** 送达方式。",
+        "description": "使用 `human_input_required` 事件中的 `form_token` 获取暂停的人工介入表单内容。需要 **WebApp** 投递方式。",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -2789,12 +2789,12 @@
             "schema": {
               "type": "string"
             },
-            "description": "暂停表单的访问令牌，由流式模式下 [发送对话消息](/api-reference/对话流/发送对话消息) 返回的 `human_input_required` 事件提供。"
+            "description": "暂停表单的访问令牌，从流式模式下[发送聊天消息](/api-reference/chatflows/send-chat-message)的 `human_input_required` 事件中返回。"
           }
         ],
         "responses": {
           "200": {
-            "description": "表单内容获取成功。",
+            "description": "成功获取表单内容。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2802,7 +2802,7 @@
                   "properties": {
                     "form_content": {
                       "type": "string",
-                      "description": "已替换工作流变量的预渲染表单正文。"
+                      "description": "预渲染的表单正文，已替换工作流变量。"
                     },
                     "inputs": {
                       "type": "array",
@@ -2811,27 +2811,27 @@
                         "properties": {
                           "type": {
                             "type": "string",
-                            "description": "表单输入控件类型。可用值：`text_input`（单行文本输入框）和 `paragraph`（多行文本区域）。"
+                            "description": "表单输入控件类型。可用值：`text_input`（单行文本字段）和 `paragraph`（多行文本区域）。"
                           },
                           "output_variable_name": {
                             "type": "string",
-                            "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。"
+                            "description": "用于在工作流内引用此输入提交值的变量名称。对应提交 `inputs` 对象中的键。"
                           },
                           "default": {
                             "type": "object",
                             "nullable": true,
-                            "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                            "description": "从工作流上下文解析的默认值。未配置默认值时为 `null`。",
                             "properties": {
                               "type": {
                                 "type": "string",
-                                "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。"
+                                "description": "默认值的来源。`constant` 表示 `value` 用作字面字符串；`variable` 表示 `selector` 指向工作流变量。"
                               },
                               "selector": {
                                 "type": "array",
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。"
+                                "description": "当 `type` 为 `variable` 时的变量引用路径（例如，`[\"node_id\", \"var_name\"]`）。必须包含至少两个元素。"
                               },
                               "value": {
                                 "type": "string",
@@ -2848,7 +2848,7 @@
                       "additionalProperties": {
                         "type": "string"
                       },
-                      "description": "预填充默认值，按输入的 `output_variable_name` 分组。所有值均为字符串。"
+                      "description": "预填充的默认值，以输入的 `output_variable_name` 为键。所有值均已字符串化。"
                     },
                     "user_actions": {
                       "type": "array",
@@ -2859,16 +2859,16 @@
                             "type": "string",
                             "maxLength": 20,
                             "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-                            "description": "操作按钮的标识。当接收者选择该按钮时，作为 `action` 传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单)。"
+                            "description": "操作按钮的标识符。当收件人选择此按钮时，在[提交人工介入表单](/api-reference/human-input/submit-human-input-form)时作为 `action` 传递。"
                           },
                           "title": {
                             "type": "string",
                             "maxLength": 100,
-                            "description": "显示给接收者的按钮文本。"
+                            "description": "显示给收件人的按钮标签。"
                           },
                           "button_style": {
                             "type": "string",
-                            "description": "按钮视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
+                            "description": "按钮的视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
                           }
                         }
                       },
@@ -2877,7 +2877,7 @@
                     "expiration_time": {
                       "type": "integer",
                       "format": "int64",
-                      "description": "Unix 时间戳（秒），超过后无法再提交该表单。"
+                      "description": "Unix 时间戳（秒），之后此表单将无法再提交。"
                     }
                   }
                 },
@@ -2903,12 +2903,12 @@
                       "user_actions": [
                         {
                           "id": "approve",
-                          "title": "Approve",
+                          "title": "批准",
                           "button_style": "primary"
                         },
                         {
                           "id": "reject",
-                          "title": "Request changes",
+                          "title": "请求修改",
                           "button_style": "default"
                         }
                       ],
@@ -2920,7 +2920,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Form not found.",
+            "description": "`not_found`：未找到表单。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2937,7 +2937,7 @@
             }
           },
           "412": {
-            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "description": "- `human_input_form_submitted`：表单已提交。表单是一次性的；无论哪个用户提交，第一个响应获胜。\n- `human_input_form_expired`：表单的过期时间在提交到达之前已过。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2965,10 +2965,10 @@
       },
       "post": {
         "tags": [
-          "人工介入"
+          "Human Input"
         ],
         "summary": "提交人工介入表单",
-        "description": "提交接收者对暂停中人工介入表单的响应。表单被接受后工作流恢复执行；可订阅 [流式获取工作流事件](/api-reference/对话流/流式获取工作流事件) 接收后续事件。需要 **WebApp** 送达方式。",
+        "description": "提交收件人对暂停的人工介入表单的响应。工作流在接受后恢复；使用[流式获取工作流事件](/api-reference/chatflows/stream-workflow-events)跟踪后续事件。需要 **WebApp** 投递方式。",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -2978,7 +2978,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "暂停表单的访问令牌，由流式模式下 [发送对话消息](/api-reference/对话流/发送对话消息) 返回的 `human_input_required` 事件提供。"
+            "description": "暂停表单的访问令牌，从流式模式下[发送聊天消息](/api-reference/chatflows/send-chat-message)的 `human_input_required` 事件中返回。"
           }
         ],
         "requestBody": {
@@ -2996,17 +2996,17 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "接收者提交的值，按输入的 `output_variable_name` 分组。"
+                    "description": "收件人提供的值，以输入的 `output_variable_name` 为键。"
                   },
                   "action": {
                     "type": "string",
-                    "description": "接收者选择的操作按钮 ID。必须与 [获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 返回的 `user_actions` 列表中的某个 `id` 值匹配。",
+                    "description": "收件人选择的操作按钮的 ID。必须与表单的 `user_actions` 列表中的 `id` 值之一匹配（由[获取人工介入表单](/api-reference/human-input/get-human-input-form)返回）。",
                     "maxLength": 20,
                     "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
                   },
                   "user": {
                     "type": "string",
-                    "description": "提交者的终端用户标识。"
+                    "description": "提交者的终端用户标识符。"
                   }
                 }
               },
@@ -3027,7 +3027,7 @@
         },
         "responses": {
           "200": {
-            "description": "表单提交成功。响应体为空对象。",
+            "description": "表单提交成功。响应体是一个空对象。",
             "content": {
               "application/json": {
                 "schema": {
@@ -3043,7 +3043,7 @@
             }
           },
           "400": {
-            "description": "- `bad_request` : Form recipient type is invalid.\n- `invalid_form_data` : Submission failed validation against the form definition.",
+            "description": "- `bad_request`：表单收件人类型无效。\n- `invalid_form_data`：提交未通过表单定义的验证。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3068,7 +3068,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Form not found.",
+            "description": "`not_found`：未找到表单。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3085,7 +3085,7 @@
             }
           },
           "412": {
-            "description": "- `human_input_form_submitted` : Form already submitted. Forms are one-shot; the first response wins regardless of which user submits it.\n- `human_input_form_expired` : The form's expiration time passed before submission arrived.",
+            "description": "- `human_input_form_submitted`：表单已提交。表单是一次性的；无论哪个用户提交，第一个响应获胜。\n- `human_input_form_expired`：表单的过期时间在提交到达之前已过。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3115,10 +3115,10 @@
     "/workflow/{task_id}/events": {
       "get": {
         "tags": [
-          "对话流"
+          "Chatflows"
         ],
         "summary": "流式获取工作流事件",
-        "description": "在工作流运行暂停或原始 SSE 连接断开后恢复 Server-Sent Events 流。对于已结束的运行，流仅发送单个 `workflow_finished` 事件后关闭。",
+        "description": "在暂停或 SSE 连接断开后恢复工作流运行的服务器发送事件流。对于已完成的运行，流会发出单个 `workflow_finished` 事件然后关闭。",
         "operationId": "streamChatflowEvents",
         "parameters": [
           {
@@ -3129,7 +3129,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "原始 [发送对话消息](/api-reference/对话流/发送对话消息) 请求返回的工作流运行 ID。"
+            "description": "原始[发送聊天消息](/api-reference/chatflows/send-chat-message)请求返回的工作流运行 ID。"
           },
           {
             "name": "user",
@@ -3138,7 +3138,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "发送该对话消息的终端用户标识。必须与工作流运行的创建者一致。"
+            "description": "发送聊天消息的终端用户标识符。必须与工作流运行的创建者匹配。"
           },
           {
             "name": "include_state_snapshot",
@@ -3148,7 +3148,7 @@
               "type": "boolean",
               "default": false
             },
-            "description": "为 `true` 时，从持久化状态快照重放，在流式发送新事件前附带已执行节点的状态摘要。"
+            "description": "当为 `true` 时，从持久化状态快照重放，在流式传输新事件之前包含已执行节点的状态摘要。"
           },
           {
             "name": "continue_on_pause",
@@ -3158,12 +3158,12 @@
               "type": "boolean",
               "default": false
             },
-            "description": "设为 `true` 时，流会在多次 `workflow_paused` 事件之间保持打开（适用于工作流包含多个连续人工介入节点的场景）。默认在首次暂停时关闭流。"
+            "description": "设置为 `true` 以在多个 `workflow_paused` 事件之间保持流打开（当工作流有多个连续的人工介入节点时很有用）。默认在第一次暂停后关闭流。"
           }
         ],
         "responses": {
           "200": {
-            "description": "Server-Sent Events 流。每个事件以 `data: {JSON}\\n\\n` 形式送达。事件载荷结构与原始流式响应一致。",
+            "description": "服务器发送事件流。每个事件以 `data: {JSON}\\n\\n` 格式投递。事件载荷遵循与原始流式响应相同的模式。",
             "content": {
               "text/event-stream": {
                 "schema": {
@@ -3174,7 +3174,7 @@
             }
           },
           "400": {
-            "description": "`not_workflow_app` : Please check if your app mode matches the right API route.",
+            "description": "`not_workflow_app`：请检查您的应用模式是否与正确的 API 路由匹配。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3191,7 +3191,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Workflow run not found.",
+            "description": "`not_found`：未找到工作流运行。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3217,7 +3217,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API_KEY",
-        "description": "API Key 认证。对于所有 API 请求，请在 `Authorization` HTTP 头中包含您的 API Key，并加上 `Bearer ` 前缀。示例：`Authorization: Bearer {API_KEY}`。**强烈建议将 API Key 存储在服务端，不要在客户端共享或存储，以避免 API Key 泄漏导致严重后果。**"
+        "description": "API Key 认证。对于所有 API 请求，在 `Authorization` HTTP 头中包含您的 API Key，以 `Bearer ` 为前缀。示例：`Authorization: Bearer {API_KEY}`。**强烈建议将您的 API Key 存储在服务器端，不要在客户端共享或存储，以避免可能导致严重后果的 API-Key 泄露。**"
       }
     },
     "responses": {
@@ -3261,7 +3261,7 @@
           },
           "inputs": {
             "type": "object",
-            "description": "允许输入应用定义的各种变量值。包含键值对。请参阅 [获取应用参数](/api-reference/应用配置/获取应用参数) 响应中的 `user_input_form` 字段，以了解应用所需的变量名称和类型。",
+            "description": "允许输入应用定义的各种变量值。包含键/值对。参考[获取应用参数](/api-reference/applications/get-app-parameters)响应中的 `user_input_form` 字段来发现您的应用期望的变量名称和类型。",
             "additionalProperties": true
           },
           "response_mode": {
@@ -3270,19 +3270,19 @@
               "streaming",
               "blocking"
             ],
-            "description": "响应返回模式。`streaming`（推荐）使用 SSE。`blocking` 等待完成后返回（长时间处理可能会被中断）。Cloudflare 超时为 `100 s`。省略时默认为阻塞模式。"
+            "description": "响应返回模式。`streaming`（推荐）使用 SSE。`blocking` 在完成后返回（对于长时间处理可能会中断）。Cloudflare 超时为 `100 秒`。省略时默认为阻塞式返回行为。"
           },
           "user": {
             "type": "string",
-            "description": "用户标识符，在应用内唯一。此标识符用于限定数据访问范围——会话、消息和文件仅在使用相同的 `user` 值查询时可见。"
+            "description": "用户标识符，在应用内唯一。此标识符限定数据访问范围 — 对话、消息和文件仅在使用相同 `user` 值查询时可见。"
           },
           "conversation_id": {
             "type": "string",
-            "description": "用于继续会话的会话 ID。传入上一条消息的 `conversation_id`。要开始新会话，请省略此字段或传入空字符串。响应会返回一个 `conversation_id`——在后续消息中传入该值即可继续该会话。"
+            "description": "继续对话的对话 ID。传递上一条消息的 `conversation_id`。要开始新对话，省略此字段或传递空字符串。响应将返回 `conversation_id` — 在后续消息中传递它以继续该对话。"
           },
           "files": {
             "type": "array",
-            "description": "用于多模态理解的文件列表，包括图片、文档、音频和视频。要附加本地文件，请先通过 [上传文件](/api-reference/文件操作/上传文件) 上传，然后将返回的 `id` 作为 `upload_file_id`，并设置 `transfer_method: local_file`。",
+            "description": "用于多模态理解的文件列表，包括图片、文档、音频和视频。要附加本地文件，首先通过[上传文件](/api-reference/files/upload-file)上传并使用返回的 `id` 作为 `upload_file_id`，同时设置 `transfer_method: local_file`。",
             "items": {
               "type": "object",
               "required": [
@@ -3307,23 +3307,23 @@
                     "remote_url",
                     "local_file"
                   ],
-                  "description": "传输方式：文件 URL 使用 `remote_url`，上传文件使用 `local_file`。"
+                  "description": "传输方式：`remote_url` 用于文件 URL，`local_file` 用于已上传的文件。"
                 },
                 "url": {
                   "type": "string",
                   "format": "url",
-                  "description": "文件 URL（当 `transfer_method` 为 `remote_url` 时必填）。"
+                  "description": "文件 URL（当 `transfer_method` 为 `remote_url` 时必需）。"
                 },
                 "upload_file_id": {
                   "type": "string",
-                  "description": "通过 [上传文件](/api-reference/文件操作/上传文件) API 获取的已上传文件 ID（当 `transfer_method` 为 `local_file` 时必填）。"
+                  "description": "从[上传文件](/api-reference/files/upload-file) API 获取的已上传文件 ID（当 `transfer_method` 为 `local_file` 时必需）。"
                 }
               }
             }
           },
           "auto_generate_name": {
             "type": "boolean",
-            "description": "自动生成会话标题。如果为 `false`，请使用 [重命名会话](/api-reference/会话管理/重命名会话) API 并设置 `auto_generate: true` 来异步生成标题。",
+            "description": "自动生成对话标题。如果为 `false`，使用[重命名对话](/api-reference/conversations/rename-conversation) API 并设置 `auto_generate: true` 进行异步标题生成。",
             "default": true
           },
           "workflow_id": {
@@ -3347,17 +3347,17 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "该响应事件的唯一 ID。"
+            "description": "此响应事件的唯一 ID。"
           },
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "唯一的消息 ID。调用反馈或推荐问题接口时，将此值作为 `message_id` 参数使用。"
+            "description": "唯一消息 ID。调用反馈或建议问题端点时，将此用作 `message_id` 参数。"
           },
           "conversation_id": {
             "type": "string",
             "format": "uuid",
-            "description": "会话 ID。"
+            "description": "对话 ID。"
           },
           "mode": {
             "type": "string",
@@ -3365,7 +3365,7 @@
           },
           "answer": {
             "type": "string",
-            "description": "完整的响应内容。"
+            "description": "完整响应内容。"
           },
           "metadata": {
             "type": "object",
@@ -3392,7 +3392,7 @@
       },
       "ChunkChatEvent": {
         "type": "object",
-        "description": "流式模式下 Server-Sent Event 块的基础 schema。",
+        "description": "流式模式下服务器发送事件块的基础模式。",
         "properties": {
           "event": {
             "type": "string",
@@ -3461,7 +3461,7 @@
       },
       "StreamEventBase": {
         "type": "object",
-        "description": "流式事件的基础属性。",
+        "description": "流事件的基础属性。",
         "properties": {
           "task_id": {
             "type": "string",
@@ -3476,7 +3476,7 @@
           "conversation_id": {
             "type": "string",
             "format": "uuid",
-            "description": "会话 ID。"
+            "description": "对话 ID。"
           },
           "created_at": {
             "type": "integer",
@@ -3514,12 +3514,12 @@
           },
           {
             "type": "object",
-            "description": "TTS 音频流事件（base64 编码的 Mp3）。自动播放启用时可用。",
+            "description": "TTS 音频流事件（Base64 编码的 Mp3）。启用自动播放时可用。",
             "properties": {
               "audio": {
                 "type": "string",
                 "format": "byte",
-                "description": "Base64 编码的 MP3 音频块。按顺序解码并拼接所有块即可生成完整的音频文件。"
+                "description": "Base64 编码的 MP3 音频块。解码并按顺序连接所有块以生成完整的音频文件。"
               }
             }
           }
@@ -3539,7 +3539,7 @@
             "properties": {
               "audio": {
                 "type": "string",
-                "description": "空字符串。标识音频流结束。"
+                "description": "空字符串。表示音频流结束。"
               }
             }
           }
@@ -3571,7 +3571,7 @@
                 "enum": [
                   "assistant"
                 ],
-                "description": "该文件的归属方，此处始终为 `assistant`。"
+                "description": "此文件属于谁，这里始终为 `assistant`。"
               },
               "url": {
                 "type": "string",
@@ -3597,7 +3597,7 @@
               "id": {
                 "type": "string",
                 "format": "uuid",
-                "description": "消息的唯一 ID。"
+                "description": "唯一消息 ID。"
               },
               "metadata": {
                 "type": "object",
@@ -3629,7 +3629,7 @@
           },
           {
             "type": "object",
-            "description": "消息内容替换事件（例如由于内容审核）。",
+            "description": "消息内容替换事件（例如，由于内容审核）。",
             "properties": {
               "answer": {
                 "type": "string",
@@ -3653,7 +3653,7 @@
           },
           {
             "type": "object",
-            "description": "流式输出过程中的错误事件。",
+            "description": "流式传输期间的错误事件。",
             "properties": {
               "status": {
                 "type": "integer",
@@ -3661,11 +3661,11 @@
               },
               "code": {
                 "type": "string",
-                "description": "错误码。"
+                "description": "错误代码。"
               },
               "message": {
                 "type": "string",
-                "description": "错误信息。"
+                "description": "错误消息。"
               }
             }
           }
@@ -3678,69 +3678,69 @@
           },
           {
             "type": "object",
-            "description": "Ping 事件，用于保持连接活跃。以 `event: ping` 行的形式送达，无 `data:` 载荷。"
+            "description": "保持连接活跃的 Ping 事件。以 `event: ping` 行的形式投递，没有 `data:` 载荷。"
           }
         ]
       },
       "Usage": {
         "type": "object",
-        "description": "模型使用信息。",
+        "description": "模型用量信息。",
         "properties": {
           "prompt_tokens": {
             "type": "integer",
-            "description": "提示词中的令牌数。"
+            "description": "提示词中的 token 数量。"
           },
           "prompt_unit_price": {
             "type": "string",
             "format": "decimal",
-            "description": "每个提示词令牌的单价。"
+            "description": "每个提示词 token 的单价。"
           },
           "prompt_price_unit": {
             "type": "string",
             "format": "decimal",
-            "description": "提示词令牌的价格单位。"
+            "description": "提示词 token 的价格单位。"
           },
           "prompt_price": {
             "type": "string",
             "format": "decimal",
-            "description": "提示词令牌的总价。"
+            "description": "提示词 token 的总价。"
           },
           "completion_tokens": {
             "type": "integer",
-            "description": "补全内容中的令牌数。"
+            "description": "补全中的 token 数量。"
           },
           "completion_unit_price": {
             "type": "string",
             "format": "decimal",
-            "description": "每个补全令牌的单价。"
+            "description": "每个补全 token 的单价。"
           },
           "completion_price_unit": {
             "type": "string",
             "format": "decimal",
-            "description": "补全令牌的价格单位。"
+            "description": "补全 token 的价格单位。"
           },
           "completion_price": {
             "type": "string",
             "format": "decimal",
-            "description": "补全令牌的总价。"
+            "description": "补全 token 的总价。"
           },
           "total_tokens": {
             "type": "integer",
-            "description": "使用的令牌总数。"
+            "description": "使用的 token 总数。"
           },
           "total_price": {
             "type": "string",
             "format": "decimal",
-            "description": "所有令牌的总价。"
+            "description": "所有 token 的总价。"
           },
           "currency": {
             "type": "string",
-            "description": "计价货币。"
+            "description": "定价货币。"
           },
           "latency": {
             "type": "number",
             "format": "double",
-            "description": "延迟时间（秒）。"
+            "description": "延迟（秒）。"
           }
         }
       },
@@ -3756,7 +3756,7 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "该资源所属消息的 ID。"
+            "description": "此资源所属的消息 ID。"
           },
           "position": {
             "type": "integer",
@@ -3765,46 +3765,46 @@
           "dataset_id": {
             "type": "string",
             "format": "uuid",
-            "description": "知识库 ID。"
+            "description": "知识库的 ID。"
           },
           "dataset_name": {
             "type": "string",
-            "description": "知识库名称。"
+            "description": "知识库的名称。"
           },
           "document_id": {
             "type": "string",
             "format": "uuid",
-            "description": "文档 ID。"
+            "description": "文档的 ID。"
           },
           "document_name": {
             "type": "string",
-            "description": "文档名称。"
+            "description": "文档的名称。"
           },
           "data_source_type": {
             "type": "string",
-            "description": "数据源类型。"
+            "description": "数据源的类型。"
           },
           "segment_id": {
             "type": "string",
             "format": "uuid",
-            "description": "文档中特定块的 ID。"
+            "description": "文档内特定分段的 ID。"
           },
           "score": {
             "type": "number",
             "format": "float",
-            "description": "资源的相关性评分。"
+            "description": "资源的相似度分数。"
           },
           "hit_count": {
             "type": "integer",
-            "description": "该块被命中的次数。"
+            "description": "此分段被命中的次数。"
           },
           "word_count": {
             "type": "integer",
-            "description": "块的字数。"
+            "description": "分段的字数。"
           },
           "segment_position": {
             "type": "integer",
-            "description": "块在文档中的位置。"
+            "description": "分段在文档中的位置。"
           },
           "index_node_hash": {
             "type": "string",
@@ -3817,7 +3817,7 @@
           "summary": {
             "type": "string",
             "nullable": true,
-            "description": "块内容的摘要。"
+            "description": "分段内容的摘要。"
           },
           "created_at": {
             "type": "integer",
@@ -3871,7 +3871,7 @@
           "source_url": {
             "type": "string",
             "nullable": true,
-            "description": "文件的源 URL。"
+            "description": "文件的来源 URL。"
           },
           "original_url": {
             "type": "string",
@@ -3882,19 +3882,19 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "关联的用户 ID。"
+            "description": "关联用户的 ID。"
           },
           "tenant_id": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "关联的租户 ID。"
+            "description": "关联租户的 ID。"
           },
           "conversation_id": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "关联的会话 ID。"
+            "description": "关联对话的 ID。"
           },
           "file_key": {
             "type": "string",
@@ -3924,12 +3924,12 @@
           },
           "type": {
             "type": "string",
-            "description": "终端用户类型。Service API 用户固定为 `service_api`。"
+            "description": "终端用户类型。对于服务 API 用户，始终为 `service_api`。"
           },
           "external_user_id": {
             "type": "string",
             "nullable": true,
-            "description": "API 请求中提供的 `user` 标识符（例如 [发送对话消息](/api-reference/对话流/发送对话消息) 中的 `user` 字段）。"
+            "description": "API 请求中提供的 `user` 标识符（例如，[发送聊天消息](/api-reference/chatflows/send-chat-message)中的 `user` 字段）。"
           },
           "name": {
             "type": "string",
@@ -3938,11 +3938,11 @@
           },
           "is_anonymous": {
             "type": "boolean",
-            "description": "用户是否为匿名用户。当原始 API 请求中未提供 `user` 标识符时，值为 `true`。"
+            "description": "用户是否匿名。当原始 API 请求中未提供 `user` 标识符时为 `true`。"
           },
           "session_id": {
             "type": "string",
-            "description": "会话标识符。默认为 `external_user_id` 的值。"
+            "description": "会话标识符。默认为 `external_user_id` 值。"
           },
           "created_at": {
             "type": "string",
@@ -3971,7 +3971,7 @@
               null
             ],
             "nullable": true,
-            "description": "反馈评分。设为 `null` 可撤销之前提交的反馈。"
+            "description": "反馈评分。设置为 `null` 可撤销之前提交的反馈。"
           },
           "user": {
             "type": "string",
@@ -3988,7 +3988,7 @@
         "properties": {
           "data": {
             "type": "array",
-            "description": "反馈项列表。",
+            "description": "反馈项目列表。",
             "items": {
               "$ref": "#/components/schemas/FeedbackItem"
             }
@@ -3997,7 +3997,7 @@
       },
       "FeedbackItem": {
         "type": "object",
-        "description": "单条反馈项。",
+        "description": "单个反馈项目。",
         "properties": {
           "id": {
             "type": "string",
@@ -4012,7 +4012,7 @@
           "conversation_id": {
             "type": "string",
             "format": "uuid",
-            "description": "会话 ID。"
+            "description": "对话 ID。"
           },
           "message_id": {
             "type": "string",
@@ -4021,16 +4021,16 @@
           },
           "rating": {
             "type": "string",
-            "description": "反馈评分。`like` 为正面，`dislike` 为负面。"
+            "description": "反馈评分。`like` 表示正面，`dislike` 表示负面。"
           },
           "content": {
             "type": "string",
             "nullable": true,
-            "description": "可选的文字反馈。"
+            "description": "可选文字反馈。"
           },
           "from_source": {
             "type": "string",
-            "description": "反馈来源。`user` 为终端用户通过 API 提交的反馈，`admin` 为从控制台提交的反馈。"
+            "description": "反馈来源。`user` 表示通过 API 提交的终端用户反馈，`admin` 表示从控制台提交的反馈。"
           },
           "from_end_user_id": {
             "type": "string",
@@ -4077,7 +4077,7 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "每页条目数。"
+            "description": "每页项目数。"
           },
           "has_more": {
             "type": "boolean",
@@ -4094,7 +4094,7 @@
       },
       "ConversationMessageItem": {
         "type": "object",
-        "description": "会话中的单条消息。",
+        "description": "对话中的单条消息。",
         "properties": {
           "id": {
             "type": "string",
@@ -4104,18 +4104,18 @@
           "conversation_id": {
             "type": "string",
             "format": "uuid",
-            "description": "会话 ID。"
+            "description": "对话 ID。"
           },
           "parent_message_id": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "线程会话的父消息 ID。"
+            "description": "线程对话的父消息 ID。"
           },
           "inputs": {
             "type": "object",
             "additionalProperties": true,
-            "description": "该消息的输入变量。"
+            "description": "此消息的输入变量。"
           },
           "query": {
             "type": "string",
@@ -4136,7 +4136,7 @@
           },
           "message_files": {
             "type": "array",
-            "description": "附加到该消息的文件。",
+            "description": "附加到此消息的文件。",
             "items": {
               "$ref": "#/components/schemas/MessageFileItem"
             }
@@ -4144,24 +4144,24 @@
           "feedback": {
             "type": "object",
             "nullable": true,
-            "description": "该消息的用户反馈。",
+            "description": "此消息的用户反馈。",
             "properties": {
               "rating": {
                 "type": "string",
-                "description": "反馈评分。`like` 为正面，`dislike` 为负面。"
+                "description": "反馈评分。`like` 表示正面，`dislike` 表示负面。"
               }
             }
           },
           "retriever_resources": {
             "type": "array",
-            "description": "该消息使用的检索资源。",
+            "description": "此消息使用的检索资源。",
             "items": {
               "$ref": "#/components/schemas/RetrieverResource"
             }
           },
           "agent_thoughts": {
             "type": "array",
-            "description": "该消息的 Agent 思考。",
+            "description": "此消息的 Agent 思考过程。",
             "items": {
               "$ref": "#/components/schemas/AgentThoughtItem"
             }
@@ -4173,7 +4173,7 @@
           },
           "extra_contents": {
             "type": "array",
-            "description": "与此消息关联的附加执行内容，例如对话流工作流中人工介入节点的表单数据。",
+            "description": "与此消息关联的附加执行内容，例如 Chatflow 工作流中人工介入节点的人工介入表单数据。",
             "items": {
               "$ref": "#/components/schemas/HumanInputContent"
             }
@@ -4187,7 +4187,7 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "File ID."
+            "description": "文件 ID。"
           },
           "filename": {
             "type": "string",
@@ -4215,18 +4215,18 @@
           },
           "transfer_method": {
             "type": "string",
-            "description": "使用的传输方式。`remote_url` 表示基于 URL 的文件，`local_file` 表示已上传的文件，`tool_file` 表示工具生成的文件。"
+            "description": "使用的传输方式。`remote_url` 用于基于 URL 的文件，`local_file` 用于已上传的文件，`tool_file` 用于工具生成的文件。"
           },
           "belongs_to": {
             "type": "string",
             "nullable": true,
-            "description": "该文件的所属者。用户上传的文件为 `user`，助手生成的文件为 `assistant`。"
+            "description": "此文件属于谁。`user` 用于用户上传的文件，`assistant` 用于助手生成的文件。"
           },
           "upload_file_id": {
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "通过 `local_file` 传输时的上传文件 ID。"
+            "description": "如果通过 `local_file` 传输的上传文件 ID。"
           }
         }
       },
@@ -4242,16 +4242,16 @@
           "chain_id": {
             "type": "string",
             "nullable": true,
-            "description": "该思考的链 ID。"
+            "description": "此思考的链 ID。"
           },
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "该思考所属的唯一消息 ID。"
+            "description": "此思考所属的唯一消息 ID。"
           },
           "position": {
             "type": "integer",
-            "description": "该思考的位置。"
+            "description": "此思考的位置。"
           },
           "thought": {
             "type": "string",
@@ -4265,11 +4265,11 @@
             "type": "object",
             "nullable": true,
             "additionalProperties": true,
-            "description": "已使用工具的标签。"
+            "description": "使用的工具的标签。"
           },
           "tool_input": {
             "type": "string",
-            "description": "工具输入（JSON 格式）。"
+            "description": "JSON 格式的工具输入。"
           },
           "observation": {
             "type": "string",
@@ -4280,7 +4280,7 @@
             "items": {
               "type": "string"
             },
-            "description": "与该思考相关的文件 ID。"
+            "description": "与此思考相关的文件 ID。"
           },
           "created_at": {
             "type": "integer",
@@ -4294,15 +4294,15 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "每页条目数。"
+            "description": "每页项目数。"
           },
           "has_more": {
             "type": "boolean",
-            "description": "是否有更多会话。"
+            "description": "是否有更多对话。"
           },
           "data": {
             "type": "array",
-            "description": "会话列表。",
+            "description": "对话列表。",
             "items": {
               "$ref": "#/components/schemas/ConversationListItem"
             }
@@ -4315,24 +4315,24 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "会话 ID。"
+            "description": "对话 ID。"
           },
           "name": {
             "type": "string",
-            "description": "会话名称。"
+            "description": "对话名称。"
           },
           "inputs": {
             "type": "object",
             "additionalProperties": true,
-            "description": "会话的输入变量。"
+            "description": "对话的输入变量。"
           },
           "status": {
             "type": "string",
-            "description": "会话状态。活跃会话为 `normal`。"
+            "description": "对话状态。活跃对话为 `normal`。"
           },
           "introduction": {
             "type": "string",
-            "description": "会话介绍。"
+            "description": "对话介绍。"
           },
           "created_at": {
             "type": "integer",
@@ -4348,19 +4348,19 @@
       },
       "ConversationRenameRequest": {
         "type": "object",
-        "description": "重命名会话的请求体。",
+        "description": "重命名对话的请求体。",
         "required": [
           "user"
         ],
         "properties": {
           "name": {
             "type": "string",
-            "description": "会话名称。当 `auto_generate` 为 `false` 时必填。"
+            "description": "对话的名称。当 `auto_generate` 为 `false` 时必需。"
           },
           "auto_generate": {
             "type": "boolean",
             "default": false,
-            "description": "自动生成会话名称。当为 `true` 时，`name` 字段将被忽略。"
+            "description": "自动生成对话名称。当为 `true` 时，`name` 字段将被忽略。"
           },
           "user": {
             "type": "string",
@@ -4373,7 +4373,7 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "每页条目数。"
+            "description": "每页项目数。"
           },
           "has_more": {
             "type": "boolean",
@@ -4394,7 +4394,7 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "Variable ID."
+            "description": "变量 ID。"
           },
           "name": {
             "type": "string",
@@ -4402,11 +4402,11 @@
           },
           "value_type": {
             "type": "string",
-            "description": "变量值类型。可选值：`string`、`number`、`object`、`secret`、`file`、`boolean`、`array[any]`、`array[string]`、`array[number]`、`array[object]`、`array[file]`、`array[boolean]`。"
+            "description": "变量值类型。可能的值：`string`、`number`、`object`、`secret`、`file`、`boolean`、`array[any]`、`array[string]`、`array[number]`、`array[object]`、`array[file]`、`array[boolean]`。"
           },
           "value": {
             "type": "string",
-            "description": "变量值（复杂类型可以是 JSON 字符串）。"
+            "description": "变量值（对于复杂类型可以是 JSON 字符串）。"
           },
           "description": {
             "type": "string",
@@ -4442,7 +4442,7 @@
       },
       "AudioToTextRequest": {
         "type": "object",
-        "description": "语音转文字的请求体。",
+        "description": "音频转文字的请求体。",
         "required": [
           "file"
         ],
@@ -4450,7 +4450,7 @@
           "file": {
             "type": "string",
             "format": "binary",
-            "description": "音频文件。支持格式：`mp3`、`mp4`、`mpeg`、`mpga`、`m4a`、`wav`、`webm`。大小限制：`30 MB`。"
+            "description": "音频文件。支持：`mp3`、`mp4`、`mpeg`、`mpga`、`m4a`、`wav`、`webm`。限制：`30 MB`。"
           },
           "user": {
             "type": "string",
@@ -4463,18 +4463,18 @@
         "properties": {
           "text": {
             "type": "string",
-            "description": "语音识别输出的文字。"
+            "description": "语音识别的输出文本。"
           }
         }
       },
       "TextToAudioRequest": {
         "type": "object",
-        "description": "文字转语音的请求体。提供 `message_id` 或 `text` 其中之一。",
+        "description": "文字转音频的请求体。提供 `message_id` 或 `text` 其中之一。",
         "properties": {
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "消息 ID。当同时提供 `text` 时，优先使用消息 ID。"
+            "description": "消息 ID。当两者都提供时优先于 `text`。"
           },
           "text": {
             "type": "string",
@@ -4486,7 +4486,7 @@
           },
           "voice": {
             "type": "string",
-            "description": "文字转语音使用的声音。可用声音取决于为此应用配置的 TTS 提供商。使用[获取应用参数](/api-reference/应用配置/获取应用参数) → `text_to_speech.voice` 中的 `voice` 值作为默认值。"
+            "description": "用于文字转语音的声音。可用的声音取决于为此应用配置的 TTS 供应商。使用[获取应用参数](/api-reference/applications/get-app-parameters) → `text_to_speech.voice` 中的 `voice` 值作为默认值。"
           },
           "streaming": {
             "type": "boolean",
@@ -4514,7 +4514,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "应用模式。`completion` 为文本生成应用，`chat` 为基础对话应用，`agent-chat` 为 Agent 应用，`advanced-chat` 为对话流应用，`workflow` 为工作流应用。"
+            "description": "应用模式。`completion` 用于文本生成应用，`chat` 用于基础聊天应用，`agent-chat` 用于基于 Agent 的应用，`advanced-chat` 用于 Chatflow 应用，`workflow` 用于工作流应用。"
           },
           "author_name": {
             "type": "string",
@@ -4527,14 +4527,14 @@
         "properties": {
           "opening_statement": {
             "type": "string",
-            "description": "会话开始时显示的开场白。"
+            "description": "对话开始时显示的开场白。"
           },
           "suggested_questions": {
             "type": "array",
             "items": {
               "type": "string"
             },
-            "description": "建议的初始问题列表。"
+            "description": "建议的开场问题列表。"
           },
           "suggested_questions_after_answer": {
             "type": "object",
@@ -4542,7 +4542,7 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
@@ -4552,7 +4552,7 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
@@ -4562,7 +4562,7 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               },
               "voice": {
                 "type": "string",
@@ -4574,7 +4574,7 @@
               },
               "autoPlay": {
                 "type": "string",
-                "description": "自动播放设置。`enabled` 为自动播放音频，`disabled` 为需要手动播放。"
+                "description": "自动播放设置。`enabled` 自动播放音频，`disabled` 需要手动播放。"
               }
             }
           },
@@ -4584,7 +4584,7 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
@@ -4594,7 +4594,7 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
@@ -4604,17 +4604,17 @@
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
           "sensitive_word_avoidance": {
             "type": "object",
-            "description": "敏感词过滤配置。",
+            "description": "敏感词规避配置。",
             "properties": {
               "enabled": {
                 "type": "boolean",
-                "description": "是否启用此功能。"
+                "description": "此功能是否启用。"
               }
             }
           },
@@ -4643,7 +4643,7 @@
                   },
                   "detail": {
                     "type": "string",
-                    "description": "图片精细程度。"
+                    "description": "图片详细级别。"
                   },
                   "transfer_methods": {
                     "type": "array",
@@ -4678,7 +4678,7 @@
               },
               "workflow_file_upload_limit": {
                 "type": "integer",
-                "description": "工作流文件上传的最大文件数。"
+                "description": "工作流文件上传的最大文件数量。"
               }
             }
           }
@@ -4699,7 +4699,7 @@
         ]
       },
       "TextInputControlWrapper": {
-        "title": "Text Input",
+        "title": "文本输入",
         "type": "object",
         "properties": {
           "text-input": {
@@ -4708,7 +4708,7 @@
         }
       },
       "ParagraphControlWrapper": {
-        "title": "Paragraph",
+        "title": "段落",
         "type": "object",
         "properties": {
           "paragraph": {
@@ -4717,7 +4717,7 @@
         }
       },
       "SelectControlWrapper": {
-        "title": "Select",
+        "title": "下拉选项",
         "type": "object",
         "properties": {
           "select": {
@@ -4739,7 +4739,7 @@
           },
           "required": {
             "type": "boolean",
-            "description": "输入是否必填。"
+            "description": "输入是否必需。"
           },
           "default": {
             "type": "string",
@@ -4761,7 +4761,7 @@
           },
           "required": {
             "type": "boolean",
-            "description": "输入是否必填。"
+            "description": "输入是否必需。"
           },
           "default": {
             "type": "string",
@@ -4771,7 +4771,7 @@
       },
       "SelectControl": {
         "type": "object",
-        "description": "下拉选择表单控件。",
+        "description": "下拉选项表单控件。",
         "properties": {
           "label": {
             "type": "string",
@@ -4783,11 +4783,11 @@
           },
           "required": {
             "type": "boolean",
-            "description": "是否必须选择。"
+            "description": "选择是否必需。"
           },
           "default": {
             "type": "string",
-            "description": "默认选中的值。"
+            "description": "默认选中值。"
           },
           "options": {
             "type": "array",
@@ -4806,7 +4806,7 @@
             "additionalProperties": {
               "oneOf": [
                 {
-                  "title": "Icon URL",
+                  "title": "图标 URL",
                   "type": "string",
                   "format": "url",
                   "description": "图标的 URL。"
@@ -4821,9 +4821,9 @@
         }
       },
       "ToolIconDetail": {
-        "title": "Emoji Icon",
+        "title": "表情图标",
         "type": "object",
-        "description": "使用 emoji 的工具图标详情。",
+        "description": "使用表情符号的工具图标详情。",
         "properties": {
           "background": {
             "type": "string",
@@ -4831,7 +4831,7 @@
           },
           "content": {
             "type": "string",
-            "description": "Emoji 内容。"
+            "description": "表情符号内容。"
           }
         }
       },
@@ -4844,19 +4844,19 @@
           },
           "chat_color_theme": {
             "type": "string",
-            "description": "聊天主题颜色。"
+            "description": "聊天颜色主题。"
           },
           "chat_color_theme_inverted": {
             "type": "boolean",
-            "description": "聊天主题颜色是否反转。"
+            "description": "聊天颜色主题是否反转。"
           },
           "icon_type": {
             "type": "string",
-            "description": "使用的图标类型。`emoji` 为表情图标，`image` 为上传的图片图标。"
+            "description": "使用的图标类型。`emoji` 表示表情符号图标，`image` 表示上传的图片图标。"
           },
           "icon": {
             "type": "string",
-            "description": "图标内容（表情或图片 ID）。"
+            "description": "图标内容（表情符号或图片 ID）。"
           },
           "icon_background": {
             "type": "string",
@@ -4906,19 +4906,19 @@
             "items": {
               "$ref": "#/components/schemas/AnnotationItem"
             },
-            "description": "当前页面的标注项列表。"
+            "description": "当前页的标注项目列表。"
           },
           "has_more": {
             "type": "boolean",
-            "description": "如果当前结果集之后还有更多页面，则为 `true`。"
+            "description": "如果超出当前结果集还有更多页面则为 `true`。"
           },
           "limit": {
             "type": "integer",
-            "description": "每页条目数。"
+            "description": "每页项目数。"
           },
           "total": {
             "type": "integer",
-            "description": "匹配查询条件的标注总数。"
+            "description": "匹配查询的标注总数。"
           },
           "page": {
             "type": "integer",
@@ -4932,22 +4932,22 @@
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "标注唯一标识符。"
+            "description": "唯一标注标识符。"
           },
           "question": {
             "type": "string",
             "nullable": true,
-            "description": "触发该标注的问题文本。"
+            "description": "触发此标注的问题文本。"
           },
           "answer": {
             "type": "string",
             "nullable": true,
-            "description": "标注被匹配时返回的预定义回答。"
+            "description": "标注匹配时返回的预定义答案。"
           },
           "hit_count": {
             "type": "integer",
             "nullable": true,
-            "description": "该标注被匹配并作为回复返回的次数。"
+            "description": "此标注被匹配并作为回复返回的次数。"
           },
           "created_at": {
             "type": "integer",
@@ -5004,16 +5004,16 @@
         "properties": {
           "embedding_provider_name": {
             "type": "string",
-            "description": "嵌入模型提供商名称（例如 `openai`、`cohere`）。"
+            "description": "嵌入模型供应商的名称（例如，`openai`、`cohere`）。"
           },
           "embedding_model_name": {
             "type": "string",
-            "description": "用于标注匹配的嵌入模型名称（例如 `text-embedding-3-small`）。"
+            "description": "用于标注匹配的嵌入模型名称（例如，`text-embedding-3-small`）。"
           },
           "score_threshold": {
             "type": "number",
             "format": "float",
-            "description": "标注被视为匹配的最低相似度分数。值越高，要求匹配越精确。",
+            "description": "标注被视为匹配的最小相似度分数。较高的值需要更接近的匹配。",
             "minimum": 0,
             "maximum": 1
           }
@@ -5025,11 +5025,11 @@
           "job_id": {
             "type": "string",
             "format": "uuid",
-            "description": "异步任务 ID。配合 [查询标注回复配置任务状态](/api-reference/标注管理/查询标注回复配置任务状态) 使用以跟踪进度。"
+            "description": "异步任务 ID。与[获取标注回复任务状态](/api-reference/annotations/get-annotation-reply-job-status)一起使用以跟踪进度。"
           },
           "job_status": {
             "type": "string",
-            "description": "当前任务状态。`waiting` 表示排队中，`processing` 表示处理中，`completed` 表示已完成，`error` 表示失败。"
+            "description": "当前任务状态。`waiting` 表示排队中，`processing` 表示进行中，`completed` 表示完成，`error` 表示失败。"
           }
         }
       },
@@ -5039,11 +5039,11 @@
           "job_id": {
             "type": "string",
             "format": "uuid",
-            "description": "来自 [配置标注回复](/api-reference/标注管理/配置标注回复) 调用的任务 ID。"
+            "description": "来自[配置标注回复](/api-reference/annotations/configure-annotation-reply)调用的任务 ID。"
           },
           "job_status": {
             "type": "string",
-            "description": "当前任务状态。`waiting` 表示排队中，`processing` 表示处理中，`completed` 表示已完成，`error` 表示失败。"
+            "description": "当前任务状态。`waiting` 表示排队中，`processing` 表示进行中，`completed` 表示完成，`error` 表示失败。"
           },
           "error_msg": {
             "type": "string",
@@ -5081,7 +5081,7 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "本次工作流执行的输入变量。"
+                    "description": "此工作流执行的输入变量。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5090,7 +5090,7 @@
                   },
                   "reason": {
                     "type": "string",
-                    "description": "工作流启动原因。`initial` 表示首次启动，`resumption` 表示暂停后恢复（例如人工介入后）。"
+                    "description": "工作流启动的原因。`initial` 表示首次启动，`resumption` 表示暂停后恢复（例如，人工介入后）。"
                   }
                 }
               }
@@ -5142,15 +5142,15 @@
                   },
                   "elapsed_time": {
                     "type": "number",
-                    "description": "总执行耗时（秒）。"
+                    "description": "总执行时间（秒）。"
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "消耗的总令牌数。"
+                    "description": "消耗的 token 总数。"
                   },
                   "total_steps": {
                     "type": "integer",
-                    "description": "已执行的总步数。"
+                    "description": "执行的总步骤数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5161,7 +5161,7 @@
                     "type": "integer",
                     "format": "int64",
                     "nullable": true,
-                    "description": "结束时间戳（Unix 纪元秒）。"
+                    "description": "完成时间戳（Unix 纪元秒）。"
                   },
                   "exceptions_count": {
                     "type": "integer",
@@ -5212,11 +5212,11 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "节点类型（例如 `llm`、`knowledge-retrieval`、`code`）。"
+                    "description": "节点类型（例如，`llm`、`knowledge-retrieval`、`code`）。"
                   },
                   "title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "节点标题。"
                   },
                   "index": {
                     "type": "integer",
@@ -5225,13 +5225,13 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前驱节点的 ID。"
+                    "description": "前置节点的 ID。"
                   },
                   "inputs": {
                     "type": "object",
                     "nullable": true,
                     "additionalProperties": true,
-                    "description": "节点输入数据。在简化 API 响应中可能为 `null`。"
+                    "description": "节点输入数据。在简化的 API 响应中可能为 `null`。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5246,12 +5246,12 @@
                   "iteration_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "如果该节点在迭代内运行，则为迭代 ID。"
+                    "description": "如果此节点在迭代内运行的迭代 ID。"
                   },
                   "loop_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "当该节点在循环内运行时的循环 ID。"
+                    "description": "如果此节点在循环内运行的循环 ID。"
                   }
                 }
               }
@@ -5288,11 +5288,11 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "节点标题。"
                   },
                   "index": {
                     "type": "integer",
@@ -5301,25 +5301,25 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前驱节点的 ID。"
+                    "description": "前置节点的 ID。"
                   },
                   "inputs": {
                     "type": "object",
                     "nullable": true,
                     "additionalProperties": true,
-                    "description": "节点输入数据。在简化 API 响应中可能为 `null`。"
+                    "description": "节点输入数据。在简化的 API 响应中可能为 `null`。"
                   },
                   "process_data": {
                     "type": "object",
                     "nullable": true,
                     "additionalProperties": true,
-                    "description": "节点处理数据。在简化 API 响应中可能为 `null`。"
+                    "description": "节点处理数据。在简化的 API 响应中可能为 `null`。"
                   },
                   "outputs": {
                     "type": "object",
                     "nullable": true,
                     "additionalProperties": true,
-                    "description": "节点输出数据。在简化 API 响应中可能为 `null`。"
+                    "description": "节点输出数据。在简化的 API 响应中可能为 `null`。"
                   },
                   "status": {
                     "type": "string",
@@ -5332,13 +5332,13 @@
                   },
                   "elapsed_time": {
                     "type": "number",
-                    "description": "节点执行耗时（秒）。"
+                    "description": "节点执行时间（秒）。"
                   },
                   "execution_metadata": {
                     "type": "object",
                     "nullable": true,
                     "additionalProperties": true,
-                    "description": "执行元数据（例如令牌用量、模型信息）。在简化 API 响应中可能为 `null`。"
+                    "description": "执行元数据（例如，token 用量、模型信息）。在简化的 API 响应中可能为 `null`。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5348,7 +5348,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "结束时间戳（Unix 纪元秒）。"
+                    "description": "完成时间戳（Unix 纪元秒）。"
                   },
                   "files": {
                     "type": "array",
@@ -5357,17 +5357,17 @@
                       "type": "object",
                       "additionalProperties": true
                     },
-                    "description": "该节点生成的文件。"
+                    "description": "此节点生成的文件。"
                   },
                   "iteration_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "如果该节点在迭代内运行，则为迭代 ID。"
+                    "description": "如果此节点在迭代内运行的迭代 ID。"
                   },
                   "loop_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "当该节点在循环内运行时的循环 ID。"
+                    "description": "如果此节点在循环内运行的循环 ID。"
                   }
                 }
               }
@@ -5385,7 +5385,7 @@
           },
           {
             "type": "object",
-            "description": "节点重试次数。",
+            "description": "节点重试尝试。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
@@ -5404,11 +5404,11 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
-                    "description": "Node title."
+                    "description": "节点标题。"
                   },
                   "index": {
                     "type": "integer",
@@ -5417,7 +5417,7 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前驱节点的 ID。"
+                    "description": "前置节点的 ID。"
                   },
                   "inputs": {
                     "type": "object",
@@ -5444,11 +5444,11 @@
                   "error": {
                     "type": "string",
                     "nullable": true,
-                    "description": "本次重试的错误消息。"
+                    "description": "此重试尝试的错误消息。"
                   },
                   "elapsed_time": {
                     "type": "number",
-                    "description": "本次尝试的执行时间（秒）。"
+                    "description": "此次尝试的执行时间（秒）。"
                   },
                   "execution_metadata": {
                     "type": "object",
@@ -5464,7 +5464,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "结束时间戳（Unix 纪元秒）。"
+                    "description": "完成时间戳（Unix 纪元秒）。"
                   },
                   "files": {
                     "type": "array",
@@ -5473,21 +5473,21 @@
                       "type": "object",
                       "additionalProperties": true
                     },
-                    "description": "本次重试期间生成的文件。"
+                    "description": "此次重试期间生成的文件。"
                   },
                   "iteration_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "迭代 ID（如适用）。"
+                    "description": "如果适用的迭代 ID。"
                   },
                   "loop_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "循环 ID（如适用）。"
+                    "description": "如果适用的循环 ID。"
                   },
                   "retry_index": {
                     "type": "integer",
-                    "description": "重试次数索引，从 `0` 开始。"
+                    "description": "重试尝试索引，从 `0` 开始。"
                   }
                 }
               }
@@ -5524,7 +5524,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5566,7 +5566,7 @@
           },
           {
             "type": "object",
-            "description": "迭代已进入下一项。",
+            "description": "迭代进入下一项。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
@@ -5585,7 +5585,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5640,7 +5640,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5663,11 +5663,11 @@
                   },
                   "elapsed_time": {
                     "type": "number",
-                    "description": "迭代总耗时（秒）。"
+                    "description": "总迭代时间（秒）。"
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "所有迭代中消耗的令牌总数。"
+                    "description": "所有迭代消耗的 token 总数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5677,11 +5677,11 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "结束时间戳（Unix 纪元秒）。"
+                    "description": "完成时间戳（Unix 纪元秒）。"
                   },
                   "steps": {
                     "type": "integer",
-                    "description": "已执行的迭代步骤总数。"
+                    "description": "执行的迭代步骤总数。"
                   }
                 }
               }
@@ -5718,7 +5718,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5760,7 +5760,7 @@
           },
           {
             "type": "object",
-            "description": "循环已进入下一次迭代。",
+            "description": "循环进入下一次迭代。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
@@ -5779,7 +5779,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5837,7 +5837,7 @@
                   },
                   "node_type": {
                     "type": "string",
-                    "description": "Node type."
+                    "description": "节点类型。"
                   },
                   "title": {
                     "type": "string",
@@ -5860,11 +5860,11 @@
                   },
                   "elapsed_time": {
                     "type": "number",
-                    "description": "循环总执行耗时（秒）。"
+                    "description": "总循环执行时间（秒）。"
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "所有循环迭代中消耗的令牌总数。"
+                    "description": "所有循环迭代消耗的 token 总数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5874,11 +5874,11 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "结束时间戳（Unix 纪元秒）。"
+                    "description": "完成时间戳（Unix 纪元秒）。"
                   },
                   "steps": {
                     "type": "integer",
-                    "description": "已执行的循环总步数。"
+                    "description": "执行的循环步骤总数。"
                   }
                 }
               }
@@ -5906,19 +5906,19 @@
                 "properties": {
                   "form_id": {
                     "type": "string",
-                    "description": "表单实例的标识符，会在错误消息和日志中出现。Service API 调用请使用 `form_token`。"
+                    "description": "表单实例的标识符，在错误消息和日志中显示。对于服务 API 调用，使用 `form_token`。"
                   },
                   "node_id": {
                     "type": "string",
-                    "description": "产生该表单的 Human Input 节点 ID。"
+                    "description": "生成此表单的人工介入节点的 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Human Input 节点的显示标题。"
+                    "description": "人工介入节点的显示标题。"
                   },
                   "form_content": {
                     "type": "string",
-                    "description": "已替换工作流变量的预渲染表单正文。"
+                    "description": "预渲染的表单正文，已替换工作流变量。"
                   },
                   "inputs": {
                     "type": "array",
@@ -5927,27 +5927,27 @@
                       "properties": {
                         "type": {
                           "type": "string",
-                          "description": "表单输入控件类型。可用值：`text_input`（单行文本输入框）和 `paragraph`（多行文本区域）。"
+                          "description": "表单输入控件类型。可用值：`text_input`（单行文本字段）和 `paragraph`（多行文本区域）。"
                         },
                         "output_variable_name": {
                           "type": "string",
-                          "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。"
+                          "description": "用于在工作流内引用此输入提交值的变量名称。对应提交 `inputs` 对象中的键。"
                         },
                         "default": {
                           "type": "object",
                           "nullable": true,
-                          "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                          "description": "从工作流上下文解析的默认值。未配置默认值时为 `null`。",
                           "properties": {
                             "type": {
                               "type": "string",
-                              "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。"
+                              "description": "默认值的来源。`constant` 表示 `value` 用作字面字符串；`variable` 表示 `selector` 指向工作流变量。"
                             },
                             "selector": {
                               "type": "array",
                               "items": {
                                 "type": "string"
                               },
-                              "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。"
+                              "description": "当 `type` 为 `variable` 时的变量引用路径（例如，`[\"node_id\", \"var_name\"]`）。必须包含至少两个元素。"
                             },
                             "value": {
                               "type": "string",
@@ -5957,7 +5957,7 @@
                         }
                       }
                     },
-                    "description": "接收者需要填写的表单输入字段。"
+                    "description": "收件人填写的表单输入字段。"
                   },
                   "actions": {
                     "type": "array",
@@ -5968,41 +5968,41 @@
                           "type": "string",
                           "maxLength": 20,
                           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-                          "description": "操作按钮的标识。当接收者选择该按钮时，作为 `action` 传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单)。"
+                          "description": "操作按钮的标识符。当收件人选择此按钮时，在[提交人工介入表单](/api-reference/human-input/submit-human-input-form)时作为 `action` 传递。"
                         },
                         "title": {
                           "type": "string",
                           "maxLength": 100,
-                          "description": "显示给接收者的按钮文本。"
+                          "description": "显示给收件人的按钮标签。"
                         },
                         "button_style": {
                           "type": "string",
-                          "description": "按钮视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
+                          "description": "按钮的视觉样式。可用值：`primary`、`default`、`accent`、`ghost`。"
                         }
                       }
                     },
-                    "description": "接收者提交时可选择的用户操作（按钮）。"
+                    "description": "收件人提交时可以选择的可用用户操作（按钮）。"
                   },
                   "display_in_ui": {
                     "type": "boolean",
-                    "description": "表单是否也在 Dify 控制台中显示。"
+                    "description": "表单是否也在 Dify 控制台 UI 中显示。"
                   },
                   "form_token": {
                     "type": "string",
                     "nullable": true,
-                    "description": "[获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 和 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 的访问令牌。当人工介入节点使用邮件或控制台送达时为 `null`（Service API 仅能处理 WebApp 送达的表单）。"
+                    "description": "用于[获取人工介入表单](/api-reference/human-input/get-human-input-form)和[提交人工介入表单](/api-reference/human-input/submit-human-input-form)的访问令牌。当人工介入节点使用邮件或控制台投递方式时为 `null`（服务 API 只能操作 WebApp 投递的表单）。"
                   },
                   "resolved_default_values": {
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "按输入的 `output_variable_name` 分组的预填充默认值。所有值均为字符串。"
+                    "description": "表单输入的预填充默认值，以输入的 `output_variable_name` 为键。所有值均已字符串化。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Unix 时间戳（秒），超过后表单无法再被提交。"
+                    "description": "Unix 时间戳（秒），之后表单将无法再提交。"
                   }
                 }
               }
@@ -6026,14 +6026,14 @@
                 "properties": {
                   "workflow_run_id": {
                     "type": "string",
-                    "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/api-reference/对话流/获取工作流执行情况) 使用以在执行后获取结果。"
+                    "description": "此工作流运行记录的持久标识符。与[获取工作流运行详情](/api-reference/chatflows/get-workflow-run-detail)一起使用以在执行后获取结果。"
                   },
                   "paused_nodes": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     },
-                    "description": "已暂停的节点 ID 列表。"
+                    "description": "暂停的节点 ID 列表。"
                   },
                   "outputs": {
                     "type": "object",
@@ -6064,11 +6064,11 @@
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "消耗的总令牌数。"
+                    "description": "消耗的 token 总数。"
                   },
                   "total_steps": {
                     "type": "integer",
-                    "description": "已执行的总步数。"
+                    "description": "执行的总步骤数。"
                   }
                 }
               }
@@ -6096,19 +6096,19 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "表单被填写的 Human Input 节点 ID。"
+                    "description": "已填写表单的人工介入节点的 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Human Input 节点的显示标题。"
+                    "description": "人工介入节点的显示标题。"
                   },
                   "rendered_content": {
                     "type": "string",
-                    "description": "包含接收者提交值的渲染后表单内容（`human_input_required` 上的 `form_content` 是未填写的模板）。"
+                    "description": "使用收件人提交值渲染的表单正文（`human_input_required` 上的 `form_content` 是未填写的模板）。"
                   },
                   "action_id": {
                     "type": "string",
-                    "description": "接收者所选操作的标识（与传入 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 的 `action` 一致）。"
+                    "description": "收件人选择的操作的标识符（与传递给[提交人工介入表单](/api-reference/human-input/submit-human-input-form)的 `action` 值匹配）。"
                   },
                   "action_text": {
                     "type": "string",
@@ -6140,16 +6140,16 @@
                 "properties": {
                   "node_id": {
                     "type": "string",
-                    "description": "表单过期的 Human Input 节点 ID。"
+                    "description": "表单已过期的人工介入节点的 ID。"
                   },
                   "node_title": {
                     "type": "string",
-                    "description": "Human Input 节点的显示标题。"
+                    "description": "人工介入节点的显示标题。"
                   },
                   "expiration_time": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "Unix 时间戳（秒），表示表单过期时刻。"
+                    "description": "表单过期时的 Unix 时间戳（秒）。"
                   }
                 }
               }
@@ -6192,7 +6192,7 @@
                   "error": {
                     "type": "string",
                     "nullable": true,
-                    "description": "错误消息（如适用）。"
+                    "description": "如果适用的错误消息。"
                   },
                   "status": {
                     "type": "string",
@@ -6242,7 +6242,7 @@
                       "type": "string"
                     },
                     "nullable": true,
-                    "description": "工作流中文本变量的源路径。"
+                    "description": "工作流中文本变量的来源路径。"
                   }
                 }
               }
@@ -6266,7 +6266,7 @@
                 "properties": {
                   "text": {
                     "type": "string",
-                    "description": "替换的文本内容。"
+                    "description": "替换文本内容。"
                   }
                 }
               }
@@ -6285,11 +6285,11 @@
           "workflow_id": {
             "type": "string",
             "format": "uuid",
-            "description": "工作流 ID."
+            "description": "工作流 ID。"
           },
           "status": {
             "type": "string",
-            "description": "工作流执行状态。`running` 表示执行中，`succeeded` 表示成功完成，`failed` 表示执行出错，`stopped` 表示手动停止，`partial-succeeded` 表示部分节点成功但其他失败，`paused` 表示等待人工介入。"
+            "description": "工作流执行状态。`running` 表示进行中的执行，`succeeded` 表示成功完成，`failed` 表示执行遇到错误，`stopped` 表示手动停止，`partial-succeeded` 表示部分节点成功但其他失败，`paused` 表示等待人工介入。"
           },
           "inputs": {
             "type": "object",
@@ -6309,11 +6309,11 @@
           },
           "total_steps": {
             "type": "integer",
-            "description": "已执行的工作流总步数。"
+            "description": "执行的工作流步骤总数。"
           },
           "total_tokens": {
             "type": "integer",
-            "description": "消耗的总令牌数。"
+            "description": "消耗的 token 总数。"
           },
           "created_at": {
             "type": "integer",
@@ -6324,7 +6324,7 @@
             "type": "integer",
             "format": "int64",
             "nullable": true,
-            "description": "工作流运行结束时的 Unix 时间戳。"
+            "description": "工作流运行完成时的 Unix 时间戳。"
           },
           "elapsed_time": {
             "type": "number",
@@ -6343,7 +6343,7 @@
           },
           "limit": {
             "type": "integer",
-            "description": "每页条目数。"
+            "description": "每页项目数。"
           },
           "total": {
             "type": "integer",
@@ -6351,7 +6351,7 @@
           },
           "has_more": {
             "type": "boolean",
-            "description": "是否有更多可用页面。"
+            "description": "是否有更多页面可用。"
           },
           "data": {
             "type": "array",
@@ -6375,16 +6375,16 @@
           },
           "created_from": {
             "type": "string",
-            "description": "工作流运行的来源（例如 `service-api`）。"
+            "description": "工作流运行的来源（例如，`service-api`）。"
           },
           "created_by_role": {
             "type": "string",
-            "description": "创建者的角色（例如 `end_user`、`account`）。"
+            "description": "创建者的角色（例如，`end_user`、`account`）。"
           },
           "created_by_account": {
             "type": "object",
             "nullable": true,
-            "description": "由管理员用户创建时的账户详情。",
+            "description": "如果由管理员用户创建的账户详情。",
             "properties": {
               "id": {
                 "type": "string",
@@ -6431,7 +6431,7 @@
           },
           "status": {
             "type": "string",
-            "description": "工作流执行状态。`running` 表示执行中，`succeeded` 表示成功完成，`failed` 表示执行出错，`stopped` 表示手动停止，`partial-succeeded` 表示部分节点成功但其他失败，`paused` 表示等待人工介入。"
+            "description": "工作流执行状态。`running` 表示进行中的执行，`succeeded` 表示成功完成，`failed` 表示执行遇到错误，`stopped` 表示手动停止，`partial-succeeded` 表示部分节点成功但其他失败，`paused` 表示等待人工介入。"
           },
           "error": {
             "type": "string",
@@ -6445,11 +6445,11 @@
           },
           "total_tokens": {
             "type": "integer",
-            "description": "消耗的总令牌数。"
+            "description": "消耗的 token 总数。"
           },
           "total_steps": {
             "type": "integer",
-            "description": "已执行的工作流总步数。"
+            "description": "执行的工作流步骤总数。"
           },
           "created_at": {
             "type": "integer",
@@ -6460,7 +6460,7 @@
             "type": "integer",
             "format": "int64",
             "nullable": true,
-            "description": "工作流运行结束时的 Unix 时间戳。"
+            "description": "工作流运行完成时的 Unix 时间戳。"
           },
           "exceptions_count": {
             "type": "integer",
@@ -6468,7 +6468,7 @@
           },
           "triggered_from": {
             "type": "string",
-            "description": "触发工作流运行的来源。`debugging` 表示从编辑器发起的测试运行，`app` 表示 API 或应用发起的运行。"
+            "description": "触发工作流运行的来源。`debugging` 表示从编辑器的测试运行，`app` 表示 API 或应用发起的运行。"
           }
         }
       },
@@ -6486,7 +6486,7 @@
           },
           "is_anonymous": {
             "type": "boolean",
-            "description": "终端用户是否为匿名。"
+            "description": "终端用户是否匿名。"
           },
           "session_id": {
             "type": "string",
@@ -6496,11 +6496,11 @@
       },
       "HumanInputContent": {
         "type": "object",
-        "description": "人工介入节点的执行内容，包括表单定义和提交数据。",
+        "description": "来自人工介入节点的执行内容，包括表单定义和提交数据。",
         "properties": {
           "workflow_run_id": {
             "type": "string",
-            "description": "该内容所属的工作流运行 ID。"
+            "description": "此内容所属的工作流运行 ID。"
           },
           "submitted": {
             "type": "boolean",
@@ -6508,31 +6508,31 @@
           },
           "type": {
             "type": "string",
-            "description": "`human_input` 表示人工介入内容。"
+            "description": "人工介入内容为 `human_input`。"
           },
           "form_definition": {
             "nullable": true,
-            "description": "人工介入节点的表单定义。当内容表示提交响应时为 `null`。",
+            "description": "来自人工介入节点的表单定义。当内容表示提交响应时为 `null`。",
             "$ref": "#/components/schemas/HumanInputFormDefinition"
           },
           "form_submission_data": {
             "nullable": true,
-            "description": "已提交的表单数据。表单尚未提交时为 `null`。",
+            "description": "提交的表单数据。当表单尚未提交时为 `null`。",
             "$ref": "#/components/schemas/HumanInputFormSubmissionData"
           }
         }
       },
       "HumanInputFormDefinition": {
         "type": "object",
-        "description": "由人工介入节点渲染的人工介入表单定义。",
+        "description": "由人工介入节点渲染的人工介入表单的定义。",
         "properties": {
           "form_id": {
             "type": "string",
-            "description": "表单唯一标识符。"
+            "description": "唯一表单标识符。"
           },
           "node_id": {
             "type": "string",
-            "description": "生成该表单的人工介入节点 ID。"
+            "description": "生成此表单的人工介入节点的 ID。"
           },
           "node_title": {
             "type": "string",
@@ -6563,22 +6563,22 @@
           "form_token": {
             "type": "string",
             "nullable": true,
-            "description": "表单提交认证的令牌。"
+            "description": "用于表单提交认证的令牌。"
           },
           "resolved_default_values": {
             "type": "object",
             "additionalProperties": true,
-            "description": "表单输入的已解析默认值，按输出变量名称索引。"
+            "description": "表单输入的已解析默认值，以输出变量名称为键。"
           },
           "expiration_time": {
             "type": "integer",
-            "description": "表单过期的 Unix 时间戳。"
+            "description": "表单过期时的 Unix 时间戳。"
           }
         }
       },
       "HumanInputFormSubmissionData": {
         "type": "object",
-        "description": "来自已提交的人工介入表单的数据。",
+        "description": "已提交的人工介入表单的数据。",
         "properties": {
           "node_id": {
             "type": "string",
@@ -6608,7 +6608,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "`text_input` 为单行文本，`paragraph` 为多行文本。"
+            "description": "`text_input` 表示单行文本，`paragraph` 表示多行文本。"
           },
           "output_variable_name": {
             "type": "string",
@@ -6616,7 +6616,7 @@
           },
           "default": {
             "nullable": true,
-            "description": "该输入的默认值配置。",
+            "description": "此输入的默认值配置。",
             "$ref": "#/components/schemas/FormInputDefault"
           }
         }
@@ -6627,7 +6627,7 @@
         "properties": {
           "type": {
             "type": "string",
-            "description": "`variable` for dynamic values from 工作流 variables, `constant` for static values."
+            "description": "`variable` 表示来自工作流变量的动态值，`constant` 表示静态值。"
           },
           "selector": {
             "type": "array",
@@ -6648,7 +6648,7 @@
         "properties": {
           "id": {
             "type": "string",
-            "description": "操作唯一标识符。"
+            "description": "唯一操作标识符。"
           },
           "title": {
             "type": "string",
@@ -6656,7 +6656,7 @@
           },
           "button_style": {
             "type": "string",
-            "description": "`primary`, `default`, `accent`, or `ghost`."
+            "description": "`primary`、`default`、`accent` 或 `ghost`。"
           }
         }
       }
@@ -6664,40 +6664,40 @@
   },
   "tags": [
     {
-      "name": "对话流",
-      "description": "对话流应用的操作，包括对话消息、工作流执行详情和事件流。"
+      "name": "Chatflows",
+      "description": "Chatflow 应用的操作，包括聊天消息、工作流运行详情和事件流式传输。"
     },
     {
-      "name": "文件操作",
+      "name": "Files",
       "description": "文件上传和预览操作。"
     },
     {
-      "name": "终端用户",
-      "description": "终端用户信息相关操作。"
+      "name": "End Users",
+      "description": "与终端用户信息相关的操作。"
     },
     {
-      "name": "消息反馈",
+      "name": "Feedback",
       "description": "用户反馈操作。"
     },
     {
-      "name": "会话管理",
-      "description": "与管理会话相关的操作。"
+      "name": "Conversations",
+      "description": "与管理对话相关的操作。"
     },
     {
-      "name": "语音与文字转换",
+      "name": "TTS",
       "description": "文字转语音和语音转文字操作。"
     },
     {
-      "name": "应用配置",
+      "name": "Applications",
       "description": "获取应用设置和信息的操作。"
     },
     {
-      "name": "标注管理",
-      "description": "与管理标注直接回复相关的操作。"
+      "name": "Annotations",
+      "description": "与管理直接回复标注相关的操作。"
     },
     {
-      "name": "人工介入",
-      "description": "暂停等待人工输入的工作流恢复操作。"
+      "name": "Human Input",
+      "description": "用于恢复需要人工介入的暂停工作流的端点。"
     }
   ]
 }
