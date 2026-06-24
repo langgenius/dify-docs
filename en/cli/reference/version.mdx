@@ -1,0 +1,128 @@
+---
+title: Version
+description: Check your difyctl build and its compatibility with your Dify server
+---
+
+Run [`difyctl version`](#check-client-and-server-versions) to see which `difyctl` build you have and whether it works with your Dify server. It prints the client build, probes your active host, and reports a [compatibility verdict](#compatibility-verdicts).
+
+In a script, [`--check-compat`](#gate-scripts-on-compatibility) turns that verdict into an exit code.
+
+## Check Client and Server Versions
+
+```text
+difyctl version [flags]
+```
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--short` | boolean | false | Print only the client semver (no server probe) and exit. |
+| `--client` | boolean | false | Skip the server probe, so the verdict reports `unknown`. |
+| `--check-compat` | boolean | false | Exit `64` unless the verdict is `compatible`. |
+| `-o <format>` | string | text | Output format: `text`, `json`, or `yaml`. |
+
+### Examples
+
+Print the full report:
+
+```bash
+difyctl version
+```
+
+Print just the client version, for scripts and bug reports:
+
+```bash
+difyctl version --short
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`) | The full report: a `Client` block, a `Server` block, and a one-line `Compatibility` verdict. Builds on any channel other than `stable` append a warning recommending the stable channel. |
+| `-o json`, `-o yaml` | The same report as three objects: `client` (`version`, `commit`, `buildDate`, `channel`, `platform`, `arch`), `server` (`endpoint`, `reachable`, and on success `version` and `edition`), and `compat` (`minDify`, `maxDify`, `status`, `detail`). |
+
+The default `text` report:
+
+```text
+Client:
+  Version:   0.1.0-alpha (channel: alpha)
+  Commit:    9f3c2ab (built 2026-06-05)
+  Platform:  darwin/arm64
+  Compat:    dify >=1.15.0, <=1.15.0
+
+Server:
+  Endpoint:  https://dify.example.com
+  Version:   1.15.0 (self_hosted)
+
+Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
+```
+
+`--short` prints only the client semver:
+
+```text
+0.1.0-alpha
+```
+
+`-o json`:
+
+```json
+{
+  "client": {
+    "version": "0.1.0-alpha",
+    "commit": "9f3c2ab",
+    "buildDate": "2026-06-05",
+    "channel": "alpha",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "server": {
+    "endpoint": "https://dify.example.com",
+    "reachable": true,
+    "version": "1.15.0",
+    "edition": "SELF_HOSTED"
+  },
+  "compat": {
+    "minDify": "1.15.0",
+    "maxDify": "1.15.0",
+    "status": "compatible",
+    "detail": "server 1.15.0 in [1.15.0, 1.15.0]"
+  }
+}
+```
+
+Without `--check-compat`, the command exits `0` even when the server is unreachable or incompatible. The verdict is the report, not an error.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Report printed, whatever the verdict |
+| `64` | With `--check-compat`: the verdict was not `compatible` |
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Compatibility Verdicts
+
+`difyctl version` compares your build against the server's version and reports one of three verdicts. You don't need to be signed in, but you do need a stored host to probe.
+
+| Verdict | Meaning |
+|:---|:---|
+| `compatible` | The server version is inside the range this build supports. |
+| `unsupported` | The server version is outside the supported range. |
+| `unknown` | No verdict: no host configured, the server is unreachable, the probe was skipped with `--client`, or the server's version didn't parse. |
+
+The `detail` field says which case you're in, for example `server 1.16.0 outside [1.15.0, 1.15.0]`.
+
+## Gate Scripts on Compatibility
+
+`--check-compat` makes the verdict scriptable: anything other than `compatible`, including every `unknown` case, exits `64`.
+
+The full report still goes to stdout in your chosen format, and the one-line reason goes to stderr, so `difyctl version -o json --check-compat | jq` works the same on both outcomes.
+
+```bash
+difyctl version --check-compat || echo "difyctl and this Dify server are not a confirmed match"
+```
+
+Exit code `64` is specific to this flag. No other `difyctl` failure uses it.

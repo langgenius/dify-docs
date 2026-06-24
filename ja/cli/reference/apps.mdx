@@ -1,0 +1,531 @@
+---
+title: アプリ
+description: Dify アプリをコマンドラインから一覧表示、確認、実行、再開、エクスポート、インポート
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/reference/apps) を参照してください。
+
+各アプリ操作は 1 つのコマンドに対応し、いずれも [グローバルフラグ](/ja/cli/reference/global-flags) を受け付けます。
+
+- [`difyctl get app`](#アプリを一覧表示) はアプリを一覧表示します
+- [`describe app`](#アプリを確認) は単一アプリの詳細と入力を表示します
+- [`run app`](#アプリを実行) は単一アプリを呼び出します
+- [`resume app`](#一時停止したワークフローを再開) は [人間の入力で一時停止した](#ワークフローが一時停止する場合) ワークフローを継続します
+- [`export studio-app`](#アプリをエクスポート) / [`import studio-app`](#アプリをインポート) はアプリを DSL ファイルとしてエクスポート / インポートします
+
+## アプリを一覧表示
+
+```text
+difyctl get app [app-id] [flags]
+```
+
+<Tip>
+日常的な呼び出し方法は、[よくあるタスク](/ja/cli/common-tasks) の [アプリの検索](/ja/cli/common-tasks#アプリの検索) を参照してください。
+</Tip>
+
+### 引数
+
+- `[app-id]`：任意。表示する単一アプリの ID。省略すると、ワークスペース内のすべてのアプリを一覧表示します。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--name <substring>` | string | なし | 名前にこのテキストを含むアプリのみに絞り込みます。 |
+| `--mode <mode>` | string | なし | アプリタイプで絞り込みます。API mode で指定します： `chat`（チャットボット）、`advanced-chat`（チャットフロー）、`agent-chat`（Agent）、`workflow`（ワークフロー）、`completion`（テキストジェネレーター）。 |
+| `--page <n>` | integer | `1` | ページ番号。 |
+| `--limit <n>` | integer | `20` | ページサイズ、1 から 200。フラグが優先され、次に [`DIFY_LIMIT`](/ja/cli/reference/environment-variables) が使われます。 |
+| `-o <format>` | string | なし | 出力形式： `json`、`yaml`、`name`、`wide`。フラグを省略するとデフォルトのテーブルになります。 |
+
+### 例
+
+ワークスペース内のアプリを一覧表示します：
+
+```bash
+difyctl get app
+```
+
+名前に「report」を含むワークフローアプリを検索します：
+
+```bash
+difyctl get app --name report --mode workflow
+```
+
+アプリ ID のみを 1 行に 1 つ出力し、shell ループで使います：
+
+```bash
+difyctl get app -o name
+```
+
+### 出力
+
+| 形式 | stdout の内容 |
+|:---|:---|
+| デフォルト | 整列されたテーブル。`MODE` 列は各アプリの API mode 名です（アプリタイプとの対応は [`--mode`](#アプリを一覧表示) を参照）。 |
+| `-o wide` | テーブルに `WORKSPACE` 列を加えたもの。 |
+| `-o json`、`-o yaml` | アプリの `data` 配列に加え、ページング項目の `page`（現在のページ）、`limit`（ページサイズ）、`total`（一致したアプリ数）、`has_more`（さらにページがあるか）。 |
+| `-o name` | アプリ ID を 1 行に 1 つ。 |
+
+デフォルトのテーブル：
+
+```text
+NAME          ID                                    MODE      UPDATED
+Customer FAQ  0a1b2c3d-4e5f-6789-abcd-ef0123456789  chat      2026-06-08T03:14:27.521839
+Daily Report  7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b  workflow  2026-06-05T22:41:09.812016
+```
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | ネットワークまたはサーバーエラー |
+| `2` | 使用方法のエラー（例： `--limit` が 1 から 200 の範囲外） |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |
+
+全体の体系は [出力形式と終了コード](/ja/cli/reference/output-formats-and-exit-codes) を参照してください。
+
+## アプリを確認
+
+```text
+difyctl describe app <app-id> [flags]
+```
+
+`describe app` は、よく知らないアプリを実行する前に確認したいこと、つまりアプリのタイプ、API が有効かどうか、どんな入力が必要かを教えてくれます。
+
+### 引数
+
+- `<app-id>`：必須。確認するアプリの ID。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--refresh` | boolean | `false` | ローカルのアプリ情報キャッシュをバイパスし、最新の詳細を取得します。アプリの再公開後に使用します。 |
+| `-o <format>` | string | `text` | 出力形式： `json`、`yaml`、`text`。 |
+
+### 例
+
+実行前にアプリを確認します：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+`--inputs` をプログラムで組み立てるために入力スキーマを抽出します：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -o json | jq '.input_schema'
+```
+
+アプリの再公開後に再取得します：
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --refresh
+```
+
+### 出力
+
+| 形式 | stdout の内容 |
+|:---|:---|
+| デフォルト（`text`） | 整列されたフィールドブロックに続いて、アプリのパラメータ（ユーザー入力フォームを含む）。 |
+| `-o json`、`-o yaml` | 3 つのトップレベルキー： `info`、`parameters`、`input_schema`（詳細は後述）。 |
+
+デフォルトのテキストビュー：
+
+```text
+Name:        Daily Report
+ID:          7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+Mode:        workflow
+Updated:     2026-06-05T22:41:09.812016
+Service API: true
+Parameters:
+  {
+    "opening_statement": null,
+    "suggested_questions": [],
+    "user_input_form": [
+      {
+        "text-input": {
+          "label": "topic",
+          "variable": "topic",
+          "required": true,
+          "default": ""
+        }
+      }
+    ],
+    "file_upload": null,
+    "system_parameters": {
+      "file_size_limit": 15,
+      "image_file_size_limit": 10,
+      "audio_file_size_limit": 50,
+      "video_file_size_limit": 100,
+      "workflow_file_upload_limit": 10
+    }
+  }
+```
+
+アプリに説明がある場合は `Description:` 行が、アプリが agentic な場合は `Agent: true` 行が表示されます。
+
+`-o json` では、3 つのキーはそれぞれ次のとおりです：
+- `info`：上記の `Name` から `Service API` までのメタデータ項目
+- `parameters`：上記のパラメータブロック
+- `input_schema`：アプリ入力の正規化されたリスト。`jq '.input_schema'` の例が読み取る項目
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | ネットワークまたはサーバーエラー（アプリが見つからない場合を含む） |
+| `2` | 使用方法のエラー（`<app-id>` が UUID でない場合を含む） |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |
+
+## アプリを実行
+
+```text
+difyctl run app <app-id> [message] [flags]
+```
+
+`run app` は、すべてのアプリタイプを 1 つのコマンドで扱います。CLI がアプリのタイプを判別し、適切なエンドポイントに振り分けます。アプリタイプによって変わるのは、入力の渡し方とレスポンスの形だけです：
+
+- **チャットボット、チャットフロー、Agent**：位置引数のメッセージを受け取り、応答を stdout に出力し、会話のヒントを stderr に出力します。
+- **テキストジェネレーター**：位置引数のメッセージを受け取り、補完結果を stdout に出力します。会話状態もヒントもありません。
+- **ワークフロー**：`--inputs` で JSON オブジェクトを受け取り、その出力を stdout に出力します。出力が単一の文字列のときはそのまま、それ以外はコンパクトな JSON として出力します。
+
+### 引数
+
+- `<app-id>`：必須。実行するアプリの ID。[`get app`](#アプリを一覧表示) から取得します。
+- `[message]`：ユーザーメッセージ。チャットボット、チャットフロー、Agent、テキストジェネレーターのアプリで使います。ワークフローアプリは位置引数のメッセージを受け付けないため、その入力は `--inputs` で渡します。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--inputs <json>` | string | なし | 入力変数を 1 つの JSON オブジェクトとして指定します。例： `--inputs '{"topic":"Q3"}'`。ワークフローアプリでは必須です。`--inputs-file` とは併用できません。 |
+| `--inputs-file <path>` | string | なし | 代わりに JSON ファイルから入力オブジェクトを読み込みます。 |
+| `--file <key=value>` | string、繰り返し可 | なし | 名前付きファイル入力。`key=@path` はローカルファイルをアップロードします。`key=https://…` はアップロードせずにリモート URL を渡します。key は入力変数名です。 |
+| `--conversation <id>` | string | なし | 既存の会話を継続します。ID は前回の実行の stderr ヒントまたは JSON レスポンスから得られます。 |
+| `--workflow-id <id>` | string | なし | 実行を特定の公開済みワークフローバージョンに固定します。ワークフローとチャットフローのアプリのみ。 |
+| `--stream` | boolean | `false` | 最後に一度に出力するのではなく、生成されるそばから出力をライブで表示します。 |
+| `--think` | boolean | `false` | モデルが思考過程を公開する場合に、それを stderr に出力します。このフラグがない場合、`<think>` ブロックは無言で取り除かれます。 |
+| `--retry-on-limit` | boolean | `false` | 429 レート制限時に、終了コード `7` で失敗する代わりに待機して実行を再試行します。実行は冪等ではないため、デフォルトはオフです。 |
+| `-o <format>` | string | `text` | 出力形式： `json`、`yaml`、`text`。 |
+
+### 例
+
+チャットボット、チャットフロー、Agent、テキストジェネレーターのアプリにメッセージを送信します：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?"
+```
+
+構造化された入力でワークフローアプリを実行します：
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"quarterly report","audience":"executives"}'
+```
+
+ファイル型の入力変数にローカルファイルを添付します：
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"contract review"}' --file document=@./contract.pdf
+```
+
+以前の会話を継続します：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "And on weekends?" --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+スクリプトやエージェント向けに、生のレスポンスを JSON で取得します：
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?" -o json | jq -r '.answer'
+```
+
+### 出力
+
+| 形式 | stdout の内容 |
+|:---|:---|
+| デフォルト（`text`） | 応答（チャットボット、チャットフロー、Agent、テキストジェネレーター）またはワークフローの出力を、プレーンテキストで。 |
+| `-o json`、`-o yaml` | サーバーの完全なペイロード。会話型アプリでは `answer` と `conversation_id` を含みます。モデルが推論を返す場合は、ノードごとの推論が `metadata.reasoning` の下に含まれます。 |
+
+レスポンス本体は stdout に出力されます。それ以外（ヒント、進捗、エラー）はすべて stderr に回るため、パイプやリダイレクトの出力が汚れません。チャットボット、チャットフロー、Agent のアプリでは、応答に続けて会話のヒントが stderr に出力されます：
+
+```text
+hint: continue this conversation with --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+`--stream` を付けると、サーバーが生成するそばから出力が逐次表示されます。アプリの再公開直後に実行が HTTP 422 で失敗した場合、CLI はアプリメタデータのキャッシュをクリアし、コマンドの再実行を促します。
+
+エラーは stderr に出力されます。`-o json` では、安定した `code` 項目を持つ構造化された JSON オブジェクトとして返されます。エラーの形は [出力形式と終了コード](/ja/cli/reference/output-formats-and-exit-codes) を参照してください。
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功。[人間の入力で一時停止した](#ワークフローが一時停止する場合) ワークフローを含む |
+| `1` | ネットワークまたはサーバーエラー（アプリが見つからない場合を含む） |
+| `2` | 使用方法のエラー： `--inputs` の JSON が無効、またはワークフローアプリに位置引数のメッセージを渡した場合 |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |
+
+### ワークフローが一時停止する場合
+
+ワークフローアプリには人間の入力ステップを含められます。実行がそこに到達すると、終了せずに一時停止します。コマンドは **終了コード 0 で終了し**（一時停止は失敗ではありません）、一時停止を stdout に出力し、すぐに実行できる再開コマンドを stderr に出力します：
+
+```text
+! Workflow paused — input required
+  Node:    Review draft
+  Message: Approve the report before it is published.
+  Actions: [approve] Approve  [reject] Reject
+  Inputs:   - comment — Reviewer comment
+
+! workflow paused — resume with:
+  difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action approve
+```
+
+`-o json` を付けると、stdout には一時停止が JSON オブジェクトとして出力されます：
+
+```json
+{
+  "status": "paused",
+  "app_id": "7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b",
+  "task_id": "c4a8e2f6-1b3d-4a5c-9e7f-2d8b6c0a4e1f",
+  "workflow_run_id": "8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+  "form_id": "5d9c3b7a-2e4f-4c6d-8b0a-1f3e5d7c9b2a",
+  "node_id": "1749876543210",
+  "node_title": "Review draft",
+  "form_token": "k3J9mQ2xWv8pL5nR7tY4bA",
+  "form_content": "Approve the report before it is published.",
+  "inputs": [
+    {
+      "output_variable_name": "comment",
+      "label": "Reviewer comment",
+      "type": "text-input",
+      "required": false
+    }
+  ],
+  "actions": [
+    { "id": "approve", "title": "Approve" },
+    { "id": "reject", "title": "Reject" }
+  ],
+  "display_in_ui": true,
+  "resolved_default_values": {},
+  "expiration_time": 1781712000
+}
+```
+
+スクリプトやエージェント向け： 一時停止した実行も完了した実行もどちらも終了コード 0 のため、終了コードで分岐しないでください。ワークフローは `-o json` で実行し、stdout に `"status": "paused"` があるか確認します。再開に必要なのは次の 3 つです： `form_token`、`workflow_run_id`、そして（フォームが複数の操作を提示する場合は）操作の `id`。フォームは `expiration_time`（Unix エポック秒）の時点で期限切れになります。
+
+ワークフローがメールやその他の外部チャネル経由でフォームを配信する場合、`form_token` は `null` になり、その実行は CLI から再開できません。
+
+## 一時停止したワークフローを再開
+
+```text
+difyctl resume app <app-id> <form-token> --workflow-run-id <id> [flags]
+```
+
+`resume app` は、一時停止したワークフローが待機しているフォームを送信し、その実行にアタッチして、`run app` とまったく同じように出力を表示します。
+
+### 引数
+
+- `<app-id>`：必須。一時停止ペイロードの `app_id`。
+- `<form-token>`：必須。一時停止ペイロードの `form_token`。Token は 1 回限りのため、消費済みの token で再開するとエラーが返ります。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--workflow-run-id <id>` | string | 必須 | 一時停止ペイロードの `workflow_run_id`。 |
+| `--action <id>` | string | 自動選択 | どのフォーム操作を実行するか。一時停止ペイロードの `actions` 内の `id` で指定します。フォームの操作がちょうど 1 つの場合は任意、複数ある場合は必須です。 |
+| `--inputs <json>` | string | なし | フォーム入力の値を 1 つの JSON オブジェクトとして、各入力の `output_variable_name` をキーにして指定します。`--inputs-file` とは併用できません。 |
+| `--inputs-file <path>` | string | なし | 代わりに JSON ファイルからフォームの値を読み込みます。 |
+| `--with-history` | boolean | `false` | ライブストリームにアタッチする前に、実行済みノードの出力を再生します。 |
+| `--stream` | boolean | `false` | 最後に一度に出力するのではなく、生成されるそばから出力をライブで表示します。 |
+| `--think` | boolean | `false` | モデルが思考過程を公開する場合に、それを stderr に出力します。このフラグがない場合、`<think>` ブロックは無言で取り除かれます。 |
+| `-o <format>` | string | `text` | 出力形式： `json`、`yaml`、`text`。 |
+
+### 例
+
+単一操作のフォームを承認し、その入力値を指定します：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs '{"comment":"Looks good"}'
+```
+
+フォームが複数の操作を提示する場合に、操作を選びます：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action reject --inputs '{"comment":"Numbers need a re-check"}'
+```
+
+ファイルからフォームの値を読み込みます：
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs-file form.json
+```
+
+### 出力
+
+| 形式 | stdout の内容 |
+|:---|:---|
+| デフォルト（`text`） | 実行の進行に合わせて出力されるワークフローの出力。stderr が送信と完了を確認します。 |
+| `-o json`、`-o yaml` | 実行結果を 1 つのドキュメントとして。`run app` と同じです（再び一時停止した場合は一時停止ペイロード）。 |
+
+デフォルトのテキスト出力では、まず stderr が送信を確認し、実行の進行に合わせてワークフローの出力が stdout に出力され、最後に stderr が完了を確認します：
+
+```text
+✓ form submitted
+  workflow execution resumed
+✓ workflow finished
+```
+
+再開したワークフローは、後続の人間の入力ノードで再び一時停止することがあります。その場合は新しい一時停止ペイロードを受け取り、新しい token で再び再開します。
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功。後続のノードで実行が再び一時停止する場合を含む |
+| `1` | エラー。消費済みのフォーム token、または操作が複数あるフォームで `--action` を省略した場合を含む |
+| `2` | 使用方法のエラー |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |
+
+## アプリをエクスポート
+
+```text
+difyctl export studio-app <app-id> [flags]
+```
+
+`export studio-app` は、バージョン管理、バックアップ、または別の場所への [インポート](#アプリをインポート) のために、アプリの完全な定義を DSL YAML ドキュメントとして書き出します。
+
+ワークフローとチャットフローのアプリでは、エクスポートは `run app` が実行する公開済みバージョンではなく、現在のドラフトを返します。代わりに `--workflow-id` を使うと、特定の公開済みバージョンをエクスポートできます。チャットボット、Agent、テキストジェネレーターのアプリは公開済みバージョンをエクスポートします。
+
+### 引数
+
+- `<app-id>`：必須。エクスポートするアプリの ID。[`get app`](#アプリを一覧表示) から取得します。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `-o, --output <path>` | string | なし | DSL を stdout ではなくこのファイルに書き込みます。このコマンドでは、`-o` は出力形式のセレクタではなく出力ファイルのパスです。 |
+| `--include-secret` | boolean | `false` | エクスポートする DSL に暗号化された機密値を含めます。 |
+| `--workflow-id <id>` | string | なし | デフォルトのドラフトではなく、特定の公開済みワークフローバージョンを ID で指定してエクスポートします。ワークフローとチャットフローのアプリのみ。 |
+
+### 例
+
+アプリの DSL を stdout に出力します：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+ファイルに書き込みます：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --output ./daily-report.yaml
+```
+
+特定の公開済みバージョンをエクスポートします：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --workflow-id c7e4a1b9-3f82-4d6a-9e15-0b8c2d7f4a63
+```
+
+機密値を含めてエクスポートします：
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --include-secret
+```
+
+### 出力
+
+DSL YAML ドキュメントが stdout に出力されます： `kind: app` ヘッダー、`version` 項目、そしてアプリの完全な定義です。`--output` を付けると、同じ内容がファイルに書き込まれ、stderr が確認します：
+
+```text
+DSL written to ./daily-report.yaml
+```
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | ネットワークまたはサーバーエラー（アプリが見つからない場合を含む） |
+| `2` | 使用方法のエラー（`<app-id>` の欠落を含む） |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |
+
+## アプリをインポート
+
+```text
+difyctl import studio-app (--from-file <path> | --from-url <url>) [flags]
+```
+
+`import studio-app` は、DSL YAML ドキュメントからアプリを作成するか、`--app-id` で既存のアプリを上書きします。ワークフローとチャットフローのアプリでは、定義をアプリのドラフトに書き込みます。`run app` は公開済みバージョンを使うため、変更を反映させるにはインポート後に Dify でアプリを公開してください。
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `-f, --from-file <path>` | string | なし | ローカルファイルから DSL をインポートします。`--from-file` と `--from-url` のどちらか一方が必須です。 |
+| `--from-url <url>` | string | なし | HTTP(S) URL から DSL をインポートします。 |
+| `--name <name>` | string | DSL から | アプリ名を上書きします。 |
+| `--description <text>` | string | DSL から | アプリの説明を上書きします。 |
+| `--app-id <id>` | string | なし | 新規作成ではなく、既存のアプリを上書きします。ワークフローとチャットフローのアプリのみ。 |
+| `--icon-type <type>` | string | DSL から | アイコンタイプを上書きします。 |
+| `--icon <icon>` | string | DSL から | アイコンを上書きします。 |
+| `--icon-background <color>` | string | DSL から | アイコンの背景色を上書きします。 |
+
+### 例
+
+ローカルの DSL ファイルからアプリをインポートします：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml
+```
+
+別の名前でインポートします：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --name "Daily Report (staging)"
+```
+
+更新した DSL で既存のアプリを上書きします：
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+URL から直接インポートします：
+
+```bash
+difyctl import studio-app --from-url https://example.com/templates/daily-report.yaml
+```
+
+### 出力
+
+すべてのステータス行は stderr に出力され、stdout は空のままです。成功すると、stderr が新しいアプリの ID を報告します：
+
+```text
+Import completed: app 9b4f2c8e-6a1d-4e3f-b7a5-0c8d2e6f4a9b
+```
+
+DSL が別の DSL バージョン向けに書かれていた場合、CLI がそれを確認し、両方のバージョンを stderr に記載します。
+
+アプリがワークスペースに未インストールのプラグインに依存している場合、インポート後に stderr が `Missing plugin dependencies` の下にそれらを列挙します。アプリを使う前にインストールしてください。
+
+### 終了コード
+
+| 終了コード | 意味 |
+|:---|:---|
+| `0` | 成功。警告付きのインポートを含む |
+| `1` | エラー。`--from-file`/`--from-url` の欠落や競合、またはインポートの失敗を含む |
+| `2` | 使用方法のエラー。存在しない `--from-file` パスを含む |
+| `4` | 認証失敗 |
+| `7` | レート制限（HTTP 429） |

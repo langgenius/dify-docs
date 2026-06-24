@@ -1,0 +1,108 @@
+---
+title: Authenticate
+description: Sign in to your Dify host from the CLI, see where your token is stored, and manage your session
+---
+
+You sign in through your browser, using the OAuth 2.0 device flow; `difyctl` never sees your password.
+
+## Sign In
+
+<Steps>
+  <Step title="Run the login command">
+    
+    Pass your Dify host's URL. On a self-hosted deployment, use the [console API URL](/en/self-host/deploy/configuration/environments#console_api_url).
+
+    ```bash
+    difyctl auth login --host https://dify.example.com
+    ```
+
+    `difyctl` prints a one-time code, opens the verification URL in your default browser, and waits:
+
+    ```text
+    ! Copy this one-time code: WDJP-XKLM
+      Open: https://dify.example.com/device
+    ```
+    <Tip>
+      To skip the auto-open, pass `--no-browser`.
+    </Tip>
+
+    If no browser opens (normal over SSH and in headless sessions), open the URL yourself on any device. 
+  </Step>
+
+  <Step title="Approve the sign-in in your browser">
+    In the browser tab that opens, sign in with your Dify credentials and enter the one-time code. 
+    
+    The code expires after 15 minutes. If it expired, re-run `difyctl auth login` to get a fresh one.
+  </Step>
+
+  <Step title="Confirm the session">
+    Back in the terminal:
+
+    ```text
+    ✓ Logged in to dify.example.com as <your-email> (<your-name>)
+      Workspace: <your-workspace>
+    ```
+
+    The second line is your workspace.
+  </Step>
+</Steps>
+
+## Sign In Again
+
+If a command fails with `auth_expired` (exit code 4), the server has expired or revoked your session. 
+
+Run `difyctl auth login` again. You don't need to sign out first, and the new sign-in refreshes your stored token.
+
+## Check Who You're Signed In As
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (<your-name>)
+```
+
+To read the identity from a script, add `--json`:
+
+```bash
+difyctl auth whoami --json
+```
+
+You'll get the same fields as a JSON object, plus your account ID:
+
+```json
+{"id":"3c90c3cc-0d44-4b50-8888-8dd25736052a","email":"<your-email>","name":"<your-name>"}
+```
+
+## Sign Out
+
+```bash
+difyctl auth logout
+```
+
+```text
+✓ Logged out of dify.example.com
+```
+
+This revokes the session on the server and deletes the token and session entry from your machine. If the server-side revocation fails, your local credentials are cleared anyway.
+
+## Where Your Token Lives
+
+Signing in stores an OAuth bearer token, recognizable by its `dfoa_` prefix. It represents you: whatever your account can do in your workspace, the token can do from the CLI.
+
+`difyctl` keeps the token in your operating system's credential store when one is available: Keychain on macOS, Credential Manager on Windows, Secret Service on Linux. If no credential store responds, it falls back to a `tokens.yml` file with `0600` permissions in the `difyctl` config directory.
+
+`difyctl` picks the store once when you sign in, and the session uses it from then on. Session metadata (hosts, accounts, workspaces) lives alongside the token in `hosts.yml`.
+
+The config directory is `~/.config/difyctl` on macOS and Linux (Linux honors `XDG_CONFIG_HOME`) and `%APPDATA%\difyctl` on Windows. Set [`DIFY_CONFIG_DIR`](/en/cli/reference/environment-variables) to override it.
+
+## Troubleshooting
+
+| Problem | What to do |
+|:---|:---|
+| The browser never opens | Copy the URL from the terminal and open it on any device. |
+| The host is rejected | Only `https://` hosts are accepted; a host without a scheme defaults to `https://`. For a plain `http://` host (local development only), add `--insecure`. |
+| A later command fails with `auth_expired` | Your session expired or was revoked. [Sign in again](#sign-in-again). |
+
+For everything else, see the full [Troubleshooting](/en/cli/troubleshooting) page.

@@ -1,0 +1,115 @@
+---
+title: 技能
+description: 安装 Agent 技能，让编码 Agent 能够驱动 difyctl
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/reference/skills)。
+
+[`skills install`](#安装技能) 会将 `difyctl` 技能（一个 `SKILL.md` 文件）写入本机上各编码 Agent 的技能目录。
+
+该技能刻意不列出任何命令：它引导 Agent 去调用 `difyctl help -o json`，由 Agent 自行发现实时的命令集。发现命令集的方式详见 [help 参考](/zh/cli/reference/help#机器可读帮助)，完整集成方式详见 [安装 difyctl 技能](/zh/cli/integrate-agents/install-the-difyctl-skill)。
+
+## 安装技能
+
+```text
+difyctl skills install [dir] [flags]
+```
+
+该命令完全在本地运行：无需登录，也不会连接服务器。
+
+### 参数
+
+- `dir`：可选。安装到这个指定目录，跳过 Agent 检测。技能会写入 `<dir>/SKILL.md`。不能与 `--agent` 同时使用。
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `-y, --yes` | boolean | `false` | 写入技能。不加该标志时，命令为试运行：仅列出技能将写入的位置，不实际写入。 |
+| `--agent` | string，可重复 | 无 | 按名称将安装限制在指定的已检测 Agent 上。可重复使用该标志，或传入逗号分隔的列表。指定一个未被检测到的 Agent 会触发用法错误。 |
+| `--stdout` | boolean | `false` | 将技能打印到 stdout，不写入任何文件。不能与 `--yes`、`--agent` 或 `dir` 同时使用。 |
+
+### 示例
+
+预览技能将安装到的位置（试运行，默认行为）：
+
+```bash
+difyctl skills install
+```
+
+安装到每个已检测的 Agent：
+
+```bash
+difyctl skills install --yes
+```
+
+仅安装到一个 Agent：
+
+```bash
+difyctl skills install --yes --agent claude-code
+```
+
+为 CLI 未检测到的 Agent，安装到指定目录：
+
+```bash
+difyctl skills install ./my-skills/difyctl --yes
+```
+
+打印技能而不写入任何文件：
+
+```bash
+difyctl skills install --stdout
+```
+
+### Agent 检测
+
+检测时会判断各 Agent 的配置目录是否存在。CLI 从不探测 `PATH`，也不会启动任何程序。技能会写入各 Agent 官方文档记录的用户级技能位置：
+
+| Agent | 检测条件 | 技能写入位置 |
+|:---|:---|:---|
+| `claude-code` | `~/.claude` 存在 | `~/.claude/skills/difyctl/SKILL.md` |
+| `codex` | `~/.codex` 存在 | `~/.agents/skills/difyctl/SKILL.md` |
+| `opencode` | `~/.config/opencode` 存在 | `~/.config/opencode/skills/difyctl/SKILL.md` |
+| `cursor` | `~/.cursor` 存在 | `~/.cursor/skills/difyctl/SKILL.md` |
+| `pi` | `~/.pi` 存在 | `~/.pi/agent/skills/difyctl/SKILL.md` |
+
+某个 Agent 虽已安装，但从未启动过，可能尚未生成配置目录。此时用 `difyctl skills install <dir>` 显式安装到它的技能目录。
+
+### 输出
+
+试运行会列出已检测的 Agent 和目标路径，然后告诉你如何继续：
+
+```text
+Detected 2 agents: claude-code, cursor
+
+would write to claude-code: /Users/you/.claude/skills/difyctl/SKILL.md
+would write to cursor: /Users/you/.cursor/skills/difyctl/SKILL.md
+
+Re-run with --yes to write all, or --agent <name> to write only some.
+Agent not listed? Install into its directory with `difyctl skills install <dir>`.
+```
+
+加上 `--yes` 后，每次写入都会得到确认：
+
+```text
+wrote /Users/you/.claude/skills/difyctl/SKILL.md
+wrote /Users/you/.cursor/skills/difyctl/SKILL.md
+```
+
+未检测到任何 Agent 时，命令会说明可选方案并以 0 退出：
+
+```text
+No agents detected (looked for ~/.claude, ~/.codex, ~/.config/opencode, ~/.cursor, ~/.pi).
+Install into a directory manually with `difyctl skills install <dir>`, or
+print the skill with `difyctl skills install --stdout`.
+```
+
+安装的技能会带有一个版本戳，与写入它的 CLI 版本一致。升级后重新运行 `skills install --yes`，会用当前版本替换该文件。重新运行始终是安全的。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功，包括试运行和未检测到任何 Agent 的情况 |
+| `1` | 本地失败，例如目标目录不可写 |
+| `2` | 用法错误：`--stdout` 与写入选项同时使用、`dir` 与 `--agent` 同时使用，或 `--agent` 指定了未被检测到的 Agent |

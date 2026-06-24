@@ -1,0 +1,67 @@
+---
+title: 在 Agent 运行的位置进行认证
+sidebarTitle: 认证
+description: 在 Agent 运行的服务器或容器上放置一个 difyctl 会话，使其无需人工值守即可调用 Dify 应用
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/integrate-agents/auth-for-agent-deployments)。
+
+Agent 本身从不登录，而是复用所在机器上的 `difyctl` 会话。如何把会话放到那台机器上，取决于机器的类型：
+
+- **你自己的机器**：[登录](/zh/cli/authenticate) 即可。
+- **可登录的服务器或虚拟机**：直接在上面登录（方式一）。
+- **容器、CI runner 或预构建镜像**：把会话复制进去（方式二）。
+
+## 方式一：在目标机器上登录
+
+以 Agent 要扮演的账户，在目标机器上登录。Agent 会继承该账户能访问的一切。在自部署环境中，`--host` 使用 [控制台 API URL](/zh/self-host/deploy/configuration/environments#console_api_url)。
+
+机器没有浏览器时，加上 `--no-browser`：
+
+```bash
+difyctl auth login --host https://dify.example.com --no-browser
+```
+
+`difyctl` 会打印一个一次性验证码和一个验证 URL。在任意设备上打开该 URL，登录后输入验证码。批准的瞬间，会话就会写入这台机器。完整流程参见 [认证](/zh/cli/authenticate#登录)。
+
+确认会话已就绪：
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (<your-name>)
+```
+
+## 方式二：复制已有的会话
+
+当你无法在目标机器上直接登录时使用此方式，例如预构建镜像或临时容器。
+
+<Steps>
+  <Step title="在没有操作系统钥匙串的机器上登录">
+    使用无界面的 Linux 服务器或容器。在没有钥匙串时，`difyctl` 会把 token 保存到 [配置目录](/zh/cli/authenticate#token-的存储位置) 下的 `tokens.yml`，使整个目录可移植。
+
+    复制之前，先确认配置目录（默认为 `~/.config/difyctl`）中存在 `tokens.yml`。如果文件缺失，说明 token 已被钥匙串捕获。
+  </Step>
+  <Step title="将配置目录复制到目标机器">
+    复制后，用 [`DIFY_CONFIG_DIR`](/zh/cli/reference/environment-variables) 让 `difyctl` 指向该目录。对于容器，应在运行时挂载该目录，而不是把它打包进镜像：
+
+    ```bash
+    docker run \
+      -v /path/to/difyctl-config:/config:ro \
+      -e DIFY_CONFIG_DIR=/config \
+      your-agent-image
+    ```
+
+    `tokens.yml` 是有效的凭据。保持其 `0600` 权限，且不要将它放入镜像或纳入版本控制。挂载设为只读，是因为只负责运行应用的 Agent 从不写入配置目录。
+  </Step>
+</Steps>
+
+## 会话过期时
+
+服务端过期或被吊销的会话，会以退出码 4 报告，`error.code` 为 `auth_expired`。Agent 无法自行恢复：新会话需要有人批准登录，也就是与方式一相同的一次性验证码步骤。
+
+因此它应当停止并报告失败，交由人工 [重新登录](/zh/cli/authenticate#重新登录)，而不是重试。如何据此分支处理，参见 [处理错误与重试](/zh/cli/integrate-agents/error-handling-and-retries-for-agents#根据退出码分支处理)。
+
+要吊销你怀疑已泄露的会话，在任意已登录的机器上运行 [`auth devices revoke`](/zh/cli/reference/auth-and-contexts#撤销会话)。
