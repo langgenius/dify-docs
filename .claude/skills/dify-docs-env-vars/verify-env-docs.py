@@ -39,14 +39,30 @@ def parse_env_file(path: Path) -> dict[str, str]:
     return variables
 
 
-def collect_env_files(sources: list[str]) -> list[Path]:
-    """Resolve each source (file or directory) into a list of env-example files.
+# Env files for deployment modes that intentionally diverge from the standard
+# full-stack Docker deployment that environments.mdx documents. middleware.env.example
+# targets the "middleware-only / app-on-host" dev compose, where services are reached
+# via host.docker.internal instead of their compose service names. Its values must not
+# be treated as authoritative (they cause false-positive default mismatches, e.g.
+# PLUGIN_DAEMON_URL, ENDPOINT_URL_TEMPLATE, LOGSTORE_DUAL_WRITE_ENABLED), so it is loaded
+# at LOWEST precedence: its variable names still count for the missing/extra checks
+# (some vars, e.g. SSRF_SANDBOX_PROXY_*, are only listed there), but every other source
+# overrides its values.
+LOW_PRECEDENCE_ENV_BASENAMES = {"middleware.env.example"}
 
-    Files are returned as-is. Directories are scanned recursively for any
-    file whose name ends with `.env.example` (matches both `.env.example`
-    and `<name>.env.example`).
+
+def collect_env_files(sources: list[str]) -> list[Path]:
+    """Resolve each source (file or directory) into env-example files, in merge
+    precedence order (lowest first, highest last, since callers merge later-wins).
+
+    Order: LOW_PRECEDENCE_ENV_BASENAMES first (present for name checks, never
+    authoritative for values), then the other directory-globbed files, then
+    explicitly-listed files last — so the canonical `docker/.env.example` has the
+    final say on conflicts (it is what a Docker Compose user actually gets).
     """
-    files: list[Path] = []
+    low_precedence: list[Path] = []
+    dir_files: list[Path] = []
+    explicit_files: list[Path] = []
     seen: set[Path] = set()
     for source in sources:
         p = Path(source)
@@ -54,28 +70,28 @@ def collect_env_files(sources: list[str]) -> list[Path]:
             print(f"ERROR: env source not found: {source}", file=sys.stderr)
             sys.exit(1)
         if p.is_dir():
-            for f in sorted(p.rglob("*.env.example")):
-                if f not in seen:
-                    files.append(f)
+            # `*.env.example` plus the bare `.env.example` filename.
+            for pattern in ("*.env.example", ".env.example"):
+                for f in sorted(p.rglob(pattern)):
+                    if f in seen:
+                        continue
                     seen.add(f)
-            # Also catch the bare `.env.example` filename, which rglob's
-            # `*.env.example` pattern does include via the leading wildcard,
-            # but be explicit for clarity.
-            for f in sorted(p.rglob(".env.example")):
-                if f not in seen:
-                    files.append(f)
-                    seen.add(f)
-        else:
-            if p not in seen:
-                files.append(p)
-                seen.add(p)
-    return files
+                    if f.name in LOW_PRECEDENCE_ENV_BASENAMES:
+                        low_precedence.append(f)
+                    else:
+                        dir_files.append(f)
+        elif p not in seen:
+            explicit_files.append(p)
+            seen.add(p)
+    return low_precedence + dir_files + explicit_files
 
 
 def parse_env_example(sources: list[str]) -> tuple[dict[str, str], list[Path]]:
     """Parse all env-example files reachable from the given sources.
 
-    Later files override earlier ones for duplicate keys. Returns the merged
+    Files are merged later-wins. collect_env_files orders them so directory-globbed
+    files come first and explicitly-listed files (the canonical docker/.env.example)
+    come last, giving the primary file the final say on conflicts. Returns the merged
     variable map plus the list of files actually parsed (for diagnostics).
     """
     files = collect_env_files(sources)

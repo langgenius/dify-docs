@@ -82,7 +82,7 @@ Transform the explanation into a concise documentation description. The descript
 - **Explain what breaks** if misconfigured (e.g., "If empty, email links will be broken")
 - **Mention fallback behavior** if the variable has one (e.g., "falls back to `CONSOLE_API_URL`")
 - **Include relationships** with other variables when relevant
-- **End with an example value** for non-obvious variables
+- **Add an `Example:` line only when the default is empty** (it shows what to set); omit it for concrete defaults, which already show the format (e.g., `TRIGGER_URL`, `SERVER_CONSOLE_API_URL`)
 
 ### Step 4: Confirm with Reviewer
 

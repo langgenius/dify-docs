@@ -15,7 +15,7 @@ Compares code changes between two Dify releases (or a release and current HEAD),
 
 **Input**: Two version references, provided by the user. Always ask if not provided.
 - Post-release: `v1.13.2` and `v1.13.3` (both tags)
-- Pre-release: `v1.13.2` and `main` (tag and branch HEAD)
+- Pre-release: `v1.13.2` and the shipped commit — prefer the `saas-deploy` staging SHA over `main` (see 1.0)
 
 ## Workflow
 
@@ -38,6 +38,30 @@ digraph {
 ```
 
 ## Phase 1: Analysis
+
+### 1.0 Pin the comparison to what actually ships
+
+`main` is not the release: it carries post-release and future-version commits, and merged code may be gated off. Pin the upper diff ref to the **shipped commit**, and treat gating as part of scope.
+
+**Upper ref (CE / cloud)** is the dify image SHA that staging runs, from the `saas-deploy` GitOps repo. Staging is the cloud release candidate — the team merges each release's functional updates there before cutting it.
+
+```bash
+# authoritative upper ref → diff <last-release-tag>..<SHA>, not ..main
+grep newTag saas-deploy/environments/staging/dify/api/kustomization.yaml
+```
+
+Scope signals, in order of authority:
+
+| Signal | Tells you |
+|---|---|
+| `saas-deploy` staging image SHA | what code ships |
+| flags in `saas-deploy/environments/staging/dify/{api,web}/env.properties` | whether shipped code is **enabled** |
+| milestone **tagged PRs** | confirmed in the release |
+| milestone **description text** | aspirational only — named features may slip; never scope from it alone |
+
+**Merged ≠ released.** Commit ancestry proves code is in the build, not that the feature is on. A flag set off in staging `env.properties` (e.g. `ENABLE_AGENT_V2=false`, `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW=false`, `AGENT_SHELL_ENABLED=false`) means it ships dark — exclude it.
+
+**CE vs EE.** The numbered release (e.g. `1.15.0`) is Community Edition; Enterprise ships separately, often weeks later. Features needing EE infrastructure (RBAC, SSO-gated MCP identity forwarding) belong to the EE doc effort, not the CE sync.
 
 ### 1.1 Diff Between Versions
 
@@ -300,13 +324,16 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | Dify codebase | Configured as an additional working directory |
 | OpenAPI specs | `dify-docs/{en,zh,ja}/api-reference/openapi_*.json` |
 | GitHub repo | `langgenius/dify` |
+| `saas-deploy` repo | GitOps repo; staging = cloud release candidate |
+| Shipped dify SHA | `saas-deploy/environments/staging/dify/api/kustomization.yaml` (`newTag`) |
+| Staging feature flags | `saas-deploy/environments/staging/dify/{api,web}/env.properties` |
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---|---|
 | Auto-detecting version references | Always ask the user for the two versions to compare |
-| Using only milestones | Milestones miss untagged PRs — prefer tag comparison |
+| Using only milestones | Milestones miss untagged PRs, and the milestone **description** names aspirational features that may slip. Only **tagged PRs** are authoritative; confirm scope against the `saas-deploy` staging SHA (1.0) |
 | Executing before report approval | STOP after report — user must review |
 | Missing shared endpoint propagation | Fix in one spec → check all 4 app specs |
 | Ignoring PR description | File paths are heuristic for non-API — description has the real context |
@@ -316,3 +343,6 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | Pre-filtering the diff to a hand-picked path list | Run the full `git diff --stat` first; categorize after. Pre-filtering hides deployment scripts, new docker files, and root README changes. |
 | Trusting the `chore:` / `fix:` prefix as a no-doc-impact signal | Read the PR title and body. "chore: easier and simpler deploy" is a deployment workflow change. Prefix is not a category. |
 | Skipping the dify-docs PR cross-check | Always run `gh pr list --repo langgenius/dify-docs` against the source PR numbers before reporting. Avoids duplicate work and surfaces doc paths the heuristic mapping missed. |
+| Diffing against `main` | `main` carries post-release and future-version commits. Pin the upper ref to the `saas-deploy` staging SHA (1.0). |
+| Assuming merged-to-main = released | Code can be in the build but gated off. Check feature flags in staging `env.properties`; gated features ship dark. |
+| Documenting EE features in a CE sync | CE and EE ship separately. Route EE-gated features (RBAC, SSO-gated MCP identity) to the EE doc effort. |
