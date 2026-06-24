@@ -128,16 +128,16 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `message` | 每个回答片段（按顺序拼接） | `answer` |\n| `message_replace` | 内容审核替换已生成的回答 | `answer`、`reason` |\n| `message_end` | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/api-reference/对话流/流式获取工作流事件) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
+                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回（设置 `reasoning_format: separated` 的 LLM 节点还会同时发送 `reasoning_chunk` 事件，承载模型的推理内容）。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `message` | 每个回答片段（按顺序拼接） | `answer` |\n| `message_replace` | 内容审核替换已生成的回答 | `answer`、`reason` |\n| `reasoning_chunk` | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_end` | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/api-reference/对话流/流式获取工作流事件) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
                     "summary": "Response Example - Streaming (Basic)",
-                    "value": "data: {\"event\": \"message\", \"task_id\":\"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"answer\": \" I\", \"created_at\": 1679586595} data: {\"event\": \"message_end\", \"task_id\":\"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"metadata\": {\"usage\": {\"total_tokens\": 10, \"latency\": 1.0}}}"
+                    "value": "data: {\"event\": \"message\", \"task_id\": \"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"answer\": \" I\", \"created_at\": 1679586595} data: {\"event\": \"message_end\", \"task_id\": \"mock_task_id\", \"message_id\": \"5ad4cb98-f0c7-4085-b384-88c403be6290\", \"conversation_id\": \"45701982-8118-4bc5-8e9b-64562b4555f2\", \"created_at\": 1679586595, \"metadata\": {\"usage\": {\"total_tokens\": 10, \"latency\": 1.0}}}"
                   },
                   "streamingResponseWorkflow": {
                     "summary": "Response Example - Streaming (工作流)",
-                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395332, \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395332, \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395333, \"data\": {\"message_id\": \"msg123\", \"reasoning\": \"The user greeted me, so\", \"node_id\": \"node_llm_1\", \"is_final\": false}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395333, \"data\": {\"message_id\": \"msg123\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395334, \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395334, \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395335, \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
                   },
                   "humanInputPause": {
                     "summary": "响应示例 - 人工介入暂停",
@@ -3168,7 +3168,13 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "工作流事件的 SSE 流。"
+                  "description": "已恢复工作流运行的事件 SSE 流，格式与 [发送对话消息](/api-reference/对话流/发送对话消息) 相同。当恢复部分运行设置 `reasoning_format: separated` 的 LLM 节点时，本流还会携带 `reasoning_chunk` 事件。"
+                },
+                "examples": {
+                  "resumedRun": {
+                    "summary": "响应示例 - 恢复运行",
+                    "value": "data: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"Please review the draft.\", \"action_id\": \"approve\", \"action_text\": \"Approve\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"created_at\": 1705407705}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"The reviewer approved the draft.\", \"node_id\": \"node_llm_1\", \"is_final\": false}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}} data: {\"event\": \"message\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"answer\": \"Approved\", \"created_at\": 1705407706} data: {\"event\": \"node_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"status\": \"succeeded\", \"elapsed_time\": 1.2, \"created_at\": 1705407705, \"finished_at\": 1705407706}} data: {\"event\": \"message_end\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"metadata\": {\"usage\": {\"total_tokens\": 42, \"latency\": 1.3}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
+                  }
                 }
               }
             }
@@ -3404,6 +3410,7 @@
               "message_file",
               "message_end",
               "message_replace",
+              "reasoning_chunk",
               "workflow_started",
               "workflow_finished",
               "node_started",
@@ -3436,6 +3443,7 @@
             "message_file": "#/components/schemas/StreamEventChatMessageFile",
             "message_end": "#/components/schemas/StreamEventChatMessageEnd",
             "message_replace": "#/components/schemas/StreamEventChatMessageReplace",
+            "reasoning_chunk": "#/components/schemas/StreamEventChatReasoningChunk",
             "workflow_started": "#/components/schemas/StreamEventWorkflowStarted",
             "workflow_finished": "#/components/schemas/StreamEventWorkflowFinished",
             "node_started": "#/components/schemas/StreamEventNodeStarted",
@@ -6211,6 +6219,44 @@
                   "node_id": {
                     "type": "string",
                     "description": "工作流图中的节点 ID。"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventChatReasoningChunk": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "此推理内容所属消息的 ID（与顶层 `message_id` 一致）。"
+                  },
+                  "reasoning": {
+                    "type": "string",
+                    "description": "由 `reasoning_format` 为 `separated` 的 LLM 节点发送的推理内容增量。拼接连续的 `reasoning_chunk` 事件即可还原完整推理内容。本流与 `message` 并行；`message`（回答）流不含 `<think>` 标签。"
+                  },
+                  "node_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "产生该推理内容的 LLM 节点 ID。当多个 LLM 节点运行时，可据此归属推理内容。"
+                  },
+                  "is_final": {
+                    "type": "boolean",
+                    "description": "`true` 标志 LLM 节点推理阶段结束（即「思考完成」信号）；该事件的 `reasoning` 可能为空。"
                   }
                 }
               }
