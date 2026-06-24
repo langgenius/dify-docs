@@ -1,18 +1,18 @@
 {
   "openapi": "3.0.1",
   "info": {
-    "title": "チャットフロー App API",
-    "description": "チャットフローアプリケーションはセッションの永続化をサポートしており、以前のチャット履歴を応答のコンテキストとして使用できます。チャットフローアプリは `advanced-chat` モードを使用し、ノードの開始、終了、イテレーション、ワークフローライフサイクルを含む詳細な実行追跡のためのワークフローレベルのストリーミングイベントを提供します。",
+    "title": "チャットフロー アプリ API",
+    "description": "チャットフローアプリケーションはセッションの永続性をサポートしており、以前のチャット履歴を応答のコンテキストとして使用できます。チャットフローアプリは `advanced-chat` モードを使用し、ノードの開始、終了、イテレーション、ワークフローライフサイクルを含む詳細な実行追跡のためのワークフローレベルのストリーミングイベントを提供します。",
     "version": "1.0.0"
   },
   "servers": [
     {
       "url": "https://{api_base_url}",
-      "description": "チャットフロー App API のベース URL。セルフホストデプロイの場合は、独自の API ベース URL に置き換えてください。",
+      "description": "チャットフロー アプリ API のベース URL。セルフホストデプロイメントの場合は、独自の API ベース URL に置き換えてください。",
       "variables": {
         "api_base_url": {
           "default": "api.dify.ai/v1",
-          "description": "API ベース URL のホストとパス（`https://` プレフィックスなし）。"
+          "description": "API ベース URL のホストとパス。`https://` プレフィックスは含みません。"
         }
       }
     }
@@ -75,7 +75,7 @@
         },
         "responses": {
           "200": {
-            "description": "成功レスポンス。コンテンツタイプと構造は、リクエストの `response_mode` パラメータによって異なります。\n- `response_mode` が `blocking` の場合、`ChatCompletionResponse` オブジェクトを含む `application/json` を返します。\n- `response_mode` が `streaming` の場合、Server-Sent Events のストリームを含む `text/event-stream` を返します。",
+            "description": "成功レスポンス。コンテンツタイプと構造は、リクエストの `response_mode` パラメータによって異なります。\n- `response_mode` が `blocking` の場合、`application/json` で `ChatCompletionResponse` オブジェクトを返します。\n- `response_mode` が `streaming` の場合、`text/event-stream` で Server-Sent Events のストリームを返します。",
             "content": {
               "application/json": {
                 "schema": {
@@ -128,7 +128,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events（SSE）のストリーム。\n**パース方法**: 各イベントは `data: ` プレフィックスが付いた行で、その後に JSON オブジェクトが続き、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを削除し、`event` フィールドを読み取ってイベントタイプを判定します。`ping` イベントは無視してください。これは接続を維持するために10秒ごとに `event: ping` 行として届きます（`data:` ペイロードなし）。\n**ストリームのライフサイクル**: ワークフローの進行状況は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループのバリアント）、そして `message` イベントとしての応答としてストリーミングされます。終了シーケンスは結果によって異なります：\n- **成功**: `message_end`、その後 `workflow_finished`\n- **失敗**: ステータス `failed` の `workflow_finished`、その後 `error`；`message_end` なし\n- **一時停止**: `human_input_required`、その後 `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\nテキスト読み上げ自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。\n**イベント**: `ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くすべてのイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベントは、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n**応答イベント**\n| イベント | 発火タイミング | 主要フィールド |\n|:---|:---|:---|\n| `message` | 各回答チャンク（順番に連結） | `answer` |\n| `message_replace` | 出力モデレーションがこれまでの回答を置き換えた | `answer`, `reason` |\n| `message_end` | 回答が完了した | `metadata`（`usage`, `retriever_resources`） |\n| `tts_message`, `tts_message_end` | TTS 自動再生が有効な場合の音声チャンク / 終了 | `audio` |\n**ワークフローとノードイベント**\n各イベントは `data` オブジェクトの下にペイロードをネストします。\n| イベント | 発火タイミング | 主要 `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始時 | `inputs` |\n| `node_started` | ノード開始時 | `node_id`, `node_type`, `title` |\n| `node_finished` | ノード終了時 | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | 失敗後にノードがリトライした | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | イテレーションノードの進行状況（参考情報） | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | ループノードの進行状況（参考情報） | `data` |\n| `agent_log` | Agent ノードのステップログ（参考情報；`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了時 | `status`（`succeeded`, `failed`, `partial-succeeded`, `stopped`）, `outputs`, `total_tokens` |\n| `workflow_paused` | 実行一時停止時 | `paused_nodes`, `reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達した | `form_token`, `form_content`, `expiration_time` |\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)経由でフォームを送信するか、タイムアウトさせてください。再開された実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` まで）は、[ワークフローイベントをストリーミング](/api-reference/chatflows/stream-workflow-events)からストリーミングされます。\n**トランスポートイベント**\n| イベント | 発火タイミング | 主要フィールド |\n|:---|:---|:---|\n| `error` | 失敗がストリームを終了させた；HTTP は `200` のまま | `status`（例：`400`）, `code`（例：`invalid_param`）, `message` |\n| `ping` | 10秒ごとのキープアライブ | なし |"
+                  "description": "Server-Sent Events (SSE) のストリーム。\n**パース方法**: 各イベントは `data: ` プレフィックスに続く JSON オブジェクトで、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定します。`ping` イベントは無視してください。これは接続を維持するために 10 秒ごとに `event: ping` 行として（`data:` ペイロードなしで）送信されます。\n**ストリームライフサイクル**: ワークフローの進行状況は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループのバリアント）としてストリーミングされ、応答は `message` イベントとして送信されます。終了シーケンスは結果によって異なります：\n- **成功**: `message_end`、その後 `workflow_finished`\n- **失敗**: `status` が `failed` の `workflow_finished`、その後 `error`；`message_end` なし\n- **一時停止**: `human_input_required`、その後 `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\nテキスト読み上げの自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。\n**イベント**: `ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます；`error` 以外のすべてには `task_id` も含まれます。ワークフロー、ノード、および人間の入力イベントは、ペイロードを `data` の下にネストし、`agent_log` を除き、トップレベルの `workflow_run_id` を持ちます。\n**応答イベント**\n| イベント | 発火タイミング | 主要フィールド |\n|:---|:---|:---|\n| `message` | 各回答チャンク（順番に連結） | `answer` |\n| `message_replace` | 出力モデレーションがこれまでの回答を置換 | `answer`、`reason` |\n| `message_end` | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 音声チャンク / 終了、TTS 自動再生が有効な場合 | `audio` |\n**ワークフローとノードイベント**\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n| イベント | 発火タイミング | 主要 `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行が開始 | `inputs` |\n| `node_started` | ノードが開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノードが終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードがリトライ | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行状況（情報提供用） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行状況（情報提供用） | `data` |\n| `agent_log` | Agent ノードステップログ（情報提供用；`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行が終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)でフォームを送信するか、タイムアウトさせてください；`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までの再開された実行は、[ワークフローイベントをストリーム](/api-reference/chatflows/stream-workflow-events)からストリーミングされます。\n**トランスポートイベント**\n| イベント | 発火タイミング | 主要フィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了；HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 接続維持のため 10 秒ごと | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -140,7 +140,7 @@
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
                   },
                   "humanInputPause": {
-                    "summary": "レスポンス例 - 人間の入力一時停止",
+                    "summary": "レスポンス例 - 人間の入力による一時停止",
                     "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}} data: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}} data: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"paused_nodes\": [\"approval_node\"], \"outputs\": {}, \"reasons\": [{\"TYPE\": \"human_input_required\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_content\": \"Please review the draft.\", \"inputs\": [{\"type\": \"text_input\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"Approve\", \"button_style\": \"primary\"}], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"resolved_default_values\": {\"comment\": \"\"}, \"form_token\": \"tok_abc123\", \"expiration_time\": 1705494029}], \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5, \"total_tokens\": 0, \"total_steps\": 1}}"
                   }
                 }
@@ -148,7 +148,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable`：アプリが利用不可または設定エラー。\n- `not_chat_app`：アプリモードが API ルートと一致しません。\n- `conversation_completed`：会話が終了しています。\n- `provider_not_initialize`：有効なモデルプロバイダー認証情報が見つかりません。\n- `provider_quota_exceeded`：モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support`：現在のモデルは利用できません。\n- `completion_request_error`：テキスト生成に失敗しました。\n- `bad_request`：ドラフトワークフローバージョンは使用できません。\n- `bad_request`：無効な `workflow_id` フォーマット。",
+            "description": "- `app_unavailable` : アプリが利用できないか、設定が正しくありません。\n- `not_chat_app` : アプリモードが API ルートと一致しません。\n- `conversation_completed` : 会話は終了しました。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `bad_request` : ドラフトワークフローバージョンは使用できません。\n- `bad_request` : `workflow_id` の形式が無効です。",
             "content": {
               "application/json": {
                 "examples": {
@@ -229,7 +229,7 @@
             }
           },
           "404": {
-            "description": "- `not_found`：会話が存在しません。\n- `not_found`：指定された `workflow_id` のワークフローが見つかりません。",
+            "description": "- `not_found` : 会話が存在しません。\n- `not_found` : 指定された `workflow_id` のワークフローが見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -254,7 +254,7 @@
             }
           },
           "429": {
-            "description": "- `too_many_requests`：このアプリへの同時リクエストが多すぎます。\n- `rate_limit_error`：上流のモデルプロバイダーのレート制限を超過しました。",
+            "description": "- `too_many_requests` : このアプリに対する同時リクエストが多すぎます。\n- `rate_limit_error` : 上流のモデルプロバイダーのレート制限を超過しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -279,7 +279,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error`：内部サーバーエラー。",
+            "description": "`internal_server_error` : 内部サーバーエラー。",
             "content": {
               "application/json": {
                 "examples": {
@@ -301,7 +301,7 @@
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "チャットメッセージ生成を停止",
-        "description": "チャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされています。",
+        "description": "チャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされます。",
         "operationId": "stopAdvancedChatMessageGeneration",
         "tags": [
           "Chatflows"
@@ -329,7 +329,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。メッセージ送信インターフェースで渡された user と一致している必要があります。"
+                    "description": "ユーザー識別子。メッセージ送信インターフェースで渡されたユーザーと一致している必要があります。"
                   }
                 }
               },
@@ -349,7 +349,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -421,7 +421,7 @@
             }
           },
           "400": {
-            "description": "- `not_chat_app`：アプリモードが API ルートと一致しません。\n- `bad_request`：推奨質問機能が無効になっています。",
+            "description": "- `not_chat_app` : アプリモードが API ルートと一致しません。\n- `bad_request` : 推奨質問機能が無効になっています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -446,7 +446,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：メッセージが存在しません。",
+            "description": "`not_found` : メッセージが存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -463,7 +463,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error`：内部サーバーエラー。",
+            "description": "`internal_server_error` : 内部サーバーエラー。",
             "content": {
               "application/json": {
                 "examples": {
@@ -489,7 +489,7 @@
           "Files"
         ],
         "summary": "ファイルをアップロード",
-        "description": "メッセージ送信時に使用するファイルをアップロードし、画像、ドキュメント、音声、ビデオのマルチモーダル理解を有効にします。アップロードされたファイルは、現在のエンドユーザーのみが使用できます。",
+        "description": "メッセージ送信時に使用するファイルをアップロードし、画像、ドキュメント、音声、動画のマルチモーダル理解を可能にします。アップロードされたファイルは、現在のエンドユーザーのみが使用できます。",
         "requestBody": {
           "description": "ファイルアップロードリクエスト。multipart/form-data が必要です。",
           "required": true,
@@ -505,11 +505,11 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "アップロードするファイル。画像、ドキュメント、音声、ビデオを含むタイプがサポートされています。"
+                    "description": "アップロードするファイル。サポートされるタイプには画像、ドキュメント、音声、動画が含まれます。"
                   },
                   "user": {
                     "type": "string",
-                    "description": "エンドユーザーの識別子。アプリケーションのルールによって定義され、アプリ内で一意です。サービス API と WebApp ユーザー ID は、同一であっても別々です。"
+                    "description": "エンドユーザーの識別子。アプリケーションのルールによって定義され、アプリ内で一意です。サービス API と WebApp のユーザー ID は、同一であっても別々です。"
                   }
                 }
               }
@@ -549,7 +549,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded`：リクエストにファイルが提供されていません。\n- `too_many_files`：リクエストごとに許可されるファイルは1つのみです。\n- `filename_not_exists_error`：アップロードされたファイルにファイル名がありません。",
+            "description": "- `no_file_uploaded` : リクエストにファイルが含まれていません。\n- `too_many_files` : リクエストごとに 1 つのファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -582,7 +582,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large`：ファイルサイズが超過しました。",
+            "description": "`file_too_large` : ファイルサイズを超過しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -599,7 +599,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type`：ファイルタイプが許可されていません。",
+            "description": "`unsupported_file_type` : ファイルタイプが許可されていません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -625,13 +625,13 @@
           "Files"
         ],
         "summary": "ファイルをダウンロード",
-        "description": "以前に[ファイルをアップロード](/api-reference/files/upload-file) API 経由でアップロードされたファイルをプレビューまたはダウンロードします。ファイルは、リクエストしているアプリケーション内のメッセージに属している場合のみアクセスできます。",
+        "description": "[ファイルをアップロード](/api-reference/files/upload-file) API で以前にアップロードされたファイルをプレビューまたはダウンロードします。ファイルは、リクエストしているアプリケーション内のメッセージに属している場合にのみアクセスできます。",
         "parameters": [
           {
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "プレビューするファイルの一意の識別子。[ファイルをアップロード](/api-reference/files/upload-file) API レスポンスから取得します。",
+            "description": "プレビューするファイルの一意の識別子。[ファイルをアップロード](/api-reference/files/upload-file) API レスポンスから取得できます。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -641,7 +641,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "`true` の場合、ブラウザでプレビューする代わりに、添付ファイルとして強制的にダウンロードします。",
+            "description": "`true` の場合、ブラウザでプレビューする代わりに添付ファイルとしてダウンロードを強制します。",
             "schema": {
               "type": "boolean",
               "default": false
@@ -651,7 +651,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "ユーザー識別子。エンドユーザーコンテキストに使用されます。",
+            "description": "ユーザー識別子。エンドユーザーのコンテキストに使用されます。",
             "schema": {
               "type": "string"
             }
@@ -659,7 +659,7 @@
         ],
         "responses": {
           "200": {
-            "description": "生のファイルコンテンツを返します。`Content-Type` ヘッダーはファイルの MIME タイプに設定されます。`as_attachment` が `true` の場合、ファイルは `Content-Disposition: attachment` でダウンロードとして返されます。",
+            "description": "生のファイルコンテンツを返します。`Content-Type` ヘッダーはファイルの MIME タイプに設定されます。`as_attachment` が `true` の場合、ファイルは `Content-Disposition: attachment` 付きでダウンロードとして返されます。",
             "content": {
               "application/octet-stream": {
                 "schema": {
@@ -670,7 +670,7 @@
             }
           },
           "403": {
-            "description": "`file_access_denied`：要求されたファイルへのアクセスが拒否されました。",
+            "description": "`file_access_denied` : リクエストされたファイルへのアクセスが拒否されました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -687,7 +687,7 @@
             }
           },
           "404": {
-            "description": "`file_not_found`：要求されたファイルが見つかりません。",
+            "description": "`file_not_found` : リクエストされたファイルが見つかりませんでした。",
             "content": {
               "application/json": {
                 "examples": {
@@ -713,7 +713,7 @@
           "End Users"
         ],
         "summary": "エンドユーザー情報を取得",
-        "description": "ID でエンドユーザーを取得します。他の API がエンドユーザー ID を返す場合に便利です（例：[ファイルをアップロード](/api-reference/files/upload-file)からの `created_by`）。",
+        "description": "ID でエンドユーザーを取得します。他の API がエンドユーザー ID を返す場合（例：[ファイルをアップロード](/api-reference/files/upload-file) の `created_by`）に便利です。",
         "parameters": [
           {
             "name": "end_user_id",
@@ -755,7 +755,7 @@
             }
           },
           "404": {
-            "description": "`end_user_not_found`：エンドユーザーが見つかりません。",
+            "description": "`end_user_not_found` : エンドユーザーが見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -818,7 +818,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "404": {
-            "description": "`not_found`：メッセージが存在しません。",
+            "description": "`not_found` : メッセージが存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -843,13 +843,13 @@
         "tags": [
           "Feedback"
         ],
-        "summary": "アプリフィードバック一覧を取得",
-        "description": "このアプリケーションのメッセージに送信されたすべてのフィードバックのページネーションされたリストを取得します。エンドユーザーと管理者の両方のフィードバックが含まれます。",
+        "summary": "アプリフィードバック一覧",
+        "description": "このアプリケーションのメッセージに対して送信されたすべてのフィードバックのページネーションされたリストを取得します。エンドユーザーと管理者のフィードバックの両方が含まれます。",
         "parameters": [
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーション用のページ番号。",
+            "description": "ページネーションのページ番号。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -860,7 +860,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "1ページあたりのレコード数。",
+            "description": "ページごとのレコード数。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -921,8 +921,8 @@
     },
     "/conversations": {
       "get": {
-        "summary": "会話一覧を取得",
-        "description": "現在のユーザーの会話リストを、最近アクティブな順に取得します。",
+        "summary": "会話一覧",
+        "description": "現在のユーザーの会話リストを取得します。最近アクティブな順にソートされます。",
         "operationId": "getAdvancedConversationsList",
         "tags": [
           "Conversations"
@@ -962,7 +962,7 @@
             "name": "sort_by",
             "in": "query",
             "required": false,
-            "description": "ソートフィールド。降順の場合は '-' プレフィックスを使用します。",
+            "description": "ソートフィールド。降順には '-' プレフィックスを使用します。",
             "schema": {
               "type": "string",
               "enum": [
@@ -1009,7 +1009,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1026,7 +1026,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：最後の会話が存在しません（無効な `last_id`）。",
+            "description": "`not_found` : 最後の会話が存在しません（無効な `last_id`）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1047,8 +1047,8 @@
     },
     "/messages": {
       "get": {
-        "summary": "会話メッセージ一覧を取得",
-        "description": "スクロールロード形式で過去のチャット記録を返します。最初のページは最新の `limit` 件のメッセージを返します（逆順）。",
+        "summary": "会話メッセージ一覧",
+        "description": "スクロール読み込み形式で履歴チャット記録を返します。最初のページは最新の `limit` 件のメッセージを返します（逆順）。",
         "operationId": "getAdvancedConversationHistory",
         "tags": [
           "Conversations"
@@ -1076,7 +1076,7 @@
             "name": "first_id",
             "in": "query",
             "required": false,
-            "description": "現在のページの最初のチャット記録の ID。デフォルトは `null`（最新のメッセージを取得）。次のページでは、現在のリストの最初のメッセージの ID を使用して、より古いメッセージを取得します。",
+            "description": "現在のページの最初のチャット記録の ID。デフォルトは `null`（最新のメッセージを取得）。次のページでは、現在のリストの最初のメッセージの ID を使用して古いメッセージを取得します。",
             "schema": {
               "type": "string"
             }
@@ -1136,7 +1136,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1153,7 +1153,7 @@
             }
           },
           "404": {
-            "description": "- `not_found`：会話が存在しません。\n- `not_found`：最初のメッセージが存在しません。",
+            "description": "- `not_found` : 会話が存在しません。\n- `not_found` : 最初のメッセージが存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1182,7 +1182,7 @@
     },
     "/conversations/{conversation_id}/variables": {
       "get": {
-        "summary": "会話変数一覧を取得",
+        "summary": "会話変数一覧",
         "description": "特定の会話から変数を取得します。",
         "operationId": "getAdvancedConversationVariables",
         "tags": [
@@ -1232,7 +1232,7 @@
             "name": "variable_name",
             "in": "query",
             "required": false,
-            "description": "特定の名前で変数をフィルタリングします。",
+            "description": "特定の名前で変数をフィルタリング。",
             "schema": {
               "type": "string",
               "minLength": 1,
@@ -1272,7 +1272,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1289,7 +1289,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：会話が存在しません。",
+            "description": "`not_found` : 会話が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1374,7 +1374,7 @@
             }
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1391,7 +1391,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：会話が存在しません。",
+            "description": "`not_found` : 会話が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1413,7 +1413,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "会話変数を更新",
-        "description": "特定の会話変数の値を更新します。値は期待される型と一致する必要があります。",
+        "description": "特定の会話変数の値を更新します。値は期待されるタイプと一致する必要があります。",
         "operationId": "updateChatflowConversationVariable",
         "tags": [
           "Conversations"
@@ -1485,7 +1485,7 @@
             }
           },
           "400": {
-            "description": "- `not_chat_app`：アプリモードが API ルートと一致しません。\n- `bad_request`：変数値の型が一致しません。",
+            "description": "- `not_chat_app` : アプリモードが API ルートと一致しません。\n- `bad_request` : 変数値の型が一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1510,7 +1510,7 @@
             }
           },
           "404": {
-            "description": "- `not_found`：会話が存在しません。\n- `not_found`：会話変数が存在しません。",
+            "description": "- `not_found` : 会話が存在しません。\n- `not_found` : 会話変数が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1585,7 +1585,7 @@
             "description": "会話の削除に成功しました。コンテンツは返されません。"
           },
           "400": {
-            "description": "`not_chat_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_chat_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1602,7 +1602,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：会話が存在しません。",
+            "description": "`not_found` : 会話が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1628,7 +1628,7 @@
           "TTS"
         ],
         "summary": "音声をテキストに変換",
-        "description": "音声ファイルをテキストに変換します。サポートされている形式：`mp3`、`mp4`、`mpeg`、`mpga`、`m4a`、`wav`、`webm`。ファイルサイズ制限は `30 MB` です。",
+        "description": "音声ファイルをテキストに変換します。サポートされる形式：`mp3`、`mp4`、`mpeg`、`mpga`、`m4a`、`wav`、`webm`。ファイルサイズ制限は `30 MB` です。",
         "requestBody": {
           "required": true,
           "content": {
@@ -1659,7 +1659,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable`：アプリが利用不可または設定エラー。\n- `no_audio_uploaded`：音声ファイルがアップロードされていません。\n- `provider_not_support_speech_to_text`：モデルプロバイダーは音声からテキストへの変換をサポートしていません。\n- `provider_not_initialize`：有効なモデルプロバイダー認証情報が見つかりません。\n- `provider_quota_exceeded`：モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support`：現在のモデルはこの操作をサポートしていません。\n- `completion_request_error`：音声認識リクエストに失敗しました。",
+            "description": "- `app_unavailable` : アプリが利用できないか、設定が正しくありません。\n- `no_audio_uploaded` : 音声ファイルがアップロードされていません。\n- `provider_not_support_speech_to_text` : モデルプロバイダーが音声認識をサポートしていません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : 音声認識リクエストに失敗しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1724,7 +1724,7 @@
             }
           },
           "413": {
-            "description": "`audio_too_large`：音声ファイルサイズが制限を超過しました。",
+            "description": "`audio_too_large` : 音声ファイルサイズが制限を超過しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1741,7 +1741,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_audio_type`：音声タイプが許可されていません。",
+            "description": "`unsupported_audio_type` : 音声タイプが許可されていません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1758,7 +1758,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error`：内部サーバーエラー。",
+            "description": "`internal_server_error` : 内部サーバーエラー。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1808,7 +1808,7 @@
         },
         "responses": {
           "200": {
-            "description": "生成された音声ファイルを返します。`Content-Type` ヘッダーは音声 MIME タイプ（例：`audio/wav`、`audio/mp3`）に設定されます。`streaming` が `true` の場合、音声はチャンク転送エンコーディングでストリーミングされます。",
+            "description": "生成された音声ファイルを返します。`Content-Type` ヘッダーは音声 MIME タイプ（例：`audio/wav`、`audio/mp3`）に設定されます。`streaming` が `true` の場合、音声はチャンク転送エンコーディングとしてストリーミングされます。",
             "content": {
               "audio/mpeg": {
                 "schema": {
@@ -1819,7 +1819,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable`：アプリが利用不可または設定エラー。\n- `provider_not_initialize`：有効なモデルプロバイダー認証情報が見つかりません。\n- `provider_quota_exceeded`：モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support`：現在のモデルはこの操作をサポートしていません。\n- `completion_request_error`：テキスト読み上げリクエストに失敗しました。",
+            "description": "- `app_unavailable` : アプリが利用できないか、設定が正しくありません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータを超過しました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : テキスト読み上げリクエストに失敗しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1868,7 +1868,7 @@
             }
           },
           "500": {
-            "description": "`internal_server_error`：内部サーバーエラー。",
+            "description": "`internal_server_error` : 内部サーバーエラー。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1894,7 +1894,7 @@
           "Applications"
         ],
         "summary": "アプリ情報を取得",
-        "description": "このアプリケーションの名前、説明、タグ、モードを含む基本情報を取得します。",
+        "description": "このアプリケーションの基本情報（名前、説明、タグ、モードなど）を取得します。",
         "responses": {
           "200": {
             "description": "アプリケーションの基本情報。",
@@ -1931,7 +1931,7 @@
           "Applications"
         ],
         "summary": "アプリパラメータを取得",
-        "description": "機能スイッチ、入力パラメータ名、型、デフォルト値を含むアプリケーションの入力フォーム設定を取得します。",
+        "description": "アプリケーションの入力フォーム設定（機能スイッチ、入力パラメータ名、タイプ、デフォルト値など）を取得します。",
         "responses": {
           "200": {
             "description": "アプリケーションパラメータ情報。",
@@ -2008,7 +2008,7 @@
             }
           },
           "400": {
-            "description": "`app_unavailable`：アプリが利用不可または設定エラー。",
+            "description": "`app_unavailable` : アプリが利用できないか、設定が正しくありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2033,8 +2033,8 @@
         "tags": [
           "Applications"
         ],
-        "summary": "アプリメタを取得",
-        "description": "ツールアイコンやその他の設定詳細を含む、このアプリケーションのメタデータを取得します。",
+        "summary": "アプリメタ情報を取得",
+        "description": "このアプリケーションに関するメタデータ（ツールアイコンやその他の設定詳細など）を取得します。",
         "responses": {
           "200": {
             "description": "アプリケーションメタ情報の取得に成功しました。",
@@ -2070,7 +2070,7 @@
           "Applications"
         ],
         "summary": "アプリ WebApp 設定を取得",
-        "description": "サイト設定、テーマ、カスタマイズオプションを含む、このアプリケーションの WebApp 設定を取得します。",
+        "description": "このアプリケーションの WebApp 設定（サイト設定、テーマ、カスタマイズオプションなど）を取得します。",
         "responses": {
           "200": {
             "description": "アプリケーションの WebApp 設定。",
@@ -2083,7 +2083,7 @@
                   "webAppSettings": {
                     "summary": "レスポンス例",
                     "value": {
-                      "title": "My Chat App",
+                      "title": "マイチャットアプリ",
                       "chat_color_theme": "#4A90D9",
                       "chat_color_theme_inverted": false,
                       "icon_type": "emoji",
@@ -2104,7 +2104,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`：このアプリケーションのサイトが見つからないか、ワークスペースがアーカイブされています。",
+            "description": "`forbidden` : このアプリケーションのサイトが見つからないか、ワークスペースがアーカイブされています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2126,7 +2126,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "注釈を作成",
-        "description": "新しい注釈を作成します。注釈は、アプリが応答を生成する代わりに直接マッチして返すことができる、事前定義された質問と回答のペアを提供します。",
+        "description": "新しい注釈を作成します。注釈は、アプリが応答を生成する代わりに直接マッチして返すことができる事前定義された質問と回答のペアを提供します。",
         "operationId": "createAdvancedAnnotation",
         "tags": [
           "Annotations"
@@ -2176,8 +2176,8 @@
         }
       },
       "get": {
-        "summary": "注釈一覧を取得",
-        "description": "アプリケーションの注釈のページネーションされたリストを取得します。キーワード検索フィルタリングをサポートします。",
+        "summary": "注釈一覧",
+        "description": "アプリケーションの注釈のページネーションされたリストを取得します。キーワード検索フィルタリングをサポートしています。",
         "operationId": "getAdvancedAnnotationList",
         "tags": [
           "Annotations"
@@ -2186,7 +2186,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーション用のページ番号。",
+            "description": "ページネーションのページ番号。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2196,7 +2196,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "1ページあたりのアイテム数。",
+            "description": "ページごとのアイテム数。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2310,7 +2310,7 @@
             }
           },
           "403": {
-            "description": "`forbidden`：注釈を編集する権限が不足しています。",
+            "description": "`forbidden` : 注釈を編集する権限がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2327,7 +2327,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：注釈が存在しません。",
+            "description": "`not_found` : 注釈が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2369,7 +2369,7 @@
             "description": "注釈の削除に成功しました。"
           },
           "403": {
-            "description": "`forbidden`：注釈を編集する権限が不足しています。",
+            "description": "`forbidden` : 注釈を編集する権限がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2386,7 +2386,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：注釈が存在しません。",
+            "description": "`not_found` : 注釈が存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2407,8 +2407,8 @@
     },
     "/apps/annotation-reply/{action}": {
       "post": {
-        "summary": "注釈返信を設定",
-        "description": "注釈返信機能を有効または無効にします。有効にする際は埋め込みモデルの設定が必要です。非同期で実行されます — [注釈返信ジョブステータスを取得](/api-reference/annotations/get-annotation-reply-job-status)を使用して進行状況を追跡してください。",
+        "summary": "注釈応答を設定",
+        "description": "注釈応答機能を有効または無効にします。有効にする場合は埋め込みモデルの設定が必要です。非同期で実行されます — [注釈応答ジョブステータスを取得](/api-reference/annotations/get-annotation-reply-job-status)を使用して進行状況を追跡してください。",
         "operationId": "initialAdvancedAnnotationReplySettings",
         "tags": [
           "Annotations"
@@ -2450,7 +2450,7 @@
         },
         "responses": {
           "200": {
-            "description": "注釈返信設定タスクが開始されました。",
+            "description": "注釈応答設定タスクが開始されました。",
             "content": {
               "application/json": {
                 "schema": {
@@ -2473,8 +2473,8 @@
     },
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
-        "summary": "注釈返信ジョブステータスを取得",
-        "description": "[注釈返信を設定](/api-reference/annotations/configure-annotation-reply)によって開始された非同期注釈返信設定ジョブのステータスを取得します。",
+        "summary": "注釈応答ジョブステータスを取得",
+        "description": "[注釈応答を設定](/api-reference/annotations/configure-annotation-reply)で開始された非同期注釈応答設定ジョブのステータスを取得します。",
         "operationId": "getAdvancedInitialAnnotationReplySettingsStatus",
         "tags": [
           "Annotations"
@@ -2484,7 +2484,7 @@
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "アクションタイプ。[注釈返信を設定](/api-reference/annotations/configure-annotation-reply)呼び出しと一致する必要があります。",
+            "description": "アクションタイプ。[注釈応答を設定](/api-reference/annotations/configure-annotation-reply)の呼び出しと一致する必要があります。",
             "schema": {
               "type": "string",
               "enum": [
@@ -2497,7 +2497,7 @@
             "name": "job_id",
             "in": "path",
             "required": true,
-            "description": "[注釈返信を設定](/api-reference/annotations/configure-annotation-reply)によって返されたジョブ ID。",
+            "description": "[注釈応答を設定](/api-reference/annotations/configure-annotation-reply)で返されたジョブ ID。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2526,7 +2526,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param`：指定されたジョブが存在しません。",
+            "description": "`invalid_param` : 指定されたジョブは存在しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2548,7 +2548,7 @@
     "/workflows/run/{workflow_run_id}": {
       "get": {
         "summary": "ワークフロー実行詳細を取得",
-        "description": "ワークフロー実行 ID に基づいて、ワークフロータスクの現在の実行結果を取得します。",
+        "description": "ワークフロー実行 ID に基づいてワークフロータスクの現在の実行結果を取得します。",
         "operationId": "getChatflowWorkflowRunDetail",
         "tags": [
           "Chatflows"
@@ -2598,7 +2598,7 @@
             }
           },
           "400": {
-            "description": "`not_workflow_app`：アプリモードが API ルートと一致しません。",
+            "description": "`not_workflow_app` : アプリモードが API ルートと一致しません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2615,7 +2615,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：ワークフロー実行が見つかりません。",
+            "description": "`not_found` : ワークフロー実行が見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2636,7 +2636,7 @@
     },
     "/workflows/logs": {
       "get": {
-        "summary": "ワークフローログ一覧を取得",
+        "summary": "ワークフローログ一覧",
         "description": "フィルタリングオプション付きでページネーションされたワークフロー実行ログを取得します。",
         "operationId": "listChatflowWorkflowLogs",
         "tags": [
@@ -2667,7 +2667,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーション用のページ番号。",
+            "description": "ページネーションのページ番号。",
             "schema": {
               "type": "integer",
               "default": 1,
@@ -2678,7 +2678,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "1ページあたりのアイテム数。",
+            "description": "ページごとのアイテム数。",
             "schema": {
               "type": "integer",
               "default": 20,
@@ -2689,7 +2689,7 @@
           {
             "name": "created_at__before",
             "in": "query",
-            "description": "この ISO 8601 タイムスタンプ以前に作成されたログをフィルタリング。",
+            "description": "この ISO 8601 タイムスタンプより前に作成されたログをフィルタリング。",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -2698,7 +2698,7 @@
           {
             "name": "created_at__after",
             "in": "query",
-            "description": "この ISO 8601 タイムスタンプ以降に作成されたログをフィルタリング。",
+            "description": "この ISO 8601 タイムスタンプより後に作成されたログをフィルタリング。",
             "schema": {
               "type": "string",
               "format": "date-time"
@@ -2779,7 +2779,7 @@
           "Human Input"
         ],
         "summary": "人間の入力フォームを取得",
-        "description": "`human_input_required` イベントの `form_token` を使用して、一時停止された人間の入力フォームの内容を取得します。**WebApp** 配信が必要です。",
+        "description": "`human_input_required` イベントからの `form_token` を使用して、一時停止中の人間の入力フォームの内容を取得します。**WebApp** 配信が必要です。",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -2789,7 +2789,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "一時停止されたフォームのアクセストークン。ストリーミングモードの[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)からの `human_input_required` イベントで返されます。"
+            "description": "一時停止中のフォームのアクセストークン。ストリーミングモードの[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)からの `human_input_required` イベントで返されます。"
           }
         ],
         "responses": {
@@ -2802,7 +2802,7 @@
                   "properties": {
                     "form_content": {
                       "type": "string",
-                      "description": "ワークフロー変数が置換された事前レンダリングされたフォーム本文。"
+                      "description": "ワークフロー変数が置換された事前レンダリングされたフォームボディ。"
                     },
                     "inputs": {
                       "type": "array",
@@ -2815,7 +2815,7 @@
                           },
                           "output_variable_name": {
                             "type": "string",
-                            "description": "ワークフロー内でこの入力の送信された値を参照するために使用される変数名。送信 `inputs` オブジェクトのキーに対応します。"
+                            "description": "ワークフロー内でこの入力の送信値を参照するために使用される変数名。送信 `inputs` オブジェクトのキーに対応します。"
                           },
                           "default": {
                             "type": "object",
@@ -2831,7 +2831,7 @@
                                 "items": {
                                   "type": "string"
                                 },
-                                "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも2つの要素が必要です。"
+                                "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも 2 つの要素を含む必要があります。"
                               },
                               "value": {
                                 "type": "string",
@@ -2848,7 +2848,7 @@
                       "additionalProperties": {
                         "type": "string"
                       },
-                      "description": "入力 `output_variable_name` でキー付けされた事前入力されたデフォルト値。すべての値は文字列化されています。"
+                      "description": "入力の `output_variable_name` をキーとする事前入力されたデフォルト値。すべての値は文字列化されています。"
                     },
                     "user_actions": {
                       "type": "array",
@@ -2859,7 +2859,7 @@
                             "type": "string",
                             "maxLength": 20,
                             "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-                            "description": "アクションボタンの識別子。受信者がこのボタンを選択した際に、[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)で `action` として渡します。"
+                            "description": "アクションボタンの識別子。受信者がこのボタンを選択したときに[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)で `action` として渡します。"
                           },
                           "title": {
                             "type": "string",
@@ -2868,7 +2868,7 @@
                           },
                           "button_style": {
                             "type": "string",
-                            "description": "ボタンの視覚スタイル。利用可能な値：`primary`、`default`、`accent`、`ghost`。"
+                            "description": "ボタンのビジュアルスタイル。利用可能な値：`primary`、`default`、`accent`、`ghost`。"
                           }
                         }
                       },
@@ -2920,7 +2920,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：フォームが見つかりません。",
+            "description": "`not_found` : フォームが見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2937,7 +2937,7 @@
             }
           },
           "412": {
-            "description": "- `human_input_form_submitted`：フォームは既に送信されています。フォームは一度限りです。どのユーザーが送信しても最初のレスポンスが有効になります。\n- `human_input_form_expired`：送信が届く前にフォームの有効期限が過ぎました。",
+            "description": "- `human_input_form_submitted` : フォームは既に送信されています。フォームは一回限りで、どのユーザーが送信しても最初の応答が優先されます。\n- `human_input_form_expired` : 送信が届く前にフォームの有効期限が切れました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2968,7 +2968,7 @@
           "Human Input"
         ],
         "summary": "人間の入力フォームを送信",
-        "description": "一時停止された人間の入力フォームへの受信者の応答を送信します。ワークフローは受け入れ時に再開されます。後続のイベントを追跡するには[ワークフローイベントをストリーミング](/api-reference/chatflows/stream-workflow-events)を使用してください。**WebApp** 配信が必要です。",
+        "description": "一時停止中の人間の入力フォームへの受信者の応答を送信します。承認するとワークフローが再開されます；後続のイベントを追跡するには[ワークフローイベントをストリーム](/api-reference/chatflows/stream-workflow-events)を使用してください。**WebApp** 配信が必要です。",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -2978,7 +2978,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "一時停止されたフォームのアクセストークン。ストリーミングモードの[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)からの `human_input_required` イベントで返されます。"
+            "description": "一時停止中のフォームのアクセストークン。ストリーミングモードの[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)からの `human_input_required` イベントで返されます。"
           }
         ],
         "requestBody": {
@@ -2996,11 +2996,11 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "入力 `output_variable_name` でキー付けされた受信者が提供した値。"
+                    "description": "入力の `output_variable_name` をキーとする受信者が提供した値。"
                   },
                   "action": {
                     "type": "string",
-                    "description": "受信者が選択したアクションボタンの ID。フォームの `user_actions` リスト（[人間の入力フォームを取得](/api-reference/human-input/get-human-input-form)によって返される）の `id` 値のいずれかと一致する必要があります。",
+                    "description": "受信者が選択したアクションボタンの ID。フォームの `user_actions` リスト（[人間の入力フォームを取得](/api-reference/human-input/get-human-input-form)で返される）の `id` 値のいずれかと一致する必要があります。",
                     "maxLength": 20,
                     "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
                   },
@@ -3043,7 +3043,7 @@
             }
           },
           "400": {
-            "description": "- `bad_request`：フォーム受信者タイプが無効です。\n- `invalid_form_data`：送信がフォーム定義に対する検証に失敗しました。",
+            "description": "- `bad_request` : フォーム受信者タイプが無効です。\n- `invalid_form_data` : フォーム定義に対する送信の検証に失敗しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3068,7 +3068,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：フォームが見つかりません。",
+            "description": "`not_found` : フォームが見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3085,7 +3085,7 @@
             }
           },
           "412": {
-            "description": "- `human_input_form_submitted`：フォームは既に送信されています。フォームは一度限りです。どのユーザーが送信しても最初のレスポンスが有効になります。\n- `human_input_form_expired`：送信が届く前にフォームの有効期限が過ぎました。",
+            "description": "- `human_input_form_submitted` : フォームは既に送信されています。フォームは一回限りで、どのユーザーが送信しても最初の応答が優先されます。\n- `human_input_form_expired` : 送信が届く前にフォームの有効期限が切れました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3117,8 +3117,8 @@
         "tags": [
           "Chatflows"
         ],
-        "summary": "ワークフローイベントをストリーミング",
-        "description": "一時停止または SSE 接続が切断された後にワークフロー実行の Server-Sent Events ストリームを再開します。既に完了した実行の場合、ストリームは単一の `workflow_finished` イベントを発行して閉じます。",
+        "summary": "ワークフローイベントをストリーム",
+        "description": "一時停止後または SSE 接続が切断された後のワークフロー実行の Server-Sent Events ストリームを再開します。既に完了した実行の場合、ストリームは単一の `workflow_finished` イベントを発行して閉じます。",
         "operationId": "streamChatflowEvents",
         "parameters": [
           {
@@ -3129,7 +3129,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "元の[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)リクエストによって返されたワークフロー実行 ID。"
+            "description": "元の[チャットメッセージを送信](/api-reference/chatflows/send-chat-message)リクエストで返されたワークフロー実行 ID。"
           },
           {
             "name": "user",
@@ -3158,7 +3158,7 @@
               "type": "boolean",
               "default": false
             },
-            "description": "`true` に設定すると、複数の `workflow_paused` イベントにわたってストリームを開いたままにします（ワークフローに複数の人間の入力ノードが連続している場合に便利）。デフォルトでは最初の一時停止後にストリームを閉じます。"
+            "description": "`true` に設定すると、複数の `workflow_paused` イベントにまたがってストリームを開いたままにします（ワークフローに連続した人間の入力ノードが複数ある場合に便利）。デフォルトでは最初の一時停止後にストリームを閉じます。"
           }
         ],
         "responses": {
@@ -3174,7 +3174,7 @@
             }
           },
           "400": {
-            "description": "`not_workflow_app`：アプリモードが正しい API ルートと一致しているか確認してください。",
+            "description": "`not_workflow_app` : アプリモードが正しい API ルートと一致しているか確認してください。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3191,7 +3191,7 @@
             }
           },
           "404": {
-            "description": "`not_found`：ワークフロー実行が見つかりません。",
+            "description": "`not_found` : ワークフロー実行が見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3217,12 +3217,12 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API_KEY",
-        "description": "API キー認証。すべての API リクエストに対して、API キーを `Authorization` HTTP ヘッダーに `Bearer ` プレフィックス付きで含めてください。例：`Authorization: Bearer {API_KEY}`。**API キーはサーバー側で保存することを強く推奨します。クライアント側で共有または保存しないでください。API キーの漏洩は深刻な結果につながる可能性があります。**"
+        "description": "API キー認証。すべての API リクエストで、`Authorization` HTTP ヘッダーに `Bearer ` を前に付けて API キーを含めてください。例：`Authorization: Bearer {API_KEY}`。**API キーはサーバー側に保存し、クライアント側で共有または保存しないことを強くお勧めします。API キーの漏洩は深刻な結果につながる可能性があります。**"
       }
     },
     "responses": {
       "SuccessResult": {
-        "description": "操作成功。",
+        "description": "操作に成功しました。",
         "content": {
           "application/json": {
             "schema": {
@@ -3261,7 +3261,7 @@
           },
           "inputs": {
             "type": "object",
-            "description": "アプリで定義されたさまざまな変数値の入力を許可します。キー/値ペアを含みます。アプリが期待する変数名と型を確認するには、[アプリパラメータを取得](/api-reference/applications/get-app-parameters)レスポンスの `user_input_form` フィールドを参照してください。",
+            "description": "アプリで定義されたさまざまな変数値の入力を許可します。キー/値のペアを含みます。[アプリパラメータを取得](/api-reference/applications/get-app-parameters)レスポンスの `user_input_form` フィールドを参照して、アプリが期待する変数名とタイプを確認してください。",
             "additionalProperties": true
           },
           "response_mode": {
@@ -3270,19 +3270,19 @@
               "streaming",
               "blocking"
             ],
-            "description": "レスポンス返却のモード。`streaming`（推奨）は SSE を使用します。`blocking` は完了後に返します（長いプロセスでは中断される可能性があります）。Cloudflare タイムアウトは `100 秒` です。省略した場合、デフォルトでブロッキング動作になります。"
+            "description": "レスポンス返却モード。`streaming`（推奨）は SSE を使用します。`blocking` は完了後に返します（長いプロセスでは中断される可能性があります）。Cloudflare タイムアウトは `100 s` です。省略した場合、デフォルトはブロッキング動作です。"
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。アプリケーション内で一意です。この識別子はデータアクセスをスコープします — 会話、メッセージ、ファイルは同じ `user` 値でクエリされた場合のみ表示されます。"
+            "description": "ユーザー識別子。アプリケーション内で一意です。この識別子はデータアクセスのスコープを設定します — 会話、メッセージ、ファイルは同じ `user` 値でクエリした場合にのみ表示されます。"
           },
           "conversation_id": {
             "type": "string",
-            "description": "会話を続けるための会話 ID。以前のメッセージの `conversation_id` を渡します。新しい会話を開始するには、このフィールドを省略するか空の文字列を渡します。レスポンスは `conversation_id` を返します — その会話を続けるには後続のメッセージでそれを渡してください。"
+            "description": "会話を継続するための会話 ID。前のメッセージの `conversation_id` を渡します。新しい会話を開始するには、このフィールドを省略するか空文字列を渡します。レスポンスは `conversation_id` を返します — その会話を継続するには、後続のメッセージでそれを渡してください。"
           },
           "files": {
             "type": "array",
-            "description": "画像、ドキュメント、音声、ビデオを含むマルチモーダル理解のためのファイルリスト。ローカルファイルを添付するには、まず[ファイルをアップロード](/api-reference/files/upload-file)経由でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。",
+            "description": "画像、ドキュメント、音声、動画を含むマルチモーダル理解のためのファイルリスト。ローカルファイルを添付するには、まず[ファイルをアップロード](/api-reference/files/upload-file)でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。",
             "items": {
               "type": "object",
               "required": [
@@ -3323,12 +3323,12 @@
           },
           "auto_generate_name": {
             "type": "boolean",
-            "description": "会話タイトルを自動生成します。`false` の場合、非同期タイトル生成のために `auto_generate: true` で[会話名を変更](/api-reference/conversations/rename-conversation) API を使用してください。",
+            "description": "会話タイトルを自動生成します。`false` の場合、[会話名を変更](/api-reference/conversations/rename-conversation) API を `auto_generate: true` で使用して非同期でタイトルを生成します。",
             "default": true
           },
           "workflow_id": {
             "type": "string",
-            "description": "実行する公開ワークフローバージョン ID を指定します。指定しない場合、最新の公開バージョンが使用されます。"
+            "description": "実行する公開済みワークフローバージョン ID を指定します。指定しない場合、最新の公開バージョンが使用されます。"
           }
         }
       },
@@ -3342,7 +3342,7 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "リクエスト追跡とレスポンス停止 API 用のタスク ID。"
+            "description": "リクエスト追跡および停止レスポンス API 用のタスク ID。"
           },
           "id": {
             "type": "string",
@@ -3352,7 +3352,7 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "一意のメッセージ ID。フィードバックや推奨質問エンドポイントを呼び出す際に `message_id` パラメータとしてこれを使用してください。"
+            "description": "一意のメッセージ ID。フィードバックや推奨質問エンドポイントを呼び出す際に `message_id` パラメータとして使用します。"
           },
           "conversation_id": {
             "type": "string",
@@ -3369,7 +3369,7 @@
           },
           "metadata": {
             "type": "object",
-            "description": "使用量と検索リソースを含むメタデータ。",
+            "description": "使用状況と検索リソースを含むメタデータ。",
             "properties": {
               "usage": {
                 "$ref": "#/components/schemas/Usage"
@@ -3392,7 +3392,7 @@
       },
       "ChunkChatEvent": {
         "type": "object",
-        "description": "ストリーミングモードにおける Server-Sent Event チャンクのベーススキーマ。",
+        "description": "ストリーミングモードでの Server-Sent Event チャンクの基本スキーマ。",
         "properties": {
           "event": {
             "type": "string",
@@ -3461,7 +3461,7 @@
       },
       "StreamEventBase": {
         "type": "object",
-        "description": "ストリームイベントのベースプロパティ。",
+        "description": "ストリームイベントの基本プロパティ。",
         "properties": {
           "task_id": {
             "type": "string",
@@ -3519,7 +3519,7 @@
               "audio": {
                 "type": "string",
                 "format": "byte",
-                "description": "Base64 エンコードされた MP3 音声チャンク。すべてのチャンクを順番にデコードして連結すると、完全な音声ファイルが生成されます。"
+                "description": "Base64 エンコードされた MP3 音声チャンク。完全な音声ファイルを生成するには、すべてのチャンクを順番にデコードして連結します。"
               }
             }
           }
@@ -3539,7 +3539,7 @@
             "properties": {
               "audio": {
                 "type": "string",
-                "description": "空の文字列。音声ストリームの終了を示します。"
+                "description": "空文字列。音声ストリームの終了を示します。"
               }
             }
           }
@@ -3564,14 +3564,14 @@
               },
               "type": {
                 "type": "string",
-                "description": "ファイルタイプ（例：`image`）。"
+                "description": "ファイルタイプ、例：`image`。"
               },
               "belongs_to": {
                 "type": "string",
                 "enum": [
                   "assistant"
                 ],
-                "description": "このファイルの所有者。ここでは常に `assistant`。"
+                "description": "このファイルが誰に属するか。ここでは常に `assistant`。"
               },
               "url": {
                 "type": "string",
@@ -3601,7 +3601,7 @@
               },
               "metadata": {
                 "type": "object",
-                "description": "使用量と検索リソースを含むメタデータ。",
+                "description": "使用状況と検索リソースを含むメタデータ。",
                 "properties": {
                   "usage": {
                     "$ref": "#/components/schemas/Usage"
@@ -3629,7 +3629,7 @@
           },
           {
             "type": "object",
-            "description": "メッセージ内容置換イベント（例：コンテンツモデレーションによる）。",
+            "description": "メッセージコンテンツ置換イベント（例：コンテンツモデレーションによる）。",
             "properties": {
               "answer": {
                 "type": "string",
@@ -3678,13 +3678,13 @@
           },
           {
             "type": "object",
-            "description": "接続を維持するための Ping イベント。`data:` ペイロードなしの `event: ping` 行として配信されます。"
+            "description": "接続を維持するための ping イベント。`event: ping` 行として `data:` ペイロードなしで配信されます。"
           }
         ]
       },
       "Usage": {
         "type": "object",
-        "description": "モデル使用量情報。",
+        "description": "モデル使用状況情報。",
         "properties": {
           "prompt_tokens": {
             "type": "integer",
@@ -3740,13 +3740,13 @@
           "latency": {
             "type": "number",
             "format": "double",
-            "description": "レイテンシ（秒）。"
+            "description": "レイテンシー（秒）。"
           }
         }
       },
       "RetrieverResource": {
         "type": "object",
-        "description": "検索リソースの引用と帰属情報。",
+        "description": "検索リソースの引用および帰属情報。",
         "properties": {
           "id": {
             "type": "string",
@@ -3817,7 +3817,7 @@
           "summary": {
             "type": "string",
             "nullable": true,
-            "description": "チャンク内容の要約。"
+            "description": "チャンクコンテンツの要約。"
           },
           "created_at": {
             "type": "integer",
@@ -3942,7 +3942,7 @@
           },
           "session_id": {
             "type": "string",
-            "description": "セッション識別子。デフォルトは `external_user_id` の値。"
+            "description": "セッション識別子。デフォルトは `external_user_id` 値。"
           },
           "created_at": {
             "type": "string",
@@ -4030,7 +4030,7 @@
           },
           "from_source": {
             "type": "string",
-            "description": "フィードバックソース。API 経由で送信されたエンドユーザーフィードバックの場合は `user`、コンソールから送信されたフィードバックの場合は `admin`。"
+            "description": "フィードバックソース。API 経由で送信されたエンドユーザーフィードバックには `user`、コンソールから送信されたフィードバックには `admin`。"
           },
           "from_end_user_id": {
             "type": "string",
@@ -4077,7 +4077,7 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "1ページあたりのアイテム数。"
+            "description": "ページごとのアイテム数。"
           },
           "has_more": {
             "type": "boolean",
@@ -4094,7 +4094,7 @@
       },
       "ConversationMessageItem": {
         "type": "object",
-        "description": "会話内の単一のメッセージ。",
+        "description": "会話内の単一メッセージ。",
         "properties": {
           "id": {
             "type": "string",
@@ -4110,7 +4110,7 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "スレッド会話の親メッセージ ID。"
+            "description": "スレッド化された会話の親メッセージ ID。"
           },
           "inputs": {
             "type": "object",
@@ -4195,7 +4195,7 @@
           },
           "type": {
             "type": "string",
-            "description": "ファイルタイプ（例：`image`）。"
+            "description": "ファイルタイプ、例：`image`。"
           },
           "url": {
             "type": "string",
@@ -4220,7 +4220,7 @@
           "belongs_to": {
             "type": "string",
             "nullable": true,
-            "description": "このファイルの所有者。ユーザーがアップロードしたファイルには `user`、アシスタントが生成したファイルには `assistant`。"
+            "description": "このファイルが誰に属するか。ユーザーがアップロードしたファイルには `user`、アシスタントが生成したファイルには `assistant`。"
           },
           "upload_file_id": {
             "type": "string",
@@ -4232,12 +4232,12 @@
       },
       "AgentThoughtItem": {
         "type": "object",
-        "description": "メッセージ内の Agent の思考ステップ。",
+        "description": "メッセージ内の Agent 思考ステップ。",
         "properties": {
           "id": {
             "type": "string",
             "format": "uuid",
-            "description": "Agent の思考 ID。"
+            "description": "Agent 思考 ID。"
           },
           "chain_id": {
             "type": "string",
@@ -4259,7 +4259,7 @@
           },
           "tool": {
             "type": "string",
-            "description": "呼び出されたツール。`;` で区切られています。"
+            "description": "呼び出されたツール。`;` で区切られます。"
           },
           "tool_labels": {
             "type": "object",
@@ -4273,7 +4273,7 @@
           },
           "observation": {
             "type": "string",
-            "description": "ツール呼び出しからのレスポンス。"
+            "description": "ツール呼び出しからの応答。"
           },
           "files": {
             "type": "array",
@@ -4294,7 +4294,7 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "1ページあたりのアイテム数。"
+            "description": "ページごとのアイテム数。"
           },
           "has_more": {
             "type": "boolean",
@@ -4373,7 +4373,7 @@
         "properties": {
           "limit": {
             "type": "integer",
-            "description": "1ページあたりのアイテム数。"
+            "description": "ページごとのアイテム数。"
           },
           "has_more": {
             "type": "boolean",
@@ -4402,11 +4402,11 @@
           },
           "value_type": {
             "type": "string",
-            "description": "変数値の型。可能な値：`string`、`number`、`object`、`secret`、`file`、`boolean`、`array[any]`、`array[string]`、`array[number]`、`array[object]`、`array[file]`、`array[boolean]`。"
+            "description": "変数値のタイプ。可能な値：`string`、`number`、`object`、`secret`、`file`、`boolean`、`array[any]`、`array[string]`、`array[number]`、`array[object]`、`array[file]`、`array[boolean]`。"
           },
           "value": {
             "type": "string",
-            "description": "変数値（複雑な型の場合は JSON 文字列にできます）。"
+            "description": "変数値（複雑なタイプの場合は JSON 文字列にできます）。"
           },
           "description": {
             "type": "string",
@@ -4432,7 +4432,7 @@
         ],
         "properties": {
           "value": {
-            "description": "変数の新しい値。変数の期待される型と一致する必要があります。"
+            "description": "変数の新しい値。変数の期待されるタイプと一致する必要があります。"
           },
           "user": {
             "type": "string",
@@ -4474,7 +4474,7 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "メッセージ ID。両方が提供された場合、`text` より優先されます。"
+            "description": "メッセージ ID。両方が提供された場合は `text` より優先されます。"
           },
           "text": {
             "type": "string",
@@ -4548,7 +4548,7 @@
           },
           "speech_to_text": {
             "type": "object",
-            "description": "音声からテキストへの設定。",
+            "description": "音声認識の設定。",
             "properties": {
               "enabled": {
                 "type": "boolean",
@@ -4558,7 +4558,7 @@
           },
           "text_to_speech": {
             "type": "object",
-            "description": "テキストから音声への設定。",
+            "description": "テキスト読み上げの設定。",
             "properties": {
               "enabled": {
                 "type": "boolean",
@@ -4590,7 +4590,7 @@
           },
           "annotation_reply": {
             "type": "object",
-            "description": "注釈返信の設定。",
+            "description": "注釈応答の設定。",
             "properties": {
               "enabled": {
                 "type": "boolean",
@@ -4600,7 +4600,7 @@
           },
           "more_like_this": {
             "type": "object",
-            "description": "類似項目の設定。",
+            "description": "類似検索の設定。",
             "properties": {
               "enabled": {
                 "type": "boolean",
@@ -4610,7 +4610,7 @@
           },
           "sensitive_word_avoidance": {
             "type": "object",
-            "description": "センシティブワード回避の設定。",
+            "description": "機密単語回避の設定。",
             "properties": {
               "enabled": {
                 "type": "boolean",
@@ -4674,7 +4674,7 @@
               },
               "video_file_size_limit": {
                 "type": "integer",
-                "description": "最大ビデオファイルサイズ（MB）。"
+                "description": "最大動画ファイルサイズ（MB）。"
               },
               "workflow_file_upload_limit": {
                 "type": "integer",
@@ -4787,7 +4787,7 @@
           },
           "default": {
             "type": "string",
-            "description": "デフォルトで選択される値。"
+            "description": "デフォルトの選択値。"
           },
           "options": {
             "type": "array",
@@ -4816,7 +4816,7 @@
                 }
               ]
             },
-            "description": "ツールアイコン。キーはツール名です。"
+            "description": "ツールアイコン。キーはツール名。"
           }
         }
       },
@@ -4827,7 +4827,7 @@
         "properties": {
           "background": {
             "type": "string",
-            "description": "16進形式の背景色。"
+            "description": "16 進形式の背景色。"
           },
           "content": {
             "type": "string",
@@ -4848,11 +4848,11 @@
           },
           "chat_color_theme_inverted": {
             "type": "boolean",
-            "description": "チャットカラーテーマが反転されているかどうか。"
+            "description": "チャットカラーテーマが反転しているかどうか。"
           },
           "icon_type": {
             "type": "string",
-            "description": "使用されているアイコンのタイプ。絵文字アイコンには `emoji`、アップロードされた画像アイコンには `image`。"
+            "description": "使用されるアイコンのタイプ。絵文字アイコンには `emoji`、アップロードされた画像アイコンには `image`。"
           },
           "icon": {
             "type": "string",
@@ -4910,15 +4910,15 @@
           },
           "has_more": {
             "type": "boolean",
-            "description": "現在の結果セットを超えて利用可能なページがある場合は `true`。"
+            "description": "現在の結果セットを超えてさらにページが利用可能な場合は `true`。"
           },
           "limit": {
             "type": "integer",
-            "description": "1ページあたりのアイテム数。"
+            "description": "ページごとのアイテム数。"
           },
           "total": {
             "type": "integer",
-            "description": "クエリに一致する注釈の総数。"
+            "description": "クエリに一致する注釈の合計数。"
           },
           "page": {
             "type": "integer",
@@ -4942,12 +4942,12 @@
           "answer": {
             "type": "string",
             "nullable": true,
-            "description": "注釈がマッチした場合に返される事前定義された回答。"
+            "description": "注釈がマッチしたときに返される事前定義された回答。"
           },
           "hit_count": {
             "type": "integer",
             "nullable": true,
-            "description": "この注釈がマッチして返信として返された回数。"
+            "description": "この注釈がマッチして応答として返された回数。"
           },
           "created_at": {
             "type": "integer",
@@ -4995,7 +4995,7 @@
       },
       "InitialAnnotationReplySettingsRequest": {
         "type": "object",
-        "description": "注釈返信設定を構成するためのリクエストボディ。",
+        "description": "注釈応答設定を構成するためのリクエストボディ。",
         "required": [
           "score_threshold",
           "embedding_provider_name",
@@ -5025,11 +5025,11 @@
           "job_id": {
             "type": "string",
             "format": "uuid",
-            "description": "非同期ジョブ ID。進行状況を追跡するには[注釈返信ジョブステータスを取得](/api-reference/annotations/get-annotation-reply-job-status)と一緒に使用してください。"
+            "description": "非同期ジョブ ID。進行状況を追跡するには[注釈応答ジョブステータスを取得](/api-reference/annotations/get-annotation-reply-job-status)で使用します。"
           },
           "job_status": {
             "type": "string",
-            "description": "現在のジョブステータス。キュー中は `waiting`、進行中は `processing`、完了時は `completed`、失敗時は `error`。"
+            "description": "現在のジョブステータス。キューに入っている場合は `waiting`、進行中の場合は `processing`、完了した場合は `completed`、失敗した場合は `error`。"
           }
         }
       },
@@ -5039,15 +5039,15 @@
           "job_id": {
             "type": "string",
             "format": "uuid",
-            "description": "[注釈返信を設定](/api-reference/annotations/configure-annotation-reply)呼び出しからのジョブ ID。"
+            "description": "[注釈応答を設定](/api-reference/annotations/configure-annotation-reply)呼び出しからのジョブ ID。"
           },
           "job_status": {
             "type": "string",
-            "description": "現在のジョブステータス。キュー中は `waiting`、進行中は `processing`、完了時は `completed`、失敗時は `error`。"
+            "description": "現在のジョブステータス。キューに入っている場合は `waiting`、進行中の場合は `processing`、完了した場合は `completed`、失敗した場合は `error`。"
           },
           "error_msg": {
             "type": "string",
-            "description": "ジョブが失敗した理由を説明するエラーメッセージ。`job_status` が `error` でない場合は空の文字列。"
+            "description": "ジョブが失敗した理由を説明するエラーメッセージ。`job_status` が `error` でない場合は空文字列。"
           }
         }
       },
@@ -5065,7 +5065,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5090,7 +5090,7 @@
                   },
                   "reason": {
                     "type": "string",
-                    "description": "ワークフロー開始の理由。最初の開始には `initial`、一時停止後の再開時（例：人間の入力後）には `resumption`。"
+                    "description": "ワークフロー開始の理由。最初の開始には `initial`、一時停止後（例：人間の入力後）に再開する場合は `resumption`。"
                   }
                 }
               }
@@ -5108,11 +5108,11 @@
           },
           {
             "type": "object",
-            "description": "ワークフロー実行が完了しました。",
+            "description": "ワークフロー実行が終了しました。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5127,7 +5127,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、手動停止時は `stopped`、部分的に完了した場合は `partial-succeeded`、人間の入力待ちの場合は `paused`。"
+                    "description": "実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、手動で停止された場合は `stopped`、部分的に完了した場合は `partial-succeeded`、人間の入力を待っている場合は `paused`。"
                   },
                   "outputs": {
                     "type": "object",
@@ -5146,11 +5146,11 @@
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "消費された token の合計。"
+                    "description": "消費された合計 token 数。"
                   },
                   "total_steps": {
                     "type": "integer",
-                    "description": "実行されたステップの合計。"
+                    "description": "実行された合計ステップ数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5161,12 +5161,12 @@
                     "type": "integer",
                     "format": "int64",
                     "nullable": true,
-                    "description": "完了タイムスタンプ（Unix エポック秒）。"
+                    "description": "終了タイムスタンプ（Unix エポック秒）。"
                   },
                   "exceptions_count": {
                     "type": "integer",
                     "nullable": true,
-                    "description": "実行中に発生した例外の数。"
+                    "description": "実行中の例外の数。"
                   },
                   "files": {
                     "type": "array",
@@ -5197,7 +5197,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5225,7 +5225,7 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前のノードの ID。"
+                    "description": "先行ノードの ID。"
                   },
                   "inputs": {
                     "type": "object",
@@ -5269,11 +5269,11 @@
           },
           {
             "type": "object",
-            "description": "ノード実行が完了しました。",
+            "description": "ノード実行が終了しました。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5301,7 +5301,7 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前のノードの ID。"
+                    "description": "先行ノードの ID。"
                   },
                   "inputs": {
                     "type": "object",
@@ -5323,7 +5323,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "ノード実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外発生時は `exception`。"
+                    "description": "ノード実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外が発生した場合は `exception`。"
                   },
                   "error": {
                     "type": "string",
@@ -5348,7 +5348,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "完了タイムスタンプ（Unix エポック秒）。"
+                    "description": "終了タイムスタンプ（Unix エポック秒）。"
                   },
                   "files": {
                     "type": "array",
@@ -5385,11 +5385,11 @@
           },
           {
             "type": "object",
-            "description": "ノードリトライ試行。",
+            "description": "ノードのリトライ試行。",
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5417,7 +5417,7 @@
                   "predecessor_node_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "前のノードの ID。"
+                    "description": "先行ノードの ID。"
                   },
                   "inputs": {
                     "type": "object",
@@ -5439,7 +5439,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "ノード実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外発生時は `exception`。"
+                    "description": "ノード実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外が発生した場合は `exception`。"
                   },
                   "error": {
                     "type": "string",
@@ -5464,7 +5464,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "完了タイムスタンプ（Unix エポック秒）。"
+                    "description": "終了タイムスタンプ（Unix エポック秒）。"
                   },
                   "files": {
                     "type": "array",
@@ -5509,7 +5509,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5570,7 +5570,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5625,7 +5625,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5654,7 +5654,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "イテレーション実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外発生時は `exception`。"
+                    "description": "イテレーション実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外が発生した場合は `exception`。"
                   },
                   "error": {
                     "type": "string",
@@ -5667,7 +5667,7 @@
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "すべてのイテレーションで消費された token の合計。"
+                    "description": "すべてのイテレーションで消費された合計 token 数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5677,7 +5677,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "完了タイムスタンプ（Unix エポック秒）。"
+                    "description": "終了タイムスタンプ（Unix エポック秒）。"
                   },
                   "steps": {
                     "type": "integer",
@@ -5703,7 +5703,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5764,7 +5764,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5822,7 +5822,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5851,7 +5851,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "ループ実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外発生時は `exception`。"
+                    "description": "ループ実行ステータス。進行中は `running`、成功時は `succeeded`、失敗時は `failed`、例外が発生した場合は `exception`。"
                   },
                   "error": {
                     "type": "string",
@@ -5864,7 +5864,7 @@
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "すべてのループイテレーションで消費された token の合計。"
+                    "description": "すべてのループイテレーションで消費された合計 token 数。"
                   },
                   "created_at": {
                     "type": "integer",
@@ -5874,7 +5874,7 @@
                   "finished_at": {
                     "type": "integer",
                     "format": "int64",
-                    "description": "完了タイムスタンプ（Unix エポック秒）。"
+                    "description": "終了タイムスタンプ（Unix エポック秒）。"
                   },
                   "steps": {
                     "type": "integer",
@@ -5899,7 +5899,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -5918,7 +5918,7 @@
                   },
                   "form_content": {
                     "type": "string",
-                    "description": "ワークフロー変数が置換された事前レンダリングされたフォーム本文。"
+                    "description": "ワークフロー変数が置換された事前レンダリングされたフォームボディ。"
                   },
                   "inputs": {
                     "type": "array",
@@ -5931,7 +5931,7 @@
                         },
                         "output_variable_name": {
                           "type": "string",
-                          "description": "ワークフロー内でこの入力の送信された値を参照するために使用される変数名。送信 `inputs` オブジェクトのキーに対応します。"
+                          "description": "ワークフロー内でこの入力の送信値を参照するために使用される変数名。送信 `inputs` オブジェクトのキーに対応します。"
                         },
                         "default": {
                           "type": "object",
@@ -5947,7 +5947,7 @@
                               "items": {
                                 "type": "string"
                               },
-                              "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも2つの要素が必要です。"
+                              "description": "`type` が `variable` の場合の変数参照パス（例：`[\"node_id\", \"var_name\"]`）。少なくとも 2 つの要素を含む必要があります。"
                             },
                             "value": {
                               "type": "string",
@@ -5968,7 +5968,7 @@
                           "type": "string",
                           "maxLength": 20,
                           "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
-                          "description": "アクションボタンの識別子。受信者がこのボタンを選択した際に、[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)で `action` として渡します。"
+                          "description": "アクションボタンの識別子。受信者がこのボタンを選択したときに[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)で `action` として渡します。"
                         },
                         "title": {
                           "type": "string",
@@ -5977,11 +5977,11 @@
                         },
                         "button_style": {
                           "type": "string",
-                          "description": "ボタンの視覚スタイル。利用可能な値：`primary`、`default`、`accent`、`ghost`。"
+                          "description": "ボタンのビジュアルスタイル。利用可能な値：`primary`、`default`、`accent`、`ghost`。"
                         }
                       }
                     },
-                    "description": "送信時に受信者が選択できる利用可能なユーザーアクション（ボタン）。"
+                    "description": "受信者が送信時に選択できる利用可能なユーザーアクション（ボタン）。"
                   },
                   "display_in_ui": {
                     "type": "boolean",
@@ -5990,14 +5990,14 @@
                   "form_token": {
                     "type": "string",
                     "nullable": true,
-                    "description": "[人間の入力フォームを取得](/api-reference/human-input/get-human-input-form)および[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)のアクセストークン。人間の入力ノードがメールまたはコンソール配信を使用している場合は `null`（サービス API は WebApp 配信されたフォームのみ操作できます）。"
+                    "description": "[人間の入力フォームを取得](/api-reference/human-input/get-human-input-form)および[人間の入力フォームを送信](/api-reference/human-input/submit-human-input-form)用のアクセストークン。人間の入力ノードがメールまたはコンソール配信を使用する場合は `null`（サービス API は WebApp 配信フォームのみ操作できます）。"
                   },
                   "resolved_default_values": {
                     "type": "object",
                     "additionalProperties": {
                       "type": "string"
                     },
-                    "description": "入力 `output_variable_name` でキー付けされたフォーム入力の事前入力されたデフォルト値。すべての値は文字列化されています。"
+                    "description": "入力の `output_variable_name` をキーとするフォーム入力の事前入力されたデフォルト値。すべての値は文字列化されています。"
                   },
                   "expiration_time": {
                     "type": "integer",
@@ -6026,7 +6026,7 @@
                 "properties": {
                   "workflow_run_id": {
                     "type": "string",
-                    "description": "このワークフロー実行レコードの永続識別子。実行後に結果を取得するには[ワークフロー実行詳細を取得](/api-reference/chatflows/get-workflow-run-detail)と一緒に使用してください。"
+                    "description": "このワークフロー実行レコードの永続識別子。実行後に結果を取得するには[ワークフロー実行詳細を取得](/api-reference/chatflows/get-workflow-run-detail)で使用します。"
                   },
                   "paused_nodes": {
                     "type": "array",
@@ -6038,7 +6038,7 @@
                   "outputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "一時停止時の部分出力。"
+                    "description": "一時停止時の部分的な出力。"
                   },
                   "reasons": {
                     "type": "array",
@@ -6064,11 +6064,11 @@
                   },
                   "total_tokens": {
                     "type": "integer",
-                    "description": "消費された token の合計。"
+                    "description": "消費された合計 token 数。"
                   },
                   "total_steps": {
                     "type": "integer",
-                    "description": "実行されたステップの合計。"
+                    "description": "実行された合計ステップ数。"
                   }
                 }
               }
@@ -6089,7 +6089,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -6104,7 +6104,7 @@
                   },
                   "rendered_content": {
                     "type": "string",
-                    "description": "受信者が送信した値でレンダリングされたフォーム本文（`human_input_required` の `form_content` は未入力テンプレートです）。"
+                    "description": "受信者が送信した値でレンダリングされたフォームボディ（`human_input_required` の `form_content` は未入力のテンプレートです）。"
                   },
                   "action_id": {
                     "type": "string",
@@ -6133,7 +6133,7 @@
             "properties": {
               "workflow_run_id": {
                 "type": "string",
-                "description": "ワークフロー実行の実行 ID。"
+                "description": "ワークフロー実行 ID。"
               },
               "data": {
                 "type": "object",
@@ -6196,7 +6196,7 @@
                   },
                   "status": {
                     "type": "string",
-                    "description": "ログエントリのステータス。"
+                    "description": "ログエントリステータス。"
                   },
                   "data": {
                     "type": "object",
@@ -6289,7 +6289,7 @@
           },
           "status": {
             "type": "string",
-            "description": "ワークフロー実行ステータス。進行中の実行には `running`、正常に完了した場合は `succeeded`、実行がエラーに遭遇した場合は `failed`、手動で停止した場合は `stopped`、一部のノードが成功し他が失敗した場合は `partial-succeeded`、人間の入力を待っている場合は `paused`。"
+            "description": "ワークフロー実行ステータス。進行中の実行には `running`、正常に完了した場合は `succeeded`、エラーが発生した場合は `failed`、手動で停止された場合は `stopped`、一部のノードが成功したが他が失敗した場合は `partial-succeeded`、人間の入力を待っている場合は `paused`。"
           },
           "inputs": {
             "type": "object",
@@ -6313,7 +6313,7 @@
           },
           "total_tokens": {
             "type": "integer",
-            "description": "消費された token の合計。"
+            "description": "消費された合計 token 数。"
           },
           "created_at": {
             "type": "integer",
@@ -6324,7 +6324,7 @@
             "type": "integer",
             "format": "int64",
             "nullable": true,
-            "description": "ワークフロー実行が完了した Unix タイムスタンプ。"
+            "description": "ワークフロー実行が終了した Unix タイムスタンプ。"
           },
           "elapsed_time": {
             "type": "number",
@@ -6343,11 +6343,11 @@
           },
           "limit": {
             "type": "integer",
-            "description": "1ページあたりのアイテム数。"
+            "description": "ページごとのアイテム数。"
           },
           "total": {
             "type": "integer",
-            "description": "ログエントリの総数。"
+            "description": "ログエントリの合計数。"
           },
           "has_more": {
             "type": "boolean",
@@ -6431,7 +6431,7 @@
           },
           "status": {
             "type": "string",
-            "description": "ワークフロー実行ステータス。進行中の実行には `running`、正常に完了した場合は `succeeded`、実行がエラーに遭遇した場合は `failed`、手動で停止した場合は `stopped`、一部のノードが成功し他が失敗した場合は `partial-succeeded`、人間の入力を待っている場合は `paused`。"
+            "description": "ワークフロー実行ステータス。進行中の実行には `running`、正常に完了した場合は `succeeded`、エラーが発生した場合は `failed`、手動で停止された場合は `stopped`、一部のノードが成功したが他が失敗した場合は `partial-succeeded`、人間の入力を待っている場合は `paused`。"
           },
           "error": {
             "type": "string",
@@ -6445,7 +6445,7 @@
           },
           "total_tokens": {
             "type": "integer",
-            "description": "消費された token の合計。"
+            "description": "消費された合計 token 数。"
           },
           "total_steps": {
             "type": "integer",
@@ -6460,7 +6460,7 @@
             "type": "integer",
             "format": "int64",
             "nullable": true,
-            "description": "ワークフロー実行が完了した Unix タイムスタンプ。"
+            "description": "ワークフロー実行が終了した Unix タイムスタンプ。"
           },
           "exceptions_count": {
             "type": "integer",
@@ -6468,7 +6468,7 @@
           },
           "triggered_from": {
             "type": "string",
-            "description": "ワークフロー実行をトリガーしたソース。エディターからのテスト実行には `debugging`、API またはアプリから開始された実行には `app`。"
+            "description": "ワークフロー実行をトリガーしたソース。エディターからのテスト実行には `debugging`、API またはアプリ起動の実行には `app`。"
           }
         }
       },
@@ -6508,11 +6508,11 @@
           },
           "type": {
             "type": "string",
-            "description": "人間の入力コンテンツの場合は `human_input`。"
+            "description": "人間の入力コンテンツには `human_input`。"
           },
           "form_definition": {
             "nullable": true,
-            "description": "人間の入力ノードからのフォーム定義。コンテンツが送信レスポンスを表す場合は `null`。",
+            "description": "人間の入力ノードからのフォーム定義。コンテンツが送信応答を表す場合は `null`。",
             "$ref": "#/components/schemas/HumanInputFormDefinition"
           },
           "form_submission_data": {
@@ -6524,7 +6524,7 @@
       },
       "HumanInputFormDefinition": {
         "type": "object",
-        "description": "人間の入力ノードによってレンダリングされる人間の入力フォームの定義。",
+        "description": "人間の入力ノードによってレンダリングされた人間の入力フォームの定義。",
         "properties": {
           "form_id": {
             "type": "string",
@@ -6540,7 +6540,7 @@
           },
           "form_content": {
             "type": "string",
-            "description": "フォームと一緒に表示される Markdown またはテキストコンテンツ。"
+            "description": "フォームと共に表示される Markdown またはテキストコンテンツ。"
           },
           "inputs": {
             "type": "array",
@@ -6568,7 +6568,7 @@
           "resolved_default_values": {
             "type": "object",
             "additionalProperties": true,
-            "description": "出力変数名でキー付けされたフォーム入力の解決済みデフォルト値。"
+            "description": "出力変数名をキーとするフォーム入力の解決されたデフォルト値。"
           },
           "expiration_time": {
             "type": "integer",
@@ -6652,7 +6652,7 @@
           },
           "title": {
             "type": "string",
-            "description": "ボタンの表示テキスト。"
+            "description": "ボタン表示テキスト。"
           },
           "button_style": {
             "type": "string",
@@ -6665,11 +6665,11 @@
   "tags": [
     {
       "name": "Chatflows",
-      "description": "チャットメッセージング、ワークフロー実行詳細、イベントストリーミングを含むチャットフローアプリの操作。"
+      "description": "チャットフローアプリの操作。チャットメッセージング、ワークフロー実行詳細、イベントストリーミングを含みます。"
     },
     {
       "name": "Files",
-      "description": "ファイルのアップロードとプレビューの操作。"
+      "description": "ファイルアップロードとプレビュー操作。"
     },
     {
       "name": "End Users",
@@ -6677,7 +6677,7 @@
     },
     {
       "name": "Feedback",
-      "description": "ユーザーフィードバックの操作。"
+      "description": "ユーザーフィードバック操作。"
     },
     {
       "name": "Conversations",
@@ -6685,7 +6685,7 @@
     },
     {
       "name": "TTS",
-      "description": "テキスト読み上げと音声認識の操作。"
+      "description": "テキスト読み上げおよび音声認識操作。"
     },
     {
       "name": "Applications",
@@ -6693,7 +6693,7 @@
     },
     {
       "name": "Annotations",
-      "description": "直接返信のための注釈管理に関連する操作。"
+      "description": "直接応答用の注釈の管理に関連する操作。"
     },
     {
       "name": "Human Input",
