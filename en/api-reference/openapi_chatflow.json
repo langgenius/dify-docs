@@ -128,7 +128,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which arrive as `event: ping` lines (no `data:` payload) every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: Workflow progress streams as `workflow_started`, node events (`node_started` and `node_finished`, plus iteration and loop variants), and the reply as `message` events. The closing sequence depends on the outcome:\n- **Success**: `message_end`, then `workflow_finished`\n- **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n- **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\nWhen text-to-speech auto-play is enabled, `tts_message_end` trails the closing event.\n\n**Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events also nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `message` | each answer chunk (concatenate in order) | `answer` |\n| `message_replace` | output moderation replaces the answer so far | `answer`, `reason` |\n| `message_end` | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events**\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/api-reference/chatflows/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive every 10 seconds | none |"
+                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which arrive as `event: ping` lines (no `data:` payload) every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: Workflow progress streams as `workflow_started`, node events (`node_started` and `node_finished`, plus iteration and loop variants), and the reply as `message` events (an LLM node with `reasoning_format: separated` also emits `reasoning_chunk` events alongside, carrying the model's chain-of-thought). The closing sequence depends on the outcome:\n- **Success**: `message_end`, then `workflow_finished`\n- **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n- **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\nWhen text-to-speech auto-play is enabled, `tts_message_end` trails the closing event.\n\n**Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events also nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `message` | each answer chunk (concatenate in order) | `answer` |\n| `message_replace` | output moderation replaces the answer so far | `answer`, `reason` |\n| `reasoning_chunk` | each chain-of-thought delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; `is_final: true` marks thinking finished) | `data.reasoning`, `data.node_id`, `data.is_final` |\n| `message_end` | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events**\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/api-reference/chatflows/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive every 10 seconds | none |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -137,7 +137,7 @@
                   },
                   "streamingResponseWorkflow": {
                     "summary": "Response Example - Streaming (Workflow)",
-                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
+                    "value": "data: {\"event\": \"workflow_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"inputs\": {\"city\": \"San Francisco\"}, \"created_at\": 1705395332}} data: {\"event\": \"node_started\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"created_at\": 1705395332}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395333, \"data\": {\"message_id\": \"msg123\", \"reasoning\": \"The user greeted me, so\", \"node_id\": \"node_llm_1\", \"is_final\": false}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"created_at\": 1705395333, \"data\": {\"message_id\": \"msg123\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}} data: {\"event\": \"message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \" I\", \"created_at\": 1705395333} data: {\"event\": \"node_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"ne_001\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 1, \"status\": \"succeeded\", \"elapsed_time\": 1.5, \"created_at\": 1705395332, \"finished_at\": 1705395334}} data: {\"event\": \"message_end\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"task123\", \"workflow_run_id\": \"wfr_abc123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"data\": {\"id\": \"wfr_abc123\", \"workflow_id\": \"wf_def456\", \"status\": \"succeeded\", \"elapsed_time\": 2.5, \"total_tokens\": 50, \"total_steps\": 2, \"created_at\": 1705395332, \"finished_at\": 1705395335}}"
                   },
                   "humanInputPause": {
                     "summary": "Response Example - Human Input pause",
@@ -3404,6 +3404,7 @@
               "message_file",
               "message_end",
               "message_replace",
+              "reasoning_chunk",
               "workflow_started",
               "workflow_finished",
               "node_started",
@@ -3436,6 +3437,7 @@
             "message_file": "#/components/schemas/StreamEventChatMessageFile",
             "message_end": "#/components/schemas/StreamEventChatMessageEnd",
             "message_replace": "#/components/schemas/StreamEventChatMessageReplace",
+            "reasoning_chunk": "#/components/schemas/StreamEventChatReasoningChunk",
             "workflow_started": "#/components/schemas/StreamEventWorkflowStarted",
             "workflow_finished": "#/components/schemas/StreamEventWorkflowFinished",
             "node_started": "#/components/schemas/StreamEventNodeStarted",
@@ -6211,6 +6213,44 @@
                   "node_id": {
                     "type": "string",
                     "description": "Node ID in the workflow graph."
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "StreamEventChatReasoningChunk": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/ChunkChatEvent"
+          },
+          {
+            "$ref": "#/components/schemas/StreamEventBase"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "data": {
+                "type": "object",
+                "properties": {
+                  "message_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "ID of the message this reasoning belongs to (mirrors the top-level `message_id`)."
+                  },
+                  "reasoning": {
+                    "type": "string",
+                    "description": "Chain-of-thought delta emitted by an LLM node whose `reasoning_format` is `separated`. Concatenate consecutive `reasoning_chunk` events to rebuild the full reasoning. This stream is parallel to `message`; the `message` (answer) stream stays free of `<think>` tags."
+                  },
+                  "node_id": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "ID of the LLM node producing the reasoning. Lets you attribute reasoning when multiple LLM nodes run."
+                  },
+                  "is_final": {
+                    "type": "boolean",
+                    "description": "`true` marks the end of an LLM node's reasoning phase (the \"thinking finished\" signal); it may arrive with an empty `reasoning`."
                   }
                 }
               }
