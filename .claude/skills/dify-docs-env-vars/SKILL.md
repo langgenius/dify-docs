@@ -155,6 +155,18 @@ The script reports:
 
 Use `.env.example` defaults (what Docker Compose users actually get), not Pydantic code defaults.
 
+### Release var-set diff (run first for a release sync)
+
+Per-PR detection misses vars from untagged PRs, and the **Missing from docs** list can hide genuinely-new vars inside old backlog. So at the start of every release sync, diff the full `.env.example` var set between the last release and the target ref:
+
+```bash
+python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
+  --compare-rev <last-release-tag> <target-ref> \
+  --repo <path-to-dify> --docs <path-to-environments.mdx>
+```
+
+It prints vars **added / removed / default-changed** between the refs, then the **NEW vars still undocumented and not in `ignored-vars.md`** (the triage list). Document each, or add it to `ignored-vars.md` with a reason. Never leave a new-this-release var as silent backlog.
+
 ### Intentionally ignored variables
 
 Some variables in `.env.example` are deliberately not documented (Cloud-only, experimental, or verifier false positives). The verifier reads these from `ignored-vars.md` (same directory) and filters them out. When you:

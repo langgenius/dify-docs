@@ -10,33 +10,46 @@ After Dify PR #31586, env vars were split across `docker/.env.example` and
 a directory; passing a directory globs `**/*.env.example` recursively.
 
 Usage:
+    # Verify mode: docs vs current .env.example
     python3 verify-env-docs.py --env-example PATH [--env-example PATH ...] --docs PATH
+
+    # Release diff mode: which vars were added/removed/changed between two refs, and
+    # which NEW ones are still undocumented. Run this every release sync.
+    python3 verify-env-docs.py --compare-rev OLD NEW --repo /path/to/dify [--docs PATH]
 
 `--env-example` may be repeated and may point to either a file or a directory.
 """
 
 import argparse
 import re
+import subprocess
 import sys
 from pathlib import Path
 
 
+def parse_env_lines(lines) -> dict[str, str]:
+    """Parse env-example text lines and return {VARIABLE_NAME: default_value}.
+
+    Only uncommented `VAR=value` lines are captured (commented `#VAR=...` defaults
+    cannot be parsed reliably, matching the verifier's documented behavior).
+    """
+    variables = {}
+    for line in lines:
+        line = line.strip()
+        # Skip comments and empty lines
+        if not line or line.startswith("#"):
+            continue
+        # Match VARIABLE=value (value can be empty)
+        match = re.match(r"^([A-Z][A-Z0-9_]+)=(.*)", line)
+        if match:
+            variables[match.group(1)] = match.group(2).strip()
+    return variables
+
+
 def parse_env_file(path: Path) -> dict[str, str]:
     """Parse a single env-example file and return {VARIABLE_NAME: default_value}."""
-    variables = {}
     with open(path, encoding="utf-8") as f:
-        for line in f:
-            line = line.strip()
-            # Skip comments and empty lines
-            if not line or line.startswith("#"):
-                continue
-            # Match VARIABLE=value (value can be empty)
-            match = re.match(r"^([A-Z][A-Z0-9_]+)=(.*)", line)
-            if match:
-                name = match.group(1)
-                value = match.group(2).strip()
-                variables[name] = value
-    return variables
+        return parse_env_lines(f)
 
 
 # Env files for deployment modes that intentionally diverge from the standard
@@ -242,13 +255,93 @@ def normalize(value: str) -> str:
 DEFAULT_IGNORED_PATH = Path(__file__).parent / "ignored-vars.md"
 
 
+def _env_example_paths_at_ref(repo: str, ref: str) -> list[str]:
+    """List docker/ *.env.example paths tracked at a git ref, in merge-precedence
+    order (lowest first, canonical docker/.env.example last)."""
+    out = subprocess.run(
+        ["git", "-C", repo, "ls-tree", "-r", "--name-only", ref, "--", "docker/"],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    files = [p for p in out if p.endswith(".env.example")]
+
+    def precedence(path: str) -> tuple[int, str]:
+        if Path(path).name in LOW_PRECEDENCE_ENV_BASENAMES:
+            return (0, path)  # lowest precedence (e.g. middleware.env.example)
+        if path == "docker/.env.example":
+            return (2, path)  # canonical file has the final say
+        return (1, path)
+
+    return sorted(files, key=precedence)
+
+
+def env_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
+    """Return the merged {VAR: default} from all docker/ *.env.example files at a git ref."""
+    merged: dict[str, str] = {}
+    for path in _env_example_paths_at_ref(repo, ref):
+        content = subprocess.run(
+            ["git", "-C", repo, "show", f"{ref}:{path}"],
+            capture_output=True, text=True, check=True,
+        ).stdout.splitlines()
+        merged.update(parse_env_lines(content))
+    return merged
+
+
+def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_path: str) -> int:
+    """Report env vars added/removed/default-changed between two git refs.
+
+    The release safety net: per-PR detection misses untagged PRs, so diff the whole
+    .env.example var set between the previous release and the target, and flag NEW
+    vars that are still undocumented and not intentionally ignored.
+    """
+    try:
+        old_vars = env_vars_at_ref(repo, old_ref)
+        new_vars = env_vars_at_ref(repo, new_ref)
+    except subprocess.CalledProcessError as e:
+        print(f"ERROR: git failed: {e.stderr.strip() or e}", file=sys.stderr)
+        return 2
+    except FileNotFoundError:
+        print("ERROR: git not found on PATH", file=sys.stderr)
+        return 2
+
+    added = sorted(set(new_vars) - set(old_vars))
+    removed = sorted(set(old_vars) - set(new_vars))
+    changed = sorted(
+        n for n in (set(new_vars) & set(old_vars))
+        if normalize(old_vars[n]) != normalize(new_vars[n])
+    )
+
+    print(f"=== ENV VAR DIFF {old_ref}..{new_ref} (uncommented .env.example vars) ===")
+    print(f"NEW ({len(added)}):")
+    for n in added:
+        print(f"  + {n}={new_vars[n]}")
+    print(f"REMOVED ({len(removed)}):")
+    for n in removed:
+        print(f"  - {n} (was {old_vars[n]!r})")
+    print(f"DEFAULT CHANGED ({len(changed)}):")
+    for n in changed:
+        print(f"  ~ {n}: {old_vars[n]!r} -> {new_vars[n]!r}")
+
+    if docs_path:
+        doc_vars = parse_mdx_docs(docs_path)
+        ignored = parse_ignored_vars(ignored_path)
+        gaps = [n for n in added if n not in doc_vars and n not in ignored]
+        print()
+        print(f"=== NEW vars NOT documented and NOT in ignored-vars ({len(gaps)}) — TRIAGE ===")
+        for n in gaps:
+            print(f"  {n}={new_vars[n]}")
+        print("(Document each, or add to ignored-vars.md with a reason. Never leave a")
+        print(" new-this-release var as silent backlog.)")
+    else:
+        print("\n(Pass --docs to also flag which NEW vars are still undocumented.)")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Verify env var documentation against .env.example"
     )
     parser.add_argument(
         "--env-example",
-        required=True,
         action="append",
         help=(
             "Path to a .env.example file or to a directory containing them. "
@@ -259,8 +352,21 @@ def main():
     )
     parser.add_argument(
         "--docs",
-        required=True,
         help="Path to MDX documentation file (e.g., en/self-host/deploy/configuration/environments.mdx)",
+    )
+    parser.add_argument(
+        "--compare-rev",
+        nargs=2,
+        metavar=("OLD", "NEW"),
+        help=(
+            "Release safety net: two git refs (previous release, target). Reports env "
+            "vars added/removed/default-changed in .env.example between them, and (with "
+            "--docs) which NEW vars are still undocumented. Requires --repo."
+        ),
+    )
+    parser.add_argument(
+        "--repo",
+        help="Path to the Dify code repo (required with --compare-rev).",
     )
     parser.add_argument(
         "--ignored",
@@ -268,6 +374,15 @@ def main():
         help=f"Path to ignored-vars markdown file (default: {DEFAULT_IGNORED_PATH}).",
     )
     args = parser.parse_args()
+
+    if args.compare_rev:
+        if not args.repo:
+            parser.error("--repo is required with --compare-rev")
+        old_ref, new_ref = args.compare_rev
+        return run_compare_rev(args.repo, old_ref, new_ref, args.docs, args.ignored)
+
+    if not args.env_example or not args.docs:
+        parser.error("--env-example and --docs are required (or use --compare-rev --repo)")
 
     if not Path(args.docs).exists():
         print(f"ERROR: Documentation not found at {args.docs}")
