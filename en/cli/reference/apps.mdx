@@ -1,0 +1,529 @@
+---
+title: Apps
+description: List, inspect, run, resume, export, and import your Dify apps from the CLI
+---
+
+Every app task maps to one command, and all of them accept the [global flags](/en/cli/reference/global-flags).
+
+- [`difyctl get app`](#list-your-apps) lists your apps
+- [`describe app`](#inspect-an-app) shows one app's details and inputs
+- [`run app`](#run-an-app) invokes one
+- [`resume app`](#resume-a-paused-workflow) continues a workflow that [paused for human input](#when-a-workflow-pauses)
+- [`export studio-app`](#export-an-app) / [`import studio-app`](#import-an-app) exports / imports apps as DSL files
+
+## List Your Apps
+
+```text
+difyctl get app [app-id] [flags]
+```
+
+<Tip>
+For the everyday invocations, see [Find Your Apps](/en/cli/common-tasks#find-your-apps) in Common Tasks.
+</Tip>
+
+### Arguments
+
+- `[app-id]`: optional. The ID of one app to show. Omit it to list every app in your workspace.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--name <substring>` | string | none | Filter to apps whose name contains this text. |
+| `--mode <mode>` | string | none | Filter by app type, named by its API mode: `chat` (Chatbot), `advanced-chat` (Chatflow), `agent-chat` (Agent), `workflow` (Workflow), `completion` (Text Generator). |
+| `--page <n>` | integer | `1` | Page number. |
+| `--limit <n>` | integer | `20` | Page size, 1 to 200. The flag wins, then [`DIFY_LIMIT`](/en/cli/reference/environment-variables). |
+| `-o <format>` | string | none | Output format: `json`, `yaml`, `name`, or `wide`. Omit the flag for the default table. |
+
+### Examples
+
+List the apps in your workspace:
+
+```bash
+difyctl get app
+```
+
+Find Workflow apps whose name contains "report":
+
+```bash
+difyctl get app --name report --mode workflow
+```
+
+Print app IDs only, one per line, for shell loops:
+
+```bash
+difyctl get app -o name
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default | An aligned table. The `MODE` column is each app's API mode name (see [`--mode`](#list-your-apps) for the mapping to app types). |
+| `-o wide` | The table plus a `WORKSPACE` column. |
+| `-o json`, `-o yaml` | A `data` array of the apps, plus the paging fields `page` (current page), `limit` (page size), `total` (apps matched), and `has_more` (whether more pages remain). |
+| `-o name` | The app IDs, one per line. |
+
+Default table:
+
+```text
+NAME          ID                                    MODE      UPDATED
+Customer FAQ  0a1b2c3d-4e5f-6789-abcd-ef0123456789  chat      2026-06-08T03:14:27.521839
+Daily Report  7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b  workflow  2026-06-05T22:41:09.812016
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Network or server error |
+| `2` | Usage error, such as a `--limit` outside 1 to 200 |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Inspect an App
+
+```text
+difyctl describe app <app-id> [flags]
+```
+
+`describe app` answers the question you have before running an unfamiliar app: what type of app is it, is its API enabled, and what inputs does it expect.
+
+### Arguments
+
+- `<app-id>`: required. The ID of the app to inspect.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--refresh` | boolean | `false` | Bypass the local app-info cache and fetch fresh details. Use after an app was republished. |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Inspect an app before running it:
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+Extract the input schema for building `--inputs` programmatically:
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -o json | jq '.input_schema'
+```
+
+Re-fetch after republishing the app:
+
+```bash
+difyctl describe app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --refresh
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`) | An aligned field block, then the app's parameters (including the user input form). |
+| `-o json`, `-o yaml` | Three top-level keys: `info`, `parameters`, and `input_schema` (detailed below). |
+
+Default text view:
+
+```text
+Name:        Daily Report
+ID:          7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+Mode:        workflow
+Updated:     2026-06-05T22:41:09.812016
+Service API: true
+Parameters:
+  {
+    "opening_statement": null,
+    "suggested_questions": [],
+    "user_input_form": [
+      {
+        "text-input": {
+          "label": "topic",
+          "variable": "topic",
+          "required": true,
+          "default": ""
+        }
+      }
+    ],
+    "file_upload": null,
+    "system_parameters": {
+      "file_size_limit": 15,
+      "image_file_size_limit": 10,
+      "audio_file_size_limit": 50,
+      "video_file_size_limit": 100,
+      "workflow_file_upload_limit": 10
+    }
+  }
+```
+
+A `Description:` row appears when the app has one, and an `Agent: true` row when the app is agentic.
+
+Under `-o json`, the three keys are:
+- `info` - the metadata fields shown above, from `Name` to `Service API`
+- `parameters` - the parameters block shown above
+- `input_schema` - a normalized list of the app's inputs, the field the `jq '.input_schema'` example reads
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Network or server error, including app not found |
+| `2` | Usage error, including a non-UUID `<app-id>` |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+## Run an App
+
+```text
+difyctl run app <app-id> [message] [flags]
+```
+
+`run app` is one command for all app types. The CLI reads the app's type and dispatches to the right endpoint. What changes is how you pass input and the response shape:
+
+- **Chatbot, Chatflow, Agent:** take a positional message, print the reply to stdout, and print a conversation hint to stderr.
+- **Text Generator:** takes a positional message and prints the completion to stdout. No conversational state, no hint.
+- **Workflow:** takes a JSON object via `--inputs` and prints its outputs to stdout. A workflow whose output is a single string prints it raw. Anything else prints as compact JSON.
+
+### Arguments
+
+- `<app-id>`: required. The ID of the app to run, from [`get app`](#list-your-apps).
+- `[message]`: the user message, for Chatbot, Chatflow, Agent, and Text Generator apps. Workflow apps reject a positional message, so pass their inputs with `--inputs`.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--inputs <json>` | string | none | Input variables as one JSON object, e.g. `--inputs '{"topic":"Q3"}'`. Required for Workflow apps. Mutually exclusive with `--inputs-file`. |
+| `--inputs-file <path>` | string | none | Read the inputs object from a JSON file instead. |
+| `--file <key=value>` | string, repeatable | none | Named file input. `key=@path` uploads a local file. `key=https://…` passes a remote URL without uploading. The key is the input variable name. |
+| `--conversation <id>` | string | none | Continue an existing conversation. The ID comes from the stderr hint or the JSON response of an earlier run. |
+| `--workflow-id <id>` | string | none | Pin the run to a specific published workflow version. Workflow and Chatflow apps only. |
+| `--stream` | boolean | `false` | Print the output live as it's generated, instead of all at once at the end. |
+| `--think` | boolean | `false` | Print the model's thinking to stderr when the model exposes it. Without this flag, `<think>` blocks are stripped silently. |
+| `--retry-on-limit` | boolean | `false` | On a 429 rate limit, wait and retry the run instead of failing with exit `7`. Off by default, since a run isn't idempotent. |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Send a message to a Chatbot, Chatflow, Agent, or Text Generator app:
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?"
+```
+
+Run a Workflow app with structured inputs:
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"quarterly report","audience":"executives"}'
+```
+
+Attach a local file to a file-type input variable:
+
+```bash
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic":"contract review"}' --file document=@./contract.pdf
+```
+
+Continue an earlier conversation:
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "And on weekends?" --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+Get the raw response as JSON for scripts and agents:
+
+```bash
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?" -o json | jq -r '.answer'
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`) | The reply (Chatbot, Chatflow, Agent, Text Generator) or the workflow's output, as plain text. |
+| `-o json`, `-o yaml` | The full server payload, including `answer` and `conversation_id` for conversational apps, plus the model's per-node reasoning under `metadata.reasoning` when present. |
+
+The response body goes to stdout. Everything else (hints, progress, errors) goes to stderr, so piping and redirection stay clean. After a reply from a Chatbot, Chatflow, or Agent app, stderr carries the conversation hint:
+
+```text
+hint: continue this conversation with --conversation 4f7d8c2a-9b1e-4c6d-8a3f-5e2b7c9d0a1f
+```
+
+With `--stream`, output prints incrementally as the server produces it. If a run fails with HTTP 422 right after an app was republished, the CLI clears its app-metadata cache and hints to run the command again.
+
+Errors print to stderr. Under `-o json` they arrive as a structured JSON object with a stable `code` field. See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the error shape.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including a workflow that [paused for human input](#when-a-workflow-pauses) |
+| `1` | Network or server error, including app not found |
+| `2` | Usage error: invalid `--inputs` JSON, or a positional message passed to a Workflow app |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+### When a Workflow Pauses
+
+Workflow apps can include human-input steps. When a run reaches one, it pauses instead of finishing: the command **exits 0** (a pause is not a failure), prints the pause to stdout, and prints a ready-to-run resume command to stderr:
+
+```text
+! Workflow paused — input required
+  Node:    Review draft
+  Message: Approve the report before it is published.
+  Actions: [approve] Approve  [reject] Reject
+  Inputs:   - comment — Reviewer comment
+
+! workflow paused — resume with:
+  difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action approve
+```
+
+With `-o json`, stdout gets the pause as a JSON object instead:
+
+```json
+{
+  "status": "paused",
+  "app_id": "7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b",
+  "task_id": "c4a8e2f6-1b3d-4a5c-9e7f-2d8b6c0a4e1f",
+  "workflow_run_id": "8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b",
+  "form_id": "5d9c3b7a-2e4f-4c6d-8b0a-1f3e5d7c9b2a",
+  "node_id": "1749876543210",
+  "node_title": "Review draft",
+  "form_token": "k3J9mQ2xWv8pL5nR7tY4bA",
+  "form_content": "Approve the report before it is published.",
+  "inputs": [
+    {
+      "output_variable_name": "comment",
+      "label": "Reviewer comment",
+      "type": "text-input",
+      "required": false
+    }
+  ],
+  "actions": [
+    { "id": "approve", "title": "Approve" },
+    { "id": "reject", "title": "Reject" }
+  ],
+  "display_in_ui": true,
+  "resolved_default_values": {},
+  "expiration_time": 1781712000
+}
+```
+
+For scripts and agents: a paused run and a completed run both exit 0, so don't branch on the exit code. Run workflows with `-o json` and check stdout for `"status": "paused"`. Three fields drive the resume: `form_token`, `workflow_run_id`, and (when the form offers more than one action) the action `id`. Forms expire at `expiration_time` (Unix epoch seconds).
+
+When the workflow delivers its form through email or another external channel, `form_token` is `null` and the run can't be resumed from the CLI.
+
+## Resume a Paused Workflow
+
+```text
+difyctl resume app <app-id> <form-token> --workflow-run-id <id> [flags]
+```
+
+`resume app` submits the form a paused workflow is waiting on, then attaches to the run and prints its output exactly like `run app`.
+
+### Arguments
+
+- `<app-id>`: required. The `app_id` from the pause payload.
+- `<form-token>`: required. The `form_token` from the pause payload. Tokens are single-use, so resuming with an already-consumed token returns an error.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--workflow-run-id <id>` | string | required | The `workflow_run_id` from the pause payload. |
+| `--action <id>` | string | auto-selected | Which form action to take, by `id` from the pause payload's `actions`. Optional when the form has exactly one action, required when it has several. |
+| `--inputs <json>` | string | none | Values for the form's inputs as one JSON object, keyed by each input's `output_variable_name`. Mutually exclusive with `--inputs-file`. |
+| `--inputs-file <path>` | string | none | Read the form values from a JSON file instead. |
+| `--with-history` | boolean | `false` | Replay the output of already-executed nodes before attaching to the live stream. |
+| `--stream` | boolean | `false` | Print the output live as it's generated, instead of all at once at the end. |
+| `--think` | boolean | `false` | Print the model's thinking to stderr when the model exposes it. Without this flag, `<think>` blocks are stripped silently. |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Approve a single-action form, providing its input values:
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs '{"comment":"Looks good"}'
+```
+
+Pick an action when the form offers several:
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --action reject --inputs '{"comment":"Numbers need a re-check"}'
+```
+
+Read the form values from a file:
+
+```bash
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b k3J9mQ2xWv8pL5nR7tY4bA --workflow-run-id 8e1f2a3b-4c5d-6e7f-8a9b-0c1d2e3f4a5b --inputs-file form.json
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`) | The workflow's output as the run completes. stderr confirms the submission and the finish. |
+| `-o json`, `-o yaml` | The run result as one document, just like `run app` (a pause payload if it pauses again). |
+
+In the default text output, stderr confirms the submission, the workflow's output prints to stdout as the run completes, and stderr confirms the finish:
+
+```text
+✓ form submitted
+  workflow execution resumed
+✓ workflow finished
+```
+
+A resumed workflow can pause again at a later human-input node. You then get a new pause payload and resume again with the new token.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including the run pausing again at a later node |
+| `1` | Error, including a consumed form token, or omitting `--action` on a form with several actions |
+| `2` | Usage error |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+## Export an App
+
+```text
+difyctl export studio-app <app-id> [flags]
+```
+
+`export studio-app` writes the app's full definition as a DSL YAML document, for versioning, backup, or [importing](#import-an-app) elsewhere.
+
+For Workflow and Chatflow apps, export returns the current draft, not the published version that `run app` executes. Use `--workflow-id` to export a specific published version instead. Chatbot, Agent, and Text Generator apps export the published version.
+
+### Arguments
+
+- `<app-id>`: required. The ID of the app to export, from [`get app`](#list-your-apps).
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-o, --output <path>` | string | none | Write the DSL to this file instead of stdout. On this command, `-o` is the output file path, not the output-format selector. |
+| `--include-secret` | boolean | `false` | Include encrypted secret values in the exported DSL. |
+| `--workflow-id <id>` | string | none | Export a specific published workflow version by ID, instead of the default draft. Workflow and Chatflow apps only. |
+
+### Examples
+
+Print an app's DSL to stdout:
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+Write it to a file:
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --output ./daily-report.yaml
+```
+
+Export a specific published version:
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --workflow-id c7e4a1b9-3f82-4d6a-9e15-0b8c2d7f4a63
+```
+
+Export with secret values included:
+
+```bash
+difyctl export studio-app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --include-secret
+```
+
+### Output
+
+The DSL YAML document prints to stdout: a `kind: app` header, a `version` field, and the full app definition. With `--output`, the same content is written to the file and stderr confirms it:
+
+```text
+DSL written to ./daily-report.yaml
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Network or server error, including app not found |
+| `2` | Usage error, including a missing `<app-id>` |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |
+
+## Import an App
+
+```text
+difyctl import studio-app (--from-file <path> | --from-url <url>) [flags]
+```
+
+`import studio-app` creates an app from a DSL YAML document, or overwrites an existing one with `--app-id`. For Workflow and Chatflow apps, it writes the definition to the app's draft. `run app` uses the published version, so publish the app in Dify after importing for the change to take effect.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-f, --from-file <path>` | string | none | Import DSL from a local file. Exactly one of `--from-file` or `--from-url` is required. |
+| `--from-url <url>` | string | none | Import DSL from an HTTP(S) URL. |
+| `--name <name>` | string | from DSL | Override the app name. |
+| `--description <text>` | string | from DSL | Override the app description. |
+| `--app-id <id>` | string | none | Overwrite an existing app instead of creating a new one. Workflow and Chatflow apps only. |
+| `--icon-type <type>` | string | from DSL | Override the icon type. |
+| `--icon <icon>` | string | from DSL | Override the icon. |
+| `--icon-background <color>` | string | from DSL | Override the icon background color. |
+
+### Examples
+
+Import an app from a local DSL file:
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml
+```
+
+Import under a different name:
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --name "Daily Report (staging)"
+```
+
+Overwrite an existing app with an updated DSL:
+
+```bash
+difyctl import studio-app --from-file ./daily-report.yaml --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+Import directly from a URL:
+
+```bash
+difyctl import studio-app --from-url https://example.com/templates/daily-report.yaml
+```
+
+### Output
+
+All status lines go to stderr; stdout stays empty. On success, stderr reports the new app's ID:
+
+```text
+Import completed: app 9b4f2c8e-6a1d-4e3f-b7a5-0c8d2e6f4a9b
+```
+
+If the DSL was written for a different DSL version, the CLI confirms it for you and notes both versions on stderr. 
+
+If the app depends on plugins that aren't installed in the workspace, stderr lists them under `Missing plugin dependencies` after the import. Install them before using the app.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including imports with warnings |
+| `1` | Error, including a missing or conflicting `--from-file`/`--from-url`, or a failed import |
+| `2` | Usage error, including a `--from-file` path that doesn't exist |
+| `4` | Authentication failure |
+| `7` | Rate limited (HTTP 429) |

@@ -19,9 +19,9 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
-| plugin | 插件 | プラグイン | |
+| plugin | 插件 | プラグイン | Still valid in developer contexts (building plugins). In user-facing docs, prefer "integration" when referring to the Integrations hub; use "plugin" only for tool plugins or the develop-plugin tree. |
 | Dify tool | Dify 工具 | ツール | |
-| workspace | 工作区 | ワークスペース | |
+| workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | WebApp | WebApp | WebApp | |
 | end user | 终端用户 | エンドユーザー | Person interacting with a published WebApp; not a workspace member |
@@ -76,10 +76,10 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | List Operator | 列表操作 | リスト処理 | Filters, sorts, and limits list data |
 | Agent | Agent | Agent | Workflow node (distinct from Agent app type above) |
 | Human Input | 人工介入 | 人間の入力 | Pauses workflow execution to request human review or decisions |
-| Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Plugin Trigger. |
+| Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Integration Trigger. |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | Triggers workflow execution on a cron schedule |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | Triggers workflow execution via incoming HTTP webhook |
-| Plugin Trigger | 插件触发器 | プラグイントリガー | Triggers workflow execution from a plugin |
+| Integration Trigger | 集成触发器 | インテグレーショントリガー | Triggers workflow execution from an integration; renamed from "Plugin Trigger" in v1.15.0 |
 | Command | 命令 | コマンド | Executes commands in the sandboxed runtime environment |
 | Upload File to Sandbox | 上传文件至沙盒 | サンドボックスへのファイルアップロード | Uploads files to the sandboxed runtime environment |
 
@@ -138,8 +138,12 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
-| self-hosted | 自托管 | セルフホスト | |
-| SaaS | SaaS | SaaS | |
+| self-hosted | 自部署 | セルフホスト | deployment term (not an edition); ja keeps セルフホスト, zh uses 自部署 |
+| SaaS | SaaS | SaaS | generic term; for Dify's hosted product use Dify Cloud (not "Dify SaaS" / "the SaaS version") |
+| Dify Cloud | Dify Cloud | Dify Cloud | product name; English in all languages |
+| Dify Enterprise | Dify Enterprise | Dify Enterprise | edition name; English in all languages |
+| Dify Premium | Dify Premium | Dify Premium | edition name; English in all languages |
+| Community Edition | Community Edition | Community Edition | edition name; English in all languages |
 | Docker | Docker | Docker | |
 | sandbox | 沙箱 | サンドボックス | |
 | API | API | API | |
@@ -167,7 +171,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Studio | 工作室 | スタジオ | common.menus.apps | Sidebar menu label for the app workspace |
 | Knowledge | 知识库 | ナレッジ | common.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
 | Explore | 探索 | 探索 | common.menus.explore | Sidebar menu label |
-| Plugins | 插件 | プラグイン | common.menus.plugins | Sidebar menu label |
+| Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
 
 ### App Detail Tabs
@@ -177,7 +181,8 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
 | API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Also used in Knowledge detail |
-| Logs & Annotations | 日志与标注 | ログ＆注釈 | common.appMenus.logAndAnn | |
+| Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
+| Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
 ### Knowledge Detail Tabs
 
@@ -194,13 +199,13 @@ Terms in this section must match the Dify product interface exactly. When these 
 |:-------------|:-------------|:--------------|:---------|:------|
 | My account | 我的账户 | マイアカウント | common.settings.account | |
 | Members | 成员 | メンバー | common.settings.members | |
-| Model Provider | 模型供应商 | モデルプロバイダー | common.settings.provider | |
-| Data Source | 数据来源 | データソース | common.settings.dataSource | |
-| API Extension | API 扩展 | API 拡張 | common.settings.apiBasedExtension | |
+| Model Provider | 模型供应商 | モデルプロバイダー | common.settings.provider | Moved from Settings to Integrations hub in v1.15.0 |
+| Data Source | 数据来源 | データソース | common.settings.dataSource | Moved from Settings to Integrations hub in v1.15.0 |
+| Custom Endpoint | 自定义端点 | カスタム API | common.settings.customEndpoint | Renamed from "API Extension" in v1.15.0; moved from Settings to Integrations hub |
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
-| Integrations | 集成 | 統合 | common.settings.integrations | |
-| Default Model Settings | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | Renamed from "System Model Settings" in v1.13.1. EN/ZH UI updated; JA UI still shows "システムモデル設定" until i18n update. Planned JA label:「デフォルトモデル設定」. |
+| Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
+| Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
@@ -276,7 +281,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Human Input | 人工介入 | 人間の入力 | workflow.blocks.human-input | |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | workflow.blocks.trigger-webhook | |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
-| Plugin Trigger | 插件触发器 | プラグイントリガー | workflow.blocks.trigger-plugin | |
+| Integration Trigger | 集成触发器 | インテグレーショントリガー | workflow.blocks.trigger-plugin | Renamed from "Plugin Trigger" in v1.15.0; internal id unchanged |
 | Knowledge Base | 知识库 | 知識ベース | workflow.blocks.knowledge-index | Knowledge index node |
 
 ### Workflow Controls

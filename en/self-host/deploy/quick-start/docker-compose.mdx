@@ -1,0 +1,176 @@
+---
+title: Deploy Dify with Docker Compose
+sidebarTitle: Docker Compose
+---
+
+<Tip>
+    For common deployment questions, see [FAQs](/en/self-host/deploy/quick-start/faqs).
+</Tip>
+
+## Before Deployment
+
+Make sure your machine meets the following minimum system requirements.
+
+### Hardware
+
+- CPU >= 2 Core
+- RAM >= 4 GiB
+
+### Software
+
+| Operating System              | Required Software                        | Notes |
+| :----------------------------- | :---------------------------------------- | :----- |
+| macOS 10.14 or later          | Docker Desktop with Docker Compose 2.24.0+ | Configure the Docker virtual machine with at least 2 virtual CPUs and 8 GiB of memory. <br></br><br></br>For installation instructions, see [Install Docker Desktop on Mac](https://docs.docker.com/desktop/mac/install/). |
+| Linux distributions           | Docker 19.03+<br></br><br></br>Docker Compose 2.24.0+ | For installation instructions, see [Install Docker Engine](https://docs.docker.com/engine/install/) and [Install Docker Compose](https://docs.docker.com/compose/install/). |
+| Windows with WSL 2 enabled    | Docker Desktop with Docker Compose 2.24.0+ | Store source code and data bound to Linux containers in the Linux file system rather than Windows. <br></br><br></br>For installation instructions, see [Install Docker Desktop on Windows](https://docs.docker.com/desktop/windows/install/#wsl-2-backend). |
+
+## Deploy and Start
+
+<Steps>
+  <Step title="Clone Dify">
+    Clone the Dify source code to your local machine.
+
+    ```bash
+    git clone --branch "$(curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name)" https://github.com/langgenius/dify.git
+
+    ```
+  </Step>
+  <Step title="Start Dify">
+
+    1. Navigate to the `docker` directory in the Dify source code:
+
+        ```bash
+        cd dify/docker
+        ```
+    
+    2. Copy the essential environment configuration file:
+
+        ```bash
+        cp .env.example .env
+        ```
+
+        To customize your deployment later, see [Customize](#customize).
+
+    3. Start the containers:
+        <Note>
+          Dify requires Docker Compose 2.24.0 or later. Run `docker compose version` to confirm.
+        </Note>
+
+        ```bash
+        docker compose up -d
+        ```
+
+        The following containers will be started:
+
+        - 5 core services: `api`, `worker`, `worker_beat`, `web`, `plugin_daemon`
+        - 6 dependent components: `weaviate`, `db_postgres`, `redis`, `nginx`, `ssrf_proxy`, `sandbox`
+
+        You should see output similar to the following, showing the status and start time of each container:
+
+            ```bash
+            [+] Running 13/13
+            ✔ Network docker_ssrf_proxy_network  Created                                                                10.0s 
+            ✔ Network docker_default             Created                                                                 0.1s 
+            ✔ Container docker-sandbox-1         Started                                                                 0.3s 
+            ✔ Container docker-db_postgres-1     Healthy                                                                 2.8s 
+            ✔ Container docker-web-1             Started                                                                 0.3s 
+            ✔ Container docker-redis-1           Started                                                                 0.3s 
+            ✔ Container docker-ssrf_proxy-1      Started                                                                 0.4s 
+            ✔ Container docker-weaviate-1        Started                                                                 0.3s 
+            ✔ Container docker-worker_beat-1     Started                                                                 3.2s 
+            ✔ Container docker-api-1             Started                                                                 3.2s 
+            ✔ Container docker-worker-1          Started                                                                 3.2s 
+            ✔ Container docker-plugin_daemon-1   Started                                                                 3.2s 
+            ✔ Container docker-nginx-1           Started                                                                 3.4s 
+            ```
+    
+    4. Verify that all containers are running successfully:
+
+        ```bash
+        docker compose ps
+        ```
+
+        You should see output similar to the following, with each container in the `Up` or `healthy` status:
+
+        ```bash
+        NAME                     IMAGE                                       COMMAND                  SERVICE         CREATED          STATUS                             PORTS
+        docker-api-1             langgenius/dify-api:1.10.1                  "/bin/bash /entrypoi…"   api             26 seconds ago   Up 22 seconds                      5001/tcp
+        docker-db_postgres-1     postgres:15-alpine                          "docker-entrypoint.s…"   db_postgres     26 seconds ago   Up 25 seconds (healthy)            5432/tcp
+        docker-nginx-1           nginx:latest                                "sh -c 'cp /docker-e…"   nginx           26 seconds ago   Up 22 seconds                      0.0.0.0:80->80/tcp, :::80->80/tcp, 0.0.0.0:443->443/tcp, :::443->443/tcp
+        docker-plugin_daemon-1   langgenius/dify-plugin-daemon:0.4.1-local   "/bin/bash -c /app/e…"   plugin_daemon   26 seconds ago   Up 22 seconds                      0.0.0.0:5003->5003/tcp, :::5003->5003/tcp
+        docker-redis-1           redis:6-alpine                              "docker-entrypoint.s…"   redis           26 seconds ago   Up 25 seconds (health: starting)   6379/tcp
+        docker-sandbox-1         langgenius/dify-sandbox:0.2.12              "/main"                  sandbox         26 seconds ago   Up 25 seconds (health: starting)   
+        docker-ssrf_proxy-1      ubuntu/squid:latest                         "sh -c 'cp /docker-e…"   ssrf_proxy      26 seconds ago   Up 25 seconds                      3128/tcp
+        docker-weaviate-1        semitechnologies/weaviate:1.27.0            "/bin/weaviate --hos…"   weaviate        26 seconds ago   Up 25 seconds                      
+        docker-web-1             langgenius/dify-web:1.10.1                  "/bin/sh ./entrypoin…"   web             26 seconds ago   Up 25 seconds                      3000/tcp
+        docker-worker-1          langgenius/dify-api:1.10.1                  "/bin/bash /entrypoi…"   worker          26 seconds ago   Up 22 seconds                      5001/tcp
+        docker-worker_beat-1     langgenius/dify-api:1.10.1                  "/bin/bash /entrypoi…"   worker_beat     26 seconds ago   Up 22 seconds                      5001/tcp
+        ```
+
+  </Step>
+</Steps>
+
+## Access
+
+1. Open the administrator initialization page to set up the admin account:
+
+    ```bash
+    # Local environment
+    http://localhost/install
+
+    # Server environment
+    http://your_server_ip/install
+    ```
+
+2. After completing the admin account setup, log in to Dify at:
+
+    ```bash
+    # Local environment
+    http://localhost  
+
+    # Server environment
+    http://your_server_ip
+    ```
+
+## Customize
+
+To customize your deployment, edit environment variables in the relevant file, then restart Dify.
+
+<Steps>
+  <Step title="Edit Environment Variables">
+
+    - **Essential startup values** live in `docker/.env`, which you created from `docker/.env.example` during deployment. Edit them directly.
+
+    - **Optional or provider-specific settings** have templates under `docker/envs/`. To override a default value, copy the matching template (drop the `.example` suffix), then edit your copy. 
+    
+      For example:
+
+        ```bash
+        cd dify/docker
+        cp envs/vectorstores/milvus.env.example envs/vectorstores/milvus.env
+        ```
+
+    Values in `docker/.env` take precedence over values in any `docker/envs/*.env` files.
+
+    <Tip>
+      For descriptions of every variable, see [Environment Variables](/en/self-host/deploy/configuration/environments).
+    </Tip>
+
+  </Step>
+  <Step title="Restart Dify">
+
+    ```bash
+    docker compose down
+    docker compose up -d
+    ```
+
+  </Step>
+</Steps>
+
+## Upgrade
+
+Upgrade steps may vary between releases. Refer to the upgrade guide for your target version provided in the [Releases](https://github.com/langgenius/dify/releases) page. 
+
+<Note>
+  After upgrading, compare each `.env.example` with its matching `.env` for new or changed variables.
+</Note>

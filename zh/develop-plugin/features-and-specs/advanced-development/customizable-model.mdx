@@ -7,35 +7,31 @@ dimensions:
 standard_title: Customizable Model
 language: zh
 title: 集成自定义模型
-description: 本文档详细介绍了如何将自定义模型集成到 Dify 中，以 Xinference 模型为例。它涵盖了完整的流程，包括创建模型供应商文件、根据模型类型编写代码、实现模型调用逻辑、处理异常、调试和发布。具体详细说明了 LLM 调用、token 计算、凭据验证和参数生成等核心方法的实现。
+description: 以 Xinference 为例，将自定义模型集成到 Dify
 ---
 
-<Note> ⚠️ 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/develop-plugin/features-and-specs/advanced-development/customizable-model)。</Note>
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/develop-plugin/features-and-specs/advanced-development/customizable-model)。
 
-**自定义模型**是指您自行部署或配置的大语言模型。本文档以 [Xinference 模型](https://inference.readthedocs.io/en/latest/)为例，演示如何将自定义模型集成到您的**模型插件**中。
+**自定义模型** 是指你自行部署或配置的大语言模型。本指南以 [Xinference](https://inference.readthedocs.io/en/latest/) 为例，演示如何将自定义模型集成到你的 **模型插件** 中。
 
-默认情况下，自定义模型自动包含两个参数（其**模型类型**和**模型名称**），无需在供应商 YAML 文件中进行额外定义。
+默认情况下，自定义模型自动包含 **模型类型** 和 **模型名称** 两个参数，因此供应商 YAML 文件无需额外定义。
 
-您无需在供应商配置文件中实现 `validate_provider_credential`。在运行时，根据用户选择的模型类型或模型名称，Dify 会自动调用相应模型层的 `validate_credentials` 方法来验证凭据。
+你无需在供应商配置文件中实现 `validate_provider_credential`。运行时，Dify 会根据用户选择的模型类型和模型名称，调用相应模型层的 `validate_credentials` 方法。
 
 ## 集成自定义模型插件
 
-以下是集成自定义模型的步骤：
+集成自定义模型分为四个步骤：
 
-1. **创建模型供应商文件**\
-   确定您的自定义模型将包含的模型类型。
-2. **按模型类型创建代码文件**\
-   根据模型的类型（例如 `llm` 或 `text_embedding`），创建单独的代码文件。确保每种模型类型都组织成不同的逻辑层，以便于维护和未来扩展。
-3. **开发模型调用逻辑**\
-   在每个模型类型模块中，创建一个以该模型类型命名的 Python 文件（例如 `llm.py`）。在文件中定义一个类，实现特定的模型逻辑，符合系统的模型接口规范。
-4. **调试插件**\
-   为新的供应商功能编写单元测试和集成测试，确保所有组件按预期工作。
+1. **创建模型供应商文件**：确定自定义模型将包含的模型类型。
+2. **按模型类型创建代码文件**：为每种模型类型（例如 `llm` 或 `text_embedding`）创建单独的代码文件。将每种模型类型保留在各自的逻辑层中，可简化维护和后续扩展。
+3. **开发模型调用逻辑**：在每个模型类型模块中，创建一个以该模型类型命名的 Python 文件（例如 `llm.py`）。在文件中定义一个类，实现符合系统模型接口规范的模型逻辑。
+4. **调试插件**：为新的供应商功能编写单元测试和集成测试，确保所有组件按预期工作。
 
-### 1. **创建模型供应商文件**
+### 1. 创建模型供应商文件
 
 在插件的 `/provider` 目录中，创建一个 `xinference.yaml` 文件。
 
-`Xinference` 系列模型支持 **LLM**、**Text Embedding** 和 **Rerank** 模型类型，因此您的 `xinference.yaml` 必须包含所有三种类型。
+`Xinference` 系列模型支持 **LLM**、**Text Embedding** 和 **Rerank** 模型类型，因此 `xinference.yaml` 必须包含全部三种类型。
 
 **示例**：
 
@@ -66,7 +62,7 @@ provider_credential_schema:
   credential_form_schemas:
 ```
 
-接下来，定义 `provider_credential_schema`。由于 `Xinference` 支持文本生成、嵌入和重排序模型，您可以按如下方式配置：
+接下来，定义 `provider_credential_schema`。由于 `Xinference` 支持文本生成、嵌入和重排序模型，可按如下方式配置：
 
 ```yaml
 provider_credential_schema:
@@ -104,7 +100,7 @@ Xinference 中的每个模型都需要一个 `model_name`：
       en_US: Input model name
 ```
 
-由于 Xinference 必须在本地部署，用户需要提供服务器地址（server\_url）和模型 UID。例如：
+由于 Xinference 在本地部署，用户还须提供服务器地址（`server_url`）和模型 UID：
 
 ```yaml
   - variable: server_url
@@ -128,15 +124,15 @@ Xinference 中的每个模型都需要一个 `model_name`：
       en_US: Enter the model uid
 ```
 
-定义完这些参数后，自定义模型供应商的 YAML 配置就完成了。接下来，为此配置中定义的每个模型创建功能代码文件。
+至此，自定义模型供应商的 YAML 配置完成。接下来，为配置中定义的每个模型创建代码文件。
 
 ### 2. 开发模型代码
 
-由于 Xinference 支持 llm、rerank、speech2text 和 tts，您应该在 /models 下创建相应的目录，每个目录包含其各自的功能代码。
+Xinference 支持 `llm`、`rerank`、`speech2text` 和 `tts`，因此需在 `/models` 下为每种类型创建相应的目录，每个目录包含其功能代码。
 
-以下是 llm 类型模型的示例。您需要创建一个名为 llm.py 的文件，然后定义一个类（例如 XinferenceAILargeLanguageModel），继承自 \_\_base.large\_language\_model.LargeLanguageModel。该类应包含：
+以下是 `llm` 类型模型的示例。创建一个名为 `llm.py` 的文件，然后定义一个继承自 `__base.large_language_model.LargeLanguageModel` 的类，例如 `XinferenceAILargeLanguageModel`。该类必须实现以下方法。
 
-* **LLM 调用**
+#### LLM 调用
 
 调用 LLM 的核心方法，支持流式和同步响应：
 
@@ -167,9 +163,9 @@ def _invoke(
     """
 ```
 
-您需要两个单独的函数来处理流式和同步响应。Python 将任何包含 `yield` 的函数视为返回 `Generator` 类型的生成器，因此最好将它们分开：
+将流式和同步响应实现为两个独立的函数。Python 将任何包含 `yield` 的函数视为返回 `Generator` 的生成器，因此分开实现可保持返回类型清晰：
 
-```yaml
+```python
 def _invoke(self, stream: bool, **kwargs) -> Union[LLMResult, Generator]:
     if stream:
         return self._handle_stream_response(**kwargs)
@@ -183,9 +179,9 @@ def _handle_sync_response(self, **kwargs) -> LLMResult:
     return LLMResult(**response)
 ```
 
-* **预计算输入 Token**
+#### 预计算输入 Token
 
-如果您的模型不提供 token 计数接口，只需返回 0：
+如果模型不提供 token 计数接口，返回 `0`：
 
 ```python
 def get_num_tokens(
@@ -201,9 +197,9 @@ def get_num_tokens(
     return 0
 ```
 
-或者，您可以从 `AIModel` 基类调用 `self._get_num_tokens_by_gpt2(text: str)`，它使用 GPT-2 分词器。请记住这只是一个近似值，可能与您的模型不完全匹配。
+或者，可从 `AIModel` 基类调用 `self._get_num_tokens_by_gpt2(text: str)`，它使用 GPT-2 分词器。注意这只是一个近似值，可能与你的模型不完全匹配。
 
-* **验证模型凭据**
+#### 验证模型凭据
 
 类似于供应商级别的凭据检查，但范围限定于单个模型：
 
@@ -214,11 +210,11 @@ def validate_credentials(self, model: str, credentials: dict) -> None:
     """
 ```
 
-* **动态模型参数模式**
+#### 动态模型参数模式
 
-与[预定义模型](/zh/develop-plugin/features-and-specs/plugin-types/model-schema)不同，没有 YAML 定义模型支持哪些参数。您必须动态生成参数模式。
+与 [预定义模型](/zh/develop-plugin/features-and-specs/plugin-types/model-schema) 不同，没有 YAML 文件定义模型支持哪些参数，因此你必须动态生成参数模式。
 
-例如，Xinference 支持 `max_tokens`、`temperature` 和 `top_p`。某些其他供应商（例如 `OpenLLM`）可能仅对某些模型支持 `top_k` 等参数。这意味着您需要根据每个模型的能力调整您的模式：
+例如，Xinference 支持 `max_tokens`、`temperature` 和 `top_p`。其他供应商（例如 `OpenLLM`）可能仅对部分模型支持 `top_k` 等参数，因此模式必须适配每个模型的能力：
 
 ```python
 def get_customizable_model_schema(self, model: str, credentials: dict) -> AIModelEntity | None:
@@ -283,19 +279,15 @@ def get_customizable_model_schema(self, model: str, credentials: dict) -> AIMode
     return entity
 ```
 
-* **错误映射**
+#### 错误映射
 
-当模型调用过程中发生错误时，将其映射到运行时识别的适当 InvokeError 类型。这使 Dify 能够以标准化的方式处理不同的错误：
+当模型调用过程中发生错误时，将其映射到运行时的某个 `InvokeError` 类型，以便 Dify 统一处理不同的错误：
 
-运行时错误：
-
-```
-•	`InvokeConnectionError`
-•	`InvokeServerUnavailableError`
-•	`InvokeRateLimitError`
-•	`InvokeAuthorizationError`
-•	`InvokeBadRequestError`
-```
+- `InvokeConnectionError`
+- `InvokeServerUnavailableError`
+- `InvokeRateLimitError`
+- `InvokeAuthorizationError`
+- `InvokeBadRequestError`
 
 ```python
 @property
@@ -312,45 +304,33 @@ def _invoke_error_mapping(self) -> dict[type[InvokeError], list[type[Exception]]
     # }
 ```
 
-有关接口方法的更多详细信息，请参阅[模型文档](https://docs.dify.ai/zh/develop-plugin/features-and-specs/plugin-types/model-schema)。
+接口方法的更多细节，参见 [模型文档](https://docs.dify.ai/zh/develop-plugin/features-and-specs/plugin-types/model-schema)。
 
-要查看本指南中讨论的完整代码文件，请访问 [GitHub 仓库](https://github.com/langgenius/dify-official-plugins/tree/main/models/xinference)。
+本指南所述的完整代码文件，参见 [GitHub 仓库](https://github.com/langgenius/dify-official-plugins/tree/main/models/xinference)。
 
 ### 3. 调试插件
 
-完成开发后，测试插件以确保其正常运行。有关更多详细信息，请参阅：
+开发完成后，测试插件以确保其正常运行。详见：
 
 <Card title="调试插件" icon="link" href="/zh/develop-plugin/dev-guides-and-walkthroughs/cheatsheet">
 </Card>
 
 ### 4. 发布插件
 
-如果您想在 Dify Marketplace 上列出此插件，请参阅：
-
-发布到 Dify Marketplace
+如需将插件上架到 Dify 市场，参见「发布到 Dify 市场」。
 
 ## 探索更多
 
 **快速开始**：
 
-* [开发扩展插件](/zh/develop-plugin/features-and-specs/plugin-types/general-specifications)
-* [开发工具插件](/zh/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
-* [Bundle 插件：打包多个插件](/zh/develop-plugin/features-and-specs/advanced-development/bundle)
+- [开发扩展插件](/zh/develop-plugin/features-and-specs/plugin-types/general-specifications)
+- [开发工具插件](/zh/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
+- [Bundle 插件：打包多个插件](/zh/develop-plugin/features-and-specs/advanced-development/bundle)
 
 **插件端点文档**：
 
-* [Manifest](/zh/develop-plugin/features-and-specs/plugin-types/plugin-info-by-manifest) 结构
-* [Endpoint](/zh/develop-plugin/dev-guides-and-walkthroughs/endpoint) 定义
-* [反向调用 Dify 服务](/zh/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
-* [工具](/zh/develop-plugin/features-and-specs/plugin-types/tool)
-* [模型](/zh/develop-plugin/features-and-specs/plugin-types/model-schema)
-
-{/*
-Contributing Section
-DO NOT edit this section!
-It will be automatically generated by the script.
-*/}
-
----
-
-[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/features-and-specs/advanced-development/customizable-model.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
+- [Manifest](/zh/develop-plugin/features-and-specs/plugin-types/plugin-info-by-manifest) 结构
+- [Endpoint](/zh/develop-plugin/dev-guides-and-walkthroughs/endpoint) 定义
+- [反向调用 Dify 服务](/zh/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
+- [工具](/zh/develop-plugin/features-and-specs/plugin-types/tool)
+- [模型](/zh/develop-plugin/features-and-specs/plugin-types/model-schema)

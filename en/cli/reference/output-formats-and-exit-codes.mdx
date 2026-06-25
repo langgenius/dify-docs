@@ -1,0 +1,94 @@
+---
+title: Output Formats and Exit Codes
+description: What each difyctl output format emits, how stdout and stderr split, how errors are structured, and what every exit code means
+---
+
+`difyctl` is built to be scripted: data goes to stdout while everything else goes to stderr, the [`-o` global flag](/en/cli/reference/global-flags) selects the output format, and failures exit with a predictable code.
+
+## Output Formats
+
+`-o <format>` selects how a command renders its result on stdout. Each command supports a subset of the five formats, listed in its `--help` and the Flags table on its reference page.
+
+| Format | What stdout gets |
+|:---|:---|
+| `json` | The result as pretty-printed JSON (2-space indent). Unicode characters appear as-is, and null fields are an explicit `null`, never omitted. |
+| `yaml` | The same data as YAML. |
+| `name` | Bare resource IDs, one per line. Built for shell loops; no parsing needed. |
+| `wide` | The default table plus extra columns. For example, `get app -o wide` adds a `WORKSPACE` column. |
+| `text` | Human-readable text. The default for single-resource commands such as `describe app` and `run app`. |
+
+Without `-o`, list commands such as `get app` print an aligned text table and other commands print text.
+
+The JSON shapes are stable: list commands such as `get app` print a JSON object with the rows in an array, and two runs of the same command return the same top-level structure. For a command's exact JSON shape, see its reference page.
+
+## Output Channels
+
+| Channel | What lands there |
+|:---|:---|
+| stdout | Data: tables, JSON and YAML documents, IDs, run output, exported DSL |
+| stderr | Everything else: errors, hints, progress spinners, status lines such as `✓ form submitted`, and reasoning streamed by `--think` |
+
+The rules worth scripting against:
+
+- On failure, stdout stays empty. You never have to filter error text out of captured data.
+- On success, `get` and `describe` commands leave stderr empty; `run app` and `resume app` may print hints there.
+- Progress spinners appear only in a terminal, on stderr, and are suppressed under `-o json`, `-o yaml`, and `-o name`.
+- Piped output carries no ANSI color codes.
+- If the consumer of a pipe exits early (`difyctl get app -o name | head -2`), `difyctl` exits `0` rather than failing on the broken pipe.
+
+## Errors
+
+Errors go to stderr. In the default human format, an error is a `code: message` line plus optional detail lines:
+
+```text
+not_logged_in: not logged in
+hint: run 'difyctl auth login'
+```
+
+When an HTTP request was involved, `request: <METHOD> <url>` and `http_status: <n>` lines follow.
+
+When the server's reply carries Dify's standard error body, the header line shows the server's more specific code (`not_found`, `invalid_param`) instead of the CLI's transport-level code. 
+
+Per-field validation details follow as indented lines, and the server's hint appears when `difyctl` has none of its own.
+
+Under `-o json`, the same error becomes a single-line JSON object on stderr:
+
+```json
+{"error":{"code":"not_logged_in","message":"not logged in","hint":"run 'difyctl auth login'"}}
+```
+
+Only `-o json` switches error rendering: `-o yaml` failures print the human format.
+
+| Field | Present | Meaning |
+|:---|:---|:---|
+| `code` | always | Stable machine-readable error code. Branch on this, never on message text. |
+| `message` | always | Human-readable description. |
+| `hint` | when known | The fastest fix, often a copy-pasteable command. |
+| `http_status` | on HTTP failures | Status code of the failed request. |
+| `method`, `url` | on HTTP failures | The request that failed. |
+| `raw_response` | only with `-v` | The raw server response body, bearer tokens redacted. |
+| `server` | on HTTP failures, when the reply is Dify's standard error body | The server's own error: `code`, `message`, `status`, plus optional `hint` and `details`. <br></br><br></br>The top-level `code` stays the CLI's stable transport-level code; `server.code` carries the server's finer-grained reason. |
+
+For what each code means and how to fix it, see [Troubleshooting](/en/cli/troubleshooting).
+
+## Exit Codes
+
+| Code | Meaning | Examples |
+|:---|:---|:---|
+| `0` | Success | Also `--help`, `version`, and a workflow run that [paused for human input](#a-paused-workflow-run-exits-0). |
+| `1` | Generic failure | Network and server errors (`network_connection`, `server_5xx`, `server_4xx_other`), unknown commands, unknown flags, an unreachable OS keychain (`keyring_unavailable`). |
+| `2` | Usage error | An invalid flag value (`-o table`, `--limit 0`), a missing argument, a non-UUID app or workspace ID, `--inputs` that isn't a JSON object. |
+| `4` | Authentication error | `not_logged_in`, `auth_expired`, `token_expired`, `access_denied`. |
+| `6` | Version or compatibility error | `unsupported_endpoint`, or an unreadable config file (`config_schema_unsupported`). |
+| `7` | Rate limited | An HTTP 429 (`rate_limited`), kept distinct from `1` so a script can back off and retry. |
+| `64` | Compatibility gate failed | Only [`version --check-compat`](/en/cli/reference/version#gate-scripts-on-compatibility): the server was not confirmed compatible. |
+
+One nuance for strict scripts: parser-level mistakes (an unknown command, an unknown flag, a flag missing its value) exit `1` with a plain-text message, while an invalid value for a known flag exits `2`.
+
+### A Paused Workflow Run Exits 0
+
+A Workflow app can pause mid-run to collect human input. The pause is a successful outcome, not a failure: `run app` and `resume app` exit `0` and print a paused payload to stdout. 
+
+To detect a pause in a script or an agent, run with `-o json` and check stdout for `"status": "paused"`; don't branch on the exit code. 
+
+For the payload shape and the resume protocol, see [When a Workflow Pauses](/en/cli/reference/apps#when-a-workflow-pauses) on the Apps reference.

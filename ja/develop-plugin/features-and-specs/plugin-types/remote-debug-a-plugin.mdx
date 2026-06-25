@@ -5,33 +5,96 @@ dimensions:
     detail: core
   level: beginner
 standard_title: Remote Debug a Plugin
-language: en
+language: ja
 title: プラグインのデバッグ
-description: このドキュメントでは、Difyのリモートデバッグ機能を使用してプラグインをテストする方法を紹介します。デバッグ情報の取得、環境変数ファイルの設定、プラグインのリモートデバッグの開始、プラグインのインストール状態の確認について詳細な手順を提供します。この方法により、開発者はローカルで開発しながら、Dify環境でリアルタイムにプラグインをテストできます。
+description: 開発中のプラグインをローカルで実行し、稼働中の Dify ワークスペースに接続してエンドツーエンドでテストします。パッケージ化は不要です
 ---
 
-<Note> ⚠️ このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin) を参照してください。</Note>
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin) を参照してください。
 
-プラグイン開発が完了したら、次のステップはプラグインが正常に機能するかどうかをテストすることです。Difyは、テスト環境でプラグインの機能を素早く検証するための便利なリモートデバッグ方法を提供しています。
+リモートデバッグは、プラグインを反復開発する最も速い方法です。プラグインのプロセスを手元のノート PC で実行すると、Dify はそれをワークスペースにインストールされたプラグインとして扱います。編集を保存してプロセスを再起動すれば、変更がすぐに反映されます。
 
-[「プラグイン管理」](https://cloud.dify.ai/plugins)ページに移動して、リモートサーバーアドレスとデバッグKeyを取得します。
+## 前提条件
+
+- 右上で **プラグイン** にアクセスできる Dify ワークスペース。
+- 雛形を作成済みのプラグインプロジェクト（未作成の場合は [CLI](/ja/develop-plugin/getting-started/cli) を参照してください）。
+- Python 3.12 とプラグインの依存関係がインストール済みであること（`pip install -r requirements.txt`）。
+
+## ステップ 1：デバッグ URL と Key を取得する
+
+Dify で **プラグイン** ページを開き、デバッグアイコン（**プラグインをインストール** の隣にある小さな虫のアイコン）をクリックします。ダイアログに **リモートインストール用の host:port** と **API key** が表示されます。
 
 <Frame>
   ![リモートデバッグプラグイン](https://assets-docs.dify.ai/2024/12/053415ef127f1f4d6dd85dd3ae79626a.png)
 </Frame>
 
-プラグインプロジェクトに戻り、`.env.example`ファイルをコピーして`.env`にリネームし、取得したリモートサーバーアドレスとデバッグKey情報を入力します。
+<Tabs>
+  <Tab title="Dify Cloud">
+    host は `debug-plugin.dify.dev:5003` のような形式です。Key はワークスペースごとに固有で、これを持つ人は誰でもプラグインを接続できるため、共有しないでください。
+  </Tab>
+  <Tab title="セルフホスト版">
+    host のデフォルトは `127.0.0.1:5003` で、プラグインデーモンの環境変数 `PLUGIN_REMOTE_INSTALLING_HOST` / `PLUGIN_REMOTE_INSTALLING_PORT` で設定します。開発マシンからポート `5003` に到達できることを確認してください。Dify を同じホスト上の Docker で実行している場合は、デーモンコンテナのブリッジ IP を使用する（またはポートを公開する）必要があります。
+  </Tab>
+</Tabs>
 
-`.env`ファイル：
+## ステップ 2：プラグインの `.env` を設定する
+
+プラグインプロジェクトで `.env.example` を `.env` にコピーし、値を入力します。
 
 ```bash
 INSTALL_METHOD=remote
-REMOTE_INSTALL_URL=debug.dify.ai:5003
+REMOTE_INSTALL_URL=debug-plugin.dify.dev:5003
 REMOTE_INSTALL_KEY=********-****-****-****-************
 ```
 
-`python -m main`コマンドを実行してプラグインを起動します。プラグインページで、プラグインがワークスペースにインストールされていることが確認でき、チームの他のメンバーもプラグインにアクセスできます。
+<Note>
+  `REMOTE_INSTALL_URL` はステップ 1 の `host:port` を結合したものであり、2 つの別々の変数ではありません。
+</Note>
+
+## ステップ 3：プラグインを実行する
+
+プラグインプロジェクトのディレクトリで実行します。
+
+```bash
+pip install -r requirements.txt
+python -m main
+```
+
+プロセスはフォアグラウンドで実行され続け、受信した呼び出しをログに記録します。コードを編集したらプロセスを再起動して変更を適用します。
+
+## ステップ 4：インストールを確認する
+
+Dify の **プラグイン** ページに戻ります。プラグインが一覧に表示され、デバッグマーカーが付きます。ワークスペースの他のメンバーもこれを確認して使用できます。
 
 <Frame>
   ![ワークスペースにインストールされたプラグイン](https://assets-docs.dify.ai/2024/12/ec26e5afc57bbfeb807719638f603807.png)
 </Frame>
+
+<Check>
+プラグインのタイルにデバッグインジケーターが表示され、ローカルのターミナルに最初の登録ハンドシェイクがログ出力されます。接続完了です。
+</Check>
+
+他のプラグインと同じようにトリガーします。ワークフローノードから呼び出す、Agent 内でツールとして実行する、またはエンドポイント URL にアクセスします。呼び出しはローカルのプロセスに届き、デバッガーを接続できます。
+
+## トラブルシューティング
+
+<AccordionGroup>
+  <Accordion title="接続が拒否される / host に到達できない">
+    デーモンが `REMOTE_INSTALL_URL` に指定したアドレスでリッスンしていません。セルフホスト構成では、デーモンコンテナに `PLUGIN_REMOTE_INSTALLING_ENABLED=true` が設定され、ポート `5003` が公開されていることを確認してください。クラウドでは、コピーした host:port がデバッグダイアログに表示されたものと完全に一致しているか再確認してください。
+  </Accordion>
+  <Accordion title="プラグインは起動するがプラグイン一覧に表示されない">
+    最も多い原因は、`REMOTE_INSTALL_KEY` が古いか誤っていることです。デバッグダイアログから Key を再生成し、`python -m main` を再実行してください。また、デーモンのログに受信した登録が記録されているか確認してください。
+  </Accordion>
+  <Accordion title="`plugin_unique_identifier is not valid`">
+    `manifest.yaml` または `provider/*.yaml` の `author` フィールドが、デーモンが受け付ける値と一致していません。自分の GitHub ハンドルに設定してから再起動してください。
+  </Accordion>
+  <Accordion title="変更が反映されない">
+    プラグインのプロセスは編集のたびに再起動が必要で、ホットリロードはありません。`Ctrl+C` で停止し、`python -m main` を再実行してください。
+  </Accordion>
+</AccordionGroup>
+
+## 関連リソース
+
+- [CLI](/ja/develop-plugin/getting-started/cli)：プラグインの雛形を作成し、`.env` を設定する
+- [プラグインのログ出力](/ja/develop-plugin/features-and-specs/plugin-types/plugin-logging)：プラグイン内部から構造化ログを出力する
+- [ローカルファイルとしてパッケージ化して共有する](/ja/develop-plugin/publishing/marketplace-listing/release-by-file)：デバッグ完了後にプラグインを配布する

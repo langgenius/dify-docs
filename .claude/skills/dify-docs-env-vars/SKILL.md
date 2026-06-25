@@ -3,7 +3,7 @@ name: dify-docs-env-vars
 description: >
   Use when writing, rewriting, or auditing environment variable documentation
   for Dify self-hosted deployment. Applies to
-  en/self-host/configuration/environments.mdx. Covers the full process from
+  en/self-host/deploy/configuration/environments.mdx. Covers the full process from
   codebase tracing to user-facing descriptions.
 ---
 
@@ -82,7 +82,7 @@ Transform the explanation into a concise documentation description. The descript
 - **Explain what breaks** if misconfigured (e.g., "If empty, email links will be broken")
 - **Mention fallback behavior** if the variable has one (e.g., "falls back to `CONSOLE_API_URL`")
 - **Include relationships** with other variables when relevant
-- **End with an example value** for non-obvious variables
+- **Add an `Example:` line only when the default is empty** (it shows what to set); omit it for concrete defaults, which already show the format (e.g., `TRIGGER_URL`, `SERVER_CONSOLE_API_URL`)
 
 ### Step 4: Confirm with Reviewer
 
@@ -106,7 +106,7 @@ The env var doc is organized into three sections following `docker/.env.example`
 
 ## Reader Persona
 
-Same audience as `en/self-host/` documentation (see `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge.
+Same audience as `en/self-host/deploy/` documentation (see `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge.
 
 **Additional context for env var docs:** Readers are actively configuring a deployment. They need to know what each variable does, when to change it, and what breaks if they get it wrong. They are not reading linearly—they are scanning for a specific variable.
 
@@ -155,6 +155,18 @@ The script reports:
 
 Use `.env.example` defaults (what Docker Compose users actually get), not Pydantic code defaults.
 
+### Release var-set diff (run first for a release sync)
+
+Per-PR detection misses vars from untagged PRs, and the **Missing from docs** list can hide genuinely-new vars inside old backlog. So at the start of every release sync, diff the full `.env.example` var set between the last release and the target ref:
+
+```bash
+python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
+  --compare-rev <last-release-tag> <target-ref> \
+  --repo <path-to-dify> --docs <path-to-environments.mdx>
+```
+
+It prints vars **added / removed / default-changed** between the refs, then the **NEW vars still undocumented and not in `ignored-vars.md`** (the triage list). Document each, or add it to `ignored-vars.md` with a reason. Never leave a new-this-release var as silent backlog.
+
 ### Intentionally ignored variables
 
 Some variables in `.env.example` are deliberately not documented (Cloud-only, experimental, or verifier false positives). The verifier reads these from `ignored-vars.md` (same directory) and filters them out. When you:
@@ -167,7 +179,7 @@ Every entry must include a source reference (PR, commit, or audit date).
 
 ## Translation
 
-The automated translation pipeline does not cover `en/self-host/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` to match.
+The automated translation pipeline does not cover `en/self-host/deploy/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` to match.
 
 ## Post-Writing Verification
 

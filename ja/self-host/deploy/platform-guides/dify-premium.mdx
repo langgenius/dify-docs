@@ -1,0 +1,114 @@
+---
+title: AWS 上の Dify Premium
+description: AWS 上で Dify Premium をデプロイ、カスタマイズ、アップグレードする
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/platform-guides/dify-premium) を参照してください。
+
+Dify Premium は、カスタムブランディングを可能にする AWS AMI サービスです。EC2 インスタンスとして AWS VPC にワンクリックでデプロイできます。[AWS Marketplace](https://aws.amazon.com/marketplace/pp/prodview-t22mebxzwjhu6) にアクセスして購読してください。以下のようなシナリオで有用です：
+
+- 中小企業として 1 つまたは少数のアプリケーションを作成したく、データレジデンシーを重視している。
+- [Dify Cloud](https://cloud.dify.ai) に興味があるが、ユースケースが [プラン](https://dify.ai/pricing) でサポートされているよりも多くのリソースを必要とする。
+- 組織内で Dify Enterprise を採用する前に POC を実行したい。
+
+## アクセスとセットアップ
+
+AMI がデプロイされた後、EC2 コンソールで確認できるインスタンスのパブリック IP を通じて Dify にアクセスします。デフォルトでは HTTP ポート 80 を使用します。
+
+初めて Dify にアクセスする場合は、管理者初期化パスワード（EC2 のインスタンス ID）を入力してセットアップを開始します。
+
+## カスタマイズ
+
+### 設定
+
+<Steps>
+    <Step title="環境変数を編集">
+        EC2 インスタンスで、関連するファイルの環境変数を編集します：
+
+        - **必須の起動値** は `/dify/.env` にあります。直接編集します。
+
+        - **オプションまたはプロバイダー固有の設定** は `/dify/envs/` にテンプレートとして用意されています。デフォルト値を上書きするには、対応するテンプレートをコピーし（`.example` 拡張子を外す）、コピーを編集します。
+
+            例：
+
+            ```bash
+            cd /dify
+            cp envs/vectorstores/opensearch.env.example envs/vectorstores/opensearch.env
+            ```
+
+        `/dify/.env` の値は、`/dify/envs/*.env` ファイルの値より優先されます。
+
+        AWS デプロイで `docker-compose.override.yaml` を通じて変数が注入されている場合は、それらの設定をそのまま残してください。Compose のサービスレベル `environment:` の値は、env ファイルから読み込まれる値より優先されます。
+    </Step>
+    <Step title="Dify を再起動">
+        ```bash
+        docker compose down
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        ```
+    </Step>
+</Steps>
+
+### Web アプリのロゴとブランディング
+
+**設定** > **カスタマイズ** で、`Powered by Dify` ブランディングを削除するか、独自のロゴに置き換えられます。
+
+## アップグレード
+
+<Warning>
+    - アップグレード前に、GitHub の [リリースノート](https://github.com/langgenius/dify/releases) でバージョン固有のアップグレード手順を確認してください。一部のバージョンでは、データベースの移行や設定変更などの追加手順が必要な場合があります。
+
+    - Dify の Docker Compose ファイルは現在 Docker Compose 2.24.0 以降を必要とします。アップグレード前に `docker compose version` を実行して確認してください。
+</Warning>
+
+EC2 インスタンスで、以下のコマンドを実行します：
+
+<Steps>
+    <Step title="実行中のサービスを停止">
+        ```bash
+        cd /dify
+        docker compose down
+        ```
+    </Step>
+    <Step title="データをバックアップ">
+        `.env` ファイル、`envs/` 下に作成したオプションの env ファイル、およびデータベースやストレージなどの永続データを含む `volumes` ディレクトリをバックアップします：
+
+        ```bash
+        cp /dify/.env /dify/.env.bak
+        tar -cvf envs-$(date +%s).tgz envs
+        tar -cvf volumes-$(date +%s).tgz volumes
+        ```
+    </Step>
+    <Step title="Dify を更新">
+        <Warning>
+            アップグレードプロセスは設定テンプレートを上書きします。ただし、`.env` ファイル、ローカルの `/dify/envs/*.env` ファイル、`volumes/` ディレクトリ内のランタイムデータ（データベースやアップロードされたファイルなど）には影響しません。
+
+            `.env` と `/dify/envs/*.env` 以外の設定ファイルを手動で変更している場合は、アップグレード前にバックアップしてください。
+        </Warning>
+
+        最新のコードをプルし、設定ファイルを同期します：
+
+        ```bash
+        git clone https://github.com/langgenius/dify.git /tmp/dify
+        rsync -av /tmp/dify/docker/ /dify/
+        rm -rf /tmp/dify
+        ```
+    </Step>
+    <Step title="新しい環境変数を確認">
+        新しいバージョンでは `.env.example` または `envs/` 下のオプションテンプレートに新しい変数が導入される場合があります。各テンプレートと対応するローカル env ファイルを比較し、必要な不足変数を追加してください：
+
+        ```bash
+        diff /dify/.env /dify/.env.example
+        find /dify/envs -name "*.env" -print | while read -r env_file; do
+          diff "$env_file" "$env_file.example"
+        done
+        ```
+
+        新しく追加されたオプションテンプレートをカスタマイズする必要がある場合は、`.example` 拡張子を外したファイルとしてコピーしてから編集してください。詳細は [設定](#設定) を参照してください。
+    </Step>
+    <Step title="サービスを開始">
+        ```bash
+        docker compose pull
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        ```
+    </Step>
+</Steps>

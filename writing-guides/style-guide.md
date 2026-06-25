@@ -12,7 +12,7 @@ Express ideas clearly and concisely. Every sentence should add value. Cut unnece
 
 Choose precision when it prevents confusion. A specific, descriptive term is better than a shorthand that assumes shared context with the reader.
 
-Keep paragraphs under 50 words. On Mintlify's content width, longer paragraphs exceed four rendered lines and become visually dense. When a paragraph runs long, split it at a natural boundary, typically where the topic shifts from setup to payoff, or from problem to solution.
+Keep every paragraph to four rendered lines or fewer (roughly 50 words). On Mintlify's content width, anything longer renders as a dense block that readers skip. When a paragraph runs long, split it at a natural boundary, typically where the topic shifts from setup to payoff, or from problem to solution.
 
 ## Images
 
@@ -38,6 +38,40 @@ For the mechanics of image syntax, alt text, captions, and storage, see the [For
 Place critical limitations at the start of a section when users need them before taking action, not only at the end.
 
 **Avoid overuse.** Too many callouts dilute their importance and interrupt reading flow. When a section accumulates multiple callouts, restructure into flowing paragraphs with inline bold text instead. Reserve callout visual weight for genuinely critical information.
+
+## Paid Feature Callouts
+
+Use one of three patterns based on the scope of the gated feature.
+
+**Plan badges:**
+
+- `<Badge color="blue">Professional</Badge>`
+- `<Badge color="blue">Team</Badge>`
+- `<Badge color="blue">Enterprise</Badge>`
+
+**1. Whole section is the paid feature.** Place the badge inline with the section heading. No additional callout needed.
+
+```mdx
+## Configure Model Load Balancing <Badge color="blue">Enterprise</Badge>
+```
+
+**2. Paid feature is one item within a section that also covers standard features.** Place the `<Info>` callout AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
+
+```mdx
+Sign in with your email address and password.
+
+Single sign-on via OAuth and SAML can be configured by the workspace administrator to supplement or replace email-and-password login.
+
+<Info>
+SSO is available on <Badge color="blue">Enterprise</Badge>. [Learn more](https://dify.ai/pricing).
+</Info>
+```
+
+**3. Paid feature mentioned in body prose alongside standard features.** Use an inline badge directly in the sentence.
+
+```mdx
+Creating additional workspaces beyond the one provisioned at install time is available on <Badge color="blue">Enterprise</Badge>.
+```
 
 ## Patterns to Use
 
@@ -65,6 +99,8 @@ Place critical limitations at the start of a section when users need them before
 
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
+**Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck.
+
 ## Patterns to Avoid
 
 **Excessive bullets.** Use bullet points only for genuinely discrete, enumerable items. When explaining concepts or processes, or when ideas connect, write in paragraphs. Don't fragment continuous reasoning into bullet lists.
@@ -80,6 +116,8 @@ Place critical limitations at the start of a section when users need them before
 **Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading.
 
 **Repeating the UI.** Don't describe interface elements users can see directly—default values, field labels, button names. Documentation provides context and rationale not visible in the UI.
+
+**Describing the documentation.** Don't narrate the page's own structure or the doc set like "This section covers". Readers want the product, not a tour of the page. Lead with what the user does or needs.
 
 **Information noise.** If content doesn't provide value beyond what the reader already knows or can see, it hinders rather than helps. Before including a detail, ask: does the reader need this to accomplish their goal? If the UI already communicates it, or it restates what the previous sentence implied, cut it.
 

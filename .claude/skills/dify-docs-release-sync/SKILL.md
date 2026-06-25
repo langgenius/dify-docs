@@ -15,7 +15,7 @@ Compares code changes between two Dify releases (or a release and current HEAD),
 
 **Input**: Two version references, provided by the user. Always ask if not provided.
 - Post-release: `v1.13.2` and `v1.13.3` (both tags)
-- Pre-release: `v1.13.2` and `main` (tag and branch HEAD)
+- Pre-release: `v1.13.2` and the shipped commit — prefer the `saas-deploy` staging SHA over `main` (see 1.0)
 
 ## Workflow
 
@@ -38,6 +38,30 @@ digraph {
 ```
 
 ## Phase 1: Analysis
+
+### 1.0 Pin the comparison to what actually ships
+
+`main` is not the release: it carries post-release and future-version commits, and merged code may be gated off. Pin the upper diff ref to the **shipped commit**, and treat gating as part of scope.
+
+**Upper ref (CE / cloud)** is the dify image SHA that staging runs, from the `saas-deploy` GitOps repo. Staging is the cloud release candidate — the team merges each release's functional updates there before cutting it.
+
+```bash
+# authoritative upper ref → diff <last-release-tag>..<SHA>, not ..main
+grep newTag saas-deploy/environments/staging/dify/api/kustomization.yaml
+```
+
+Scope signals, in order of authority:
+
+| Signal | Tells you |
+|---|---|
+| `saas-deploy` staging image SHA | what code ships |
+| flags in `saas-deploy/environments/staging/dify/{api,web}/env.properties` | whether shipped code is **enabled** |
+| milestone **tagged PRs** | confirmed in the release |
+| milestone **description text** | aspirational only — named features may slip; never scope from it alone |
+
+**Merged ≠ released.** Commit ancestry proves code is in the build, not that the feature is on. A flag set off in staging `env.properties` (e.g. `ENABLE_AGENT_V2=false`, `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW=false`, `AGENT_SHELL_ENABLED=false`) means it ships dark — exclude it.
+
+**CE vs EE.** The numbered release (e.g. `1.15.0`) is Community Edition; Enterprise ships separately, often weeks later. Features needing EE infrastructure (RBAC, SSO-gated MCP identity forwarding) belong to the EE doc effort, not the CE sync.
 
 ### 1.1 Diff Between Versions
 
@@ -117,20 +141,20 @@ Also check: Pydantic models and `fields/` serializers used by Service API contro
 
 #### Help Documentation Detection (Heuristic)
 
-Read the PR description for context. Map changed source paths to likely doc areas:
+Read the PR description for context. Map changed source paths to likely doc areas. `use-dify` content exists in two product copies (`en/cloud/...` and `en/self-host/...`); apply changes to both, then mirror zh/ja:
 
 | Repo | Source path pattern | Likely doc area |
 |---|---|---|
-| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/use-dify/workflow/nodes/` |
-| dify | `api/core/rag/` | `en/use-dify/knowledge/` |
-| dify | `api/core/tools/` | `en/use-dify/tools/` or workflow tool node docs |
-| dify | `api/core/agent/` | `en/use-dify/build-apps/agent.mdx` |
-| dify | `api/core/app/` | `en/use-dify/build-apps/` |
+| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/{cloud,self-host}/use-dify/nodes/` |
+| dify | `api/core/rag/` | `en/{cloud,self-host}/use-dify/knowledge/` |
+| dify | `api/core/tools/` | `en/{cloud,self-host}/use-dify/nodes/tools.mdx` or workflow tool node docs |
+| dify | `api/core/agent/` | `en/{cloud,self-host}/use-dify/build/agent.mdx` |
+| dify | `api/core/app/` | `en/{cloud,self-host}/use-dify/build/` |
 | dify | `web/app/components/` | UI-related docs (check PR description for specifics) |
-| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/configuration/environments.mdx` (env var docs) |
-| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/quick-start/docker-compose.mdx` and `en/self-host/quick-start/faqs.mdx` (deployment workflow docs) |
-| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/use-dify/workflow/nodes/` |
-| graphon | `src/graphon/model_runtime/` | `en/use-dify/model-providers/` |
+| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
+| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/deploy/quick-start/docker-compose.mdx` and `en/self-host/deploy/quick-start/faqs.mdx` (deployment workflow docs) |
+| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/{cloud,self-host}/use-dify/nodes/` |
+| graphon | `src/graphon/model_runtime/` | `en/{cloud,self-host}/use-dify/workspace/model-providers.mdx` |
 | graphon | `src/graphon/graph_engine/`, `src/graphon/runtime/` | workflow engine behavior, execution semantics |
 
 When checking dify PRs, also scan recent merges in `langgenius/graphon` for the same release window. A user-visible workflow change may ship as a graphon release plus a dify pin bump (look for changes to `api/pyproject.toml` and `api/uv.lock`).
@@ -280,9 +304,9 @@ For each affected doc page, use `dify-docs-guides` skill:
 
 For each affected variable group, use `dify-docs-env-vars` skill:
 1. Trace the variable in the release codebase
-2. Update `en/self-host/configuration/environments.mdx`
+2. Update `en/self-host/deploy/configuration/environments.mdx`
 3. Run the verification script to confirm zero mismatches
-4. Update `zh/self-host/configuration/environments.mdx` and `ja/self-host/configuration/environments.mdx` with the same changes
+4. Update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` with the same changes
 
 **Important**: `environments.mdx` is in the translation pipeline's ignore list (`tools/translate/config.json`). It is **not** auto-translated on PR push. ZH and JA env var docs must be updated manually.
 
@@ -300,13 +324,16 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | Dify codebase | Configured as an additional working directory |
 | OpenAPI specs | `dify-docs/{en,zh,ja}/api-reference/openapi_*.json` |
 | GitHub repo | `langgenius/dify` |
+| `saas-deploy` repo | GitOps repo; staging = cloud release candidate |
+| Shipped dify SHA | `saas-deploy/environments/staging/dify/api/kustomization.yaml` (`newTag`) |
+| Staging feature flags | `saas-deploy/environments/staging/dify/{api,web}/env.properties` |
 
 ## Common Mistakes
 
 | Mistake | Fix |
 |---|---|
 | Auto-detecting version references | Always ask the user for the two versions to compare |
-| Using only milestones | Milestones miss untagged PRs — prefer tag comparison |
+| Using only milestones | Milestones miss untagged PRs, and the milestone **description** names aspirational features that may slip. Only **tagged PRs** are authoritative; confirm scope against the `saas-deploy` staging SHA (1.0) |
 | Executing before report approval | STOP after report — user must review |
 | Missing shared endpoint propagation | Fix in one spec → check all 4 app specs |
 | Ignoring PR description | File paths are heuristic for non-API — description has the real context |
@@ -316,3 +343,6 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | Pre-filtering the diff to a hand-picked path list | Run the full `git diff --stat` first; categorize after. Pre-filtering hides deployment scripts, new docker files, and root README changes. |
 | Trusting the `chore:` / `fix:` prefix as a no-doc-impact signal | Read the PR title and body. "chore: easier and simpler deploy" is a deployment workflow change. Prefix is not a category. |
 | Skipping the dify-docs PR cross-check | Always run `gh pr list --repo langgenius/dify-docs` against the source PR numbers before reporting. Avoids duplicate work and surfaces doc paths the heuristic mapping missed. |
+| Diffing against `main` | `main` carries post-release and future-version commits. Pin the upper ref to the `saas-deploy` staging SHA (1.0). |
+| Assuming merged-to-main = released | Code can be in the build but gated off. Check feature flags in staging `env.properties`; gated features ship dark. |
+| Documenting EE features in a CE sync | CE and EE ship separately. Route EE-gated features (RBAC, SSO-gated MCP identity) to the EE doc effort. |

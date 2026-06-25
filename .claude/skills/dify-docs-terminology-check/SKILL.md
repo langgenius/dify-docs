@@ -32,9 +32,9 @@ terms). Covers the whole file, not just the diff.
    review (not just the diff), plus their zh/ja siblings when they exist.
    Expand to a directory or the full docs tree if the user specifies.
    Always exclude:
-   - `en/self-host/configuration/environments.mdx`
-   - `zh/self-host/configuration/environments.mdx`
-   - `ja/self-host/configuration/environments.mdx`
+   - `en/self-host/deploy/configuration/environments.mdx`
+   - `zh/self-host/deploy/configuration/environments.mdx`
+   - `ja/self-host/deploy/configuration/environments.mdx`
 
    Environment variable names are not UI labels and do not belong in the
    terminology check.

@@ -1,0 +1,84 @@
+---
+title: Install the difyctl Skill
+description: Give your coding agent access to your Dify apps by installing one skill file
+---
+
+Run [`difyctl skills install`](/en/cli/reference/skills#install-the-skill) to write a skill file for the coding agents on your machine. The agent picks it up and onboards itself from there.
+
+The installed `SKILL.md` is a bootstrap, not a manual. It tells the agent the one thing that matters: run [`difyctl help -o json`](/en/cli/reference/help#machine-readable-help) and treat that output as the source of truth.
+
+At runtime, the agent reads the full command surface from the installed `difyctl`.
+
+## When to Use the Skill
+
+- Your agent runtime reads skills: Claude Code, Codex, OpenCode, Cursor, pi, or anything else that picks up `SKILL.md` files from a skill directory.
+- The agent can run shell commands. The skill drives `difyctl` through the agent's shell tool.
+- You want zero maintenance: the skill never goes stale, because it lists no commands.
+
+If your runtime doesn't read skills, your agent can still drive `difyctl` directly by reading [`difyctl help -o json`](/en/cli/reference/help#machine-readable-help) at runtime.
+
+## Prerequisites
+
+- [Install](/en/cli/install) `difyctl` and [sign in](/en/cli/authenticate) on the machine the agent runs on, so it can reuse your session. For a server or container, see [Authenticate Where Your Agent Runs](/en/cli/integrate-agents/auth-for-agent-deployments).
+- Use a coding agent that reads skills and can run shell commands. A sandboxed agent with no shell access can't use the skill.
+- Launch the agent at least once before installing, so its config directory exists for `difyctl skills install` to find.
+
+## Steps
+
+<Steps>
+  <Step title="Preview where the skill will land">
+    Without `--yes`, the command is a dry run:
+
+    ```bash
+    difyctl skills install
+    ```
+
+    ```text
+    Detected 1 agent: claude-code
+
+    would write to claude-code: /Users/you/.claude/skills/difyctl/SKILL.md
+
+    Re-run with --yes to write.
+    Agent not listed? Install into its directory with `difyctl skills install <dir>`.
+    ```
+  </Step>
+
+  <Step title="Write the skill">
+    `--yes` writes to every detected agent. Pass `--agent <name>` to write to just one.
+
+    ```bash
+    difyctl skills install --yes
+    ```
+
+    ```text
+    wrote /Users/you/.claude/skills/difyctl/SKILL.md
+    ```
+  </Step>
+
+  <Step title="Start a fresh agent session">
+    Start a new session so the agent indexes the skill it just received.
+  </Step>
+</Steps>
+
+<Info>
+See the [Skills reference page](/en/cli/reference/skills) for detection, target paths per agent, and the `--agent`, `--stdout`, and explicit-directory forms.
+</Info>
+
+## Test
+
+The install prints the path it wrote; open that file to confirm the skill is there. Then check that the agent actually uses it:
+
+1. **Discovery**: In a fresh session, ask the agent: *"What can you do with `difyctl`?"* A correctly onboarded agent runs `difyctl help -o json` and answers from its output rather than guessing commands.
+2. **End to end**: Ask the agent to list your Dify apps and run one. Watch for `difyctl get app -o json` followed by a `describe`/`run` sequence with real IDs from the list.
+3. **Pause handling**: If you have a Workflow app with a human-input step, ask the agent to run it. A paused run [exits 0 and reports `"status": "paused"` on stdout](/en/cli/reference/apps#when-a-workflow-pauses). The agent should recognize the pause and offer to resume, not report a failure or retry the run.
+
+## Troubleshooting
+
+| Problem | What to do |
+|:---|:---|
+| The agent isn't detected | Its config directory (for example `~/.claude`) doesn't exist until the agent has run at least once. Launch it once, or target the directory explicitly with `difyctl skills install <dir> --yes`. |
+| The skill is installed but the agent ignores it | Most agents index skills at session start, so start a new session. If it still doesn't load, point the installer at the directory your agent reads skills from. |
+| Commands fail with exit code 4 | The agent has no session to reuse. Sign in on its machine first: see [Authenticate Where Your Agent Runs](/en/cli/integrate-agents/auth-for-agent-deployments). |
+| The skill is older than the CLI | The skill carries a version stamp and tells the agent to compare it against `difyctl version`. If they differ, re-run `difyctl skills install --yes` to overwrite it. |
+
+For everything else, see the full [Troubleshooting](/en/cli/troubleshooting) page.

@@ -27,7 +27,7 @@ Then gather and select interactively (targets passed at runtime, so any
 npx backport --pr-query "merged:>=2026-05-01 label:backport-pending" \
   --branch release/1.15.0 --branch release/1.14.x
 # Or by path / single PR:
-npx backport --path en/use-dify --branch release/1.14.x
+npx backport --path en/self-host/use-dify --branch release/1.14.x
 npx backport --pr 792 --branch release/1.14.x
 ```
 

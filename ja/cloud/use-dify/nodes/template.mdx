@@ -1,0 +1,185 @@
+---
+title: テンプレート
+description: Jinja2 テンプレートを使用してデータを変換およびフォーマット
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cloud/use-dify/nodes/template) を参照してください。
+
+テンプレートノードは、Jinja2 テンプレートを使用して複数のソースからのデータを構造化されたテキストに変換・フォーマットします。変数の結合、出力のフォーマット、下流のノードやエンドユーザー向けのデータ準備に使用します。
+
+<Frame caption="テンプレートノード設定インターフェース">
+  ![テンプレートノード設定インターフェース](https://assets-docs.dify.ai/2025/04/0838bb5c7e1d1a58ed30fcd9fc48920f.png)
+</Frame>
+
+## Jinja2 テンプレート
+
+テンプレートノードは Jinja2 テンプレート構文を使用し、ワークフローのデータに応じて動的にコンテンツを生成します。ループ、条件分岐、フィルターといったプログラミング的な機能を活用して、複雑なテキスト生成が可能です。
+
+### 変数の置換
+
+二重波括弧でワークフロー変数を参照します：`{{ variable_name }}`。ドット記法とブラケット構文により、ネストされたオブジェクトプロパティや配列要素にアクセスできます。
+
+```jinja
+{{ user.name }}
+{{ items[0].title }}
+{{ data.metrics.score }}
+```
+
+### 条件分岐ロジック
+
+if-else 文を使用して、データ値に応じて異なるコンテンツを表示します：
+
+```jinja
+{% if user.subscription == 'premium' %}
+Welcome back, Premium Member! You have access to all features.
+{% else %}
+Consider upgrading to Premium for additional capabilities.
+{% endif %}
+```
+
+### ループと反復処理
+
+for ループで配列やオブジェクトを処理し、反復的なコンテンツを生成します：
+
+```jinja
+{% for item in search_results %}
+### Result {{ loop.index }}
+**Score**: {{ item.score | round(2) }}
+{{ item.content }}
+---
+{% endfor %}
+```
+
+<Frame caption="知識検索結果を処理するテンプレート">
+  ![知識検索結果を処理するテンプレート](https://assets-docs.dify.ai/2025/04/0ae3f13cf725cb2c52c72cc354e592ee.png)
+</Frame>
+
+## データフォーマット
+
+### フィルター
+
+Jinja2 フィルターはテンプレートレンダリング時にデータを変換します：
+
+```jinja
+{{ name | upper }}
+{{ price | round(2) }}
+{{ content | replace('\n', '<br>') }}
+{{ tags | join(', ') }}
+{{ score | default('No score available') }}
+```
+
+### エラーハンドリング
+
+デフォルト値と条件チェックを使用して、欠損または無効なデータを適切に処理します：
+
+```jinja
+{{ user.email | default('No email provided') }}
+{{ metrics.accuracy | round(2) if metrics.accuracy else 'Not calculated' }}
+```
+
+## インタラクティブフォーム
+
+テンプレートは Chatflow で構造化データ収集用のインタラクティブな HTML フォームを生成できます。
+
+送信されると、フォームの値はエンドユーザーの次のチャットメッセージとして送信されます。フォーマットは `<form>` の `data-format` 属性によって決まります：
+
+- **`data-format="json"`**：値は JSON オブジェクトにシリアライズされます。下流のコード実行ノードやパラメータ抽出は `JSON.parse`（またはパターンマッチ）で各フィールドを取り出せます。
+- **未設定（またはその他の値）**：値はプレーンテキスト（1 行に 1 つの `name: value`）として送信されます。LLM が読みやすい形式です。
+
+例：
+
+<Columns>
+  <Column>
+
+```html
+<form data-format="json">
+  <label for="username">Username:</label>
+  <input type="text" name="username" placeholder="Please enter" />
+  <label for="password">Password:</label>
+  <input type="password" name="password" placeholder="Please enter" />
+  <label for="content">Content:</label>
+  <textarea name="content"></textarea>
+  <label for="date">Date:</label>
+  <input type="date" name="date" />
+  <label for="time">Time:</label>
+  <input type="time" name="time" />
+  <label for="datetime">Datetime:</label>
+  <input type="datetime" name="datetime" />
+  <label for="select">Select:</label>
+  <input type="select" name="select" data-options='["Option A","Option B","Option C"]' />
+  <input type="checkbox" name="agreed" data-tip="By checking this means you agreed" />
+  <button data-variant="primary">Login</button>
+</form>
+```
+
+  </Column>
+  <Column>
+    <Frame>
+      <img src="https://assets-docs.dify.ai/2025/04/9d24e9cfa3cdde00e4eee15bd4bbea76.png" alt="チャットインターフェースで描画されたインタラクティブフォーム" width="100%" />
+    </Frame>
+  </Column>
+</Columns>
+
+### サポートされるタグ
+
+| <div style={{width: '30px'}}>タグ</div> | 属性 | 説明 |
+|:---|:---|:---|
+| `<form>` | `data-format` | フォームフィールドのコンテナ。<br></br><br></br>`data-format="json"` を設定すると JSON で送信、それ以外の値（または未設定）はプレーンテキストで送信されます。 |
+| `<label>` | `for` | 内部テキストをフィールドのラベルとして描画します。<br></br><br></br>`for` をフィールドの `name` に設定して関連付けます。`<label>` をフィールドの前に配置すると、ラベルが上部に表示されます。 |
+| `<input>` | `type`、`name`、`value`、`placeholder`、`checked`、`data-tip`、`data-options` | 下記の入力タイプを参照してください。`name` は送信内容にフィールドを含めるために必須で、`[A-Za-z][A-Za-z0-9_-]*` にマッチする必要があります。 |
+| `<textarea>` | `name`、`placeholder`、`value` | 複数行のテキスト入力。 |
+| `<button>` | `data-variant`、`data-size` | フォームを送信します。<ul><li>バリアント：`primary`、`warning`、`secondary`、`secondary-accent`、`ghost`、`ghost-accent`、`tertiary`。</li><li>サイズ：`small`、`medium`、`large`。</li></ul>上記以外の値は無視され、ボタンはデフォルトスタイルにフォールバックします。<br></br><br></br>`data-message` と `data-link` は無視されます。これらの属性は [クイック返信ボタン](#クイック返信ボタン) にのみ適用されます。|
+
+<Note>
+`<form>` 内のタグの間に空行を入れないでください。空行があると markdown 解析で HTML ブロックが終了し、空行以降のタグはフォームフィールドとして描画されません。
+</Note>
+
+### サポートされる入力タイプ
+
+| `type` 値 | 描画 | 送信形式 |
+|:---|:---|:---|
+| `text`、`password`、`email`、`number` | HTML セマンティクスに対応する 1 行入力 | 文字列 |
+| `date` | 日付ピッカー | ISO 日付文字列（例：`2026-01-10`） |
+| `datetime` | 日付ピッカー（時刻選択あり） | ISO 日付時刻文字列（例：`2026-01-10T14:30:00.000+08:00`） |
+| `time` | 時刻ピッカー | 文字列（時刻のみではなく完全な日付プレフィックスを含む） |
+| `checkbox` | チェックボックスの後にラベルとして `data-tip` テキスト | 真偽値（`true` または `false`） |
+| `select` | `data-options` の JSON 文字列配列から構築されるドロップダウン | 選択されたオプション文字列 |
+| `hidden` | `<input type="hidden">` 要素として描画され、UI には表示されない | 文字列 |
+
+- 上記以外の `type` 値は、フィールドの位置に「Unsupported tag」フォールバックとして描画されます。
+
+- `required`、`min`、`max`、`pattern` などの HTML5 バリデーション属性は強制されません。
+
+- ブラウザは `<input type="password">` と `<input type="email">` を、サイトに保存された認証情報で自動入力する場合があります。自動入力を避けたい場合は `<input type="text">` を使用してください。
+
+### クイック返信ボタン
+
+どの `<form>` の外にも配置されたスタンドアロンの `<button>` は、チャット内でクリック可能なボタンとして描画されます。アシスタントのメッセージにあらかじめ用意した返答や外部リンクを表示するのに使用します。例：
+
+```html wrap
+Would you like to see more options?
+<button data-variant="primary" data-message="Yes, show me more">Yes</button> <button data-variant="secondary" data-message="No, that is enough">No</button> <button data-variant="secondary-accent" data-link="https://docs.dify.ai">Read the docs</button>
+```
+
+<Frame>
+  ![クイック返信ボタン](/images/use-dify/workflow/template-quick-reply-button.png)
+</Frame>
+
+| 属性 | クリック時の動作 |
+|:---|:---|
+| `data-message` | テキストをエンドユーザーの次のチャットメッセージとして送信します。 |
+| `data-link` | 新しいタブで URL を開きます。有効な URL である必要があります。 |
+
+両方が設定されている場合は `data-link` が優先されます。どちらも設定されていない場合、ボタンは描画されますがクリックしても動作しません。
+
+`data-variant` と `data-size` でスタイルを設定できます。値は上記の [フォームボタン](#サポートされるタグ) と同じです。
+
+<Note>
+フォームボタンとは異なり、スタンドアロンボタンは `data-variant` と `data-size` をバリデーションせずに下層コンポーネントに渡します。認識されない値を渡すと、スタイル付きボタンではなくプレーンテキストとして描画される場合があります。
+
+上記の値のみを使用してください。
+</Note>
+
+## 出力制限
+
+テンプレート出力は **400,000 文字** に制限されています。この制限により、メモリ問題を防ぎ、大きなテンプレート出力でも適切な処理時間を確保します。

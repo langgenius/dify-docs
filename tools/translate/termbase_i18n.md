@@ -14,7 +14,7 @@
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
 | Dify tool | Dify 工具 | ツール |
-| workspace | 工作区 | ワークスペース |
+| workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
 | WebApp | WebApp | WebApp |
 
@@ -71,7 +71,7 @@
 | Trigger | 触发器 | トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
-| Plugin Trigger | 插件触发器 | プラグイントリガー |
+| Integration Trigger | 集成触发器 | 統合トリガー |
 | Command | 命令 | コマンド |
 | Upload File to Sandbox | 上传文件至沙盒 | サンドボックスへのファイルアップロード |
 
@@ -130,8 +130,12 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| self-hosted | 自托管 | セルフホスト |
+| self-hosted | 自部署 | セルフホスト |
 | SaaS | SaaS | SaaS |
+| Dify Cloud | Dify Cloud | Dify Cloud |
+| Dify Enterprise | Dify Enterprise | Dify Enterprise |
+| Dify Premium | Dify Premium | Dify Premium |
+| Community Edition | Community Edition | Community Edition |
 | Docker | Docker | Docker |
 | sandbox | 沙箱 | サンドボックス |
 | API | API | API |
@@ -157,7 +161,7 @@
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
 | Explore | 探索 | 探索 |
-| Plugins | 插件 | プラグイン |
+| Integrations | 集成 | 統合 |
 | Tools | 工具 | ツール |
 
 ### App Detail Tabs
@@ -167,7 +171,8 @@
 | Orchestrate | 编排 | オーケストレート |
 | Monitoring | 监测 | 監視 |
 | API Access | 访问 API | API アクセス |
-| Logs & Annotations | 日志与标注 | ログ＆注釈 |
+| Logs | 日志 | ログ |
+| Annotations | 标注 | 注釈 |
 
 ### Knowledge Detail Tabs
 
@@ -186,11 +191,11 @@
 | Members | 成员 | メンバー |
 | Model Provider | 模型供应商 | モデルプロバイダー |
 | Data Source | 数据来源 | データソース |
-| API Extension | API 扩展 | API 拡張 |
+| Custom Endpoint | 自定义端点 | カスタム API |
 | Billing | 账单 | 請求 |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 |
 | Integrations | 集成 | 統合 |
-| Default Model Settings | 默认模型设置 | システムモデル設定 |
+| Default Models | 默认模型 | デフォルトモデル |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
@@ -266,7 +271,7 @@
 | Human Input | 人工介入 | 人間の入力 |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
-| Plugin Trigger | 插件触发器 | プラグイントリガー |
+| Integration Trigger | 集成触发器 | 統合トリガー |
 | Knowledge Base | 知识库 | 知識ベース |
 
 ### Workflow Controls
