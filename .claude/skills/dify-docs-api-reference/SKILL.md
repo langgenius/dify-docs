@@ -237,3 +237,14 @@ Exception: Tags without a create operation (e.g., Conversations). GET list comes
 ## Post-Writing Verification
 
 After completing the document, run the post-writing checks listed in `writing-guides/index.md#post-writing-verification`.
+
+### Independent code audit (required for new or substantially-changed endpoints)
+
+Spec errors hide in plausible-looking JSON. After writing, dispatch a subagent to audit the spec against the code, and instruct it not to trust your draft. The brief MUST:
+
+- Pin the verification refs: the exact dify tag/branch, plus the graphon version pinned in `dify/api/pyproject.toml`.
+- Require the agent to load this skill and its `references/` (audit-checklist, common-mistakes, codebase-paths).
+- **Identify the correct controller.** These specs are the Service API (`servers` base ends in `/v1`; `controllers/service_api/`). The same route name often also exists on the `web` or `console` blueprint with a different path, auth model, and required params (e.g., a required `user`). Verify against the blueprint whose base URL matches `servers`, not the first controller you find.
+- Per endpoint: check path/method, every param (required/optional/type), response status + body fields, and each error code traced `exception -> handler` — all against code. Return a per-endpoint verdict with `file:symbol` evidence, plus a separate list of what code alone cannot confirm.
+
+Treat the audit as authoritative over your draft; reconcile every discrepancy before claiming done.
