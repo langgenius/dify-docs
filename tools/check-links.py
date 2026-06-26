@@ -161,8 +161,11 @@ def slugify(text: str) -> str:
     s = re.sub(r"[`*]", "", s)
     # Strip Pandoc/kramdown custom-id syntax if embedded in heading text
     s = CUSTOM_ID_RE.sub("", s)
-    # Drop characters that aren't word chars, hyphens, or whitespace
-    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    # Drop ASCII punctuation only. Non-ASCII characters (CJK text and
+    # full-width punctuation like "：") are kept verbatim: Mintlify preserves
+    # them in the slug, so the ASCII colon in an English heading becomes a
+    # hyphen while the full-width colon in a zh/ja heading stays a colon.
+    s = re.sub(r"[^\w\s\u0080-\U0010ffff-]", "", s, flags=re.UNICODE)
     # Whitespace → hyphen
     s = re.sub(r"\s+", "-", s)
     # Collapse hyphens, trim

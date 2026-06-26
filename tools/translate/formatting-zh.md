@@ -98,6 +98,8 @@ No space is needed when link text is adjacent to punctuation.
 
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/zh/`.
 
+Same-page anchors keep the heading verbatim, full-width punctuation included: `## 示例：内容审核工作流` → `(#示例：内容审核工作流)`. Do not strip or hyphenate `：`/`，` (only English headings convert `:` and spaces to hyphens).
+
 ### API Reference Cross-Links
 
 In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
