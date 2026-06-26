@@ -1,77 +1,30 @@
 ---
 name: dify-docs-api-reference
 description: >
-  Use when editing, auditing, or creating OpenAPI specs for the Dify
-  documentation repo. Applies to files in en/api-reference/. Covers
-  formatting rules, error code conventions, example standards,
-  operationId patterns.
+  Use when editing, auditing, or creating OpenAPI specs in the Dify docs
+  repo (en/api-reference/openapi_*.json), or on any task touching API
+  endpoint parameters, responses, error codes, status codes, or examples.
 ---
 
 # Dify API Reference Documentation
 
-## Before Starting
+OpenAPI specs for developers integrating Dify over REST. **The code is the source of truth: when the spec disagrees with the code, the spec is wrong.** Every detail you write must be traceable to a controller, model, or converter in the Dify codebase.
 
-Read these shared guides:
+## Workflow
 
-1. `writing-guides/style-guide.md`
-2. `writing-guides/formatting-guide.md`
-3. `writing-guides/glossary.md`
+Work through these in order. Steps 1, 3, 4, and 5 are non-negotiable.
 
-**When auditing**, also load:
-- `references/audit-checklist.md`
-- `references/common-mistakes.md`
+Editing or creating a spec runs all five steps. Auditing an existing spec is steps 1 and 3 applied systematically from `references/audit-checklist.md`; the independent subagent audit in step 5 is required only when you have written or substantially changed an endpoint.
 
-**When tracing code paths**, also load:
-- `references/codebase-paths.md`
+1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Confirm the Dify codebase is on the ref you mean to verify against: the latest `main` by default (`git fetch origin`, then fast-forward only if the working tree is clean), or a dev branch if the user names one. Do not force a checkout over a dirty or feature working tree. Identify which spec you are in and its app type from [Spec Structure](#spec-structure); every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
+2. **Write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here.
+3. **Verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers.
+4. **Flag suspected code bugs; never silently document them** (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
+5. **Run post-writing verification** (see [Post-Writing Verification](#post-writing-verification)): the post-writing checks always, plus the independent subagent audit for new or substantially-changed endpoints.
 
 ## Reader Persona
 
-Backend developers integrating Dify apps or knowledge bases into their own applications via REST APIs. Assume strong coding ability, familiarity with HTTP, authentication patterns, and JSON. Focus on precision: exact parameter types, required vs optional, error codes, and realistic examples. Don't explain what a REST API is.
-
-## Code Fidelity (Non-Negotiable)
-
-**Pull the latest Dify code** before auditing. In the Dify codebase directory:
-```bash
-git fetch origin && git checkout main && git pull origin main
-```
-
-**Every detail in the spec MUST be verifiable against the codebase.** When the spec disagrees with the code, the spec is wrong.
-
-### What must match the code exactly
-
-- **Schema constraints**: `default`, `minimum`/`maximum`, `enum` must exactly match Pydantic `Field()` arguments. E.g., `le=101` -> `"maximum": 101` -- not 100.
-- **Required/optional**: `Field(default=...)` = optional, no default = required; `FetchUserArg(required=True)` = required.
-- **Error codes**: Only errors the endpoint actually raises. Trace `except` -> `raise` -> exception class -> `error_code` and `code` attributes. See [Error Responses](#error-responses).
-- **Response status codes**: Must match the code's `return ..., <status>` value.
-- **Response body fields**: Must match what the code actually returns. For streaming endpoints, verify the event type `enum` against actual events yielded by the task pipeline. Each event type must have a corresponding discriminator mapping entry.
-- **Error messages**: Must match the exception's `description` attribute or the string passed to werkzeug exceptions.
-
-### How to verify
-
-1. Read the controller method.
-2. For each parameter: find the Pydantic model or `request.args.get()`, note `Field()` arguments.
-3. **Trace string fields beyond the controller.** The controller may declare `str`, but the service layer may cast to `StrEnum`, `Literal`, or validate against a fixed list. Common patterns: `SomeEnum(value)` cast, `Literal["a", "b"]` downstream, explicit `if field not in ALLOWED_VALUES` checks. If any exist, the spec MUST have `enum`.
-4. For errors: trace `except` -> `raise` -> exception class -> `error_code` and `code` in `error.py`.
-5. For responses: check `return` statement. **Important:** Response converters (e.g., `convert_blocking_full_response`) may flatten, restructure, or inject fields not present in the Pydantic entity. Always read the converter.
-6. For service calls: read the service method to see what it returns or raises.
-
-### Flagging suspected code bugs
-
-The code is the source of truth, but the **code itself may have bugs**. When you encounter something irregular:
-
-1. **Flag it explicitly** -- do NOT silently document the suspected bug.
-2. **Show the evidence** -- quote the exact code line and explain why it looks wrong.
-3. **Ask the user for a decision** -- (a) document as-is, or (b) treat as upstream bug.
-4. **Never auto-correct** -- do not silently write the "correct" value when the code says otherwise.
-
-Common code smells: off-by-one in `le`/`ge`, response body with 204, inconsistent error handling across similar endpoints, missing error handlers that sibling endpoints have, `required` mismatches.
-
-### Professional judgment
-
-You are a professional API documentation writer. Beyond code fidelity:
-- **Challenge questionable decisions** with reasoning.
-- **Suggest improvements** to API consistency or developer experience (clearly separated from required fixes).
-- **Question conflicting instructions** -- push back with evidence.
+Backend developers integrating Dify apps or knowledge bases via REST. Strong coding ability; familiar with HTTP, authentication patterns, and JSON. Be precise about parameter types, required vs optional, error codes, and realistic examples. Do not explain what a REST API is.
 
 ## Spec Structure
 
@@ -83,157 +36,71 @@ You are a professional API documentation writer. Beyond code fidelity:
 | `openapi_completion.json` | Completion | `COMPLETION` | `/completion-messages` |
 | `openapi_knowledge.json` | Knowledge | *(N/A)* | datasets, documents, segments, metadata |
 
-Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in chat/chatflow/workflow/completion specs.
+Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in the chat, chatflow, workflow, and completion specs. A fix to one usually applies to all four, so propagate it.
 
-### App-Type Scoping (Critical)
+### App-Type Scoping
 
-The codebase uses shared controllers and Pydantic models across app modes. The **documentation separates** these into per-app-type specs. You MUST filter through the app type lens:
+The codebase shares controllers and Pydantic models across app modes; the docs split them into per-app-type specs. Filter everything through the app type of the spec you are in:
 
-1. **Shared Pydantic models** -- only include fields relevant to this spec's app type.
-2. **Shared error handlers** -- only include errors triggerable under this spec's app type.
-3. **Internal-only fields** (e.g., `retriever_from`) -- omit from all specs.
+- **Shared models**: include only fields that have an effect in this mode.
+- **Shared error handlers**: include only errors triggerable in this mode.
+- **Internal-only fields** (e.g., `retriever_from`): omit from all specs.
 
-**How to determine relevance:** Check the controller's `AppMode` guard. For fields: "does this field have any effect in this mode?" For errors: "can this error be triggered in this mode?" When in doubt, trace through `AppGenerateService.generate()`.
+To judge relevance, check the controller's `AppMode` guard; when in doubt, trace through `AppGenerateService.generate()`. For example, `workflow_id` belongs in chatflow, not chat.
 
-## Style Overrides
+## Verifying Against Code
 
-These rules are specific to API reference docs and override or extend the general style guide.
+Every detail in the spec MUST be verifiable against the codebase.
 
-### Endpoint Summaries
+**What must match exactly:**
 
-Must start with an imperative verb. Title Case. Standard vocabulary:
+- **Schema constraints** (`default`, `minimum`/`maximum`, `enum`): the Pydantic `Field()` arguments, verbatim.
+- **Required/optional**: `Field(default=...)` is optional; no default is required; `FetchUserArg(required=True)` is required.
+- **Response status codes**: the code's `return ..., <status>`.
+- **Response body fields**: what the code actually returns after converters.
+- **Error codes and messages**: only errors the endpoint raises, with names and `description` strings traced to the exception.
 
-| Verb | Method | When to use |
-|------|--------|-------------|
-| `Get` | GET | Single JSON resource by ID or fixed path |
-| `List` | GET | Collection (paginated array) |
-| `Download` | GET | Binary file content |
-| `Create` | POST | New persistent resource |
-| `Send` | POST | Message or request dispatch |
-| `Submit` | POST | Feedback or input on existing resource |
-| `Upload` | POST | File upload |
-| `Convert` | POST | Format transformation |
-| `Run` | POST | Execute workflow or process |
-| `Stop` | POST | Halt running task |
-| `Configure` | POST | Enable/disable setting |
-| `Rename` | POST | Rename existing resource |
-| `Update` | PUT/PATCH | Modify fields on existing resource |
-| `Delete` | DELETE | Remove resource |
+**How to verify:**
 
-**Do NOT use `Retrieve`** -- use `Get` or `List`. Verb-object order: `Upload File` not `File Upload`.
+1. **Identify the correct controller.** These specs are the Service API (`servers` base ends in `/v1`; `controllers/service_api/`). The same route name often also exists on the `web` or `console` blueprint with a different path, auth model, and required params (e.g., a required `user`); match the blueprint whose base URL matches `servers`, not the first controller you find.
+2. Read the controller method.
+3. For each parameter, find the Pydantic model or `request.args.get()` and note the `Field()` arguments.
+4. **Trace string fields beyond the controller.** A controller `str` may be cast to `StrEnum`/`Literal` or validated against a fixed list downstream; if so, the spec needs `enum`.
+5. For errors, trace `except` to `raise` to the exception class and its `error_code`/`code` in `error.py`, and through the global handlers in `api/libs/external_api.py`.
+6. For responses, read the `return` statement AND any response converter (they flatten, restructure, or inject fields).
+7. For service calls, read the service method to see what it actually returns or raises.
 
-### operationId Convention
+## Flagging Suspected Bugs
 
-Pattern: `{verb}{AppType}{Resource}`
+The code is the source of truth, but the code itself can have bugs. When something looks irregular (off-by-one in `le`/`ge`, a body on a 204, error handling that differs from sibling endpoints, a `required` mismatch):
 
-| App Type | Prefix | Examples |
-|----------|--------|---------|
-| Chat | `Chat` | `createChatMessage`, `listChatConversations` |
-| Chatflow | `Chatflow` | `createChatflowMessage` |
-| Workflow | `Workflow` | `runWorkflow`, `getWorkflowLogs` |
-| Completion | `Completion` | `createCompletionMessage` |
-| Knowledge | *(none)* | `createDataset`, `listDocuments` |
+1. **Flag it explicitly.** Never silently document the suspected bug.
+2. **Show the evidence.** Quote the exact line and explain why it looks wrong.
+3. **Ask the user to decide**: document as-is, or treat as an upstream bug.
+4. **Never auto-correct.** Do not write the "correct" value when the code says otherwise.
 
-**Legacy operationIds**: Do NOT rename existing ones. Changing operationIds is a breaking change for SDK users. Apply this convention to **new endpoints only**.
-
-### Descriptions
-
-- **User-centric**: Write for developers, not the codebase. Name by what developers want to accomplish (e.g., "Download" not "Preview" for an endpoint serving raw file bytes).
-- **Terminology consistency**: All user-facing text within a spec must use consistent terms. Code-derived names (paths, fields, schema names) stay as-is. Watch for: "segment" vs "chunk" (use "chunk"), "dataset" vs "knowledge base" (use "knowledge base").
-- **Descriptions must add value**: `"Session identifier."` is a label, not a description. Instead: `"The \`user\` identifier provided in API requests."`.
-- **Nullable/conditional fields**: Explain when present or `null`.
-
-#### Endpoint vs parameter descriptions
-
-| Field | Scope |
-|---|---|
-| Endpoint `description` | What the endpoint does, plus any whole-API surprise (cascading delete, long-poll duration). One sentence when possible. |
-| Parameter `description` | Field meaning, valid values, deprecation, normalization, and rules about when to use it vs an alternative. |
-
-If the endpoint description explains a parameter, move it down.
-
-❌ "Remove one or more tag bindings from a knowledge base. Provide tag IDs in `tag_ids`. The legacy `tag_id` field is still accepted for single-tag requests and is normalized into `tag_ids` server-side; supply at least one of the two."
-
-✅ Endpoint: "Remove one or more tags from a knowledge base."
-   `tag_ids`: "Tag IDs to unbind. Required unless the legacy `tag_id` is provided."
-   `tag_id`: "Legacy single-tag form. Normalized into `tag_ids` server-side. Use `tag_ids` for new integrations."
-
-### Cross-API Links
-
-When a description mentions another endpoint, add a markdown link. Pattern: `/api-reference/{category}/{endpoint-name}` (kebab-case from endpoint summary).
-
-## Parameters
-
-- Every parameter MUST have a `description`.
-- **Schema constraints must exactly match code.** Transcribe `Field()` arguments verbatim.
-- Do NOT have `example` field on parameters.
-- **Do NOT repeat schema metadata in descriptions.** If `default: 20` is in schema, don't repeat in description.
-- **Do NOT repeat enum values in descriptions** unless explaining when to choose each value.
-- Mark `required` accurately based on code.
-- **Request fields**: Use `enum` for known value sets. Trace string fields through service layer for hidden enums.
-- **Response fields**: Do NOT use `enum`. Explain values in `description` instead (Mintlify renders duplicate "Available options" list).
-- **Backtick all values** in descriptions: literal values, field names, code references.
-- **Space between numbers and units**: `100 s`, `15 MB` -- not `100s`, `15MB`.
-- **Descriptions must be specific**: `"Available options."` is not acceptable.
-
-## Responses
-
-### Success Responses
-
-Only 200/201 as the primary response. For multiple response modes (blocking/streaming), use markdown bullets in the 200 description.
-
-**Every 200/201 JSON response MUST have at least one `examples` entry** with realistic values.
-
-**Binary/file responses**: Use `content` with appropriate media type and `format: binary`. Use `audio/mpeg` for audio, `application/octet-stream` for generic files. Put details in response `description`, not endpoint description.
-
-**Schema description duplication**: When using `$ref`, the schema definition MUST NOT have a top-level `description`. Mintlify renders both, causing duplication.
-
-### Error Responses
-
-Each endpoint MUST list its specific error codes, grouped by HTTP status.
-
-#### Error Tracing Rules
-
-1. **`BaseHTTPException` subclasses** (in `error.py`): Use `error_code` attribute as code name, `code` attribute as HTTP status.
-2. **Werkzeug built-in exceptions** (`BadRequest`, `NotFound`): Use generic codes -- `bad_request`, `not_found`. NOT the service-layer exception name.
-3. **Custom werkzeug `HTTPException` subclasses** (NOT `BaseHTTPException`): Global handler converts class name to snake_case via regex. E.g., `FilenameNotExistsError` -> `filename_not_exists_error`.
-4. **Fire-and-forget methods**: If a service method never raises, do NOT invent error responses.
-5. **No custom error handling**: If controller only uses `@validate_app_token` with no `try/except`, the only error is 401 (global auth). Do NOT add empty error sections.
-6. **Error messages**: Use the exact string from the exception's `description` attribute or werkzeug string argument.
-
-#### Error Format
-
-- **No `$ref` schema** in error responses -- omit `"schema"` entirely.
-- **Description** lists error codes as markdown bullets with backticked names.
-- **Examples** required for every error response (provides Mintlify dropdown selector).
-
-## Schemas
-
-- **Prefer inline** over `$ref` for simple objects.
-- Only use `$ref` for genuinely reused or complex schemas.
-- **Array items must define `properties`** -- no bare `"type": "object"`.
-- **`required` arrays on request schemas only** -- not response schemas.
-- **`oneOf` options**: Each must have a `title` property. Parent schema must NOT have `description`.
-
-## Examples
-
-- **Realistic values only.** Real-looking UUIDs, timestamps, text, metadata.
-- **Verify example values against code.** Enum-like fields must use values the code actually returns.
-- Request and response examples must correspond.
-- **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example-Streaming mode"` (multiple). Error examples: use error code as summary.
-
-## Tag Naming
-
-- **Plural** for countable resources: `Chats`, `Files`, `Conversations`.
-- **Singular** for uncountable nouns or abbreviations: `Feedback`, `TTS`.
-- Title Case.
-
-## Endpoint Ordering
-
-**CRUD lifecycle**: POST create -> GET list/detail -> PUT/PATCH update -> DELETE.
-
-Exception: Tags without a create operation (e.g., Conversations). GET list comes first; non-create POST placed after GETs but before PUT/DELETE.
+Beyond fidelity, act as a professional API writer: challenge questionable decisions with reasoning, suggest developer-experience improvements (kept clearly separate from required fixes), and push back on conflicting instructions with evidence.
 
 ## Post-Writing Verification
 
-After completing the document, run the post-writing checks listed in `writing-guides/index.md#post-writing-verification`.
+Run the post-writing checks in `writing-guides/index.md#post-writing-verification`, then the two passes below.
+
+### Independent code audit (required for new or substantially-changed endpoints)
+
+Spec errors hide in plausible-looking JSON. Dispatch a subagent to audit the spec against the code, and instruct it not to trust your draft. The brief MUST:
+
+- Pin the verification refs: the exact dify tag/branch. Add the graphon version pinned in `dify/api/pyproject.toml` only when the endpoint's behavior runs through the graph engine (workflow execution and its streaming events); it does not apply to the Knowledge spec or to controller, parameter, or error checks, which live in `dify`.
+- Require the agent to load this skill and its `references/` (spec-conventions, audit-checklist, codebase-paths).
+- **Identify the correct controller** (Service API at `/v1`, `controllers/service_api/`), not a same-named `web`/`console` route with different auth or params; see [Verifying Against Code](#verifying-against-code).
+- Per endpoint: check path/method, every parameter (required/optional/type), response status and body fields, and each error code traced `exception` to `handler`, all against code. Return a per-endpoint verdict with `file:symbol` evidence, plus a separate list of what code alone cannot confirm.
+- Trace opaque request fields (ids, tokens, file references) to where they are resolved and validated, not just the controller. Capture ownership and cross-request rules, such as an `upload_file_id` whose owning `user` must match the submit's.
+- If the endpoint also appears in the in-product API templates (`web/app/components/develop/template/template_*.mdx`), diff the spec against them; they document the same endpoints and surface divergence and upstream fixes.
+
+Treat the audit as authoritative over your draft; reconcile every discrepancy before claiming done.
+
+### Example and schema consistency
+
+A quick mechanical pass, independent of the audit:
+
+- Every key in a request or response example appears in the corresponding schema, and every documented field appears in at least one example.
+- Every documented enum value and `oneOf` branch is exercised by at least one example.

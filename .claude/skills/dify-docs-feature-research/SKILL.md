@@ -74,7 +74,7 @@ Produce a summary of:
 - How results are returned to the user (UI, API, streaming)
 - Any notable edge cases or limitations visible in the code
 
-Flag any behavior inferred from code rather than observed in the running product.
+Flag inferred behavior per the rule in [Important](#important).
 
 ### Phase 2: Community Feedback
 
