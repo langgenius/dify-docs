@@ -245,6 +245,15 @@ Spec errors hide in plausible-looking JSON. After writing, dispatch a subagent t
 - Pin the verification refs: the exact dify tag/branch, plus the graphon version pinned in `dify/api/pyproject.toml`.
 - Require the agent to load this skill and its `references/` (audit-checklist, common-mistakes, codebase-paths).
 - **Identify the correct controller.** These specs are the Service API (`servers` base ends in `/v1`; `controllers/service_api/`). The same route name often also exists on the `web` or `console` blueprint with a different path, auth model, and required params (e.g., a required `user`). Verify against the blueprint whose base URL matches `servers`, not the first controller you find.
-- Per endpoint: check path/method, every param (required/optional/type), response status + body fields, and each error code traced `exception -> handler` — all against code. Return a per-endpoint verdict with `file:symbol` evidence, plus a separate list of what code alone cannot confirm.
+- Per endpoint: check path/method, every param (required/optional/type), response status + body fields, and each error code traced `exception -> handler`, all against code. Return a per-endpoint verdict with `file:symbol` evidence, plus a separate list of what code alone cannot confirm.
+- Trace opaque request fields (ids, tokens, file references) to where they are resolved and validated, not just the controller. Capture ownership and cross-request rules, such as an `upload_file_id` whose owning `user` must match the submit's.
+- If the endpoint also appears in the in-product API templates (`web/app/components/develop/template/template_*.mdx`), diff the spec against them. They document the same endpoints and surface divergence and upstream fixes.
 
 Treat the audit as authoritative over your draft; reconcile every discrepancy before claiming done.
+
+### Example and schema consistency
+
+A quick mechanical pass, independent of the audit:
+
+- Every key in a request or response example appears in the corresponding schema, and every documented field appears in at least one example.
+- Every documented enum value and `oneOf` branch is exercised by at least one example.
