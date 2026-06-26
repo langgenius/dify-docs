@@ -23,22 +23,22 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
         每个流式数据块都带有 `task_id`；请保留它，以便在第 5 步需要时恢复监听。
   </Step>
   <Step title="获取表单定义">
-    使用 `form_token` 调用 [获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 接口。响应包含渲染后的 Markdown、输入字段定义、可用操作以及已预填的默认值。将表单呈现给接收人。
+    使用 `form_token` 调用 [获取人工介入表单](/api-reference/人工介入/获取人工介入表单) 接口。响应包含渲染后的 Markdown、输入字段定义、可用操作、已预填的默认值，以及一个 `expiration_time`，超过该时间后表单将无法再提交。将表单呈现给接收人。
   </Step>
   <Step title="（仅文件输入）上传本地文件">
-    若接收人为 `file` 或 `file-list` 输入附加了本地文件，请先通过标准的 Service API 文件接口 [上传文件](/api-reference/文件操作/上传文件) 上传，并使用与提交时相同的 `user`。该接口返回一个 `id`，提交时作为 `upload_file_id` 引用；上传的文件按该用户隔离。
+    若接收人为 `file` 或 `file-list` 输入附加了本地文件，请先通过 [上传文件](/api-reference/文件操作/上传文件) 上传。该接口返回一个 `id`，提交时作为 `upload_file_id` 引用。执行、上传和提交各次调用请使用同一个 `user`。
 
-    远程文件无需上传：在提交时通过 `remote_url` 映射内联附加即可。
+    远程文件无需上传：在提交时以 `{transfer_method: remote_url, url}` 映射内联附加即可。
   </Step>
   <Step title="提交响应">
-    调用 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 接口，附上接收人输入的值、所选操作以及你的 `user`。
+    调用 [提交人工介入表单](/api-reference/人工介入/提交人工介入表单) 接口，附上接收人输入的值、所选的 `action` 以及你的 `user`。`action` 必须是第 2 步表单定义中的某个操作。
 
     文件输入既可使用 `{transfer_method: local_file, upload_file_id}` 映射（来自第 3 步），也可在提交时直接使用 `{transfer_method: remote_url, url}` 映射。两种模式的权衡详见 [先上传 vs 直接提交远程 URL](#先上传-vs-直接提交远程-url)。
 
-    提交成功后，工作流沿匹配的操作分支恢复执行。
+    提交一旦成功即为最终结果：表单随之关闭，工作流沿匹配的操作分支恢复执行，同一个 `form_token` 无法再次提交。若提交被拒绝（操作无效、缺少必填输入，或远程文件抓取失败），表单保持不变，修正输入后可用同一个 `form_token` 重新提交。
   </Step>
   <Step title="继续监听工作流">
-    若原 SSE 流已关闭，使用第 1 步中的 `task_id` 调用 [Workflow](/api-reference/工作流/流式获取工作流事件) 或 [Chatflow](/api-reference/对话流/流式获取工作流事件) 的订阅工作流事件接口重新连接。
+    若原 SSE 流已关闭，使用第 1 步中的 `task_id` 调用 [Workflow](/api-reference/工作流/流式获取工作流事件) 或 [Chatflow](/api-reference/对话流/流式获取工作流事件) 的订阅工作流事件接口重新连接。恢复后的运行会像从未暂停过一样，继续流式输出其余节点事件直至完成。
   </Step>
 </Steps>
 
