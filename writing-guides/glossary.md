@@ -319,6 +319,8 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Select | 下拉选项 | 選択 | app-debug.variableConfig.select | Variable type |
 | Number | 数字 | 数値 | app-debug.variableConfig.number | Variable type |
 | Checkbox | 复选框 | チェックボックス | app-debug.variableConfig.checkbox | Variable type |
+| Single File | 单文件 | 単一ファイル | app-debug.variableConfig.single-file | Variable type; one file upload |
+| File List | 文件列表 | ファイルリスト | app-debug.variableConfig.multi-files | Variable type; multiple file uploads |
 | API-based Variable | 基于 API 的变量 | API ベースの変数 | app-debug.variableConfig.apiBasedVar | Variable type |
 | Label Name | 显示名称 | ラベル名 | app-debug.variableConfig.labelName | Display name field for variables |
 
