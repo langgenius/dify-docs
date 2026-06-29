@@ -1,0 +1,105 @@
+---
+title: 認証
+description: 企業 ID を使って CLI から会社の Dify ホストにサインインし、token の保存場所を確認し、サインアウトする
+---
+
+サインインは会社のシングルサインオンを使ってブラウザ経由で行います。`difyctl` が企業のパスワードを受け取ることはありません。
+
+## サインイン
+
+<Steps>
+  <Step title="ログインコマンドの実行">
+    ```bash
+    difyctl auth login --host https://dify.example.com
+    ```
+
+    管理者から提供されたホスト URL を使用します。スキームのないホストは `https://` として扱われます。
+
+    <Tip>
+      自動で開かないようにするには、`--no-browser` を渡します。
+    </Tip>
+  </Step>
+
+  <Step title="企業 ID でのサインイン">
+    `difyctl` はワンタイムコードと検証 URL を表示し、既定のブラウザでその URL を開いて待機します。
+
+    ```text
+    ! Copy this one-time code: WDJP-XKLM
+      Open: https://dify.example.com/device
+    ```
+
+    ブラウザは、会社の通常のサインイン（他の企業ツールで使用しているものと同じ）に沿って進み、ワンタイムコードの入力を求めます。
+
+    ブラウザが開かない場合（SSH 経由やヘッドレスセッションでは通常の動作です）、ターミナルから URL をコピーし、任意のデバイスで開きます。コードは 15 分後に失効します。
+  </Step>
+
+  <Step title="セッションの確認">
+    ターミナルに戻ります。
+
+    ```text
+    ✓ Logged in to dify.example.com as <your-email> (external SSO, issuer: <your-identity-provider>)
+    ```
+
+    `external SSO` は、Dify アカウントではなく、会社の ID プロバイダーを通じてサインインしたことを意味します。issuer はその ID プロバイダーであり、あなたの身元を保証します。
+  </Step>
+</Steps>
+
+## 再サインイン
+
+コマンドが `auth_expired`（終了コード 4）で失敗した場合、サーバー側でセッションが失効または取り消されています。
+
+`difyctl auth login` をもう一度実行します。先にサインアウトする必要はなく、新しいサインインによって保存済みの token が置き換えられます。
+
+## Token の保存場所
+
+サインインすると OAuth bearer token が保存されます。`dfoe_` プレフィックスで識別できます。この token はこの Dify ホスト上でのあなたの企業 ID を表し、会社が付与したアクセス権だけを持ちます。そのアクセス権の範囲については、[権限範囲と制限](/ja/cli/sso-users/scope-and-limitations)を参照してください。
+
+`difyctl` は、オペレーティングシステムの認証情報ストアが利用できる場合はそこに token を保存します。macOS では Keychain、Windows では Credential Manager、Linux では Secret Service です。利用できる認証情報ストアがない場合は、`difyctl` 設定ディレクトリ内のパーミッション `0600` の `tokens.yml` ファイルにフォールバックします。これは `hosts.yml` のセッションメタデータと並んで保存されます。
+
+設定ディレクトリは、macOS と Linux では `~/.config/difyctl`、Windows では `%APPDATA%\difyctl` です。[`DIFY_CONFIG_DIR`](/ja/cli/reference/environment-variables) を設定すると、この場所を上書きできます。
+
+## サインイン中のアカウントの確認
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (external SSO, issuer: <your-identity-provider>)
+```
+
+スクリプトから ID 情報を読み取るには、`--json` を追加します。
+
+```bash
+difyctl auth whoami --json
+```
+
+```json
+{"subject_type":"external_sso","email":"<your-email>","issuer":"<your-identity-provider>"}
+```
+
+## サインアウト
+
+```bash
+difyctl auth logout
+```
+
+```text
+✓ Logged out of dify.example.com
+```
+
+これにより、token とセッションエントリがマシンから削除されます。ただし、サーバー上のセッションは終了しません。そのセッションは、自然に失効するまで有効なままです。
+
+再認証のためにサインアウトする必要はありません。同じホストに対して `difyctl auth login` を再実行すると、セッションが置き換えられます。
+
+## トラブルシューティング
+
+| 問題 | 対処方法 |
+|:---|:---|
+| ブラウザがまったく開かない | ターミナルから URL をコピーし、任意のデバイスで開く。SSH 経由やヘッドレスセッションでは通常の動作。 |
+| コードが失効した | コードの有効期間は 15 分。`difyctl auth login` を再実行して新しいコードを取得する。 |
+| サインインが拒否された（`access_denied`） | 承認がブラウザのステップで拒否された。アカウントが Dify で有効になっているか管理者に確認する。 |
+| ホストが拒否される | 受け付けるのは `https://` ホストのみ。スキームのないホストは `https://` として扱われる。 |
+| 後続のコマンドが `auth_expired` で失敗する | サーバー側でセッションが失効または取り消された。[再サインイン](#再サインイン)する。 |
+
+その他の問題については、[トラブルシューティング](/ja/cli/troubleshooting)ページを参照してください。

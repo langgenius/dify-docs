@@ -1,0 +1,105 @@
+---
+title: Authenticate
+description: Sign in to your company's Dify host from the CLI with your corporate identity, see where your token is stored, and sign out
+---
+
+You sign in through your browser with your company's single sign-on; `difyctl` never sees your corporate password.
+
+## Sign In
+
+<Steps>
+  <Step title="Run the login command">
+    ```bash
+    difyctl auth login --host https://dify.example.com
+    ```
+
+    Use the host URL your administrator gave you. A host without a scheme defaults to `https://`.
+
+    <Tip>
+      To skip the auto-open, pass `--no-browser`.
+    </Tip>
+  </Step>
+
+  <Step title="Sign in with your corporate identity">
+    `difyctl` prints a one-time code and a verification URL, opens the URL in your default browser, and waits:
+
+    ```text
+    ! Copy this one-time code: WDJP-XKLM
+      Open: https://dify.example.com/device
+    ```
+
+    The browser walks you through your company's usual sign-in (the same one you use for other corporate tools), then asks for the one-time code. 
+    
+    If the browser doesn't open (normal over SSH and in headless sessions), copy the URL from the terminal and open it on any device. The code expires after 15 minutes.
+  </Step>
+
+  <Step title="Confirm the session">
+    Back in the terminal:
+
+    ```text
+    ✓ Logged in to dify.example.com as <your-email> (external SSO, issuer: <your-identity-provider>)
+    ```
+
+    `external SSO` means you signed in through your company's identity provider, not a Dify account. The issuer is that provider, which vouched for you.
+  </Step>
+</Steps>
+
+## Sign In Again
+
+If a command fails with `auth_expired` (exit code 4), the server has expired or revoked your session.
+
+Run `difyctl auth login` again. You don't need to sign out first, and the new sign-in replaces the stored token.
+
+## Where Your Token Lives
+
+Signing in stores an OAuth bearer token, recognizable by its `dfoe_` prefix. It represents your corporate identity on this Dify host and carries only the access your company granted it. For what that access covers, see [Scope and Limitations](/en/cli/sso-users/scope-and-limitations).
+
+`difyctl` keeps the token in your operating system's credential store when one is available: Keychain on macOS, Credential Manager on Windows, Secret Service on Linux. If no credential store responds, it falls back to a `tokens.yml` file with `0600` permissions in the `difyctl` config directory, next to the session metadata in `hosts.yml`.
+
+The config directory is `~/.config/difyctl` on macOS and Linux and `%APPDATA%\difyctl` on Windows. Set [`DIFY_CONFIG_DIR`](/en/cli/reference/environment-variables) to override it.
+
+## Check Who You're Signed In As
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (external SSO, issuer: <your-identity-provider>)
+```
+
+Scripts can ask for JSON:
+
+```bash
+difyctl auth whoami --json
+```
+
+```json
+{"subject_type":"external_sso","email":"<your-email>","issuer":"<your-identity-provider>"}
+```
+
+## Sign Out
+
+```bash
+difyctl auth logout
+```
+
+```text
+✓ Logged out of dify.example.com
+```
+
+This removes the token and session entry from your machine. It doesn't end your session on the server, though: that session stays active until it expires on its own.
+
+You don't need to sign out to re-authenticate: re-running `difyctl auth login` against the same host replaces the session.
+
+## If It Fails
+
+| Problem | What to do |
+|:---|:---|
+| The browser never opens | Copy the URL from the terminal and open it on any device. Normal over SSH and in headless sessions. |
+| The code expired | Codes are valid for 15 minutes. Re-run `difyctl auth login` to get a fresh one. |
+| Sign-in was denied (`access_denied`) | The authorization was rejected in the browser step. Check with your administrator that your account is enabled for Dify. |
+| The host is rejected | Only `https://` hosts are accepted; a host without a scheme defaults to `https://`. |
+| A later command fails with `auth_expired` | The server expired or revoked your session. [Sign in again](#sign-in-again). |
+
+For everything else, see [Troubleshooting](/en/cli/troubleshooting).

@@ -1,0 +1,105 @@
+---
+title: 认证
+description: 用企业身份从 CLI 登录公司的 Dify 主机，了解 token 的存储位置，并登出
+---
+
+登录通过浏览器完成，使用公司的单点登录，`difyctl` 全程接触不到你的企业密码。
+
+## 登录
+
+<Steps>
+  <Step title="运行登录命令">
+    ```bash
+    difyctl auth login --host https://dify.example.com
+    ```
+
+    使用管理员提供给你的主机 URL。不带协议的主机默认按 `https://` 处理。
+
+    <Tip>
+      若不想自动打开浏览器，可传入 `--no-browser`。
+    </Tip>
+  </Step>
+
+  <Step title="用企业身份登录">
+    `difyctl` 会打印一次性验证码和一个验证 URL，在默认浏览器中打开该 URL，然后等待：
+
+    ```text
+    ! Copy this one-time code: WDJP-XKLM
+      Open: https://dify.example.com/device
+    ```
+
+    浏览器会引导你完成公司惯常的登录流程（与你登录其他企业工具时相同），然后要求输入一次性验证码。
+
+    如果没有浏览器打开（通过 SSH 或在无图形界面的会话中属正常现象），从终端复制 URL，在任意设备上打开。验证码 15 分钟后过期。
+  </Step>
+
+  <Step title="确认会话">
+    回到终端：
+
+    ```text
+    ✓ Logged in to dify.example.com as <your-email> (external SSO, issuer: <your-identity-provider>)
+    ```
+
+    `external SSO` 表示你是通过公司的身份提供商登录的，而非 Dify 账户。issuer 即为该提供商，由它为你做身份背书。
+  </Step>
+</Steps>
+
+## 重新登录
+
+如果某条命令以 `auth_expired`（退出码 4）失败，说明服务器已使你的会话过期或将其吊销。
+
+重新运行 `difyctl auth login`。无需先登出，新的登录会替换已存储的 token。
+
+## Token 的存储位置
+
+登录后会存储一个 OAuth bearer token，可通过 `dfoe_` 前缀识别。它代表你在这台 Dify 主机上的企业身份，仅携带公司授予它的访问权限。该权限的具体范围，参见[权限范围与限制](/zh/cli/sso-users/scope-and-limitations)。
+
+只要操作系统提供凭据存储，`difyctl` 就会把 token 存入其中：macOS 上是 Keychain，Windows 上是 Credential Manager，Linux 上是 Secret Service。如果没有可用的凭据存储，则回退到 `difyctl` 配置目录下一个权限为 `0600` 的 `tokens.yml` 文件，与 `hosts.yml` 中的会话元数据并列存放。
+
+配置目录在 macOS 和 Linux 上是 `~/.config/difyctl`，在 Windows 上是 `%APPDATA%\difyctl`。设置 [`DIFY_CONFIG_DIR`](/zh/cli/reference/environment-variables) 可覆盖此路径。
+
+## 查看当前登录身份
+
+```bash
+difyctl auth whoami
+```
+
+```text
+<your-email> (external SSO, issuer: <your-identity-provider>)
+```
+
+要在脚本中读取身份信息，加上 `--json`：
+
+```bash
+difyctl auth whoami --json
+```
+
+```json
+{"subject_type":"external_sso","email":"<your-email>","issuer":"<your-identity-provider>"}
+```
+
+## 登出
+
+```bash
+difyctl auth logout
+```
+
+```text
+✓ Logged out of dify.example.com
+```
+
+这会从你的机器上删除 token 和会话记录。但它不会结束服务器上的会话：该会话会一直保持活跃，直到其自行过期。
+
+无需为重新认证而登出：对同一主机重新运行 `difyctl auth login` 会替换该会话。
+
+## 故障排查
+
+| 问题 | 处理方法 |
+|:---|:---|
+| 浏览器始终未打开 | 从终端复制 URL，在任意设备上打开。通过 SSH 或在无图形界面的会话中属正常现象。 |
+| 验证码已过期 | 验证码有效期为 15 分钟。重新运行 `difyctl auth login` 获取一个新的。 |
+| 登录被拒绝（`access_denied`） | 授权在浏览器步骤中被拒。请与管理员确认你的账户已启用 Dify。 |
+| 主机被拒绝 | 只接受 `https://` 主机；不带协议的主机默认按 `https://` 处理。 |
+| 后续某条命令以 `auth_expired` 失败 | 服务器已使你的会话过期或将其吊销。[重新登录](#重新登录)。 |
+
+其余问题详见 [故障排查](/zh/cli/troubleshooting)。
