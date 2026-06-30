@@ -11,11 +11,15 @@ description: >
 
 ## Overview
 
-Compares code changes between two Dify releases (or a release and current HEAD), identifies documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference (→ `dify-docs-api-reference`), help documentation (→ `dify-docs-guides`), and environment variables (→ `dify-docs-env-vars`).
+Compares code changes between two Dify releases (or a release and current HEAD), identifies documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference (-> `dify-docs-api-reference`), help documentation (-> `dify-docs-guides`), and environment variables (-> `dify-docs-env-vars`).
 
 **Input**: Two version references, provided by the user. Always ask if not provided.
 - Post-release: `v1.13.2` and `v1.13.3` (both tags)
 - Pre-release: `v1.13.2` and the shipped commit — prefer the `saas-deploy` staging SHA over `main` (see 1.0)
+
+## Critical: pin to what ships
+
+**Merged to `main` is NOT released.** `main` carries post-release and future-version commits, and merged code may be gated off by a feature flag. Pin the upper diff ref to the **shipped commit** (the `saas-deploy` staging image SHA), not `..main`, and treat flag-gating as part of scope: a feature flagged off in staging `env.properties` ships dark and is out of scope. See 1.0 for the exact signals and commands.
 
 ## Workflow
 
@@ -41,12 +45,12 @@ digraph {
 
 ### 1.0 Pin the comparison to what actually ships
 
-`main` is not the release: it carries post-release and future-version commits, and merged code may be gated off. Pin the upper diff ref to the **shipped commit**, and treat gating as part of scope.
+Apply the "pin to what ships" rule above. Operationally:
 
-**Upper ref (CE / cloud)** is the dify image SHA that staging runs, from the `saas-deploy` GitOps repo. Staging is the cloud release candidate — the team merges each release's functional updates there before cutting it.
+**Upper ref (CE / cloud)** is the dify image SHA that staging runs, from the `saas-deploy` GitOps repo. Staging is the cloud release candidate: the team merges each release's functional updates there before cutting it.
 
 ```bash
-# authoritative upper ref → diff <last-release-tag>..<SHA>, not ..main
+# authoritative upper ref -> diff <last-release-tag>..<SHA>, not ..main
 grep newTag saas-deploy/environments/staging/dify/api/kustomization.yaml
 ```
 
@@ -57,9 +61,9 @@ Scope signals, in order of authority:
 | `saas-deploy` staging image SHA | what code ships |
 | flags in `saas-deploy/environments/staging/dify/{api,web}/env.properties` | whether shipped code is **enabled** |
 | milestone **tagged PRs** | confirmed in the release |
-| milestone **description text** | aspirational only — named features may slip; never scope from it alone |
+| milestone **description text** | aspirational only: named features may slip; never scope from it alone |
 
-**Merged ≠ released.** Commit ancestry proves code is in the build, not that the feature is on. A flag set off in staging `env.properties` (e.g. `ENABLE_AGENT_V2=false`, `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW=false`, `AGENT_SHELL_ENABLED=false`) means it ships dark — exclude it.
+**Merged is not released.** Commit ancestry proves code is in the build, not that the feature is on. A flag set off in staging `env.properties` (e.g. `ENABLE_AGENT_V2=false`, `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW=false`, `AGENT_SHELL_ENABLED=false`) means it ships dark, so exclude it.
 
 **CE vs EE.** The numbered release (e.g. `1.15.0`) is Community Edition; Enterprise ships separately, often weeks later. Features needing EE infrastructure (RBAC, SSO-gated MCP identity forwarding) belong to the EE doc effort, not the CE sync.
 
@@ -113,89 +117,44 @@ Note: milestones may miss PRs not tagged to them. Tag comparison is preferred.
 
 ### 1.2 Categorize PRs
 
-For each PR, check changed files against these mappings.
+For each PR, check changed files. Look up the affected target in `references/detection-tables.md`, which holds the deterministic API-Reference path-to-spec table, the heuristic Help-Doc source-to-doc-area mapping, the deterministic Env-Var path-to-impact table, and the i18n source-file list.
 
-**Skip** (no doc impact): PRs that only touch `tests/`, `.github/`, `dev/`, or are pure refactoring with no behavior change (confirm from PR description).
+**Skip** (no doc impact): PRs that only touch `tests/`, `.github/`, `dev/`, or are pure refactoring with no behavior change (confirm from PR description). Do not treat a `chore:` or `fix:` prefix as a no-doc-impact signal; the prefix is not a category. Read the PR title and body ("chore: easier and simpler deploy" is a deployment workflow change).
 
 #### API Reference Detection (Deterministic)
 
-Any file matching these patterns means the corresponding spec is affected:
-
-| Source path | Affected spec(s) |
-|---|---|
-| `controllers/service_api/app/chat.py` | chat, chatflow |
-| `controllers/service_api/app/completion.py` | completion |
-| `controllers/service_api/app/workflow.py` | workflow, chatflow |
-| `controllers/service_api/app/audio.py`, `file.py`, `site.py`, `app.py` | all 4 app specs |
-| `controllers/service_api/app/message.py` | chat, chatflow, completion |
-| `controllers/service_api/app/conversation.py` | chat, chatflow |
-| `controllers/service_api/app/annotation.py` | chat, chatflow |
-| `controllers/service_api/dataset/` | knowledge |
-| `controllers/service_api/app/error.py` | all 4 app specs |
-| `controllers/service_api/dataset/error.py` | knowledge |
-| `controllers/service_api/wraps.py` | all 5 specs |
-| `controllers/service_api/__init__.py` | all 5 specs (route changes) |
-| `libs/external_api.py` | all 5 specs |
-
-Also check: Pydantic models and `fields/` serializers used by Service API controllers. If a PR modifies a model or serializer referenced by a Service API endpoint, that spec is affected.
+Use the API-Reference table in `references/detection-tables.md`: any matching source path means the listed spec(s) are affected. Also check Pydantic models and `fields/` serializers used by Service API controllers; if a PR modifies a model or serializer referenced by a Service API endpoint, that spec is affected.
 
 #### Help Documentation Detection (Heuristic)
 
-Read the PR description for context. Map changed source paths to likely doc areas. `use-dify` content exists in two product copies (`en/cloud/...` and `en/self-host/...`); apply changes to both, then mirror zh/ja:
-
-| Repo | Source path pattern | Likely doc area |
-|---|---|---|
-| dify | `api/core/workflow/nodes/` (integration nodes only: agent, knowledge, datasource, trigger) | `en/{cloud,self-host}/use-dify/nodes/` |
-| dify | `api/core/rag/` | `en/{cloud,self-host}/use-dify/knowledge/` |
-| dify | `api/core/tools/` | `en/{cloud,self-host}/use-dify/nodes/tools.mdx` or workflow tool node docs |
-| dify | `api/core/agent/` | `en/{cloud,self-host}/use-dify/build/agent.mdx` |
-| dify | `api/core/app/` | `en/{cloud,self-host}/use-dify/build/` |
-| dify | `web/app/components/` | UI-related docs (check PR description for specifics) |
-| dify | `docker/.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
-| dify | `docker/README.md`, `docker/dify-compose*`, `docker/.env.default`, root `README.md`, any new file under `docker/` | `en/self-host/deploy/quick-start/docker-compose.mdx` and `en/self-host/deploy/quick-start/faqs.mdx` (deployment workflow docs) |
-| graphon | `src/graphon/nodes/` (built-in nodes: llm, code, http_request, if_else, loop, iteration, parameter_extractor, document_extractor, list_operator, variable_aggregator/assigner, question_classifier, template_transform, tool, start/end/answer, human_input) | `en/{cloud,self-host}/use-dify/nodes/` |
-| graphon | `src/graphon/model_runtime/` | `en/{cloud,self-host}/use-dify/workspace/model-providers.mdx` |
-| graphon | `src/graphon/graph_engine/`, `src/graphon/runtime/` | workflow engine behavior, execution semantics |
-
-When checking dify PRs, also scan recent merges in `langgenius/graphon` for the same release window. A user-visible workflow change may ship as a graphon release plus a dify pin bump (look for changes to `api/pyproject.toml` and `api/uv.lock`).
+Read the PR description for context, then map changed source paths via the Help-Documentation table in `references/detection-tables.md`. `use-dify` content exists in two product copies (`en/cloud/...` and `en/self-host/...`); apply changes to both, then mirror zh/ja. When checking dify PRs, also scan recent merges in `langgenius/graphon` for the same release window: a user-visible workflow change may ship as a graphon release plus a dify pin bump (look for changes to `api/pyproject.toml` and `api/uv.lock`).
 
 **Important**: These mappings are heuristic. For every candidate match:
 
 1. **Read the PR title and description** to confirm the change is user-facing (not purely internal).
 2. **Read the existing doc page** to check whether the current documentation covers the affected area at a level of detail that warrants an update. If the doc doesn't cover the topic (e.g., a node doc that mentions model selection but never discusses model parameters), a PR that changes model parameter behavior may not require a doc update.
 3. **Assess priority**:
-   - **High**: PR changes behavior that the doc explicitly describes → doc is now inaccurate
-   - **Medium**: PR adds a new capability in an area the doc covers at a general level → doc could be enhanced
-   - **Low / Skip**: PR changes something the doc doesn't cover at all → no update needed unless the feature is significant enough to warrant a new section
+   - **High**: PR changes behavior that the doc explicitly describes -> doc is now inaccurate
+   - **Medium**: PR adds a new capability in an area the doc covers at a general level -> doc could be enhanced
+   - **Low / Skip**: PR changes something the doc doesn't cover at all -> no update needed unless the feature is significant enough to warrant a new section
 
 **Also watch for**:
-- "Breaking change" labels → high priority
-- New feature PRs → may need new doc pages
-- Deprecation notices → update existing docs
-- Behavior changes → verify current docs are still accurate
+- "Breaking change" labels -> high priority
+- New feature PRs -> may need new doc pages
+- Deprecation notices -> update existing docs
+- Behavior changes -> verify current docs are still accurate
 
 #### Environment Variable Detection (Deterministic)
 
-Any file matching these patterns means env var documentation is affected:
-
-| Source path | Impact |
-|---|---|
-| `docker/.env.example` | New vars, changed defaults, removed vars |
-| `api/configs/**/*.py` | Pydantic config models define backend vars |
-| `web/docker/entrypoint.sh` | Frontend Docker-to-NEXT_PUBLIC mapping |
-| `docker-compose.yaml` | Infrastructure/container vars |
-
-When detected, the report should list which variables were added, removed, or had defaults changed, which config file(s) were modified, and priority (High if new/removed vars, Medium if default changes only).
+Use the Env-Var table in `references/detection-tables.md`: any matching source path means env var documentation is affected. When detected, the report should list which variables were added, removed, or had defaults changed, which config file(s) were modified, and priority (High if new/removed vars, Medium if default changes only).
 
 #### UI i18n Change Detection
 
-Check PRs that touch `web/i18n/en-US/` files:
+Check PRs that touch `web/i18n/en-US/` files (full source-file list in `references/detection-tables.md`):
 1. Compare changed i18n keys against the UI Labels section of `writing-guides/glossary.md`
-2. If a changed key exists in the glossary → flag for glossary update (value may have changed)
-3. If a changed key is new and falls within terminology scope (feature names, field labels, menu names, button names, status labels) → flag as candidate for glossary addition
+2. If a changed key exists in the glossary -> flag for glossary update (value may have changed)
+3. If a changed key is new and falls within terminology scope (feature names, field labels, menu names, button names, status labels) -> flag as candidate for glossary addition
 4. Report as a separate section in Phase 2 with: key, old value, new value, glossary status
-
-i18n source files: `web/i18n/{en-US,zh-Hans,ja-JP}/` (~30 JSON files each, ~4,875 keys total). Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`—these contain the most documentation-relevant UI labels.
 
 ### 1.3 Check Documentation Status
 
@@ -214,61 +173,7 @@ This step prevents the report from listing changes that have already been addres
 
 Generate the report and **STOP**. Do not execute until the user reviews and approves.
 
-### Report Template
-
-```markdown
-# Doc Sync Report: [from] → [to]
-
-## Summary
-- **Comparison**: `<from>..<to>` (X commits, Y PRs)
-- **API reference impact**: Y PRs → Z spec files (A already documented, B need updates)
-- **Help documentation impact**: W PRs → V doc pages (C already documented, D need updates)
-- **Environment variable impact**: E PRs → F variables (G already documented, H need updates)
-- **UI i18n changes**: I PRs → J glossary entries affected
-- **No doc impact**: N PRs
-
-## API Reference Changes
-
-### openapi_chat.json / openapi_chatflow.json
-
-| PR | Title | Change Type | Details | Doc Status |
-|---|---|---|---|---|
-| #1234 | Add streaming retry | New parameter | `retry_count` on `/chat-messages` | Not yet documented |
-| #1235 | Fix error handling | Error codes | New `rate_limit_exceeded` on `/chat-messages` | Already documented |
-
-### openapi_knowledge.json
-| PR | Title | Change Type | Details | Doc Status |
-|---|---|---|---|---|
-| #1240 | Add metadata filter | New parameter | `metadata_filter` on list segments | Not yet documented |
-
-## Help Documentation Changes
-
-| PR | Title | Affected Doc(s) | Priority | Change Needed | Doc Status |
-|---|---|---|---|---|---|
-| #1250 | Add semantic chunking | `knowledge/chunking.mdx` | High | New chunking option must be added | Not yet documented |
-| #1251 | New HTTP node timeout | `workflow/nodes/http.mdx` | Low | Timeout config not covered | Already documented |
-
-## Environment Variable Changes
-
-| PR | Title | Variables | Change Type | Priority | Doc Status |
-|---|---|---|---|---|---|
-| #1270 | Add Redis sentinel | `REDIS_SENTINEL_*` (3 new) | New variables | High | Not yet documented |
-| #1271 | Change default log level | `LOG_LEVEL` default INFO→WARNING | Default change | Medium | Already documented |
-
-## UI i18n Changes (Glossary Impact)
-
-| PR | Key | Old Value | New Value | Glossary Status |
-|---|---|---|---|---|
-| #1280 | `dataset.indexMethod` | Index Method | Indexing Method | Exists — update needed |
-| #1281 | `workflow.nodeGroup` | (new) | Node Group | Candidate for addition |
-
-## No Documentation Impact
-
-| PR | Title | Reason |
-|---|---|---|
-| #1260 | Refactor internal cache | Internal only |
-| #1261 | Update CI pipeline | Infrastructure |
-```
+Use the report skeleton in `references/report-template.md`: a summary block (per-track PR/file counts plus already-documented vs. need-updates splits) followed by per-track tables for API Reference, Help Documentation, Environment Variable, UI i18n (glossary impact), and No Documentation Impact changes.
 
 ## Phase 3: Execution
 
@@ -291,14 +196,14 @@ For each affected spec, dispatch a parallel audit agent with `dify-docs-api-refe
 
 **Cross-spec propagation**: Shared endpoints (file upload, audio, feedback, app info) appear in all 4 app specs. When fixing one, propagate to siblings.
 
-Translation of API specs is handled automatically by the workflow when changes are pushed — no manual translation step needed.
+Translation of API specs is handled automatically by the workflow when changes are pushed; no manual translation step needed.
 
 ### Help Documentation Updates
 
 For each affected doc page, use `dify-docs-guides` skill:
 1. Read the current doc and the relevant PR(s) for context
 2. Update content to reflect changes
-3. Translation is handled automatically by the Dify workflow on PR push — no manual translation needed
+3. Translation is handled automatically by the Dify workflow on PR push; no manual translation needed
 
 ### Environment Variable Updates
 
@@ -327,22 +232,3 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 | `saas-deploy` repo | GitOps repo; staging = cloud release candidate |
 | Shipped dify SHA | `saas-deploy/environments/staging/dify/api/kustomization.yaml` (`newTag`) |
 | Staging feature flags | `saas-deploy/environments/staging/dify/{api,web}/env.properties` |
-
-## Common Mistakes
-
-| Mistake | Fix |
-|---|---|
-| Auto-detecting version references | Always ask the user for the two versions to compare |
-| Using only milestones | Milestones miss untagged PRs, and the milestone **description** names aspirational features that may slip. Only **tagged PRs** are authoritative; confirm scope against the `saas-deploy` staging SHA (1.0) |
-| Executing before report approval | STOP after report — user must review |
-| Missing shared endpoint propagation | Fix in one spec → check all 4 app specs |
-| Ignoring PR description | File paths are heuristic for non-API — description has the real context |
-| Skipping Pydantic model changes | A model change may affect multiple endpoints — trace which controllers use it |
-| Forgetting to checkout target version | Audit against the target release code, not whatever is currently checked out |
-| Manually translating after EN fixes | Translation is automatic on PR push — never run manual translation scripts. **Exception**: `environments.mdx` is in the ignore list and must be translated manually. |
-| Pre-filtering the diff to a hand-picked path list | Run the full `git diff --stat` first; categorize after. Pre-filtering hides deployment scripts, new docker files, and root README changes. |
-| Trusting the `chore:` / `fix:` prefix as a no-doc-impact signal | Read the PR title and body. "chore: easier and simpler deploy" is a deployment workflow change. Prefix is not a category. |
-| Skipping the dify-docs PR cross-check | Always run `gh pr list --repo langgenius/dify-docs` against the source PR numbers before reporting. Avoids duplicate work and surfaces doc paths the heuristic mapping missed. |
-| Diffing against `main` | `main` carries post-release and future-version commits. Pin the upper ref to the `saas-deploy` staging SHA (1.0). |
-| Assuming merged-to-main = released | Code can be in the build but gated off. Check feature flags in staging `env.properties`; gated features ship dark. |
-| Documenting EE features in a CE sync | CE and EE ship separately. Route EE-gated features (RBAC, SSO-gated MCP identity) to the EE doc effort. |
