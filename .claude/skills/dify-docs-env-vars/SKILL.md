@@ -33,7 +33,7 @@ The verifier reads both. Pass `--env-example docker/.env.example --env-example d
 | Only in `api/configs/` Pydantic, not in any `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate `.env.example` file first. |
 | Removed from `.env.example` because the code no longer reads it | **Remove from docs.** Documenting unreferenced vars implies they still take effect. Discoverability for upgraders belongs in upstream Dify release notes, not this docs site. |
 
-The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.
+**The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.**
 
 ## Four-Step Process
 
@@ -90,11 +90,7 @@ Present the proposed description to the user for review before editing the docum
 
 ## Document Structure
 
-The env var doc is organized into three sections following `docker/.env.example` section order:
-
-1. **Backend (API + Worker)** — Python API server and Celery worker variables.
-2. **Frontend (Web)** — Next.js frontend variables. Uses `<Tabs>` to show Docker and source code variable names.
-3. **Infrastructure (Docker Compose / AWS AMI Only)** — database, Redis, Nginx, and other container variables. Not applicable to source code deployments.
+The doc groups variables by subsystem, broadly following the `docker/.env.example` and `docker/envs/**` layout: Common Variables, Server Configuration, Web Frontend Service, Database Service, Sandbox Service, Nginx Reverse Proxy, SSRF Proxy, Plugin Daemon Configuration, Vector Database Service Configuration, and so on (the live doc currently has ~17 `##` sections). Match the existing section for a new variable; don't invent one. If a variable genuinely fits no section, raise it rather than guessing.
 
 **When to use tables**: Groups of related, straightforward variables (connection settings, credentials, tuning knobs).
 
@@ -153,7 +149,7 @@ The script reports:
 - **Extra in docs**: Variables documented but not in `.env.example` (verify manually)
 - **Default mismatches**: Documented defaults that don't match `.env.example` — **must be zero before work is complete**
 
-Use `.env.example` defaults (what Docker Compose users actually get), not Pydantic code defaults.
+For which vars to document and which defaults to use, see [Source of Truth](#source-of-truth-docker-env-example).
 
 ### Release var-set diff (run first for a release sync)
 
@@ -173,7 +169,7 @@ Some variables in `.env.example` are deliberately not documented (Cloud-only, ex
 
 - Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)** in `ignored-vars.md`.
 - Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
-- Document a supported variable whose `.env.example` entry is **commented out** (e.g., `#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars that exist in `.env.example` in commented form. Do not use it to suppress verifier signal for vars that are absent from `.env.example` entirely — those are upstream-deferred (see [Source of Truth](#source-of-truth-docker-env-example)) and must not be documented.
+- Document a supported variable whose `.env.example` entry is **commented out** (e.g., `#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars that exist in `.env.example` in commented form; see [Source of Truth](#source-of-truth-docker-env-example) for vars absent from `.env.example` entirely.
 
 Every entry must include a source reference (PR, commit, or audit date).
 

@@ -1,71 +1,52 @@
 # Audit Checklist (Per Endpoint)
 
-Use this checklist when auditing or reviewing an OpenAPI spec against the Dify codebase.
+Use when auditing an existing spec against the Dify codebase. `spec-conventions.md` defines what "correct" looks like for each element; SKILL.md's "Verifying Against Code" defines the verification method. This file is the audit procedure plus the rules for not reporting false positives.
 
 ## Pre-Audit
 
-1. **Identify the spec's app type**: Determine which `AppMode` values this spec covers (see SKILL.md Spec Structure table). All subsequent checks are filtered through this app-type scope.
-2. **Compare routes**: Check `api/controllers/service_api/__init__.py` for registered routes, then each controller file.
+1. **Identify the spec's app type** (SKILL.md Spec Structure). Every check is filtered through this app-type scope.
+2. **Compare routes**: read `api/controllers/service_api/__init__.py` for registered routes, then each controller file. Note endpoints present in code but missing from the spec, and ghost endpoints present in the spec but not in code.
 
 ## Per-Endpoint Checks
 
-3. **App-type scoping**: For shared controllers/models, only include fields, parameters, and errors relevant to this spec's app type. Trace code paths to confirm relevance.
-4. **Missing endpoints**: Present in code but not in spec.
-5. **Ghost endpoints**: Present in spec but not in code.
-6. **Request schemas**: Verify params, types, required/optional, defaults, enums against every `Field()` argument.
-7. **Hidden enums on request string fields**: For every `string` field without `enum`, trace through the service layer to check for `StrEnum` casts, `Literal` types, or validation against fixed lists. Do NOT trust the controller-level type annotation alone.
-8. **Response schemas**: Verify fields, types, status codes. Check `return ..., <status>` and read response converters (they may flatten or inject fields).
-9. **Error codes -- completeness**: All errors the endpoint raises are documented. Trace every `except` -> `raise` chain; read service methods to confirm they actually raise.
-10. **Error codes -- correctness**: No phantom codes. Remove errors the controller does not raise.
-11. **Error code names**: Must match `error_code` attribute (custom exceptions) or werkzeug generic name (`bad_request`, `not_found`). Never use Python class names or service exception names.
-12. **Error messages**: Must match the `description` attribute or string argument. Copy from code verbatim.
-13. **Example values**: Match actual code output (e.g., enum values returned by the code). No unresolved `{message}` placeholders.
-14. **operationId convention**: Follows `{verb}{AppType}{Resource}` pattern for new endpoints; legacy IDs left as-is.
-15. **Description quality**: Useful explanations, not just field-name labels.
-16. **200/201 responses have examples**: Every JSON success response must have at least one `examples` entry with realistic values.
-17. **No schema description duplication**: `$ref` response schemas must not have a top-level `description` (Mintlify shows both).
-18. **Binary responses**: Use `content` with `format: binary` schema; details in response `description`.
-19. **`oneOf` options have `title`**: Each option object needs a descriptive `title`. Parent schema has no `description`.
-20. **`required` arrays on request schemas only**: Not on response schemas.
-21. **`enum` on request schemas only**: Not on response schemas (Mintlify renders duplicate "Available options").
-22. **Response array items have `properties`**: No bare `"type": "object"` -- Mintlify renders `object[]` with no expandable fields.
-23. **Terminology consistency**: No synonym mixing within a tag (e.g., "segment" vs "chunk").
-24. **Values backticked, number-unit spacing correct**: All literal values backticked; space between numbers and units.
-25. **Endpoint ordering**: Follows CRUD lifecycle (POST create -> GET list/detail -> PUT/PATCH update -> DELETE).
-26. **Tag naming**: Plural for countable resources, singular for uncountable nouns/abbreviations, Title Case.
+Verify each against code, using `spec-conventions.md` as the definition of correct:
+
+- **Path and method** match the route.
+- **Request schema**: every parameter's type, required/optional, default, and enum against each `Field()` argument. For every `string` field without `enum`, trace the service layer for a hidden `StrEnum`/`Literal`/fixed-list validation before concluding none is needed.
+- **Response schema**: fields, types, and status from the `return` statement; read response converters, which flatten or inject fields.
+- **Error completeness**: every error the endpoint actually raises is documented. Trace each `except` to its `raise`; read service methods to confirm they raise.
+- **Error correctness**: no phantom codes; names match the `error_code` attribute or the werkzeug generic, never the Python class name; messages copied verbatim.
+- **Examples**: present on every 200/201 and every error response; values match actual code output; no unresolved `{message}` placeholders.
+- **Formatting**: operationId, descriptions, schemas, tags, ordering, terminology, backticks, and number-unit spacing, all per `spec-conventions.md`.
 
 ## Two-Agent Workflow
 
-- **Agent 1 (Fixer)**: Audits the spec and applies fixes using this checklist and all rules from SKILL.md.
-- **Agent 2 (Reviewer)**: Reads the fixed spec and verifies compliance. Reports remaining issues WITHOUT making edits. If issues are found, fix and optionally re-run the reviewer.
+- **Agent 1 (Fixer)**: audits and applies fixes using this checklist, `spec-conventions.md`, and SKILL.md.
+- **Agent 2 (Reviewer)**: reads the fixed spec, verifies compliance, and reports remaining issues WITHOUT editing. Fix and optionally re-run the reviewer.
 
-Always validate JSON (`python -m json.tool`) after fixes.
-
-## Cross-Spec Propagation
-
-Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in chat, chatflow, completion, and workflow specs. When a fix is applied to one spec, check all sibling specs for the same issue.
+Always validate JSON (`python -m json.tool`) after fixes. Shared endpoints exist in the chat, chatflow, completion, and workflow specs; propagate every fix to all siblings.
 
 ## Verification Rigor
 
 **Every reported issue must be correct.** False positives erode trust and waste time.
 
-1. **Trace the full path.** Don't stop at the controller. Follow errors through global handlers (`external_api.py`), check whether service methods actually raise.
+1. **Trace the full path.** Don't stop at the controller; follow errors through the global handlers (`external_api.py`) and confirm service methods actually raise.
 2. **Check app-type relevance.** Don't flag `workflow_id` as missing from the chat spec.
-3. **Verify every claim has evidence.** You must have read the actual code line. No speculative claims.
-4. **Self-review before reporting.** Re-read each finding and ask:
-   - "Did I read the actual code, or am I assuming?"
-   - "Did I check global error handlers for bare `raise ValueError/Exception`?"
-   - "Is this field/error relevant to THIS spec's app type?"
-   - "Am I confusing the Python class name with the `error_code` attribute?"
-   - "Did I check the service method body, or did I assume it raises?"
-5. **When uncertain, investigate further.** Report fewer verified issues rather than many unverified ones. Mark uncertain items as "unverified -- needs manual check."
+3. **Every claim needs evidence.** You must have read the actual code line. No speculation.
+4. **Self-review before reporting.** For each finding, ask:
+   - Did I read the actual code, or am I assuming?
+   - Did I check the global handlers for a bare `raise ValueError/Exception`?
+   - Is this field or error relevant to THIS spec's app type?
+   - Am I confusing the Python class name with the `error_code` attribute?
+   - Did I read the service method body, or assume it raises?
+5. **When uncertain, investigate further.** Report fewer verified issues over many unverified ones; mark anything unconfirmed as "unverified, needs manual check."
 
-### Common False-Positive Patterns
+### Common False Positives
 
-- Assuming bare `ValueError` is a 500 (global handler converts to 400 `invalid_param`)
-- Flagging shared-model fields as missing from a spec covering a different app type
-- Assuming a service method raises when it's actually fire-and-forget
-- Using the Python exception class name instead of the `error_code` attribute
-- Inventing errors for code paths that don't exist under the spec's app mode
-- Documenting an unreachable `except` clause (controller catches exception the service never raises for this endpoint)
-- Adding `enum` to a genuinely dynamic/provider-specific string field (e.g., `voice`, `embedding_model_name`)
+- Assuming a bare `ValueError` is a 500 (the global handler converts it to 400 `invalid_param`).
+- Flagging a shared-model field as missing from a spec covering a different app type.
+- Assuming a service method raises when it is actually fire-and-forget.
+- Using the Python exception class name instead of the `error_code` attribute.
+- Inventing errors for code paths unreachable under the spec's app mode.
+- Documenting an unreachable `except` (the controller catches an exception the service never raises here).
+- Adding `enum` to a genuinely dynamic or provider-specific string field (e.g., `voice`, `embedding_model_name`).

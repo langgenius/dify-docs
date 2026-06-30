@@ -9,6 +9,17 @@ description: >
 
 # Dify CLI Documentation
 
+## Workflow
+
+1. Read the three writing guides (`style-guide.md`, `formatting-guide.md`, `glossary.md`) and mirror an existing `en/cli/` page of the same type.
+2. Confirm edition scope: CE-first; badge and defer Cloud-only content.
+3. Draft per the Command Reference structure.
+4. Apply the Writing rules and Content ownership (state each fact once, link elsewhere).
+5. Verify every behavior claim against `langgenius/dify` `origin/main:cli/...` (`git show origin/main:cli/<path>`); never `feat/cli` or `cli/README.md`.
+6. Run post-writing verification.
+
+**Critical (source of truth):** Verify behavior against `langgenius/dify`, `cli/` on `origin/main` only (`git show origin/main:cli/<path>`). Never `feat/cli` or `cli/README.md`; both drift from shipped reality.
+
 ## Before starting
 
 Read `writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`. For page structure, mirror an existing page of the same type. For the IA, see `docs.json`.
@@ -32,7 +43,15 @@ The CLI launches **CE-first**: the shipped docs are CE-only, with Cloud content 
 
 ## Writing rules
 
-House overrides on top of the writing-guides. The non-obvious ones:
+House overrides on top of the writing-guides.
+
+**Non-negotiable (correctness and security):**
+
+- **Never document `DIFY_TOKEN` or any non-interactive token as working auth** — the only path is the browser device flow.
+- **Never `<your-app-id>` in runnable code** (it fails validation; see Placeholders).
+- **No `--workspace` / `-A` or multi-workspace framing in CE** (one workspace; see Editions).
+
+The non-obvious style rules:
 
 - **host vs server.** "host" = the connection target (`--host`, `hosts.yml`, `use host`, "Active host", "known hosts"). "server" = the backend as actor ("the server returns", "Network or server error") or its version ("client and server versions").
 - **No "envelope" jargon.** Describe JSON plainly ("a `data` array with the paging fields `page`/`limit`/`total`/`has_more`"); error JSON is "a structured JSON object".
@@ -40,12 +59,12 @@ House overrides on top of the writing-guides. The non-obvious ones:
 - **Configurable values:** when a value is settable by flag, env var, and/or config, name the methods and make their precedence unambiguous, in prose or a numbered list, whichever is clearer (a list is often clearest for a multi-step chain). Clarity is the test, not a fixed phrase: avoid the chained "A overrides B, which overrides C" (the referent of "which" is unclear) and a bare "or" (hides the order). "Override" is fine with one clear referent ("the `--limit` flag overrides `DIFY_LIMIT`") or a named target ("overrides the resolution chain", linking the owner).
 - **Openers stay general** over volatile lists (don't enumerate config keys in an opener); the table carries the specifics.
 - **Cross-references:** make the command the actor ("Run `auth devices list` to see your sessions"), not "to do X, see [section]"; for an owned fact, link with a short payoff instead of re-explaining.
-- **Placeholders:** app/workspace IDs are UUID-shaped (non-UUID fails validation); the reader's own identity is `<your-*>`; received values stay concrete. Never `<your-app-id>` in runnable code.
-- **Never document `DIFY_TOKEN` or any non-interactive token as working auth** — the only path is the browser device flow.
+- **Placeholders:** app/workspace IDs are UUID-shaped (non-UUID fails validation); the reader's own identity is `<your-*>`; received values stay concrete.
 - Backtick the typeable token, not the category word ("list commands such as `get app`"; never `list`).
 - No version numbers in prose (the `version` page shows real output); no See Also; shipped reality only, except an in-flight Linear fix may be documented as expected behavior, verified before publish.
+- Task-oriented openers (lead with when/why you run it), front-load the key limitation, show real terminal output.
 
-Also: task-oriented openers (lead with when/why you run it), front-load the key limitation, show real terminal output, ~3-4 line paragraphs, few semicolons, em dashes by judgment.
+Style nits: ~3-4 line paragraphs, few semicolons, em dashes by judgment.
 
 ## Command Reference structure
 
@@ -79,8 +98,8 @@ Write each cross-cutting fact ONCE on its owner; link the anchor everywhere else
 
 ## Verification
 
-Check behavior against the code, not the docs or in-CLI help (both drift). The CLI is `langgenius/dify` under `cli/` on `origin/main`: `git show origin/main:cli/<path>`. Never `feat/cli` or `cli/README.md`. Best source for exact strings and exit codes: the e2e suite `cli/test/e2e/suites/**`. Flags/args → `commands/<verb>/<resource>/index.ts`; codes → `errors/codes.ts`; env vars → `env/registry.ts`. Can't verify a claim? Skip it, soften it, or flag `{/* VERIFY: ... */}`.
+Source of truth is the code (per the Critical note above), not the docs or in-CLI help (both drift). Where to look under `cli/`: best source for exact strings and exit codes is the e2e suite `cli/test/e2e/suites/**`; flags/args → `commands/<verb>/<resource>/index.ts`; codes → `errors/codes.ts`; env vars → `env/registry.ts`. Can't verify a claim? Skip it, soften it, or flag `{/* VERIFY: ... */}`.
 
 For project context (known bugs, decisions, what's shipped vs planned), see the **Dify CLI** Linear project (team WTA).
 
-After writing, run `writing-guides/index.md#post-writing-verification`, confirm anchors resolve and no owned fact is re-explained, and re-verify any behavior claim against `origin/main`.
+After writing, run `writing-guides/index.md#post-writing-verification`, then confirm anchors resolve and no owned fact is re-explained.

@@ -150,9 +150,11 @@ def resolve_internal_link(url: str, source_file: Path) -> Path | None:
 def slugify(text: str) -> str:
     """Convert heading text to a Mintlify-style anchor slug.
 
-    Mirrors the GitHub Flavored Markdown convention: lowercase, drop
-    punctuation other than hyphen/underscore, replace whitespace with
-    hyphens, collapse and trim.
+    Lowercase, strip ASCII punctuation and markdown markers, turn
+    whitespace into hyphens, collapse and trim. Non-ASCII characters (CJK
+    text and full-width punctuation like "：") are kept, matching Mintlify,
+    so an English heading's ASCII ":" is dropped while a zh/ja heading's
+    "：" is preserved.
     """
     s = text.lower().strip()
     # Strip inline markdown formatting markers (backticks and asterisks).
@@ -161,8 +163,10 @@ def slugify(text: str) -> str:
     s = re.sub(r"[`*]", "", s)
     # Strip Pandoc/kramdown custom-id syntax if embedded in heading text
     s = CUSTOM_ID_RE.sub("", s)
-    # Drop characters that aren't word chars, hyphens, or whitespace
-    s = re.sub(r"[^\w\s-]", "", s, flags=re.UNICODE)
+    # Strip ASCII punctuation only; the negated class keeps every non-ASCII
+    # char (CJK text and full-width punctuation like "："), which Mintlify
+    # preserves in the slug.
+    s = re.sub(r"[^\w\s\u0080-\U0010ffff-]", "", s, flags=re.UNICODE)
     # Whitespace → hyphen
     s = re.sub(r"\s+", "-", s)
     # Collapse hyphens, trim
