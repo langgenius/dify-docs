@@ -98,7 +98,7 @@ No space is needed when link text is adjacent to punctuation.
 
 For cross-links to other documentation pages, change the `/en/` path prefix in the English source to `/zh/`.
 
-Same-page anchors keep the heading verbatim, full-width punctuation included: `## 示例：内容审核工作流` → `(#示例：内容审核工作流)`. Do not strip or hyphenate `：`/`，` (only English headings convert `:` and spaces to hyphens).
+Same-page anchors keep CJK characters and full-width punctuation (`：`, `，`) as-is, not stripped or hyphenated: `## 示例：内容审核工作流` → `(#示例：内容审核工作流)`. Latin letters still lowercase and spaces still become hyphens, as in English headings.
 
 ### API Reference Cross-Links
 

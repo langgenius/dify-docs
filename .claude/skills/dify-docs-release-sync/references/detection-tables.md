@@ -59,4 +59,4 @@ When detected, the report should list which variables were added, removed, or ha
 
 ## UI i18n Source Files
 
-i18n source files: `web/i18n/{en-US,zh-Hans,ja-JP}/` (~30 JSON files each, ~4,875 keys total). Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`--these contain the most documentation-relevant UI labels.
+i18n source files: `web/i18n/{en-US,zh-Hans,ja-JP}/` (~30 JSON files each, ~4,875 keys total). Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`. These contain the most documentation-relevant UI labels.
