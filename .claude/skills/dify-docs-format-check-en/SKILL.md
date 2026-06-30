@@ -25,87 +25,24 @@ Filter for `.mdx` and `.md` files under `en/`. If no files are detected, ask the
 
 ## Checks
 
-### Part 1 — Deterministic (run the linter)
+### Part 1 — Deterministic (run the linter, paste the output)
 
-Run the linter and capture its output:
+Run the linter and paste its output into your report:
 
 ```bash
 python3 .claude/skills/dify-docs-format-check-en/check-format-en.py <file> [<file> ...]
 ```
 
-The script checks these rules. Each violation includes the file path, line number, rule ID, severity, and a short message.
+The script is the authoritative rule list. It prints one line per violation, grouped by file, as `line [rule-id] message`; the messages are self-describing, so do not re-summarize each rule. Rule IDs are prefixed by family: `F-` frontmatter, `H-` headings, `B-` bold/italic, `L-` lists, `C-` code, `Li-` links, `I-` images, `M-` Mintlify components, `U-` UI element references, `S-` spacing, `P-` punctuation.
 
-**Frontmatter**
+Two IDs need context the message alone does not give:
 
-- `F-title-missing` — file lacks `title` field.
-- `F-desc-trailing-period` — `description` ends with a period.
-- `F-quote-needed` — value contains `: ` (colon + space) but is not quoted.
-- `F-quote-unnecessary` — value is quoted but contains no character that requires quoting.
-- `F-single-quote` — value uses single quotes; should use double.
-- `F-blank-after-fm` — no blank line between closing `---` and body.
+- `H-ing-verb`: section-name gerunds (`Troubleshooting`, `Logging`, `Getting Started`, `Monitoring Data List`, etc.) are exempt via the `SKIP_ING_HEADINGS` constant in the script. If a flagged heading is a legitimate section concept, add it there.
+- `I-alt-empty`: the script flags *every* empty alt as a prompt to confirm the image is genuinely decorative, not as a hard error.
 
-**Headings**
+### Part 2 — Judgment-call review (where your attention goes)
 
-- `H-trailing-hash` — heading ends with a trailing `#`.
-- `H-blank-before` / `H-blank-after` — missing blank line adjacent to a heading.
-- `H-skip-level` — jump in depth (e.g., H2 to H4 without H3).
-- `H-ing-verb` — heading starts with a verb in `-ing` form where the base form should be used. The linter carries a curated verb list and strips leading numeric/parenthetical prefixes (`1.`, `(a)`, etc.) before detection. Section-name gerunds in a skip list are not flagged (`Troubleshooting`, `Logging`, `Getting Started`, `Monitoring Data List`, etc.). The skip list lives in the script constant `SKIP_TEXTS`.
-
-**Bold and Italic**
-
-- `B-trailing-colon-inside` — `**X:**` or `**X：**` patterns. Colon must be outside the bold markers.
-- `B-underscore-italic` — `_italic_` style; must use `*italic*`.
-
-**Lists**
-
-- `L-asterisk-bullet` — `* ` used as a bullet; must use `- `.
-- `L-blank-before` / `L-blank-after` — missing blank line around a list block.
-- `L-nested-indent` — nested list item not indented by a multiple of 2 spaces.
-
-**Code**
-
-- `C-no-language` — fenced code block opens with ` ``` ` but no language tag.
-- `C-blank-before` / `C-blank-after` — missing blank line around a fenced code block.
-
-**Links**
-
-- `Li-click-here` — link text is `click here`, `here`, or `Click here`.
-- `Li-http-external` — external link uses `http://` rather than `https://`.
-- `Li-internal-no-prefix` — internal link starts with a relative path or omits the language prefix (`/en/...`).
-
-**Images**
-
-- `I-raw-img-tag` — raw `<img>` element used instead of `<Frame>` + markdown.
-- `I-alt-empty` — `![](...)` with no alt text on a non-decorative image. The script flags every empty alt as a prompt to confirm the image is truly decorative.
-- `I-alt-too-long` — alt text exceeds 125 characters.
-- `I-caption-alt-mismatch` — `<Frame caption="...">` value differs from the alt text of the enclosed markdown image.
-- `I-filename-uppercase-ext` — filename ends with an uppercase extension (`.PNG`, `.JPG`).
-- `I-filename-retina-suffix` — filename contains `@2x`, `@3x`, or similar.
-- `I-filename-default-tool` — filename begins with `CleanShot`, `Screenshot`, `IMG_`, etc.
-- `I-filename-non-kebab` — filename has underscores, spaces, uppercase letters, or non-ASCII characters.
-- `I-filename-ing-verb` — filename begins with a verb in `-ing` form.
-
-**Mintlify Components**
-
-- `M-tab-no-title` — `<Tab>` without a `title` attribute.
-
-**UI Element References**
-
-- `U-menu-arrow` — menu path uses `→`, `->`, or `=>` instead of `>`.
-
-**Spacing**
-
-- `S-double-blank` — two or more consecutive blank lines.
-
-**Punctuation**
-
-- `P-em-dash-spaces` — em dash `—` surrounded by spaces.
-- `P-en-dash-spaces` — en dash `–` surrounded by spaces in a numeric range.
-- `P-fullwidth-in-english` — full-width punctuation (`，。；：！？（）、`) adjacent to ASCII letters.
-
-### Part 2 — Judgment-call review (LLM reads each file)
-
-For each changed file, read it and look for:
+Part 1 is run-and-paste; this pass is where you actually read and reason. For each changed file, read it and look for:
 
 **Headings**
 
@@ -146,28 +83,23 @@ For each changed file, read it and look for:
 
 ## Output Format
 
+Paste the script's raw output first, then append your judgment findings under each file. The script already groups by file and ends each file with either its violation lines or `✅ no deterministic issues found`; do not invent per-rule "clean" lines it never printed.
+
 ```
-## English Formatting Check Results
+[script output, verbatim. Per file: "### {path}", then "line [rule-id] message"
+lines, or "✅ no deterministic issues found", ending with "Total violations: {n}"]
 
-### File: {path}
+### Judgment findings
 
-**Deterministic violations** ({n})
-- Line {n} [{rule-id}]: {message}
+**{path}**
+- Line {n}: {description of issue} ({rule area})
 - ...
-
-**Judgment-call findings** ({n})
-- Line {n}: {description of issue} — {rule area}
-- ...
-
-**Clean checks**
-- ✅ Frontmatter valid
-- ✅ No deterministic violations in {area}
 ```
 
-Group by file. If a file has no issues in any area, report a single ✅ line for it.
+If a file has no deterministic violations and no judgment findings, the script's `✅ no deterministic issues found` line stands on its own.
 
 ## Important
 
 - Do NOT modify any files. This is a read-only audit.
 - Report findings to the user for review.
-- When the script flags a rule that looks like a false positive on inspection (e.g., `-ing` verb that should have been in `SKIP_TEXTS`, or `_` that is a legitimate filename/identifier), surface it as a finding but note the ambiguity so the user can decide.
+- When the script flags a rule that looks like a false positive on inspection (e.g., an `-ing` verb that should have been in `SKIP_ING_HEADINGS`, or `_` that is a legitimate filename/identifier), surface it as a finding but note the ambiguity so the user can decide.

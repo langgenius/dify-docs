@@ -34,68 +34,24 @@ Because translations are typically produced as a zh/ja pair from the same Englis
 
 ## Checks
 
-### Part 1 — Deterministic (run the linter)
+### Part 1 — Deterministic (run the linter, paste the output)
 
-Run the linter:
+Run the linter and paste its output into your report:
 
 ```bash
 python3 .claude/skills/dify-docs-format-check-cjk/check-format-cjk.py <file> [<file> ...]
 ```
 
-The script selects zh or ja rules based on the file path. Rules fall into three groups: shared (both zh and ja), zh-only, and ja-only.
+The script selects the zh or ja rule set from the file path and is the authoritative rule list. It prints one line per violation, grouped by file, as `line [rule-id] message`; the messages are self-describing, so do not re-summarize each rule. Rule IDs are prefixed by family: `F-` frontmatter, `H-` headings (including `H-heading-end-punct` for CJK), `B-` bold, `L-` lists, `C-` code, `Li-` links, `I-` images, `M-` Mintlify components, `S-` spacing, `P-` punctuation; `CJK-` rules apply to both languages; `ZH-` are Chinese-only and `JA-` are Japanese-only.
 
-**Shared structural rules (zh + ja)**
+Two `CJK-` rules need context the message alone does not give:
 
-- `F-title-missing` — frontmatter missing `title`.
-- `F-desc-trailing-period` — `description` ends with a period.
-- `F-quote-needed` / `F-quote-unnecessary` / `F-single-quote` — frontmatter quoting rules.
-- `F-blank-after-fm` — no blank line between frontmatter close and body.
-- `H-trailing-hash`, `H-blank-before`, `H-blank-after`, `H-skip-level` — heading structure rules from the general guide.
-- `B-trailing-colon-inside` — colon inside `**...**`.
-- `L-asterisk-bullet`, `L-nested-indent`, `L-blank-before`, `L-blank-after` — list structure.
-- `C-no-language`, `C-blank-before`, `C-blank-after` — code block rules.
-- `Li-click-here`, `Li-http-external` — link rules.
-- `I-raw-img-tag`, `I-alt-too-long`, `I-caption-alt-mismatch`, `I-filename-*` — image rules (same set as the EN skill).
-- `M-tab-no-title` — Mintlify component rules.
-- `S-double-blank` — spacing.
-- `P-em-dash-spaces`, `P-en-dash-spaces` — general punctuation.
+- `CJK-disclaimer-missing`: the script looks for the translation-disclaimer text only within the ~10 lines just below the frontmatter, so a disclaimer placed lower in the file still trips it.
+- `CJK-cross-lang-link`: `/en/...` links are flagged everywhere *except* on the disclaimer line, which is allowed to point at the English source.
 
-**Shared CJK rules (zh + ja)**
+### Part 2 — Judgment-call review (where your attention goes)
 
-- `CJK-latin-spacing` — CJK character directly adjacent to Latin letter, digit, or backtick without a space. Exceptions: punctuation boundary, start/end of line, inside code/URLs.
-- `CJK-halfwidth-punct` — half-width punctuation `, . : ; ? ! ( )` directly adjacent to a CJK character. (Slash and other exceptions are handled by language-specific rules below.)
-- `CJK-bold-no-space` — bold span `**...**` adjacent to CJK character without a space on each side.
-- `CJK-link-no-space` — markdown link text adjacent to CJK character without a space on each side.
-- `CJK-italic` — `*text*` italic used on a CJK span. Chinese and Japanese should use bold, never italic.
-- `CJK-em-dash` — em dash `—` or double em dash `——` appears in CJK text. Restructure the sentence.
-- `CJK-disclaimer-missing` — translation disclaimer (`<Note> ⚠️ ...`) missing directly below the frontmatter.
-- `CJK-cross-lang-link` — internal link begins with the wrong language prefix (e.g., `/en/...` inside a `zh/` file).
-
-**Heading rules**
-
-- `H-heading-end-punct` — CJK heading ends with sentence-ending punctuation (`。，、；：`).
-
-**Chinese-only rules**
-
-- `ZH-ascii-ellipsis` — `...` used where Chinese ellipsis `……` is expected.
-- `ZH-fullwidth-slash` — full-width slash `／` used; must be `/`.
-- `ZH-quotes` — mainland-style double or single quotation marks `""`, `''` used; must be corner brackets `「」` (single) or `『』` (nested).
-- `ZH-range-hyphen` — numeric range uses `-` or `–`; must use `～`.
-- `ZH-percent-space` — space between a digit and `%` or `°`.
-
-**Japanese-only rules**
-
-- `JA-fullwidth-digit` — full-width digit used (`１`, `２`, ...).
-- `JA-fullwidth-latin` — full-width Latin letter used (`Ａ`, `Ｂ`, ...).
-- `JA-fullwidth-space` — full-width space (`　`) used.
-- `JA-sentence-too-long` — sentence longer than 80 Japanese characters.
-- `JA-go-prefix` — `ご` prefix used on a verb in the "avoid" list (`ご確認ください`, `ご参照ください`, `ご入力ください`). `ご利用` is allowed.
-- `JA-heading-sentence-ending` — heading ends with `します` / `します。` / `します？`, indicating a full-sentence rather than noun-phrase form.
-- `JA-style-mix` — the file contains both です/ます and だ/である forms in body text. Only one register should be used.
-
-### Part 2 — Judgment-call review (LLM reads each file)
-
-For each changed file, read it and look for:
+Part 1 is run-and-paste; this pass is where you actually read and reason. The two findings the linter misses most often are **translated anchor slugs** (a cross-reference must use the translated heading slug, e.g. `#响应`, not `#response`) and **`{{placeholder}}` variables left unchanged** inside otherwise-translated prompt examples. For each changed file, read it and look for:
 
 **Translatable elements**
 
@@ -129,26 +85,21 @@ For each changed file, read it and look for:
 
 ## Output Format
 
+Paste the script's raw output first, then append your judgment findings under each file. The script already groups by file (with `({lang})` in the header) and ends each file with either its violation lines or `✅ no deterministic issues found`. It reports only violations, so do not add per-rule "clean" lines it never printed.
+
 ```
-## CJK Formatting Check Results
+[script output, verbatim. Per file: "### {path} ({lang})", then
+"line [rule-id] message" lines, or "✅ no deterministic issues found",
+ending with "Total violations: {n}"]
 
-### File: {path} ({lang})
+### Judgment findings
 
-**Deterministic violations** ({n})
-- Line {n} [{rule-id}]: {message}
-- ...
-
-**Judgment-call findings** ({n})
-- Line {n}: {description of issue} — {rule area}
-- ...
-
-**Clean checks**
-- ✅ Disclaimer present
-- ✅ No bold/CJK spacing issues
+**{path} ({lang})**
+- Line {n}: {description of issue} ({rule area})
 - ...
 ```
 
-Group by file. If a file has no issues at all, report a single ✅ line.
+If a file has no deterministic violations and no judgment findings, the script's `✅ no deterministic issues found` line stands on its own.
 
 ## Important
 
