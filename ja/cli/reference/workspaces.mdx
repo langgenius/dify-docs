@@ -1,15 +1,18 @@
 ---
 title: ワークスペース
-description: ワークスペースを表示し、difyctl がコマンドで使用するワークスペースをどう決定するかを解説します
+description: ワークスペースを一覧表示し、アクティブなワークスペースを切り替え、difyctl がコマンドで使用するワークスペースをどう決定するかを解説します
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/reference/workspaces) を参照してください。
 
-サインインすると、`difyctl` はワークスペースを保存し、すべてのコマンドをそのワークスペースに対して実行します。解決順序の詳細は [difyctl がワークスペースを選択する仕組み](#difyctl-がワークスペースを選択する仕組み) を参照してください。
+`difyctl` は一度に 1 つのアクティブなワークスペースで動作します。このワークスペースは、フラグ、環境変数、または保存されたデフォルト値から決まります。これらの優先順位については [difyctl がワークスペースを選択する仕組み](#difyctl-がワークスペースを選択する仕組み) を参照してください。
 
-[`difyctl get workspace`](#ワークスペースを表示) は所属するワークスペースを表示し、[グローバルフラグ](/ja/cli/reference/global-flags) を受け付けます。
+- [`difyctl get workspace`](#ワークスペースの一覧表示) は所属するワークスペースを一覧表示します
+- [`use workspace`](#ワークスペースの切り替え) はアクティブなワークスペースを切り替えます <Badge color="blue">Cloud</Badge>
 
-## ワークスペースを表示
+どちらも [グローバルフラグ](/ja/cli/reference/global-flags) を受け付けます。
+
+## ワークスペースの一覧表示
 
 ```text
 difyctl get workspace [flags]
@@ -23,19 +26,19 @@ difyctl get workspace [flags]
 
 ### 例
 
-ワークスペースを表示する：
+ワークスペースと、現在アクティブなものを確認する：
 
 ```bash
 difyctl get workspace
 ```
 
-スクリプト用に JSON 形式で取得する：
+スクリプト用に一覧全体を JSON 形式で取得する：
 
 ```bash
 difyctl get workspace -o json
 ```
 
-ワークスペース ID のみを出力する：
+ワークスペース ID のみを 1 行に 1 つずつ出力する：
 
 ```bash
 difyctl get workspace -o name
@@ -45,16 +48,17 @@ difyctl get workspace -o name
 
 | 形式 | stdout に出力される内容 |
 |:---|:---|
-| default | 整列された表。`CURRENT` 列は現在アクティブなワークスペースを `*` で示し、`ROLE` 列はロールを示します。 |
+| default | 整列された表。`CURRENT` 列は現在アクティブなワークスペースを `*` で示し、`ROLE` 列は各ワークスペースでのロールを示します。 |
 | `-o wide` | 同じ列です。ワークスペースに wide 専用の列はありません。 |
 | `-o json`、`-o yaml` | `workspaces` 配列。各エントリには `id`、`name`、`role`、`status`、`current` が含まれます。 |
-| `-o name` | ワークスペース ID。 |
+| `-o name` | ワークスペース ID。1 行に 1 つずつ。 |
 
 デフォルトの表：
 
 ```text
 ID                                    NAME       ROLE    STATUS  CURRENT
 b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
+9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c  Marketing  normal  normal
 ```
 
 `-o json`：
@@ -68,6 +72,13 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
       "role": "owner",
       "status": "normal",
       "current": true
+    },
+    {
+      "id": "9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c",
+      "name": "Marketing",
+      "role": "normal",
+      "status": "normal",
+      "current": false
     }
   ]
 }
@@ -85,13 +96,77 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
 
 全体の体系については [出力形式と終了コード](/ja/cli/reference/output-formats-and-exit-codes) を参照してください。
 
+## ワークスペースの切り替え <Badge color="blue">Cloud</Badge>
+
+```text
+difyctl use workspace [workspace-id] [flags]
+```
+
+`use workspace` はまずサーバー上でアクティブなワークスペースを切り替え、続いて `hosts.yml` に保存されたデフォルト値を更新します。切り替えに失敗した場合（ワークスペースが存在しない、またはメンバーでない場合）、ローカルの状態は変更されません。
+
+<Tip>
+日常的な呼び出し方法については、よく使うタスクの [ワークスペースの切り替え](/ja/cli/common-tasks#ワークスペースの切り替え) を参照してください。
+</Tip>
+
+### 引数
+
+- `workspace-id`：切り替え先のワークスペース。[`get workspace`](#ワークスペースの一覧表示) で取得します。ターミナルでは省略すると、現在のワークスペースが `*` で示された一覧から選択できます。非対話的なセッション（スクリプト、CI、パイプ）では必須です。
+
+### フラグ
+
+[グローバルフラグ](/ja/cli/reference/global-flags) のみです。
+
+### 例
+
+ワークスペースから対話的に選択する：
+
+```bash
+difyctl use workspace
+```
+
+または、切り替え先を自分で調べてから ID で切り替える（スクリプトで使える形式）：
+
+```bash
+difyctl get workspace
+difyctl use workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+別のワークスペースに対して単一のコマンドを実行するだけなら、切り替えずに `--workspace` を渡します：
+
+```bash
+difyctl get app --workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+### 出力
+
+切り替えに成功すると、新しいアクティブなワークスペースが stdout に確認表示されます：
+
+```text
+✓ Switched to Marketing (9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c)
+```
+
+切り替えは永続化されます。以降のすべてのコマンドは、再度切り替えるまで新しいワークスペースに対して実行されます。
+
+### 終了コード
+
+| コード | 意味 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | ワークスペースが見つからない、またはその他のサーバーエラー |
+| `2` | 使用方法のエラー（選択するターミナルがない状況で `workspace-id` を省略した場合など） |
+| `4` | 認証エラー、または `use workspace` がピッカーを開いたときに利用可能なワークスペースがない |
+| `7` | レート制限（HTTP 429） |
+
+全体の体系については [出力形式と終了コード](/ja/cli/reference/output-formats-and-exit-codes) を参照してください。
+
 ## difyctl がワークスペースを選択する仕組み
 
-アプリは必ず 1 つのワークスペースに属するため、すべてのコマンドは 1 つのワークスペースに対して実行されます。通常は、サインイン時に保存されたワークスペースです。`difyctl` は次の順序で解決し、最初に見つかった値を使用します。
+アプリは必ず 1 つのワークスペースに属するため、ワークスペースを対象とするすべてのコマンドには、実行先となるワークスペースが必要です。`difyctl` は次の順序で解決し、最初に見つかった値を使用します。
 
-1. [`DIFY_WORKSPACE_ID`](/ja/cli/reference/environment-variables) 環境変数。任意のオーバーライドです。
-2. 保存されたデフォルト値。サインイン時に設定ディレクトリの `hosts.yml` に書き込まれます。
+1. コマンド自体に付ける `--workspace <id>` フラグ。その呼び出しにのみ適用されます。
+2. [`DIFY_WORKSPACE_ID`](/ja/cli/reference/environment-variables) 環境変数。
+3. 保存されたデフォルト値。サインイン時に設定ディレクトリの `hosts.yml` に書き込まれ、[`use workspace`](#ワークスペースの切り替え) によって更新されます。
 
-どちらからもワークスペースが得られない場合、コマンドは終了コード `2` で失敗します。
+いずれからもワークスペースが得られない場合、コマンドは終了コード `2` で失敗します。
 
-ワークスペース ID は UUID です。ワークスペース名ではなく、[`get workspace`](#ワークスペースを表示) で取得した ID を使用してください。UUID でない値は使用方法のエラーになります。
+ワークスペース ID は UUID です。ワークスペース名ではなく、[`get workspace`](#ワークスペースの一覧表示) で取得した ID を使用してください。UUID でない値は使用方法のエラーになります。

@@ -1,13 +1,16 @@
 ---
 title: Workspaces
-description: Show your workspace and how difyctl resolves which workspace your commands use
+description: List your workspaces, switch the active one, and understand how difyctl resolves which workspace to use
 ---
 
-After you sign in, `difyctl` saves your workspace and runs every command against it. For the full resolution order, see [How difyctl Picks a Workspace](#how-difyctl-picks-a-workspace).
+`difyctl` works in one active workspace at a time, taken from a flag, an environment variable, or your stored default. For the order those take priority, see [How difyctl Picks a Workspace](#how-difyctl-picks-a-workspace).
 
-[`difyctl get workspace`](#show-your-workspace) shows the workspace you belong to, and accepts the [global flags](/en/cli/reference/global-flags).
+- [`difyctl get workspace`](#list-your-workspaces) lists the workspaces you belong to
+- [`use workspace`](#switch-your-workspace) switches the active one <Badge color="blue">Cloud</Badge>
 
-## Show Your Workspace
+Both accept the [global flags](/en/cli/reference/global-flags).
+
+## List Your Workspaces
 
 ```text
 difyctl get workspace [flags]
@@ -21,19 +24,19 @@ difyctl get workspace [flags]
 
 ### Examples
 
-See your workspace:
+See your workspaces and which one is active:
 
 ```bash
 difyctl get workspace
 ```
 
-Get it as JSON for scripts:
+Get the full list as JSON for scripts:
 
 ```bash
 difyctl get workspace -o json
 ```
 
-Print the workspace ID only:
+Print workspace IDs only, one per line:
 
 ```bash
 difyctl get workspace -o name
@@ -43,16 +46,17 @@ difyctl get workspace -o name
 
 | Format | What stdout gets |
 |:---|:---|
-| default | An aligned table. `CURRENT` marks your active workspace with `*`, and `ROLE` is your role. |
+| default | An aligned table. `CURRENT` marks your active workspace with `*`, and `ROLE` is your role in each one. |
 | `-o wide` | The same columns. Workspaces have no wide-only columns. |
 | `-o json`, `-o yaml` | A `workspaces` array, each entry carrying `id`, `name`, `role`, `status`, and `current`. |
-| `-o name` | The workspace ID. |
+| `-o name` | The workspace IDs, one per line. |
 
 Default table:
 
 ```text
 ID                                    NAME       ROLE    STATUS  CURRENT
 b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
+9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c  Marketing  normal  normal
 ```
 
 `-o json`:
@@ -66,6 +70,13 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
       "role": "owner",
       "status": "normal",
       "current": true
+    },
+    {
+      "id": "9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c",
+      "name": "Marketing",
+      "role": "normal",
+      "status": "normal",
+      "current": false
     }
   ]
 }
@@ -83,13 +94,77 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
 
 See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
 
+## Switch Your Workspace <Badge color="blue">Cloud</Badge>
+
+```text
+difyctl use workspace [workspace-id] [flags]
+```
+
+`use workspace` switches your active workspace on the server first, then updates the stored default in `hosts.yml`. If the switch fails (the workspace doesn't exist, or you're not a member), your local state is left untouched.
+
+<Tip>
+For the everyday invocation, see [Switch Your Workspace](/en/cli/common-tasks#switch-your-workspace) in Common Tasks.
+</Tip>
+
+### Arguments
+
+- `workspace-id`: the workspace to switch to, from [`get workspace`](#list-your-workspaces). In a terminal, omit it to pick from your workspaces, the current one marked `*`. In a non-interactive session (script, CI, pipe), it's required.
+
+### Flags
+
+Only the [global flags](/en/cli/reference/global-flags).
+
+### Examples
+
+Pick interactively from your workspaces:
+
+```bash
+difyctl use workspace
+```
+
+Or look up the target yourself, then switch by ID (the form that works in scripts):
+
+```bash
+difyctl get workspace
+difyctl use workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+For a single command against another workspace, skip switching and pass `--workspace` instead:
+
+```bash
+difyctl get app --workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+### Output
+
+On success, the new active workspace is confirmed on stdout:
+
+```text
+✓ Switched to Marketing (9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c)
+```
+
+The switch persists: every subsequent command runs against the new workspace until you switch again.
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Workspace not found, or another server error |
+| `2` | Usage error, such as omitting `workspace-id` where there's no terminal to pick in |
+| `4` | Authentication failure, or no workspaces available when `use workspace` opens its picker |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
 ## How difyctl Picks a Workspace
 
-Apps live in exactly one workspace, so every command runs against one. Normally that's the workspace saved when you signed in. `difyctl` resolves it in this order, taking the first value it finds:
+Apps live in exactly one workspace, so every command that targets one needs a workspace to run against. `difyctl` resolves it in this order, taking the first value it finds:
 
-1. The [`DIFY_WORKSPACE_ID`](/en/cli/reference/environment-variables) environment variable, an optional override.
-2. Your stored default, written to `hosts.yml` in the config directory when you sign in.
+1. The `--workspace <id>` flag on the command itself. Applies to that invocation only.
+2. The [`DIFY_WORKSPACE_ID`](/en/cli/reference/environment-variables) environment variable.
+3. Your stored default, written to `hosts.yml` in the config directory when you sign in and updated by [`use workspace`](#switch-your-workspace).
 
-If neither yields a workspace, the command fails with exit code `2`.
+If none of these yields a workspace, the command fails with exit code `2`.
 
-Workspace IDs are UUIDs, so use the ID from [`get workspace`](#show-your-workspace), not a workspace name. A value that isn't a UUID fails as a usage error.
+Workspace IDs are UUIDs, so pass an ID from [`get workspace`](#list-your-workspaces), not a workspace name. A value that isn't a UUID fails as a usage error.
