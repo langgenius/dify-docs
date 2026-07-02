@@ -301,7 +301,11 @@ def check_lists(lines: list[str]) -> list[Violation]:
             # first item of a list
             # only flag if previous line is non-heading content
             prev = lines[i - 2]
-            if not HEADING_RE.match(prev) and prev.strip() != '':
+            # Indented preceding content (a nested Frame/Columns/etc. under an
+            # earlier list item) keeps the list going and renders fine; only
+            # flag when the preceding line is unindented sibling content.
+            if (not HEADING_RE.match(prev) and prev.strip() != ''
+                    and not prev[:1].isspace()):
                 vs.append(Violation(
                     i, 'L-blank-before',
                     'Missing blank line before list.'))
@@ -321,8 +325,10 @@ def check_lists(lines: list[str]) -> list[Violation]:
         if in_fence:
             continue
         is_list = list_re.match(line) is not None
-        if prev_list and not is_list and line.strip() != '':
-            # transitioning out of a list block without a blank line
+        if (prev_list and not is_list and line.strip() != ''
+                and not line[:1].isspace()):
+            # transitioning out of a list block without a blank line; indented
+            # content (nested components under the item) stays part of the list
             vs.append(Violation(
                 i, 'L-blank-after',
                 'Missing blank line after list block.'))
