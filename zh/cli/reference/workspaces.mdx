@@ -1,15 +1,18 @@
 ---
 title: 工作空间
-description: 显示你的工作空间，并了解 difyctl 如何决定命令使用哪个工作空间
+description: 列出你的工作空间、切换当前工作空间，并了解 difyctl 如何决定命令使用哪个工作空间
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/reference/workspaces)。
 
-登录后，`difyctl` 会保存你的工作空间，并对它执行每一条命令。完整的解析顺序参见 [difyctl 如何选择工作空间](#difyctl-如何选择工作空间)。
+`difyctl` 一次只在一个工作空间中工作，该工作空间来自标志、环境变量或你存储的默认值。它们的优先级顺序参见 [difyctl 如何选择工作空间](#difyctl-如何选择工作空间)。
 
-[`difyctl get workspace`](#显示工作空间) 会显示你所属的工作空间，并接受 [全局标志](/zh/cli/reference/global-flags)。
+- [`difyctl get workspace`](#列出工作空间) 列出你所属的工作空间
+- [`use workspace`](#切换工作空间-cloud) 切换当前工作空间 <Badge color="blue">Cloud</Badge>
 
-## 显示工作空间
+两者都接受 [全局标志](/zh/cli/reference/global-flags)。
+
+## 列出工作空间
 
 ```text
 difyctl get workspace [flags]
@@ -23,19 +26,19 @@ difyctl get workspace [flags]
 
 ### 示例
 
-查看你的工作空间：
+查看你的工作空间，以及当前激活的是哪一个：
 
 ```bash
 difyctl get workspace
 ```
 
-获取 JSON 格式，便于脚本处理：
+获取完整列表的 JSON 格式，便于脚本处理：
 
 ```bash
 difyctl get workspace -o json
 ```
 
-仅打印工作空间 ID：
+仅打印工作空间 ID，每行一个：
 
 ```bash
 difyctl get workspace -o name
@@ -45,16 +48,17 @@ difyctl get workspace -o name
 
 | 格式 | stdout 输出内容 |
 |:---|:---|
-| default | 对齐的表格。`CURRENT` 列以 `*` 标记当前激活的工作空间，`ROLE` 列为你的角色。 |
+| default | 对齐的表格。`CURRENT` 列以 `*` 标记当前激活的工作空间，`ROLE` 列为你在每个工作空间中的角色。 |
 | `-o wide` | 相同的列。工作空间没有仅在 wide 格式下显示的列。 |
 | `-o json`、`-o yaml` | 一个 `workspaces` 数组，每个条目包含 `id`、`name`、`role`、`status` 和 `current`。 |
-| `-o name` | 工作空间 ID。 |
+| `-o name` | 工作空间 ID，每行一个。 |
 
 默认表格：
 
 ```text
 ID                                    NAME       ROLE    STATUS  CURRENT
 b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
+9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c  Marketing  normal  normal
 ```
 
 `-o json`：
@@ -68,6 +72,13 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
       "role": "owner",
       "status": "normal",
       "current": true
+    },
+    {
+      "id": "9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c",
+      "name": "Marketing",
+      "role": "normal",
+      "status": "normal",
+      "current": false
     }
   ]
 }
@@ -85,13 +96,76 @@ b4e8d2a6-7c3f-4a1e-9d5b-8f2c6e0a4d7b  Acme Team  owner   normal  *
 
 完整方案参见 [输出格式与退出码](/zh/cli/reference/output-formats-and-exit-codes)。
 
+## 切换工作空间 <Badge color="blue">Cloud</Badge>
+```text
+difyctl use workspace [workspace-id] [flags]
+```
+
+`use workspace` 先在服务器上切换你的当前工作空间，然后更新 `hosts.yml` 中存储的默认值。如果切换失败（工作空间不存在，或你不是其成员），本地状态保持不变。
+
+<Tip>
+日常调用方式参见常见任务中的 [切换工作空间](/zh/cli/common-tasks#切换工作空间-cloud)。
+</Tip>
+
+### 参数
+
+- `workspace-id`：要切换到的工作空间，取自 [`get workspace`](#列出工作空间)。在终端中可省略，以从你的工作空间中选择，当前工作空间以 `*` 标记。在非交互式会话（脚本、CI、管道）中必须提供。
+
+### 标志
+
+仅 [全局标志](/zh/cli/reference/global-flags)。
+
+### 示例
+
+从你的工作空间中交互式选择：
+
+```bash
+difyctl use workspace
+```
+
+或自行查找目标，然后按 ID 切换（适用于脚本的形式）：
+
+```bash
+difyctl get workspace
+difyctl use workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+如果只是针对另一个工作空间执行单条命令，可跳过切换，改为传入 `--workspace`：
+
+```bash
+difyctl get app --workspace 9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c
+```
+
+### 输出
+
+切换成功后，stdout 会确认新的当前工作空间：
+
+```text
+✓ Switched to Marketing (9c2f4e6a-8b1d-4f3e-a5c7-0d9e2b4f6a8c)
+```
+
+切换会持久化：之后每条命令都针对新的工作空间执行，直到你再次切换。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 成功 |
+| `1` | 工作空间未找到，或其他服务器错误 |
+| `2` | 用法错误，例如在没有终端可供选择时省略了 `workspace-id` |
+| `4` | 认证失败，或 `use workspace` 打开选择器时没有可用的工作空间 |
+| `7` | 触发限流（HTTP 429） |
+
+完整方案参见 [输出格式与退出码](/zh/cli/reference/output-formats-and-exit-codes)。
+
 ## difyctl 如何选择工作空间
 
-应用只属于一个工作空间，因此每条命令都对某一个工作空间执行。通常就是你登录时保存的那个。`difyctl` 按以下顺序解析，取首个找到的值：
+应用只属于一个工作空间，因此每条针对工作空间的命令都需要一个工作空间来执行。`difyctl` 按以下顺序解析，取首个找到的值：
 
-1. [`DIFY_WORKSPACE_ID`](/zh/cli/reference/environment-variables) 环境变量，一个可选的覆盖项。
-2. 你存储的默认值，登录时写入配置目录下的 `hosts.yml`。
+1. 命令本身的 `--workspace <id>` 标志，仅对该次调用生效。
+2. [`DIFY_WORKSPACE_ID`](/zh/cli/reference/environment-variables) 环境变量。
+3. 你存储的默认值，登录时写入配置目录下的 `hosts.yml`，并由 [`use workspace`](#切换工作空间-cloud) 更新。
 
-如果两者都未指定工作空间，命令以退出码 `2` 失败。
+如果三者都未指定工作空间，命令以退出码 `2` 失败。
 
-工作空间 ID 是 UUID，因此请使用 [`get workspace`](#显示工作空间) 返回的 ID，而非工作空间名称。非 UUID 的值会作为用法错误失败。
+工作空间 ID 是 UUID，因此请使用 [`get workspace`](#列出工作空间) 返回的 ID，而非工作空间名称。非 UUID 的值会作为用法错误失败。

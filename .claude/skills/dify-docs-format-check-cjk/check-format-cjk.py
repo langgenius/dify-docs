@@ -239,10 +239,14 @@ def check_lists(lines: list[str]) -> list[Violation]:
         is_list = list_re.match(line) is not None
         if is_list and not prev_list and i > 1:
             prev_line = lines[i - 2]
-            if not HEADING_RE.match(prev_line) and prev_line.strip() != '':
+            # Indented preceding content (nested components under an earlier
+            # list item) keeps the list going; only flag unindented siblings.
+            if (not HEADING_RE.match(prev_line) and prev_line.strip() != ''
+                    and not prev_line[:1].isspace()):
                 vs.append(Violation(i, 'L-blank-before',
                                     'Missing blank line before list.'))
-        if prev_list and not is_list and line.strip() != '':
+        if (prev_list and not is_list and line.strip() != ''
+                and not line[:1].isspace()):
             vs.append(Violation(i, 'L-blank-after',
                                 'Missing blank line after list.'))
         prev_list = is_list

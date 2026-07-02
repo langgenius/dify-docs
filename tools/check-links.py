@@ -157,6 +157,12 @@ def slugify(text: str) -> str:
     "：" is preserved.
     """
     s = text.lower().strip()
+    # Strip JSX/HTML tags but keep their inner text. Mintlify renders a
+    # heading's components and includes their text in the anchor, e.g.
+    # `## Switch Your Workspace <Badge color="blue">Cloud</Badge>` ->
+    # `#switch-your-workspace-cloud`. Dropping the tag markup (not the
+    # "Cloud" text) avoids mangling the attributes into the slug.
+    s = re.sub(r"<[^>]+>", "", s)
     # Strip inline markdown formatting markers (backticks and asterisks).
     # Underscores are preserved — they appear in identifier headings like
     # `retrieval_setting` and Mintlify keeps them in the slug.
