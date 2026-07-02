@@ -1,0 +1,1769 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "Agent App API",
+    "description": "Agent apps expose a streaming service API for production integrations. Use the API key created from the Agent app API Access page. Public service API requests use the returned API base URL and do not include the Agent ID in the path; the API key identifies the backing app.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://{api_base_url}",
+      "description": "Base URL of the Agent App API. Use the Service API Base URL shown in the Agent app API Access page. For self-hosted deployments, replace it with your own API base URL.",
+      "variables": {
+        "api_base_url": {
+          "default": "api.dify.ai/v1",
+          "description": "Host and path of the API base URL, without the `https://` prefix."
+        }
+      }
+    }
+  ],
+  "security": [
+    {
+      "ApiKeyAuth": []
+    }
+  ],
+  "paths": {
+    "/chat-messages": {
+      "post": {
+        "summary": "Send Agent App Message",
+        "description": "Send a user message to an Agent app. Agent apps use streaming responses only and may return message chunks, agent reasoning/tool events, generated files, and a final `message_end` event.",
+        "operationId": "sendAgentAppMessage",
+        "tags": [
+          "Agent Messages"
+        ],
+        "requestBody": {
+          "description": "Request body to send an Agent app message.",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentChatRequest"
+              },
+              "examples": {
+                "streaming_example": {
+                  "summary": "Request Example",
+                  "value": {
+                    "inputs": {
+                      "customer_tier": "enterprise"
+                    },
+                    "query": "Summarize the attached product feedback and suggest next steps.",
+                    "response_mode": "streaming",
+                    "conversation_id": "",
+                    "user": "user-123",
+                    "files": [
+                      {
+                        "type": "document",
+                        "transfer_method": "local_file",
+                        "upload_file_id": "72fa9618-8f89-4a37-9b33-7e1178a24a67"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful streaming response. Agent apps return `text/event-stream` Server-Sent Events. Blocking JSON responses are not supported for Agent apps.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string",
+                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which arrive as `event: ping` lines (no `data:` payload) every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The reply streams as `message` events (Chatbot apps), or as `agent_thought` and `agent_message` events (Agent apps), and ends with `message_end`. When text-to-speech auto-play is enabled, `tts_message` events interleave and `tts_message_end` becomes the final event.\n\n**Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot | each answer chunk (concatenate in order) | `answer` |\n| `agent_message` | Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | Chatbot, Agent | output moderation replaces the answer so far | `answer` |\n| `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | Chatbot, Agent | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Agent | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Transport events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `error` | Chatbot, Agent | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | Chatbot, Agent | keep-alive every 10 seconds | none |"
+                },
+                "examples": {
+                  "streamingResponseAgent": {
+                    "summary": "Response Example - Streaming (Agent)",
+                    "value": "data: {\"event\": \"agent_thought\", \"id\": \"agent_thought_id_1\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"position\": 1, \"thought\": \"Thinking about calling a tool...\", \"tool\": \"dalle3\", \"tool_input\": \"{\\\"dalle3\\\": {\\\"prompt\\\": \\\"a cute cat\\\"}}\", \"created_at\": 1705395332} data: {\"event\": \"message_file\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"id\": \"file_id_1\", \"type\": \"image\", \"belongs_to\": \"assistant\", \"url\": \"https://example.com/cat.png\", \"created_at\": 1705395332} data: {\"event\": \"agent_message\", \"task_id\": \"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"answer\": \"Here is the image: \", \"created_at\": 1705395333} data: {\"event\": \"message_end\", \"task_id\":\"task123\", \"message_id\": \"msg123\", \"conversation_id\": \"conv123\", \"metadata\": {\"usage\": {\"total_tokens\": 50, \"latency\": 2.5}}}"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `not_chat_app` : App mode does not match the API route.\n- `conversation_completed` : The conversation has ended.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Text generation failed.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "app_unavailable": {
+                    "summary": "app_unavailable",
+                    "value": {
+                      "status": 400,
+                      "code": "app_unavailable",
+                      "message": "App unavailable, please check your app configurations."
+                    }
+                  },
+                  "not_chat_app": {
+                    "summary": "not_chat_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_chat_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  },
+                  "conversation_completed": {
+                    "summary": "conversation_completed",
+                    "value": {
+                      "status": 400,
+                      "code": "conversation_completed",
+                      "message": "The conversation has ended. Please start a new conversation."
+                    }
+                  },
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "provider_quota_exceeded": {
+                    "summary": "provider_quota_exceeded",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_quota_exceeded",
+                      "message": "Your quota for Dify Hosted OpenAI has been exhausted. Please go to Settings -> Model Provider to complete your own provider credentials."
+                    }
+                  },
+                  "model_currently_not_support": {
+                    "summary": "model_currently_not_support",
+                    "value": {
+                      "status": 400,
+                      "code": "model_currently_not_support",
+                      "message": "Dify Hosted OpenAI trial currently not support the GPT-4 model."
+                    }
+                  },
+                  "completion_request_error": {
+                    "summary": "completion_request_error",
+                    "value": {
+                      "status": 400,
+                      "code": "completion_request_error",
+                      "message": "Completion request failed."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Conversation does not exist.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "conversation_not_exists": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Conversation Not Exists."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "- `too_many_requests` : Too many concurrent requests for this app.\n- `rate_limit_error` : The upstream model provider rate limit was exceeded.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "too_many_requests": {
+                    "summary": "too_many_requests",
+                    "value": {
+                      "status": 429,
+                      "code": "too_many_requests",
+                      "message": "Too many requests. Please try again later."
+                    }
+                  },
+                  "rate_limit_error": {
+                    "summary": "rate_limit_error",
+                    "value": {
+                      "status": 429,
+                      "code": "rate_limit_error",
+                      "message": "Rate Limit Error"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "`internal_server_error` : Internal server error.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "internal_server_error": {
+                    "summary": "internal_server_error",
+                    "value": {
+                      "status": 500,
+                      "code": "internal_server_error",
+                      "message": "Internal server error."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/chat-messages/{task_id}/stop": {
+      "post": {
+        "summary": "Stop Agent App Message Generation",
+        "description": "Stop a running Agent app streaming task.",
+        "operationId": "stopAgentAppMessageGeneration",
+        "tags": [
+          "Agent Messages"
+        ],
+        "parameters": [
+          {
+            "name": "task_id",
+            "in": "path",
+            "required": true,
+            "description": "Task ID returned by the Send Agent App Message streaming response.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "user"
+                ],
+                "properties": {
+                  "user": {
+                    "type": "string",
+                    "description": "User identifier, must be consistent with the user passed in the send message interface."
+                  }
+                }
+              },
+              "examples": {
+                "example": {
+                  "summary": "Request Example",
+                  "value": {
+                    "user": "abc-123"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/SuccessResult"
+          },
+          "400": {
+            "description": "`not_chat_app` : App mode does not match the API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_chat_app": {
+                    "summary": "not_chat_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_chat_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/files/upload": {
+      "post": {
+        "summary": "Upload Agent App File",
+        "description": "Upload a file for an Agent app conversation. Use the returned `id` as `upload_file_id` in the `files` array when calling Send Agent App Message. Uploaded files are scoped to the same `user` value.",
+        "operationId": "uploadAgentAppFile",
+        "tags": [
+          "Agent Files"
+        ],
+        "requestBody": {
+          "description": "File upload request. Requires multipart/form-data.",
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file",
+                  "user"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "The file to be uploaded. Supported types include images, documents, audio, and video."
+                  },
+                  "user": {
+                    "type": "string",
+                    "description": "Identifier for the end user, defined by your application's rules and unique within the app. Service API and WebApp user IDs are separate, even when identical."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "File uploaded successfully.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileUploadResponse"
+                },
+                "examples": {
+                  "uploadSuccess": {
+                    "summary": "Response Example",
+                    "value": {
+                      "id": "a1b2c3d4-5678-90ab-cdef-1234567890ab",
+                      "name": "product-photo.png",
+                      "size": 204800,
+                      "extension": "png",
+                      "mime_type": "image/png",
+                      "created_by": "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+                      "created_at": 1705407629,
+                      "preview_url": null,
+                      "source_url": null,
+                      "original_url": null,
+                      "user_id": "f1e2d3c4-b5a6-7890-abcd-ef1234567890",
+                      "tenant_id": "11223344-5566-7788-99aa-bbccddeeff00",
+                      "conversation_id": null,
+                      "file_key": "uploads/product-photo.png"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "no_file_uploaded": {
+                    "summary": "no_file_uploaded",
+                    "value": {
+                      "status": 400,
+                      "code": "no_file_uploaded",
+                      "message": "Please upload your file."
+                    }
+                  },
+                  "too_many_files": {
+                    "summary": "too_many_files",
+                    "value": {
+                      "status": 400,
+                      "code": "too_many_files",
+                      "message": "Only one file is allowed."
+                    }
+                  },
+                  "filename_not_exists_error": {
+                    "summary": "filename_not_exists_error",
+                    "value": {
+                      "status": 400,
+                      "code": "filename_not_exists_error",
+                      "message": "The specified filename does not exist."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "`file_too_large` : File size exceeded.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "file_too_large": {
+                    "summary": "file_too_large",
+                    "value": {
+                      "status": 413,
+                      "code": "file_too_large",
+                      "message": "File size exceeded."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "`unsupported_file_type` : File type not allowed.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unsupported_file_type": {
+                    "summary": "unsupported_file_type",
+                    "value": {
+                      "status": 415,
+                      "code": "unsupported_file_type",
+                      "message": "File type not allowed."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/messages": {
+      "get": {
+        "summary": "List Agent App Conversation Messages",
+        "description": "Return historical messages for an Agent app conversation in reverse chronological order. Use the same `user` value that created the conversation.",
+        "operationId": "listAgentAppConversationMessages",
+        "tags": [
+          "Agent Conversations"
+        ],
+        "parameters": [
+          {
+            "name": "conversation_id",
+            "in": "query",
+            "required": true,
+            "description": "Conversation ID.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "description": "User identifier.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "first_id",
+            "in": "query",
+            "required": false,
+            "description": "The ID of the first chat record on the current page. Default is `null` (fetches the latest messages). For subsequent pages, use the ID of the first message from the current list to get older messages.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of chat history messages to return per request.",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversation history.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationHistoryResponse"
+                },
+                "examples": {
+                  "conversationHistory": {
+                    "summary": "Response Example",
+                    "value": {
+                      "limit": 20,
+                      "has_more": false,
+                      "data": [
+                        {
+                          "id": "9da23599-e713-473b-982c-4328d4f5c78a",
+                          "conversation_id": "45701982-8118-4bc5-8e9b-64562b4555f2",
+                          "parent_message_id": null,
+                          "inputs": {
+                            "city": "San Francisco"
+                          },
+                          "query": "What are the specs of the iPhone 13 Pro Max?",
+                          "answer": "iPhone 13 Pro Max specs are listed here:...",
+                          "status": "normal",
+                          "error": null,
+                          "message_files": [],
+                          "feedback": {
+                            "rating": "like"
+                          },
+                          "retriever_resources": [],
+                          "agent_thoughts": [],
+                          "created_at": 1705407629,
+                          "extra_contents": []
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_chat_app` : App mode does not match the API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_chat_app": {
+                    "summary": "not_chat_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_chat_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "- `not_found` : Conversation does not exist.\n- `not_found` : First message does not exist.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "conversation_not_exists": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Conversation Not Exists."
+                    }
+                  },
+                  "first_message_not_exists": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "First Message Not Exists."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/conversations": {
+      "get": {
+        "summary": "List Agent App Conversations",
+        "description": "Return Agent app conversations for the specified end user, ordered by most recently active.",
+        "operationId": "listAgentAppConversations",
+        "tags": [
+          "Agent Conversations"
+        ],
+        "parameters": [
+          {
+            "name": "user",
+            "in": "query",
+            "required": false,
+            "description": "User identifier.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "last_id",
+            "in": "query",
+            "required": false,
+            "description": "The ID of the last record on the current page (for pagination).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "description": "Number of records to return.",
+            "schema": {
+              "type": "integer",
+              "default": 20,
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "description": "Sorting field. Use '-' prefix for descending order.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "created_at",
+                "-created_at",
+                "updated_at",
+                "-updated_at"
+              ],
+              "default": "-updated_at"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved conversations list.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationsListResponse"
+                },
+                "examples": {
+                  "conversationsList": {
+                    "summary": "Response Example",
+                    "value": {
+                      "limit": 20,
+                      "has_more": false,
+                      "data": [
+                        {
+                          "id": "45701982-8118-4bc5-8e9b-64562b4555f2",
+                          "name": "iPhone Specs Chat",
+                          "inputs": {
+                            "city": "San Francisco"
+                          },
+                          "status": "normal",
+                          "introduction": "Welcome! How can I help you today?",
+                          "created_at": 1705407629,
+                          "updated_at": 1705411229
+                        }
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`not_chat_app` : App mode does not match the API route.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_chat_app": {
+                    "summary": "not_chat_app",
+                    "value": {
+                      "status": 400,
+                      "code": "not_chat_app",
+                      "message": "Please check if your app mode matches the right API route."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "`not_found` : Last conversation does not exist (invalid `last_id`).",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "last_conversation_not_exists": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Last Conversation Not Exists."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/info": {
+      "get": {
+        "summary": "Get Agent App Info",
+        "description": "Retrieve basic information for the Agent app identified by the API key.",
+        "operationId": "getAgentAppInfo",
+        "tags": [
+          "Agent App"
+        ],
+        "responses": {
+          "200": {
+            "description": "Basic information of the application.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppInfoResponse"
+                },
+                "examples": {
+                  "appInfo": {
+                    "summary": "Response Example",
+                    "value": {
+                      "name": "My Chat App",
+                      "description": "A helpful customer service chatbot.",
+                      "tags": [
+                        "customer-service",
+                        "chatbot"
+                      ],
+                      "mode": "chat",
+                      "author_name": "Dify Team"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/parameters": {
+      "get": {
+        "summary": "Get Agent App Parameters",
+        "description": "Retrieve Agent app input parameters. For Agent apps, the `user_input_form` field is projected from variables configured in the Agent Soul.",
+        "operationId": "getAgentAppParameters",
+        "tags": [
+          "Agent App"
+        ],
+        "responses": {
+          "200": {
+            "description": "Application parameters information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAppParametersResponse"
+                },
+                "examples": {
+                  "appParameters": {
+                    "summary": "Response Example",
+                    "value": {
+                      "opening_statement": "Hello! How can I help you today?",
+                      "suggested_questions": [
+                        "What can you do?",
+                        "Tell me about your features."
+                      ],
+                      "suggested_questions_after_answer": {
+                        "enabled": true
+                      },
+                      "speech_to_text": {
+                        "enabled": false
+                      },
+                      "text_to_speech": {
+                        "enabled": false,
+                        "voice": "alloy",
+                        "language": "en-US",
+                        "autoPlay": "disabled"
+                      },
+                      "retriever_resource": {
+                        "enabled": true
+                      },
+                      "annotation_reply": {
+                        "enabled": false
+                      },
+                      "more_like_this": {
+                        "enabled": false
+                      },
+                      "sensitive_word_avoidance": {
+                        "enabled": false
+                      },
+                      "user_input_form": [
+                        {
+                          "text-input": {
+                            "label": "City",
+                            "variable": "city",
+                            "required": true,
+                            "default": ""
+                          }
+                        }
+                      ],
+                      "file_upload": {
+                        "image": {
+                          "enabled": true,
+                          "number_limits": 3,
+                          "detail": "high",
+                          "transfer_methods": [
+                            "remote_url",
+                            "local_file"
+                          ]
+                        }
+                      },
+                      "system_parameters": {
+                        "file_size_limit": 15,
+                        "image_file_size_limit": 10,
+                        "audio_file_size_limit": 50,
+                        "video_file_size_limit": 100,
+                        "workflow_file_upload_limit": 10
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "`app_unavailable` : App unavailable or misconfigured.",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "app_unavailable": {
+                    "summary": "app_unavailable",
+                    "value": {
+                      "status": 400,
+                      "code": "app_unavailable",
+                      "message": "App unavailable, please check your app configurations."
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/meta": {
+      "get": {
+        "summary": "Get Agent App Meta",
+        "description": "Retrieve Agent app metadata, including tool icons and other runtime display metadata.",
+        "operationId": "getAgentAppMeta",
+        "tags": [
+          "Agent App"
+        ],
+        "responses": {
+          "200": {
+            "description": "Successfully retrieved application meta information.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppMetaResponse"
+                },
+                "examples": {
+                  "appMeta": {
+                    "summary": "Response Example",
+                    "value": {
+                      "tool_icons": {
+                        "dalle3": "https://example.com/icons/dalle3.png",
+                        "calculator": {
+                          "background": "#4A90D9",
+                          "content": "🧮"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "ApiKeyAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API_KEY",
+        "description": "API Key authentication. For all API requests, include your API Key in the `Authorization` HTTP Header, prefixed with `Bearer `. Example: `Authorization: Bearer {API_KEY}`. **Strongly recommend storing your API Key on the server-side, not shared or stored on the client-side, to avoid possible API-Key leakage that can lead to serious consequences.**"
+      }
+    },
+    "responses": {
+      "SuccessResult": {
+        "description": "Operation successful.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "type": "string",
+                  "description": "Result status."
+                }
+              }
+            },
+            "examples": {
+              "success": {
+                "summary": "Response Example",
+                "value": {
+                  "result": "success"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "RetrieverResource": {
+        "type": "object",
+        "description": "Citation and attribution information for a retriever resource.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique ID of the retriever resource."
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the message this resource belongs to."
+          },
+          "position": {
+            "type": "integer",
+            "description": "Position of the resource in the list."
+          },
+          "dataset_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the knowledge base."
+          },
+          "dataset_name": {
+            "type": "string",
+            "description": "Name of the knowledge base."
+          },
+          "document_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the document."
+          },
+          "document_name": {
+            "type": "string",
+            "description": "Name of the document."
+          },
+          "data_source_type": {
+            "type": "string",
+            "description": "Type of the data source."
+          },
+          "segment_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "ID of the specific chunk within the document."
+          },
+          "score": {
+            "type": "number",
+            "format": "float",
+            "description": "Similarity score of the resource."
+          },
+          "hit_count": {
+            "type": "integer",
+            "description": "Number of times this chunk was hit."
+          },
+          "word_count": {
+            "type": "integer",
+            "description": "Word count of the chunk."
+          },
+          "segment_position": {
+            "type": "integer",
+            "description": "Position of the chunk within the document."
+          },
+          "index_node_hash": {
+            "type": "string",
+            "description": "Hash of the index node."
+          },
+          "content": {
+            "type": "string",
+            "description": "Content snippet from the resource."
+          },
+          "summary": {
+            "type": "string",
+            "nullable": true,
+            "description": "Summary of the chunk content."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Creation timestamp (Unix epoch seconds)."
+          }
+        }
+      },
+      "FileUploadResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique file ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "File name."
+          },
+          "size": {
+            "type": "integer",
+            "description": "File size in bytes."
+          },
+          "extension": {
+            "type": "string",
+            "nullable": true,
+            "description": "File extension."
+          },
+          "mime_type": {
+            "type": "string",
+            "nullable": true,
+            "description": "MIME type of the file."
+          },
+          "created_by": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the user who uploaded the file."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Upload timestamp (Unix epoch seconds)."
+          },
+          "preview_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Preview URL for the file."
+          },
+          "source_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Source URL of the file."
+          },
+          "original_url": {
+            "type": "string",
+            "nullable": true,
+            "description": "Original URL of the file."
+          },
+          "user_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the associated user."
+          },
+          "tenant_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the associated tenant."
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "ID of the associated conversation."
+          },
+          "file_key": {
+            "type": "string",
+            "nullable": true,
+            "description": "Storage key for the file."
+          }
+        }
+      },
+      "ConversationHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page."
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether there are more messages."
+          },
+          "data": {
+            "type": "array",
+            "description": "List of messages.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationMessageItem"
+            }
+          }
+        }
+      },
+      "ConversationMessageItem": {
+        "type": "object",
+        "description": "A single message in a conversation.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Message ID."
+          },
+          "conversation_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Conversation ID."
+          },
+          "parent_message_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Parent message ID for threaded conversations."
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Input variables for this message."
+          },
+          "query": {
+            "type": "string",
+            "description": "User query text."
+          },
+          "answer": {
+            "type": "string",
+            "description": "Assistant answer text."
+          },
+          "status": {
+            "type": "string",
+            "description": "Message status. `normal` for successful messages, `error` when generation failed."
+          },
+          "error": {
+            "type": "string",
+            "nullable": true,
+            "description": "Error message if `status` is `error`."
+          },
+          "message_files": {
+            "type": "array",
+            "description": "Files attached to this message.",
+            "items": {
+              "$ref": "#/components/schemas/MessageFileItem"
+            }
+          },
+          "feedback": {
+            "type": "object",
+            "nullable": true,
+            "description": "User feedback for this message.",
+            "properties": {
+              "rating": {
+                "type": "string",
+                "description": "Feedback rating. `like` for positive, `dislike` for negative."
+              }
+            }
+          },
+          "retriever_resources": {
+            "type": "array",
+            "description": "Retriever resources used for this message.",
+            "items": {
+              "$ref": "#/components/schemas/RetrieverResource"
+            }
+          },
+          "agent_thoughts": {
+            "type": "array",
+            "description": "Agent thoughts for this message.",
+            "items": {
+              "$ref": "#/components/schemas/AgentThoughtItem"
+            }
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Creation timestamp (Unix epoch seconds)."
+          },
+          "extra_contents": {
+            "type": "array",
+            "description": "Additional execution content associated with this message, such as human input form data.",
+            "items": {
+              "type": "object",
+              "additionalProperties": true
+            }
+          }
+        }
+      },
+      "MessageFileItem": {
+        "type": "object",
+        "description": "A file attached to a message.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "File ID."
+          },
+          "filename": {
+            "type": "string",
+            "description": "Original filename."
+          },
+          "type": {
+            "type": "string",
+            "description": "File type, e.g., `image`."
+          },
+          "url": {
+            "type": "string",
+            "format": "url",
+            "nullable": true,
+            "description": "Preview URL for the file."
+          },
+          "mime_type": {
+            "type": "string",
+            "nullable": true,
+            "description": "MIME type of the file."
+          },
+          "size": {
+            "type": "integer",
+            "nullable": true,
+            "description": "File size in bytes."
+          },
+          "transfer_method": {
+            "type": "string",
+            "description": "Transfer method used. `remote_url` for URL-based files, `local_file` for uploaded files, `tool_file` for tool-generated files."
+          },
+          "belongs_to": {
+            "type": "string",
+            "nullable": true,
+            "description": "Who this file belongs to. `user` for user-uploaded files, `assistant` for assistant-generated files."
+          },
+          "upload_file_id": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "description": "Upload file ID if transferred via `local_file`."
+          }
+        }
+      },
+      "AgentThoughtItem": {
+        "type": "object",
+        "description": "An agent thought step in the message.",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Agent thought ID."
+          },
+          "chain_id": {
+            "type": "string",
+            "nullable": true,
+            "description": "Chain ID for this thought."
+          },
+          "message_id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Unique message ID this thought belongs to."
+          },
+          "position": {
+            "type": "integer",
+            "description": "Position of this thought."
+          },
+          "thought": {
+            "type": "string",
+            "description": "What LLM is thinking."
+          },
+          "tool": {
+            "type": "string",
+            "description": "Tools called, split by `;`."
+          },
+          "tool_labels": {
+            "type": "object",
+            "nullable": true,
+            "additionalProperties": true,
+            "description": "Labels for tools used."
+          },
+          "tool_input": {
+            "type": "string",
+            "description": "Input of tools in JSON format."
+          },
+          "observation": {
+            "type": "string",
+            "description": "Response from tool calls."
+          },
+          "files": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "File IDs related to this thought."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Creation timestamp."
+          }
+        }
+      },
+      "ConversationsListResponse": {
+        "type": "object",
+        "properties": {
+          "limit": {
+            "type": "integer",
+            "description": "Number of items per page."
+          },
+          "has_more": {
+            "type": "boolean",
+            "description": "Whether there are more conversations."
+          },
+          "data": {
+            "type": "array",
+            "description": "List of conversations.",
+            "items": {
+              "$ref": "#/components/schemas/ConversationListItem"
+            }
+          }
+        }
+      },
+      "ConversationListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Conversation ID."
+          },
+          "name": {
+            "type": "string",
+            "description": "Conversation name."
+          },
+          "inputs": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Input variables for the conversation."
+          },
+          "status": {
+            "type": "string",
+            "description": "Conversation status. `normal` for active conversations."
+          },
+          "introduction": {
+            "type": "string",
+            "description": "Conversation introduction."
+          },
+          "created_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Creation timestamp."
+          },
+          "updated_at": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Last update timestamp."
+          }
+        }
+      },
+      "AppInfoResponse": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Application name."
+          },
+          "description": {
+            "type": "string",
+            "description": "Application description."
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Application tags."
+          },
+          "mode": {
+            "type": "string",
+            "description": "Application mode. `chat` for basic chat apps, `agent-chat` for agent-based apps, `advanced-chat` for chatflow apps."
+          },
+          "author_name": {
+            "type": "string",
+            "description": "Name of the application author."
+          }
+        }
+      },
+      "ChatAppParametersResponse": {
+        "type": "object",
+        "properties": {
+          "opening_statement": {
+            "type": "string",
+            "description": "Opening statement displayed at conversation start."
+          },
+          "suggested_questions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of suggested starter questions."
+          },
+          "suggested_questions_after_answer": {
+            "type": "object",
+            "description": "Configuration for suggested questions after answer.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "speech_to_text": {
+            "type": "object",
+            "description": "Speech-to-text configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "text_to_speech": {
+            "type": "object",
+            "description": "Text-to-speech configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              },
+              "voice": {
+                "type": "string",
+                "description": "Voice identifier for TTS."
+              },
+              "language": {
+                "type": "string",
+                "description": "Language for TTS."
+              },
+              "autoPlay": {
+                "type": "string",
+                "description": "Auto-play setting. `enabled` to auto-play audio, `disabled` to require manual play."
+              }
+            }
+          },
+          "retriever_resource": {
+            "type": "object",
+            "description": "Retriever resource configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "annotation_reply": {
+            "type": "object",
+            "description": "Annotation reply configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "more_like_this": {
+            "type": "object",
+            "description": "More-like-this configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "sensitive_word_avoidance": {
+            "type": "object",
+            "description": "Sensitive word avoidance configuration.",
+            "properties": {
+              "enabled": {
+                "type": "boolean",
+                "description": "Whether this feature is enabled."
+              }
+            }
+          },
+          "user_input_form": {
+            "type": "array",
+            "description": "List of user input form elements.",
+            "items": {
+              "$ref": "#/components/schemas/UserInputFormItem"
+            }
+          },
+          "file_upload": {
+            "type": "object",
+            "description": "File upload configuration.",
+            "properties": {
+              "image": {
+                "type": "object",
+                "description": "Image upload settings.",
+                "properties": {
+                  "enabled": {
+                    "type": "boolean",
+                    "description": "Whether image upload is enabled."
+                  },
+                  "number_limits": {
+                    "type": "integer",
+                    "description": "Maximum number of images."
+                  },
+                  "detail": {
+                    "type": "string",
+                    "description": "Image detail level."
+                  },
+                  "transfer_methods": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    },
+                    "description": "Allowed transfer methods."
+                  }
+                }
+              }
+            }
+          },
+          "system_parameters": {
+            "type": "object",
+            "description": "System-level parameters and limits.",
+            "properties": {
+              "file_size_limit": {
+                "type": "integer",
+                "description": "Maximum file size in MB."
+              },
+              "image_file_size_limit": {
+                "type": "integer",
+                "description": "Maximum image file size in MB."
+              },
+              "audio_file_size_limit": {
+                "type": "integer",
+                "description": "Maximum audio file size in MB."
+              },
+              "video_file_size_limit": {
+                "type": "integer",
+                "description": "Maximum video file size in MB."
+              },
+              "workflow_file_upload_limit": {
+                "type": "integer",
+                "description": "Maximum number of files for workflow file upload."
+              }
+            }
+          }
+        }
+      },
+      "UserInputFormItem": {
+        "type": "object",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/TextInputControlWrapper"
+          },
+          {
+            "$ref": "#/components/schemas/ParagraphControlWrapper"
+          },
+          {
+            "$ref": "#/components/schemas/SelectControlWrapper"
+          }
+        ]
+      },
+      "TextInputControlWrapper": {
+        "title": "Text Input",
+        "type": "object",
+        "properties": {
+          "text-input": {
+            "$ref": "#/components/schemas/TextInputControl"
+          }
+        }
+      },
+      "ParagraphControlWrapper": {
+        "title": "Paragraph",
+        "type": "object",
+        "properties": {
+          "paragraph": {
+            "$ref": "#/components/schemas/ParagraphControl"
+          }
+        }
+      },
+      "SelectControlWrapper": {
+        "title": "Select",
+        "type": "object",
+        "properties": {
+          "select": {
+            "$ref": "#/components/schemas/SelectControl"
+          }
+        }
+      },
+      "TextInputControl": {
+        "type": "object",
+        "description": "Text input form control.",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Display label."
+          },
+          "variable": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Whether input is required."
+          },
+          "default": {
+            "type": "string",
+            "description": "Default value."
+          }
+        }
+      },
+      "ParagraphControl": {
+        "type": "object",
+        "description": "Paragraph (multi-line text) form control.",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Display label."
+          },
+          "variable": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Whether input is required."
+          },
+          "default": {
+            "type": "string",
+            "description": "Default value."
+          }
+        }
+      },
+      "SelectControl": {
+        "type": "object",
+        "description": "Select (dropdown) form control.",
+        "properties": {
+          "label": {
+            "type": "string",
+            "description": "Display label."
+          },
+          "variable": {
+            "type": "string",
+            "description": "Variable name."
+          },
+          "required": {
+            "type": "boolean",
+            "description": "Whether selection is required."
+          },
+          "default": {
+            "type": "string",
+            "description": "Default selected value."
+          },
+          "options": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "List of selectable values for this form control."
+          }
+        }
+      },
+      "AppMetaResponse": {
+        "type": "object",
+        "properties": {
+          "tool_icons": {
+            "type": "object",
+            "additionalProperties": {
+              "oneOf": [
+                {
+                  "title": "Icon URL",
+                  "type": "string",
+                  "format": "url",
+                  "description": "URL of the icon."
+                },
+                {
+                  "$ref": "#/components/schemas/ToolIconDetail"
+                }
+              ]
+            },
+            "description": "Tool icons. Keys are tool names."
+          }
+        }
+      },
+      "ToolIconDetail": {
+        "title": "Emoji Icon",
+        "type": "object",
+        "description": "Detail of a tool icon using emoji.",
+        "properties": {
+          "background": {
+            "type": "string",
+            "description": "Background color in hex format."
+          },
+          "content": {
+            "type": "string",
+            "description": "Emoji content."
+          }
+        }
+      },
+      "AgentChatRequest": {
+        "type": "object",
+        "required": [
+          "inputs",
+          "query",
+          "user"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "User message or task for the Agent app."
+          },
+          "inputs": {
+            "type": "object",
+            "description": "Values for variables configured in the Agent Soul. Call the Get Agent App Parameters API to discover expected variable names and input controls.",
+            "additionalProperties": true
+          },
+          "response_mode": {
+            "type": "string",
+            "enum": [
+              "streaming"
+            ],
+            "description": "Agent apps support streaming mode only. Set this field to `streaming` or omit it.",
+            "default": "streaming"
+          },
+          "user": {
+            "type": "string",
+            "description": "End-user identifier, unique within this Agent app. Conversations, messages, and uploaded files are scoped to the same `user` value."
+          },
+          "conversation_id": {
+            "type": "string",
+            "description": "Conversation ID to continue. Omit this field or pass an empty string to start a new conversation, then reuse the returned `conversation_id` in later requests."
+          },
+          "files": {
+            "type": "array",
+            "description": "Files for multimodal Agent input. To attach a local file, upload it with the Upload File API first, then pass the returned file `id` as `upload_file_id` with `transfer_method: local_file`.",
+            "items": {
+              "type": "object",
+              "required": [
+                "type",
+                "transfer_method"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "image",
+                    "document",
+                    "audio",
+                    "video",
+                    "custom"
+                  ],
+                  "description": "File type."
+                },
+                "transfer_method": {
+                  "type": "string",
+                  "enum": [
+                    "remote_url",
+                    "local_file"
+                  ],
+                  "description": "Transfer method: `remote_url` for file URL, `local_file` for uploaded file."
+                },
+                "url": {
+                  "type": "string",
+                  "format": "url",
+                  "description": "File URL (required when `transfer_method` is `remote_url`)."
+                },
+                "upload_file_id": {
+                  "type": "string",
+                  "description": "Uploaded file ID obtained from the [Upload File](/api-reference/files/upload-file) API (required when `transfer_method` is `local_file`)."
+                }
+              }
+            }
+          },
+          "auto_generate_name": {
+            "type": "boolean",
+            "description": "Auto-generate conversation title. If `false`, use the [Rename Conversation](/api-reference/conversations/rename-conversation) API with `auto_generate: true` for async title generation.",
+            "default": true
+          }
+        },
+        "description": "Request body for sending a message to an Agent app."
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Agent Messages",
+      "description": "Send Agent app messages and stop running tasks."
+    },
+    {
+      "name": "Agent Files",
+      "description": "Upload files for Agent app conversations."
+    },
+    {
+      "name": "Agent Conversations",
+      "description": "List Agent app conversations and conversation messages."
+    },
+    {
+      "name": "Agent App",
+      "description": "Retrieve Agent app parameters and metadata."
+    }
+  ]
+}
