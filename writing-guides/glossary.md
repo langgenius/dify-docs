@@ -212,7 +212,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| AI Credits | AI Credits | AI クレジット | common.modelProvider.quota | Renamed from "Message Credits" in v1.13.1. ZH uses English "AI Credits" in UI. |
+| AI Credits | AI 消息额度 | AI クレジット | common.modelProvider.quota | Renamed from "Message Credits" in v1.13.1. UI localizes the label (zh 消息额度, ja クレジット). |
 | Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI Credits. |
 | API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI Credits. |
 
