@@ -97,6 +97,8 @@ Creating additional workspaces beyond the one provisioned at install time is ava
 
 **Adjustable parameter guidance.** When documenting parameters users can tune (thresholds, limits, intervals), describe the trade-off direction—not a recommended value. Tell users what happens when they go higher vs. lower so they can decide based on their own context. For example: "Higher thresholds return fewer, more relevant results; lower thresholds include broader matches."
 
+**Limits and quotas.** Match the claim to the limit's source. A hardcoded product limit gets a plain number ("up to 50 MB"). A deployment-configurable limit states the default and names the environment variable, linked to the environment variable reference ("up to 15 MB by default; adjust with `UPLOAD_FILE_SIZE_LIMIT`"). Presenting a configurable default as a fixed rule breaks on any deployment that changed it.
+
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
 **Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck.
