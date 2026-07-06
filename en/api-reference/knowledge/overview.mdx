@@ -1,9 +1,84 @@
 ---
 title: Knowledge API
 sidebarTitle: Overview
-description: API for managing knowledge bases, documents, chunks, metadata, and tags, including creation, retrieval, and configuration
+description: API for managing knowledge bases, documents, chunks, metadata, tags, and knowledge pipelines
 ---
 
+The Knowledge API manages knowledge bases and their content directly, independent of any app. Each knowledge base exposes its own endpoints for documents, chunks, metadata, and tags, plus a retrieval endpoint you can call standalone for production search or retrieval testing.
+
 <Note>
-A single Knowledge Base API key has permission to operate on all visible knowledge bases under the same account. Please pay attention to data security.
+A single Knowledge Base API key has access to every knowledge base visible to the account that created it. Handle your keys carefully to avoid unintended data exposure.
 </Note>
+
+## Get Your API Endpoint and Key
+
+In **Knowledge**, click **Service API** in the top-right corner to open the API configuration panel. From here:
+
+- Copy the Service API endpoint, the base URL for every Knowledge API request.
+- Click **API Key** to create and manage keys.
+
+<Warning>
+Store your API key securely on the server side. Never expose it in client-side code or public repositories.
+</Warning>
+
+## Manage API Access for a Knowledge Base
+
+Every knowledge base is reachable through the Service API by default. To restrict a specific knowledge base, open it, click **API Access** in the bottom-left corner, and turn the toggle off.
+
+## Create and Manage Knowledge Bases
+
+[Create an Empty Knowledge Base](/en/api-reference/knowledge-bases/create-an-empty-knowledge-base) creates a knowledge base with no documents yet; add content afterward with [Create Document by Text](/en/api-reference/documents/create-document-by-text) or [Create Document by File](/en/api-reference/documents/create-document-by-file). The `permission` field controls who can access it, and `indexing_technique` chooses between `high_quality` embedding-based search and `economy` keyword-based search.
+
+[List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases) returns a paginated list, filterable by keyword or tag. [Get Knowledge Base](/en/api-reference/knowledge-bases/get-knowledge-base) returns one knowledge base's embedding model, retrieval configuration, and document statistics.
+
+[Update Knowledge Base](/en/api-reference/knowledge-bases/update-knowledge-base) changes only the fields you provide (name, permissions, embedding model, or retrieval settings), leaving the rest untouched. [Delete Knowledge Base](/en/api-reference/knowledge-bases/delete-knowledge-base) permanently removes the knowledge base and every document inside it.
+
+[Retrieve Chunks from a Knowledge Base / Test Retrieval](/en/api-reference/knowledge-bases/retrieve-chunks-from-a-knowledge-base-test-retrieval) searches the knowledge base and returns the most relevant chunks—the same endpoint handles both production retrieval and retrieval testing. Pass `retrieval_model` to override the default search settings, or `attachment_ids` to include uploaded attachments in the retrieval context.
+
+## Add and Update Documents
+
+[Create Document by Text](/en/api-reference/documents/create-document-by-text) and [Create Document by File](/en/api-reference/documents/create-document-by-file) add a document to a knowledge base from raw text or an uploaded file. Set `doc_form` to choose the chunking mode: `text_model` for standard chunking, `hierarchical_model` for parent-child chunks, or `qa_model` to extract question-answer pairs.
+
+If you didn't set `indexing_technique` when creating the knowledge base, set it on the first document—later documents inherit it automatically.
+
+Both create endpoints process the document asynchronously and return a `batch` ID. Poll [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status) with that ID until `indexing_status` reaches `completed` or `error`; it progresses through `waiting`, `parsing`, `cleaning`, `splitting`, and `indexing` along the way.
+
+[List Documents](/en/api-reference/documents/list-documents) returns a paginated list, filterable by keyword or status. [Get Document](/en/api-reference/documents/get-document) returns one document's indexing status, metadata, and processing statistics—its `metadata` query parameter controls whether the response includes, omits, or returns only the metadata fields.
+
+[Download Document](/en/api-reference/documents/download-document) returns a signed URL for the document's original uploaded file. [Download Documents as ZIP](/en/api-reference/documents/download-documents-as-zip) bundles up to 100 documents into a single archive for bulk download.
+
+[Update Document](/en/api-reference/documents/update-document) uploads a new file to replace an existing document's content and re-triggers indexing; it's the canonical way to update a document. [Update Document by Text](/en/api-reference/documents/update-document-by-text) and [Update Document by File](/en/api-reference/documents/update-document-by-file) are deprecated aliases kept for backward compatibility—use Update Document instead.
+
+[Update Document Status in Batch](/en/api-reference/documents/update-document-status-in-batch) enables, disables, archives, or restores multiple documents at once. [Delete Document](/en/api-reference/documents/delete-document) permanently removes a document and every chunk inside it.
+
+## Manage Chunks and Child Chunks
+
+[Create Chunks](/en/api-reference/chunks/create-chunks) adds one or more chunks to a document; each chunk requires `content`, and Q&A-mode documents (`qa_model`) also require `answer`. [List Chunks](/en/api-reference/chunks/list-chunks) returns a paginated list, filterable by status or keyword, and [Get Chunk](/en/api-reference/chunks/get-chunk) returns one chunk's content, keywords, and indexing status.
+
+[Update Chunk](/en/api-reference/chunks/update-chunk) changes a chunk's content, keywords, or answer and re-triggers indexing for that chunk. [Delete Chunk](/en/api-reference/chunks/delete-chunk) permanently removes it.
+
+For documents in Parent-child mode, [Create Child Chunk](/en/api-reference/chunks/create-child-chunk), [List Child Chunks](/en/api-reference/chunks/list-child-chunks), [Update Child Chunk](/en/api-reference/chunks/update-child-chunk), and [Delete Child Chunk](/en/api-reference/chunks/delete-child-chunk) manage chunks nested under a parent chunk. Chunks you create or update through the API are always marked `customized`, unlike the `automatic` chunks the indexing pipeline generates.
+
+## Manage Metadata Fields
+
+[Create Metadata Field](/en/api-reference/metadata/create-metadata-field) adds a custom field to the knowledge base, typed as `string`, `number`, or `time`. [List Metadata Fields](/en/api-reference/metadata/list-metadata-fields) returns every field, custom and built-in, with a count of documents using each.
+
+[Update Metadata Field](/en/api-reference/metadata/update-metadata-field) renames a custom field, and [Delete Metadata Field](/en/api-reference/metadata/delete-metadata-field) removes it—documents lose their values for that field. [Get Built-in Metadata Fields](/en/api-reference/metadata/get-built-in-metadata-fields) lists the system-provided fields, and [Update Built-in Metadata Field](/en/api-reference/metadata/update-built-in-metadata-field) enables or disables them for the knowledge base.
+
+[Update Document Metadata in Batch](/en/api-reference/metadata/update-document-metadata-in-batch) sets metadata key-value pairs across multiple documents in a single call.
+
+## Organize Knowledge Bases with Tags
+
+[Create Knowledge Tag](/en/api-reference/tags/create-knowledge-tag), [List Knowledge Tags](/en/api-reference/tags/list-knowledge-tags), [Update Knowledge Tag](/en/api-reference/tags/update-knowledge-tag), and [Delete Knowledge Tag](/en/api-reference/tags/delete-knowledge-tag) manage tags at the workspace level, independent of any single knowledge base. Deleting a tag removes it from every knowledge base it was bound to, without deleting those knowledge bases.
+
+[Create Tag Binding](/en/api-reference/tags/create-tag-binding) and [Delete Tag Binding](/en/api-reference/tags/delete-tag-binding) attach or remove tags on a specific knowledge base; a knowledge base can carry multiple tags. [Get Knowledge Base Tags](/en/api-reference/tags/get-knowledge-base-tags) returns the tags currently bound to one knowledge base.
+
+## Look Up Available Models
+
+[Get Available Models](/en/api-reference/models/get-available-models) lists the models available for a given `model_type`. For knowledge base configuration, query `text-embedding` to populate `embedding_model`, or `rerank` to populate a retrieval model's reranking configuration.
+
+## Run the Knowledge Pipeline
+
+A knowledge pipeline is a workflow that ingests data from a datasource and turns it into documents. [Upload Pipeline File](/en/api-reference/knowledge-pipeline/upload-pipeline-file) uploads a file for the pipeline to process, and [List Datasource Plugins](/en/api-reference/knowledge-pipeline/list-datasource-plugins) returns the datasource nodes configured in it—published by default, or draft with `is_published=false`.
+
+[Run Datasource Node](/en/api-reference/knowledge-pipeline/run-datasource-node) executes a single datasource node and streams its results, useful for testing one step in isolation. [Run Pipeline](/en/api-reference/knowledge-pipeline/run-pipeline) executes the full pipeline in `streaming` or `blocking` response mode; set `is_published` to run the published version or the current draft.
