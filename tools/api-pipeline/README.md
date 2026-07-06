@@ -6,11 +6,12 @@ Consolidates the five per-app-type Service API specs into one `openapi_service.j
 
 | File | Role |
 |:-----|:-----|
-| `merge_specs.py` | The pipeline: `analyze`, `build`, `wire`, `relink` modes |
+| `merge_specs.py` | The pipeline: `analyze`, `build`, `wire`, `relink`, `check-coverage` modes |
 | `resolutions.json` | Explicit choice for every divergence between the five input specs |
 | `overrides/strings.json` | Per-language strings injected by resolutions (mode notes, merged descriptions) |
 | `overrides/chat-messages-sse.{en,zh,ja}.md` | Hand-merged mode-aware SSE documentation for `POST /chat-messages` |
-| `nav_labels.json` | docs.json group labels, group order, overview-page strings |
+| `nav_labels.json` | docs.json Guides order, two-tier reference config, per-group op ordering |
+| `memberships.json` | App type → supported operations; drives availability lines, app-type pages, and the coverage lint |
 | `lint_specs.py` | Example/schema, enum, link, and x-codeSamples lint (all specs) |
 | `parity_check.py` | en/zh/ja structural parity |
 | `coverage_matrix.py`, `swagger_diff.py`, `compose.swagger.yml` | Audit-era code-vs-spec tooling, kept for runtime verification |
@@ -29,7 +30,7 @@ DOCS="$PWD" python3 tools/api-pipeline/parity_check.py
 
 - `build` refuses to run while any spec divergence lacks a `resolutions.json` entry; unresolved same-name components are namespaced per spec (rendering-preserving) and printed.
 - `build --report` writes per-language render-diff reports: every operation whose fully-dereferenced rendering differs from its source spec, for review.
-- `wire` regenerates the API menu groups in docs.json (all languages × products), the legacy-URL redirects (flattening chains), and per-app-type `overview.mdx` pages (only if missing — hand edits survive).
+- `wire` regenerates the three-group API menu in docs.json (Guides / App APIs / Knowledge API, all languages × products) and the legacy-URL redirects (flattening chains). The per-app-type `overview.mdx` pages are hand-maintained content; `check-coverage` fails the build if a page misses a supported endpoint link.
 - `relink` rewrites legacy `/api-reference/...` links in MDX bodies to the new language-prefixed URLs.
 
 ## URL scheme
