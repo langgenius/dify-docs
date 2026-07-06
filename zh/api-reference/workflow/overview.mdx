@@ -1,7 +1,47 @@
 ---
 title: 工作流应用 API
 sidebarTitle: 概览
-description: 工作流应用提供无会话支持，适用于翻译、文章写作、摘要 AI 等场景
+description: 工作流应用 API，涵盖工作流执行、运行控制与流式传输、人工介入暂停、运行历史查询
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/api-reference/workflow/overview)。
+
+工作流应用运行在 `workflow` 模式下，每次调用执行一次已发布的工作流并返回其输出。调用之间不保留会话状态，每次运行都相互独立。
+
+## 运行工作流
+
+[执行工作流](/zh/api-reference/workflow-runs/run-workflow) 使用提供的输入变量，执行应用当前已发布的工作流。[按 ID 执行工作流](/zh/api-reference/workflow-runs/run-workflow-by-id) 可执行指定的已发布版本，其 `workflow_id` 来自此前的运行响应或运行详情查询结果。
+
+## 跟踪与控制运行
+
+将运行接口的 `response_mode` 设为 `streaming`，可在工作流执行过程中实时获取事件；设为 `blocking`，则需等待完整结果返回。无论选择哪种模式，响应都会携带两个 ID：`task_id` 用于控制运行中的任务，`workflow_run_id` 用于标识运行结束后持久保存的记录。
+
+[停止工作流任务](/zh/api-reference/workflow-runs/stop-workflow-task) 通过 `task_id` 取消运行中的任务，但仅适用于 `streaming` 模式；`blocking` 模式下调用返回时任务已执行完毕，无法取消。当连接中断或运行暂停时，[流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 可从 `workflow_run_id` 处恢复事件流。传入 `include_state_snapshot=true` 可先重放已执行节点的状态，传入 `continue_on_pause=true` 可在多次人工介入暂停时保持流连接不中断。
+
+## 人工介入暂停
+
+当运行在人工介入节点暂停时，事件流会推送一个携带 `form_token` 的 `human_input_required` 事件，与 `workflow_paused` 事件一同出现后即关闭。若该节点的投递方式为 WebApp，可通过 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 获取表单内容，再通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交接收者的填写结果。
+
+提交表单后运行会恢复执行；若接收者未及时响应，且已配置超时回退路径，工作流会转而执行该路径。无论哪种情况，都可使用暂停前事件流中的 `workflow_run_id`，通过 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 继续跟踪后续事件。
+
+## 查看历史运行
+
+[获取工作流执行情况](/zh/api-reference/workflow-runs/get-workflow-run-detail) 可根据指定的 `workflow_run_id` 查询运行的状态与输出。[获取工作流日志](/zh/api-reference/workflow-runs/list-workflow-logs) 返回的是运行级别的汇总信息（状态、token 用量、步骤数、耗时），而非逐节点的执行日志；可按关键词、状态、时间范围或触发运行的终端用户进行筛选。
+
+如需查看逐节点的执行详情，应流式跟踪运行本身，而非查看日志：对尚未开始的运行，可在 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 中设置 `response_mode=streaming`；对已在执行中的运行，可使用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events)。
+
+## 处理文件
+
+[上传文件](/zh/api-reference/files/upload-file) 用于上传图片、文档、音频或视频文件，供工作流运行引用。调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 或 [按 ID 执行工作流](/zh/api-reference/workflow-runs/run-workflow-by-id) 时，可在文件类型的输入变量中传入返回的 `id` 作为 `upload_file_id`；工作流应用不提供预览或下载已上传文件的接口。
+
+当某个响应只返回终端用户 ID（例如上传文件响应中的 `created_by`）而非完整信息时，可通过 [获取终端用户信息](/zh/api-reference/end-users/get-end-user-info) 查询详情。
+
+## 语音转写与合成
+
+[语音转文字](/zh/api-reference/audio/convert-audio-to-text) 可将上传的音频文件（MP3、M4A、WAV、AMR 或 MPGA，最大 30 MB）转写为文字，让终端用户用语音代替手动输入取值。[文字转语音](/zh/api-reference/audio/convert-text-to-audio) 可将工作流的文本输出合成为语音。
+
+## 获取应用信息与配置
+
+[获取应用基本信息](/zh/api-reference/applications/get-app-info) 返回应用的名称、描述、标签和模式。[获取应用参数](/zh/api-reference/applications/get-app-parameters) 返回输入表单配置：功能开关、输入参数名称、类型及默认值，可用于构建客户端界面。
+
+[获取应用元数据](/zh/api-reference/applications/get-app-meta) 返回工具图标等配置元数据。[获取应用 WebApp 设置](/zh/api-reference/applications/get-app-webapp-settings) 返回 WebApp 的站点配置、主题和自定义选项。
