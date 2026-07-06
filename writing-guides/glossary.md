@@ -227,14 +227,9 @@ Terms in this section must match the Dify product interface exactly. When these 
 
 ### Workspace Roles
 
-| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
-|:-------------|:-------------|:--------------|:---------|:------|
-| Owner | 所有者 | オーナー | common.members.owner | |
-| Admin | 管理员 | 管理者 | common.members.admin | |
-| Editor | 编辑 | エディター | common.members.editor | |
-| Builder | 构建器 | ビルダー | common.members.builder | REVIEW: ZH "构建器" seems unusual for a role name |
-| Knowledge Admin | 知识库管理员 | ナレッジ管理員 | common.members.datasetOperator | Formerly "Dataset Operator" in code |
-| Normal | 成员 | 通常 | common.members.normal | REVIEW: ZH uses "成员" (member); verify intended translation |
+Role **names are not localized**. The member UI renders `role.name` raw from RBAC/backend data (`web/app/components/header/account-setting/members-page/member-row.tsx`); the `common.members.<role>` name keys were removed, leaving only the `common.members.<role>Tip` descriptions. Built-in roles display as English identifiers in every language, and custom RBAC roles show their own names. **In docs, use the English role names in all languages** (zh/ja included) to match the UI.
+
+Built-in roles: Owner, Admin, Editor, Builder, Knowledge Admin (code: `datasetOperator`), Normal. The UI renders them lowercase (`owner`, `admin`, …); docs capitalize them for readability.
 
 ### App Type Selectors
 
