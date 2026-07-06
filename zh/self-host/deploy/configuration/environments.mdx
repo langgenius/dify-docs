@@ -118,6 +118,8 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 
 如果用户通过 `localhost` 以外的主机访问 Dify，将 `NEXT_PUBLIC_SOCKET_URL` 设置为浏览器可访问的 WebSocket URL（参见 [CORS 配置](#cors-配置)）。默认值 `ws://localhost` 仅适用于本地访问场景。
 
+承载协作流量的专用 `api_websocket` 容器可通过 [容器启动配置](#容器启动配置) 中的 `API_WEBSOCKET_*` 变量调优。
+
 如需禁用协作功能，将此值设为 `false`。使用 Docker Compose 时，还需从 `COMPOSE_PROFILES` 中移除 `collaboration`，否则专用的 `api_websocket` 容器会持续运行但无任何流量。
 
 如果使用自己的反向代理，需在 `/socket.io/` 路径上转发 `Upgrade` 与 `Connection` 请求头（Dify 自带的 nginx 模板已包含此配置）。多 API 副本部署需启用会话保持（sticky sessions）。
@@ -199,8 +201,9 @@ openssl rand -base64 42
 | `SERVER_WORKER_CLASS` | `gevent` | Gunicorn 工作进程类型。保持默认值；其他值会破坏 psycopg2 和 gRPC 补丁。 |
 | `SERVER_WORKER_CONNECTIONS` | `10` | 每个工作进程的最大并发连接数。仅适用于异步工作进程（gevent）。如果在高负载下遇到连接拒绝或响应缓慢，尝试增大此值。 |
 | `GUNICORN_TIMEOUT` | `360` | 如果工作进程在此秒数内没有响应，Gunicorn 将终止并重启它。设为 360（6 分钟）以支持用于流式 LLM 响应的长连接 SSE。 |
+| `API_WEBSOCKET_WORKER_AMOUNT` | `1` | 仅适用于 Docker Compose。专用 `api_websocket` 容器（为实时协作提供 WebSocket 服务）的 Gunicorn 工作进程数。协作事件通过 Redis 跨进程同步，因此可放心调高；当单个进程在大量并发编辑下占满一个 CPU 核心时再增加。 |
 | `API_WEBSOCKET_WORKER_CLASS` | `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` | 仅适用于 Docker Compose。专用 `api_websocket` 容器的工作进程类型。保持默认值；其他值会破坏 WebSocket 支持。 |
-| `API_WEBSOCKET_WORKER_CONNECTIONS` | `1000` | 仅适用于 Docker Compose。`api_websocket` 容器可同时接受的 WebSocket 连接数上限。每个打开的工作流编辑器标签页占用一个连接，因此默认值最多支持 1000 个并发编辑会话；如有更多需求可调高此值。 |
+| `API_WEBSOCKET_WORKER_CONNECTIONS` | `1000` | 仅适用于 Docker Compose。每个 `api_websocket` 工作进程可同时接受的 WebSocket 连接数上限。每个打开的工作流编辑器标签页占用一个连接，因此默认值下每个进程最多支持 1000 个并发编辑会话；如有更多需求，可调高此值或增加进程数。 |
 | `API_WEBSOCKET_GUNICORN_TIMEOUT` | `360` | 仅适用于 Docker Compose。`api_websocket` 工作进程在此秒数内无响应时，Gunicorn 会将其重启。默认值 360 秒（6 分钟）适用于长时间保持的 WebSocket 连接。 |
 | `CELERY_WORKER_CLASS` | （空；默认为 gevent） | Celery 工作进程类型，与 `SERVER_WORKER_CLASS` 有相同的 gevent 补丁要求。强烈不建议修改。 |
 | `CELERY_WORKER_AMOUNT` | `4` | Celery 工作进程数。仅在禁用自动扩缩时使用。资源受限的 VM 可适当降低；若需弹性吞吐，建议启用 `CELERY_AUTO_SCALE` 而非仅调高此值。 |

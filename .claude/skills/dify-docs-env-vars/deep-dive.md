@@ -1511,3 +1511,26 @@ Creator Center is the submission portal where users upload Dify apps as DSL temp
 - UI labels: `common.publishToMarketplace` in `web/i18n/{en-US,zh-Hans,ja-JP}/workflow.json`
 
 **Naming note:** Env var prefix is `CREATORS_PLATFORM_*` and the backend Pydantic class is `CreatorsPlatformConfig`, but the user-facing product name is **Creator Center** and the UI button reads "Publish to Marketplace" (templates appear on Marketplace after Creator Center review). Use "Creator Center" in user-facing prose; the prefix is a backend-only artifact.
+
+---
+
+## 1.16 Additions (traced 2026-07-06)
+
+### API_WEBSOCKET_WORKER_AMOUNT
+
+**Default:** `1`
+
+**What it actually does:** Sets the number of Gunicorn worker processes in the dedicated `api_websocket` container (Docker Compose `collaboration` profile). The compose template maps it onto the container's `SERVER_WORKER_AMOUNT`, which `api/docker/entrypoint.sh` passes to Gunicorn as `--workers` when launching `app:socketio_app`. Also present in `docker/envs/core-services/shared.env.example`.
+
+Before 1.16.0 the worker count was hardcoded to `1` because Socket.IO room state was process-local: room broadcasts didn't cross worker boundaries, and a session connected to another worker was treated as inactive. dify PR #38242 added a Redis-backed Socket.IO manager plus worker-ownership and heartbeat tracking for collaboration sessions, so multi-worker (and multi-pod) websocket deployments now behave correctly.
+
+**Behavior by var state:**
+
+- Unset / `1`: single websocket worker, same as pre-1.16 behavior.
+- `>1`: multiple Gunicorn workers share collaboration traffic; events relay across workers through Redis.
+
+**Key code locations:**
+
+- Compose mapping: `docker/docker-compose-template.yaml` (`api_websocket` service)
+- Gunicorn launch: `api/docker/entrypoint.sh`
+- Cross-worker sync: Socket.IO Redis manager (dify PR #38242)
