@@ -10,6 +10,7 @@
 | Chatflow | 对话流 | チャットフロー |
 | workflow | 工作流 | ワークフロー |
 | Agent | Agent | Agent |
+| Agent app | Agent 应用 | Agent アプリ |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
@@ -17,6 +18,7 @@
 | workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
 | WebApp | WebApp | WebApp |
+| end user | 终端用户 | エンドユーザー |
 
 ### Models
 
@@ -71,7 +73,7 @@
 | Trigger | 触发器 | トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
-| Integration Trigger | 集成触发器 | 統合トリガー |
+| Integration Trigger | 集成触发器 | インテグレーショントリガー |
 | Command | 命令 | コマンド |
 | Upload File to Sandbox | 上传文件至沙盒 | サンドボックスへのファイルアップロード |
 
@@ -161,7 +163,7 @@
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
 | Explore | 探索 | 探索 |
-| Integrations | 集成 | 統合 |
+| Integrations | 集成 | インテグレーション |
 | Tools | 工具 | ツール |
 
 ### App Detail Tabs
@@ -202,7 +204,7 @@
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
-| AI Credits | AI Credits | AI クレジット |
+| AI Credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
 | API Key | API Key | API キー |
 
@@ -214,17 +216,6 @@
 | Professional | Professional | Professional |
 | Team | Team | Team |
 | Upgrade | 升级 | アップグレード |
-
-### Workspace Roles
-
-| English | Chinese | Japanese |
-|:--------|:--------|:---------|
-| Owner | 所有者 | オーナー |
-| Admin | 管理员 | 管理者 |
-| Editor | 编辑 | エディター |
-| Builder | 构建器 | ビルダー |
-| Knowledge Admin | 知识库管理员 | ナレッジ管理員 |
-| Normal | 成员 | 通常 |
 
 ### App Type Selectors
 
@@ -271,7 +262,7 @@
 | Human Input | 人工介入 | 人間の入力 |
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
-| Integration Trigger | 集成触发器 | 統合トリガー |
+| Integration Trigger | 集成触发器 | インテグレーショントリガー |
 | Knowledge Base | 知识库 | 知識ベース |
 
 ### Workflow Controls
@@ -309,6 +300,8 @@
 | Select | 下拉选项 | 選択 |
 | Number | 数字 | 数値 |
 | Checkbox | 复选框 | チェックボックス |
+| Single File | 单文件 | 単一ファイル |
+| File List | 文件列表 | ファイルリスト |
 | API-based Variable | 基于 API 的变量 | API ベースの変数 |
 | Label Name | 显示名称 | ラベル名 |
 
