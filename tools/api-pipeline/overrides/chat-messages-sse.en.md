@@ -43,7 +43,7 @@ Each event nests its payload under a `data` object.
 | `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |
 | `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |
 
-After a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflows/stream-workflow-events).
+After a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events).
 
 **Transport events**
 

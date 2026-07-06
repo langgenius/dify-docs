@@ -56,15 +56,11 @@
       "description": "与管理标注直接回复相关的操作。"
     },
     {
-      "name": "对话流",
-      "description": "对话流应用的操作，包括对话消息、工作流执行详情和事件流。"
-    },
-    {
       "name": "人工介入",
       "description": "暂停等待人工输入的工作流恢复操作。"
     },
     {
-      "name": "工作流",
+      "name": "工作流运行",
       "description": "用于执行和管理工作流的操作。"
     },
     {
@@ -206,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：聊天助手应用的回复以 `message` 事件流式返回，Agent 应用则以 `agent_thought` 与 `agent_message` 事件返回。流以 `message_end` 结束；开启文本转语音（TTS）自动播放时，`tts_message` 事件会穿插其间，`tts_message_end` 成为最后一个事件。\n\n对话流应用中，工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回（设置 `reasoning_format: separated` 的 LLM 节点还会同时发送 `reasoning_chunk` 事件，承载模型的推理内容）。开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\nNew Agent 应用的回复以 `message` 事件流式返回，并以 `message_end` 结束；模型的推理和工具调用过程不会作为流事件暴露。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（对话流应用）还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、对话流、New Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；对话流应用还包含 `reason` |\n| `reasoning_chunk` | 对话流 | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent、对话流 | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅对话流应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflows/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
+                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：聊天助手应用的回复以 `message` 事件流式返回，Agent 应用则以 `agent_thought` 与 `agent_message` 事件返回。流以 `message_end` 结束；开启文本转语音（TTS）自动播放时，`tts_message` 事件会穿插其间，`tts_message_end` 成为最后一个事件。\n\n对话流应用中，工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回（设置 `reasoning_format: separated` 的 LLM 节点还会同时发送 `reasoning_chunk` 事件，承载模型的推理内容）。开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\nNew Agent 应用的回复以 `message` 事件流式返回，并以 `message_end` 结束；模型的推理和工具调用过程不会作为流事件暴露。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（对话流应用）还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、对话流、New Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；对话流应用还包含 `reason` |\n| `reasoning_chunk` | 对话流 | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent、对话流 | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅对话流应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -387,7 +383,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/chats/send-chat-message"
+          "href": "/zh/api-reference/chat-messages/send-chat-message"
         }
       }
     },
@@ -404,7 +400,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [发送对话消息](/zh/api-reference/chats/send-chat-message) API 的流式分块返回中获取。",
+            "description": "任务 ID，可以从 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message) API 的流式分块返回中获取。",
             "schema": {
               "type": "string"
             }
@@ -460,7 +456,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/chats/stop-chat-message-generation"
+          "href": "/zh/api-reference/chat-messages/stop-chat-message-generation"
         }
       }
     },
@@ -584,7 +580,7 @@
           }
         ],
         "x-mint": {
-          "href": "/zh/api-reference/chats/get-next-suggested-questions"
+          "href": "/zh/api-reference/chat-messages/get-next-suggested-questions"
         }
       }
     },
@@ -1931,7 +1927,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/tts/convert-audio-to-text"
+          "href": "/zh/api-reference/audio/convert-audio-to-text"
         }
       }
     },
@@ -2044,7 +2040,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/tts/convert-text-to-audio"
+          "href": "/zh/api-reference/audio/convert-text-to-audio"
         }
       }
     },
@@ -2708,7 +2704,7 @@
         "description": "根据工作流执行 ID 获取工作流任务的当前执行结果。",
         "operationId": "getWorkflowRunDetailCn",
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "parameters": [
           {
@@ -2788,17 +2784,17 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/workflows/get-workflow-run-detail"
+          "href": "/zh/api-reference/workflow-runs/get-workflow-run-detail"
         }
       }
     },
     "/workflows/logs": {
       "get": {
         "summary": "获取工作流日志",
-        "description": "列出过往的工作流运行，支持可选筛选。每条记录是运行级摘要（状态、Token 用量、步数和耗时），而非逐节点的执行日志。\n\n如需跟踪某次运行的节点级事件，请改用流式方式：\n\n- **自行发起的运行**：以流式模式调用 [执行工作流](/zh/api-reference/workflows/run-workflow)，运行执行时会发送 `node_started` 和 `node_finished` 事件。\n- **已在进行中的运行**：调用 [流式获取工作流事件](/zh/api-reference/workflows/stream-workflow-events) 并附带 `include_state_snapshot=true`，先重放各已执行节点的状态，再流式发送其余事件。\n\n已结束运行的节点级日志无法通过服务 API 获取。",
+        "description": "列出过往的工作流运行，支持可选筛选。每条记录是运行级摘要（状态、Token 用量、步数和耗时），而非逐节点的执行日志。\n\n如需跟踪某次运行的节点级事件，请改用流式方式：\n\n- **自行发起的运行**：以流式模式调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，运行执行时会发送 `node_started` 和 `node_finished` 事件。\n- **已在进行中的运行**：调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 并附带 `include_state_snapshot=true`，先重放各已执行节点的状态，再流式发送其余事件。\n\n已结束运行的节点级日志无法通过服务 API 获取。",
         "operationId": "getWorkflowLogsCn",
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "parameters": [
           {
@@ -2931,7 +2927,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/workflows/list-workflow-logs"
+          "href": "/zh/api-reference/workflow-runs/list-workflow-logs"
         }
       }
     },
@@ -3404,7 +3400,7 @@
     "/workflow/{workflow_run_id}/events": {
       "get": {
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "summary": "流式获取工作流事件",
         "description": "在工作流运行暂停或原始 SSE 连接断开后恢复 Server-Sent Events 流。对于已结束的运行，流仅发送单个 `workflow_finished` 事件后关闭。\n\n如需查看进行中运行的节点级状态与进度，可在调用时附带 `include_state_snapshot=true`：流会先重放各已执行节点的状态，再流式发送新事件。",
@@ -3457,7 +3453,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "已恢复工作流运行的事件 SSE 流，格式与 [执行工作流](/zh/api-reference/workflows/run-workflow)（工作流应用）或 [发送对话消息](/zh/api-reference/chats/send-chat-message)（对话流应用）相同。当恢复部分运行设置 `reasoning_format: separated` 的 LLM 节点时，本流还会携带 `reasoning_chunk` 事件。"
+                  "description": "已恢复工作流运行的事件 SSE 流，格式与 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)（工作流应用）或 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)（对话流应用）相同。当恢复部分运行设置 `reasoning_format: separated` 的 LLM 节点时，本流还会携带 `reasoning_chunk` 事件。"
                 },
                 "examples": {
                   "resumedRun": {
@@ -3520,7 +3516,7 @@
           }
         ],
         "x-mint": {
-          "href": "/zh/api-reference/workflows/stream-workflow-events"
+          "href": "/zh/api-reference/workflow-runs/stream-workflow-events"
         }
       }
     },
@@ -3530,7 +3526,7 @@
         "description": "执行工作流。没有已发布的工作流时无法执行。",
         "operationId": "executeWorkflowCn",
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "requestBody": {
           "required": true,
@@ -3736,7 +3732,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/workflows/run-workflow"
+          "href": "/zh/api-reference/workflow-runs/run-workflow"
         }
       }
     },
@@ -3746,14 +3742,14 @@
         "description": "通过 ID 执行指定的工作流版本。适用于运行工作流的特定已发布版本。",
         "operationId": "runWorkflowByIdZh",
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "parameters": [
           {
             "name": "workflow_id",
             "in": "path",
             "required": true,
-            "description": "要执行的特定版本的工作流 ID。此值在 [执行工作流](/zh/api-reference/workflows/run-workflow) 响应和 [获取工作流运行详情](/zh/api-reference/workflows/get-workflow-run-detail) 的 `workflow_id` 字段中返回。",
+            "description": "要执行的特定版本的工作流 ID。此值在 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 响应和 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 的 `workflow_id` 字段中返回。",
             "schema": {
               "type": "string"
             }
@@ -3957,7 +3953,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/workflows/run-workflow-by-id"
+          "href": "/zh/api-reference/workflow-runs/run-workflow-by-id"
         }
       }
     },
@@ -3967,14 +3963,14 @@
         "description": "停止正在运行的工作流任务。仅在 `streaming` 模式下支持。",
         "operationId": "stopWorkflowTaskGenerationCn",
         "tags": [
-          "工作流"
+          "工作流运行"
         ],
         "parameters": [
           {
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [执行工作流](/zh/api-reference/workflows/run-workflow) API 的流式分块返回中获取。",
+            "description": "任务 ID，可以从 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) API 的流式分块返回中获取。",
             "schema": {
               "type": "string"
             }
@@ -3992,7 +3988,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，仅用于标识请求的终端用户，无需与 [执行工作流](/zh/api-reference/workflows/run-workflow) 请求传入的 `user` 一致；停止对该任务始终生效。"
+                    "description": "用户标识符，仅用于标识请求的终端用户，无需与 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 请求传入的 `user` 一致；停止对该任务始终生效。"
                   }
                 }
               },
@@ -4038,7 +4034,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/workflows/stop-workflow-task"
+          "href": "/zh/api-reference/workflow-runs/stop-workflow-task"
         }
       }
     },
@@ -4238,7 +4234,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/completions/send-completion-message"
+          "href": "/zh/api-reference/completion-messages/send-completion-message"
         }
       }
     },
@@ -4255,7 +4251,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [发送消息](/zh/api-reference/completions/send-completion-message) API 的流式分块返回中获取。",
+            "description": "任务 ID，可以从 [发送消息](/zh/api-reference/completion-messages/send-completion-message) API 的流式分块返回中获取。",
             "schema": {
               "type": "string"
             }
@@ -4319,7 +4315,7 @@
           }
         },
         "x-mint": {
-          "href": "/zh/api-reference/completions/stop-completion-message-generation"
+          "href": "/zh/api-reference/completion-messages/stop-completion-message-generation"
         }
       }
     },
@@ -12921,7 +12917,7 @@
           "external_user_id": {
             "type": "string",
             "nullable": true,
-            "description": "API 请求中提供的 `user` 标识符（例如 [发送对话消息](/zh/api-reference/chats/send-chat-message) 中的 `user` 字段）。"
+            "description": "API 请求中提供的 `user` 标识符（例如 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message) 中的 `user` 字段）。"
           },
           "name": {
             "type": "string",
@@ -15100,7 +15096,7 @@
                 "properties": {
                   "workflow_run_id": {
                     "type": "string",
-                    "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflows/get-workflow-run-detail) 使用以在执行后获取结果。"
+                    "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 使用以在执行后获取结果。"
                   },
                   "paused_nodes": {
                     "type": "array",
@@ -15888,12 +15884,12 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "进行中的执行任务 ID。配合 [停止工作流任务](/zh/api-reference/workflows/stop-workflow-task) 使用以取消运行中的工作流。仅在执行期间有效。"
+            "description": "进行中的执行任务 ID。配合 [停止工作流任务](/zh/api-reference/workflow-runs/stop-workflow-task) 使用以取消运行中的工作流。仅在执行期间有效。"
           },
           "workflow_run_id": {
             "type": "string",
             "format": "uuid",
-            "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflows/get-workflow-run-detail) 使用以在执行后获取结果。"
+            "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 使用以在执行后获取结果。"
           },
           "data": {
             "$ref": "#/components/schemas/WorkflowFinishedData"
@@ -16194,12 +16190,12 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "进行中的执行任务 ID。配合 [停止工作流任务](/zh/api-reference/workflows/stop-workflow-task) 使用以取消运行中的工作流。仅在执行期间有效。"
+            "description": "进行中的执行任务 ID。配合 [停止工作流任务](/zh/api-reference/workflow-runs/stop-workflow-task) 使用以取消运行中的工作流。仅在执行期间有效。"
           },
           "workflow_run_id": {
             "type": "string",
             "format": "uuid",
-            "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflows/get-workflow-run-detail) 使用以在执行后获取结果。"
+            "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 使用以在执行后获取结果。"
           }
         }
       },
@@ -17129,7 +17125,7 @@
                   "workflow_run_id": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflows/get-workflow-run-detail) 使用以在执行后获取结果。"
+                    "description": "此工作流运行记录的持久化标识符。配合 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 使用以在执行后获取结果。"
                   },
                   "paused_nodes": {
                     "type": "array",
@@ -17360,7 +17356,7 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "用于请求追踪和 [停止响应](/zh/api-reference/completions/stop-completion-message-generation) API 的任务 ID。"
+            "description": "用于请求追踪和 [停止响应](/zh/api-reference/completion-messages/stop-completion-message-generation) API 的任务 ID。"
           },
           "id": {
             "type": "string",

@@ -43,7 +43,7 @@ New Agent 应用的回复以 `message` 事件流式返回，并以 `message_end`
 | `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |
 | `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |
 
-暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflows/stream-workflow-events) 流式返回。
+暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。
 
 **传输事件**
 

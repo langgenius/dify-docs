@@ -56,15 +56,11 @@
       "description": "ダイレクト返信用のアノテーション管理に関連する操作です。"
     },
     {
-      "name": "チャットフロー",
-      "description": "チャットフローアプリケーションの操作です（チャットメッセージ、ワークフロー実行詳細、イベントストリーミングを含む）。"
-    },
-    {
       "name": "人間の入力",
       "description": "人間の入力を要する一時停止中のワークフローの再開操作です。"
     },
     {
-      "name": "ワークフロー",
+      "name": "ワークフロー実行",
       "description": "ワークフローの実行と管理のための操作です。"
     },
     {
@@ -206,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：チャットボットアプリでは、回答は `message` イベントとしてストリーミングされます。Agent アプリでは `agent_thought` と `agent_message` イベントになります。ストリームは `message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\nチャットフローアプリでは、ワークフローの進行は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループの各バリアント）として、回答は `message` イベントとしてストリーミングされます（`reasoning_format: separated` を指定した LLM ノードは、モデルの思考過程を伝える `reasoning_chunk` イベントも並行して発行します）。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。終了シーケンスは実行結果によって異なります：\n- **成功**：`message_end`、続いて `workflow_finished`\n- **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` は送信されません\n- **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\nNew Agent アプリでは、回答は `message` イベントとしてストリーミングされ、`message_end` で終了します。モデルの推論やツール使用はストリームイベントとして公開されません。`message_end` の `metadata` には `usage` が含まれ（アノテーションが一致した場合は `annotation_reply` も含まれます）、`retriever_resources` は含まれません。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（チャットフローアプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、チャットフロー、New Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_message` | Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。チャットフローでは `reason` も含む |\n| `reasoning_chunk` | チャットフロー | 思考過程の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは思考の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、チャットフロー | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（チャットフローアプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflows/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
+                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：チャットボットアプリでは、回答は `message` イベントとしてストリーミングされます。Agent アプリでは `agent_thought` と `agent_message` イベントになります。ストリームは `message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\nチャットフローアプリでは、ワークフローの進行は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループの各バリアント）として、回答は `message` イベントとしてストリーミングされます（`reasoning_format: separated` を指定した LLM ノードは、モデルの思考過程を伝える `reasoning_chunk` イベントも並行して発行します）。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。終了シーケンスは実行結果によって異なります：\n- **成功**：`message_end`、続いて `workflow_finished`\n- **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` は送信されません\n- **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\nNew Agent アプリでは、回答は `message` イベントとしてストリーミングされ、`message_end` で終了します。モデルの推論やツール使用はストリームイベントとして公開されません。`message_end` の `metadata` には `usage` が含まれ（アノテーションが一致した場合は `annotation_reply` も含まれます）、`retriever_resources` は含まれません。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（チャットフローアプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、チャットフロー、New Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_message` | Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。チャットフローでは `reason` も含む |\n| `reasoning_chunk` | チャットフロー | 思考過程の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは思考の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、チャットフロー | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（チャットフローアプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -387,7 +383,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chats/send-chat-message"
+          "href": "/ja/api-reference/chat-messages/send-chat-message"
         }
       }
     },
@@ -404,7 +400,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[チャットメッセージを送信](/ja/api-reference/chats/send-chat-message) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) API のストリーミングチャンクレスポンスから取得できます。",
             "schema": {
               "type": "string"
             }
@@ -460,7 +456,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chats/stop-chat-message-generation"
+          "href": "/ja/api-reference/chat-messages/stop-chat-message-generation"
         }
       }
     },
@@ -584,7 +580,7 @@
           }
         ],
         "x-mint": {
-          "href": "/ja/api-reference/chats/get-next-suggested-questions"
+          "href": "/ja/api-reference/chat-messages/get-next-suggested-questions"
         }
       }
     },
@@ -1931,7 +1927,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tts/convert-audio-to-text"
+          "href": "/ja/api-reference/audio/convert-audio-to-text"
         }
       }
     },
@@ -2044,7 +2040,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tts/convert-text-to-audio"
+          "href": "/ja/api-reference/audio/convert-text-to-audio"
         }
       }
     },
@@ -2708,7 +2704,7 @@
         "description": "ワークフロー実行 ID に基づいて、ワークフロータスクの現在の実行結果を取得します。",
         "operationId": "getWorkflowRunDetailJp",
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "parameters": [
           {
@@ -2788,17 +2784,17 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflows/get-workflow-run-detail"
+          "href": "/ja/api-reference/workflow-runs/get-workflow-run-detail"
         }
       }
     },
     "/workflows/logs": {
       "get": {
         "summary": "ワークフローログ一覧を取得",
-        "description": "過去のワークフロー実行を、任意のフィルターで一覧表示します。各エントリは実行単位のサマリー（ステータス、トークン使用量、ステップ数、所要時間）であり、ノードごとの実行ログではありません。\n\n実行のノードレベルのイベントを追跡するには、代わりにストリーミングを使用します。\n\n- **自分で開始する実行**：[ワークフローを実行](/ja/api-reference/workflows/run-workflow) をストリーミングモードで使用すると、実行の進行に応じて `node_started` と `node_finished` が送信されます。\n- **すでに進行中の実行**：[ワークフローイベントをストリーム](/ja/api-reference/workflows/stream-workflow-events) を `include_state_snapshot=true` 付きで呼び出し、実行済み各ノードのステータスを再送してから、残りをストリーミングします。\n\n完了した実行のノードレベルのログは、サービス API 経由では取得できません。",
+        "description": "過去のワークフロー実行を、任意のフィルターで一覧表示します。各エントリは実行単位のサマリー（ステータス、トークン使用量、ステップ数、所要時間）であり、ノードごとの実行ログではありません。\n\n実行のノードレベルのイベントを追跡するには、代わりにストリーミングを使用します。\n\n- **自分で開始する実行**：[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) をストリーミングモードで使用すると、実行の進行に応じて `node_started` と `node_finished` が送信されます。\n- **すでに進行中の実行**：[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) を `include_state_snapshot=true` 付きで呼び出し、実行済み各ノードのステータスを再送してから、残りをストリーミングします。\n\n完了した実行のノードレベルのログは、サービス API 経由では取得できません。",
         "operationId": "getWorkflowLogsJp",
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "parameters": [
           {
@@ -2931,7 +2927,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflows/list-workflow-logs"
+          "href": "/ja/api-reference/workflow-runs/list-workflow-logs"
         }
       }
     },
@@ -3404,7 +3400,7 @@
     "/workflow/{workflow_run_id}/events": {
       "get": {
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "summary": "ワークフローイベントをストリーム",
         "description": "一時停止後または元の SSE 接続が切断された後にワークフロー実行の Server-Sent Events ストリームを再開します。すでに完了している実行に対しては、`workflow_finished` イベントを 1 つ送信してストリームを閉じます。\n\n進行中の実行のノードレベルのステータスと進捗を確認するには、`include_state_snapshot=true` を指定して呼び出します。ストリームは新しいイベントの送信前に、実行済み各ノードのステータスを再送します。",
@@ -3457,7 +3453,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "再開されたワークフロー実行のイベントの SSE ストリームです。形式は [ワークフローを実行](/ja/api-reference/workflows/run-workflow)（ワークフローアプリ）または [チャットメッセージを送信](/ja/api-reference/chats/send-chat-message)（チャットフローアプリ）と同じです。再開された部分で `reasoning_format: separated` を指定した LLM ノードが実行される場合、このストリームには `reasoning_chunk` イベントも含まれます。"
+                  "description": "再開されたワークフロー実行のイベントの SSE ストリームです。形式は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow)（ワークフローアプリ）または [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message)（チャットフローアプリ）と同じです。再開された部分で `reasoning_format: separated` を指定した LLM ノードが実行される場合、このストリームには `reasoning_chunk` イベントも含まれます。"
                 },
                 "examples": {
                   "resumedRun": {
@@ -3520,7 +3516,7 @@
           }
         ],
         "x-mint": {
-          "href": "/ja/api-reference/workflows/stream-workflow-events"
+          "href": "/ja/api-reference/workflow-runs/stream-workflow-events"
         }
       }
     },
@@ -3530,7 +3526,7 @@
         "description": "ワークフローを実行します。公開済みのワークフローがないと実行できません。",
         "operationId": "executeWorkflowJp",
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "requestBody": {
           "required": true,
@@ -3736,7 +3732,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflows/run-workflow"
+          "href": "/ja/api-reference/workflow-runs/run-workflow"
         }
       }
     },
@@ -3746,14 +3742,14 @@
         "description": "ID で指定された特定のワークフローバージョンを実行します。ワークフローの特定の公開バージョンを実行する場合に便利です。",
         "operationId": "runWorkflowByIdJa",
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "parameters": [
           {
             "name": "workflow_id",
             "in": "path",
             "required": true,
-            "description": "実行する特定バージョンのワークフロー ID です。この値は [ワークフローを実行](/ja/api-reference/workflows/run-workflow) のレスポンスおよび [ワークフロー実行詳細を取得](/ja/api-reference/workflows/get-workflow-run-detail) の `workflow_id` フィールドで返されます。",
+            "description": "実行する特定バージョンのワークフロー ID です。この値は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のレスポンスおよび [ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) の `workflow_id` フィールドで返されます。",
             "schema": {
               "type": "string"
             }
@@ -3957,7 +3953,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflows/run-workflow-by-id"
+          "href": "/ja/api-reference/workflow-runs/run-workflow-by-id"
         }
       }
     },
@@ -3967,14 +3963,14 @@
         "description": "実行中のワークフロータスクを停止します。`streaming` モードでのみサポートされます。",
         "operationId": "stopWorkflowTaskGenerationJp",
         "tags": [
-          "ワークフロー"
+          "ワークフロー実行"
         ],
         "parameters": [
           {
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[ワークフローを実行](/ja/api-reference/workflows/run-workflow) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) API のストリーミングチャンクレスポンスから取得できます。",
             "schema": {
               "type": "string"
             }
@@ -3992,7 +3988,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子です。エンドユーザーの識別のみに使用され、[ワークフローを実行](/ja/api-reference/workflows/run-workflow) リクエストで渡した `user` と一致する必要はありません。停止はユーザーに関係なくタスクに適用されます。"
+                    "description": "ユーザー識別子です。エンドユーザーの識別のみに使用され、[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) リクエストで渡した `user` と一致する必要はありません。停止はユーザーに関係なくタスクに適用されます。"
                   }
                 }
               },
@@ -4038,7 +4034,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflows/stop-workflow-task"
+          "href": "/ja/api-reference/workflow-runs/stop-workflow-task"
         }
       }
     },
@@ -4238,7 +4234,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/completions/send-completion-message"
+          "href": "/ja/api-reference/completion-messages/send-completion-message"
         }
       }
     },
@@ -4255,7 +4251,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[完了メッセージを送信](/ja/api-reference/completions/send-completion-message) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[完了メッセージを送信](/ja/api-reference/completion-messages/send-completion-message) API のストリーミングチャンクレスポンスから取得できます。",
             "schema": {
               "type": "string"
             }
@@ -4319,7 +4315,7 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/completions/stop-completion-message-generation"
+          "href": "/ja/api-reference/completion-messages/stop-completion-message-generation"
         }
       }
     },
@@ -12921,7 +12917,7 @@
           "external_user_id": {
             "type": "string",
             "nullable": true,
-            "description": "API リクエストで提供された `user` 識別子です（例：[チャットメッセージを送信](/ja/api-reference/chats/send-chat-message) の `user` フィールド）。"
+            "description": "API リクエストで提供された `user` 識別子です（例：[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) の `user` フィールド）。"
           },
           "name": {
             "type": "string",
@@ -15100,7 +15096,7 @@
                 "properties": {
                   "workflow_run_id": {
                     "type": "string",
-                    "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflows/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
+                    "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
                   },
                   "paused_nodes": {
                     "type": "array",
@@ -15888,12 +15884,12 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "進行中の実行のタスク ID です。[ワークフロータスクを停止](/ja/api-reference/workflows/stop-workflow-task) と組み合わせて、実行中のワークフローをキャンセルします。実行中のみ有効です。"
+            "description": "進行中の実行のタスク ID です。[ワークフロータスクを停止](/ja/api-reference/workflow-runs/stop-workflow-task) と組み合わせて、実行中のワークフローをキャンセルします。実行中のみ有効です。"
           },
           "workflow_run_id": {
             "type": "string",
             "format": "uuid",
-            "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflows/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
+            "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
           },
           "data": {
             "$ref": "#/components/schemas/WorkflowFinishedData"
@@ -16194,12 +16190,12 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "進行中の実行のタスク ID です。[ワークフロータスクを停止](/ja/api-reference/workflows/stop-workflow-task) と組み合わせて、実行中のワークフローをキャンセルします。実行中のみ有効です。"
+            "description": "進行中の実行のタスク ID です。[ワークフロータスクを停止](/ja/api-reference/workflow-runs/stop-workflow-task) と組み合わせて、実行中のワークフローをキャンセルします。実行中のみ有効です。"
           },
           "workflow_run_id": {
             "type": "string",
             "format": "uuid",
-            "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflows/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
+            "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
           }
         }
       },
@@ -17129,7 +17125,7 @@
                   "workflow_run_id": {
                     "type": "string",
                     "format": "uuid",
-                    "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflows/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
+                    "description": "このワークフロー実行記録の永続的な識別子です。[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) と組み合わせて、実行後に結果を取得します。"
                   },
                   "paused_nodes": {
                     "type": "array",
@@ -17360,7 +17356,7 @@
           "task_id": {
             "type": "string",
             "format": "uuid",
-            "description": "リクエスト追跡および [生成を停止](/ja/api-reference/completions/stop-completion-message-generation) API 用のタスク ID です。"
+            "description": "リクエスト追跡および [生成を停止](/ja/api-reference/completion-messages/stop-completion-message-generation) API 用のタスク ID です。"
           },
           "id": {
             "type": "string",

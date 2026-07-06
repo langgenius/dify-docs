@@ -321,15 +321,18 @@ def load_resolutions() -> dict:
         return json.load(f)
 
 
-def link_rewriter(linkmap: dict):
+def link_rewriter(linkmap: dict, prefixed: bool = False):
     """String-rewrite function for legacy /api-reference/... URLs.
 
     Single-pass substitution: longest alternatives first, and skip URLs that
     already carry a language prefix (re.sub never rescans its own output).
+    With prefixed=True the keys carry explicit /{lang}/ prefixes themselves,
+    so the language-prefix guard is dropped.
     """
     keys = sorted(linkmap, key=len, reverse=True)
+    guard = "" if prefixed else r"(?<!/en)(?<!/zh)(?<!/ja)"
     pattern = re.compile(
-        r"(?<!/en)(?<!/zh)(?<!/ja)(" + "|".join(re.escape(k) for k in keys) + r")"
+        guard + r"(" + "|".join(re.escape(k) for k in keys) + r")"
     )
 
     def fix(s: str) -> str:
@@ -370,6 +373,32 @@ class Merger:
         self.render_changes = []  # (op/component, spec, rule)
         self.namespaced = []  # renames applied by the fixed-point pass
         self.errors = []
+        self.tag_alignment = self._build_tag_alignment()
+
+    def _build_tag_alignment(self) -> dict:
+        """Map every tag name as it appears in this language's specs to its
+        en tag name, by index-zipping each spec's en tags with its
+        this-language tags (identity when self.lang == "en").
+        """
+        alignment = {}
+        for name in SPEC_NAMES:
+            en_tags = [t["name"] for t in load_spec("en", name)["tags"]]
+            lang_tags = [t["name"] for t in self.specs[name].get("tags", [])]
+            if len(en_tags) != len(lang_tags):
+                self.errors.append(
+                    f"tag alignment length mismatch in {name}: "
+                    f"en={len(en_tags)} {self.lang}={len(lang_tags)}"
+                )
+                continue
+            for en_name, lang_name in zip(en_tags, lang_tags):
+                if lang_name in alignment and alignment[lang_name] != en_name:
+                    self.errors.append(
+                        f"tag alignment conflict in {name}: {lang_name!r} maps to "
+                        f"both {alignment[lang_name]!r} and {en_name!r}"
+                    )
+                    continue
+                alignment[lang_name] = en_name
+        return alignment
 
     # -- canonical operation table (language-independent decisions) --------
 
@@ -379,6 +408,11 @@ class Merger:
             for path, method, op in iter_ops(self.specs[name]):
                 ops.setdefault((path, method), []).append(name)
         return ops
+
+    def lang_tag_name(self, tag: str) -> str:
+        """Map a tag as it appears in this language's specs to its final name."""
+        en_name = self.tag_alignment.get(tag, tag)
+        return self.res.get("tag_renames", {}).get(en_name, {}).get(self.lang, tag)
 
     def canonical_meta(self, key):
         """(operationId, tags) for the merged op, from resolutions or first spec."""
@@ -641,7 +675,7 @@ class Merger:
                         merged = copy.deepcopy(op)
                     opid, tags, _ = self.canonical_meta(key)
                     merged["operationId"] = opid
-                    merged["tags"] = tags
+                    merged["tags"] = [self.lang_tag_name(t) for t in tags]
                     merged.setdefault("x-mint", {})["href"] = (
                         f"/{self.lang}/api-reference/{self.en_slugs[key]}"
                     )
@@ -663,11 +697,15 @@ class Merger:
         else:
             obj[last] = value
 
-    def merged_tags(self):
+    def merged_tags(self, paths):
         """Union of tag objects; divergent descriptions default to first occurrence.
 
         resolutions.json 'tags' entries (keyed by the tag name in this
         language's specs) can pick a later spec's variant instead.
+
+        Names are then remapped through tag_renames, and any tag object
+        whose final name isn't carried by at least one merged op is dropped
+        (e.g. the "Chatflows" tag, whose ops all merge under other tags).
         """
         tag_res = self.res["tags"]
         seen = {}
@@ -683,7 +721,14 @@ class Merger:
                         seen[t["name"]] = t
                     else:
                         self.note_change(f"tags/{t['name']}", name, {"default": "first occurrence"})
-        return [seen[n] for n in order]
+        used = {tag for item in paths.values() for op in item.values() for tag in op["tags"]}
+        tags = []
+        for n in order:
+            tag = copy.deepcopy(seen[n])
+            tag["name"] = self.lang_tag_name(n)
+            if tag["name"] in used:
+                tags.append(tag)
+        return tags
 
     def build(self):
         self.strings = load_strings(self.lang)
@@ -700,7 +745,7 @@ class Merger:
                     if comp_name in bucket and canon(bucket[comp_name]) != canon(comp):
                         self.errors.append(f"residual collision {kind}/{comp_name} from {name}")
                     bucket.setdefault(comp_name, comp)
-        tags = self.merged_tags()
+        tags = self.merged_tags(paths)
         base = self.specs["chat"]
         servers = copy.deepcopy(base["servers"])
         servers[0]["description"] = self.strings["server_description"]
@@ -779,11 +824,13 @@ def compute_en_slugs(resolutions: dict) -> dict:
     for name in SPEC_NAMES:
         for path, method, op in iter_ops(specs[name]):
             ops.setdefault((path, method), []).append((name, op))
+    renames = resolutions.get("tag_renames", {})
     for key, occ in ops.items():
         res = resolutions["operations"].get(f"{key[1].upper()} {key[0]}", {})
         tags_source = res.get("tags_from", occ[0][0])
         op = dict(occ)[tags_source]
-        slug = f"{kebab(op['tags'][0])}/{kebab(op['summary'])}"
+        tag_en = renames.get(op["tags"][0], {}).get("en", op["tags"][0])
+        slug = f"{kebab(tag_en)}/{kebab(op['summary'])}"
         if slug in seen and seen[slug] != key:
             sys.exit(f"slug collision: {slug} for {seen[slug]} and {key}")
         seen[slug] = key
@@ -976,9 +1023,13 @@ def relink(langs):
     """Rewrite legacy /api-reference/... links in MDX bodies to the new URLs.
 
     Links in a page map to that page's own language, so readers stay in it.
+    Language-prefixed URLs written under earlier slug schemes (before a tag
+    rename in resolutions.json) are remapped to the current slugs as well.
     """
     resolutions = load_resolutions()
     en_slugs = compute_en_slugs(resolutions)
+    pre_rename = {k: v for k, v in resolutions.items() if k != "tag_renames"}
+    old_en_slugs = compute_en_slugs(pre_rename)
     for lang in langs:
         linkmap = {}
         for src_lang in {lang, "en"}:
@@ -988,13 +1039,20 @@ def relink(langs):
                     tag = (op.get("tags") or [""])[0]
                     old = f"/api-reference/{kebab(tag)}/{kebab(op.get('summary', ''))}"
                     linkmap[old] = f"/{lang}/api-reference/{en_slugs[(path, method)]}"
+        prefixed_map = {
+            f"/{lang}/api-reference/{old_en_slugs[key]}":
+                f"/{lang}/api-reference/{slug}"
+            for key, slug in en_slugs.items()
+            if old_en_slugs[key] != slug
+        }
         fix = link_rewriter(linkmap)
+        fix_prefixed = link_rewriter(prefixed_map, prefixed=True) if prefixed_map else (lambda s: s)
         changed = 0
         for mdx in sorted((REPO / lang).rglob("*.mdx")):
             text = mdx.read_text(encoding="utf-8")
             if "/api-reference/" not in text:
                 continue
-            new_text = fix(text)
+            new_text = fix_prefixed(fix(text))
             if new_text != text:
                 mdx.write_text(new_text, encoding="utf-8")
                 changed += 1
