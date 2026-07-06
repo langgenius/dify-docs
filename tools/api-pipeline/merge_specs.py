@@ -912,85 +912,48 @@ def load_nav_labels() -> dict:
         return json.load(f)
 
 
-def split_first_sentence(text: str):
-    """(first sentence without trailing period, remainder) for en/zh/ja text."""
-    for sep in ("。", ". "):
-        if sep in text:
-            head, rest = text.split(sep, 1)
-            return head.strip().rstrip("."), rest.strip()
-    return text.strip().rstrip("。."), ""
-
-
-def write_overview_pages(lang: str, labels: dict):
-    """One landing page per app-type group, from the original specs' info blocks.
-
-    Only writes missing files, so later hand edits survive re-runs.
-    """
-    written = []
-    for name in SPEC_NAMES:
-        page = REPO / lang / "api-reference" / name / "overview.mdx"
-        if page.exists():
-            continue
-        info = load_spec(lang, name)["info"]
-        title = info["title"]
-        desc, body = split_first_sentence(info["description"])
-        note = re.match(r"^\*\*[^*]+[:：]\*\*\s*", body)
-        if note:
-            body = f"<Note>\n{body[note.end():].strip()}\n</Note>"
-        quote = '"' if ": " in title else ""
-        lines = [
-            "---",
-            f"title: {quote}{title}{quote}",
-            f"sidebarTitle: {labels['overview_sidebar_title'][lang]}",
-            f"description: {desc}",
-            "---",
-            "",
-        ]
-        if lang in labels["disclaimer"]:
-            en_path = f"/en/api-reference/{name}/overview"
-            lines += [labels["disclaimer"][lang].format(en_path=en_path), ""]
-        if body:
-            lines += [body, ""]
-        page.parent.mkdir(parents=True, exist_ok=True)
-        page.write_text("\n".join(lines), encoding="utf-8")
-        written.append(str(page.relative_to(REPO)))
-    return written
-
-
 def nav_groups_for(lang: str, labels: dict) -> list:
-    """The API menu's groups: per app type, tag subgroups with explicit ops.
+    """The API menu's three groups: Guides, App APIs, Knowledge API.
 
-    App types without an input spec ("virtual_groups", e.g. New Agent) are
-    built from nav_labels.json config; their ops are canonical operations
-    already present in the merged spec. Their overview pages are authored
-    by hand, not generated.
+    Guides lists the hand-maintained overview pages (guides_order). The two
+    reference tiers group the merged spec's operations into tag subgroups,
+    ordered and labeled per nav_labels.json, with per-tag op ordering
+    overrides from op_order.
     """
-    groups = []
-    spec_ref = "api-reference/openapi_service.json"
-    for name in labels["group_order"]:
-        pages = [f"{lang}/api-reference/{name}/overview"]
-        if name in labels.get("virtual_groups", {}):
-            for sub in labels["virtual_groups"][name]["subgroups"]:
-                pages.append({
-                    "group": sub["labels"][lang],
-                    "openapi": f"{lang}/{spec_ref}",
-                    "pages": list(sub["pages"]),
-                })
-        else:
-            spec = load_spec(lang, name)
-            ops_by_tag = {}
-            for path, method, op in iter_ops(spec):
-                tag = (op.get("tags") or ["default"])[0]
-                ops_by_tag.setdefault(tag, []).append(f"{method.upper()} {path}")
-            for t in spec.get("tags", []):
-                if t["name"] in ops_by_tag:
-                    pages.append({
-                        "group": t["name"],
-                        "openapi": f"{lang}/{spec_ref}",
-                        "pages": ops_by_tag[t["name"]],
-                    })
-        groups.append({"group": labels["app_groups"][lang][name], "pages": pages})
-    return groups
+    memberships = load_memberships()
+    merged = json.load(open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8"))
+    en_merged = json.load(open(REPO / "en" / "api-reference" / "openapi_service.json", encoding="utf-8"))
+    if len(merged["tags"]) != len(en_merged["tags"]):
+        raise ValueError(
+            f"nav_groups_for({lang}): tag count mismatch: "
+            f"{len(merged['tags'])} vs en {len(en_merged['tags'])}"
+        )
+    # en tag -> this language's tag label, via index alignment of the tags arrays
+    tag_map = {e["name"]: l["name"] for e, l in zip(en_merged["tags"], merged["tags"])}
+    ops_by_en_tag = {}
+    mismatches = []
+    for (path, method, op), (en_path, en_method, en_op) in zip(iter_ops(merged), iter_ops(en_merged)):
+        if (path, method) != (en_path, en_method):
+            mismatches.append(((path, method), (en_path, en_method)))
+            continue
+        ops_by_en_tag.setdefault(en_op["tags"][0], []).append(f"{method.upper()} {path}")
+    if mismatches:
+        raise ValueError(
+            f"nav_groups_for({lang}): merged spec operation order diverges from en: {mismatches}"
+        )
+    for tag, order in labels.get("op_order", {}).items():
+        if tag in ops_by_en_tag:
+            ops_by_en_tag[tag] = [o for o in order if o in ops_by_en_tag[tag]] + \
+                                 [o for o in ops_by_en_tag[tag] if o not in order]
+    guides = {"group": labels["guides_group"][lang],
+              "pages": [f"{lang}/{memberships['pages'][k]['page']}" for k in labels["guides_order"]]}
+
+    def tier(cfg):
+        return {"group": cfg["labels"][lang], "pages": [
+            {"group": tag_map[t], "openapi": f"{lang}/api-reference/openapi_service.json",
+             "pages": ops_by_en_tag[t]} for t in cfg["tag_order_en"] if t in ops_by_en_tag]}
+
+    return [guides, tier(labels["reference"]["app_apis"]), tier(labels["reference"]["knowledge_api"])]
 
 
 def old_to_new_urls(langs, en_slugs) -> dict:
@@ -1018,8 +981,6 @@ def wire(langs):
         docs = json.load(f)
 
     for lang in langs:
-        for page in write_overview_pages(lang, labels):
-            print(f"[{lang}] wrote {page}")
         groups = nav_groups_for(lang, labels)
         lang_nav = next(l for l in docs["navigation"]["languages"] if l["language"] == lang)
         replaced = 0
