@@ -348,6 +348,11 @@ def load_strings(lang: str) -> dict:
         return json.load(f)[lang]
 
 
+def load_memberships() -> dict:
+    with open(Path(__file__).resolve().parent / "memberships.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
 def walk_strings(node, fn):
     """Apply fn to every string value in a JSON tree, in place."""
     if isinstance(node, dict):
@@ -374,6 +379,7 @@ class Merger:
         self.namespaced = []  # renames applied by the fixed-point pass
         self.errors = []
         self.tag_alignment = self._build_tag_alignment()
+        self.op_availability = self._build_op_availability()
 
     def _build_tag_alignment(self) -> dict:
         """Map every tag name as it appears in this language's specs to its
@@ -399,6 +405,33 @@ class Merger:
                     continue
                 alignment[lang_name] = en_name
         return alignment
+
+    def _build_op_availability(self) -> dict:
+        """{"METHOD /path": [availability names, in guides_order order]}.
+
+        Built from memberships.json: for each app-type page in
+        nav_labels.json's guides_order, non-empty availability_labels for
+        this language contribute their names to every op that page lists.
+        App types with empty availability_labels (e.g. Knowledge, which
+        isn't an app-type page) contribute nothing.
+        """
+        guides_order = load_nav_labels()["guides_order"]
+        pages = load_memberships()["pages"]
+        availability = {}
+        for name in guides_order:
+            names = pages[name]["availability_labels"].get(self.lang, [])
+            if not names:
+                continue
+            for op_key in pages[name]["ops"]:
+                availability.setdefault(op_key, []).extend(names)
+        return availability
+
+    def availability_line(self, op_key):
+        names = self.op_availability.get(op_key)
+        if not names:
+            return None
+        joiner = ", " if self.lang == "en" else "、"
+        return self.strings["availability_prefix"].replace("{list}", joiner.join(names))
 
     # -- canonical operation table (language-independent decisions) --------
 
@@ -676,6 +709,9 @@ class Merger:
                     opid, tags, _ = self.canonical_meta(key)
                     merged["operationId"] = opid
                     merged["tags"] = [self.lang_tag_name(t) for t in tags]
+                    line = self.availability_line(f"{method.upper()} {path}")
+                    if line:
+                        merged["description"] = line + "\n\n" + merged.get("description", "")
                     merged.setdefault("x-mint", {})["href"] = (
                         f"/{self.lang}/api-reference/{self.en_slugs[key]}"
                     )
@@ -805,6 +841,9 @@ def verify_rendering(merger, merged, report_lines):
                 v.pop("operationId", None)
                 v.pop("tags", None)
                 v.pop("x-mint", None)
+            line = merger.availability_line(f"{method.upper()} {path}")
+            if line and isinstance(b.get("description"), str) and b["description"].startswith(line):
+                b["description"] = b["description"][len(line):].lstrip("\n")
             diffs = json_diff(
                 resolve_tree(a, comps), resolve_tree(b, merged["components"])
             )
