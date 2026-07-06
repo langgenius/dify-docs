@@ -1,0 +1,1026 @@
+#!/usr/bin/env python3
+"""Phase-1 Service API spec consolidation.
+
+Merges the five per-app-type OpenAPI specs (chat, chatflow, workflow,
+completion, knowledge) into one openapi_service.json per language.
+
+Modes:
+  analyze   Report operation overlap, divergence pointers, and component
+            collisions. Writes nothing to the docs tree.
+  build     Emit {lang}/api-reference/openapi_service.json for each language,
+            applying resolutions.json to divergent operations. Refuses to
+            build while any divergence is unresolved.
+
+Usage:
+  python3 merge_specs.py analyze [--lang en] [--report <path>]
+  python3 merge_specs.py build [--lang en zh ja]
+
+Env:
+  DOCS  docs repo root (default: two levels above this file)
+
+This script is Phase 2's pipeline skeleton: the input today is our five
+hand-maintained specs; in Phase 2 it becomes R&D's generated spec plus
+docs-owned overlays. Keep the merge logic input-agnostic where possible.
+"""
+
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+REPO = Path(os.environ.get("DOCS", Path(__file__).resolve().parents[2]))
+SPEC_NAMES = ["chat", "chatflow", "workflow", "completion", "knowledge"]
+LANGS = ["en", "zh", "ja"]
+HTTP_METHODS = {"get", "post", "put", "patch", "delete", "head", "options", "trace"}
+RESOLUTIONS = Path(__file__).resolve().parent / "resolutions.json"
+
+# Merged-spec metadata. Everything else is carried over from the inputs.
+MERGED_INFO = {
+    "en": {
+        "title": "Dify Service API",
+        "description": "REST API for Dify applications and knowledge bases. Application endpoints authenticate with an app API key; knowledge endpoints authenticate with a dataset API key.",
+    },
+    "zh": {
+        "title": "Dify 服务 API",
+        "description": "用于 Dify 应用与知识库的 REST API。应用类接口使用应用 API 密钥认证，知识库类接口使用知识库 API 密钥认证。",
+    },
+    "ja": {
+        "title": "Dify サービス API",
+        "description": "Dify アプリケーションとナレッジベースのための REST API です。アプリケーション系エンドポイントはアプリの API キーで、ナレッジ系エンドポイントはデータセットの API キーで認証します。",
+    },
+}
+
+
+def load_spec(lang: str, name: str) -> dict:
+    path = REPO / lang / "api-reference" / f"openapi_{name}.json"
+    with open(path, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def canon(obj) -> str:
+    return json.dumps(obj, sort_keys=True, ensure_ascii=False)
+
+
+def iter_ops(spec: dict):
+    """Yield (path, method, op) for every operation in a spec."""
+    for path, item in spec.get("paths", {}).items():
+        for method, op in item.items():
+            if method in HTTP_METHODS:
+                yield path, method, op
+
+
+def json_diff(a, b, pointer=""):
+    """Recursive diff returning a list of (pointer, a_value, b_value)."""
+    if type(a) is not type(b):
+        return [(pointer or "/", a, b)]
+    if isinstance(a, dict):
+        out = []
+        for k in sorted(set(a) | set(b)):
+            pa, pb = a.get(k, "<absent>"), b.get(k, "<absent>")
+            if k not in a or k not in b:
+                out.append((f"{pointer}/{k}", pa, pb))
+            elif pa != pb:
+                out.extend(json_diff(pa, pb, f"{pointer}/{k}"))
+        return out
+    if isinstance(a, list):
+        if len(a) != len(b):
+            return [(f"{pointer}/<len {len(a)} vs {len(b)}>", a, b)]
+        out = []
+        for i, (xa, xb) in enumerate(zip(a, b)):
+            if xa != xb:
+                out.extend(json_diff(xa, xb, f"{pointer}/{i}"))
+        return out
+    return [(pointer or "/", a, b)] if a != b else []
+
+
+def collect(lang: str):
+    """Load all five specs and index operations and components."""
+    specs = {name: load_spec(lang, name) for name in SPEC_NAMES}
+    ops = {}  # (path, method) -> list of (spec_name, op)
+    path_level_params = {}  # path -> list of (spec_name, params)
+    for name, spec in specs.items():
+        for path, item in spec.get("paths", {}).items():
+            if "parameters" in item:
+                path_level_params.setdefault(path, []).append((name, item["parameters"]))
+            for method, op in item.items():
+                if method in HTTP_METHODS:
+                    ops.setdefault((path, method), []).append((name, op))
+    return specs, ops, path_level_params
+
+
+def classify(ops):
+    unique, identical, divergent = {}, {}, {}
+    for key, occurrences in ops.items():
+        if len(occurrences) == 1:
+            unique[key] = occurrences
+        elif len({canon(op) for _, op in occurrences}) == 1:
+            identical[key] = occurrences
+        else:
+            divergent[key] = occurrences
+    return unique, identical, divergent
+
+
+def component_collisions(specs):
+    """Same component name defined differently across specs."""
+    collisions = []
+    seen = {}  # (kind, name) -> (spec_name, canon)
+    for name, spec in specs.items():
+        for kind, entries in spec.get("components", {}).items():
+            for comp_name, comp in entries.items():
+                key = (kind, comp_name)
+                c = canon(comp)
+                if key in seen and seen[key][1] != c:
+                    collisions.append((kind, comp_name, seen[key][0], name))
+                seen.setdefault(key, (name, c))
+    return collisions
+
+
+def tag_report(specs):
+    tags = {}  # tag name -> {spec_name: description}
+    for name, spec in specs.items():
+        for t in spec.get("tags", []):
+            tags.setdefault(t["name"], {})[name] = t.get("description", "")
+    return tags
+
+
+def component_diff_report(specs, lines):
+    """Full diffs for colliding components, plus named near-siblings."""
+    p = lines.append
+    by_key = {}  # (kind, name) -> {spec_name: comp}
+    for name, spec in specs.items():
+        for kind, entries in spec.get("components", {}).items():
+            for comp_name, comp in entries.items():
+                by_key.setdefault((kind, comp_name), {})[name] = comp
+    p("## Component collision diffs")
+    for (kind, comp_name), occ in sorted(by_key.items()):
+        if len(occ) < 2 or len({canon(c) for c in occ.values()}) == 1:
+            continue
+        names = list(occ)
+        p(f"### {kind}/{comp_name} in {names}")
+        base = names[0]
+        for other in names[1:]:
+            diffs = json_diff(occ[base], occ[other])
+            if not diffs:
+                continue
+            p(f"- {base} vs {other}: {len(diffs)} differing pointers")
+            for ptr, va, vb in diffs:
+                p(f"    - `{ptr}`")
+                p(f"        - {base}: {canon(va)[:200]}")
+                p(f"        - {other}: {canon(vb)[:200]}")
+        p("")
+
+
+def slug_inventory(specs, lines):
+    """List (tag, summary) pairs and flag slug-hostile characters."""
+    import re
+
+    p = lines.append
+    p("## Slug inventory (tag / summary pairs)")
+    for name, spec in specs.items():
+        for path, method, op in iter_ops(spec):
+            tag = (op.get("tags") or ["untagged"])[0]
+            summary = op.get("summary", "")
+            flag = ""
+            if re.search(r"[^A-Za-z0-9 \-]", f"{tag} {summary}"):
+                flag = "  <-- special chars"
+            p(f"- {name}: {tag} / {summary}{flag}")
+    p("")
+
+
+def analyze(lang: str, report_path: Path | None):
+    specs, ops, path_params = collect(lang)
+    unique, identical, divergent = classify(ops)
+
+    lines = []
+    p = lines.append
+    p(f"# Spec overlap analysis — {lang}")
+    p("")
+    p(f"Total distinct operations: {len(ops)}")
+    p(f"  unique to one spec:      {len(unique)}")
+    p(f"  shared, identical:       {len(identical)}")
+    p(f"  shared, divergent:       {len(divergent)}")
+    p("")
+
+    p("## Unique operations by spec")
+    by_spec = {}
+    for (path, method), occ in unique.items():
+        by_spec.setdefault(occ[0][0], []).append(f"{method.upper()} {path}")
+    for name in SPEC_NAMES:
+        entries = sorted(by_spec.get(name, []))
+        p(f"- {name}: {len(entries)}")
+    p("")
+
+    p("## Shared identical operations")
+    for (path, method), occ in sorted(identical.items()):
+        names = [n for n, _ in occ]
+        op = occ[0][1]
+        p(f"- `{method.upper()} {path}` in {names} | operationId={op.get('operationId')} | tags={op.get('tags')} | summary={op.get('summary')!r}")
+    p("")
+
+    p("## Shared divergent operations")
+    for (path, method), occ in sorted(divergent.items()):
+        names = [n for n, _ in occ]
+        p(f"### `{method.upper()} {path}` in {names}")
+        base_name, base_op = occ[0]
+        for other_name, other_op in occ[1:]:
+            diffs = json_diff(base_op, other_op)
+            p(f"- {base_name} vs {other_name}: {len(diffs)} differing pointers")
+            for ptr, va, vb in diffs:
+                sa, sb = canon(va), canon(vb)
+                p(f"    - `{ptr}`")
+                p(f"        - {base_name}: {sa[:220]}")
+                p(f"        - {other_name}: {sb[:220]}")
+        p("")
+
+    if path_params:
+        multi = {k: v for k, v in path_params.items() if len(v) > 1}
+        p(f"## Path-level parameters: {len(path_params)} paths ({len(multi)} shared)")
+        for path, occ in sorted(multi.items()):
+            vals = {canon(v) for _, v in occ}
+            status = "identical" if len(vals) == 1 else "DIVERGENT"
+            p(f"- `{path}`: {[n for n, _ in occ]} — {status}")
+        p("")
+
+    collisions = component_collisions(specs)
+    p(f"## Component collisions (same name, different content): {len(collisions)}")
+    for kind, comp_name, a, b in collisions:
+        p(f"- {kind}/{comp_name}: {a} vs {b}")
+    p("")
+
+    component_diff_report(specs, lines)
+    slug_inventory(specs, lines)
+
+    p("## AppParametersResponse three-way diff")
+    variants = {}
+    for name in ("chat", "workflow", "completion"):
+        for schema_name, schema in specs[name].get("components", {}).get("schemas", {}).items():
+            if schema_name.endswith("AppParametersResponse"):
+                variants[f"{name}:{schema_name}"] = schema
+    keys = list(variants)
+    for other in keys[1:]:
+        diffs = json_diff(variants[keys[0]], variants[other])
+        p(f"- {keys[0]} vs {other}: {len(diffs)} differing pointers")
+        for ptr, va, vb in diffs:
+            p(f"    - `{ptr}`")
+            p(f"        - {canon(va)[:200]}")
+            p(f"        - {canon(vb)[:200]}")
+    p("")
+
+    tags = tag_report(specs)
+    p("## Tags")
+    for tag_name, descs in tags.items():
+        uniq = set(descs.values())
+        status = "identical" if len(uniq) == 1 else "DIVERGENT"
+        p(f"- {tag_name!r} in {list(descs)} — {status}")
+
+    report = "\n".join(lines)
+    if report_path:
+        report_path.write_text(report, encoding="utf-8")
+        print(f"report written to {report_path}")
+        print(f"ops={len(ops)} unique={len(unique)} identical={len(identical)} divergent={len(divergent)} collisions={len(collisions)}")
+    else:
+        print(report)
+
+
+# ---------------------------------------------------------------------------
+# Build mode
+# ---------------------------------------------------------------------------
+
+import copy
+import re
+
+OVERRIDES_DIR = Path(__file__).resolve().parent / "overrides"
+
+# Prefix used when a colliding component must keep per-spec variants.
+NAMESPACE_PREFIX = {
+    "chat": "Chat",
+    "chatflow": "Chatflow",
+    "workflow": "Workflow",
+    "completion": "Completion",
+    "knowledge": "Knowledge",
+}
+
+
+def kebab(text: str) -> str:
+    """Mintlify-style URL slug: lowercase Latin, spaces to hyphens.
+
+    Non-ASCII characters (CJK text and full-width punctuation) are kept
+    verbatim — observed behavior of the existing zh/ja page URLs, e.g.
+    /api-reference/文档/获取文档嵌入状态（进度）.
+    """
+    out = text.strip().lower()
+    out = re.sub(r"\s+", "-", out)
+    out = re.sub(r"[!-,.-/:-@\[-`{-~]", "", out)  # ASCII punctuation except '-'
+    out = re.sub(r"-{2,}", "-", out).strip("-")
+    return out
+
+
+def load_resolutions() -> dict:
+    with open(RESOLUTIONS, encoding="utf-8") as f:
+        return json.load(f)
+
+
+def link_rewriter(linkmap: dict):
+    """String-rewrite function for legacy /api-reference/... URLs.
+
+    Single-pass substitution: longest alternatives first, and skip URLs that
+    already carry a language prefix (re.sub never rescans its own output).
+    """
+    keys = sorted(linkmap, key=len, reverse=True)
+    pattern = re.compile(
+        r"(?<!/en)(?<!/zh)(?<!/ja)(" + "|".join(re.escape(k) for k in keys) + r")"
+    )
+
+    def fix(s: str) -> str:
+        if "/api-reference/" not in s:
+            return s
+        return pattern.sub(lambda mo: linkmap[mo.group(1)], s)
+
+    return fix
+
+
+def load_strings(lang: str) -> dict:
+    with open(OVERRIDES_DIR / "strings.json", encoding="utf-8") as f:
+        return json.load(f)[lang]
+
+
+def walk_strings(node, fn):
+    """Apply fn to every string value in a JSON tree, in place."""
+    if isinstance(node, dict):
+        for k, v in node.items():
+            if isinstance(v, str):
+                node[k] = fn(v)
+            else:
+                walk_strings(v, fn)
+    elif isinstance(node, list):
+        for i, v in enumerate(node):
+            if isinstance(v, str):
+                node[i] = fn(v)
+            else:
+                walk_strings(v, fn)
+
+
+class Merger:
+    def __init__(self, lang: str, resolutions: dict, en_slugs: dict):
+        self.lang = lang
+        self.res = resolutions
+        self.en_slugs = en_slugs  # (path, method) -> "tag-slug/summary-slug"
+        self.specs = {name: load_spec(lang, name) for name in SPEC_NAMES}
+        self.render_changes = []  # (op/component, spec, rule)
+        self.namespaced = []  # renames applied by the fixed-point pass
+        self.errors = []
+
+    # -- canonical operation table (language-independent decisions) --------
+
+    def op_occurrences(self):
+        ops = {}
+        for name in SPEC_NAMES:
+            for path, method, op in iter_ops(self.specs[name]):
+                ops.setdefault((path, method), []).append(name)
+        return ops
+
+    def canonical_meta(self, key):
+        """(operationId, tags) for the merged op, from resolutions or first spec."""
+        op_res = self.res["operations"].get(f"{key[1].upper()} {key[0]}", {})
+        first = self.op_order[key][0]
+        first_op = self.specs[first]["paths"][key[0]][key[1]]
+        opid_source = op_res.get("operationId_from", first)
+        tags_source = op_res.get("tags_from", first)
+        opid = self.specs[opid_source]["paths"][key[0]][key[1]].get("operationId")
+        tags = self.specs[tags_source]["paths"][key[0]][key[1]].get("tags")
+        return opid, tags, first_op
+
+    # -- link canonicalization ---------------------------------------------
+
+    def build_linkmap(self):
+        """Map every old /api-reference/... URL (this lang + en) to the new URL."""
+        linkmap = {}
+        for lang in {self.lang, "en"}:
+            for name in SPEC_NAMES:
+                spec = self.specs[name] if lang == self.lang else load_spec(lang, name)
+                for path, method, op in iter_ops(spec):
+                    tag = (op.get("tags") or [""])[0]
+                    old = f"/api-reference/{kebab(tag)}/{kebab(op.get('summary', ''))}"
+                    new = f"/{self.lang}/api-reference/{self.en_slugs[(path, method)]}"
+                    if old in linkmap and linkmap[old] != new:
+                        self.errors.append(f"link collision: {old} -> {linkmap[old]} vs {new}")
+                    linkmap[old] = new
+        return linkmap
+
+    def canonicalize_links(self):
+        fix = link_rewriter(self.build_linkmap())
+
+        for name in SPEC_NAMES:
+            walk_strings(self.specs[name], fix)
+
+        # Any surviving unprefixed /api-reference/ link is a dangling target.
+        dangling = re.compile(r"\(/api-reference/[^)]*\)")
+        for name in SPEC_NAMES:
+            found = dangling.findall(json.dumps(self.specs[name], ensure_ascii=False))
+            for hit in set(found):
+                self.errors.append(f"{name}: unmapped cross-link {hit}")
+
+    # -- component unification ---------------------------------------------
+
+    def unify_components(self):
+        """Resolve collisions; namespace genuinely divergent components."""
+        comp_res = self.res["components"]
+
+        # Phase 1: snapshot chosen contents from pristine (pre-overwrite) specs.
+        chosen_contents = {}
+        for res_key, rule in comp_res.items():
+            kind, comp_name = res_key.split("/", 1)
+            source = rule.get("content_from") or rule.get("pick") or rule.get("custom_from")
+            chosen = None
+            if rule.get("superset") == "chunk-chat-event":
+                chosen = self.superset_chunk_chat_event()
+            elif rule.get("superset") == "chat-request":
+                chosen = self.superset_chat_request()
+            elif source:
+                if ":" in source:
+                    src_spec, src_ref = source.split(":", 1)
+                    src_kind, src_name = src_ref.split("/", 1)
+                else:
+                    src_spec, src_kind, src_name = source, kind, comp_name
+                chosen = copy.deepcopy(self.specs[src_spec]["components"][src_kind][src_name])
+            if chosen is not None:
+                for ptr, string_key in rule.get("set_strings", {}).items():
+                    self.set_pointer(chosen, ptr, self.strings[string_key])
+            chosen_contents[res_key] = chosen
+
+        # Phase 2: overwrite variants and apply renames.
+        for res_key, rule in comp_res.items():
+            kind, comp_name = res_key.split("/", 1)
+            chosen = chosen_contents[res_key]
+            for name in SPEC_NAMES:
+                comps = self.specs[name].get("components", {}).get(kind, {})
+                if comp_name not in comps:
+                    continue
+                if chosen is not None:
+                    if canon(comps[comp_name]) != canon(chosen):
+                        self.note_change(f"components/{kind}/{comp_name}", name, rule)
+                    comps[comp_name] = copy.deepcopy(chosen)
+                new_name = rule.get("rename_to")
+                if new_name:
+                    comps[new_name] = comps.pop(comp_name)
+                    self.rewrite_refs(self.specs[name], kind, comp_name, new_name)
+
+        # Phase 3: fixed-point namespacing for remaining divergence.
+        for _ in range(10):
+            collisions = self.find_collisions()
+            progressed = False
+            for kind, comp_name, variants in collisions:
+                keep = variants[0]  # first occurrence keeps the name
+                for spec_name in variants[1:]:
+                    if canon(self.get_comp(spec_name, kind, comp_name)) == canon(
+                        self.get_comp(keep, kind, comp_name)
+                    ):
+                        continue
+                    new_name = NAMESPACE_PREFIX[spec_name] + comp_name
+                    comps = self.specs[spec_name]["components"][kind]
+                    if new_name in comps:
+                        self.errors.append(f"rename target exists: {new_name}")
+                        continue
+                    comps[new_name] = comps.pop(comp_name)
+                    self.rewrite_refs(self.specs[spec_name], kind, comp_name, new_name)
+                    self.namespaced.append(f"{kind}/{comp_name} ({spec_name}) -> {new_name}")
+                    progressed = True
+            if not collisions:
+                return
+            if not progressed:
+                self.errors.append(f"unresolved collisions without progress: {collisions}")
+                return
+        self.errors.append("component namespacing did not converge")
+
+    def get_comp(self, spec_name, kind, comp_name):
+        return self.specs[spec_name]["components"][kind][comp_name]
+
+    def find_collisions(self):
+        seen = {}
+        out = []
+        for name in SPEC_NAMES:
+            for kind, entries in self.specs[name].get("components", {}).items():
+                for comp_name, comp in entries.items():
+                    seen.setdefault((kind, comp_name), []).append((name, canon(comp)))
+        for (kind, comp_name), occ in seen.items():
+            if len({c for _, c in occ}) > 1:
+                out.append((kind, comp_name, [n for n, _ in occ]))
+        return out
+
+    def rewrite_refs(self, spec, kind, old, new):
+        old_ref = f"#/components/{kind}/{old}"
+        new_ref = f"#/components/{kind}/{new}"
+
+        def fix(s: str) -> str:
+            return new_ref if s == old_ref else s
+
+        walk_strings(spec, fix)
+
+    # -- superset builders (POST /chat-messages and the events endpoint) ----
+
+    def superset_chunk_chat_event(self):
+        chat = copy.deepcopy(self.get_comp("chat", "schemas", "ChunkChatEvent"))
+        cf = self.get_comp("chatflow", "schemas", "ChunkChatEvent")
+        enum = list(cf["properties"]["event"]["enum"])
+        for extra, anchor in (("agent_message", "message"), ("agent_thought", "agent_message")):
+            if extra not in enum:
+                enum.insert(enum.index(anchor) + 1, extra)
+        merged = copy.deepcopy(cf)
+        merged["properties"]["event"]["enum"] = enum
+        merged["discriminator"]["mapping"] = {
+            **chat["discriminator"]["mapping"],
+            **cf["discriminator"]["mapping"],
+        }
+        return merged
+
+    def superset_chat_request(self):
+        cf = copy.deepcopy(self.get_comp("chatflow", "schemas", "ChatRequest"))
+        chat = self.get_comp("chat", "schemas", "ChatRequest")
+        cf["properties"]["response_mode"]["description"] = (
+            chat["properties"]["response_mode"]["description"]
+            + " "
+            + self.strings["response_mode_new_agent_note"]
+        )
+        cf["properties"]["files"]["description"] += " " + self.strings["files_new_agent_note"]
+        wf_id = cf["properties"]["workflow_id"]
+        wf_id["description"] = self.strings["workflow_id_mode_note"] + " " + wf_id["description"]
+        return cf
+
+    def superset_chat_messages(self):
+        """Single mode-aware POST /chat-messages from the chat + chatflow variants."""
+        chat = self.specs["chat"]["paths"]["/chat-messages"]["post"]
+        cf = self.specs["chatflow"]["paths"]["/chat-messages"]["post"]
+        op = copy.deepcopy(cf)  # error responses are supersets of chat's
+        op["description"] = self.strings["chat_messages_description"]
+        json200 = op["responses"]["200"]["content"]["application/json"]
+        json200["examples"] = copy.deepcopy(chat["responses"]["200"]["content"]["application/json"]["examples"])
+        sse = op["responses"]["200"]["content"]["text/event-stream"]
+        sse["schema"]["description"] = (OVERRIDES_DIR / f"chat-messages-sse.{self.lang}.md").read_text(encoding="utf-8").strip()
+        chat_sse_examples = chat["responses"]["200"]["content"]["text/event-stream"]["examples"]
+        merged_examples = {}
+        for key, value in sse["examples"].items():
+            merged_examples[key] = value
+            if key == "streamingResponseBasic":
+                merged_examples["streamingResponseAgent"] = copy.deepcopy(chat_sse_examples["streamingResponseAgent"])
+        sse["examples"] = merged_examples
+        # New Agent mode: verified against 7a4252b3de (streaming-only; agent
+        # binding errors surface as 400 invalid_param).
+        r400 = op["responses"]["400"]
+        r400["description"] += "\n" + self.strings["chat_messages_400_new_agent_bullets"]
+        r400["content"]["application/json"]["examples"].update({
+            "new_agent_streaming_only": {
+                "summary": "bad_request",
+                "value": {"code": "bad_request", "message": "Agent App only supports streaming response mode.", "status": 400},
+            },
+            "new_agent_not_bound": {
+                "summary": "invalid_param",
+                "value": {"code": "invalid_param", "message": "Agent App has no bound Agent", "status": 400},
+            },
+        })
+        return op
+
+    def superset_events(self):
+        """Single mode-aware GET /workflow/{workflow_run_id}/events."""
+        wf = self.specs["workflow"]["paths"]["/workflow/{workflow_run_id}/events"]["get"]
+        cf = self.specs["chatflow"]["paths"]["/workflow/{workflow_run_id}/events"]["get"]
+        op = copy.deepcopy(wf)  # workflow's wording is mode-neutral
+        sse = op["responses"]["200"]["content"]["text/event-stream"]
+        sse["schema"]["description"] = self.strings["events_stream_format_note"]
+        sse["examples"]["resumedRun"]["summary"] = self.strings["events_example_workflow_summary"]
+        cf_example = cf["responses"]["200"]["content"]["text/event-stream"]["examples"]["resumedRun"]
+        merged = copy.deepcopy(cf_example)
+        merged["summary"] = self.strings["events_example_chatflow_summary"]
+        sse["examples"]["resumedRunChatflow"] = merged
+        return op
+
+    # -- op merge ------------------------------------------------------------
+
+    def merge_ops(self):
+        merged_paths = {}
+        op_res_map = self.res["operations"]
+        occurrences = self.op_occurrences()
+        self.op_order = occurrences
+        for name in SPEC_NAMES:
+            for path, item in self.specs[name]["paths"].items():
+                for method, op in item.items():
+                    if method not in HTTP_METHODS:
+                        self.errors.append(f"{name}: non-operation key {path}.{method}")
+                        continue
+                    key = (path, method)
+                    if path in merged_paths and method in merged_paths[path]:
+                        continue  # already merged at first occurrence
+                    res = op_res_map.get(f"{method.upper()} {path}", {})
+                    specs_with = occurrences[key]
+                    if len(specs_with) == 1:
+                        merged = copy.deepcopy(op)
+                    elif res.get("superset") == "chat-messages":
+                        merged = self.superset_chat_messages()
+                    elif res.get("superset") == "events":
+                        merged = self.superset_events()
+                    elif "pick" in res:
+                        merged = copy.deepcopy(
+                            self.specs[res["pick"]]["paths"][path][method]
+                        )
+                        for ptr, string_key in res.get("set_strings", {}).items():
+                            self.set_pointer(merged, ptr, self.strings[string_key])
+                    else:
+                        # default: all occurrences must match apart from
+                        # operationId and tags
+                        variants = set()
+                        for sname in specs_with:
+                            v = copy.deepcopy(self.specs[sname]["paths"][path][method])
+                            v.pop("operationId", None)
+                            v.pop("tags", None)
+                            variants.add(canon(v))
+                        if len(variants) > 1:
+                            self.errors.append(
+                                f"unresolved divergence: {method.upper()} {path} in {specs_with}"
+                            )
+                            continue
+                        merged = copy.deepcopy(op)
+                    opid, tags, _ = self.canonical_meta(key)
+                    merged["operationId"] = opid
+                    merged["tags"] = tags
+                    merged.setdefault("x-mint", {})["href"] = (
+                        f"/{self.lang}/api-reference/{self.en_slugs[key]}"
+                    )
+                    merged_paths.setdefault(path, {})[method] = merged
+        return merged_paths
+
+    # -- assembly ------------------------------------------------------------
+
+    def note_change(self, target, spec, rule):
+        self.render_changes.append((target, spec, json.dumps(rule, ensure_ascii=False)[:120]))
+
+    def set_pointer(self, obj, pointer, value):
+        parts = [p.replace("~1", "/").replace("~0", "~") for p in pointer.split("/") if p]
+        for part in parts[:-1]:
+            obj = obj[int(part)] if isinstance(obj, list) else obj[part]
+        last = parts[-1]
+        if isinstance(obj, list):
+            obj[int(last)] = value
+        else:
+            obj[last] = value
+
+    def merged_tags(self):
+        """Union of tag objects; divergent descriptions default to first occurrence.
+
+        resolutions.json 'tags' entries (keyed by the tag name in this
+        language's specs) can pick a later spec's variant instead.
+        """
+        tag_res = self.res["tags"]
+        seen = {}
+        order = []
+        for name in SPEC_NAMES:
+            for t in self.specs[name].get("tags", []):
+                if t["name"] not in seen:
+                    seen[t["name"]] = t
+                    order.append(t["name"])
+                elif canon(seen[t["name"]]) != canon(t):
+                    pick = tag_res.get(t["name"], {}).get("pick")
+                    if pick == name:
+                        seen[t["name"]] = t
+                    else:
+                        self.note_change(f"tags/{t['name']}", name, {"default": "first occurrence"})
+        return [seen[n] for n in order]
+
+    def build(self):
+        self.strings = load_strings(self.lang)
+        self.canonicalize_links()
+        self.pristine = copy.deepcopy(self.specs)
+        self.op_order = self.op_occurrences()
+        self.unify_components()
+        paths = self.merge_ops()
+        components = {}
+        for name in SPEC_NAMES:
+            for kind, entries in self.specs[name].get("components", {}).items():
+                bucket = components.setdefault(kind, {})
+                for comp_name, comp in entries.items():
+                    if comp_name in bucket and canon(bucket[comp_name]) != canon(comp):
+                        self.errors.append(f"residual collision {kind}/{comp_name} from {name}")
+                    bucket.setdefault(comp_name, comp)
+        tags = self.merged_tags()
+        base = self.specs["chat"]
+        servers = copy.deepcopy(base["servers"])
+        servers[0]["description"] = self.strings["server_description"]
+        merged = {
+            "openapi": base["openapi"],
+            "info": {**MERGED_INFO[self.lang], "version": "1.0.0"},
+            "servers": servers,
+            "security": base["security"],
+            "tags": tags,
+            "paths": paths,
+            "components": components,
+        }
+        # Every cross-reference must carry a language prefix by now.
+        stale = re.findall(r"\(/api-reference/[^)]*\)", json.dumps(merged, ensure_ascii=False))
+        for hit in sorted(set(stale)):
+            self.errors.append(f"unprefixed cross-link in merged spec: {hit}")
+        if self.errors:
+            for e in self.errors:
+                print(f"ERROR [{self.lang}]: {e}")
+            sys.exit(1)
+        return merged
+
+
+def resolve_tree(node, components, stack=frozenset()):
+    """Dereference $refs recursively so trees compare by rendered content."""
+    if isinstance(node, dict):
+        if "$ref" in node and isinstance(node["$ref"], str) and node["$ref"].startswith("#/components/"):
+            ref = node["$ref"]
+            if ref in stack:
+                return "<recursion>"
+            _, _, kind, name = ref.split("/")
+            target = components.get(kind, {}).get(name)
+            if target is None:
+                return f"<dangling:{ref}>"
+            resolved = resolve_tree(target, components, stack | {ref})
+            extra = {k: v for k, v in node.items() if k != "$ref"}
+            if extra and isinstance(resolved, dict):
+                resolved = {**resolved, **resolve_tree(extra, components, stack)}
+            return resolved
+        return {k: resolve_tree(v, components, stack) for k, v in node.items()}
+    if isinstance(node, list):
+        return [resolve_tree(v, components, stack) for v in node]
+    return node
+
+
+def verify_rendering(merger, merged, report_lines):
+    """Diff every op's dereferenced tree: merged spec vs each source spec."""
+    p = report_lines.append
+    for name in SPEC_NAMES:
+        spec = merger.pristine[name]
+        comps = spec.get("components", {})
+        for path, method, op in iter_ops(spec):
+            merged_op = merged["paths"][path][method]
+            a = copy.deepcopy(op)
+            b = copy.deepcopy(merged_op)
+            for v in (a, b):
+                v.pop("operationId", None)
+                v.pop("tags", None)
+                v.pop("x-mint", None)
+            diffs = json_diff(
+                resolve_tree(a, comps), resolve_tree(b, merged["components"])
+            )
+            if diffs:
+                p(f"### {method.upper()} {path} (vs {name}): {len(diffs)} pointers")
+                for ptr, va, vb in diffs:
+                    p(f"- `{ptr}`")
+                    p(f"    - {name}: {canon(va)[:180]}")
+                    p(f"    - merged: {canon(vb)[:180]}")
+
+
+def compute_en_slugs(resolutions: dict) -> dict:
+    """Canonical language-independent URL slugs from the en specs."""
+    specs = {name: load_spec("en", name) for name in SPEC_NAMES}
+    slugs, seen = {}, {}
+    ops = {}
+    for name in SPEC_NAMES:
+        for path, method, op in iter_ops(specs[name]):
+            ops.setdefault((path, method), []).append((name, op))
+    for key, occ in ops.items():
+        res = resolutions["operations"].get(f"{key[1].upper()} {key[0]}", {})
+        tags_source = res.get("tags_from", occ[0][0])
+        op = dict(occ)[tags_source]
+        slug = f"{kebab(op['tags'][0])}/{kebab(op['summary'])}"
+        if slug in seen and seen[slug] != key:
+            sys.exit(f"slug collision: {slug} for {seen[slug]} and {key}")
+        seen[slug] = key
+        slugs[key] = slug
+    return slugs
+
+
+def build_all(langs, report_dir: Path | None = None):
+    resolutions = load_resolutions()
+    en_slugs = compute_en_slugs(resolutions)
+    for lang in langs:
+        merger = Merger(lang, resolutions, en_slugs)
+        merged = merger.build()
+        out = REPO / lang / "api-reference" / "openapi_service.json"
+        with open(out, "w", encoding="utf-8") as f:
+            json.dump(merged, f, ensure_ascii=False, indent=2)
+            f.write("\n")
+        if report_dir:
+            lines = [f"# Rendered-content changes — {lang}", ""]
+            verify_rendering(merger, merged, lines)
+            report = report_dir / f"render_diff_{lang}.md"
+            report.write_text("\n".join(lines), encoding="utf-8")
+            print(f"[{lang}] render diff report: {report}")
+        n_ops = sum(1 for _ in iter_ops(merged))
+        print(f"[{lang}] wrote {out.relative_to(REPO)}: {n_ops} operations, "
+              f"{sum(len(v) for v in merged['components'].values())} components")
+        for entry in merger.namespaced:
+            print(f"  namespaced: {entry}")
+        for target, spec, rule in merger.render_changes:
+            print(f"  render change: {target} (from {spec}) rule={rule}")
+
+
+# ---------------------------------------------------------------------------
+# Wire mode: docs.json navigation, redirects, and overview MDX pages
+# ---------------------------------------------------------------------------
+
+
+def load_nav_labels() -> dict:
+    with open(Path(__file__).resolve().parent / "nav_labels.json", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def split_first_sentence(text: str):
+    """(first sentence without trailing period, remainder) for en/zh/ja text."""
+    for sep in ("。", ". "):
+        if sep in text:
+            head, rest = text.split(sep, 1)
+            return head.strip().rstrip("."), rest.strip()
+    return text.strip().rstrip("。."), ""
+
+
+def write_overview_pages(lang: str, labels: dict):
+    """One landing page per app-type group, from the original specs' info blocks.
+
+    Only writes missing files, so later hand edits survive re-runs.
+    """
+    written = []
+    for name in SPEC_NAMES:
+        page = REPO / lang / "api-reference" / name / "overview.mdx"
+        if page.exists():
+            continue
+        info = load_spec(lang, name)["info"]
+        title = info["title"]
+        desc, body = split_first_sentence(info["description"])
+        note = re.match(r"^\*\*[^*]+[:：]\*\*\s*", body)
+        if note:
+            body = f"<Note>\n{body[note.end():].strip()}\n</Note>"
+        quote = '"' if ": " in title else ""
+        lines = [
+            "---",
+            f"title: {quote}{title}{quote}",
+            f"sidebarTitle: {labels['overview_sidebar_title'][lang]}",
+            f"description: {desc}",
+            "---",
+            "",
+        ]
+        if lang in labels["disclaimer"]:
+            en_path = f"/en/api-reference/{name}/overview"
+            lines += [labels["disclaimer"][lang].format(en_path=en_path), ""]
+        if body:
+            lines += [body, ""]
+        page.parent.mkdir(parents=True, exist_ok=True)
+        page.write_text("\n".join(lines), encoding="utf-8")
+        written.append(str(page.relative_to(REPO)))
+    return written
+
+
+def nav_groups_for(lang: str, labels: dict) -> list:
+    """The API menu's groups: per app type, tag subgroups with explicit ops.
+
+    App types without an input spec ("virtual_groups", e.g. New Agent) are
+    built from nav_labels.json config; their ops are canonical operations
+    already present in the merged spec. Their overview pages are authored
+    by hand, not generated.
+    """
+    groups = []
+    spec_ref = "api-reference/openapi_service.json"
+    for name in labels["group_order"]:
+        pages = [f"{lang}/api-reference/{name}/overview"]
+        if name in labels.get("virtual_groups", {}):
+            for sub in labels["virtual_groups"][name]["subgroups"]:
+                pages.append({
+                    "group": sub["labels"][lang],
+                    "openapi": f"{lang}/{spec_ref}",
+                    "pages": list(sub["pages"]),
+                })
+        else:
+            spec = load_spec(lang, name)
+            ops_by_tag = {}
+            for path, method, op in iter_ops(spec):
+                tag = (op.get("tags") or ["default"])[0]
+                ops_by_tag.setdefault(tag, []).append(f"{method.upper()} {path}")
+            for t in spec.get("tags", []):
+                if t["name"] in ops_by_tag:
+                    pages.append({
+                        "group": t["name"],
+                        "openapi": f"{lang}/{spec_ref}",
+                        "pages": ops_by_tag[t["name"]],
+                    })
+        groups.append({"group": labels["app_groups"][lang][name], "pages": pages})
+    return groups
+
+
+def old_to_new_urls(langs, en_slugs) -> dict:
+    """Every legacy /api-reference/... URL -> its new language-prefixed URL."""
+    mapping = {}
+    for lang in langs:
+        for name in SPEC_NAMES:
+            spec = load_spec(lang, name)
+            for path, method, op in iter_ops(spec):
+                tag = (op.get("tags") or [""])[0]
+                old = f"/api-reference/{kebab(tag)}/{kebab(op.get('summary', ''))}"
+                new = f"/{lang}/api-reference/{en_slugs[(path, method)]}"
+                if mapping.get(old, new) != new:
+                    sys.exit(f"redirect source collision: {old}")
+                mapping[old] = new
+    return mapping
+
+
+def wire(langs):
+    resolutions = load_resolutions()
+    en_slugs = compute_en_slugs(resolutions)
+    labels = load_nav_labels()
+    docs_path = REPO / "docs.json"
+    with open(docs_path, encoding="utf-8") as f:
+        docs = json.load(f)
+
+    for lang in langs:
+        for page in write_overview_pages(lang, labels):
+            print(f"[{lang}] wrote {page}")
+        groups = nav_groups_for(lang, labels)
+        lang_nav = next(l for l in docs["navigation"]["languages"] if l["language"] == lang)
+        replaced = 0
+        for prod in lang_nav.get("products", []):
+            for tab in prod.get("tabs", []):
+                for item in tab.get("menu", []):
+                    if item.get("item") == "API":
+                        item["groups"] = copy.deepcopy(groups)
+                        replaced += 1
+        print(f"[{lang}] replaced {replaced} API menus in docs.json")
+
+    # Redirects: legacy per-page URLs -> new language-prefixed URLs.
+    mapping = old_to_new_urls(langs, en_slugs)
+    existing = docs.get("redirects", [])
+    # Flatten chains through both legacy redirects and the new mapping, so
+    # every kept entry points straight at a real page (redirects don't chain).
+    combined = {r["source"]: r["destination"] for r in existing if ":slug" not in r["source"]}
+    combined.update(mapping)
+    for r in existing:
+        seen = set()
+        while r["destination"] in combined and r["destination"] not in seen:
+            seen.add(r["destination"])
+            r["destination"] = combined[r["destination"]]
+    kept = [r for r in existing if r["source"] not in mapping]
+    generated = [
+        {"source": src, "destination": dst}
+        for src, dst in sorted(mapping.items())
+        if src != dst
+    ]
+    docs["redirects"] = kept + generated
+    print(f"redirects: {len(kept)} kept, {len(generated)} generated")
+
+    with open(docs_path, "w", encoding="utf-8") as f:
+        json.dump(docs, f, ensure_ascii=False, indent=2)
+        f.write("\n")
+    print(f"wrote {docs_path.relative_to(REPO)}")
+
+
+def relink(langs):
+    """Rewrite legacy /api-reference/... links in MDX bodies to the new URLs.
+
+    Links in a page map to that page's own language, so readers stay in it.
+    """
+    resolutions = load_resolutions()
+    en_slugs = compute_en_slugs(resolutions)
+    for lang in langs:
+        linkmap = {}
+        for src_lang in {lang, "en"}:
+            for name in SPEC_NAMES:
+                spec = load_spec(src_lang, name)
+                for path, method, op in iter_ops(spec):
+                    tag = (op.get("tags") or [""])[0]
+                    old = f"/api-reference/{kebab(tag)}/{kebab(op.get('summary', ''))}"
+                    linkmap[old] = f"/{lang}/api-reference/{en_slugs[(path, method)]}"
+        fix = link_rewriter(linkmap)
+        changed = 0
+        for mdx in sorted((REPO / lang).rglob("*.mdx")):
+            text = mdx.read_text(encoding="utf-8")
+            if "/api-reference/" not in text:
+                continue
+            new_text = fix(text)
+            if new_text != text:
+                mdx.write_text(new_text, encoding="utf-8")
+                changed += 1
+        print(f"[{lang}] relinked {changed} MDX files")
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("mode", choices=["analyze", "build", "wire", "relink"])
+    ap.add_argument("--lang", nargs="*", default=["en"])
+    ap.add_argument("--report", type=Path, default=None)
+    args = ap.parse_args()
+
+    if args.mode == "analyze":
+        for lang in args.lang:
+            path = args.report
+            if path and len(args.lang) > 1:
+                path = path.with_name(f"{path.stem}_{lang}{path.suffix}")
+            analyze(lang, path)
+    elif args.mode == "build":
+        build_all(args.lang, args.report)
+    elif args.mode == "wire":
+        wire(args.lang)
+    elif args.mode == "relink":
+        relink(args.lang)
+
+
+if __name__ == "__main__":
+    main()

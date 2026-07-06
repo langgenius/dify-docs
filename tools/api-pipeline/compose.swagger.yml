@@ -1,0 +1,74 @@
+name: claude-verify
+services:
+  db:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_PASSWORD: difyai123456
+      POSTGRES_DB: dify
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:6-alpine
+  slow:
+    image: langgenius/dify-api:1.15.0
+    entrypoint:
+      - /app/api/.venv/bin/python
+      - -c
+      - |
+        import http.server, time
+        class H(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                time.sleep(25)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"ok": true}')
+            def log_message(self, *a):
+                pass
+        http.server.HTTPServer(('0.0.0.0', 8977), H).serve_forever()
+  worker:
+    image: langgenius/dify-api:1.15.0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      MODE: worker
+      SECRET_KEY: claude-verify-throwaway-secret-key-123456
+      DB_USERNAME: postgres
+      DB_PASSWORD: difyai123456
+      DB_HOST: db
+      DB_PORT: '5432'
+      DB_DATABASE: dify
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      CELERY_BROKER_URL: redis://redis:6379/1
+  api:
+    image: langgenius/dify-api:1.15.0
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      MODE: api
+      MIGRATION_ENABLED: 'true'
+      SECRET_KEY: claude-verify-throwaway-secret-key-123456
+      DB_USERNAME: postgres
+      DB_PASSWORD: difyai123456
+      DB_HOST: db
+      DB_PORT: '5432'
+      DB_DATABASE: dify
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      CELERY_BROKER_URL: redis://redis:6379/1
+      CONSOLE_API_URL: http://localhost:15001
+      CONSOLE_WEB_URL: http://localhost:15001
+      SERVICE_API_URL: http://localhost:15001
+      APP_WEB_URL: http://localhost:15001
+    ports:
+      - "15001:5001"
