@@ -252,6 +252,12 @@ Built-in roles: Owner, Admin, Editor, Builder, Knowledge Admin (code: `datasetOp
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
 | Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 | app.accessControl | |
 
+### Web App Settings
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Input placeholder | 输入框提示语 | 入力欄のプレースホルダー | app-overview.overview.appInfo.settings.more.inputPlaceholder | New in v1.16.0. Custom hint text for the WebApp chat input box; chat-style apps only. On Dify Cloud, requires a paid plan. |
+
 ### Workflow Node Names
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
