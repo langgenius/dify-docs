@@ -1059,9 +1059,34 @@ def relink(langs):
         print(f"[{lang}] relinked {changed} MDX files")
 
 
+def check_coverage(langs):
+    memberships = load_memberships()
+    failures = []
+    for lang in langs:
+        merged = json.load(open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8"))
+        hrefs = {f"{m.upper()} {p}": op["x-mint"]["href"]
+                 for p, ms in merged["paths"].items() for m, op in ms.items()
+                 if isinstance(op, dict) and "x-mint" in op}
+        for key, cfg in memberships["pages"].items():
+            page = REPO / lang / f"{cfg['page']}.mdx"
+            if not page.exists():
+                failures.append(f"{lang}/{key}: page missing"); continue
+            text = page.read_text(encoding="utf-8")
+            links = set(re.findall(r"\]\((/[a-z]{2}/api-reference/[^)#\s]+)", text))
+            for op_key in cfg["ops"]:
+                if hrefs[op_key] not in links:
+                    failures.append(f"{lang}/{key}: missing link for {op_key} ({hrefs[op_key]})")
+            for link in links - set(hrefs.values()):
+                if not link.endswith("/overview"):
+                    failures.append(f"{lang}/{key}: link to unknown page {link}")
+    for f in failures: print("COVERAGE:", f)
+    print(f"coverage failures: {len(failures)}")
+    sys.exit(1 if failures else 0)
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["analyze", "build", "wire", "relink"])
+    ap.add_argument("mode", choices=["analyze", "build", "wire", "relink", "check-coverage"])
     ap.add_argument("--lang", nargs="*", default=["en"])
     ap.add_argument("--report", type=Path, default=None)
     args = ap.parse_args()
@@ -1078,6 +1103,8 @@ def main():
         wire(args.lang)
     elif args.mode == "relink":
         relink(args.lang)
+    elif args.mode == "check-coverage":
+        check_coverage(args.lang)
 
 
 if __name__ == "__main__":
