@@ -1,9 +1,55 @@
 ---
 title: 工作流编排对话型应用 API (对话流 API)
 sidebarTitle: 概览
-description: 对话流应用支持会话持久化，允许将之前的聊天记录作为响应的上下文
+description: 对话流应用 API，涵盖对话消息、工作流级别流式事件、会话管理、人工介入暂停
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/api-reference/chatflow/overview)。
 
-对话流应用使用 `advanced-chat` 模式，提供工作流级别的流式事件，用于详细的执行追踪，包括节点开始、完成、迭代和工作流生命周期。
+对话流应用运行在 `advanced-chat` 模式下。生成回复的同时，还会流式传输工作流级别的事件（节点开始、完成、迭代、暂停）。之前的对话内容会保留为上下文，后续消息可引用更早的内容。
+
+## 发送消息并接收流式回复
+
+[发送对话消息](/zh/api-reference/chat-messages/send-chat-message) 向对话流应用发送一次请求。`streaming` 模式下，响应会在回复文本之外携带工作流和节点事件；`blocking` 模式下，需等运行结束后才返回完整结果。
+
+如需在回复完成前中断流式输出，可调用 [停止响应](/zh/api-reference/chat-messages/stop-chat-message-generation)。回复完成后，[获取下一轮建议问题列表](/zh/api-reference/chat-messages/get-next-suggested-questions) 会基于当前对话内容推荐后续问题。
+
+## 管理会话
+
+[获取会话列表](/zh/api-reference/conversations/list-conversations) 按最近活跃时间返回当前用户的会话列表。[获取会话历史消息](/zh/api-reference/conversations/list-conversation-messages) 以滚动加载的方式返回某个会话的历史消息，适合聊天界面分页显示。[重命名会话](/zh/api-reference/conversations/rename-conversation) 用于设置或自动生成会话名称，[删除会话](/zh/api-reference/conversations/delete-conversation) 用于删除指定会话。
+
+会话变量用于在同一会话的多轮对话间保留取值。[获取对话变量](/zh/api-reference/conversations/list-conversation-variables) 可读取当前取值，[更新对话变量](/zh/api-reference/conversations/update-conversation-variable) 可直接通过 API 修改指定变量的值。
+
+## 处理文件
+
+[上传文件](/zh/api-reference/files/upload-file) 用于上传图片、文档、音频或视频文件，供 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message) 引用，且仅限上传者本人使用。[下载文件](/zh/api-reference/files/download-file) 可预览或下载通过该方式上传的文件，前提是该文件属于当前应用内的某条消息。
+
+当某个响应只返回终端用户 ID（例如上传文件响应中的 `created_by`）而非完整信息时，可通过 [获取终端用户信息](/zh/api-reference/end-users/get-end-user-info) 查询详情。
+
+## 语音转写与合成
+
+[语音转文字](/zh/api-reference/audio/convert-audio-to-text) 可将上传的音频文件（MP3、M4A、WAV、AMR 或 MPGA，最大 30 MB）转写为文字，让终端用户用语音代替打字输入。[文字转语音](/zh/api-reference/audio/convert-text-to-audio) 可将回复合成为语音。
+
+## 人工介入暂停
+
+当运行在人工介入节点暂停时，事件流会推送一个携带 `form_token` 的 `human_input_required` 事件。如果该节点的投递方式为 WebApp，可通过 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 获取表单内容，再通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交接收者的填写结果。
+
+提交表单后，运行会恢复执行。使用暂停前事件流中的 `workflow_run_id`，即可通过 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 继续跟踪后续事件，直到获得最终回复。
+
+## 查看工作流运行
+
+[获取工作流执行情况](/zh/api-reference/workflow-runs/get-workflow-run-detail) 可根据 `workflow_run_id` 查询某次运行的状态与输出，该 ID 会出现在对话回复所附带的工作流和节点事件中。[获取工作流日志](/zh/api-reference/workflow-runs/list-workflow-logs) 返回的是运行级别的汇总信息（状态、token 用量、步骤数、耗时），而非逐节点的执行日志。
+
+## 获取应用信息与配置
+
+[获取应用基本信息](/zh/api-reference/applications/get-app-info) 返回应用的名称、描述、标签和模式。[获取应用参数](/zh/api-reference/applications/get-app-parameters) 返回输入表单配置：功能开关、输入参数名称、类型及默认值，可用于构建客户端界面。
+
+[获取应用元数据](/zh/api-reference/applications/get-app-meta) 返回工具图标等配置元数据。[获取应用 WebApp 设置](/zh/api-reference/applications/get-app-webapp-settings) 返回 WebApp 的站点配置、主题和自定义选项。
+
+## 收集反馈与标注
+
+终端用户可通过 [提交消息反馈](/zh/api-reference/feedback/submit-message-feedback) 将回复评为 `like` 或 `dislike`，并附加文字说明；将 `rating` 传入 `null` 可撤销此前的评价。[获取应用的消息反馈](/zh/api-reference/feedback/list-app-feedbacks) 返回应用内终端用户和管理员提交的全部反馈。
+
+标注为问题预设固定答案，应用命中标注后会直接返回该答案，不再重新生成回复。可通过 [创建标注](/zh/api-reference/annotations/create-annotation)、[获取标注列表](/zh/api-reference/annotations/list-annotations)、[更新标注](/zh/api-reference/annotations/update-annotation) 和 [删除标注](/zh/api-reference/annotations/delete-annotation) 管理标注。
+
+[配置标注回复](/zh/api-reference/annotations/configure-annotation-reply) 用于开启或关闭标注匹配功能。该操作以异步任务方式执行，可使用返回的任务 ID 轮询 [查询标注回复配置任务状态](/zh/api-reference/annotations/get-annotation-reply-job-status) 确认任务是否完成。

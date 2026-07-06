@@ -1,9 +1,55 @@
 ---
 title: 高度なチャットアプリAPI (Chatflow API)
 sidebarTitle: 概要
-description: Chatflow アプリケーションはセッションの永続化をサポートし、過去のチャット履歴をレスポンスのコンテキストとして使用できます
+description: チャットメッセージ、ワークフローレベルのストリーミング、会話管理、人間の入力による一時停止を扱う Chatflow アプリ向けの API
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/api-reference/chatflow/overview) を参照してください。
 
-Chatflow アプリは `advanced-chat` モードを使用し、ノードの開始・完了、イテレーション、ワークフローのライフサイクルを含む詳細な実行追跡のためのワークフローレベルのストリーミングイベントを提供します。
+Chatflow アプリは `advanced-chat` モードで動作します。返信と同時に、ワークフローレベルのイベントをストリーミングします。これには、ノードの開始、終了、イテレーション、一時停止が含まれます。それまでの会話内容はコンテキストとして保持され、後のメッセージから参照できます。
+
+## メッセージの送信とストリーミング返信
+
+[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) は、Chatflow アプリにリクエストを送信します。`streaming` モードでは、レスポンスに回答テキストとあわせてワークフローイベントとノードイベントが含まれます。`blocking` モードでは、実行が完了してから結果を返します。
+
+返信が完了する前に中断するには、[生成を停止](/ja/api-reference/chat-messages/stop-chat-message-generation) を呼び出してください。返信の完了後は、[次の推奨質問を取得](/ja/api-reference/chat-messages/get-next-suggested-questions) がそれまでの会話内容から次の質問を提案します。
+
+## 会話の管理
+
+[会話一覧を取得](/ja/api-reference/conversations/list-conversations) は、最終アクティビティの新しい順に現在のユーザーの会話一覧を返します。[会話履歴メッセージ一覧を取得](/ja/api-reference/conversations/list-conversation-messages) は、1 つの会話のメッセージ履歴をスクロール読み込み形式で返します。[会話の名前を変更](/ja/api-reference/conversations/rename-conversation) は表示名を設定または自動生成します。[会話を削除](/ja/api-reference/conversations/delete-conversation) は会話を削除します。
+
+会話変数はセッション内の複数ターンにわたって値を保持します。[会話変数の取得](/ja/api-reference/conversations/list-conversation-variables) で現在の値を読み取り、[会話変数を更新](/ja/api-reference/conversations/update-conversation-variable) で API から直接値を変更できます。
+
+## ファイルの操作
+
+[ファイルをアップロード](/ja/api-reference/files/upload-file) は、画像、ドキュメント、音声、動画ファイルをアップロードし、[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) から参照できるようにします。アップロードしたエンドユーザー自身のみが利用できます。[ファイルをダウンロード](/ja/api-reference/files/download-file) は、そのファイルをプレビューまたはダウンロードします。対象はアプリ内のメッセージに紐づくファイルに限られます。
+
+レスポンスに詳細情報の代わりにエンドユーザー ID のみが含まれる場合（アップロードファイルのレスポンスの `created_by` など）は、[エンドユーザー取得](/ja/api-reference/end-users/get-end-user-info) でその詳細を取得できます。
+
+## 音声とテキストの相互変換
+
+[音声をテキストに変換](/ja/api-reference/audio/convert-audio-to-text) は、アップロードされた音声ファイル（MP3、M4A、WAV、AMR、MPGA のいずれか、最大 30 MB）をテキストに変換します。エンドユーザーは入力をテキストではなく音声で行えます。[テキストを音声に変換](/ja/api-reference/audio/convert-text-to-audio) は、返信を音声として合成します。
+
+## 人間の入力による一時停止
+
+実行が人間の入力ノードで一時停止すると、イベントストリームに `form_token` を含む `human_input_required` イベントが発生します。ノードの配信方法が WebApp の場合は、[人間の入力フォームを取得](/ja/api-reference/human-input/get-human-input-form) でフォームの内容を取得し、[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) で回答者の入力内容を送信します。
+
+フォームを送信すると、実行が再開します。一時停止前のストリームに含まれる `workflow_run_id` を使います。[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) では、最終的な回答までの残りのイベントを追跡できます。
+
+## ワークフロー実行の確認
+
+[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) は、指定した `workflow_run_id` の実行ステータスと出力を返します。この ID は、チャット返信とあわせてストリーミングされるワークフローイベントとノードイベントに含まれています。[ワークフローログ一覧を取得](/ja/api-reference/workflow-runs/list-workflow-logs) が返すのは、ステータス、token 使用量、ステップ数、所要時間といった実行単位のサマリーであり、ノード単位の実行ログではありません。
+
+## アプリ情報と設定の取得
+
+[アプリケーションの基本情報を取得](/ja/api-reference/applications/get-app-info) は、アプリの名前、説明、タグ、モードを返します。[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) は、機能スイッチや入力パラメータの名前・型・デフォルト値といった入力フォームの設定を返し、クライアント UI の構築に役立ちます。
+
+[アプリケーションのメタ情報を取得](/ja/api-reference/applications/get-app-meta) は、ツールアイコンなどの設定メタデータを返します。[アプリの WebApp 設定を取得](/ja/api-reference/applications/get-app-webapp-settings) は、WebApp のサイト設定、テーマ、カスタマイズ項目を返します。
+
+## フィードバックとアノテーションの収集
+
+エンドユーザーは [メッセージフィードバックを送信](/ja/api-reference/feedback/submit-message-feedback) で返信を `like` または `dislike` として評価し、任意でコメントを付けられます。`rating` に `null` を渡すと、それまでの評価を取り消せます。[アプリのフィードバック一覧を取得](/ja/api-reference/feedback/list-app-feedbacks) は、エンドユーザーと管理者の両方から寄せられたフィードバックをすべて返します。
+
+アノテーションは質問に固定の回答を紐づけ、一致した場合はアプリが新たな回答を生成せずそのまま返します。管理には [アノテーションを作成](/ja/api-reference/annotations/create-annotation)、[アノテーションリストを取得](/ja/api-reference/annotations/list-annotations)、[アノテーションを更新](/ja/api-reference/annotations/update-annotation)、[アノテーションを削除](/ja/api-reference/annotations/delete-annotation) を使用します。
+
+[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) は、アノテーションによる自動応答のオン・オフを切り替えます。処理は非同期で実行されるため、返されたジョブ ID を使って [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) を呼び出し、完了を確認します。
