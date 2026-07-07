@@ -143,8 +143,12 @@ for f in sorted(glob.glob(f"{DOCS}/*/api-reference/openapi_*.json")):
             for link in re.findall(r"\]\((/[^)\s]+)\)", desc):
                 CHECKS["links"] += 1
                 if link.startswith("/api-reference/") or re.match(r"^/(en|zh|ja)/api-reference/", link):
-                    if link.split("#")[0] not in valid_pages:
-                        issues[rel].append(f"{where}: broken link target {link}")
+                    base = link.split("#")[0]
+                    if base not in valid_pages:
+                        # MDX guide pages live under api-reference/ too
+                        target = f"{DOCS}{base}"
+                        if not (os.path.exists(target + ".mdx") or os.path.exists(target + ".md")):
+                            issues[rel].append(f"{where}: broken link target {link}")
                 else:
                     if not re.match(r"^/(en|zh|ja)/", link):
                         issues[rel].append(f"{where}: non-API link without language prefix: {link}")
