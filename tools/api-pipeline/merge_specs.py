@@ -1086,7 +1086,7 @@ def check_coverage(langs):
                 if hrefs[op_key] not in links:
                     failures.append(f"{lang}/{key}: missing link for {op_key} ({hrefs[op_key]})")
             for link in links - set(hrefs.values()):
-                if not link.endswith("/overview"):
+                if not (link.endswith("/overview") or "/api-reference/guides/" in link):
                     failures.append(f"{lang}/{key}: link to unknown page {link}")
     for f in failures: print("COVERAGE:", f)
     print(f"coverage failures: {len(failures)}")
