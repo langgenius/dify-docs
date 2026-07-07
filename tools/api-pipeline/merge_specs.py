@@ -644,6 +644,10 @@ class Merger:
                 "summary": "invalid_param",
                 "value": {"code": "invalid_param", "message": "Agent App has no bound Agent", "status": 400},
             },
+            "new_agent_not_published": {
+                "summary": "agent_not_published",
+                "value": {"code": "agent_not_published", "message": "Agent has not been published. Please publish the Agent before using the API.", "status": 400},
+            },
         })
         return op
 
@@ -691,6 +695,8 @@ class Merger:
                         )
                         for ptr, string_key in res.get("set_strings", {}).items():
                             self.set_pointer(merged, ptr, self.strings[string_key])
+                        for ptr, val in res.get("set_json", {}).items():
+                            self.set_pointer(merged, ptr, val)
                     else:
                         # default: all occurrences must match apart from
                         # operationId and tags

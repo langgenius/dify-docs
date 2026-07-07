@@ -9,7 +9,7 @@ For Chatflow apps, workflow progress streams as `workflow_started`, node events 
 - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`
 - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)
 
-For New Agent apps, the reply streams as `message` events and ends with `message_end`; the model's reasoning and tool activity are not exposed as stream events. `message_end` metadata carries `usage` (plus `annotation_reply` when an annotation match replies) and never includes `retriever_resources`.
+For New Agent apps, the reply streams as `message` text chunks, and the model's reasoning and tool calls stream alongside as `agent_thought` events. `message_end` metadata carries `usage` (plus `annotation_reply` when an annotation match replies) and never includes `retriever_resources`.
 
 **Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) also nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.
 
@@ -19,7 +19,7 @@ For New Agent apps, the reply streams as `message` events and ends with `message
 |:---|:---|:---|:---|
 | `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order) | `answer` |
 | `agent_message` | Agent | each answer chunk (concatenate in order) | `answer` |
-| `agent_thought` | Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |
+| `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |
 | `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |
 | `reasoning_chunk` | Chatflow | each chain-of-thought delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks thinking finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |
 | `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |

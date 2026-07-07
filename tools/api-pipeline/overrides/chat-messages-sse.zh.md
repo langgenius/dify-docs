@@ -9,7 +9,7 @@
 - **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`
 - **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）
 
-New Agent 应用的回复以 `message` 事件流式返回，并以 `message_end` 结束；模型的推理和工具调用过程不会作为流事件暴露。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。
+New Agent 应用的回复以 `message` 文本片段流式返回，模型的推理和工具调用会同时以 `agent_thought` 事件返回。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。
 
 **事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（对话流应用）还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。
 
@@ -19,7 +19,7 @@ New Agent 应用的回复以 `message` 事件流式返回，并以 `message_end`
 |:---|:---|:---|:---|
 | `message` | 聊天助手、对话流、New Agent | 每个回答片段（按顺序拼接） | `answer` |
 | `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |
-| `agent_thought` | Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |
+| `agent_thought` | Agent、New Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |
 | `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；对话流应用还包含 `reason` |
 | `reasoning_chunk` | 对话流 | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |
 | `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |
