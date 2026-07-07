@@ -945,8 +945,17 @@ def nav_groups_for(lang: str, labels: dict) -> list:
         if tag in ops_by_en_tag:
             ops_by_en_tag[tag] = [o for o in order if o in ops_by_en_tag[tag]] + \
                                  [o for o in ops_by_en_tag[tag] if o not in order]
-    guides = {"group": labels["guides_group"][lang],
-              "pages": [f"{lang}/{memberships['pages'][k]['page']}" for k in labels["guides_order"]]}
+    guides_pages = []
+    for entry in labels["guides_layout"]:
+        if "page" in entry:
+            guides_pages.append(f"{lang}/{entry['page']}")
+        else:
+            sub = {"group": entry["labels"][lang],
+                   "pages": [f"{lang}/{memberships['pages'][k]['page']}" for k in entry["apps"]]}
+            if entry.get("expanded"):
+                sub["expanded"] = True
+            guides_pages.append(sub)
+    guides = {"group": labels["guides_group"][lang], "pages": guides_pages}
 
     def tier(cfg):
         return {"group": cfg["labels"][lang], "pages": [
