@@ -8,40 +8,57 @@ Workflow apps run in `workflow` mode, executing the published workflow once per 
 
 ## Run a Workflow
 
-[Run Workflow](/en/api-reference/workflow-runs/run-workflow) executes the app's currently published workflow with the input variables you provide. [Run Workflow by ID](/en/api-reference/workflow-runs/run-workflow-by-id) executes a specific published version instead, identified by the `workflow_id` from an earlier run or run detail lookup.
+- **[Run Workflow](/en/api-reference/workflow-runs/run-workflow)**: execute the app's currently published workflow with the input variables you provide. Streaming mode delivers events live as nodes execute; blocking mode returns once the run finishes.
+- **[Run Workflow by ID](/en/api-reference/workflow-runs/run-workflow-by-id)**: execute a specific published version instead, identified by the `workflow_id` from an earlier run response or run detail lookup.
 
 ## Follow and Control a Run
 
-Set `response_mode` on the run call to `streaming` for a live event feed as the workflow executes, or `blocking` to wait for the full result. Either way, the response carries two IDs: `task_id` controls the run while it's active, and `workflow_run_id` identifies the persisted record afterward.
+Whichever mode you run in, the response carries two IDs: `task_id` controls the run while it's active, and `workflow_run_id` identifies the persisted record afterward.
 
-[Stop Workflow Task](/en/api-reference/workflow-runs/stop-workflow-task) cancels a run using its `task_id`, but only works in streaming mode; a blocking call has already finished by the time it returns.
-
-When a connection drops or a run pauses, [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) resumes the stream from `workflow_run_id`. Pass `include_state_snapshot=true` to replay already-finished nodes first, or `continue_on_pause=true` to stay open across multiple Human Input pauses.
+- **[Stop Workflow Task](/en/api-reference/workflow-runs/stop-workflow-task)**: cancel an active run by its `task_id`. Works in streaming mode only; a blocking call has already finished by the time it returns.
+- **[Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events)**: resume a run's event stream from its `workflow_run_id` after a dropped connection or a pause. Pass `include_state_snapshot=true` to replay the status of already-executed nodes first, or `continue_on_pause=true` to stay open across multiple Human Input pauses.
 
 ## Pause for Human Input
 
-When a run pauses at a Human Input node, its event stream emits `human_input_required` (carrying a `form_token`) together with `workflow_paused`, then closes. If the node's delivery method is WebApp, fetch the paused form's contents with [Get Human Input Form](/en/api-reference/human-input/get-human-input-form), then submit the recipient's response with [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form).
+When a run reaches a Human Input node whose delivery method is WebApp, complete the pause over the API:
 
-Submitting the form resumes the run; if the recipient doesn't respond in time, the workflow follows its timeout fallback edge instead, when one is defined. Either way, pick the remaining events back up with [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events), using the `workflow_run_id` from the paused stream.
+<Steps>
+  <Step title="Listen for the pause">
+    The run's event stream emits `human_input_required` carrying a `form_token`, then ends at `workflow_paused`.
+  </Step>
+  <Step title="Fetch the form">
+    Load the form's contents with [Get Human Input Form](/en/api-reference/human-input/get-human-input-form), using the `form_token`.
+  </Step>
+  <Step title="Submit the response">
+    Send the recipient's input with [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form). Submitting resumes the run.
+  </Step>
+  <Step title="Resume the stream">
+    Follow the remaining events, through to the run's finish, with [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events), using the `workflow_run_id` from the paused stream.
+  </Step>
+</Steps>
+
+For file-attached submissions and the full event sequence, see the [Human Input Flow](/en/api-reference/guides/human-input-flow) guide.
 
 ## Inspect Past Runs
 
-[Get Workflow Run Detail](/en/api-reference/workflow-runs/get-workflow-run-detail) returns a run's status and outputs for a given `workflow_run_id`. [List Workflow Logs](/en/api-reference/workflow-runs/list-workflow-logs) returns run-level summaries—status, token usage, step count, and timing—rather than a node-by-node execution log; filter by keyword, status, date range, or the end user who triggered the run.
+- **[Get Workflow Run Detail](/en/api-reference/workflow-runs/get-workflow-run-detail)**: a run's status and outputs, by its `workflow_run_id`.
+- **[List Workflow Logs](/en/api-reference/workflow-runs/list-workflow-logs)**: run-level summaries covering status, token usage, step count, and timing, rather than a node-by-node execution log; filter by keyword, status, date range, or who triggered the run.
 
-For node-level detail, stream the run instead of listing its logs: use `response_mode=streaming` on [Run Workflow](/en/api-reference/workflow-runs/run-workflow) for a run you're starting, or [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) for one already in progress.
+For node-level events, stream the run instead of listing its logs: call [Run Workflow](/en/api-reference/workflow-runs/run-workflow) in streaming mode for a run you're starting, or [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) for one already in progress.
 
 ## Work with Files
 
-[Upload File](/en/api-reference/files/upload-file) uploads an image, document, audio, or video file for a workflow run to reference. Pass the returned `id` as `upload_file_id` in a file-type input variable on [Run Workflow](/en/api-reference/workflow-runs/run-workflow) or [Run Workflow by ID](/en/api-reference/workflow-runs/run-workflow-by-id); Workflow apps have no endpoint to preview or download a file after uploading it.
-
-When a response returns an end-user ID instead of full details, such as `created_by` in the Upload File response, [Get End User Info](/en/api-reference/end-users/get-end-user-info) resolves it.
+- **[Upload File](/en/api-reference/files/upload-file)**: upload an image, document, audio, or video file, then pass the returned `id` as `upload_file_id` in a file-type input variable when you run the workflow. Files are scoped to the uploading end user.
+- **[Get End User Info](/en/api-reference/end-users/get-end-user-info)**: look up an end user's details from an end-user ID, such as the `created_by` in the Upload File response.
 
 ## Transcribe and Synthesize Speech
 
-[Convert Audio to Text](/en/api-reference/audio/convert-audio-to-text) transcribes an uploaded audio file (MP3, M4A, WAV, AMR, or MPGA, up to 30 MB), letting end users speak an input value instead of typing it. [Convert Text to Audio](/en/api-reference/audio/convert-text-to-audio) synthesizes a workflow's text output back into speech.
+- **[Convert Audio to Text](/en/api-reference/audio/convert-audio-to-text)**: transcribe an uploaded audio file (MP3, M4A, WAV, AMR, or MPGA, up to 30 MB) so end users can speak an input value instead of typing it.
+- **[Convert Text to Audio](/en/api-reference/audio/convert-text-to-audio)**: synthesize a workflow's text output back into speech.
 
 ## Retrieve App Info and Settings
 
-[Get App Info](/en/api-reference/applications/get-app-info) returns the app's name, description, tags, and mode. [Get App Parameters](/en/api-reference/applications/get-app-parameters) returns its input form configuration: feature switches, input parameter names, types, and defaults, useful for building a client UI.
-
-[Get App Meta](/en/api-reference/applications/get-app-meta) returns tool icons and other configuration metadata. [Get App WebApp Settings](/en/api-reference/applications/get-app-webapp-settings) returns the WebApp's site configuration, theme, and customization options.
+- **[Get App Info](/en/api-reference/applications/get-app-info)**: the app's name, description, tags, and mode.
+- **[Get App Parameters](/en/api-reference/applications/get-app-parameters)**: the input form configuration (feature switches, parameter names, types, and defaults), useful for building a client UI.
+- **[Get App Meta](/en/api-reference/applications/get-app-meta)**: tool icons and other configuration metadata.
+- **[Get App WebApp Settings](/en/api-reference/applications/get-app-webapp-settings)**: the WebApp's site configuration, theme, and customization options.
