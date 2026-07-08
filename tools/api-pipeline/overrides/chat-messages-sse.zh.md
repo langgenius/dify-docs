@@ -17,14 +17,14 @@ Chatflow 应用中，工作流进度以 `workflow_started`、节点事件（`nod
 
 | 事件 | 应用 | 触发时机 | 关键字段 |
 |:---|:---|:---|:---|
-| `message` | 聊天助手、对话流、新 Agent | 每个回答片段（按顺序拼接） | `answer` |
+| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接） | `answer` |
 | `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |
 | `agent_thought` | Agent、新 Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |
 | `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |
-| `reasoning_chunk` | 对话流 | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |
+| `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |
 | `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |
 | `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |
-| `tts_message`、`tts_message_end` | 聊天助手、Agent、对话流 | 音频片段/结束，开启 TTS 自动播放时 | `audio` |
+| `tts_message`、`tts_message_end` | 聊天助手、Agent、Chatflow | 音频片段/结束，开启 TTS 自动播放时 | `audio` |
 
 **工作流与节点事件**（仅 Chatflow 应用）
 

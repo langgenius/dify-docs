@@ -4,7 +4,7 @@ A stream of Server-Sent Events (SSE).
 
 **Stream lifecycle**: For Chatbot apps, the reply streams as `message` events; for Agent apps, as `agent_thought` and `agent_message` events. The stream ends with `message_end`; when text-to-speech auto-play is enabled, `tts_message` events interleave and `tts_message_end` becomes the final event.
 
-For Chatflow apps, workflow progress streams as `workflow_started`, node events (`node_started` and `node_finished`, plus iteration and loop variants), and the reply as `message` events (an LLM node with `reasoning_format: separated` also emits `reasoning_chunk` events alongside, carrying the model's chain-of-thought). When text-to-speech auto-play is enabled, `tts_message_end` trails the closing event. The closing sequence depends on the outcome:
+For Chatflow apps, workflow progress streams as `workflow_started`, node events (`node_started` and `node_finished`, plus iteration and loop variants), and the reply as `message` events (an LLM node with `reasoning_format: separated` also emits `reasoning_chunk` events alongside, carrying the model's reasoning content). When text-to-speech auto-play is enabled, `tts_message_end` trails the closing event. The closing sequence depends on the outcome:
 - **Success**: `message_end`, then `workflow_finished`
 - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`
 - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)
@@ -21,7 +21,7 @@ For New Agent apps, the reply streams as `message` text chunks, and the model's 
 | `agent_message` | Agent | each answer chunk (concatenate in order) | `answer` |
 | `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |
 | `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |
-| `reasoning_chunk` | Chatflow | each chain-of-thought delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks thinking finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |
+| `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |
 | `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |
 | `message_end` | All | the answer is complete | `metadata` (`usage`, `retriever_resources`) |
 | `tts_message`, `tts_message_end` | Chatbot, Agent, Chatflow | audio chunk / end, when TTS auto-play is on | `audio` |
