@@ -47,7 +47,7 @@ MERGED_INFO = {
     },
     "ja": {
         "title": "Dify サービス API",
-        "description": "Dify アプリケーションとナレッジベースのための REST API です。アプリケーション系エンドポイントはアプリの API キーで、ナレッジ系エンドポイントはデータセットの API キーで認証します。",
+        "description": "Dify アプリケーションとナレッジベースのための REST API です。アプリケーション系エンドポイントはアプリの API キーで、ナレッジ系エンドポイントはナレッジベースの API キーで認証します。",
     },
 }
 
@@ -721,6 +721,14 @@ class Merger:
                     merged.setdefault("x-mint", {})["href"] = (
                         f"/{self.lang}/api-reference/{self.en_slugs[key]}"
                     )
+                    # A custom href makes Mintlify derive the nav label from the
+                    # English URL slug instead of the (translated) summary. Pin
+                    # the sidebar label and page title to the summary so zh/ja
+                    # operations render in their own language.
+                    if merged.get("summary"):
+                        merged["x-mint"].setdefault("metadata", {}).update(
+                            {"title": merged["summary"], "sidebarTitle": merged["summary"]}
+                        )
                     merged_paths.setdefault(path, {})[method] = merged
         return merged_paths
 
@@ -971,25 +979,7 @@ def nav_groups_for(lang: str, labels: dict) -> list:
     return [guides, tier(labels["reference"]["app_apis"]), tier(labels["reference"]["knowledge_api"])]
 
 
-def old_to_new_urls(langs, en_slugs) -> dict:
-    """Every legacy /api-reference/... URL -> its new language-prefixed URL."""
-    mapping = {}
-    for lang in langs:
-        for name in SPEC_NAMES:
-            spec = load_spec(lang, name)
-            for path, method, op in iter_ops(spec):
-                tag = (op.get("tags") or [""])[0]
-                old = f"/api-reference/{kebab(tag)}/{kebab(op.get('summary', ''))}"
-                new = f"/{lang}/api-reference/{en_slugs[(path, method)]}"
-                if mapping.get(old, new) != new:
-                    sys.exit(f"redirect source collision: {old}")
-                mapping[old] = new
-    return mapping
-
-
 def wire(langs):
-    resolutions = load_resolutions()
-    en_slugs = compute_en_slugs(resolutions)
     labels = load_nav_labels()
     docs_path = REPO / "docs.json"
     with open(docs_path, encoding="utf-8") as f:
@@ -1007,26 +997,26 @@ def wire(langs):
                         replaced += 1
         print(f"[{lang}] replaced {replaced} API menus in docs.json")
 
-    # Redirects: legacy per-page URLs -> new language-prefixed URLs.
-    mapping = old_to_new_urls(langs, en_slugs)
+    # Redirects. No per-endpoint API map: any legacy no-language-prefix
+    # /api-reference/... link falls through to the English API home via the
+    # catch-all. The only exceptions are the three knowledge-base links embedded
+    # in the product UI, which keep a specific per-language target. Non-API
+    # redirects are preserved untouched.
     existing = docs.get("redirects", [])
-    # Flatten chains through both legacy redirects and the new mapping, so
-    # every kept entry points straight at a real page (redirects don't chain).
-    combined = {r["source"]: r["destination"] for r in existing if ":slug" not in r["source"]}
-    combined.update(mapping)
-    for r in existing:
-        seen = set()
-        while r["destination"] in combined and r["destination"] not in seen:
-            seen.add(r["destination"])
-            r["destination"] = combined[r["destination"]]
-    kept = [r for r in existing if r["source"] not in mapping]
-    generated = [
-        {"source": src, "destination": dst}
-        for src, dst in sorted(mapping.items())
-        if src != dst
+    api_kb = [
+        {"source": "/api-reference/knowledge-bases/list-knowledge-bases",
+         "destination": "/en/api-reference/guides/knowledge"},
+        {"source": "/api-reference/知识库/获取知识库列表",
+         "destination": "/zh/api-reference/guides/knowledge"},
+        {"source": "/api-reference/データセット/ナレッジベースリストを取得",
+         "destination": "/ja/api-reference/guides/knowledge"},
     ]
-    docs["redirects"] = kept + generated
-    print(f"redirects: {len(kept)} kept, {len(generated)} generated")
+    # Catch-all last so the KB exceptions win (Mintlify matches sources in order).
+    api_catchall = {"source": "/api-reference/:slug*",
+                    "destination": "/en/api-reference/guides/get-started"}
+    kept = [r for r in existing if "/api-reference/" not in r["source"]]
+    docs["redirects"] = kept + api_kb + [api_catchall]
+    print(f"redirects: {len(kept)} non-API + {len(api_kb)} KB + 1 catch-all")
 
     with open(docs_path, "w", encoding="utf-8") as f:
         json.dump(docs, f, ensure_ascii=False, indent=2)
