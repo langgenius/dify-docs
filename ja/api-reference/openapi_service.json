@@ -2,7 +2,7 @@
   "openapi": "3.0.1",
   "info": {
     "title": "Dify サービス API",
-    "description": "Dify アプリケーションとナレッジベースのための REST API です。アプリケーション系エンドポイントはアプリの API キーで、ナレッジ系エンドポイントはデータセットの API キーで認証します。",
+    "description": "Dify アプリケーションとナレッジベースのための REST API です。アプリケーション系エンドポイントはアプリの API キーで、ナレッジ系エンドポイントはナレッジベースの API キーで認証します。",
     "version": "1.0.0"
   },
   "servers": [
@@ -68,7 +68,7 @@
       "description": "テキスト生成に関連する操作です。"
     },
     {
-      "name": "データセット",
+      "name": "ナレッジベース",
       "description": "ナレッジベースの作成、設定、取得を含むナレッジベース管理の操作です。"
     },
     {
@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "チャットメッセージを送信",
-        "description": "**対象アプリ**：チャットフロー、New Agent、チャットボット、Agent。\n\nチャットアプリケーションにリクエストを送信します。チャットボット、Agent、チャットフロー、New Agent アプリで利用できます。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットアプリケーションにリクエストを送信します。チャットボット、Agent、Chatflow、新しい Agent アプリで利用できます。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
         "operationId": "sendBasicChatMessageJa",
         "tags": [
           "チャットメッセージ"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：チャットボットアプリでは、回答は `message` イベントとしてストリーミングされます。Agent アプリでは `agent_thought` と `agent_message` イベントになります。ストリームは `message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\nチャットフローアプリでは、ワークフローの進行は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループの各バリアント）として、回答は `message` イベントとしてストリーミングされます（`reasoning_format: separated` を指定した LLM ノードは、モデルの思考過程を伝える `reasoning_chunk` イベントも並行して発行します）。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。終了シーケンスは実行結果によって異なります：\n- **成功**：`message_end`、続いて `workflow_finished`\n- **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` は送信されません\n- **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\nNew Agent アプリでは、回答は `message` テキストチャンクとしてストリーミングされ、モデルの推論とツール呼び出しは `agent_thought` イベントとして並行して届きます。`message_end` の `metadata` には `usage` が含まれ（アノテーションが一致した場合は `annotation_reply` も含まれます）、`retriever_resources` は含まれません。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（チャットフローアプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、チャットフロー、New Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_message` | Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent、New Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。チャットフローでは `reason` も含む |\n| `reasoning_chunk` | チャットフロー | 思考過程の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは思考の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、チャットフロー | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（チャットフローアプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
+                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：チャットボットアプリでは、回答は `message` イベントとしてストリーミングされます。Agent アプリでは `agent_thought` と `agent_message` イベントになります。ストリームは `message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\nChatflow アプリでは、ワークフローの進行は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループの各バリアント）として、回答は `message` イベントとしてストリーミングされます（`reasoning_format: separated` を指定した LLM ノードは、モデルの思考過程を伝える `reasoning_chunk` イベントも並行して発行します）。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。終了シーケンスは実行結果によって異なります：\n- **成功**：`message_end`、続いて `workflow_finished`\n- **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` は送信されません\n- **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\n新しい Agent アプリでは、回答は `message` テキストチャンクとしてストリーミングされ、モデルの推論とツール呼び出しは `agent_thought` イベントとして並行して届きます。`message_end` の `metadata` には `usage` が含まれ（アノテーションが一致した場合は `annotation_reply` も含まれます）、`retriever_resources` は含まれません。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（Chatflow アプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、チャットフロー、新しい Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_message` | Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent、新しい Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。チャットフローでは `reason` も含む |\n| `reasoning_chunk` | チャットフロー | 思考過程の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは思考の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、チャットフロー | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（Chatflow アプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -226,7 +226,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : New Agent アプリで `blocking` レスポンスモードが指定されました。\n- `invalid_param` : New Agent アプリに Agent がバインドされていません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（New Agent アプリ）",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : 新しい Agent アプリで `blocking` レスポンスモードが指定されました。\n- `invalid_param` : 新しい Agent アプリに Agent がバインドされていません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（新しい Agent アプリ）",
             "content": {
               "application/json": {
                 "examples": {
@@ -391,14 +391,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chat-messages/send-chat-message"
+          "href": "/ja/api-reference/chat-messages/send-chat-message",
+          "metadata": {
+            "title": "チャットメッセージを送信",
+            "sidebarTitle": "チャットメッセージを送信"
+          }
         }
       }
     },
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "生成を停止",
-        "description": "**対象アプリ**：チャットフロー、New Agent、チャットボット、Agent。\n\nチャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされます。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされます。",
         "operationId": "stopBasicChatMessageGenerationJa",
         "tags": [
           "チャットメッセージ"
@@ -464,14 +468,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chat-messages/stop-chat-message-generation"
+          "href": "/ja/api-reference/chat-messages/stop-chat-message-generation",
+          "metadata": {
+            "title": "生成を停止",
+            "sidebarTitle": "生成を停止"
+          }
         }
       }
     },
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "次の推奨質問を取得",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n現在のメッセージに対する次の質問の提案を取得します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n現在のメッセージに対する次の質問の提案を取得します。",
         "operationId": "getBasicChatSuggestedQuestionsJa",
         "tags": [
           "チャットメッセージ"
@@ -588,14 +596,18 @@
           }
         ],
         "x-mint": {
-          "href": "/ja/api-reference/chat-messages/get-next-suggested-questions"
+          "href": "/ja/api-reference/chat-messages/get-next-suggested-questions",
+          "metadata": {
+            "title": "次の推奨質問を取得",
+            "sidebarTitle": "次の推奨質問を取得"
+          }
         }
       }
     },
     "/files/upload": {
       "post": {
         "summary": "ファイルをアップロード",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、New Agent、チャットボット、Agent、テキストジェネレーター。\n\nメッセージ送信時に使用するファイルをアップロードします。画像、ドキュメント、音声、動画のマルチモーダル理解が可能です。アップロードされたファイルは現在のエンドユーザーのみが使用できます。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nメッセージ送信時に使用するファイルをアップロードします。画像、ドキュメント、音声、動画のマルチモーダル理解が可能です。アップロードされたファイルは現在のエンドユーザーのみが使用できます。",
         "operationId": "uploadBasicChatFileJa",
         "tags": [
           "ファイル操作"
@@ -734,14 +746,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/files/upload-file"
+          "href": "/ja/api-reference/files/upload-file",
+          "metadata": {
+            "title": "ファイルをアップロード",
+            "sidebarTitle": "ファイルをアップロード"
+          }
         }
       }
     },
     "/files/{file_id}/preview": {
       "get": {
         "summary": "ファイルをダウンロード",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent、テキストジェネレーター。\n\n以前[ファイルをアップロード](/ja/api-reference/files/upload-file) API 経由でアップロードされたファイルをプレビューまたはダウンロードします。ファイルは、リクエスト元のアプリケーション内のメッセージに属する場合のみアクセスできます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\n以前[ファイルをアップロード](/ja/api-reference/files/upload-file) API 経由でアップロードされたファイルをプレビューまたはダウンロードします。ファイルは、リクエスト元のアプリケーション内のメッセージに属する場合のみアクセスできます。",
         "operationId": "previewBasicChatFileJa",
         "tags": [
           "ファイル操作"
@@ -825,14 +841,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/files/download-file"
+          "href": "/ja/api-reference/files/download-file",
+          "metadata": {
+            "title": "ファイルをダウンロード",
+            "sidebarTitle": "ファイルをダウンロード"
+          }
         }
       }
     },
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "エンドユーザー取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、チャットボット、Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーを取得します。他の API がエンドユーザー ID を返す場合（例：[ファイルをアップロード](/ja/api-reference/files/upload-file)の `created_by`）に便利です。",
+        "description": "**対象アプリ**：Chatflow、Workflow、チャットボット、Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーを取得します。他の API がエンドユーザー ID を返す場合（例：[ファイルをアップロード](/ja/api-reference/files/upload-file)の `created_by`）に便利です。",
         "operationId": "getEndUserChatJa",
         "tags": [
           "エンドユーザー"
@@ -896,14 +916,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/end-users/get-end-user-info"
+          "href": "/ja/api-reference/end-users/get-end-user-info",
+          "metadata": {
+            "title": "エンドユーザー取得",
+            "sidebarTitle": "エンドユーザー取得"
+          }
         }
       }
     },
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "メッセージフィードバックを送信",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent、テキストジェネレーター。\n\nメッセージに対するフィードバックを送信します。エンドユーザーはメッセージを `like` または `dislike` で評価でき、任意でテキストフィードバックを提供できます。`rating` に `null` を渡すと、以前送信したフィードバックを取り消せます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nメッセージに対するフィードバックを送信します。エンドユーザーはメッセージを `like` または `dislike` で評価でき、任意でテキストフィードバックを提供できます。`rating` に `null` を渡すと、以前送信したフィードバックを取り消せます。",
         "operationId": "postBasicChatMessageFeedbackJa",
         "tags": [
           "メッセージフィードバック"
@@ -962,14 +986,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/feedback/submit-message-feedback"
+          "href": "/ja/api-reference/feedback/submit-message-feedback",
+          "metadata": {
+            "title": "メッセージフィードバックを送信",
+            "sidebarTitle": "メッセージフィードバックを送信"
+          }
         }
       }
     },
     "/app/feedbacks": {
       "get": {
         "summary": "アプリのフィードバック一覧を取得",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメッセージに対して送信されたすべてのフィードバックのページネーション付きリストを取得します。エンドユーザーと管理者のフィードバックの両方が含まれます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメッセージに対して送信されたすべてのフィードバックのページネーション付きリストを取得します。エンドユーザーと管理者のフィードバックの両方が含まれます。",
         "operationId": "getBasicChatAppFeedbacksJa",
         "tags": [
           "メッセージフィードバック"
@@ -1047,14 +1075,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/feedback/list-app-feedbacks"
+          "href": "/ja/api-reference/feedback/list-app-feedbacks",
+          "metadata": {
+            "title": "アプリのフィードバック一覧を取得",
+            "sidebarTitle": "アプリのフィードバック一覧を取得"
+          }
         }
       }
     },
     "/conversations": {
       "get": {
         "summary": "会話一覧を取得",
-        "description": "**対象アプリ**：チャットフロー、New Agent、チャットボット、Agent。\n\n現在のユーザーの会話リストを、最近アクティブな順に取得します。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n現在のユーザーの会話リストを、最近アクティブな順に取得します。",
         "operationId": "getBasicChatConversationsListJa",
         "tags": [
           "会話管理"
@@ -1176,14 +1208,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/conversations/list-conversations"
+          "href": "/ja/api-reference/conversations/list-conversations",
+          "metadata": {
+            "title": "会話一覧を取得",
+            "sidebarTitle": "会話一覧を取得"
+          }
         }
       }
     },
     "/messages": {
       "get": {
         "summary": "会話履歴メッセージ一覧を取得",
-        "description": "**対象アプリ**：チャットフロー、New Agent、チャットボット、Agent。\n\nスクロール読み込み形式で過去のチャット記録を返します。最初のページは最新の `limit` 件のメッセージを返します（時系列の逆順）。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nスクロール読み込み形式で過去のチャット記録を返します。最初のページは最新の `limit` 件のメッセージを返します（時系列の逆順）。",
         "operationId": "getBasicChatConversationHistoryJa",
         "tags": [
           "会話管理"
@@ -1322,14 +1358,18 @@
           }
         ],
         "x-mint": {
-          "href": "/ja/api-reference/conversations/list-conversation-messages"
+          "href": "/ja/api-reference/conversations/list-conversation-messages",
+          "metadata": {
+            "title": "会話履歴メッセージ一覧を取得",
+            "sidebarTitle": "会話履歴メッセージ一覧を取得"
+          }
         }
       }
     },
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "会話変数の取得",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n特定の会話から変数を取得します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n特定の会話から変数を取得します。",
         "operationId": "getBasicChatConversationVariablesJa",
         "tags": [
           "会話管理"
@@ -1453,14 +1493,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/conversations/list-conversation-variables"
+          "href": "/ja/api-reference/conversations/list-conversation-variables",
+          "metadata": {
+            "title": "会話変数の取得",
+            "sidebarTitle": "会話変数の取得"
+          }
         }
       }
     },
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "会話の名前を変更",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n会話の名前を変更するか、自動的に生成します。会話名は複数の会話をサポートするクライアントでの表示に使用されます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話の名前を変更するか、自動的に生成します。会話名は複数の会話をサポートするクライアントでの表示に使用されます。",
         "operationId": "renameBasicChatConversationJa",
         "tags": [
           "会話管理"
@@ -1558,14 +1602,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/conversations/rename-conversation"
+          "href": "/ja/api-reference/conversations/rename-conversation",
+          "metadata": {
+            "title": "会話の名前を変更",
+            "sidebarTitle": "会話の名前を変更"
+          }
         }
       }
     },
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "会話変数を更新",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n特定の会話変数の値を更新します。値は期待される型と一致する必要があります。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n特定の会話変数の値を更新します。値は期待される型と一致する必要があります。",
         "operationId": "updateChatConversationVariableJa",
         "tags": [
           "会話管理"
@@ -1688,14 +1736,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/conversations/update-conversation-variable"
+          "href": "/ja/api-reference/conversations/update-conversation-variable",
+          "metadata": {
+            "title": "会話変数を更新",
+            "sidebarTitle": "会話変数を更新"
+          }
         }
       }
     },
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "会話を削除",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n会話を削除します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話を削除します。",
         "operationId": "deleteBasicChatConversationJa",
         "tags": [
           "会話管理"
@@ -1776,14 +1828,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/conversations/delete-conversation"
+          "href": "/ja/api-reference/conversations/delete-conversation",
+          "metadata": {
+            "title": "会話を削除",
+            "sidebarTitle": "会話を削除"
+          }
         }
       }
     },
     "/audio-to-text": {
       "post": {
         "summary": "音声をテキストに変換",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、チャットボット、Agent、テキストジェネレーター。\n\n音声ファイルをテキストに変換します。アップロードされたファイルの MIME タイプで検証され、`audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` のいずれかである必要があります。それ以外のタイプ（一般的な `audio/mpeg` を含む）は `unsupported_audio_type` エラーで拒否されます。ファイルサイズの上限は `30 MB` です。",
+        "description": "**対象アプリ**：Chatflow、Workflow、チャットボット、Agent、テキストジェネレーター。\n\n音声ファイルをテキストに変換します。アップロードされたファイルの MIME タイプで検証され、`audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` のいずれかである必要があります。それ以外のタイプ（一般的な `audio/mpeg` を含む）は `unsupported_audio_type` エラーで拒否されます。ファイルサイズの上限は `30 MB` です。",
         "operationId": "basicChatAudioToTextJa",
         "tags": [
           "音声・テキスト変換"
@@ -1935,14 +1991,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/audio/convert-audio-to-text"
+          "href": "/ja/api-reference/audio/convert-audio-to-text",
+          "metadata": {
+            "title": "音声をテキストに変換",
+            "sidebarTitle": "音声をテキストに変換"
+          }
         }
       }
     },
     "/text-to-audio": {
       "post": {
         "summary": "テキストを音声に変換",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、チャットボット、Agent、テキストジェネレーター。\n\nテキストを音声に変換します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、チャットボット、Agent、テキストジェネレーター。\n\nテキストを音声に変換します。",
         "operationId": "basicChatTextToAudioJa",
         "tags": [
           "音声・テキスト変換"
@@ -2048,14 +2108,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/audio/convert-text-to-audio"
+          "href": "/ja/api-reference/audio/convert-text-to-audio",
+          "metadata": {
+            "title": "テキストを音声に変換",
+            "sidebarTitle": "テキストを音声に変換"
+          }
         }
       }
     },
     "/info": {
       "get": {
         "summary": "アプリケーションの基本情報を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、New Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの基本情報（名前、説明、タグ、モード）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの基本情報（名前、説明、タグ、モード）を取得します。",
         "operationId": "getBasicChatAppInfoJa",
         "tags": [
           "アプリケーション設定"
@@ -2088,14 +2152,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/applications/get-app-info"
+          "href": "/ja/api-reference/applications/get-app-info",
+          "metadata": {
+            "title": "アプリケーションの基本情報を取得",
+            "sidebarTitle": "アプリケーションの基本情報を取得"
+          }
         }
       }
     },
     "/parameters": {
       "get": {
         "summary": "アプリケーションのパラメータ情報を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、New Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリケーションの入力フォーム設定（機能スイッチ、入力パラメータ名、タイプ、デフォルト値）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリケーションの入力フォーム設定（機能スイッチ、入力パラメータ名、タイプ、デフォルト値）を取得します。",
         "operationId": "getBasicChatAppParametersJa",
         "tags": [
           "アプリケーション設定"
@@ -2176,7 +2244,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（New Agent アプリ）",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（新しい Agent アプリ）",
             "content": {
               "application/json": {
                 "examples": {
@@ -2202,14 +2270,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/applications/get-app-parameters"
+          "href": "/ja/api-reference/applications/get-app-parameters",
+          "metadata": {
+            "title": "アプリケーションのパラメータ情報を取得",
+            "sidebarTitle": "アプリケーションのパラメータ情報を取得"
+          }
         }
       }
     },
     "/meta": {
       "get": {
         "summary": "アプリケーションのメタ情報を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、New Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメタデータ（ツールアイコンやその他の設定詳細）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメタデータ（ツールアイコンやその他の設定詳細）を取得します。",
         "operationId": "getBasicChatAppMetaJa",
         "tags": [
           "アプリケーション設定"
@@ -2241,14 +2313,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/applications/get-app-meta"
+          "href": "/ja/api-reference/applications/get-app-meta",
+          "metadata": {
+            "title": "アプリケーションのメタ情報を取得",
+            "sidebarTitle": "アプリケーションのメタ情報を取得"
+          }
         }
       }
     },
     "/site": {
       "get": {
         "summary": "アプリの WebApp 設定を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの WebApp 設定（サイト設定、テーマ、カスタマイズオプション）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの WebApp 設定（サイト設定、テーマ、カスタマイズオプション）を取得します。",
         "operationId": "getBasicChatWebAppSettingsJa",
         "tags": [
           "アプリケーション設定"
@@ -2304,14 +2380,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/applications/get-app-webapp-settings"
+          "href": "/ja/api-reference/applications/get-app-webapp-settings",
+          "metadata": {
+            "title": "アプリの WebApp 設定を取得",
+            "sidebarTitle": "アプリの WebApp 設定を取得"
+          }
         }
       }
     },
     "/apps/annotations": {
       "post": {
         "summary": "アノテーションを作成",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n新しいアノテーションを作成します。アノテーションは、アプリがレスポンスを生成する代わりに直接マッチして返すことができる、事前定義された質問と回答のペアを提供します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n新しいアノテーションを作成します。アノテーションは、アプリがレスポンスを生成する代わりに直接マッチして返すことができる、事前定義された質問と回答のペアを提供します。",
         "operationId": "createChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2360,12 +2440,16 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/create-annotation"
+          "href": "/ja/api-reference/annotations/create-annotation",
+          "metadata": {
+            "title": "アノテーションを作成",
+            "sidebarTitle": "アノテーションを作成"
+          }
         }
       },
       "get": {
         "summary": "アノテーションリストを取得",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\nアプリケーションのアノテーションをページネーションリストで取得します。キーワード検索によるフィルタリングをサポートしています。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリケーションのアノテーションをページネーションリストで取得します。キーワード検索によるフィルタリングをサポートしています。",
         "operationId": "listChatAnnotationsJa",
         "tags": [
           "アノテーション管理"
@@ -2434,14 +2518,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/list-annotations"
+          "href": "/ja/api-reference/annotations/list-annotations",
+          "metadata": {
+            "title": "アノテーションリストを取得",
+            "sidebarTitle": "アノテーションリストを取得"
+          }
         }
       }
     },
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "アノテーションを更新",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n既存のアノテーションの質問と回答を更新します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n既存のアノテーションの質問と回答を更新します。",
         "operationId": "updateChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2519,12 +2607,16 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/update-annotation"
+          "href": "/ja/api-reference/annotations/update-annotation",
+          "metadata": {
+            "title": "アノテーションを更新",
+            "sidebarTitle": "アノテーションを更新"
+          }
         }
       },
       "delete": {
         "summary": "アノテーションを削除",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\nアノテーションとその関連するヒット履歴を削除します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションとその関連するヒット履歴を削除します。",
         "operationId": "deleteChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2564,14 +2656,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/delete-annotation"
+          "href": "/ja/api-reference/annotations/delete-annotation",
+          "metadata": {
+            "title": "アノテーションを削除",
+            "sidebarTitle": "アノテーションを削除"
+          }
         }
       }
     },
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "アノテーション返信を設定",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\nアノテーション返信機能を有効または無効にします。リクエストボディはアクションの実行前に検証されるため、`enable` と `disable` のどちらでも `embedding_provider_name`、`embedding_model_name`、`score_threshold` が必須です。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーション返信機能を有効または無効にします。リクエストボディはアクションの実行前に検証されるため、`enable` と `disable` のどちらでも `embedding_provider_name`、`embedding_model_name`、`score_threshold` が必須です。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。",
         "operationId": "setChatAnnotationReplyJa",
         "tags": [
           "アノテーション管理"
@@ -2633,14 +2729,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/configure-annotation-reply"
+          "href": "/ja/api-reference/annotations/configure-annotation-reply",
+          "metadata": {
+            "title": "アノテーション返信を設定",
+            "sidebarTitle": "アノテーション返信を設定"
+          }
         }
       }
     },
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "アノテーション返信の初期設定タスクステータスを取得",
-        "description": "**対象アプリ**：チャットフロー、チャットボット、Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始された非同期アノテーション返信設定ジョブのステータスを取得します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始された非同期アノテーション返信設定ジョブのステータスを取得します。",
         "operationId": "getChatAnnotationReplyStatusJa",
         "tags": [
           "アノテーション管理"
@@ -2710,14 +2810,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/annotations/get-annotation-reply-job-status"
+          "href": "/ja/api-reference/annotations/get-annotation-reply-job-status",
+          "metadata": {
+            "title": "アノテーション返信の初期設定タスクステータスを取得",
+            "sidebarTitle": "アノテーション返信の初期設定タスクステータスを取得"
+          }
         }
       }
     },
     "/workflows/run/{workflow_run_id}": {
       "get": {
         "summary": "ワークフロー実行詳細を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー。\n\nワークフロー実行 ID に基づいて、ワークフロータスクの現在の実行結果を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\nワークフロー実行 ID に基づいて、ワークフロータスクの現在の実行結果を取得します。",
         "operationId": "getWorkflowRunDetailJp",
         "tags": [
           "ワークフロー実行"
@@ -2800,14 +2904,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/get-workflow-run-detail"
+          "href": "/ja/api-reference/workflow-runs/get-workflow-run-detail",
+          "metadata": {
+            "title": "ワークフロー実行詳細を取得",
+            "sidebarTitle": "ワークフロー実行詳細を取得"
+          }
         }
       }
     },
     "/workflows/logs": {
       "get": {
         "summary": "ワークフローログ一覧を取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー。\n\n過去のワークフロー実行を、任意のフィルターで一覧表示します。各エントリは実行単位のサマリー（ステータス、トークン使用量、ステップ数、所要時間）であり、ノードごとの実行ログではありません。\n\n実行のノードレベルのイベントを追跡するには、代わりにストリーミングを使用します。\n\n- **自分で開始する実行**：[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) をストリーミングモードで使用すると、実行の進行に応じて `node_started` と `node_finished` が送信されます。\n- **すでに進行中の実行**：[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) を `include_state_snapshot=true` 付きで呼び出し、実行済み各ノードのステータスを再送してから、残りをストリーミングします。\n\n完了した実行のノードレベルのログは、サービス API 経由では取得できません。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n過去のワークフロー実行を、任意のフィルターで一覧表示します。各エントリは実行単位のサマリー（ステータス、トークン使用量、ステップ数、所要時間）であり、ノードごとの実行ログではありません。\n\n実行のノードレベルのイベントを追跡するには、代わりにストリーミングを使用します。\n\n- **自分で開始する実行**：[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) をストリーミングモードで使用すると、実行の進行に応じて `node_started` と `node_finished` が送信されます。\n- **すでに進行中の実行**：[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) を `include_state_snapshot=true` 付きで呼び出し、実行済み各ノードのステータスを再送してから、残りをストリーミングします。\n\n完了した実行のノードレベルのログは、サービス API 経由では取得できません。",
         "operationId": "getWorkflowLogsJp",
         "tags": [
           "ワークフロー実行"
@@ -2943,7 +3051,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/list-workflow-logs"
+          "href": "/ja/api-reference/workflow-runs/list-workflow-logs",
+          "metadata": {
+            "title": "ワークフローログ一覧を取得",
+            "sidebarTitle": "ワークフローログ一覧を取得"
+          }
         }
       }
     },
@@ -2953,7 +3065,7 @@
           "人間の入力"
         ],
         "summary": "人間の入力フォームを取得",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー。\n\n一時停止中の人間の入力フォームの内容を取得します。 WebApp 配信が必要です。\n\n人間の入力エンドポイントを呼び出す一連の流れについては、[API 連携フロー](/ja/api-reference/guides/human-input-flow) を参照してください。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームの内容を取得します。 WebApp 配信が必要です。\n\n人間の入力エンドポイントを呼び出す一連の流れについては、[API 連携フロー](/ja/api-reference/guides/human-input-flow) を参照してください。",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -3242,7 +3354,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/human-input/get-human-input-form"
+          "href": "/ja/api-reference/human-input/get-human-input-form",
+          "metadata": {
+            "title": "人間の入力フォームを取得",
+            "sidebarTitle": "人間の入力フォームを取得"
+          }
         }
       },
       "post": {
@@ -3250,7 +3366,7 @@
           "人間の入力"
         ],
         "summary": "人間の入力フォームを送信",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー。\n\n一時停止中の人間の入力フォームに受信者の応答を送信します。受理されるとワークフローが再開され、後続のイベントはワークフローイベントをストリーミングエンドポイントで追跡できます。 WebApp 配信が必要です。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームに受信者の応答を送信します。受理されるとワークフローが再開され、後続のイベントはワークフローイベントをストリーミングエンドポイントで追跡できます。 WebApp 配信が必要です。",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -3409,7 +3525,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/human-input/submit-human-input-form"
+          "href": "/ja/api-reference/human-input/submit-human-input-form",
+          "metadata": {
+            "title": "人間の入力フォームを送信",
+            "sidebarTitle": "人間の入力フォームを送信"
+          }
         }
       }
     },
@@ -3419,7 +3539,7 @@
           "ワークフロー実行"
         ],
         "summary": "ワークフローイベントをストリーム",
-        "description": "**対象アプリ**：チャットフロー、ワークフロー。\n\n一時停止後または元の SSE 接続が切断された後にワークフロー実行の Server-Sent Events ストリームを再開します。すでに完了している実行に対しては、`workflow_finished` イベントを 1 つ送信してストリームを閉じます。\n\n進行中の実行のノードレベルのステータスと進捗を確認するには、`include_state_snapshot=true` を指定して呼び出します。ストリームは新しいイベントの送信前に、実行済み各ノードのステータスを再送します。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止後または元の SSE 接続が切断された後にワークフロー実行の Server-Sent Events ストリームを再開します。すでに完了している実行に対しては、`workflow_finished` イベントを 1 つ送信してストリームを閉じます。\n\n進行中の実行のノードレベルのステータスと進捗を確認するには、`include_state_snapshot=true` を指定して呼び出します。ストリームは新しいイベントの送信前に、実行済み各ノードのステータスを再送します。",
         "operationId": "streamWorkflowEvents",
         "parameters": [
           {
@@ -3469,15 +3589,15 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "再開されたワークフロー実行のイベントの SSE ストリームです。形式は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow)（ワークフローアプリ）または [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message)（チャットフローアプリ）と同じです。再開された部分で `reasoning_format: separated` を指定した LLM ノードが実行される場合、このストリームには `reasoning_chunk` イベントも含まれます。"
+                  "description": "再開されたワークフロー実行のイベントの SSE ストリームです。形式は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow)（Workflow アプリ）または [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message)（Chatflow アプリ）と同じです。再開された部分で `reasoning_format: separated` を指定した LLM ノードが実行される場合、このストリームには `reasoning_chunk` イベントも含まれます。"
                 },
                 "examples": {
                   "resumedRun": {
-                    "summary": "レスポンス例 - 再開実行（ワークフロー）",
+                    "summary": "レスポンス例 - 再開実行（Workflow）",
                     "value": "data: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"Please review the draft.\", \"action_id\": \"approve\", \"action_text\": \"Approve\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_2\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 2, \"created_at\": 1705407705}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"Approved, now translating.\", \"node_id\": \"node_1\", \"is_final\": false}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"\", \"node_id\": \"node_1\", \"is_final\": true}} data: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour\"}, \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
                   },
                   "resumedRunChatflow": {
-                    "summary": "レスポンス例 - 再開実行（チャットフロー）",
+                    "summary": "レスポンス例 - 再開実行（Chatflow）",
                     "value": "data: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"Please review the draft.\", \"action_id\": \"approve\", \"action_text\": \"Approve\"}} data: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"created_at\": 1705407705}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"The reviewer approved the draft.\", \"node_id\": \"node_llm_1\", \"is_final\": false}} data: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}} data: {\"event\": \"message\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"answer\": \"Approved\", \"created_at\": 1705407706} data: {\"event\": \"node_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"status\": \"succeeded\", \"elapsed_time\": 1.2, \"created_at\": 1705407705, \"finished_at\": 1705407706}} data: {\"event\": \"message_end\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"metadata\": {\"usage\": {\"total_tokens\": 42, \"latency\": 1.3}}} data: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
                   }
                 }
@@ -3532,14 +3652,18 @@
           }
         ],
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/stream-workflow-events"
+          "href": "/ja/api-reference/workflow-runs/stream-workflow-events",
+          "metadata": {
+            "title": "ワークフローイベントをストリーム",
+            "sidebarTitle": "ワークフローイベントをストリーム"
+          }
         }
       }
     },
     "/workflows/run": {
       "post": {
         "summary": "ワークフローを実行",
-        "description": "**対象アプリ**：ワークフロー。\n\nワークフローを実行します。公開済みのワークフローがないと実行できません。",
+        "description": "**対象アプリ**：Workflow。\n\nワークフローを実行します。公開済みのワークフローがないと実行できません。",
         "operationId": "executeWorkflowJp",
         "tags": [
           "ワークフロー実行"
@@ -3748,14 +3872,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/run-workflow"
+          "href": "/ja/api-reference/workflow-runs/run-workflow",
+          "metadata": {
+            "title": "ワークフローを実行",
+            "sidebarTitle": "ワークフローを実行"
+          }
         }
       }
     },
     "/workflows/{workflow_id}/run": {
       "post": {
         "summary": "ID でワークフローを実行",
-        "description": "**対象アプリ**：ワークフロー。\n\nID で指定された特定のワークフローバージョンを実行します。ワークフローの特定の公開バージョンを実行する場合に便利です。",
+        "description": "**対象アプリ**：Workflow。\n\nID で指定された特定のワークフローバージョンを実行します。ワークフローの特定の公開バージョンを実行する場合に便利です。",
         "operationId": "runWorkflowByIdJa",
         "tags": [
           "ワークフロー実行"
@@ -3969,14 +4097,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/run-workflow-by-id"
+          "href": "/ja/api-reference/workflow-runs/run-workflow-by-id",
+          "metadata": {
+            "title": "ID でワークフローを実行",
+            "sidebarTitle": "ID でワークフローを実行"
+          }
         }
       }
     },
     "/workflows/tasks/{task_id}/stop": {
       "post": {
         "summary": "ワークフロータスクを停止",
-        "description": "**対象アプリ**：ワークフロー。\n\n実行中のワークフロータスクを停止します。`streaming` モードでのみサポートされます。",
+        "description": "**対象アプリ**：Workflow。\n\n実行中のワークフロータスクを停止します。`streaming` モードでのみサポートされます。",
         "operationId": "stopWorkflowTaskGenerationJp",
         "tags": [
           "ワークフロー実行"
@@ -4050,7 +4182,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/workflow-runs/stop-workflow-task"
+          "href": "/ja/api-reference/workflow-runs/stop-workflow-task",
+          "metadata": {
+            "title": "ワークフロータスクを停止",
+            "sidebarTitle": "ワークフロータスクを停止"
+          }
         }
       }
     },
@@ -4250,7 +4386,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/completion-messages/send-completion-message"
+          "href": "/ja/api-reference/completion-messages/send-completion-message",
+          "metadata": {
+            "title": "完了メッセージを送信",
+            "sidebarTitle": "完了メッセージを送信"
+          }
         }
       }
     },
@@ -4331,14 +4471,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/completion-messages/stop-completion-message-generation"
+          "href": "/ja/api-reference/completion-messages/stop-completion-message-generation",
+          "metadata": {
+            "title": "生成を停止",
+            "sidebarTitle": "生成を停止"
+          }
         }
       }
     },
     "/datasets": {
       "post": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "空のナレッジベースを作成",
         "description": "新しい空のナレッジベースを作成します。作成後、[テキストからドキュメントを作成](/ja/api-reference/documents/create-document-by-text) または [ファイルからドキュメントを作成](/ja/api-reference/documents/create-document-by-file) を使用してドキュメントを追加します。",
@@ -4543,12 +4687,16 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/create-an-empty-knowledge-base"
+          "href": "/ja/api-reference/knowledge-bases/create-an-empty-knowledge-base",
+          "metadata": {
+            "title": "空のナレッジベースを作成",
+            "sidebarTitle": "空のナレッジベースを作成"
+          }
         }
       },
       "get": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "ナレッジベースリストを取得",
         "description": "ナレッジベースのページネーションリストを返します。キーワードとタグによるフィルタリングをサポートしています。",
@@ -4704,14 +4852,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/list-knowledge-bases"
+          "href": "/ja/api-reference/knowledge-bases/list-knowledge-bases",
+          "metadata": {
+            "title": "ナレッジベースリストを取得",
+            "sidebarTitle": "ナレッジベースリストを取得"
+          }
         }
       }
     },
     "/datasets/{dataset_id}": {
       "get": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "ナレッジベース詳細を取得",
         "description": "特定のナレッジベースの詳細情報（埋め込みモデル、検索設定、ドキュメント統計を含む）を取得します。",
@@ -4830,12 +4982,16 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/get-knowledge-base"
+          "href": "/ja/api-reference/knowledge-bases/get-knowledge-base",
+          "metadata": {
+            "title": "ナレッジベース詳細を取得",
+            "sidebarTitle": "ナレッジベース詳細を取得"
+          }
         }
       },
       "patch": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "ナレッジベースを更新",
         "description": "既存のナレッジベースの名前、説明、権限、または検索設定を更新します。リクエストボディで指定されたフィールドのみが更新されます。",
@@ -5055,12 +5211,16 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/update-knowledge-base"
+          "href": "/ja/api-reference/knowledge-bases/update-knowledge-base",
+          "metadata": {
+            "title": "ナレッジベースを更新",
+            "sidebarTitle": "ナレッジベースを更新"
+          }
         }
       },
       "delete": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "ナレッジベースを削除",
         "description": "ナレッジベースとそのすべてのドキュメントを完全に削除します。",
@@ -5125,7 +5285,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/delete-knowledge-base"
+          "href": "/ja/api-reference/knowledge-bases/delete-knowledge-base",
+          "metadata": {
+            "title": "ナレッジベースを削除",
+            "sidebarTitle": "ナレッジベースを削除"
+          }
         }
       }
     },
@@ -5426,7 +5590,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/create-document-by-text"
+          "href": "/ja/api-reference/documents/create-document-by-text",
+          "metadata": {
+            "title": "テキストからドキュメントを作成",
+            "sidebarTitle": "テキストからドキュメントを作成"
+          }
         }
       }
     },
@@ -5542,7 +5710,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : ファイルをアップロードしてください。\n- `too_many_files` : アップロードできるファイルは 1 つだけです。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : 外部データセットはサポートされていません。`indexing_technique` が必須、または `process_rule` がありません。",
+            "description": "- `no_file_uploaded` : ファイルをアップロードしてください。\n- `too_many_files` : アップロードできるファイルは 1 つだけです。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : 外部ナレッジベースはサポートされていません。`indexing_technique` が必須、または `process_rule` がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5650,7 +5818,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/create-document-by-file"
+          "href": "/ja/api-reference/documents/create-document-by-file",
+          "metadata": {
+            "title": "ファイルからドキュメントを作成",
+            "sidebarTitle": "ファイルからドキュメントを作成"
+          }
         }
       }
     },
@@ -5840,7 +6012,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/list-documents"
+          "href": "/ja/api-reference/documents/list-documents",
+          "metadata": {
+            "title": "ナレッジベースのドキュメントリストを取得",
+            "sidebarTitle": "ナレッジベースのドキュメントリストを取得"
+          }
         }
       }
     },
@@ -6212,7 +6388,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/get-document"
+          "href": "/ja/api-reference/documents/get-document",
+          "metadata": {
+            "title": "ドキュメント詳細を取得",
+            "sidebarTitle": "ドキュメント詳細を取得"
+          }
         }
       },
       "delete": {
@@ -6300,7 +6480,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/delete-document"
+          "href": "/ja/api-reference/documents/delete-document",
+          "metadata": {
+            "title": "ドキュメントを削除",
+            "sidebarTitle": "ドキュメントを削除"
+          }
         }
       },
       "patch": {
@@ -6539,7 +6723,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/update-document"
+          "href": "/ja/api-reference/documents/update-document",
+          "metadata": {
+            "title": "ドキュメントを更新",
+            "sidebarTitle": "ドキュメントを更新"
+          }
         }
       }
     },
@@ -6642,7 +6830,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/download-document"
+          "href": "/ja/api-reference/documents/download-document",
+          "metadata": {
+            "title": "ドキュメントをダウンロード",
+            "sidebarTitle": "ドキュメントをダウンロード"
+          }
         }
       }
     },
@@ -6815,7 +7007,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/get-document-indexing-status"
+          "href": "/ja/api-reference/documents/get-document-indexing-status",
+          "metadata": {
+            "title": "ドキュメント埋め込みステータス（進捗）を取得",
+            "sidebarTitle": "ドキュメント埋め込みステータス（進捗）を取得"
+          }
         }
       }
     },
@@ -7111,7 +7307,11 @@
         },
         "deprecated": true,
         "x-mint": {
-          "href": "/ja/api-reference/documents/update-document-by-text"
+          "href": "/ja/api-reference/documents/update-document-by-text",
+          "metadata": {
+            "title": "テキストでドキュメントを更新",
+            "sidebarTitle": "テキストでドキュメントを更新"
+          }
         }
       }
     },
@@ -7369,7 +7569,11 @@
         },
         "deprecated": true,
         "x-mint": {
-          "href": "/ja/api-reference/documents/update-document-by-file"
+          "href": "/ja/api-reference/documents/update-document-by-file",
+          "metadata": {
+            "title": "ファイルでドキュメントを更新",
+            "sidebarTitle": "ファイルでドキュメントを更新"
+          }
         }
       }
     },
@@ -7475,7 +7679,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/download-documents-as-zip"
+          "href": "/ja/api-reference/documents/download-documents-as-zip",
+          "metadata": {
+            "title": "ドキュメントを一括ダウンロード（ZIP）",
+            "sidebarTitle": "ドキュメントを一括ダウンロード（ZIP）"
+          }
         }
       }
     },
@@ -7614,7 +7822,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/documents/update-document-status-in-batch"
+          "href": "/ja/api-reference/documents/update-document-status-in-batch",
+          "metadata": {
+            "title": "ドキュメントステータスを一括更新",
+            "sidebarTitle": "ドキュメントステータスを一括更新"
+          }
         }
       }
     },
@@ -7875,7 +8087,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/create-chunks"
+          "href": "/ja/api-reference/chunks/create-chunks",
+          "metadata": {
+            "title": "ドキュメントにチャンクを追加",
+            "sidebarTitle": "ドキュメントにチャンクを追加"
+          }
         }
       },
       "get": {
@@ -8077,7 +8293,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/list-chunks"
+          "href": "/ja/api-reference/chunks/list-chunks",
+          "metadata": {
+            "title": "チャンク一覧を取得",
+            "sidebarTitle": "チャンク一覧を取得"
+          }
         }
       }
     },
@@ -8234,7 +8454,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/get-chunk"
+          "href": "/ja/api-reference/chunks/get-chunk",
+          "metadata": {
+            "title": "ドキュメント内のチャンク詳細を取得",
+            "sidebarTitle": "ドキュメント内のチャンク詳細を取得"
+          }
         }
       },
       "post": {
@@ -8487,7 +8711,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/update-chunk"
+          "href": "/ja/api-reference/chunks/update-chunk",
+          "metadata": {
+            "title": "ドキュメント内のチャンクを更新",
+            "sidebarTitle": "ドキュメント内のチャンクを更新"
+          }
         }
       },
       "delete": {
@@ -8593,7 +8821,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/delete-chunk"
+          "href": "/ja/api-reference/chunks/delete-chunk",
+          "metadata": {
+            "title": "ドキュメント内のチャンクを削除",
+            "sidebarTitle": "ドキュメント内のチャンクを削除"
+          }
         }
       }
     },
@@ -8782,7 +9014,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/create-child-chunk"
+          "href": "/ja/api-reference/chunks/create-child-chunk",
+          "metadata": {
+            "title": "子チャンクを作成",
+            "sidebarTitle": "子チャンクを作成"
+          }
         }
       },
       "get": {
@@ -8963,7 +9199,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/list-child-chunks"
+          "href": "/ja/api-reference/chunks/list-child-chunks",
+          "metadata": {
+            "title": "子チャンク一覧を取得",
+            "sidebarTitle": "子チャンク一覧を取得"
+          }
         }
       }
     },
@@ -9170,7 +9410,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/update-child-chunk"
+          "href": "/ja/api-reference/chunks/update-child-chunk",
+          "metadata": {
+            "title": "子チャンクを更新",
+            "sidebarTitle": "子チャンクを更新"
+          }
         }
       },
       "delete": {
@@ -9319,14 +9563,18 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/chunks/delete-child-chunk"
+          "href": "/ja/api-reference/chunks/delete-child-chunk",
+          "metadata": {
+            "title": "子チャンクを削除",
+            "sidebarTitle": "子チャンクを削除"
+          }
         }
       }
     },
     "/datasets/{dataset_id}/retrieve": {
       "post": {
         "tags": [
-          "データセット"
+          "ナレッジベース"
         ],
         "summary": "ナレッジベースからチャンクを取得 / テスト検索",
         "description": "ナレッジベースに対して検索クエリを実行し、最も関連性の高いチャンクを取得します。このエンドポイントは本番環境の検索とテスト検索の両方に使用できます。",
@@ -9774,7 +10022,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-bases/retrieve-chunks-from-a-knowledge-base-test-retrieval"
+          "href": "/ja/api-reference/knowledge-bases/retrieve-chunks-from-a-knowledge-base-test-retrieval",
+          "metadata": {
+            "title": "ナレッジベースからチャンクを取得 / テスト検索",
+            "sidebarTitle": "ナレッジベースからチャンクを取得 / テスト検索"
+          }
         }
       }
     },
@@ -9850,7 +10102,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/create-knowledge-tag"
+          "href": "/ja/api-reference/tags/create-knowledge-tag",
+          "metadata": {
+            "title": "ナレッジベースタグを作成",
+            "sidebarTitle": "ナレッジベースタグを作成"
+          }
         }
       },
       "get": {
@@ -9908,7 +10164,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/list-knowledge-tags"
+          "href": "/ja/api-reference/tags/list-knowledge-tags",
+          "metadata": {
+            "title": "ナレッジベースタグリストを取得",
+            "sidebarTitle": "ナレッジベースタグリストを取得"
+          }
         }
       },
       "patch": {
@@ -9987,7 +10247,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/update-knowledge-tag"
+          "href": "/ja/api-reference/tags/update-knowledge-tag",
+          "metadata": {
+            "title": "ナレッジベースタグを変更",
+            "sidebarTitle": "ナレッジベースタグを変更"
+          }
         }
       },
       "delete": {
@@ -10022,7 +10286,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/delete-knowledge-tag"
+          "href": "/ja/api-reference/tags/delete-knowledge-tag",
+          "metadata": {
+            "title": "ナレッジベースタグを削除",
+            "sidebarTitle": "ナレッジベースタグを削除"
+          }
         }
       }
     },
@@ -10031,7 +10299,7 @@
         "tags": [
           "タグ管理"
         ],
-        "summary": "タグをデータセットにバインド",
+        "summary": "タグをナレッジベースにバインド",
         "description": "ナレッジベースに 1 つ以上のタグをバインドします。ナレッジベースには複数のタグを設定できます。",
         "operationId": "bindTagsToDataset",
         "requestBody": {
@@ -10068,7 +10336,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/create-tag-binding"
+          "href": "/ja/api-reference/tags/create-tag-binding",
+          "metadata": {
+            "title": "タグをナレッジベースにバインド",
+            "sidebarTitle": "タグをナレッジベースにバインド"
+          }
         }
       }
     },
@@ -10077,7 +10349,7 @@
         "tags": [
           "タグ管理"
         ],
-        "summary": "タグとデータセットのバインドを解除",
+        "summary": "タグとナレッジベースのバインドを解除",
         "description": "ナレッジベースから 1 つまたは複数のタグを削除します。",
         "operationId": "unbindTagFromDataset",
         "requestBody": {
@@ -10118,7 +10390,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/delete-tag-binding"
+          "href": "/ja/api-reference/tags/delete-tag-binding",
+          "metadata": {
+            "title": "タグとナレッジベースのバインドを解除",
+            "sidebarTitle": "タグとナレッジベースのバインドを解除"
+          }
         }
       }
     },
@@ -10226,7 +10502,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/tags/get-knowledge-base-tags"
+          "href": "/ja/api-reference/tags/get-knowledge-base-tags",
+          "metadata": {
+            "title": "ナレッジベースにバインドされたタグを取得",
+            "sidebarTitle": "ナレッジベースにバインドされたタグを取得"
+          }
         }
       }
     },
@@ -10375,7 +10655,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/create-metadata-field"
+          "href": "/ja/api-reference/metadata/create-metadata-field",
+          "metadata": {
+            "title": "メタデータフィールドを作成",
+            "sidebarTitle": "メタデータフィールドを作成"
+          }
         }
       },
       "get": {
@@ -10491,7 +10775,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/list-metadata-fields"
+          "href": "/ja/api-reference/metadata/list-metadata-fields",
+          "metadata": {
+            "title": "メタデータフィールドリストを取得",
+            "sidebarTitle": "メタデータフィールドリストを取得"
+          }
         }
       }
     },
@@ -10640,7 +10928,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/update-metadata-field"
+          "href": "/ja/api-reference/metadata/update-metadata-field",
+          "metadata": {
+            "title": "メタデータフィールドを更新",
+            "sidebarTitle": "メタデータフィールドを更新"
+          }
         }
       },
       "delete": {
@@ -10720,7 +11012,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/delete-metadata-field"
+          "href": "/ja/api-reference/metadata/delete-metadata-field",
+          "metadata": {
+            "title": "メタデータフィールドを削除",
+            "sidebarTitle": "メタデータフィールドを削除"
+          }
         }
       }
     },
@@ -10839,7 +11135,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/get-built-in-metadata-fields"
+          "href": "/ja/api-reference/metadata/get-built-in-metadata-fields",
+          "metadata": {
+            "title": "組み込みメタデータフィールドを取得",
+            "sidebarTitle": "組み込みメタデータフィールドを取得"
+          }
         }
       }
     },
@@ -10945,7 +11245,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/update-built-in-metadata-field"
+          "href": "/ja/api-reference/metadata/update-built-in-metadata-field",
+          "metadata": {
+            "title": "組み込みメタデータフィールドを更新",
+            "sidebarTitle": "組み込みメタデータフィールドを更新"
+          }
         }
       }
     },
@@ -11115,7 +11419,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/metadata/update-document-metadata-in-batch"
+          "href": "/ja/api-reference/metadata/update-document-metadata-in-batch",
+          "metadata": {
+            "title": "ドキュメントメタデータを一括更新",
+            "sidebarTitle": "ドキュメントメタデータを一括更新"
+          }
         }
       }
     },
@@ -11302,7 +11610,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/models/get-available-models"
+          "href": "/ja/api-reference/models/get-available-models",
+          "metadata": {
+            "title": "利用可能なモデルを取得",
+            "sidebarTitle": "利用可能なモデルを取得"
+          }
         }
       }
     },
@@ -11460,7 +11772,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-pipeline/upload-pipeline-file"
+          "href": "/ja/api-reference/knowledge-pipeline/upload-pipeline-file",
+          "metadata": {
+            "title": "パイプラインファイルをアップロード",
+            "sidebarTitle": "パイプラインファイルをアップロード"
+          }
         }
       }
     },
@@ -11638,7 +11954,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-pipeline/list-datasource-plugins"
+          "href": "/ja/api-reference/knowledge-pipeline/list-datasource-plugins",
+          "metadata": {
+            "title": "データソースプラグインリストを取得",
+            "sidebarTitle": "データソースプラグインリストを取得"
+          }
         }
       }
     },
@@ -11777,7 +12097,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-pipeline/run-datasource-node"
+          "href": "/ja/api-reference/knowledge-pipeline/run-datasource-node",
+          "metadata": {
+            "title": "データソースノードを実行",
+            "sidebarTitle": "データソースノードを実行"
+          }
         }
       }
     },
@@ -12142,7 +12466,11 @@
           }
         },
         "x-mint": {
-          "href": "/ja/api-reference/knowledge-pipeline/run-pipeline"
+          "href": "/ja/api-reference/knowledge-pipeline/run-pipeline",
+          "metadata": {
+            "title": "パイプラインを実行",
+            "sidebarTitle": "パイプラインを実行"
+          }
         }
       }
     }
@@ -12206,7 +12534,7 @@
               "streaming",
               "blocking"
             ],
-            "description": "レスポンスの返却モードです。`streaming`（推奨）は SSE を使用します。`blocking` は完了後に返します（長時間の処理では中断される場合があります。エージェントアシスタントモードではサポートされていません）。Cloudflare のタイムアウトは `100 s` です。省略した場合、デフォルトはブロッキング動作になります。 New Agent アプリは `streaming` のみに対応しています。`blocking` を指定すると 400 `bad_request` が返されます。"
+            "description": "レスポンスの返却モードです。`streaming`（推奨）は SSE を使用します。`blocking` は完了後に返します（長時間の処理では中断される場合があります。エージェントアシスタントモードではサポートされていません）。Cloudflare のタイムアウトは `100 s` です。省略した場合、デフォルトはブロッキング動作になります。 新しい Agent アプリは `streaming` のみに対応しています。`blocking` を指定すると 400 `bad_request` が返されます。"
           },
           "user": {
             "type": "string",
@@ -12218,7 +12546,7 @@
           },
           "files": {
             "type": "array",
-            "description": "マルチモーダル理解用のファイルリストです。画像、ドキュメント、音声、動画を含みます。ローカルファイルを添付するには、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。 New Agent アプリでは未対応です。ファイルの内容は処理されません。",
+            "description": "マルチモーダル理解用のファイルリストです。画像、ドキュメント、音声、動画を含みます。ローカルファイルを添付するには、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。 新しい Agent アプリでは未対応です。ファイルの内容は処理されません。",
             "items": {
               "type": "object",
               "required": [
@@ -12264,7 +12592,7 @@
           },
           "workflow_id": {
             "type": "string",
-            "description": "チャットフローアプリでのみ使用できます。 実行する公開済みワークフローバージョンの ID を指定します。指定しない場合、最新の公開バージョンが使用されます。"
+            "description": "Chatflow アプリでのみ使用できます。 実行する公開済みワークフローバージョンの ID を指定します。指定しない場合、最新の公開バージョンが使用されます。"
           }
         }
       },
@@ -12297,7 +12625,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "アプリモード。`chat` はチャットボットアプリ、`agent-chat` は Agent アプリ、`advanced-chat` はチャットフローアプリです。"
+            "description": "アプリモード。`chat` はチャットボットアプリ、`agent-chat` は Agent アプリ、`advanced-chat` は Chatflow アプリです。"
           },
           "answer": {
             "type": "string",
@@ -13515,7 +13843,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "アプリケーションモード。`completion` はテキスト生成アプリ、`chat` は基本チャットアプリ、`agent-chat` はエージェントベースのアプリ、`advanced-chat` は Chatflow アプリ、`workflow` はワークフローアプリです。"
+            "description": "アプリケーションモード。`completion` はテキスト生成アプリ、`chat` は基本チャットアプリ、`agent-chat` はエージェントベースのアプリ、`advanced-chat` は Chatflow アプリ、`workflow` は Workflow アプリです。"
           },
           "author_name": {
             "type": "string",
