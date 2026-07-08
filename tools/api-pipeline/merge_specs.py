@@ -5,14 +5,11 @@ Merges the five per-app-type OpenAPI specs (chat, chatflow, workflow,
 completion, knowledge) into one openapi_service.json per language.
 
 Modes:
-  analyze   Report operation overlap, divergence pointers, and component
-            collisions. Writes nothing to the docs tree.
   build     Emit {lang}/api-reference/openapi_service.json for each language,
             applying resolutions.json to divergent operations. Refuses to
             build while any divergence is unresolved.
 
 Usage:
-  python3 merge_specs.py analyze [--lang en] [--report <path>]
   python3 merge_specs.py build [--lang en zh ja]
 
 Env:
@@ -92,195 +89,6 @@ def json_diff(a, b, pointer=""):
                 out.extend(json_diff(xa, xb, f"{pointer}/{i}"))
         return out
     return [(pointer or "/", a, b)] if a != b else []
-
-
-def collect(lang: str):
-    """Load all five specs and index operations and components."""
-    specs = {name: load_spec(lang, name) for name in SPEC_NAMES}
-    ops = {}  # (path, method) -> list of (spec_name, op)
-    path_level_params = {}  # path -> list of (spec_name, params)
-    for name, spec in specs.items():
-        for path, item in spec.get("paths", {}).items():
-            if "parameters" in item:
-                path_level_params.setdefault(path, []).append((name, item["parameters"]))
-            for method, op in item.items():
-                if method in HTTP_METHODS:
-                    ops.setdefault((path, method), []).append((name, op))
-    return specs, ops, path_level_params
-
-
-def classify(ops):
-    unique, identical, divergent = {}, {}, {}
-    for key, occurrences in ops.items():
-        if len(occurrences) == 1:
-            unique[key] = occurrences
-        elif len({canon(op) for _, op in occurrences}) == 1:
-            identical[key] = occurrences
-        else:
-            divergent[key] = occurrences
-    return unique, identical, divergent
-
-
-def component_collisions(specs):
-    """Same component name defined differently across specs."""
-    collisions = []
-    seen = {}  # (kind, name) -> (spec_name, canon)
-    for name, spec in specs.items():
-        for kind, entries in spec.get("components", {}).items():
-            for comp_name, comp in entries.items():
-                key = (kind, comp_name)
-                c = canon(comp)
-                if key in seen and seen[key][1] != c:
-                    collisions.append((kind, comp_name, seen[key][0], name))
-                seen.setdefault(key, (name, c))
-    return collisions
-
-
-def tag_report(specs):
-    tags = {}  # tag name -> {spec_name: description}
-    for name, spec in specs.items():
-        for t in spec.get("tags", []):
-            tags.setdefault(t["name"], {})[name] = t.get("description", "")
-    return tags
-
-
-def component_diff_report(specs, lines):
-    """Full diffs for colliding components, plus named near-siblings."""
-    p = lines.append
-    by_key = {}  # (kind, name) -> {spec_name: comp}
-    for name, spec in specs.items():
-        for kind, entries in spec.get("components", {}).items():
-            for comp_name, comp in entries.items():
-                by_key.setdefault((kind, comp_name), {})[name] = comp
-    p("## Component collision diffs")
-    for (kind, comp_name), occ in sorted(by_key.items()):
-        if len(occ) < 2 or len({canon(c) for c in occ.values()}) == 1:
-            continue
-        names = list(occ)
-        p(f"### {kind}/{comp_name} in {names}")
-        base = names[0]
-        for other in names[1:]:
-            diffs = json_diff(occ[base], occ[other])
-            if not diffs:
-                continue
-            p(f"- {base} vs {other}: {len(diffs)} differing pointers")
-            for ptr, va, vb in diffs:
-                p(f"    - `{ptr}`")
-                p(f"        - {base}: {canon(va)[:200]}")
-                p(f"        - {other}: {canon(vb)[:200]}")
-        p("")
-
-
-def slug_inventory(specs, lines):
-    """List (tag, summary) pairs and flag slug-hostile characters."""
-    import re
-
-    p = lines.append
-    p("## Slug inventory (tag / summary pairs)")
-    for name, spec in specs.items():
-        for path, method, op in iter_ops(spec):
-            tag = (op.get("tags") or ["untagged"])[0]
-            summary = op.get("summary", "")
-            flag = ""
-            if re.search(r"[^A-Za-z0-9 \-]", f"{tag} {summary}"):
-                flag = "  <-- special chars"
-            p(f"- {name}: {tag} / {summary}{flag}")
-    p("")
-
-
-def analyze(lang: str, report_path: Path | None):
-    specs, ops, path_params = collect(lang)
-    unique, identical, divergent = classify(ops)
-
-    lines = []
-    p = lines.append
-    p(f"# Spec overlap analysis — {lang}")
-    p("")
-    p(f"Total distinct operations: {len(ops)}")
-    p(f"  unique to one spec:      {len(unique)}")
-    p(f"  shared, identical:       {len(identical)}")
-    p(f"  shared, divergent:       {len(divergent)}")
-    p("")
-
-    p("## Unique operations by spec")
-    by_spec = {}
-    for (path, method), occ in unique.items():
-        by_spec.setdefault(occ[0][0], []).append(f"{method.upper()} {path}")
-    for name in SPEC_NAMES:
-        entries = sorted(by_spec.get(name, []))
-        p(f"- {name}: {len(entries)}")
-    p("")
-
-    p("## Shared identical operations")
-    for (path, method), occ in sorted(identical.items()):
-        names = [n for n, _ in occ]
-        op = occ[0][1]
-        p(f"- `{method.upper()} {path}` in {names} | operationId={op.get('operationId')} | tags={op.get('tags')} | summary={op.get('summary')!r}")
-    p("")
-
-    p("## Shared divergent operations")
-    for (path, method), occ in sorted(divergent.items()):
-        names = [n for n, _ in occ]
-        p(f"### `{method.upper()} {path}` in {names}")
-        base_name, base_op = occ[0]
-        for other_name, other_op in occ[1:]:
-            diffs = json_diff(base_op, other_op)
-            p(f"- {base_name} vs {other_name}: {len(diffs)} differing pointers")
-            for ptr, va, vb in diffs:
-                sa, sb = canon(va), canon(vb)
-                p(f"    - `{ptr}`")
-                p(f"        - {base_name}: {sa[:220]}")
-                p(f"        - {other_name}: {sb[:220]}")
-        p("")
-
-    if path_params:
-        multi = {k: v for k, v in path_params.items() if len(v) > 1}
-        p(f"## Path-level parameters: {len(path_params)} paths ({len(multi)} shared)")
-        for path, occ in sorted(multi.items()):
-            vals = {canon(v) for _, v in occ}
-            status = "identical" if len(vals) == 1 else "DIVERGENT"
-            p(f"- `{path}`: {[n for n, _ in occ]} — {status}")
-        p("")
-
-    collisions = component_collisions(specs)
-    p(f"## Component collisions (same name, different content): {len(collisions)}")
-    for kind, comp_name, a, b in collisions:
-        p(f"- {kind}/{comp_name}: {a} vs {b}")
-    p("")
-
-    component_diff_report(specs, lines)
-    slug_inventory(specs, lines)
-
-    p("## AppParametersResponse three-way diff")
-    variants = {}
-    for name in ("chat", "workflow", "completion"):
-        for schema_name, schema in specs[name].get("components", {}).get("schemas", {}).items():
-            if schema_name.endswith("AppParametersResponse"):
-                variants[f"{name}:{schema_name}"] = schema
-    keys = list(variants)
-    for other in keys[1:]:
-        diffs = json_diff(variants[keys[0]], variants[other])
-        p(f"- {keys[0]} vs {other}: {len(diffs)} differing pointers")
-        for ptr, va, vb in diffs:
-            p(f"    - `{ptr}`")
-            p(f"        - {canon(va)[:200]}")
-            p(f"        - {canon(vb)[:200]}")
-    p("")
-
-    tags = tag_report(specs)
-    p("## Tags")
-    for tag_name, descs in tags.items():
-        uniq = set(descs.values())
-        status = "identical" if len(uniq) == 1 else "DIVERGENT"
-        p(f"- {tag_name!r} in {list(descs)} — {status}")
-
-    report = "\n".join(lines)
-    if report_path:
-        report_path.write_text(report, encoding="utf-8")
-        print(f"report written to {report_path}")
-        print(f"ops={len(ops)} unique={len(unique)} identical={len(identical)} divergent={len(divergent)} collisions={len(collisions)}")
-    else:
-        print(report)
 
 
 # ---------------------------------------------------------------------------
@@ -1091,18 +899,12 @@ def check_coverage(langs):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("mode", choices=["analyze", "build", "wire", "relink", "check-coverage"])
+    ap.add_argument("mode", choices=["build", "wire", "relink", "check-coverage"])
     ap.add_argument("--lang", nargs="*", default=["en"])
     ap.add_argument("--report", type=Path, default=None)
     args = ap.parse_args()
 
-    if args.mode == "analyze":
-        for lang in args.lang:
-            path = args.report
-            if path and len(args.lang) > 1:
-                path = path.with_name(f"{path.stem}_{lang}{path.suffix}")
-            analyze(lang, path)
-    elif args.mode == "build":
+    if args.mode == "build":
         build_all(args.lang, args.report)
     elif args.mode == "wire":
         wire(args.lang)

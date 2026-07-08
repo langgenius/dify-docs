@@ -6,7 +6,7 @@ Consolidates the five per-app-type Service API specs into one `openapi_service.j
 
 | File | Role |
 |:-----|:-----|
-| `merge_specs.py` | The pipeline: `analyze`, `build`, `wire`, `relink`, `check-coverage` modes |
+| `merge_specs.py` | The pipeline: `build`, `wire`, `relink`, `check-coverage` modes |
 | `resolutions.json` | Explicit choice for every divergence between the five input specs |
 | `overrides/strings.json` | Per-language strings injected by resolutions (mode notes, merged descriptions) |
 | `overrides/chat-messages-sse.{en,zh,ja}.md` | Hand-merged mode-aware SSE documentation for `POST /chat-messages` |
@@ -20,7 +20,6 @@ Consolidates the five per-app-type Service API specs into one `openapi_service.j
 
 ```bash
 DOCS="$(git rev-parse --show-toplevel)"   # scripts default to repo root
-python3 tools/api-pipeline/merge_specs.py analyze --lang en --report /tmp/overlap.md
 python3 tools/api-pipeline/merge_specs.py build --lang en zh ja --report /tmp/reports
 python3 tools/api-pipeline/merge_specs.py wire --lang en zh ja
 python3 tools/api-pipeline/merge_specs.py relink --lang en zh ja
@@ -30,7 +29,7 @@ DOCS="$PWD" python3 tools/api-pipeline/parity_check.py
 
 - `build` refuses to run while any spec divergence lacks a `resolutions.json` entry; unresolved same-name components are namespaced per spec (rendering-preserving) and printed.
 - `build --report` writes per-language render-diff reports: every operation whose fully-dereferenced rendering differs from its source spec, for review.
-- `wire` regenerates the three-group API menu in docs.json (Guides / App APIs / Knowledge API, all languages × products) and the legacy-URL redirects (flattening chains). The per-app-type `overview.mdx` pages are hand-maintained content; `check-coverage` fails the build if a page misses a supported endpoint link.
+- `wire` regenerates the three-group API menu in docs.json (Guides / App APIs / Knowledge API, all languages × products) and the API redirects (a catch-all to the English API home plus the knowledge-base exceptions). The per-app-type `overview.mdx` pages are hand-maintained content; `check-coverage` fails the build if a page misses a supported endpoint link.
 - `relink` rewrites legacy `/api-reference/...` links in MDX bodies to the new language-prefixed URLs.
 
 ## URL scheme
