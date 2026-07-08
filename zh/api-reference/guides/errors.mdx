@@ -1,0 +1,61 @@
+---
+title: 处理错误与速率限制
+sidebarTitle: 错误与速率限制
+description: 错误响应的统一结构、各状态码类别的含义，以及哪些失败值得重试
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/api-reference/guides/errors)。
+
+无论哪个接口，所有错误都采用同一种三字段 JSON 结构：
+
+```json
+{
+  "code": "invalid_param",
+  "message": "user is required",
+  "status": 400
+}
+```
+
+`status` 与 HTTP 状态码一致；`code` 是稳定的标识符，适合作为分支判断的依据；`message` 是供人阅读的详细信息。每个接口页面都会列出它可能返回的所有 `code`。
+
+## 状态码类别速览
+
+| 状态码 | 含义 | 典型 `code` |
+|:-------|:-----|:------------|
+| 400 | 请求或应用配置无效 | `invalid_param`、`bad_request`、`app_unavailable`、供应商错误（见下文） |
+| 401 | API 密钥缺失或无效 | `unauthorized` |
+| 403 | 该密钥无权执行此操作：访问受限或达到套餐限制 | `forbidden` |
+| 404 | 资源不存在，或对该密钥或 `user` 不可见 | `not_found` |
+| 413 / 415 | 文件过大或类型不受支持 | `file_too_large`、`unsupported_file_type` |
+| 429 | 当前请求过多，或配额已用尽 | `too_many_requests`、`rate_limit_error` |
+| 500 | Dify 侧出现故障 | `internal_server_error` |
+
+## 供应商错误是配置错误
+
+有 4 个常见的 400 `code` 指向应用的模型配置，而不是你的请求本身：
+
+- `provider_not_initialize`：没有有效的模型凭据
+- `provider_quota_exceeded`：模型供应商自身的配额已用尽
+- `model_currently_not_support`：当前不支持该模型
+- `completion_request_error`：发起文本生成请求时出错
+
+这些错误重试无济于事，需在 Dify 中修复应用的模型配置。
+
+## 速率限制与配额
+
+两个 429 `code` 的含义并不相同：
+
+- `too_many_requests` 是并发上限：应用此刻的同时请求过多。退避后重试即可。
+- `rate_limit_error` 是 Dify Cloud 的套餐配额（如工作流执行次数）。重试无法消除，只会随配额周期重置或套餐变更而解除。
+
+在 Dify Cloud 上，知识库写入接口还会以 `403` 响应实施套餐限制。这些响应携带的 `code` 与访问受限相同，都是 `forbidden`，只能靠 `message` 判断是不是套餐限制，因此不要只根据 `code` 来分支处理 403。
+
+## 流中的错误
+
+流一旦打开，HTTP 状态码就已经是 `200`：失败会以 `error` 事件的形式到达并结束整个流。事件中的 `code` 取值与本页所列相同，按同样的规则分类处理即可。详见 [处理流式响应](/zh/api-reference/guides/streaming)。
+
+## 哪些错误值得重试
+
+- **退避后重试**：`too_many_requests`、`500` 和网络故障。
+- **不要原样重试**：参数校验错误（先修正请求）、鉴权失败，以及配额错误（配额未重置前不会消失）。
+- **修正而非重试**：恢复调用返回的 `404` 意味着 `user` 不对或运行不存在。改正标识符即可。
