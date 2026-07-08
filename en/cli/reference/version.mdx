@@ -47,22 +47,22 @@ The default `text` report:
 
 ```text
 Client:
-  Version:   0.1.0-alpha (channel: alpha)
+  Version:   0.2.0-alpha (channel: alpha)
   Commit:    9f3c2ab (built 2026-06-05)
   Platform:  darwin/arm64
-  Compat:    dify >=1.15.0, <=1.15.0
+  Compat:    dify >=1.16.0, <=1.16.0
 
 Server:
   Endpoint:  https://cloud.dify.ai
-  Version:   1.15.0 (cloud)
+  Version:   1.16.0 (cloud)
 
-Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
+Compatibility: ok — server 1.16.0 in [1.16.0, 1.16.0]
 ```
 
 `--short` prints only the client semver:
 
 ```text
-0.1.0-alpha
+0.2.0-alpha
 ```
 
 `-o json`:
@@ -70,7 +70,7 @@ Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
 ```json
 {
   "client": {
-    "version": "0.1.0-alpha",
+    "version": "0.2.0-alpha",
     "commit": "9f3c2ab",
     "buildDate": "2026-06-05",
     "channel": "alpha",
@@ -80,19 +80,19 @@ Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
   "server": {
     "endpoint": "https://cloud.dify.ai",
     "reachable": true,
-    "version": "1.15.0",
+    "version": "1.16.0",
     "edition": "CLOUD"
   },
   "compat": {
-    "minDify": "1.15.0",
-    "maxDify": "1.15.0",
+    "minDify": "1.16.0",
+    "maxDify": "1.16.0",
     "status": "compatible",
-    "detail": "server 1.15.0 in [1.15.0, 1.15.0]"
+    "detail": "server 1.16.0 in [1.16.0, 1.16.0]"
   }
 }
 ```
 
-Without `--check-compat`, the command exits `0` even when the server is unreachable or incompatible. The verdict is the report, not an error.
+This command exits `0` even when the server is unreachable or incompatible: the verdict is the report, not an error. Pass `--check-compat` (below) to turn it into an exit code. Other commands act on the verdict; see [How Commands React to an Incompatible Server](#how-commands-react-to-an-incompatible-server).
 
 ### Exit Codes
 
@@ -105,19 +105,40 @@ See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-co
 
 ## Compatibility Verdicts
 
-`difyctl version` compares your build against the server's version and reports one of three verdicts. You don't need to be signed in, but you do need a stored host to probe.
+`difyctl version` compares your build against the server's version and reports one of four verdicts. You don't need to be signed in, but you do need a stored host to probe. 
 
-| Verdict | Meaning |
-|:---|:---|
-| `compatible` | The server version is inside the range this build supports. |
-| `unsupported` | The server version is outside the supported range. |
-| `unknown` | No verdict: no host configured, the server is unreachable, the probe was skipped with `--client`, or the server's version didn't parse. |
+The `text` report prints the **Shown as** label on its `Compatibility:` line; `-o json` reports the verdict name in `status`.
 
-The `detail` field says which case you're in, for example `server 1.16.0 outside [1.15.0, 1.15.0]`.
+| Verdict | Shown as | Meaning |
+|:---|:---|:---|
+| `compatible` | `ok` | The server version is inside the range this build supports. |
+| `too_old` | `incompatible (server too old)` | The server is older than the minimum this build supports. |
+| `too_new` | `incompatible (server too new)` | The server is newer than the maximum this build was tested against. |
+| `unknown` | `unknown` | No verdict: no host configured, the server is unreachable, the probe was skipped with `--client`, or the server's version didn't parse. |
+
+The `detail` field spells out the case, for example `server 1.14.0 is older than the minimum 1.16.0` or `server 1.16.0 in [1.16.0, 1.16.0]`.
+
+## How Commands React to an Incompatible Server
+
+`difyctl version` only reports the verdict. Every other command acts on it before running, so a `too_old` server stops those commands until you resolve the mismatch:
+
+- **`too_old`**: the command stops with exit [`6`](/en/cli/reference/output-formats-and-exit-codes) before sending any request, and tells you to upgrade the Dify server to at least the minimum this build supports (or [install the `difyctl` that matches your server](/en/cli/install)).
+- **`too_new`**: the command runs, and prints a one-line warning to stderr.
+- **`unknown`**: the command runs; there is nothing to gate on.
+
+A passing check is cached per host for about an hour, so `difyctl` doesn't re-probe on every command. Upgrading the server clears it at once.
+
+Signing in with [`auth login`](/en/cli/reference/auth-and-contexts) runs the same check before it stores a session, so a mismatch surfaces at sign-in rather than on your first command.
+
+The checks run in both directions: the verdicts above are `difyctl` judging your server, and your server also judges `difyctl`. 
+
+If your client is older than the server accepts, the server rejects the request with HTTP `426` and `difyctl` exits `6` with an upgrade message. This is why upgrading your Dify server can break an older `difyctl`: the server refuses the old client, even though that client's own verdict on a newer server is only a warning. 
+
+Keep `difyctl` and your Dify server on matching versions. They move in lockstep.
 
 ## Gate Scripts on Compatibility
 
-`--check-compat` makes the verdict scriptable: anything other than `compatible`, including every `unknown` case, exits `64`.
+`--check-compat` makes the verdict scriptable: anything other than `compatible`, including every `unknown` case, exits `64`. The check probes the server live every time, so a scripted gate always reflects the server's current version rather than a cached result.
 
 The full report still goes to stdout in your chosen format, and the one-line reason goes to stderr, so `difyctl version -o json --check-compat | jq` works the same on both outcomes.
 
