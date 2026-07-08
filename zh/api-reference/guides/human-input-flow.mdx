@@ -6,7 +6,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/api-reference/guides/human-input-flow)。
 
-当工作流执行到人工介入节点时会暂停，并在流式响应中发出 `human_input_required` 事件。该事件携带 `form_token`，集成方可凭其驱动整个表单生命周期，直到工作流恢复执行。
+当工作流执行到 [人工介入](/zh/cloud/use-dify/nodes/human-input) 节点时会暂停，并在流式响应中发出 `human_input_required` 事件。该事件携带 `form_token`，集成方可凭其驱动整个表单生命周期，直到工作流恢复执行。
 
 各接口的字段参考，详见 [人工介入 API](/zh/api-reference/human-input/get-human-input-form)。
 
@@ -17,7 +17,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 <Steps>
   <Step title="以流式模式启动应用">
 
-    1. Workflow 应用调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，Chatflow 应用调用 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)。
+    1. Workflow 应用调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，Chatflow 应用调用 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)，并传入终端用户的 `user` 标识。
     2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`。
 
         若 `form_token` 为 `null`，说明表单使用邮件投递，无法通过 API 驱动（见 [提交方式要求](#提交方式要求)）。
@@ -30,7 +30,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     若表单在提交前过期，暂停的运行会按节点配置的超时行为处理；恢复后的事件流中携带的是 `human_input_form_timeout`，而非 `human_input_form_filled`。
   </Step>
   <Step title="（仅文件输入）上传本地文件">
-    若接收者为 `file` 或 `file-list` 输入附加了本地文件，请先通过 [上传文件](/zh/api-reference/files/upload-file) 上传。该接口返回一个 `id`，提交时作为 `upload_file_id` 引用。执行、上传和提交各次调用请使用同一个 `user`。
+    若接收者为 `file` 或 `file-list` 输入附加了本地文件，请先通过 [上传文件](/zh/api-reference/files/upload-file) 上传。该接口返回一个 `id`，提交时作为 `upload_file_id` 引用。执行、上传和提交各次调用使用同一个 `user`（见 [终端用户身份](/zh/api-reference/guides/end-user-identity)）。
 
     远程文件无需上传：在提交时以 `{transfer_method: remote_url, url}` 映射内联附加即可。
   </Step>
@@ -46,7 +46,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
   <Step title="继续监听工作流">
     若原 SSE 流已关闭，可调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 重新连接：使用第 1 步中的 `workflow_run_id`，并携带启动运行时的同一个 `user`（`user` 不一致会返回 404）。
 
-    恢复后的运行会像从未暂停过一样，继续流式输出其余节点事件直至完成。
+    恢复后的事件流会先携带确认提交的 `human_input_form_filled`（表单过期时则是 `human_input_form_timeout`），随后像从未暂停过一样，继续输出其余节点事件直至完成。
 
     如需先重放已执行节点的状态，可附带 `include_state_snapshot=true`。若工作流串联了多个人工介入节点，流默认会在每次暂停时关闭；传入 `continue_on_pause=true` 可让同一条流跨越所有暂停保持连接。
   </Step>
@@ -83,6 +83,81 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     Authorization: Bearer {api-key}
     ```
 
+    返回表单定义：
+
+    ```json
+    {
+      "form_content": "Please review the draft, set a priority, and confirm or request changes.",
+      "inputs": [
+        {
+          "type": "paragraph",
+          "output_variable_name": "feedback",
+          "default": {
+            "type": "constant",
+            "selector": [],
+            "value": ""
+          }
+        },
+        {
+          "type": "select",
+          "output_variable_name": "priority",
+          "option_source": {
+            "type": "constant",
+            "selector": [],
+            "value": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        {
+          "type": "file",
+          "output_variable_name": "attachment",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ]
+        },
+        {
+          "type": "file-list",
+          "output_variable_name": "attachments",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ],
+          "number_limits": 5
+        }
+      ],
+      "resolved_default_values": {
+        "feedback": ""
+      },
+      "user_actions": [
+        {
+          "id": "approve",
+          "title": "Approve",
+          "button_style": "primary"
+        },
+        {
+          "id": "reject",
+          "title": "Request changes",
+          "button_style": "default"
+        }
+      ],
+      "expiration_time": 1745510400
+    }
+    ```
+
 2. 针对每个本地文件，调用 [上传文件](/zh/api-reference/files/upload-file) 接口：
 
     ```http
@@ -116,3 +191,5 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     ```
 
     返回 `{}`。工作流沿 `approve` 分支恢复执行。
+
+4. 调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 重新连接运行的事件流，跟踪至运行完成，与上文流程的第 5 步相同。

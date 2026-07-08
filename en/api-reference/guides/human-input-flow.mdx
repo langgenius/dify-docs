@@ -4,7 +4,7 @@ sidebarTitle: Human Input Flow
 description: End-to-end sequence for handling a paused Human Input form via the API
 ---
 
-When a workflow reaches a Human Input node, it pauses and emits a `human_input_required` event in the streaming response. The event carries a `form_token` that your integration uses to drive the form lifecycle until the workflow resumes.
+When a workflow reaches a [Human Input node](/en/cloud/use-dify/nodes/human-input), it pauses and emits a `human_input_required` event in the streaming response. The event carries a `form_token` that your integration uses to drive the form lifecycle until the workflow resumes.
 
 For per-endpoint reference, see the [Human Input API](/en/api-reference/human-input/get-human-input-form).
 
@@ -15,7 +15,7 @@ The sequence below applies to both Workflow and Chatflow apps. Only the entry en
 <Steps>
   <Step title="Start the app in streaming mode">
 
-    1. Call [Run Workflow](/en/api-reference/workflow-runs/run-workflow) (Workflow apps) or [Send Chat Message](/en/api-reference/chat-messages/send-chat-message) (Chatflow apps).
+    1. Call [Run Workflow](/en/api-reference/workflow-runs/run-workflow) (Workflow apps) or [Send Chat Message](/en/api-reference/chat-messages/send-chat-message) (Chatflow apps), passing your end user's `user` identifier.
     2. Watch the SSE stream for the `human_input_required` event and capture its `form_token`.
 
         If `form_token` is `null`, the form uses Email delivery and can't be driven via the API (see [Delivery Method Requirement](#delivery-method-requirement)).
@@ -28,7 +28,7 @@ The sequence below applies to both Workflow and Chatflow apps. Only the entry en
     If the form expires before it is submitted, the paused run follows the node's configured timeout behavior; a resumed stream then carries `human_input_form_timeout` rather than `human_input_form_filled`.
   </Step>
   <Step title="(File inputs only) Upload local files">
-    If the recipient attaches a local file to a `file` or `file-list` input, upload it first with [Upload File](/en/api-reference/files/upload-file). It returns an `id` you reference as `upload_file_id` in the submit payload. Use one consistent `user` across the run, upload, and submit calls.
+    If the recipient attaches a local file to a `file` or `file-list` input, upload it first with [Upload File](/en/api-reference/files/upload-file). It returns an `id` you reference as `upload_file_id` in the submit payload. Use one consistent `user` across the run, upload, and submit calls (see [End User Identity](/en/api-reference/guides/end-user-identity) for details).
 
     A remote file needs no upload step: attach it inline in the submit as a `{transfer_method: remote_url, url}` mapping.
   </Step>
@@ -44,7 +44,7 @@ The sequence below applies to both Workflow and Chatflow apps. Only the entry en
   <Step title="Resume listening to the workflow">
     If the original SSE stream closed, reopen it via [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) with the `workflow_run_id` from Step 1 and the same `user` that started the run—a different `user` gets a 404.
 
-    The resumed run streams its remaining node events through to completion, like a run that never paused.
+    The resumed stream includes `human_input_form_filled` confirming the submission (or `human_input_form_timeout` if the form expired), then the remaining node events through to completion, like a run that never paused.
 
     Add `include_state_snapshot=true` to first replay the status of nodes that already executed. If the workflow has more than one Human Input node in sequence, the stream closes at each pause by default; pass `continue_on_pause=true` to keep one stream open across all of them.
   </Step>
@@ -81,6 +81,81 @@ This example uses a form with a `feedback` paragraph input, an `attachments` fil
     Authorization: Bearer {api-key}
     ```
 
+    Returns the form definition:
+
+    ```json
+    {
+      "form_content": "Please review the draft, set a priority, and confirm or request changes.",
+      "inputs": [
+        {
+          "type": "paragraph",
+          "output_variable_name": "feedback",
+          "default": {
+            "type": "constant",
+            "selector": [],
+            "value": ""
+          }
+        },
+        {
+          "type": "select",
+          "output_variable_name": "priority",
+          "option_source": {
+            "type": "constant",
+            "selector": [],
+            "value": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        {
+          "type": "file",
+          "output_variable_name": "attachment",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ]
+        },
+        {
+          "type": "file-list",
+          "output_variable_name": "attachments",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ],
+          "number_limits": 5
+        }
+      ],
+      "resolved_default_values": {
+        "feedback": ""
+      },
+      "user_actions": [
+        {
+          "id": "approve",
+          "title": "Approve",
+          "button_style": "primary"
+        },
+        {
+          "id": "reject",
+          "title": "Request changes",
+          "button_style": "default"
+        }
+      ],
+      "expiration_time": 1745510400
+    }
+    ```
+
 2. For each local file, call [Upload File](/en/api-reference/files/upload-file):
 
     ```http
@@ -114,3 +189,5 @@ This example uses a form with a `feedback` paragraph input, an `attachments` fil
     ```
 
     Returns `{}`. The workflow resumes along the `approve` branch.
+
+4. Reconnect to the run's stream with [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) to follow it through to completion, as in Step 5 of the sequence above.
