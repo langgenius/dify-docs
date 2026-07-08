@@ -53,7 +53,6 @@ Feature flags for unfinished or staff-only features. Not yet meant for self-host
 |---|---|---|
 | `EXPERIMENTAL_ENABLE_VINEXT` | Switches the web container to an experimental Vite-based server (`web/docker/entrypoint.sh`). Not a supported user-facing knob. | 1.14 sync audit, 2026-04-22 |
 | `ENABLE_AGENT_V2` | Agent v2 feature flag; off in CE 1.15.0 (`AGENT_SHELL_ENABLED`, `AGENT_DRIVE_MANIFEST_ENABLED`, and `NEXT_PUBLIC_ENABLE_AGENT_V2` all false in staging). **Deferred, not permanently excluded** — document and remove this entry when the Agent v2 docs land (expected late June 2026). | 1.15.0 sync audit, 2026-06-24 |
-| `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW` | Gates in-development preview features (the `/create` and `/refine` command-palette slash commands); off in CE 1.15.0. | 1.15.0 sync audit, 2026-06-24 |
 
 ## Verifier false positives
 

@@ -1534,3 +1534,27 @@ Before 1.16.0 the worker count was hardcoded to `1` because Socket.IO room state
 - Compose mapping: `docker/docker-compose-template.yaml` (`api_websocket` service)
 - Gunicorn launch: `api/docker/entrypoint.sh`
 - Cross-worker sync: Socket.IO Redis manager (dify PR #38242)
+
+---
+
+### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW (default flipped in 1.16.0)
+
+**Default:** `true` (was `false` through 1.15.0)
+
+**What it actually does:** Frontend-only feature flag (`NEXT_PUBLIC_*`, no api usage). Gates in-development "preview" features in the console UI. As of 1.16.0 the only surface is `web/app/components/goto-anything/actions/commands/slash-provider.tsx`, which registers the command-palette `/create` and `/refine` slash commands (AI-assisted workflow/chatflow generation, dify PR #38175) when the flag is on and unregisters them when off.
+
+**Why it changed:** dify #38361 flipped the `.env.example` default from `false` to `true`. This lands in the **CE-first 1.16.0** release, so self-hosted CE reads the on-by-default value. Cloud staging still overrides `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW=false` in `saas-deploy` (Cloud lags CE), so the commands stay hidden on Dify Cloud for now.
+
+**Behavior by var state:**
+
+- `true` (CE default in 1.16.0): the `/create` and `/refine` slash commands appear in the command palette.
+- `false`: those commands are hidden. Set this to keep preview features off a self-hosted deployment.
+
+**Key code locations:**
+
+- Default + coercion: `web/env.ts` (`coercedBoolean.default(true)`), `web/config/index.ts` (`ENABLE_FEATURE_PREVIEW`)
+- Docker mapping: `web/docker/entrypoint.sh` (`:-true`)
+- Gating site: `web/app/components/goto-anything/actions/commands/slash-provider.tsx`
+- Default flip: dify PR #38361; commands added by #37094 / #38175
+
+**Note:** The user guide for the `/create` and `/refine` flow is deferred — the feature is still preview-branded and its UX was unverified at sync time (2026-07-08). Only the env toggle is documented, so CE admins can disable preview features. Revisit the feature guide when the flow is confirmed stable.
