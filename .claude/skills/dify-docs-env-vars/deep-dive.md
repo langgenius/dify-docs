@@ -1511,3 +1511,16 @@ Creator Center is the submission portal where users upload Dify apps as DSL temp
 - UI labels: `common.publishToMarketplace` in `web/i18n/{en-US,zh-Hans,ja-JP}/workflow.json`
 
 **Naming note:** Env var prefix is `CREATORS_PLATFORM_*` and the backend Pydantic class is `CreatorsPlatformConfig`, but the user-facing product name is **Creator Center** and the UI button reads "Publish to Marketplace" (templates appear on Marketplace after Creator Center review). Use "Creator Center" in user-facing prose; the prefix is a backend-only artifact.
+
+## Web Frontend Service — New Agent (agent v2)
+
+### ENABLE_AGENT_V2
+
+Traced 2026-07-02 against dify `feat/agent-v2` @ `275ea285c2` (pre-release feature branch).
+
+- **Definition/defaults**: `docker/.env.example` (`ENABLE_AGENT_V2=false`, uncommented) and `docker/envs/core-services/web.env.example`; source deployments use `NEXT_PUBLIC_ENABLE_AGENT_V2` (`web/.env.example`, default false).
+- **Wiring**: reaches the web container via the web service's `env_file: ./.env` (NOT in the compose `environment:` block); `web/docker/entrypoint.sh` maps `NEXT_PUBLIC_ENABLE_AGENT_V2=${NEXT_PUBLIC_ENABLE_AGENT_V2:-${ENABLE_AGENT_V2:-false}}`.
+- **Consumption**: web only — `web/env.ts` (coercedBoolean, default false) → `isAgentV2Enabled()` (`web/features/agent-v2/feature-flag.ts`) and `guardAgentV2Route()` (`web/app/(commonLayout)/roster/feature-guard.ts`). Zero hits in `api/` — frontend-only, no dual purpose.
+- **Gates exactly three things**: the **Roster** item in the main navigation (`web/app/components/main-nav`); the `/roster` route (404 when off, via `roster/layout.tsx`); and which Agent node the node picker offers in the workflow and RAG-pipeline editors (`use-available-nodes-meta-data.ts` — new Agent node when on, classic only when off).
+- **Off (default)**: no Roster nav item, `/roster` 404s, workflows offer the classic Agent node.
+- **On**: UI appears. Agents only actually run if the agent runtime services are deployed — configured by `AGENT_BACKEND_BASE_URL` / `AGENT_SHELL_ENABLED`, which are Pydantic-only (not in any `.env.example`) as of this commit and therefore NOT documented (upstream-deferred). CE turnkey packaging of the runtime is pending R&D as of 2026-07-02.

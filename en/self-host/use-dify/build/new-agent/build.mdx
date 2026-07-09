@@ -1,0 +1,207 @@
+---
+title: Build an Agent
+sidebarTitle: Build
+description: Create an agent and shape what it can do, by hand or by describing what you want
+---
+
+<Warning>
+**Data Security Notice**
+
+When exposing the same agent to multiple end users in Community Edition, Dify applies precautionary safeguards intended to reduce cross-conversation data access risks. However, CE relies on soft isolation rather than hard per-user or per-run filesystem isolation, and runs may share the same underlying container or base filesystem.
+
+As a result, malicious prompts, tool execution, or similar attacks may still access data outside the intended working directory. For strict security or compliance requirements, use Dify Cloud or Enterprise, or deploy with separate hardened infrastructure isolation.
+</Warning>
+
+<Tip>
+The new Agent is in beta: deploy the Dify [1.16.0-rc1](https://github.com/langgenius/dify/releases) release to try it out. It's on by default on Docker Compose, with its runtime bundled in.
+
+Before starting, set [`DIFY_AGENT_SERVER_SECRET_KEY`](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key) to a random value.
+</Tip>
+
+## Create an Agent
+
+From **Agents**, click **Create agent** and give it a name; optionally add a role such as *Research Assistant* and a description. Then you shape everything else in **Configure**.
+
+<Info>
+Creating and managing agents requires the Editor role or above.
+</Info>
+
+## Configure Its Capabilities
+
+Set up each capability by hand, or describe what you want and build it by chatting in [Build mode](#build-by-chatting).
+
+Everything you set up in **Configure** is saved as the agent's capabilities and used in every task later. Separately, the agent works inside its own *sandbox*, where it runs commands and handles files as it goes.
+
+The agent's capabilities can only be changed here: even if an end user asks a published agent to change its own prompt, skills, or tools, it won't.
+
+### Model
+
+Pick the chat model the agent runs on. Favor models that are strong at reasoning and natively support tool calling, since the agent has to judge when to act, which tool fits, and how to read the result.
+
+<Note>
+Agent performance rises and falls with the model, so pick a recent one.
+
+Older models often can't make full use of the sandbox: a common symptom is an agent that never runs commands or installs tools, even when the task needs it.
+</Note>
+
+### Prompt
+
+In the prompt, set the agent's role and how it should approach its work. Be specific about how it should reason, when to lean on its tools and knowledge, and what to avoid.
+
+A few things worth covering:
+
+- **Persona and goal**: who the agent acts as and what it's trying to achieve.
+- **Approach**: the steps or order you expect for a typical task.
+- **Tool and file use**: when to reach for each, named explicitly.
+- **Output**: the format, length, or tone you want back.
+
+You can point the agent at a specific skill, file, tool, or knowledge source, or leave the choice to the agent:
+
+- **Reference it in the prompt** with `/` to send the agent straight to it, right where you want it used. Best when a step depends on a specific one.
+
+- **Just add it to its section** and let the agent decide on its own when to use it. Best when you'd rather trust the agent's judgment than script every move.
+
+### Skills
+
+A *skill* is a self-contained procedure you package for the agent: instructions, reference materials, and any scripts for one specialized task, bundled together so you define it once and reuse it.
+
+Where the prompt sets the agent's overall role, a skill is a job aid it pulls in only when a particular task calls for it—an SOP you hand a capable hire. The agent brings the general ability; the skill gives it your exact steps, materials, and tools for that job, so the work comes out the way you expect.
+
+For instance, a `marketing-copy` skill might bundle your style guide, brand assets, and a checklist, so you don't re-explain them every time.
+
+A skill package needs to be a `.zip` or `.skill` file no larger than 50 MB, with a `SKILL.md` inside. To learn more about the format and how to build one, see [Agent Skills](https://agentskills.io/home). You can also have the agent create skills for you in [Build mode](#build-by-chatting).
+
+### Files
+
+Files are reference documents the agent can read while it works, like specs, templates, or guidelines. Unlike a skill, a file is just material to read, not a procedure to run.
+
+Files suit a handful of documents the agent should read in full and follow exactly; for a large library it should search, connect a [knowledge base](#knowledge-retrieval) instead.
+
+Size limits depend on file type; each is a default you can adjust with [environment variables](/en/self-host/deploy/configuration/environments):
+
+| File type | Default limit | Environment variable |
+|:----------|:--------------|:---------------------|
+| Documents | 15 MB | `UPLOAD_FILE_SIZE_LIMIT` |
+| Images | 10 MB | `UPLOAD_IMAGE_FILE_SIZE_LIMIT` |
+| Video | 100 MB | `UPLOAD_VIDEO_FILE_SIZE_LIMIT` |
+| Audio | 50 MB | `UPLOAD_AUDIO_FILE_SIZE_LIMIT` |
+
+<Info>
+Files added here are saved as part of the agent's capabilities, while files the agent creates in its sandbox are cleared once the task is done.
+</Info>
+
+You can also have the agent create files and save them here in [Build mode](#build-by-chatting).
+
+### Tools
+
+Give the agent [Dify tools](/en/self-host/use-dify/workspace/tools) so it can act beyond the chat: plugins, custom APIs, workflows, and MCP servers from your workspace. Some tools need authentication before use.
+
+<Tip>
+Beyond the Dify tools you add here, the agent can also install and run command-line programs on its own inside its sandbox when it needs one.
+
+Those tools don't appear in the Tools list, and unlike the files in its working directory, they stay available for later tasks once installed.
+</Tip>
+
+### Knowledge Retrieval
+
+Connect [knowledge bases](/en/self-host/use-dify/knowledge/readme) the agent can search while it works.
+
+Retrieval pulls only what's relevant to each query, so it scales to content far too large to add as [files](#files). A knowledge base is also a workspace asset: other apps can share it, and it can stay synced to its data source.
+
+Set how each knowledge base is queried:
+
+- **Agent decide**: the agent writes its own search query from the conversation.
+
+  Best when questions vary and you want it to judge what to look for, like a docs assistant that searches for whatever a user asks about.
+
+- **Custom query**: you pin a fixed query that runs every time.
+
+  Best when a source should always be searched the same way, like a returns assistant that always pulls from your return policy, however the question is phrased.
+
+Under **Retrieval Setting**, tune how results are ranked and filtered:
+
+- **Rerank**: reorder results by relevance with a rerank model, or with a **Weighted Score** that balances meaning against keyword matching.
+
+  <Info>
+  Weighted Score appears only when all connected knowledge bases use High Quality indexing, share one embedding model, and aren't external.
+
+  If one is Economical, external, or uses a different embedding model, the option won't show.
+  </Info>
+
+- **Top K**: the maximum number of results to keep after reranking.
+
+- **Score Threshold**: the minimum similarity a result needs to be included. Higher is stricter; lower casts a wider net.
+
+To limit a search to certain documents, enable [metadata](/en/self-host/use-dify/knowledge/metadata) filtering.
+
+### Advanced Settings
+
+**Environment variables** are key-value pairs the agent can read while it runs, like an endpoint or an API key its tools need.
+
+They live in the agent's sandbox, so they're how you hand a secret to a command-line tool or skill without writing it into the prompt. Mark a value as a **Secret** to keep it masked, or import a `.env` file to add several at once.
+
+You can also have the agent set them up in [Build mode](#build-by-chatting).
+
+<Tip>
+To polish the chat experience, you can add extras like a welcome message, suggested questions, and voice in **Chat Features**. See [App Toolkit](/en/self-host/use-dify/build/additional-features) for details.
+</Tip>
+
+## Build by Chatting
+
+Instead of setting everything up by hand, you can build the agent by describing what it should do, and as you chat it sets up *skills*, *files*, and *environment variables* itself.
+
+For example, your first message might be:
+
+```text wrap
+Build an agent that turns raw meeting notes into structured minutes: attendees, decisions, and action items.
+```
+
+You're talking to the live agent: test it as you build, watch how it behaves, and refine it in the same build chat. To look at the files it's working on, click **File system**; they're cleared when you exit Build mode.
+
+As the agent works, it edits the configuration in the panel directly, and you can see all changes listed in **Build draft**. Click **Apply** to keep them, or **Discard** to drop. Either one exits Build mode and clears the conversation.
+
+<Info>
+While you're in Build mode, the configuration panel is read-only—just tell the agent what you want to change.
+</Info>
+
+### The Build Note
+
+As it works, the agent records what it set up in a *build note*, a `build_note.md` that appears in **Files** the first time you **Apply**.
+
+Unlike the agent's working files, the note is saved with its setup. The agent reads it back at the start of every new conversation, combining it with your **Prompt** to form its instructions.
+
+After you apply, open the build note and read what the agent captured:
+
+  - If it covers what you want, you're set.
+
+  - To change what it says, have the agent revise it in Build mode.
+
+    <Info>
+    The agent maintains only the auto-generated build note: a downloaded copy you re-upload is just an ordinary file, and the next build chat creates a fresh note alongside it.
+    </Info>
+
+  - If anything's missing, add it to the **Prompt**.
+
+  - To start over with a clean record, delete the note in **Files**.
+
+Across build chats, the note also serves as the agent's *memory*. If you shaped the meeting-minutes agent in one chat, a later chat to add action-item owners starts from the format and decisions you already settled, not from scratch.
+
+## Publish
+
+Your edits autosave as a draft. When the agent is ready, publish it to make that version live. Open the version history anytime to revisit or restore an earlier version.
+
+<Note>
+Restoring a version rolls back the agent's configuration only. The sandbox environment isn't versioned: changes to it, like installed tools, stay as they are.
+</Note>
+
+From the **Access Point** tab, host it as a web app at a shareable link, embed it in your site, or call it from your code through the service API.
+
+<Note>
+The agent's API is streaming only. Only the workspace owner and admins can turn API access on or off.
+</Note>
+
+You can also invite the agent into a workflow's [Agent node](/en/self-host/use-dify/nodes/agent#new-agent) to handle a step.
+
+Each conversation has its own memory: how much the agent keeps in mind depends on the model's context window, and a new conversation starts fresh.
+
+Once it's live, review its conversations in **Logs** and its usage, quality, speed, and cost in **Monitoring**.

@@ -1,0 +1,119 @@
+---
+title: 知识库 API
+sidebarTitle: 知识库
+description: 用于管理知识库、文档、分段、元数据、标签和知识流水线的 API
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/api-reference/guides/knowledge)。
+
+不经过 Dify 控制台，直接在自己的代码中构建和维护 [知识库](/zh/cloud/use-dify/knowledge/readme)：创建知识库、导入文档和分段、用元数据和标签组织内容，并可直接调用检索接口用于搜索或 RAG。
+
+<Note>
+单个知识库 API 密钥可访问创建该密钥的账户下所有可见的知识库，妥善保管密钥，避免数据意外泄露。
+</Note>
+
+## 获取 API 端点和密钥
+
+在 **知识库** 页面右上角点击 **服务 API**，打开 API 配置面板，可在此：
+
+- 复制服务 API 端点，这是所有知识库 API 请求的基础 URL。
+- 点击 **API 密钥** 创建和管理密钥。
+
+<Warning>
+在服务端妥善保存 API 密钥，切勿在客户端代码或公开仓库中暴露。
+</Warning>
+
+## 管理知识库的 API 访问权限
+
+默认情况下，每个知识库都可通过 API 访问。如需限制某个知识库的访问，打开该知识库，点击左下角的 **访问 API**，关闭开关即可。
+
+## 创建和管理知识库
+
+- **[创建空知识库](/zh/api-reference/knowledge-bases/create-an-empty-knowledge-base)**：创建一个还没有文档的知识库。
+- **[获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases)**：返回分页列表，支持按关键词或标签筛选。
+- **[获取知识库详情](/zh/api-reference/knowledge-bases/get-knowledge-base)**：返回单个知识库的嵌入模型、检索配置和文档统计信息。
+- **[更新知识库](/zh/api-reference/knowledge-bases/update-knowledge-base)**：修改名称、权限、嵌入模型或检索设置，只更新请求中提供的字段。
+- **[删除知识库](/zh/api-reference/knowledge-bases/delete-knowledge-base)**：永久删除知识库及其中的所有文档。
+- **[从知识库检索分段 / 测试检索](/zh/api-reference/knowledge-bases/retrieve-chunks-from-a-knowledge-base-test-retrieval)**：搜索知识库并返回最相关的分段，生产检索和召回测试共用同一个接口。
+
+## 添加和更新文档
+
+文档创建是异步的，需要先创建文档，再轮询等待索引完成：
+
+<Steps>
+  <Step title="创建知识库">
+    调用 [创建空知识库](/zh/api-reference/knowledge-bases/create-an-empty-knowledge-base)，也可直接使用已有的知识库。
+  </Step>
+  <Step title="添加文档">
+    调用 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 或 [从文件创建文档](/zh/api-reference/documents/create-document-by-file)，两者都会返回一个 `batch` ID。
+
+    如果创建知识库时未设置 `indexing_technique`（内容用于检索的索引方式），在第一个文档上设置即可，后续文档会自动继承。
+  </Step>
+  <Step title="轮询索引状态">
+    使用 `batch` ID 轮询 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status)，直到 `indexing_status` 变为 `completed` 或 `error`，期间会依次经过 `waiting`、`parsing`、`cleaning`、`splitting`、`indexing` 几个阶段。
+  </Step>
+</Steps>
+
+- **[获取知识库的文档列表](/zh/api-reference/documents/list-documents)**：返回分页列表，支持按关键词或索引状态筛选。
+- **[获取文档详情](/zh/api-reference/documents/get-document)**：返回文档的索引状态、元数据和处理统计信息，`metadata` 查询参数控制响应包含、省略还是仅返回元数据字段。
+- **[下载文档](/zh/api-reference/documents/download-document)**：返回文档原始上传文件的签名下载 URL。
+- **[批量下载文档（ZIP）](/zh/api-reference/documents/download-documents-as-zip)**：最多可将 100 个通过文件上传的文档打包为一个压缩包。
+- **[更新文档](/zh/api-reference/documents/update-document)**：上传新文件替换文档内容并重新触发索引，是基于文件更新文档的标准方式。
+- **[用文本更新文档](/zh/api-reference/documents/update-document-by-text)**：直接更新文档的文本内容、名称或处理配置，内容变更时将重新触发索引。
+- **[用文件更新文档](/zh/api-reference/documents/update-document-by-file)**：已废弃的别名接口，用于上传替换文件，改用「更新文档」。
+- **[批量更新文档状态](/zh/api-reference/documents/update-document-status-in-batch)**：一次性启用、禁用、归档或取消归档多个文档。
+- **[删除文档](/zh/api-reference/documents/delete-document)**：永久删除文档及其中的所有分段。
+
+## 管理分段与子分段
+
+- **[向文档添加分段](/zh/api-reference/chunks/create-chunks)**：手动为文档添加分段（上传的内容在索引时已自动分段）。每个分段都需要 `content`，问答模式的文档还需要 `answer`。
+- **[从文档获取分段](/zh/api-reference/chunks/list-chunks)**：返回分页列表，支持按关键词或状态筛选。
+- **[获取文档中的分段详情](/zh/api-reference/chunks/get-chunk)**：返回单个分段的内容、关键词和索引状态。
+- **[更新文档中的分段](/zh/api-reference/chunks/update-chunk)**：修改分段的内容、关键词或答案，并为该分段重新触发索引。
+- **[删除文档中的分段](/zh/api-reference/chunks/delete-chunk)**：永久删除该分段。
+
+对于父子模式（`hierarchical_model`）的文档，子分段挂在父分段下。通过 API 创建或更新的子分段，其 `type` 始终为 `customized`，区别于索引流程自动生成的 `automatic` 子分段。
+
+- **[创建子分段](/zh/api-reference/chunks/create-child-chunk)**：在父分段下添加子分段。
+- **[获取子分段](/zh/api-reference/chunks/list-child-chunks)**：返回某个父分段下子分段的分页列表。
+- **[更新子分段](/zh/api-reference/chunks/update-child-chunk)**：修改子分段的内容。
+- **[删除子分段](/zh/api-reference/chunks/delete-child-chunk)**：永久删除子分段。
+
+## 管理元数据字段
+
+元数据字段为文档附加结构化信息，检索时可据此过滤：
+
+- **[创建元数据字段](/zh/api-reference/metadata/create-metadata-field)**：为知识库添加自定义字段，类型可为 `string`、`number` 或 `time`。
+- **[获取元数据字段列表](/zh/api-reference/metadata/list-metadata-fields)**：返回全部字段（包括自定义和内置字段），并给出每个字段的使用文档数。
+- **[更新元数据字段](/zh/api-reference/metadata/update-metadata-field)**：重命名自定义字段。
+- **[删除元数据字段](/zh/api-reference/metadata/delete-metadata-field)**：删除自定义字段，文档会随之丢失该字段的取值。
+- **[获取内置元数据字段](/zh/api-reference/metadata/get-built-in-metadata-fields)**：返回系统内置字段，如 `document_name`、`uploader`、`upload_date`。
+- **[更新内置元数据字段](/zh/api-reference/metadata/update-built-in-metadata-field)**：为知识库启用或禁用内置字段。
+- **[批量更新文档元数据](/zh/api-reference/metadata/update-document-metadata-in-batch)**：在一次调用中为多个文档设置元数据键值对。
+
+元数据还可充当稳定的外部键：在每个文档上存入源系统的 ID，后续同步时按该 ID 过滤，即可找到并更新同一批文档。
+
+## 用标签组织知识库
+
+标签在工作空间层面管理，不依附于某个具体知识库：
+
+- **[创建知识库标签](/zh/api-reference/tags/create-knowledge-tag)**：创建用于组织知识库的标签。
+- **[获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags)**：返回工作空间内的全部标签。
+- **[修改知识库标签](/zh/api-reference/tags/update-knowledge-tag)**：重命名标签。
+- **[删除知识库标签](/zh/api-reference/tags/delete-knowledge-tag)**：将标签从所有绑定的知识库上移除，但不会删除这些知识库。
+- **[绑定标签到知识库](/zh/api-reference/tags/create-tag-binding)**：为知识库绑定一个或多个标签，一个知识库可同时绑定多个标签。
+- **[解除标签与知识库的绑定](/zh/api-reference/tags/delete-tag-binding)**：从知识库上移除标签。
+- **[获取知识库绑定的标签](/zh/api-reference/tags/get-knowledge-base-tags)**：返回某个知识库当前绑定的标签。
+
+## 查询可用模型
+
+- **[获取可用模型](/zh/api-reference/models/get-available-models)**：返回指定 `model_type` 下的可用模型。配置知识库时，可查询 `text-embedding` 获取嵌入模型，或查询 `rerank` 获取重排序模型。
+
+## 运行知识流水线
+
+知识流水线是一种工作流，从数据源摄取数据并将其转换为文档：
+
+- **[上传流水线文件](/zh/api-reference/knowledge-pipeline/upload-pipeline-file)**：上传供流水线处理的文件。
+- **[获取数据源插件列表](/zh/api-reference/knowledge-pipeline/list-datasource-plugins)**：返回流水线中配置的数据源节点，默认返回已发布版本，传入 `is_published=false` 则返回草稿版本。
+- **[执行数据源节点](/zh/api-reference/knowledge-pipeline/run-datasource-node)**：执行单个数据源节点并以流式返回结果，适合单独测试某个步骤。
+- **[运行流水线](/zh/api-reference/knowledge-pipeline/run-pipeline)**：以 `streaming` 或 `blocking` 模式执行完整流水线，通过 `is_published` 指定运行已发布版本还是当前草稿。

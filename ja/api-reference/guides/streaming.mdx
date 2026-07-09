@@ -1,0 +1,103 @@
+---
+title: ストリーミングレスポンスの処理
+sidebarTitle: SSE ストリーミング
+description: レスポンスモードの選択、SSE ストリームの解析、イベントの振り分け、接続切断からの復旧
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/api-reference/guides/streaming) を参照してください。
+
+生成系エンドポイントは、完全なレスポンスを 1 回で返すか、Server-Sent Events（SSE）ストリームで返します。どちらになるかは、リクエストごとに `response_mode` で指定します。通常はストリーミングモードを選びます。返信を生成と同時に描画でき、長い実行が途中で打ち切られることもありません。
+
+## レスポンスモードの選択
+
+`blocking`（ブロッキングモード）は、生成完了後に JSON ボディを 1 回で返します。短い非対話型の呼び出しでは統合が簡単です。ただし長い生成には中断のリスクがあります。プロキシは長いリクエストを切断し、Dify Cloud ではエッジプロキシが約 100 秒でリクエストを終了させます。
+
+`streaming`（ストリーミングモード）は、返信を SSE イベントとして届けます。ユーザーに見せる処理、長時間の実行、[人間の入力](/ja/api-reference/guides/human-input-flow) で一時停止するすべてのフローには、こちらを使ってください。
+
+<Info>
+Agent と新しい Agent アプリはストリーミングモードのみ対応です。
+</Info>
+
+## ストリームの解析
+
+各イベントは 1 行の `data: ` として届き、1 つの JSON オブジェクトを含みます。イベントの終わりは空行です。
+
+`event` フィールドを読んで処理内容を判断し、`data: ` で始まらない行はスキップします。キープアライブの `ping` は 10 秒ごとに届き、`data:` ペイロードのない `event: ping` 行だけで構成されます。
+
+```python
+import json
+import requests
+
+body = {
+    "query": "What are this month's top issues?",
+    "inputs": {},
+    "user": "customer-4821",
+    "response_mode": "streaming",
+}
+
+with requests.post(url, headers=headers, json=body, stream=True) as r:
+    for line in r.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data: "):
+            continue  # 空行の区切りと ping 行をスキップ
+        event = json.loads(line[len("data: "):])
+        handle(event)
+```
+
+実際の通信では、ストリームは次のようになります。
+
+```text
+data: {"event": "workflow_started", "task_id": "c3800678-…", "workflow_run_id": "fb47b2e6-…", "data": {…}}
+
+event: ping
+
+data: {"event": "node_finished", "task_id": "c3800678-…", "workflow_run_id": "fb47b2e6-…", "data": {…}}
+```
+
+## イベントタイプごとの振り分け
+
+届くイベントはアプリタイプによって異なります。イベントの一覧は [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message)、[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow)、[完了メッセージを送信](/ja/api-reference/completion-messages/send-completion-message) の各イベント表を参照してください。
+
+最低限の典型的な処理は次のとおりです。
+
+1. 返信チャンクを順番に連結します。
+
+    - チャットボットと Chatflow アプリでは `message` イベント
+    - Agent と新しい Agent アプリでは `agent_message` イベント
+
+    新しい Agent アプリでは、最後に完全な回答を繰り返す `message` イベントが 1 つ届きます。追加のテキストではなく、最終回答として扱ってください。
+
+2. 正しい終端イベントで締めくくります。
+    - チャットボット、Agent、新しい Agent アプリは `message_end`
+    - Chatflow アプリは `message_end` と `workflow_finished`（この順で両方届きます）
+    - Workflow アプリは `workflow_finished`
+3. `error` イベントを呼び出し元に伝えます。
+
+## ストリーム中のエラー処理
+
+ストリームが開いた後に失敗しても、HTTP ステータスは変わりません。接続は `200` のままです。失敗がどう現れるかは、発生した場所によって異なります。
+
+- ワークフローノードの失敗は、`status: "failed"` を持つ `node_finished` と `workflow_finished` イベントとして届きます。
+- それ以外の失敗は、`status`、`code`、`message` を持つ `error` イベントでストリームを終了させます。
+
+どちらも処理し、いずれの場合もそのリクエストは終了とみなしてください。
+
+## 再接続と再開
+
+重要な識別子は 2 つあり、混同しやすいものです。
+
+- `task_id` は進行中の生成を制御します。停止エンドポイント（[生成を停止](/ja/api-reference/chat-messages/stop-chat-message-generation)、[ワークフロータスクを停止](/ja/api-reference/workflow-runs/stop-workflow-task)）が受け取るのはこの値です。
+- `workflow_run_id` は永続化された実行レコードを指します。
+
+どちらもストリーム自体から取得できます。`error` 以外のすべてのイベントは `task_id` を持ち、ワークフローとノードのイベントは `workflow_run_id` も持ちます。`workflow_run_id` は届いた時点ですぐ保存してください。接続が途中で切れた場合、再接続や結果確認の唯一の手がかりになります。
+
+ワークフローが背後にある実行（Workflow アプリと Chatflow アプリ）では、接続が切れても致命的ではありません。[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) でストリームを開き直し、`workflow_run_id` と、実行を開始したのと同じ `user` を渡します。`user` が一致しない場合は 404 が返ります。
+
+`include_state_snapshot=true` を付けると、実行済みノードのステータスを最初に再生できます。`continue_on_pause=true` を付けると、人間の入力による複数回の一時停止をまたいで 1 本のストリームを維持できます。
+
+実行中のワークフローに再接続した後は、[ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) で完了を確認してください。再接続したストリームの最後のイベントだけに頼るのは避けてください。
+
+それ以外の返信には再開用のエンドポイントがありません。返信の途中で接続が切れた場合は、新しいリクエストを送ってください。チャット系アプリでは、[会話履歴メッセージ一覧を取得](/ja/api-reference/conversations/list-conversation-messages) で会話に保存された内容を確認できます。
+
+## 接続の維持
+
+クライアントの読み取りタイムアウトは、10 秒の `ping` 間隔より十分長く設定してください。イベント間のアイドル時間で接続が切れるのを防げます。`ping` 自体はスキップする以外の処理は不要です。

@@ -1,0 +1,119 @@
+---
+title: ナレッジ API
+sidebarTitle: ナレッジ
+description: ナレッジベース、ドキュメント、チャンク、メタデータ、タグ、ナレッジパイプラインを扱う API
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/api-reference/guides/knowledge) を参照してください。
+
+Dify コンソールを介さず、自分のコードから [ナレッジベース](/ja/cloud/use-dify/knowledge/readme) を構築・管理できます。ナレッジベースを作成し、ドキュメントとチャンクを取り込み、メタデータとタグで整理し、検索や RAG のために直接クエリできます。
+
+<Note>
+1 つのナレッジベース API キーは、キーを作成したアカウントから見えるすべてのナレッジベースにアクセスできます。データの意図しない漏えいを防ぐため、キーは慎重に管理してください。
+</Note>
+
+## API エンドポイントとキーの取得
+
+**ナレッジ** 画面右上の **サービスAPI** をクリックすると、API 設定パネルが開きます。ここから以下を行えます。
+
+- サービスAPI エンドポイントをコピーします。すべてのナレッジ API リクエストのベース URL です。
+- **APIキー** をクリックしてキーを作成・管理します。
+
+<Warning>
+API キーはサーバー側で安全に保管してください。クライアントコードや公開リポジトリには絶対に含めないでください。
+</Warning>
+
+## ナレッジベースの API アクセス管理
+
+既定では、すべてのナレッジベースが API からアクセス可能です。特定のナレッジベースへのアクセスを制限するには、対象のナレッジベースを開き、左下の **API アクセス** をクリックしてトグルをオフにします。
+
+## ナレッジベースの作成と管理
+
+- **[空のナレッジベースを作成](/ja/api-reference/knowledge-bases/create-an-empty-knowledge-base)**：ドキュメントを含まないナレッジベースを作成します。
+- **[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases)**：キーワードやタグで絞り込めるページネーション付きリストを返します。
+- **[ナレッジベース詳細を取得](/ja/api-reference/knowledge-bases/get-knowledge-base)**：埋め込みモデル、検索設定、ドキュメント統計を返します。
+- **[ナレッジベースを更新](/ja/api-reference/knowledge-bases/update-knowledge-base)**：名前、権限、埋め込みモデル、検索設定を変更します。リクエストで指定したフィールドのみを更新します。
+- **[ナレッジベースを削除](/ja/api-reference/knowledge-bases/delete-knowledge-base)**：ナレッジベースとその中のすべてのドキュメントを完全に削除します。
+- **[ナレッジベースからチャンクを取得 / テスト検索](/ja/api-reference/knowledge-bases/retrieve-chunks-from-a-knowledge-base-test-retrieval)**：ナレッジベースを検索し、最も関連性の高いチャンクを返します。本番検索と検索テストの両方に同じエンドポイントを使います。
+
+## ドキュメントの追加と更新
+
+ドキュメントの作成は非同期です。作成後、インデックスが完了するまでポーリングします。
+
+<Steps>
+  <Step title="ナレッジベースの作成">
+    [空のナレッジベースを作成](/ja/api-reference/knowledge-bases/create-an-empty-knowledge-base) を呼び出します。既存のナレッジベースをそのまま使うこともできます。
+  </Step>
+  <Step title="ドキュメントの追加">
+    [テキストからドキュメントを作成](/ja/api-reference/documents/create-document-by-text) または [ファイルからドキュメントを作成](/ja/api-reference/documents/create-document-by-file) を呼び出します。どちらも `batch` ID を返します。
+
+    ナレッジベース作成時に `indexing_technique`（検索用に内容をインデックスする方法）を設定しなかった場合は、この最初のドキュメントで設定します。以降のドキュメントには自動的に引き継がれます。
+  </Step>
+  <Step title="インデックス状況のポーリング">
+    `batch` ID を使って [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) をポーリングします。`indexing_status` が `completed` または `error` になるまで待ちます。処理は `waiting`、`parsing`、`cleaning`、`splitting`、`indexing` の順に進みます。
+  </Step>
+</Steps>
+
+- **[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents)**：キーワードやインデックスステータスで絞り込めるページネーション付きリストを返します。
+- **[ドキュメント詳細を取得](/ja/api-reference/documents/get-document)**：インデックスステータス、メタデータ、処理統計を返します。`metadata` クエリパラメータで、メタデータフィールドを含める・省略する・のみ返すのいずれかを指定できます。
+- **[ドキュメントをダウンロード](/ja/api-reference/documents/download-document)**：ドキュメントの元ファイルに対する署名付きダウンロード URL を返します。
+- **[ドキュメントを一括ダウンロード（ZIP）](/ja/api-reference/documents/download-documents-as-zip)**：ファイルからアップロードしたドキュメントを最大 100 件、1 つのアーカイブにまとめます。
+- **[ドキュメントを更新](/ja/api-reference/documents/update-document)**：新しいファイルをアップロードして内容を置き換え、インデックスを再実行します。これがファイルベースのドキュメントを更新する標準的な方法です。
+- **[テキストでドキュメントを更新](/ja/api-reference/documents/update-document-by-text)**：ドキュメントのテキスト内容、名前、処理設定をインラインで更新します。内容が変わるとインデックスを再実行します。
+- **[ファイルでドキュメントを更新](/ja/api-reference/documents/update-document-by-file)**：置き換え用のファイルをアップロードするための非推奨のエイリアスです。代わりに「ドキュメントを更新」を使用してください。
+- **[ドキュメントステータスを一括更新](/ja/api-reference/documents/update-document-status-in-batch)**：複数のドキュメントを一度に有効化・無効化・アーカイブ・アーカイブ解除します。
+- **[ドキュメントを削除](/ja/api-reference/documents/delete-document)**：ドキュメントとその中のすべてのチャンクを完全に削除します。
+
+## チャンクと子チャンクの管理
+
+- **[ドキュメントにチャンクを追加](/ja/api-reference/chunks/create-chunks)**：チャンクを手動でドキュメントに追加します（アップロードされた内容は、インデックス処理が自動でチャンク化します）。各チャンクには `content` が必須で、Q&A モードのドキュメントでは `answer` も必須です。
+- **[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks)**：キーワードやステータスで絞り込めるページネーション付きリストを返します。
+- **[ドキュメント内のチャンク詳細を取得](/ja/api-reference/chunks/get-chunk)**：チャンクの内容、キーワード、インデックスステータスを返します。
+- **[ドキュメント内のチャンクを更新](/ja/api-reference/chunks/update-chunk)**：チャンクの内容、キーワード、回答を変更し、そのチャンクのインデックスを再実行します。
+- **[ドキュメント内のチャンクを削除](/ja/api-reference/chunks/delete-chunk)**：チャンクを完全に削除します。
+
+親子モード（`hierarchical_model`）のドキュメントでは、子チャンクは親チャンクの配下に置かれます。API から作成・更新した子チャンクは常に `customized` になり、インデックス処理が自動生成する `automatic` とは区別されます。
+
+- **[子チャンクを作成](/ja/api-reference/chunks/create-child-chunk)**：親チャンクの下に子チャンクを追加します。
+- **[子チャンク一覧を取得](/ja/api-reference/chunks/list-child-chunks)**：親チャンク配下の子チャンクをページネーション付きで返します。
+- **[子チャンクを更新](/ja/api-reference/chunks/update-child-chunk)**：子チャンクの内容を変更します。
+- **[子チャンクを削除](/ja/api-reference/chunks/delete-child-chunk)**：子チャンクを完全に削除します。
+
+## メタデータフィールドの管理
+
+メタデータフィールドはドキュメントに構造化情報を付与し、検索時のフィルタリングに使えます。
+
+- **[メタデータフィールドを作成](/ja/api-reference/metadata/create-metadata-field)**：`string`、`number`、`time` のいずれかの型でカスタムフィールドを追加します。
+- **[メタデータフィールドリストを取得](/ja/api-reference/metadata/list-metadata-fields)**：カスタムフィールドと組み込みフィールドの両方を、使用ドキュメント数とともに返します。
+- **[メタデータフィールドを更新](/ja/api-reference/metadata/update-metadata-field)**：カスタムフィールドの名前を変更します。
+- **[メタデータフィールドを削除](/ja/api-reference/metadata/delete-metadata-field)**：カスタムフィールドを削除します。対象ドキュメントはその値を失います。
+- **[組み込みメタデータフィールドを取得](/ja/api-reference/metadata/get-built-in-metadata-fields)**：`document_name`、`uploader`、`upload_date` など、システム提供のフィールドを返します。
+- **[組み込みメタデータフィールドを更新](/ja/api-reference/metadata/update-built-in-metadata-field)**：ナレッジベースごとに組み込みフィールドの有効・無効を切り替えます。
+- **[ドキュメントメタデータを一括更新](/ja/api-reference/metadata/update-document-metadata-in-batch)**：1 回の呼び出しで複数のドキュメントにメタデータのキーと値を設定します。
+
+メタデータは安定した外部キーとしても使えます。各ドキュメントにソースシステムの ID を保存しておけば、後続の同期実行でその ID をフィルタに使い、同じドキュメントを特定して更新できます。
+
+## タグによるナレッジベースの整理
+
+タグはワークスペース単位で管理され、個々のナレッジベースには依存しません。
+
+- **[ナレッジベースタグを作成](/ja/api-reference/tags/create-knowledge-tag)**：ナレッジベースを整理するためのタグを作成します。
+- **[ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags)**：ワークスペース内のすべてのタグを返します。
+- **[ナレッジベースタグを変更](/ja/api-reference/tags/update-knowledge-tag)**：タグの名前を変更します。
+- **[ナレッジベースタグを削除](/ja/api-reference/tags/delete-knowledge-tag)**：紐づいていたすべてのナレッジベースからタグを外します。ナレッジベース自体は削除されません。
+- **[タグをナレッジベースにバインド](/ja/api-reference/tags/create-tag-binding)**：1 つ以上のタグをナレッジベースにバインドします。1 つのナレッジベースに複数のタグを付けられます。
+- **[タグとナレッジベースのバインドを解除](/ja/api-reference/tags/delete-tag-binding)**：ナレッジベースからタグを外します。
+- **[ナレッジベースにバインドされたタグを取得](/ja/api-reference/tags/get-knowledge-base-tags)**：ナレッジベースに現在バインドされているタグを返します。
+
+## 利用可能なモデルの取得
+
+- **[利用可能なモデルを取得](/ja/api-reference/models/get-available-models)**：指定した `model_type` で利用できるモデルを返します。ナレッジベースの設定では、`text-embedding` で埋め込みモデルを、`rerank` でリランクモデルを照会します。
+
+## ナレッジパイプラインの実行
+
+ナレッジパイプラインは、データソースからデータを取り込みドキュメントに変換するワークフローです。
+
+- **[パイプラインファイルをアップロード](/ja/api-reference/knowledge-pipeline/upload-pipeline-file)**：パイプラインが処理するファイルをアップロードします。
+- **[データソースプラグインリストを取得](/ja/api-reference/knowledge-pipeline/list-datasource-plugins)**：パイプラインに設定されたデータソースノードを返します。既定では公開版を、`is_published=false` を指定すると下書き版を返します。
+- **[データソースノードを実行](/ja/api-reference/knowledge-pipeline/run-datasource-node)**：単一のデータソースノードを実行し、結果をストリーミングで返します。1 つのステップを個別にテストする際に便利です。
+- **[パイプラインを実行](/ja/api-reference/knowledge-pipeline/run-pipeline)**：`streaming` または `blocking` モードでパイプライン全体を実行します。`is_published` で公開版と下書きのどちらを実行するかを指定します。

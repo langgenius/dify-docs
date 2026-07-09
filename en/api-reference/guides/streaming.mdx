@@ -1,0 +1,101 @@
+---
+title: Consume Streaming Responses
+sidebarTitle: SSE Streaming
+description: Choose a response mode, parse the SSE stream, dispatch events, and recover when a connection drops
+---
+
+Generation endpoints return either one complete response or a Server-Sent Events (SSE) stream, chosen per request with `response_mode`. Streaming is the usual choice: the reply renders as it generates, and long runs aren't cut off mid-flight.
+
+## Choose a Response Mode
+
+`blocking` returns a single JSON body once generation finishes. It's the simpler integration for short, non-interactive calls, but long generations risk interruption: proxies cut long requests, and on Dify Cloud the edge proxy ends them after about 100 seconds.
+
+`streaming` delivers the reply as SSE events. Use it for anything user-facing, for long runs, and for every flow that pauses for [Human Input](/en/api-reference/guides/human-input-flow).
+
+<Info>
+Agent and New Agent apps stream only.
+</Info>
+
+## Parse the Stream
+
+Each event arrives as a `data: ` line holding one JSON object, terminated by a blank line. 
+
+Read the `event` field to decide what to do, and skip anything that isn't a `data: ` line: the keep-alive `ping` arrives as a bare `event: ping` line with no `data:` payload, every 10 seconds.
+
+```python
+import json
+import requests
+
+body = {
+    "query": "What are this month's top issues?",
+    "inputs": {},
+    "user": "customer-4821",
+    "response_mode": "streaming",
+}
+
+with requests.post(url, headers=headers, json=body, stream=True) as r:
+    for line in r.iter_lines(decode_unicode=True):
+        if not line or not line.startswith("data: "):
+            continue  # skips blank separators and ping lines
+        event = json.loads(line[len("data: "):])
+        handle(event)
+```
+
+On the wire, a stream looks like this:
+
+```text
+data: {"event": "workflow_started", "task_id": "c3800678-…", "workflow_run_id": "fb47b2e6-…", "data": {…}}
+
+event: ping
+
+data: {"event": "node_finished", "task_id": "c3800678-…", "workflow_run_id": "fb47b2e6-…", "data": {…}}
+```
+
+## Dispatch by Event Type
+
+Which events arrive depends on the app type. See the event tables on [Send Chat Message](/en/api-reference/chat-messages/send-chat-message), [Run Workflow](/en/api-reference/workflow-runs/run-workflow), and [Send Completion Message](/en/api-reference/completion-messages/send-completion-message) for the contract.
+
+The typical minimum:
+
+1. Concatenate reply chunks in order:
+
+    - `message` events for Chatbot and Chatflow apps
+    - `agent_message` events for Agent and New Agent apps
+
+    For New Agent apps, a single closing `message` event repeats the complete answer; treat it as the final answer, not extra text to append.
+
+2. Close on the right terminal event: 
+    - `message_end` for Chatbot, Agent, and New Agent apps
+    - `message_end` then `workflow_finished` (both arrive, in that order) for Chatflow apps
+    - `workflow_finished` for Workflow apps
+3. Surface `error`.
+
+## Handle Errors Mid-Stream
+
+A failure after the stream opens doesn't change the HTTP status: the connection stays `200`. How the failure surfaces depends on where it happens:
+
+- A workflow node failure arrives as `node_finished` and `workflow_finished` events with `status: "failed"`.
+- Other failures end the stream with an `error` event carrying `status`, `code`, and `message`. 
+
+Handle both, and treat either as terminal for that request.
+
+## Reconnect and Resume
+
+Two identifiers matter, and they're easy to mix up:
+
+- `task_id` controls the in-flight generation and is what the stop endpoints ([Stop Chat Message Generation](/en/api-reference/chat-messages/stop-chat-message-generation) / [Stop Workflow Task](/en/api-reference/workflow-runs/stop-workflow-task)) take.
+- `workflow_run_id` names the persistent run record.
+
+Both arrive on the stream itself: every event except `error` carries `task_id`, and workflow and node events carry `workflow_run_id`. Save `workflow_run_id` as soon as it arrives: if the connection drops mid-run, it's the only handle you have for reconnecting or checking the outcome.
+
+For workflow-backed runs (Workflow and Chatflow apps), a dropped connection isn't fatal. Reopen the stream with [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events), passing the `workflow_run_id` and the same `user` that started the run. A mismatch returns 404. 
+
+Add `include_state_snapshot=true` to first replay the status of nodes that already ran, and `continue_on_pause=true` to keep one stream open across multiple Human Input pauses. 
+
+After reconnecting to a still-running workflow, confirm completion with [Get Workflow Run Detail](/en/api-reference/workflow-runs/get-workflow-run-detail) rather than relying on the reconnected stream's final event alone.
+
+Other replies have no resume endpoint: if the connection drops mid-reply, issue a new request. For chat-style apps, [List Conversation Messages](/en/api-reference/conversations/list-conversation-messages) shows what was saved to the conversation.
+
+## Keep the Connection Alive
+
+Set your client's read timeout comfortably above the 10-second `ping` interval so idle stretches between events don't kill the connection. The pings themselves need no handling beyond being skipped.
