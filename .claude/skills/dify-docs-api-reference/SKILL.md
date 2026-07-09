@@ -28,6 +28,10 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 
 ## Spec Structure
 
+You edit five per-app-type **source** specs; `tools/api-pipeline/merge_specs.py` merges them into one rendered `openapi_service.json` per language. Edit the sources — never the rendered spec.
+
+Source specs (`{en,zh,ja}/api-reference/openapi_*.json`), one per app type:
+
 | Spec File | App Type | `AppMode` values | Key Endpoints |
 |-----------|----------|------------------|---------------|
 | `openapi_chat.json` | Chat & Agent | `CHAT`, `AGENT_CHAT` | `/chat-messages`, conversations |
@@ -36,7 +40,9 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 | `openapi_completion.json` | Completion | `COMPLETION` | `/completion-messages` |
 | `openapi_knowledge.json` | Knowledge | *(N/A)* | datasets, documents, segments, metadata |
 
-Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in the chat, chatflow, workflow, and completion specs. A fix to one usually applies to all four, so propagate it.
+Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in the chat, chatflow, workflow, and completion specs. A fix to one usually applies to all four, so propagate it. zh/ja translations live in their own source specs and merge the same way.
+
+After editing a source spec, run `build --lang en zh ja` then `wire` to regenerate `openapi_service.json`, the docs.json API nav, and redirects, then `check-coverage`. The build stamps one English-slug `x-mint.href` (language-switcher parity) and an `x-mint.metadata.sidebarTitle` (the summary, so translated operations keep their language in the sidebar) per operation.
 
 ### App-Type Scoping
 

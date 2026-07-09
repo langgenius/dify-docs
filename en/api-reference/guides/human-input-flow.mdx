@@ -1,0 +1,165 @@
+---
+title: Human Input API Integration Flow
+sidebarTitle: Human Input Flow
+description: End-to-end sequence for handling a paused Human Input form via the API
+---
+
+When a workflow reaches a [Human Input node](/en/cloud/use-dify/nodes/human-input), it pauses and emits a `human_input_required` event in the streaming response. The event carries a `form_token` that your integration uses to drive the form lifecycle until the workflow resumes.
+
+For per-endpoint reference, see the [Human Input API](/en/api-reference/human-input/get-human-input-form).
+
+## Steps
+
+The sequence below applies to both Workflow and Chatflow apps. Only the entry endpoint in Step 1 differs between the two.
+
+<Steps>
+  <Step title="Start the app in streaming mode">
+
+    1. Call [Run Workflow](/en/api-reference/workflow-runs/run-workflow) (Workflow apps) or [Send Chat Message](/en/api-reference/chat-messages/send-chat-message) (Chatflow apps), passing your end user's `user` identifier.
+    2. Watch the SSE stream for the `human_input_required` event and capture its `form_token`.
+
+        If `form_token` is `null`, the form uses Email delivery and can't be driven via the API (see [Delivery Method Requirement](#delivery-method-requirement)).
+
+        The `human_input_required` event also carries the run's `workflow_run_id`; keep it in case you need to resume listening in Step 5.
+  </Step>
+  <Step title="Get the form definition">
+    Call [Get Human Input Form](/en/api-reference/human-input/get-human-input-form) with `form_token`. The response includes the rendered Markdown, input field definitions, available actions, pre-filled default values, and an `expiration_time` after which the form can no longer be submitted. Render the form for the recipient.
+
+    If the form expires before it is submitted, the paused run follows the node's configured timeout behavior; a resumed stream then carries `human_input_form_timeout` rather than `human_input_form_filled`.
+  </Step>
+  <Step title="(File inputs only) Upload local files">
+    If the recipient attaches a local file to a `file` or `file-list` input, upload it first with [Upload File](/en/api-reference/files/upload-file). It returns an `id` you reference as `upload_file_id` in the submit payload. Use one consistent `user` across the run, upload, and submit calls (see [End User Identity](/en/api-reference/guides/end-user-identity) for details).
+
+    A remote file needs no upload step: attach it inline in the submit as a `{transfer_method: remote_url, url}` mapping.
+  </Step>
+  <Step title="Submit the response">
+    Call [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) with the recipient's input values, the selected `action`, and your `user`. The `action` must be one of the actions from the form definition in Step 2.
+
+    File inputs accept either a `{transfer_method: local_file, upload_file_id}` mapping (from Step 3) or an inline `{transfer_method: remote_url, url}` mapping. See [Upload First vs. Inline Remote URL](#upload-first-vs-inline-remote-url) for the trade-off.
+
+    A successful submit is final: it closes the form and resumes the run along the matching action branch, so the same `form_token` can't be submitted again.
+
+    A rejected submit (an invalid action, a missing required input, or a failed remote-file fetch) leaves the form unchanged—fix the inputs and resubmit with the same `form_token`.
+  </Step>
+  <Step title="Resume listening to the workflow">
+    If the original SSE stream closed, reopen it via [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) with the `workflow_run_id` from Step 1 and the same `user` that started the run—a different `user` gets a 404.
+
+    The resumed stream includes `human_input_form_filled` confirming the submission (or `human_input_form_timeout` if the form expired), then the remaining node events through to completion, like a run that never paused.
+
+    Add `include_state_snapshot=true` to first replay the status of nodes that already executed. If the workflow has more than one Human Input node in sequence, the stream closes at each pause by default; pass `continue_on_pause=true` to keep one stream open across all of them.
+  </Step>
+</Steps>
+
+## Upload First vs. Inline Remote URL
+
+Both patterns work for file inputs:
+
+- **Pre-upload, then reference `upload_file_id`** (recommended)
+
+  [Upload File](/en/api-reference/files/upload-file) enforces the file size limits at upload time, so the recipient gets immediate feedback and can retry before committing the whole submission.
+
+- **Submit inline with `transfer_method: remote_url`**
+
+  The backend fetches the file at submit time. Faster to integrate, but any size, type, or fetch failure rejects the entire submission, forcing the recipient to redo other fields.
+
+<Tip>
+  For interactive forms with recipient feedback, prefer the pre-upload pattern. The trade-off only pays off when the integration is fully programmatic and no human is waiting to retype anything.
+</Tip>
+
+## Delivery Method Requirement
+
+The Human Input API works only with forms delivered via the Human Input node's WebApp method. Email-only delivery doesn't expose a `form_token`.
+
+## Example: File-Attached Submission
+
+This example uses a form with a `feedback` paragraph input, an `attachments` file-list input, and `approve` / `reject` actions.
+
+1. Call [Get Human Input Form](/en/api-reference/human-input/get-human-input-form) to get the form definition:
+
+    ```http
+    GET /form/human_input/<form_token>
+    Authorization: Bearer {api-key}
+    ```
+
+    Returns the form definition:
+
+    ```json
+    {
+      "form_content": "Please review the draft and confirm or request changes.",
+      "inputs": [
+        {
+          "type": "paragraph",
+          "output_variable_name": "feedback",
+          "default": {
+            "type": "constant",
+            "selector": [],
+            "value": ""
+          }
+        },
+        {
+          "type": "file-list",
+          "output_variable_name": "attachments",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ],
+          "number_limits": 5
+        }
+      ],
+      "resolved_default_values": {},
+      "user_actions": [
+        {
+          "id": "approve",
+          "title": "Approve",
+          "button_style": "primary"
+        },
+        {
+          "id": "reject",
+          "title": "Request changes",
+          "button_style": "default"
+        }
+      ],
+      "expiration_time": 1745510400
+    }
+    ```
+
+2. For each local file, call [Upload File](/en/api-reference/files/upload-file):
+
+    ```http
+    POST /files/upload
+    Authorization: Bearer {api-key}
+    Content-Type: multipart/form-data
+
+    file=<binary>
+    user=abc-123
+    ```
+
+    Returns `{"id": "1a77f0df-...", ...}`.
+
+3. Call [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) with the recipient's input and selected action:
+
+    ```http
+    POST /form/human_input/<form_token>
+    Authorization: Bearer {api-key}
+    Content-Type: application/json
+
+    {
+      "inputs": {
+        "feedback": "Looks good to ship",
+        "attachments": [
+          {"transfer_method": "local_file", "upload_file_id": "1a77f0df-..."}
+        ]
+      },
+      "action": "approve",
+      "user": "abc-123"
+    }
+    ```
+
+    Returns `{}`. The workflow resumes along the `approve` branch.
+
+4. Reconnect to the run's stream with [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events) to follow it through to completion, as in Step 5 of the sequence above.
