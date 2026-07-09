@@ -420,7 +420,9 @@ def main():
         print()
 
     # --- Check 3: Default value mismatches ---
-    common = sorted(set(env_vars.keys()) & set(doc_vars.keys()))
+    # Ignored vars are excluded here too: the false-positives bucket covers
+    # secret values that the docs deliberately describe instead of reproduce.
+    common = sorted((set(env_vars.keys()) & set(doc_vars.keys())) - ignored)
     mismatches = []
     for name in common:
         env_val = normalize(env_vars[name])
