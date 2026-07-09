@@ -1,0 +1,195 @@
+---
+title: 人間の入力 API 連携フロー
+sidebarTitle: 人間の入力フロー
+description: 一時停止中の人間の入力フォームを API で扱うエンドツーエンドのフロー
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/api-reference/guides/human-input-flow) を参照してください。
+
+ワークフローが [人間の入力](/ja/cloud/use-dify/nodes/human-input) ノードに到達すると一時停止し、ストリーミングレスポンスから `human_input_required` イベントが送出されます。このイベントが運ぶ `form_token` を使って、ワークフローが再開するまでフォームのライフサイクルを進めます。
+
+各エンドポイントのリファレンスは [人間の入力 API](/ja/api-reference/human-input/get-human-input-form) を参照してください。
+
+## フロー
+
+以下のフローは Workflow アプリと Chatflow アプリの両方に共通します。両者は手順 1 のエントリエンドポイントだけが異なります。
+
+<Steps>
+  <Step title="アプリをストリーミングモードで起動">
+
+    1. Workflow アプリは [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) を、Chatflow アプリは [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) を呼び出します。その際、エンドユーザーの `user` 識別子を渡します。
+    2. SSE ストリームで `human_input_required` イベントを監視し、その `form_token` を取得します。
+
+        `form_token` が `null` の場合、フォームはメール配信を使用しており、API から操作できません（[配信方法の前提](#配信方法の前提) を参照）。
+
+        `human_input_required` イベントには実行の `workflow_run_id` も含まれます。手順 5 で監視を再開する必要がある場合に備えて、保持しておきます。
+  </Step>
+  <Step title="フォーム定義を取得">
+    `form_token` を指定して [人間の入力フォームを取得](/ja/api-reference/human-input/get-human-input-form) エンドポイントを呼び出します。レスポンスにはレンダリング済みの Markdown、入力フィールド定義、利用可能なアクション、事前入力済みのデフォルト値が含まれます。`expiration_time` を過ぎると、フォームは送信できなくなります。フォームを受信者に表示します。
+
+    フォームが送信前に期限切れになった場合、一時停止中の実行はノードに設定されたタイムアウト動作に従います。再開後のストリームには `human_input_form_filled` ではなく `human_input_form_timeout` が含まれます。
+  </Step>
+  <Step title="（ファイル入力時のみ）ローカルファイルをアップロード">
+    受信者が `file` または `file-list` 入力にローカルファイルを添付する場合は、[ファイルをアップロード](/ja/api-reference/files/upload-file) で先にアップロードします。このエンドポイントは `id` を返すので、送信時に `upload_file_id` として参照します。実行、アップロード、送信の各呼び出しで一貫した `user` を使用してください（[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照）。
+
+    リモートファイルにアップロードは不要です。送信時に `{transfer_method: remote_url, url}` マッピングでインライン添付します。
+  </Step>
+  <Step title="応答を送信">
+    [人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) エンドポイントを呼び出し、受信者の入力値、選択された `action`、そして `user` を送ります。`action` は手順 2 のフォーム定義に含まれるアクションのいずれかである必要があります。
+
+    ファイル入力には、`{transfer_method: local_file, upload_file_id}` マッピング（手順 3 の結果）と、インラインの `{transfer_method: remote_url, url}` マッピングのどちらも使えます。トレードオフの詳細は [事前アップロードかインラインリモート URL か](#事前アップロードかインラインリモート-url-か) を参照してください。
+
+    送信が成功すると確定し、フォームは閉じられ、ワークフローは該当するアクション分岐から再開するため、同じ `form_token` で再送信することはできません。
+
+    送信が拒否された場合（無効なアクション、必須入力の欠落、リモートファイルの取得失敗）、フォームはそのまま変わりません。入力を修正し、同じ `form_token` で再送信してください。
+  </Step>
+  <Step title="ワークフローの監視を継続">
+    元の SSE ストリームが切断されている場合は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) で再接続します。手順 1 の `workflow_run_id` と、実行を開始したときと同じ `user` を指定してください。`user` が異なると 404 が返されます。
+
+    再開後のストリームには、送信を確認する `human_input_form_filled`（フォームが期限切れの場合は `human_input_form_timeout`）が含まれます。その後は一時停止しなかった実行と同じように、残りのノードイベントを完了までストリーミングします。
+
+    実行済みノードのステータスを先に再送するには、`include_state_snapshot=true` を付けます。ワークフローに人間の入力ノードが複数連続する場合、ストリームはデフォルトで一時停止のたびに閉じます。`continue_on_pause=true` を渡すと、1 つのストリームですべての一時停止をまたいで接続を維持できます。
+  </Step>
+</Steps>
+
+## 事前アップロードかインラインリモート URL か
+
+ファイル入力には 2 つの送信パターンがあります。
+
+- **事前アップロードしてから `upload_file_id` で送信**（推奨）
+
+  [ファイルをアップロード](/ja/api-reference/files/upload-file) は、ファイルサイズ制限をアップロード時に検証します。受信者はエラーをすぐに確認でき、送信前に再試行できます。
+
+- **`transfer_method: remote_url` でインライン送信**
+
+  バックエンドは送信時にファイルを取得します。実装は速いですが、サイズ・タイプ・取得の失敗があると送信全体が拒否され、他のフィールドを再入力する必要が出る場合があります。
+
+<Tip>
+  受信者からのフィードバックが伴うインタラクティブなフォームでは、事前アップロードのパターンを推奨します。完全に自動化されたインテグレーションで、誰も再入力を待たされない場合のみ、インラインのトレードオフが見合います。
+</Tip>
+
+## 配信方法の前提
+
+人間の入力 API は、人間の入力ノードで WebApp 配信方法が設定されたフォームのみを対象とします。メール配信のみのフォームは、API に `form_token` を公開しません。
+
+## 例：ファイル添付付きの送信
+
+このフォームには、`feedback` 段落入力、`attachments` ファイルリスト入力、`approve` / `revise` アクションがあるものとします。
+
+1. [人間の入力フォームを取得](/ja/api-reference/human-input/get-human-input-form) エンドポイントを呼び出してフォーム定義を取得します。
+
+    ```http
+    GET /form/human_input/<form_token>
+    Authorization: Bearer {api-key}
+    ```
+
+    フォーム定義が返ります。
+
+    ```json
+    {
+      "form_content": "Please review the draft, set a priority, and confirm or request changes.",
+      "inputs": [
+        {
+          "type": "paragraph",
+          "output_variable_name": "feedback",
+          "default": {
+            "type": "constant",
+            "selector": [],
+            "value": ""
+          }
+        },
+        {
+          "type": "select",
+          "output_variable_name": "priority",
+          "option_source": {
+            "type": "constant",
+            "selector": [],
+            "value": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        {
+          "type": "file",
+          "output_variable_name": "attachment",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ]
+        },
+        {
+          "type": "file-list",
+          "output_variable_name": "attachments",
+          "allowed_file_types": [
+            "image",
+            "document"
+          ],
+          "allowed_file_extensions": [],
+          "allowed_file_upload_methods": [
+            "local_file",
+            "remote_url"
+          ],
+          "number_limits": 5
+        }
+      ],
+      "resolved_default_values": {
+        "feedback": ""
+      },
+      "user_actions": [
+        {
+          "id": "approve",
+          "title": "Approve",
+          "button_style": "primary"
+        },
+        {
+          "id": "reject",
+          "title": "Request changes",
+          "button_style": "default"
+        }
+      ],
+      "expiration_time": 1745510400
+    }
+    ```
+
+2. ローカルファイルごとに [ファイルをアップロード](/ja/api-reference/files/upload-file) エンドポイントを呼び出します。
+
+    ```http
+    POST /files/upload
+    Authorization: Bearer {api-key}
+    Content-Type: multipart/form-data
+
+    file=<binary>
+    user=abc-123
+    ```
+
+    `{"id": "1a77f0df-...", ...}` が返ります。
+
+3. [人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) エンドポイントを呼び出し、受信者の入力と選択されたアクションを送ります。
+
+    ```http
+    POST /form/human_input/<form_token>
+    Authorization: Bearer {api-key}
+    Content-Type: application/json
+
+    {
+      "inputs": {
+        "feedback": "公開して問題ありません",
+        "attachments": [
+          {"transfer_method": "local_file", "upload_file_id": "1a77f0df-..."}
+        ]
+      },
+      "action": "approve",
+      "user": "abc-123"
+    }
+    ```
+
+    `{}` が返ります。ワークフローは `approve` 分岐から再開します。
+
+4. [ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) で実行のストリームに再接続し、完了まで追跡します。上記フローの手順 5 と同様です。

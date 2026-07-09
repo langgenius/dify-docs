@@ -151,6 +151,11 @@ These elements must be translated, not left in English:
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/zh-Hans/`. Refer to the glossary.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.
+
+## App-Type Names: Workflow and Chatflow
+
+The **Workflow** and **Chatflow** app types stay in English, like Agent. Add 应用 when naming the app (「Workflow 应用」「Chatflow 应用」). Use 工作流 only for the lowercase collective sense: the workflow engine, workflow-backed runs, workflow nodes, and endpoints shared across app types. Never write 工作流 for the Workflow app type, or 对话流 for Chatflow.
+
 ## Cross-Reference Anchors
 
 When a link includes `#slug`, the slug must match the **translated** text, not the English original. Mintlify generates slugs from the source text, so an untranslated anchor will break the link. This applies to both heading anchors and Tab title anchors (`<Tab title="...">` values).
