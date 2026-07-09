@@ -52,13 +52,14 @@ Feature flags for unfinished or staff-only features. Not yet meant for self-host
 | Variable | Reason | Source |
 |---|---|---|
 | `EXPERIMENTAL_ENABLE_VINEXT` | Switches the web container to an experimental Vite-based server (`web/docker/entrypoint.sh`). Not a supported user-facing knob. | 1.14 sync audit, 2026-04-22 |
-| `ENABLE_AGENT_V2` | Agent v2 feature flag; off in CE 1.15.0 (`AGENT_SHELL_ENABLED`, `AGENT_DRIVE_MANIFEST_ENABLED`, and `NEXT_PUBLIC_ENABLE_AGENT_V2` all false in staging). **Deferred, not permanently excluded** — document and remove this entry when the Agent v2 docs land (expected late June 2026). | 1.15.0 sync audit, 2026-06-24 |
+| `ENABLE_AGENT_V2` | Superseded by `NEXT_PUBLIC_ENABLE_AGENT_V2` (documented in the New Agent section, which notes this var as its fallback); removed from `.env.example` on feat/agent-v2. Kept here only so verification against the 1.15.x baseline stays clean — drop this entry at the 1.16.0 sync. | feat/agent-v2 audit, 2026-07-09 |
 | `NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW` | Gates in-development preview features (the `/create` and `/refine` command-palette slash commands); off in CE 1.15.0. | 1.15.0 sync audit, 2026-06-24 |
 
 ## Verifier false positives
 
-The variable is documented in `environments.mdx` and supported by the backend, but the verifier reports it as missing from `.env.example` because the example entry is commented out.
+The variable is documented in `environments.mdx`, but the verifier misreports it: either the example entry is commented out (reported as missing), or the example pre-fills a secret value that the docs deliberately describe instead of reproduce (reported as a default mismatch).
 
 | Variable | Reason | Source |
 |---|---|---|
 | `ALIYUN_CLOUDBOX_ID` | Commented-out `#ALIYUN_CLOUDBOX_ID=your-cloudbox-id` in `docker/.env.example`; backend field exists in `api/configs/middleware/storage/aliyun_oss_storage_config.py`. | 1.14 sync audit, 2026-04-22 |
+| `DIFY_AGENT_SERVER_SECRET_KEY` | Documented with a descriptive default; `.env.example` pre-fills a development key that the docs must not reproduce (no real or example secret values in docs). | feat/agent-v2 audit, 2026-07-09 |
