@@ -9,7 +9,7 @@ Chatflow 应用中，工作流进度以 `workflow_started`、节点事件（`nod
 - **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`
 - **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）
 
-新 Agent 应用的回复以 `message` 文本片段流式返回，模型的推理和工具调用会同时以 `agent_thought` 事件返回。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。
+新 Agent 应用的回复以 `agent_message` 事件增量流式返回，模型的推理和工具调用同时以 `agent_thought` 事件返回；随后一个收尾的 `message` 事件携带完整回答（实时渲染按增量拼接即可，收尾的 `message` 视为最终回答，不要再追加）。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。
 
 **事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（Chatflow 应用）还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。
 
@@ -17,8 +17,8 @@ Chatflow 应用中，工作流进度以 `workflow_started`、节点事件（`nod
 
 | 事件 | 应用 | 触发时机 | 关键字段 |
 |:---|:---|:---|:---|
-| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接） | `answer` |
-| `agent_message` | Agent | 每个回答片段（按顺序拼接） | `answer` |
+| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接）；新 Agent 为携带完整回答的收尾片段 | `answer` |
+| `agent_message` | Agent、新 Agent | 每个回答片段（按顺序拼接） | `answer` |
 | `agent_thought` | Agent、新 Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |
 | `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |
 | `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |

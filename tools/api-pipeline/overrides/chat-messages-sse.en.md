@@ -9,7 +9,7 @@ For Chatflow apps, workflow progress streams as `workflow_started`, node events 
 - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`
 - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)
 
-For New Agent apps, the reply streams as `message` text chunks, and the model's reasoning and tool calls stream alongside as `agent_thought` events. `message_end` metadata carries `usage` (plus `annotation_reply` when an annotation match replies) and never includes `retriever_resources`.
+For New Agent apps, the reply streams incrementally as `agent_message` events, with the model's reasoning and tool calls streaming alongside as `agent_thought` events; a single closing `message` event then carries the complete answer (render the deltas live and treat that `message` as the final answer rather than appending it). `message_end` metadata carries `usage` (plus `annotation_reply` when an annotation match replies) and never includes `retriever_resources`.
 
 **Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) also nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.
 
@@ -17,8 +17,8 @@ For New Agent apps, the reply streams as `message` text chunks, and the model's 
 
 | Event | App | Fires on | Key fields |
 |:---|:---|:---|:---|
-| `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order) | `answer` |
-| `agent_message` | Agent | each answer chunk (concatenate in order) | `answer` |
+| `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order); for New Agent, one closing chunk with the complete answer | `answer` |
+| `agent_message` | Agent, New Agent | each answer chunk (concatenate in order) | `answer` |
 | `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |
 | `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |
 | `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |
