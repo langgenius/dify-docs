@@ -1,5 +1,5 @@
 ---
-title: Version
+title: 版本
 description: 检查 difyctl 版本及其与 Dify 服务器的兼容性
 ---
 
@@ -49,22 +49,22 @@ difyctl version --short
 
 ```text
 Client:
-  Version:   0.1.0-alpha (channel: alpha)
+  Version:   0.2.0-alpha (channel: alpha)
   Commit:    9f3c2ab (built 2026-06-05)
   Platform:  darwin/arm64
-  Compat:    dify >=1.15.0, <=1.15.0
+  Compat:    dify >=1.16.0, <=1.16.0
 
 Server:
   Endpoint:  https://cloud.dify.ai
-  Version:   1.15.0 (cloud)
+  Version:   1.16.0 (cloud)
 
-Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
+Compatibility: ok — server 1.16.0 in [1.16.0, 1.16.0]
 ```
 
 `--short` 仅打印客户端 semver：
 
 ```text
-0.1.0-alpha
+0.2.0-alpha
 ```
 
 `-o json`：
@@ -72,7 +72,7 @@ Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
 ```json
 {
   "client": {
-    "version": "0.1.0-alpha",
+    "version": "0.2.0-alpha",
     "commit": "9f3c2ab",
     "buildDate": "2026-06-05",
     "channel": "alpha",
@@ -82,19 +82,19 @@ Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
   "server": {
     "endpoint": "https://cloud.dify.ai",
     "reachable": true,
-    "version": "1.15.0",
+    "version": "1.16.0",
     "edition": "CLOUD"
   },
   "compat": {
-    "minDify": "1.15.0",
-    "maxDify": "1.15.0",
+    "minDify": "1.16.0",
+    "maxDify": "1.16.0",
     "status": "compatible",
-    "detail": "server 1.15.0 in [1.15.0, 1.15.0]"
+    "detail": "server 1.16.0 in [1.16.0, 1.16.0]"
   }
 }
 ```
 
-不加 `--check-compat` 时，即使服务器无法访问或不兼容，命令也会以 `0` 退出。判定结果本身就是报告，而非错误。
+即使服务器无法访问或不兼容，此命令也会以 `0` 退出：判定结果本身就是报告，而非错误。若要在脚本中将其转换为退出码，请使用下文的 `--check-compat`。其他命令则会根据判定结果采取行动，参见 [命令如何应对不兼容的服务器](#命令如何应对不兼容的服务器)。
 
 ### 退出码
 
@@ -107,19 +107,40 @@ Compatibility: ok — server 1.15.0 in [1.15.0, 1.15.0]
 
 ## 兼容性判定
 
-`difyctl version` 会将你的版本与服务器版本进行比对，给出三种判定之一。你无需登录，但需要有一个已存储的主机供其探测。
+`difyctl version` 会将你的版本与服务器版本进行比对，给出四种判定之一。你无需登录，但需要有一个已存储的主机供其探测。
 
-| 判定 | 含义 |
-|:---|:---|
-| `compatible` | 服务器版本处于该版本所支持的范围内。 |
-| `unsupported` | 服务器版本超出支持范围。 |
-| `unknown` | 无法判定：未配置主机、服务器无法访问、使用 `--client` 跳过了探测，或服务器版本无法解析。 |
+在 `text` 报告中，判定会以下表「显示为」列中的标签打印在 `Compatibility:` 行；`-o json` 则在 `status` 字段中给出判定名称。
 
-`detail` 字段会说明你属于哪种情况，例如 `server 1.16.0 outside [1.15.0, 1.15.0]`。
+| 判定 | 显示为 | 含义 |
+|:---|:---|:---|
+| `compatible` | `ok` | 服务器版本处于该版本所支持的范围内。 |
+| `too_old` | `incompatible (server too old)` | 服务器版本低于该版本所支持的最低要求。 |
+| `too_new` | `incompatible (server too new)` | 服务器版本高于该版本测试过的最高版本。 |
+| `unknown` | `unknown` | 无法判定：未配置主机、服务器无法访问、使用 `--client` 跳过了探测，或服务器版本无法解析。 |
+
+`detail` 字段会说明具体属于哪种情况，例如 `server 1.14.0 is older than the minimum 1.16.0` 或 `server 1.16.0 in [1.16.0, 1.16.0]`。
+
+## 命令如何应对不兼容的服务器
+
+`difyctl version` 只会报告判定结果。其他所有命令都会在运行前依据判定采取行动，因此 `too_old` 的服务器会让这些命令无法运行，直到你解决版本不匹配的问题：
+
+- **`too_old`**：命令会在执行实际操作之前以退出码 [`6`](/zh/cli/reference/output-formats-and-exit-codes) 停止，并提示你将 Dify 服务器升级到该版本所支持的最低版本（或[安装与服务器相匹配的 `difyctl`](/zh/cli/install)）。
+- **`too_new`**：命令照常运行；在交互式终端且为文本输出时，还会向 stderr 打印一行经过节流的警告。
+- **`unknown`**：命令照常运行；判定为 unknown 时不进行拦截。
+
+通过最低版本校验的服务器（`compatible` 或 `too_new`）会按主机缓存约一小时，因此不会在每次执行命令时重复该拦截检查。`too_old` 的服务器不会被缓存，因此每次都会重新检查，一旦你升级服务器就会立即恢复正常。
+
+使用 [`auth login`](/zh/cli/reference/auth-and-contexts) 登录时也会执行同样的检查，并在存储会话之前完成，因此版本不匹配会在登录时就被发现，而不必等到执行第一条命令。
+
+这个校验是双向的：上面的判定是 `difyctl` 对服务器的判断，而服务器也会反过来判断 `difyctl`。
+
+如果你的客户端版本低于服务器所接受的版本，服务器会以 HTTP `426` 拒绝该请求，`difyctl` 则以退出码 `6` 退出并提示升级。这也是为什么升级 Dify 服务器会导致较旧的 `difyctl` 无法工作：即使客户端自己对更新服务器的判定只是一条警告，服务器仍会直接拒绝这个旧客户端。
+
+因此，最稳妥的做法是让 `difyctl` 与服务器版本保持匹配：较新的服务器会被容许（并给出警告），但较旧的服务器会被拒绝。
 
 ## 在脚本中根据兼容性进行控制
 
-`--check-compat` 让判定结果可用于脚本：只要不是 `compatible`，包括所有 `unknown` 情况，都会以 `64` 退出。
+`--check-compat` 让判定结果可用于脚本：只要不是 `compatible`，包括所有 `unknown` 情况，都会以 `64` 退出。`difyctl version` 每次都会实时探测服务器，且从不读取兼容性缓存，因此脚本中的校验反映的是服务器当前的版本；该标志只是把判定转换为退出码。
 
 完整报告仍会按你选择的格式输出到 stdout，而那一行原因则输出到 stderr，因此无论结果如何，`difyctl version -o json --check-compat | jq` 都能照常工作。
 
