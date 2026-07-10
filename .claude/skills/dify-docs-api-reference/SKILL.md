@@ -1,9 +1,10 @@
 ---
 name: dify-docs-api-reference
 description: >
-  Use when editing, auditing, or creating OpenAPI specs in the Dify docs
-  repo (en/api-reference/openapi_*.json), or on any task touching API
-  endpoint parameters, responses, error codes, status codes, or examples.
+  Use when editing or auditing the Service API specs in the Dify docs
+  repo ({en,zh,ja}/api-reference/openapi_service.json), or on any task
+  touching API endpoint parameters, responses, error codes, status codes,
+  or examples.
 ---
 
 # Dify API Reference Documentation
@@ -16,7 +17,7 @@ Work through these in order. Steps 1, 3, 4, and 5 are non-negotiable.
 
 Editing or creating a spec runs all five steps. Auditing an existing spec is steps 1 and 3 applied systematically from `references/audit-checklist.md`; the independent subagent audit in step 5 is required only when you have written or substantially changed an endpoint.
 
-1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Confirm the Dify codebase is on the ref you mean to verify against: the latest `main` by default (`git fetch origin`, then fast-forward only if the working tree is clean), or a dev branch if the user names one. Do not force a checkout over a dirty or feature working tree. Identify which spec you are in and its app type from [Spec Structure](#spec-structure); every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
+1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Confirm the Dify codebase is on the ref you mean to verify against: the latest `main` by default (`git fetch origin`, then fast-forward only if the working tree is clean), or a dev branch if the user names one. Do not force a checkout over a dirty or feature working tree. Identify which app types the operation serves from [Spec Structure](#spec-structure); every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
 2. **Write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here.
 3. **Verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers.
 4. **Flag suspected code bugs; never silently document them** (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
@@ -28,31 +29,33 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 
 ## Spec Structure
 
-You edit five per-app-type **source** specs; `tools/api-pipeline/merge_specs.py` merges them into one rendered `openapi_service.json` per language. Edit the sources — never the rendered spec.
+One spec per language — `{en,zh,ja}/api-reference/openapi_service.json` — is the spec of record. Edit it directly, in all three languages; `parity_check` enforces structural parity with en. (The five legacy per-app-type source specs and the merge pipeline that consolidated them are retired; recover from git history if needed.)
 
-Source specs (`{en,zh,ja}/api-reference/openapi_*.json`), one per app type:
+App types map to `AppMode` values:
 
-| Spec File | App Type | `AppMode` values | Key Endpoints |
-|-----------|----------|------------------|---------------|
-| `openapi_chat.json` | Chat & Agent | `CHAT`, `AGENT_CHAT` | `/chat-messages`, conversations |
-| `openapi_chatflow.json` | Chatflow | `ADVANCED_CHAT` | Same as chat, mode `advanced-chat` |
-| `openapi_workflow.json` | Workflow | `WORKFLOW` | `/workflows/run`, workflow logs |
-| `openapi_completion.json` | Completion | `COMPLETION` | `/completion-messages` |
-| `openapi_knowledge.json` | Knowledge | *(N/A)* | datasets, documents, segments, metadata |
+| App Type | `AppMode` values | Key Endpoints |
+|----------|------------------|---------------|
+| Chat & Agent | `CHAT`, `AGENT_CHAT` | `/chat-messages`, conversations |
+| Chatflow | `ADVANCED_CHAT` | Same as chat, mode `advanced-chat` |
+| Workflow | `WORKFLOW` | `/workflows/run`, workflow logs |
+| Completion | `COMPLETION` | `/completion-messages` |
+| Knowledge | *(N/A)* | datasets, documents, segments, metadata |
 
-Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear in the chat, chatflow, workflow, and completion specs. A fix to one usually applies to all four, so propagate it. zh/ja translations live in their own source specs and merge the same way.
+Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear **once**, with an availability line and per-mode notes in the description — a fix applies in one place, no propagation. `tools/api-pipeline/memberships.json` records which app types support each operation and drives the app-type overview pages plus `check-coverage`.
 
-After editing a source spec, run `build --lang en zh ja` then `wire` to regenerate `openapi_service.json`, the docs.json API nav, and redirects, then `check-coverage`. The build stamps one English-slug `x-mint.href` (language-switcher parity) and an `x-mint.metadata.sidebarTitle` (the summary, so translated operations keep their language in the sidebar) per operation.
+Every operation carries `x-mint.href` (`/{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` — English slugs in all languages for language-switcher parity) and `x-mint.metadata.title`/`sidebarTitle` (the translated summary; without them the sidebar shows the English slug). Set all of these when adding an operation, and keep the `tags` arrays index-aligned across languages.
+
+After structural edits (adding, removing, retitling, or reordering operations, or changing availability): update `memberships.json` and the app-type overview pages, then run `wire`, `check-coverage`, `lint_specs`, and `parity_check` per `tools/api-pipeline/README.md`. Description-only edits need the lints but not `wire`.
 
 ### App-Type Scoping
 
-The codebase shares controllers and Pydantic models across app modes; the docs split them into per-app-type specs. Filter everything through the app type of the spec you are in:
+The codebase shares controllers and Pydantic models across app modes; the merged spec documents each shared endpoint once, mode-aware. Filter every claim through the app types the operation actually serves (its availability line and `memberships.json`):
 
-- **Shared models**: include only fields that have an effect in this mode.
-- **Shared error handlers**: include only errors triggerable in this mode.
-- **Internal-only fields** (e.g., `retriever_from`): omit from all specs.
+- **Shared models**: include only fields that have an effect in at least one supported mode; mark mode-specific fields in a mode note.
+- **Shared error handlers**: include only errors triggerable in a supported mode.
+- **Internal-only fields** (e.g., `retriever_from`): omit from the spec.
 
-To judge relevance, check the controller's `AppMode` guard; when in doubt, trace through `AppGenerateService.generate()`. For example, `workflow_id` belongs in chatflow, not chat.
+To judge relevance, check the controller's `AppMode` guard; when in doubt, trace through `AppGenerateService.generate()`. For example, `workflow_id` matters in chatflow mode, not chat.
 
 ## Verifying Against Code
 
