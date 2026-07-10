@@ -1,7 +1,7 @@
-import glob, json, os
+import glob, json, os, sys
 DOCS = os.environ['DOCS']
 
-def op_shape(op, spec):
+def op_shape(op):
     params = sorted(
         (p.get('name'), p.get('in'), bool(p.get('required')), (p.get('schema') or {}).get('type'))
         for p in op.get('parameters', []) or []
@@ -27,8 +27,8 @@ for en_file in sorted(glob.glob(f'{DOCS}/en/api-reference/openapi_*.json')):
         for p, m in sorted(ot_ops - en_ops):
             print(f'{lang}/{name}: EXTRA op {m.upper()} {p}'); total += 1
         for p, m in sorted(en_ops & ot_ops):
-            a = op_shape(en['paths'][p][m], en)
-            b = op_shape(other['paths'][p][m], other)
+            a = op_shape(en['paths'][p][m])
+            b = op_shape(other['paths'][p][m])
             for key in a:
                 if a[key] != b[key]:
                     print(f'{lang}/{name}: {m.upper()} {p} differs in {key}:')
@@ -36,3 +36,4 @@ for en_file in sorted(glob.glob(f'{DOCS}/en/api-reference/openapi_*.json')):
                     print(f'    {lang}: {b[key]}')
                     total += 1
 print(f'\nTOTAL PARITY ISSUES: {total}')
+sys.exit(1 if total else 0)
