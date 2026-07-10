@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "发送对话消息",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n向对话型应用发送请求。适用于聊天助手、Agent、Chatflow 和新 Agent 应用；流式响应中的事件因应用类型而异。",
+        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n向对话型应用发送一条消息并返回助手的回复。流式响应中的事件因应用类型而异。",
         "operationId": "sendBasicChatMessageCn",
         "tags": [
           "对话消息"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，它以 `event: ping` 行的形式（无 `data:` 载荷）每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：聊天助手应用的回复以 `message` 事件流式返回，Agent 应用则以 `agent_thought` 与 `agent_message` 事件返回。流以 `message_end` 结束；开启文本转语音（TTS）自动播放时，`tts_message` 事件会穿插其间，`tts_message_end` 成为最后一个事件。\n\nChatflow 应用中，工作流进度以 `workflow_started`、节点事件（`node_started` 和 `node_finished`，以及迭代和循环的相应变体）流式返回，回复则以 `message` 事件返回（设置 `reasoning_format: separated` 的 LLM 节点还会同时发送 `reasoning_chunk` 事件，承载模型的推理内容）。开启文本转语音（TTS）自动播放时，`tts_message_end` 跟随在结束事件之后。结束序列取决于运行结果：\n- **成功**：`message_end`，随后 `workflow_finished`\n- **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n- **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n新 Agent 应用的回复以 `agent_message` 事件增量流式返回，模型的推理和工具调用同时以 `agent_thought` 事件返回；随后一个收尾的 `message` 事件携带完整回答（实时渲染按增量拼接即可，收尾的 `message` 视为最终回答，不要再追加）。`message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不会包含 `retriever_resources`。\n\n**事件**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（Chatflow 应用）还将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接）；新 Agent 为携带完整回答的收尾片段 | `answer` |\n| `agent_message` | Agent、新 Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent、新 Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |\n| `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent、Chatflow | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅 Chatflow 应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
+                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（每 10 秒保持连接）。\n\n**按应用类型划分的事件**（先是回复事件，再是流的结束方式）：\n\n- **聊天助手**：`message` 片段（按顺序拼接）→ `message_end`。\n- **Agent**：`agent_thought` 推理与工具调用步骤，与 `agent_message` 片段并行 → `message_end`。\n- **新 Agent**：`agent_message` 片段与并行的 `agent_thought` 步骤 → 一个收尾的 `message` 携带完整回答（将其视为最终回答，而非要追加的额外文本）→ `message_end`。其 `message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不含 `retriever_resources`。\n- **Chatflow**：`workflow_started` → 节点事件（`node_started`、`node_finished`，以及迭代和循环的相应变体）与 `message` 片段并行 → 随后按运行结果：\n  - **成功**：`message_end`，随后 `workflow_finished`\n  - **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n  - **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n**附加事件**：\n\n- 文本转语音自动播放：`tts_message` 音频片段会穿插其间，`tts_message_end` 跟随在结束事件之后。\n- 设置 `reasoning_format: separated` 的 Chatflow LLM 节点还会发送 `reasoning_chunk` 增量，承载模型的推理内容。\n\n**通用字段**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（Chatflow 应用）会将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接）；新 Agent 为携带完整回答的收尾片段 | `answer` |\n| `agent_message` | Agent、新 Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent、新 Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |\n| `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent、Chatflow | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅 Chatflow 应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 每 10 秒保持连接 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -404,7 +404,14 @@
             "title": "发送对话消息",
             "sidebarTitle": "发送对话消息"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/chat-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"query\": \"What are the specs of the iPhone 13 Pro Max?\", \"inputs\": {}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/chat-messages/{task_id}/stop": {
@@ -420,7 +427,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message) API 的流式分块返回中获取。",
+            "description": "任务 ID，来自 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message) 的流式事件。",
             "schema": {
               "type": "string"
             }
@@ -438,7 +445,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，必须与发送消息时传入的 `user` 一致；不一致时停止不会生效，但响应仍返回成功。"
+                    "description": "终端用户标识，由你的应用定义，需在应用内唯一。必须与发送原始消息时的 `user` 一致；不一致时停止不会生效，但仍返回成功。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               },
@@ -458,7 +465,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_chat_app` : 应用模式与 API 路由不匹配。\n- `invalid_param` : 缺少必填参数或参数无效。",
+            "description": "- `not_chat_app` : 应用模式与 API 路由不匹配。\n- `invalid_param` : 缺少必填的 `user` 字段。",
             "content": {
               "application/json": {
                 "examples": {
@@ -495,7 +502,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "获取下一轮建议问题列表",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n获取当前消息的下一步建议问题。",
+        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n返回为某条消息推荐的追问问题。",
         "operationId": "getBasicChatSuggestedQuestionsCn",
         "tags": [
           "对话消息"
@@ -505,7 +512,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "消息 ID。",
+            "description": "要获取建议问题的消息 ID。可从对话响应或 [获取会话历史消息](/zh/api-reference/conversations/list-conversation-messages) 获取。",
             "schema": {
               "type": "string"
             }
@@ -514,7 +521,7 @@
             "name": "user",
             "in": "query",
             "required": true,
-            "description": "用户标识符。",
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。",
             "schema": {
               "type": "string"
             }
@@ -642,7 +649,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "要上传的文件，作为 `multipart/form-data` 的一个部分。除部署安全黑名单（`UPLOAD_FILE_EXTENSION_BLACKLIST`，默认为空）中的扩展名外，任何文件类型都可上传。文件大小按类别限制：图片 10 MB、音频 50 MB、视频 100 MB、其他文件 15 MB（默认值，Dify Cloud 使用默认值）；自部署可通过 `UPLOAD_*_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。文件名不能包含 `/` 或 `\\`。"
+                    "description": "要上传的文件，作为 `multipart/form-data` 的一个部分。文件名不能包含 `/` 或 `\\`。\n\n除部署安全黑名单（`UPLOAD_FILE_EXTENSION_BLACKLIST`，默认为空）中的扩展名外，任何文件类型都可上传。\n\n文件大小按类别限制：图片 10 MB、音频 50 MB、视频 100 MB、其他文件 15 MB（默认值，Dify Cloud 使用默认值）。自部署可通过 `UPLOAD_*_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。"
                   },
                   "user": {
                     "type": "string",
@@ -781,7 +788,7 @@
     "/files/{file_id}/preview": {
       "get": {
         "summary": "下载文件",
-        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n预览或下载之前通过[上传文件](/zh/api-reference/files/upload-file) API 上传的文件。仅可访问属于请求应用内消息的文件。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n返回此前由 [上传文件](/zh/api-reference/files/upload-file) 返回的文件的原始字节。文件仅可通过引用它的消息所属的应用访问。",
         "operationId": "previewBasicChatFileCn",
         "tags": [
           "文件操作"
@@ -791,7 +798,7 @@
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "要预览的文件唯一标识符，从 [上传文件](/zh/api-reference/files/upload-file) API 响应中获取。",
+            "description": "要下载的文件 ID，来自上传文件的响应。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -801,7 +808,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "如果为 `true`，则强制文件以附件形式下载，而不是在浏览器中预览。",
+            "description": "为 `true` 时，文件以附件形式下载，而不是在浏览器中内联渲染。",
             "schema": {
               "type": "boolean",
               "default": false
@@ -811,7 +818,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "用户标识符，用于终端用户上下文。",
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。此处对文件访问没有影响，文件访问按应用和消息（而非 `user`）限定。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。",
             "schema": {
               "type": "string"
             }
@@ -830,7 +837,7 @@
             }
           },
           "403": {
-            "description": "`file_access_denied` : 拒绝访问请求的文件。",
+            "description": "`file_access_denied` : 文件存在，但属于其他应用或工作空间。",
             "content": {
               "application/json": {
                 "examples": {
@@ -847,7 +854,7 @@
             }
           },
           "404": {
-            "description": "`file_not_found` : 未找到请求的文件。",
+            "description": "`file_not_found` : 此 ID 对应的文件无法通过本应用的消息访问。",
             "content": {
               "application/json": {
                 "examples": {
@@ -876,7 +883,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "获取终端用户信息",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n根据 ID 获取终端用户信息。当其他 API 返回终端用户 ID（例如[上传文件](/zh/api-reference/files/upload-file)返回的 `created_by`）时很有用。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n根据 ID 返回终端用户的详细信息。当需要解析其他接口返回的终端用户 ID（例如 [上传文件](/zh/api-reference/files/upload-file) 响应中的 `created_by`）时很有用。",
         "operationId": "getEndUserChatCn",
         "tags": [
           "终端用户"
@@ -886,7 +893,7 @@
             "name": "end_user_id",
             "in": "path",
             "required": true,
-            "description": "终端用户 ID。",
+            "description": "要查询的终端用户 ID。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -951,7 +958,7 @@
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "提交消息反馈",
-        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n提交消息反馈。终端用户可以对消息评价 `like` 或 `dislike`，并可选择提供文字反馈。将 `rating` 设为 `null` 可撤销之前提交的反馈。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n为消息记录 `like` 或 `dislike` 评价，并可附带可选评论。将 `rating` 设为 `null` 可撤销该消息的已有反馈。",
         "operationId": "postBasicChatMessageFeedbackCn",
         "tags": [
           "消息反馈"
@@ -961,7 +968,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "消息 ID。",
+            "description": "要反馈的消息 ID。消息 ID 从 [获取会话历史消息](/zh/api-reference/conversations/list-conversation-messages) 获取。",
             "schema": {
               "type": "string"
             }
@@ -992,7 +999,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "`invalid_param` : 缺少必填参数或参数无效。当省略 `user` 字段，或 `rating` 为 `null` 但没有可撤销的已有反馈时返回。",
+            "description": "`invalid_param` : 缺少必填的 `user` 字段，或 `rating` 为 `null` 但没有可撤销的已有反馈。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1038,7 +1045,7 @@
     "/app/feedbacks": {
       "get": {
         "summary": "获取应用的消息反馈",
-        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n获取此应用中所有消息反馈的分页列表，包括终端用户和管理员反馈。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent、文本生成应用。\n\n返回此应用所有消息反馈的分页列表，包括终端用户和管理员提交的反馈。",
         "operationId": "getBasicChatAppFeedbacksCn",
         "tags": [
           "消息反馈"
@@ -1047,7 +1054,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "页码。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1058,7 +1065,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "每页记录数。",
+            "description": "每页反馈条数。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1127,7 +1134,7 @@
     "/conversations": {
       "get": {
         "summary": "获取会话列表",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n获取当前用户的会话列表，按最近活跃时间排序。",
+        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n列出某个终端用户的会话，按最近活跃时间排序。",
         "operationId": "getBasicChatConversationsListCn",
         "tags": [
           "会话管理"
@@ -1137,7 +1144,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "用户标识符。",
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。",
             "schema": {
               "type": "string"
             }
@@ -1146,7 +1153,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "当前页最后一条记录的 ID（用于分页）。",
+            "description": "分页游标：当前页最后一个会话的 `id`。省略则获取第一页。",
             "schema": {
               "type": "string"
             }
@@ -1167,7 +1174,7 @@
             "name": "sort_by",
             "in": "query",
             "required": false,
-            "description": "排序字段。使用 '-' 前缀表示降序。",
+            "description": "排序字段。加 `-` 前缀表示降序。",
             "schema": {
               "type": "string",
               "enum": [
@@ -1260,7 +1267,7 @@
     "/messages": {
       "get": {
         "summary": "获取会话历史消息",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n以滚动加载的格式返回历史聊天记录，首页返回最新的 `limit` 条消息，即按时间倒序排列。",
+        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n返回会话的消息历史，按时间倒序（最新在前）。传入 `first_id` 可向前翻页获取更早的消息。",
         "operationId": "getBasicChatConversationHistoryCn",
         "tags": [
           "会话管理"
@@ -1270,7 +1277,7 @@
             "name": "conversation_id",
             "in": "query",
             "required": true,
-            "description": "会话 ID。",
+            "description": "要读取的会话 ID。会话 ID 从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取。",
             "schema": {
               "type": "string"
             }
@@ -1279,7 +1286,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "用户标识符。",
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。",
             "schema": {
               "type": "string"
             }
@@ -1288,7 +1295,7 @@
             "name": "first_id",
             "in": "query",
             "required": false,
-            "description": "当前页第一条聊天记录的 ID。默认为 `null`（获取最新消息）。获取后续页面时，使用当前列表中第一条消息的 ID 来获取更早的消息。",
+            "description": "分页游标：当前页第一条消息的 `id`。传入它可获取上一页（更早的消息）；省略则获取最新消息。",
             "schema": {
               "type": "string"
             }
@@ -1372,7 +1379,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : 会话不存在。\n- `not_found` : 第一条消息不存在。",
+            "description": "- `not_found` : 会话不存在。\n- `not_found` : 第一条消息不存在（`first_id` 无效）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1416,7 +1423,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "获取对话变量",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n从特定会话中获取变量。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n列出会话中存储的变量。",
         "operationId": "getBasicChatConversationVariablesCn",
         "tags": [
           "会话管理"
@@ -1426,7 +1433,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "要列出变量的会话 ID。会话 ID 从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取。",
             "schema": {
               "type": "string"
             }
@@ -1435,7 +1442,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "用户标识符。",
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。",
             "schema": {
               "type": "string"
             }
@@ -1444,7 +1451,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "当前页最后一条记录的 ID（用于分页）。",
+            "description": "分页游标：当前页最后一个变量的 `id`。省略则获取第一页。",
             "schema": {
               "type": "string"
             }
@@ -1559,7 +1566,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "重命名会话",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n重命名会话或自动生成名称。会话名称用于在支持多会话的客户端上显示。",
+        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n重命名会话；当 `auto_generate` 为 `true` 时，根据会话消息自动生成名称。该名称用于客户端的多会话列表显示。",
         "operationId": "renameBasicChatConversationCn",
         "tags": [
           "会话管理"
@@ -1569,7 +1576,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "要重命名的会话 ID。会话 ID 从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取。",
             "schema": {
               "type": "string"
             }
@@ -1676,7 +1683,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "更新对话变量",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新特定会话变量的值。值必须与预期类型匹配。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新会话变量的值。新值必须与该变量的现有类型匹配。",
         "operationId": "updateChatConversationVariableZh",
         "tags": [
           "会话管理"
@@ -1686,7 +1693,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "变量所属的会话 ID。会话 ID 从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1696,7 +1703,7 @@
             "name": "variable_id",
             "in": "path",
             "required": true,
-            "description": "Variable ID.",
+            "description": "要更新的变量 ID。变量 ID 从 [获取对话变量](/zh/api-reference/conversations/list-conversation-variables) 获取。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1820,7 +1827,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会话 ID。",
+            "description": "要删除的会话 ID。会话 ID 从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取。",
             "schema": {
               "type": "string"
             }
@@ -1836,7 +1843,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符。"
+                    "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               },
@@ -1902,7 +1909,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "语音转文字",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n将音频文件转换为文字。按上传文件的 MIME 类型校验，必须为 `audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` 之一；其他类型（包括常见的 `audio/mpeg`）会返回 `unsupported_audio_type` 错误。文件大小限制为 `30 MB`。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n使用应用配置的语音转文字模型，将上传的音频文件转写为文字。",
         "operationId": "basicChatAudioToTextCn",
         "tags": [
           "语音与文字转换"
@@ -1937,7 +1944,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 请求无效。当此应用未启用语音转文字时返回。\n- `provider_not_support_speech_to_text` : 模型供应商不支持语音转文字。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 语音识别请求失败。",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 此应用未启用语音转文字。\n- `provider_not_support_speech_to_text` : 模型供应商不支持语音转文字。\n- `provider_not_initialize` : 未配置有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 语音识别请求失败。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2002,7 +2009,7 @@
             }
           },
           "413": {
-            "description": "`audio_too_large` : 音频文件大小超出限制。",
+            "description": "`audio_too_large` : 音频文件超出 `30 MB` 大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2019,7 +2026,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_audio_type` : 不允许的音频类型。",
+            "description": "`unsupported_audio_type` : 文件的 MIME 类型不在接受的音频类型之列（见 `file` 字段）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2059,13 +2066,20 @@
             "title": "语音转文字",
             "sidebarTitle": "语音转文字"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/audio-to-text' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@meeting-question.mp3' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/text-to-audio": {
       "post": {
         "summary": "文字转语音",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n将文字转换为语音。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n将文本转换为语音音频。传入 `text` 可合成任意文本，或传入 `message_id` 为已有消息的答案配音。",
         "operationId": "basicChatTextToAudioCn",
         "tags": [
           "语音与文字转换"
@@ -2104,7 +2118,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 请求无效。当未启用文字转语音、缺少 `text` 或没有可用音色时返回。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 文字转语音请求失败。",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 未启用文字转语音、缺少 `text` 或没有可用音色。\n- `provider_not_initialize` : 未配置有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不支持此操作。\n- `completion_request_error` : 文字转语音请求失败。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2190,7 +2204,7 @@
     "/info": {
       "get": {
         "summary": "获取应用基本信息",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n获取应用的基本信息，包括名称、描述、标签和模式。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用的基本信息：名称、描述、标签、模式和作者。",
         "operationId": "getBasicChatAppInfoCn",
         "tags": [
           "应用配置"
@@ -2234,7 +2248,7 @@
     "/parameters": {
       "get": {
         "summary": "获取应用参数",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n获取应用的输入表单配置，包括功能开关、输入参数名称、类型和默认值。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用的前端配置：开场白和建议问题、功能开关、用户输入表单，以及文件上传限制。用它来渲染应用的输入项并应用正确的上传限制。",
         "operationId": "getBasicChatAppParametersCn",
         "tags": [
           "应用配置"
@@ -2315,7 +2329,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `agent_not_published` : 绑定的 Agent 尚未发布。（新 Agent 应用）",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `agent_not_published` : 应用的 Agent 尚无已发布版本。（新 Agent 应用）",
             "content": {
               "application/json": {
                 "examples": {
@@ -2352,7 +2366,7 @@
     "/meta": {
       "get": {
         "summary": "获取应用元数据",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n获取应用的元数据，包括工具图标和其他配置详情。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回此应用所用工具的展示图标，以工具名为键。",
         "operationId": "getBasicChatAppMetaCn",
         "tags": [
           "应用配置"
@@ -2395,7 +2409,7 @@
     "/site": {
       "get": {
         "summary": "获取应用 WebApp 设置",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n获取应用的 WebApp 设置，包括站点配置、主题和自定义选项。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用托管 WebApp 的品牌与展示设置，如标题、图标、主题色和默认语言。",
         "operationId": "getBasicChatWebAppSettingsCn",
         "tags": [
           "应用配置"
@@ -2463,7 +2477,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "创建标注",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n创建新的标注。标注提供预定义的问答对，应用可以直接匹配并返回，而无需生成回复。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n创建标注。标注是预定义的问答对，命中时应用直接返回，而不再生成新回复。",
         "operationId": "createChatAnnotationZh",
         "tags": [
           "标注管理"
@@ -2521,7 +2535,7 @@
       },
       "get": {
         "summary": "获取标注列表",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n获取应用的标注分页列表。支持关键词搜索筛选。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n列出应用的标注，可按关键词筛选。",
         "operationId": "listChatAnnotationsZh",
         "tags": [
           "标注管理"
@@ -2530,7 +2544,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "页码。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2540,7 +2554,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "每页条目数。",
+            "description": "每页条目数。超过 100 的请求会被限制为 100。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2601,7 +2615,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "更新标注",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新现有标注的问题和回答。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新标注的问题和答案。",
         "operationId": "updateChatAnnotationZh",
         "tags": [
           "标注管理"
@@ -2611,7 +2625,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "要更新的标注的唯一标识符。",
+            "description": "要更新的标注 ID。标注 ID 从 [获取标注列表](/zh/api-reference/annotations/list-annotations) 获取。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2698,7 +2712,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "要删除的标注的唯一标识符。",
+            "description": "要删除的标注 ID。标注 ID 从 [获取标注列表](/zh/api-reference/annotations/list-annotations) 获取。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2739,7 +2753,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "配置标注回复",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n启用或禁用标注回复功能。请求体在执行操作前校验，因此无论 `enable` 还是 `disable` 都必须提供 `embedding_provider_name`、`embedding_model_name` 和 `score_threshold`。异步执行，使用 [查询标注回复配置任务状态](/zh/api-reference/annotations/get-annotation-reply-job-status) 跟踪进度。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n为应用启用或禁用标注回复。异步执行；使用 [查询标注回复配置任务状态](/zh/api-reference/annotations/get-annotation-reply-job-status) 跟踪进度。\n\n请求体在执行操作前校验，因此即使是 `disable` 也必须提供 `score_threshold`、`embedding_provider_name` 和 `embedding_model_name`。",
         "operationId": "setChatAnnotationReplyZh",
         "tags": [
           "标注管理"
@@ -2749,7 +2763,7 @@
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "要执行的操作。",
+            "description": "启用还是禁用标注回复。",
             "schema": {
               "type": "string",
               "enum": [
@@ -2812,7 +2826,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "查询标注回复配置任务状态",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n获取由 [配置标注回复](/zh/api-reference/annotations/configure-annotation-reply) 发起的异步标注回复配置任务的状态。",
+        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n返回由 [配置标注回复](/zh/api-reference/annotations/configure-annotation-reply) 发起的标注回复配置任务的状态。",
         "operationId": "getChatAnnotationReplyStatusZh",
         "tags": [
           "标注管理"
@@ -2893,7 +2907,7 @@
     "/workflows/run/{workflow_run_id}": {
       "get": {
         "summary": "获取工作流执行情况",
-        "description": "**适用于**：Chatflow、Workflow。\n\n根据工作流执行 ID 获取工作流任务的当前执行结果。",
+        "description": "**适用于**：Chatflow、Workflow。\n\n获取单次工作流运行的状态、输入、输出和执行指标。",
         "operationId": "getWorkflowRunDetailCn",
         "tags": [
           "工作流运行"
@@ -2903,7 +2917,7 @@
             "name": "workflow_run_id",
             "in": "path",
             "required": true,
-            "description": "工作流运行 ID，可从工作流执行响应、流式事件或消息元数据中获取。",
+            "description": "工作流运行 ID，来自 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 的响应或流式事件，或 Chatflow 应用的消息元数据。",
             "schema": {
               "type": "string"
             }
@@ -3017,7 +3031,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "分页页码。",
+            "description": "页码。",
             "schema": {
               "type": "integer",
               "default": 1,
@@ -3154,7 +3168,7 @@
           "人工介入"
         ],
         "summary": "获取人工介入表单",
-        "description": "**适用于**：Chatflow、Workflow。\n\n获取暂停中的人工介入表单内容。需要 WebApp 提交方式。\n\n调用人工介入接口的端到端流程，参见 [API 集成流程](/zh/api-reference/guides/human-input-flow)。",
+        "description": "**适用于**：Chatflow、Workflow。\n\n返回暂停中的人工介入表单内容。需要 WebApp 提交方式。\n\n人工介入调用的完整流程，参见 [人工介入流程](/zh/api-reference/guides/human-input-flow)。",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -3455,7 +3469,7 @@
           "人工介入"
         ],
         "summary": "提交人工介入表单",
-        "description": "**适用于**：Chatflow、Workflow。\n\n向暂停中的人工介入表单提交接收人的响应。接受后工作流将继续；可通过订阅工作流事件接口跟踪后续事件。需要 WebApp 提交方式。",
+        "description": "**适用于**：Chatflow、Workflow。\n\n向暂停中的人工介入表单提交接收人的响应。接受后工作流将恢复；可通过 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 跟踪恢复后的运行。需要 WebApp 提交方式。",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -3483,7 +3497,7 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "按各输入的 `output_variable_name` 作为键提交的值。段落和下拉选项输入为字符串；`file` 输入为单个文件映射；`file-list` 输入为文件映射数组。文件映射为 `{transfer_method: local_file, upload_file_id, type}` 或 `{transfer_method: remote_url, url, type}`，其中 `type` 为该字段 `allowed_file_types` 中的一种（`image`、`document`、`audio`、`video`、`custom`）。对于 `local_file`，`upload_file_id` 为 [上传文件](/zh/api-reference/files/upload-file) 返回的 `id`。请在执行、上传和提交各次调用中使用一致的 `user`。"
+                    "description": "按各输入的 `output_variable_name` 作为键提交的值。段落和下拉选项输入为字符串；`file` 输入为单个文件映射；`file-list` 输入为文件映射数组。\n\n文件映射为 `{transfer_method: local_file, upload_file_id, type}` 或 `{transfer_method: remote_url, url, type}`，其中 `type` 为该字段 `allowed_file_types` 中的一种。对于 `local_file`，`upload_file_id` 为 [上传文件](/zh/api-reference/files/upload-file) 返回的 `id`。\n\n在执行、上传和提交各次调用中使用一致的 `user`。"
                   },
                   "action": {
                     "type": "string",
@@ -3491,7 +3505,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，由开发者定义的规则生成，必须在应用内唯一。Service API 与 WebApp 的用户 ID 相互独立，即使取值相同也不指向同一用户。"
+                    "description": "终端用户标识，由你的应用定义，需在应用内唯一。Service API 与 WebApp 的用户 ID 相互独立，即使取值相同也不指向同一用户。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               },
@@ -3639,7 +3653,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "要恢复事件流的工作流运行 ID（取自原始运行响应中的 `workflow_run_id`）。"
+            "description": "要恢复事件流的工作流运行 ID，来自 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 的响应或流式事件。"
           },
           {
             "name": "user",
@@ -3648,7 +3662,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "最初触发该运行的终端用户标识。必须与工作流运行的创建者一致。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。必须与发起该运行的 `user` 一致。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           {
             "name": "include_state_snapshot",
@@ -3752,7 +3766,7 @@
     "/workflows/run": {
       "post": {
         "summary": "执行工作流",
-        "description": "**适用于**：Workflow。\n\n执行工作流。没有已发布的工作流时无法执行。",
+        "description": "**适用于**：Workflow。\n\n运行应用已发布的工作流并返回其输出，可以是单次 `blocking` 响应，也可以是 `streaming` 的 Server-Sent Events 流。需要已发布的工作流。",
         "operationId": "executeWorkflowCn",
         "tags": [
           "工作流运行"
@@ -3845,7 +3859,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每行以 `data: ` 开头，后接一个 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，该事件每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**推理事件**：\n- `reasoning_chunk`：来自 `reasoning_format` 为 `separated` 的 LLM 节点的推理内容增量。拼接连续的 `reasoning_chunk` 事件即可还原完整推理内容；`is_final: true` 的事件标志该节点思考结束（且 `reasoning` 可能为空）。载荷位于 `data` 下，与对话应用不同，不含 `message_id` 或 `conversation_id`。并行的 `text_chunk` 流不含 `<think>` 标签。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/zh/api-reference/human-input/get-human-input-form) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
+                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（每 10 秒保持连接）。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**推理事件**：\n- `reasoning_chunk`：来自 `reasoning_format` 为 `separated` 的 LLM 节点的推理内容增量。拼接连续的 `reasoning_chunk` 事件即可还原完整推理内容；`is_final: true` 的事件标志该节点思考结束（且 `reasoning` 可能为空）。载荷位于 `data` 下，与对话应用不同，不含 `message_id` 或 `conversation_id`。并行的 `text_chunk` 流不含 `<think>` 标签。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/zh/api-reference/human-input/get-human-input-form) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -3861,7 +3875,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 工作流 execution request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `not_workflow_app` : 应用模式与 API 路由不匹配。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 工作流执行请求失败。\n- `invalid_param` : 请求参数缺失或无效，例如缺少 `user` 或工作流未发布。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3966,13 +3980,20 @@
             "title": "执行工作流",
             "sidebarTitle": "执行工作流"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl -N --request POST \\\n  --url 'https://{api_base_url}/workflows/run' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\"inputs\": {\"query\": \"Summarize this text: The quick brown fox jumps over the lazy dog.\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/workflows/{workflow_id}/run": {
       "post": {
         "summary": "按 ID 执行工作流",
-        "description": "**适用于**：Workflow。\n\n通过 ID 执行指定的工作流版本。适用于运行工作流的特定已发布版本。",
+        "description": "**适用于**：Workflow。\n\n运行指定的已发布工作流版本，由路径中的 `workflow_id` 指定。请求体、响应和流式行为与 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 相同，仅执行的版本不同。",
         "operationId": "runWorkflowByIdZh",
         "tags": [
           "工作流运行"
@@ -3982,7 +4003,7 @@
             "name": "workflow_id",
             "in": "path",
             "required": true,
-            "description": "要执行的特定版本的工作流 ID。此值在 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 响应和 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 的 `workflow_id` 字段中返回。",
+            "description": "要运行的已发布工作流版本。在 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 响应和 [获取工作流运行详情](/zh/api-reference/workflow-runs/get-workflow-run-detail) 的 `workflow_id` 字段中返回。必须指向已发布版本；草稿版本 ID 会返回 `bad_request`。",
             "schema": {
               "type": "string"
             }
@@ -4045,7 +4066,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。\n\n**解析**：每行以 `data: ` 开头，后接一个 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀，再读取 `event` 字段确定事件类型。忽略 `ping` 事件，该事件每 10 秒发送一次以保持连接活跃。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**推理事件**：\n- `reasoning_chunk`：来自 `reasoning_format` 为 `separated` 的 LLM 节点的推理内容增量。拼接连续的 `reasoning_chunk` 事件即可还原完整推理内容；`is_final: true` 的事件标志该节点思考结束（且 `reasoning` 可能为空）。载荷位于 `data` 下，与对话应用不同，不含 `message_id` 或 `conversation_id`。并行的 `text_chunk` 流不含 `<think>` 标签。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/zh/api-reference/human-input/get-human-input-form) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
+                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（每 10 秒保持连接）。\n\n**流生命周期**：收到 `workflow_finished`、`workflow_paused` 或 `error` 事件时流关闭。错误以流内 `error` 事件的形式返回，HTTP 状态码始终为 `200`；请检查事件载荷获取详情，不要依赖状态码判断。\n\n**推理事件**：\n- `reasoning_chunk`：来自 `reasoning_format` 为 `separated` 的 LLM 节点的推理内容增量。拼接连续的 `reasoning_chunk` 事件即可还原完整推理内容；`is_final: true` 的事件标志该节点思考结束（且 `reasoning` 可能为空）。载荷位于 `data` 下，与对话应用不同，不含 `message_id` 或 `conversation_id`。并行的 `text_chunk` 流不含 `<think>` 标签。\n\n**人工介入事件**：\n- `human_input_required`：工作流到达人工介入节点时与 `workflow_paused` 一同触发。使用载荷中的 `form_token` 通过 [人工介入 API](/zh/api-reference/human-input/get-human-input-form) 处理表单。\n- `human_input_form_filled`：接收者提交了表单，工作流恢复执行。\n- `human_input_form_timeout`：表单超时未响应。如定义了超时回退分支，工作流将沿该分支执行。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4061,7 +4082,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `bad_request` : 工作流 is a draft or has an invalid ID format.\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 工作流 execution request failed.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `not_workflow_app` : 应用模式与 API 路由不匹配。\n- `bad_request` : 工作流为草稿或 ID 格式无效。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 工作流执行请求失败。\n- `invalid_param` : 请求参数缺失或无效，例如缺少 `user`。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4207,7 +4228,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) API 的流式分块返回中获取。",
+            "description": "任务 ID，来自 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 的流式事件。",
             "schema": {
               "type": "string"
             }
@@ -4225,7 +4246,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，仅用于标识请求的终端用户，无需与 [执行工作流](/zh/api-reference/workflow-runs/run-workflow) 请求传入的 `user` 一致；停止对该任务始终生效。"
+                    "description": "终端用户标识，由你的应用定义，需在应用内唯一。无需与发起该运行的 `user` 一致；停止对该任务始终生效。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               },
@@ -4245,7 +4266,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_workflow_app` : 应用模式与 API 路由不匹配。\n- `invalid_param` : 必要参数缺失或无效。",
+            "description": "- `not_workflow_app` : 应用模式与 API 路由不匹配。\n- `invalid_param` : 请求参数缺失或无效，例如缺少 `user`。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4282,7 +4303,7 @@
     "/completion-messages": {
       "post": {
         "summary": "发送消息",
-        "description": "**适用于**：文本生成应用。\n\n向文本生成型应用发送请求。",
+        "description": "**适用于**：文本生成应用。\n\n向文本生成型应用发送请求并返回生成的文本。",
         "operationId": "createCompletionMessage",
         "tags": [
           "文本生成消息"
@@ -4371,7 +4392,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件 (SSE) 流。每个事件是一个以 `data: ` 为前缀的 JSON 对象，以两个换行符终止。\n\n**SSE 解析指南：**每个事件是一行以 `data: ` 为前缀的 JSON 对象，以 `\\n\\n` 终止。解析 JSON 前先去除 `data: ` 前缀。JSON 内的 `event` 字段决定事件类型。当收到终止事件（如 `message_end` 或 `error`）时流结束。忽略 `ping` 事件（每 10 秒发送一次以保持连接活跃）。注意即使流中出现错误事件，HTTP 状态码仍为 `200`。"
+                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（每 10 秒保持连接）。事件结构参见 `ChunkCompletionEvent`。\n\n**流生命周期**：回复以 `message` 片段流式返回，并以 `message_end` 结束。`error` 事件会提前结束流；此时 HTTP 状态码仍为 `200`，请检查事件载荷获取详情。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4383,7 +4404,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 文本生成失败。\n- `invalid_param` : 缺少必需参数或参数无效。",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 文本生成失败。\n- `invalid_param` : 缺少必填的 `user` 字段。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4480,7 +4501,14 @@
             "title": "发送消息",
             "sidebarTitle": "发送消息"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/completion-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"inputs\": {\"city\": \"San Francisco\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/completion-messages/{task_id}/stop": {
@@ -4496,7 +4524,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "任务 ID，可以从 [发送消息](/zh/api-reference/completion-messages/send-completion-message) API 的流式分块返回中获取。",
+            "description": "任务 ID，来自 [发送消息](/zh/api-reference/completion-messages/send-completion-message) 的流式事件。",
             "schema": {
               "type": "string"
             }
@@ -4514,7 +4542,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，必须与发送消息时传入的 `user` 一致；不一致时停止不会生效，但响应仍返回成功。"
+                    "description": "终端用户标识，由你的应用定义，需在应用内唯一。必须与发送原始消息时的 `user` 一致；不一致时停止不会生效，但仍返回成功。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               },
@@ -4534,7 +4562,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 缺少必需参数或参数无效。",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `invalid_param` : 缺少必填的 `user` 字段。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4574,7 +4602,7 @@
           "知识库"
         ],
         "summary": "创建空知识库",
-        "description": "创建新的空知识库。创建后，使用 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 或 [从文件创建文档](/zh/api-reference/documents/create-document-by-file) 添加文档。",
+        "description": "创建一个空知识库。之后用 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 或 [从文件创建文档](/zh/api-reference/documents/create-document-by-file) 向其中添加文档。",
         "operationId": "createDataset",
         "requestBody": {
           "required": true,
@@ -4632,7 +4660,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "嵌入模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/openai/openai`）；`openai` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。有效取值可从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `provider` 字段获取。"
+                    "description": "嵌入模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/openai/openai`）。`openai` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。\n\n有效取值从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `provider` 字段获取。"
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -4741,7 +4769,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。",
+            "description": "`invalid_param` : 指定的嵌入模型或重排序模型未配置或不可用。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4775,7 +4803,7 @@
             }
           },
           "409": {
-            "description": "`dataset_name_duplicate` : 知识库名称已存在，请修改名称。",
+            "description": "`dataset_name_duplicate` : 已存在同名知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4805,7 +4833,7 @@
           "知识库"
         ],
         "summary": "获取知识库列表",
-        "description": "返回知识库的分页列表。支持按关键词和标签筛选。",
+        "description": "返回知识库的分页列表，可按关键词或标签筛选。",
         "operationId": "listDatasets",
         "parameters": [
           {
@@ -4815,7 +4843,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "要获取的页码。"
+            "description": "页码。"
           },
           {
             "name": "limit",
@@ -4854,7 +4882,7 @@
             },
             "style": "form",
             "explode": true,
-            "description": "用于筛选的标签 ID。"
+            "description": "用于筛选的标签 ID。标签 ID 从 [获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags) 获取。"
           }
         ],
         "responses": {
@@ -4972,7 +5000,7 @@
           "知识库"
         ],
         "summary": "获取知识库详情",
-        "description": "获取指定知识库的详细信息，包括嵌入模型、检索配置和文档统计信息。",
+        "description": "返回知识库的详细信息，包括嵌入模型、检索配置和文档统计信息。",
         "operationId": "getDatasetDetail",
         "parameters": [
           {
@@ -4983,7 +5011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "responses": {
@@ -5070,7 +5098,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5100,7 +5128,7 @@
           "知识库"
         ],
         "summary": "更新知识库",
-        "description": "更新现有知识库的名称、描述、权限或检索设置。仅更新请求体中提供的字段。",
+        "description": "更新知识库。仅更改请求体中包含的字段。",
         "operationId": "updateDataset",
         "parameters": [
           {
@@ -5111,7 +5139,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -5156,7 +5184,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "嵌入模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/openai/openai`）；`openai` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。有效取值可从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `provider` 字段获取。"
+                    "description": "嵌入模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/openai/openai`）。`openai` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。\n\n有效取值从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `provider` 字段获取。"
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -5274,7 +5302,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。",
+            "description": "`invalid_param` : 指定的嵌入模型或重排序模型未配置或不可用。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5316,7 +5344,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5357,12 +5385,12 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "responses": {
           "204": {
-            "description": "Success."
+            "description": "知识库删除成功。"
           },
           "403": {
             "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
@@ -5390,7 +5418,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5422,7 +5450,7 @@
           "文档"
         ],
         "summary": "从文本创建文档",
-        "description": "通过纯文本内容创建文档。文档将异步处理，使用返回的 `batch` ID 配合 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
+        "description": "在知识库中通过纯文本创建文档。索引异步进行；使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
         "operationId": "createDocumentFromText",
         "parameters": [
           {
@@ -5433,7 +5461,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -5492,7 +5520,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "处理模式。`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
+                        "description": "`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
                       },
                       "rules": {
                         "type": "object",
@@ -5543,7 +5571,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "检索模型配置。控制查询此知识库时如何搜索和排序分段。"
+                    "description": "控制查询此知识库时如何搜索和排序分段。"
                   },
                   "embedding_model": {
                     "type": "string",
@@ -5555,7 +5583,7 @@
                   },
                   "original_document_id": {
                     "type": "string",
-                    "description": "用于版本控制的原始文档 ID。"
+                    "description": "用于版本控制的原始文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
                   }
                 }
               }
@@ -5629,7 +5657,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 未找到有效的模型供应商凭据。前往 Settings -> Model Provider 补全供应商凭据。\n- `invalid_param` : 添加首个文档时必须提供 `indexing_technique`，或 `doc_form` 无效。",
+            "description": "- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 添加首个文档时必须提供 `indexing_technique`，或 `doc_form` 无效。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5727,7 +5755,7 @@
           "文档"
         ],
         "summary": "从文件创建文档",
-        "description": "通过上传文件创建文档。支持常见文档格式（PDF、TXT、DOCX 等）。处理过程为异步，使用返回的 `batch` ID 配合 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
+        "description": "在知识库中通过上传文件创建文档。支持 PDF、TXT、DOCX 等常见格式。索引异步进行；使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
         "operationId": "createDocumentFromFile",
         "parameters": [
           {
@@ -5738,7 +5766,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -5833,7 +5861,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : 请上传文件。\n- `too_many_files` : 仅允许上传一个文件。\n- `filename_not_exists_error` : 指定的文件名不存在。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。前往 Settings -> Model Provider 补全供应商凭据。\n- `invalid_param` : 不支持外部知识库，缺少 `indexing_technique`，或缺少 `process_rule`。",
+            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 该知识库为外部知识库、缺少 `indexing_technique`，或缺少 `process_rule`。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5946,7 +5974,14 @@
             "title": "从文件创建文档",
             "sidebarTitle": "从文件创建文档"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/document/create-by-file' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"indexing_technique\":\"high_quality\",\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents": {
@@ -5955,7 +5990,7 @@
           "文档"
         ],
         "summary": "获取知识库的文档列表",
-        "description": "返回知识库中的文档分页列表。支持按关键词和索引状态进行筛选。",
+        "description": "返回知识库中文档的分页列表。",
         "operationId": "listDocuments",
         "parameters": [
           {
@@ -5966,7 +6001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "page",
@@ -5975,7 +6010,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "要获取的页码。"
+            "description": "页码。"
           },
           {
             "name": "limit",
@@ -6149,7 +6184,7 @@
           "文档"
         ],
         "summary": "获取文档详情",
-        "description": "获取指定文档的详细信息，包括索引状态、元数据和处理统计信息。",
+        "description": "返回单个文档的详细信息。",
         "operationId": "getDocumentDetail",
         "parameters": [
           {
@@ -6160,7 +6195,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -6170,7 +6205,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "metadata",
@@ -6189,7 +6224,7 @@
         ],
         "responses": {
           "200": {
-            "description": "文档详情。响应结构根据 `metadata` 查询参数的不同而变化。当 `metadata` 为 `only` 时，仅返回 `id`、`doc_type` 和 `doc_metadata`。当 `metadata` 为 `without` 时，省略 `doc_type` 和 `doc_metadata`。",
+            "description": "文档详情。返回的字段取决于 `metadata` 查询参数。",
             "content": {
               "application/json": {
                 "schema": {
@@ -6468,7 +6503,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 无权限。\n- `forbidden` : 该知识库未启用 API 访问。",
+            "description": "- `forbidden` : 你没有访问此文档的权限。\n- `forbidden` : 该知识库未启用 API 访问。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6534,7 +6569,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -6544,7 +6579,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "responses": {
@@ -6615,7 +6650,7 @@
           "文档"
         ],
         "summary": "更新文档",
-        "description": "通过上传新文件更新现有文档。这是基于文件更新文档的规范端点。将重新触发索引，使用返回的 `batch` ID 配合 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
+        "description": "通过上传新文件更新文档，然后重新索引。这是基于文件更新文档的规范端点。使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
         "operationId": "updateDocument",
         "parameters": [
           {
@@ -6626,7 +6661,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -6636,7 +6671,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "requestBody": {
@@ -6728,7 +6763,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : 仅允许上传一个文件。\n- `filename_not_exists_error` : 指定的文件名不存在。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。前往 Settings -> Model Provider 补全供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
+            "description": "- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6827,7 +6862,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : 文件大小超出限制。",
+            "description": "`file_too_large` : 上传的文件超出最大大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6844,7 +6879,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 不支持的文件类型。",
+            "description": "`unsupported_file_type` : 上传文件的类型不受支持。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6867,7 +6902,14 @@
             "title": "更新文档",
             "sidebarTitle": "更新文档"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request PATCH \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/documents/{document_id}' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}/download": {
@@ -6876,7 +6918,7 @@
           "文档"
         ],
         "summary": "下载文档",
-        "description": "获取文档原始上传文件的签名下载 URL。",
+        "description": "返回用于下载文档原始上传文件的签名 URL。",
         "operationId": "downloadDocumentZh",
         "parameters": [
           {
@@ -6887,7 +6929,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -6897,7 +6939,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "responses": {
@@ -6926,7 +6968,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 无权限。\n- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 抱歉，您的订阅已达到知识库请求速率限制。",
+            "description": "- `forbidden` : 你没有访问此文档的权限。\n- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6991,7 +7033,7 @@
           "文档"
         ],
         "summary": "获取文档嵌入状态（进度）",
-        "description": "检查批量文档的索引进度。返回每个文档的当前处理阶段和分段完成计数。请轮询此接口直到 `indexing_status` 变为 `completed` 或 `error`。状态按以下顺序推进：`waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`。",
+        "description": "返回批次中每个文档的索引进度：当前阶段和分段完成计数。轮询直到每个 `indexing_status` 变为 `completed` 或 `error`。状态按 `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed` 推进。",
         "operationId": "getDocumentIndexingStatus",
         "parameters": [
           {
@@ -7002,7 +7044,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "batch",
@@ -7011,7 +7053,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "创建文档时返回的批次 ID。"
+            "description": "创建或更新文档时返回的批次 ID。"
           }
         ],
         "responses": {
@@ -7133,7 +7175,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 知识库未找到。/ 文档未找到。",
+            "description": "- `not_found` : 未找到知识库。\n- `not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7173,7 +7215,7 @@
           "文档"
         ],
         "summary": "用文本更新文档",
-        "description": "更新现有文档的文本内容、名称或处理配置。内容变更时将重新触发索引。",
+        "description": "更新文档的文本内容、名称或处理配置。文本变更时会重新索引文档。",
         "operationId": "updateDocumentByText",
         "parameters": [
           {
@@ -7184,7 +7226,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -7194,7 +7236,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "requestBody": {
@@ -7226,7 +7268,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "处理模式。`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
+                        "description": "`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
                       },
                       "rules": {
                         "type": "object",
@@ -7292,7 +7334,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "检索模型配置。控制查询此知识库时如何搜索和排序分段。"
+                    "description": "控制查询此知识库时如何搜索和排序分段。"
                   }
                 }
               }
@@ -7366,7 +7408,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 未找到有效的模型供应商凭据。前往 Settings -> Model Provider 补全供应商凭据。\n- `invalid_param` : 提供 `text` 时必须提供 `name`，或 `doc_form` 无效。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
+            "description": "- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 提供 `text` 时必须提供 `name`，或 `doc_form` 无效。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7472,7 +7514,7 @@
           "文档"
         ],
         "summary": "用文件更新文档",
-        "description": "已弃用。改用 [更新文档](/zh/api-reference/documents/update-document)。通过上传新文件更新现有文档并重新触发索引。",
+        "description": "已弃用。改用 [更新文档](/zh/api-reference/documents/update-document)。通过上传新文件更新文档，然后重新索引。",
         "operationId": "updateDocumentByFile",
         "parameters": [
           {
@@ -7483,7 +7525,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -7493,7 +7535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "requestBody": {
@@ -7585,7 +7627,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : 仅允许上传一个文件。\n- `filename_not_exists_error` : 指定的文件名不存在。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。前往 Settings -> Model Provider 补全供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
+            "description": "- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7684,7 +7726,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : 文件大小超出限制。",
+            "description": "`file_too_large` : 上传的文件超出最大大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7701,7 +7743,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 不支持的文件类型。",
+            "description": "`unsupported_file_type` : 上传文件的类型不受支持。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7734,7 +7776,7 @@
           "文档"
         ],
         "summary": "批量下载文档（ZIP）",
-        "description": "将多个上传文件文档下载为单个 ZIP 压缩包。最多接受 `100` 个文档 ID。",
+        "description": "将一个或多个文档下载为单个 ZIP 压缩包。仅可包含以文件形式上传的文档。",
         "operationId": "downloadDocumentsZipZh",
         "parameters": [
           {
@@ -7745,7 +7787,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -7766,7 +7808,7 @@
                       "type": "string",
                       "format": "uuid"
                     },
-                    "description": "要包含在 ZIP 压缩包中的文档 ID 数组。"
+                    "description": "要包含在压缩包中的文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
                   }
                 }
               }
@@ -7787,7 +7829,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 抱歉，您的订阅已达到知识库请求速率限制。\n- `forbidden` : 您没有访问此知识库的权限。\n- `forbidden` : 无权限。",
+            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。\n- `forbidden` : 你没有访问此知识库的权限。\n- `forbidden` : 你对请求的某个文档没有访问权限。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7868,7 +7910,7 @@
           "文档"
         ],
         "summary": "批量更新文档状态",
-        "description": "批量启用、禁用、归档或取消归档多个文档。",
+        "description": "在一次请求中批量启用、禁用、归档或取消归档多个文档。",
         "operationId": "batchUpdateDocumentStatus",
         "parameters": [
           {
@@ -7879,7 +7921,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "action",
@@ -7894,7 +7936,7 @@
                 "un_archive"
               ]
             },
-            "description": "`enable` 启用，`disable` 停用，`archive` 归档，`un_archive` 从归档中恢复。"
+            "description": "`enable` 启用文档以供检索，`disable` 停用，`archive` 移入归档，`un_archive` 从归档中恢复。"
           }
         ],
         "requestBody": {
@@ -7912,7 +7954,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "description": "要更新的文档 ID 列表。"
+                    "description": "要更新的文档 ID。文档 ID 从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
                   }
                 }
               }
@@ -8011,7 +8053,7 @@
           "分段"
         ],
         "summary": "向文档添加分段",
-        "description": "在文档中创建一个或多个分段。每个分段的 `content` 为必填项；对于问答模式（`qa_model`）文档，`answer` 也为必填项。`keywords` 为可选项。",
+        "description": "在文档中创建一个或多个分段。",
         "operationId": "createSegments",
         "parameters": [
           {
@@ -8022,7 +8064,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -8032,7 +8074,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           }
         ],
         "requestBody": {
@@ -8057,7 +8099,7 @@
                         },
                         "answer": {
                           "type": "string",
-                          "description": "QA 模式的回答内容。"
+                          "description": "答案文本。问答模式（`qa_model`）文档必填。"
                         },
                         "keywords": {
                           "type": "array",
@@ -8154,7 +8196,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。\n- `invalid_param` : 某个分段字段无效（例如 Q&A 模式的文档要求提供 `answer`），或分段数量超出单次请求上限。\n- 请求体 schema 校验失败（例如 `content` 为空）时返回非标准响应体 `{\"error\": \"<校验详情>\"}`，不含 `code` 或 `status` 字段。",
+            "description": "- `provider_not_initialize` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。\n- `invalid_param` : 某个分段字段无效（例如 Q&A 模式的文档要求提供 `answer`），或分段数量超出单次请求上限。\n- 请求体 schema 校验失败（例如 `content` 为空）时返回非标准响应体 `{\"error\": \"<校验详情>\"}`，不含 `code` 或 `status` 字段。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8280,7 +8322,7 @@
           "分段"
         ],
         "summary": "从文档获取分段",
-        "description": "返回文档内分段的分页列表。支持按关键词和状态筛选。",
+        "description": "返回文档内分段的分页列表，可按关键词或索引状态筛选。",
         "operationId": "listSegments",
         "parameters": [
           {
@@ -8291,7 +8333,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -8301,7 +8343,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "page",
@@ -8310,7 +8352,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "要获取的页码。"
+            "description": "页码。"
           },
           {
             "name": "limit",
@@ -8431,7 +8473,7 @@
             }
           },
           "400": {
-            "description": "`provider_not_initialize` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。",
+            "description": "`provider_not_initialize` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8505,7 +8547,7 @@
           "分段"
         ],
         "summary": "获取文档中的分段详情",
-        "description": "获取指定分段的详细信息，包括内容、关键词和索引状态。",
+        "description": "获取单个分段的完整详情。",
         "operationId": "getSegmentDetail",
         "parameters": [
           {
@@ -8516,7 +8558,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -8526,7 +8568,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -8536,7 +8578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           }
         ],
         "responses": {
@@ -8601,7 +8643,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。",
+            "description": "`invalid_param` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8681,7 +8723,7 @@
           "分段"
         ],
         "summary": "更新文档中的分段",
-        "description": "更新分段的内容、关键词或回答。修改后的分段将重新触发索引。",
+        "description": "更新分段的字段。更新会为该分段重新触发索引。",
         "operationId": "updateSegment",
         "parameters": [
           {
@@ -8692,7 +8734,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -8702,7 +8744,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -8712,7 +8754,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           }
         ],
         "requestBody": {
@@ -8734,7 +8776,7 @@
                       },
                       "answer": {
                         "type": "string",
-                        "description": "QA 模式的回答内容。"
+                        "description": "问答模式（`qa_model`）文档的答案文本。"
                       },
                       "keywords": {
                         "type": "array",
@@ -8834,7 +8876,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。\n- `invalid_param` : 分段正在索引中或已被禁用，无法更新，或索引配置无效。",
+            "description": "- `provider_not_initialize` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。\n- `invalid_param` : 分段正在索引中或已被禁用，无法更新，或索引配置无效。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8949,7 +8991,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -8959,7 +9001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -8969,7 +9011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           }
         ],
         "responses": {
@@ -8977,7 +9019,7 @@
             "description": "Success."
           },
           "400": {
-            "description": "- `invalid_param` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。\n- `invalid_param` : 分段正在删除中。",
+            "description": "- `invalid_param` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。\n- `invalid_param` : 该分段正在被另一并发请求删除。",
             "content": {
               "application/json": {
                 "examples": {
@@ -9086,7 +9128,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -9096,7 +9138,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -9106,7 +9148,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "父分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           }
         ],
         "requestBody": {
@@ -9162,7 +9204,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 无可用的嵌入模型。请前往 Settings -> Model Provider 配置有效的供应商。\n- `invalid_param` : 在向量库中为子分段建立索引失败；错误信息中会携带底层向量库的报错。",
+            "description": "- `provider_not_initialize` : 知识库使用高质量索引，但其嵌入模型缺失或配置有误。\n- `invalid_param` : 在向量库中为子分段建立索引失败；错误信息中会携带底层向量库的报错。",
             "content": {
               "application/json": {
                 "examples": {
@@ -9285,7 +9327,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -9295,7 +9337,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -9305,7 +9347,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "父分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           },
           {
             "name": "page",
@@ -9315,7 +9357,7 @@
               "default": 1,
               "minimum": 1
             },
-            "description": "要获取的页码。"
+            "description": "页码。"
           },
           {
             "name": "limit",
@@ -9472,7 +9514,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -9482,7 +9524,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -9492,7 +9534,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "父分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           },
           {
             "name": "child_chunk_id",
@@ -9681,7 +9723,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "document_id",
@@ -9691,7 +9733,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "文档 ID."
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
           },
           {
             "name": "segment_id",
@@ -9701,7 +9743,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "父分段 ID。来自 [从文档获取分段](/zh/api-reference/chunks/list-chunks)。"
           },
           {
             "name": "child_chunk_id",
@@ -9825,7 +9867,7 @@
           "知识库"
         ],
         "summary": "从知识库检索分段 / 测试检索",
-        "description": "对知识库执行搜索查询，检索最相关的分段。此接口可用于生产环境检索和测试检索。",
+        "description": "搜索知识库，返回与查询最相关的分段，可用于生产环境检索和测试检索。",
         "operationId": "retrieveSegments",
         "parameters": [
           {
@@ -9836,7 +9878,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -10179,7 +10221,7 @@
             }
           },
           "400": {
-            "description": "- `dataset_not_initialized` : 知识库仍在初始化或索引中。请稍候。\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。请前往设置 -> 模型供应商完成凭据配置。\n- `provider_quota_exceeded` : Your quota for Dify Hosted Model Provider has been exhausted. Please go to Settings -> Model Provider to complete your own provider credentials.\n- `model_currently_not_support` : Dify Hosted OpenAI trial currently not support the GPT-4 model.\n- `completion_request_error` : Completion request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `dataset_not_initialized` : 知识库仍在初始化或索引中。\n- `provider_not_initialize` : 模型供应商未配置有效凭据。\n- `provider_quota_exceeded` : Dify 托管的模型供应商配额已用尽。\n- `model_currently_not_support` : 所选模型当前不受支持。\n- `completion_request_error` : 模型请求失败。\n- `invalid_param` : 请求参数无效。",
             "content": {
               "application/json": {
                 "examples": {
@@ -10236,7 +10278,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 抱歉，您的订阅已达到知识库请求速率限制。",
+            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -10261,7 +10303,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 知识库未找到。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -10310,7 +10352,7 @@
           "标签"
         ],
         "summary": "创建知识库标签",
-        "description": "创建新标签以组织知识库。",
+        "description": "创建用于组织知识库的标签。",
         "operationId": "createKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10326,7 +10368,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "Tag name."
+                    "description": "标签名称。在工作空间内必须唯一。"
                   }
                 }
               }
@@ -10405,7 +10447,7 @@
           "标签"
         ],
         "summary": "获取知识库标签列表",
-        "description": "返回工作区中所有知识库标签的列表。",
+        "description": "返回工作空间中所有的知识库标签。",
         "operationId": "getKnowledgeTags",
         "responses": {
           "200": {
@@ -10467,7 +10509,7 @@
           "标签"
         ],
         "summary": "修改知识库标签",
-        "description": "重命名现有的知识库标签。",
+        "description": "重命名知识库标签。",
         "operationId": "updateKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10482,13 +10524,13 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "要更新的标签 ID。"
+                    "description": "要重命名的标签 ID。参见 [获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags)。"
                   },
                   "name": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "新标签名称。"
+                    "description": "标签的新名称。在工作空间内必须唯一。"
                   }
                 }
               }
@@ -10598,7 +10640,7 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "要删除的标签 ID。"
+                    "description": "要删除的标签 ID。参见 [获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags)。"
                   }
                 }
               }
@@ -10661,11 +10703,11 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "要绑定的标签 ID。"
+                    "description": "要绑定的标签 ID。参见 [获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags)。"
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "知识库 ID。"
+                    "description": "要绑定标签的知识库。参见 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases)。"
                   }
                 }
               }
@@ -10727,7 +10769,7 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "要解绑的标签 ID 列表。未提供旧版 `tag_id` 时必填。"
+                    "description": "要解绑的标签 ID 列表。未提供旧版 `tag_id` 时必填。参见 [获取知识库标签列表](/zh/api-reference/tags/list-knowledge-tags)。"
                   },
                   "tag_id": {
                     "type": "string",
@@ -10736,7 +10778,7 @@
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "知识库 ID。"
+                    "description": "要解绑标签的知识库。参见 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases)。"
                   }
                 }
               }
@@ -10780,7 +10822,7 @@
           "标签"
         ],
         "summary": "获取知识库绑定的标签",
-        "description": "返回绑定到特定知识库的标签列表。",
+        "description": "返回绑定到知识库的标签。",
         "operationId": "queryDatasetTags",
         "parameters": [
           {
@@ -10791,7 +10833,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "responses": {
@@ -10892,7 +10934,7 @@
           "元数据"
         ],
         "summary": "创建元数据字段",
-        "description": "为知识库创建自定义元数据字段。元数据字段可用于为文档添加结构化信息标注。",
+        "description": "为知识库创建自定义元数据字段，用于给文档标注结构化信息。",
         "operationId": "createMetadataFieldZh",
         "parameters": [
           {
@@ -10903,7 +10945,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -10928,7 +10970,7 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "元数据字段名称。"
+                    "description": "元数据字段的名称。在知识库的字段中必须唯一，且不超过 255 个字符。"
                   }
                 }
               }
@@ -11043,7 +11085,7 @@
           "元数据"
         ],
         "summary": "获取元数据字段列表",
-        "description": "返回知识库的所有元数据字段列表（包括自定义和内置字段），以及使用每个字段的文档数量。",
+        "description": "返回知识库的所有元数据字段（包括自定义和内置字段），以及使用每个字段的文档数量。",
         "operationId": "listMetadataFieldsZh",
         "parameters": [
           {
@@ -11054,7 +11096,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "responses": {
@@ -11176,7 +11218,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "metadata_id",
@@ -11186,7 +11228,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "元数据字段 ID。"
+            "description": "要重命名的元数据字段 ID。参见 [获取元数据字段列表](/zh/api-reference/metadata/list-metadata-fields)。"
           }
         ],
         "requestBody": {
@@ -11201,7 +11243,7 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "新元数据字段名称。"
+                    "description": "字段的新名称。在知识库的字段中必须唯一，且不超过 255 个字符。"
                   }
                 }
               }
@@ -11316,7 +11358,7 @@
           "元数据"
         ],
         "summary": "删除元数据字段",
-        "description": "永久删除自定义元数据字段。使用此字段的文档将丢失其对应的元数据值。",
+        "description": "永久删除自定义元数据字段。使用过该字段的文档将丢失其对应的值。",
         "operationId": "deleteMetadataFieldZh",
         "parameters": [
           {
@@ -11327,7 +11369,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "metadata_id",
@@ -11337,7 +11379,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "元数据字段 ID。"
+            "description": "要删除的元数据字段 ID。参见 [获取元数据字段列表](/zh/api-reference/metadata/list-metadata-fields)。"
           }
         ],
         "responses": {
@@ -11402,7 +11444,7 @@
           "元数据"
         ],
         "summary": "获取内置元数据字段",
-        "description": "返回系统提供的内置元数据字段列表（例如文档类型、来源 URL）。",
+        "description": "返回系统提供的内置元数据字段。",
         "operationId": "getBuiltInMetadataFieldsZh",
         "parameters": [
           {
@@ -11413,7 +11455,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "responses": {
@@ -11536,7 +11578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "action",
@@ -11635,7 +11677,7 @@
           "元数据"
         ],
         "summary": "批量更新文档元数据",
-        "description": "批量更新多个文档的元数据值。请求中的每个文档将接收指定的元数据键值对。",
+        "description": "在一次请求中批量更新多个文档的元数据值。",
         "operationId": "batchUpdateDocumentMetadataZh",
         "parameters": [
           {
@@ -11646,7 +11688,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -11670,7 +11712,7 @@
                       "properties": {
                         "document_id": {
                           "type": "string",
-                          "description": "要更新元数据的文档 ID。"
+                          "description": "要更新的文档 ID。参见 [获取知识库的文档列表](/zh/api-reference/documents/list-documents)。"
                         },
                         "metadata_list": {
                           "type": "array",
@@ -11683,7 +11725,7 @@
                             "properties": {
                               "id": {
                                 "type": "string",
-                                "description": "元数据字段 ID。"
+                                "description": "元数据字段 ID。参见 [获取元数据字段列表](/zh/api-reference/metadata/list-metadata-fields)。"
                               },
                               "name": {
                                 "type": "string",
@@ -11693,7 +11735,8 @@
                                 "description": "元数据值。可以是字符串、数字或 `null`。"
                               }
                             }
-                          }
+                          },
+                          "description": "要设置到文档的元数据字段。"
                         },
                         "partial_update": {
                           "type": "boolean",
@@ -11702,7 +11745,7 @@
                         }
                       }
                     },
-                    "description": "文档元数据更新操作数组。每个条目将一个文档 ID 映射到其元数据键值对。"
+                    "description": "文档元数据更新操作，每个文档一个条目。"
                   }
                 }
               }
@@ -11809,7 +11852,7 @@
           "模型"
         ],
         "summary": "获取可用模型",
-        "description": "按类型获取可用模型列表。主要用于查询知识库配置所需的 `text-embedding` 和 `rerank` 模型。",
+        "description": "返回指定类型的可用模型。用它查找可配置到知识库的 `text-embedding` 和 `rerank` 模型。",
         "operationId": "getAvailableModelsZh",
         "parameters": [
           {
@@ -11987,7 +12030,7 @@
           "知识流水线"
         ],
         "summary": "上传流水线文件",
-        "description": "上传文件以在知识流水线中使用。通过 `multipart/form-data` 接受单个文件。",
+        "description": "上传文件以在知识流水线中使用。将返回的 `id` 用作 [运行流水线](/zh/api-reference/knowledge-pipeline/run-pipeline) 中 `local_file` 项的 `reference`。",
         "operationId": "uploadPipelineFileZh",
         "requestBody": {
           "required": true,
@@ -12002,7 +12045,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "要上传的文件。"
+                    "description": "要上传的文件，作为 `multipart/form-data` 的一个部分。"
                   }
                 }
               }
@@ -12067,7 +12110,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : 请上传文件。\n- `filename_not_exists_error` : 指定的文件名不存在。\n- `too_many_files` : 仅允许上传一个文件。",
+            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `too_many_files` : 每次请求仅允许一个文件。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12100,7 +12143,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : 文件大小超出限制。",
+            "description": "`file_too_large` : 文件超出上传大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12117,7 +12160,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 不允许的文件类型。",
+            "description": "`unsupported_file_type` : 不支持的文件类型。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12140,7 +12183,14 @@
             "title": "上传流水线文件",
             "sidebarTitle": "上传流水线文件"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/pipeline/file-upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/pipeline/datasource-plugins": {
@@ -12149,7 +12199,7 @@
           "知识流水线"
         ],
         "summary": "获取数据源插件列表",
-        "description": "列出知识流水线中已配置的数据源节点。每个节点包含其使用的插件，以及运行该节点所需的元数据。",
+        "description": "返回知识流水线中已配置的数据源节点，每个节点包含其使用的插件，以及运行该节点所需的元数据。",
         "operationId": "listDatasourcePluginsZh",
         "parameters": [
           {
@@ -12160,7 +12210,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "is_published",
@@ -12169,7 +12219,7 @@
               "type": "boolean",
               "default": true
             },
-            "description": "是否从已发布的流水线中获取节点。默认为 `true`，返回已发布版本中的节点。"
+            "description": "是否读取已发布流水线版本的节点，而非草稿版本。"
           }
         ],
         "responses": {
@@ -12299,7 +12349,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12331,7 +12381,7 @@
           "知识流水线"
         ],
         "summary": "执行数据源节点",
-        "description": "在知识流水线中执行单个数据源节点。返回包含节点执行结果的流式响应。",
+        "description": "运行知识流水线中的单个数据源节点，并流式返回其执行事件。",
         "operationId": "runDatasourceNodeZh",
         "parameters": [
           {
@@ -12342,7 +12392,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           },
           {
             "name": "node_id",
@@ -12351,7 +12401,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "要执行的数据源节点 ID。"
+            "description": "要运行的数据源节点 ID，来自 [获取数据源插件列表](/zh/api-reference/knowledge-pipeline/list-datasource-plugins)。"
           }
         ],
         "requestBody": {
@@ -12384,11 +12434,11 @@
                   "credential_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "用于数据源认证的凭证 ID。"
+                    "description": "用于向数据源认证的凭证 ID，来自 [获取数据源插件列表](/zh/api-reference/knowledge-pipeline/list-datasource-plugins) 的 `credentials` 数组。"
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "运行节点的已发布版本还是草稿版本。`true` 运行已发布版本，`false` 运行草稿版本。"
+                    "description": "是否运行节点的已发布版本，而非草稿版本。"
                   }
                 }
               }
@@ -12402,7 +12452,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "包含节点执行进度和结果的 Server-Sent Events 流。"
+                  "description": "包含节点执行进度和结果的 Server-Sent Events 流。解析方式参见 [SSE 流式传输](/zh/api-reference/guides/streaming)。"
                 }
               }
             }
@@ -12442,7 +12492,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12474,7 +12524,7 @@
           "知识流水线"
         ],
         "summary": "运行流水线",
-        "description": "为知识库执行完整的知识流水线。支持流式和阻塞两种响应模式。",
+        "description": "对一个或多个数据源运行完整的知识流水线。`response_mode` 选择流式或阻塞响应。",
         "operationId": "runPipelineZh",
         "parameters": [
           {
@@ -12485,7 +12535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "知识库 ID。"
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
           }
         ],
         "requestBody": {
@@ -12632,11 +12682,11 @@
                   },
                   "start_node_id": {
                     "type": "string",
-                    "description": "流水线开始执行的数据源节点 ID。"
+                    "description": "开始执行的节点 ID，来自 [获取数据源插件列表](/zh/api-reference/knowledge-pipeline/list-datasource-plugins)。"
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "运行流水线的已发布版本还是草稿版本。`true` 运行最新已发布版本；`false` 运行当前草稿（适用于测试未发布的更改）。"
+                    "description": "是否运行流水线的已发布版本，而非当前草稿。运行草稿可测试未发布的更改。"
                   },
                   "response_mode": {
                     "type": "string",
@@ -12731,7 +12781,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "服务器发送事件流。每行格式为 `data: {JSON}\\n\\n`。主要事件：`workflow_started`（执行开始）、`node_started` / `node_finished`（逐节点进度，包含 `node_id`、`node_type`、`status`、`inputs`、`outputs`）、`workflow_finished`（最终结果，包含 `status`、`outputs`、`total_tokens`、`elapsed_time`）、`ping`（心跳保活）。"
+                  "description": "Server-Sent Events 流。当 `response_mode` 为 `streaming` 时返回；线路格式参见 [SSE 流式传输](/zh/api-reference/guides/streaming)。\n\n主要事件：\n\n- `workflow_started`：执行开始\n- `node_started` / `node_finished`：逐节点进度，包含 `node_id`、`node_type`、`status`、`inputs`、`outputs`\n- `workflow_finished`：最终结果，包含 `status`、`outputs`、`total_tokens`、`elapsed_time`\n- `ping`：心跳保活"
                 }
               },
               "application/json": {
@@ -12794,7 +12844,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : 未找到知识库。",
+            "description": "`not_found` : 未找到与 `dataset_id` 匹配的知识库。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12844,7 +12894,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API_KEY",
-        "description": "API Key 认证。对于所有 API 请求，请在 `Authorization` HTTP 头中包含您的 API Key，并加上 `Bearer ` 前缀。示例：`Authorization: Bearer {API_KEY}`。**强烈建议将 API Key 存储在服务端，不要在客户端共享或存储，以避免 API Key 泄漏导致严重后果。**缺少或无效的 API Key 会返回 HTTP `401`，错误码为 `unauthorized`。"
+        "description": "每个请求都通过 API Key 认证：`Authorization: Bearer {API_KEY}`。应用接口使用应用 API Key，知识库接口使用知识库 API Key（[快速开始](/zh/api-reference/guides/get-started)）。\n\nAPI Key 应保存在服务端，切勿嵌入客户端代码。缺失或无效的 Key 会返回 HTTP `401`（`unauthorized`）。"
       }
     },
     "responses": {
@@ -12884,11 +12934,11 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "用户输入/问题内容。"
+            "description": "用户发送的消息。"
           },
           "inputs": {
             "type": "object",
-            "description": "允许输入应用定义的各种变量值。包含键值对。请参阅 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段，以了解应用所需的变量名称和类型。",
+            "description": "应用输入变量的值，以变量名为键。变量名称和类型可从 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段获取。",
             "additionalProperties": true
           },
           "response_mode": {
@@ -12897,19 +12947,19 @@
               "streaming",
               "blocking"
             ],
-            "description": "响应返回模式。`streaming`（推荐）使用 SSE。`blocking` 在完成后返回（长时间处理可能中断；Agent 助手模式不支持此选项）。Cloudflare 超时时间为 `100 s`。未指定时默认为阻塞模式。 新 Agent 应用仅支持 `streaming`；使用 `blocking` 会返回 400 `bad_request`。"
+            "description": "响应返回模式。省略时默认为阻塞模式。\n\n- `streaming`（推荐）：回复以 Server-Sent Events 形式返回。\n- `blocking`：生成完成后一次性返回。生成时间较长时有中断风险：在 Dify Cloud 上，如果边缘代理在超时时间内未收到响应，就可能中断连接。\n- Agent 和新 Agent 应用仅支持 `streaming`；使用 `blocking` 会返回 400。"
           },
           "user": {
             "type": "string",
-            "description": "用户标识符，在应用内唯一。此标识符用于限定数据访问范围——会话、消息和文件仅在使用相同的 `user` 值查询时可见。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。会话、消息和文件仅对携带相同 `user` 的请求可见。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           "conversation_id": {
             "type": "string",
-            "description": "用于继续会话的会话 ID。传入上一条消息的 `conversation_id`。要开始新会话，请省略此字段或传入空字符串。响应会返回一个 `conversation_id`——在后续消息中传入该值即可继续该会话。"
+            "description": "要继续的会话 ID。省略此字段或传入空字符串可开始新会话；响应会返回一个 `conversation_id`，在下一条消息中带上它即可。要恢复较早的会话，可从 [获取会话列表](/zh/api-reference/conversations/list-conversations) 获取其 ID。"
           },
           "files": {
             "type": "array",
-            "description": "用于多模态理解的文件列表，包括图片、文档、音频和视频。要附加本地文件，请先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，然后将返回的 `id` 作为 `upload_file_id`，并设置 `transfer_method: local_file`。 新 Agent 应用不支持此字段，文件内容不会被处理。",
+            "description": "要附加到消息的文件。本地文件需先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，再将返回的 `id` 作为 `upload_file_id` 引用，并设置 `transfer_method: local_file`。新 Agent 应用接受文件引用，但不会处理其内容。",
             "items": {
               "type": "object",
               "required": [
@@ -13675,7 +13725,7 @@
           },
           "user": {
             "type": "string",
-            "description": "用户标识符，由开发者定义，必须确保在应用内唯一。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。反馈按终端用户隔离，必须与收到该消息的 `user` 一致。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           "content": {
             "type": "string",
@@ -14080,7 +14130,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "会话名称。当 `auto_generate` 为 `false` 时必填。"
+            "description": "新的会话名称。除非 `auto_generate` 为 `true`，否则必填。"
           },
           "auto_generate": {
             "type": "boolean",
@@ -14089,7 +14139,7 @@
           },
           "user": {
             "type": "string",
-            "description": "用户标识符。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           }
         }
       },
@@ -14161,7 +14211,7 @@
           },
           "user": {
             "type": "string",
-            "description": "用户标识符。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           }
         }
       },
@@ -14175,11 +14225,11 @@
           "file": {
             "type": "string",
             "format": "binary",
-            "description": "音频文件。按 MIME 类型校验，必须为 `audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` 之一。大小限制：`30 MB`。"
+            "description": "要转写的音频文件。接受的 MIME 类型：`audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga`。其他类型（包括常见的 `audio/mpeg`）会返回 `unsupported_audio_type` 错误。最大 `30 MB`。"
           },
           "user": {
             "type": "string",
-            "description": "用户标识符。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           }
         }
       },
@@ -14199,15 +14249,15 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "消息 ID。当同时提供 `text` 时，优先使用消息 ID。"
+            "description": "要转为语音的消息答案的 ID。同时提供 `text` 时，优先使用 `message_id`。消息 ID 从 [获取会话历史消息](/zh/api-reference/conversations/list-conversation-messages) 获取。"
           },
           "text": {
             "type": "string",
-            "description": "要转换的语音内容。"
+            "description": "要合成为语音的文本。"
           },
           "user": {
             "type": "string",
-            "description": "用户标识符。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           "voice": {
             "type": "string",
@@ -14532,11 +14582,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "标注问题。"
+            "description": "应用用来匹配用户输入的问题文本。"
           },
           "answer": {
             "type": "string",
-            "description": "标注答案。"
+            "description": "命中该标注时返回的答案。"
           }
         }
       },
@@ -14550,11 +14600,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "更新后的标注问题。"
+            "description": "标注的新问题文本。"
           },
           "answer": {
             "type": "string",
-            "description": "更新后的标注答案。"
+            "description": "标注的新答案文本。"
           }
         }
       },
@@ -14569,11 +14619,11 @@
         "properties": {
           "embedding_provider_name": {
             "type": "string",
-            "description": "嵌入模型供应商名称（例如 `openai`、`cohere`）。"
+            "description": "嵌入模型供应商（例如 `openai`）。可用供应商从 [获取可用模型](/zh/api-reference/models/get-available-models) 获取。"
           },
           "embedding_model_name": {
             "type": "string",
-            "description": "用于标注匹配的嵌入模型名称（例如 `text-embedding-3-small`）。"
+            "description": "用于将标注向量化以进行匹配的嵌入模型（例如 `text-embedding-3-small`）。"
           },
           "score_threshold": {
             "type": "number",
@@ -16497,7 +16547,7 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "工作流输入变量的键值对。文件类型变量的值应为文件对象数组，包含 `type`、`transfer_method` 以及 `url` 或 `upload_file_id`。请参阅 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段，以了解应用所需的变量名称和类型。",
+            "description": "工作流输入变量的键值对。变量名称和类型可从 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段获取。\n\n文件类型变量的值为文件对象数组，包含 `type`、`transfer_method` 以及 `url` 或 `upload_file_id`。",
             "additionalProperties": {
               "oneOf": [
                 {
@@ -16531,7 +16581,7 @@
           },
           "user": {
             "type": "string",
-            "description": "用户标识符，由开发者自定义规则，在应用内必须唯一。此标识符用于限定数据访问范围——工作流运行和文件仅在使用相同的 `user` 值查询时可见。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。用于限定数据访问范围：工作流运行及其文件仅对携带相同 `user` 的后续请求可见。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           "files": {
             "type": "array",
@@ -18062,13 +18112,13 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "允许输入应用定义的各种变量值。包含键值对，每个键对应一个特定变量，每个值为该变量的具体值。请参阅 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段，以了解应用所需的变量名称和类型。",
+            "description": "应用输入变量的值，以变量名为键。变量名称和类型可从 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 响应中的 `user_input_form` 字段获取。",
             "additionalProperties": true
           },
           "query": {
             "type": "string",
             "default": "",
-            "description": "要处理的输入文本。这是一个旧版参数；在较新的应用中，查询内容应通过 `inputs` 对象传递。"
+            "description": "要处理的文本。旧版字段；较新的应用改为在 `inputs` 中传递。"
           },
           "response_mode": {
             "type": "string",
@@ -18080,14 +18130,14 @@
           },
           "user": {
             "type": "string",
-            "description": "用户标识符，在应用内唯一。此标识符限定数据访问范围——消息和文件仅在使用相同 `user` 值查询时可见。"
+            "description": "终端用户标识，由你的应用定义，需在应用内唯一。消息和文件仅对携带相同 `user` 的请求可见。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
           },
           "files": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/InputFileObject"
             },
-            "description": "用于多模态理解的文件列表，包括图片、文档、音频和视频。要附加本地文件，请先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，然后将返回的 `id` 作为 `upload_file_id`，并设置 `transfer_method: local_file`。"
+            "description": "要附加到请求的文件。本地文件需先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，再将返回的 `id` 作为 `upload_file_id` 引用，并设置 `transfer_method: local_file`。"
           }
         }
       },
@@ -19136,7 +19186,7 @@
             "properties": {
               "reranking_provider_name": {
                 "type": "string",
-                "description": "重排序模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/cohere/cohere`）；`cohere` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。有效取值可从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=rerank` 返回的 `provider` 字段获取。"
+                "description": "重排序模型供应商标识符，格式为 `organization/plugin_name/provider_name`（例如 `langgenius/cohere/cohere`）。`cohere` 这类简写会展开为 `langgenius/<name>/<name>`，仅对 langgenius 发布的插件有效。\n\n有效取值从 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=rerank` 返回的 `provider` 字段获取。"
               },
               "reranking_model_name": {
                 "type": "string",
@@ -19242,7 +19292,7 @@
                     },
                     "comparison_operator": {
                       "type": "string",
-                      "description": "应用的比较方式。字符串运算符（`contains`、`not contains`、`start with`、`end with`、`is`、`is not`、`empty`、`not empty`、`in`、`not in`）作用于字符串或数组类型的元数据。数值运算符（`=`、`≠`、`>`、`<`、`≥`、`≤`）作用于数值类型的元数据。时间运算符（`before`、`after`）作用于时间类型的元数据。",
+                      "description": "按元数据类型选择要应用的比较方式：\n\n- 字符串或数组类型元数据：`contains`、`not contains`、`start with`、`end with`、`is`、`is not`、`empty`、`not empty`、`in`、`not in`\n- 数值类型元数据：`=`、`≠`、`>`、`<`、`≥`、`≤`\n- 时间类型元数据：`before`、`after`",
                       "enum": [
                         "contains",
                         "not contains",

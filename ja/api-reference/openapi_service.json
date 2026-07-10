@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "チャットメッセージを送信",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットアプリケーションにリクエストを送信します。チャットボット、Agent、Chatflow、新しい Agent アプリで利用できます。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットアプリにメッセージを送信し、アシスタントの応答を返します。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
         "operationId": "sendBasicChatMessageJa",
         "tags": [
           "チャットメッセージ"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。\n\n**パース**：各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベントは `event: ping` 行（`data:` ペイロードなし）として 10 秒ごとに接続維持のために送信されるため、無視してください。\n\n**ストリームライフサイクル**：チャットボットアプリでは、回答は `message` イベントとしてストリーミングされます。Agent アプリでは `agent_thought` と `agent_message` イベントになります。ストリームは `message_end` で終了します。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message` イベントが間に挟まり、`tts_message_end` が最後のイベントになります。\n\nChatflow アプリでは、ワークフローの進行は `workflow_started`、ノードイベント（`node_started` と `node_finished`、およびイテレーションとループの各バリアント）として、回答は `message` イベントとしてストリーミングされます（`reasoning_format: separated` を指定した LLM ノードは、モデルの推論内容を伝える `reasoning_chunk` イベントも並行して発行します）。テキスト読み上げ（TTS）の自動再生が有効な場合、`tts_message_end` が終了イベントの後に続きます。終了シーケンスは実行結果によって異なります：\n- **成功**：`message_end`、続いて `workflow_finished`\n- **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` は送信されません\n- **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\n新しい Agent アプリでは、回答は `agent_message` イベントとして順次ストリーミングされ、モデルの推論とツール呼び出しは `agent_thought` イベントとして並行して届きます。最後に、完全な回答を含む `message` イベントが 1 つ届きます（差分をライブ表示し、この `message` は追加ではなく最終回答として扱ってください）。`message_end` の `metadata` には `usage` が含まれ（アノテーションが一致した場合は `annotation_reply` も含まれます）、`retriever_resources` は含まれません。\n\n**イベント**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（Chatflow アプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、Chatflow、新しい Agent | 回答の各チャンク（順番に連結）。新しい Agent では、完全な回答を含む最後の 1 チャンク | `answer` |\n| `agent_message` | Agent、新しい Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent、新しい Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。Chatflow では `reason` も含む |\n| `reasoning_chunk` | Chatflow | 推論内容の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは推論の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、Chatflow | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（Chatflow アプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
+                  "description": "サーバー送信イベント (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（10 秒ごとのキープアライブ）は無視します。\n\n**アプリタイプ別のイベント**（応答イベントと、ストリームの終了方法）：\n\n- **チャットボット**：`message` チャンク（順番に連結）→ `message_end`。\n- **Agent**：`agent_thought`（推論とツール呼び出しのステップ）と `agent_message` チャンクが並行 → `message_end`。\n- **新しい Agent**：`agent_message` チャンクと `agent_thought` ステップが並行 → 完全な回答を含む終了 `message` が 1 つ（追加するテキストではなく最終回答として扱う）→ `message_end`。その `message_end` の metadata には `usage`（アノテーション一致時は `annotation_reply` も）が含まれ、`retriever_resources` は含まれません。\n- **Chatflow**：`workflow_started` → ノードイベント（`node_started`、`node_finished`、およびイテレーションとループの各バリアント）と `message` チャンクが並行 → その後、結果に応じて：\n  - **成功**：`message_end`、続いて `workflow_finished`\n  - **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` はありません\n  - **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\n**アドオン**：\n\n- テキスト読み上げの自動再生：`tts_message` の音声チャンクが間に挟まり、`tts_message_end` が終了イベントの後に続きます。\n- `reasoning_format: separated` を使う Chatflow の LLM ノードは、モデルの推論を伝える `reasoning_chunk` デルタも発行します。\n\n**共通フィールド**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（Chatflow アプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、Chatflow、新しい Agent | 回答の各チャンク（順番に連結）。新しい Agent では、完全な回答を含む最後の 1 チャンク | `answer` |\n| `agent_message` | Agent、新しい Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent、新しい Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。Chatflow では `reason` も含む |\n| `reasoning_chunk` | Chatflow | 推論内容の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは推論の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、Chatflow | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（Chatflow アプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | 10 秒ごとのキープアライブ | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -404,7 +404,14 @@
             "title": "チャットメッセージを送信",
             "sidebarTitle": "チャットメッセージを送信"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/chat-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"query\": \"What are the specs of the iPhone 13 Pro Max?\", \"inputs\": {}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/chat-messages/{task_id}/stop": {
@@ -420,7 +427,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message) のストリーミングイベントから取得します。",
             "schema": {
               "type": "string"
             }
@@ -438,7 +445,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子です。メッセージ送信時に渡した `user` と一致する必要があります。一致しない場合、停止は行われず、レスポンスは成功を返します。"
+                    "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。元のメッセージ送信時に渡した `user` と一致する必要があります。一致しない場合、停止は行われず、成功が返されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               },
@@ -458,7 +465,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_chat_app` : アプリモードが API ルートと一致しません。\n- `invalid_param` : 必須パラメータが不足しているか無効です。",
+            "description": "- `not_chat_app` : アプリモードが API ルートと一致しません。\n- `invalid_param` : 必須の `user` フィールドがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -495,7 +502,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "次の推奨質問を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n現在のメッセージに対する次の質問の提案を取得します。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nメッセージに対して提案されたフォローアップ質問を返します。",
         "operationId": "getBasicChatSuggestedQuestionsJa",
         "tags": [
           "チャットメッセージ"
@@ -505,7 +512,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "メッセージ ID。",
+            "description": "推奨質問を取得するメッセージの ID です。チャットのレスポンス、または [会話履歴メッセージ一覧を取得](/ja/api-reference/conversations/list-conversation-messages) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -514,7 +521,7 @@
             "name": "user",
             "in": "query",
             "required": true,
-            "description": "ユーザー識別子。",
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。",
             "schema": {
               "type": "string"
             }
@@ -642,7 +649,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "アップロードするファイル。`multipart/form-data` の 1 パートとして送信します。デプロイの安全ブラックリスト（`UPLOAD_FILE_EXTENSION_BLACKLIST`、デフォルトは空）にある拡張子を除き、任意のファイル形式をアップロードできます。サイズ上限はカテゴリごとに適用されます：画像 10 MB、音声 50 MB、動画 100 MB、その他のファイル 15 MB（デフォルト値。Dify Cloud はデフォルト値を使用）。セルフホスト環境では `UPLOAD_*_FILE_SIZE_LIMIT` [環境変数](/ja/self-host/deploy/configuration/environments) で調整できます。ファイル名に `/` や `\\` は使えません。"
+                    "description": "アップロードするファイル。`multipart/form-data` の 1 パートとして送信します。ファイル名に `/` や `\\` は使えません。\n\nデプロイの安全ブラックリスト（`UPLOAD_FILE_EXTENSION_BLACKLIST`、デフォルトは空）にある拡張子を除き、任意の拡張子を受け付けます。\n\nサイズ上限はカテゴリごとに適用されます：画像 10 MB、音声 50 MB、動画 100 MB、その他のファイル 15 MB（デフォルト値。Dify Cloud はデフォルト値を使用）。セルフホスト環境では `UPLOAD_*_FILE_SIZE_LIMIT` [環境変数](/ja/self-host/deploy/configuration/environments) で調整できます。"
                   },
                   "user": {
                     "type": "string",
@@ -781,7 +788,7 @@
     "/files/{file_id}/preview": {
       "get": {
         "summary": "ファイルをダウンロード",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\n以前[ファイルをアップロード](/ja/api-reference/files/upload-file) API 経由でアップロードされたファイルをプレビューまたはダウンロードします。ファイルは、リクエスト元のアプリケーション内のメッセージに属する場合のみアクセスできます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\n以前 [ファイルをアップロード](/ja/api-reference/files/upload-file) が返したファイルの生のバイト列を返します。ファイルには、そのメッセージが参照しているアプリからのみアクセスできます。",
         "operationId": "previewBasicChatFileJa",
         "tags": [
           "ファイル操作"
@@ -791,7 +798,7 @@
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "プレビューするファイルの一意の識別子です。[ファイルをアップロード](/ja/api-reference/files/upload-file) API のレスポンスから取得します。",
+            "description": "ダウンロードするファイルの ID です。ファイルアップロードのレスポンスから取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -801,7 +808,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "`true` の場合、ブラウザでプレビューする代わりにファイルを添付ファイルとして強制ダウンロードします。",
+            "description": "`true` の場合、ファイルはブラウザでインライン表示される代わりに、添付ファイルとしてダウンロードされます。",
             "schema": {
               "type": "boolean",
               "default": false
@@ -811,7 +818,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "ユーザー識別子。エンドユーザーのコンテキストに使用されます。",
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。ここではファイルアクセスに影響しません。アクセスは `user` ではなくアプリとメッセージによってスコープされます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。",
             "schema": {
               "type": "string"
             }
@@ -830,7 +837,7 @@
             }
           },
           "403": {
-            "description": "`file_access_denied` : リクエストされたファイルへのアクセスが拒否されました。",
+            "description": "`file_access_denied` : ファイルは存在しますが、別のアプリまたはワークスペースに属しています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -847,7 +854,7 @@
             }
           },
           "404": {
-            "description": "`file_not_found` : リクエストされたファイルが見つかりません。",
+            "description": "`file_not_found` : この ID のファイルは、このアプリのメッセージからは参照できません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -876,7 +883,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "エンドユーザー取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーを取得します。他の API がエンドユーザー ID を返す場合（例：[ファイルをアップロード](/ja/api-reference/files/upload-file)の `created_by`）に便利です。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーの詳細を返します。別のエンドポイントが返したエンドユーザー ID（例：[ファイルをアップロード](/ja/api-reference/files/upload-file) レスポンスの `created_by`）を解決するのに便利です。",
         "operationId": "getEndUserChatJa",
         "tags": [
           "エンドユーザー"
@@ -886,7 +893,7 @@
             "name": "end_user_id",
             "in": "path",
             "required": true,
-            "description": "エンドユーザー ID。",
+            "description": "照会するエンドユーザーの ID です。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -951,7 +958,7 @@
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "メッセージフィードバックを送信",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nメッセージに対するフィードバックを送信します。エンドユーザーはメッセージを `like` または `dislike` で評価でき、任意でテキストフィードバックを提供できます。`rating` に `null` を渡すと、以前送信したフィードバックを取り消せます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nメッセージに `like` または `dislike` の評価と、任意のコメントを記録します。`rating` に `null` を送信すると、そのメッセージの既存のフィードバックを取り消します。",
         "operationId": "postBasicChatMessageFeedbackJa",
         "tags": [
           "メッセージフィードバック"
@@ -961,7 +968,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "メッセージ ID。",
+            "description": "フィードバックを送信するメッセージの ID です。メッセージ ID は [会話履歴メッセージ一覧を取得](/ja/api-reference/conversations/list-conversation-messages) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -992,7 +999,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "`invalid_param` : 必須パラメータが不足しているか無効です。`user` フィールドが省略された場合、または `rating` が `null` であるにもかかわらず取り消す既存のフィードバックがない場合に返されます。",
+            "description": "`invalid_param` : 必須の `user` フィールドが省略されているか、`rating` が `null` であるにもかかわらず取り消す既存のフィードバックがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1038,7 +1045,7 @@
     "/app/feedbacks": {
       "get": {
         "summary": "アプリのフィードバック一覧を取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメッセージに対して送信されたすべてのフィードバックのページネーション付きリストを取得します。エンドユーザーと管理者のフィードバックの両方が含まれます。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent、テキストジェネレーター。\n\nアプリのメッセージに対するすべてのフィードバックのページネーション付きリストを返します。エンドユーザーと管理者の両方の送信が含まれます。",
         "operationId": "getBasicChatAppFeedbacksJa",
         "tags": [
           "メッセージフィードバック"
@@ -1047,7 +1054,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーションのページ番号。",
+            "description": "ページ番号。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1058,7 +1065,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "1ページあたりのレコード数。",
+            "description": "1 ページあたりのフィードバック件数。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1127,7 +1134,7 @@
     "/conversations": {
       "get": {
         "summary": "会話一覧を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n現在のユーザーの会話リストを、最近アクティブな順に取得します。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nエンドユーザーの会話を、最近アクティブな順に一覧表示します。",
         "operationId": "getBasicChatConversationsListJa",
         "tags": [
           "会話管理"
@@ -1137,7 +1144,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "ユーザー識別子。",
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。",
             "schema": {
               "type": "string"
             }
@@ -1146,7 +1153,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "現在のページの最後のレコードの ID（ページネーション用）です。",
+            "description": "ページネーションカーソルです。現在のページの最後の会話の `id` を指定します。省略すると最初のページを取得します。",
             "schema": {
               "type": "string"
             }
@@ -1167,7 +1174,7 @@
             "name": "sort_by",
             "in": "query",
             "required": false,
-            "description": "ソートフィールドです。降順にするには '-' プレフィックスを使用します。",
+            "description": "並べ替えるフィールドです。降順にするには `-` を先頭に付けます。",
             "schema": {
               "type": "string",
               "enum": [
@@ -1260,7 +1267,7 @@
     "/messages": {
       "get": {
         "summary": "会話履歴メッセージ一覧を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nスクロール読み込み形式で過去のチャット記録を返します。最初のページは最新の `limit` 件のメッセージを返します（時系列の逆順）。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話のメッセージ履歴を新しい順に返します。`first_id` を渡すと、より古いメッセージへページをさかのぼれます。",
         "operationId": "getBasicChatConversationHistoryJa",
         "tags": [
           "会話管理"
@@ -1270,7 +1277,7 @@
             "name": "conversation_id",
             "in": "query",
             "required": true,
-            "description": "会話 ID。",
+            "description": "読み取る会話の ID です。会話 ID は [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -1279,7 +1286,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "ユーザー識別子。",
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。",
             "schema": {
               "type": "string"
             }
@@ -1288,7 +1295,7 @@
             "name": "first_id",
             "in": "query",
             "required": false,
-            "description": "現在のページの最初のチャット記録の ID です。デフォルトは `null`（最新のメッセージを取得）です。次のページを取得するには、現在のリストの最初のメッセージの ID を使用して、より古いメッセージを取得します。",
+            "description": "ページネーションカーソルです。現在のページの最初のメッセージの `id` を指定します。渡すと前（より古い）ページを取得し、省略すると最新のメッセージを取得します。",
             "schema": {
               "type": "string"
             }
@@ -1372,7 +1379,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : 会話が存在しません。\n- `not_found` : 最初のメッセージが存在しません。",
+            "description": "- `not_found` : 会話が存在しません。\n- `not_found` : 最初のメッセージが存在しません（無効な `first_id`）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -1416,7 +1423,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "会話変数の取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n特定の会話から変数を取得します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話に保存された変数を一覧表示します。",
         "operationId": "getBasicChatConversationVariablesJa",
         "tags": [
           "会話管理"
@@ -1426,7 +1433,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会話 ID。",
+            "description": "変数を一覧表示する会話の ID です。会話 ID は [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -1435,7 +1442,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "ユーザー識別子です。",
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。",
             "schema": {
               "type": "string"
             }
@@ -1444,7 +1451,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "現在のページの最後のレコードの ID（ページネーション用）です。",
+            "description": "ページネーションカーソルです。現在のページの最後の変数の `id` を指定します。省略すると最初のページを取得します。",
             "schema": {
               "type": "string"
             }
@@ -1559,7 +1566,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "会話の名前を変更",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話の名前を変更するか、自動的に生成します。会話名は複数の会話をサポートするクライアントでの表示に使用されます。",
+        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話の名前を変更します。`auto_generate` が `true` の場合は、メッセージから名前を自動生成します。この名前は、複数会話のリストでクライアントが表示するものです。",
         "operationId": "renameBasicChatConversationJa",
         "tags": [
           "会話管理"
@@ -1569,7 +1576,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会話 ID。",
+            "description": "名前を変更する会話の ID です。会話 ID は [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -1676,7 +1683,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "会話変数を更新",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n特定の会話変数の値を更新します。値は期待される型と一致する必要があります。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話変数の値を更新します。新しい値は変数の既存の型と一致する必要があります。",
         "operationId": "updateChatConversationVariableJa",
         "tags": [
           "会話管理"
@@ -1686,7 +1693,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会話 ID。",
+            "description": "変数が属する会話の ID です。会話 ID は [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1696,7 +1703,7 @@
             "name": "variable_id",
             "in": "path",
             "required": true,
-            "description": "Variable ID.",
+            "description": "更新する変数の ID です。変数 ID は [会話変数の取得](/ja/api-reference/conversations/list-conversation-variables) から取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1820,7 +1827,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "会話 ID。",
+            "description": "削除する会話の ID です。会話 ID は [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。",
             "schema": {
               "type": "string"
             }
@@ -1836,7 +1843,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子です。"
+                    "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               },
@@ -1902,7 +1909,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "音声をテキストに変換",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\n音声ファイルをテキストに変換します。アップロードされたファイルの MIME タイプで検証され、`audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` のいずれかである必要があります。それ以外のタイプ（一般的な `audio/mpeg` を含む）は `unsupported_audio_type` エラーで拒否されます。ファイルサイズの上限は `30 MB` です。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリに設定された音声認識モデルを使用して、アップロードされた音声ファイルをテキストに文字起こしします。",
         "operationId": "basicChatAudioToTextJa",
         "tags": [
           "音声・テキスト変換"
@@ -1937,7 +1944,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : 無効なリクエストです。このアプリで音声認識が有効になっていない場合に返されます。\n- `provider_not_support_speech_to_text` : モデルプロバイダーが音声認識をサポートしていません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : 音声認識リクエストに失敗しました。",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : このアプリで音声認識が有効になっていません。\n- `provider_not_support_speech_to_text` : モデルプロバイダーが音声認識をサポートしていません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : 音声認識リクエストに失敗しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2002,7 +2009,7 @@
             }
           },
           "413": {
-            "description": "`audio_too_large` : 音声ファイルサイズが上限を超えています。",
+            "description": "`audio_too_large` : 音声ファイルが `30 MB` のサイズ上限を超えています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2019,7 +2026,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_audio_type` : 許可されていない音声タイプです。",
+            "description": "`unsupported_audio_type` : ファイルの MIME タイプが、受け付ける音声タイプのいずれでもありません（`file` フィールドを参照）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2059,13 +2066,20 @@
             "title": "音声をテキストに変換",
             "sidebarTitle": "音声をテキストに変換"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/audio-to-text' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@meeting-question.mp3' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/text-to-audio": {
       "post": {
         "summary": "テキストを音声に変換",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nテキストを音声に変換します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nテキストを音声に変換します。任意のテキストを合成するには `text` を、既存のメッセージの回答を音声化するには `message_id` を渡します。",
         "operationId": "basicChatTextToAudioJa",
         "tags": [
           "音声・テキスト変換"
@@ -2104,7 +2118,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : 無効なリクエストです。テキスト読み上げが有効になっていない、`text` が指定されていない、または利用可能な音声がない場合に返されます。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : テキスト読み上げリクエストに失敗しました。",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : テキスト読み上げが有効になっていない、`text` が指定されていない、または利用可能な音声がありません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルはこの操作をサポートしていません。\n- `completion_request_error` : テキスト読み上げリクエストに失敗しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -2190,7 +2204,7 @@
     "/info": {
       "get": {
         "summary": "アプリケーションの基本情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの基本情報（名前、説明、タグ、モード）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリの基本情報（名前、説明、タグ、モード、作成者）を返します。",
         "operationId": "getBasicChatAppInfoJa",
         "tags": [
           "アプリケーション設定"
@@ -2234,7 +2248,7 @@
     "/parameters": {
       "get": {
         "summary": "アプリケーションのパラメータ情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリケーションの入力フォーム設定（機能スイッチ、入力パラメータ名、タイプ、デフォルト値）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリのフロントエンド設定（開始文と推奨質問、機能トグル、ユーザー入力フォーム、ファイルアップロード上限）を返します。アプリの入力をレンダリングし、正しいアップロード上限を適用するために使用します。",
         "operationId": "getBasicChatAppParametersJa",
         "tags": [
           "アプリケーション設定"
@@ -2352,7 +2366,7 @@
     "/meta": {
       "get": {
         "summary": "アプリケーションのメタ情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションのメタデータ（ツールアイコンやその他の設定詳細）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリが使用するツールの表示アイコンを、ツール名をキーとして返します。",
         "operationId": "getBasicChatAppMetaJa",
         "tags": [
           "アプリケーション設定"
@@ -2395,7 +2409,7 @@
     "/site": {
       "get": {
         "summary": "アプリの WebApp 設定を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリケーションの WebApp 設定（サイト設定、テーマ、カスタマイズオプション）を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリのホスト型 WebApp のブランディングと表示設定（タイトル、アイコン、テーマカラー、デフォルト言語など）を返します。",
         "operationId": "getBasicChatWebAppSettingsJa",
         "tags": [
           "アプリケーション設定"
@@ -2463,7 +2477,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "アノテーションを作成",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n新しいアノテーションを作成します。アノテーションは、アプリがレスポンスを生成する代わりに直接マッチして返すことができる、事前定義された質問と回答のペアを提供します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションを作成します。アノテーションは、一致したときにアプリが新しい応答を生成する代わりに直接返す、事前定義された質問と回答のペアです。",
         "operationId": "createChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2521,7 +2535,7 @@
       },
       "get": {
         "summary": "アノテーションリストを取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリケーションのアノテーションをページネーションリストで取得します。キーワード検索によるフィルタリングをサポートしています。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリのアノテーションを、任意でキーワードでフィルタリングして一覧表示します。",
         "operationId": "listChatAnnotationsJa",
         "tags": [
           "アノテーション管理"
@@ -2530,7 +2544,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーションのページ番号。",
+            "description": "ページ番号。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2540,7 +2554,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "1 ページあたりの件数です。",
+            "description": "1 ページあたりのアイテム数。100 を超えるリクエストは 100 に制限されます。",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2601,7 +2615,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "アノテーションを更新",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n既存のアノテーションの質問と回答を更新します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションの質問と回答を更新します。",
         "operationId": "updateChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2611,7 +2625,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "更新するアノテーションの一意の識別子です。",
+            "description": "更新するアノテーションの ID です。アノテーション ID は [アノテーションリストを取得](/ja/api-reference/annotations/list-annotations) から取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2698,7 +2712,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "削除するアノテーションの一意の識別子です。",
+            "description": "削除するアノテーションの ID です。アノテーション ID は [アノテーションリストを取得](/ja/api-reference/annotations/list-annotations) から取得します。",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2739,7 +2753,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "アノテーション返信を設定",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーション返信機能を有効または無効にします。リクエストボディはアクションの実行前に検証されるため、`enable` と `disable` のどちらでも `embedding_provider_name`、`embedding_model_name`、`score_threshold` が必須です。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリのアノテーション返信を有効または無効にします。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。\n\nリクエストボディはアクションの実行前に検証されるため、`disable` の場合でも `score_threshold`、`embedding_provider_name`、`embedding_model_name` が必須です。",
         "operationId": "setChatAnnotationReplyJa",
         "tags": [
           "アノテーション管理"
@@ -2749,7 +2763,7 @@
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "実行するアクションです。",
+            "description": "アノテーション返信を有効にするか無効にするかを指定します。",
             "schema": {
               "type": "string",
               "enum": [
@@ -2812,7 +2826,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "アノテーション返信の初期設定タスクステータスを取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始された非同期アノテーション返信設定ジョブのステータスを取得します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始されたアノテーション返信設定ジョブのステータスを返します。",
         "operationId": "getChatAnnotationReplyStatusJa",
         "tags": [
           "アノテーション管理"
@@ -2893,7 +2907,7 @@
     "/workflows/run/{workflow_run_id}": {
       "get": {
         "summary": "ワークフロー実行詳細を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow。\n\nワークフロー実行 ID に基づいて、ワークフロータスクの現在の実行結果を取得します。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n1 つのワークフロー実行のステータス、入力、出力、実行メトリクスを取得します。",
         "operationId": "getWorkflowRunDetailJp",
         "tags": [
           "ワークフロー実行"
@@ -2903,7 +2917,7 @@
             "name": "workflow_run_id",
             "in": "path",
             "required": true,
-            "description": "ワークフロー実行 ID です。ワークフロー実行レスポンス、ストリーミングイベント、またはメッセージメタデータから取得できます。",
+            "description": "ワークフロー実行 ID です。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のレスポンスまたはストリーミングイベント、あるいは Chatflow アプリのメッセージメタデータから取得します。",
             "schema": {
               "type": "string"
             }
@@ -3017,7 +3031,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "ページネーションのページ番号。",
+            "description": "ページ番号。",
             "schema": {
               "type": "integer",
               "default": 1,
@@ -3154,7 +3168,7 @@
           "人間の入力"
         ],
         "summary": "人間の入力フォームを取得",
-        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームの内容を取得します。 WebApp 配信が必要です。\n\n人間の入力エンドポイントを呼び出す一連の流れについては、[API 連携フロー](/ja/api-reference/guides/human-input-flow) を参照してください。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームの内容を返します。WebApp 配信が必要です。\n\n人間の入力を呼び出す一連の流れについては、[API 連携フロー](/ja/api-reference/guides/human-input-flow) を参照してください。",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -3455,7 +3469,7 @@
           "人間の入力"
         ],
         "summary": "人間の入力フォームを送信",
-        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームに受信者の応答を送信します。受理されるとワークフローが再開され、後続のイベントはワークフローイベントをストリーミングエンドポイントで追跡できます。 WebApp 配信が必要です。",
+        "description": "**対象アプリ**：Chatflow、Workflow。\n\n一時停止中の人間の入力フォームに、受信者の応答を送信します。受理されるとワークフローが再開されます。再開後の実行は [ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) で追跡してください。WebApp 配信が必要です。",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -3483,7 +3497,7 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "各入力の `output_variable_name` をキーとして送信する値。段落と選択の入力は文字列、`file` 入力は単一のファイルマッピング、`file-list` 入力はファイルマッピングの配列です。ファイルマッピングは `{transfer_method: local_file, upload_file_id, type}` または `{transfer_method: remote_url, url, type}` で、`type` はそのフィールドの `allowed_file_types` のいずれか（`image`、`document`、`audio`、`video`、`custom`）です。`local_file` の場合、`upload_file_id` は [ファイルをアップロード](/ja/api-reference/files/upload-file) が返す `id` です。実行、アップロード、送信の各呼び出しで一貫した `user` を使用してください。"
+                    "description": "各入力の `output_variable_name` をキーとして送信する値。段落と選択の入力は文字列、`file` 入力は単一のファイルマッピング、`file-list` 入力はファイルマッピングの配列です。\n\nファイルマッピングは `{transfer_method: local_file, upload_file_id, type}` または `{transfer_method: remote_url, url, type}` で、`type` はそのフィールドの `allowed_file_types` のいずれかです。`local_file` の場合、`upload_file_id` は [ファイルをアップロード](/ja/api-reference/files/upload-file) が返す `id` です。\n\n実行、アップロード、送信の各呼び出しで一貫した `user` を使用してください。"
                   },
                   "action": {
                     "type": "string",
@@ -3491,7 +3505,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。開発者のルールで定義され、アプリケーション内で一意である必要があります。Service API と WebApp のユーザー ID は独立しており、値が同じでも同じユーザーを指しません。"
+                    "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。サービス API と WebApp のユーザー ID は、たとえ同じでも別物として扱われます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               },
@@ -3639,7 +3653,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "イベントストリームを再開するワークフロー実行 ID（元のワークフロー実行レスポンスの `workflow_run_id`）。"
+            "description": "イベントストリームを再開するワークフロー実行 ID です。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のレスポンスまたはストリーミングイベントから取得します。"
           },
           {
             "name": "user",
@@ -3648,7 +3662,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "この実行を最初にトリガーしたエンドユーザー識別子。ワークフロー実行の作成者と一致している必要があります。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。実行を開始した `user` と一致する必要があります。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           {
             "name": "include_state_snapshot",
@@ -3731,12 +3745,12 @@
         "x-codeSamples": [
           {
             "lang": "bash",
-            "label": "ストリームを再開",
+            "label": "Resume stream",
             "source": "curl -N --request GET \\\n  --url 'https://{api_base_url}/workflow/{workflow_run_id}/events?user={user}' \\\n  --header 'Authorization: Bearer {api_key}'"
           },
           {
             "lang": "bash",
-            "label": "状態スナップショット付き",
+            "label": "With state snapshot",
             "source": "curl -N --request GET \\\n  --url 'https://{api_base_url}/workflow/{workflow_run_id}/events?user={user}&include_state_snapshot=true' \\\n  --header 'Authorization: Bearer {api_key}'"
           }
         ],
@@ -3752,7 +3766,7 @@
     "/workflows/run": {
       "post": {
         "summary": "ワークフローを実行",
-        "description": "**対象アプリ**：Workflow。\n\nワークフローを実行します。公開済みのワークフローがないと実行できません。",
+        "description": "**対象アプリ**：Workflow。\n\nアプリの公開済みワークフローを実行し、その出力を返します。単一の `blocking` レスポンス、または `streaming` の Server-Sent Events フィードのいずれかで返します。公開済みのワークフローが必要です。",
         "operationId": "executeWorkflowJp",
         "tags": [
           "ワークフロー実行"
@@ -3845,7 +3859,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events (SSE) のストリーム。\n\n**パース**：各行は `data: ` で始まり JSON オブジェクトが続き、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベント（接続維持のため 10 秒ごとに送信）は無視してください。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**推論イベント**：\n- `reasoning_chunk`：`reasoning_format` が `separated` の LLM ノードが発行する思考過程のデルタです。連続する `reasoning_chunk` イベントを連結すると、完全な推論を復元できます。`is_final: true` のイベントはノードの思考完了を示し、空の `reasoning` を伴う場合があります。ペイロードは `data` の下にあり、チャットアプリとは異なり `message_id` や `conversation_id` は含まれません。並行する `text_chunk` ストリームには `<think>` タグが含まれません。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/ja/api-reference/human-input/get-human-input-form) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
+                  "description": "Server-Sent Events (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（10 秒ごとのキープアライブ）は無視します。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**推論イベント**：\n- `reasoning_chunk`：`reasoning_format` が `separated` の LLM ノードが発行する思考過程のデルタです。連続する `reasoning_chunk` イベントを連結すると、完全な推論を復元できます。`is_final: true` のイベントはノードの思考完了を示し、空の `reasoning` を伴う場合があります。ペイロードは `data` の下にあり、チャットアプリとは異なり `message_id` や `conversation_id` は含まれません。並行する `text_chunk` ストリームには `<think>` タグが含まれません。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/ja/api-reference/human-input/get-human-input-form) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -3861,7 +3875,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : リクエストパラメータが不足または無効です（`user` の欠落や未公開のワークフローなど）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -3966,13 +3980,20 @@
             "title": "ワークフローを実行",
             "sidebarTitle": "ワークフローを実行"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl -N --request POST \\\n  --url 'https://{api_base_url}/workflows/run' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\"inputs\": {\"query\": \"Summarize this text: The quick brown fox jumps over the lazy dog.\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/workflows/{workflow_id}/run": {
       "post": {
         "summary": "ID でワークフローを実行",
-        "description": "**対象アプリ**：Workflow。\n\nID で指定された特定のワークフローバージョンを実行します。ワークフローの特定の公開バージョンを実行する場合に便利です。",
+        "description": "**対象アプリ**：Workflow。\n\n特定の公開済みワークフローバージョンを、パスの `workflow_id` で指定して実行します。リクエストボディ、レスポンス、ストリーミングの挙動は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) と同じで、実行されるバージョンだけが異なります。",
         "operationId": "runWorkflowByIdJa",
         "tags": [
           "ワークフロー実行"
@@ -3982,7 +4003,7 @@
             "name": "workflow_id",
             "in": "path",
             "required": true,
-            "description": "実行する特定バージョンのワークフロー ID です。この値は [ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のレスポンスおよび [ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) の `workflow_id` フィールドで返されます。",
+            "description": "実行する公開済みワークフローバージョンです。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のレスポンスおよび [ワークフロー実行詳細を取得](/ja/api-reference/workflow-runs/get-workflow-run-detail) の `workflow_id` フィールドで返されます。公開済みバージョンを指定する必要があります。ドラフトバージョンの ID は `bad_request` で拒否されます。",
             "schema": {
               "type": "string"
             }
@@ -4045,7 +4066,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events (SSE) のストリーム。\n\n**パース**：各行は `data: ` で始まり JSON オブジェクトが続き、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去し、`event` フィールドを読み取ってイベントタイプを判定してください。`ping` イベント（接続維持のため 10 秒ごとに送信）は無視してください。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**推論イベント**：\n- `reasoning_chunk`：`reasoning_format` が `separated` の LLM ノードが発行する思考過程のデルタです。連続する `reasoning_chunk` イベントを連結すると、完全な推論を復元できます。`is_final: true` のイベントはノードの思考完了を示し、空の `reasoning` を伴う場合があります。ペイロードは `data` の下にあり、チャットアプリとは異なり `message_id` や `conversation_id` は含まれません。並行する `text_chunk` ストリームには `<think>` タグが含まれません。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/ja/api-reference/human-input/get-human-input-form) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
+                  "description": "Server-Sent Events (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（10 秒ごとのキープアライブ）は無視します。\n\n**ストリームライフサイクル**：`workflow_finished`、`workflow_paused`、または `error` イベントを受信するとストリームが閉じます。エラーはストリーム内の `error` イベントとして HTTP ステータス `200` で配信されます。ステータスコードではなくイベントペイロードを確認して詳細を取得してください。\n\n**推論イベント**：\n- `reasoning_chunk`：`reasoning_format` が `separated` の LLM ノードが発行する思考過程のデルタです。連続する `reasoning_chunk` イベントを連結すると、完全な推論を復元できます。`is_final: true` のイベントはノードの思考完了を示し、空の `reasoning` を伴う場合があります。ペイロードは `data` の下にあり、チャットアプリとは異なり `message_id` や `conversation_id` は含まれません。並行する `text_chunk` ストリームには `<think>` タグが含まれません。\n\n**人間の入力イベント**：\n- `human_input_required`：ワークフローが人間の入力ノードに到達した際に `workflow_paused` と同時に発行されます。ペイロードの `form_token` を使用して、[人間の入力 API](/ja/api-reference/human-input/get-human-input-form) でフォーム処理を進めます。\n- `human_input_form_filled`：受信者がフォームを送信し、ワークフロー実行が再開されます。\n- `human_input_form_timeout`：応答がないままフォームが期限切れ。タイムアウトのフォールバックエッジが定義されている場合、ワークフローはそのエッジを通って実行されます。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4061,7 +4082,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `bad_request` : Workflow is a draft or has an invalid ID format.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `bad_request` : Workflow is a draft or has an invalid ID format.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : リクエストパラメータが不足または無効です（`user` の欠落など）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4207,7 +4228,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) のストリーミングイベントから取得します。",
             "schema": {
               "type": "string"
             }
@@ -4225,7 +4246,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子です。エンドユーザーの識別のみに使用され、[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow) リクエストで渡した `user` と一致する必要はありません。停止はユーザーに関係なくタスクに適用されます。"
+                    "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。実行を開始した `user` と一致する必要はありません。停止は `user` にかかわらずタスクに適用されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               },
@@ -4245,7 +4266,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_workflow_app` : アプリモードが API ルートと一致しません。\n- `invalid_param` : 必須パラメータが不足しているか無効です。",
+            "description": "- `not_workflow_app` : アプリモードが API ルートと一致しません。\n- `invalid_param` : リクエストパラメータが不足または無効です（`user` の欠落など）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4282,7 +4303,7 @@
     "/completion-messages": {
       "post": {
         "summary": "完了メッセージを送信",
-        "description": "**対象アプリ**：テキストジェネレーター。\n\nテキスト生成アプリケーションにリクエストを送信します。",
+        "description": "**対象アプリ**：テキストジェネレーター。\n\nテキスト生成アプリにリクエストを送信し、生成されたテキストを返します。",
         "operationId": "createCompletionMessageJp",
         "tags": [
           "完了メッセージ"
@@ -4371,7 +4392,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。各イベントは `data: ` プレフィックス付きの JSON オブジェクトで、2 つの改行で終了します。\n\n**SSE パースガイド：**各イベントは `data: ` プレフィックス付きの JSON オブジェクトの行で、`\\n\\n` で終了します。JSON をパースする前に `data: ` プレフィックスを除去してください。JSON 内の `event` フィールドがイベントタイプを決定します。終了イベント（`message_end`、`error` など）を受信するとストリームは終了します。`ping` イベント（10 秒ごとに接続維持のために送信）は無視してください。ストリーム内でエラーイベントが発生しても HTTP ステータスコードは常に `200` です。"
+                  "description": "サーバー送信イベント (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（10 秒ごとのキープアライブ）は無視します。イベント構造については `ChunkCompletionEvent` を参照してください。\n\n**ストリームライフサイクル**：応答は `message` チャンクとしてストリーミングされ、`message_end` で終了します。`error` イベントはストリームを早期に終了させます。HTTP ステータスは `200` のままなので、詳細はイベントペイロードを確認してください。"
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4383,7 +4404,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `invalid_param` : 必須パラメータが不足しているか、無効です。",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `invalid_param` : 必須の `user` フィールドがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4480,7 +4501,14 @@
             "title": "完了メッセージを送信",
             "sidebarTitle": "完了メッセージを送信"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/completion-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"inputs\": {\"city\": \"San Francisco\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/completion-messages/{task_id}/stop": {
@@ -4496,7 +4524,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "タスク ID です。[完了メッセージを送信](/ja/api-reference/completion-messages/send-completion-message) API のストリーミングチャンクレスポンスから取得できます。",
+            "description": "タスク ID です。[完了メッセージを送信](/ja/api-reference/completion-messages/send-completion-message) のストリーミングイベントから取得します。",
             "schema": {
               "type": "string"
             }
@@ -4514,7 +4542,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子です。メッセージ送信時に渡した `user` と一致する必要があります。一致しない場合、停止は行われず、レスポンスは成功を返します。"
+                    "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。元のメッセージ送信時に渡した `user` と一致する必要があります。一致しない場合、停止は行われず、成功が返されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               },
@@ -4534,7 +4562,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : 必須パラメータが不足しているか、無効です。",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `invalid_param` : 必須の `user` フィールドがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4574,7 +4602,7 @@
           "ナレッジベース"
         ],
         "summary": "空のナレッジベースを作成",
-        "description": "新しい空のナレッジベースを作成します。作成後、[テキストからドキュメントを作成](/ja/api-reference/documents/create-document-by-text) または [ファイルからドキュメントを作成](/ja/api-reference/documents/create-document-by-file) を使用してドキュメントを追加します。",
+        "description": "空のナレッジベースを作成します。ドキュメントを追加するには [テキストからドキュメントを作成](/ja/api-reference/documents/create-document-by-text) または [ファイルからドキュメントを作成](/ja/api-reference/documents/create-document-by-file) を使用します。",
         "operationId": "createDataset",
         "requestBody": {
           "required": true,
@@ -4632,7 +4660,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "埋め込みモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/openai/openai`）。`openai` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=text-embedding` を指定した際の `provider` フィールドから取得します。"
+                    "description": "埋め込みモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/openai/openai`）。`openai` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。\n\n有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=text-embedding` を指定した際の `provider` フィールドから取得します。"
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -4741,7 +4769,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。",
+            "description": "`invalid_param` : 指定した埋め込みモデルまたはリランクモデルが設定されていないか、利用できません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4775,7 +4803,7 @@
             }
           },
           "409": {
-            "description": "`dataset_name_duplicate` : ナレッジベース名は既に存在します。名前を変更してください。",
+            "description": "`dataset_name_duplicate` : 同じ名前のナレッジベースが既に存在します。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4805,7 +4833,7 @@
           "ナレッジベース"
         ],
         "summary": "ナレッジベースリストを取得",
-        "description": "ナレッジベースのページネーションリストを返します。キーワードとタグによるフィルタリングをサポートしています。",
+        "description": "ナレッジベースのページネーションリストを返します。任意でキーワードまたはタグでフィルタリングできます。",
         "operationId": "listDatasets",
         "parameters": [
           {
@@ -4815,7 +4843,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "取得するページ番号。"
+            "description": "ページ番号。"
           },
           {
             "name": "limit",
@@ -4854,7 +4882,7 @@
             },
             "style": "form",
             "explode": true,
-            "description": "フィルタリングに使用するタグ ID です。"
+            "description": "フィルタリングに使用するタグ ID です。タグ ID は [ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags) から取得します。"
           }
         ],
         "responses": {
@@ -4972,7 +5000,7 @@
           "ナレッジベース"
         ],
         "summary": "ナレッジベース詳細を取得",
-        "description": "特定のナレッジベースの詳細情報（埋め込みモデル、検索設定、ドキュメント統計を含む）を取得します。",
+        "description": "ナレッジベースの詳細情報（埋め込みモデル、検索設定、ドキュメント統計を含む）を返します。",
         "operationId": "getDatasetDetail",
         "parameters": [
           {
@@ -4983,7 +5011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "responses": {
@@ -5070,7 +5098,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5100,7 +5128,7 @@
           "ナレッジベース"
         ],
         "summary": "ナレッジベースを更新",
-        "description": "既存のナレッジベースの名前、説明、権限、または検索設定を更新します。リクエストボディで指定されたフィールドのみが更新されます。",
+        "description": "ナレッジベースを更新します。リクエストボディに含まれるフィールドのみが変更されます。",
         "operationId": "updateDataset",
         "parameters": [
           {
@@ -5111,7 +5139,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -5156,7 +5184,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "埋め込みモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/openai/openai`）。`openai` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=text-embedding` を指定した際の `provider` フィールドから取得します。"
+                    "description": "埋め込みモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/openai/openai`）。`openai` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。\n\n有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=text-embedding` を指定した際の `provider` フィールドから取得します。"
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -5274,7 +5302,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。",
+            "description": "`invalid_param` : 指定した埋め込みモデルまたはリランクモデルが設定されていないか、利用できません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5316,7 +5344,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5357,12 +5385,12 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "responses": {
           "204": {
-            "description": "Success."
+            "description": "ナレッジベースが正常に削除されました。"
           },
           "403": {
             "description": "- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。\n- `forbidden` : サブスクリプションのナレッジベースリクエストのレート制限に達しました。",
@@ -5390,7 +5418,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5422,7 +5450,7 @@
           "ドキュメント"
         ],
         "summary": "テキストからドキュメントを作成",
-        "description": "テキストコンテンツからドキュメントを作成します。ドキュメントは非同期で処理されるため、返された `batch` ID を [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で使用して進捗を追跡します。",
+        "description": "生のテキストからナレッジベースにドキュメントを作成します。インデックスは非同期で実行されます。返された `batch` ID を使って [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で追跡します。",
         "operationId": "createDocumentFromText",
         "parameters": [
           {
@@ -5433,7 +5461,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -5492,7 +5520,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "処理モードです。`automatic` は組み込みルールを使用、`custom` は手動設定が可能、`hierarchical` は親子チャンク構造を有効にします（`doc_form: hierarchical_model` と組み合わせて使用）。"
+                        "description": "`automatic` は組み込みルールを使用、`custom` は手動設定が可能、`hierarchical` は親子チャンク構造を有効にします（`doc_form: hierarchical_model` と組み合わせて使用）。"
                       },
                       "rules": {
                         "type": "object",
@@ -5543,7 +5571,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "検索モデルの設定です。このナレッジベースをクエリする際のチャンクの検索方法とランキング方法を制御します。"
+                    "description": "このナレッジベースをクエリする際のチャンクの検索方法とランキング方法を制御します。"
                   },
                   "embedding_model": {
                     "type": "string",
@@ -5555,7 +5583,7 @@
                   },
                   "original_document_id": {
                     "type": "string",
-                    "description": "バージョン管理用の元ドキュメント ID です。"
+                    "description": "バージョン管理用の元ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
                   }
                 }
               }
@@ -5629,7 +5657,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : 最初のドキュメント追加時には `indexing_technique` が必須です。または `doc_form` が無効です。",
+            "description": "- `provider_not_initialize` : ワークスペースにモデルプロバイダーの認証情報が設定されていません。\n- `invalid_param` : 最初のドキュメント追加時には `indexing_technique` が必須です。または `doc_form` が無効です。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5727,7 +5755,7 @@
           "ドキュメント"
         ],
         "summary": "ファイルからドキュメントを作成",
-        "description": "ファイルをアップロードしてドキュメントを作成します。一般的なドキュメント形式（PDF、TXT、DOCX など）をサポートしています。処理は非同期で行われるため、返された `batch` ID を [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で使用して進捗を追跡します。",
+        "description": "アップロードしたファイルからナレッジベースにドキュメントを作成します。PDF、TXT、DOCX などの一般的な形式をサポートします。インデックスは非同期で実行されます。返された `batch` ID を使って [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で追跡します。",
         "operationId": "createDocumentFromFile",
         "parameters": [
           {
@@ -5738,7 +5766,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -5833,7 +5861,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : ファイルをアップロードしてください。\n- `too_many_files` : アップロードできるファイルは 1 つだけです。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : 外部ナレッジベースはサポートされていません。`indexing_technique` が必須、または `process_rule` がありません。",
+            "description": "- `no_file_uploaded` : リクエストにファイルが提供されていません。\n- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `provider_not_initialize` : ワークスペースにモデルプロバイダーの認証情報が設定されていません。\n- `invalid_param` : ナレッジベースが外部です。`indexing_technique` が必須、または `process_rule` がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5946,7 +5974,14 @@
             "title": "ファイルからドキュメントを作成",
             "sidebarTitle": "ファイルからドキュメントを作成"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/document/create-by-file' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"indexing_technique\":\"high_quality\",\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents": {
@@ -5955,7 +5990,7 @@
           "ドキュメント"
         ],
         "summary": "ナレッジベースのドキュメントリストを取得",
-        "description": "ナレッジベース内のドキュメントのページネーションされた一覧を返します。キーワードやインデックスステータスによるフィルタリングをサポートしています。",
+        "description": "ナレッジベース内のドキュメントのページネーションされた一覧を返します。",
         "operationId": "listDocuments",
         "parameters": [
           {
@@ -5966,7 +6001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "page",
@@ -5975,7 +6010,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "取得するページ番号。"
+            "description": "ページ番号。"
           },
           {
             "name": "limit",
@@ -6149,7 +6184,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメント詳細を取得",
-        "description": "特定のドキュメントの詳細情報（インデックスステータス、メタデータ、処理統計を含む）を取得します。",
+        "description": "1 つのドキュメントの詳細情報を返します。",
         "operationId": "getDocumentDetail",
         "parameters": [
           {
@@ -6160,7 +6195,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -6170,7 +6205,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "metadata",
@@ -6189,7 +6224,7 @@
         ],
         "responses": {
           "200": {
-            "description": "ドキュメントの詳細です。レスポンスの形式は `metadata` クエリパラメータによって異なります。`metadata` が `only` の場合、`id`、`doc_type`、`doc_metadata` のみが返されます。`metadata` が `without` の場合、`doc_type` と `doc_metadata` は省略されます。",
+            "description": "ドキュメントの詳細です。返されるフィールドは `metadata` クエリパラメータによって異なります。",
             "content": {
               "application/json": {
                 "schema": {
@@ -6468,7 +6503,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 権限がありません。\n- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。",
+            "description": "- `forbidden` : このドキュメントにアクセスする権限がありません。\n- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6534,7 +6569,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -6544,7 +6579,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "responses": {
@@ -6615,7 +6650,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメントを更新",
-        "description": "新しいファイルをアップロードして既存のドキュメントを更新します。これはファイルベースのドキュメント更新の正規エンドポイントです。インデックスが再トリガーされるため、返された `batch` ID を [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で使用して進捗を追跡します。",
+        "description": "新しいファイルをアップロードしてドキュメントを更新し、再インデックスします。これはファイルベースのドキュメント更新の正規エンドポイントです。返された `batch` ID を使って [ドキュメント埋め込みステータス（進捗）を取得](/ja/api-reference/documents/get-document-indexing-status) で進捗を追跡します。",
         "operationId": "updateDocument",
         "parameters": [
           {
@@ -6626,7 +6661,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -6636,7 +6671,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "requestBody": {
@@ -6728,7 +6763,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : アップロードできるファイルは 1 つだけです。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
+            "description": "- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `provider_not_initialize` : ワークスペースにモデルプロバイダーの認証情報が設定されていません。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6867,7 +6902,14 @@
             "title": "ドキュメントを更新",
             "sidebarTitle": "ドキュメントを更新"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request PATCH \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/documents/{document_id}' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}/download": {
@@ -6876,7 +6918,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメントをダウンロード",
-        "description": "ドキュメントの元のアップロードファイルの署名付きダウンロード URL を取得します。",
+        "description": "ドキュメントの元のアップロードファイルをダウンロードするための署名付き URL を返します。",
         "operationId": "downloadDocumentJa",
         "parameters": [
           {
@@ -6887,7 +6929,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -6897,7 +6939,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "responses": {
@@ -6926,7 +6968,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : 権限がありません。\n- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。\n- `forbidden` : サブスクリプションのナレッジベースリクエストのレート制限に達しました。",
+            "description": "- `forbidden` : このドキュメントにアクセスする権限がありません。\n- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。\n- `forbidden` : サブスクリプションのナレッジベースリクエストのレート制限に達しました。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6991,7 +7033,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメント埋め込みステータス（進捗）を取得",
-        "description": "バッチ内のドキュメントのインデックス進捗を確認します。各ドキュメントの現在の処理段階とチャンク完了数を返します。`indexing_status` が `completed` または `error` に達するまでこのエンドポイントをポーリングしてください。ステータスは次の順序で進行します：`waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`。",
+        "description": "バッチ内のすべてのドキュメントのインデックス進捗（現在の段階とチャンク完了数）を返します。各 `indexing_status` が `completed` または `error` に達するまでポーリングします。ステータスは `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed` の順に進みます。",
         "operationId": "getDocumentIndexingStatus",
         "parameters": [
           {
@@ -7002,7 +7044,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "batch",
@@ -7011,7 +7053,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "ドキュメント作成時に返されるバッチ ID です。"
+            "description": "ドキュメントの作成時または更新時に返されるバッチ ID です。"
           }
         ],
         "responses": {
@@ -7133,7 +7175,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。/ ドキュメントが見つかりません。",
+            "description": "- `not_found` : ナレッジベースが見つかりません。\n- `not_found` : ドキュメントが見つかりません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7173,7 +7215,7 @@
           "ドキュメント"
         ],
         "summary": "テキストでドキュメントを更新",
-        "description": "既存のドキュメントのテキスト内容、名前、または処理設定を更新します。内容が変更されると、インデックスを再トリガーします。",
+        "description": "ドキュメントのテキスト内容、名前、または処理設定を更新します。テキストが変更されると、ドキュメントを再インデックスします。",
         "operationId": "updateDocumentByText",
         "parameters": [
           {
@@ -7184,7 +7226,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -7194,7 +7236,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "requestBody": {
@@ -7226,7 +7268,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "処理モードです。`automatic` は組み込みルールを使用、`custom` は手動設定が可能、`hierarchical` は親子チャンク構造を有効にします（`doc_form: hierarchical_model` と組み合わせて使用）。"
+                        "description": "`automatic` は組み込みルールを使用、`custom` は手動設定が可能、`hierarchical` は親子チャンク構造を有効にします（`doc_form: hierarchical_model` と組み合わせて使用）。"
                       },
                       "rules": {
                         "type": "object",
@@ -7292,7 +7334,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "検索モデルの設定です。このナレッジベースをクエリする際のチャンクの検索方法とランキング方法を制御します。"
+                    "description": "このナレッジベースをクエリする際のチャンクの検索方法とランキング方法を制御します。"
                   }
                 }
               }
@@ -7366,7 +7408,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : `text` を指定する場合は `name` が必須です。または `doc_form` が無効です。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
+            "description": "- `provider_not_initialize` : ワークスペースにモデルプロバイダーの認証情報が設定されていません。\n- `invalid_param` : `text` を指定する場合は `name` が必須です。または `doc_form` が無効です。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7472,7 +7514,7 @@
           "ドキュメント"
         ],
         "summary": "ファイルでドキュメントを更新",
-        "description": "非推奨です。代わりに [ドキュメントを更新](/ja/api-reference/documents/update-document) を使用してください。新しいファイルをアップロードして既存のドキュメントを更新し、インデックスを再トリガーします。",
+        "description": "非推奨です。代わりに [ドキュメントを更新](/ja/api-reference/documents/update-document) を使用してください。新しいファイルをアップロードしてドキュメントを更新し、再インデックスします。",
         "operationId": "updateDocumentByFile",
         "parameters": [
           {
@@ -7483,7 +7525,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -7493,7 +7535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "requestBody": {
@@ -7585,7 +7627,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : アップロードできるファイルは 1 つだけです。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。Settings -> Model Provider でプロバイダーの認証情報を設定してください。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
+            "description": "- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `provider_not_initialize` : ワークスペースにモデルプロバイダーの認証情報が設定されていません。\n- `invalid_param` : ドキュメントが更新できる状態ではありません（利用可能なドキュメントのみ更新できます）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7734,7 +7776,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメントを一括ダウンロード（ZIP）",
-        "description": "複数のアップロードファイルドキュメントを単一の ZIP アーカイブとしてダウンロードします。最大 `100` 件のドキュメント ID を受け付けます。",
+        "description": "1 つ以上のドキュメントを単一の ZIP アーカイブとしてダウンロードします。ファイルとしてアップロードされたドキュメントのみ含められます。",
         "operationId": "downloadDocumentsZipJa",
         "parameters": [
           {
@@ -7745,7 +7787,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -7766,7 +7808,7 @@
                       "type": "string",
                       "format": "uuid"
                     },
-                    "description": "ZIP アーカイブに含めるドキュメント ID の配列です。"
+                    "description": "アーカイブに含めるドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
                   }
                 }
               }
@@ -7787,7 +7829,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。\n- `forbidden` : サブスクリプションのナレッジベースリクエストのレート制限に達しました。\n- `forbidden` : このナレッジベースにアクセスする権限がありません。\n- `forbidden` : 権限がありません。",
+            "description": "- `forbidden` : このナレッジベースでは API アクセスが有効になっていません。\n- `forbidden` : サブスクリプションのナレッジベースリクエストのレート制限に達しました。\n- `forbidden` : このナレッジベースにアクセスする権限がありません。\n- `forbidden` : リクエストされたドキュメントのいずれかにアクセスする権限がありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -7868,7 +7910,7 @@
           "ドキュメント"
         ],
         "summary": "ドキュメントステータスを一括更新",
-        "description": "複数のドキュメントを一括で有効化、無効化、アーカイブ、またはアーカイブ解除します。",
+        "description": "複数のドキュメントを 1 回のリクエストで有効化、無効化、アーカイブ、またはアーカイブ解除します。",
         "operationId": "batchUpdateDocumentStatus",
         "parameters": [
           {
@@ -7879,7 +7921,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "action",
@@ -7894,7 +7936,7 @@
                 "un_archive"
               ]
             },
-            "description": "`enable` で有効化、`disable` で無効化、`archive` でアーカイブ、`un_archive` でアーカイブから復元します。"
+            "description": "`enable` はドキュメントを検索対象として有効化し、`disable` は無効化し、`archive` はアーカイブに移動し、`un_archive` はアーカイブから復元します。"
           }
         ],
         "requestBody": {
@@ -7912,7 +7954,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "description": "更新するドキュメント ID のリストです。"
+                    "description": "更新するドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
                   }
                 }
               }
@@ -8011,7 +8053,7 @@
           "チャンク"
         ],
         "summary": "ドキュメントにチャンクを追加",
-        "description": "ドキュメント内に 1 つ以上のチャンクを作成します。各チャンクには `content` が必須です。Q&A モード（`qa_model`）ドキュメントの場合は `answer` も必須です。`keywords` は任意です。",
+        "description": "ドキュメント内に 1 つ以上のチャンクを作成します。",
         "operationId": "createSegments",
         "parameters": [
           {
@@ -8022,7 +8064,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -8032,7 +8074,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           }
         ],
         "requestBody": {
@@ -8057,7 +8099,7 @@
                         },
                         "answer": {
                           "type": "string",
-                          "description": "QA モードの回答内容です。"
+                          "description": "回答テキストです。Q&A モード（`qa_model`）のドキュメントでは必須です。"
                         },
                         "keywords": {
                           "type": "array",
@@ -8154,7 +8196,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。\n- `invalid_param` : チャンクのフィールドが無効です（例：Q&A モードのドキュメントでは `answer` が必須）。またはチャンク数がリクエストごとの上限を超えています。\n- リクエストボディのスキーマ検証（`content` が空など）では、`code` や `status` を持たない非標準のボディ `{\"error\": \"<検証の詳細>\"}` が返されます。",
+            "description": "- `provider_not_initialize` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。\n- `invalid_param` : チャンクのフィールドが無効です（例：Q&A モードのドキュメントでは `answer` が必須）。またはチャンク数がリクエストごとの上限を超えています。\n- リクエストボディのスキーマ検証（`content` が空など）では、`code` や `status` を持たない非標準のボディ `{\"error\": \"<検証の詳細>\"}` が返されます。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8280,7 +8322,7 @@
           "チャンク"
         ],
         "summary": "チャンク一覧を取得",
-        "description": "ドキュメント内のチャンクのページネーションリストを返します。キーワードとステータスによるフィルタリングをサポートしています。",
+        "description": "ドキュメント内のチャンクのページネーションリストを返します。任意でキーワードまたはインデックスステータスでフィルタリングできます。",
         "operationId": "listSegments",
         "parameters": [
           {
@@ -8291,7 +8333,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -8301,7 +8343,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "page",
@@ -8310,7 +8352,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "取得するページ番号。"
+            "description": "ページ番号。"
           },
           {
             "name": "limit",
@@ -8431,7 +8473,7 @@
             }
           },
           "400": {
-            "description": "`provider_not_initialize` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。",
+            "description": "`provider_not_initialize` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8505,7 +8547,7 @@
           "チャンク"
         ],
         "summary": "ドキュメント内のチャンク詳細を取得",
-        "description": "特定のチャンクの詳細情報（内容、キーワード、インデックスステータスを含む）を取得します。",
+        "description": "1 つのチャンクの詳細をすべて取得します。",
         "operationId": "getSegmentDetail",
         "parameters": [
           {
@@ -8516,7 +8558,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -8526,7 +8568,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -8536,7 +8578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           }
         ],
         "responses": {
@@ -8601,7 +8643,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。",
+            "description": "`invalid_param` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8681,7 +8723,7 @@
           "チャンク"
         ],
         "summary": "ドキュメント内のチャンクを更新",
-        "description": "チャンクのコンテンツ、キーワード、または回答を更新します。変更されたチャンクのインデックス作成が再トリガーされます。",
+        "description": "チャンクのフィールドを更新します。この更新により、そのチャンクのインデックス作成が再トリガーされます。",
         "operationId": "updateSegment",
         "parameters": [
           {
@@ -8692,7 +8734,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -8702,7 +8744,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -8712,7 +8754,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           }
         ],
         "requestBody": {
@@ -8734,7 +8776,7 @@
                       },
                       "answer": {
                         "type": "string",
-                        "description": "QA モードの回答内容です。"
+                        "description": "Q&A モード（`qa_model`）のドキュメントの回答テキストです。"
                       },
                       "keywords": {
                         "type": "array",
@@ -8834,7 +8876,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。\n- `invalid_param` : チャンクがインデックス中または無効化されているため更新できません。またはインデックス設定が無効です。",
+            "description": "- `provider_not_initialize` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。\n- `invalid_param` : チャンクがインデックス中または無効化されているため更新できません。またはインデックス設定が無効です。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8949,7 +8991,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -8959,7 +9001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -8969,7 +9011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           }
         ],
         "responses": {
@@ -8977,7 +9019,7 @@
             "description": "Success."
           },
           "400": {
-            "description": "- `invalid_param` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。\n- `invalid_param` : チャンクを削除中です。",
+            "description": "- `invalid_param` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。\n- `invalid_param` : チャンクは別の同時リクエストによってすでに削除中です。",
             "content": {
               "application/json": {
                 "examples": {
@@ -9086,7 +9128,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -9096,7 +9138,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -9106,7 +9148,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "親チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           }
         ],
         "requestBody": {
@@ -9162,7 +9204,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : 利用可能な埋め込みモデルがありません。Settings -> Model Provider で有効なプロバイダーを設定してください。\n- `invalid_param` : ベクトルストアでの子チャンクのインデックス作成に失敗しました。メッセージにはベクトルストアの元のエラーが含まれます。",
+            "description": "- `provider_not_initialize` : ナレッジベースは高品質インデックスを使用していますが、埋め込みモデルが未設定または誤って設定されています。\n- `invalid_param` : ベクトルストアでの子チャンクのインデックス作成に失敗しました。メッセージにはベクトルストアの元のエラーが含まれます。",
             "content": {
               "application/json": {
                 "examples": {
@@ -9285,7 +9327,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -9295,7 +9337,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -9305,7 +9347,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "親チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           },
           {
             "name": "page",
@@ -9315,7 +9357,7 @@
               "default": 1,
               "minimum": 1
             },
-            "description": "取得するページ番号。"
+            "description": "ページ番号。"
           },
           {
             "name": "limit",
@@ -9472,7 +9514,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -9482,7 +9524,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -9492,7 +9534,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "親チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           },
           {
             "name": "child_chunk_id",
@@ -9681,7 +9723,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "document_id",
@@ -9691,7 +9733,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "ドキュメント ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) から取得します。"
           },
           {
             "name": "segment_id",
@@ -9701,7 +9743,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "親チャンク ID です。[チャンク一覧を取得](/ja/api-reference/chunks/list-chunks) から取得します。"
           },
           {
             "name": "child_chunk_id",
@@ -9825,7 +9867,7 @@
           "ナレッジベース"
         ],
         "summary": "ナレッジベースからチャンクを取得 / テスト検索",
-        "description": "ナレッジベースに対して検索クエリを実行し、最も関連性の高いチャンクを取得します。このエンドポイントは本番環境の検索とテスト検索の両方に使用できます。",
+        "description": "ナレッジベースを検索し、クエリに最も関連性の高いチャンクを返します。本番環境の検索とテスト検索の両方に使用できます。",
         "operationId": "retrieveSegments",
         "parameters": [
           {
@@ -9836,7 +9878,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -10179,7 +10221,7 @@
             }
           },
           "400": {
-            "description": "- `dataset_not_initialized` : ナレッジベースはまだ初期化中またはインデキシング中です。しばらくお待ちください。\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。設定 → モデルプロバイダーで認証情報を完了してください。\n- `provider_quota_exceeded` : Your quota for Dify Hosted Model Provider has been exhausted. Please go to Settings -> Model Provider to complete your own provider credentials.\n- `model_currently_not_support` : Dify Hosted OpenAI trial currently not support the GPT-4 model.\n- `completion_request_error` : Completion request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `dataset_not_initialized` : ナレッジベースはまだ初期化中またはインデキシング中です。\n- `provider_not_initialize` : モデルプロバイダーに有効な認証情報が設定されていません。\n- `provider_quota_exceeded` : Dify がホストするモデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 選択したモデルは現在サポートされていません。\n- `completion_request_error` : モデルへのリクエストに失敗しました。\n- `invalid_param` : リクエストパラメータが無効です。",
             "content": {
               "application/json": {
                 "examples": {
@@ -10261,7 +10303,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -10310,7 +10352,7 @@
           "タグ管理"
         ],
         "summary": "ナレッジベースタグを作成",
-        "description": "ナレッジベースを整理するための新しいタグを作成します。",
+        "description": "ナレッジベースを整理するためのタグを作成します。",
         "operationId": "createKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10326,7 +10368,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "Tag name."
+                    "description": "タグ名です。ワークスペース内で一意である必要があります。"
                   }
                 }
               }
@@ -10405,7 +10447,7 @@
           "タグ管理"
         ],
         "summary": "ナレッジベースタグリストを取得",
-        "description": "ワークスペース内のすべてのナレッジベースタグのリストを返します。",
+        "description": "ワークスペース内のすべてのナレッジベースタグを返します。",
         "operationId": "getKnowledgeTags",
         "responses": {
           "200": {
@@ -10467,7 +10509,7 @@
           "タグ管理"
         ],
         "summary": "ナレッジベースタグを変更",
-        "description": "既存のナレッジベースタグの名前を変更します。",
+        "description": "ナレッジベースタグの名前を変更します。",
         "operationId": "updateKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10482,13 +10524,13 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "更新するタグ ID です。"
+                    "description": "名前を変更するタグの ID です。[ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags) を参照してください。"
                   },
                   "name": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "新しいタグ名です。"
+                    "description": "タグの新しい名前です。ワークスペース内で一意である必要があります。"
                   }
                 }
               }
@@ -10598,7 +10640,7 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "削除するタグ ID です。"
+                    "description": "削除するタグの ID です。[ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags) を参照してください。"
                   }
                 }
               }
@@ -10661,11 +10703,11 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "バインドするタグ ID です。"
+                    "description": "バインドするタグの ID です。[ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags) を参照してください。"
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "ナレッジベース ID です。"
+                    "description": "タグをバインドするナレッジベースです。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
                   }
                 }
               }
@@ -10727,7 +10769,7 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "バインド解除するタグ ID のリストです。旧版の `tag_id` を指定しない限り必須です。"
+                    "description": "バインド解除するタグ ID のリストです。旧版の `tag_id` を指定しない限り必須です。[ナレッジベースタグリストを取得](/ja/api-reference/tags/list-knowledge-tags) を参照してください。"
                   },
                   "tag_id": {
                     "type": "string",
@@ -10736,7 +10778,7 @@
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "ナレッジベース ID です。"
+                    "description": "タグのバインドを解除するナレッジベースです。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
                   }
                 }
               }
@@ -10780,7 +10822,7 @@
           "タグ管理"
         ],
         "summary": "ナレッジベースにバインドされたタグを取得",
-        "description": "特定のナレッジベースにバインドされたタグのリストを返します。",
+        "description": "ナレッジベースにバインドされたタグを返します。",
         "operationId": "queryDatasetTags",
         "parameters": [
           {
@@ -10791,7 +10833,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           }
         ],
         "responses": {
@@ -10892,7 +10934,7 @@
           "メタデータ"
         ],
         "summary": "メタデータフィールドを作成",
-        "description": "ナレッジベースのカスタムメタデータフィールドを作成します。メタデータフィールドを使用して、構造化された情報でドキュメントにアノテーションを付けることができます。",
+        "description": "ナレッジベース内のドキュメントを構造化情報でアノテーションするための、カスタムメタデータフィールドを作成します。",
         "operationId": "createMetadataFieldJa",
         "parameters": [
           {
@@ -10903,7 +10945,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           }
         ],
         "requestBody": {
@@ -10928,7 +10970,7 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "メタデータフィールド名です。"
+                    "description": "メタデータフィールドの名前です。ナレッジベースのフィールド内で一意であり、255 文字以内である必要があります。"
                   }
                 }
               }
@@ -11043,7 +11085,7 @@
           "メタデータ"
         ],
         "summary": "メタデータフィールドリストを取得",
-        "description": "ナレッジベースのすべてのメタデータフィールド（カスタムおよび組み込みの両方）の一覧と、各フィールドを使用しているドキュメント数を返します。",
+        "description": "ナレッジベースのすべてのメタデータフィールド（カスタムと組み込みの両方）を、各フィールドを使用しているドキュメント数とともに返します。",
         "operationId": "listMetadataFieldsJa",
         "parameters": [
           {
@@ -11054,7 +11096,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           }
         ],
         "responses": {
@@ -11176,7 +11218,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           },
           {
             "name": "metadata_id",
@@ -11186,7 +11228,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "メタデータフィールド ID です。"
+            "description": "名前を変更するメタデータフィールドの ID です。[メタデータフィールドリストを取得](/ja/api-reference/metadata/list-metadata-fields) を参照してください。"
           }
         ],
         "requestBody": {
@@ -11201,7 +11243,7 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "新しいメタデータフィールド名です。"
+                    "description": "フィールドの新しい名前です。ナレッジベースのフィールド内で一意であり、255 文字以内である必要があります。"
                   }
                 }
               }
@@ -11316,7 +11358,7 @@
           "メタデータ"
         ],
         "summary": "メタデータフィールドを削除",
-        "description": "カスタムメタデータフィールドを完全に削除します。このフィールドを使用しているドキュメントは、該当するメタデータ値を失います。",
+        "description": "カスタムメタデータフィールドを完全に削除します。このフィールドを使用していたドキュメントは、それに対応する値を失います。",
         "operationId": "deleteMetadataFieldJa",
         "parameters": [
           {
@@ -11327,7 +11369,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           },
           {
             "name": "metadata_id",
@@ -11337,7 +11379,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "メタデータフィールド ID です。"
+            "description": "削除するメタデータフィールドの ID です。[メタデータフィールドリストを取得](/ja/api-reference/metadata/list-metadata-fields) を参照してください。"
           }
         ],
         "responses": {
@@ -11402,7 +11444,7 @@
           "メタデータ"
         ],
         "summary": "組み込みメタデータフィールドを取得",
-        "description": "システムが提供する組み込みメタデータフィールドの一覧を返します（例：ドキュメントタイプ、ソース URL）。",
+        "description": "システムが提供する組み込みメタデータフィールドを返します。",
         "operationId": "getBuiltInMetadataFieldsJa",
         "parameters": [
           {
@@ -11413,7 +11455,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           }
         ],
         "responses": {
@@ -11536,7 +11578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           },
           {
             "name": "action",
@@ -11635,7 +11677,7 @@
           "メタデータ"
         ],
         "summary": "ドキュメントメタデータを一括更新",
-        "description": "複数のドキュメントのメタデータ値を一括更新します。リクエスト内の各ドキュメントに指定されたメタデータのキーと値のペアが適用されます。",
+        "description": "複数のドキュメントのメタデータ値を 1 回のリクエストで更新します。",
         "operationId": "batchUpdateDocumentMetadataJa",
         "parameters": [
           {
@@ -11646,7 +11688,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) を参照してください。"
           }
         ],
         "requestBody": {
@@ -11670,7 +11712,7 @@
                       "properties": {
                         "document_id": {
                           "type": "string",
-                          "description": "メタデータを更新するドキュメントの ID です。"
+                          "description": "更新するドキュメントの ID です。[ナレッジベースのドキュメントリストを取得](/ja/api-reference/documents/list-documents) を参照してください。"
                         },
                         "metadata_list": {
                           "type": "array",
@@ -11683,7 +11725,7 @@
                             "properties": {
                               "id": {
                                 "type": "string",
-                                "description": "メタデータフィールド ID です。"
+                                "description": "メタデータフィールド ID です。[メタデータフィールドリストを取得](/ja/api-reference/metadata/list-metadata-fields) を参照してください。"
                               },
                               "name": {
                                 "type": "string",
@@ -11693,7 +11735,8 @@
                                 "description": "メタデータ値。文字列、数値、または `null` を指定できます。"
                               }
                             }
-                          }
+                          },
+                          "description": "ドキュメントに設定するメタデータフィールドです。"
                         },
                         "partial_update": {
                           "type": "boolean",
@@ -11702,7 +11745,7 @@
                         }
                       }
                     },
-                    "description": "ドキュメントメタデータの更新操作の配列です。各エントリはドキュメント ID をメタデータのキーと値のペアにマッピングします。"
+                    "description": "ドキュメントメタデータの更新操作です。ドキュメントごとに 1 エントリです。"
                   }
                 }
               }
@@ -11809,7 +11852,7 @@
           "モデル"
         ],
         "summary": "利用可能なモデルを取得",
-        "description": "タイプ別に利用可能なモデルの一覧を取得します。主にナレッジベース設定用の `text-embedding` モデルと `rerank` モデルのクエリに使用します。",
+        "description": "指定したタイプの利用可能なモデルを返します。ナレッジベースに設定する `text-embedding` モデルと `rerank` モデルを見つけるために使用します。",
         "operationId": "getAvailableModelsJa",
         "parameters": [
           {
@@ -11987,7 +12030,7 @@
           "ナレッジパイプライン"
         ],
         "summary": "パイプラインファイルをアップロード",
-        "description": "ナレッジパイプラインで使用するファイルをアップロードします。`multipart/form-data` で単一ファイルを受け付けます。",
+        "description": "ナレッジパイプラインで使用するファイルをアップロードします。返された `id` を [パイプラインを実行](/ja/api-reference/knowledge-pipeline/run-pipeline) の `local_file` アイテムの `reference` として使用します。",
         "operationId": "uploadPipelineFileJa",
         "requestBody": {
           "required": true,
@@ -12002,7 +12045,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "アップロードするファイルです。"
+                    "description": "アップロードするファイル。`multipart/form-data` の 1 パートとして送信します。"
                   }
                 }
               }
@@ -12067,7 +12110,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : ファイルをアップロードしてください。\n- `filename_not_exists_error` : 指定されたファイル名が存在しません。\n- `too_many_files` : ファイルは 1 つのみ許可されています。",
+            "description": "- `no_file_uploaded` : リクエストにファイルが提供されていません。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12140,7 +12183,14 @@
             "title": "パイプラインファイルをアップロード",
             "sidebarTitle": "パイプラインファイルをアップロード"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/pipeline/file-upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/pipeline/datasource-plugins": {
@@ -12149,7 +12199,7 @@
           "ナレッジパイプライン"
         ],
         "summary": "データソースプラグインリストを取得",
-        "description": "ナレッジパイプラインで設定されたデータソースノードを一覧表示します。各ノードには使用するプラグインと、ノードの実行に必要なメタデータが含まれます。",
+        "description": "ナレッジパイプラインに設定されたデータソースノードを、それぞれが使用するプラグインとノードの実行に必要なメタデータとともに返します。",
         "operationId": "listDatasourcePluginsJa",
         "parameters": [
           {
@@ -12160,7 +12210,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "is_published",
@@ -12169,7 +12219,7 @@
               "type": "boolean",
               "default": true
             },
-            "description": "公開済みのパイプラインからノードを取得するかどうかです。デフォルトは `true` で、公開済みバージョンのノードを返します。"
+            "description": "ドラフトではなく公開済みパイプラインバージョンからノードを読み取るかどうかを指定します。"
           }
         ],
         "responses": {
@@ -12299,7 +12349,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12331,7 +12381,7 @@
           "ナレッジパイプライン"
         ],
         "summary": "データソースノードを実行",
-        "description": "ナレッジパイプライン内の単一のデータソースノードを実行します。ノードの実行結果を含むストリーミングレスポンスを返します。",
+        "description": "ナレッジパイプライン内の単一のデータソースノードを実行し、その実行イベントをストリーミングします。",
         "operationId": "runDatasourceNodeJa",
         "parameters": [
           {
@@ -12342,7 +12392,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           },
           {
             "name": "node_id",
@@ -12351,7 +12401,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "実行するデータソースノードの ID です。"
+            "description": "実行するデータソースノードの ID です。[データソースプラグインリストを取得](/ja/api-reference/knowledge-pipeline/list-datasource-plugins) から取得します。"
           }
         ],
         "requestBody": {
@@ -12384,11 +12434,11 @@
                   "credential_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "データソースとの認証に使用する認証情報の ID です。"
+                    "description": "データソースとの認証に使用する認証情報の ID です。[データソースプラグインリストを取得](/ja/api-reference/knowledge-pipeline/list-datasource-plugins) の `credentials` 配列から取得します。"
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "ノードの公開バージョンとドラフトバージョンのどちらを実行するかを指定します。`true` は公開バージョン、`false` はドラフトを実行します。"
+                    "description": "ドラフトではなくノードの公開バージョンを実行するかどうかを指定します。"
                   }
                 }
               }
@@ -12402,7 +12452,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "ノード実行の進捗と結果を含む Server-Sent Events ストリームです。"
+                  "description": "ノード実行の進捗と結果を含む Server-Sent Events ストリームです。解析については [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) を参照してください。"
                 }
               }
             }
@@ -12442,7 +12492,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12474,7 +12524,7 @@
           "ナレッジパイプライン"
         ],
         "summary": "パイプラインを実行",
-        "description": "ナレッジベースの完全なナレッジパイプラインを実行します。ストリーミングとブロッキングの両方のレスポンスモードをサポートしています。",
+        "description": "1 つ以上のデータソースに対して完全なナレッジパイプラインを実行します。`response_mode` でストリーミングまたはブロッキングのレスポンスを選択します。",
         "operationId": "runPipelineJa",
         "parameters": [
           {
@@ -12485,7 +12535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "ナレッジベース ID です。"
+            "description": "ナレッジベース ID です。[ナレッジベースリストを取得](/ja/api-reference/knowledge-bases/list-knowledge-bases) から取得します。"
           }
         ],
         "requestBody": {
@@ -12632,11 +12682,11 @@
                   },
                   "start_node_id": {
                     "type": "string",
-                    "description": "パイプライン実行を開始するノードの ID です。"
+                    "description": "実行を開始するノードの ID です。[データソースプラグインリストを取得](/ja/api-reference/knowledge-pipeline/list-datasource-plugins) から取得します。"
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "パイプラインの公開版またはドラフト版のどちらを実行するかを指定します。`true` は最新の公開版を実行し、`false` は現在のドラフトを実行します（未公開の変更をテストする場合に便利です）。"
+                    "description": "現在のドラフトではなくパイプラインの公開バージョンを実行するかどうかを指定します。未公開の変更をテストするにはドラフトを実行します。"
                   },
                   "response_mode": {
                     "type": "string",
@@ -12731,7 +12781,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events ストリームです。各行は `data: {JSON}\\n\\n` 形式です。主要なイベント：`workflow_started`（実行開始）、`node_started` / `node_finished`（ノードごとの進捗、`node_id`、`node_type`、`status`、`inputs`、`outputs` を含む）、`workflow_finished`（最終結果、`status`、`outputs`、`total_tokens`、`elapsed_time` を含む）、`ping`（キープアライブ）。"
+                  "description": "Server-Sent Events ストリームです。`response_mode` が `streaming` の場合に返されます。ワイヤーフォーマットについては [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) を参照してください。\n\n主なイベント：\n\n- `workflow_started`：実行開始\n- `node_started` / `node_finished`：ノードごとの進捗（`node_id`、`node_type`、`status`、`inputs`、`outputs` を含む）\n- `workflow_finished`：最終結果（`status`、`outputs`、`total_tokens`、`elapsed_time` を含む）\n- `ping`：キープアライブ"
                 }
               },
               "application/json": {
@@ -12794,7 +12844,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : ナレッジベースが見つかりません。",
+            "description": "`not_found` : `dataset_id` に一致するナレッジベースがありません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -12844,7 +12894,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API_KEY",
-        "description": "API Key 認証です。すべての API リクエストにおいて、`Authorization` HTTP ヘッダーに `Bearer ` プレフィックスを付けた API Key を含めてください。例：`Authorization: Bearer {API_KEY}`。**API Key はサーバーサイドに保存し、クライアントサイドで共有・保存しないことを強く推奨します。API Key の漏洩は深刻な結果につながる可能性があります。**API Key が欠落または無効な場合、HTTP `401` とエラーコード `unauthorized` が返されます。"
+        "description": "すべてのリクエストは API キーで認証します：`Authorization: Bearer {API_KEY}`。アプリのエンドポイントにはアプリの API キーを、ナレッジのエンドポイントにはナレッジベースの API キーを使用します（[Dify API クイックスタート](/ja/api-reference/guides/get-started)）。\n\nキーはサーバーサイドで保管し、クライアントコードには決して埋め込まないでください。キーが欠落または無効なリクエストは HTTP `401`（`unauthorized`）で失敗します。"
       }
     },
     "responses": {
@@ -12884,11 +12934,11 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "ユーザーの入力/質問内容です。"
+            "description": "ユーザーのメッセージです。"
           },
           "inputs": {
             "type": "object",
-            "description": "アプリで定義されたさまざまな変数の値を入力できます。キーと値のペアを含みます。アプリが期待する変数名と型については、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) レスポンスの `user_input_form` フィールドを参照してください。",
+            "description": "アプリの入力変数の値を、変数名をキーとして指定します。期待される名前と型は、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) の `user_input_form` フィールドで確認できます。",
             "additionalProperties": true
           },
           "response_mode": {
@@ -12897,19 +12947,19 @@
               "streaming",
               "blocking"
             ],
-            "description": "レスポンスの返却モードです。`streaming`（推奨）は SSE を使用します。`blocking` は完了後に返します（長時間の処理では中断される場合があります。エージェントアシスタントモードではサポートされていません）。Cloudflare のタイムアウトは `100 s` です。省略した場合、デフォルトはブロッキング動作になります。 新しい Agent アプリは `streaming` のみに対応しています。`blocking` を指定すると 400 `bad_request` が返されます。"
+            "description": "レスポンスの返却モードです。省略した場合はブロッキングになります。\n\n- `streaming`（推奨）：応答は Server-Sent Events として届きます。\n- `blocking`：生成の完了後に返します。長時間の生成は中断されるおそれがあります。Dify Cloud では、応答がタイムアウト内に届かないと、エッジプロキシが接続を終了する場合があります。\n- Agent と新しい Agent アプリは `streaming` のみに対応します。`blocking` のリクエストは 400 で失敗します。"
           },
           "user": {
             "type": "string",
-            "description": "アプリケーション内で一意のユーザー識別子です。この識別子はデータアクセスの範囲を限定します——会話、メッセージ、ファイルは同じ `user` 値でクエリした場合にのみ表示されます。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。会話、メッセージ、ファイルは、同じ `user` を持つリクエストにのみ表示されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           "conversation_id": {
             "type": "string",
-            "description": "会話を継続するための会話 ID です。前のメッセージの `conversation_id` を渡します。新しい会話を開始するには、このフィールドを省略するか空文字列を渡します。レスポンスで `conversation_id` が返されます——以降のメッセージでこの値を渡すとその会話を継続できます。"
+            "description": "継続する会話の ID です。省略するか空文字列を渡すと新しい会話を開始します。レスポンスで `conversation_id` が返されるので、次のメッセージで渡します。以前の会話を再開するには、その ID を [会話一覧を取得](/ja/api-reference/conversations/list-conversations) から取得します。"
           },
           "files": {
             "type": "array",
-            "description": "マルチモーダル理解用のファイルリストです。画像、ドキュメント、音声、動画を含みます。ローカルファイルを添付するには、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。 新しい Agent アプリでは未対応です。ファイルの内容は処理されません。",
+            "description": "メッセージに添付するファイルです。ローカルファイルの場合は、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で参照します。新しい Agent アプリはファイル参照を受け付けますが、その内容は処理しません。",
             "items": {
               "type": "object",
               "required": [
@@ -13675,7 +13725,7 @@
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。開発者が定義し、アプリケーション内での一意性を確保する必要があります。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。フィードバックはそのエンドユーザーにスコープされるため、メッセージを受け取った `user` と一致する必要があります。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           "content": {
             "type": "string",
@@ -14080,7 +14130,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "会話の名前です。`auto_generate` が `false` の場合は必須です。"
+            "description": "新しい会話名です。`auto_generate` が `true` でない限り必須です。"
           },
           "auto_generate": {
             "type": "boolean",
@@ -14089,7 +14139,7 @@
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子です。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           }
         }
       },
@@ -14161,7 +14211,7 @@
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           }
         }
       },
@@ -14175,11 +14225,11 @@
           "file": {
             "type": "string",
             "format": "binary",
-            "description": "音声ファイルです。MIME タイプで検証され、`audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` のいずれかである必要があります。上限：`30 MB`。"
+            "description": "文字起こしする音声ファイルです。受け付ける MIME タイプは `audio/mp3`、`audio/m4a`、`audio/wav`、`audio/amr`、`audio/mpga` です。それ以外のタイプ（一般的な `audio/mpeg` を含む）は `unsupported_audio_type` で拒否されます。最大サイズは `30 MB` です。"
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           }
         }
       },
@@ -14199,15 +14249,15 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "メッセージ ID です。両方が指定された場合、`text` よりも優先されます。"
+            "description": "回答を音声化するメッセージの ID です。両方が指定された場合、`text` よりも優先されます。メッセージ ID は [会話履歴メッセージ一覧を取得](/ja/api-reference/conversations/list-conversation-messages) から取得します。"
           },
           "text": {
             "type": "string",
-            "description": "変換する音声コンテンツ。"
+            "description": "音声に合成するテキストです。"
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           "voice": {
             "type": "string",
@@ -14532,11 +14582,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "アノテーションの質問です。"
+            "description": "アプリが受信したユーザー入力を照合する質問テキストです。"
           },
           "answer": {
             "type": "string",
-            "description": "アノテーションの回答です。"
+            "description": "このアノテーションが一致したときに返される回答です。"
           }
         }
       },
@@ -14550,11 +14600,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "更新されたアノテーションの質問です。"
+            "description": "アノテーションの新しい質問テキストです。"
           },
           "answer": {
             "type": "string",
-            "description": "更新されたアノテーションの回答です。"
+            "description": "アノテーションの新しい回答テキストです。"
           }
         }
       },
@@ -14569,11 +14619,11 @@
         "properties": {
           "embedding_provider_name": {
             "type": "string",
-            "description": "埋め込みモデルプロバイダーの名前（例：`openai`、`cohere`）です。"
+            "description": "埋め込みモデルプロバイダーです（例：`openai`）。利用可能なプロバイダーは [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) から取得します。"
           },
           "embedding_model_name": {
             "type": "string",
-            "description": "アノテーションマッチングに使用する埋め込みモデルの名前です（例：`text-embedding-3-small`）。"
+            "description": "マッチングのためにアノテーションをベクトル化する埋め込みモデルです（例：`text-embedding-3-small`）。"
           },
           "score_threshold": {
             "type": "number",
@@ -16497,7 +16547,7 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "ワークフロー入力変数のキーと値のペアです。ファイル型変数の値は、`type`、`transfer_method`、および `url` または `upload_file_id` を持つファイルオブジェクトの配列である必要があります。アプリが期待する変数名と型については、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) レスポンスの `user_input_form` フィールドを参照してください。",
+            "description": "ワークフロー入力変数のキーと値のペアです。アプリが期待する変数名と型は、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) の `user_input_form` フィールドで確認できます。\n\nファイル型の変数には、`type`、`transfer_method`、および `url` または `upload_file_id` を持つファイルオブジェクトの配列を渡します。",
             "additionalProperties": {
               "oneOf": [
                 {
@@ -16531,7 +16581,7 @@
           },
           "user": {
             "type": "string",
-            "description": "開発者のルールで定義されるユーザー識別子で、アプリケーション内で一意である必要があります。この識別子はデータアクセスの範囲を限定します——ワークフロー実行とファイルは同じ `user` 値でクエリした場合にのみ表示されます。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。データアクセスをスコープします。ワークフロー実行とそのファイルは、同じ `user` を持つ後続のリクエストにのみ表示されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           "files": {
             "type": "array",
@@ -18062,13 +18112,13 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "アプリで定義されたさまざまな変数の値を入力できます。キーと値のペアを含み、各キーは特定の変数に対応し、各値はその変数の具体的な値です。アプリが期待する変数名と型については、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) レスポンスの `user_input_form` フィールドを参照してください。",
+            "description": "アプリの入力変数の値を、変数名をキーとして指定します。期待される名前と型は、[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) の `user_input_form` フィールドで確認できます。",
             "additionalProperties": true
           },
           "query": {
             "type": "string",
             "default": "",
-            "description": "処理対象の入力テキストです。これはレガシーパラメータであり、新しいアプリではクエリを `inputs` オブジェクト内で渡す必要があります。"
+            "description": "処理するテキストです。レガシーフィールドで、新しいアプリではこの値を `inputs` の中で渡します。"
           },
           "response_mode": {
             "type": "string",
@@ -18080,14 +18130,14 @@
           },
           "user": {
             "type": "string",
-            "description": "ユーザー識別子。アプリケーション内で一意です。この識別子はデータアクセスの範囲を制限します。メッセージとファイルは同じ `user` 値でクエリした場合のみ表示されます。"
+            "description": "エンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。メッセージとファイルは、同じ `user` を持つリクエストにのみ表示されます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
           },
           "files": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/InputFileObject"
             },
-            "description": "マルチモーダル理解用のファイルリストです。画像、ドキュメント、音声、動画を含みます。ローカルファイルを添付するには、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で使用します。"
+            "description": "リクエストに添付するファイルです。ローカルファイルの場合は、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で参照します。"
           }
         }
       },
@@ -19136,7 +19186,7 @@
             "properties": {
               "reranking_provider_name": {
                 "type": "string",
-                "description": "リランクモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/cohere/cohere`）。`cohere` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=rerank` を指定した際の `provider` フィールドから取得します。"
+                "description": "リランクモデルプロバイダーの識別子です。`organization/plugin_name/provider_name` の形式です（例：`langgenius/cohere/cohere`）。`cohere` のような短縮名は `langgenius/<name>/<name>` に展開され、langgenius が公開したプラグインでのみ機能します。\n\n有効な値は [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) で `model_type=rerank` を指定した際の `provider` フィールドから取得します。"
               },
               "reranking_model_name": {
                 "type": "string",
@@ -19242,7 +19292,7 @@
                     },
                     "comparison_operator": {
                       "type": "string",
-                      "description": "適用する比較方法です。文字列演算子（`contains`、`not contains`、`start with`、`end with`、`is`、`is not`、`empty`、`not empty`、`in`、`not in`）は文字列または配列のメタデータに作用します。数値演算子（`=`、`≠`、`>`、`<`、`≥`、`≤`）は数値メタデータに作用します。時刻演算子（`before`、`after`）は時刻メタデータに作用します。",
+                      "description": "適用する比較方法です。メタデータのタイプ別：\n\n- 文字列または配列のメタデータ：`contains`、`not contains`、`start with`、`end with`、`is`、`is not`、`empty`、`not empty`、`in`、`not in`\n- 数値メタデータ：`=`、`≠`、`>`、`<`、`≥`、`≤`\n- 時刻メタデータ：`before`、`after`",
                       "enum": [
                         "contains",
                         "not contains",

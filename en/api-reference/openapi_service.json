@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "Send Chat Message",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nSend a request to the chat application. Works with Chatbot, Agent, Chatflow, and New Agent apps; the events in the streaming response vary by app type.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nSends a message to a chat app and returns the assistant's reply. The events in the streaming response vary by app type.",
         "operationId": "sendChatMessage",
         "tags": [
           "Chat Messages"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which arrive as `event: ping` lines (no `data:` payload) every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: For Chatbot apps, the reply streams as `message` events; for Agent apps, as `agent_thought` and `agent_message` events. The stream ends with `message_end`; when text-to-speech auto-play is enabled, `tts_message` events interleave and `tts_message_end` becomes the final event.\n\nFor Chatflow apps, workflow progress streams as `workflow_started`, node events (`node_started` and `node_finished`, plus iteration and loop variants), and the reply as `message` events (an LLM node with `reasoning_format: separated` also emits `reasoning_chunk` events alongside, carrying the model's reasoning content). When text-to-speech auto-play is enabled, `tts_message_end` trails the closing event. The closing sequence depends on the outcome:\n- **Success**: `message_end`, then `workflow_finished`\n- **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n- **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\nFor New Agent apps, the reply streams incrementally as `agent_message` events, with the model's reasoning and tool calls streaming alongside as `agent_thought` events; a single closing `message` event then carries the complete answer (render the deltas live and treat that `message` as the final answer rather than appending it). `message_end` metadata carries `usage` (plus `annotation_reply` when an annotation match replies) and never includes `retriever_resources`.\n\n**Events**: Apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) also nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order); for New Agent, one closing chunk with the complete answer | `answer` |\n| `agent_message` | Agent, New Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |\n| `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |\n| `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | All | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Agent, Chatflow | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events** (Chatflow apps only)\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive every 10 seconds | none |"
+                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive every 10 seconds).\n\n**Events by app type** (the reply events, then how the stream closes):\n\n- **Chatbot**: `message` chunks (concatenate in order) → `message_end`.\n- **Agent**: `agent_thought` reasoning and tool-call steps alongside `agent_message` chunks → `message_end`.\n- **New Agent**: `agent_message` chunks with `agent_thought` steps alongside → one closing `message` carrying the complete answer (treat it as the final answer, not extra text to append) → `message_end`. Its `message_end` metadata carries `usage` (plus `annotation_reply` on an annotation match) and never `retriever_resources`.\n- **Chatflow**: `workflow_started` → node events (`node_started`, `node_finished`, plus iteration and loop variants) alongside `message` chunks → then, by outcome:\n  - **Success**: `message_end`, then `workflow_finished`\n  - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n  - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\n**Add-ons**:\n\n- Text-to-speech auto-play: `tts_message` audio chunks interleave, and `tts_message_end` trails the closing event.\n- Chatflow LLM nodes with `reasoning_format: separated` also emit `reasoning_chunk` deltas carrying the model's reasoning.\n\n**Common fields**: apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order); for New Agent, one closing chunk with the complete answer | `answer` |\n| `agent_message` | Agent, New Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |\n| `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |\n| `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | All | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Agent, Chatflow | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events** (Chatflow apps only)\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive every 10 seconds | none |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -404,7 +404,14 @@
             "title": "Send Chat Message",
             "sidebarTitle": "Send Chat Message"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/chat-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"query\": \"What are the specs of the iPhone 13 Pro Max?\", \"inputs\": {}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/chat-messages/{task_id}/stop": {
@@ -420,7 +427,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "Task ID, can be obtained from the streaming chunk return of the [Send Chat Message](/en/api-reference/chat-messages/send-chat-message) API.",
+            "description": "Task ID, from the streaming events of [Send Chat Message](/en/api-reference/chat-messages/send-chat-message).",
             "schema": {
               "type": "string"
             }
@@ -438,7 +445,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "User identifier. Must match the `user` passed when the message was sent: if it differs, the stop silently does nothing and the response still returns success."
+                    "description": "End-user identifier, defined by your app and unique within it. Must match the `user` sent with the original message; if it differs, the stop silently does nothing and still returns success. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               },
@@ -458,7 +465,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_chat_app` : App mode does not match the API route.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `not_chat_app` : App mode does not match the API route.\n- `invalid_param` : The required `user` field is missing.",
             "content": {
               "application/json": {
                 "examples": {
@@ -495,7 +502,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "Get Next Suggested Questions",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nGet next questions suggestions for the current message.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nReturns the follow-up questions suggested for a message.",
         "operationId": "getSuggestedQuestions",
         "tags": [
           "Chat Messages"
@@ -505,7 +512,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "Message ID.",
+            "description": "ID of the message to get suggestions for. Get it from a chat response or [List Conversation Messages](/en/api-reference/conversations/list-conversation-messages).",
             "schema": {
               "type": "string"
             }
@@ -514,7 +521,7 @@
             "name": "user",
             "in": "query",
             "required": true,
-            "description": "User identifier.",
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity).",
             "schema": {
               "type": "string"
             }
@@ -642,7 +649,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "The file to upload, as one `multipart/form-data` part. Any extension is accepted unless it is on the deployment's security blacklist (`UPLOAD_FILE_EXTENSION_BLACKLIST`, empty by default). Size limits apply per category: images 10 MB, audio 50 MB, video 100 MB, and other files 15 MB by default (Dify Cloud uses the defaults); self-hosted deployments adjust them with the `UPLOAD_*_FILE_SIZE_LIMIT` [environment variables](/en/self-host/deploy/configuration/environments). The filename must not contain `/` or `\\`."
+                    "description": "The file to upload, as one `multipart/form-data` part. The filename must not contain `/` or `\\`.\n\nAny extension is accepted unless it is on the deployment's security blacklist (`UPLOAD_FILE_EXTENSION_BLACKLIST`, empty by default).\n\nSize limits per category: images 10 MB, audio 50 MB, video 100 MB, other files 15 MB by default (Dify Cloud uses the defaults). Self-hosted deployments adjust them with the `UPLOAD_*_FILE_SIZE_LIMIT` [environment variables](/en/self-host/deploy/configuration/environments)."
                   },
                   "user": {
                     "type": "string",
@@ -781,7 +788,7 @@
     "/files/{file_id}/preview": {
       "get": {
         "summary": "Download File",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nPreview or download uploaded files previously uploaded via the [Upload File](/en/api-reference/files/upload-file) API. Files can only be accessed if they belong to messages within the requesting application.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nReturns the raw bytes of a file previously returned by [Upload File](/en/api-reference/files/upload-file). A file is reachable only through the app whose messages reference it.",
         "operationId": "previewChatFile",
         "tags": [
           "Files"
@@ -791,7 +798,7 @@
             "name": "file_id",
             "in": "path",
             "required": true,
-            "description": "The unique identifier of the file to preview, obtained from the [Upload File](/en/api-reference/files/upload-file) API response.",
+            "description": "ID of the file to download, from the Upload File response.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -801,7 +808,7 @@
             "name": "as_attachment",
             "in": "query",
             "required": false,
-            "description": "If `true`, forces the file to download as an attachment instead of previewing in browser.",
+            "description": "When `true`, the file downloads as an attachment instead of rendering inline in the browser.",
             "schema": {
               "type": "boolean",
               "default": false
@@ -811,7 +818,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "User identifier, used for end-user context.",
+            "description": "End-user identifier, defined by your app and unique within it. It has no effect on file access here, which is scoped by app and message rather than by `user`. See [End User Identity](/en/api-reference/guides/end-user-identity).",
             "schema": {
               "type": "string"
             }
@@ -830,7 +837,7 @@
             }
           },
           "403": {
-            "description": "`file_access_denied` : Access to the requested file is denied.",
+            "description": "`file_access_denied` : The file exists but belongs to a different app or workspace.",
             "content": {
               "application/json": {
                 "examples": {
@@ -847,7 +854,7 @@
             }
           },
           "404": {
-            "description": "`file_not_found` : The requested file was not found.",
+            "description": "`file_not_found` : No file with this ID is reachable through this app's messages.",
             "content": {
               "application/json": {
                 "examples": {
@@ -876,7 +883,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "Get End User Info",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nRetrieve an end user by ID. Useful when other APIs return an end-user ID (e.g., `created_by` from [Upload File](/en/api-reference/files/upload-file)).",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns an end user's details by ID. Useful for resolving an end-user ID returned by another endpoint, such as `created_by` in the [Upload File](/en/api-reference/files/upload-file) response.",
         "operationId": "getEndUserChat",
         "tags": [
           "End Users"
@@ -886,7 +893,7 @@
             "name": "end_user_id",
             "in": "path",
             "required": true,
-            "description": "End user ID.",
+            "description": "ID of the end user to look up.",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -951,7 +958,7 @@
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "Submit Message Feedback",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nSubmit feedback for a message. End users can rate messages as `like` or `dislike`, and optionally provide text feedback. Pass `null` for `rating` to revoke previously submitted feedback.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nRecords a `like` or `dislike` rating, plus an optional comment, on a message. Submitting `null` for `rating` revokes the message's existing feedback.",
         "operationId": "postChatMessageFeedback",
         "tags": [
           "Feedback"
@@ -961,7 +968,7 @@
             "name": "message_id",
             "in": "path",
             "required": true,
-            "description": "Message ID.",
+            "description": "ID of the message to give feedback on. Get message IDs from [List Conversation Messages](/en/api-reference/conversations/list-conversation-messages).",
             "schema": {
               "type": "string"
             }
@@ -992,7 +999,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "`invalid_param` : A required parameter is missing or invalid. Returned when the `user` field is omitted, or when `rating` is `null` but there is no existing feedback to revoke.",
+            "description": "`invalid_param` : The required `user` field is omitted, or `rating` is `null` but there is no existing feedback to revoke.",
             "content": {
               "application/json": {
                 "examples": {
@@ -1038,7 +1045,7 @@
     "/app/feedbacks": {
       "get": {
         "summary": "List App Feedbacks",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nRetrieve a paginated list of all feedback submitted for messages in this application, including both end-user and admin feedback.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nReturns a paginated list of all feedback on the app's messages, including both end-user and admin submissions.",
         "operationId": "getChatAppFeedbacks",
         "tags": [
           "Feedback"
@@ -1047,7 +1054,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "Page number for pagination.",
+            "description": "Page number.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1058,7 +1065,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Number of records per page.",
+            "description": "Feedback items per page.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -1127,7 +1134,7 @@
     "/conversations": {
       "get": {
         "summary": "List Conversations",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nRetrieve the conversation list for the current user, ordered by most recently active.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nLists an end user's conversations, most recently active first.",
         "operationId": "getConversationsList",
         "tags": [
           "Conversations"
@@ -1137,7 +1144,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "User identifier.",
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity).",
             "schema": {
               "type": "string"
             }
@@ -1146,7 +1153,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "The ID of the last record on the current page (for pagination).",
+            "description": "Pagination cursor: the `id` of the last conversation on the current page. Omit to fetch the first page.",
             "schema": {
               "type": "string"
             }
@@ -1167,7 +1174,7 @@
             "name": "sort_by",
             "in": "query",
             "required": false,
-            "description": "Sorting field. Use '-' prefix for descending order.",
+            "description": "Field to sort by. Prefix with `-` for descending order.",
             "schema": {
               "type": "string",
               "enum": [
@@ -1260,7 +1267,7 @@
     "/messages": {
       "get": {
         "summary": "List Conversation Messages",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nReturns historical chat records in a scrolling load format, with the first page returning the latest `limit` messages, i.e., in reverse order.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nReturns a conversation's message history, newest first. Pass `first_id` to page backward into older messages.",
         "operationId": "getConversationHistory",
         "tags": [
           "Conversations"
@@ -1270,7 +1277,7 @@
             "name": "conversation_id",
             "in": "query",
             "required": true,
-            "description": "Conversation ID.",
+            "description": "ID of the conversation to read. Get conversation IDs from [List Conversations](/en/api-reference/conversations/list-conversations).",
             "schema": {
               "type": "string"
             }
@@ -1279,7 +1286,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "User identifier.",
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity).",
             "schema": {
               "type": "string"
             }
@@ -1288,7 +1295,7 @@
             "name": "first_id",
             "in": "query",
             "required": false,
-            "description": "The ID of the first chat record on the current page. Default is `null` (fetches the latest messages). For subsequent pages, use the ID of the first message from the current list to get older messages.",
+            "description": "Pagination cursor: the `id` of the first message on the current page. Pass it to fetch the previous (older) page; omit to fetch the latest messages.",
             "schema": {
               "type": "string"
             }
@@ -1372,7 +1379,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Conversation does not exist.\n- `not_found` : First message does not exist.",
+            "description": "- `not_found` : Conversation does not exist.\n- `not_found` : First message does not exist (invalid `first_id`).",
             "content": {
               "application/json": {
                 "examples": {
@@ -1416,7 +1423,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "List Conversation Variables",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nRetrieve variables from a specific conversation.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nLists the variables stored in a conversation.",
         "operationId": "getConversationVariables",
         "tags": [
           "Conversations"
@@ -1426,7 +1433,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "Conversation ID.",
+            "description": "ID of the conversation whose variables to list. Get conversation IDs from [List Conversations](/en/api-reference/conversations/list-conversations).",
             "schema": {
               "type": "string"
             }
@@ -1435,7 +1442,7 @@
             "name": "user",
             "in": "query",
             "required": false,
-            "description": "The user identifier.",
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity).",
             "schema": {
               "type": "string"
             }
@@ -1444,7 +1451,7 @@
             "name": "last_id",
             "in": "query",
             "required": false,
-            "description": "The ID of the last record on the current page (for pagination).",
+            "description": "Pagination cursor: the `id` of the last variable on the current page. Omit to fetch the first page.",
             "schema": {
               "type": "string"
             }
@@ -1559,7 +1566,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "Rename Conversation",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nRename a conversation or auto-generate a name. The conversation name is used for display on clients that support multiple conversations.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nRenames a conversation, or auto-generates a name from its messages when `auto_generate` is `true`. The name is what clients display in a multi-conversation list.",
         "operationId": "renameConversation",
         "tags": [
           "Conversations"
@@ -1569,7 +1576,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "Conversation ID.",
+            "description": "ID of the conversation to rename. Get conversation IDs from [List Conversations](/en/api-reference/conversations/list-conversations).",
             "schema": {
               "type": "string"
             }
@@ -1676,7 +1683,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "Update Conversation Variable",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdate the value of a specific conversation variable. The value must match the expected type.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdates a conversation variable's value. The new value must match the variable's existing type.",
         "operationId": "updateChatConversationVariable",
         "tags": [
           "Conversations"
@@ -1686,7 +1693,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "Conversation ID.",
+            "description": "ID of the conversation that owns the variable. Get conversation IDs from [List Conversations](/en/api-reference/conversations/list-conversations).",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1696,7 +1703,7 @@
             "name": "variable_id",
             "in": "path",
             "required": true,
-            "description": "Variable ID.",
+            "description": "ID of the variable to update. Get variable IDs from [List Conversation Variables](/en/api-reference/conversations/list-conversation-variables).",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -1810,7 +1817,7 @@
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "Delete Conversation",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nDelete a conversation.",
+        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nDeletes a conversation.",
         "operationId": "deleteConversation",
         "tags": [
           "Conversations"
@@ -1820,7 +1827,7 @@
             "name": "conversation_id",
             "in": "path",
             "required": true,
-            "description": "Conversation ID.",
+            "description": "ID of the conversation to delete. Get conversation IDs from [List Conversations](/en/api-reference/conversations/list-conversations).",
             "schema": {
               "type": "string"
             }
@@ -1836,7 +1843,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "The user identifier."
+                    "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               },
@@ -1902,7 +1909,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "Convert Audio to Text",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nConvert audio file to text. The uploaded file's MIME type must be one of `audio/mp3`, `audio/m4a`, `audio/wav`, `audio/amr`, `audio/mpga`; other types, including the common `audio/mpeg`, are rejected with the `unsupported_audio_type` error. File size limit is `30 MB`.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nTranscribes an uploaded audio file to text using the app's configured speech-to-text model.",
         "operationId": "audioToText",
         "tags": [
           "Audio"
@@ -1937,7 +1944,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `invalid_param` : Invalid request. Returned when speech-to-text is not enabled for this app.\n- `provider_not_support_speech_to_text` : Model provider does not support speech-to-text.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model does not support this operation.\n- `completion_request_error` : Speech recognition request failed.",
+            "description": "- `app_unavailable` : The app is unavailable or misconfigured.\n- `invalid_param` : Speech-to-text is not enabled for this app.\n- `provider_not_support_speech_to_text` : The model provider does not support speech-to-text.\n- `provider_not_initialize` : No valid model provider credentials are configured.\n- `provider_quota_exceeded` : The model provider quota is exhausted.\n- `model_currently_not_support` : The current model does not support this operation.\n- `completion_request_error` : The speech recognition request failed.",
             "content": {
               "application/json": {
                 "examples": {
@@ -2002,7 +2009,7 @@
             }
           },
           "413": {
-            "description": "`audio_too_large` : Audio file size exceeded the limit.",
+            "description": "`audio_too_large` : The audio file exceeds the `30 MB` size limit.",
             "content": {
               "application/json": {
                 "examples": {
@@ -2019,7 +2026,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_audio_type` : Audio type is not allowed.",
+            "description": "`unsupported_audio_type` : The file's MIME type is not one of the accepted audio types (see the `file` field).",
             "content": {
               "application/json": {
                 "examples": {
@@ -2059,13 +2066,20 @@
             "title": "Convert Audio to Text",
             "sidebarTitle": "Convert Audio to Text"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/audio-to-text' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@meeting-question.mp3' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/text-to-audio": {
       "post": {
         "summary": "Convert Text to Audio",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nConvert text to speech.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nConverts text to speech audio. Pass `text` to synthesize arbitrary text, or `message_id` to voice an existing message's answer.",
         "operationId": "textToAudioChat",
         "tags": [
           "Audio"
@@ -2104,7 +2118,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `invalid_param` : Invalid request. Returned when text-to-speech is not enabled, `text` is missing, or no voice is available.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model does not support this operation.\n- `completion_request_error` : Text-to-speech request failed.",
+            "description": "- `app_unavailable` : The app is unavailable or misconfigured.\n- `invalid_param` : Text-to-speech is not enabled, `text` is missing, or no voice is available.\n- `provider_not_initialize` : No valid model provider credentials are configured.\n- `provider_quota_exceeded` : The model provider quota is exhausted.\n- `model_currently_not_support` : The current model does not support this operation.\n- `completion_request_error` : The text-to-speech request failed.",
             "content": {
               "application/json": {
                 "examples": {
@@ -2190,7 +2204,7 @@
     "/info": {
       "get": {
         "summary": "Get App Info",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nRetrieve basic information about this application, including name, description, tags, and mode.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns basic information about the app: name, description, tags, mode, and author.",
         "operationId": "getChatAppInfo",
         "tags": [
           "Applications"
@@ -2234,7 +2248,7 @@
     "/parameters": {
       "get": {
         "summary": "Get App Parameters",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nRetrieve the application's input form configuration, including feature switches, input parameter names, types, and default values.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the app's front-end configuration: the opening statement and suggested questions, feature toggles, the user input form, and file-upload limits. Use it to render the app's inputs and apply the correct upload limits.",
         "operationId": "getChatAppParameters",
         "tags": [
           "Applications"
@@ -2315,7 +2329,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `agent_not_published` : The bound Agent has no published version. (New Agent apps)",
+            "description": "- `app_unavailable` : The app is unavailable or misconfigured.\n- `agent_not_published` : The app's Agent has no published version yet. (New Agent apps)",
             "content": {
               "application/json": {
                 "examples": {
@@ -2352,7 +2366,7 @@
     "/meta": {
       "get": {
         "summary": "Get App Meta",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nRetrieve metadata about this application, including tool icons and other configuration details.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the display icons for the tools this app uses, keyed by tool name.",
         "operationId": "getChatAppMeta",
         "tags": [
           "Applications"
@@ -2395,7 +2409,7 @@
     "/site": {
       "get": {
         "summary": "Get App WebApp Settings",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nRetrieve the WebApp settings of this application, including site configuration, theme, and customization options.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the branding and display settings for the app's hosted WebApp, such as its title, icon, theme colors, and default language.",
         "operationId": "getChatWebAppSettings",
         "tags": [
           "Applications"
@@ -2463,7 +2477,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "Create Annotation",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nCreates a new annotation. Annotations provide predefined question-answer pairs that the app can match and return directly instead of generating a response.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nCreates an annotation. Annotations are predefined question-answer pairs the app returns directly on a match, instead of generating a fresh response.",
         "operationId": "createAnnotation",
         "tags": [
           "Annotations"
@@ -2521,7 +2535,7 @@
       },
       "get": {
         "summary": "List Annotations",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nRetrieves a paginated list of annotations for the application. Supports keyword search filtering.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nLists the app's annotations, optionally filtered by keyword.",
         "operationId": "getAnnotationList",
         "tags": [
           "Annotations"
@@ -2530,7 +2544,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "Page number for pagination.",
+            "description": "Page number.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2540,7 +2554,7 @@
           {
             "name": "limit",
             "in": "query",
-            "description": "Number of items per page.",
+            "description": "Number of items per page. Requests above 100 are capped at 100.",
             "required": false,
             "schema": {
               "type": "integer",
@@ -2601,7 +2615,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "Update Annotation",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdates the question and answer of an existing annotation.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdates an annotation's question and answer.",
         "operationId": "updateAnnotation",
         "tags": [
           "Annotations"
@@ -2611,7 +2625,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "The unique identifier of the annotation to update.",
+            "description": "ID of the annotation to update. Get annotation IDs from [List Annotations](/en/api-reference/annotations/list-annotations).",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2698,7 +2712,7 @@
             "name": "annotation_id",
             "in": "path",
             "required": true,
-            "description": "The unique identifier of the annotation to delete.",
+            "description": "ID of the annotation to delete. Get annotation IDs from [List Annotations](/en/api-reference/annotations/list-annotations).",
             "schema": {
               "type": "string",
               "format": "uuid"
@@ -2739,7 +2753,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "Configure Annotation Reply",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nEnables or disables the annotation reply feature. The request body is validated before the action runs, so `embedding_provider_name`, `embedding_model_name`, and `score_threshold` are required for both `enable` and `disable`. Executes asynchronously; use [Get Annotation Reply Job Status](/en/api-reference/annotations/get-annotation-reply-job-status) to track progress.",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nEnables or disables annotation reply for the app. Runs asynchronously; track progress with [Get Annotation Reply Job Status](/en/api-reference/annotations/get-annotation-reply-job-status).\n\nThe body is validated before the action runs, so `score_threshold`, `embedding_provider_name`, and `embedding_model_name` are required even for `disable`.",
         "operationId": "initialAnnotationReplySettings",
         "tags": [
           "Annotations"
@@ -2749,7 +2763,7 @@
             "name": "action",
             "in": "path",
             "required": true,
-            "description": "Action to perform.",
+            "description": "Whether to enable or disable annotation reply.",
             "schema": {
               "type": "string",
               "enum": [
@@ -2812,7 +2826,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "Get Annotation Reply Job Status",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nRetrieves the status of an asynchronous annotation reply configuration job started by [Configure Annotation Reply](/en/api-reference/annotations/configure-annotation-reply).",
+        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nReturns the status of an annotation reply configuration job started by [Configure Annotation Reply](/en/api-reference/annotations/configure-annotation-reply).",
         "operationId": "getInitialAnnotationReplySettingsStatus",
         "tags": [
           "Annotations"
@@ -2893,7 +2907,7 @@
     "/workflows/run/{workflow_run_id}": {
       "get": {
         "summary": "Get Workflow Run Detail",
-        "description": "**Available for**: Chatflow, Workflow apps.\n\nRetrieve the current execution results of a workflow task based on the workflow execution ID.",
+        "description": "**Available for**: Chatflow, Workflow apps.\n\nGet a single workflow run's status, inputs, outputs, and execution metrics.",
         "operationId": "getWorkflowRunDetail",
         "tags": [
           "Workflow Runs"
@@ -2903,7 +2917,7 @@
             "name": "workflow_run_id",
             "in": "path",
             "required": true,
-            "description": "Workflow run ID, can be obtained from the workflow execution response, streaming events, or message metadata.",
+            "description": "Workflow run ID, from the response or streaming events of [Run Workflow](/en/api-reference/workflow-runs/run-workflow), or from message metadata in Chatflow apps.",
             "schema": {
               "type": "string"
             }
@@ -3017,7 +3031,7 @@
           {
             "name": "page",
             "in": "query",
-            "description": "Page number for pagination.",
+            "description": "Page number.",
             "schema": {
               "type": "integer",
               "default": 1,
@@ -3154,7 +3168,7 @@
           "Human Input"
         ],
         "summary": "Get Human Input Form",
-        "description": "**Available for**: Chatflow, Workflow apps.\n\nRetrieve a paused Human Input form's contents. Requires WebApp delivery.\n\nSee the [API Integration Flow](/en/api-reference/guides/human-input-flow) for the end-to-end sequence of calling Human Input endpoints.",
+        "description": "**Available for**: Chatflow, Workflow apps.\n\nReturns the contents of a paused Human Input form. Requires WebApp delivery.\n\nFor the full sequence of Human Input calls, see [Human Input Flow](/en/api-reference/guides/human-input-flow).",
         "operationId": "getChatflowHumanInputForm",
         "parameters": [
           {
@@ -3455,7 +3469,7 @@
           "Human Input"
         ],
         "summary": "Submit Human Input Form",
-        "description": "**Available for**: Chatflow, Workflow apps.\n\nSubmit the recipient's response to a paused Human Input form. The workflow resumes on acceptance; follow subsequent events via the Stream Workflow Events endpoint. Requires WebApp delivery.",
+        "description": "**Available for**: Chatflow, Workflow apps.\n\nSubmits the recipient's response to a paused Human Input form. On acceptance the workflow resumes; follow the resumed run via [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events). Requires WebApp delivery.",
         "operationId": "submitChatflowHumanInputForm",
         "parameters": [
           {
@@ -3483,7 +3497,7 @@
                   "inputs": {
                     "type": "object",
                     "additionalProperties": true,
-                    "description": "Submitted values keyed by each input's `output_variable_name`. Paragraph and select inputs take a string; a `file` input takes one file mapping; a `file-list` input takes an array of file mappings. A file mapping is `{transfer_method: local_file, upload_file_id, type}` or `{transfer_method: remote_url, url, type}`, where `type` is one of the field's `allowed_file_types` (`image`, `document`, `audio`, `video`, `custom`). For `local_file`, `upload_file_id` is the `id` from [Upload File](/en/api-reference/files/upload-file). Use a consistent `user` across the run, upload, and submit."
+                    "description": "Submitted values keyed by each input's `output_variable_name`. Paragraph and select inputs take a string; a `file` input takes one file mapping; a `file-list` input takes an array of file mappings.\n\nA file mapping is `{transfer_method: local_file, upload_file_id, type}` or `{transfer_method: remote_url, url, type}`, where `type` is one of the field's `allowed_file_types`. For `local_file`, `upload_file_id` is the `id` from [Upload File](/en/api-reference/files/upload-file).\n\nUse a consistent `user` across the run, upload, and submit."
                   },
                   "action": {
                     "type": "string",
@@ -3491,7 +3505,7 @@
                   },
                   "user": {
                     "type": "string",
-                    "description": "Identifier for the end user, defined by your application's rules and unique within the app. Service API and WebApp user IDs are separate, even when identical."
+                    "description": "End-user identifier, defined by your app and unique within it. Service API and WebApp user IDs are separate, even when identical. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               },
@@ -3639,7 +3653,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "The workflow run ID (the `workflow_run_id` from the original run response) whose event stream to resume."
+            "description": "Workflow run ID whose event stream to resume, from the response or streaming events of [Run Workflow](/en/api-reference/workflow-runs/run-workflow)."
           },
           {
             "name": "user",
@@ -3648,7 +3662,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "End-user identifier that originally triggered the run. Must match the creator of the workflow run."
+            "description": "End-user identifier, defined by your app and unique within it. Must match the `user` that started the run. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           {
             "name": "include_state_snapshot",
@@ -3752,7 +3766,7 @@
     "/workflows/run": {
       "post": {
         "summary": "Run Workflow",
-        "description": "**Available for**: Workflow apps.\n\nExecute a workflow. Cannot be executed without a published workflow.",
+        "description": "**Available for**: Workflow apps.\n\nRun the app's published workflow and return its outputs, either in a single `blocking` response or as a `streaming` Server-Sent Events feed. Requires a published workflow.",
         "operationId": "executeWorkflow",
         "tags": [
           "Workflow Runs"
@@ -3845,7 +3859,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each line begins with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which fire every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Reasoning events**:\n- `reasoning_chunk`: A chain-of-thought delta from an LLM node whose `reasoning_format` is `separated`. Concatenate consecutive `reasoning_chunk` events to rebuild the full reasoning; an event with `is_final: true` marks the node finished thinking (and may carry an empty `reasoning`). The payload sits under `data` and, unlike chat apps, carries no `message_id` or `conversation_id`. The parallel `text_chunk` stream stays free of `<think>` tags.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/en/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
+                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive every 10 seconds).\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Reasoning events**:\n- `reasoning_chunk`: A chain-of-thought delta from an LLM node whose `reasoning_format` is `separated`. Concatenate consecutive `reasoning_chunk` events to rebuild the full reasoning; an event with `is_final: true` marks the node finished thinking (and may carry an empty `reasoning`). The payload sits under `data` and, unlike chat apps, carries no `message_id` or `conversation_id`. The parallel `text_chunk` stream stays free of `<think>` tags.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/en/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
                 },
                 "examples": {
                   "streamingResponse": {
@@ -3861,7 +3875,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : A request parameter is missing or invalid, such as a missing `user` or an unpublished workflow.",
             "content": {
               "application/json": {
                 "examples": {
@@ -3966,13 +3980,20 @@
             "title": "Run Workflow",
             "sidebarTitle": "Run Workflow"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl -N --request POST \\\n  --url 'https://{api_base_url}/workflows/run' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --data '{\"inputs\": {\"query\": \"Summarize this text: The quick brown fox jumps over the lazy dog.\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/workflows/{workflow_id}/run": {
       "post": {
         "summary": "Run Workflow by ID",
-        "description": "**Available for**: Workflow apps.\n\nExecute a specific workflow version identified by its ID. Useful for running a particular published version of the workflow.",
+        "description": "**Available for**: Workflow apps.\n\nRun a specific published workflow version, identified by the `workflow_id` in the path. Request body, response, and streaming behavior match [Run Workflow](/en/api-reference/workflow-runs/run-workflow); only the executed version differs.",
         "operationId": "runWorkflowById",
         "tags": [
           "Workflow Runs"
@@ -3982,7 +4003,7 @@
             "name": "workflow_id",
             "in": "path",
             "required": true,
-            "description": "Workflow ID of the specific version to execute. This value is returned in the `workflow_id` field of [Run Workflow](/en/api-reference/workflow-runs/run-workflow) responses and [Get Workflow Run Detail](/en/api-reference/workflow-runs/get-workflow-run-detail).",
+            "description": "Published workflow version to run. Returned in the `workflow_id` field of [Run Workflow](/en/api-reference/workflow-runs/run-workflow) responses and [Get Workflow Run Detail](/en/api-reference/workflow-runs/get-workflow-run-detail). Must reference a published version; a draft version ID is rejected with `bad_request`.",
             "schema": {
               "type": "string"
             }
@@ -4045,7 +4066,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE).\n\n**Parsing**: Each line begins with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing the JSON, then read the `event` field to determine the event type. Ignore `ping` events, which fire every 10 seconds to keep the connection alive.\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Reasoning events**:\n- `reasoning_chunk`: A chain-of-thought delta from an LLM node whose `reasoning_format` is `separated`. Concatenate consecutive `reasoning_chunk` events to rebuild the full reasoning; an event with `is_final: true` marks the node finished thinking (and may carry an empty `reasoning`). The payload sits under `data` and, unlike chat apps, carries no `message_id` or `conversation_id`. The parallel `text_chunk` stream stays free of `<think>` tags.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/en/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
+                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive every 10 seconds).\n\n**Stream lifecycle**: The stream closes when a `workflow_finished`, `workflow_paused`, or `error` event is received. Errors are delivered in-stream with HTTP status `200`; inspect the event payload for details rather than relying on the status code.\n\n**Reasoning events**:\n- `reasoning_chunk`: A chain-of-thought delta from an LLM node whose `reasoning_format` is `separated`. Concatenate consecutive `reasoning_chunk` events to rebuild the full reasoning; an event with `is_final: true` marks the node finished thinking (and may carry an empty `reasoning`). The payload sits under `data` and, unlike chat apps, carries no `message_id` or `conversation_id`. The parallel `text_chunk` stream stays free of `<think>` tags.\n\n**Human Input events**:\n- `human_input_required`: Fires together with `workflow_paused` when the workflow reaches a Human Input node. Use the `form_token` from the payload to drive the form-handling flow via the [Human Input API](/en/api-reference/human-input/get-human-input-form).\n- `human_input_form_filled`: A recipient submitted the form; workflow execution resumes.\n- `human_input_form_timeout`: The form expired without a response. Workflow follows the timeout fallback edge if defined."
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4061,7 +4082,7 @@
             }
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `bad_request` : Workflow is a draft or has an invalid ID format.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `bad_request` : Workflow is a draft or has an invalid ID format.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Workflow execution request failed.\n- `invalid_param` : A request parameter is missing or invalid, such as a missing `user`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4207,7 +4228,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "Task ID, can be obtained from the streaming chunk return of the [Run Workflow](/en/api-reference/workflow-runs/run-workflow) API.",
+            "description": "Task ID, from the streaming events of [Run Workflow](/en/api-reference/workflow-runs/run-workflow).",
             "schema": {
               "type": "string"
             }
@@ -4225,7 +4246,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "User identifier, used to attribute the stop request to an end user. It does not need to match the `user` passed to [Run Workflow](/en/api-reference/workflow-runs/run-workflow); the stop applies to the task regardless of user."
+                    "description": "End-user identifier, defined by your app and unique within it. Need not match the `user` that started the run; the stop applies to the task regardless of `user`. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               },
@@ -4245,7 +4266,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `not_workflow_app` : App mode does not match the API route.\n- `invalid_param` : A request parameter is missing or invalid, such as a missing `user`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4282,7 +4303,7 @@
     "/completion-messages": {
       "post": {
         "summary": "Send Completion Message",
-        "description": "**Available for**: Text Generator apps.\n\nSend a request to the text generation application.",
+        "description": "**Available for**: Text Generator apps.\n\nSends a request to a text-generation app and returns the generated text.",
         "operationId": "createCompletionMessage",
         "tags": [
           "Completion Messages"
@@ -4371,7 +4392,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events (SSE). Each event is a JSON object prefixed with `data: ` and terminated by two newlines. See `ChunkCompletionEvent` for possible event structures.\n\n**SSE Parsing Guide:** Each event is a line prefixed with `data: ` followed by a JSON object, terminated by `\\n\\n`. Strip the `data: ` prefix before parsing JSON. The `event` field inside the JSON determines the event type. The stream ends when a `message_end` event is received. Ignore `ping` events (sent every 10 seconds to keep the connection alive). If an `error` event is received mid-stream, the stream terminates — parse the error object for details. Note that the HTTP status code is always `200` even when an error event occurs within the stream."
+                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive every 10 seconds). See `ChunkCompletionEvent` for the event structures.\n\n**Stream lifecycle**: the reply streams as `message` chunks and ends with `message_end`. An `error` event ends the stream early; HTTP status stays `200`, so inspect the event payload for details."
                 },
                 "examples": {
                   "streamingResponse": {
@@ -4383,7 +4404,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Text generation failed.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Text generation failed.\n- `invalid_param` : The required `user` field is missing.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4480,7 +4501,14 @@
             "title": "Send Completion Message",
             "sidebarTitle": "Send Completion Message"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/completion-messages' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --header 'Content-Type: application/json' \\\n  --no-buffer \\\n  --data '{\"inputs\": {\"city\": \"San Francisco\"}, \"response_mode\": \"streaming\", \"user\": \"{user}\"}'"
+          }
+        ]
       }
     },
     "/completion-messages/{task_id}/stop": {
@@ -4496,7 +4524,7 @@
             "name": "task_id",
             "in": "path",
             "required": true,
-            "description": "Task ID, can be obtained from the streaming chunk return of the [Send Completion Message](/en/api-reference/completion-messages/send-completion-message) API.",
+            "description": "Task ID, from the streaming events of [Send Completion Message](/en/api-reference/completion-messages/send-completion-message).",
             "schema": {
               "type": "string"
             }
@@ -4514,7 +4542,7 @@
                 "properties": {
                   "user": {
                     "type": "string",
-                    "description": "User identifier. Must match the `user` passed when the message was sent: if it differs, the stop silently does nothing and the response still returns success."
+                    "description": "End-user identifier, defined by your app and unique within it. Must match the `user` sent with the original message; if it differs, the stop silently does nothing and still returns success. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               },
@@ -4534,7 +4562,7 @@
             "$ref": "#/components/responses/SuccessResult"
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `invalid_param` : Required parameter missing or invalid.",
+            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `invalid_param` : The required `user` field is missing.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4574,7 +4602,7 @@
           "Knowledge Bases"
         ],
         "summary": "Create an Empty Knowledge Base",
-        "description": "Create a new empty knowledge base. After creation, use [Create Document by Text](/en/api-reference/documents/create-document-by-text) or [Create Document by File](/en/api-reference/documents/create-document-by-file) to add documents.",
+        "description": "Creates an empty knowledge base. Add documents to it with [Create Document by Text](/en/api-reference/documents/create-document-by-text) or [Create Document by File](/en/api-reference/documents/create-document-by-file).",
         "operationId": "createDataset",
         "requestBody": {
           "required": true,
@@ -4632,7 +4660,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "Embedding model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/openai/openai`); a bare name like `openai` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins. Get valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
+                    "description": "Embedding model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/openai/openai`). A bare name like `openai` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins.\n\nGet valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -4741,7 +4769,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.",
+            "description": "`invalid_param` : The embedding or reranking model you specified is not configured or available.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4758,7 +4786,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "`forbidden` : Your subscription's knowledge base request rate limit has been reached.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4775,7 +4803,7 @@
             }
           },
           "409": {
-            "description": "`dataset_name_duplicate` : The dataset name already exists. Please modify your dataset name.",
+            "description": "`dataset_name_duplicate` : A knowledge base with the same name already exists.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4805,7 +4833,7 @@
           "Knowledge Bases"
         ],
         "summary": "List Knowledge Bases",
-        "description": "Returns a paginated list of knowledge bases. Supports filtering by keyword and tags.",
+        "description": "Returns a paginated list of knowledge bases, optionally filtered by keyword or tags.",
         "operationId": "listDatasets",
         "parameters": [
           {
@@ -4815,7 +4843,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "Page number to retrieve."
+            "description": "Page number."
           },
           {
             "name": "limit",
@@ -4854,7 +4882,7 @@
             },
             "style": "form",
             "explode": true,
-            "description": "Tag IDs to filter by."
+            "description": "Tag IDs to filter by. Get tag IDs from [List Knowledge Type Tags](/en/api-reference/tags/list-knowledge-tags)."
           }
         ],
         "responses": {
@@ -4972,7 +5000,7 @@
           "Knowledge Bases"
         ],
         "summary": "Get Knowledge Base",
-        "description": "Retrieve detailed information about a specific knowledge base, including its embedding model, retrieval configuration, and document statistics.",
+        "description": "Returns detailed information about a knowledge base, including its embedding model, retrieval configuration, and document statistics.",
         "operationId": "getDatasetDetail",
         "parameters": [
           {
@@ -4983,7 +5011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "responses": {
@@ -5053,7 +5081,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : API access is not enabled for this knowledge base.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5070,7 +5098,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5100,7 +5128,7 @@
           "Knowledge Bases"
         ],
         "summary": "Update Knowledge Base",
-        "description": "Update the name, description, permissions, or retrieval settings of an existing knowledge base. Only the fields provided in the request body are updated.",
+        "description": "Updates a knowledge base. Only the fields included in the request body are changed.",
         "operationId": "updateDataset",
         "parameters": [
           {
@@ -5111,7 +5139,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -5156,7 +5184,7 @@
                   },
                   "embedding_model_provider": {
                     "type": "string",
-                    "description": "Embedding model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/openai/openai`); a bare name like `openai` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins. Get valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
+                    "description": "Embedding model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/openai/openai`). A bare name like `openai` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins.\n\nGet valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
@@ -5274,7 +5302,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.",
+            "description": "`invalid_param` : The embedding or reranking model you specified is not configured or available.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5291,7 +5319,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : API access is not enabled for this knowledge base.\n- `forbidden` : Your subscription's knowledge base request rate limit has been reached.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5316,7 +5344,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5346,7 +5374,7 @@
           "Knowledge Bases"
         ],
         "summary": "Delete Knowledge Base",
-        "description": "Permanently delete a knowledge base and all its documents.",
+        "description": "Permanently deletes a knowledge base and all of its documents.",
         "operationId": "deleteDataset",
         "parameters": [
           {
@@ -5357,15 +5385,15 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "responses": {
           "204": {
-            "description": "Success."
+            "description": "Knowledge base deleted successfully."
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : API access is not enabled for this knowledge base.\n- `forbidden` : Your subscription's knowledge base request rate limit has been reached.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5390,7 +5418,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5422,7 +5450,7 @@
           "Documents"
         ],
         "summary": "Create Document by Text",
-        "description": "Create a document from raw text content. The document is processed asynchronously — use the returned `batch` ID with [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status) to track progress.",
+        "description": "Creates a document in a knowledge base from raw text. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "createDocumentFromText",
         "parameters": [
           {
@@ -5433,7 +5461,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -5492,7 +5520,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "Processing mode. `automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
+                        "description": "`automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
                       },
                       "rules": {
                         "type": "object",
@@ -5543,7 +5571,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "Retrieval model configuration. Controls how chunks are searched and ranked when querying this knowledge base."
+                    "description": "Controls how chunks are searched and ranked when querying this knowledge base."
                   },
                   "embedding_model": {
                     "type": "string",
@@ -5555,7 +5583,7 @@
                   },
                   "original_document_id": {
                     "type": "string",
-                    "description": "Original document ID for versioning."
+                    "description": "Original document ID for versioning. Get it from [List Documents](/en/api-reference/documents/list-documents)."
                   }
                 }
               }
@@ -5629,7 +5657,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `invalid_param` : `indexing_technique` is required when adding the first document, or `doc_form` is invalid.",
+            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `indexing_technique` is required when adding the first document, or `doc_form` is invalid.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5654,7 +5682,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5695,7 +5723,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : Knowledge base not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5727,7 +5755,7 @@
           "Documents"
         ],
         "summary": "Create Document by File",
-        "description": "Create a document by uploading a file. Supports common document formats (PDF, TXT, DOCX, etc.). Processing is asynchronous — use the returned `batch` ID with [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status) to track progress.",
+        "description": "Creates a document in a knowledge base from an uploaded file. Common formats such as PDF, TXT, and DOCX are supported. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "createDocumentFromFile",
         "parameters": [
           {
@@ -5738,7 +5766,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -5833,7 +5861,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : Please upload your file.\n- `too_many_files` : Only one file is allowed.\n- `filename_not_exists_error` : The specified filename does not exist.\n- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `invalid_param` : External datasets are not supported, `indexing_technique` is required, or `process_rule` is missing.",
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The knowledge base is external, `indexing_technique` is required, or `process_rule` is missing.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5882,7 +5910,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5923,7 +5951,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : Knowledge base not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5946,7 +5974,14 @@
             "title": "Create Document by File",
             "sidebarTitle": "Create Document by File"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/document/create-by-file' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"indexing_technique\":\"high_quality\",\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents": {
@@ -5955,7 +5990,7 @@
           "Documents"
         ],
         "summary": "List Documents",
-        "description": "Returns a paginated list of documents in the knowledge base. Supports filtering by keyword and indexing status.",
+        "description": "Returns a paginated list of documents in a knowledge base.",
         "operationId": "listDocuments",
         "parameters": [
           {
@@ -5966,7 +6001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "page",
@@ -5975,7 +6010,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "Page number to retrieve."
+            "description": "Page number."
           },
           {
             "name": "limit",
@@ -6100,7 +6135,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6149,7 +6184,7 @@
           "Documents"
         ],
         "summary": "Get Document",
-        "description": "Retrieve detailed information about a specific document, including its indexing status, metadata, and processing statistics.",
+        "description": "Returns detailed information for a single document.",
         "operationId": "getDocumentDetail",
         "parameters": [
           {
@@ -6160,7 +6195,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -6170,7 +6205,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "metadata",
@@ -6189,7 +6224,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Document details. The response shape varies based on the `metadata` query parameter. When `metadata` is `only`, only `id`, `doc_type`, and `doc_metadata` are returned. When `metadata` is `without`, `doc_type` and `doc_metadata` are omitted.",
+            "description": "Document details. The returned fields depend on the `metadata` query parameter.",
             "content": {
               "application/json": {
                 "schema": {
@@ -6468,7 +6503,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : No permission.\n- `forbidden` : Dataset api access is not enabled.",
+            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6523,7 +6558,7 @@
           "Documents"
         ],
         "summary": "Delete Document",
-        "description": "Permanently delete a document and all its chunks from the knowledge base.",
+        "description": "Permanently deletes a document and all its chunks from the knowledge base.",
         "operationId": "deleteDocument",
         "parameters": [
           {
@@ -6534,7 +6569,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -6544,7 +6579,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "responses": {
@@ -6552,7 +6587,7 @@
             "description": "Success."
           },
           "403": {
-            "description": "- `archived_document_immutable` : The archived document is not editable.\n- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `archived_document_immutable` : The archived document is not editable.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6585,7 +6620,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Document Not Exists.",
+            "description": "`not_found` : The document does not exist.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6615,7 +6650,7 @@
           "Documents"
         ],
         "summary": "Update Document",
-        "description": "Update an existing document by uploading a new file. This is the canonical endpoint for file-based document updates. Re-triggers indexing; use the returned `batch` ID with [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status) to track progress.",
+        "description": "Updates a document by uploading a new file, then re-indexes it. This is the canonical endpoint for file-based document updates. Track progress with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "updateDocument",
         "parameters": [
           {
@@ -6626,7 +6661,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -6636,7 +6671,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "requestBody": {
@@ -6728,7 +6763,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : Only one file is allowed.\n- `filename_not_exists_error` : The specified filename does not exist.\n- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
+            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -6769,7 +6804,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6802,7 +6837,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Dataset not found.\n- `not_found` : Document not found.",
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6827,7 +6862,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : File size exceeded.",
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6844,7 +6879,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : File type not allowed.",
+            "description": "`unsupported_file_type` : The uploaded file's type is not supported.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6867,7 +6902,14 @@
             "title": "Update Document",
             "sidebarTitle": "Update Document"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request PATCH \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/documents/{document_id}' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}/download": {
@@ -6876,7 +6918,7 @@
           "Documents"
         ],
         "summary": "Download Document",
-        "description": "Get a signed download URL for a document's original uploaded file.",
+        "description": "Returns a signed URL for downloading a document's original uploaded file.",
         "operationId": "downloadDocument",
         "parameters": [
           {
@@ -6887,7 +6929,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -6897,7 +6939,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "responses": {
@@ -6926,7 +6968,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : No permission.\n- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6991,7 +7033,7 @@
           "Documents"
         ],
         "summary": "Get Document Indexing Status",
-        "description": "Check the indexing progress of documents in a batch. Returns the current processing stage and chunk completion counts for each document. Poll this endpoint until `indexing_status` reaches `completed` or `error`. The status progresses through: `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`.",
+        "description": "Returns indexing progress for every document in a batch: the current stage and chunk completion counts. Poll until each `indexing_status` reaches `completed` or `error`. Status advances through `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`.",
         "operationId": "getDocumentIndexingStatus",
         "parameters": [
           {
@@ -7002,7 +7044,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "batch",
@@ -7011,7 +7053,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "Batch ID returned from document creation."
+            "description": "Batch ID returned when you create or update a document."
           }
         ],
         "responses": {
@@ -7116,7 +7158,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7133,7 +7175,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Knowledge base not found. / Documents not found.",
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Documents not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7173,7 +7215,7 @@
           "Documents"
         ],
         "summary": "Update Document by Text",
-        "description": "Updates an existing document's text content, name, or processing configuration. Re-triggers indexing when the content changes.",
+        "description": "Updates a document's text content, name, or processing configuration. Re-indexes the document when its text changes.",
         "operationId": "updateDocumentByText",
         "parameters": [
           {
@@ -7184,7 +7226,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -7194,7 +7236,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "requestBody": {
@@ -7226,7 +7268,7 @@
                           "custom",
                           "hierarchical"
                         ],
-                        "description": "Processing mode. `automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
+                        "description": "`automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
                       },
                       "rules": {
                         "type": "object",
@@ -7292,7 +7334,7 @@
                   },
                   "retrieval_model": {
                     "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "Retrieval model configuration. Controls how chunks are searched and ranked when querying this knowledge base."
+                    "description": "Controls how chunks are searched and ranked when querying this knowledge base."
                   }
                 }
               }
@@ -7366,7 +7408,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `invalid_param` : `name` is required when `text` is provided, or `doc_form` is invalid.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
+            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `name` is required when `text` is provided, or `doc_form` is invalid.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -7399,7 +7441,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7432,7 +7474,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Dataset not found.\n- `not_found` : Document not found.",
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7472,7 +7514,7 @@
           "Documents"
         ],
         "summary": "Update Document by File",
-        "description": "Deprecated. Use [Update Document](/en/api-reference/documents/update-document) instead. Updates an existing document by uploading a new file and re-triggers indexing.",
+        "description": "Deprecated. Use [Update Document](/en/api-reference/documents/update-document) instead. Updates a document by uploading a new file, then re-indexes it.",
         "operationId": "updateDocumentByFile",
         "parameters": [
           {
@@ -7483,7 +7525,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -7493,7 +7535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "requestBody": {
@@ -7585,7 +7627,7 @@
             }
           },
           "400": {
-            "description": "- `too_many_files` : Only one file is allowed.\n- `filename_not_exists_error` : The specified filename does not exist.\n- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
+            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -7626,7 +7668,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7659,7 +7701,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Dataset not found.\n- `not_found` : Document not found.",
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7684,7 +7726,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : File size exceeded.",
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7701,7 +7743,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : File type not allowed.",
+            "description": "`unsupported_file_type` : The uploaded file's type is not supported.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7734,7 +7776,7 @@
           "Documents"
         ],
         "summary": "Download Documents as ZIP",
-        "description": "Download multiple uploaded-file documents as a single ZIP archive. Accepts up to `100` document IDs.",
+        "description": "Downloads one or more documents as a single ZIP archive. Only documents that were uploaded as files can be included.",
         "operationId": "downloadDocumentsZip",
         "parameters": [
           {
@@ -7745,7 +7787,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -7766,7 +7808,7 @@
                       "type": "string",
                       "format": "uuid"
                     },
-                    "description": "Array of document IDs to include in the ZIP archive."
+                    "description": "Document IDs to include in the archive. Get them from [List Documents](/en/api-reference/documents/list-documents)."
                   }
                 }
               }
@@ -7787,7 +7829,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.\n- `forbidden` : You do not have permission to access this dataset.\n- `forbidden` : No permission.",
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.\n- `forbidden` : You do not have permission to access this knowledge base.\n- `forbidden` : You do not have permission for one of the requested documents.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7828,7 +7870,7 @@
             }
           },
           "404": {
-            "description": "- `not_found` : Document not found.\n- `not_found` : Dataset not found.",
+            "description": "- `not_found` : Document not found.\n- `not_found` : Knowledge base not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -7868,7 +7910,7 @@
           "Documents"
         ],
         "summary": "Update Document Status in Batch",
-        "description": "Enable, disable, archive, or unarchive multiple documents at once.",
+        "description": "Enables, disables, archives, or unarchives multiple documents in one request.",
         "operationId": "batchUpdateDocumentStatus",
         "parameters": [
           {
@@ -7879,7 +7921,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "action",
@@ -7894,7 +7936,7 @@
                 "un_archive"
               ]
             },
-            "description": "`enable` to activate, `disable` to deactivate, `archive` to archive, `un_archive` to restore from archive."
+            "description": "`enable` activates documents for retrieval, `disable` deactivates them, `archive` moves them to the archive, `un_archive` restores them from the archive."
           }
         ],
         "requestBody": {
@@ -7912,7 +7954,7 @@
                     "items": {
                       "type": "string"
                     },
-                    "description": "List of document IDs to update."
+                    "description": "Document IDs to update. Get them from [List Documents](/en/api-reference/documents/list-documents)."
                   }
                 }
               }
@@ -7962,7 +8004,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8011,7 +8053,7 @@
           "Chunks"
         ],
         "summary": "Create Chunks",
-        "description": "Create one or more chunks within a document. Each chunk requires `content`; `answer` is required for Q&A-mode (`qa_model`) documents. `keywords` are optional.",
+        "description": "Create one or more chunks within a document.",
         "operationId": "createSegments",
         "parameters": [
           {
@@ -8022,7 +8064,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -8032,7 +8074,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           }
         ],
         "requestBody": {
@@ -8057,7 +8099,7 @@
                         },
                         "answer": {
                           "type": "string",
-                          "description": "Answer content for QA mode."
+                          "description": "Answer text. Required for Q&A-mode (`qa_model`) documents."
                         },
                         "keywords": {
                           "type": "array",
@@ -8154,7 +8196,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.\n- `invalid_param` : A chunk field is invalid (for example, `answer` is required for Q&A-mode documents) or the number of chunks exceeds the per-request limit.\n- Request-body schema validation (such as empty `content`) returns a non-standard body `{\"error\": \"<validation details>\"}` with no `code` or `status` field.",
+            "description": "- `provider_not_initialize` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.\n- `invalid_param` : A chunk field is invalid (for example, `answer` is required for Q&A-mode documents) or the number of chunks exceeds the per-request limit.\n- Request-body schema validation (such as empty `content`) returns a non-standard body `{\"error\": \"<validation details>\"}` with no `code` or `status` field.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8280,7 +8322,7 @@
           "Chunks"
         ],
         "summary": "List Chunks",
-        "description": "Returns a paginated list of chunks within a document. Supports filtering by keyword and status.",
+        "description": "Returns a paginated list of chunks within a document, optionally filtered by keyword or indexing status.",
         "operationId": "listSegments",
         "parameters": [
           {
@@ -8291,7 +8333,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -8301,7 +8343,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "page",
@@ -8310,7 +8352,7 @@
               "type": "integer",
               "default": 1
             },
-            "description": "Page number to retrieve."
+            "description": "Page number."
           },
           {
             "name": "limit",
@@ -8431,7 +8473,7 @@
             }
           },
           "400": {
-            "description": "`provider_not_initialize` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.",
+            "description": "`provider_not_initialize` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8505,7 +8547,7 @@
           "Chunks"
         ],
         "summary": "Get Chunk",
-        "description": "Retrieve detailed information about a specific chunk, including its content, keywords, and indexing status.",
+        "description": "Retrieve the full details of a single chunk.",
         "operationId": "getSegmentDetail",
         "parameters": [
           {
@@ -8516,7 +8558,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -8526,7 +8568,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -8536,7 +8578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           }
         ],
         "responses": {
@@ -8601,7 +8643,7 @@
             }
           },
           "400": {
-            "description": "`invalid_param` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.",
+            "description": "`invalid_param` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8681,7 +8723,7 @@
           "Chunks"
         ],
         "summary": "Update Chunk",
-        "description": "Update a chunk's content, keywords, or answer. Re-triggers indexing for the modified chunk.",
+        "description": "Update a chunk's fields. The update re-triggers indexing for that chunk.",
         "operationId": "updateSegment",
         "parameters": [
           {
@@ -8692,7 +8734,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -8702,7 +8744,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -8712,7 +8754,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           }
         ],
         "requestBody": {
@@ -8734,7 +8776,7 @@
                       },
                       "answer": {
                         "type": "string",
-                        "description": "Answer content for QA mode."
+                        "description": "Answer text for Q&A-mode (`qa_model`) documents."
                       },
                       "keywords": {
                         "type": "array",
@@ -8834,7 +8876,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.\n- `invalid_param` : The chunk is indexing or disabled and cannot be updated, or index configuration is invalid.",
+            "description": "- `provider_not_initialize` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.\n- `invalid_param` : The chunk is indexing or disabled and cannot be updated, or index configuration is invalid.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8949,7 +8991,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -8959,7 +9001,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -8969,7 +9011,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           }
         ],
         "responses": {
@@ -8977,7 +9019,7 @@
             "description": "Success."
           },
           "400": {
-            "description": "- `invalid_param` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.\n- `invalid_param` : Segment is deleting.",
+            "description": "- `invalid_param` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.\n- `invalid_param` : The chunk is already being deleted by a concurrent request.",
             "content": {
               "application/json": {
                 "examples": {
@@ -9086,7 +9128,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -9096,7 +9138,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -9106,7 +9148,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Parent chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           }
         ],
         "requestBody": {
@@ -9162,7 +9204,7 @@
             }
           },
           "400": {
-            "description": "- `provider_not_initialize` : No Embedding Model available. Please configure a valid provider in the Settings -> Model Provider.\n- `invalid_param` : Indexing the child chunk in the vector store failed; the message carries the underlying vector-store error.",
+            "description": "- `provider_not_initialize` : The knowledge base uses high-quality indexing but its embedding model is missing or misconfigured.\n- `invalid_param` : Indexing the child chunk in the vector store failed; the message carries the underlying vector-store error.",
             "content": {
               "application/json": {
                 "examples": {
@@ -9285,7 +9327,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -9295,7 +9337,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -9305,7 +9347,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Parent chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           },
           {
             "name": "page",
@@ -9315,7 +9357,7 @@
               "default": 1,
               "minimum": 1
             },
-            "description": "Page number to retrieve."
+            "description": "Page number."
           },
           {
             "name": "limit",
@@ -9472,7 +9514,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -9482,7 +9524,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -9492,7 +9534,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Parent chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           },
           {
             "name": "child_chunk_id",
@@ -9681,7 +9723,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. Obtain it from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "document_id",
@@ -9691,7 +9733,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Document ID."
+            "description": "Document ID. Obtain it from [List Documents](/en/api-reference/documents/list-documents)."
           },
           {
             "name": "segment_id",
@@ -9701,7 +9743,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Chunk ID."
+            "description": "Parent chunk ID. Obtain it from [List Chunks](/en/api-reference/chunks/list-chunks)."
           },
           {
             "name": "child_chunk_id",
@@ -9825,7 +9867,7 @@
           "Knowledge Bases"
         ],
         "summary": "Retrieve Chunks from a Knowledge Base / Test Retrieval",
-        "description": "Performs a search query against a knowledge base to retrieve the most relevant chunks. This endpoint can be used for both production retrieval and test retrieval.",
+        "description": "Searches a knowledge base and returns the chunks most relevant to the query, for both production retrieval and test retrieval.",
         "operationId": "retrieveSegments",
         "parameters": [
           {
@@ -9836,7 +9878,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -10179,7 +10221,7 @@
             }
           },
           "400": {
-            "description": "- `dataset_not_initialized` : The dataset is still being initialized or indexing. Please wait a moment.\n- `provider_not_initialize` : No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials.\n- `provider_quota_exceeded` : Your quota for Dify Hosted Model Provider has been exhausted. Please go to Settings -> Model Provider to complete your own provider credentials.\n- `model_currently_not_support` : Dify Hosted OpenAI trial currently not support the GPT-4 model.\n- `completion_request_error` : Completion request failed.\n- `invalid_param` : Invalid parameter value.",
+            "description": "- `dataset_not_initialized` : The knowledge base is still initializing or indexing.\n- `provider_not_initialize` : The model provider has no valid credentials configured.\n- `provider_quota_exceeded` : The Dify-hosted model provider quota is exhausted.\n- `model_currently_not_support` : The selected model is not currently supported.\n- `completion_request_error` : The model request failed.\n- `invalid_param` : A request parameter is invalid.",
             "content": {
               "application/json": {
                 "examples": {
@@ -10236,7 +10278,7 @@
             }
           },
           "403": {
-            "description": "- `forbidden` : Dataset api access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
+            "description": "- `forbidden` : API access is not enabled for this knowledge base.\n- `forbidden` : Your subscription's knowledge base request rate limit has been reached.",
             "content": {
               "application/json": {
                 "examples": {
@@ -10261,7 +10303,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Knowledge base not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -10310,7 +10352,7 @@
           "Tags"
         ],
         "summary": "Create Knowledge Tag",
-        "description": "Create a new tag for organizing knowledge bases.",
+        "description": "Create a tag for organizing knowledge bases.",
         "operationId": "createKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10326,7 +10368,7 @@
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "Tag name."
+                    "description": "Tag name. Must be unique within the workspace."
                   }
                 }
               }
@@ -10405,7 +10447,7 @@
           "Tags"
         ],
         "summary": "List Knowledge Tags",
-        "description": "Returns the list of all knowledge base tags in the workspace.",
+        "description": "Returns all knowledge base tags in the workspace.",
         "operationId": "getKnowledgeTags",
         "responses": {
           "200": {
@@ -10467,7 +10509,7 @@
           "Tags"
         ],
         "summary": "Update Knowledge Tag",
-        "description": "Rename an existing knowledge base tag.",
+        "description": "Rename a knowledge base tag.",
         "operationId": "updateKnowledgeTag",
         "requestBody": {
           "required": true,
@@ -10482,13 +10524,13 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "Tag ID to update."
+                    "description": "ID of the tag to rename. See [List Knowledge Type Tags](/en/api-reference/tags/list-knowledge-tags)."
                   },
                   "name": {
                     "type": "string",
                     "minLength": 1,
                     "maxLength": 50,
-                    "description": "New tag name."
+                    "description": "New name for the tag. Must be unique within the workspace."
                   }
                 }
               }
@@ -10598,7 +10640,7 @@
                 "properties": {
                   "tag_id": {
                     "type": "string",
-                    "description": "Tag ID to delete."
+                    "description": "ID of the tag to delete. See [List Knowledge Type Tags](/en/api-reference/tags/list-knowledge-tags)."
                   }
                 }
               }
@@ -10661,11 +10703,11 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "Tag IDs to bind."
+                    "description": "IDs of the tags to bind. See [List Knowledge Type Tags](/en/api-reference/tags/list-knowledge-tags)."
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "Knowledge base ID."
+                    "description": "Knowledge base to bind the tags to. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
                   }
                 }
               }
@@ -10727,7 +10769,7 @@
                       "type": "string"
                     },
                     "minItems": 1,
-                    "description": "Tag IDs to unbind. Required unless the legacy `tag_id` is provided."
+                    "description": "Tag IDs to unbind. Required unless the legacy `tag_id` is provided. See [List Knowledge Type Tags](/en/api-reference/tags/list-knowledge-tags)."
                   },
                   "tag_id": {
                     "type": "string",
@@ -10736,7 +10778,7 @@
                   },
                   "target_id": {
                     "type": "string",
-                    "description": "Knowledge base ID."
+                    "description": "Knowledge base to unbind the tags from. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
                   }
                 }
               }
@@ -10780,7 +10822,7 @@
           "Tags"
         ],
         "summary": "Get Knowledge Base Tags",
-        "description": "Returns the list of tags bound to a specific knowledge base.",
+        "description": "Returns the tags bound to a knowledge base.",
         "operationId": "queryDatasetTags",
         "parameters": [
           {
@@ -10791,7 +10833,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "responses": {
@@ -10892,7 +10934,7 @@
           "Metadata"
         ],
         "summary": "Create Metadata Field",
-        "description": "Create a custom metadata field for the knowledge base. Metadata fields can be used to annotate documents with structured information.",
+        "description": "Create a custom metadata field for annotating documents in the knowledge base with structured information.",
         "operationId": "createMetadataField",
         "parameters": [
           {
@@ -10903,7 +10945,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -10928,7 +10970,7 @@
                   },
                   "name": {
                     "type": "string",
-                    "description": "Metadata field name."
+                    "description": "Name for the metadata field. Must be unique among the knowledge base's fields and at most 255 characters."
                   }
                 }
               }
@@ -11043,7 +11085,7 @@
           "Metadata"
         ],
         "summary": "List Metadata Fields",
-        "description": "Returns the list of all metadata fields (both custom and built-in) for the knowledge base, along with the count of documents using each field.",
+        "description": "Returns all metadata fields for the knowledge base, both custom and built-in, with the count of documents using each field.",
         "operationId": "listMetadataFields",
         "parameters": [
           {
@@ -11054,7 +11096,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "responses": {
@@ -11176,7 +11218,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "metadata_id",
@@ -11186,7 +11228,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Metadata field ID."
+            "description": "ID of the metadata field to rename. See [List Metadata Fields](/en/api-reference/metadata/list-metadata-fields)."
           }
         ],
         "requestBody": {
@@ -11201,7 +11243,7 @@
                 "properties": {
                   "name": {
                     "type": "string",
-                    "description": "New metadata field name."
+                    "description": "New name for the field. Must be unique among the knowledge base's fields and at most 255 characters."
                   }
                 }
               }
@@ -11316,7 +11358,7 @@
           "Metadata"
         ],
         "summary": "Delete Metadata Field",
-        "description": "Permanently delete a custom metadata field. Documents using this field will lose their metadata values for it.",
+        "description": "Permanently delete a custom metadata field. Documents that used the field lose their values for it.",
         "operationId": "deleteMetadataField",
         "parameters": [
           {
@@ -11327,7 +11369,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "metadata_id",
@@ -11337,7 +11379,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Metadata field ID."
+            "description": "ID of the metadata field to delete. See [List Metadata Fields](/en/api-reference/metadata/list-metadata-fields)."
           }
         ],
         "responses": {
@@ -11402,7 +11444,7 @@
           "Metadata"
         ],
         "summary": "Get Built-in Metadata Fields",
-        "description": "Returns the list of built-in metadata fields provided by the system (e.g., document type, source URL).",
+        "description": "Returns the built-in metadata fields provided by the system.",
         "operationId": "getBuiltInMetadataFields",
         "parameters": [
           {
@@ -11413,7 +11455,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "responses": {
@@ -11536,7 +11578,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "action",
@@ -11635,7 +11677,7 @@
           "Metadata"
         ],
         "summary": "Update Document Metadata in Batch",
-        "description": "Update metadata values for multiple documents at once. Each document in the request receives the specified metadata key-value pairs.",
+        "description": "Update metadata values for multiple documents in a single request.",
         "operationId": "batchUpdateDocumentMetadata",
         "parameters": [
           {
@@ -11646,7 +11688,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID. See [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -11670,7 +11712,7 @@
                       "properties": {
                         "document_id": {
                           "type": "string",
-                          "description": "ID of the document whose metadata to update."
+                          "description": "ID of the document to update. See [List Documents](/en/api-reference/documents/list-documents)."
                         },
                         "metadata_list": {
                           "type": "array",
@@ -11683,7 +11725,7 @@
                             "properties": {
                               "id": {
                                 "type": "string",
-                                "description": "Metadata field ID."
+                                "description": "Metadata field ID. See [List Metadata Fields](/en/api-reference/metadata/list-metadata-fields)."
                               },
                               "name": {
                                 "type": "string",
@@ -11693,7 +11735,8 @@
                                 "description": "Metadata value. Can be a string, number, or `null`."
                               }
                             }
-                          }
+                          },
+                          "description": "Metadata fields to set on the document."
                         },
                         "partial_update": {
                           "type": "boolean",
@@ -11702,7 +11745,7 @@
                         }
                       }
                     },
-                    "description": "Array of document metadata update operations. Each entry maps a document ID to its metadata key-value pairs."
+                    "description": "Document metadata update operations, one entry per document."
                   }
                 }
               }
@@ -11809,7 +11852,7 @@
           "Models"
         ],
         "summary": "Get Available Models",
-        "description": "Retrieve the list of available models by type. Primarily used to query `text-embedding` and `rerank` models for knowledge base configuration.",
+        "description": "Returns the available models of a given type. Use it to find the `text-embedding` and `rerank` models to configure on a knowledge base.",
         "operationId": "getAvailableModels",
         "parameters": [
           {
@@ -11987,7 +12030,7 @@
           "Knowledge Pipeline"
         ],
         "summary": "Upload Pipeline File",
-        "description": "Upload a file for use in a knowledge pipeline. Accepts a single file via `multipart/form-data`.",
+        "description": "Uploads a file for use in a knowledge pipeline. Use the returned `id` as the `reference` of a `local_file` item in [Run Pipeline](/en/api-reference/knowledge-pipeline/run-pipeline).",
         "operationId": "uploadPipelineFile",
         "requestBody": {
           "required": true,
@@ -12002,7 +12045,7 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "The file to upload."
+                    "description": "The file to upload, as one `multipart/form-data` part."
                   }
                 }
               }
@@ -12067,7 +12110,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : Please upload your file.\n- `filename_not_exists_error` : The specified filename does not exist.\n- `too_many_files` : Only one file is allowed.",
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `too_many_files` : Only one file is allowed per request.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12100,7 +12143,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : File size exceeded.",
+            "description": "`file_too_large` : The file exceeds the upload size limit.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12117,7 +12160,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : File type not allowed.",
+            "description": "`unsupported_file_type` : The file type is not supported.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12140,7 +12183,14 @@
             "title": "Upload Pipeline File",
             "sidebarTitle": "Upload Pipeline File"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/pipeline/file-upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf'"
+          }
+        ]
       }
     },
     "/datasets/{dataset_id}/pipeline/datasource-plugins": {
@@ -12149,7 +12199,7 @@
           "Knowledge Pipeline"
         ],
         "summary": "List Datasource Plugins",
-        "description": "List the datasource nodes configured in the knowledge pipeline. Each node includes the plugin it uses plus the metadata needed to run it.",
+        "description": "Returns the datasource nodes configured in the knowledge pipeline, each with the plugin it uses and the metadata needed to run it.",
         "operationId": "listDatasourcePlugins",
         "parameters": [
           {
@@ -12160,7 +12210,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "is_published",
@@ -12169,7 +12219,7 @@
               "type": "boolean",
               "default": true
             },
-            "description": "Whether to retrieve nodes from the published pipeline. Defaults to `true`, which returns nodes from the published version."
+            "description": "Whether to read nodes from the published pipeline version rather than the draft."
           }
         ],
         "responses": {
@@ -12282,7 +12332,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : API access is not enabled for this knowledge base.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12299,7 +12349,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12331,7 +12381,7 @@
           "Knowledge Pipeline"
         ],
         "summary": "Run Datasource Node",
-        "description": "Execute a single datasource node within the knowledge pipeline. Returns a streaming response with the node execution results.",
+        "description": "Runs a single datasource node in the knowledge pipeline and streams its execution events.",
         "operationId": "runDatasourceNode",
         "parameters": [
           {
@@ -12342,7 +12392,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           },
           {
             "name": "node_id",
@@ -12351,7 +12401,7 @@
             "schema": {
               "type": "string"
             },
-            "description": "ID of the datasource node to execute."
+            "description": "ID of the datasource node to run, from [List Datasource Plugins](/en/api-reference/knowledge-pipeline/list-datasource-plugins)."
           }
         ],
         "requestBody": {
@@ -12384,11 +12434,11 @@
                   "credential_id": {
                     "type": "string",
                     "nullable": true,
-                    "description": "ID of the credential to use for authentication with the datasource."
+                    "description": "ID of the credential to authenticate with the datasource, from the `credentials` array of [List Datasource Plugins](/en/api-reference/knowledge-pipeline/list-datasource-plugins)."
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "Whether to run the published or draft version of the node. `true` runs the published version, `false` runs the draft."
+                    "description": "Whether to run the published version of the node instead of the draft."
                   }
                 }
               }
@@ -12402,7 +12452,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events stream containing node execution progress and results."
+                  "description": "Server-Sent Events stream of node execution progress and results. See [SSE Streaming](/en/api-reference/guides/streaming) for parsing."
                 }
               }
             }
@@ -12425,7 +12475,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : API access is not enabled for this knowledge base.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12442,7 +12492,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12474,7 +12524,7 @@
           "Knowledge Pipeline"
         ],
         "summary": "Run Pipeline",
-        "description": "Execute the full knowledge pipeline for a knowledge base. Supports both streaming and blocking response modes.",
+        "description": "Runs the full knowledge pipeline over one or more datasources. `response_mode` selects a streaming or blocking response.",
         "operationId": "runPipeline",
         "parameters": [
           {
@@ -12485,7 +12535,7 @@
               "type": "string",
               "format": "uuid"
             },
-            "description": "Knowledge base ID."
+            "description": "Knowledge base ID, from [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
           }
         ],
         "requestBody": {
@@ -12632,11 +12682,11 @@
                   },
                   "start_node_id": {
                     "type": "string",
-                    "description": "ID of the node to start pipeline execution from."
+                    "description": "ID of the node to start execution from, from [List Datasource Plugins](/en/api-reference/knowledge-pipeline/list-datasource-plugins)."
                   },
                   "is_published": {
                     "type": "boolean",
-                    "description": "Whether to run the published or draft version of the pipeline. `true` runs the latest published version; `false` runs the current draft (useful for testing unpublished changes)."
+                    "description": "Whether to run the published version of the pipeline instead of the current draft. Run the draft to test unpublished changes."
                   },
                   "response_mode": {
                     "type": "string",
@@ -12731,7 +12781,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events stream. Returned when `response_mode` is `streaming`.\n\nEach line is `data: {JSON}\\n\\n`. Key events: `workflow_started` (execution began), `node_started` / `node_finished` (per-node progress with `node_id`, `node_type`, `status`, `inputs`, `outputs`), `workflow_finished` (final result with `status`, `outputs`, `total_tokens`, `elapsed_time`), `ping` (keepalive)."
+                  "description": "Server-Sent Events stream. Returned when `response_mode` is `streaming`; see [SSE Streaming](/en/api-reference/guides/streaming) for the wire format.\n\nKey events:\n\n- `workflow_started`: execution began\n- `node_started` / `node_finished`: per-node progress with `node_id`, `node_type`, `status`, `inputs`, `outputs`\n- `workflow_finished`: final result with `status`, `outputs`, `total_tokens`, `elapsed_time`\n- `ping`: keepalive"
                 }
               },
               "application/json": {
@@ -12777,7 +12827,7 @@
             }
           },
           "403": {
-            "description": "`forbidden` : Dataset api access is not enabled.",
+            "description": "`forbidden` : API access is not enabled for this knowledge base.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12794,7 +12844,7 @@
             }
           },
           "404": {
-            "description": "`not_found` : Dataset not found.",
+            "description": "`not_found` : No knowledge base matches `dataset_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -12844,7 +12894,7 @@
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "API_KEY",
-        "description": "API Key authentication. For all API requests, include your API Key in the `Authorization` HTTP Header, prefixed with `Bearer `. Example: `Authorization: Bearer {API_KEY}`. **Strongly recommend storing your API Key on the server-side, not shared or stored on the client-side, to avoid possible API-Key leakage that can lead to serious consequences.** Requests with a missing or invalid API key fail with HTTP `401` and error code `unauthorized`."
+        "description": "Every request authenticates with an API key: `Authorization: Bearer {API_KEY}`. App endpoints take an app API key; knowledge endpoints take a knowledge base API key ([Get Started](/en/api-reference/guides/get-started)).\n\nKeep keys server-side; never embed them in client code. Requests with a missing or invalid key fail with HTTP `401` (`unauthorized`)."
       }
     },
     "responses": {
@@ -12884,11 +12934,11 @@
         "properties": {
           "query": {
             "type": "string",
-            "description": "User input/question content."
+            "description": "The user's message."
           },
           "inputs": {
             "type": "object",
-            "description": "Allows the entry of various variable values defined by the App. Contains key/value pairs. Refer to the `user_input_form` field in the [Get App Parameters](/en/api-reference/applications/get-app-parameters) response to discover the variable names and types expected by your app.",
+            "description": "Values for the app's input variables, keyed by variable name. The expected names and types come from the `user_input_form` field of [Get App Parameters](/en/api-reference/applications/get-app-parameters).",
             "additionalProperties": true
           },
           "response_mode": {
@@ -12897,19 +12947,19 @@
               "streaming",
               "blocking"
             ],
-            "description": "Mode of response return. `streaming` (recommended) uses SSE. `blocking` returns after completion (may be interrupted for long processes; not supported in Agent Assistant mode). Cloudflare timeout is `100 s`. When omitted, defaults to blocking behavior. New Agent apps support `streaming` only; `blocking` returns 400 `bad_request`."
+            "description": "Mode of response return. Defaults to blocking when omitted.\n\n- `streaming` (recommended): the reply arrives as Server-Sent Events.\n- `blocking`: returns once generation completes. Long generations risk interruption: on Dify Cloud, the edge proxy may end the connection if the response doesn't arrive within its timeout.\n- Agent and New Agent apps support `streaming` only; a `blocking` request fails with 400."
           },
           "user": {
             "type": "string",
-            "description": "User identifier, unique within the application. This identifier scopes data access — conversations, messages, and files are only visible when queried with the same `user` value."
+            "description": "End-user identifier, defined by your app and unique within it. Conversations, messages, and files are visible only to requests carrying the same `user`. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           "conversation_id": {
             "type": "string",
-            "description": "Conversation ID to continue a conversation. Pass the previous message's `conversation_id`. To start a new conversation, omit this field or pass an empty string. The response will return a `conversation_id` — pass it in subsequent messages to continue that conversation."
+            "description": "ID of the conversation to continue. Omit it or pass an empty string to start a new conversation; the response returns a `conversation_id` to send with the next message. To resume an earlier conversation, get its ID from [List Conversations](/en/api-reference/conversations/list-conversations)."
           },
           "files": {
             "type": "array",
-            "description": "File list for multimodal understanding, including images, documents, audio, and video. To attach a local file, first upload it via [Upload File](/en/api-reference/files/upload-file) and use the returned `id` as `upload_file_id` with `transfer_method: local_file`. Not supported for New Agent apps: file references are accepted but their contents are not processed.",
+            "description": "Files to attach to the message. For a local file, first upload it via [Upload File](/en/api-reference/files/upload-file), then reference the returned `id` as `upload_file_id` with `transfer_method: local_file`. New Agent apps accept file references but do not process their contents.",
             "items": {
               "type": "object",
               "required": [
@@ -13675,7 +13725,7 @@
           },
           "user": {
             "type": "string",
-            "description": "User identifier, defined by the developer, must ensure uniqueness within the application."
+            "description": "End-user identifier, defined by your app and unique within it. Must match the `user` that received the message, since feedback is scoped to that end user. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           "content": {
             "type": "string",
@@ -14080,7 +14130,7 @@
         "properties": {
           "name": {
             "type": "string",
-            "description": "The name of the conversation. Required when `auto_generate` is `false`."
+            "description": "New conversation name. Required unless `auto_generate` is `true`."
           },
           "auto_generate": {
             "type": "boolean",
@@ -14089,7 +14139,7 @@
           },
           "user": {
             "type": "string",
-            "description": "The user identifier."
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           }
         }
       },
@@ -14161,7 +14211,7 @@
           },
           "user": {
             "type": "string",
-            "description": "User identifier."
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           }
         }
       },
@@ -14175,11 +14225,11 @@
           "file": {
             "type": "string",
             "format": "binary",
-            "description": "Audio file. Validated by MIME type: `audio/mp3`, `audio/m4a`, `audio/wav`, `audio/amr`, or `audio/mpga`. Limit: `30 MB`."
+            "description": "Audio file to transcribe. Accepted MIME types: `audio/mp3`, `audio/m4a`, `audio/wav`, `audio/amr`, `audio/mpga`. Other types, including the common `audio/mpeg`, are rejected with `unsupported_audio_type`. Maximum size `30 MB`."
           },
           "user": {
             "type": "string",
-            "description": "User identifier."
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           }
         }
       },
@@ -14199,15 +14249,15 @@
           "message_id": {
             "type": "string",
             "format": "uuid",
-            "description": "Message ID. Takes priority over `text` when both are provided."
+            "description": "ID of the message whose answer to voice. Takes priority over `text` when both are provided. Get message IDs from [List Conversation Messages](/en/api-reference/conversations/list-conversation-messages)."
           },
           "text": {
             "type": "string",
-            "description": "Speech content to convert."
+            "description": "Text to synthesize into speech."
           },
           "user": {
             "type": "string",
-            "description": "User identifier."
+            "description": "End-user identifier, defined by your app and unique within it. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           "voice": {
             "type": "string",
@@ -14532,11 +14582,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "Annotation question."
+            "description": "Question text the app matches incoming user input against."
           },
           "answer": {
             "type": "string",
-            "description": "Annotation answer."
+            "description": "Answer returned when this annotation is matched."
           }
         }
       },
@@ -14550,11 +14600,11 @@
         "properties": {
           "question": {
             "type": "string",
-            "description": "Updated annotation question."
+            "description": "New question text for the annotation."
           },
           "answer": {
             "type": "string",
-            "description": "Updated annotation answer."
+            "description": "New answer text for the annotation."
           }
         }
       },
@@ -14569,11 +14619,11 @@
         "properties": {
           "embedding_provider_name": {
             "type": "string",
-            "description": "Name of the embedding model provider (e.g., `openai`, `cohere`)."
+            "description": "Embedding model provider (for example, `openai`). Get available providers from [Get Available Models](/en/api-reference/models/get-available-models)."
           },
           "embedding_model_name": {
             "type": "string",
-            "description": "Name of the embedding model to use for annotation matching (e.g., `text-embedding-3-small`)."
+            "description": "Embedding model used to vectorize annotations for matching (for example, `text-embedding-3-small`)."
           },
           "score_threshold": {
             "type": "number",
@@ -16497,7 +16547,7 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "Key-value pairs for workflow input variables. Values for file-type variables should be arrays of file objects with `type`, `transfer_method`, and either `url` or `upload_file_id`. Refer to the `user_input_form` field in the [Get App Parameters](/en/api-reference/applications/get-app-parameters) response to discover the variable names and types expected by your app.",
+            "description": "Key-value pairs for workflow input variables. Discover the variable names and types your app expects from the `user_input_form` field of [Get App Parameters](/en/api-reference/applications/get-app-parameters).\n\nFile-type variables take an array of file objects with `type`, `transfer_method`, and either `url` or `upload_file_id`.",
             "additionalProperties": {
               "oneOf": [
                 {
@@ -16531,7 +16581,7 @@
           },
           "user": {
             "type": "string",
-            "description": "User identifier, defined by the developer's rules, must be unique within the application. This identifier scopes data access — workflow runs and files are only visible when queried with the same `user` value."
+            "description": "End-user identifier, defined by your app and unique within it. Scopes data access: a workflow run and its files are only visible to later requests that carry the same `user`. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           "files": {
             "type": "array",
@@ -18062,13 +18112,13 @@
         "properties": {
           "inputs": {
             "type": "object",
-            "description": "Allows the entry of various variable values defined by the App. Contains key/value pairs, with each key corresponding to a specific variable and each value being the specific value for that variable. Refer to the `user_input_form` field in the [Get App Parameters](/en/api-reference/applications/get-app-parameters) response to discover the variable names and types expected by your app.",
+            "description": "Values for the app's input variables, keyed by variable name. The expected names and types come from the `user_input_form` field of [Get App Parameters](/en/api-reference/applications/get-app-parameters).",
             "additionalProperties": true
           },
           "query": {
             "type": "string",
             "default": "",
-            "description": "The input text to be processed. This is a legacy parameter; in newer apps, the query should be passed inside the `inputs` object."
+            "description": "The text to process. Legacy field; newer apps pass this inside `inputs` instead."
           },
           "response_mode": {
             "type": "string",
@@ -18080,14 +18130,14 @@
           },
           "user": {
             "type": "string",
-            "description": "User identifier, unique within the application. This identifier scopes data access — messages and files are only visible when queried with the same `user` value."
+            "description": "End-user identifier, defined by your app and unique within it. Messages and files are visible only to requests carrying the same `user`. See [End User Identity](/en/api-reference/guides/end-user-identity)."
           },
           "files": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/InputFileObject"
             },
-            "description": "File list for multimodal understanding, including images, documents, audio, and video. To attach a local file, first upload it via [Upload File](/en/api-reference/files/upload-file) and use the returned `id` as `upload_file_id` with `transfer_method: local_file`."
+            "description": "Files to attach to the request. For a local file, first upload it via [Upload File](/en/api-reference/files/upload-file), then reference the returned `id` as `upload_file_id` with `transfer_method: local_file`."
           }
         }
       },
@@ -19136,7 +19186,7 @@
             "properties": {
               "reranking_provider_name": {
                 "type": "string",
-                "description": "Reranking model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/cohere/cohere`); a bare name like `cohere` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins. Get valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=rerank`."
+                "description": "Reranking model provider identifier, formatted as `organization/plugin_name/provider_name` (e.g. `langgenius/cohere/cohere`). A bare name like `cohere` expands to `langgenius/<name>/<name>` and works only for langgenius-published plugins.\n\nGet valid values from the `provider` field of [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=rerank`."
               },
               "reranking_model_name": {
                 "type": "string",
@@ -19242,7 +19292,7 @@
                     },
                     "comparison_operator": {
                       "type": "string",
-                      "description": "Comparison to apply. String operators (`contains`, `not contains`, `start with`, `end with`, `is`, `is not`, `empty`, `not empty`, `in`, `not in`) act on string or array metadata. Numeric operators (`=`, `≠`, `>`, `<`, `≥`, `≤`) act on numeric metadata. Time operators (`before`, `after`) act on time metadata.",
+                      "description": "Comparison to apply, by metadata type:\n\n- String or array metadata: `contains`, `not contains`, `start with`, `end with`, `is`, `is not`, `empty`, `not empty`, `in`, `not in`\n- Numeric metadata: `=`, `≠`, `>`, `<`, `≥`, `≤`\n- Time metadata: `before`, `after`",
                       "enum": [
                         "contains",
                         "not contains",
