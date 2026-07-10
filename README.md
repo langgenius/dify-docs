@@ -103,7 +103,7 @@ This repository includes Claude Code skills in `.claude/skills/` that provide wr
 
 - **One topic per PR.** Don't combine unrelated changes.
 - **All three languages.** Every content change updates `en/`, `zh/`, and `ja/` together; agent-produced translations are welcome when they follow the rules in `tools/translate/`.
-- **Update navigation.** If you add a new page, add it to the English section of `docs.json`.
+- **Update navigation.** If you add a new page, add it to all three language sections of `docs.json`.
 - **Test locally.** Run `mintlify dev` to verify your changes render correctly before opening a PR.
 - **No secrets.** Never commit API keys, credentials, or `.env` files.
 
