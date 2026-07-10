@@ -103,7 +103,7 @@ Spec errors hide in plausible-looking JSON. Dispatch a subagent to audit the spe
 - **Identify the correct controller** (Service API at `/v1`, `controllers/service_api/`), not a same-named `web`/`console` route with different auth or params; see [Verifying Against Code](#verifying-against-code).
 - Per endpoint: check path/method, every parameter (required/optional/type), response status and body fields, and each error code traced `exception` to `handler`, all against code. Return a per-endpoint verdict with `file:symbol` evidence, plus a separate list of what code alone cannot confirm.
 - Trace opaque request fields (ids, tokens, file references) to where they are resolved and validated, not just the controller. Capture ownership and cross-request rules, such as an `upload_file_id` whose owning `user` must match the submit's.
-- If the endpoint also appears in the in-product API templates (`web/app/components/develop/template/template_*.mdx`), diff the spec against them; they document the same endpoints and surface divergence and upstream fixes.
+- If the endpoint also appears in the in-product API templates (`web/app/components/develop/template/template_*.mdx`), diff the spec against them. Treat divergence as a signal to re-check the code, not as authority: the templates have been found stale (wrong limits, renamed error codes) — the code decides, and template drift is worth flagging upstream.
 
 Treat the audit as authoritative over your draft; reconcile every discrepancy before claiming done.
 
