@@ -623,7 +623,7 @@
     "/files/upload": {
       "post": {
         "summary": "Upload File",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nUpload a file for use when sending messages, enabling multimodal understanding of images, documents, audio, and video. Uploaded files are for use by the current end-user only.",
+        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nUploads a file and returns its `id` for later requests to reference. The file belongs to the uploading end user: only requests carrying the same `user` can reference it.\n\nWhich file types an app actually consumes depends on its file-upload settings; read them from [Get App Parameters](/en/api-reference/applications/get-app-parameters).",
         "operationId": "uploadChatFile",
         "tags": [
           "Files"
@@ -642,11 +642,11 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "The file to be uploaded. Supported types include images, documents, audio, and video."
+                    "description": "The file to upload, as one `multipart/form-data` part. Any extension is accepted unless it is on the deployment's security blacklist (`UPLOAD_FILE_EXTENSION_BLACKLIST`, empty by default). Size limits apply per category: images 10 MB, audio 50 MB, video 100 MB, and other files 15 MB by default (Dify Cloud uses the defaults); self-hosted deployments adjust them with the `UPLOAD_*_FILE_SIZE_LIMIT` [environment variables](/en/self-host/deploy/configuration/environments). The filename must not contain `/` or `\\`."
                   },
                   "user": {
                     "type": "string",
-                    "description": "Identifier for the end user, defined by your application's rules and unique within the app. Service API and WebApp user IDs are separate, even when identical. If omitted, the upload is attributed to the shared `DEFAULT-USER` end user; a file can only be used later by requests carrying the same `user` value."
+                    "description": "End-user identifier this upload belongs to, defined by your app and unique within it. Omit it to attribute the upload to the shared `DEFAULT-USER`. Only later requests with the same `user` can reference the file. See [End User Identity](/en/api-reference/guides/end-user-identity)."
                   }
                 }
               }
@@ -687,7 +687,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `invalid_param` : The filename contains invalid characters (`/` or `\\`).",
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `invalid_param` : The filename contains `/` or `\\`, or the file's extension is on the deployment's blacklist.",
             "content": {
               "application/json": {
                 "examples": {
@@ -720,7 +720,7 @@
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
-                      "message": "Filename contains invalid characters"
+                      "message": "File extension '.exe' is not allowed for security reasons"
                     }
                   }
                 }
@@ -728,7 +728,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : File size exceeded. The runtime `message` is currently returned as an empty string (a known backend quirk); rely on the `code` and status.",
+            "description": "`file_too_large` : The file exceeds its category's size limit (see the `file` field). The runtime `message` is currently returned as an empty string (a known backend quirk); rely on the `code` and status.",
             "content": {
               "application/json": {
                 "examples": {
@@ -745,7 +745,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : File type not allowed.",
+            "description": "`unsupported_file_type` : The uploaded `file` part declares no MIME type.",
             "content": {
               "application/json": {
                 "examples": {
@@ -768,7 +768,14 @@
             "title": "Upload File",
             "sidebarTitle": "Upload File"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/files/upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@product-photo.png' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/files/{file_id}/preview": {
@@ -13550,7 +13557,7 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "ID of the user who uploaded the file."
+            "description": "End-user ID of the uploader. Look up details with [Get End User Info](/en/api-reference/end-users/get-end-user-info)."
           },
           "created_at": {
             "type": "integer",

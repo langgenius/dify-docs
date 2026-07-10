@@ -623,7 +623,7 @@
     "/files/upload": {
       "post": {
         "summary": "ファイルをアップロード",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nメッセージ送信時に使用するファイルをアップロードします。画像、ドキュメント、音声、動画のマルチモーダル理解が可能です。アップロードされたファイルは現在のエンドユーザーのみが使用できます。",
+        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nファイルをアップロードし、後続のリクエストから参照するための `id` を返します。ファイルはアップロードしたエンドユーザーに属し、同じ `user` を持つリクエストだけがそのファイルを参照できます。\n\nアプリが実際に扱えるファイル種別は、アプリのファイルアップロード設定によって決まります。[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) で確認できます。",
         "operationId": "uploadBasicChatFileJa",
         "tags": [
           "ファイル操作"
@@ -642,11 +642,11 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "アップロードするファイル。サポートされるタイプには画像、ドキュメント、音声、動画が含まれます。"
+                    "description": "アップロードするファイル。`multipart/form-data` の 1 パートとして送信します。デプロイの安全ブラックリスト（`UPLOAD_FILE_EXTENSION_BLACKLIST`、デフォルトは空）にある拡張子を除き、任意のファイル形式をアップロードできます。サイズ上限はカテゴリごとに適用されます：画像 10 MB、音声 50 MB、動画 100 MB、その他のファイル 15 MB（デフォルト値。Dify Cloud はデフォルト値を使用）。セルフホスト環境では `UPLOAD_*_FILE_SIZE_LIMIT` [環境変数](/ja/self-host/deploy/configuration/environments) で調整できます。ファイル名に `/` や `\\` は使えません。"
                   },
                   "user": {
                     "type": "string",
-                    "description": "ユーザー識別子。開発者のルールで定義され、アプリケーション内で一意である必要があります。Service API と WebApp のユーザー ID は独立しており、値が同じでも同じユーザーを指しません。省略した場合、アップロードは共有の `DEFAULT-USER` エンドユーザーに帰属します。ファイルは、アップロード時と同じ `user` 値を持つリクエストからのみ使用できます。"
+                    "description": "このアップロードが属するエンドユーザーの識別子。アプリ側で定義し、アプリ内で一意にします。省略すると、共有の `DEFAULT-USER` に帰属します。同じ `user` を持つ後続のリクエストだけがこのファイルを参照できます。[エンドユーザーの識別](/ja/api-reference/guides/end-user-identity) を参照してください。"
                   }
                 }
               }
@@ -687,7 +687,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : リクエストにファイルが提供されていません。\n- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `invalid_param` : ファイル名に不正な文字（`/` または `\\`）が含まれています。",
+            "description": "- `no_file_uploaded` : リクエストにファイルが提供されていません。\n- `too_many_files` : 1 回のリクエストにつき 1 ファイルのみ許可されています。\n- `filename_not_exists_error` : アップロードされたファイルにファイル名がありません。\n- `invalid_param` : ファイル名に `/` または `\\` が含まれているか、ファイルの拡張子がデプロイのブラックリストにあります。",
             "content": {
               "application/json": {
                 "examples": {
@@ -720,7 +720,7 @@
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
-                      "message": "Filename contains invalid characters"
+                      "message": "File extension '.exe' is not allowed for security reasons"
                     }
                   }
                 }
@@ -728,7 +728,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : ファイルサイズの上限を超えています。現在、ランタイムの `message` は空文字列として返されます（既知のバックエンドの挙動）。`code` とステータスで判定してください。",
+            "description": "`file_too_large` : ファイルがカテゴリごとのサイズ上限（`file` フィールドを参照）を超えています。現在、実行時の `message` は空文字列で返ります（既知のバックエンドの問題）。`code` とステータスコードで判定してください。",
             "content": {
               "application/json": {
                 "examples": {
@@ -745,7 +745,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 許可されていないファイルタイプです。",
+            "description": "`unsupported_file_type` : アップロードされた `file` パートに MIME タイプが宣言されていません。",
             "content": {
               "application/json": {
                 "examples": {
@@ -768,7 +768,14 @@
             "title": "ファイルをアップロード",
             "sidebarTitle": "ファイルをアップロード"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/files/upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@product-photo.png' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/files/{file_id}/preview": {
@@ -13550,7 +13557,7 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "ファイルをアップロードしたユーザーの ID。"
+            "description": "アップロードしたエンドユーザーの ID。[エンドユーザー取得](/ja/api-reference/end-users/get-end-user-info) で詳細を確認できます。"
           },
           "created_at": {
             "type": "integer",

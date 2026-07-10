@@ -623,7 +623,7 @@
     "/files/upload": {
       "post": {
         "summary": "上传文件",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n上传文件用于发送消息时使用，支持图片、文档、音频和视频的多模态理解。上传的文件仅供当前终端用户使用。",
+        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n上传文件并返回其 `id`，供后续请求引用。文件归上传它的终端用户所有：只有携带相同 `user` 的请求才能引用该文件。\n\n应用实际能使用哪些文件类型，取决于它的文件上传设置；可通过 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 读取。",
         "operationId": "uploadBasicChatFileCn",
         "tags": [
           "文件操作"
@@ -642,11 +642,11 @@
                   "file": {
                     "type": "string",
                     "format": "binary",
-                    "description": "要上传的文件。支持的类型包括图片、文档、音频和视频。"
+                    "description": "要上传的文件，作为 `multipart/form-data` 的一个部分。除部署安全黑名单（`UPLOAD_FILE_EXTENSION_BLACKLIST`，默认为空）中的扩展名外，任何文件类型都可上传。文件大小按类别限制：图片 10 MB、音频 50 MB、视频 100 MB、其他文件 15 MB（默认值，Dify Cloud 使用默认值）；自部署可通过 `UPLOAD_*_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。文件名不能包含 `/` 或 `\\`。"
                   },
                   "user": {
                     "type": "string",
-                    "description": "用户标识符，由开发者定义的规则生成，必须在应用内唯一。Service API 与 WebApp 的用户 ID 相互独立，即使取值相同也不指向同一用户。省略时，上传会归属到共享的 `DEFAULT-USER` 终端用户；后续请求只有携带与上传时相同的 `user` 值才能使用该文件。"
+                    "description": "该上传所属的终端用户标识，由你的应用定义，需在应用内唯一。省略时上传归属于共享的 `DEFAULT-USER`。只有携带相同 `user` 的后续请求才能引用该文件。参见 [终端用户身份](/zh/api-reference/guides/end-user-identity)。"
                   }
                 }
               }
@@ -687,7 +687,7 @@
             }
           },
           "400": {
-            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `too_many_files` : 每次请求仅允许上传一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `invalid_param` : 文件名包含非法字符（`/` 或 `\\`）。",
+            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `too_many_files` : 每次请求仅允许上传一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `invalid_param` : 文件名包含 `/` 或 `\\`，或文件扩展名在部署的黑名单中。",
             "content": {
               "application/json": {
                 "examples": {
@@ -720,7 +720,7 @@
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
-                      "message": "Filename contains invalid characters"
+                      "message": "File extension '.exe' is not allowed for security reasons"
                     }
                   }
                 }
@@ -728,7 +728,7 @@
             }
           },
           "413": {
-            "description": "`file_too_large` : 文件大小超出限制。运行时返回的 `message` 目前为空字符串（已知的后端问题），请以 `code` 和状态码为准。",
+            "description": "`file_too_large` : 文件超过其类别的大小限制（见 `file` 字段）。目前运行时返回的 `message` 为空字符串（已知的后端问题），请以 `code` 和状态码为准。",
             "content": {
               "application/json": {
                 "examples": {
@@ -745,7 +745,7 @@
             }
           },
           "415": {
-            "description": "`unsupported_file_type` : 不允许的文件类型。",
+            "description": "`unsupported_file_type` : 上传的 `file` 部分未声明 MIME 类型。",
             "content": {
               "application/json": {
                 "examples": {
@@ -768,7 +768,14 @@
             "title": "上传文件",
             "sidebarTitle": "上传文件"
           }
-        }
+        },
+        "x-codeSamples": [
+          {
+            "lang": "bash",
+            "label": "cURL",
+            "source": "curl --request POST \\\n  --url 'https://{api_base_url}/files/upload' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@product-photo.png' \\\n  --form 'user={user}'"
+          }
+        ]
       }
     },
     "/files/{file_id}/preview": {
@@ -13550,7 +13557,7 @@
             "type": "string",
             "format": "uuid",
             "nullable": true,
-            "description": "上传文件的用户 ID。"
+            "description": "上传者的终端用户 ID。可通过 [获取终端用户信息](/zh/api-reference/end-users/get-end-user-info) 查询详情。"
           },
           "created_at": {
             "type": "integer",
