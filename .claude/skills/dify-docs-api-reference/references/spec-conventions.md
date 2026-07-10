@@ -54,7 +54,7 @@ Pattern: `{verb}{AppType}{Resource}`.
 
 | Field | Scope |
 |---|---|
-| Endpoint `description` | What the endpoint does, plus any whole-API surprise (cascading delete, long-poll duration). One sentence when possible. |
+| Endpoint `description` | What the endpoint does, plus any whole-API surprise (cascading delete, long-poll duration). As short as the contract allows; parameter-scoped facts move into parameter descriptions. |
 | Parameter `description` | Field meaning, valid values, deprecation, normalization, and when to use it vs an alternative. |
 
 If the endpoint description explains a parameter, move it down.
@@ -67,7 +67,7 @@ If the endpoint description explains a parameter, move it down.
 
 ### Cross-API links
 
-When a description mentions another endpoint, link it: `/api-reference/{category}/{endpoint-name}` (kebab-case from the endpoint summary).
+When a description mentions another endpoint, link it with the language prefix and English slugs: `/{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` (identical across languages except the prefix; translate only the link text). When a request parameter's valid values come from another endpoint, name that endpoint in the parameter description and link it.
 
 ## Parameters
 
@@ -131,6 +131,10 @@ Never use the Python class name as the code when an `error_code` attribute exist
 - **Verify values against code.** Enum-like fields must use values the code actually returns or accepts.
 - Request and response examples must correspond.
 - **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example-Streaming mode"` (multiple). For error examples, use the error code as the summary.
+
+## x-codeSamples
+
+Mintlify's playground auto-generates request samples from the schema; do not duplicate it. Add a hand-written `x-codeSamples` entry only where autogen fails: `multipart/form-data`, binary bodies, and SSE consumption. House format: `{"lang": "bash", "label": "cURL", "source": "curl --request …"}` with `{api_base_url}`, `{api_key}`, `{user}` placeholders. Code samples are identical across languages.
 
 ## Tag Naming
 
