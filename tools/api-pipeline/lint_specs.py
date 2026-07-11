@@ -1,6 +1,5 @@
 """Mechanical lint for Dify OpenAPI specs: examples vs schemas, enum coverage, links, x-codeSamples guard."""
 
-import glob
 import json
 import os
 import re
@@ -84,15 +83,22 @@ def collect_enum_usage(node, used, spec, depth=0):
         used.add(node)
 
 
-for f in sorted(glob.glob(f"{DOCS}/*/api-reference/openapi_*.json")):
+SPEC_FILES = [f"{DOCS}/{lang}/api-reference/openapi_service.json" for lang in ("en", "zh", "ja")]
+missing = [f for f in SPEC_FILES if not os.path.exists(f)]
+if missing:
+    for f in missing:
+        print(f"MISSING FILE: {f.replace(DOCS + '/', '')}")
+    sys.exit(1)
+
+for f in SPEC_FILES:
     rel = f.replace(DOCS + "/", "")
-    spec = json.load(open(f))
+    with open(f, encoding="utf-8") as _fh:
+        spec = json.load(_fh)
     lang = rel.split("/")[0]
 
-    # Build valid page slugs for this language (across all its specs)
+    # Build valid page slugs for this language from the already-loaded spec
     valid_pages = set()
-    for g in glob.glob(f"{DOCS}/{lang}/api-reference/openapi_*.json"):
-        s2 = json.load(open(g))
+    for s2 in [spec]:
         for p, ms in s2["paths"].items():
             for m, op in ms.items():
                 if not isinstance(op, dict) or "summary" not in op:

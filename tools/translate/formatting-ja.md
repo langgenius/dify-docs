@@ -90,13 +90,11 @@ Same-page anchors keep CJK characters and full-width punctuation (`：`, `・`) 
 
 ### API Reference Cross-Links
 
-In OpenAPI spec descriptions, cross-links use the pattern `/api-reference/{tag-kebab}/{summary-kebab}`. When translating, replace both the tag and summary segments with their translated equivalents from the target language's spec.
+In OpenAPI spec descriptions, cross-links carry the language prefix and English slugs — identical to the English URL except the prefix: `/ja/api-reference/{en-tag-kebab}/{en-summary-kebab}`. Translate the link text; never translate the URL segments.
 
 | English | Japanese |
 |:--------|:---------|
-| `/api-reference/knowledge-pipeline/upload-pipeline-file` | `/api-reference/ナレッジパイプライン/パイプラインファイルをアップロード` |
-
-The translated tag and summary must match the `tags` and `summary` fields in the corresponding endpoint of the ja OpenAPI spec.
+| `[Get Human Input Form](/en/api-reference/human-input/get-human-input-form)` | `[人間の入力フォームを取得](/ja/api-reference/human-input/get-human-input-form)` |
 
 ## Katakana Conventions
 
