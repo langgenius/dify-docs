@@ -1,4 +1,4 @@
-import glob, json, os, sys
+import json, os, sys
 DOCS = os.environ['DOCS']
 
 def op_shape(op):
@@ -12,7 +12,10 @@ def op_shape(op):
     return {'params': params, 'responses': responses, 'body': body_types, 'samples': n_samples}
 
 total = 0
-for en_file in sorted(glob.glob(f'{DOCS}/en/api-reference/openapi_*.json')):
+en_file = f'{DOCS}/en/api-reference/openapi_service.json'
+if not os.path.exists(en_file):
+    print('MISSING FILE: en/api-reference/openapi_service.json'); sys.exit(1)
+for en_file in [en_file]:
     name = en_file.split('/')[-1]
     en = json.load(open(en_file))
     for lang in ('zh', 'ja'):
