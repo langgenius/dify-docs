@@ -18,7 +18,8 @@ def blank(p):
     return re.sub(r"\{[^}]+\}", "{}", p)
 
 
-swagger = json.load(urllib.request.urlopen(SWAGGER_URL, timeout=20))
+with urllib.request.urlopen(SWAGGER_URL, timeout=20) as _fh:
+    swagger = json.load(_fh)
 print(f"swagger version: {swagger.get('swagger') or swagger.get('openapi')}, paths: {len(swagger['paths'])}")
 
 code_ops = {}
@@ -39,7 +40,8 @@ for p, ms in swagger["paths"].items():
 
 spec_ops = {}
 for f in [f"{DOCS}/en/api-reference/openapi_service.json"]:
-    spec = json.load(open(f, encoding='utf-8'))
+    with open(f, encoding='utf-8') as _fh:
+        spec = json.load(_fh)
     name = f.split("/")[-1]
     for p, ms in spec["paths"].items():
         for m, op in ms.items():

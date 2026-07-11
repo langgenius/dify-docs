@@ -68,8 +68,10 @@ def nav_groups_for(lang: str, labels: dict) -> list:
     overrides from op_order.
     """
     memberships = load_memberships()
-    merged = json.load(open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8"))
-    en_merged = json.load(open(REPO / "en" / "api-reference" / "openapi_service.json", encoding="utf-8"))
+    with open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8") as _fh:
+        merged = json.load(_fh)
+    with open(REPO / "en" / "api-reference" / "openapi_service.json", encoding="utf-8") as _fh:
+        en_merged = json.load(_fh)
     if len(merged["tags"]) != len(en_merged["tags"]):
         raise ValueError(
             f"nav_groups_for({lang}): tag count mismatch: "
@@ -161,7 +163,8 @@ def check_coverage(langs):
     memberships = load_memberships()
     failures = []
     for lang in langs:
-        merged = json.load(open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8"))
+        with open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8") as _fh:
+            merged = json.load(_fh)
         hrefs = {f"{m.upper()} {p}": op["x-mint"]["href"]
                  for p, ms in merged["paths"].items() for m, op in ms.items()
                  if isinstance(op, dict) and "x-mint" in op}

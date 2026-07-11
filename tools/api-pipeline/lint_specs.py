@@ -92,7 +92,8 @@ if missing:
 
 for f in SPEC_FILES:
     rel = f.replace(DOCS + "/", "")
-    spec = json.load(open(f, encoding="utf-8"))
+    with open(f, encoding="utf-8") as _fh:
+        spec = json.load(_fh)
     lang = rel.split("/")[0]
 
     # Build valid page slugs for this language from the already-loaded spec
