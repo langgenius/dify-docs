@@ -15,16 +15,12 @@ Skeleton for the Phase 2 doc sync report. Fill in the comparison refs, counts, a
 
 ## API Reference Changes
 
-### openapi_chat.json / openapi_chatflow.json
+Target: `{lang}/api-reference/openapi_service.json` (one spec per language; edit all three).
 
 | PR | Title | Change Type | Details | Doc Status |
 |---|---|---|---|---|
 | #1234 | Add streaming retry | New parameter | `retry_count` on `/chat-messages` | Not yet documented |
 | #1235 | Fix error handling | Error codes | New `rate_limit_exceeded` on `/chat-messages` | Already documented |
-
-### openapi_knowledge.json
-| PR | Title | Change Type | Details | Doc Status |
-|---|---|---|---|---|
 | #1240 | Add metadata filter | New parameter | `metadata_filter` on list segments | Not yet documented |
 
 ## Help Documentation Changes
