@@ -175,8 +175,12 @@ def check_coverage(langs):
             text = page.read_text(encoding="utf-8")
             links = set(re.findall(r"\]\((/[a-z]{2}/api-reference/[^)#\s]+)", text))
             for op_key in cfg["ops"]:
-                if hrefs[op_key] not in links:
-                    failures.append(f"{lang}/{key}: missing link for {op_key} ({hrefs[op_key]})")
+                href = hrefs.get(op_key)
+                if href is None:
+                    failures.append(f"{lang}/{key}: {op_key} not in the spec or missing x-mint.href")
+                    continue
+                if href not in links:
+                    failures.append(f"{lang}/{key}: missing link for {op_key} ({href})")
             for link in links - set(hrefs.values()):
                 if not (link.endswith("/overview") or "/api-reference/guides/" in link):
                     failures.append(f"{lang}/{key}: link to unknown page {link}")
