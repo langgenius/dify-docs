@@ -4,7 +4,6 @@ Disagreements are flags for Tier 1 investigation, not verdicts: the restx doc
 decorators are themselves hand-maintained.
 """
 
-import glob
 import json
 import os
 import re
@@ -39,8 +38,8 @@ for p, ms in swagger["paths"].items():
         }
 
 spec_ops = {}
-for f in sorted(glob.glob(f"{DOCS}/en/api-reference/openapi_*.json")):
-    spec = json.load(open(f))
+for f in [f"{DOCS}/en/api-reference/openapi_service.json"]:
+    spec = json.load(open(f, encoding='utf-8'))
     name = f.split("/")[-1]
     for p, ms in spec["paths"].items():
         for m, op in ms.items():

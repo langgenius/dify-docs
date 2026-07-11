@@ -133,7 +133,7 @@ The wire `code` and `message` per exception kind are defined once, in `codebase-
 - **Realistic values only**: real-looking UUIDs, timestamps, text, metadata.
 - **Verify values against code.** Enum-like fields must use values the code actually returns or accepts.
 - Request and response examples must correspond.
-- **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example-Streaming mode"` (multiple). For error examples, use the error code as the summary.
+- **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example - Streaming mode"` (multiple; spaced hyphen, matching the existing specs). For error examples, use the error code as the summary.
 
 ## Standard Texts
 

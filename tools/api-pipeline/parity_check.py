@@ -17,12 +17,12 @@ if not os.path.exists(en_file):
     print('MISSING FILE: en/api-reference/openapi_service.json'); sys.exit(1)
 for en_file in [en_file]:
     name = en_file.split('/')[-1]
-    en = json.load(open(en_file))
+    en = json.load(open(en_file, encoding='utf-8'))
     for lang in ('zh', 'ja'):
         other_file = en_file.replace('/en/', f'/{lang}/')
         if not os.path.exists(other_file):
             print(f'MISSING FILE: {lang}/{name}'); total += 1; continue
-        other = json.load(open(other_file))
+        other = json.load(open(other_file, encoding='utf-8'))
         en_ops = {(p, m) for p, ms in en['paths'].items() for m in ms if isinstance(ms[m], dict)}
         ot_ops = {(p, m) for p, ms in other['paths'].items() for m in ms if isinstance(ms[m], dict)}
         for p, m in sorted(en_ops - ot_ops):

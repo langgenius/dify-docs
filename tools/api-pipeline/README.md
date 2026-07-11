@@ -11,15 +11,16 @@ Tooling for the Service API reference. `{lang}/api-reference/openapi_service.jso
 | `memberships.json` | App type → supported operations; drives the app-type overview pages and the coverage check |
 | `lint_specs.py` | Example/schema, enum, link, and x-codeSamples lint |
 | `parity_check.py` | en/zh/ja structural parity (ops, params, responses, samples) |
-| `coverage_matrix.py`, `swagger_diff.py` | Code-vs-spec audit tooling, for runtime verification |
+| `coverage_matrix.py`, `swagger_diff.py` | Code-vs-spec audit tooling, for runtime verification (read `openapi_service.json`) |
 
 ## Usage
 
 ```bash
-DOCS="$PWD" python3 tools/api-pipeline/merge_specs.py wire --lang en zh ja
-DOCS="$PWD" python3 tools/api-pipeline/merge_specs.py check-coverage --lang en zh ja
-DOCS="$PWD" python3 tools/api-pipeline/lint_specs.py
-DOCS="$PWD" python3 tools/api-pipeline/parity_check.py
+export DOCS="$(git rev-parse --show-toplevel)"
+python3 "$DOCS/tools/api-pipeline/merge_specs.py" wire --lang en zh ja
+python3 "$DOCS/tools/api-pipeline/merge_specs.py" check-coverage --lang en zh ja
+python3 "$DOCS/tools/api-pipeline/lint_specs.py"
+python3 "$DOCS/tools/api-pipeline/parity_check.py"
 ```
 
 All checks exit nonzero on failure.

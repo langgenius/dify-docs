@@ -92,13 +92,12 @@ if missing:
 
 for f in SPEC_FILES:
     rel = f.replace(DOCS + "/", "")
-    spec = json.load(open(f))
+    spec = json.load(open(f, encoding="utf-8"))
     lang = rel.split("/")[0]
 
-    # Build valid page slugs for this language
+    # Build valid page slugs for this language from the already-loaded spec
     valid_pages = set()
-    for g in [f"{DOCS}/{lang}/api-reference/openapi_service.json"]:
-        s2 = json.load(open(g))
+    for s2 in [spec]:
         for p, ms in s2["paths"].items():
             for m, op in ms.items():
                 if not isinstance(op, dict) or "summary" not in op:

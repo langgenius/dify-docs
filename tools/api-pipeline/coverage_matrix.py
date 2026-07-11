@@ -12,7 +12,7 @@ def blank(p):
 # --- code inventory ---
 code_ops = {}  # (blank_path, method) -> {'path': normalized, 'file': f, 'class': cls}
 for f in glob.glob(f'{WT}/api/controllers/service_api/**/*.py', recursive=True):
-    tree = ast.parse(open(f).read())
+    tree = ast.parse(open(f, encoding='utf-8').read())
     for node in ast.walk(tree):
         if not isinstance(node, ast.ClassDef): continue
         routes = []
@@ -30,8 +30,8 @@ for f in glob.glob(f'{WT}/api/controllers/service_api/**/*.py', recursive=True):
 
 # --- spec inventory ---
 spec_ops = defaultdict(lambda: {'specs': [], 'paths': set()})
-for f in sorted(glob.glob(f'{DOCS}/en/api-reference/openapi_*.json')):
-    spec = json.load(open(f))
+for f in [f'{DOCS}/en/api-reference/openapi_service.json']:
+    spec = json.load(open(f, encoding='utf-8'))
     name = f.split('/')[-1].replace('openapi_','').replace('.json','')
     for p, ms in spec['paths'].items():
         for m in ms:

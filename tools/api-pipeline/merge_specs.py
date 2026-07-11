@@ -16,8 +16,9 @@ Modes:
                   supported operation, per memberships.json.
 
 Usage:
-  DOCS="$PWD" python3 merge_specs.py wire --lang en zh ja
-  DOCS="$PWD" python3 merge_specs.py check-coverage --lang en zh ja
+  export DOCS="$(git rev-parse --show-toplevel)"
+  python3 "$DOCS/tools/api-pipeline/merge_specs.py" wire --lang en zh ja
+  python3 "$DOCS/tools/api-pipeline/merge_specs.py" check-coverage --lang en zh ja
 
 Env:
   DOCS  docs repo root (default: two levels above this file)
