@@ -1,6 +1,6 @@
 # Dify Documentation Glossary
 
-Standard terminology for Dify documentation. Single source of truth for writers, translators, and the automated translation pipeline.
+Standard terminology for Dify documentation. Single source of truth for writers and translators, human and AI alike.
 
 ---
 
