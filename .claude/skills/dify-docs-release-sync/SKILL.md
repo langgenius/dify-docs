@@ -129,12 +129,13 @@ MILESTONE_NUM=$(gh api repos/langgenius/dify/milestones --paginate \
   --jq '.[] | select(.title=="MILESTONE_NAME") | .number')
 gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=all&per_page=100" \
   --paginate --jq '.[] | {number, title, state, pr: (.pull_request != null)}'
-# merged-PR range: the git log from 1.1 (--grep "(#") is the other half
+# merged-PR range: the git log from 1.1 (--grep="(#") is the other half
 ```
 
+- **Only milestone PRs (`pr: true`) join the range cross-check.** Plain issues (`pr: false`) are planned-feature signals, not range candidates: find each one's closing/linked PR (issue timeline, `Fixes #N` references) and track that PR instead.
 - In the range but **not in the milestone** → usually community contributions: assess doc impact normally — these are the easiest changes to miss.
-- In the milestone but **not in the range** → not merged yet (early pass: carry to the next sweep) or slipped (re-sweep: apply the slippage check from 1.0a).
-- Milestone **description text** stays aspirational (see 1.0): scope from its tagged PRs/issues, never from the prose alone.
+- Milestone PRs **not in the range** → not merged yet (early pass: carry to the next sweep) or slipped (re-sweep: apply the slippage check from 1.0a).
+- Milestone **description text** stays aspirational (see 1.0): scope from tracked items, never from the prose alone.
 
 ### 1.2 Categorize PRs
 
