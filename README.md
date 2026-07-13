@@ -11,29 +11,29 @@ Official documentation for [Dify](https://dify.ai), available in English, Chines
 
 ## Contributing
 
-We welcome contributions! All content should be submitted in **English only** — Chinese and Japanese translations are generated automatically by our translation pipeline.
+We welcome contributions! Submit changes in **all three languages**: English (`en/`, the source), Chinese (`zh/`), and Japanese (`ja/`). If you work with an AI agent (Claude Code, Cursor, etc.), it can produce the translations — point it at `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`, the same rules our own agents follow.
 
 ### Quick Start
 
 1. Fork and clone the repository.
 2. Create a branch, make your changes, and open a pull request against `main`.
-3. Your PR will be reviewed by a maintainer. Once approved, translations are generated automatically.
+3. Your PR will be reviewed by a maintainer, translations included — the docs team may adjust zh/ja wording during review.
 
 ### Repository Structure
 
 ```
 dify-docs/
 ├── en/              # English documentation (source language)
-├── zh/              # Chinese translations (auto-generated)
-├── ja/              # Japanese translations (auto-generated)
+├── zh/              # Chinese translations (submitted with each change)
+├── ja/              # Japanese translations (submitted with each change)
 ├── writing-guides/  # Style guide, formatting guide, glossary
 ├── .claude/skills/  # Claude Code documentation skills
-├── tools/translate/ # Translation pipeline
+├── tools/translate/ # Translation rules and utilities
 ├── docs.json        # Navigation structure
 ```
 
-- All content changes should be made in the `en/` directory. Do not edit `zh/` or `ja/` directly except when specifically optimizing Chinese or Japanese translations.
-- If you add or move a page, update the English section in `docs.json` — translations sync automatically.
+- English is the source: make the change in `en/` first, then mirror it to `zh/` and `ja/` in the same PR. Keep the translation Note at the top of zh/ja pages.
+- If you add or move a page, update all three language sections of `docs.json`.
 
 ### File Format
 
@@ -102,8 +102,8 @@ This repository includes Claude Code skills in `.claude/skills/` that provide wr
 ### Guidelines
 
 - **One topic per PR.** Don't combine unrelated changes.
-- **English only.** Translations are handled automatically, except for `en/self-host/deploy/configuration/environments.mdx` which must be translated manually.
-- **Update navigation.** If you add a new page, add it to the English section of `docs.json`.
+- **All three languages.** Every content change updates `en/`, `zh/`, and `ja/` together; agent-produced translations are welcome when they follow the rules in `tools/translate/`.
+- **Update navigation.** If you add a new page, add it to all three language sections of `docs.json`.
 - **Test locally.** Run `mintlify dev` to verify your changes render correctly before opening a PR.
 - **No secrets.** Never commit API keys, credentials, or `.env` files.
 
