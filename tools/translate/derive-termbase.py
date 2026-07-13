@@ -2,7 +2,7 @@
 """Derive termbase_i18n.md from writing-guides/glossary.md.
 
 Reads the rich glossary (with Notes and i18n Key columns),
-strips them, and writes the lean termbase for the translation pipeline.
+strips them, and writes the lean termbase used during translation.
 """
 
 import argparse

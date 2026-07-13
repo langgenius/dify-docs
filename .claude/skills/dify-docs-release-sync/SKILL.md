@@ -35,9 +35,9 @@ digraph {
   "User approves / adjusts" -> "Execute API spec updates";
   "User approves / adjusts" -> "Execute help doc updates";
   "User approves / adjusts" -> "Execute env var updates";
-  "Execute API spec updates" -> "Auto-translated on PR push";
-  "Execute help doc updates" -> "Auto-translated on PR push";
-  "Execute env var updates" -> "Manually update ZH/JA (not auto-translated)";
+  "Execute API spec updates" -> "Manually update ZH/JA in the same pass";
+  "Execute help doc updates" -> "Manually update ZH/JA in the same pass";
+  "Execute env var updates" -> "Manually update ZH/JA in the same pass";
 }
 ```
 
@@ -196,14 +196,14 @@ For each affected spec, dispatch a parallel audit agent with `dify-docs-api-refe
 
 **Cross-spec propagation**: Shared endpoints (file upload, audio, feedback, app info) appear in all 4 app specs. When fixing one, propagate to siblings.
 
-Translation of API specs is handled automatically by the workflow when changes are pushed; no manual translation step needed.
+Translate the spec changes into the `zh` and `ja` specs in the same pass (wire strings verbatim; run the parity check where available).
 
 ### Help Documentation Updates
 
 For each affected doc page, use `dify-docs-guides` skill:
 1. Read the current doc and the relevant PR(s) for context
 2. Update content to reflect changes
-3. Translation is handled automatically by the Dify workflow on PR push; no manual translation needed
+3. Update the zh and ja pages manually in the same pass (read `tools/translate/formatting-{zh,ja}.md` and the glossary first)
 
 ### Environment Variable Updates
 
@@ -213,7 +213,7 @@ For each affected variable group, use `dify-docs-env-vars` skill:
 3. Run the verification script to confirm zero mismatches
 4. Update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` with the same changes
 
-**Important**: `environments.mdx` is in the translation pipeline's ignore list (`tools/translate/config.json`). It is **not** auto-translated on PR push. ZH and JA env var docs must be updated manually.
+**Important**: update the ZH and JA env var docs in the same pass, like all pages.
 
 ### Parallel Execution
 
