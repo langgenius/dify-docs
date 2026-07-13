@@ -175,7 +175,7 @@ Every entry must include a source reference (PR, commit, or audit date).
 
 ## Translation
 
-The automated translation pipeline does not cover `en/self-host/deploy/configuration/environments.mdx`. After editing that English file, manually update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` to match.
+After editing `en/self-host/deploy/configuration/environments.mdx`, update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` to match in the same pass, like all pages.
 
 ## Post-Writing Verification
 

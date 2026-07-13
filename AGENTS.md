@@ -1,6 +1,6 @@
 # Dify Documentation — AI Agent Instructions
 
-Documentation for Dify, built with Mintlify. English is the source language; Chinese and Japanese translations are generated automatically. Exception: `en/self-host/deploy/configuration/environments.mdx` is excluded from the translation pipeline and must be translated manually.
+Documentation for Dify, built with Mintlify. English is the source language, and every content change ships all three languages together: finalize the English change, then produce the zh and ja translations in the same pass, following `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`. This applies to external contributions too.
 
 For documentation tasks, read these guides before starting:
 
@@ -12,8 +12,8 @@ For task-specific guidance, see `writing-guides/index.md`.
 
 ## Key Rules
 
-- Write in English only, except when specifically optimizing Chinese or Japanese translations.
-- Only edit the English section in `docs.json`. Translation sections sync automatically.
+- English first: write and finalize content in English, then translate to zh and ja in the same pass per the rules in `tools/translate/`. Keep the translation Note at the top of zh/ja pages.
+- `docs.json` has one navigation section per language. Structural changes (added, moved, renamed pages) must be mirrored across all three sections in the same PR.
 - MDX files require `title` and `description` in YAML frontmatter.
 - When writing about a feature, verify behavior against the Dify codebase, not just existing docs. Existing docs may be outdated or completely wrong. When rewriting a page, treat every claim in the original as unverified. Check field names, types, required/optional status, and behavior descriptions against the current code. Never carry forward details from legacy docs without independent verification. The backend is split across two repos: built-in workflow nodes, the graph engine, runtime, and model_runtime live in the `graphon` repo (version-pinned in `dify/api/pyproject.toml`); integration nodes (Agent, Knowledge, Datasource, Trigger), orchestration, RAG, and tools stay in `dify`. Verify against the graphon version actually pinned by dify, not graphon `main`.
 - For new features, the user may specify a development branch. Code on development branches may be in flux—when behavior is ambiguous, ask rather than assume.
@@ -24,7 +24,7 @@ For task-specific guidance, see `writing-guides/index.md`.
 
 en/, zh/, ja/         Documentation content (en is source)
 writing-guides/       Style guide, formatting guide, glossary
-tools/translate/      Translation pipeline and language-specific formatting
+tools/translate/      Translation rules (zh/ja formatting guides, termbase) and utilities
 .claude/skills/       Documentation writing skills (auto-discovered)
 docs.json             Navigation structure
 
