@@ -41,36 +41,43 @@ Place critical limitations at the start of a section when users need them before
 
 ## Paid Feature Callouts
 
-Use one of three patterns based on the scope of the gated feature.
+Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`); Enterprise mentions appear only on self-host pages, as a `<Tip>`. Never both patterns in one copy.
 
-**Plan badges:**
+### Cloud pages: plan badges
 
 - `<Badge color="blue">Professional</Badge>`
 - `<Badge color="blue">Team</Badge>`
-- `<Badge color="blue">Enterprise</Badge>`
 
-**1. Whole section is the paid feature.** Place the badge inline with the section heading. No additional callout needed.
+Pick one of three placements based on the scope of the gated feature.
+
+**1. Whole section is the paid feature.** Place the badges inline with the section heading. No additional callout needed.
 
 ```mdx
-## Configure Model Load Balancing <Badge color="blue">Enterprise</Badge>
+## Spread Requests Across Keys with Load Balancing <Badge color="blue">Professional</Badge> <Badge color="blue">Team</Badge>
 ```
 
 **2. Paid feature is one item within a section that also covers standard features.** Place the `<Info>` callout AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
 
 ```mdx
-Sign in with your email address and password.
-
-Single sign-on via OAuth and SAML can be configured by the workspace administrator to supplement or replace email-and-password login.
-
 <Info>
-SSO is available on <Badge color="blue">Enterprise</Badge>. [Learn more](https://dify.ai/pricing).
+Adding chunks is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge>. [Learn more](https://dify.ai/pricing).
 </Info>
 ```
 
-**3. Paid feature mentioned in body prose alongside standard features.** Use an inline badge directly in the sentence.
+**3. Paid feature mentioned in body prose alongside standard features.** Use inline badges directly in the sentence.
 
 ```mdx
-Creating additional workspaces beyond the one provisioned at install time is available on <Badge color="blue">Enterprise</Badge>.
+Unlimited log retention is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge> for the duration of the active subscription. [Learn more](https://dify.ai/pricing).
+```
+
+### Self-host pages: Enterprise Tip
+
+Where a Community Edition capability ends and Dify Enterprise extends it, add a `<Tip>` at that point. It names a different product, not the reader's own, so it is not an audience restatement. Link to contact sales, never to the pricing page or the Enterprise docs. Do not add Enterprise mentions where CE isn't restricted, and no orphan headings for Enterprise-only features.
+
+```mdx
+<Tip>
+  On Dify Enterprise, you can sign in with OAuth or SAML single sign-on instead of a password. [Contact sales](https://udify.app/chat/QuwcpW1oBNcfeL55) to learn more.
+</Tip>
 ```
 
 ## Patterns to Use
@@ -97,7 +104,7 @@ Creating additional workspaces beyond the one provisioned at install time is ava
 
 **Adjustable parameter guidance.** When documenting parameters users can tune (thresholds, limits, intervals), describe the trade-off direction—not a recommended value. Tell users what happens when they go higher vs. lower so they can decide based on their own context. For example: "Higher thresholds return fewer, more relevant results; lower thresholds include broader matches."
 
-**Limits and quotas.** Match the claim to the limit's source. A hardcoded product limit gets a plain number ("up to 50 MB"). A deployment-configurable limit states the default and names the environment variable, linked to the environment variable reference ("up to 15 MB by default; adjust with `UPLOAD_FILE_SIZE_LIMIT`"). Presenting a configurable default as a fixed rule breaks on any deployment that changed it.
+**Limits and quotas.** Match the claim to what the reader can change. A hardcoded product limit gets a plain number ("up to 50 MB") — on Cloud pages every limit reads this way, since readers there have no deployment configuration to change. On self-host pages, a deployment-configurable limit states the default and names the environment variable, linked to the environment variable reference ("up to 15 MB by default; adjust with `UPLOAD_FILE_SIZE_LIMIT`"); presenting a configurable default as a fixed rule breaks on any deployment that changed it.
 
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
