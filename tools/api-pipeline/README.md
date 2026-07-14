@@ -23,7 +23,7 @@ python3 "$DOCS/tools/api-pipeline/lint_specs.py"
 python3 "$DOCS/tools/api-pipeline/parity_check.py"
 ```
 
-All checks exit nonzero on failure.
+parity_check.py and check-coverage exit nonzero on failure; lint_specs.py exits nonzero only on missing files — gate on its printed `TOTAL ISSUES` count.
 
 ## Editing the spec
 
