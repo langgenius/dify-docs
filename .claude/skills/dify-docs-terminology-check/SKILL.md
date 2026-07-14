@@ -9,77 +9,87 @@ description: >
 
 # Terminology Consistency Check
 
-## Purpose
+Read-only audit. Verify that documentation terms match the glossary (general terms) and the Dify codebase i18n (UI labels). Covers the whole file, not just the diff. Do NOT modify any files during the audit; report findings and stop.
 
-Verify that documentation uses terms consistently with the codebase i18n
-(source of truth for UI labels) and the glossary (source of truth for general
-terms). Covers the whole file, not just the diff.
+## Step 1 — Read the sources of truth
 
-## Before Starting
+1. Read `writing-guides/glossary.md`. Two sections matter here:
+   - `## General Terms` — standard body-text terms with English/Chinese/Japanese columns.
+   - `## UI Labels` — product UI strings with an `i18n Key` column mapping each label to the codebase.
+2. Locate the Dify codebase. If it is available as an additional working directory, use it; otherwise ask the user for the local path to their Dify repo.
+3. Ask the user: **"Which branch in the Dify codebase should I check UI labels against?"** (e.g., `main`, a feature branch). Default to `main` if they have no preference.
 
-1. Ask the user: **"Which branch in the Dify codebase should I check UI labels
-   against?"** (e.g., `main`, `feat/support-agent-sandbox`). If the Dify
-   codebase is available as an additional working directory, use that. Otherwise,
-   ask the user for the local filesystem path to their Dify repo and use it for
-   reading i18n files.
+## Step 2 — Pin the codebase ref
 
-   Pull the latest code before checking. In the Dify codebase directory:
+1. Sync and read the Dify codebase per `writing-guides/index.md` → "Syncing the Dify codebase safely". Never `git checkout` or `git pull` in the Dify tree.
+2. Fetch, then resolve the ref once and record it for the report. In the Dify repo:
    ```bash
-   git fetch origin && git checkout <branch> && git pull origin <branch>
+   git fetch --tags origin
+   REF=$(git rev-parse origin/<branch>)
    ```
+   All i18n lookups below use `"$REF"`; the report cites it (short form, e.g. `61d2ad572a`).
 
-2. Determine the audit scope. Default to the whole file(s) currently under
-   review (not just the diff), plus their zh/ja siblings when they exist.
-   Expand to a directory or the full docs tree if the user specifies.
-   Always exclude:
+## Step 3 — Set the scope
+
+1. Default scope: the whole file(s) currently under review (not just the diff), plus their zh/ja siblings when they exist. Expand to a directory or the full docs tree only if the user says so.
+2. Skip zh/ja checks for files whose translations don't exist yet.
+3. Always exclude (env var names are not UI labels):
    - `en/self-host/deploy/configuration/environments.mdx`
    - `zh/self-host/deploy/configuration/environments.mdx`
    - `ja/self-host/deploy/configuration/environments.mdx`
 
-   Environment variable names are not UI labels and do not belong in the
-   terminology check.
+## Step 4 — Extract candidate terms
 
-## Checks to Perform
+For each file in scope, in the docs repo:
 
-### 1. General Term Consistency
+```bash
+grep -noE '\*\*[^*]+\*\*' <file>    # bolded terms, prints line:**term**
+grep -nE '^#{2,3} ' <file>          # section headings, prints line:## Heading
+```
 
-Read `writing-guides/glossary.md` — General Terms section.
+Every bolded term and every heading is a candidate. Step 5 decides deterministically which are UI labels; do not pre-filter by intuition.
 
-For each file in scope, verify:
+## Step 5 — Classify and verify UI labels against codebase i18n
 
-- **English docs**: Terms match the English column. Flag any deviations.
-- **Chinese docs**: Terms match the Chinese column. Flag mismatches.
-- **Japanese docs**: Terms match the Japanese column. Flag mismatches.
+The codebase i18n is the source of truth for UI labels: `web/i18n/en-US/` (flat JSON files with dot-flattened keys, e.g. `"menus.apps": "Studio"`), plus `zh-Hans/` and `ja-JP/` siblings. The glossary's `i18n Key` column maps to them: `common.menus.apps` → file `common.json`, key `"menus.apps"`.
 
-Skip zh/ja checks if the corresponding translation files don't exist locally
-(they may not have been generated yet for new documents).
+For each candidate term (use the English term; for zh/ja files, take the candidate from the same position in the en sibling):
 
-### 2. UI Label Consistency
+1. If the term has a `## UI Labels` row in the glossary, read its `i18n Key`; skip to substep 3 to confirm the codebase still agrees.
+2. Otherwise search the en-US i18n values. In the Dify repo:
+   ```bash
+   git grep -n '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
+   ```
+   - Exact-value hit (e.g., `<REF>:web/i18n/en-US/common.json:285:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
+   - No hit → retry case-insensitively: `git grep -in '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
+   - Still no hit → not a UI label. Headings fall out of scope here; bolded terms go to Step 6 (general terms) instead.
+3. Confirm the exact string at the key:
+   ```bash
+   git grep -n '"<key>"' "$REF" -- web/i18n/en-US/<file>.json
+   ```
+   The doc's English term must match the printed value exactly (casing included). If the glossary row disagrees with the codebase, the codebase wins — record a glossary gap.
+4. For zh/ja siblings, look up the same key in the matching locale:
+   ```bash
+   git grep -n '"<key>"' "$REF" -- web/i18n/zh-Hans/<file>.json
+   git grep -n '"<key>"' "$REF" -- web/i18n/ja-JP/<file>.json
+   ```
+   Each prints one line with the localized string; the zh/ja doc's bolded term must match it exactly.
 
-For each file in scope, collect:
+## Step 6 — Check general terms against the glossary
 
-- Every **bolded term** (text wrapped in `**...**`) that refers to a UI element.
-- Every section heading (`##`, `###`) that names a product feature.
+For candidates that are not UI labels, and for terms noticed while reading the prose:
 
-Use judgment to skip bolds that are pure emphasis (e.g., `**semantically**`).
+1. Find the term's row: `grep -in '<term>' writing-guides/glossary.md`. Expected output: the table row(s) containing the term; no hit means the term is not standardized (consider it for Glossary Gaps if it recurs).
+2. Verify the file's usage against the column for its language — English column for `en/`, Chinese for `zh/`, Japanese for `ja/`. Honor the row's Notes (casing rules, context restrictions). Flag every deviation with its line number.
 
-Verify every collected term against the codebase i18n as the source of truth:
-`web/i18n/en-US/`, `web/i18n/zh-Hans/`, `web/i18n/ja-JP/`. Read files with
-`git show <branch>:<path>` so you don't need to switch branches. The
-glossary (`writing-guides/glossary.md`) is a convenience lookup; the
-codebase wins when they disagree.
+## Step 7 — Report
 
-### 3. Glossary Updates
-
-When the audit surfaces a UI label that is new, renamed, or inconsistent
-with the codebase, propose an update to `writing-guides/glossary.md` in the
-report. Note that `tools/translate/derive-termbase.py` should be run
-afterward so `tools/translate/termbase_i18n.md` stays in sync.
-
-## Output Format
+Report findings in this format, then STOP. Do not edit any file until the user responds.
 
 ```
 ## Terminology Check Results
+
+Checked against Dify codebase `origin/<branch>` at `<short REF>`.
 
 ### File: {path}
 
@@ -91,16 +101,25 @@ afterward so `tools/translate/termbase_i18n.md` stays in sync.
 **UI Labels**
 - ✅ All UI labels (bolded terms and feature section headings) match codebase
   OR
-- ⚠️ Line {n}: **{label}** — codebase says "{expected}"
+- ⚠️ Line {n}: **{label}** — codebase says "{expected}" (web/i18n/<locale>/<file>.json, key "<key>")
 
 **Glossary Gaps**
 - Terms used in docs but missing from glossary: {list}
 - Glossary entries outdated compared to codebase: {list}
 ```
 
-## Important
+## Step 8 — Glossary updates (only after user approval)
 
-- Do NOT modify any files. This is a read-only audit.
-- Report findings to the user for review.
-- Codebase i18n is the source of truth for UI labels. When the glossary
-  disagrees, update the glossary.
+If the user approves fixes for Glossary Gaps:
+
+1. Edit `writing-guides/glossary.md` with the approved rows.
+2. Regenerate the termbase. In the docs repo:
+   ```bash
+   python3 tools/translate/derive-termbase.py
+   ```
+   Must print `Generated .../tools/translate/termbase_i18n.md`.
+3. Verify sync:
+   ```bash
+   python3 tools/translate/derive-termbase.py --check
+   ```
+   Must print `termbase_i18n.md is in sync with glossary.md.` and exit 0. `git diff tools/translate/termbase_i18n.md` must show only rows corresponding to the approved glossary edits.
