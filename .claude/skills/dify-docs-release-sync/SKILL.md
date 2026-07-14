@@ -209,7 +209,7 @@ The spec of record is `{en,zh,ja}/api-reference/openapi_service.json` — one ha
 1. Dispatch audit agents with the `dify-docs-api-reference` skill, one per affected tag group: audit the group's endpoints against the code at the pinned ref, focusing on the report's changes but reading each touched endpoint fully (PRs have side effects).
 2. Apply fixes to the `en` spec, then mirror the same structural change into `zh` and `ja` (translate summaries and descriptions; keep wire strings verbatim).
 3. If operations were added, removed, retitled, or reordered: update `tools/api-pipeline/memberships.json` (and the app-type overview pages) if availability changed, then regenerate navigation with `python3 "$DOCS/tools/api-pipeline/merge_specs.py" wire --lang en zh ja` (rewrites the `docs.json` API menus and redirects). Description-only edits skip this step.
-4. Run the gate from the docs repo root. Every command must exit 0; a nonzero exit blocks the track — fix and re-run:
+4. Run the gate from the docs repo root. The gate is each command's printed zero line, not its exit status — `lint_specs.py` exits 0 even with issues. Any nonzero printed count (or nonzero exit) blocks the track — fix and re-run:
 
 ```bash
 export DOCS="$(git rev-parse --show-toplevel)"

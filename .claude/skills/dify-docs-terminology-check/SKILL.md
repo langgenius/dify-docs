@@ -58,20 +58,20 @@ For each candidate term (use the English term; for zh/ja files, take the candida
 1. If the term has a `## UI Labels` row in the glossary, read its `i18n Key`; skip to substep 3 to confirm the codebase still agrees.
 2. Otherwise search the en-US i18n values. In the Dify repo:
    ```bash
-   git grep -n '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
+   git grep -nF '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
    ```
    - Exact-value hit (e.g., `<REF>:web/i18n/en-US/common.json:285:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
-   - No hit → retry case-insensitively: `git grep -in '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
+   - No hit → retry case-insensitively: `git grep -inF '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
    - Still no hit → not a UI label. Headings fall out of scope here; bolded terms go to Step 6 (general terms) instead.
 3. Confirm the exact string at the key:
    ```bash
-   git grep -n '"<key>"' "$REF" -- web/i18n/en-US/<file>.json
+   git grep -nF '"<key>"' "$REF" -- web/i18n/en-US/<file>.json
    ```
    The doc's English term must match the printed value exactly (casing included). If the glossary row disagrees with the codebase, the codebase wins — record a glossary gap.
 4. For zh/ja siblings, look up the same key in the matching locale:
    ```bash
-   git grep -n '"<key>"' "$REF" -- web/i18n/zh-Hans/<file>.json
-   git grep -n '"<key>"' "$REF" -- web/i18n/ja-JP/<file>.json
+   git grep -nF '"<key>"' "$REF" -- web/i18n/zh-Hans/<file>.json
+   git grep -nF '"<key>"' "$REF" -- web/i18n/ja-JP/<file>.json
    ```
    Each prints one line with the localized string; the zh/ja doc's bolded term must match it exactly.
 
