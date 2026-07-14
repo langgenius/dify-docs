@@ -15,14 +15,14 @@ description: >
 2. Confirm edition scope: CE-first; badge and defer Cloud-only content.
 3. Draft per the Command Reference structure.
 4. Apply the Writing rules and Content ownership (state each fact once, link elsewhere).
-5. Verify every behavior claim against `langgenius/dify` `origin/main:cli/...` (`git show origin/main:cli/<path>`); never `feat/cli` or `cli/README.md`.
-6. Run post-writing verification.
+5. Verify every behavior claim against `langgenius/dify` `cli/` on `origin/main`, read at a pinned SHA per `writing-guides/index.md` "Syncing the Dify codebase safely"; record that SHA in your report.
+6. Run post-writing verification (the numbered checks under Verification below).
 
-**Critical (source of truth):** Verify behavior against `langgenius/dify`, `cli/` on `origin/main` only (`git show origin/main:cli/<path>`). Never `feat/cli` or `cli/README.md`; both drift from shipped reality.
+**Critical (source of truth):** `cli/` on `origin/main` only. Never `feat/cli` or `cli/README.md`; both drift from shipped reality.
 
 ## Before starting
 
-Read `writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`. For page structure, mirror an existing page of the same type. For the IA, see `docs.json`.
+Read `writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`. For page structure, mirror an existing page of the same type (command reference → `en/cli/reference/apps.mdx`; task page → `en/cli/common-tasks.mdx`). For the IA, see `docs.json`.
 
 ## Reader segments
 
@@ -37,9 +37,9 @@ Read `writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`. For 
 The CLI launches **CE-first**: the shipped docs are CE-only, with Cloud content added when Cloud supports the CLI. EE is a separate doc set (never add EE content here).
 
 - **CE = one workspace.** No workspace switching, no `--workspace` / `-A` multi-workspace flags, no "another/every workspace" framing; `difyctl` runs against your single workspace.
-- **Cloud-only content** (workspace switching and membership, and anything that needs more than one workspace) gets a `<Badge color="blue">Cloud</Badge>` on its heading or list item, then is removed for the CE release and saved to `~/Documents/Work/Projects/Dify CLI/deferred-cli-docs/cloud/` (snapshots + a restore README); restore it when Cloud ships. Mark with the badge; don't write a "Cloud only" sentence.
+- **Cloud-only content** (workspace switching and membership, and anything that needs more than one workspace) gets a `<Badge color="blue">Cloud</Badge>` on its heading or list item. Mark with the badge; don't write a "Cloud only" sentence. When a CE release requires removing Cloud-only sections, list the exact sections and STOP — do not remove until the user approves; then remove them in a dedicated commit so they can be restored from git history when Cloud ships.
 - **Host examples are self-hosted:** use `dify.example.com`, never `cloud.dify.ai`; the server edition shows `self_hosted`. (`auth login`'s real default is still `cloud.dify.ai`, so steer the reader to enter their host rather than stating the default.)
-- `<Badge>` is not a standard Mintlify component and renders nowhere else in the repo yet; verify it before the Cloud restore.
+- A `<Badge>` inside a heading changes the heading's anchor: the badge text joins the slug (`## Switch Your Workspace <Badge color="blue">Cloud</Badge>` → `#switch-your-workspace-cloud`). Link to the real anchor; `python3 tools/check-links.py --internal` validates this.
 
 ## Writing rules
 
@@ -61,7 +61,7 @@ The non-obvious style rules:
 - **Cross-references:** make the command the actor ("Run `auth devices list` to see your sessions"), not "to do X, see [section]"; for an owned fact, link with a short payoff instead of re-explaining.
 - **Placeholders:** app/workspace IDs are UUID-shaped (non-UUID fails validation); the reader's own identity is `<your-*>`; received values stay concrete.
 - Backtick the typeable token, not the category word ("list commands such as `get app`"; never `list`).
-- No version numbers in prose (the `version` page shows real output); no See Also; shipped reality only, except an in-flight Linear fix may be documented as expected behavior, verified before publish.
+- No version numbers in prose (the `version` page shows real output); no See Also; shipped reality only, except a fix the user confirms is in flight may be documented as expected behavior, verified before publish.
 - Task-oriented openers (lead with when/why you run it), front-load the key limitation, show real terminal output.
 
 Style nits: ~3-4 line paragraphs, few semicolons, em dashes by judgment.
@@ -98,8 +98,13 @@ Write each cross-cutting fact ONCE on its owner; link the anchor everywhere else
 
 ## Verification
 
-Source of truth is the code (per the Critical note above), not the docs or in-CLI help (both drift). Where to look under `cli/`: best source for exact strings and exit codes is the e2e suite `cli/test/e2e/suites/**`; flags/args → `commands/<verb>/<resource>/index.ts`; codes → `errors/codes.ts`; env vars → `env/registry.ts`. Can't verify a claim? Skip it, soften it, or flag `{/* VERIFY: ... */}`.
+Source of truth is the code (per the Critical note above), not the docs or in-CLI help (both drift). Where to look: best source for exact strings and exit codes is the e2e suite `cli/test/e2e/suites/**`; flags/args → `cli/src/commands/<verb>/<resource>/index.ts` (verb-only commands: `cli/src/commands/<verb>/index.ts`); error codes → `cli/src/errors/codes.ts`; env vars → `cli/src/env/registry.ts`. Can't verify a claim? Skip it, soften it, or flag `{/* VERIFY: ... */}`.
 
-For project context (known bugs, decisions, what's shipped vs planned), see the **Dify CLI** Linear project (team WTA).
+For project context (known bugs, decisions, what's shipped vs planned), ask the user.
 
-After writing, run `writing-guides/index.md#post-writing-verification`, then confirm anchors resolve and no owned fact is re-explained.
+After writing, run these checks in order (per `writing-guides/index.md` "Post-Writing Verification"):
+
+1. Run the `dify-docs-format-check` skill on every changed page; its checker must print `Total violations: 0`.
+2. Run `python3 tools/check-links.py --internal`; it must print `Broken links: 0` and `Broken anchors: 0`.
+3. Run the `dify-docs-terminology-check` skill, then the `dify-docs-reader-test` skill.
+4. Confirm no owned fact is re-explained (check each changed page against the Content ownership table).
