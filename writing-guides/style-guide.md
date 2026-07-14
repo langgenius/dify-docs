@@ -136,6 +136,6 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Repetitive structures.** Vary sentence patterns across related sections to avoid a mechanical feel.
 
-**Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, "see X for details" is fine if the surrounding context already makes clear what those details are. Only add a specific description when the context alone doesn't convey what the reader will find—otherwise the description itself becomes redundant.
+**Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, never write a bare "see [X]" — give the link a payoff: "see [X] for details" when the surrounding context already makes clear what those details are, or name what the reader will find ("see [X] for the full flag table") when it doesn't.
 
 **Over-simplification.** Don't sacrifice clarity for brevity. Choose precision when a specific term prevents confusion, even if it's longer.
