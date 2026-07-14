@@ -134,7 +134,7 @@ gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=all&per_page
 
 - **Only milestone PRs (`pr: true`) join the range cross-check.** Plain issues (`pr: false`) are planned-feature signals, not range candidates: find each one's closing/linked PR (issue timeline, `Fixes #N` references) and track that PR instead.
 - In the range but **not in the milestone** → usually community contributions: assess doc impact normally — these are the easiest changes to miss.
-- Milestone PRs **not in the range** → not merged yet (early pass: carry to the next sweep) or slipped (re-sweep: apply the slippage check from 1.0a).
+- Milestone PRs **not in the range** → check the PR itself: `gh pr view <n> --repo langgenius/dify --json state,mergedAt` — a PR is merged only when `mergedAt` is non-null (a closed PR may be closed WITHOUT merging). Open → not merged yet, carry to the next sweep; closed and unmerged → dropped from the release, apply the slippage check from 1.0a.
 - Milestone **description text** stays aspirational (see 1.0): scope from tracked items, never from the prose alone.
 
 ### 1.2 Categorize PRs
