@@ -77,9 +77,9 @@ Docs prep usually starts before the version reaches staging — and some version
 |---|---|---|---|
 | Early | no staging build yet | pinned `main` SHA | scope from the milestone AND the merged-PR range (1.1b); flags unknown, milestone items may slip — everything provisional |
 | Staging | staging runs the version | staging image SHA | diff `<last-swept-SHA>..<staging-SHA>`; re-check feature flags; confirm early-pass items are in and enabled |
-| Release | tag or release branch cut (also the path for versions that skip staging) | release tag | diff `<last-swept-SHA>..<tag>`; final sweep |
+| Release | tag or release branch cut (also the path for versions that skip staging) | release tag, or a pinned SHA of the dify release branch until the tag is cut | diff `<last-swept-SHA>..<tag-or-SHA>`; final sweep |
 
-**Slippage check, every re-sweep**: anything documented in an earlier pass whose PR is no longer in scope (reverted, retargeted to a later milestone, or flagged off) must be pulled from the docs release branch — docs must not describe what doesn't ship.
+**Slippage check, every re-sweep**: anything documented in an earlier pass whose PR is no longer in scope (reverted, retargeted to a later milestone, or flagged off) must be pulled from dify-docs' `release/<version>` integration branch — docs must not describe what doesn't ship.
 
 ### 1.1 Diff Between Versions
 
