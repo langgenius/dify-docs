@@ -1,10 +1,11 @@
 ---
 name: dify-docs-release-sync
 description: >
-  Use when preparing documentation updates for a Dify release. User provides
-  two version references to compare (e.g., v1.13.2 and v1.13.3, or v1.13.2
-  and main). Covers API reference, help documentation, environment variable
-  changes, and UI i18n glossary impact.
+  Use when preparing documentation updates for a Dify release — either
+  comparing two version references (e.g., v1.13.2 and v1.13.3) or prepping
+  ahead of an unreleased version in multiple passes. Covers API reference,
+  help documentation, environment variable changes, and UI i18n glossary
+  impact.
 ---
 
 # Dify Release Documentation Sync
@@ -15,7 +16,8 @@ Compares code changes between two Dify releases (or a release and current HEAD),
 
 **Input**: Two version references, provided by the user. Always ask if not provided.
 - Post-release: `v1.13.2` and `v1.13.3` (both tags)
-- Pre-release: `v1.13.2` and the shipped commit — prefer the `saas-deploy` staging SHA over `main` (see 1.0)
+- Pre-release, on staging: `v1.13.2` and the shipped commit — prefer the `saas-deploy` staging SHA over `main` (see 1.0)
+- Pre-release, NOT yet on staging (the usual first pass): `v1.13.2` and a pinned `main` SHA, scoped with the release milestone (see 1.0a) — provisional, re-swept later
 
 ## Critical: pin to what ships
 
@@ -67,6 +69,18 @@ Scope signals, in order of authority:
 
 **CE vs EE.** The numbered release (e.g. `1.15.0`) is Community Edition; Enterprise ships separately, often weeks later. Features needing EE infrastructure (RBAC, SSO-gated MCP identity forwarding) belong to the EE doc effort, not the CE sync.
 
+### 1.0a Release passes: prep early, re-sweep until release
+
+Docs prep usually starts before the version reaches staging — and some versions never deploy to staging at all. Run multiple passes; record each pass's upper SHA and date in the report so the next pass diffs only the delta.
+
+| Pass | When | Upper ref | Notes |
+|---|---|---|---|
+| Early | no staging build yet | pinned `main` SHA | scope from the milestone AND the merged-PR range (1.1b); flags unknown, milestone items may slip — everything provisional |
+| Staging | staging runs the version | staging image SHA | diff `<last-swept-SHA>..<staging-SHA>`; re-check feature flags; confirm early-pass items are in and enabled |
+| Release | tag or release branch cut (also the path for versions that skip staging) | release tag, or a pinned SHA of the dify release branch until the tag is cut | diff `<last-swept-SHA>..<tag-or-SHA>`; final sweep |
+
+**Slippage check, every re-sweep**: anything documented in an earlier pass whose PR is no longer in scope (reverted, retargeted to a later milestone, or flagged off) must be pulled from dify-docs' `release/<version>` integration branch — docs must not describe what doesn't ship.
+
 ### 1.1 Diff Between Versions
 
 In the Dify codebase (configured as an additional working directory):
@@ -106,14 +120,22 @@ git log <from>..<to> --oneline | grep -oE '#[0-9]+' | sort -u
 gh pr view PR_NUMBER --repo langgenius/dify --json number,title,body,labels,files
 ```
 
-**Alternative (milestone-based)**: If the user specifically wants to scope by milestone instead of tags, use:
+### 1.1b Milestone + PR-list cross-check
+
+The release milestone in `langgenius/dify` (titled like the version, e.g. `1.16.0`) tracks the features planned for the release — but it is maintained for internally-initiated work, and community PRs often merge without a milestone tag. Scope from BOTH sources and cross-check; neither alone is complete.
+
 ```bash
-MILESTONE_NUM=$(gh api repos/langgenius/dify/milestones --paginate \
+MILESTONE_NUM=$(gh api "repos/langgenius/dify/milestones?state=all" --paginate \
   --jq '.[] | select(.title=="MILESTONE_NAME") | .number')
-gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=closed&per_page=100" \
-  --paginate --jq '.[] | select(.pull_request) | {number, title}'
+gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=all&per_page=100" \
+  --paginate --jq '.[] | {number, title, state, pr: (.pull_request != null)}'
+# the other half of the cross-check is the merged-PR range: use the git log command from 1.1 verbatim
 ```
-Note: milestones may miss PRs not tagged to them. Tag comparison is preferred.
+
+- **Only milestone PRs (`pr: true`) join the range cross-check.** Plain issues (`pr: false`) are planned-feature signals, not range candidates: find each one's closing/linked PR (issue timeline, `Fixes #N` references) and track that PR instead.
+- In the range but **not in the milestone** → usually community contributions: assess doc impact normally — these are the easiest changes to miss.
+- Milestone PRs **not in the range** → check the PR itself: `gh pr view <n> --repo langgenius/dify --json state,mergedAt` — a PR is merged only when `mergedAt` is non-null (a closed PR may be closed WITHOUT merging). Open → not merged yet, carry to the next sweep; closed and unmerged → dropped from the release, apply the slippage check from 1.0a.
+- Milestone **description text** stays aspirational (see 1.0): scope from tracked items, never from the prose alone.
 
 ### 1.2 Categorize PRs
 
@@ -178,6 +200,10 @@ Use the report skeleton in `references/report-template.md`: a summary block (per
 ## Phase 3: Execution
 
 After user approval (they may add, remove, or adjust items):
+
+### Docs Branch
+
+Docs for an upcoming release integrate on that release's branch in dify-docs (`release/<version>`, cut from `main` when prep starts) — release doc PRs target it, never `main`; the branch merges into `main` when the release ships. Fixes to currently published docs still target `main` directly.
 
 ### Codebase Preparation
 
