@@ -59,6 +59,8 @@ Pick one of three placements based on the scope of the gated feature.
 **2. Paid feature is one item within a section that also covers standard features.** Place the `<Info>` callout AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
 
 ```mdx
+Add one chunk or batch-add several. For documents chunked in Parent-child mode, both parent and child chunks can be added.
+
 <Info>
 Adding chunks is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge>. [Learn more](https://dify.ai/pricing).
 </Info>

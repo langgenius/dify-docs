@@ -40,7 +40,7 @@ Skills that verify behavior against the dify or graphon codebase read files at a
    REF=$(git rev-parse origin/main)  # or the tag / dev branch the user names
    ```
 
-2. Read files at the pinned ref with `git show`. Build the revspec in its own variable, with braces around the ref — an unbraced `$REF:<path>` (inline or in an assignment) can be consumed by the shell as a variable modifier, handing git a mangled argument while a piped command still exits 0 with empty output:
+2. Read files at the pinned ref with `git show`. Build the revspec in its own variable, with braces around the ref — in zsh (the macOS default shell), an unbraced `$REF:<path>` — inline or in an assignment — triggers csh-style modifier expansion (`:a` means absolute-path, so `$REF:api/…` expands to `<cwd><ref>pi/…`), handing git a mangled argument while a piped command still exits 0 with empty output. Other shells mangle differently; the braced form is safe everywhere:
 
    ```bash
    REVSPEC="${REF}:api/pyproject.toml"
