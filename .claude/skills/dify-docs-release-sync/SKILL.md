@@ -76,7 +76,7 @@ Docs prep usually starts before the version reaches staging — and some version
 | Pass | When | Upper ref | Notes |
 |---|---|---|---|
 | Early | no staging build yet | pinned `main` SHA | scope from the milestone AND the merged-PR range (1.1b); flags unknown, milestone items may slip — everything provisional |
-| Staging | staging runs the version | staging image SHA | diff `<last-swept-SHA>..<staging SHA>`; re-check feature flags; confirm early-pass items are in and enabled |
+| Staging | staging runs the version | staging image SHA | diff `<last-swept-SHA>..<staging-SHA>`; re-check feature flags; confirm early-pass items are in and enabled |
 | Release | tag or release branch cut (also the path for versions that skip staging) | release tag | diff `<last-swept-SHA>..<tag>`; final sweep |
 
 **Slippage check, every re-sweep**: anything documented in an earlier pass whose PR is no longer in scope (reverted, retargeted to a later milestone, or flagged off) must be pulled from the docs release branch — docs must not describe what doesn't ship.
@@ -125,11 +125,11 @@ gh pr view PR_NUMBER --repo langgenius/dify --json number,title,body,labels,file
 The release milestone in `langgenius/dify` (titled like the version, e.g. `1.16.0`) tracks the features planned for the release — but it is maintained for internally-initiated work, and community PRs often merge without a milestone tag. Scope from BOTH sources and cross-check; neither alone is complete.
 
 ```bash
-MILESTONE_NUM=$(gh api repos/langgenius/dify/milestones --paginate \
+MILESTONE_NUM=$(gh api "repos/langgenius/dify/milestones?state=all" --paginate \
   --jq '.[] | select(.title=="MILESTONE_NAME") | .number')
 gh api "repos/langgenius/dify/issues?milestone=$MILESTONE_NUM&state=all&per_page=100" \
   --paginate --jq '.[] | {number, title, state, pr: (.pull_request != null)}'
-# merged-PR range: the git log from 1.1 (--grep="(#") is the other half
+# the other half of the cross-check is the merged-PR range: use the git log command from 1.1 verbatim
 ```
 
 - **Only milestone PRs (`pr: true`) join the range cross-check.** Plain issues (`pr: false`) are planned-feature signals, not range candidates: find each one's closing/linked PR (issue timeline, `Fixes #N` references) and track that PR instead.
