@@ -4,9 +4,19 @@ Use when auditing an existing spec against the Dify codebase. `spec-conventions.
 
 ## Pre-Audit
 
-1. **Identify which app types each operation serves** (its availability line and `tools/api-pipeline/memberships.json`). Every check is filtered through that app-type scope.
-2. **Compare routes**: read `api/controllers/service_api/__init__.py` for registered routes, then each controller file. Note endpoints present in code but missing from the spec, and ghost endpoints present in the spec but not in code. **Match the exact route string** — hyphen and underscore variants of the same path are separate registrations and can differ in deprecation status.
-3. **Pin the refs**: record the dify commit SHA and, for graph-engine behavior, the graphon version pinned in `dify/api/pyproject.toml`. Every finding cites file:line at those refs.
+1. **Pin the refs**: record the dify commit SHA and, for graph-engine behavior, the graphon version pinned in `dify/api/pyproject.toml` (read at a pinned ref per `writing-guides/index.md` § "Syncing the Dify codebase safely"). Every finding cites file:line at those refs.
+2. **Identify which app types each operation serves** (its availability line and `tools/api-pipeline/memberships.json`). Every check is filtered through that app-type scope.
+3. **Compare routes mechanically.** From the docs repo root, with `WT` pointing at a dify checkout of the pinned ref (use the detached-worktree recipe in the safe-sync section if the clone is not on it; requires Python ≥ 3.10 — the script AST-parses dify controllers that use `match`):
+
+   ```bash
+   WT=<dify checkout> DOCS="$(git rev-parse --show-toplevel)" python3 tools/api-pipeline/coverage_matrix.py
+   ```
+
+   It prints `code operations: N   spec unique operations: M` plus three sections, and always exits 0 — triage the printed sections, not the exit code:
+   - **A. In code but NOT documented** / **B. Documented but NOT in code (ghosts)**: each entry is a finding to investigate against `api/controllers/service_api/__init__.py` and the named controller. **Match the exact route string** — hyphen and underscore variants of the same path are separate registrations and can differ in deprecation status (section A legitimately lists deprecated duplicate registrations and the `/` index route).
+   - **C. Path param NAME mismatches**: spec path-param names are a docs choice and need not match Flask's internal names (`c_id`); flag only when the path structure itself differs.
+
+   `tools/api-pipeline/swagger_diff.py` is optional runtime tooling: reach for it only when a dify API server is running (`SWAGGER_URL`, default `http://localhost:15001/v1/swagger.json`). It diffs the live flask-restx swagger against the en spec (query params, required flags, status codes) and prints `TOTAL FLAGS: {n}`; each flag is an investigation lead, not a verdict, because the restx doc decorators are themselves hand-maintained.
 
 ## Per-Endpoint Checks
 
@@ -28,9 +38,18 @@ For audits spanning many endpoints, separate the roles and gate each stage:
 
 1. **Auditors** (one per tag group, pinned refs): findings only, no edits; per-finding severity + file:line evidence + a "cannot confirm from code" list.
 2. **Adversarial refuters** (one per group): independently re-trace every ERROR/WARN and try to REFUTE it; verdict CONFIRMED/REFUTED/UNCERTAIN with evidence. Only confirmed findings proceed. (In practice this kills real false positives — over-generalized class-hierarchy claims, sibling-endpoint assumptions.)
-3. **Fix authors**: turn confirmed findings into patch scripts that assert every precondition (exact current text), are validated on a copy, and are applied serially — never direct parallel edits to one file.
+3. **Report and STOP.** Present every confirmed finding to the user: severity, file:line evidence, and the proposed fix. STOP — do not write or apply any patch until the user approves.
+4. **Fix authors**: turn approved findings into patch scripts that assert every precondition (exact current text), are validated on a copy, and are applied serially — never direct parallel edits to one file.
 
-Always validate JSON after fixes. Shared endpoints exist **once** in `openapi_service.json` with mode-aware descriptions — no cross-spec propagation. Propagate fixes across the three **language** specs instead: structural parity is enforced by `tools/api-pipeline/parity_check.py`; wire strings (`message`/`code` values, enum and example literals) stay verbatim English in zh/ja, and only human-language prose translates.
+Shared endpoints exist **once** in `openapi_service.json` with mode-aware descriptions — no cross-spec propagation. Propagate fixes across the three **language** specs instead: wire strings (`message`/`code` values, enum and example literals) stay verbatim English in zh/ja, and only human-language prose translates.
+
+After every fix batch, validate from the docs repo root:
+
+```bash
+export DOCS="$(git rev-parse --show-toplevel)"
+python3 "$DOCS/tools/api-pipeline/lint_specs.py"    # success = prints "TOTAL ISSUES: 0"; its exit code stays 0 even with issues, so read the count
+python3 "$DOCS/tools/api-pipeline/parity_check.py"  # success = prints "TOTAL PARITY ISSUES: 0" and exits 0
+```
 
 ## Verification Rigor
 

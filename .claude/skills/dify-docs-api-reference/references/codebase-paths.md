@@ -41,14 +41,19 @@ Dify pins a flask-restx fork; its `handle_error` ends with `data = getattr(e, "d
 
 ### AppMode ↔ app-type names
 
-| `AppMode` | Docs name |
-|---|---|
-| `CHAT` | Chatbot |
-| `AGENT_CHAT` | Agent |
-| `ADVANCED_CHAT` | Chatflow |
-| `AGENT` | New Agent |
-| `WORKFLOW` | Workflow |
-| `COMPLETION` | Text Generator |
+The single mapping table for availability claims — never work from memory. Enum source: `class AppMode` in `api/models/model.py`. Spec group = the key in `tools/api-pipeline/memberships.json` listing the operations each app type supports.
+
+| `AppMode` | Docs name | Spec group | Key endpoints |
+|---|---|---|---|
+| `CHAT` | Chatbot | `chat` | `/chat-messages`, conversations |
+| `AGENT_CHAT` | Agent | `chat` | Same as Chatbot |
+| `ADVANCED_CHAT` | Chatflow | `chatflow` | Same routes as chat; app mode `advanced-chat` |
+| `AGENT` | New Agent | `agent` | Chat-style routes (`/chat-messages`, conversations) |
+| `WORKFLOW` | Workflow | `workflow` | `/workflows/run`, workflow logs |
+| `COMPLETION` | Text Generator | `completion` | `/completion-messages` |
+| — (not an app; no `AppMode`) | Knowledge | `knowledge` | Datasets, documents, chunks, metadata |
+| `CHANNEL` | — | Not in the Service API spec | No `service_api` controller serves it; never list it in availability |
+| `RAG_PIPELINE` | — | Not in the Service API spec | Backs Knowledge Pipeline runs internally (`core/app/apps/pipeline/`); never list it in availability |
 
 `AGENT` vs `AGENT_CHAT` is the recurring trap — double-check it in both directions on every availability claim.
 
