@@ -7,7 +7,7 @@ Skeleton for the Phase 2 doc sync report. Fill in the comparison refs, counts, a
 
 ## Summary
 - **Comparison**: `<from>..<to>` (X commits, Y PRs)
-- **API reference impact**: Y PRs -> Z spec files (A already documented, B need updates)
+- **API reference impact**: Y PRs -> Z endpoints (A already documented, B need updates)
 - **Help documentation impact**: W PRs -> V doc pages (C already documented, D need updates)
 - **Environment variable impact**: E PRs -> F variables (G already documented, H need updates)
 - **UI i18n changes**: I PRs -> J glossary entries affected
@@ -17,18 +17,18 @@ Skeleton for the Phase 2 doc sync report. Fill in the comparison refs, counts, a
 
 Target: `{lang}/api-reference/openapi_service.json` (one spec per language; edit all three).
 
-| PR | Title | Change Type | Details | Doc Status |
-|---|---|---|---|---|
-| #1234 | Add streaming retry | New parameter | `retry_count` on `/chat-messages` | Not yet documented |
-| #1235 | Fix error handling | Error codes | New `rate_limit_exceeded` on `/chat-messages` | Already documented |
-| #1240 | Add metadata filter | New parameter | `metadata_filter` on list segments | Not yet documented |
+| PR | Title | Tag Group | Change Type | Details | Doc Status |
+|---|---|---|---|---|---|
+| #1234 | Add streaming retry | Chat Messages | New parameter | `retry_count` on `POST /chat-messages` | Not yet documented |
+| #1235 | Fix error handling | Chat Messages | Error codes | New `rate_limit_exceeded` on `POST /chat-messages` | Already documented |
+| #1240 | Add metadata filter | Chunks | New parameter | `metadata_filter` on `GET .../segments` | Not yet documented |
 
 ## Help Documentation Changes
 
 | PR | Title | Affected Doc(s) | Priority | Change Needed | Doc Status |
 |---|---|---|---|---|---|
-| #1250 | Add semantic chunking | `knowledge/chunking.mdx` | High | New chunking option must be added | Not yet documented |
-| #1251 | New HTTP node timeout | `workflow/nodes/http.mdx` | Low | Timeout config not covered | Already documented |
+| #1250 | Add semantic chunking | `en/{cloud,self-host}/use-dify/knowledge/chunking.mdx` (both copies) | High | New chunking option must be added | Not yet documented |
+| #1251 | New HTTP node timeout | `en/{cloud,self-host}/use-dify/nodes/http-request.mdx` (both copies) | Low | Timeout config not covered | Already documented |
 
 ## Environment Variable Changes
 
