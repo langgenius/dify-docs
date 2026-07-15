@@ -58,6 +58,8 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
    - Any notable edge cases or limitations visible in the code
 7. Flag inferred behavior per the rule in [Important](#important).
 
+**Permission-gated behavior (RBAC/ACL).** To document what a permission lets a user do, read the *effective* gate — the frontend capability map (`web/utils/permission.ts`: `getAppACLCapabilities` / `getDatasetACLCapabilities`) plus the UI that consumes it (e.g. a `canEdit` → read-only hook) — and confirm it in a test environment. A single backend `@rbac_permission_required` decorator can be looser than the frontend and never fire, so treat it as a lower bound, not the answer. Permission display labels (for bolding in docs) come from `web/i18n/{en-US,zh-Hans,ja-JP}/permission-keys.json`.
+
 ### Phase 2: Community Feedback
 
 Search for user-reported problems and questions across these channels:
@@ -130,6 +132,7 @@ Present the summary to the user. STOP — do not start the writing phase until t
 ## Important
 
 - This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope.
+- When scope is confirmed and writing begins, load the writing skill for the target tree (`dify-docs-guides` for `use-dify` guides, `dify-cli-docs` for `en/cli/` pages, `dify-docs-env-vars` for env-var docs, `dify-docs-api-reference` for API specs) plus the style, formatting, and glossary guides — before the first edit. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.
 - Distinguish bugs from documentation gaps. Documenting buggy behavior as intended causes more harm than leaving a gap.
 - Note issue numbers for traceability. The user may want to reference them when prioritizing what to cover.
