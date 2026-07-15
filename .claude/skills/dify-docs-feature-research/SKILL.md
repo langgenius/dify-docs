@@ -49,6 +49,7 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
    - Panel component (what configuration options users see)
    - Type definitions (data shape)
    - Default values and validation rules
+   - **Permission-gated behavior (RBAC/ACL):** the effective gate is here — read the capability map (`web/utils/permission.ts`: `getAppACLCapabilities` / `getDatasetACLCapabilities`) and the UI that consumes it (e.g. a `canEdit` → read-only hook), and confirm it in a test environment. A backend `@rbac_permission_required` decorator can be looser than the frontend and never fire, so treat it as a lower bound. Permission labels for docs: `web/i18n/{en-US,zh-Hans,ja-JP}/permission-keys.json`.
 5. Trace the API surface: how the feature's output reaches the API response. Check controllers, response converters, and serialization (all in dify).
 6. Produce a summary of:
    - What the feature does (based on code, not existing docs)
@@ -130,6 +131,7 @@ Present the summary to the user. STOP — do not start the writing phase until t
 ## Important
 
 - This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope.
+- When scope is confirmed and writing begins, load the writing skill for the target tree (`dify-docs-guides` for `use-dify` guides, `dify-cli-docs` for `en/cli/` pages, `dify-docs-env-vars` for env-var docs, `dify-docs-api-reference` for API specs) plus the writing guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`) — before the first edit. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.
 - Distinguish bugs from documentation gaps. Documenting buggy behavior as intended causes more harm than leaving a gap.
 - Note issue numbers for traceability. The user may want to reference them when prioritizing what to cover.
