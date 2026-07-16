@@ -15,9 +15,9 @@ OpenAPI specs for developers integrating Dify over REST. **The code is the sourc
 
 Work through these in order. Steps 1, 3, 4, and 5 are non-negotiable.
 
-Editing or creating a spec runs all five steps. Auditing an existing spec is steps 1 and 3 applied systematically from `references/audit-checklist.md`; the independent subagent audit in step 5 is required only when you have written or substantially changed an endpoint.
+Editing or creating a spec runs all five steps. Auditing an existing spec is steps 1 and 3 applied systematically from `references/audit-checklist.md`; the independent subagent audit in step 5 is required only when you have written or substantially changed an endpoint. **Substantially changed** = any change to paths, methods, parameters, schema fields or constraints, status codes, error codes, example values, or availability; only pure prose rewording (summaries, descriptions, translations) is exempt.
 
-1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Confirm the Dify codebase is on the ref you mean to verify against: the latest `main` by default (`git fetch origin`, then fast-forward only if the working tree is clean), or a dev branch if the user names one. Do not force a checkout over a dirty or feature working tree. Identify which app types the operation serves from [Spec Structure](#spec-structure); every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
+1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Pin the dify ref to verify against — `origin/main` by default, or the tag/dev branch the user names — and read code at that ref per `writing-guides/index.md` § "Syncing the Dify codebase safely"; never `git checkout` or `git pull` in a tree you have not confirmed is clean. Identify which app types the operation serves from the AppMode table in `references/codebase-paths.md`; every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
 2. **Write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here.
 3. **Verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers.
 4. **Flag suspected code bugs; never silently document them** (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
@@ -31,15 +31,7 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 
 One spec per language — `{en,zh,ja}/api-reference/openapi_service.json` — is the spec of record. Edit it directly, in all three languages; `parity_check` enforces structural parity with en. (The five legacy per-app-type source specs and the merge pipeline that consolidated them are retired; recover from git history if needed.)
 
-App types map to `AppMode` values:
-
-| App Type | `AppMode` values | Key Endpoints |
-|----------|------------------|---------------|
-| Chat & Agent | `CHAT`, `AGENT_CHAT` | `/chat-messages`, conversations |
-| Chatflow | `ADVANCED_CHAT` | Same as chat, mode `advanced-chat` |
-| Workflow | `WORKFLOW` | `/workflows/run`, workflow logs |
-| Completion | `COMPLETION` | `/completion-messages` |
-| Knowledge | *(N/A)* | datasets, documents, segments, metadata |
+App types map to `AppMode` values. The one mapping table (docs names, spec groups, key endpoints, and the modes the Service API does not cover) is `references/codebase-paths.md` § "AppMode ↔ app-type names" — use it, never memory.
 
 Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site, end-user) appear **once**, with an availability line and per-mode notes in the description — a fix applies in one place, no propagation. `tools/api-pipeline/memberships.json` records which app types support each operation and drives the app-type overview pages plus `check-coverage`.
 

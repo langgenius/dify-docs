@@ -9,22 +9,109 @@ description: >
 
 # Dify Environment Variable Documentation
 
-## Before Starting
+Work through the steps in order. **Every variable goes through steps 4–7 without exception** — do not skip a variable because it seems "obvious".
 
-Read these shared guides:
+## Step 1: Read first
 
 1. `writing-guides/style-guide.md`
 2. `writing-guides/formatting-guide.md`
 3. `writing-guides/glossary.md`
+4. `references/style-overrides.md` (in this skill directory) — env-var-specific style rules and description anti-patterns
 
-## Source of Truth: `docker/.env.example` + `docker/envs/**/*.env.example`
+## Step 2: Sync the Dify codebase
+
+Follow `writing-guides/index.md` section "Syncing the Dify codebase safely". Never run `git checkout` or `git pull` in the Dify working tree. Record the tag or SHA you verify against; cite it in your step 7 report.
+
+## Step 3 (release sync only): Diff the var set between releases
+
+Run this before any tracing. Per-PR detection misses vars from untagged PRs, and the verifier's Missing-from-docs list hides genuinely new vars inside old backlog.
+
+```bash
+python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
+  --compare-rev <last-release-tag> <target-release-tag> \
+  --repo <path-to-dify-repo> \
+  --docs en/self-host/deploy/configuration/environments.mdx
+```
+
+Pin exact tags or SHAs (e.g., `--compare-rev 1.14.1 1.15.0`), never a branch name. The script prints the vars **added / removed / default-changed** between the refs, then `=== NEW vars NOT documented and NOT in ignored-vars (<n>) — TRIAGE ===`, and exits 0. Every triage var must end the task either documented or in `ignored-vars.md` with a reason — never as silent backlog.
+
+## Step 4: Trace each variable in the codebase
+
+When using subagents for tracing, assign 3–5 related variables per agent. Tracing depth depends on variable type:
+
+| Variable type | Depth |
+|---|---|
+| Python config vars (defined in `api/configs/`) | Full trace (below). |
+| Frontend vars (mapped in `web/docker/entrypoint.sh`) | Trace the Docker-to-`NEXT_PUBLIC_*` mapping in `entrypoint.sh`; verify the default in both `docker/.env.example` and `web/.env.example`; run `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` — any match means the var is dual-purpose and needs a full trace. |
+| Docker/container service vars (only in `docker-compose.yaml`) | `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` must return no matches; then document from `.env.example` comments. |
+| Plugin daemon vars (`PLUGIN_*` not in `api/configs/`) | Document from `.env.example` comments. |
+
+Full trace:
+
+1. Find the definition in `api/configs/` — Pydantic field type, default, description, and any `validation_alias` (fallback) settings.
+2. Find every usage — grep both the env var name and the Python attribute (`dify_config.VARIABLE_NAME`); read the surrounding code.
+3. Determine behavior when empty vs set — trace fallback chains; identify what breaks.
+
+## Step 5: Write a plain-language explanation
+
+Cover: what the variable does in practical terms; the specific features that depend on it (name them); what happens if left empty; what happens if set; key code file paths (no line numbers — they shift). This explanation goes into your step 7 report.
+
+## Step 6: Write the user-facing description
+
+- Lead with the practical impact, not the technical mechanism
+- Name the features that require the variable (e.g., "Required for the Human Input node")
+- Explain what breaks if misconfigured (e.g., "If empty, email links will be broken")
+- Mention fallback behavior if any (e.g., "falls back to `CONSOLE_API_URL`")
+- Include relationships with other variables when relevant
+- Apply every rule in `references/style-overrides.md`
+
+## Step 7: Report and STOP
+
+Present to the user: the plain-language explanations, the proposed descriptions, and the codebase ref from step 2. **STOP — do not edit any documentation file until the user approves.**
+
+## Step 8: Edit the documentation
+
+Edit `en/self-host/deploy/configuration/environments.mdx` following [Document Structure](#document-structure). Update the `zh/` and `ja/` copies in the same pass, per `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`.
+
+## Step 9: Run the verifier
+
+The canonical command scans BOTH env sources — never pass only one:
+
+```bash
+python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
+  --env-example <path-to-dify-repo>/docker/.env.example \
+  --env-example <path-to-dify-repo>/docker/envs \
+  --docs en/self-host/deploy/configuration/environments.mdx
+```
+
+`--env-example` is repeatable; a directory argument is globbed `**/*.env.example` recursively. The script first prints the list of files it parsed — confirm it shows `docker/.env.example` plus the files under `docker/envs/`. A single-source run under-scans and produces false "extra in docs" results.
+
+Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
+
+Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every step 3 triage var must be resolved.
+
+## Step 10: Update `ignored-vars.md` if needed
+
+The verifier filters out variables listed in `ignored-vars.md` (in this skill directory). When you:
+
+- Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)**.
+- Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
+- Document a supported variable whose `.env.example` entry is commented out (`#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars present in `.env.example` in commented form; see [Source of Truth](#source-of-truth) for vars absent entirely.
+
+Every entry must include a source reference (PR, commit, or audit date).
+
+## Step 11: Post-writing checks
+
+Run the checks listed in `writing-guides/index.md#post-writing-verification`.
+
+## Source of Truth
 
 After Dify PR #31586, the supported self-host knob surface is split across:
 
 - `docker/.env.example` — essential startup values
 - `docker/envs/**/*.env.example` — categorized optional vars (core-services, databases, infrastructure, security, vectorstores, middleware)
 
-The verifier reads both. Pass `--env-example docker/.env.example --env-example docker/envs` (the second arg is a directory; the verifier globs `**/*.env.example` recursively).
+The verifier reads both — always use the canonical step 9 command, which passes both sources.
 
 | Var location | Action |
 |---|---|
@@ -35,148 +122,17 @@ The verifier reads both. Pass `--env-example docker/.env.example --env-example d
 
 **The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.**
 
-## Four-Step Process
-
-**Pull the latest Dify code** before tracing. In the Dify codebase directory:
-```bash
-git fetch origin && git checkout main && git pull origin main
-```
-
-**This process applies to every variable without exception.** Do not skip variables because they seem "obvious" — every variable must be traced, explained, and described.
-
-### Step 1: Trace the Variable in the Codebase
-
-**Agent granularity**: When using subagents for tracing, assign 3–5 related variables per agent.
-
-**Tracing depth depends on variable type:**
-
-- **Python config variables** (defined in `api/configs/`): Full tracing — find definition, all usage locations, and behavior when empty vs set.
-- **Frontend variables** (mapped in `web/docker/entrypoint.sh`): Trace from `entrypoint.sh` to find the Docker-to-`NEXT_PUBLIC_*` mapping, verify the default in both `docker/.env.example` and `web/.env.example`, and check whether the variable is also used in Python code (dual-purpose). For Next.js-only variables (UI knobs like `MAX_TOOLS_NUM`), light verification is sufficient.
-- **Docker/container service variables** (only in `docker-compose.yaml`): Light verification — grep to confirm the variable is not used in Python code, then document from `.env.example` comments.
-- **Plugin daemon variables** (`PLUGIN_*` not in `api/configs/`): Document from `.env.example` comments.
-
-**For full tracing**, search the Dify codebase:
-
-1. **Find the definition** in `api/configs/` — note the Pydantic field type, default, description, and any `validation_alias` (fallback) settings.
-2. **Find every usage** — grep for both the env var name and the Python attribute (e.g., `dify_config.VARIABLE_NAME`). Read surrounding code to understand what each usage does.
-3. **Determine behavior when empty vs set** — trace fallback chains and identify what features break.
-
-### Step 2: Write a Plain-Language Explanation
-
-Write an explanation covering:
-
-- What the variable actually does (in practical terms, not code terms)
-- Specific features that depend on it (name them)
-- What happens if left empty (what breaks, what falls back)
-- What happens if set (what works)
-- Key code locations (file paths, no line numbers — they shift)
-
-Save to `deep-dive.md` (in this skill directory) under the appropriate section heading.
-
-### Step 3: Write the User-Facing Description
-
-Transform the explanation into a concise documentation description. The description must:
-
-- **Lead with the practical impact**, not the technical mechanism
-- **Name the features** that require this variable (e.g., "Required for the Human Input node" not "used for frontend references")
-- **Explain what breaks** if misconfigured (e.g., "If empty, email links will be broken")
-- **Mention fallback behavior** if the variable has one (e.g., "falls back to `CONSOLE_API_URL`")
-- **Include relationships** with other variables when relevant
-- **Add an `Example:` line only when the default is empty** (it shows what to set); omit it for concrete defaults, which already show the format (e.g., `TRIGGER_URL`, `SERVER_CONSOLE_API_URL`)
-
-### Step 4: Confirm with Reviewer
-
-Present the proposed description to the user for review before editing the documentation file.
-
 ## Document Structure
 
-The doc groups variables by subsystem, broadly following the `docker/.env.example` and `docker/envs/**` layout: Common Variables, Server Configuration, Web Frontend Service, Database Service, Sandbox Service, Nginx Reverse Proxy, SSRF Proxy, Plugin Daemon Configuration, Vector Database Service Configuration, and so on (the live doc currently has ~17 `##` sections). Match the existing section for a new variable; don't invent one. If a variable genuinely fits no section, raise it rather than guessing.
+The doc groups variables by subsystem, broadly following the `docker/.env.example` and `docker/envs/**` layout (Common Variables, Server Configuration, Web Frontend Service, Database Service, and so on). Match an existing `##` section for a new variable; don't invent one. If a variable genuinely fits no section, raise it with the user rather than guessing.
 
-**When to use tables**: Groups of related, straightforward variables (connection settings, credentials, tuning knobs).
-
-**When to use individual headings**: Important variables needing explanation — typically enum-type selectors (`STORAGE_TYPE`, `VECTOR_STORE`) or variables where the "why" matters (`SECRET_KEY`, `FILES_URL`).
-
-**When to use tabs**: Frontend section variables where Docker and source code deployments use different variable names. Tabs cannot be placed inside table cells, so all tabbed variables require individual headings.
-
-**When to use accordions**: Provider-specific configuration (storage backends, vector databases, mail providers) — users only need one provider.
+| Element | Use for |
+|---|---|
+| Tables | Groups of related, straightforward variables (connection settings, credentials, tuning knobs). |
+| Individual headings | Important variables needing explanation — enum-type selectors (`STORAGE_TYPE`, `VECTOR_STORE`) or variables where the "why" matters (`SECRET_KEY`, `FILES_URL`). |
+| Tabs | Frontend variables where Docker and source deployments use different names. Tabs cannot sit inside table cells, so tabbed variables need individual headings. |
+| Accordions | Provider-specific configuration (storage backends, vector databases, mail providers) — users only need one provider. |
 
 ## Reader Persona
 
-Same audience as `en/self-host/deploy/` documentation (see `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge.
-
-**Additional context for env var docs:** Readers are actively configuring a deployment. They need to know what each variable does, when to change it, and what breaks if they get it wrong. They are not reading linearly—they are scanning for a specific variable.
-
-## Style Overrides
-
-Rules specific to env var docs (override or extend the shared style guide):
-
-- Use `(empty)` for empty-string defaults, not `""` or blank
-- For empty defaults with a fallback: `(empty; falls back to X)` or `(empty; defaults to X)`
-- Never include real or example secret keys — GitHub push protection blocks `sk-*` patterns. Use descriptions like `(pre-filled in .env.example; must be replaced for production)`
-
-**Consistency over variety in reference tables.** The general style guide says to vary sentence patterns. In reference tables, consistency aids scanning. Use predictable patterns for connection credentials (hostname, port, username, password) across providers. Vary descriptions only when variables genuinely differ in behavior or purpose.
-
-**Variable descriptions should be self-contained.** The general style guide says not to restate the heading. Variable descriptions must state what the variable does—even if the name partially implies it. Not all variable names are self-explanatory, and users may arrive at a description via search without seeing the surrounding section context.
-
-**Include actionable technical mechanisms.** The general style guide favors user outcomes over technical mechanisms. For env var docs, include technical mechanisms that help users configure, troubleshoot, or understand trade-offs—algorithm names, encoding behavior, fallback chains, version requirements. Exclude mechanisms that only describe code architecture—factory patterns, lazy imports, class names—unless understanding them is necessary for configuration.
-
-- **Keep**: "URL-encoded in the connection string, so `@`, `:`, `%` are safe to use", "HMAC-SHA256", "Requires Milvus >= 2.5.0", "Falls back to `CONSOLE_API_URL`"
-- **Remove**: "Dify's storage dispatcher lazily imports the selected backend", "Sends POST to /v1/sandbox/run with X-Api-Key header"
-
-**No specific recommended values for tuning parameters.** For numeric tuning parameters without clear boundaries (connection pool sizes, worker counts, timeouts, buffer sizes), do not prescribe values. Describe the symptom that indicates the value needs changing: "If you experience connection rejections under load, try increasing this value." Exception: when a value has a well-established recommendation (e.g., PostgreSQL `shared_buffers` = 25% of RAM), include it with a reference link.
-
-## Description Anti-Patterns
-
-| Anti-Pattern | Better |
-|---|---|
-| "Used for frontend references" | "Required for the Human Input node — form links in email notifications are built from this URL" |
-| "The backend URL of the console API" | "Set this if you use OAuth login (GitHub, Google) or Notion integration — these features need an absolute callback URL" |
-| "Upload file size limit, default 15" | "Maximum file size in MB for uploads" |
-| Restating the code comment verbatim | Explaining when you'd change it and what happens if you don't |
-
-## Verification
-
-Run after completing any documentation change:
-
-```bash
-python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
-  --env-example <path-to-docker/.env.example> \
-  --docs <path-to-environments.mdx>
-```
-
-The script reports:
-- **Missing from docs**: Variables in `.env.example` not yet documented (address over time)
-- **Extra in docs**: Variables documented but not in `.env.example` (verify manually)
-- **Default mismatches**: Documented defaults that don't match `.env.example` — **must be zero before work is complete**
-
-For which vars to document and which defaults to use, see [Source of Truth](#source-of-truth-docker-env-example).
-
-### Release var-set diff (run first for a release sync)
-
-Per-PR detection misses vars from untagged PRs, and the **Missing from docs** list can hide genuinely-new vars inside old backlog. So at the start of every release sync, diff the full `.env.example` var set between the last release and the target ref:
-
-```bash
-python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
-  --compare-rev <last-release-tag> <target-ref> \
-  --repo <path-to-dify> --docs <path-to-environments.mdx>
-```
-
-It prints vars **added / removed / default-changed** between the refs, then the **NEW vars still undocumented and not in `ignored-vars.md`** (the triage list). Document each, or add it to `ignored-vars.md` with a reason. Never leave a new-this-release var as silent backlog.
-
-### Intentionally ignored variables
-
-Some variables in `.env.example` are deliberately not documented (Cloud-only, experimental, or verifier false positives). The verifier reads these from `ignored-vars.md` (same directory) and filters them out. When you:
-
-- Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)** in `ignored-vars.md`.
-- Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
-- Document a supported variable whose `.env.example` entry is **commented out** (e.g., `#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars that exist in `.env.example` in commented form; see [Source of Truth](#source-of-truth-docker-env-example) for vars absent from `.env.example` entirely.
-
-Every entry must include a source reference (PR, commit, or audit date).
-
-## Translation
-
-After editing `en/self-host/deploy/configuration/environments.mdx`, update `zh/self-host/deploy/configuration/environments.mdx` and `ja/self-host/deploy/configuration/environments.mdx` to match in the same pass, like all pages.
-
-## Post-Writing Verification
-
-After completing the document, run the post-writing checks listed in `writing-guides/index.md#post-writing-verification`.
+Same audience as `en/self-host/deploy/` documentation (see the `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge. Readers are actively configuring a deployment and scanning for a specific variable, not reading linearly. They need to know what each variable does, when to change it, and what breaks if they get it wrong.

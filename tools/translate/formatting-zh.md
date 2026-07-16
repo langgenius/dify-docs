@@ -152,7 +152,7 @@ These elements must be translated, not left in English:
 
 ## App-Type Names: Workflow and Chatflow
 
-The **Workflow** and **Chatflow** app types stay in English, like Agent. Add 应用 when naming the app (「Workflow 应用」「Chatflow 应用」). Use 工作流 only for the lowercase collective sense: the workflow engine, workflow-backed runs, workflow nodes, and endpoints shared across app types. Never write 工作流 for the Workflow app type, or 对话流 for Chatflow.
+The **Workflow** and **Chatflow** app types stay in English, like Agent. Add 应用 when naming the app (「Workflow 应用」「Chatflow 应用」). Use 工作流 only for the lowercase collective sense: the workflow engine, workflow-backed runs, workflow nodes, and endpoints shared across app types. Never write 工作流 for the Workflow app type, or 对话流 for Chatflow. Exception: a bold quote of the type-selector UI label mirrors the product UI string (the zh UI labels the Workflow type 工作流), e.g. 选择 **工作流**.
 
 ## Cross-Reference Anchors
 
