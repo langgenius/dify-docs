@@ -136,7 +136,7 @@ Combine both phases into a structured research summary:
 ### Recommended Documentation Scope
 - [What to add based on gaps]
 - [What to clarify based on confusion]
-- [What to explicitly omit and why (bugs, unreleased features)]
+- [What to explicitly omit and why (bugs, unreleased features, UI-discoverable mechanics)]
 ```
 
 Present the summary to the user. STOP — do not start the writing phase until the user reviews the findings and confirms the scope.
@@ -144,6 +144,7 @@ Present the summary to the user. STOP — do not start the writing phase until t
 ## Important
 
 - This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope.
+- Research findings exist to make the page's claims accurate, not to be exhaustively included. When recommending scope, apply the style guide's "Repeating the UI" filter: UI-discoverable mechanics stay out of the page unless especially consequential.
 - When scope is confirmed and writing begins, load the writing skill for the target tree (`dify-docs-guides` for `use-dify` guides, `dify-cli-docs` for `en/cli/` pages, `dify-docs-env-vars` for env-var docs, `dify-docs-api-reference` for API specs) plus the writing guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`) — before the first edit. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.
 - Distinguish bugs from documentation gaps. Documenting buggy behavior as intended causes more harm than leaving a gap.

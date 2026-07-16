@@ -126,11 +126,11 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading.
 
-**Repeating the UI.** Don't describe interface elements users can see directly—default values, field labels, button names. Documentation provides context and rationale not visible in the UI.
+**Repeating the UI.** Don't describe what users can see or discover directly in the UI—default values, field labels, button names, and interaction mechanics the interface teaches on first contact (displayed keyboard hints, what selecting an item does, option lists inside a menu). Repeat a UI-discoverable fact only when it's especially consequential: data loss, permissions, or cost. Documentation provides context and rationale not visible in the UI.
 
 **Describing the documentation.** Don't narrate the page's own structure or the doc set like "This section covers". Readers want the product, not a tour of the page. Lead with what the user does or needs.
 
-**Information noise.** If content doesn't provide value beyond what the reader already knows or can see, it hinders rather than helps. Before including a detail, ask: does the reader need this to accomplish their goal? If the UI already communicates it, or it restates what the previous sentence implied, cut it.
+**Information noise.** If content doesn't provide value beyond what the reader already knows or can see, it hinders rather than helps. Before including a detail, ask: does the reader need this to accomplish their goal? If it repeats the UI (see above) or restates what the previous sentence implied, cut it.
 
 **Unnecessary second sentences.** When two sentences can be merged into one without losing readability, combine them. If the "how it works" can be folded into the "what it does," a separate sentence is noise. Apply case-by-case—don't sacrifice clarity for brevity.
 
