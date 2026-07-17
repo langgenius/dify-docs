@@ -49,7 +49,7 @@ Read-only audit of documentation formatting. Mechanical rules are enforced by tw
 
    - `H-ing-verb` (en): section-name gerunds (`Troubleshooting`, `Logging`, `Getting Started`, etc.) are exempt via the `SKIP_ING_HEADINGS` constant in `check-format-en.py`. If a flagged heading is a legitimate section concept, propose the addition to `SKIP_ING_HEADINGS` in your report — do not edit the script.
    - `I-alt-empty` (en): flags every empty alt as a prompt to confirm the image is genuinely decorative, not as a hard error.
-   - `CJK-disclaimer-missing`: the script looks for the translation disclaimer only within the ~10 lines below the frontmatter, so a disclaimer placed lower in the file still trips it.
+   - `CJK-disclaimer-missing`: the script looks for the translation disclaimer only within the ~10 lines below the frontmatter, so a disclaimer placed lower in the file still trips it. Pages whose frontmatter sets `mode: "custom"` or `mode: "frame"` are exempt — chrome-less landing pages carry no disclaimer (see the formatting guides' Translation Disclaimer exception).
    - `CJK-cross-lang-link`: `/en/...` links are flagged everywhere except on the disclaimer line, which is allowed to point at the English source.
 
 4. **Judgment review — `en/` files.** Digest of `writing-guides/formatting-guide.md` (section names in parentheses; the guide wins on conflict). Read each file and check:

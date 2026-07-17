@@ -43,9 +43,11 @@ Read-only audit. Verify that documentation terms match the glossary (general ter
 For each file in scope, in the docs repo:
 
 ```bash
-grep -noE '\*\*[^*]+\*\*' <file>    # bolded terms, prints line:**term**
-grep -nE '^#{2,3} ' <file>          # section headings, prints line:## Heading
+grep -anoE '\*\*[^*]+\*\*' <file>    # bolded terms, prints line:**term**
+grep -anE '^#{2,3} ' <file>          # section headings, prints line:## Heading
 ```
+
+The `-a` flag is required: some legacy zh/ja pages contain stray NUL bytes, and without it grep prints only `Binary file … matches` and silently drops the term inventory.
 
 Every bolded term and every heading is a candidate. Step 5 decides deterministically which are UI labels; do not pre-filter by intuition.
 
