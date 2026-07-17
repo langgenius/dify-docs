@@ -213,6 +213,20 @@ Only effective when starting with Docker image or Docker Compose.
 | `COMPOSE_WORKER_HEALTHCHECK_INTERVAL` | `30s` | Interval between Celery worker health checks. Only used when `COMPOSE_WORKER_HEALTHCHECK_DISABLED=false`. Accepts Docker Compose duration values (e.g., `30s`, `1m`). |
 | `COMPOSE_WORKER_HEALTHCHECK_TIMEOUT` | `30s` | Timeout for each Celery worker health check. Only used when `COMPOSE_WORKER_HEALTHCHECK_DISABLED=false`. |
 
+### MODE
+
+Default: `worker`
+
+What the `dify-api` image runs at container start. Each of the three env example files pins the value for its own service: `worker` in `worker.env.example`, `api` in `api.env.example`, and `beat` in `worker-beat.env.example`. Accepted values:
+
+- `api` (and any empty or unrecognized value): the API server
+- `worker`: the Celery task consumer
+- `beat`: the scheduled-task dispatcher
+- `job`: run one Flask CLI command, then exit
+- `migration`: with `MIGRATION_ENABLED=true`, migrate the database and exit
+
+The bundled Compose file pins the right value per service, so you only set this in custom setups such as Kubernetes. A wrong value runs the wrong process—with no worker, indexing and mail tasks queue forever.
+
 ### API Tool Configuration
 
 | Variable | Default | Description |
@@ -379,6 +393,19 @@ Controls cross-domain access policies for the frontend.
 | `NEXT_PUBLIC_COOKIE_DOMAIN` | (empty) | Frontend flag for cross-subdomain cookies. Set to `1` (or any non-empty value) to enable—the actual domain is read from `COOKIE_DOMAIN` on the backend. |
 | `NEXT_PUBLIC_SOCKET_URL` | `ws://localhost` | Browser-side WebSocket endpoint for real-time collaboration. Scheme + host + port only (path `/socket.io/` is fixed). Swap `http(s)://` for `ws(s)://`. Example: `wss://dify.example.com`. The default targets the bundled nginx on port 80. Applied at runtime; container restart picks up changes. |
 | `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | Frontend-only. Controls how many concurrent API calls the UI makes during batch operations. |
+
+### Dify CLI and Programmatic API
+
+The `/openapi/v1/*` surface is the user-scoped programmatic API that the [Dify CLI](/en/cli/quick-start) (`difyctl`) and other clients authenticate against with OAuth bearer tokens. It ships disabled: set both `OPENAPI_ENABLED` and `ENABLE_OAUTH_BEARER` to `true` to use the CLI against your deployment.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPENAPI_ENABLED` | `false` | Master switch for the `/openapi/v1/*` programmatic API used by the Dify CLI (`difyctl`).<br/>When `false`, every `/openapi/v1/*` endpoint returns 404 and `difyctl login` cannot start. Enable together with `ENABLE_OAUTH_BEARER`. |
+| `ENABLE_OAUTH_BEARER` | `false` | Binds the OAuth bearer authenticator for `/openapi/v1/*` and gates device-flow login approval.<br/>With `OPENAPI_ENABLED=true` but this `false`, `difyctl login` fails with 503 at the approval step. Both must be `true` for the CLI to work. |
+| `OPENAPI_KNOWN_CLIENT_IDS` | `difyctl` | Comma-separated OAuth client IDs allowed to start a device-flow login.<br/>Add IDs to admit other clients without code changes; removing `difyctl` breaks CLI login with `unsupported_client`. |
+| `OPENAPI_CORS_ALLOW_ORIGINS` | (empty) | Browser origins allowed to call `/openapi/v1/*` cross-origin, comma-separated.<br/>Empty allows none, which is fine for the standard deployment and irrelevant to non-browser clients like the CLI. |
+| `OPENAPI_RATE_LIMIT_PER_TOKEN` | `60` | Requests per minute per OAuth bearer token across `/openapi/v1/*`, shared across API replicas via Redis.<br/>Exceeding it returns 429 with a `Retry-After` header. `0` disables the limit. |
+| `DEVICE_FLOW_APPROVE_RATE_LIMIT_PER_HOUR` | `10` | Device-flow login approvals or denials one browser session can perform per hour.<br/>Beyond that, approvals return 429 until the window passes. Cannot be `0`. |
 
 ### File Storage Configuration
 
@@ -1050,6 +1077,8 @@ Sentry provides error tracking and performance monitoring. Each service has its 
 | `API_SENTRY_DSN` | (empty) | Sentry DSN for the API service. Overrides `SENTRY_DSN` if set. Empty disables Sentry for the backend. |
 | `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in performance tracing (0.01 = 1%, 1.0 = 100%). Traces track request flow across services. |
 | `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in CPU/memory profiling (0.01 = 1%). Profiles show where time is spent in code. |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Direct name for `API_SENTRY_TRACES_SAMPLE_RATE`, used by the config files under `docker/envs/core-services/`.<br/>In the Compose stack the `API_SENTRY_*` value wins. No effect while the Sentry DSN is empty. |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Direct name for `API_SENTRY_PROFILES_SAMPLE_RATE`, used by the same config files.<br/>Profiling only samples requests already selected by the traces rate, so effective volume is traces rate × profiles rate. |
 | `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend (Next.js). Frontend-only. |
 | `PLUGIN_SENTRY_ENABLED` | `false` | Enable Sentry for the plugin daemon service. |
 | `PLUGIN_SENTRY_DSN` | (empty) | Sentry DSN for the plugin daemon. |
@@ -1112,6 +1141,21 @@ For more details, see the [SendGrid documentation](https://www.twilio.com/docs/s
 </AccordionGroup>
 
 ### Others Configuration
+
+#### Console Features
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENABLE_LEARN_APP` | `true` | Shows the Learn Dify section: tutorial templates on the Explore page, the getting-started panel when Studio has no apps, and its show/hide toggle in the help menu.<br/>Set to `false` to hide all three. |
+
+#### LLMOps Trace Delivery
+
+Traces of app runs are delivered to the configured LLMOps provider (Langfuse, LangSmith, Arize/Phoenix, and so on) by a background task. These variables govern its retries on transient failures.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | How many times a trace delivery is retried after a transient failure before the trace is dropped.<br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 5 minutes at defaults).<br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
 
 #### Indexing
 
@@ -1416,11 +1460,15 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | How long to cache each tenant's plugin model provider list in Redis, in seconds (24 hours). Dify invalidates this cache when a tenant installs, uninstalls, or upgrades a plugin. |
 | `PLUGIN_DIFY_INNER_API_KEY` | (auto-generated) | API key the plugin daemon uses to call back to the Dify API. Must match `DIFY_INNER_API_KEY` in the plugin daemon service config. |
+| `INNER_API_KEY_FOR_PLUGIN` | (pre-filled in the env example; replace for production) | The API-service side of the same secret, under its direct name from `docker/envs/core-services/`; in the Compose stack `PLUGIN_DIFY_INNER_API_KEY` feeds both sides.<br/>The API checks it on every plugin callback (model invocation, tool calls, file transfer). On mismatch those calls fail while plugin install keeps working.<br/>Replace the shipped default: it is public in the Dify repo and is the only auth on the plugin callback API. |
 | `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | Internal API URL the plugin daemon calls back to. |
 | `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | Host for plugin remote debugging connections. |
 | `PLUGIN_DEBUGGING_PORT` | `5003` | Port for plugin remote debugging connections. |
+| `PLUGIN_REMOTE_INSTALL_HOST` | `localhost` | Address the console shows plugin developers for remote plugin debugging. Display-only: the daemon's listener is unaffected.<br/>Set it (via `EXPOSE_PLUGIN_DEBUGGING_HOST` in the Compose stack) to a host developers can reach; `localhost` only works when developing on the Docker host itself. |
+| `PLUGIN_REMOTE_INSTALL_PORT` | `5003` | Port half of the advertised debugging address.<br/>Must match the published daemon debugging port (`EXPOSE_PLUGIN_DEBUGGING_PORT`); the Compose stack keeps the two in sync from that one knob. |
 | `MARKETPLACE_ENABLED` | `true` | Enable the plugin marketplace. When disabled, only locally installed plugins are available—browsing and auto-upgrades are unavailable. |
 | `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` | Marketplace API endpoint for plugin browsing, downloading, and upgrade checking. |
+| `MARKETPLACE_URL` | (empty; the Compose stack falls back to `https://marketplace.dify.ai`) | Base URL for links that send users out to the Marketplace website (plugin detail pages, "more" links, the publishing guide).<br/>Distinct from `MARKETPLACE_API_URL`, which the console and plugin daemon use to fetch Marketplace data. |
 | `FORCE_VERIFYING_SIGNATURE` | `true` | Require valid signatures before installing plugins. Prevents installing tampered or unsigned packages. |
 | `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | Plugin execution timeout in seconds (plugin daemon side). Should match `PLUGIN_DAEMON_TIMEOUT` on the API side. |
 | `PIP_MIRROR_URL` | (empty) | Custom PyPI mirror URL used by the plugin daemon when installing plugin dependencies. Useful for faster installs or air-gapped environments. |
