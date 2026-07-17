@@ -201,8 +201,9 @@ Only effective when starting with Docker image or Docker Compose.
 | `SERVER_WORKER_CLASS` | `gevent` | Gunicorn worker type. Keep the default; other values break psycopg2 and gRPC patching. |
 | `SERVER_WORKER_CONNECTIONS` | `10` | Maximum concurrent connections per worker. Only applies to async workers (gevent). If you experience connection rejections or slow responses under load, try increasing this value. |
 | `GUNICORN_TIMEOUT` | `360` | If a worker doesn't respond within this many seconds, Gunicorn kills and restarts it. Set to 360 (6 minutes) to support long-lived SSE connections used for streaming LLM responses. |
+| `API_WEBSOCKET_WORKER_AMOUNT` | `1` | Docker Compose only. Number of Gunicorn workers in the dedicated `api_websocket` container serving real-time collaboration. Collaboration events sync across workers through Redis, so it's safe to raise this when one worker saturates a CPU core under heavy editor traffic. |
 | `API_WEBSOCKET_WORKER_CLASS` | `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` | Docker Compose only. Worker class for the dedicated `api_websocket` container. Keep the default; other values break WebSocket support. |
-| `API_WEBSOCKET_WORKER_CONNECTIONS` | `1000` | Docker Compose only. Maximum simultaneous WebSocket connections the `api_websocket` container accepts. Each open workflow editor in a browser tab uses one, so the default supports up to 1000 simultaneous editor sessions; raise it if you expect more. |
+| `API_WEBSOCKET_WORKER_CONNECTIONS` | `1000` | Docker Compose only. Maximum simultaneous WebSocket connections per `api_websocket` worker. Each open workflow editor in a browser tab uses one, so the default supports up to 1000 simultaneous editor sessions per worker; raise it or add workers if you expect more. |
 | `API_WEBSOCKET_GUNICORN_TIMEOUT` | `360` | Docker Compose only. If an `api_websocket` worker doesn't respond within this many seconds, Gunicorn restarts it. The default 360 seconds (6 minutes) supports long-lived WebSocket connections. |
 | `CELERY_WORKER_CLASS` | (empty; defaults to gevent) | Celery worker type with the same gevent patching requirements as `SERVER_WORKER_CLASS`. Strongly discouraged to change. |
 | `CELERY_WORKER_AMOUNT` | `4` | Number of Celery worker processes. Only used when autoscaling is disabled. Lower it on constrained VMs; for elastic throughput, enable `CELERY_AUTO_SCALE` instead of raising this. |
@@ -287,6 +288,10 @@ Configure these to connect Dify to your Redis instance. Dify supports three depl
 | `REDIS_KEY_PREFIX` | (empty) | Optional global prefix applied to all Redis keys, pub/sub channels, Redis Streams names, and Celery broker queues and result-backend keys. Dify automatically inserts a colon between the prefix and the key, so setting `staging` produces keys like `staging:session:abc`. Useful when multiple Dify instances share one Redis deployment (for example, staging and production) to prevent key collisions. Leave empty to preserve unprefixed behavior. Turning the prefix on for an existing deployment strands any keys written under the previous (empty or different) prefix. |
 | `REDIS_USE_SSL` | `false` | Enable SSL/TLS for the Redis connection. Does not automatically apply to Sentinel protocol. |
 | `REDIS_MAX_CONNECTIONS` | (empty) | Maximum connections in the Redis pool. Leave unset for the library default. Set this to match your Redis server's `maxclients` if needed. |
+| `REDIS_KEEPALIVE` | `true` | Enable TCP keepalive on Redis connections, so idle connections silently dropped by a firewall or load balancer are detected and re-established instead of failing on next use. |
+| `REDIS_KEEPALIVE_IDLE` | `30` | Seconds a connection stays idle before the first TCP keepalive probe (`TCP_KEEPIDLE`). Applies when `REDIS_KEEPALIVE=true`. |
+| `REDIS_KEEPALIVE_INTERVAL` | `10` | Seconds between TCP keepalive probes (`TCP_KEEPINTVL`). Applies when `REDIS_KEEPALIVE=true`. |
+| `REDIS_KEEPALIVE_COUNT` | `10` | Number of unacknowledged probes before the connection is treated as dead (`TCP_KEEPCNT`). Applies when `REDIS_KEEPALIVE=true`. |
 
 #### Redis SSL Configuration
 
@@ -1119,6 +1124,20 @@ For more details, see the [SendGrid documentation](https://www.twilio.com/docs/s
 |---|---|---|
 | `INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH` | `4000` | Maximum token length per text segment when chunking documents for the knowledge base. Larger values retain more context per chunk; smaller values provide finer granularity. |
 
+#### New User Defaults
+
+| Variable | Default | Description |
+|---|---|---|
+| `NEW_USER_DEFAULT_PLUGIN_IDS` | (empty) | Comma-separated Marketplace plugin IDs installed automatically when a new workspace is created. |
+| `NEW_USER_DEFAULT_MODELS` | (empty) | Default models set up for a new workspace, comma-separated in `model_type:provider:model` format. |
+
+#### Workflow Generation
+
+| Variable | Default | Description |
+|---|---|---|
+| `WORKFLOW_GENERATION_TIMEOUT_MS` | `180000` | How long the UI waits for one `/create` or `/refine` app generation run. Read by the web container. |
+| `WORKFLOW_GENERATOR_NODE_BUILDER_MAX_WORKERS` | `6` | Maximum concurrent node-builder LLM calls per `/create` or `/refine` generation request. |
+
 #### Token & Invitation
 
 All token expiry variables control how long a one-time-use token stored in Redis remains valid. After expiry, the user must request a new token.
@@ -1256,9 +1275,15 @@ These variables are used by the Next.js web frontend container only, and do not 
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
 | `MAX_TREE_DEPTH` | `50` | Maximum number of nodes along a single execution path. Longer paths cannot be published. Changes apply only to newly published workflows. |
 
+### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
+
+Default: `true`
+
+Enables the `/create` and `/refine` slash commands in the Go to Anything command palette, which generate and refine Workflow and Chatflow apps from a natural-language description. Set to `false` to hide them.
+
 ## New Agent (Beta)
 
-Deploy the Dify [1.16.0-rc1](https://github.com/langgenius/dify/releases) release to try out the New Agent. It runs as two extra services in the Docker Compose deployment, an agent backend and a sandbox, that start automatically with `docker compose up`. 
+The New Agent runs as two extra services in the Docker Compose deployment, an agent backend and a sandbox, that start automatically with `docker compose up`. 
 
 The feature is enabled by default, and most of its settings derive from your existing Compose values, so only the variables below usually need attention.
 
@@ -1292,7 +1317,7 @@ Default: `http://agent_backend:5050`
 
 Address the API uses to reach the agent backend. Keep the default on Docker Compose.
 
-The remaining variables point at the bundled Compose services or derive from your existing Compose values, and don't normally need changes.
+The remaining variables configure the bundled services or derive from your existing Compose values, and don't normally need changes.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1300,6 +1325,9 @@ The remaining variables point at the bundled Compose services or derive from you
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Key prefix for the agent backend's Redis entries. |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | How long a stopping agent backend waits for in-flight runs to finish. |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | How long finished run records are retained (3 days by default). |
+| `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` | `1200` | Total deadline for one agent run's event stream; a run that exceeds it fails. |
+| `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
+| `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | (empty; derives from `PLUGIN_DAEMON_KEY`) | Credential for the plugin daemon. |
 | `DIFY_AGENT_INNER_API_URL` | (empty; derives from `PLUGIN_DIFY_INNER_API_URL`) | Dify API address for the agent backend's internal calls. |
@@ -1307,6 +1335,8 @@ The remaining variables point at the bundled Compose services or derive from you
 | `DIFY_AGENT_SHELLCTL_ENTRYPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. |
 | `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` | (empty) | Optional bearer token securing the agent backend's calls to the sandbox; Compose passes the same value to both services. |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. |
+| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.13 or later; on older kernels the sandbox logs a warning and runs without it. Set in `docker/envs/core-services/local-sandbox.env`; `.env` values don't reach the sandbox container. |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys; the agent's internal bearer token is always masked. Set in `docker/envs/core-services/dify-agent.env`; Compose doesn't forward it from `.env`. |
 
 ## Database Service
 
