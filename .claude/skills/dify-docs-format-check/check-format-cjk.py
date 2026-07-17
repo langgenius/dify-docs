@@ -568,6 +568,12 @@ def check_cjk_disclaimer(lines: list[str], text: str, lang: str
     m = FM_RE.match(text)
     if not m:
         return vs
+    # Chrome-less landing pages (mode: custom/frame) carry no disclaimer
+    # by design — see tools/translate/formatting-{zh,ja}.md § Translation
+    # Disclaimer, Exception.
+    if re.search(r'^mode:\s*["\']?(custom|frame)["\']?\s*$',
+                 text[:m.end()], re.M):
+        return vs
     fm_end_line = text[:m.end()].count('\n')
     # scan next ~10 lines for the disclaimer
     needle = '本文档由 AI 自动翻译' if lang == 'zh' \

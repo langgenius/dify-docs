@@ -177,6 +177,18 @@ Every translated page must include the translation disclaimer directly below the
 
 Keep the disclaimer regardless of whether the page has been human-reviewed. The English source is always the canonical version, and readers benefit from a consistent pointer to it on every translated page.
 
+**Exception:** Pages whose frontmatter sets `mode: "custom"` or `mode: "frame"` (the chrome-less landing pages: `home.mdx`, the two `use-dify/getting-started/introduction.mdx` pages, and `self-host/deploy/overview.mdx`) carry no disclaimer. Do not add one when creating or updating these pages.
+
+## Enterprise Tip Callouts
+
+The paid-feature `<Tip>` pattern (`writing-guides/style-guide.md` § Paid Feature Callouts) has a standard Japanese rendering. Keep "Dify Enterprise" in English and keep the contact-sales URL unchanged:
+
+```mdx
+<Tip>
+Dify Enterprise では、…できます。詳しくは [営業担当](https://udify.app/chat/QuwcpW1oBNcfeL55) までお問い合わせください。
+</Tip>
+```
+
 ## Translatable Elements
 
 These elements must be translated, not left in English:
