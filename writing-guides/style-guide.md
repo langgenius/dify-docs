@@ -74,11 +74,17 @@ Unlimited log retention is available on <Badge color="blue">Professional</Badge>
 
 ### Self-host pages: Enterprise Tip
 
-Where a Community Edition capability ends and Dify Enterprise extends it, add a `<Tip>` at that point. It names a different product, not the reader's own, so it is not an audience restatement. Link to contact sales, never to the pricing page or the Enterprise docs. Do not add Enterprise mentions where CE isn't restricted, and no orphan headings for Enterprise-only features.
+Where a Community Edition capability ends and Dify Enterprise extends it, add a `<Tip>` at that point. It names a different product, not the reader's own, so it is not an audience restatement. Link **Contact sales** to the sales form for the page's language, never to the pricing page, the Enterprise docs, or a webapp. Do not add Enterprise mentions where CE isn't restricted, and no orphan headings for Enterprise-only features.
+
+| Language | Sales form link |
+|:---------|:----------------|
+| en | `https://share-na2.hsforms.com/14-09ff5HS92Sh4m3f4yrcw40s9fk` |
+| zh | `https://share-na2.hsforms.com/1O3Rajx4URXm88UzneXYpCw40s9fk` |
+| ja | `https://share-na2.hsforms.com/176RpklY3TLeHo6qmuAdRKQ40s9fk` |
 
 ```mdx
 <Tip>
-  On Dify Enterprise, you can sign in with OAuth or SAML single sign-on instead of a password. [Contact sales](https://udify.app/chat/QuwcpW1oBNcfeL55) to learn more.
+  On Dify Enterprise, you can sign in with OAuth or SAML single sign-on instead of a password. [Contact sales](https://share-na2.hsforms.com/14-09ff5HS92Sh4m3f4yrcw40s9fk) to learn more.
 </Tip>
 ```
 
