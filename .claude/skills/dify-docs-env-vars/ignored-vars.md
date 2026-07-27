@@ -45,6 +45,8 @@ Meaningful only on the hosted Dify Cloud deployment; self-hosted users cannot us
 | `CREATE_TIDB_SERVICE_JOB_ENABLED` | Cloud-side TiDB pre-provisioning job. | PR #721, commit 9248032 |
 | `AMPLITUDE_API_KEY` | Cloud product analytics integration. | PR #721, commit 9248032 |
 | `COOKIEYES_SITE_KEY` | CookieYes consent-banner key for Dify Cloud analytics. The frontend boundary requires `EDITION=CLOUD` plus the Cloud console host (`web/app/components/base/analytics-consent/request-boundary.ts`); dify PR #39408 explicitly excludes self-hosted deployments. Companion to `AMPLITUDE_API_KEY`. | dify #39408, 1.16.1 sync audit 2026-07-23 |
+| `ENABLE_TRIAL_APP` | Cloud trial-app runs on Explore. The server gate is `DEPLOYMENT_EDITION == CLOUD and ENABLE_TRIAL_APP` (`api/services/recommended_app_service.py`), so the flag is inert on self-host: `can_trial` is always false and the `/trial-apps/*` endpoints 403. | dify #39562, 1.16.1 sync audit 2026-07-27 |
+| `ENABLE_EXPLORE_BANNER` | Marketing banner carousel on the Explore page. Banner content comes from the `exporle_banners` DB table, which has no CE management UI or seed data—enabling the flag on self-host renders nothing. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 
 ## Experimental / internal
 
@@ -58,6 +60,16 @@ Feature flags for unfinished or staff-only features. Not yet meant for self-host
 | `KNOWLEDGE_FS_JWT_SECRET` | Service-JWT signing secret for the flag-off KnowledgeFS bridge; inert unless enabled. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
 | `KNOWLEDGE_FS_TIMEOUT_SECONDS` | Request timeout for the flag-off KnowledgeFS bridge; inert unless enabled. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
 | `KNOWLEDGE_FS_SSE_READ_TIMEOUT_SECONDS` | SSE idle-read timeout for the flag-off KnowledgeFS bridge; inert unless enabled. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
+| `ENABLE_STEP_BY_STEP_TOUR` | Staged-rollout onboarding tour (home/studio/knowledge/integration guides). Flag-off, and eligibility additionally requires `STEP_BY_STEP_TOUR_ROLLOUT_STARTED_AT`, which is Pydantic-only (`api/services/step_by_step_tour_service.py` `is_eligible`)—the tour cannot be turned on from the docker env alone. Revisit when it ships enabled. | dify #38785/#39399, 1.16.1 sync audit 2026-07-27 |
+
+## Enterprise-only
+
+Switches for the Dify Enterprise control plane. Inert at their defaults on Community Edition; enabling them without the Enterprise services makes the deployment call APIs that don't exist. Enterprise deployments configure them through the EE Helm chart, not this file.
+
+| Variable | Reason | Source |
+|---|---|---|
+| `ENTERPRISE_ENABLED` | Master switch for EE integrations (branding, SSO, license, webapp auth). At `false` it is fully inert on CE. Setting `true` makes `get_system_features` call `EnterpriseService.get_info()` against `ENTERPRISE_API_URL`, which has no CE backend—based on the code, the console then fails to load. | dify #39543, 1.16.1 sync audit 2026-07-27 |
+| `RBAC_ENABLED` | Routes permission checks to the EE inner RBAC API (`rbac_permission_required` in `api/controllers/common/wraps.py` is an explicit no-op when false). On CE there is no RBAC service to answer the checks. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 
 ## Verifier false positives
 
