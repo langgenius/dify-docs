@@ -79,3 +79,4 @@ The variable is documented in `environments.mdx`, but the verifier misreports it
 |---|---|---|
 | `ALIYUN_CLOUDBOX_ID` | Commented-out `#ALIYUN_CLOUDBOX_ID=your-cloudbox-id` in `docker/.env.example`; backend field exists in `api/configs/middleware/storage/aliyun_oss_storage_config.py`. | 1.14 sync audit, 2026-04-22 |
 | `DIFY_AGENT_SERVER_SECRET_KEY` | Documented with a descriptive default; `.env.example` pre-fills a development key that the docs must not reproduce (no real or example secret values in docs). | feat/agent-v2 audit, 2026-07-09 |
+| `DIFY_AGENT_API_TOKEN` | Documented with a descriptive default; `.env.example` pre-fills a development bearer token that the docs describe instead of reproduce (same rule as `DIFY_AGENT_SERVER_SECRET_KEY`). | dify #39544/#39622, 1.16.1 sync audit 2026-07-27 |
