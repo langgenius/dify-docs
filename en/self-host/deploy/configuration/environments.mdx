@@ -155,6 +155,7 @@ If you use your own reverse proxy, forward `Upgrade` and `Connection` headers on
 | `FLASK_DEBUG` | `false` | Standard Flask debug mode flag. Not actively used by Dify; `DEBUG` is the primary control. |
 | `ENABLE_REQUEST_LOGGING` | `false` | Logs a compact access line (`METHOD PATH STATUS DURATION TRACE_ID`) for every HTTP request. When `LOG_LEVEL` is also set to `DEBUG`, additionally logs full request and response bodies as JSON. |
 | `DEPLOY_ENV` | `PRODUCTION` | Tags monitoring data in Sentry and OpenTelemetry so you can filter errors and traces by environment. Also sent as the `X-Env` response header. Does not change application behavior. |
+| `EDITION` | `SELF_HOSTED` | Deployment identity, exposed to the console as `deployment_edition`. Keep the default: `CLOUD` is the mode Dify's hosted service runs in—it skips the initial admin-setup wizard and switches on billing and hosted-model behavior that talks to Dify-internal services, so a deployment set to `CLOUD` cannot complete setup. |
 | `MIGRATION_ENABLED` | `true` | When `true`, runs database schema migrations (`flask upgrade-db`) automatically on container startup. Docker only. Set to `false` if you run migrations separately. For source code launches, run `flask db upgrade` manually. |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | The console checks this URL for newer Dify versions. Set to empty to disable—useful for air-gapped environments or to prevent external HTTP calls. |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | Legacy variable. Not actively used by Dify's own code. May be picked up by the OpenAI Python SDK if present in the environment. |
@@ -1153,6 +1154,19 @@ For more details, see the [SendGrid documentation](https://www.twilio.com/docs/s
 |---|---|---|
 | `ENABLE_LEARN_APP` | `true` | Shows the Learn Dify section: tutorial templates on the Explore page, the getting-started panel when Studio has no apps, and its show/hide toggle in the help menu.<br/>Set to `false` to hide all three. |
 
+#### Authentication and Accounts
+
+By default, sign-in is email + password, and new accounts come from workspace invitations or the initial setup wizard. The toggles below relax or tighten that.
+
+| Variable | Default | Description |
+|---|---|---|
+| `ENABLE_EMAIL_PASSWORD_LOGIN` | `true` | Sign in to the console with email and password. When disabled, the password form disappears from the sign-in page and the password login, password reset, and self-serve signup endpoints all return 403. Keep at least one sign-in method enabled—if every method is off, the sign-in page shows "Authentication method not configured" and no one can log in until you change the setting back. |
+| `ENABLE_EMAIL_CODE_LOGIN` | `false` | Sign in with a one-time 6-digit code sent by email instead of a password. Requires mail delivery to be configured (see [Mail Configuration](#mail-configuration))—without it, codes are never delivered. With `ALLOW_REGISTER=true`, entering a code for an unknown email also creates the account, so this doubles as a self-serve signup path. |
+| `ENABLE_SOCIAL_OAUTH_LOGIN` | `false` | Shows GitHub and Google sign-in buttons on the console sign-in page. The buttons only work if the matching GitHub or Google OAuth app credentials are also configured on the API service; with the flag on but no credentials, sign-in attempts fail. First-time OAuth sign-ins create an account only when `ALLOW_REGISTER=true`. |
+| `ALLOW_REGISTER` | `false` | Lets people create their own accounts: shows the sign-up link on the sign-in page (with password login enabled) and allows first-time email-code or OAuth sign-ins to create accounts. Leave `false` for an invite-only deployment—workspace invitations and the initial setup wizard always work regardless. |
+| `ALLOW_CREATE_WORKSPACE` | `false` | Automatically creates a workspace for an account that doesn't belong to one—during self-serve registration and at email-code or OAuth sign-in. When `false`, such accounts must wait for a workspace invitation. The admin workspace created by the setup wizard is unaffected. |
+| `ENABLE_CHANGE_EMAIL` | `true` | Lets users change their account's email address from the account settings page. The flow confirms the change with emailed verification codes, so it requires mail delivery to be configured. Set to `false` to lock account emails, e.g. when they must match an external directory. |
+
 #### LLMOps Trace Delivery
 
 Traces of app runs are delivered to the configured LLMOps provider (Langfuse, LangSmith, Arize/Phoenix, and so on) by a background task. These variables govern its retries on transient failures.
@@ -1327,7 +1341,7 @@ Enables the `/create` and `/refine` slash commands in the Go to Anything command
 
 ## New Agent (Beta)
 
-The New Agent runs as two extra services in the Docker Compose deployment, an agent backend and a sandbox, that start automatically with `docker compose up`. 
+The New Agent runs as extra services in the Docker Compose deployment: an agent backend, a sandbox, and a dedicated egress proxy for the sandbox. All start automatically with `docker compose up`. 
 
 The feature is enabled by default, and most of its settings derive from your existing Compose values, so only the variables below usually need attention.
 
@@ -1346,6 +1360,14 @@ Generate one with:
 ```bash
 python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
+
+### DIFY_AGENT_API_TOKEN
+
+Default: (development token pre-filled in `.env.example`; must be replaced for production)
+
+Bearer token the Dify API presents when calling the agent backend's run API. Compose passes the same value to both services, so setting it once keeps them in agreement.
+
+A publicly known development token ships as the default, so the stack starts out of the box—but anyone who can reach the agent backend and knows the token can start runs. Replace it with your own random value before production use.
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
