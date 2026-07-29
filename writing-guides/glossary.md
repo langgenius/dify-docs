@@ -25,7 +25,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Dify tool | Dify 工具 | ツール | |
 | workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
-| web app | Web 应用 | Web アプリ | The published app interface end users see; lowercase in English body text. When naming a UI element rather than the concept, use the on-screen label verbatim instead; see the UI-string rows below. |
+| web app | Web 应用 | Web アプリ | The published app interface end users see; lowercase in English body text. When naming a UI element rather than the concept, use the on-screen label verbatim instead; see the UI Labels section. |
 | end user | 终端用户 | エンドユーザー | Person interacting with a published web app; not a workspace member |
 
 ### Models
@@ -214,9 +214,9 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| AI Credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. UI localizes the label (zh 消息额度, ja クレジット) and renders it lowercase, "AI credits". |
-| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI Credits. |
-| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI Credits. |
+| AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
+| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
+| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
 
 ### Billing
 
