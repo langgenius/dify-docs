@@ -46,6 +46,10 @@ Without `gh`, put a token in `~/.backport/config.json` as
 The `BACKPORT_TOKEN` used by the workflow is a repository secret; it cannot
 be read locally and is unrelated to CLI auth.
 
+One edge: pushing a backport that touches `.github/workflows/` additionally
+requires the `workflow` scope, which the default `gh` token does not carry —
+grant it with `gh auth refresh -s workflow` if you hit that rejection.
+
 Gather and select interactively (targets passed at runtime, so any
 `release/*` works without editing config):
 
@@ -71,11 +75,11 @@ the PR.
 
 ## After merging
 
-Confirm the change reached every labelled branch by probing content:
+Confirm the change reached every labeled branch by probing content:
 
 ```bash
 git fetch origin
-git show origin/release/<v>:<path> | grep "<distinctive marker>"
+git show origin/release/<branch>:<path> | grep "<distinctive marker>"
 ```
 
 Squash-merged backports make `git log --grep` unreliable in both
