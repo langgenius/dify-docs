@@ -25,8 +25,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Dify tool | Dify 工具 | ツール | |
 | workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
-| WebApp | WebApp | WebApp | |
-| end user | 终端用户 | エンドユーザー | Person interacting with a published WebApp; not a workspace member |
+| web app | Web 应用 | Web アプリ | The published app interface end users see; lowercase in English body text. When naming a UI element rather than the concept, use the on-screen label verbatim instead; see the UI Labels section. |
+| end user | 终端用户 | エンドユーザー | Person interacting with a published web app; not a workspace member |
 
 ### Models
 
@@ -134,7 +134,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
-| Max Iterations | 最大迭代次数 | 最大イテレーション数 | Limits the maximum number of reasoning loops and tool actions |
+| Max Iterations | 最大迭代次数 | 最大反復回数 | Limits the maximum number of reasoning loops and tool actions. The classic Agent app setting is a different string, "Maximum Iterations" (`app-debug.agent.setting.maximumIterations.name`). |
 
 ### Infrastructure
 
@@ -186,6 +186,17 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
+### Log Page
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Title | 标题 | タイトル | appLog.table.header.summary | Conversation list column; auto-generated from the first message |
+| End User or Account | 用户或账户 | エンドユーザーまたはアカウント | appLog.table.header.endUser | Session ID for web app/API usage, account name for in-Dify usage |
+| User Rate | 用户反馈 | ユーザーレート | appLog.table.header.userRate | End-user thumbs aggregate |
+| Op. Rate | 管理员反馈 | 操作レート | appLog.table.header.adminRate | Team/operator thumbs aggregate |
+| Trigger By | 触发方式 | トリガー方法 | appLog.table.header.triggered_from | Workflow run list column; UI renders uppercase "TRIGGER BY"; values WebApp 网页应用/Webhook/Schedule 定时任务/Integration 集成/Debugging 调试 |
+| Test With Params | 按此参数测试 | パラメータ付きテスト | appLog.runDetail.testWithParams | Workflow run detail replay button |
+
 ### Knowledge Detail Tabs
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
@@ -207,6 +218,8 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
 | Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
+| Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
+| Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
 | Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
@@ -214,9 +227,9 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| AI Credits | AI 消息额度 | AI クレジット | common.modelProvider.quota | Renamed from "Message Credits" in v1.13.1. UI localizes the label (zh 消息额度, ja クレジット). |
-| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI Credits. |
-| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI Credits. |
+| AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
+| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
+| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
 
 ### Billing
 
@@ -258,6 +271,25 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
 | Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 | app.accessControl | |
+| Branding | 品牌设置 | ブランディング | app-overview.overview.appInfo.settings.title | Publish-panel action opening the client-side web app settings (name, description, language, copyright, privacy policy, custom disclaimer) |
+| Custom Frontend | 自定义前端 | カスタムフロントエンド | app-overview.overview.appInfo.customize.title | Publish-panel action, sibling to Branding; covers forking the web client or calling the API directly |
+
+### Web App Access Levels
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Anyone with the link | 任何人 | リンクを知っているすべてのユーザー | app.accessControlDialog.accessItems.anyone | |
+| Authenticated external users | 经认证的外部用户 | 認証済みの外部ユーザー | app.accessControlDialog.accessItems.external | |
+| All members within the platform | 平台内所有成员 | プラットフォーム内の全メンバー | app.accessControlDialog.accessItems.organization | |
+| Specific members within the platform | 平台内指定成员 | 特定のプラットフォーム内メンバー | app.accessControlDialog.accessItems.specific | Default for new apps |
+
+### Web App Interface
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Run Batch | 批量运行 | 一括実行 | share.generation.tabs.batch | Web app tab in Workflow and Completion apps |
+| Saved | 已保存 | 保存済み | share.generation.tabs.saved | Web app tab in Workflow and Completion apps |
+| More like this | 更多类似的 | これに似たもの | app-debug.feature.moreLikeThis.title | Feature toggle in app settings; button on web app results |
 
 ### Workflow Node Names
 
@@ -361,6 +393,10 @@ Terms in this section must match the Dify product interface exactly. When these 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
+| Agent task | Agent 任务 | Agent タスク | workflow.nodes.agent.task.label | New Agent surface |
+| Edit in Agent Console | 在 Agent Console 中编辑 | Agent Console で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
+| Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
+| New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
 

@@ -19,7 +19,7 @@
 | Dify tool | Dify 工具 | ツール |
 | workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
-| WebApp | WebApp | WebApp |
+| web app | Web 应用 | Web アプリ |
 | end user | 终端用户 | エンドユーザー |
 
 ### Models
@@ -128,7 +128,7 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| Max Iterations | 最大迭代次数 | 最大イテレーション数 |
+| Max Iterations | 最大迭代次数 | 最大反復回数 |
 
 ### Infrastructure
 
@@ -178,6 +178,17 @@
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
+### Log Page
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Title | 标题 | タイトル |
+| End User or Account | 用户或账户 | エンドユーザーまたはアカウント |
+| User Rate | 用户反馈 | ユーザーレート |
+| Op. Rate | 管理员反馈 | 操作レート |
+| Trigger By | 触发方式 | トリガー方法 |
+| Test With Params | 按此参数测试 | パラメータ付きテスト |
+
 ### Knowledge Detail Tabs
 
 | English | Chinese | Japanese |
@@ -199,6 +210,8 @@
 | Billing | 账单 | 請求 |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 |
 | Integrations | 集成 | 統合 |
+| Archived logs | 归档日志 | アーカイブされたログ |
+| Prepare download | 准备下载 | ダウンロードを準備 |
 | Default Models | 默认模型 | デフォルトモデル |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
@@ -206,7 +219,7 @@
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
-| AI Credits | AI 消息额度 | AI クレジット |
+| AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
 | API Key | API Key | API キー |
 
@@ -250,6 +263,25 @@
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
 | Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 |
+| Branding | 品牌设置 | ブランディング |
+| Custom Frontend | 自定义前端 | カスタムフロントエンド |
+
+### Web App Access Levels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Anyone with the link | 任何人 | リンクを知っているすべてのユーザー |
+| Authenticated external users | 经认证的外部用户 | 認証済みの外部ユーザー |
+| All members within the platform | 平台内所有成员 | プラットフォーム内の全メンバー |
+| Specific members within the platform | 平台内指定成员 | 特定のプラットフォーム内メンバー |
+
+### Web App Interface
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Run Batch | 批量运行 | 一括実行 |
+| Saved | 已保存 | 保存済み |
+| More like this | 更多类似的 | これに似たもの |
 
 ### Workflow Node Names
 
@@ -353,6 +385,10 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 |
+| Agent task | Agent 任务 | Agent タスク |
+| Edit in Agent Console | 在 Agent Console 中编辑 | Agent Console で編集 |
+| Make a copy | 创建副本 | コピーを作成 |
+| New output | 新建输出 | 新しい出力 |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 
