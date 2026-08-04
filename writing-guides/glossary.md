@@ -186,6 +186,17 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
+### Log Page
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Title | 标题 | タイトル | appLog.table.header.summary | Conversation list column; auto-generated from the first message |
+| End User or Account | 用户或账户 | エンドユーザーまたはアカウント | appLog.table.header.endUser | Session ID for web app/API usage, account name for in-Dify usage |
+| User Rate | 用户反馈 | ユーザーレート | appLog.table.header.userRate | End-user thumbs aggregate |
+| Op. Rate | 管理员反馈 | 操作レート | appLog.table.header.adminRate | Team/operator thumbs aggregate |
+| Trigger By | 触发方式 | トリガー方法 | appLog.table.header.triggered_from | Workflow run list column; UI renders uppercase "TRIGGER BY"; values WebApp 网页应用/Webhook/Schedule 定时任务/Integration 集成/Debugging 调试 |
+| Test With Params | 按此参数测试 | パラメータ付きテスト | appLog.runDetail.testWithParams | Workflow run detail replay button |
+
 ### Knowledge Detail Tabs
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
@@ -207,6 +218,8 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
 | Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
+| Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
+| Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
 | Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
