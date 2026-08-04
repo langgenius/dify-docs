@@ -39,6 +39,8 @@ Place critical limitations at the start of a section when users need them before
 
 **Avoid overuse.** Too many callouts dilute their importance and interrupt reading flow. When a section accumulates multiple callouts, restructure into flowing paragraphs with inline bold text instead. Reserve callout visual weight for genuinely critical information.
 
+**Promote traps.** When a fact contradicts what the interface implies (an API-started run labeled WebApp) or protects the reader's data or time (a download that expires), a short `<Info>` or `<Tip>` beats a buried sentence—even inside a list item.
+
 ## Paid Feature Callouts
 
 Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`); Enterprise mentions appear only on self-host pages, as a `<Tip>`. Never both patterns in one copy.
@@ -132,7 +134,9 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading.
 
-**Repeating the UI.** Don't describe what users can see or discover directly in the UI—default values, field labels, button names, and interaction mechanics the interface teaches on first contact (displayed keyboard hints, what selecting an item does, option lists inside a menu). Repeat a UI-discoverable fact only when it's especially consequential: data loss, permissions, or cost. Documentation provides context and rationale not visible in the UI.
+**Repeating the UI.** Apply the moment-of-use test: if the interface shows the fact at the moment the reader acts—a button's next state, an unread marker, a notice that appears in context, a Retry label after a failure, the filename of a download—leave it out. Document what the interface cannot say at that moment: hidden affordances (hover-only actions), behavior connecting two screens, what a search field actually matches, and the system rules behind a label. Repeat a UI-visible fact only when it's especially consequential: data loss, permissions, or cost.
+
+**Navigation hand-holding.** State where a surface lives once; don't re-explain routes to standard chrome (the avatar menu, **Settings**) or spell out a next step the restriction already implies ("ask an admin"). Location-first instructions cover the step being performed, not repeated wayfinding.
 
 **Describing the documentation.** Don't narrate the page's own structure or the doc set like "This section covers". Readers want the product, not a tour of the page. Lead with what the user does or needs.
 
