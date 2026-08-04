@@ -48,6 +48,8 @@ Use bold for:
 
 Do not use bold for general emphasis in running text. If everything is bold, nothing stands out.
 
+When enumerating the possible values of a column or menu in prose, leave the values unbolded—bold marks the element the reader must find or click, not every string the UI can display.
+
 Do not include trailing punctuation (colons, commas, periods) inside bold markup. Write `**Upload Method**:` not `**Upload Method:**`.
 
 ### Italic (`*text*`)
