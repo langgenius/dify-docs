@@ -1,28 +1,27 @@
 ---
 name: dify-cli-docs
 description: >
-  Use when drafting or editing any page under `en/cli/` in dify-docs.
-  Covers reader segments, the writing rules, content ownership, and
-  codebase-verification rules for the Dify CLI (`difyctl`) doc set. Triggers:
-  "draft a CLI page", "write difyctl docs", "edit a page in en/cli/".
+  Rule pack for the Dify CLI (`difyctl`) doc set — en/cli/. Covers reader
+  segments, the writing rules, content ownership, and codebase-verification
+  rules. Loaded by dify-docs-write; not an entry point.
 ---
 
 # Dify CLI Documentation
 
-## Workflow
+Not an entry point — run under `dify-docs-write`; this pack's rules implement its stages for `en/cli/` pages.
 
-1. Read the three writing guides (`style-guide.md`, `formatting-guide.md`, `glossary.md`) and mirror an existing `en/cli/` page of the same type.
-2. Confirm edition scope: CE-first; badge and defer Cloud-only content.
-3. Draft per the Command Reference structure.
-4. Apply the Writing rules and Content ownership (state each fact once, link elsewhere).
-5. Verify every behavior claim against `langgenius/dify` `cli/` on `origin/main`, read at a pinned SHA per `writing-guides/index.md` "Syncing the Dify codebase safely"; record that SHA in your report.
-6. Run post-writing verification (the numbered checks under Verification below).
+## Procedures by stage
+
+1. **S1**: Confirm edition scope: CE-first; badge and defer Cloud-only content (see Editions below).
+2. **S2/S7**: Verify every behavior claim against `langgenius/dify` `cli/` on `origin/main`, read at the pinned SHA per `writing-guides/index.md` "Syncing the Dify codebase safely"; record that SHA in your report.
+3. **S5**: Mirror an existing page of the same type (see Before starting); draft per the Command Reference structure; apply the Writing rules and Content ownership (state each fact once, link elsewhere).
+4. **S7 verifiers**: the numbered checks under Verification below, after the spine's check chain.
 
 **Critical (source of truth):** `cli/` on `origin/main` only. Never `feat/cli` or `cli/README.md`; both drift from shipped reality.
 
 ## Before starting
 
-Read `writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`. For page structure, mirror an existing page of the same type (command reference → `en/cli/reference/apps.mdx`; task page → `en/cli/common-tasks.mdx`). For the IA, see `docs.json`.
+For page structure, mirror an existing page of the same type (command reference → `en/cli/reference/apps.mdx`; task page → `en/cli/common-tasks.mdx`). For the IA, see `docs.json`.
 
 ## Reader segments
 
@@ -102,9 +101,7 @@ Source of truth is the code (per the Critical note above), not the docs or in-CL
 
 For project context (known bugs, decisions, what's shipped vs planned), ask the user.
 
-After writing, run these checks in order (per `writing-guides/index.md` "Post-Writing Verification"):
+S7 verifiers — run after the spine's check chain:
 
-1. Run the `dify-docs-format-check` skill on every changed page; its checker must print `Total violations: 0`.
-2. Run `python3 tools/check-links.py --internal`; it must print `Broken links: 0` and `Broken anchors: 0`.
-3. Run the `dify-docs-terminology-check` skill, then the `dify-docs-reader-test` skill.
-4. Confirm no owned fact is re-explained (check each changed page against the Content ownership table).
+1. Run `python3 tools/check-links.py --internal`; it must print `Broken links: 0` and `Broken anchors: 0`.
+2. Confirm no owned fact is re-explained (check each changed page against the Content ownership table).

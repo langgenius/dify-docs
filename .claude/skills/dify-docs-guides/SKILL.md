@@ -1,70 +1,35 @@
 ---
 name: dify-docs-guides
 description: >
-  Use when writing, improving, or reviewing Dify user guide documentation.
-  Covers pages in en/{cloud,self-host}/use-dify/, en/develop-plugin/, and en/self-host/deploy/.
-  Triggers: "write docs for [feature]", "improve this page",
-  "review this documentation section".
+  Rule pack for Dify user-guide pages — en/{cloud,self-host}/use-dify/,
+  en/develop-plugin/, and en/self-host/deploy/. Carries the reader personas
+  (master copy), audience-voice rules, dual-copy discipline, and env-var
+  presentation patterns. Loaded by dify-docs-write; not an entry point.
 ---
 
-# Dify Documentation Guides
+# User Guide Rules
 
-Follow the numbered workflow in order. Do not skip steps.
+Not an entry point — run under `dify-docs-write`; this pack's rules and procedures implement its stages for user-guide pages.
 
-## Step 1 — Read the guides
+## Scoping rules (S1)
 
-Read all three files before drafting or editing anything:
+Match each target page to its reader persona (see Reader Personas below). `use-dify` pages exist as two product copies — `en/cloud/use-dify/` and `en/self-host/use-dify/` — with no shared pages and no cross-audience navigation. When the page exists in both, scope both: shared-content improvements land in both copies in the same pass; audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy.
 
-1. `writing-guides/style-guide.md` — voice, tone, writing patterns. No overrides: it applies as written.
-2. `writing-guides/formatting-guide.md` — MDX formatting, Mintlify components.
-3. `writing-guides/glossary.md` — standardized terminology.
+## S2 discovery — environment variables
 
-If the task includes Chinese or Japanese content, also read `tools/translate/formatting-zh.md` or `tools/translate/formatting-ja.md` before writing that language.
+Check for feature-related environment variables. In the Dify codebase, run:
 
-## Step 2 — Research and verify
+```bash
+grep -rn "<FEATURE_KEYWORD>" docker/.env.example docker/envs/ api/configs/
+```
 
-1. Identify the target page(s) and match each to its reader persona (see Reader Personas below). `use-dify` pages exist as two product copies — `en/cloud/use-dify/` and `en/self-host/use-dify/` — with no shared pages and no cross-audience navigation. When the page exists in both, scope both: shared-content improvements land in both copies in the same pass; audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy.
-2. For a new feature page, or a rewrite that changes what the doc claims about behavior (not just wording), invoke the `dify-docs-feature-research` skill first and complete its research gate.
-3. Verify feature behavior against the Dify codebase, never against existing docs — existing docs may be outdated or wrong. Work in the Dify codebase directory configured for this session; if none is configured, ask the user for the path. Sync it per `writing-guides/index.md` section "Syncing the Dify codebase safely". For new features, use the development branch the user names; when code in flux is ambiguous, ask rather than assume.
-4. When rewriting an existing page, treat every carried-over claim as unverified: re-check permissions, defaults, option lists, navigation paths, and behavior against the code before keeping them. The most common failure mode is faithfully reproducing an outdated section.
-5. Code presence ≠ working feature. If behavior is inferred from code rather than observed in the running product, mark it unverified and ask the user to test before documenting it as fact.
-6. Check for feature-related environment variables. In the Dify codebase, run:
+Use the feature's name as it would appear in a variable (e.g. `COLLABORATION`); try 2–3 keyword variants before concluding. No matches → the feature has no env-var surface; skip the env-var guidance below. Matches → record each variable as mandatory or optional plus its default, and queue the `dify-docs-env-vars` pack's procedure in the S4 scope report, to update `en/self-host/deploy/configuration/environments.mdx` in the same session — that reference is the single source of truth for variable semantics.
 
-   ```bash
-   grep -rn "<FEATURE_KEYWORD>" docker/.env.example docker/envs/ api/configs/
-   ```
-
-   Use the feature's name as it would appear in a variable (e.g. `COLLABORATION`); try 2–3 keyword variants before concluding. No matches → the feature has no env-var surface; skip the env-var guidance in Step 4. Matches → record each variable as mandatory or optional plus its default, and invoke the `dify-docs-env-vars` skill in the same session to update `en/self-host/deploy/configuration/environments.mdx` — that reference is the single source of truth for variable semantics.
-
-## Step 3 — Report scope, then STOP
-
-If the task touches more than one page, or restructures a section (adds, moves, renames, or deletes pages or headings), report before editing:
-
-- the full path of every page you will touch
-- for each page, what changes and why
-- every claim from Step 2 you could not verify in code
-
-**STOP — do not edit any file until the user approves.** A single-page edit with no restructuring may proceed directly to Step 4, but any unverified claims must still be reported to the user, never written as fact.
-
-## Step 4 — Draft
+## Drafting rules (S5)
 
 1. Write for the persona of the page's path (see Reader Personas below).
 2. Never restate the page's own audience. Everyone on a self-host page is self-hosted and everyone on a cloud page is on Dify Cloud, so "On self-hosted deployments, …" and "On Dify Cloud, …" are banned on their own pages. Audience qualifiers are legitimate only on the audience-neutral trees (`en/learn/`, `en/api-reference/`, `en/cli/`, `en/develop-plugin/`), where they genuinely disambiguate. Two carve-outs are deliberate and stay: naming a different product (the `<Tip>` surfacing Dify Enterprise where a CE capability ends — see "Paid Feature Callouts" in the style guide), and a comparative-advantage claim, where the qualifier marks something this product has that the other lacks ("On Dify Cloud, many popular trigger integrations are pre-configured" — the point is the perk, not the scope). Scoping restatement is banned; advantage framing is not.
-3. If Step 2.6 found related environment variables, present them per Environment Variables in User Guides below.
-
-## Step 5 — Translate
-
-Every English change ships all three languages. Update `zh/` and `ja/` in the same pass per `tools/translate/formatting-{zh,ja}.md` and `writing-guides/glossary.md`.
-
-## Step 6 — Run the check chain
-
-Invoke these skills in order (the chain is defined in `writing-guides/index.md` section "Post-Writing Verification"). Do not restate their rules or hand-roll their checks — invoke them:
-
-1. `dify-docs-format-check`
-2. `dify-docs-terminology-check`
-3. `dify-docs-reader-test`
-
-Fix what they flag and re-run until each reports clean, then report the results to the user.
+3. If S2 discovery found related environment variables, present them per Environment Variables in User Guides below.
 
 ## Reader Personas
 
@@ -89,16 +54,16 @@ The user brings documentation expertise and user empathy; you bring AI domain kn
 
 ## Environment Variables in User Guides
 
-Applies when Step 2.6 found related variables. The two product copies fork — never mix the patterns:
+Applies when S2 discovery found related variables. The two product copies fork — never mix the patterns:
 
-- **Self-host copy** (`en/self-host/use-dify/`): name the mandatory variables and the values to set in a callout (rules below), and link to the reference. `environments.mdx` (maintained via `dify-docs-env-vars`) owns everything else: defaults, mechanisms (worker classes, proxy paths, scheme rules, fallbacks), interactions, and failure modes.
+- **Self-host copy** (`en/self-host/use-dify/`): name the mandatory variables and the values to set in a callout (rules below), and link to the reference. `environments.mdx` (maintained via the `dify-docs-env-vars` pack) owns everything else: defaults, mechanisms (worker classes, proxy paths, scheme rules, fallbacks), interactions, and failure modes.
 - **Cloud copy** (`en/cloud/use-dify/`): never any env-var content. A feature that is simply on in Dify Cloud gets nothing; a plan-limited feature gets the plan-gating pattern (`<Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge>` in prose with a [Learn more](https://dify.ai/pricing) link — see "Paid Feature Callouts" in the style guide).
 
 In the self-host copy:
 
 1. Place the configuration in a callout, never a dedicated H2 section. Configuration enablement is an aside to the page's task flow, and the defaults and mechanics live one click away in the env reference.
 2. Pick the callout type: `<Note>` when the variables are mandatory (the feature does not work at all without them); `<Info>` when they only customize behavior that already works.
-3. Use this pattern — open with the feature state, never an audience qualifier (Step 4.2):
+3. Use this pattern — open with the feature state, never an audience qualifier (Drafting rule 2):
 
    ```mdx
    <Note>

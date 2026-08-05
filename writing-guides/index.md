@@ -2,20 +2,12 @@
 
 ## Which Skill to Use
 
-| Task | Skill | Paths | References |
-|:-----|:------|:------|:-----------|
-| Research a feature before writing | dify-docs-feature-research | — | dify and graphon codebases (graphon owns built-in workflow nodes, engine, runtime, model_runtime; verify against the graphon version pinned in `dify/api/pyproject.toml`), GitHub Issues in both repos |
-| Write or improve a user guide | dify-docs-guides | `en/{cloud,self-host}/use-dify/`, `en/develop-plugin/`, `en/self-host/deploy/` | style-guide, formatting-guide, glossary |
-| Write or audit API reference specs | dify-docs-api-reference | `en/api-reference/` | style-guide, formatting-guide, glossary |
-| Write or audit env var docs | dify-docs-env-vars | `en/self-host/deploy/configuration/environments.mdx` | style-guide, formatting-guide, glossary |
-| Write or edit Dify CLI (`difyctl`) docs | dify-cli-docs | `en/cli/` | style-guide, formatting-guide, glossary |
-| Prepare doc updates for a Dify release | dify-docs-release-sync | — | dify codebase diffed between two pinned version refs; routes into the api-reference, guides, and env-vars skills |
+| Task | Skill |
+|:-----|:------|
+| Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — resolves the work type, loads the doc-type rule pack, and runs the stage pipeline |
+| Prepare doc updates for a Dify release | dify-docs-release-sync — diffs the codebase between two pinned version refs, then hands execution to dify-docs-write |
 
-When paths overlap, the most specific match takes precedence.
-
-## Without a Skill
-
-If no skill matches your task (e.g., fixing a typo, updating navigation), follow the style guide and formatting guide directly.
+Everything else (research, rule packs, checks) is loaded by these two — start here, not there.
 
 ## Post-Writing Verification
 
