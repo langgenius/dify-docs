@@ -25,7 +25,7 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
 
 Pin exact tags or SHAs (e.g., `--compare-rev 1.14.1 1.15.0`), never a branch name. The script prints the vars **added / removed / default-changed** between the refs, then `=== NEW vars NOT documented and NOT in ignored-vars (<n>) — TRIAGE ===`, and exits 0. Every triage var must end the task either documented or in `ignored-vars.md` with a reason — never as silent backlog.
 
-## Procedure (S2 → S5)
+## Procedure (S2 → S6)
 
 Work through in order. **Every variable goes through steps 1–4 without exception** — do not skip a variable because it seems "obvious".
 

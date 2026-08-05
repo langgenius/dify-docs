@@ -39,7 +39,7 @@ Every writing task runs the same eight stages. The work-type row sets each stage
 | `en/cli/` | `dify-cli-docs` |
 | any other path (e.g. `en/learn/`) | none — the writing guides alone govern |
 
-3. Read now, before any other work: `writing-guides/style-guide.md`, `writing-guides/formatting-guide.md`, `writing-guides/glossary.md`; the rule pack's SKILL.md plus every reference it names; `references/task-analysis.md` in this skill. If the task includes zh or ja content, also `tools/translate/formatting-zh.md` / `formatting-ja.md`.
+3. Read now, before any other work: `writing-guides/style-guide.md`, `writing-guides/formatting-guide.md`, `writing-guides/glossary.md`; the rule pack's SKILL.md plus every reference it names; `references/task-analysis.md` in this skill. If the task includes zh or ja content, also `tools/translate/formatting-{zh,ja}.md`.
 
 4. Print the route before starting S1: `ROUTE: row=<R#> pack=<name|none> pages=<paths>`.
 
