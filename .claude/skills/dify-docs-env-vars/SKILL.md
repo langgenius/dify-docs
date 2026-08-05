@@ -1,30 +1,20 @@
 ---
 name: dify-docs-env-vars
 description: >
-  Use when writing, rewriting, or auditing environment variable documentation
-  for Dify self-hosted deployment. Applies to
-  en/self-host/deploy/configuration/environments.mdx. Covers the full process from
-  codebase tracing to user-facing descriptions.
+  Rule pack for the environment variable reference —
+  en/self-host/deploy/configuration/environments.mdx. Carries the tracing
+  procedure, description rules, verifier, and document structure. Loaded by
+  dify-docs-write; not an entry point. Its release-sync diff is a standalone
+  procedure invoked by dify-docs-release-sync.
 ---
 
 # Dify Environment Variable Documentation
 
-Work through the steps in order. **Every variable goes through steps 4–7 without exception** — do not skip a variable because it seems "obvious".
+Not an entry point — run under `dify-docs-write`; the procedure below implements its stages for `en/self-host/deploy/configuration/environments.mdx`. Read `references/style-overrides.md` (in this skill directory — env-var-specific style rules and description anti-patterns) together with this pack. Use the ref pinned at S1; cite it in the S4 scope report.
 
-## Step 1: Read first
+## Standalone procedure: release-sync diff
 
-1. `writing-guides/style-guide.md`
-2. `writing-guides/formatting-guide.md`
-3. `writing-guides/glossary.md`
-4. `references/style-overrides.md` (in this skill directory) — env-var-specific style rules and description anti-patterns
-
-## Step 2: Sync the Dify codebase
-
-Follow `writing-guides/index.md` section "Syncing the Dify codebase safely". Never run `git checkout` or `git pull` in the Dify working tree. Record the tag or SHA you verify against; cite it in your step 7 report.
-
-## Step 3 (release sync only): Diff the var set between releases
-
-Run this before any tracing. Per-PR detection misses vars from untagged PRs, and the verifier's Missing-from-docs list hides genuinely new vars inside old backlog.
+Invoked from `dify-docs-release-sync` only. Run this before any tracing. Per-PR detection misses vars from untagged PRs, and the verifier's Missing-from-docs list hides genuinely new vars inside old backlog.
 
 ```bash
 python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
@@ -35,7 +25,11 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
 
 Pin exact tags or SHAs (e.g., `--compare-rev 1.14.1 1.15.0`), never a branch name. The script prints the vars **added / removed / default-changed** between the refs, then `=== NEW vars NOT documented and NOT in ignored-vars (<n>) — TRIAGE ===`, and exits 0. Every triage var must end the task either documented or in `ignored-vars.md` with a reason — never as silent backlog.
 
-## Step 4: Trace each variable in the codebase
+## Procedure (S2 → S6)
+
+Work through in order. **Every variable goes through steps 1–4 without exception** — do not skip a variable because it seems "obvious".
+
+### Step 1 (S2): Trace each variable in the codebase
 
 When using subagents for tracing, assign 3–5 related variables per agent. Tracing depth depends on variable type:
 
@@ -52,11 +46,11 @@ Full trace:
 2. Find every usage — grep both the env var name and the Python attribute (`dify_config.VARIABLE_NAME`); read the surrounding code.
 3. Determine behavior when empty vs set — trace fallback chains; identify what breaks.
 
-## Step 5: Write a plain-language explanation
+### Step 2 (S2): Write a plain-language explanation
 
-Cover: what the variable does in practical terms; the specific features that depend on it (name them); what happens if left empty; what happens if set; key code file paths (no line numbers — they shift). This explanation goes into your step 7 report.
+Cover: what the variable does in practical terms; the specific features that depend on it (name them); what happens if left empty; what happens if set; key code file paths (no line numbers — they shift). This explanation goes into the S4 scope report.
 
-## Step 6: Write the user-facing description
+### Step 3 (S5): Write the user-facing description
 
 - Lead with the practical impact, not the technical mechanism
 - Name the features that require the variable (e.g., "Required for the Human Input node")
@@ -65,15 +59,17 @@ Cover: what the variable does in practical terms; the specific features that dep
 - Include relationships with other variables when relevant
 - Apply every rule in `references/style-overrides.md`
 
-## Step 7: Report and STOP
+### Step 4 (S4 contribution): Report
 
-Present to the user: the plain-language explanations, the proposed descriptions, and the codebase ref from step 2. **STOP — do not edit any documentation file until the user approves.**
+The S4 scope report presents: the plain-language explanations, the proposed descriptions, and the pinned ref. The spine's S4 gate applies.
 
-## Step 8: Edit the documentation
+### Step 5 (S5/S6): Edit the documentation
 
 Edit `en/self-host/deploy/configuration/environments.mdx` following [Document Structure](#document-structure). Update the `zh/` and `ja/` copies in the same pass, per `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`.
 
-## Step 9: Run the verifier
+## S7 verifiers
+
+### Run the verifier
 
 The canonical command scans BOTH env sources — never pass only one:
 
@@ -88,9 +84,9 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
 
 Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
 
-Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every step 3 triage var must be resolved.
+Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every release-sync-diff triage var must be resolved.
 
-## Step 10: Update `ignored-vars.md` if needed
+### Update `ignored-vars.md` if needed
 
 The verifier filters out variables listed in `ignored-vars.md` (in this skill directory). When you:
 
@@ -100,10 +96,6 @@ The verifier filters out variables listed in `ignored-vars.md` (in this skill di
 
 Every entry must include a source reference (PR, commit, or audit date).
 
-## Step 11: Post-writing checks
-
-Run the checks listed in `writing-guides/index.md#post-writing-verification`.
-
 ## Source of Truth
 
 After Dify PR #31586, the supported self-host knob surface is split across:
@@ -111,7 +103,7 @@ After Dify PR #31586, the supported self-host knob surface is split across:
 - `docker/.env.example` — essential startup values
 - `docker/envs/**/*.env.example` — categorized optional vars (core-services, databases, infrastructure, security, vectorstores, middleware)
 
-The verifier reads both — always use the canonical step 9 command, which passes both sources.
+The verifier reads both — always use the canonical verifier command above, which passes both sources.
 
 | Var location | Action |
 |---|---|
@@ -135,4 +127,4 @@ The doc groups variables by subsystem, broadly following the `docker/.env.exampl
 
 ## Reader Persona
 
-Same audience as `en/self-host/deploy/` documentation (see the `dify-docs-guides` skill): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge. Readers are actively configuring a deployment and scanning for a specific variable, not reading linearly. They need to know what each variable does, when to change it, and what breaks if they get it wrong.
+Same audience as `en/self-host/deploy/` documentation (see the `dify-docs-guides` pack): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge. Readers are actively configuring a deployment and scanning for a specific variable, not reading linearly. They need to know what each variable does, when to change it, and what breaks if they get it wrong.

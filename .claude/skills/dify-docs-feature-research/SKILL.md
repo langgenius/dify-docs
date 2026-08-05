@@ -7,6 +7,15 @@ description: "Research a Dify feature before writing or optimizing documentation
 
 Pre-writing research that combines codebase analysis with community feedback to ensure documentation is grounded in both technical reality and actual user needs.
 
+## Depths
+
+When invoked from the `dify-docs-write` pipeline, its S1 supplies the feature, ref, and target pages — consume them instead of re-asking (Before Starting 1–3), and run at the depth the caller's row sets:
+
+- **full**: everything below.
+- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why; Phase 2 runs when the caller's row requires it; otherwise skip it and say so in the summary.
+
+Standalone use (no caller): run Before Starting 1–3 and full depth.
+
 ## Before Starting
 
 1. Ask the user which feature, node, or area to research.
@@ -145,7 +154,7 @@ Present the summary to the user. STOP — do not start the writing phase until t
 
 - This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope.
 - Research findings exist to make the page's claims accurate, not to be exhaustively included. When recommending scope, apply the style guide's "Repeating the UI" filter: UI-discoverable mechanics stay out of the page unless especially consequential.
-- When scope is confirmed and writing begins, load the writing skill for the target tree (`dify-docs-guides` for `use-dify` guides, `dify-cli-docs` for `en/cli/` pages, `dify-docs-env-vars` for env-var docs, `dify-docs-api-reference` for API specs) plus the writing guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`) — before the first edit. This skill carries none of the writing rules.
+- When scope is confirmed and writing begins, return to the `dify-docs-write` pipeline — it loads the doc-type rule pack and the writing guides. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.
 - Distinguish bugs from documentation gaps. Documenting buggy behavior as intended causes more harm than leaving a gap.
 - Note issue numbers for traceability. The user may want to reference them when prioritizing what to cover.

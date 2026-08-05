@@ -1,27 +1,29 @@
 ---
 name: dify-docs-api-reference
 description: >
-  Use when editing or auditing the Service API specs in the Dify docs
-  repo ({en,zh,ja}/api-reference/openapi_service.json), or on any task
-  touching API endpoint parameters, responses, error codes, status codes,
-  or examples.
+  Rule pack for the Service API specs
+  ({en,zh,ja}/api-reference/openapi_service.json): spec conventions,
+  app-type scoping, code-verification rules, and the audit machinery.
+  Writing and editing run under dify-docs-write; the standalone audit of an
+  existing spec ("audit the API spec") runs directly from this pack.
 ---
 
 # Dify API Reference Documentation
 
 OpenAPI specs for developers integrating Dify over REST. **The code is the source of truth: when the spec disagrees with the code, the spec is wrong.** Every detail you write must be traceable to a controller, model, or converter in the Dify codebase.
 
-## Workflow
+Not an entry point for writing — editing or creating specs runs under `dify-docs-write`; the procedures below implement its stages for the Service API specs.
 
-Work through these in order. Steps 1, 3, 4, and 5 are non-negotiable.
+**Standalone audit** (read-only, own trigger — no pipeline needed): auditing an existing spec is the app-type lens (procedure 1 below) plus [Verifying Against Code](#verifying-against-code) applied systematically from `references/audit-checklist.md`.
 
-Editing or creating a spec runs all five steps. Auditing an existing spec is steps 1 and 3 applied systematically from `references/audit-checklist.md`; the independent subagent audit in step 5 is required only when you have written or substantially changed an endpoint. **Substantially changed** = any change to paths, methods, parameters, schema fields or constraints, status codes, error codes, example values, or availability; only pure prose rewording (summaries, descriptions, translations) is exempt.
+## Procedures by stage
 
-1. **Set up and scope.** Read the shared guides (`writing-guides/style-guide.md`, `formatting-guide.md`, `glossary.md`). Pin the dify ref to verify against — `origin/main` by default, or the tag/dev branch the user names — and read code at that ref per `writing-guides/index.md` § "Syncing the Dify codebase safely"; never `git checkout` or `git pull` in a tree you have not confirmed is clean. Identify which app types the operation serves from the AppMode table in `references/codebase-paths.md`; every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)).
-2. **Write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here.
-3. **Verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers.
-4. **Flag suspected code bugs; never silently document them** (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
-5. **Run post-writing verification** (see [Post-Writing Verification](#post-writing-verification)): the post-writing checks always, plus the independent subagent audit for new or substantially-changed endpoints.
+All four are non-negotiable.
+
+1. **S1 — scope.** Identify which app types the operation serves from the AppMode table in `references/codebase-paths.md`; every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)). Read code at the ref pinned in S1 per `writing-guides/index.md` § "Syncing the Dify codebase safely"; never `git checkout` or `git pull` in a tree you have not confirmed is clean.
+2. **S5 — write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here. `S6 modified per pack`: all three language specs are edited directly in the same pass (see [Spec Structure](#spec-structure)); `parity_check` replaces a separate translate step.
+3. **S2/S7 — verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers. Flag suspected code bugs; never silently document them (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
+4. **S7 verifiers** (after the spine's check chain): the independent subagent audit — required for new or **substantially changed** endpoints — and the example/schema consistency pass (both under [S7 Verifiers](#s7-verifiers)). **Substantially changed** = any change to paths, methods, parameters, schema fields or constraints, status codes, error codes, example values, or availability; only pure prose rewording (summaries, descriptions, translations) is exempt.
 
 ## Reader Persona
 
@@ -82,9 +84,7 @@ The code is the source of truth, but the code itself can have bugs. When somethi
 
 Beyond fidelity, act as a professional API writer: challenge questionable decisions with reasoning, suggest developer-experience improvements (kept clearly separate from required fixes), and push back on conflicting instructions with evidence.
 
-## Post-Writing Verification
-
-Run the post-writing checks in `writing-guides/index.md#post-writing-verification`, then the two passes below.
+## S7 Verifiers
 
 ### Independent code audit (required for new or substantially-changed endpoints)
 
