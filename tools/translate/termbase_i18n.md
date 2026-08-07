@@ -231,6 +231,7 @@
 | Professional | Professional | Professional |
 | Team | Team | Team |
 | Upgrade | 升级 | アップグレード |
+| Knowledge Data Storage | 知识库数据存储空间 | ナレッジベースのデータストレージ |
 
 ### Workspace Roles
 

@@ -239,6 +239,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Professional | Professional | Professional | billing.plans.professional.name | Paid tier; kept English in all locales |
 | Team | Team | Team | billing.plans.team.name | Paid tier; kept English in all locales |
 | Upgrade | 升级 | アップグレード | billing.upgradeBtn.encourageShort | Short variant; "Upgrade Now" is the full label (`encourage` key) |
+| Knowledge Data Storage | 知识库数据存储空间 | ナレッジベースのデータストレージ | billing.usagePage.vectorSpace | Usage row in **Settings** > **Billing**; consumed by High Quality-indexed documents |
 
 ### Workspace Roles
 
