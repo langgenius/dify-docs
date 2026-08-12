@@ -1,0 +1,167 @@
+---
+title: Weaviate Server Upgrade Path
+description: How to move a self-hosted Weaviate server across minor versions without losing vector data
+---
+
+Dify's bundled Weaviate image moved from `1.27.0` to `1.39.0`. Deploy Dify fresh and you get the new version, so nothing here applies to you.
+
+If you already run Weaviate on an existing data volume, you cannot jump straight to the new image. Weaviate neither tests nor supports skipping minor versions, and any release may carry an on-disk migration that expects the previous version to have run at least once.
+
+The supported path is to step through every minor release in order, landing on the latest patch of each. Below is that ladder, along with the two operational details that decide whether your vectors survive it.
+
+<Warning>
+  Back up your Weaviate volume before you start. An upgrade that goes wrong partway through a twelve-step ladder is only recoverable if you have a snapshot to return to.
+</Warning>
+
+## Check Your Current Version
+
+```bash
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  http://localhost:8080/v1/meta | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])"
+```
+
+If this already reports `1.39.x`, you are done. Anything lower tells you where to start on the ladder.
+
+## Back Up Your Data
+
+For a Docker deployment, the simplest backup is an offline copy of the volume. Stop Weaviate first so the copy is consistent:
+
+```bash
+cd docker
+docker compose stop weaviate
+sudo cp -r ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
+```
+
+In production, prefer Weaviate's [backup module](https://docs.weaviate.io/deploy/configuration/backups) writing to S3, GCS, or Azure. It produces a restorable snapshot rather than a raw directory copy, and it can run against a live instance. The local filesystem backend is for development only.
+
+## Upgrade One Minor at a Time
+
+Move through every minor release in order, always landing on that minor's latest patch. The versions below were current at the time of writing; check for newer patches before you start, and prefer them.
+
+| Step | Image tag |
+|:-----|:----------|
+| 0 (current) | `cr.weaviate.io/semitechnologies/weaviate:1.27.x` |
+| 1 | `cr.weaviate.io/semitechnologies/weaviate:1.27.27` |
+| 2 | `cr.weaviate.io/semitechnologies/weaviate:1.28.16` |
+| 3 | `cr.weaviate.io/semitechnologies/weaviate:1.29.11` |
+| 4 | `cr.weaviate.io/semitechnologies/weaviate:1.30.23` |
+| 5 | `cr.weaviate.io/semitechnologies/weaviate:1.31.22` |
+| 6 | `cr.weaviate.io/semitechnologies/weaviate:1.32.27` |
+| 7 | `cr.weaviate.io/semitechnologies/weaviate:1.33.18` |
+| 8 | `cr.weaviate.io/semitechnologies/weaviate:1.34.20` |
+| 9 | `cr.weaviate.io/semitechnologies/weaviate:1.35.23` |
+| 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
+| 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.14` |
+| 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.9` |
+| 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.0` |
+
+Stepping one minor at a time also limits your blast radius. When a rung misbehaves, you roll back a single version and know exactly which release caused it, instead of bisecting a twelve-version jump.
+
+<Info>
+  Staying close to the newest release keeps you in the fix window. Weaviate backports bug and security fixes to the latest patch of the newest minor and roughly the three minors before it, so a deployment more than about three minors behind stops receiving them. Revisit periodically after this migration and move to the current patch.
+</Info>
+
+## Upgrade with Docker Compose
+
+Dify pins the Weaviate image in `docker/docker-compose.yaml`, `docker/docker-compose.middleware.yaml`, and `docker/docker-compose-template.yaml`. Edit the file you deploy with, then repeat the loop below for each rung.
+
+<Steps>
+  <Step title="Set the Next Image Tag">
+    Change the `weaviate` service to the next minor's latest patch, for example `image: cr.weaviate.io/semitechnologies/weaviate:1.28.16`.
+  </Step>
+  <Step title="Stop the Container Gracefully">
+    ```bash
+    cd docker
+    docker compose stop weaviate
+    ```
+
+    Never use `docker kill` or `docker rm -f` here. See [Stop Weaviate Gracefully](#stop-weaviate-gracefully) for what a hard kill costs you.
+  </Step>
+  <Step title="Start the New Version">
+    ```bash
+    docker compose up -d weaviate
+    ```
+  </Step>
+  <Step title="Verify Before Moving On">
+    Confirm the reported version, then check that data and search both work, as described in [Verify Each Step](#verify-each-step). Only then continue to the next rung.
+  </Step>
+</Steps>
+
+If you run Weaviate through `docker-compose.middleware.yaml` while developing from source, the same loop applies with the file named explicitly:
+
+```bash
+cd docker
+docker compose -f docker-compose.middleware.yaml stop weaviate
+docker compose -f docker-compose.middleware.yaml --profile weaviate up -d weaviate
+```
+
+## Stop Weaviate Gracefully
+
+This is the single detail most likely to cost you data, and it is easy to get wrong.
+
+Weaviate holds its HNSW vector index in memory and flushes it to disk on a clean shutdown. When the container is hard-killed—`docker kill`, `docker rm -f`, an out-of-memory kill, or a stop that exceeds Docker's grace period—the vector index commit log on disk can be left incomplete.
+
+The failure that follows is quiet, which is what makes it dangerous. Your objects survive intact: the count is correct and fetching an object by ID returns its exact vector. But the HNSW graph is truncated, so vector search silently recalls only a subset of them until the index rebuilds. In testing, a hard kill between versions left a ten-object collection returning three results from `near_vector` while the object count still read ten.
+
+Use `docker compose stop` or `docker compose down`, both of which send SIGTERM, and give the process enough time to finish flushing. Large indexes need a longer grace period than Docker's default:
+
+```bash
+docker compose stop -t 120 weaviate
+```
+
+If you suspect a hard kill already happened, verify recall as described below rather than assuming the data is gone—the objects are still there, and the index recovers once rebuilt.
+
+## Wait for the Index to Mount After Each Restart
+
+On newer versions, `/v1/meta` answers a moment before per-collection indexes finish mounting. A query fired in that window fails with `tried to browse non-existing index for Vector_index_<id>_Node`.
+
+This is transient and needs no action beyond patience. Wait a few seconds after each restart before relying on search. If you script health checks, poll until a trivial query succeeds instead of trusting `/v1/meta` alone.
+
+## Verify Each Step
+
+Confirm that data survived and that search works. A server that boots is not evidence of a healthy index.
+
+```bash
+KEY="<WEAVIATE_API_KEY>"
+
+# Reported server version
+curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/meta \
+  | python3 -c "import sys, json; print('version', json.load(sys.stdin)['version'])"
+
+# Collections are present
+curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/schema \
+  | python3 -c "import sys, json; print([c['class'] for c in json.load(sys.stdin)['classes']])"
+
+# Object count for one collection
+curl -s -H "Authorization: Bearer $KEY" \
+  "http://localhost:8080/v1/objects?class=<CollectionName>&limit=1" \
+  | python3 -c "import sys, json; print('totalResults', json.load(sys.stdin).get('totalResults'))"
+```
+
+Then open a knowledge base in Dify and run a test retrieval. Getting chunks back confirms the vector index survived, which the object count alone does not tell you.
+
+## Roll Back a Failed Step
+
+Restore the backup and return the image tag to the last rung that worked:
+
+```bash
+cd docker
+docker compose stop weaviate
+sudo rm -rf ./volumes/weaviate
+sudo cp -r ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate
+docker compose up -d weaviate
+```
+
+<Warning>
+  Rolling the image tag back without restoring the data is not safe. Once a newer version has written to the volume, an older binary may not read it.
+</Warning>
+
+## What Does Not Change
+
+Your collections keep their existing layout, so no re-indexing is required and your knowledge bases keep working as they are. Dify stores each dataset as a `Vector_index_<dataset_id>_Node` collection with a self-provided named vector `default` using cosine distance, and that structure is identical before and after the upgrade.
+
+The Python `weaviate-client` also needs no attention. Version `4.22.0`, which current Dify ships, works against every server version on the ladder, so you can upgrade the server independently.
+
+<Info>
+  Upgrading from Weaviate 1.19 or older, or moving from client v3 to v4? Start with the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration), which covers the schema migration up to 1.27, then return here.
+</Info>

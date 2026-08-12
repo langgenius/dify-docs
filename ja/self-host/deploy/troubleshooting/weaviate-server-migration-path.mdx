@@ -1,0 +1,169 @@
+---
+title: Weaviate サーバーのアップグレード経路
+description: セルフホスト Weaviate サーバーをベクトルデータを失わずにマイナーバージョン間で移行する方法
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/troubleshooting/weaviate-server-migration-path) を参照してください。
+
+Dify に同梱される Weaviate イメージは `1.27.0` から `1.39.0` に更新されました。新規に Dify をデプロイする場合は新しいバージョンが使われるため、このページの内容は不要です。
+
+既存のデータボリュームで Weaviate を運用している場合、新しいイメージへ直接移行することはできません。Weaviate はマイナーバージョンの飛び越しをテストも保証もしていません。各リリースにはディスク上のデータ移行が含まれることがあり、その移行は直前のバージョンが一度は起動していることを前提とします。
+
+サポートされる手順は、マイナーリリースを順に 1 つずつ進め、それぞれの最新パッチで止めることです。以下にその手順一覧と、ベクトルが無事に残るかどうかを左右する 2 つの運用上の注意点を示します。
+
+<Warning>
+  開始前に Weaviate のデータボリュームをバックアップしてください。10 段階を超える手順の途中で問題が起きた場合、スナップショットがなければ復旧できません。
+</Warning>
+
+## 現在のバージョンの確認
+
+```bash
+curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
+  http://localhost:8080/v1/meta | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])"
+```
+
+すでに `1.39.x` が表示される場合、作業は不要です。それより低い場合は、その値が手順の開始地点になります。
+
+## データのバックアップ
+
+Docker デプロイでは、ボリュームをオフラインでコピーする方法が最も簡単です。整合性を保つため、先に Weaviate を停止します。
+
+```bash
+cd docker
+docker compose stop weaviate
+sudo cp -r ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
+```
+
+本番環境では、S3、GCS、Azure に書き出す Weaviate の [バックアップモジュール](https://docs.weaviate.io/deploy/configuration/backups) を推奨します。ディレクトリの単純なコピーではなく復元可能なスナップショットが得られ、稼働中のインスタンスに対しても実行できます。ローカルファイルシステムのバックエンドは開発用途に限られます。
+
+## マイナーバージョンごとのアップグレード
+
+すべてのマイナーリリースを順に進め、毎回そのマイナーの最新パッチで止めます。以下のバージョンは執筆時点のものです。開始前に新しいパッチが出ていないか確認し、あればそちらを使ってください。
+
+| 手順 | イメージタグ |
+|:-----|:-------------|
+| 0（現在） | `cr.weaviate.io/semitechnologies/weaviate:1.27.x` |
+| 1 | `cr.weaviate.io/semitechnologies/weaviate:1.27.27` |
+| 2 | `cr.weaviate.io/semitechnologies/weaviate:1.28.16` |
+| 3 | `cr.weaviate.io/semitechnologies/weaviate:1.29.11` |
+| 4 | `cr.weaviate.io/semitechnologies/weaviate:1.30.23` |
+| 5 | `cr.weaviate.io/semitechnologies/weaviate:1.31.22` |
+| 6 | `cr.weaviate.io/semitechnologies/weaviate:1.32.27` |
+| 7 | `cr.weaviate.io/semitechnologies/weaviate:1.33.18` |
+| 8 | `cr.weaviate.io/semitechnologies/weaviate:1.34.20` |
+| 9 | `cr.weaviate.io/semitechnologies/weaviate:1.35.23` |
+| 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
+| 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.14` |
+| 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.9` |
+| 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.0` |
+
+1 つずつ進めることで影響範囲も限定できます。ある段階で問題が起きても、戻すのは 1 バージョンだけで済み、原因となったリリースもすぐ特定できます。10 以上のバージョンをまたいだ切り分けは不要です。
+
+<Info>
+  最新に近い状態を保つことが修正を受け取り続ける条件です。Weaviate は不具合修正とセキュリティ修正を、最新マイナーとその直前 3 マイナー程度の最新パッチにのみバックポートします。3 マイナー以上遅れた環境はこれらの修正を受け取れなくなります。今回の移行後も定期的に確認し、その時点の最新パッチへ更新してください。
+</Info>
+
+## Docker Compose でのアップグレード
+
+Dify は `docker/docker-compose.yaml`、`docker/docker-compose.middleware.yaml`、`docker/docker-compose-template.yaml` の 3 か所で Weaviate のイメージを固定しています。実際にデプロイに使うファイルを編集し、各段階で次の手順を繰り返します。
+
+<Steps>
+  <Step title="次のイメージタグの設定">
+    `weaviate` サービスを次のマイナーの最新パッチに変更します。例：`image: cr.weaviate.io/semitechnologies/weaviate:1.28.16`
+  </Step>
+  <Step title="コンテナの正常な停止">
+    ```bash
+    cd docker
+    docker compose stop weaviate
+    ```
+
+    ここで `docker kill` や `docker rm -f` を使わないでください。強制終了の代償については [Weaviate の正常な停止](#weaviate-の正常な停止) を参照してください。
+  </Step>
+  <Step title="新しいバージョンの起動">
+    ```bash
+    docker compose up -d weaviate
+    ```
+  </Step>
+  <Step title="確認してから次へ">
+    報告されたバージョンを確認し、[各段階での確認](#各段階での確認) に従ってデータと検索が正常か調べます。問題がなければ次の段階へ進みます。
+  </Step>
+</Steps>
+
+ソースからの開発時に `docker-compose.middleware.yaml` で Weaviate を動かしている場合も、ファイルを明示すれば同じ手順です。
+
+```bash
+cd docker
+docker compose -f docker-compose.middleware.yaml stop weaviate
+docker compose -f docker-compose.middleware.yaml --profile weaviate up -d weaviate
+```
+
+## Weaviate の正常な停止
+
+データ損失につながりやすく、間違えやすいのがこの点です。
+
+Weaviate は HNSW ベクトルインデックスをメモリ上に保持し、正常終了時にディスクへ書き出します。コンテナが強制終了された場合（`docker kill`、`docker rm -f`、メモリ不足による強制終了、Docker の猶予時間を超えた停止）、ディスク上のベクトルインデックスのコミットログが不完全なまま残ることがあります。
+
+その後に起きる不具合は表面化しにくく、そこが危険です。オブジェクト自体は無傷で、件数も正しく、ID による取得では完全なベクトルが返ります。しかし HNSW グラフは途中で切れているため、インデックスが再構築されるまでベクトル検索は一部しか返しません。実際の検証では、バージョン間での強制終了により、10 件のコレクションが `near_vector` で 3 件しか返さない状態になりました。オブジェクト件数は 10 のままです。
+
+`docker compose stop` または `docker compose down` を使ってください。どちらも SIGTERM を送ります。書き出しが終わるまでの時間も確保します。インデックスが大きい場合、Docker の既定値より長い猶予時間が必要です。
+
+```bash
+docker compose stop -t 120 weaviate
+```
+
+すでに強制終了が起きた疑いがある場合は、データが失われたと決めつけず、以下の手順で再現率を確認してください。オブジェクトは残っており、インデックスの再構築後に復旧します。
+
+## 再起動後のインデックスのマウント待ち
+
+新しいバージョンでは、コレクションごとのインデックスのマウントが終わる前に `/v1/meta` が応答します。この間にクエリを実行すると `tried to browse non-existing index for Vector_index_<id>_Node` というエラーで失敗します。
+
+これは一時的な状態で、少し待つ以外の対応は不要です。再起動のたびに数秒待ってから検索を利用してください。ヘルスチェックをスクリプト化する場合は、`/v1/meta` だけを見るのではなく、簡単なクエリが成功するまでポーリングします。
+
+## 各段階での確認
+
+データが残っていることと、検索が動くことの両方を確認します。サーバーが起動しても、インデックスが健全である証拠にはなりません。
+
+```bash
+KEY="<WEAVIATE_API_KEY>"
+
+# 報告されたサーバーバージョン
+curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/meta \
+  | python3 -c "import sys, json; print('version', json.load(sys.stdin)['version'])"
+
+# コレクションの存在
+curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/schema \
+  | python3 -c "import sys, json; print([c['class'] for c in json.load(sys.stdin)['classes']])"
+
+# 単一コレクションのオブジェクト数
+curl -s -H "Authorization: Bearer $KEY" \
+  "http://localhost:8080/v1/objects?class=<CollectionName>&limit=1" \
+  | python3 -c "import sys, json; print('totalResults', json.load(sys.stdin).get('totalResults'))"
+```
+
+続いて Dify でナレッジベースを開き、テスト検索を実行します。チャンクが返ってくればベクトルインデックスが残っていると判断できます。オブジェクト数だけでは、そこまでは分かりません。
+
+## 失敗した段階のロールバック
+
+バックアップを復元し、イメージタグを最後に正常だった段階へ戻します。
+
+```bash
+cd docker
+docker compose stop weaviate
+sudo rm -rf ./volumes/weaviate
+sudo cp -r ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate
+docker compose up -d weaviate
+```
+
+<Warning>
+  データを復元せずにイメージタグだけを戻すのは安全ではありません。新しいバージョンが一度そのボリュームに書き込むと、古いバイナリでは読めなくなる場合があります。
+</Warning>
+
+## 変更されない部分
+
+コレクションの構成は変わらないため、再インデックスは不要で、ナレッジベースもそのまま使えます。Dify は各データセットを `Vector_index_<dataset_id>_Node` コレクションとして保存し、コサイン距離の名前付きベクトル `default` を自前で指定します。この構造はアップグレードの前後で同一です。
+
+Python の `weaviate-client` についても対応は不要です。現行の Dify が同梱する `4.22.0` は一覧のすべてのサーバーバージョンで動作するため、サーバーだけを個別にアップグレードできます。
+
+<Info>
+  Weaviate 1.19 以前からのアップグレード、またはクライアント v3 から v4 への移行を行う場合は、先に [Weaviate v4 移行ガイド](/ja/self-host/deploy/troubleshooting/weaviate-v4-migration) を参照してください。1.27 までのスキーマ移行を扱っています。その後このページに戻ってください。
+</Info>
