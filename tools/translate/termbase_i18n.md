@@ -130,6 +130,15 @@
 |:--------|:--------|:---------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 |
 
+### Skills
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| skill | Skill | スキル |
+| skill library | Skill 库 | スキルライブラリ |
+| embedded skill | 内嵌 Skill | 埋め込みスキル |
+| Skill Builder | Skill Builder | Skill Builder |
+
 ### Infrastructure
 
 | English | Chinese | Japanese |
@@ -146,7 +155,6 @@
 | runtime | 运行时 | ランタイム |
 | classic runtime | 经典运行时 | クラシックランタイム |
 | sandboxed runtime | 沙盒运行时 | サンドボックスランタイム |
-| skill | 技能 | スキル |
 | file system | 文件系统 | ファイルシステム |
 
 ### Marketplace
@@ -167,6 +175,7 @@
 | Explore | 探索 | 探索 |
 | Integrations | 集成 | インテグレーション |
 | Tools | 工具 | ツール |
+| Skills | Skills | Skills |
 
 ### App Detail Tabs
 

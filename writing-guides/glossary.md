@@ -136,6 +136,15 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 |:--------|:--------|:---------|:------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 | Limits the maximum number of reasoning loops and tool actions. The classic Agent app setting is a different string, "Maximum Iterations" (`app-debug.agent.setting.maximumIterations.name`). |
 
+### Skills
+
+| English | Chinese | Japanese | Notes |
+|:--------|:--------|:---------|:------|
+| skill | Skill | スキル | Self-contained package of instructions and supporting files for one reusable task. Chinese keeps the product term in English; do not translate it as 技能. |
+| skill library | Skill 库 | スキルライブラリ | Workspace-wide collection of shared skills. |
+| embedded skill | 内嵌 Skill | 埋め込みスキル | Descriptive docs term for a skill that belongs to one agent and does not follow updates from the skill library. Not a UI label. |
+| Skill Builder | Skill Builder | Skill Builder | Product feature and UI name; keep it in English in all languages. |
+
 ### Infrastructure
 
 | English | Chinese | Japanese | Notes |
@@ -152,7 +161,6 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | runtime | 运行时 | ランタイム | The execution environment for workflow nodes |
 | classic runtime | 经典运行时 | クラシックランタイム | Original lightweight execution environment focused on speed and token efficiency |
 | sandboxed runtime | 沙盒运行时 | サンドボックスランタイム | Enhanced execution environment with file system access and autonomous tool installation |
-| skill | 技能 | スキル | Reusable expertise packages that eliminate repetitive prompt writing (Sandboxed runtime) |
 | file system | 文件系统 | ファイルシステム | Sandboxed file access for reading/writing during execution |
 
 ### Marketplace
@@ -175,6 +183,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Explore | 探索 | 探索 | common.menus.explore | Sidebar menu label |
 | Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
+| Skills | Skills | Skills | skill.skillManagement.title | Main navigation label for the workspace skill library; currently stays English in all locales. |
 
 ### App Detail Tabs
 
@@ -500,4 +509,3 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Chunking Setting | 分段模式 | チャンキングモード | dataset-documents.embedding.mode | Section heading |
 | High-quality mode | 高质量模式 | 高品質モード | dataset-documents.embedding.highQuality | |
 | Economy mode | 经济模式 | 経済モード | dataset-documents.embedding.economy | |
-
