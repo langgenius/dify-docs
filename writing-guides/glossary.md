@@ -181,10 +181,21 @@ Terms in this section must match the Dify product interface exactly. When these 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
+| Access Point | 访问点 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
-| API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Also used in Knowledge detail |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
+
+### Access Point Channel Cards
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Web App | Web 应用 | Web アプリ | agent-v-2.agentDetail.access.webApp.title | Web app channel card; hosts Embed Into Site, access control, Branding, and Custom Frontend |
+| Backend Service API | 后端服务 API | バックエンドサービス API | app-overview.overview.apiInfo.title | API channel card |
+| API Endpoint | API Endpoint | API エンドポイント | app-overview.overview.apiInfo.accessibleAddress | Renamed from "Service API Endpoint" in v1.16.2; zh UI keeps the English label |
+| API Key | API 密钥 | API キー | app-api.apiKeyModal.apiSecretKey | Key modal on the API channel card; renamed from "API Secret key" in v1.16.2. Distinct from the model provider credential option of the same name |
+| MCP Server | MCP 服务 | MCP サーバー | tools.mcp.server.title | MCP channel card |
+| Trigger | 触发器 | トリガー | common.settings.trigger | Trigger channel card; per-trigger toggles for published triggers |
 
 ### Log Page
 
@@ -202,6 +213,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Documents | 文档 | ドキュメント | common.datasetMenus.documents | |
+| API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Knowledge detail tab; since v1.16.2 the app side uses the Access Point tab instead |
 | Retrieval Testing | 召回测试 | 検索テスト | common.datasetMenus.hitTesting | |
 | Settings | 设置 | 設定 | common.datasetMenus.settings | |
 | Pipeline | 流水线 | パイプライン | common.datasetMenus.pipeline | |
@@ -324,15 +336,24 @@ Terms in this section must match the Dify product interface exactly. When these 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Publish | 发布 | 公開する | workflow.common.publish | |
+| Publish Update | 发布更新 | 更新を公開 | workflow.common.publishUpdate | Publish-panel button when a published version exists |
 | Published | 已发布 | 公開済み | workflow.common.published | Status label |
 | Unpublished | 未发布 | 未公開 | workflow.common.unpublished | Status label |
+| Not published yet | 尚未发布 | まだ公開されていません | workflow.common.notPublishedYet | Publish-panel status; new panel design in v1.16.2 |
+| No changes | 无更改 | 変更なし | workflow.common.noChanges | Publish-panel status |
+| Unpublished changes | 有未发布的更改 | 未公開の変更 | workflow.common.unpublishedChanges | Publish-panel status |
+| Up to date | 已是最新 | 最新です | workflow.common.upToDate | Publish-panel status |
+| Open web app | 打开 Web 应用 | Web アプリを開く | workflow.common.openWebApp | Publish-panel action; replaced "Run App" in v1.16.2 |
 | Preview | 预览 | プレビュー | workflow.common.debugAndPreview | Debug & preview button |
 | Test Run | 测试运行 | テスト実行 | workflow.common.run | |
-| Run App | 运行 | アプリを実行 | workflow.common.runApp | |
 | Features | 功能 | 機能 | workflow.common.features | Panel for web app features |
 | Version History | 版本历史 | バージョン履歴 | workflow.common.versionHistory | |
 | Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する | workflow.common.workflowAsTool | REVIEW: ZH/JA much longer than EN label |
-| Embed Into Site | 嵌入网站 | サイトに埋め込む | workflow.common.embedIntoSite | |
+| Needs Setup | 需要进行配置 | 設定が必要 | workflow.common.configureRequired | Workflow as Tool badge before first configuration; renamed from "Configure Required" in v1.16.2 |
+| Ready | 已就绪 | 準備完了 | workflow.common.workflowAsToolReady | Workflow as Tool status |
+| Update Needed | 需要更新 | 更新が必要 | workflow.common.workflowAsToolUpdateNeeded | Workflow as Tool status; the workflow changed after the tool was configured |
+| Reconfigure | 重新配置 | 再設定 | workflow.common.workflowAsToolReconfigure | Workflow as Tool action to apply workflow changes |
+| Embed Into Site | 嵌入网站 | サイトに埋め込む | workflow.common.embedIntoSite | Also on the Access Point Web App card (deployments.studio.accessPoint.embedIntoSite, same text) |
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
