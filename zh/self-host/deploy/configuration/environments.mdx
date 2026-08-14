@@ -172,6 +172,26 @@ openssl rand -base64 42
 部署后更改此密钥将立即使所有用户登出、使所有文件 URL 失效，并破坏使用 OAuth 的插件集成，其加密凭证将无法恢复。
 </Warning>
 
+### KEY_PROVIDER_TYPE
+
+默认值：`local`
+
+决定 Dify 把加密存储凭证（模型供应商 API 密钥、工具凭证等工作空间机密）所用的密钥保存在哪里：
+
+- `local`：为每个工作空间生成一对 RSA 密钥，私钥保存在 `STORAGE_TYPE` 对应的存储后端中。
+
+- `azure-keyvault`：将每个工作空间的 RSA 密钥保存在 Azure Key Vault 中，私钥不会离开 Key Vault。Dify 通过 `DefaultAzureCredential`（托管身份、环境变量或 Azure CLI 登录）完成认证。
+
+<Warning>
+在创建第一个工作空间前确定密钥提供方。两种提供方加密的凭证互不兼容，在已存有凭证的部署上切换会导致这些凭证无法解密，只能重新录入。
+</Warning>
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `AZURE_KEYVAULT_VAULT_URL` | （空） | Key Vault 实例 URL。`KEY_PROVIDER_TYPE` 为 `azure-keyvault` 时必填，缺失会导致 API 服务无法启动。示例：`https://your-vault-name.vault.azure.net` |
+| `AZURE_KEYVAULT_KEY_SIZE` | `2048` | Dify 在 Key Vault 中为工作空间新建密钥时使用的 RSA 密钥长度（位）。仅在创建新密钥时生效，已有密钥保持原长度。 |
+| `AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS` | （空） | 设置后（最小值 7），新建的工作空间密钥会附带 Key Vault 自动轮换策略，每 N 天轮换一次。旧版本密钥保持可用，轮换前加密的凭证无需重新加密即可继续解密。留空则自行在 Azure 中管理轮换。 |
+
 ### INIT_PASSWORD
 
 默认值：（空）
@@ -776,6 +796,7 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 | `TIDB_VECTOR_USER` | （空） | 用户名。 |
 | `TIDB_VECTOR_PASSWORD` | （空） | 密码。 |
 | `TIDB_VECTOR_DATABASE` | `dify` | 数据库名称。 |
+| `TIDB_VECTOR_ENABLE_FULLTEXT_SEARCH` | `false` | 为 TiDB Vector 上的知识库解锁全文检索和混合检索两种检索方式。<br/><br/>新建的知识库表会带有多语言全文索引；已有表会在下次索引文档时补建该索引。<br/><br/>要求 TiDB 部署支持全文索引。 |
 
 </Accordion>
 
@@ -1269,7 +1290,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 |---|---|---|
 | `GRAPH_ENGINE_MIN_WORKERS` | `3` | 每个 GraphEngine 实例的最小工作线程数。 |
 | `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的最大工作线程数。 |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 触发创建额外工作线程的队列深度。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | 允许多少个任务等待空闲工作线程，超过即新增工作线程，上限为 `GRAPH_ENGINE_MAX_WORKERS`。<br/><br/>默认值 `0` 表示一旦有任务等待就立即新增；调大可先容忍短暂积压再扩容。 |
 | `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 多余工作线程在空闲此秒数后被移除。 |
 
 #### 工作流日志清理
@@ -1330,6 +1351,7 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `ALLOW_INLINE_STYLES` | `false` | 允许在用户生成的 Markdown 内容中使用内联 `style` 属性和 `<style>` 块。出于安全考虑默认禁用（内联样式可能被用于钓鱼攻击）。仅在需要来自可信来源的富样式内容时启用。 |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | 允许渲染 `data:` 协议的 URL。出于安全考虑默认禁用。 |
 | `MAX_TREE_DEPTH` | `50` | 单条执行路径中的最大节点数。超过此限制的工作流无法发布。调整仅对新发布的工作流生效。 |
+| `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | （空） | 应用在聊天回复中通过 Markdown 渲染表单时，表单字段 `name` 属性额外接受的字符。<br/><br/>默认情况下，字段名必须以字母开头，可包含字母、数字、下划线和连字符；名称含其他字符的字段不会被渲染。<br/><br/>将额外字符连成一个字符串填入，半角和全角字符均可。示例：`()！？` |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1503,6 +1525,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
+| `PLUGIN_MAX_FILE_SIZE` | `52428800` | 插件返回给 Dify 的单个文件的最大大小（字节，50 MB），例如工具插件输出的生成图片或文档。超过限制的文件会使本次调用失败，并报「file is too large」错误。 |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 Schema 的时间（秒）。减少重复查找。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | 是否在 Redis 中缓存各租户的插件模型供应商列表。当插件由外部系统安装、无法在租户插件变更时使本部署的缓存失效时，应关闭此项。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 在 Redis 中缓存各租户插件模型供应商列表的时长（秒），默认 24 小时。租户安装、卸载或升级插件时，Dify 会使该缓存失效。 |

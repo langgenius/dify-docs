@@ -174,6 +174,26 @@ openssl rand -base64 42
 Changing this key after deployment will immediately log out all users, invalidate all file URLs, and break any plugin integrations that use OAuth—their encrypted credentials become unrecoverable.
 </Warning>
 
+### KEY_PROVIDER_TYPE
+
+Default: `local`
+
+Where Dify keeps the per-workspace keys that encrypt stored credentials—model provider API keys, tool credentials, and other workspace secrets:
+
+- `local`: generates an RSA key pair per workspace and keeps the private key in the `STORAGE_TYPE` backend.
+
+- `azure-keyvault`: keeps each workspace's RSA key in Azure Key Vault instead, so the private key never leaves the vault; Dify authenticates with `DefaultAzureCredential` (managed identity, environment variables, or Azure CLI login).
+
+<Warning>
+Choose the provider before the first workspace is created. Credentials encrypted by one provider cannot be decrypted by the other, so switching on a deployment that already stores credentials makes them unreadable until re-entered.
+</Warning>
+
+| Variable | Default | Description |
+|---|---|---|
+| `AZURE_KEYVAULT_VAULT_URL` | (empty) | Key Vault instance URL. Required when `KEY_PROVIDER_TYPE` is `azure-keyvault`; the API service fails to start without it. Example: `https://your-vault-name.vault.azure.net` |
+| `AZURE_KEYVAULT_KEY_SIZE` | `2048` | RSA key size in bits for the per-workspace keys Dify provisions in the vault. Applies only when a new key is created; existing keys keep their size. |
+| `AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS` | (empty) | When set (minimum 7), each newly provisioned per-workspace key gets a Key Vault auto-rotation policy that rotates it every N days. Old key versions stay usable, so credentials encrypted before a rotation keep decrypting without re-encryption. Leave empty to manage rotation yourself in Azure. |
+
 ### INIT_PASSWORD
 
 Default: (empty)
@@ -778,6 +798,7 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 | `TIDB_VECTOR_USER` | (empty) | Username. |
 | `TIDB_VECTOR_PASSWORD` | (empty) | Password. |
 | `TIDB_VECTOR_DATABASE` | `dify` | Database name. |
+| `TIDB_VECTOR_ENABLE_FULLTEXT_SEARCH` | `false` | Unlocks the Full-Text Search and Hybrid Search retrieval options for knowledge bases on TiDB Vector.<br/><br/>New knowledge base tables get a multilingual full-text index; existing tables gain it the next time documents are indexed.<br/><br/>Requires a TiDB deployment that supports full-text indexes. |
 
 </Accordion>
 
@@ -1271,7 +1292,7 @@ These select which backend implementation handles workflow execution data. The d
 |---|---|---|
 | `GRAPH_ENGINE_MIN_WORKERS` | `3` | Minimum workers per GraphEngine instance. |
 | `GRAPH_ENGINE_MAX_WORKERS` | `10` | Maximum workers per GraphEngine instance. |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | Queue depth that triggers spawning additional workers. |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | How many tasks may wait for a free worker before the pool adds another, up to `GRAPH_ENGINE_MAX_WORKERS`.<br/><br/>At the default `0`, a worker is added as soon as any task waits; raise it to tolerate short backlogs before scaling up. |
 | `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | Seconds of idle time before excess workers are removed. |
 
 #### Workflow Log Cleanup
@@ -1332,6 +1353,7 @@ These variables are used by the Next.js web frontend container only, and do not 
 | `ALLOW_INLINE_STYLES` | `false` | Allow inline `style` attributes and `<style>` blocks in user-generated Markdown content. Disabled by default for security (inline styles can be used for phishing). Enable only if you need rich styling from trusted content sources. |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
 | `MAX_TREE_DEPTH` | `50` | Maximum number of nodes along a single execution path. Longer paths cannot be published. Changes apply only to newly published workflows. |
+| `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | (empty) | Extra characters accepted in the `name` attributes of form fields that apps render from Markdown in chat responses.<br/><br/>By default a field name must start with a letter and may contain letters, digits, underscores, and hyphens; fields whose names use other characters are not rendered.<br/><br/>Set the additional characters as one string; both half-width and full-width characters work, e.g. `()！？`. |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1509,6 +1531,7 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | `PLUGIN_DAEMON_PORT` | `5002` | Plugin daemon listening port. |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | Timeout in seconds for all plugin daemon requests (installation, execution, listing). |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | Maximum plugin package size in bytes (50 MB). Validated during marketplace downloads. |
+| `PLUGIN_MAX_FILE_SIZE` | `52428800` | Maximum size in bytes (50 MB) for a single file a plugin returns to Dify, such as a tool plugin outputting a generated image or document. A larger file fails the invocation with a "file is too large" error. |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | Whether each tenant's plugin model provider list is cached in Redis at all. Disable when plugins are installed by an external system that can't invalidate this deployment's cache when a tenant's plugins change. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | How long to cache each tenant's plugin model provider list in Redis, in seconds (24 hours). Dify invalidates this cache when a tenant installs, uninstalls, or upgrades a plugin. |
