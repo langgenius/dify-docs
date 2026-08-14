@@ -198,7 +198,7 @@ After user approval (they may add, remove, or adjust items):
 
 Docs for an upcoming release integrate on that release's branch in dify-docs (`release/<version>`, cut from `main` when prep starts) — release doc PRs target it, never `main`; the branch merges into `main` when the release ships. Fixes to currently published docs still target `main` directly.
 
-**Copy scope follows the branch.** Release-branch work edits ONLY the `en/self-host/...` copy of dual-copy pages: the `en/cloud/...` copy describes the version Dify Cloud currently runs and updates on Cloud's own release lane, re-derived from the self-host diff when Cloud ships that version. Flag cloud-only pages (no self-host sibling) for that Cloud pass explicitly — the self-host diff won't carry them. Single-copy trees (`en/learn/`, `en/develop-plugin/`, `writing-guides/`, the API specs) ride the release branch. Main-targeting fixes edit both copies in the same pass.
+**Copy scope follows the branch.** The split is cloud vs self-host, never English vs translations — every edit still ships en, zh, and ja together. Release-branch work edits ONLY the self-host copy (`{en,zh,ja}/self-host/...`) of dual-copy pages: the cloud copy (`{en,zh,ja}/cloud/...`) describes the version Dify Cloud currently runs and updates on Cloud's own release lane, re-derived from the self-host diff when Cloud ships that version. Flag cloud-only pages (no self-host sibling) for that Cloud pass explicitly — the self-host diff won't carry them. Single-copy trees (`learn/`, `develop-plugin/`, `writing-guides/`, the API specs) ride the release branch. Main-targeting fixes edit both copies in the same pass.
 
 ### Reading Code at the Pinned Ref
 

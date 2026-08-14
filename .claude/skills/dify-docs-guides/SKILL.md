@@ -13,7 +13,7 @@ Not an entry point — run under `dify-docs-write`; this pack's rules and proced
 
 ## Scoping rules (S1)
 
-Match each target page to its reader persona (see Reader Personas below). `use-dify` pages exist as two product copies — `en/cloud/use-dify/` and `en/self-host/use-dify/` — with no shared pages and no cross-audience navigation. When the page exists in both, scope both: shared-content improvements land in both copies in the same pass; audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy. Exception — work on a `release/<version>` branch edits only the self-host copy; the cloud copy follows Cloud's own release lane (see the dify-docs-release-sync skill § Docs Branch).
+Match each target page to its reader persona (see Reader Personas below). `use-dify` pages exist as two product copies — `en/cloud/use-dify/` and `en/self-host/use-dify/` — with no shared pages and no cross-audience navigation. When the page exists in both, scope both: shared-content improvements land in both copies in the same pass; audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy. Exception — work on a `release/<version>` branch edits only the self-host copy, still in all three languages; what it excludes is the cloud copy, which follows Cloud's own release lane (see the dify-docs-release-sync skill § Docs Branch).
 
 ## S2 discovery — environment variables
 
