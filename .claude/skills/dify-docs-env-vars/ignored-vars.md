@@ -44,8 +44,8 @@ Meaningful only on the hosted Dify Cloud deployment; self-hosted users cannot us
 | `TIDB_ON_QDRANT_GRPC_PORT` | Hybrid TiDB-Qdrant Cloud-only backend. | PR #721, commit 9248032 |
 | `CREATE_TIDB_SERVICE_JOB_ENABLED` | Cloud-side TiDB pre-provisioning job. | PR #721, commit 9248032 |
 | `AMPLITUDE_API_KEY` | Cloud product analytics integration. | PR #721, commit 9248032 |
-| `COOKIEYES_SITE_KEY` | CookieYes consent-banner key for Dify Cloud analytics. The frontend boundary requires `EDITION=CLOUD` plus the Cloud console host (`web/app/components/base/analytics-consent/request-boundary.ts`); dify PR #39408 explicitly excludes self-hosted deployments. Companion to `AMPLITUDE_API_KEY`. | dify #39408, 1.16.1 sync audit 2026-07-23 |
-| `ENABLE_TRIAL_APP` | Cloud trial-app runs on Explore. The server gate (`api/services/recommended_app_service.py`) requires the derived `DEPLOYMENT_EDITION` property to be CLOUD—i.e. the `EDITION` env var set to `CLOUD`—so the flag is inert on self-host: `can_trial` is always false and the `/trial-apps/*` endpoints 403. | dify #39562, 1.16.1 sync audit 2026-07-27 |
+| `COOKIEYES_SITE_KEY` | CookieYes consent-banner key for Dify Cloud analytics. The frontend boundary requires the system-features `deployment_edition` to be `CLOUD` plus the Cloud console host (`web/app/components/base/analytics-consent/request-boundary.ts`); dify PR #39408 explicitly excludes self-hosted deployments. Companion to `AMPLITUDE_API_KEY`. | dify #39408, 1.16.1 sync audit 2026-07-23, re-verified after #40142 2026-08-11 |
+| `ENABLE_TRIAL_APP` | Cloud trial-app runs on Explore. The server gate (`api/services/recommended_app_service.py`) requires `DEPLOYMENT_EDITION=CLOUD`, so the flag is inert on self-host: `can_trial` is always false and the `/trial-apps/*` endpoints 403. | dify #39562, 1.16.1 sync audit 2026-07-27, re-verified after #40142 2026-08-11 |
 | `ENABLE_EXPLORE_BANNER` | Marketing banner carousel on the Explore page. Banner content comes from the `exporle_banners` DB table (sic—the table name is misspelled upstream, `api/models/model.py`), which has no CE management UI or seed data—enabling the flag on self-host renders nothing. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 
 ## Experimental / internal
@@ -68,7 +68,6 @@ Switches for the Dify Enterprise control plane. Inert at their defaults on Commu
 
 | Variable | Reason | Source |
 |---|---|---|
-| `ENTERPRISE_ENABLED` | Master switch for EE integrations (branding, SSO, license, webapp auth). At `false` it is fully inert on CE. Setting `true` makes `get_system_features` call `EnterpriseService.get_info()` against `ENTERPRISE_API_URL`, which has no CE backend—based on the code, the console then fails to load. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 | `RBAC_ENABLED` | Routes permission checks to the EE inner RBAC API (`rbac_permission_required` in `api/controllers/common/wraps.py` is an explicit no-op when false). On CE there is no RBAC service to answer the checks. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 
 ## Verifier false positives
