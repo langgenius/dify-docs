@@ -353,7 +353,8 @@ Use for showing multiple code variants of the same operation:
 
 - Left-align columns by default using `:---`.
 - Use bold for header row content only when it adds clarity.
-- For multi-line content within cells, prefer lists or components. When manual line breaks are needed, use `<br/><br/><br/><br/>` between lines.
+- For multi-line content within cells, prefer lists or components. When manual line breaks are needed, use `<br/><br/>` between lines.
+- Split long description cells at semantic boundaries (what it does / default behavior / how to change it), one break per boundary — long cells hurt more in a table than an extra break does.
 - Mintlify components (`<Info>`, `<Note>`) can be embedded within table cells when necessary.
 
 ```markdown

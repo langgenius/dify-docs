@@ -198,6 +198,8 @@ After user approval (they may add, remove, or adjust items):
 
 Docs for an upcoming release integrate on that release's branch in dify-docs (`release/<version>`, cut from `main` when prep starts) — release doc PRs target it, never `main`; the branch merges into `main` when the release ships. Fixes to currently published docs still target `main` directly.
 
+**Copy scope follows the branch.** Release-branch work edits ONLY the `en/self-host/...` copy of dual-copy pages: the `en/cloud/...` copy describes the version Dify Cloud currently runs and updates on Cloud's own release lane, re-derived from the self-host diff when Cloud ships that version. Flag cloud-only pages (no self-host sibling) for that Cloud pass explicitly — the self-host diff won't carry them. Single-copy trees (`en/learn/`, `en/develop-plugin/`, `writing-guides/`, the API specs) ride the release branch. Main-targeting fixes edit both copies in the same pass.
+
 ### Reading Code at the Pinned Ref
 
 Verify against the Dify codebase (configured as an additional working directory) at the pinned upper ref: `git fetch --tags origin`, then read files with `git show <to>:<path>`. Never check out a branch in that tree — follow `writing-guides/index.md` section "Syncing the Dify codebase safely".
@@ -222,7 +224,7 @@ python3 "$DOCS/tools/api-pipeline/parity_check.py"  # prints "TOTAL PARITY ISSUE
 
 For each affected doc page, run `dify-docs-write` (row R5 update; S4 satisfied by the approved report; the `dify-docs-guides` pack loads automatically):
 1. Read the current doc and the relevant PR(s) for context
-2. Update content to reflect changes — both product copies (`en/cloud/...` and `en/self-host/...`) where the page exists in both; shared content lands in both, audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy
+2. Update content to reflect changes — copy scope per the Docs Branch rule above (release branch → self-host copy only); audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy
 
 ### Environment Variable Updates
 
