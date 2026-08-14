@@ -1404,6 +1404,35 @@ The remaining variables configure the bundled services or derive from your exist
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.13 or later; on older kernels the sandbox logs a warning and runs without it. Set in `docker/envs/core-services/local-sandbox.env`; `.env` values don't reach the sandbox container. |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys; the agent's internal bearer token is always masked. Set in `docker/envs/core-services/dify-agent.env`; Compose doesn't forward it from `.env`. |
 
+### Test the Optional Rust Local Runtime
+
+The Go local sandbox remains the default. To send a small percentage of new local sandbox bindings to the optional Rust runtime, start Docker Compose with its overlay:
+
+```bash
+cd docker
+DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT=1 \
+  docker compose \
+  -f docker-compose.yaml \
+  -f docker-compose.rust-runtime.yaml \
+  up -d --build
+```
+
+The overlay builds and starts the Rust service alongside the Go service. The two runtimes use separate SQLite, tmux, home, workspace, and snapshot state.
+
+| Variable | Default | Description |
+|---|---|---|
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_IMAGE` | `dify-agent-local-sandbox-rust:local` | Rust local sandbox image used by the Compose overlay. |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_ENDPOINT` | (empty) | Rust service address. The overlay sets it to `http://local_sandbox_rust:5004`. Required when the canary percentage is greater than `0`. |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_AUTH_TOKEN` | (empty) | Optional bearer token for Rust sandbox calls. When omitted, the overlay uses the Go sandbox token. |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT` | `0` | Percentage of new, unowned bindings assigned to Rust, from `0` to `100`. The overlay defaults to `100` unless you set this variable. |
+| `DIFY_AGENT_LOCAL_SANDBOX_PREFLIGHT_TIMEOUT_SECONDS` | `1` | Rust health preflight timeout before a new binding falls back to Go. |
+
+The agent backend assigns only new, unowned bindings. Assignment is deterministic, and an unsuccessful Rust health preflight sends the new binding to Go. Existing Go resources keep their current representation. Rust-owned references use a `rust+` prefix and stay assigned to Rust for their full lifecycle. After a mutating request reaches one runtime, Dify never replays it against the other runtime.
+
+<Warning>
+To stop new Rust assignments, set `DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT=0` while keeping the Rust endpoint configured and its service running. Remove the overlay only after every `rust+` binding, workspace, and home snapshot has drained. Removing the Rust service earlier strands those resources.
+</Warning>
+
 ## Database Service
 
 These configure the database containers directly in Docker Compose.
