@@ -195,7 +195,7 @@ These elements must be translated, not left in English:
 
 - **Tab titles:** `<Tab title="...">` values must use the Japanese UI label from the glossary.
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
-- **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary.
+- **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary. For labels not in the glossary, resolve the exact i18n key first (see the glossary's UI Labels section), then take the value at that key — never match by value across namespaces.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
 
 ## App-Type Names: Workflow and Chatflow
