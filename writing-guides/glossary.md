@@ -166,6 +166,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 Terms in this section must match the Dify product interface exactly. When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product.
 
+For a label not yet in this table, resolve its exact i18n key before writing any language's form: find the key whose en-US value matches on the surface you are documenting — several keys often share one value, so trace the rendering component (`git grep '<key>' -- 'web/app/**'`) to disambiguate — then take each language from that key. Never pick a translation by matching values across namespaces; a label whose key you cannot identify is unverified and must be flagged, not approximated.
+
 ### Sidebar & Navigation
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |

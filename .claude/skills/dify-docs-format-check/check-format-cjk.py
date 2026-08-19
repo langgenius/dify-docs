@@ -736,6 +736,8 @@ def check_ja_sentence_length(lines: list[str]) -> list[Violation]:
         if HEADING_RE.match(line):
             continue
         s = _strip_code_and_urls(line).strip()
+        # <br/> tags are line breaks, not prose: treat them as sentence boundaries
+        s = re.sub(r'<br\s*/?>', '。', s)
         if not CJK_RE.search(s):
             continue
         # split on Japanese sentence-ending punctuation, then count chars
