@@ -130,6 +130,15 @@
 |:--------|:--------|:---------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 |
 
+### Skills
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| skill | Skill | スキル |
+| skill library | Skill 库 | スキルライブラリ |
+| embedded skill | 内嵌 Skill | 埋め込みスキル |
+| Skill Builder | Skill Builder | Skill Builder |
+
 ### Infrastructure
 
 | English | Chinese | Japanese |
@@ -146,7 +155,6 @@
 | runtime | 运行时 | ランタイム |
 | classic runtime | 经典运行时 | クラシックランタイム |
 | sandboxed runtime | 沙盒运行时 | サンドボックスランタイム |
-| skill | 技能 | スキル |
 | file system | 文件系统 | ファイルシステム |
 
 ### Marketplace
@@ -167,16 +175,28 @@
 | Explore | 探索 | 探索 |
 | Integrations | 集成 | インテグレーション |
 | Tools | 工具 | ツール |
+| Skills | Skills | Skills |
 
 ### App Detail Tabs
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Orchestrate | 编排 | オーケストレート |
+| Access Point | 访问点 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
-| API Access | 访问 API | API アクセス |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
+
+### Access Point Channel Cards
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Web App | Web 应用 | Web アプリ |
+| Backend Service API | 后端服务 API | バックエンドサービス API |
+| API Endpoint | API Endpoint | API エンドポイント |
+| API Key | API 密钥 | API キー |
+| MCP Server | MCP 服务 | MCP サーバー |
+| Trigger | 触发器 | トリガー |
 
 ### Log Page
 
@@ -194,6 +214,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Documents | 文档 | ドキュメント |
+| API Access | 访问 API | API アクセス |
 | Retrieval Testing | 召回测试 | 検索テスト |
 | Settings | 设置 | 設定 |
 | Pipeline | 流水线 | パイプライン |
@@ -316,14 +337,23 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Publish | 发布 | 公開する |
+| Publish Update | 发布更新 | 更新を公開 |
 | Published | 已发布 | 公開済み |
 | Unpublished | 未发布 | 未公開 |
+| Not published yet | 尚未发布 | まだ公開されていません |
+| No changes | 无更改 | 変更なし |
+| Unpublished changes | 有未发布的更改 | 未公開の変更 |
+| Up to date | 已是最新 | 最新です |
+| Open web app | 打开 Web 应用 | Web アプリを開く |
 | Preview | 预览 | プレビュー |
 | Test Run | 测试运行 | テスト実行 |
-| Run App | 运行 | アプリを実行 |
 | Features | 功能 | 機能 |
 | Version History | 版本历史 | バージョン履歴 |
 | Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する |
+| Needs Setup | 需要进行配置 | 設定が必要 |
+| Ready | 已就绪 | 準備完了 |
+| Update Needed | 需要更新 | 更新が必要 |
+| Reconfigure | 重新配置 | 再設定 |
 | Embed Into Site | 嵌入网站 | サイトに埋め込む |
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
