@@ -35,6 +35,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | model | 模型 | モデル | |
 | model provider | 模型供应商 | モデルプロバイダー | |
 | AI credits | AI 消息额度 | AI クレジット | Dify Cloud credits for using supported models. Use "AI credits" in body prose. Apply normal title case in headings: "AI Credits" as a standalone term and singular "AI Credit" as a modifier, as in "AI Credit Usage." |
+| API key | API Key | API キー | Model provider credential. Use "API key" in body prose. Apply normal title case in headings: "API Key." The exact UI label is also "API Key." |
 | LLM (large language model) | 大语言模型 | 大規模言語モデル | |
 | chat model | 对话模型 | チャットモデル | Models that support role-based conversations (System/User/Assistant) |
 | completion model | 文本续写模型 | 補完モデル | Models designed for simple text continuation |

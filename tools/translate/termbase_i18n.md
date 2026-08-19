@@ -29,6 +29,7 @@
 | model | 模型 | モデル |
 | model provider | 模型供应商 | モデルプロバイダー |
 | AI credits | AI 消息额度 | AI クレジット |
+| API key | API Key | API キー |
 | LLM (large language model) | 大语言模型 | 大規模言語モデル |
 | chat model | 对话模型 | チャットモデル |
 | completion model | 文本续写模型 | 補完モデル |
