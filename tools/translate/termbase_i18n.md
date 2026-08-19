@@ -28,6 +28,7 @@
 |:--------|:--------|:---------|
 | model | 模型 | モデル |
 | model provider | 模型供应商 | モデルプロバイダー |
+| AI credits | AI 消息额度 | AI クレジット |
 | LLM (large language model) | 大语言模型 | 大規模言語モデル |
 | chat model | 对话模型 | チャットモデル |
 | completion model | 文本续写模型 | 補完モデル |
@@ -37,8 +38,8 @@
 | rerank model | 重排序模型 | リランクモデル |
 | reasoning model | 推理模型 | 推論モデル |
 | moderation model | 内容审核模型 | モデレーションモデル |
-| TTS model | 文字转语音模型 | TTSモデル |
-| Speech2Text model | 语音转文字模型 | 音声認識モデル |
+| speech-to-text model | 语音转文字模型 | 音声認識モデル |
+| text-to-speech model | 文字转语音模型 | TTSモデル |
 | token | token | token |
 | API token | API 令牌 | APIトークン |
 | prompt | 提示词 | プロンプト |
@@ -218,7 +219,7 @@
 | Rerank Model | Rerank 模型 | Rerank モデル |
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
-| Load Balancing | 负载均衡 | 負荷分散 |
+| Load balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
 | API Key | API Key | API キー |
