@@ -1419,18 +1419,37 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent 后端 Redis 键的前缀。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent 后端停止时，等待进行中的运行结束的时长（秒）。 |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 已结束运行记录的保留时长（默认 3 天）。 |
-| `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` | `1200` | 单次 Agent 运行事件流的总时限，超时后运行失败。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限，超时的运行以 `agent_run_limit_exceeded` 失败。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此高于 1 小时的值只在 `local` 后端下有效。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空；由 `PLUGIN_DAEMON_KEY` 推导） | 插件守护进程的凭证。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。 |
-| `DIFY_AGENT_SHELLCTL_ENTRYPOINT` | `http://local_sandbox:5004` | 打包的沙箱服务地址。 |
-| `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` | （空） | 可选的 Bearer 令牌，用于保护 Agent 后端对沙箱的调用；Compose 会把同一值传给两个服务。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。取代原 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`，旧名仍可作为兼容别名使用。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | 可选的 Bearer 令牌，用于保护 Agent 后端对沙箱的调用；Compose 会把同一值传给两个服务。<br/><br/>取代原 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`，旧名仍可作为兼容别名使用。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。 |
+| `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
+| `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API 从 Agent 沙箱取文件时的等待时长，超时则传输失败。应高于 Agent 侧的 `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`。 |
+| `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | 沙箱中负责输出该文件的命令可运行的时长。默认值低于 API 侧超时，以便先呈现 Agent 自身的错误。 |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | 沙箱中的 Agent 向 Dify 回传单个文件的大小上限（MiB），例如它为回复生成的文件。 |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.13 及以上；内核不支持时，沙箱会记录警告并在无隔离状态下运行。在 `docker/envs/core-services/local-sandbox.env` 中设置；`.env` 中的值不会传给沙箱容器。 |
-| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密；Agent 的内部令牌始终会被遮盖。在 `docker/envs/core-services/dify-agent.env` 中设置；Compose 不会从 `.env` 转发该值。 |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密。Agent 的内部令牌始终会被遮盖。 |
+
+### DIFY_AGENT_RUNTIME_BACKEND
+
+默认值：`local`
+
+选择 Agent 沙箱的运行位置。默认的 `local` 使用内置沙箱容器；设为 `e2b` 时，每个 Agent 的沙箱会运行在 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
+
+`e2b` 后端使用自己的一组变量，`docker/docker-compose.e2b.yaml` overlay 会相应调整 Compose 配置：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_AGENT_E2B_API_KEY` | （空；回退到 `E2B_API_KEY`/`E2B_API_TOKEN`） | E2B 账户密钥；`e2b` 后端必填。 |
+| `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent 运行所用的 E2B 沙箱模板。 |
+| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 单个 E2B 沙箱保持活跃的时长，覆盖一次完整的 Agent 运行。3600 同时是硬上限，更高的值会被拒绝。<br/><br/>应不低于 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`。若沙箱的活跃时长短于运行的允许时长，运行会在未超时的情况下失去沙箱。 |
+| `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | 沙箱控制服务在 E2B 虚拟机内监听的端口。 |
 
 ## 数据库服务
 
