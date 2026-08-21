@@ -135,6 +135,9 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 | Limits the maximum number of reasoning loops and tool actions. The classic Agent app setting is a different string, "Maximum Iterations" (`app-debug.agent.setting.maximumIterations.name`). |
+| build chat | 构建对话 | ビルドチャット | One conversation in Build mode; prose term with no UI string |
+| build note | 构建笔记 | ビルドノート | The agent's auto-generated `build_note.md` record of what it set up in Build mode |
+| artifact | 产物 | 成果物 | Generic industry term, one fixed rendering; zh may add the English gloss 产物（Artifacts）on first use |
 
 ### Skills
 
@@ -430,6 +433,20 @@ Terms in this section must match the Dify product interface exactly. When these 
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
+
+### New Agent Configure
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Build mode | 构建模式 | ビルドモード | agent-v-2.agentDetail.configure.buildDraft.modeBadge | |
+| Build draft | Build 草稿 | ビルドドラフト | agent-v-2.agentDetail.configure.buildDraft.title | |
+| File system | 文件系统 | ファイルシステム | agent-v-2.agentDetail.configure.workingDirectory.fileSystem | Top-right entry in Configure |
+| Persistent | 长期 | 永続ファイル | agent-v-2.agentDetail.configure.workingDirectory.persistentFiles | File system tab; zh docs prose writes **长期** 文件, with 文件 outside the bold |
+| Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
+| Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
+| Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
+| Web App URL | Web 应用 URL | Web アプリ URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab |
+| Backend Service API | 后端服务 API | バックエンドサービス API | agent-v-2.agentDetail.access.serviceApi.title | Access Point tab |
 
 ### Question Classifier Node Config
 
