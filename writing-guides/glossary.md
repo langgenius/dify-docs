@@ -175,7 +175,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 ## UI Labels
 
-Terms in this section must match the Dify product interface exactly. When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product.
+Terms in this section must match the Dify product interface exactly. When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product. Add a row only after confirming the key's value is the rendered label at its usage site, not an aria-label, tooltip, or placeholder.
 
 For a label not yet in this table, resolve its exact i18n key before writing any language's form: find the key whose en-US value matches on the surface you are documenting — several keys often share one value, so trace the rendering component to disambiguate (`git grep -nF '<key>' "$REF" -- 'web/app/**'`, `$REF` pinned per writing-guides/index.md § "Syncing the Dify codebase safely"; components often reference the key without its file prefix, so retry with the suffix — `menus.apps` for `common.menus.apps` — when there are no hits) — then take each language from that key. Never pick a translation by matching values across namespaces; a label whose key you cannot identify is unverified and must be flagged, not approximated.
 

@@ -55,6 +55,8 @@ Every bolded term and every heading is a candidate. Step 5 decides deterministic
 
 The codebase i18n is the source of truth for UI labels: `web/i18n/en-US/` (flat JSON files with dot-flattened keys, e.g. `"menus.apps": "Studio"`), plus `zh-Hans/` and `ja-JP/` siblings. The glossary's `i18n Key` column maps to them: `common.menus.apps` → file `common.json`, key `"menus.apps"`.
 
+A key's value counts as the visible label only after checking its render site: `git grep` the key under `web/` and confirm it lands in on-screen text. Values feeding `aria-label`, tooltips, or placeholders are not the label, and shared generic keys (`common.operation.*`) often supply the visible text instead — the Skills section's add button renders `operation.add` ("Add") while `skills.add` ("Add skill") is its aria-label. A product or staging screenshot outranks any code inference.
+
 For each candidate term (use the English term; for zh/ja files, take the candidate from the same position in the en sibling):
 
 1. If the term has a `## UI Labels` row in the glossary, read its `i18n Key`; skip to substep 3 to confirm the codebase still agrees.
