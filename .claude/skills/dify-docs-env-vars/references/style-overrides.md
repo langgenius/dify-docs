@@ -8,6 +8,7 @@ Rules specific to env var documentation. They override or extend the shared styl
 - For empty defaults with a fallback: `(empty; falls back to X)` or `(empty; defaults to X)`.
 - Never include real or example secret keys — GitHub push protection blocks `sk-*` patterns. Use descriptions like `(pre-filled in .env.example; must be replaced for production)`.
 - Add an `Example:` line only when the default is empty (it shows what to set); omit it for concrete defaults, which already show the format (e.g., `TRIGGER_URL`, `SERVER_CONSOLE_API_URL`).
+- Segment long descriptions at semantic boundaries with `<br/><br/>` — what it does / behavior detail / when to change it. A description running past roughly two sentences usually needs a break (formatting-guide § Tables carries the cell-break mechanics).
 
 ## Style-guide overrides
 

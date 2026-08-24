@@ -10,6 +10,8 @@ For documentation tasks, read these guides before starting:
 
 For task-specific guidance, see `writing-guides/index.md`.
 
+After any documentation edit, check the work against these guides and the matching skill under `.claude/skills/`, and apply the corrections before presenting it — the dify-docs-write skill's Verify stage (S7) is the procedure.
+
 ## Key Rules
 
 - English first: write and finalize content in English, then translate to zh and ja in the same pass per the rules in `tools/translate/`. Keep the translation Note at the top of zh/ja pages.

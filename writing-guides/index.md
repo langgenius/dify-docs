@@ -11,7 +11,7 @@ Everything else (research, rule packs, checks) is loaded by these two — start 
 
 ## Post-Writing Verification
 
-After completing a writing task, run these checks in order. Each is a self-contained skill.
+After completing a writing task, run these checks in order and apply the fixes before presenting the work for review — this holds even for writing that did not run through dify-docs-write (the full obligation lives in its S7 stage). Each is a self-contained skill.
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
