@@ -63,6 +63,7 @@ For each candidate term (use the English term; for zh/ja files, take the candida
    git grep -nF '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
    ```
    - Exact-value hit (e.g., `<REF>:web/i18n/en-US/common.json:285:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
+   - Multiple exact hits → the value is shared by several keys; pick by tracing which component the documented surface renders (`git grep -nF '<key>' "$REF" -- 'web/app/**'`; components may reference the key without its file prefix, so retry with the suffix when there are no hits), and record which key you chose and why. Never assume the closest-looking key.
    - No hit → retry case-insensitively: `git grep -inF '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
    - Still no hit → not a UI label. Headings fall out of scope here; bolded terms go to Step 6 (general terms) instead.
 3. Confirm the exact string at the key:

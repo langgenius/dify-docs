@@ -100,7 +100,8 @@ Depth at a glance (the imperatives live in the stage sections below):
 
 1. Run the check chain per `writing-guides/index.md` § "Post-Writing Verification": `dify-docs-format-check` → `dify-docs-terminology-check` → `dify-docs-reader-test`. Fix findings and re-run until each reports clean.
 2. Run every check the pack labels **S7 verifier**, gating on the success output each one names.
-3. Deliverable: the printed check results.
+3. Universal: this stage closes EVERY writing execution — a draft or a direct modification alike — and its fixes are applied BEFORE the finished work is presented for review, never after. Writing that somehow bypassed this pipeline still owes S7 post-hoc: resolve the pack and read the guides per Step 1, run items 1–2, apply the fixes, then present. Process documents (design docs, plans, implementation docs) are exempt.
+4. Deliverable: the printed check results.
 
 ## S8 — Close
 
