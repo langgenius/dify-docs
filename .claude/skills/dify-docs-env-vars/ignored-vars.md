@@ -61,6 +61,8 @@ Feature flags for unfinished or staff-only features. Not yet meant for self-host
 
 | Variable | Reason | Source |
 |---|---|---|
+| `OPS_TRACE_UNIFIED_ENABLED` | Migration flag for the unified ops-tracing pipeline (`api/core/ops/unified_trace/`), default off; shipped tracing providers behave identically while off. Drop from this list and assess documentation when the unified path becomes the default. | dify main `24287bcb0c`, 1.17.0 delta sweep 2026-08-24 |
+| `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | Companion retention setting for the unified tracing parent contexts; meaningless while `OPS_TRACE_UNIFIED_ENABLED` is off. | dify main `24287bcb0c`, 1.17.0 delta sweep 2026-08-24 |
 | `EXPERIMENTAL_ENABLE_VINEXT` | Switches the web container to an experimental Vite-based server (`web/docker/entrypoint.sh`). Not a supported user-facing knob. | 1.14 sync audit, 2026-04-22 |
 | `KNOWLEDGE_FS_ENABLED` | Feature flag for the unreleased New Knowledge (KnowledgeFS) Console bridge. Default false; every proxy route 404s and the frontend hides the UI while off (`api/controllers/console/knowledge_fs_proxy.py`). Document the group and drop these five entries when the feature ships enabled. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
 | `KNOWLEDGE_FS_BASE_URL` | Connection setting for the flag-off KnowledgeFS bridge; inert unless `KNOWLEDGE_FS_ENABLED=true`. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
