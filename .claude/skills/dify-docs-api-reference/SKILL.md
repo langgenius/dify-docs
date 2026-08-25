@@ -31,7 +31,7 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 
 ## Spec Structure
 
-One spec per language — `{en,zh,ja}/api-reference/openapi_service.json` — is the spec of record. Edit it directly, in all three languages; `parity_check` enforces structural parity with en. (The five legacy per-app-type source specs and the merge pipeline that consolidated them are retired; recover from git history if needed.)
+Dify's generated `service-openapi.json` is the base contract. The three `{en,zh,ja}/api-reference/openapi_service.json` files are composed authoring outputs: edit presentation fields in all three languages, then recapture their reviewed overlays with `compose_service_api.py capture`. Capture ignores wire-contract edits, so paths, parameters, schemas, statuses, security, and deprecation always come from Dify. The composer applies the locale overlays back to the Dify base, and `parity_check` enforces structural parity with en. Never update an overlay fingerprint without rechecking the affected endpoint against runtime.
 
 App types map to `AppMode` values. The one mapping table (docs names, spec groups, key endpoints, and the modes the Service API does not cover) is `references/codebase-paths.md` § "AppMode ↔ app-type names" — use it, never memory.
 
@@ -39,7 +39,7 @@ Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site
 
 Every operation carries `x-mint.href` (`/{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` — English slugs in all languages for language-switcher parity) and `x-mint.metadata.title`/`sidebarTitle` (the translated summary; without them the sidebar shows the English slug). Set all of these when adding an operation, and keep the `tags` arrays index-aligned across languages.
 
-After structural edits (adding, removing, retitling, or reordering operations, or changing availability): update `memberships.json` and the app-type overview pages, then run `wire`, `check-coverage`, `lint_specs`, and `parity_check` per `tools/api-pipeline/README.md`. Description-only edits need the lints but not `wire`.
+After any spec edit, recapture and verify the locale overlays per `tools/api-pipeline/README.md`. After structural edits (adding, removing, retitling, or reordering operations, or changing availability), also update `memberships.json` and the app-type overview pages, then run `wire`, `check-coverage`, `lint_specs`, and `parity_check`. Description-only edits need no `wire`.
 
 ### App-Type Scoping
 

@@ -47,7 +47,7 @@ After every fix batch, validate from the docs repo root:
 
 ```bash
 export DOCS="$(git rev-parse --show-toplevel)"
-python3 "$DOCS/tools/api-pipeline/lint_specs.py"    # success = prints "TOTAL ISSUES: 0"; its exit code stays 0 even with issues, so read the count
+python3 "$DOCS/tools/api-pipeline/lint_specs.py"    # success = prints "TOTAL ISSUES: 0" and exits 0
 python3 "$DOCS/tools/api-pipeline/parity_check.py"  # success = prints "TOTAL PARITY ISSUES: 0" and exits 0
 ```
 
