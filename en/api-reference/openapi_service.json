@@ -4202,65 +4202,52 @@
     },
     "/datasets/{dataset_id}/document/create-by-file": {
       "post": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Create Document by File",
         "description": "Creates a document in a knowledge base from an uploaded file. Common formats such as PDF, TXT, and DOCX are supported. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "createDocumentFromFile",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
+                "properties": {
+                  "data": {
+                    "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`indexing_technique`, `doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
+                    "type": "string",
+                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
                 "required": [
                   "file"
                 ],
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB."
-                  },
-                  "data": {
-                    "type": "string",
-                    "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`indexing_technique`, `doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
-                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
-                  }
-                }
+                "type": "object"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Document created successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "Batch ID for tracking indexing progress."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -4309,10 +4296,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document created successfully."
           },
           "400": {
-            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The knowledge base is external, `indexing_technique` is required, or `process_rule` is missing.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4358,10 +4345,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The knowledge base is external, `indexing_technique` is required, or `process_rule` is missing."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4399,27 +4403,10 @@
                   }
                 }
               }
-            }
-          },
-          "404": {
-            "description": "`not_found` : Knowledge base not found.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           },
           "413": {
-            "description": "`file_too_large` : The uploaded file exceeds the maximum size.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4433,204 +4420,63 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : Vector space usage could not be verified. Returned on the Dify Cloud Sandbox plan only; retry the request later.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size."
           }
         },
-        "x-mint": {
-          "href": "/en/api-reference/documents/create-document-by-file",
-          "metadata": {
-            "title": "Create Document by File",
-            "sidebarTitle": "Create Document by File"
-          }
-        },
+        "summary": "Create Document by File",
+        "tags": [
+          "Documents"
+        ],
         "x-codeSamples": [
           {
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/document/create-by-file' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"indexing_technique\":\"high_quality\",\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
           }
-        ]
+        ],
+        "x-mint": {
+          "href": "/en/api-reference/documents/create-document-by-file",
+          "metadata": {
+            "title": "Create Document by File",
+            "sidebarTitle": "Create Document by File"
+          }
+        }
       }
     },
     "/datasets/{dataset_id}/document/create-by-text": {
       "post": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Create Document by Text",
         "description": "Creates a document in a knowledge base from raw text. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "createDocumentFromText",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "text"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "Document name."
-                  },
-                  "text": {
-                    "type": "string",
-                    "description": "Document text content."
-                  },
-                  "indexing_technique": {
-                    "type": "string",
-                    "enum": [
-                      "high_quality",
-                      "economy"
-                    ],
-                    "description": "Required when adding the first document to a knowledge base. Subsequent documents inherit the knowledge base's indexing technique if omitted. `high_quality` uses embedding models for precise search; `economy` uses keyword-based indexing."
-                  },
-                  "doc_form": {
-                    "type": "string",
-                    "enum": [
-                      "text_model",
-                      "hierarchical_model",
-                      "qa_model"
-                    ],
-                    "default": "text_model",
-                    "description": "`text_model` for standard text chunking, `hierarchical_model` for parent-child chunk structure, `qa_model` for question-answer pair extraction."
-                  },
-                  "doc_language": {
-                    "type": "string",
-                    "default": "English",
-                    "description": "Language of the document for processing optimization."
-                  },
-                  "process_rule": {
-                    "type": "object",
-                    "description": "Processing rules for chunking.",
-                    "required": [
-                      "mode"
-                    ],
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "automatic",
-                          "custom",
-                          "hierarchical"
-                        ],
-                        "description": "`automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
-                      },
-                      "rules": {
-                        "type": "object",
-                        "properties": {
-                          "pre_processing_rules": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "enum": [
-                                    "remove_stopwords",
-                                    "remove_extra_spaces",
-                                    "remove_urls_emails"
-                                  ],
-                                  "description": "Rule identifier."
-                                },
-                                "enabled": {
-                                  "type": "boolean",
-                                  "description": "Whether this preprocessing rule is enabled."
-                                }
-                              }
-                            }
-                          },
-                          "segmentation": {
-                            "type": "object",
-                            "properties": {
-                              "separator": {
-                                "type": "string",
-                                "default": "\n",
-                                "description": "Custom separator for splitting text."
-                              },
-                              "max_tokens": {
-                                "type": "integer",
-                                "description": "Maximum token count per chunk."
-                              },
-                              "chunk_overlap": {
-                                "type": "integer",
-                                "default": 0,
-                                "description": "Token overlap between chunks."
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "retrieval_model": {
-                    "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "Controls how chunks are searched and ranked when querying this knowledge base."
-                  },
-                  "embedding_model": {
-                    "type": "string",
-                    "description": "Embedding model name. Use the `model` field from [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
-                  },
-                  "embedding_model_provider": {
-                    "type": "string",
-                    "description": "Embedding model provider. Use the `provider` field from [Get Available Models](/en/api-reference/models/get-available-models) with `model_type=text-embedding`."
-                  },
-                  "original_document_id": {
-                    "type": "string",
-                    "description": "Original document ID for versioning. Get it from [List Documents](/en/api-reference/documents/list-documents)."
-                  }
-                }
+                "$ref": "#/components/schemas/DocumentTextCreatePayload"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Document created successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "Batch ID for tracking indexing progress."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -4679,10 +4525,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document created successfully."
           },
           "400": {
-            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `indexing_technique` is required when adding the first document, or `doc_form` is invalid.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4704,10 +4550,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `indexing_technique` is required when adding the first document, or `doc_form` is invalid."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4745,43 +4608,14 @@
                   }
                 }
               }
-            }
-          },
-          "404": {
-            "description": "`not_found` : Knowledge base not found.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : Vector space usage could not be verified. Returned on the Dify Cloud Sandbox plan only; retry the request later.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           }
         },
+        "summary": "Create Document by Text",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/create-document-by-text",
           "metadata": {
@@ -4791,101 +4625,486 @@
         }
       }
     },
-    "/datasets/{dataset_id}/documents": {
-      "get": {
+    "/datasets/{dataset_id}/document/create_by_file": {
+      "post": {
+        "deprecated": true,
+        "description": "Deprecated compatibility endpoint. Creates a document in a knowledge base from an uploaded file. Common formats such as PDF, TXT, and DOCX are supported. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
+        "operationId": "create_document_by_file_75a87285",
+        "parameters": [
+          {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`indexing_technique`, `doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
+                    "type": "string",
+                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 0,
+                        "indexing_status": "indexing",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "indexing",
+                        "word_count": 0,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Document created successfully."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "no_file_uploaded": {
+                    "summary": "no_file_uploaded",
+                    "value": {
+                      "status": 400,
+                      "code": "no_file_uploaded",
+                      "message": "Please upload your file."
+                    }
+                  },
+                  "too_many_files": {
+                    "summary": "too_many_files",
+                    "value": {
+                      "status": 400,
+                      "code": "too_many_files",
+                      "message": "Only one file is allowed."
+                    }
+                  },
+                  "filename_not_exists_error": {
+                    "summary": "filename_not_exists_error",
+                    "value": {
+                      "status": 400,
+                      "code": "filename_not_exists_error",
+                      "message": "The specified filename does not exist."
+                    }
+                  },
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_external": {
+                    "summary": "invalid_param (external)",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "External datasets are not supported."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `no_file_uploaded` : No file was provided in the request.\n- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The knowledge base is external, `indexing_technique` is required, or `process_rule` is missing."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden (api access)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden (vector space)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden (documents limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The number of documents has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_4": {
+                    "summary": "forbidden (rate limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "file_too_large": {
+                    "summary": "file_too_large",
+                    "value": {
+                      "status": 413,
+                      "code": "file_too_large",
+                      "message": "File size exceeded."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size."
+          }
+        },
+        "summary": "Create Document by File",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/document/create_by_text": {
+      "post": {
+        "deprecated": true,
+        "description": "Deprecated compatibility endpoint. Creates a document in a knowledge base from raw text. Indexing runs asynchronously; track it with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
+        "operationId": "create_document_by_text_deprecated",
+        "parameters": [
+          {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentTextCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 0,
+                        "indexing_status": "indexing",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "indexing",
+                        "word_count": 0,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Document created successfully."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_indexing": {
+                    "summary": "invalid_param (indexing_technique)",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "indexing_technique is required."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `indexing_technique` is required when adding the first document, or `doc_form` is invalid."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden (api access)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden (vector space)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden (documents limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The number of documents has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_4": {
+                    "summary": "forbidden (rate limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : The number of documents has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
+          }
+        },
         "tags": [
           "Documents"
         ],
-        "summary": "List Documents",
+        "summary": "Create Document by Text"
+      }
+    },
+    "/datasets/{dataset_id}/documents": {
+      "get": {
         "description": "Returns a paginated list of documents in a knowledge base.",
         "operationId": "listDocuments",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "Page number."
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "Number of items per page. Server caps at `100`."
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
               "type": "string"
-            },
-            "description": "Search keyword to filter by document name."
+            }
           },
           {
-            "name": "status",
+            "description": "Search keyword to filter by document name.",
             "in": "query",
+            "name": "keyword",
+            "required": false,
             "schema": {
-              "type": "string",
+              "description": "Search keyword to filter by document name.",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of items per page. Server caps at `100`.",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Number of items per page. Server caps at `100`.",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Page number to retrieve.",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number to retrieve.",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by display status.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "description": "Filter by display status.",
               "enum": [
-                "queuing",
-                "indexing",
-                "paused",
-                "error",
+                "archived",
                 "available",
                 "disabled",
-                "archived"
-              ]
-            },
-            "description": "Filter by display status."
+                "error",
+                "indexing",
+                "paused",
+                "queuing"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "List of documents.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "description": "Array of document objects.",
-                      "items": {
-                        "$ref": "#/components/schemas/Document"
-                      }
-                    },
-                    "has_more": {
-                      "type": "boolean",
-                      "description": "Whether more items exist on the next page."
-                    },
-                    "limit": {
-                      "type": "integer",
-                      "description": "Number of items per page."
-                    },
-                    "total": {
-                      "type": "integer",
-                      "description": "Total number of matching items."
-                    },
-                    "page": {
-                      "type": "integer",
-                      "description": "Current page number."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentListResponse"
                 },
                 "examples": {
                   "success": {
@@ -4939,10 +5158,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "List of documents."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4956,10 +5192,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled."
           },
           "404": {
-            "description": "`not_found` : Knowledge base not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -4973,9 +5209,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found."
           }
         },
+        "summary": "List Documents",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/list-documents",
           "metadata": {
@@ -4987,64 +5228,62 @@
     },
     "/datasets/{dataset_id}/documents/download-zip": {
       "post": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Download Documents as ZIP",
         "description": "Downloads one or more documents as a single ZIP archive. Only documents that were uploaded as files can be included.",
         "operationId": "downloadDocumentsZip",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "document_ids"
-                ],
-                "properties": {
-                  "document_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 100,
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "description": "Document IDs to include in the archive. Get them from [List Documents](/en/api-reference/documents/list-documents)."
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "ZIP archive containing the requested documents.",
-            "content": {
-              "application/zip": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary",
-                  "description": "ZIP archive binary stream."
-                }
+                "$ref": "#/components/schemas/DocumentBatchDownloadZipPayload"
               }
             }
           },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                  "description": "ZIP archive binary stream."
+                }
+              }
+            },
+            "description": "ZIP archive containing the requested documents."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.\n- `forbidden` : You do not have permission to access this knowledge base.\n- `forbidden` : You do not have permission for one of the requested documents.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5082,10 +5321,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.\n- `forbidden` : You do not have permission to access this knowledge base.\n- `forbidden` : You do not have permission for one of the requested documents."
           },
           "404": {
-            "description": "- `not_found` : Document not found.\n- `not_found` : Knowledge base not found. Also returned as \"Only uploaded-file documents can be downloaded as ZIP.\" when a requested document has no uploaded file.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5115,9 +5354,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Document not found.\n- `not_found` : Knowledge base not found. Also returned as \"Only uploaded-file documents can be downloaded as ZIP.\" when a requested document has no uploaded file."
           }
         },
+        "summary": "Download Documents as ZIP",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/download-documents-as-zip",
           "metadata": {
@@ -5320,74 +5564,64 @@
     },
     "/datasets/{dataset_id}/documents/status/{action}": {
       "patch": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Update Document Status in Batch",
-        "description": "Enables, disables, archives, or unarchives multiple documents in one request.",
+        "description": "Enables, disables, archives, or unarchives multiple documents in one request. `document_ids` is optional for compatibility; omitting it or passing an empty array performs no updates and still returns `result: success`.",
         "operationId": "batchUpdateDocumentStatus",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Action to perform: 'enable', 'disable', 'archive', or 'un_archive'",
             "in": "path",
+            "name": "action",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Action to perform: 'enable', 'disable', 'archive', or 'un_archive'",
+              "enum": [
+                "archive",
+                "disable",
+                "enable",
+                "un_archive"
+              ],
+              "type": "string"
+            }
           },
           {
-            "name": "action",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "enum": [
-                "enable",
-                "disable",
-                "archive",
-                "un_archive"
-              ]
-            },
-            "description": "`enable` activates documents for retrieval, `disable` deactivates them, `archive` moves them to the archive, `un_archive` restores them from the archive."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "document_ids"
-                ],
-                "properties": {
-                  "document_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "Document IDs to update. Get them from [List Documents](/en/api-reference/documents/list-documents)."
+                "$ref": "#/components/schemas/DocumentStatusPayload"
+              },
+              "examples": {
+                "update_documents": {
+                  "summary": "Request Example",
+                  "value": {
+                    "document_ids": [
+                      "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                      "c4c4f9aa-2c9b-4f95-9f5a-2c0f7c3a8f21"
+                    ]
                   }
                 }
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Documents updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "result": {
-                      "type": "string",
-                      "description": "Operation result."
-                    }
-                  }
+                  "$ref": "#/components/schemas/SimpleResultResponse"
                 },
                 "examples": {
                   "success": {
@@ -5398,10 +5632,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Documents updated successfully."
           },
           "400": {
-            "description": "`invalid_action` : Invalid action, or a document is in a state that does not allow the action (e.g. still indexing, or not completed).",
             "content": {
               "application/json": {
                 "examples": {
@@ -5415,10 +5649,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`invalid_action` : Invalid action, or a document is in a state that does not allow the action (e.g. still indexing, or not completed)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5432,10 +5683,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled."
           },
           "404": {
-            "description": "`not_found` : Knowledge base not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5449,9 +5700,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found."
           }
         },
+        "summary": "Update Document Status in Batch",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/update-document-status-in-batch",
           "metadata": {
@@ -5463,107 +5719,37 @@
     },
     "/datasets/{dataset_id}/documents/{batch}/indexing-status": {
       "get": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Get Document Indexing Status",
-        "description": "Returns indexing progress for every document in a batch: the current stage and chunk completion counts. Poll until each `indexing_status` reaches `completed` or `error`. Status advances through `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`.",
+        "description": "Returns indexing progress for every document in a batch: the current stage and chunk completion counts. Poll until each `indexing_status` reaches `completed`, `error`, or `paused`. `completed` and `error` are terminal. The Service API has no resume action for a paused document; resume it in the Dify knowledge-base console, then continue polling this endpoint. The active stages are `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed`. A non-null `stopped_at` records when processing stopped, even though it is not a separate `indexing_status` value.",
         "operationId": "getDocumentIndexingStatus",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Batch ID returned when you create or update a document.",
             "in": "path",
+            "name": "batch",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Batch ID.",
+              "type": "string"
+            }
           },
           {
-            "name": "batch",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
               "type": "string"
-            },
-            "description": "Batch ID returned when you create or update a document."
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Indexing status for documents in the batch.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "description": "List of indexing status entries.",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Document identifier."
-                          },
-                          "indexing_status": {
-                            "type": "string",
-                            "description": "Current indexing status: `waiting`, `parsing`, `cleaning`, `splitting`, `indexing`, `completed`, or `error`."
-                          },
-                          "processing_started_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Unix timestamp when processing started."
-                          },
-                          "parsing_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Unix timestamp when parsing completed."
-                          },
-                          "cleaning_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Unix timestamp when cleaning completed."
-                          },
-                          "splitting_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Unix timestamp when splitting completed."
-                          },
-                          "completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Unix timestamp when indexing completed."
-                          },
-                          "paused_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Timestamp when indexing was paused. `null` if not paused."
-                          },
-                          "error": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "Error message if indexing failed. `null` if no error."
-                          },
-                          "stopped_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "Timestamp when indexing was stopped. `null` if not stopped."
-                          },
-                          "completed_segments": {
-                            "type": "integer",
-                            "description": "Number of chunks that have been indexed."
-                          },
-                          "total_segments": {
-                            "type": "integer",
-                            "description": "Total number of chunks to be indexed."
-                          }
-                        }
-                      }
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentStatusListResponse"
                 },
                 "examples": {
                   "success": {
@@ -5589,10 +5775,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Indexing status for documents in the batch."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "`forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5606,10 +5809,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled."
           },
           "404": {
-            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Documents not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5631,9 +5834,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Documents not found."
           }
         },
+        "summary": "Get Document Indexing Status",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/get-document-indexing-status",
           "metadata": {
@@ -5644,247 +5852,191 @@
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}": {
-      "get": {
+      "delete": {
+        "description": "Permanently deletes a document and all its chunks from the knowledge base.",
+        "operationId": "deleteDocument",
+        "parameters": [
+          {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Success."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "document_indexing": {
+                    "summary": "document_indexing",
+                    "value": {
+                      "status": 400,
+                      "code": "document_indexing",
+                      "message": "Cannot delete document during indexing."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `document_indexing` : The document is still being processed and cannot be deleted."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "archived_document_immutable": {
+                    "summary": "archived_document_immutable",
+                    "value": {
+                      "status": 403,
+                      "code": "archived_document_immutable",
+                      "message": "The archived document is not editable."
+                    }
+                  },
+                  "forbidden_1": {
+                    "summary": "forbidden (api access)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden (rate limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `archived_document_immutable` : The archived document is not editable.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document Not Exists."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found_2",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found` : The document does not exist. Also returned as \"Dataset not found.\" when the knowledge base itself does not exist."
+          }
+        },
+        "summary": "Delete Document",
         "tags": [
           "Documents"
         ],
-        "summary": "Get Document",
+        "x-mint": {
+          "href": "/en/api-reference/documents/delete-document",
+          "metadata": {
+            "title": "Delete Document",
+            "sidebarTitle": "Delete Document"
+          }
+        }
+      },
+      "get": {
         "description": "Returns detailed information for a single document.",
         "operationId": "getDocumentDetail",
         "parameters": [
           {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
             "name": "dataset_id",
-            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
+            "in": "path",
             "name": "document_id",
-            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "metadata",
+            "description": "`all` returns all fields including metadata. `only` returns only `id`, `doc_type`, and `doc_metadata`. `without` returns all fields except `doc_metadata`.",
             "in": "query",
+            "name": "metadata",
+            "required": false,
             "schema": {
-              "type": "string",
+              "default": "all",
+              "description": "`all` returns all fields including metadata. `only` returns only `id`, `doc_type`, and `doc_metadata`. `without` returns all fields except `doc_metadata`.",
               "enum": [
                 "all",
                 "only",
                 "without"
               ],
-              "default": "all"
-            },
-            "description": "`all` returns all fields including metadata. `only` returns only `id`, `doc_type`, and `doc_metadata`. `without` returns all fields except `doc_metadata`."
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Document details. The returned fields depend on the `metadata` query parameter.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "description": "Document identifier."
-                    },
-                    "position": {
-                      "type": "integer",
-                      "description": "Position index within the knowledge base."
-                    },
-                    "data_source_type": {
-                      "type": "string",
-                      "description": "How the document was uploaded. `upload_file` for file uploads, `notion_import` for Notion imports."
-                    },
-                    "data_source_info": {
-                      "type": "object",
-                      "description": "Data source details. For file uploads, this detail endpoint returns the full file object under `upload_file` (the list endpoint returns only `upload_file_id`).",
-                      "properties": {
-                        "upload_file": {
-                          "type": "object",
-                          "description": "Uploaded file details. Present when `data_source_type` is `upload_file`.",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "description": "File identifier."
-                            },
-                            "name": {
-                              "type": "string",
-                              "description": "Original file name."
-                            },
-                            "size": {
-                              "type": "integer",
-                              "description": "File size in bytes."
-                            },
-                            "extension": {
-                              "type": "string",
-                              "description": "File extension."
-                            },
-                            "mime_type": {
-                              "type": "string",
-                              "description": "File MIME type."
-                            },
-                            "created_by": {
-                              "type": "string",
-                              "description": "ID of the user who uploaded the file."
-                            },
-                            "created_at": {
-                              "type": "integer",
-                              "description": "Unix timestamp of file upload."
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "dataset_process_rule_id": {
-                      "type": "string",
-                      "description": "ID of the processing rule applied to this document."
-                    },
-                    "dataset_process_rule": {
-                      "type": "object",
-                      "description": "Knowledge-base-level processing rule configuration."
-                    },
-                    "document_process_rule": {
-                      "type": "object",
-                      "description": "Document-level processing rule configuration."
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "Document name."
-                    },
-                    "created_from": {
-                      "type": "string",
-                      "description": "Origin of the document. `api` for API creation, `web` for UI creation."
-                    },
-                    "created_by": {
-                      "type": "string",
-                      "description": "ID of the user who created the document."
-                    },
-                    "created_at": {
-                      "type": "number",
-                      "description": "Unix timestamp of document creation."
-                    },
-                    "tokens": {
-                      "type": "integer",
-                      "description": "Number of tokens in the document."
-                    },
-                    "indexing_status": {
-                      "type": "string",
-                      "description": "Current indexing status, e.g. `waiting`, `parsing`, `cleaning`, `splitting`, `indexing`, `completed`, `error`, `paused`."
-                    },
-                    "error": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "Error message if indexing failed, `null` otherwise."
-                    },
-                    "enabled": {
-                      "type": "boolean",
-                      "description": "Whether the document is enabled for retrieval."
-                    },
-                    "disabled_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "Unix timestamp when the document was disabled, `null` if enabled."
-                    },
-                    "disabled_by": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "ID of the user who disabled the document, `null` if enabled."
-                    },
-                    "archived": {
-                      "type": "boolean",
-                      "description": "Whether the document is archived."
-                    },
-                    "display_status": {
-                      "type": "string",
-                      "description": "Display-friendly indexing status for the UI."
-                    },
-                    "hit_count": {
-                      "type": "integer",
-                      "description": "Number of times this document has been retrieved."
-                    },
-                    "doc_form": {
-                      "type": "string",
-                      "description": "Document chunking mode. `text_model` for standard text, `hierarchical_model` for parent-child, `qa_model` for QA pairs."
-                    },
-                    "doc_language": {
-                      "type": "string",
-                      "description": "Language of the document content."
-                    },
-                    "doc_type": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "Document type classification, `null` if not set."
-                    },
-                    "doc_metadata": {
-                      "type": "array",
-                      "description": "Custom metadata key-value pairs for this document.",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "Metadata field identifier."
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "Metadata field name."
-                          },
-                          "type": {
-                            "type": "string",
-                            "description": "Metadata field type."
-                          },
-                          "value": {
-                            "type": "string",
-                            "description": "Metadata field value for this document."
-                          }
-                        }
-                      }
-                    },
-                    "completed_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "Unix timestamp when processing completed, `null` if not yet completed."
-                    },
-                    "updated_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "Unix timestamp of last update, `null` if never updated."
-                    },
-                    "indexing_latency": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "Time taken for indexing in seconds, `null` if not completed."
-                    },
-                    "segment_count": {
-                      "type": "integer",
-                      "description": "Number of chunks in the document."
-                    },
-                    "average_segment_length": {
-                      "type": "number",
-                      "description": "Average character length of chunks."
-                    },
-                    "summary_index_status": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "Status of summary indexing, `null` if summary index is not enabled."
-                    },
-                    "need_summary": {
-                      "type": "boolean",
-                      "description": "Whether the document needs summary generation."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
                 },
                 "examples": {
                   "success": {
@@ -5948,10 +6100,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document details. The returned fields depend on the `metadata` query parameter."
           },
           "400": {
-            "description": "`invalid_metadata` : The `metadata` query parameter value is invalid (must be `all`, `only`, or `without`).",
             "content": {
               "application/json": {
                 "examples": {
@@ -5960,15 +6112,32 @@
                     "value": {
                       "status": 400,
                       "code": "invalid_metadata",
-                      "message": "Invalid metadata value: only"
+                      "message": "Invalid metadata value."
                     }
                   }
                 }
               }
-            }
+            },
+            "description": "`invalid_metadata` : The `metadata` query parameter value is invalid (must be `all`, `only`, or `without`)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled.",
             "content": {
               "application/json": {
                 "examples": {
@@ -5990,10 +6159,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled."
           },
           "404": {
-            "description": "`not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6007,9 +6176,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Document not found."
           }
         },
+        "summary": "Get Document",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/get-document",
           "metadata": {
@@ -6018,173 +6192,61 @@
           }
         }
       },
-      "delete": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Delete Document",
-        "description": "Permanently deletes a document and all its chunks from the knowledge base.",
-        "operationId": "deleteDocument",
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
-          },
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Success."
-          },
-          "403": {
-            "description": "- `archived_document_immutable` : The archived document is not editable.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "archived_document_immutable": {
-                    "summary": "archived_document_immutable",
-                    "value": {
-                      "status": 403,
-                      "code": "archived_document_immutable",
-                      "message": "The archived document is not editable."
-                    }
-                  },
-                  "forbidden_1": {
-                    "summary": "forbidden (api access)",
-                    "value": {
-                      "status": 403,
-                      "code": "forbidden",
-                      "message": "Dataset api access is not enabled."
-                    }
-                  },
-                  "forbidden_2": {
-                    "summary": "forbidden (rate limit)",
-                    "value": {
-                      "status": 403,
-                      "code": "forbidden",
-                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`not_found` : The document does not exist. Also returned as \"Dataset not found.\" when the knowledge base itself does not exist.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Document Not Exists."
-                    }
-                  },
-                  "not_found_2": {
-                    "summary": "not_found_2",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-mint": {
-          "href": "/en/api-reference/documents/delete-document",
-          "metadata": {
-            "title": "Delete Document",
-            "sidebarTitle": "Delete Document"
-          }
-        }
-      },
       "patch": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Update Document",
-        "description": "Updates a document by uploading a new file, then re-indexes it. This is the canonical endpoint for file-based document updates. Track progress with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
+        "description": "Updates a document and re-indexes it. Send `file` to replace the source file, `data` to change processing settings, or both. If `file` is omitted, Dify reprocesses the existing source with the supplied or current settings; an empty multipart request re-indexes it with the current settings. Track progress with the returned `batch` ID via [Get Document Indexing Status](/en/api-reference/documents/get-document-indexing-status).",
         "operationId": "updateDocument",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
                 "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB."
-                  },
                   "data": {
-                    "type": "string",
                     "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
+                    "type": "string",
                     "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB.",
+                    "format": "binary",
+                    "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             }
-          }
+          },
+          "required": false
         },
         "responses": {
           "200": {
-            "description": "Document updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "Batch ID for tracking indexing progress."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -6233,10 +6295,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document updated successfully."
           },
           "400": {
-            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -6274,10 +6336,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6307,10 +6386,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           },
           "404": {
-            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6332,10 +6411,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found."
           },
           "413": {
-            "description": "`file_too_large` : The uploaded file exceeds the maximum size.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6349,10 +6428,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size."
           },
           "415": {
-            "description": "`unsupported_file_type` : The uploaded file's type is not supported.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6366,85 +6445,64 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : Vector space usage could not be verified. Returned on the Dify Cloud Sandbox plan only; retry the request later.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`unsupported_file_type` : The uploaded file's type is not supported."
           }
         },
-        "x-mint": {
-          "href": "/en/api-reference/documents/update-document",
-          "metadata": {
-            "title": "Update Document",
-            "sidebarTitle": "Update Document"
-          }
-        },
+        "summary": "Update Document",
+        "tags": [
+          "Documents"
+        ],
         "x-codeSamples": [
           {
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request PATCH \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/documents/{document_id}' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
           }
-        ]
+        ],
+        "x-mint": {
+          "href": "/en/api-reference/documents/update-document",
+          "metadata": {
+            "title": "Update Document",
+            "sidebarTitle": "Update Document"
+          }
+        }
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}/download": {
       "get": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Download Document",
         "description": "Returns a signed URL for downloading a document's original uploaded file.",
         "operationId": "downloadDocument",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "Download URL generated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string",
-                      "description": "Signed URL to download the original uploaded file."
-                    }
-                  }
+                  "$ref": "#/components/schemas/UrlResponse"
                 },
                 "examples": {
                   "success": {
@@ -6455,10 +6513,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Download URL generated successfully."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6488,10 +6563,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : You do not have permission to access this document.\n- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           },
           "404": {
-            "description": "`not_found` : Document not found. Also returned as \"Uploaded file not found.\" when the stored file is missing, and \"Document does not have an uploaded file to download.\" for non-file documents.",
             "content": {
               "application/json": {
                 "examples": {
@@ -6521,9 +6596,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Document not found. Also returned as \"Uploaded file not found.\" when the stored file is missing, and \"Document does not have an uploaded file to download.\" for non-file documents."
           }
         },
+        "summary": "Download Document",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/download-document",
           "metadata": {
@@ -8419,72 +8499,61 @@
     },
     "/datasets/{dataset_id}/documents/{document_id}/update-by-file": {
       "post": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Update Document by File",
-        "description": "Deprecated. Use [Update Document](/en/api-reference/documents/update-document) instead. Updates a document by uploading a new file, then re-indexes it.",
+        "deprecated": true,
+        "description": "Deprecated file-update route. Send `file` to replace the source file, `data` to change processing settings, or both. If `file` is omitted, Dify reprocesses the existing source with the supplied or current settings; an empty multipart request re-indexes it with the current settings. Use [Update Document](/en/api-reference/documents/update-document) instead.",
         "operationId": "updateDocumentByFile",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
                 "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB."
-                  },
                   "data": {
-                    "type": "string",
                     "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
+                    "type": "string",
                     "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB.",
+                    "format": "binary",
+                    "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             }
-          }
+          },
+          "required": false
         },
         "responses": {
           "200": {
-            "description": "Document updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "Batch ID for tracking indexing progress."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -8533,10 +8602,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document updated successfully."
           },
           "400": {
-            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -8574,10 +8643,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8607,10 +8693,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           },
           "404": {
-            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8632,10 +8718,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found."
           },
           "413": {
-            "description": "`file_too_large` : The uploaded file exceeds the maximum size.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8649,10 +8735,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size."
           },
           "415": {
-            "description": "`unsupported_file_type` : The uploaded file's type is not supported.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8666,27 +8752,14 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : Vector space usage could not be verified. Returned on the Dify Cloud Sandbox plan only; retry the request later.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`unsupported_file_type` : The uploaded file's type is not supported."
           }
         },
-        "deprecated": true,
+        "summary": "Update Document by File",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/update-document-by-file",
           "metadata": {
@@ -8698,152 +8771,48 @@
     },
     "/datasets/{dataset_id}/documents/{document_id}/update-by-text": {
       "post": {
-        "tags": [
-          "Documents"
-        ],
-        "summary": "Update Document by Text",
         "description": "Updates a document's text content, name, or processing configuration. Re-indexes the document when its text changes.",
         "operationId": "updateDocumentByText",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases)."
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents)."
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "Document name. Required when `text` is provided."
-                  },
-                  "text": {
-                    "type": "string",
-                    "description": "Document text content."
-                  },
-                  "process_rule": {
-                    "type": "object",
-                    "description": "Processing rules for chunking.",
-                    "required": [
-                      "mode"
-                    ],
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "automatic",
-                          "custom",
-                          "hierarchical"
-                        ],
-                        "description": "`automatic` uses built-in rules, `custom` allows manual configuration, `hierarchical` enables parent-child chunk structure (use with `doc_form: hierarchical_model`)."
-                      },
-                      "rules": {
-                        "type": "object",
-                        "properties": {
-                          "pre_processing_rules": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "enum": [
-                                    "remove_stopwords",
-                                    "remove_extra_spaces",
-                                    "remove_urls_emails"
-                                  ],
-                                  "description": "Rule identifier."
-                                },
-                                "enabled": {
-                                  "type": "boolean",
-                                  "description": "Whether this preprocessing rule is enabled."
-                                }
-                              }
-                            }
-                          },
-                          "segmentation": {
-                            "type": "object",
-                            "properties": {
-                              "separator": {
-                                "type": "string",
-                                "default": "\n",
-                                "description": "Custom separator for splitting text."
-                              },
-                              "max_tokens": {
-                                "type": "integer",
-                                "description": "Maximum token count per chunk."
-                              },
-                              "chunk_overlap": {
-                                "type": "integer",
-                                "default": 0,
-                                "description": "Token overlap between chunks."
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "doc_form": {
-                    "type": "string",
-                    "enum": [
-                      "text_model",
-                      "hierarchical_model",
-                      "qa_model"
-                    ],
-                    "default": "text_model",
-                    "description": "`text_model` for standard text chunking, `hierarchical_model` for parent-child chunk structure, `qa_model` for question-answer pair extraction."
-                  },
-                  "doc_language": {
-                    "type": "string",
-                    "default": "English",
-                    "description": "Language of the document for processing optimization."
-                  },
-                  "retrieval_model": {
-                    "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "Controls how chunks are searched and ranked when querying this knowledge base."
-                  }
-                }
+                "$ref": "#/components/schemas/DocumentTextUpdate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "Document updated successfully.",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "Batch ID for tracking indexing progress."
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -8892,10 +8861,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "Document updated successfully."
           },
           "400": {
-            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `name` is required when `text` is provided, or `doc_form` is invalid.\n- `invalid_param` : The document is not available for update (only available documents can be updated).",
             "content": {
               "application/json": {
                 "examples": {
@@ -8925,10 +8894,27 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : `name` is required when `text` is provided, or `doc_form` is invalid.\n- `invalid_param` : The document is not available for update (only available documents can be updated)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
           },
           "403": {
-            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8958,10 +8944,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
           },
           "404": {
-            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found.",
             "content": {
               "application/json": {
                 "examples": {
@@ -8983,26 +8969,14 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : Vector space usage could not be verified. Returned on the Dify Cloud Sandbox plan only; retry the request later.",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found."
           }
         },
+        "summary": "Update Document by Text",
+        "tags": [
+          "Documents"
+        ],
         "x-mint": {
           "href": "/en/api-reference/documents/update-document-by-text",
           "metadata": {
@@ -9010,6 +8984,449 @@
             "sidebarTitle": "Update Document by Text"
           }
         }
+      }
+    },
+    "/datasets/{dataset_id}/documents/{document_id}/update_by_file": {
+      "post": {
+        "deprecated": true,
+        "description": "Deprecated file-update route. Send `file` to replace the source file, `data` to change processing settings, or both. If `file` is omitted, Dify reprocesses the existing source with the supplied or current settings; an empty multipart request re-indexes it with the current settings. Use [Update Document](/en/api-reference/documents/update-document) instead.",
+        "operationId": "update_document_by_file_deprecated_5dc5fe59",
+        "parameters": [
+          {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "description": "JSON string containing configuration. Accepts the same fields as [Create Document by Text](/en/api-reference/documents/create-document-by-text) (`doc_form`, `doc_language`, `process_rule`, `retrieval_model`, `embedding_model`, `embedding_model_provider`) except `name` and `text`.",
+                    "type": "string",
+                    "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "File to upload, capped at 15 MB by default.\n\nSelf-hosted deployments adjust the limit with the `UPLOAD_FILE_SIZE_LIMIT` [environment variable](/en/self-host/deploy/configuration/environments). On Dify Cloud, Professional and Team plans raise the cap to 50 MB.",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 512,
+                        "indexing_status": "completed",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "available",
+                        "word_count": 350,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Document updated successfully."
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "too_many_files": {
+                    "summary": "too_many_files",
+                    "value": {
+                      "status": 400,
+                      "code": "too_many_files",
+                      "message": "Only one file is allowed."
+                    }
+                  },
+                  "filename_not_exists_error": {
+                    "summary": "filename_not_exists_error",
+                    "value": {
+                      "status": 400,
+                      "code": "filename_not_exists_error",
+                      "message": "The specified filename does not exist."
+                    }
+                  },
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_not_available": {
+                    "summary": "invalid_param (not available)",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "Document is not available"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `too_many_files` : Only one file is allowed per request.\n- `filename_not_exists_error` : The uploaded file has no filename.\n- `provider_not_initialize` : No model provider credentials are configured for the workspace.\n- `invalid_param` : The document is not available for update (only available documents can be updated)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden (api access)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden (vector space)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden (rate limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found_1": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found."
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "file_too_large": {
+                    "summary": "file_too_large",
+                    "value": {
+                      "status": 413,
+                      "code": "file_too_large",
+                      "message": "File size exceeded."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`file_too_large` : The uploaded file exceeds the maximum size."
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unsupported_file_type": {
+                    "summary": "unsupported_file_type",
+                    "value": {
+                      "status": 415,
+                      "code": "unsupported_file_type",
+                      "message": "File type not allowed."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`unsupported_file_type` : The uploaded file's type is not supported."
+          }
+        },
+        "summary": "Update Document by File",
+        "tags": [
+          "Documents"
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/documents/{document_id}/update_by_text": {
+      "post": {
+        "deprecated": true,
+        "description": "Deprecated compatibility endpoint. Updates a document's text content, name, or processing configuration. Re-indexes the document when its text changes.",
+        "operationId": "update_document_by_text_deprecated",
+        "parameters": [
+          {
+            "description": "Knowledge base ID. From [List Knowledge Bases](/en/api-reference/knowledge-bases/list-knowledge-bases).",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "Knowledge base ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Document ID. From [List Documents](/en/api-reference/documents/list-documents).",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "Document ID.",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentTextUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "Response Example",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 512,
+                        "indexing_status": "completed",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "available",
+                        "word_count": 350,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "Document updated successfully."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized` : The `Authorization` header is missing, malformed, or contains an invalid API key."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden (api access)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden (vector space)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden (rate limit)",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden` : Knowledge base API access is not enabled.\n- `forbidden` : The capacity of the vector space has reached the limit of your subscription.\n- `forbidden` : Sorry, you have reached the knowledge base request rate limit of your subscription."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found_1": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : Document not found."
+          }
+        },
+        "tags": [
+          "Documents"
+        ],
+        "summary": "Update Document by Text"
       }
     },
     "/datasets/{dataset_id}/hit-testing": {

@@ -4202,65 +4202,52 @@
     },
     "/datasets/{dataset_id}/document/create-by-file": {
       "post": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "从文件创建文档",
-        "description": "在知识库中通过上传文件创建文档。支持 PDF、TXT、DOCX 等常见格式。索引异步进行；使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
+        "description": "在知识库中通过上传文件创建文档。支持 PDF、TXT、DOCX 等常见格式。索引异步进行；使用返回的 `batch` ID 通过 [获取文档索引状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
         "operationId": "createDocumentFromFile",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
+                "properties": {
+                  "data": {
+                    "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`indexing_technique`、`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
+                    "type": "string",
+                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
                 "required": [
                   "file"
                 ],
-                "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。"
-                  },
-                  "data": {
-                    "type": "string",
-                    "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`indexing_technique`、`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
-                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
-                  }
-                }
+                "type": "object"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "文档创建成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "用于跟踪索引进度的批次 ID。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -4309,10 +4296,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档创建成功。"
           },
           "400": {
-            "description": "- `no_file_uploaded` : 请求中未提供文件。\n- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 该知识库为外部知识库、缺少 `indexing_technique`，或缺少 `process_rule`。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4349,7 +4336,7 @@
                     }
                   },
                   "invalid_param_external": {
-                    "summary": "invalid_param (external)",
+                    "summary": "invalid_param（外部知识库）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -4358,15 +4345,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `no_file_uploaded`：请求中未提供文件。\n- `too_many_files`：每次请求仅允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。\n- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：该知识库为外部知识库、缺少 `indexing_technique`，或缺少 `process_rule`。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 向量空间容量已达到您订阅套餐的上限。\n- `forbidden` : 文档数量已达到您订阅套餐的上限。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4374,7 +4378,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (vector space)",
+                    "summary": "forbidden（向量空间限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4382,7 +4386,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (documents limit)",
+                    "summary": "forbidden（文档数量限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4390,7 +4394,7 @@
                     }
                   },
                   "forbidden_4": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4399,27 +4403,10 @@
                   }
                 }
               }
-            }
-          },
-          "404": {
-            "description": "`not_found` : 未找到知识库。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：文档数量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           },
           "413": {
-            "description": "`file_too_large` : 上传的文件超出最大大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4433,204 +4420,63 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : 暂时无法确认向量空间用量，稍后重试即可。仅在 Dify Cloud Sandbox 套餐下出现。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`file_too_large`：上传的文件超出最大大小限制。"
           }
         },
-        "x-mint": {
-          "href": "/zh/api-reference/documents/create-document-by-file",
-          "metadata": {
-            "title": "从文件创建文档",
-            "sidebarTitle": "从文件创建文档"
-          }
-        },
+        "summary": "从文件创建文档",
+        "tags": [
+          "文档"
+        ],
         "x-codeSamples": [
           {
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request POST \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/document/create-by-file' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"indexing_technique\":\"high_quality\",\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
           }
-        ]
+        ],
+        "x-mint": {
+          "href": "/zh/api-reference/documents/create-document-by-file",
+          "metadata": {
+            "title": "从文件创建文档",
+            "sidebarTitle": "从文件创建文档"
+          }
+        }
       }
     },
     "/datasets/{dataset_id}/document/create-by-text": {
       "post": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "从文本创建文档",
-        "description": "在知识库中通过纯文本创建文档。索引异步进行；使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
+        "description": "在知识库中通过纯文本创建文档。索引异步进行；使用返回的 `batch` ID 通过 [获取文档索引状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
         "operationId": "createDocumentFromText",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "name",
-                  "text"
-                ],
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "文档名称。"
-                  },
-                  "text": {
-                    "type": "string",
-                    "description": "文档文本内容。"
-                  },
-                  "indexing_technique": {
-                    "type": "string",
-                    "enum": [
-                      "high_quality",
-                      "economy"
-                    ],
-                    "description": "向知识库添加首个文档时必填。后续文档如果省略此字段，将继承知识库的索引方式。`high_quality` 使用嵌入模型进行精确搜索；`economy` 使用基于关键词的索引。"
-                  },
-                  "doc_form": {
-                    "type": "string",
-                    "enum": [
-                      "text_model",
-                      "hierarchical_model",
-                      "qa_model"
-                    ],
-                    "default": "text_model",
-                    "description": "`text_model` 为标准文本分段，`hierarchical_model` 为父子分段结构，`qa_model` 为问答对提取。"
-                  },
-                  "doc_language": {
-                    "type": "string",
-                    "default": "English",
-                    "description": "用于处理优化的文档语言。"
-                  },
-                  "process_rule": {
-                    "type": "object",
-                    "description": "分块处理规则。",
-                    "required": [
-                      "mode"
-                    ],
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "automatic",
-                          "custom",
-                          "hierarchical"
-                        ],
-                        "description": "`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
-                      },
-                      "rules": {
-                        "type": "object",
-                        "properties": {
-                          "pre_processing_rules": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "enum": [
-                                    "remove_stopwords",
-                                    "remove_extra_spaces",
-                                    "remove_urls_emails"
-                                  ],
-                                  "description": "规则标识符。"
-                                },
-                                "enabled": {
-                                  "type": "boolean",
-                                  "description": "该预处理规则是否启用。"
-                                }
-                              }
-                            }
-                          },
-                          "segmentation": {
-                            "type": "object",
-                            "properties": {
-                              "separator": {
-                                "type": "string",
-                                "default": "\n",
-                                "description": "用于拆分文本的自定义分隔符。"
-                              },
-                              "max_tokens": {
-                                "type": "integer",
-                                "description": "每个分段的最大令牌数。"
-                              },
-                              "chunk_overlap": {
-                                "type": "integer",
-                                "default": 0,
-                                "description": "分段之间的令牌重叠数。"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "retrieval_model": {
-                    "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "控制查询此知识库时如何搜索和排序分段。"
-                  },
-                  "embedding_model": {
-                    "type": "string",
-                    "description": "嵌入模型名称。使用 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `model` 字段值。"
-                  },
-                  "embedding_model_provider": {
-                    "type": "string",
-                    "description": "嵌入模型供应商。使用 [获取可用模型](/zh/api-reference/models/get-available-models) 中 `model_type=text-embedding` 返回的 `provider` 字段值。"
-                  },
-                  "original_document_id": {
-                    "type": "string",
-                    "description": "用于版本控制的原始文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
-                  }
-                }
+                "$ref": "#/components/schemas/DocumentTextCreatePayload"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "文档创建成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "用于跟踪索引进度的批次 ID。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -4679,10 +4525,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档创建成功。"
           },
           "400": {
-            "description": "- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 添加首个文档时必须提供 `indexing_technique`，或 `doc_form` 无效。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4695,7 +4541,7 @@
                     }
                   },
                   "invalid_param_indexing": {
-                    "summary": "invalid_param (indexing_technique)",
+                    "summary": "invalid_param（索引方式）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -4704,15 +4550,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：添加首个文档时必须提供 `indexing_technique`，或 `doc_form` 无效。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 向量空间容量已达到您订阅套餐的上限。\n- `forbidden` : 文档数量已达到您订阅套餐的上限。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4720,7 +4583,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (vector space)",
+                    "summary": "forbidden（向量空间限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4728,7 +4591,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (documents limit)",
+                    "summary": "forbidden（文档数量限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4736,7 +4599,7 @@
                     }
                   },
                   "forbidden_4": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4745,43 +4608,14 @@
                   }
                 }
               }
-            }
-          },
-          "404": {
-            "description": "`not_found` : 未找到知识库。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : 暂时无法确认向量空间用量，稍后重试即可。仅在 Dify Cloud Sandbox 套餐下出现。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：文档数量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           }
         },
+        "summary": "从文本创建文档",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/create-document-by-text",
           "metadata": {
@@ -4791,101 +4625,486 @@
         }
       }
     },
-    "/datasets/{dataset_id}/documents": {
-      "get": {
+    "/datasets/{dataset_id}/document/create_by_file": {
+      "post": {
+        "deprecated": true,
+        "description": "已弃用的兼容接口。在知识库中通过上传文件创建文档。支持 PDF、TXT、DOCX 等常见格式。索引异步进行；使用返回的 `batch` ID 通过 [获取文档索引状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
+        "operationId": "create_document_by_file_75a87285",
+        "parameters": [
+          {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`indexing_technique`、`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
+                    "type": "string",
+                    "example": "{\"indexing_technique\":\"high_quality\",\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "file"
+                ],
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 0,
+                        "indexing_status": "indexing",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "indexing",
+                        "word_count": 0,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "文档创建成功。"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "no_file_uploaded": {
+                    "summary": "no_file_uploaded",
+                    "value": {
+                      "status": 400,
+                      "code": "no_file_uploaded",
+                      "message": "Please upload your file."
+                    }
+                  },
+                  "too_many_files": {
+                    "summary": "too_many_files",
+                    "value": {
+                      "status": 400,
+                      "code": "too_many_files",
+                      "message": "Only one file is allowed."
+                    }
+                  },
+                  "filename_not_exists_error": {
+                    "summary": "filename_not_exists_error",
+                    "value": {
+                      "status": 400,
+                      "code": "filename_not_exists_error",
+                      "message": "The specified filename does not exist."
+                    }
+                  },
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_external": {
+                    "summary": "invalid_param（外部知识库）",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "External datasets are not supported."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `no_file_uploaded`：请求中未提供文件。\n- `too_many_files`：每次请求仅允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。\n- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：该知识库为外部知识库、缺少 `indexing_technique`，或缺少 `process_rule`。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden（API 访问）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden（向量空间限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden（文档数量限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The number of documents has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_4": {
+                    "summary": "forbidden（速率限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：文档数量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "file_too_large": {
+                    "summary": "file_too_large",
+                    "value": {
+                      "status": 413,
+                      "code": "file_too_large",
+                      "message": "File size exceeded."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`file_too_large`：上传的文件超出最大大小限制。"
+          }
+        },
+        "summary": "从文件创建文档",
+        "tags": [
+          "文档"
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/document/create_by_text": {
+      "post": {
+        "deprecated": true,
+        "description": "已弃用的兼容接口。在知识库中通过纯文本创建文档。索引异步进行；使用返回的 `batch` ID 通过 [获取文档索引状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪。",
+        "operationId": "create_document_by_text_deprecated",
+        "parameters": [
+          {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentTextCreatePayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 0,
+                        "indexing_status": "indexing",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "indexing",
+                        "word_count": 0,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "文档创建成功。"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_indexing": {
+                    "summary": "invalid_param（索引方式）",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "indexing_technique is required."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：添加首个文档时必须提供 `indexing_technique`，或 `doc_form` 无效。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden（API 访问）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden（向量空间限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden（文档数量限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The number of documents has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_4": {
+                    "summary": "forbidden（速率限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：文档数量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
+          }
+        },
         "tags": [
           "文档"
         ],
-        "summary": "获取知识库的文档列表",
+        "summary": "从文本创建文档"
+      }
+    },
+    "/datasets/{dataset_id}/documents": {
+      "get": {
         "description": "返回知识库中文档的分页列表。",
         "operationId": "listDocuments",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
-          },
-          {
-            "name": "page",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 1
-            },
-            "description": "页码。"
-          },
-          {
-            "name": "limit",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "default": 20
-            },
-            "description": "每页的项目数量。服务器上限为 `100`。"
-          },
-          {
-            "name": "keyword",
-            "in": "query",
-            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
               "type": "string"
-            },
-            "description": "按文档名称筛选的搜索关键词。"
+            }
           },
           {
-            "name": "status",
+            "description": "按文档名称筛选的搜索关键词。",
             "in": "query",
+            "name": "keyword",
+            "required": false,
             "schema": {
-              "type": "string",
+              "description": "按文档名称筛选的搜索关键词。",
+              "type": "string"
+            }
+          },
+          {
+            "description": "每页的项目数量。服务器上限为 `100`。",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "每页的项目数量。服务器上限为 `100`。",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "要获取的页码。",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "要获取的页码。",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "按显示状态筛选。",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "description": "按显示状态筛选。",
               "enum": [
-                "queuing",
-                "indexing",
-                "paused",
-                "error",
+                "archived",
                 "available",
                 "disabled",
-                "archived"
-              ]
-            },
-            "description": "按显示状态筛选。"
+                "error",
+                "indexing",
+                "paused",
+                "queuing"
+              ],
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "文档列表。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "description": "文档对象数组。",
-                      "items": {
-                        "$ref": "#/components/schemas/Document"
-                      }
-                    },
-                    "has_more": {
-                      "type": "boolean",
-                      "description": "下一页是否还有更多项目。"
-                    },
-                    "limit": {
-                      "type": "integer",
-                      "description": "每页条目数。"
-                    },
-                    "total": {
-                      "type": "integer",
-                      "description": "匹配条目的总数。"
-                    },
-                    "page": {
-                      "type": "integer",
-                      "description": "当前页码。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentListResponse"
                 },
                 "examples": {
                   "success": {
@@ -4939,15 +5158,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档列表。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "`forbidden` : 该知识库未启用 API 访问。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -4956,10 +5192,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。"
           },
           "404": {
-            "description": "`not_found` : 知识库未找到。",
             "content": {
               "application/json": {
                 "examples": {
@@ -4973,9 +5209,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：知识库未找到。"
           }
         },
+        "summary": "获取知识库的文档列表",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/list-documents",
           "metadata": {
@@ -4987,69 +5228,67 @@
     },
     "/datasets/{dataset_id}/documents/download-zip": {
       "post": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "批量下载文档（ZIP）",
         "description": "将一个或多个文档下载为单个 ZIP 压缩包。仅可包含以文件形式上传的文档。",
-        "operationId": "downloadDocumentsZipZh",
+        "operationId": "downloadDocumentsZip",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "document_ids"
-                ],
-                "properties": {
-                  "document_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "maxItems": 100,
-                    "items": {
-                      "type": "string",
-                      "format": "uuid"
-                    },
-                    "description": "要包含在压缩包中的文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
-                  }
-                }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "包含所请求文档的 ZIP 压缩包。",
-            "content": {
-              "application/zip": {
-                "schema": {
-                  "type": "string",
-                  "format": "binary",
-                  "description": "ZIP 压缩包二进制流。"
-                }
+                "$ref": "#/components/schemas/DocumentBatchDownloadZipPayload"
               }
             }
           },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {
+                "schema": {
+                  "format": "binary",
+                  "type": "string",
+                  "description": "ZIP 压缩包二进制流。"
+                }
+              }
+            },
+            "description": "包含所请求文档的 ZIP 压缩包。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。\n- `forbidden` : 你没有访问此知识库的权限。\n- `forbidden` : 你对请求的某个文档没有访问权限。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5057,7 +5296,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5065,7 +5304,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (dataset permission)",
+                    "summary": "forbidden（知识库权限）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5073,7 +5312,7 @@
                     }
                   },
                   "forbidden_4": {
-                    "summary": "forbidden (document permission)",
+                    "summary": "forbidden（文档权限）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5082,10 +5321,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。\n- `forbidden`：你没有访问此知识库的权限。\n- `forbidden`：你对请求的某个文档没有访问权限。"
           },
           "404": {
-            "description": "- `not_found` : 未找到文档。\n- `not_found` : 未找到知识库。 请求的文档没有已上传的文件时，也会返回 \"Only uploaded-file documents can be downloaded as ZIP.\"。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5115,9 +5354,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到文档。\n- `not_found`：未找到知识库。 请求的文档不是通过上传文件创建时，也会返回仅上传文件类文档可打包下载的错误。"
           }
         },
+        "summary": "批量下载文档（ZIP）",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/download-documents-as-zip",
           "metadata": {
@@ -5320,74 +5564,64 @@
     },
     "/datasets/{dataset_id}/documents/status/{action}": {
       "patch": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "批量更新文档状态",
-        "description": "在一次请求中批量启用、禁用、归档或取消归档多个文档。",
+        "description": "在一次请求中批量启用、禁用、归档或取消归档多个文档。为保持兼容，`document_ids` 为可选字段；省略该字段或传入空数组时不会更新任何文档，但仍返回 `result: success`。",
         "operationId": "batchUpdateDocumentStatus",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "要执行的操作：`enable`、`disable`、`archive` 或 `un_archive`。",
             "in": "path",
+            "name": "action",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "要执行的操作：`enable`、`disable`、`archive` 或 `un_archive`。",
+              "enum": [
+                "archive",
+                "disable",
+                "enable",
+                "un_archive"
+              ],
+              "type": "string"
+            }
           },
           {
-            "name": "action",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "enum": [
-                "enable",
-                "disable",
-                "archive",
-                "un_archive"
-              ]
-            },
-            "description": "`enable` 启用文档以供检索，`disable` 停用，`archive` 移入归档，`un_archive` 从归档中恢复。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "required": [
-                  "document_ids"
-                ],
-                "properties": {
-                  "document_ids": {
-                    "type": "array",
-                    "items": {
-                      "type": "string"
-                    },
-                    "description": "要更新的文档 ID。文档 ID 从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+                "$ref": "#/components/schemas/DocumentStatusPayload"
+              },
+              "examples": {
+                "update_documents": {
+                  "summary": "请求示例",
+                  "value": {
+                    "document_ids": [
+                      "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                      "c4c4f9aa-2c9b-4f95-9f5a-2c0f7c3a8f21"
+                    ]
                   }
                 }
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "文档更新成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "result": {
-                      "type": "string",
-                      "description": "操作结果。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/SimpleResultResponse"
                 },
                 "examples": {
                   "success": {
@@ -5398,10 +5632,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档更新成功。"
           },
           "400": {
-            "description": "`invalid_action` : 操作无效，或某个文档处于不允许该操作的状态（例如仍在索引中或尚未处理完成）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5415,15 +5649,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`invalid_action`：操作无效，或某个文档处于不允许该操作的状态（例如仍在索引中或尚未处理完成）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "`forbidden` : 该知识库未启用 API 访问。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5432,10 +5683,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。"
           },
           "404": {
-            "description": "`not_found` : 知识库未找到。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5449,9 +5700,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：知识库未找到。"
           }
         },
+        "summary": "批量更新文档状态",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/update-document-status-in-batch",
           "metadata": {
@@ -5463,107 +5719,37 @@
     },
     "/datasets/{dataset_id}/documents/{batch}/indexing-status": {
       "get": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "获取文档嵌入状态（进度）",
-        "description": "返回批次中每个文档的索引进度：当前阶段和分段完成计数。轮询直到每个 `indexing_status` 变为 `completed` 或 `error`。状态按 `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed` 推进。",
+        "description": "返回批次中每个文档的索引进度，包括当前阶段和分段完成计数。轮询直到每个 `indexing_status` 变为 `completed`、`error` 或 `paused`。`completed` 和 `error` 为终态。Service API 没有恢复暂停文档的操作；请在 Dify 知识库控制台恢复文档，再继续轮询此端点。活动阶段按 `waiting` → `parsing` → `cleaning` → `splitting` → `indexing` → `completed` 推进。`stopped_at` 非空时记录处理停止时间，但 `stopped` 并不是独立的 `indexing_status` 值。",
         "operationId": "getDocumentIndexingStatus",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "创建或更新文档时返回的批次 ID。",
             "in": "path",
+            "name": "batch",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "批次 ID。",
+              "type": "string"
+            }
           },
           {
-            "name": "batch",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
               "type": "string"
-            },
-            "description": "创建或更新文档时返回的批次 ID。"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "批次中文档的索引状态。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "文档标识符。"
-                          },
-                          "indexing_status": {
-                            "type": "string",
-                            "description": "当前索引状态：`waiting`、`parsing`、`cleaning`、`splitting`、`indexing`、`completed` 或 `error`。"
-                          },
-                          "processing_started_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "处理开始的 Unix 时间戳。"
-                          },
-                          "parsing_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "解析完成的 Unix 时间戳。"
-                          },
-                          "cleaning_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "清洗完成的 Unix 时间戳。"
-                          },
-                          "splitting_completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "拆分完成的 Unix 时间戳。"
-                          },
-                          "completed_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "索引完成的 Unix 时间戳。"
-                          },
-                          "paused_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "索引暂停的时间戳。未暂停时为 `null`。"
-                          },
-                          "error": {
-                            "type": "string",
-                            "nullable": true,
-                            "description": "索引失败时的错误信息。无错误时为 `null`。"
-                          },
-                          "stopped_at": {
-                            "type": "number",
-                            "nullable": true,
-                            "description": "索引停止的时间戳。未停止时为 `null`。"
-                          },
-                          "completed_segments": {
-                            "type": "integer",
-                            "description": "已索引的分段数。"
-                          },
-                          "total_segments": {
-                            "type": "integer",
-                            "description": "待索引的分段总数。"
-                          }
-                        }
-                      },
-                      "description": "索引状态条目列表。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentStatusListResponse"
                 },
                 "examples": {
                   "success": {
@@ -5589,15 +5775,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "批次中文档的索引状态。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "`forbidden` : 该知识库未启用 API 访问。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5606,10 +5809,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。"
           },
           "404": {
-            "description": "- `not_found` : 未找到知识库。\n- `not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5631,260 +5834,209 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
           }
         },
+        "summary": "获取文档索引状态（进度）",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/get-document-indexing-status",
           "metadata": {
-            "title": "获取文档嵌入状态（进度）",
-            "sidebarTitle": "获取文档嵌入状态（进度）"
+            "title": "获取文档索引状态（进度）",
+            "sidebarTitle": "获取文档索引状态（进度）"
           }
         }
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}": {
-      "get": {
+      "delete": {
+        "description": "从知识库中永久删除文档及其所有分段。",
+        "operationId": "deleteDocument",
+        "parameters": [
+          {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "成功。"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "document_indexing": {
+                    "summary": "document_indexing",
+                    "value": {
+                      "status": 400,
+                      "code": "document_indexing",
+                      "message": "Cannot delete document during indexing."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `document_indexing`：文档仍在处理中，无法删除。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "archived_document_immutable": {
+                    "summary": "archived_document_immutable",
+                    "value": {
+                      "status": 403,
+                      "code": "archived_document_immutable",
+                      "message": "The archived document is not editable."
+                    }
+                  },
+                  "forbidden_1": {
+                    "summary": "forbidden（API 访问）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden（速率限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `archived_document_immutable`：已归档的文档不可编辑。\n- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document Not Exists."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found_2",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found`：文档不存在。 知识库本身不存在时，也会返回未找到知识库的错误。"
+          }
+        },
+        "summary": "删除文档",
         "tags": [
           "文档"
         ],
-        "summary": "获取文档详情",
+        "x-mint": {
+          "href": "/zh/api-reference/documents/delete-document",
+          "metadata": {
+            "title": "删除文档",
+            "sidebarTitle": "删除文档"
+          }
+        }
+      },
+      "get": {
         "description": "返回单个文档的详细信息。",
         "operationId": "getDocumentDetail",
         "parameters": [
           {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
             "name": "dataset_id",
-            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
+            "in": "path",
             "name": "document_id",
-            "in": "path",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "metadata",
+            "description": "`all` 返回所有字段（包括元数据）。`only` 仅返回 `id`、`doc_type` 和 `doc_metadata`。`without` 返回除 `doc_metadata` 外的所有字段。",
             "in": "query",
+            "name": "metadata",
+            "required": false,
             "schema": {
-              "type": "string",
+              "default": "all",
+              "description": "`all` 返回所有字段（包括元数据）。`only` 仅返回 `id`、`doc_type` 和 `doc_metadata`。`without` 返回除 `doc_metadata` 外的所有字段。",
               "enum": [
                 "all",
                 "only",
                 "without"
               ],
-              "default": "all"
-            },
-            "description": "`all` 返回所有字段（包括元数据）。`only` 仅返回 `id`、`doc_type` 和 `doc_metadata`。`without` 返回除 `doc_metadata` 外的所有字段。"
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "文档详情。返回的字段取决于 `metadata` 查询参数。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "id": {
-                      "type": "string",
-                      "description": "文档标识符。"
-                    },
-                    "position": {
-                      "type": "integer",
-                      "description": "在知识库中的位置索引。"
-                    },
-                    "data_source_type": {
-                      "type": "string",
-                      "description": "文档的上传方式。文件上传为 `upload_file`，Notion 导入为 `notion_import`。"
-                    },
-                    "data_source_info": {
-                      "type": "object",
-                      "description": "数据源详情。文件上传时，此详情接口在 `upload_file` 下返回完整的文件对象，而列表接口仅返回 `upload_file_id`。",
-                      "properties": {
-                        "upload_file": {
-                          "type": "object",
-                          "description": "上传文件的详情。当 `data_source_type` 为 `upload_file` 时返回。",
-                          "properties": {
-                            "id": {
-                              "type": "string",
-                              "description": "文件标识符。"
-                            },
-                            "name": {
-                              "type": "string",
-                              "description": "原始文件名。"
-                            },
-                            "size": {
-                              "type": "integer",
-                              "description": "文件大小（字节）。"
-                            },
-                            "extension": {
-                              "type": "string",
-                              "description": "文件扩展名。"
-                            },
-                            "mime_type": {
-                              "type": "string",
-                              "description": "文件的 MIME 类型。"
-                            },
-                            "created_by": {
-                              "type": "string",
-                              "description": "上传该文件的用户 ID。"
-                            },
-                            "created_at": {
-                              "type": "integer",
-                              "description": "文件上传的 Unix 时间戳。"
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "dataset_process_rule_id": {
-                      "type": "string",
-                      "description": "应用于该文档的处理规则 ID。"
-                    },
-                    "dataset_process_rule": {
-                      "type": "object",
-                      "description": "知识库级别的处理规则配置。"
-                    },
-                    "document_process_rule": {
-                      "type": "object",
-                      "description": "文档级别的处理规则配置。"
-                    },
-                    "name": {
-                      "type": "string",
-                      "description": "文档名称。"
-                    },
-                    "created_from": {
-                      "type": "string",
-                      "description": "文档来源。通过 API 创建时为 `api`，通过 UI 创建时为 `web`。"
-                    },
-                    "created_by": {
-                      "type": "string",
-                      "description": "创建该文档的用户 ID。"
-                    },
-                    "created_at": {
-                      "type": "number",
-                      "description": "文档创建的 Unix 时间戳。"
-                    },
-                    "tokens": {
-                      "type": "integer",
-                      "description": "文档中的令牌数。"
-                    },
-                    "indexing_status": {
-                      "type": "string",
-                      "description": "当前索引状态，例如 `waiting`、`parsing`、`cleaning`、`splitting`、`indexing`、`completed`、`error`、`paused`。"
-                    },
-                    "error": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "索引失败时的错误消息，否则为 `null`。"
-                    },
-                    "enabled": {
-                      "type": "boolean",
-                      "description": "该文档是否启用检索。"
-                    },
-                    "disabled_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "文档被禁用的 Unix 时间戳，启用时为 `null`。"
-                    },
-                    "disabled_by": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "禁用该文档的用户 ID，启用时为 `null`。"
-                    },
-                    "archived": {
-                      "type": "boolean",
-                      "description": "文档是否已归档。"
-                    },
-                    "display_status": {
-                      "type": "string",
-                      "description": "适合 UI 显示的索引状态。"
-                    },
-                    "hit_count": {
-                      "type": "integer",
-                      "description": "该文档被检索的次数。"
-                    },
-                    "doc_form": {
-                      "type": "string",
-                      "description": "文档分块模式。`text_model` 表示标准文本，`hierarchical_model` 表示父子结构，`qa_model` 表示问答对。"
-                    },
-                    "doc_language": {
-                      "type": "string",
-                      "description": "文档内容的语言。"
-                    },
-                    "doc_type": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "文档类型分类，未设置时为 `null`。"
-                    },
-                    "doc_metadata": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string",
-                            "description": "元数据字段标识符。"
-                          },
-                          "name": {
-                            "type": "string",
-                            "description": "元数据字段名称。"
-                          },
-                          "type": {
-                            "type": "string",
-                            "description": "元数据字段类型。"
-                          },
-                          "value": {
-                            "type": "string",
-                            "description": "此文档的元数据字段值。"
-                          }
-                        }
-                      },
-                      "description": "此文档的自定义元数据键值对。"
-                    },
-                    "completed_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "处理完成的 Unix 时间戳，尚未完成时为 `null`。"
-                    },
-                    "updated_at": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "最后更新的 Unix 时间戳，从未更新时为 `null`。"
-                    },
-                    "indexing_latency": {
-                      "type": "number",
-                      "nullable": true,
-                      "description": "索引耗时（秒），未完成时为 `null`。"
-                    },
-                    "segment_count": {
-                      "type": "integer",
-                      "description": "文档中的分段数。"
-                    },
-                    "average_segment_length": {
-                      "type": "number",
-                      "description": "分段的平均字符长度。"
-                    },
-                    "summary_index_status": {
-                      "type": "string",
-                      "nullable": true,
-                      "description": "摘要索引的状态，未启用摘要索引时为 `null`。"
-                    },
-                    "need_summary": {
-                      "type": "boolean",
-                      "description": "该文档是否需要生成摘要。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentDetailResponse"
                 },
                 "examples": {
                   "success": {
@@ -5948,10 +6100,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档详情。返回的字段取决于 `metadata` 查询参数。"
           },
           "400": {
-            "description": "`invalid_metadata` : `metadata` 查询参数的值无效（必须为 `all`、`only` 或 `without`）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -5960,20 +6112,37 @@
                     "value": {
                       "status": 400,
                       "code": "invalid_metadata",
-                      "message": "Invalid metadata value: only"
+                      "message": "Invalid metadata value."
                     }
                   }
                 }
               }
-            }
+            },
+            "description": "`invalid_metadata`：`metadata` 查询参数的值无效（必须为 `all`、`only` 或 `without`）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 你没有访问此文档的权限。\n- `forbidden` : 该知识库未启用 API 访问。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (no permission)",
+                    "summary": "forbidden（无权限）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5981,7 +6150,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -5990,10 +6159,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：你没有访问此文档的权限。\n- `forbidden`：该知识库未启用 API 访问。"
           },
           "404": {
-            "description": "`not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6007,9 +6176,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到文档。"
           }
         },
+        "summary": "获取文档详情",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/get-document",
           "metadata": {
@@ -6018,173 +6192,61 @@
           }
         }
       },
-      "delete": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "删除文档",
-        "description": "从知识库中永久删除文档及其所有分段。",
-        "operationId": "deleteDocument",
-        "parameters": [
-          {
-            "name": "dataset_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
-          },
-          {
-            "name": "document_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": "Success."
-          },
-          "403": {
-            "description": "- `archived_document_immutable` : 已归档的文档不可编辑。\n- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "archived_document_immutable": {
-                    "summary": "archived_document_immutable",
-                    "value": {
-                      "status": 403,
-                      "code": "archived_document_immutable",
-                      "message": "The archived document is not editable."
-                    }
-                  },
-                  "forbidden_1": {
-                    "summary": "forbidden (api access)",
-                    "value": {
-                      "status": 403,
-                      "code": "forbidden",
-                      "message": "Dataset api access is not enabled."
-                    }
-                  },
-                  "forbidden_2": {
-                    "summary": "forbidden (rate limit)",
-                    "value": {
-                      "status": 403,
-                      "code": "forbidden",
-                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "`not_found` : 文档不存在。 知识库本身不存在时，也会返回 \"Dataset not found.\"。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "not_found": {
-                    "summary": "not_found",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Document Not Exists."
-                    }
-                  },
-                  "not_found_2": {
-                    "summary": "not_found_2",
-                    "value": {
-                      "status": 404,
-                      "code": "not_found",
-                      "message": "Dataset not found."
-                    }
-                  }
-                }
-              }
-            }
-          }
-        },
-        "x-mint": {
-          "href": "/zh/api-reference/documents/delete-document",
-          "metadata": {
-            "title": "删除文档",
-            "sidebarTitle": "删除文档"
-          }
-        }
-      },
       "patch": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "更新文档",
-        "description": "通过上传新文件更新文档，然后重新索引。这是基于文件更新文档的规范端点。使用返回的 `batch` ID 通过 [获取文档嵌入状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
+        "description": "更新文档并重新索引。传入 `file` 可替换源文件，传入 `data` 可修改处理设置，也可同时传入两者。省略 `file` 时，Dify 使用提供的设置或当前设置重新处理现有源文件；空的 multipart 请求会使用当前设置重新索引。使用返回的 `batch` ID 通过 [获取文档索引状态（进度）](/zh/api-reference/documents/get-document-indexing-status) 跟踪进度。",
         "operationId": "updateDocument",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
                 "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。"
-                  },
                   "data": {
-                    "type": "string",
                     "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
+                    "type": "string",
                     "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。",
+                    "format": "binary",
+                    "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             }
-          }
+          },
+          "required": false
         },
         "responses": {
           "200": {
-            "description": "文档更新成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "用于跟踪索引进度的批次 ID。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -6233,10 +6295,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档更新成功。"
           },
           "400": {
-            "description": "- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6265,7 +6327,7 @@
                     }
                   },
                   "invalid_param_not_available": {
-                    "summary": "invalid_param (not available)",
+                    "summary": "invalid_param（不可用）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -6274,15 +6336,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `too_many_files`：每次请求仅允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。\n- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：文档不可用，无法更新（仅可更新处于可用状态的文档）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 向量空间容量已达到您订阅套餐的上限。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6290,7 +6369,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (vector space)",
+                    "summary": "forbidden（向量空间限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6298,7 +6377,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6307,10 +6386,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           },
           "404": {
-            "description": "- `not_found` : 未找到知识库。\n- `not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6332,10 +6411,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
           },
           "413": {
-            "description": "`file_too_large` : 上传的文件超出最大大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6349,10 +6428,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`file_too_large`：上传的文件超出最大大小限制。"
           },
           "415": {
-            "description": "`unsupported_file_type` : 上传文件的类型不受支持。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6366,85 +6445,64 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : 暂时无法确认向量空间用量，稍后重试即可。仅在 Dify Cloud Sandbox 套餐下出现。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`unsupported_file_type`：上传文件的类型不受支持。"
           }
         },
-        "x-mint": {
-          "href": "/zh/api-reference/documents/update-document",
-          "metadata": {
-            "title": "更新文档",
-            "sidebarTitle": "更新文档"
-          }
-        },
+        "summary": "更新文档",
+        "tags": [
+          "文档"
+        ],
         "x-codeSamples": [
           {
             "lang": "bash",
             "label": "cURL",
             "source": "curl --request PATCH \\\n  --url 'https://{api_base_url}/datasets/{dataset_id}/documents/{document_id}' \\\n  --header 'Authorization: Bearer {api_key}' \\\n  --form 'file=@quarterly-report.pdf' \\\n  --form 'data={\"process_rule\":{\"mode\":\"automatic\"}};type=application/json'"
           }
-        ]
+        ],
+        "x-mint": {
+          "href": "/zh/api-reference/documents/update-document",
+          "metadata": {
+            "title": "更新文档",
+            "sidebarTitle": "更新文档"
+          }
+        }
       }
     },
     "/datasets/{dataset_id}/documents/{document_id}/download": {
       "get": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "下载文档",
         "description": "返回用于下载文档原始上传文件的签名 URL。",
-        "operationId": "downloadDocumentZh",
+        "operationId": "downloadDocument",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "responses": {
           "200": {
-            "description": "下载 URL 生成成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "url": {
-                      "type": "string",
-                      "description": "用于下载原始上传文件的签名 URL。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/UrlResponse"
                 },
                 "examples": {
                   "success": {
@@ -6455,15 +6513,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "下载 URL 生成成功。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 你没有访问此文档的权限。\n- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (no permission)",
+                    "summary": "forbidden（无权限）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6471,7 +6546,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6479,7 +6554,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -6488,10 +6563,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：你没有访问此文档的权限。\n- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           },
           "404": {
-            "description": "`not_found` : 未找到文档。 存储文件缺失时也会返回 \"Uploaded file not found.\"；非文件类文档则返回 \"Document does not have an uploaded file to download.\"。",
             "content": {
               "application/json": {
                 "examples": {
@@ -6521,9 +6596,14 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到文档。 存储文件缺失时也会返回未找到上传文件的错误；非文件类文档则返回该文档没有可下载上传文件的错误。"
           }
         },
+        "summary": "下载文档",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/download-document",
           "metadata": {
@@ -8419,72 +8499,61 @@
     },
     "/datasets/{dataset_id}/documents/{document_id}/update-by-file": {
       "post": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "用文件更新文档",
-        "description": "已弃用。改用 [更新文档](/zh/api-reference/documents/update-document)。通过上传新文件更新文档，然后重新索引。",
+        "deprecated": true,
+        "description": "已废弃的文件更新路由。传入 `file` 可替换源文件，传入 `data` 可修改处理设置，也可同时传入两者。省略 `file` 时，Dify 使用提供的设置或当前设置重新处理现有源文件；空的 multipart 请求会使用当前设置重新索引。请改用[更新文档](/zh/api-reference/documents/update-document)。",
         "operationId": "updateDocumentByFile",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "multipart/form-data": {
               "schema": {
-                "type": "object",
                 "properties": {
-                  "file": {
-                    "type": "string",
-                    "format": "binary",
-                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。"
-                  },
                   "data": {
-                    "type": "string",
                     "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
+                    "type": "string",
                     "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。",
+                    "format": "binary",
+                    "type": "string"
                   }
-                }
+                },
+                "type": "object"
               }
             }
-          }
+          },
+          "required": false
         },
         "responses": {
           "200": {
-            "description": "文档更新成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "用于跟踪索引进度的批次 ID。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -8533,10 +8602,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档更新成功。"
           },
           "400": {
-            "description": "- `too_many_files` : 每次请求仅允许一个文件。\n- `filename_not_exists_error` : 上传的文件没有文件名。\n- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8565,7 +8634,7 @@
                     }
                   },
                   "invalid_param_not_available": {
-                    "summary": "invalid_param (not available)",
+                    "summary": "invalid_param（不可用）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -8574,15 +8643,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `too_many_files`：每次请求仅允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。\n- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：文档不可用，无法更新（仅可更新处于可用状态的文档）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 向量空间容量已达到您订阅套餐的上限。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8590,7 +8676,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (vector space)",
+                    "summary": "forbidden（向量空间限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8598,7 +8684,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8607,10 +8693,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           },
           "404": {
-            "description": "- `not_found` : 未找到知识库。\n- `not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8632,10 +8718,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
           },
           "413": {
-            "description": "`file_too_large` : 上传的文件超出最大大小限制。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8649,10 +8735,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "`file_too_large`：上传的文件超出最大大小限制。"
           },
           "415": {
-            "description": "`unsupported_file_type` : 上传文件的类型不受支持。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8666,27 +8752,14 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : 暂时无法确认向量空间用量，稍后重试即可。仅在 Dify Cloud Sandbox 套餐下出现。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "`unsupported_file_type`：上传文件的类型不受支持。"
           }
         },
-        "deprecated": true,
+        "summary": "用文件更新文档",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/update-document-by-file",
           "metadata": {
@@ -8698,152 +8771,48 @@
     },
     "/datasets/{dataset_id}/documents/{document_id}/update-by-text": {
       "post": {
-        "tags": [
-          "文档"
-        ],
-        "summary": "用文本更新文档",
         "description": "更新文档的文本内容、名称或处理配置。文本变更时会重新索引文档。",
         "operationId": "updateDocumentByText",
         "parameters": [
           {
-            "name": "dataset_id",
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
             "in": "path",
+            "name": "dataset_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。"
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           },
           {
-            "name": "document_id",
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
             "in": "path",
+            "name": "document_id",
             "required": true,
             "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。"
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "type": "object",
-                "properties": {
-                  "name": {
-                    "type": "string",
-                    "description": "文档名称。当提供 `text` 时必填。"
-                  },
-                  "text": {
-                    "type": "string",
-                    "description": "文档文本内容。"
-                  },
-                  "process_rule": {
-                    "type": "object",
-                    "description": "分块处理规则。",
-                    "required": [
-                      "mode"
-                    ],
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "automatic",
-                          "custom",
-                          "hierarchical"
-                        ],
-                        "description": "`automatic` 使用内置规则，`custom` 允许手动配置，`hierarchical` 启用父子分段结构（配合 `doc_form: hierarchical_model` 使用）。"
-                      },
-                      "rules": {
-                        "type": "object",
-                        "properties": {
-                          "pre_processing_rules": {
-                            "type": "array",
-                            "items": {
-                              "type": "object",
-                              "properties": {
-                                "id": {
-                                  "type": "string",
-                                  "enum": [
-                                    "remove_stopwords",
-                                    "remove_extra_spaces",
-                                    "remove_urls_emails"
-                                  ],
-                                  "description": "规则标识符。"
-                                },
-                                "enabled": {
-                                  "type": "boolean",
-                                  "description": "该预处理规则是否启用。"
-                                }
-                              }
-                            }
-                          },
-                          "segmentation": {
-                            "type": "object",
-                            "properties": {
-                              "separator": {
-                                "type": "string",
-                                "default": "\n",
-                                "description": "用于拆分文本的自定义分隔符。"
-                              },
-                              "max_tokens": {
-                                "type": "integer",
-                                "description": "每个分段的最大令牌数。"
-                              },
-                              "chunk_overlap": {
-                                "type": "integer",
-                                "default": 0,
-                                "description": "分段之间的令牌重叠数。"
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "doc_form": {
-                    "type": "string",
-                    "enum": [
-                      "text_model",
-                      "hierarchical_model",
-                      "qa_model"
-                    ],
-                    "default": "text_model",
-                    "description": "`text_model` 为标准文本分段，`hierarchical_model` 为父子分段结构，`qa_model` 为问答对提取。"
-                  },
-                  "doc_language": {
-                    "type": "string",
-                    "default": "English",
-                    "description": "用于处理优化的文档语言。"
-                  },
-                  "retrieval_model": {
-                    "$ref": "#/components/schemas/RetrievalModel",
-                    "description": "控制查询此知识库时如何搜索和排序分段。"
-                  }
-                }
+                "$ref": "#/components/schemas/DocumentTextUpdate"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "文档更新成功。",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "object",
-                  "properties": {
-                    "document": {
-                      "$ref": "#/components/schemas/Document"
-                    },
-                    "batch": {
-                      "type": "string",
-                      "description": "用于跟踪索引进度的批次 ID。"
-                    }
-                  }
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
                 },
                 "examples": {
                   "success": {
@@ -8892,10 +8861,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "文档更新成功。"
           },
           "400": {
-            "description": "- `provider_not_initialize` : 工作空间未配置模型供应商凭据。\n- `invalid_param` : 提供 `text` 时必须提供 `name`，或 `doc_form` 无效。\n- `invalid_param` : 文档不可用，无法更新（仅可更新处于可用状态的文档）。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8908,7 +8877,7 @@
                     }
                   },
                   "invalid_param_name": {
-                    "summary": "invalid_param (name required)",
+                    "summary": "invalid_param（名称必填）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -8916,7 +8885,7 @@
                     }
                   },
                   "invalid_param_not_available": {
-                    "summary": "invalid_param (not available)",
+                    "summary": "invalid_param（不可用）",
                     "value": {
                       "status": 400,
                       "code": "invalid_param",
@@ -8925,15 +8894,32 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：提供 `text` 时必须提供 `name`，或 `doc_form` 无效。\n- `invalid_param`：文档不可用，无法更新（仅可更新处于可用状态的文档）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
           },
           "403": {
-            "description": "- `forbidden` : 该知识库未启用 API 访问。\n- `forbidden` : 向量空间容量已达到您订阅套餐的上限。\n- `forbidden` : 已达到您订阅套餐的知识库请求速率限制。",
             "content": {
               "application/json": {
                 "examples": {
                   "forbidden_1": {
-                    "summary": "forbidden (api access)",
+                    "summary": "forbidden（API 访问）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8941,7 +8927,7 @@
                     }
                   },
                   "forbidden_2": {
-                    "summary": "forbidden (vector space)",
+                    "summary": "forbidden（向量空间限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8949,7 +8935,7 @@
                     }
                   },
                   "forbidden_3": {
-                    "summary": "forbidden (rate limit)",
+                    "summary": "forbidden（速率限制）",
                     "value": {
                       "status": 403,
                       "code": "forbidden",
@@ -8958,10 +8944,10 @@
                   }
                 }
               }
-            }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
           },
           "404": {
-            "description": "- `not_found` : 未找到知识库。\n- `not_found` : 未找到文档。",
             "content": {
               "application/json": {
                 "examples": {
@@ -8983,26 +8969,14 @@
                   }
                 }
               }
-            }
-          },
-          "503": {
-            "description": "`service_unavailable` : 暂时无法确认向量空间用量，稍后重试即可。仅在 Dify Cloud Sandbox 套餐下出现。",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "service_unavailable": {
-                    "summary": "service_unavailable",
-                    "value": {
-                      "status": 503,
-                      "code": "service_unavailable",
-                      "message": "Unable to verify vector space usage right now. Please try again later."
-                    }
-                  }
-                }
-              }
-            }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
           }
         },
+        "summary": "用文本更新文档",
+        "tags": [
+          "文档"
+        ],
         "x-mint": {
           "href": "/zh/api-reference/documents/update-document-by-text",
           "metadata": {
@@ -9010,6 +8984,449 @@
             "sidebarTitle": "用文本更新文档"
           }
         }
+      }
+    },
+    "/datasets/{dataset_id}/documents/{document_id}/update_by_file": {
+      "post": {
+        "deprecated": true,
+        "description": "已废弃的文件更新路由。传入 `file` 可替换源文件，传入 `data` 可修改处理设置，也可同时传入两者。省略 `file` 时，Dify 使用提供的设置或当前设置重新处理现有源文件；空的 multipart 请求会使用当前设置重新索引。请改用[更新文档](/zh/api-reference/documents/update-document)。",
+        "operationId": "update_document_by_file_deprecated_5dc5fe59",
+        "parameters": [
+          {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "properties": {
+                  "data": {
+                    "description": "包含配置信息的 JSON 字符串。接受与 [从文本创建文档](/zh/api-reference/documents/create-document-by-text) 相同的字段（`doc_form`、`doc_language`、`process_rule`、`retrieval_model`、`embedding_model`、`embedding_model_provider`），但不包括 `name` 和 `text`。",
+                    "type": "string",
+                    "example": "{\"doc_form\":\"text_model\",\"doc_language\":\"English\",\"process_rule\":{\"mode\":\"automatic\"}}"
+                  },
+                  "file": {
+                    "description": "要上传的文件，默认上限 15 MB。\n\n自部署可通过 `UPLOAD_FILE_SIZE_LIMIT` [环境变量](/zh/self-host/deploy/configuration/environments) 调整。Dify Cloud 的 Professional 和 Team 套餐上限为 50 MB。",
+                    "format": "binary",
+                    "type": "string"
+                  }
+                },
+                "type": "object"
+              }
+            }
+          },
+          "required": false
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 512,
+                        "indexing_status": "completed",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "available",
+                        "word_count": 350,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "文档更新成功。"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "too_many_files": {
+                    "summary": "too_many_files",
+                    "value": {
+                      "status": 400,
+                      "code": "too_many_files",
+                      "message": "Only one file is allowed."
+                    }
+                  },
+                  "filename_not_exists_error": {
+                    "summary": "filename_not_exists_error",
+                    "value": {
+                      "status": 400,
+                      "code": "filename_not_exists_error",
+                      "message": "The specified filename does not exist."
+                    }
+                  },
+                  "provider_not_initialize": {
+                    "summary": "provider_not_initialize",
+                    "value": {
+                      "status": 400,
+                      "code": "provider_not_initialize",
+                      "message": "No valid model provider credentials found. Please go to Settings -> Model Provider to complete your provider credentials."
+                    }
+                  },
+                  "invalid_param_not_available": {
+                    "summary": "invalid_param（不可用）",
+                    "value": {
+                      "status": 400,
+                      "code": "invalid_param",
+                      "message": "Document is not available"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `too_many_files`：每次请求仅允许一个文件。\n- `filename_not_exists_error`：上传的文件没有文件名。\n- `provider_not_initialize`：工作空间未配置模型供应商凭据。\n- `invalid_param`：文档不可用，无法更新（仅可更新处于可用状态的文档）。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden（API 访问）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden（向量空间限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden（速率限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found_1": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
+          },
+          "413": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "file_too_large": {
+                    "summary": "file_too_large",
+                    "value": {
+                      "status": 413,
+                      "code": "file_too_large",
+                      "message": "File size exceeded."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`file_too_large`：上传的文件超出最大大小限制。"
+          },
+          "415": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unsupported_file_type": {
+                    "summary": "unsupported_file_type",
+                    "value": {
+                      "status": 415,
+                      "code": "unsupported_file_type",
+                      "message": "File type not allowed."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "`unsupported_file_type`：上传文件的类型不受支持。"
+          }
+        },
+        "summary": "用文件更新文档",
+        "tags": [
+          "文档"
+        ]
+      }
+    },
+    "/datasets/{dataset_id}/documents/{document_id}/update_by_text": {
+      "post": {
+        "deprecated": true,
+        "description": "已弃用的兼容接口。更新文档的文本内容、名称或处理配置。文本变更时会重新索引文档。",
+        "operationId": "update_document_by_text_deprecated",
+        "parameters": [
+          {
+            "description": "知识库 ID。从 [获取知识库列表](/zh/api-reference/knowledge-bases/list-knowledge-bases) 获取。",
+            "in": "path",
+            "name": "dataset_id",
+            "required": true,
+            "schema": {
+              "description": "知识库 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "description": "文档 ID。从 [获取知识库的文档列表](/zh/api-reference/documents/list-documents) 获取。",
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "description": "文档 ID。",
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentTextUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentAndBatchResponse"
+                },
+                "examples": {
+                  "success": {
+                    "summary": "响应示例",
+                    "value": {
+                      "document": {
+                        "id": "a8e0e5b5-78c6-4130-a5ce-25feb0e0b4ac",
+                        "position": 1,
+                        "data_source_type": "upload_file",
+                        "data_source_info": {
+                          "upload_file_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                        },
+                        "data_source_detail_dict": {
+                          "upload_file": {
+                            "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                            "name": "guide.txt",
+                            "size": 2048,
+                            "extension": "txt",
+                            "mime_type": "text/plain",
+                            "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                            "created_at": 1741267200
+                          }
+                        },
+                        "dataset_process_rule_id": "e1f2a3b4-c5d6-7890-ef12-345678901234",
+                        "name": "guide.txt",
+                        "created_from": "api",
+                        "created_by": "ad313dd6-ef04-4dd1-a5b0-c0f0b9e2e7e4",
+                        "created_at": 1741267200,
+                        "tokens": 512,
+                        "indexing_status": "completed",
+                        "error": null,
+                        "enabled": true,
+                        "disabled_at": null,
+                        "disabled_by": null,
+                        "archived": false,
+                        "display_status": "available",
+                        "word_count": 350,
+                        "hit_count": 0,
+                        "doc_form": "text_model",
+                        "doc_metadata": [],
+                        "summary_index_status": null,
+                        "need_summary": false
+                      },
+                      "batch": "20250306150245647595"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "文档更新成功。"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "unauthorized": {
+                    "summary": "unauthorized",
+                    "value": {
+                      "status": 401,
+                      "code": "unauthorized",
+                      "message": "Authorization header must be provided and start with 'Bearer'"
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `unauthorized`：`Authorization` 请求头缺失、格式错误或包含无效的 API 密钥。"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "forbidden_1": {
+                    "summary": "forbidden（API 访问）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Dataset api access is not enabled."
+                    }
+                  },
+                  "forbidden_2": {
+                    "summary": "forbidden（向量空间限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "The capacity of the vector space has reached the limit of your subscription."
+                    }
+                  },
+                  "forbidden_3": {
+                    "summary": "forbidden（速率限制）",
+                    "value": {
+                      "status": 403,
+                      "code": "forbidden",
+                      "message": "Sorry, you have reached the knowledge base request rate limit of your subscription."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `forbidden`：该知识库未启用 API 访问。\n- `forbidden`：向量空间容量已达到您订阅套餐的上限。\n- `forbidden`：已达到您订阅套餐的知识库请求速率限制。"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "examples": {
+                  "not_found_1": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Dataset not found."
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found",
+                    "value": {
+                      "status": 404,
+                      "code": "not_found",
+                      "message": "Document not found."
+                    }
+                  }
+                }
+              }
+            },
+            "description": "- `not_found`：未找到知识库。\n- `not_found`：未找到文档。"
+          }
+        },
+        "tags": [
+          "文档"
+        ],
+        "summary": "用文本更新文档"
       }
     },
     "/datasets/{dataset_id}/hit-testing": {
