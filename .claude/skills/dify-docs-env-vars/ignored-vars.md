@@ -44,9 +44,16 @@ Meaningful only on the hosted Dify Cloud deployment; self-hosted users cannot us
 | `TIDB_ON_QDRANT_GRPC_PORT` | Hybrid TiDB-Qdrant Cloud-only backend. | PR #721, commit 9248032 |
 | `CREATE_TIDB_SERVICE_JOB_ENABLED` | Cloud-side TiDB pre-provisioning job. | PR #721, commit 9248032 |
 | `AMPLITUDE_API_KEY` | Cloud product analytics integration. | PR #721, commit 9248032 |
-| `COOKIEYES_SITE_KEY` | CookieYes consent-banner key for Dify Cloud analytics. The frontend boundary requires `EDITION=CLOUD` plus the Cloud console host (`web/app/components/base/analytics-consent/request-boundary.ts`); dify PR #39408 explicitly excludes self-hosted deployments. Companion to `AMPLITUDE_API_KEY`. | dify #39408, 1.16.1 sync audit 2026-07-23 |
-| `ENABLE_TRIAL_APP` | Cloud trial-app runs on Explore. The server gate (`api/services/recommended_app_service.py`) requires the derived `DEPLOYMENT_EDITION` property to be CLOUD—i.e. the `EDITION` env var set to `CLOUD`—so the flag is inert on self-host: `can_trial` is always false and the `/trial-apps/*` endpoints 403. | dify #39562, 1.16.1 sync audit 2026-07-27 |
+| `COOKIEYES_SITE_KEY` | CookieYes consent-banner key for Dify Cloud analytics. The frontend boundary requires the system-features `deployment_edition` to be `CLOUD` plus the Cloud console host (`web/app/components/base/analytics-consent/request-boundary.ts`); dify PR #39408 explicitly excludes self-hosted deployments. Companion to `AMPLITUDE_API_KEY`. | dify #39408, 1.16.1 sync audit 2026-07-23, re-verified after #40142 2026-08-11 |
+| `ENABLE_TRIAL_APP` | Cloud trial-app runs on Explore. The server gate (`api/services/recommended_app_service.py`) requires `DEPLOYMENT_EDITION=CLOUD`, so the flag is inert on self-host: `can_trial` is always false and the `/trial-apps/*` endpoints 403. | dify #39562, 1.16.1 sync audit 2026-07-27, re-verified after #40142 2026-08-11 |
 | `ENABLE_EXPLORE_BANNER` | Marketing banner carousel on the Explore page. Banner content comes from the `exporle_banners` DB table (sic—the table name is misspelled upstream, `api/models/model.py`), which has no CE management UI or seed data—enabling the flag on self-host renders nothing. | dify #39543, 1.16.1 sync audit 2026-07-27 |
+| `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile server-side secret for the email-code sign-in challenge. The only verification call site (`api/controllers/console/auth/login.py`) runs inside a `DEPLOYMENT_EDITION == CLOUD` gate, and the sign-in page renders the widget only when `deployment_edition` is `CLOUD` (`web/app/signin/components/mail-and-code-auth.tsx`)—inert on CE. | dify #40494, 1.16.2 sync 2026-08-12 |
+| `TURNSTILE_ALLOWED_HOSTNAMES` | Hostname allowlist for the same Cloud-only Turnstile verification; unused on CE for the same reason as `TURNSTILE_SECRET_KEY`. | dify #40494, 1.16.2 sync 2026-08-12 |
+| `TURNSTILE_SITE_KEY` | Frontend site key for the same Cloud-only Turnstile challenge; the sign-in widget renders only when `deployment_edition` is `CLOUD`. Companion to `TURNSTILE_SECRET_KEY`. | dify #40569, 1.16.2 delta sweep 2026-08-17 |
+| `TURNSTILE_EMAIL_CODE_VERIFY_REQUIRED` | Forces Turnstile verification on the email-code sign-in confirm step; the whole check runs inside a `DEPLOYMENT_EDITION == CLOUD` gate (`api/controllers/console/auth/login.py`), inert on CE like its siblings. | dify #40960, 1.17.0 delta sweep 2026-08-21 |
+| `KNOWLEDGE_UPLOAD_FILE_SIZE_LIMIT_FOR_PAID_PLAN` | Raised knowledge-upload size cap for paid Cloud plans. `FeatureService.get_knowledge_file_size_limit` (`api/services/feature_service.py`) returns plain `UPLOAD_FILE_SIZE_LIMIT` unless `DEPLOYMENT_EDITION == CLOUD` and the tenant's billing plan is Professional or Team. | dify #39967, 1.16.2 sync 2026-08-12 |
+| `TIDB_ON_QDRANT_ESTIMATED_STORAGE_LIMITS_MB` | Per-Cloud-plan storage admission limits for the TiDB-on-Qdrant backend; `api/services/vector_space_admission_service.py` exits early unless `DEPLOYMENT_EDITION == CLOUD` and the dataset's vector store is TiDB on Qdrant. Joins the existing `TIDB_ON_QDRANT_*` rows. | dify #39967, 1.16.2 sync 2026-08-12 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | Grace period for Cloud's expired-subscription record cleanup. Both consumers gate on `DEPLOYMENT_EDITION == CLOUD`: `create_message_clean_policy` returns `BillingDisabledPolicy` otherwise, and `WorkflowRunCleanup._filter_free_tenants` returns every tenant without plan checks—inert on CE. Previously documented; row removed 2026-08-12. The sibling `SANDBOX_EXPIRED_RECORDS_*` vars stay documented (consumed unconditionally by the cleanup tasks). | dify #40142 follow-up, DC-186 review 2026-08-12 |
 
 ## Experimental / internal
 
@@ -54,6 +61,8 @@ Feature flags for unfinished or staff-only features. Not yet meant for self-host
 
 | Variable | Reason | Source |
 |---|---|---|
+| `OPS_TRACE_UNIFIED_ENABLED` | Migration flag for the unified ops-tracing pipeline (`api/core/ops/unified_trace/`), default off; shipped tracing providers behave identically while off. Drop from this list and assess documentation when the unified path becomes the default. | dify main `24287bcb0c`, 1.17.0 delta sweep 2026-08-24 |
+| `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | Companion retention setting for the unified tracing parent contexts; meaningless while `OPS_TRACE_UNIFIED_ENABLED` is off. | dify main `24287bcb0c`, 1.17.0 delta sweep 2026-08-24 |
 | `EXPERIMENTAL_ENABLE_VINEXT` | Switches the web container to an experimental Vite-based server (`web/docker/entrypoint.sh`). Not a supported user-facing knob. | 1.14 sync audit, 2026-04-22 |
 | `KNOWLEDGE_FS_ENABLED` | Feature flag for the unreleased New Knowledge (KnowledgeFS) Console bridge. Default false; every proxy route 404s and the frontend hides the UI while off (`api/controllers/console/knowledge_fs_proxy.py`). Document the group and drop these five entries when the feature ships enabled. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
 | `KNOWLEDGE_FS_BASE_URL` | Connection setting for the flag-off KnowledgeFS bridge; inert unless `KNOWLEDGE_FS_ENABLED=true`. | dify #39158/#39314, 1.16.1 sync audit 2026-07-23 |
@@ -68,8 +77,8 @@ Switches for the Dify Enterprise control plane. Inert at their defaults on Commu
 
 | Variable | Reason | Source |
 |---|---|---|
-| `ENTERPRISE_ENABLED` | Master switch for EE integrations (branding, SSO, license, webapp auth). At `false` it is fully inert on CE. Setting `true` makes `get_system_features` call `EnterpriseService.get_info()` against `ENTERPRISE_API_URL`, which has no CE backend—based on the code, the console then fails to load. | dify #39543, 1.16.1 sync audit 2026-07-27 |
 | `RBAC_ENABLED` | Routes permission checks to the EE inner RBAC API (`rbac_permission_required` in `api/controllers/common/wraps.py` is an explicit no-op when false). On CE there is no RBAC service to answer the checks. | dify #39543, 1.16.1 sync audit 2026-07-27 |
+| `ENABLE_LICENSE_EXPIRY_NOTICE` | Toggles the console's license-expiry countdown badge. `FeatureService.get_license` returns the default license model on non-ENTERPRISE editions before the var is ever read, and the badge renders only when license status is `expiring`—a status CE never has. Inert on CE. | dify #39972/#40128, 1.16.2 sync 2026-08-12 |
 
 ## Verifier false positives
 

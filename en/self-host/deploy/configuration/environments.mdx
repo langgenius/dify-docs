@@ -155,7 +155,7 @@ If you use your own reverse proxy, forward `Upgrade` and `Connection` headers on
 | `FLASK_DEBUG` | `false` | Standard Flask debug mode flag. Not actively used by Dify; `DEBUG` is the primary control. |
 | `ENABLE_REQUEST_LOGGING` | `false` | Logs a compact access line (`METHOD PATH STATUS DURATION TRACE_ID`) for every HTTP request. When `LOG_LEVEL` is also set to `DEBUG`, additionally logs full request and response bodies as JSON. |
 | `DEPLOY_ENV` | `PRODUCTION` | Tags monitoring data in Sentry and OpenTelemetry so you can filter errors and traces by environment. Also sent as the `X-Env` response header. Does not change application behavior. |
-| `EDITION` | `SELF_HOSTED` | Deployment identity, exposed to the console as `deployment_edition`. Keep the default: `CLOUD` is the mode Dify's hosted service runs in—it skips the initial admin-setup wizard and switches on billing and hosted-model behavior that talks to Dify-internal services, so a deployment set to `CLOUD` cannot complete setup. |
+| `DEPLOYMENT_EDITION` | `COMMUNITY` | Which edition this deployment runs as: `COMMUNITY`, `ENTERPRISE`, or `CLOUD`. Keep the default.<br/><br/>Replaces the former `EDITION`, `ENTERPRISE_ENABLED`, and `BILLING_ENABLED` variables, which are ignored from 1.17.0 onward. |
 | `MIGRATION_ENABLED` | `true` | When `true`, runs database schema migrations (`flask upgrade-db`) automatically on container startup. Docker only. Set to `false` if you run migrations separately. For source code launches, run `flask db upgrade` manually. |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | The console checks this URL for newer Dify versions. Set to empty to disable—useful for air-gapped environments or to prevent external HTTP calls. |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | Legacy variable. Not actively used by Dify's own code. May be picked up by the OpenAI Python SDK if present in the environment. |
@@ -174,6 +174,26 @@ openssl rand -base64 42
 Changing this key after deployment will immediately log out all users, invalidate all file URLs, and break any plugin integrations that use OAuth—their encrypted credentials become unrecoverable.
 </Warning>
 
+### KEY_PROVIDER_TYPE
+
+Default: `local`
+
+Where Dify keeps the per-workspace keys that encrypt stored credentials—model provider API keys, tool credentials, and other workspace secrets:
+
+- `local`: generates an RSA key pair per workspace and keeps the private key in the `STORAGE_TYPE` backend.
+
+- `azure-keyvault`: keeps each workspace's RSA key in Azure Key Vault instead, so the private key never leaves the vault; Dify authenticates with `DefaultAzureCredential` (managed identity, environment variables, or Azure CLI login).
+
+<Warning>
+Choose the provider before the first workspace is created. Credentials encrypted by one provider cannot be decrypted by the other, so switching on a deployment that already stores credentials makes them unreadable until re-entered.
+</Warning>
+
+| Variable | Default | Description |
+|---|---|---|
+| `AZURE_KEYVAULT_VAULT_URL` | (empty) | Key Vault instance URL. Required when `KEY_PROVIDER_TYPE` is `azure-keyvault`; the API service fails to start without it. Example: `https://your-vault-name.vault.azure.net` |
+| `AZURE_KEYVAULT_KEY_SIZE` | `2048` | RSA key size in bits for the per-workspace keys Dify provisions in the vault. Applies only when a new key is created; existing keys keep their size. |
+| `AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS` | (empty) | When set (minimum 7), each newly provisioned per-workspace key gets a Key Vault auto-rotation policy that rotates it every N days. Old key versions stay usable, so credentials encrypted before a rotation keep decrypting without re-encryption. Leave empty to manage rotation yourself in Azure. |
+
 ### INIT_PASSWORD
 
 Default: (empty)
@@ -186,7 +206,7 @@ Optional security gate for first-time setup. When set, the `/install` page requi
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | How long a login session's access token stays valid (in minutes). When it expires, the browser silently refreshes it using the refresh token—users are not logged out. |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | How long a user can stay logged in without re-entering credentials (in days). If the user doesn't visit within this period, they must log in again. |
-| `APP_MAX_EXECUTION_TIME` | `1200` | Maximum time (in seconds) an app execution can run before being terminated. Works alongside `WORKFLOW_MAX_EXECUTION_TIME`: both enforce the same default of 20 minutes, but this one applies at the app queue level while the other applies at the workflow engine level. Increase both if your workflows need more time. |
+| `APP_MAX_EXECUTION_TIME` | `3600` | Maximum time in seconds an app execution can run before it is terminated. <br/><br/>An outer limit alongside `WORKFLOW_MAX_EXECUTION_TIME`: both default to one hour, with this one applied at the app queue level and the other at the workflow engine level. Increase both together if your workflows need more time.<br/><br/>If you run agents, keep these outer limits at or above the agent run deadline (`DIFY_AGENT_RUN_TIMEOUT_SECONDS`); otherwise agent runs are cut short. |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | Default concurrent request limit per app, used when an app doesn't have a custom limit set in the UI. `0` means unlimited. The effective limit is the smaller of this and `APP_MAX_ACTIVE_REQUESTS`. |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | Global ceiling for concurrent requests per app. Overrides per-app settings if they exceed this value. `0` means unlimited. |
 
@@ -778,6 +798,7 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 | `TIDB_VECTOR_USER` | (empty) | Username. |
 | `TIDB_VECTOR_PASSWORD` | (empty) | Password. |
 | `TIDB_VECTOR_DATABASE` | `dify` | Database name. |
+| `TIDB_VECTOR_ENABLE_FULLTEXT_SEARCH` | `false` | Unlocks the Full-Text Search and Hybrid Search retrieval options for knowledge bases on TiDB Vector.<br/><br/>New knowledge base tables get a multilingual full-text index; existing tables gain it the next time documents are indexed.<br/><br/>Requires a TiDB deployment that supports full-text indexes. |
 
 </Accordion>
 
@@ -1162,6 +1183,8 @@ By default, sign-in is email + password, and new accounts come from workspace in
 |---|---|---|
 | `ENABLE_EMAIL_PASSWORD_LOGIN` | `true` | Sign in to the console with email and password. When disabled, the password form disappears from the sign-in page and the password login, password reset, and self-serve signup endpoints all return 403. Keep at least one sign-in method enabled—if every method is off, the sign-in page shows "Authentication method not configured" and no one can log in until you change the setting back. |
 | `ENABLE_EMAIL_CODE_LOGIN` | `false` | Sign in with a one-time 6-digit code sent by email instead of a password. Requires mail delivery to be configured (see [Mail Configuration](#mail-configuration))—without it, codes are never delivered. With `ALLOW_REGISTER=true`, entering a code for an unknown email also creates the account, so this doubles as a self-serve signup path. |
+| `EMAIL_CODE_LOGIN_TOKEN_EXPIRY_MINUTES` | `5` | How long a sign-in code stays valid (in minutes). An expired code is rejected; request a new one to continue. |
+| `EMAIL_CODE_LOGIN_MAX_ATTEMPTS` | `5` | How many wrong entries one sign-in code survives before it is invalidated and a new code must be requested. |
 | `ENABLE_SOCIAL_OAUTH_LOGIN` | `false` | Shows GitHub and Google sign-in buttons on the console sign-in page. The buttons only work if the matching GitHub or Google OAuth app credentials are also configured on the API service; with the flag on but no credentials, sign-in attempts fail. First-time OAuth sign-ins create an account only when `ALLOW_REGISTER=true`. |
 | `ALLOW_REGISTER` | `false` | Lets people create their own accounts: shows the sign-up link on the sign-in page (with password login enabled) and allows first-time email-code or OAuth sign-ins to create accounts. Leave `false` for an invite-only deployment—workspace invitations and the initial setup wizard always work regardless. |
 | `ALLOW_CREATE_WORKSPACE` | `false` | Automatically creates a workspace for an account that doesn't belong to one—during self-serve registration and at email-code or OAuth sign-in. When `false`, such accounts must wait for a workspace invitation. The admin workspace created by the setup wizard is unaffected. |
@@ -1173,8 +1196,8 @@ Traces of app runs are delivered to the configured LLMOps provider (Langfuse, La
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | How many times a trace delivery is retried after a transient failure before the trace is dropped.<br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 5 minutes at defaults).<br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | How many times a trace delivery is retried after a transient failure before the trace is dropped. <br/><br/>The default retry window (retries × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`) is sized to outlast the one-hour workflow limit plus the export grace period. <br/><br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 65 minutes at defaults).<br/><br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
 
 #### Indexing
 
@@ -1245,7 +1268,7 @@ The API and Worker apply these limits to the output returned by Code and Templat
 | Variable | Default | Description |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | Maximum number of node executions per workflow run. Exceeding this terminates the workflow. |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | Maximum wall-clock time in seconds per workflow run. Exceeding this terminates the workflow. |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | Maximum wall-clock time in seconds per workflow run. Exceeding this terminates the workflow.<br/><br/>An outer limit paired with `APP_MAX_EXECUTION_TIME` (both default to one hour): increase both together. If you run agents, keep them at or above the agent run deadline (`DIFY_AGENT_RUN_TIMEOUT_SECONDS`). |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | Maximum depth for nested workflow-calls-workflow. Prevents infinite recursion. |
 | `MAX_VARIABLE_SIZE` | `204800` | Maximum size in bytes (200 KB) for a single workflow variable. |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | Upper bound for the max-files setting on a single file-upload field (e.g., a User Input File List). The node panel's max-files slider is capped at this value; raise to allow larger per-field configurations. |
@@ -1271,7 +1294,7 @@ These select which backend implementation handles workflow execution data. The d
 |---|---|---|
 | `GRAPH_ENGINE_MIN_WORKERS` | `3` | Minimum workers per GraphEngine instance. |
 | `GRAPH_ENGINE_MAX_WORKERS` | `10` | Maximum workers per GraphEngine instance. |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | Queue depth that triggers spawning additional workers. |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | How many tasks may wait for a free worker before the pool adds another, up to `GRAPH_ENGINE_MAX_WORKERS`.<br/><br/>At the default `0`, a worker is added as soon as any task waits; raise it to tolerate short backlogs before scaling up. |
 | `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | Seconds of idle time before excess workers are removed. |
 
 #### Workflow Log Cleanup
@@ -1332,6 +1355,7 @@ These variables are used by the Next.js web frontend container only, and do not 
 | `ALLOW_INLINE_STYLES` | `false` | Allow inline `style` attributes and `<style>` blocks in user-generated Markdown content. Disabled by default for security (inline styles can be used for phishing). Enable only if you need rich styling from trusted content sources. |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
 | `MAX_TREE_DEPTH` | `50` | Maximum number of nodes along a single execution path. Longer paths cannot be published. Changes apply only to newly published workflows. |
+| `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | (empty) | Extra characters accepted in the `name` attributes of form fields that apps render from Markdown in chat responses.<br/><br/>By default a field name must start with a letter and may contain letters, digits, underscores, and hyphens; fields whose names use other characters are not rendered.<br/><br/>Set the additional characters as one string; both half-width and full-width characters work, e.g. `()！？`. |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1377,6 +1401,14 @@ Shows the New Agent in the web UI: the **Agents** item in the main navigation an
 
 Set to `false` to hide it and fall back to the classic Agent node. Replaces `ENABLE_AGENT_V2`, which still works as a fallback.
 
+### UPLOAD_SKILL_FILE_SIZE_LIMIT
+
+Default: `50`
+
+Maximum size in MB for a skill package (`.zip` or `.skill`), whether uploaded to an agent as an embedded skill or imported into the skill library. Larger packages are rejected with a size error.
+
+A skill's unpacked content is separately capped at 200 MB and 5000 files. For library imports, folders also count toward the 5000 limit. This variable doesn't change either limit. If you raise it above 100, also raise `NGINX_CLIENT_MAX_BODY_SIZE` to match; otherwise Nginx rejects the upload with a 413 error.
+
 ### AGENT_BACKEND_BASE_URL
 
 Default: `http://agent_backend:5050`
@@ -1391,18 +1423,45 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Key prefix for the agent backend's Redis entries. |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | How long a stopping agent backend waits for in-flight runs to finish. |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | How long finished run records are retained (3 days by default). |
-| `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` | `1200` | Total deadline for one agent run's event stream; a run that exceeds it fails. |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so values above an hour only take effect on the `local` backend. |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | (empty; derives from `PLUGIN_DAEMON_KEY`) | Credential for the plugin daemon. |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Connect timeout in seconds for the agent service's outbound HTTP calls, such as tool and plugin traffic. |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | Read timeout in seconds; generous by default so slow tool responses and large downloads can finish. |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | Write timeout in seconds for outbound requests. |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | How long in seconds a request waits for a free connection from the pool. |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Connection pool size for the agent service's outbound HTTP. |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | How many idle connections stay pooled for reuse. |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | Seconds an idle pooled connection is kept before it closes. |
 | `DIFY_AGENT_INNER_API_URL` | (empty; derives from `PLUGIN_DIFY_INNER_API_URL`) | Dify API address for the agent backend's internal calls. |
 | `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`. |
-| `DIFY_AGENT_SHELLCTL_ENTRYPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. |
-| `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` | (empty) | Optional bearer token securing the agent backend's calls to the sandbox; Compose passes the same value to both services. |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which still works as a legacy alias. |
+| `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | (empty) | Optional bearer token securing the agent backend's calls to the sandbox; Compose passes the same value to both services. <br/><br/>Replaces the former `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`, which still works as a legacy alias. |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. |
+| `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | Dify API address the sandboxed agent uses for file transfers. Keep the default on Docker Compose. A remote sandbox backend needs your publicly reachable Dify address here. |
+| `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | How long the API waits when fetching a file from an agent's sandbox before failing the transfer. Keep it above the agent-side `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`. |
+| `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | How long the API waits on agent backend calls that transfer a home snapshot: capturing or deleting one, and starting a run that restores one.<br/><br/>If applying a build or starting runs fails for agents with large home environments, increase this. |
+| `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | How long the sandbox command serving that file may run. The default stays below the API's timeout so the agent's own error surfaces first. |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | Maximum size in MiB for one file the sandboxed agent uploads back to Dify, such as the files it generates for a reply. |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.13 or later; on older kernels the sandbox logs a warning and runs without it. Set in `docker/envs/core-services/local-sandbox.env`; `.env` values don't reach the sandbox container. |
-| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys; the agent's internal bearer token is always masked. Set in `docker/envs/core-services/dify-agent.env`; Compose doesn't forward it from `.env`. |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys. The agent's internal bearer token is always masked. |
+
+### DIFY_AGENT_RUNTIME_BACKEND
+
+Default: `local`
+
+Selects where agent sandboxes run. The default `local` uses the bundled sandbox container. Set to `e2b` to run each agent's sandbox as an [E2B](https://e2b.dev) cloud VM instead, for stronger isolation than the bundled container provides.
+
+The `e2b` backend reads its own group of variables, and the `docker/docker-compose.e2b.yaml` overlay adjusts the Compose stack for it:
+
+| Variable | Default | Description |
+|---|---|---|
+| `DIFY_AGENT_E2B_API_KEY` | (empty; falls back to `E2B_API_KEY`/`E2B_API_TOKEN`) | E2B account key; required for the `e2b` backend. |
+| `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | E2B sandbox template agents run in. |
+| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | How long one E2B sandbox stays active, spanning a complete agent run. 3600 is also the hard ceiling: higher values are rejected. <br/><br/>Keep it at or above `DIFY_AGENT_RUN_TIMEOUT_SECONDS`. If the sandbox's active time is shorter than the run's allowed time, runs lose their sandbox while still within their limit. |
+| `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | Port the sandbox control service listens on inside the E2B VM. |
 
 ## Database Service
 
@@ -1509,6 +1568,7 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | `PLUGIN_DAEMON_PORT` | `5002` | Plugin daemon listening port. |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | Timeout in seconds for all plugin daemon requests (installation, execution, listing). |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | Maximum plugin package size in bytes (50 MB). Validated during marketplace downloads. |
+| `PLUGIN_MAX_FILE_SIZE` | `52428800` | Maximum size in bytes (50 MB) for a single file a plugin returns to Dify, such as a tool plugin outputting a generated image or document. A larger file fails the invocation with a "file is too large" error. |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | Whether each tenant's plugin model provider list is cached in Redis at all. Disable when plugins are installed by an external system that can't invalidate this deployment's cache when a tenant's plugins change. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | How long to cache each tenant's plugin model provider list in Redis, in seconds (24 hours). Dify invalidates this cache when a tenant installs, uninstalls, or upgrades a plugin. |
@@ -1594,15 +1654,17 @@ Dify uses Celery Beat to run background maintenance tasks on configurable schedu
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | Update TiDB Serverless cluster status periodically. |
 | `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | How often to check for expired Human Input forms (in minutes). |
+| `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | Safety net for conversation deletion. A deleted conversation disappears instantly while a background job removes its messages and the files generated by tools during the conversation. Files end users uploaded are kept.<br/><br/>This sweep re-runs that job for conversations whose cleanup was lost, so their data does not linger. |
+| `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | How often the sweep runs (in minutes). |
+| `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | Maximum conversations re-dispatched per sweep. |
 
 #### Record Retention & Cleanup
 
-These control how old records are cleaned up. When `BILLING_ENABLED` is active, cleanup targets sandbox-tier tenants with a grace period. When billing is disabled (self-hosted), cleanup applies to all records within the retention window.
+These control the scheduled cleanup of old messages and workflow run records: anything older than the retention window is deleted in batches.
 
 | Variable | Default | Description |
 |---|---|---|
 | `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | Records older than this many days are eligible for deletion. |
-| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | Grace period in days after subscription expiration before records are deleted (billing-enabled only). |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | Number of records processed per cleanup batch. |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | Maximum random delay in milliseconds between cleanup batches to reduce database load. |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | Redis lock TTL in seconds (~25 hours) to prevent concurrent cleanup task execution. |

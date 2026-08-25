@@ -135,6 +135,18 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 | Limits the maximum number of reasoning loops and tool actions. The classic Agent app setting is a different string, "Maximum Iterations" (`app-debug.agent.setting.maximumIterations.name`). |
+| build chat | 构建对话 | ビルドチャット | One conversation in Build mode; prose term with no UI string |
+| build note | 构建笔记 | ビルドノート | The agent's auto-generated `build_note.md` record of what it set up in Build mode |
+| artifact | 产物 | 成果物 | Generic industry term, one fixed rendering; zh may add the English gloss 产物（Artifacts）on first use |
+
+### Skills
+
+| English | Chinese | Japanese | Notes |
+|:--------|:--------|:---------|:------|
+| skill | Skill | スキル | Self-contained package of instructions and supporting files for one reusable task. Chinese keeps the product term in English; do not translate it as 技能. |
+| skill library | Skill 库 | スキルライブラリ | Workspace-wide collection of shared skills. |
+| embedded skill | 内嵌 Skill | 埋め込みスキル | Descriptive docs term for a skill that belongs to one agent and does not follow updates from the skill library. Not a UI label. |
+| Skill Builder | Skill Builder | Skill Builder | Product feature and UI name; keep it in English in all languages. |
 
 ### Infrastructure
 
@@ -152,7 +164,6 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | runtime | 运行时 | ランタイム | The execution environment for workflow nodes |
 | classic runtime | 经典运行时 | クラシックランタイム | Original lightweight execution environment focused on speed and token efficiency |
 | sandboxed runtime | 沙盒运行时 | サンドボックスランタイム | Enhanced execution environment with file system access and autonomous tool installation |
-| skill | 技能 | スキル | Reusable expertise packages that eliminate repetitive prompt writing (Sandboxed runtime) |
 | file system | 文件系统 | ファイルシステム | Sandboxed file access for reading/writing during execution |
 
 ### Marketplace
@@ -164,9 +175,9 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 ## UI Labels
 
-Terms in this section must match the Dify product interface exactly. When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product.
+Terms in this section must match the Dify product interface exactly. When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product. Add a row only after confirming the key's value is the rendered label at its usage site, not an aria-label, tooltip, or placeholder.
 
-For a label not yet in this table, resolve its exact i18n key before writing any language's form: find the key whose en-US value matches on the surface you are documenting — several keys often share one value, so trace the rendering component (`git grep '<key>' -- 'web/app/**'`) to disambiguate — then take each language from that key. Never pick a translation by matching values across namespaces; a label whose key you cannot identify is unverified and must be flagged, not approximated.
+For a label not yet in this table, resolve its exact i18n key before writing any language's form: find the key whose en-US value matches on the surface you are documenting — several keys often share one value, so trace the rendering component to disambiguate (`git grep -nF '<key>' "$REF" -- 'web/app/**'`, `$REF` pinned per writing-guides/index.md § "Syncing the Dify codebase safely"; components often reference the key without its file prefix, so retry with the suffix — `menus.apps` for `common.menus.apps` — when there are no hits) — then take each language from that key. Never pick a translation by matching values across namespaces; a label whose key you cannot identify is unverified and must be flagged, not approximated.
 
 ### Sidebar & Navigation
 
@@ -177,16 +188,28 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Explore | 探索 | 探索 | common.menus.explore | Sidebar menu label |
 | Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
+| Skills | Skills | Skills | common.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The localized `skill.skillManagement.title` (ja スキル) is only the browser-tab/page title, not the nav label. |
 
 ### App Detail Tabs
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
+| Access Point | 访问点 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
-| API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Also used in Knowledge detail |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
+
+### Access Point Channel Cards
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Web App | Web 应用 | Web アプリ | agent-v-2.agentDetail.access.webApp.title | Web app channel card; hosts Embed Into Site, access control, Branding, and Custom Frontend |
+| Backend Service API | 后端服务 API | バックエンドサービス API | app-overview.overview.apiInfo.title | API channel card |
+| API Endpoint | API Endpoint | API エンドポイント | app-overview.overview.apiInfo.accessibleAddress | Renamed from "Service API Endpoint" in v1.16.2; zh UI keeps the English label |
+| API Key | API 密钥 | API キー | app-api.apiKeyModal.apiSecretKey | Key modal on the API channel card; renamed from "API Secret key" in v1.16.2. Distinct from the model provider credential option of the same name |
+| MCP Server | MCP 服务 | MCP サーバー | tools.mcp.server.title | MCP channel card |
+| Trigger | 触发器 | トリガー | common.settings.trigger | Trigger channel card; per-trigger toggles for published triggers |
 
 ### Log Page
 
@@ -204,6 +227,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Documents | 文档 | ドキュメント | common.datasetMenus.documents | |
+| API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Knowledge detail tab; since v1.16.2 the app side uses the Access Point tab instead |
 | Retrieval Testing | 召回测试 | 検索テスト | common.datasetMenus.hitTesting | |
 | Settings | 设置 | 設定 | common.datasetMenus.settings | |
 | Pipeline | 流水线 | パイプライン | common.datasetMenus.pipeline | |
@@ -326,15 +350,24 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Publish | 发布 | 公開する | workflow.common.publish | |
+| Publish Update | 发布更新 | 更新を公開 | workflow.common.publishUpdate | Publish-panel button when a published version exists |
 | Published | 已发布 | 公開済み | workflow.common.published | Status label |
 | Unpublished | 未发布 | 未公開 | workflow.common.unpublished | Status label |
+| Not published yet | 尚未发布 | まだ公開されていません | workflow.common.notPublishedYet | Publish-panel status; new panel design in v1.16.2 |
+| No changes | 无更改 | 変更なし | workflow.common.noChanges | Publish-panel status |
+| Unpublished changes | 有未发布的更改 | 未公開の変更 | workflow.common.unpublishedChanges | Publish-panel status |
+| Up to date | 已是最新 | 最新です | workflow.common.upToDate | Publish-panel status |
+| Open web app | 打开 Web 应用 | Web アプリを開く | workflow.common.openWebApp | Publish-panel action; replaced "Run App" in v1.16.2 |
 | Preview | 预览 | プレビュー | workflow.common.debugAndPreview | Debug & preview button |
 | Test Run | 测试运行 | テスト実行 | workflow.common.run | |
-| Run App | 运行 | アプリを実行 | workflow.common.runApp | |
 | Features | 功能 | 機能 | workflow.common.features | Panel for web app features |
 | Version History | 版本历史 | バージョン履歴 | workflow.common.versionHistory | |
 | Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する | workflow.common.workflowAsTool | REVIEW: ZH/JA much longer than EN label |
-| Embed Into Site | 嵌入网站 | サイトに埋め込む | workflow.common.embedIntoSite | |
+| Needs Setup | 需要进行配置 | 設定が必要 | workflow.common.configureRequired | Workflow as Tool badge before first configuration; renamed from "Configure Required" in v1.16.2 |
+| Ready | 已就绪 | 準備完了 | workflow.common.workflowAsToolReady | Workflow as Tool status |
+| Update Needed | 需要更新 | 更新が必要 | workflow.common.workflowAsToolUpdateNeeded | Workflow as Tool status; the workflow changed after the tool was configured |
+| Reconfigure | 重新配置 | 再設定 | workflow.common.workflowAsToolReconfigure | Workflow as Tool action to apply workflow changes |
+| Embed Into Site | 嵌入网站 | サイトに埋め込む | workflow.common.embedIntoSite | Also on the Access Point Web App card (deployments.studio.accessPoint.embedIntoSite, same text) |
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
@@ -397,11 +430,25 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 |:-------------|:-------------|:--------------|:---------|:------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
 | Agent task | Agent 任务 | Agent タスク | workflow.nodes.agent.task.label | New Agent surface |
-| Edit in Agent Console | 在 Agent Console 中编辑 | Agent Console で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
+| Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
 | Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
+
+### New Agent Configure
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Build mode | 构建模式 | ビルドモード | agent-v-2.agentDetail.configure.buildDraft.modeBadge | |
+| Build draft | Build 草稿 | ビルドドラフト | agent-v-2.agentDetail.configure.buildDraft.title | |
+| File system | 文件系统 | ファイルシステム | agent-v-2.agentDetail.configure.workingDirectory.fileSystem | Top-right entry in Configure |
+| Persistent | 长期 | 永続ファイル | agent-v-2.agentDetail.configure.workingDirectory.persistentFiles | File system tab; zh docs prose writes **长期** 文件, with 文件 outside the bold |
+| Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
+| Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
+| Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
+| Web App URL | Web 应用 URL | Web アプリ URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab |
+| Backend Service API | 后端服务 API | バックエンドサービス API | agent-v-2.agentDetail.access.serviceApi.title | Access Point tab |
 
 ### Question Classifier Node Config
 
@@ -481,4 +528,3 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Chunking Setting | 分段模式 | チャンキングモード | dataset-documents.embedding.mode | Section heading |
 | High-quality mode | 高质量模式 | 高品質モード | dataset-documents.embedding.highQuality | |
 | Economy mode | 经济模式 | 経済モード | dataset-documents.embedding.economy | |
-

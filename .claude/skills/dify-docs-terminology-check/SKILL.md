@@ -55,6 +55,8 @@ Every bolded term and every heading is a candidate. Step 5 decides deterministic
 
 The codebase i18n is the source of truth for UI labels: `web/i18n/en-US/` (flat JSON files with dot-flattened keys, e.g. `"menus.apps": "Studio"`), plus `zh-Hans/` and `ja-JP/` siblings. The glossary's `i18n Key` column maps to them: `common.menus.apps` → file `common.json`, key `"menus.apps"`.
 
+A key's value counts as the visible label only after checking its render site: `git grep` the key under `web/` and confirm it lands in on-screen text. Values feeding `aria-label`, tooltips, or placeholders are not the label, and shared generic keys (`common.operation.*`) often supply the visible text instead — the Skills section's add button renders `operation.add` ("Add") while `skills.add` ("Add skill") is its aria-label. A product or staging screenshot outranks any code inference.
+
 For each candidate term (use the English term; for zh/ja files, take the candidate from the same position in the en sibling):
 
 1. If the term has a `## UI Labels` row in the glossary, read its `i18n Key`; skip to substep 3 to confirm the codebase still agrees.
@@ -63,7 +65,7 @@ For each candidate term (use the English term; for zh/ja files, take the candida
    git grep -nF '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
    ```
    - Exact-value hit (e.g., `<REF>:web/i18n/en-US/common.json:285:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
-   - Multiple exact hits → the value is shared by several keys; pick by tracing which component the documented surface renders (`git grep -n '"<key>"' "$REF" -- 'web/app/**'`), and record which key you chose and why. Never assume the closest-looking key.
+   - Multiple exact hits → the value is shared by several keys; pick by tracing which component the documented surface renders (`git grep -nF '<key>' "$REF" -- 'web/app/**'`; components may reference the key without its file prefix, so retry with the suffix when there are no hits), and record which key you chose and why. Never assume the closest-looking key.
    - No hit → retry case-insensitively: `git grep -inF '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
    - Still no hit → not a UI label. Headings fall out of scope here; bolded terms go to Step 6 (general terms) instead.
 3. Confirm the exact string at the key:

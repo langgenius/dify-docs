@@ -76,3 +76,4 @@ In the self-host copy:
    ```
 
 4. Exclude from the user guide: default values, the "why" behind each variable, deployment-specific mechanics, and variable interactions — anything the reader finds one click into the reference.
+5. Link a variable name only when it has its own heading anchor in the reference (`#var_name`). Table-row variables stay plain code — a link would land at the page or section top while promising the variable; each self-contained unit that names them (a bullet, a callout) carries its own "See [Environment Variables](…) for details." reference — placed with the variables, never as a section-level closing line.

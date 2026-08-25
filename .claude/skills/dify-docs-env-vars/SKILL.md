@@ -110,7 +110,8 @@ The verifier reads both — always use the canonical verifier command above, whi
 | In any `.env.example` file, uncommented | Document. |
 | In any `.env.example` file, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `ignored-vars.md` (the verifier can't parse defaults from comments). |
 | Only in `api/configs/` Pydantic, not in any `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate `.env.example` file first. |
-| Removed from `.env.example` because the code no longer reads it | **Remove from docs.** Documenting unreferenced vars implies they still take effect. Discoverability for upgraders belongs in upstream Dify release notes, not this docs site. |
+| In `.env.example` and still parsed, but upstream-deprecated with a replacement | Keep the row; lead the description with the deprecation and the replacement: "Deprecated; use `X`." Deprecated means still parsed — a removed var never gets a Deprecated label. |
+| Removed from `.env.example` because the code no longer reads it | **Remove from docs — no tombstone rows** (a documented row implies the var still takes effect). If a successor variable replaced it, add one clause to the successor's description so the old names stay findable via search: "Replaces the former `EDITION`, ignored from 1.17.0 onward." With no successor, remove without trace; upgrader discoverability belongs in upstream Dify release notes. |
 
 **The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.**
 

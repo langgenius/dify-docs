@@ -153,7 +153,7 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 | `FLASK_DEBUG` | `false` | 标准 Flask 调试模式标志。Dify 未主动使用；`DEBUG` 是主要控制变量。 |
 | `ENABLE_REQUEST_LOGGING` | `false` | 为每个 HTTP 请求记录一条紧凑的访问日志（`METHOD PATH STATUS DURATION TRACE_ID`）。当 `LOG_LEVEL` 同时设为 `DEBUG` 时，还会以 JSON 格式记录完整的请求和响应体。 |
 | `DEPLOY_ENV` | `PRODUCTION` | 在 Sentry 和 OpenTelemetry 中标记监控数据，以便按环境过滤错误和追踪。也作为 `X-Env` 响应头发送。不改变应用行为。 |
-| `EDITION` | `SELF_HOSTED` | 部署身份标识，以 `deployment_edition` 暴露给控制台。保持默认值：`CLOUD` 是 Dify 托管服务的运行模式，会跳过初始管理员设置向导，并启用依赖 Dify 内部服务的计费与托管模型行为，因此设为 `CLOUD` 的部署无法完成初始化设置。 |
+| `DEPLOYMENT_EDITION` | `COMMUNITY` | 部署运行的版本：`COMMUNITY`、`ENTERPRISE` 或 `CLOUD`。保持默认值即可。<br/><br/>取代原有的 `EDITION`、`ENTERPRISE_ENABLED` 和 `BILLING_ENABLED`，这些旧变量自 1.17.0 起会被忽略。 |
 | `MIGRATION_ENABLED` | `true` | 为 `true` 时，容器启动时自动运行数据库架构迁移（`flask upgrade-db`）。仅限 Docker。如果你单独运行迁移，请设为 `false`。对于源码启动，需手动运行 `flask db upgrade`。 |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | 控制台通过此 URL 检查 Dify 的新版本。设为空可禁用，适用于离线环境或防止外部 HTTP 调用。 |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | 遗留变量。Dify 自身代码未主动使用。如果存在于环境中，可能会被 OpenAI Python SDK 读取。 |
@@ -172,6 +172,26 @@ openssl rand -base64 42
 部署后更改此密钥将立即使所有用户登出、使所有文件 URL 失效，并破坏使用 OAuth 的插件集成，其加密凭证将无法恢复。
 </Warning>
 
+### KEY_PROVIDER_TYPE
+
+默认值：`local`
+
+决定 Dify 把加密存储凭证（模型供应商 API 密钥、工具凭证等工作空间机密）所用的密钥保存在哪里：
+
+- `local`：为每个工作空间生成一对 RSA 密钥，私钥保存在 `STORAGE_TYPE` 对应的存储后端中。
+
+- `azure-keyvault`：将每个工作空间的 RSA 密钥保存在 Azure Key Vault 中，私钥不会离开 Key Vault。Dify 通过 `DefaultAzureCredential`（托管身份、环境变量或 Azure CLI 登录）完成认证。
+
+<Warning>
+在创建第一个工作空间前确定密钥提供方。两种提供方加密的凭证互不兼容，在已存有凭证的部署上切换会导致这些凭证无法解密，只能重新录入。
+</Warning>
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `AZURE_KEYVAULT_VAULT_URL` | （空） | Key Vault 实例 URL。`KEY_PROVIDER_TYPE` 为 `azure-keyvault` 时必填，缺失会导致 API 服务无法启动。示例：`https://your-vault-name.vault.azure.net` |
+| `AZURE_KEYVAULT_KEY_SIZE` | `2048` | Dify 在 Key Vault 中为工作空间新建密钥时使用的 RSA 密钥长度（位）。仅在创建新密钥时生效，已有密钥保持原长度。 |
+| `AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS` | （空） | 设置后（最小值 7），新建的工作空间密钥会附带 Key Vault 自动轮换策略，每 N 天轮换一次。旧版本密钥保持可用，轮换前加密的凭证无需重新加密即可继续解密。留空则自行在 Azure 中管理轮换。 |
+
 ### INIT_PASSWORD
 
 默认值：（空）
@@ -184,7 +204,7 @@ openssl rand -base64 42
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | 登录会话的访问令牌有效时长（分钟）。过期后浏览器使用刷新令牌静默刷新，用户不会被登出。 |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 用户无需重新输入凭证即可保持登录的时长（天）。如果用户在此期间未访问，则需要重新登录。 |
-| `APP_MAX_EXECUTION_TIME` | `1200` | 应用执行的最大运行时间（秒），超时后终止。与 `WORKFLOW_MAX_EXECUTION_TIME` 配合使用：两者默认均为 20 分钟，但此变量作用于应用队列层面，另一个作用于工作流引擎层面。如果工作流需要更多时间，请同时增大两者。 |
+| `APP_MAX_EXECUTION_TIME` | `3600` | 应用执行的最大运行时间（秒），超时后终止。属于外层限制，与 `WORKFLOW_MAX_EXECUTION_TIME` 配合使用：两者默认均为一小时，此变量作用于应用队列层面，另一个作用于工作流引擎层面。如果工作流需要更多时间，请同时增大两者。<br/><br/>如果你使用 Agent，请让这两个外层限制不低于 Agent 的运行时限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`），否则 Agent 运行会被提前截断。 |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | 每个应用的默认并发请求限制，在应用未在 UI 中设置自定义限制时使用。`0` 表示不限制。有效限制取此值与 `APP_MAX_ACTIVE_REQUESTS` 的较小值。 |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | 每个应用的全局并发请求上限。如果应用自定义设置超过此值，将被覆盖。`0` 表示不限制。 |
 
@@ -776,6 +796,7 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 | `TIDB_VECTOR_USER` | （空） | 用户名。 |
 | `TIDB_VECTOR_PASSWORD` | （空） | 密码。 |
 | `TIDB_VECTOR_DATABASE` | `dify` | 数据库名称。 |
+| `TIDB_VECTOR_ENABLE_FULLTEXT_SEARCH` | `false` | 为 TiDB Vector 上的知识库解锁全文检索和混合检索两种检索方式。<br/><br/>新建的知识库表会带有多语言全文索引；已有表会在下次索引文档时补建该索引。<br/><br/>要求 TiDB 部署支持全文索引。 |
 
 </Accordion>
 
@@ -1160,6 +1181,8 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 |---|---|---|
 | `ENABLE_EMAIL_PASSWORD_LOGIN` | `true` | 使用邮箱和密码登录控制台。关闭后，登录页不再显示密码表单，密码登录、密码重置和自助注册接口均返回 403。至少保留一种登录方式：若全部关闭，登录页会提示未配置认证方式，在改回设置前无人能登录。 |
 | `ENABLE_EMAIL_CODE_LOGIN` | `false` | 使用邮件发送的 6 位一次性验证码登录，无需密码。需要先配置邮件发送（参见 [邮件配置](#邮件配置)），否则验证码无法送达。当 `ALLOW_REGISTER=true` 时，未注册邮箱输入验证码即可同时创建账户，相当于一条自助注册途径。 |
+| `EMAIL_CODE_LOGIN_TOKEN_EXPIRY_MINUTES` | `5` | 登录验证码的有效时长（分钟）。过期的验证码会被拒绝，需重新获取。 |
+| `EMAIL_CODE_LOGIN_MAX_ATTEMPTS` | `5` | 单个登录验证码允许的最大输错次数，超过后验证码失效，需重新获取。 |
 | `ENABLE_SOCIAL_OAUTH_LOGIN` | `false` | 在控制台登录页显示 GitHub 和 Google 登录按钮。按钮需在 API 服务上配置相应的 GitHub 或 Google OAuth 应用凭据后才可用；只开启开关而未配置凭据时，登录会失败。首次 OAuth 登录仅在 `ALLOW_REGISTER=true` 时创建账户。 |
 | `ALLOW_REGISTER` | `false` | 允许自助创建账户：在登录页显示注册链接（需同时启用密码登录），并允许首次邮箱验证码或 OAuth 登录时创建账户。保持 `false` 即为仅限邀请的部署，工作空间邀请和初始设置向导始终不受影响。 |
 | `ALLOW_CREATE_WORKSPACE` | `false` | 为不属于任何工作空间的账户自动创建工作空间，作用于自助注册及邮箱验证码或 OAuth 登录。设为 `false` 时，这类账户需等待工作空间邀请。设置向导创建的管理员工作空间不受影响。 |
@@ -1171,8 +1194,8 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 5 分钟）。<br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
 
 #### 索引
 
@@ -1243,7 +1266,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 每次工作流运行的最大节点执行数。超过此值将终止工作流。 |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。<br/><br/>与 `APP_MAX_EXECUTION_TIME` 配对的外层限制（两者默认均为一小时）：请同时增大两者。如果你使用 Agent，还需保持不低于 Agent 的运行时限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）。 |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | 嵌套工作流调用工作流的最大深度。防止无限递归。 |
 | `MAX_VARIABLE_SIZE` | `204800` | 单个工作流变量的最大大小（字节，200 KB）。 |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 单个文件上传字段（如用户输入节点的 File List）中最大文件数设置的上限。节点面板的最大文件数滑块以此值为上限；调高此值可允许更大的单字段配置。 |
@@ -1269,7 +1292,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 |---|---|---|
 | `GRAPH_ENGINE_MIN_WORKERS` | `3` | 每个 GraphEngine 实例的最小工作线程数。 |
 | `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的最大工作线程数。 |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 触发创建额外工作线程的队列深度。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | 允许多少个任务等待空闲工作线程，超过即新增工作线程，上限为 `GRAPH_ENGINE_MAX_WORKERS`。<br/><br/>默认值 `0` 表示一旦有任务等待就立即新增；调大可先容忍短暂积压再扩容。 |
 | `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 多余工作线程在空闲此秒数后被移除。 |
 
 #### 工作流日志清理
@@ -1330,6 +1353,7 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `ALLOW_INLINE_STYLES` | `false` | 允许在用户生成的 Markdown 内容中使用内联 `style` 属性和 `<style>` 块。出于安全考虑默认禁用（内联样式可能被用于钓鱼攻击）。仅在需要来自可信来源的富样式内容时启用。 |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | 允许渲染 `data:` 协议的 URL。出于安全考虑默认禁用。 |
 | `MAX_TREE_DEPTH` | `50` | 单条执行路径中的最大节点数。超过此限制的工作流无法发布。调整仅对新发布的工作流生效。 |
+| `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | （空） | 应用在聊天回复中通过 Markdown 渲染表单时，表单字段 `name` 属性额外接受的字符。<br/><br/>默认情况下，字段名必须以字母开头，可包含字母、数字、下划线和连字符；名称含其他字符的字段不会被渲染。<br/><br/>将额外字符连成一个字符串填入，半角和全角字符均可。示例：`()！？` |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1373,6 +1397,14 @@ Dify API 调用 Agent 后端运行接口时出示的 Bearer 令牌。Compose 会
 
 设为 `false` 可隐藏它并回退到经典 Agent 节点。此变量替代了 `ENABLE_AGENT_V2`，后者仍可作为回退。
 
+### UPLOAD_SKILL_FILE_SIZE_LIMIT
+
+默认值：`50`
+
+Skill 包（`.zip` 或 `.skill`）的最大大小，单位为 MB。无论将包作为内嵌 Skill 上传到 Agent，还是导入 Skill 库，都受此限制。超过限制时会返回大小错误。
+
+Skill 解压后的内容另有两项上限：200 MB 和 5000 个文件；导入 Skill 库时，文件夹也计入 5000 个条目。此变量不会改变这两项限制。若将其提高到 100 以上，还需同步提高 `NGINX_CLIENT_MAX_BODY_SIZE`，否则 Nginx 会以 413 错误拒绝上传。
+
 ### AGENT_BACKEND_BASE_URL
 
 默认值：`http://agent_backend:5050`
@@ -1387,18 +1419,45 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent 后端 Redis 键的前缀。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent 后端停止时，等待进行中的运行结束的时长（秒）。 |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 已结束运行记录的保留时长（默认 3 天）。 |
-| `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` | `1200` | 单次 Agent 运行事件流的总时限，超时后运行失败。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限，超时的运行以 `agent_run_limit_exceeded` 失败。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此高于 1 小时的值只在 `local` 后端下有效。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空；由 `PLUGIN_DAEMON_KEY` 推导） | 插件守护进程的凭证。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Agent 服务对外 HTTP 调用（如工具与插件流量）的连接超时（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | 读取超时（秒）；默认较宽松，以便较慢的工具响应和大文件下载能够完成。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | 对外请求的写入超时（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | 请求等待连接池空闲连接的时长（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Agent 服务对外 HTTP 的连接池大小。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | 保留供复用的空闲连接数。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | 空闲连接在关闭前保留的秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。 |
-| `DIFY_AGENT_SHELLCTL_ENTRYPOINT` | `http://local_sandbox:5004` | 打包的沙箱服务地址。 |
-| `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` | （空） | 可选的 Bearer 令牌，用于保护 Agent 后端对沙箱的调用；Compose 会把同一值传给两个服务。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。取代原 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`，旧名仍可作为兼容别名使用。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | 可选的 Bearer 令牌，用于保护 Agent 后端对沙箱的调用；Compose 会把同一值传给两个服务。<br/><br/>取代原 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`，旧名仍可作为兼容别名使用。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。 |
+| `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
+| `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API 从 Agent 沙箱取文件时的等待时长，超时则传输失败。应高于 Agent 侧的 `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`。 |
+| `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API 等待 Agent 后端传输 home snapshot（捕获、删除快照，以及启动需要恢复快照的运行）的时长。<br/><br/>如果 home 环境较大的 Agent 在应用构建或启动运行时失败，可调大该值。 |
+| `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | 沙箱中负责输出该文件的命令可运行的时长。默认值低于 API 侧超时，以便先呈现 Agent 自身的错误。 |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | 沙箱中的 Agent 向 Dify 回传单个文件的大小上限（MiB），例如它为回复生成的文件。 |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.13 及以上；内核不支持时，沙箱会记录警告并在无隔离状态下运行。在 `docker/envs/core-services/local-sandbox.env` 中设置；`.env` 中的值不会传给沙箱容器。 |
-| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密；Agent 的内部令牌始终会被遮盖。在 `docker/envs/core-services/dify-agent.env` 中设置；Compose 不会从 `.env` 转发该值。 |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密。Agent 的内部令牌始终会被遮盖。 |
+
+### DIFY_AGENT_RUNTIME_BACKEND
+
+默认值：`local`
+
+选择 Agent 沙箱的运行位置。默认的 `local` 使用内置沙箱容器；设为 `e2b` 时，每个 Agent 的沙箱会运行在 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
+
+`e2b` 后端使用自己的一组变量，`docker/docker-compose.e2b.yaml` overlay 会相应调整 Compose 配置：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_AGENT_E2B_API_KEY` | （空；回退到 `E2B_API_KEY`/`E2B_API_TOKEN`） | E2B 账户密钥；`e2b` 后端必填。 |
+| `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent 运行所用的 E2B 沙箱模板。 |
+| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 单个 E2B 沙箱保持活跃的时长，覆盖一次完整的 Agent 运行。3600 同时是硬上限，更高的值会被拒绝。<br/><br/>应不低于 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`。若沙箱的活跃时长短于运行的允许时长，运行会在未超时的情况下失去沙箱。 |
+| `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | 沙箱控制服务在 E2B 虚拟机内监听的端口。 |
 
 ## 数据库服务
 
@@ -1503,6 +1562,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
+| `PLUGIN_MAX_FILE_SIZE` | `52428800` | 插件返回给 Dify 的单个文件的最大大小（字节，50 MB），例如工具插件输出的生成图片或文档。超过限制的文件会使本次调用失败，并报「file is too large」错误。 |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 Schema 的时间（秒）。减少重复查找。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | 是否在 Redis 中缓存各租户的插件模型供应商列表。当插件由外部系统安装、无法在租户插件变更时使本部署的缓存失效时，应关闭此项。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 在 Redis 中缓存各租户插件模型供应商列表的时长（秒），默认 24 小时。租户安装、卸载或升级插件时，Dify 会使该缓存失效。 |
@@ -1588,15 +1648,17 @@ Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
 | `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工输入表单，恢复或停止超时的工作流。 |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工输入表单的频率（分钟）。 |
+| `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 对话删除的兜底清理。对话删除后立即不可见，其消息以及对话中由工具生成的文件由后台任务清除，终端用户上传的文件会保留。<br/><br/>该定时清理会为清理任务丢失的对话重新派发任务，避免数据残留。 |
+| `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | 清理任务的运行频率（分钟）。 |
+| `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | 每次最多重新派发的对话数。 |
 
 #### 记录保留与清理
 
-这些变量控制旧记录的清理方式。当 `BILLING_ENABLED` 激活时，清理针对沙箱层租户并有宽限期。当计费禁用时（自部署），清理适用于保留窗口内的所有记录。
+这些变量控制旧消息与工作流运行记录的定时清理，超过保留天数的记录会分批删除。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | 超过此天数的记录有资格被删除。 |
-| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | 订阅到期后删除记录前的宽限期天数（仅计费启用时）。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | 每次清理批次处理的记录数。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | 清理批次间的最大随机延迟（毫秒），用于减少数据库负载。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | Redis 锁 TTL（秒，约 25 小时），防止清理任务并发执行。 |

@@ -153,7 +153,7 @@ Docker ネットワーク内のサービス間通信で使用されるファイ�
 | `FLASK_DEBUG` | `false` | 標準 Flask デバッグモードフラグ。Dify では積極的に使用されていません。`DEBUG` が主要な制御変数です。 |
 | `ENABLE_REQUEST_LOGGING` | `false` | すべての HTTP リクエストに対してコンパクトなアクセスログ（`METHOD PATH STATUS DURATION TRACE_ID`）を記録します。`LOG_LEVEL`が `DEBUG` に設定されている場合、完全なリクエストとレスポンスボディも JSON 形式で記録されます。 |
 | `DEPLOY_ENV` | `PRODUCTION` | Sentry と OpenTelemetry の監視データにタグ付けし、環境別にエラーとトレースをフィルタリングできるようにします。`X-Env` レスポンスヘッダーとしても送信されます。アプリケーションの動作は変更しません。 |
-| `EDITION` | `SELF_HOSTED` | デプロイの種別を示す値で、コンソールには `deployment_edition` として公開されます。デフォルトのまま使用してください。`CLOUD` は Dify のホステッドサービス向けのモードです。初期管理者のセットアップウィザードを省略し、課金などで Dify 内部サービスを呼び出すため、`CLOUD` に設定したデプロイはセットアップを完了できません。 |
+| `DEPLOYMENT_EDITION` | `COMMUNITY` | デプロイのエディション（`COMMUNITY`、`ENTERPRISE`、`CLOUD`）。デフォルトのまま使用してください。<br/><br/>従来の `EDITION`、`ENTERPRISE_ENABLED`、`BILLING_ENABLED` を置き換えるものです。これらの旧変数は 1.17.0 以降無視されます。 |
 | `MIGRATION_ENABLED` | `true` | `true`の場合、コンテナ起動時にデータベーススキーママイグレーション（`flask upgrade-db`）を自動実行します。Docker のみ。マイグレーションを別途実行する場合は `false`に設定してください。ソースコードからの起動では、`flask db upgrade` を手動で実行してください。 |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | コンソールがこの URL で Dify の新バージョンを確認します。空に設定すると無効化されます。エアギャップ環境や外部 HTTP コールを防止したい場合に有用です。 |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | レガシー変数。Dify 自身のコードでは積極的に使用されていません。環境に存在する場合、OpenAI Python SDK に読み取られる可能性があります。 |
@@ -172,6 +172,26 @@ openssl rand -base64 42
 デプロイ後にこのキーを変更すると、すべてのユーザーが即座にログアウトされ、すべてのファイル URL が無効になり、OAuth を使用するプラグイン連携が壊れます。暗号化された資格情報は復元できなくなります。
 </Warning>
 
+### KEY_PROVIDER_TYPE
+
+デフォルト値：`local`
+
+保存された資格情報（モデルプロバイダーの API キー、ツール資格情報などワークスペースの機密情報）を暗号化する、ワークスペースごとの鍵の保管場所を選択します。
+
+- `local`：ワークスペースごとに RSA 鍵ペアを生成し、秘密鍵を `STORAGE_TYPE` のストレージバックエンドに保存します。
+
+- `azure-keyvault`：各ワークスペースの RSA 鍵を Azure Key Vault に保管し、秘密鍵が Key Vault の外に出ることはありません。認証には `DefaultAzureCredential`（マネージド ID、環境変数、または Azure CLI ログイン）を使用します。
+
+<Warning>
+プロバイダーは最初のワークスペースを作成する前に決めてください。一方のプロバイダーで暗号化した資格情報はもう一方では復号できません。資格情報が保存済みのデプロイで切り替えると、再入力するまで読み取れなくなります。
+</Warning>
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `AZURE_KEYVAULT_VAULT_URL` | （空） | Key Vault インスタンスの URL。`KEY_PROVIDER_TYPE` が `azure-keyvault` の場合は必須で、未設定だと API サービスが起動しません。例：`https://your-vault-name.vault.azure.net` |
+| `AZURE_KEYVAULT_KEY_SIZE` | `2048` | Dify が Key Vault にワークスペース用の鍵を新規作成する際の RSA 鍵長（ビット）。新規作成時のみ適用され、既存の鍵のサイズは変わりません。 |
+| `AZURE_KEYVAULT_ROTATION_INTERVAL_DAYS` | （空） | 設定すると（最小 7）、新規作成されるワークスペース鍵に N 日ごとの Key Vault 自動ローテーションポリシーが付与されます。古いバージョンの鍵は使用可能なまま残るため、ローテーション前に暗号化した資格情報も再暗号化なしで復号できます。空のままにすると、ローテーションは Azure 側で手動管理します。 |
+
 ### INIT_PASSWORD
 
 デフォルト値：（空）
@@ -184,7 +204,7 @@ openssl rand -base64 42
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | ログインセッションのアクセストークンの有効期間（分）。期限切れ後、ブラウザがリフレッシュトークンを使用してサイレントに更新します。ユーザーはログアウトされません。 |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 資格情報を再入力せずにログイン状態を維持できる期間（日）。この期間内にアクセスがない場合、再ログインが必要です。 |
-| `APP_MAX_EXECUTION_TIME` | `1200` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME` と連動し、両方ともデフォルトは 20 分ですが、これはアプリキューレベルで適用され、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増加してください。 |
+| `APP_MAX_EXECUTION_TIME` | `3600` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME` と連動する外側の制限で、両方ともデフォルトは 1 時間です。これはアプリキューレベル、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増やしてください。<br/><br/>Agent を利用する場合は、この 2 つの外側の制限を Agent の実行期限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）以上に保ってください。下回ると Agent の実行が途中で打ち切られます。 |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | アプリごとのデフォルト同時リクエスト制限。UI でカスタム制限が設定されていないアプリに使用されます。`0`は無制限を意味します。有効な制限はこの値と `APP_MAX_ACTIVE_REQUESTS` の小さい方になります。 |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | アプリごとのグローバル同時リクエスト上限。アプリのカスタム設定がこの値を超える場合、オーバーライドされます。`0` は無制限を意味します。 |
 
@@ -776,6 +796,7 @@ seekdb は OceanBase のライト版であり、同じ接続設定を共有し�
 | `TIDB_VECTOR_USER` | （空） | ユーザー名。 |
 | `TIDB_VECTOR_PASSWORD` | （空） | パスワード。 |
 | `TIDB_VECTOR_DATABASE` | `dify` | データベース名。 |
+| `TIDB_VECTOR_ENABLE_FULLTEXT_SEARCH` | `false` | TiDB Vector 上のナレッジベースで全文検索とハイブリッド検索を利用できるようにします。<br/><br/>新規のナレッジベーステーブルには多言語対応の全文インデックスが付与され、既存テーブルには次回ドキュメントをインデックスする際に追加されます。<br/><br/>全文インデックスをサポートする TiDB デプロイが必要です。 |
 
 </Accordion>
 
@@ -1160,6 +1181,8 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 |---|---|---|
 | `ENABLE_EMAIL_PASSWORD_LOGIN` | `true` | メールアドレスとパスワードでコンソールにサインインします。無効にすると、サインインページからパスワードフォームが消え、パスワードログイン、パスワードリセット、セルフサービス登録の各エンドポイントが 403 を返します。サインイン方法は必ず 1 つ以上有効にしてください。すべて無効にすると、認証方式が未設定である旨が表示され、設定を戻すまで誰もログインできません。 |
 | `ENABLE_EMAIL_CODE_LOGIN` | `false` | パスワードの代わりに、メールで届く 6 桁のワンタイムコードでサインインします。メール送信の設定が必要です（[メール設定](#メール設定) を参照）。未設定ではコードが届きません。`ALLOW_REGISTER=true` の場合、未登録のメールアドレスでコードを入力するとアカウントも作成されるため、セルフサービス登録の経路にもなります。 |
+| `EMAIL_CODE_LOGIN_TOKEN_EXPIRY_MINUTES` | `5` | サインインコードの有効時間（分）。期限切れのコードは拒否され、再取得が必要です。 |
+| `EMAIL_CODE_LOGIN_MAX_ATTEMPTS` | `5` | 1 つのサインインコードで許容される入力ミスの最大回数。超えるとコードが無効になり、再取得が必要です。 |
 | `ENABLE_SOCIAL_OAUTH_LOGIN` | `false` | コンソールのサインインページに GitHub と Google のサインインボタンを表示します。ボタンが機能するのは、対応する GitHub または Google の OAuth アプリ認証情報を API サービスに設定した場合だけです。フラグだけ有効にして認証情報が未設定だと、サインインは失敗します。初回の OAuth サインインでアカウントが作成されるのは `ALLOW_REGISTER=true` のときだけです。 |
 | `ALLOW_REGISTER` | `false` | アカウントの自己作成を許可します。サインインページに新規登録リンクを表示し（パスワードログインが有効な場合）、初回のメールコードまたは OAuth サインインでのアカウント作成を許可します。招待制にするには `false` のままにします。ワークスペースへの招待と初期セットアップウィザードは常に利用できます。 |
 | `ALLOW_CREATE_WORKSPACE` | `false` | どのワークスペースにも属さないアカウントに対して、セルフサービス登録時やメールコード、OAuth サインイン時にワークスペースを自動作成します。`false` の場合、こうしたアカウントはワークスペースへの招待を待つ必要があります。セットアップウィザードが作成する管理者ワークスペースには影響しません。 |
@@ -1171,8 +1194,8 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 5 分）です。<br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/><br/>デフォルトのリトライ時間（回数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）は、1 時間のワークフロー上限とエクスポート猶予期間を上回るよう設定されています。<br/><br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 65 分）です。<br/><br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
 
 #### インデックス作成
 
@@ -1243,7 +1266,7 @@ API と Worker は、コードノードとテンプレート変換ノードの�
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | ワークフロー実行ごとの最大ノード実行回数。超過するとワークフローが終了されます。 |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | ワークフロー実行ごとの最大実行時間（秒）。超過するとワークフローが終了されます。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | ワークフロー実行ごとの最大実行時間（秒）。超過するとワークフローが終了されます。<br/><br/>`APP_MAX_EXECUTION_TIME` と対になる外側の制限です（両方ともデフォルトは 1 時間）。両方を一緒に増やしてください。Agent を利用する場合は、Agent の実行期限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）以上に保ちます。 |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | ネストされたワークフロー呼び出しの最大深度。無限再帰を防止します。 |
 | `MAX_VARIABLE_SIZE` | `204800` | 単一のワークフロー変数の最大サイズ（バイト、200 KB）。 |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 1 つのファイルアップロードフィールド（ユーザー入力ノードのファイル変数など）における最大ファイル数設定の上限です。ノードパネルの最大ファイル数スライダーはこの値で制限されます。フィールドごとの設定をより大きくするには、この値を上げます。 |
@@ -1269,7 +1292,7 @@ API と Worker は、コードノードとテンプレート変換ノードの�
 |---|---|---|
 | `GRAPH_ENGINE_MIN_WORKERS` | `3` | GraphEngine インスタンスごとの最小ワーカー数。 |
 | `GRAPH_ENGINE_MAX_WORKERS` | `10` | GraphEngine インスタンスごとの最大ワーカー数。 |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 追加ワーカーの生成をトリガーするキュー深度。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | 空きワーカーを待つタスクをいくつまで許容するか。超えると `GRAPH_ENGINE_MAX_WORKERS` を上限にワーカーが追加されます。<br/><br/>デフォルトの `0` では、待ちタスクが発生した時点で即座に追加されます。値を上げると、短い滞留を許容してからスケールアップします。 |
 | `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 余剰ワーカーが削除されるまでのアイドル時間（秒）。 |
 
 #### ワークフローログクリーンアップ
@@ -1330,6 +1353,7 @@ Dify からのすべてのアウトバウンド HTTP リクエスト（HTTP ノ�
 | `ALLOW_INLINE_STYLES` | `false` | ユーザー生成の Markdown コンテンツでインライン `style` 属性と `<style>` ブロックの使用を許可します。セキュリティ上の理由（インラインスタイルはフィッシングに悪用される可能性があります）から、デフォルトでは無効です。信頼できるソースからのリッチなスタイリングが必要な場合にのみ有効化してください。 |
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | `data:` スキームの URL レンダリングを許可。セキュリティのためデフォルトでは無効です。 |
 | `MAX_TREE_DEPTH` | `50` | 1 つの実行パスの最大ノード数。上限を超えるワークフローは公開できません。変更は新たに公開するワークフローにのみ適用されます。 |
+| `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | （空） | チャット応答内の Markdown からアプリがレンダリングするフォームで、フィールドの `name` 属性に追加で許可する文字。<br/><br/>デフォルトでは、フィールド名は文字で始まり、文字・数字・アンダースコア・ハイフンのみ使用できます。それ以外の文字を名前に含むフィールドはレンダリングされません。<br/><br/>追加する文字は 1 つの文字列として設定します。半角と全角のどちらも使用できます。例：`()！？` |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1369,6 +1393,14 @@ Dify API が Agent バックエンドの実行 API を呼び出す際に提示�
 
 新しい Agent を Web UI に表示します。メインナビゲーションの **Agents** 項目と、ワークフローのノード一覧の新しい Agent ノードです。`false` にすると非表示になり、クラシック Agent ノードにフォールバックします。`ENABLE_AGENT_V2` を置き換えるもので、こちらは引き続きフォールバックとして機能します。
 
+### UPLOAD_SKILL_FILE_SIZE_LIMIT
+
+デフォルト値：`50`
+
+スキルパッケージ（`.zip` または `.skill`）の最大サイズを MB 単位で指定します。Agent に埋め込みスキルとしてアップロードする場合と、スキルライブラリへインポートする場合の両方に適用されます。上限を超えるパッケージはサイズエラーで拒否されます。
+
+展開後の内容には、200 MB と 5000 ファイルという別の上限があります。スキルライブラリへインポートする場合、フォルダーも 5000 件の上限に含まれます。この環境変数では、どちらの上限も変更できません。100 より大きくする場合は、`NGINX_CLIENT_MAX_BODY_SIZE` も同じ値以上に設定してください。設定しないと、Nginx が 413 エラーでアップロードを拒否します。
+
 ### AGENT_BACKEND_BASE_URL
 
 デフォルト値：`http://agent_backend:5050`
@@ -1383,18 +1415,45 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent バックエンドの Redis キーのプレフィックス。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent バックエンドの停止時に、進行中の実行の完了を待つ秒数。 |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 終了した実行レコードの保持期間（デフォルトは 3 日）。 |
-| `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` | `1200` | Agent 実行 1 回のイベントストリーム全体の制限時間。超過した実行は失敗する。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、1 時間を超える値が効くのは `local` バックエンドのみ。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | ストリーム切断時、実行を失敗と判定するまでに API が再接続を試みる回数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空。`PLUGIN_DAEMON_URL` から導出） | Agent バックエンドがツール呼び出しに使うプラグインデーモンのアドレス。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空。`PLUGIN_DAEMON_KEY` から導出） | プラグインデーモンの認証情報。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Agent サービスの外向き HTTP 呼び出し（ツールやプラグインの通信など）の接続タイムアウト（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | 読み取りタイムアウト（秒）。遅いツール応答や大きなダウンロードが完了できるように、デフォルトは長めに設定されている。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | 外向きリクエストの書き込みタイムアウト（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | 接続プールの空き接続を待つ時間（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Agent サービスの外向き HTTP の接続プールサイズ。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | 再利用のために保持するアイドル接続数。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | アイドル接続を閉じるまで保持する秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空。`PLUGIN_DIFY_INNER_API_URL` から導出） | Agent バックエンドの内部呼び出し用 Dify API アドレス。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空。`PLUGIN_DIFY_INNER_API_KEY` から導出） | API サービスの `INNER_API_KEY_FOR_PLUGIN` と一致させる（`INNER_API_KEY` ではない）。 |
-| `DIFY_AGENT_SHELLCTL_ENTRYPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。 |
-| `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` | （空） | Agent バックエンドからサンドボックスへの呼び出しを保護する任意の Bearer トークン。Compose は同じ値を両サービスに渡す。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。旧 `DIFY_AGENT_SHELLCTL_ENTRYPOINT` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | Agent バックエンドからサンドボックスへの呼び出しを保護する任意の Bearer トークン。Compose は同じ値を両サービスに渡す。<br/><br/>旧 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。 |
+| `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | サンドボックス内の Agent がファイル転送に使う Dify API アドレス。Docker Compose ではデフォルトのまま使う。リモートサンドボックスバックエンドでは、公開されている Dify アドレスを指定する。 |
+| `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API が Agent のサンドボックスからファイルを取得する際の待ち時間。超過すると転送は失敗する。Agent 側の `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` より高く保つこと。 |
+| `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | home snapshot の転送を伴う Agent バックエンド呼び出し（スナップショットの取得・削除、スナップショットを復元する実行の開始）を API が待つ時間。<br/><br/>home 環境が大きい Agent でビルドの適用や実行開始が失敗する場合は、値を大きくしてください。 |
+| `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | そのファイルを出力するサンドボックスコマンドの実行時間の上限。デフォルトは API 側のタイムアウトより低く、Agent 自身のエラーが先に表面化するようにしている。 |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | サンドボックス内の Agent が Dify にアップロードする 1 ファイルの上限サイズ（MiB）。返信のために生成したファイルなどが対象。 |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | カーネルレベルの Landlock でサンドボックスが読み書きできるパスを制限する。Linux 5.13 以降が必要。未対応のカーネルでは警告を記録し、分離なしで実行される。`docker/envs/core-services/local-sandbox.env` で設定する。`.env` の値はサンドボックスコンテナには渡されない。 |
-| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | シェル出力を Agent が読む前にマスクする正規表現の JSON 配列。API キーなどの機密を保護する。Agent の内部トークンは常にマスクされる。`docker/envs/core-services/dify-agent.env` で設定する。Compose は `.env` からこの値を転送しない。 |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | シェル出力を Agent が読む前にマスクする正規表現の JSON 配列。API キーなどの機密を保護する。Agent の内部トークンは常にマスクされる。 |
+
+### DIFY_AGENT_RUNTIME_BACKEND
+
+デフォルト値：`local`
+
+Agent のサンドボックスをどこで実行するかを選択します。デフォルトの `local` は同梱のサンドボックスコンテナを使います。`e2b` に設定すると、各 Agent のサンドボックスを [E2B](https://e2b.dev) のクラウド VM で実行でき、同梱コンテナより強い分離が得られます。
+
+`e2b` バックエンドには専用の変数グループがあり、`docker/docker-compose.e2b.yaml` オーバーレイが Compose 構成を調整します：
+
+| 変数 | デフォルト | 説明 |
+|---|---|---|
+| `DIFY_AGENT_E2B_API_KEY` | （空；`E2B_API_KEY`/`E2B_API_TOKEN` にフォールバック） | E2B アカウントキー。`e2b` バックエンドでは必須。 |
+| `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent が実行される E2B サンドボックステンプレート。 |
+| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 1 つの E2B サンドボックスがアクティブでいられる時間。Agent の 1 回の実行全体に及ぶ。3600 が上限で、それより大きい値は拒否される。<br/><br/>`DIFY_AGENT_RUN_TIMEOUT_SECONDS` 以上に設定すること。サンドボックスのアクティブ時間が実行の許容時間より短いと、実行は制限内であってもサンドボックスを失う。 |
+| `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | E2B VM 内でサンドボックス制御サービスが待ち受けるポート。 |
 
 ## データベースサービス
 
@@ -1471,7 +1530,7 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql},collaboration` | 起動するサービスコンテナを選択します。デフォルトでは、対応するベクトルストアとデータベース（`DB_TYPE=mysql` を設定すれば PostgreSQL の代わりに MySQL が起動）、および専用の `api_websocket` コンテナを起動する `collaboration` プロファイルが含まれます。`collaboration` を削除すると、独立した WebSocket サービスを起動しません。 |
+| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql},collaboration` | 起動するサービスコンテナを選びます。デフォルトでは、ベクトルストア、データベース、`collaboration` プロファイルを起動します。`DB_TYPE=mysql` なら MySQL を使います。`collaboration` を削除すると、`api_websocket` コンテナを起動しません。 |
 | `EXPOSE_NGINX_PORT` | `80` | Nginx HTTP にマッピングされるホストポート。 |
 | `EXPOSE_NGINX_SSL_PORT` | `443` | Nginx HTTPS にマッピングされるホストポート。 |
 
@@ -1499,6 +1558,7 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 | `PLUGIN_DAEMON_PORT` | `5002` | プラグインデーモンのリッスンポート。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | すべてのプラグインデーモンリクエスト（インストール、実行、リスト表示）のタイムアウト（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | プラグインパッケージの最大サイズ（バイト、50 MB）。マーケットプレイスダウンロード時に検証されます。 |
+| `PLUGIN_MAX_FILE_SIZE` | `52428800` | プラグインが Dify に返す単一ファイルの最大サイズ（バイト、50 MB）。ツールプラグインが生成した画像やドキュメントの出力などが対象です。上限を超えるファイルは「file is too large」エラーで呼び出しが失敗します。 |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | プラグインモデルスキーマのキャッシュ期間（秒）。繰り返しの参照を削減します。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | 各テナントのプラグインモデルプロバイダー一覧を Redis にキャッシュするかどうか。プラグインを外部システムからインストールしていて、テナントのプラグイン変更時にこのデプロイのキャッシュを無効化できない場合は無効にします。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 各テナントのプラグインモデルプロバイダー一覧を Redis にキャッシュする期間（秒）。デフォルトは 24 時間。テナントがプラグインをインストール、アンインストール、またはアップグレードすると、Dify はこのキャッシュを無効化します。 |
@@ -1584,15 +1644,17 @@ Dify は Celery Beat を使用して、設定可能なスケジュールでバ�
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | TiDB Serverless クラスターのステータスを定期的に更新。 |
 | `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 期限切れの人間の入力フォームを確認し、タイムアウトしたワークフローを再開または停止します。 |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 期限切れの人間の入力フォームを確認する頻度（分）。 |
+| `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 会話削除のセーフティネット。削除された会話は即座に見えなくなり、メッセージと会話中にツールが生成したファイルはバックグラウンドジョブが削除します。エンドユーザーがアップロードしたファイルは保持されます。<br/><br/>このタスクは、クリーンアップが実行されなかった会話を定期的に再処理し、データの残留を防ぎます。 |
+| `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | タスクの実行頻度（分）。 |
+| `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | 1 回のスイープで再処理する会話の最大数。 |
 
 #### レコード保持とクリーンアップ
 
-古いレコードのクリーンアップ方法を制御します。`BILLING_ENABLED` がアクティブな場合、クリーンアップは猶予期間付きでサンドボックスティアのテナントを対象とします。課金が無効（セルフホスト）の場合、クリーンアップは保持期間内のすべてのレコードに適用されます。
+古いメッセージとワークフロー実行レコードの定期クリーンアップを制御します。保持期間を超えたレコードはバッチ単位で削除されます。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | この日数を超えたレコードが削除対象になります。 |
-| `SANDBOX_EXPIRED_RECORDS_CLEAN_GRACEFUL_PERIOD` | `21` | サブスクリプション期限切れ後、レコードが削除されるまでの猶予期間（日、課金有効時のみ）。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | クリーンアップバッチごとに処理されるレコード数。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | データベース負荷を軽減するためのクリーンアップバッチ間の最大ランダム遅延（ミリ秒）。 |
 | `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | 同時クリーンアップタスク実行を防止する Redis ロック TTL（秒、約 25 時間）。 |
