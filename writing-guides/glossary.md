@@ -430,7 +430,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 |:-------------|:-------------|:--------------|:---------|:------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
 | Agent task | Agent 任务 | Agent タスク | workflow.nodes.agent.task.label | New Agent surface |
-| Edit in Agent Console | 在 Agent Console 中编辑 | Agent Console で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
+| Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
 | Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
