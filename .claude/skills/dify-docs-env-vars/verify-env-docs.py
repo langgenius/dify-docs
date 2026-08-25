@@ -240,7 +240,9 @@ _EXPANSION_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*(?::-(?P<fallback>.*))?\
 
 def resolve_expansion(value: str) -> str:
     """Resolve a compose-style ${VAR:-fallback} value to its innermost literal
-    fallback — the effective default when nothing is set in the environment."""
+    fallback — the effective default when nothing is set in the environment.
+    A bare ${VAR} resolves to "" for the same reason: compose substitutes the
+    empty string when the variable is unset."""
     v = value.strip()
     while True:
         m = _EXPANSION_RE.match(v)
