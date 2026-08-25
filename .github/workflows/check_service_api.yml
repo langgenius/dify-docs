@@ -1,0 +1,133 @@
+name: Check Service API contract
+
+on:
+  workflow_dispatch:
+    inputs:
+      dify_ref:
+        description: Dify commit, tag, or branch to verify (defaults to the reviewed pin)
+        required: false
+        type: string
+  repository_dispatch:
+    types: [service-api-openapi-changed]
+  schedule:
+    - cron: '23 3 * * *'
+  pull_request:
+    paths:
+      - 'en/api-reference/openapi_service.json'
+      - 'zh/api-reference/openapi_service.json'
+      - 'ja/api-reference/openapi_service.json'
+      - 'en/api-reference/guides/**'
+      - 'zh/api-reference/guides/**'
+      - 'ja/api-reference/guides/**'
+      - 'tools/api-pipeline/**'
+      - '.github/workflows/check_service_api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'en/api-reference/openapi_service.json'
+      - 'zh/api-reference/openapi_service.json'
+      - 'ja/api-reference/openapi_service.json'
+      - 'en/api-reference/guides/**'
+      - 'zh/api-reference/guides/**'
+      - 'ja/api-reference/guides/**'
+      - 'tools/api-pipeline/**'
+      - '.github/workflows/check_service_api.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: service-api-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  docs-contract:
+    name: Validate localized specs
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run API pipeline checks
+        env:
+          DOCS: ${{ github.workspace }}
+        run: |
+          python3 -m unittest discover -s tools/api-pipeline -p 'test_*.py'
+          python3 tools/api-pipeline/lint_specs.py
+          python3 tools/api-pipeline/parity_check.py
+          python3 tools/api-pipeline/merge_specs.py check-coverage --lang en zh ja
+
+  generated-contract:
+    name: Compare Dify contract
+    runs-on: depot-ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Dify source
+        id: dify-source
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_REF: ${{ github.event.client_payload.ref || inputs.dify_ref || '' }}
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          import os
+
+          with open("tools/api-pipeline/dify_ref.json", encoding="utf-8") as handle:
+              pin = json.load(handle)
+
+          requested = os.environ.get("REQUESTED_REF", "").strip()
+          event = os.environ["EVENT_NAME"]
+          if requested:
+              ref = requested
+              expected_digest = ""
+          elif event == "schedule":
+              ref = "main"
+              expected_digest = ""
+          else:
+              ref = pin["ref"]
+              expected_digest = pin["generated_service_openapi_sha256"]
+
+          print(f"ref={ref}")
+          print(f"expected_digest={expected_digest}")
+          PY
+
+      - uses: actions/checkout@v4
+        with:
+          repository: langgenius/dify
+          ref: ${{ steps.dify-source.outputs.ref }}
+          path: dify
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Verify pinned source and generate OpenAPI
+        env:
+          EXPECTED_DIGEST: ${{ steps.dify-source.outputs.expected_digest }}
+          GENERATED_DIR: ${{ runner.temp }}/dify-openapi
+        run: |
+          echo "Dify checkout: $(git -C dify rev-parse HEAD)"
+          uv run --project dify/api dify/api/dev/generate_swagger_specs.py --output-dir "$GENERATED_DIR"
+          python3 - <<'PY'
+          import hashlib
+          import os
+
+          expected = os.environ["EXPECTED_DIGEST"]
+          path = os.path.join(os.environ["GENERATED_DIR"], "service-openapi.json")
+          with open(path, "rb") as handle:
+              actual = hashlib.sha256(handle.read()).hexdigest()
+          if expected and actual != expected:
+              raise SystemExit(f"generated digest mismatch: expected {expected}, found {actual}")
+          print(f"Service API digest: {actual}")
+          PY
+
+      - name: Compose localized specs and check contract alignment
+        env:
+          GENERATED_DIR: ${{ runner.temp }}/dify-openapi
+        run: |
+          python3 tools/api-pipeline/compose_service_api.py compose "$GENERATED_DIR/service-openapi.json"
+          python3 tools/api-pipeline/contract_alignment.py "$GENERATED_DIR/service-openapi.json"
