@@ -235,9 +235,23 @@ def is_placeholder(value: str) -> bool:
     return False
 
 
+_EXPANSION_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*(?::-(?P<fallback>.*))?\}$")
+
+
+def resolve_expansion(value: str) -> str:
+    """Resolve a compose-style ${VAR:-fallback} value to its innermost literal
+    fallback — the effective default when nothing is set in the environment."""
+    v = value.strip()
+    while True:
+        m = _EXPANSION_RE.match(v)
+        if not m:
+            return v
+        v = (m.group("fallback") or "").strip()
+
+
 def normalize(value: str) -> str:
     """Normalize a value for comparison."""
-    v = value.strip().strip('"').strip("'")
+    v = resolve_expansion(value).strip().strip('"').strip("'")
     # Normalize boolean representations
     if v.lower() in ("true", "yes", "1"):
         return "true"
