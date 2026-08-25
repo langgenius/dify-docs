@@ -204,7 +204,7 @@ openssl rand -base64 42
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | 登录会话的访问令牌有效时长（分钟）。过期后浏览器使用刷新令牌静默刷新，用户不会被登出。 |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 用户无需重新输入凭证即可保持登录的时长（天）。如果用户在此期间未访问，则需要重新登录。 |
-| `APP_MAX_EXECUTION_TIME` | `1200` | 应用执行的最大运行时间（秒），超时后终止。与 `WORKFLOW_MAX_EXECUTION_TIME` 配合使用：两者默认均为 20 分钟，但此变量作用于应用队列层面，另一个作用于工作流引擎层面。如果工作流需要更多时间，请同时增大两者。 |
+| `APP_MAX_EXECUTION_TIME` | `3600` | 应用执行的最大运行时间（秒），超时后终止。属于外层限制，与 `WORKFLOW_MAX_EXECUTION_TIME` 配合使用：两者默认均为一小时，此变量作用于应用队列层面，另一个作用于工作流引擎层面。如果工作流需要更多时间，请同时增大两者。<br/><br/>如果你使用 Agent，请让这两个外层限制不低于 Agent 的运行时限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`），否则 Agent 运行会被提前截断。 |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | 每个应用的默认并发请求限制，在应用未在 UI 中设置自定义限制时使用。`0` 表示不限制。有效限制取此值与 `APP_MAX_ACTIVE_REQUESTS` 的较小值。 |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | 每个应用的全局并发请求上限。如果应用自定义设置超过此值，将被覆盖。`0` 表示不限制。 |
 
@@ -1194,8 +1194,8 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 5 分钟）。<br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
 
 #### 索引
 
@@ -1266,7 +1266,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 每次工作流运行的最大节点执行数。超过此值将终止工作流。 |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。<br/><br/>与 `APP_MAX_EXECUTION_TIME` 配对的外层限制（两者默认均为一小时）：请同时增大两者。如果你使用 Agent，还需保持不低于 Agent 的运行时限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）。 |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | 嵌套工作流调用工作流的最大深度。防止无限递归。 |
 | `MAX_VARIABLE_SIZE` | `204800` | 单个工作流变量的最大大小（字节，200 KB）。 |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 单个文件上传字段（如用户输入节点的 File List）中最大文件数设置的上限。节点面板的最大文件数滑块以此值为上限；调高此值可允许更大的单字段配置。 |
@@ -1419,11 +1419,18 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent 后端 Redis 键的前缀。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent 后端停止时，等待进行中的运行结束的时长（秒）。 |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 已结束运行记录的保留时长（默认 3 天）。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限，超时的运行以 `agent_run_limit_exceeded` 失败。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `1200`）会更早终止运行，需一并调高。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此高于 1 小时的值只在 `local` 后端下有效。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限，超时的运行以 `agent_run_limit_exceeded` 失败。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此高于 1 小时的值只在 `local` 后端下有效。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空；由 `PLUGIN_DAEMON_KEY` 推导） | 插件守护进程的凭证。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Agent 服务对外 HTTP 调用（如工具与插件流量）的连接超时（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | 读取超时（秒）；默认较宽松，以便较慢的工具响应和大文件下载能够完成。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | 对外请求的写入超时（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | 请求等待连接池空闲连接的时长（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Agent 服务对外 HTTP 的连接池大小。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | 保留供复用的空闲连接数。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | 空闲连接在关闭前保留的秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。取代原 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`，旧名仍可作为兼容别名使用。 |

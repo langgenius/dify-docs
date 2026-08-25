@@ -206,7 +206,7 @@ Optional security gate for first-time setup. When set, the `/install` page requi
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | How long a login session's access token stays valid (in minutes). When it expires, the browser silently refreshes it using the refresh token—users are not logged out. |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | How long a user can stay logged in without re-entering credentials (in days). If the user doesn't visit within this period, they must log in again. |
-| `APP_MAX_EXECUTION_TIME` | `1200` | Maximum time (in seconds) an app execution can run before being terminated. Works alongside `WORKFLOW_MAX_EXECUTION_TIME`: both enforce the same default of 20 minutes, but this one applies at the app queue level while the other applies at the workflow engine level. Increase both if your workflows need more time. |
+| `APP_MAX_EXECUTION_TIME` | `3600` | Maximum time in seconds an app execution can run before it is terminated. <br/><br/>An outer limit alongside `WORKFLOW_MAX_EXECUTION_TIME`: both default to one hour, with this one applied at the app queue level and the other at the workflow engine level. Increase both together if your workflows need more time.<br/><br/>If you run agents, keep these outer limits at or above the agent run deadline (`DIFY_AGENT_RUN_TIMEOUT_SECONDS`); otherwise agent runs are cut short. |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | Default concurrent request limit per app, used when an app doesn't have a custom limit set in the UI. `0` means unlimited. The effective limit is the smaller of this and `APP_MAX_ACTIVE_REQUESTS`. |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | Global ceiling for concurrent requests per app. Overrides per-app settings if they exceed this value. `0` means unlimited. |
 
@@ -1196,8 +1196,8 @@ Traces of app runs are delivered to the configured LLMOps provider (Langfuse, La
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | How many times a trace delivery is retried after a transient failure before the trace is dropped.<br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 5 minutes at defaults).<br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | How many times a trace delivery is retried after a transient failure before the trace is dropped. <br/><br/>The default retry window (retries × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`) is sized to outlast the one-hour workflow limit plus the export grace period. <br/><br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 65 minutes at defaults).<br/><br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
 
 #### Indexing
 
@@ -1268,7 +1268,7 @@ The API and Worker apply these limits to the output returned by Code and Templat
 | Variable | Default | Description |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | Maximum number of node executions per workflow run. Exceeding this terminates the workflow. |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | Maximum wall-clock time in seconds per workflow run. Exceeding this terminates the workflow. |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | Maximum wall-clock time in seconds per workflow run. Exceeding this terminates the workflow.<br/><br/>An outer limit paired with `APP_MAX_EXECUTION_TIME` (both default to one hour): increase both together. If you run agents, keep them at or above the agent run deadline (`DIFY_AGENT_RUN_TIMEOUT_SECONDS`). |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | Maximum depth for nested workflow-calls-workflow. Prevents infinite recursion. |
 | `MAX_VARIABLE_SIZE` | `204800` | Maximum size in bytes (200 KB) for a single workflow variable. |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | Upper bound for the max-files setting on a single file-upload field (e.g., a User Input File List). The node panel's max-files slider is capped at this value; raise to allow larger per-field configurations. |
@@ -1423,11 +1423,18 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Key prefix for the agent backend's Redis entries. |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | How long a stopping agent backend waits for in-flight runs to finish. |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | How long finished run records are retained (3 days by default). |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `1200`) stop runs earlier unless raised to match.<br/><br/>On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so values above an hour only take effect on the `local` backend. |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so values above an hour only take effect on the `local` backend. |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | (empty; derives from `PLUGIN_DAEMON_KEY`) | Credential for the plugin daemon. |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Connect timeout in seconds for the agent service's outbound HTTP calls, such as tool and plugin traffic. |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | Read timeout in seconds; generous by default so slow tool responses and large downloads can finish. |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | Write timeout in seconds for outbound requests. |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | How long in seconds a request waits for a free connection from the pool. |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Connection pool size for the agent service's outbound HTTP. |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | How many idle connections stay pooled for reuse. |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | Seconds an idle pooled connection is kept before it closes. |
 | `DIFY_AGENT_INNER_API_URL` | (empty; derives from `PLUGIN_DIFY_INNER_API_URL`) | Dify API address for the agent backend's internal calls. |
 | `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`. |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which still works as a legacy alias. |

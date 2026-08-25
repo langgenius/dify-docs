@@ -204,7 +204,7 @@ openssl rand -base64 42
 |---|---|---|
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | ログインセッションのアクセストークンの有効期間（分）。期限切れ後、ブラウザがリフレッシュトークンを使用してサイレントに更新します。ユーザーはログアウトされません。 |
 | `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 資格情報を再入力せずにログイン状態を維持できる期間（日）。この期間内にアクセスがない場合、再ログインが必要です。 |
-| `APP_MAX_EXECUTION_TIME` | `1200` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME` と連動し、両方ともデフォルトは 20 分ですが、これはアプリキューレベルで適用され、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増加してください。 |
+| `APP_MAX_EXECUTION_TIME` | `3600` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME` と連動する外側の制限で、両方ともデフォルトは 1 時間です。これはアプリキューレベル、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増やしてください。<br/><br/>Agent を利用する場合は、この 2 つの外側の制限を Agent の実行期限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）以上に保ってください。下回ると Agent の実行が途中で打ち切られます。 |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | アプリごとのデフォルト同時リクエスト制限。UI でカスタム制限が設定されていないアプリに使用されます。`0`は無制限を意味します。有効な制限はこの値と `APP_MAX_ACTIVE_REQUESTS` の小さい方になります。 |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | アプリごとのグローバル同時リクエスト上限。アプリのカスタム設定がこの値を超える場合、オーバーライドされます。`0` は無制限を意味します。 |
 
@@ -1194,8 +1194,8 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `60` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 5 分）です。<br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/><br/>デフォルトのリトライ時間（回数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）は、1 時間のワークフロー上限とエクスポート猶予期間を上回るよう設定されています。<br/><br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
+| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 65 分）です。<br/><br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
 
 #### インデックス作成
 
@@ -1266,7 +1266,7 @@ API と Worker は、コードノードとテンプレート変換ノードの�
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | ワークフロー実行ごとの最大ノード実行回数。超過するとワークフローが終了されます。 |
-| `WORKFLOW_MAX_EXECUTION_TIME` | `1200` | ワークフロー実行ごとの最大実行時間（秒）。超過するとワークフローが終了されます。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | ワークフロー実行ごとの最大実行時間（秒）。超過するとワークフローが終了されます。<br/><br/>`APP_MAX_EXECUTION_TIME` と対になる外側の制限です（両方ともデフォルトは 1 時間）。両方を一緒に増やしてください。Agent を利用する場合は、Agent の実行期限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）以上に保ちます。 |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | ネストされたワークフロー呼び出しの最大深度。無限再帰を防止します。 |
 | `MAX_VARIABLE_SIZE` | `204800` | 単一のワークフロー変数の最大サイズ（バイト、200 KB）。 |
 | `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 1 つのファイルアップロードフィールド（ユーザー入力ノードのファイル変数など）における最大ファイル数設定の上限です。ノードパネルの最大ファイル数スライダーはこの値で制限されます。フィールドごとの設定をより大きくするには、この値を上げます。 |
@@ -1415,11 +1415,18 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent バックエンドの Redis キーのプレフィックス。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent バックエンドの停止時に、進行中の実行の完了を待つ秒数。 |
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 終了した実行レコードの保持期間（デフォルトは 3 日）。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `1200`）が先に実行を停止するため、合わせて引き上げること。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、1 時間を超える値が効くのは `local` バックエンドのみ。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、1 時間を超える値が効くのは `local` バックエンドのみ。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | ストリーム切断時、実行を失敗と判定するまでに API が再接続を試みる回数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空。`PLUGIN_DAEMON_URL` から導出） | Agent バックエンドがツール呼び出しに使うプラグインデーモンのアドレス。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空。`PLUGIN_DAEMON_KEY` から導出） | プラグインデーモンの認証情報。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Agent サービスの外向き HTTP 呼び出し（ツールやプラグインの通信など）の接続タイムアウト（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | 読み取りタイムアウト（秒）。遅いツール応答や大きなダウンロードが完了できるように、デフォルトは長めに設定されている。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | 外向きリクエストの書き込みタイムアウト（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_POOL_TIMEOUT` | `10` | 接続プールの空き接続を待つ時間（秒）。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_CONNECTIONS` | `100` | Agent サービスの外向き HTTP の接続プールサイズ。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | 再利用のために保持するアイドル接続数。 |
+| `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | アイドル接続を閉じるまで保持する秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空。`PLUGIN_DIFY_INNER_API_URL` から導出） | Agent バックエンドの内部呼び出し用 Dify API アドレス。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空。`PLUGIN_DIFY_INNER_API_KEY` から導出） | API サービスの `INNER_API_KEY_FOR_PLUGIN` と一致させる（`INNER_API_KEY` ではない）。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。旧 `DIFY_AGENT_SHELLCTL_ENTRYPOINT` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
