@@ -1,4 +1,4 @@
-"""Mechanical lint for Dify OpenAPI specs: examples vs schemas, enum coverage, links, x-codeSamples guard."""
+"""Mechanical lint for Dify OpenAPI specs: examples, schemas, links, and samples."""
 
 import json
 import os
@@ -28,6 +28,21 @@ def resolve(schema, spec, depth=0):
 
 
 CHECKS = {"examples": 0, "links": 0}
+MARKDOWN_LINK_RE = re.compile(r"\]\((/[^)\s]+)\)")
+
+
+def iter_markdown_links(node, path="$"):
+    """Yield internal Markdown links from every string in an OpenAPI document."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield from iter_markdown_links(value, f"{path}.{key}")
+    elif isinstance(node, list):
+        for index, value in enumerate(node):
+            yield from iter_markdown_links(value, f"{path}[{index}]")
+    elif isinstance(node, str):
+        for link in MARKDOWN_LINK_RE.findall(node):
+            yield path, link
+
 
 def check_example(example, schema, spec, where, f, path=""):
     if not path:
@@ -109,6 +124,33 @@ for f in SPEC_FILES:
                 if href:
                     valid_pages.add(href.split("#")[0])
 
+    for json_path, link in iter_markdown_links(spec):
+        CHECKS["links"] += 1
+        base = link.split("#")[0]
+        api_match = re.match(r"^/(en|zh|ja)/api-reference/", link)
+        if link.startswith("/api-reference/"):
+            issues[rel].append(f"{json_path}: API link missing language prefix: {link}")
+        elif api_match:
+            if api_match.group(1) != lang:
+                issues[rel].append(
+                    f"{json_path}: API link uses the wrong language prefix: {link}"
+                )
+            if base not in valid_pages:
+                # MDX guide pages live under api-reference/ too
+                target = f"{DOCS}{base}"
+                if not (
+                    os.path.exists(target + ".mdx") or os.path.exists(target + ".md")
+                ):
+                    issues[rel].append(f"{json_path}: broken link target {link}")
+        elif not re.match(r"^/(en|zh|ja)/", link):
+            issues[rel].append(
+                f"{json_path}: non-API link without language prefix: {link}"
+            )
+        else:
+            target = f"{DOCS}{base}"
+            if not (os.path.exists(target + ".mdx") or os.path.exists(target + ".md")):
+                issues[rel].append(f"{json_path}: broken doc link {link}")
+
     all_example_values = set()
     all_enums = []  # (where, enum values)
 
@@ -129,7 +171,15 @@ for f in SPEC_FILES:
             for code, resp in (op.get("responses", {}) or {}).items():
                 for ctype, media in (resp.get("content", {}) or {}).items():
                     schema = media.get("schema", {})
-                    for name, ex in iter_examples(media):
+                    examples = list(iter_examples(media))
+                    if ctype == "application/json" and (
+                        str(code) in {"200", "201"}
+                        or str(code).startswith(("4", "5"))
+                    ) and not examples:
+                        issues[rel].append(
+                            f"{where} resp{code}: application/json response has no example"
+                        )
+                    for name, ex in examples:
                         check_example(ex, schema, spec, f"{where} resp{code}[{name}]", rel)
                         collect_enum_usage(ex, all_example_values, spec)
 
@@ -143,25 +193,6 @@ for f in SPEC_FILES:
                     req_query.append(prm["name"])
             if req_query and m.lower() == "get" and not op.get("x-codeSamples"):
                 issues[rel].append(f"{where}: required query {req_query} but no x-codeSamples override")
-
-            # link targets in descriptions
-            desc = op.get("description", "") or ""
-            for link in re.findall(r"\]\((/[^)\s]+)\)", desc):
-                CHECKS["links"] += 1
-                if link.startswith("/api-reference/") or re.match(r"^/(en|zh|ja)/api-reference/", link):
-                    base = link.split("#")[0]
-                    if base not in valid_pages:
-                        # MDX guide pages live under api-reference/ too
-                        target = f"{DOCS}{base}"
-                        if not (os.path.exists(target + ".mdx") or os.path.exists(target + ".md")):
-                            issues[rel].append(f"{where}: broken link target {link}")
-                else:
-                    if not re.match(r"^/(en|zh|ja)/", link):
-                        issues[rel].append(f"{where}: non-API link without language prefix: {link}")
-                    else:
-                        target = f"{DOCS}{link.split('#')[0]}"
-                        if not (os.path.exists(target + ".mdx") or os.path.exists(target + ".md")):
-                            issues[rel].append(f"{where}: broken doc link {link}")
 
     # enum coverage: every enum value in schemas seen in at least one example (warning-level)
     def walk_schemas(node, ctx, depth=0):
@@ -194,3 +225,4 @@ for f in sorted(issues):
         seen.add(msg)
         print("  -", msg)
     print()
+sys.exit(1 if total else 0)

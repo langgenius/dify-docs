@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Service API docs.json wiring and coverage checks.
 
-Since Phase 1 shipped, {lang}/api-reference/openapi_service.json is the
-hand-maintained spec of record for each language: edit it directly. The
-Phase-1 merge machinery (build/relink, resolutions.json, overrides/) that
-produced it from the five per-app-type source specs is retired; recover it
-from git history when Phase 2 rebuilds the spec from R&D's generated spec
-plus docs-owned overlays.
+The rendered {lang}/api-reference/openapi_service.json files are composed from
+Dify's generated Service API contract plus reviewed locale overlays. This
+module owns only navigation wiring and app-type coverage over those outputs;
+compose_service_api.py owns contract composition.
 
 Modes:
   wire            Regenerate the docs.json API menus (all languages ×
@@ -23,6 +21,8 @@ Usage:
 Env:
   DOCS  docs repo root (default: two levels above this file)
 """
+
+from __future__ import annotations
 
 import argparse
 import copy
@@ -59,7 +59,9 @@ def load_nav_labels() -> dict:
         return json.load(f)
 
 
-def nav_groups_for(lang: str, labels: dict) -> list:
+def nav_groups_for(
+    lang: str, labels: dict, existing_order: list[str] | None = None
+) -> list:
     """The API menu's three groups: Guides, App APIs, Knowledge API.
 
     Guides lists the hand-maintained overview pages (guides_order). The two
@@ -85,11 +87,18 @@ def nav_groups_for(lang: str, labels: dict) -> list:
         if (path, method) != (en_path, en_method):
             mismatches.append(((path, method), (en_path, en_method)))
             continue
+        if en_op.get("deprecated") is True:
+            continue
         ops_by_en_tag.setdefault(en_op["tags"][0], []).append(f"{method.upper()} {path}")
     if mismatches:
         raise ValueError(
             f"nav_groups_for({lang}): merged spec operation order diverges from en: {mismatches}"
         )
+    existing_order = existing_order or []
+    for tag, operations in ops_by_en_tag.items():
+        ops_by_en_tag[tag] = [op for op in existing_order if op in operations] + [
+            op for op in operations if op not in existing_order
+        ]
     for tag, order in labels.get("op_order", {}).items():
         if tag in ops_by_en_tag:
             ops_by_en_tag[tag] = [o for o in order if o in ops_by_en_tag[tag]] + \
@@ -121,8 +130,32 @@ def wire(langs):
         docs = json.load(f)
 
     for lang in langs:
-        groups = nav_groups_for(lang, labels)
         lang_nav = next(l for l in docs["navigation"]["languages"] if l["language"] == lang)
+        existing_order: list[str] = []
+
+        def collect_operation_pages(value):
+            if isinstance(value, str) and re.match(
+                r"^(?:DELETE|GET|HEAD|OPTIONS|PATCH|POST|PUT|TRACE) /", value
+            ):
+                existing_order.append(value)
+            elif isinstance(value, dict):
+                collect_operation_pages(value.get("pages", []))
+            elif isinstance(value, list):
+                for item in value:
+                    collect_operation_pages(item)
+
+        for product in lang_nav.get("products", []):
+            for tab in product.get("tabs", []):
+                for item in tab.get("menu", []):
+                    if item.get("item") == "API":
+                        collect_operation_pages(item.get("groups", []))
+                        break
+                if existing_order:
+                    break
+            if existing_order:
+                break
+
+        groups = nav_groups_for(lang, labels, existing_order)
         replaced = 0
         for prod in lang_nav.get("products", []):
             for tab in prod.get("tabs", []):
