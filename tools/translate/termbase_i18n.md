@@ -39,7 +39,7 @@
 | moderation model | 内容审核模型 | モデレーションモデル |
 | TTS model | 文字转语音模型 | TTSモデル |
 | Speech2Text model | 语音转文字模型 | 音声認識モデル |
-| token | token | token |
+| token | 词元 | token |
 | API token | API 令牌 | APIトークン |
 | prompt | 提示词 | プロンプト |
 | system instruction | 系统指令 | システムインストラクション |

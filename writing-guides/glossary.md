@@ -45,8 +45,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | moderation model | 内容审核模型 | モデレーションモデル | Models that detect and filter inappropriate content |
 | TTS model | 文字转语音模型 | TTSモデル | Text-to-speech models |
 | Speech2Text model | 语音转文字模型 | 音声認識モデル | Speech-to-text models |
-| token | token | token | |
-| API token | API 令牌 | APIトークン | |
+| token | 词元 | token | Model/NLP unit used for model input, output, context, usage, and cost. In Chinese prose, use 词元; preserve UI strings verbatim even when they contain token/TOKENS; authentication credentials use 令牌 instead. |
+| API token | API 令牌 | APIトークン | Authentication credential; not a model/NLP token. |
 | prompt | 提示词 | プロンプト | |
 | system instruction | 系统指令 | システムインストラクション | Defines the model's behavior and role |
 | user message | User 消息 | ユーザーメッセージ | Passes user input or provides example queries |
