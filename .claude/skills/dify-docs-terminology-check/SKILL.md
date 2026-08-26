@@ -55,7 +55,7 @@ Every bolded term and every heading is a candidate. Step 5 decides deterministic
 Screenshots are candidates too:
 
 ```bash
-grep -anoE '\(/images/[^)]+' <file>  # local images, prints line:(/images/path
+grep -anoE '/images/[^) "]+' <file>  # local images, prints line:/images/path
 ```
 
 View each listed image and read every UI string it displays; strings that are labels verify under Step 5 like bolded terms. An image showing a superseded string is a finding for re-capture — the fix is a new screenshot at the same path, never a prose edit. The pattern deliberately matches only local `/images/` paths; legacy CDN images (`assets-docs.dify.ai`) stay out of scope.
