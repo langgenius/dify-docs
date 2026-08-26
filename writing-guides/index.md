@@ -16,7 +16,7 @@ After completing a writing task, run these checks in order and apply the fixes b
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
 | 1 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
-| 2 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels. |
+| 2 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings screenshots display. |
 | 3 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
 
 Steps 1 and 2 cover all three languages and audit the whole document, not just the diff. Step 3 is always the last step because it depends on the others passing.
