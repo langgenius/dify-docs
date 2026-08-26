@@ -2,7 +2,7 @@
 name: dify-docs-terminology-check
 description: >
   Audit terminology consistency across documentation against the codebase UI
-  labels and the glossary — in prose and in the UI strings screenshots display.
+  labels and the glossary — in prose and in the UI strings shown in screenshots.
   Covers full files, not just diffs; excludes env var docs. Use after
   finalizing a draft, or when the user says "check terminology", "check
   terms", "verify glossary", or "terminology audit".
