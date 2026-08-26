@@ -42,7 +42,6 @@ def iter_ops(spec: dict):
         for method, op in item.items():
             if (
                 method in HTTP_METHODS
-                and op.get("deprecated") is not True
                 and "x-mint" in op
             ):
                 yield path, method, op
