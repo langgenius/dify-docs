@@ -40,10 +40,7 @@ def iter_ops(spec: dict):
     """Yield (path, method, op) for every operation in a spec."""
     for path, item in spec.get("paths", {}).items():
         for method, op in item.items():
-            if (
-                method in HTTP_METHODS
-                and "x-mint" in op
-            ):
+            if method in HTTP_METHODS:
                 yield path, method, op
 
 
@@ -152,22 +149,8 @@ def wire(langs):
     # Catch-all last so the KB exceptions win (Mintlify matches sources in order).
     api_catchall = {"source": "/api-reference/:slug*",
                     "destination": "/en/api-reference/guides/get-started"}
-    api_indexes = [
-        index
-        for index, redirect in enumerate(existing)
-        if "/api-reference/" in redirect["source"]
-    ]
-    kept = [redirect for redirect in existing if "/api-reference/" not in redirect["source"]]
-    if api_indexes:
-        insert_at = sum(
-            "/api-reference/" not in redirect["source"]
-            for redirect in existing[:api_indexes[0]]
-        )
-    else:
-        insert_at = len(kept)
-    docs["redirects"] = (
-        kept[:insert_at] + api_kb + [api_catchall] + kept[insert_at:]
-    )
+    kept = [r for r in existing if "/api-reference/" not in r["source"]]
+    docs["redirects"] = kept + api_kb + [api_catchall]
     print(f"redirects: {len(kept)} non-API + {len(api_kb)} KB + 1 catch-all")
 
     with open(docs_path, "w", encoding="utf-8") as f:
