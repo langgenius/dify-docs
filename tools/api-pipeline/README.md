@@ -41,7 +41,7 @@ The aligner takes paths, methods, parameters, schemas, status codes, authenticat
 ## Editing the spec
 
 - Edit all three languages; `parity_check` enforces structural parity with en.
-- Every operation carries `x-mint.href = /{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` (English slugs in every language, so the language switcher can map pages) and `x-mint.metadata.title`/`sidebarTitle` = the translated summary (without them, the custom href makes Mintlify label the sidebar from the English slug). Set all of these when adding an operation.
+- Every published operation carries `x-mint.href = /{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` (English slugs in every language, so the language switcher can map pages) and `x-mint.metadata.title`/`sidebarTitle` = the translated summary (without them, the custom href makes Mintlify label the sidebar from the English slug). Generated operations without `x-mint` remain in the wire contract but are excluded from the documentation navigation.
 - The `tags` arrays must stay index-aligned across languages; `wire` maps translated tag labels by position and fails on a mismatch.
 - Shared endpoints exist once, with availability lines and mode notes in the description; there is no cross-spec propagation anymore.
 - After adding, removing, retitling, or reordering operations: update `memberships.json` (and the app-type overview pages) if availability changed, then run `wire`, `check-coverage`, and the lints. Description-only edits need no `wire`.

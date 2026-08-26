@@ -98,15 +98,16 @@ class AlignServiceApiTest(unittest.TestCase):
         aligned = merge_presentation(generated, current)
         self.assertEqual(list(aligned), ["description", "type", "new"])
 
-    def test_root_operation_receives_docs_metadata(self) -> None:
+    def test_root_operation_keeps_generated_contract_without_docs_metadata(self) -> None:
         aligned = align_language(copy.deepcopy(self.generated), self.current, "en")
         operation = aligned["paths"]["/"]["get"]
-        self.assertEqual(operation["summary"], "Get API Information")
-        self.assertEqual(operation["tags"], ["Applications"])
-        self.assertEqual(operation["x-mint"]["href"], "/en/api-reference/applications/get-api-information")
-        example = operation["responses"]["200"]["content"]["application/json"]["examples"]["response"]["value"]
-        self.assertEqual(example["api_version"], "v1")
-        self.assertEqual(example["server_version"], "1.17.0")
+        self.assertEqual(operation["summary"], "Generated root")
+        self.assertEqual(operation["tags"], ["service_api"])
+        self.assertNotIn("x-mint", operation)
+        self.assertNotIn(
+            "examples",
+            operation["responses"]["200"]["content"]["application/json"],
+        )
 
     def test_new_untranslated_prose_is_removed_but_response_description_is_localized(self) -> None:
         english = {

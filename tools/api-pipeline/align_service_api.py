@@ -36,27 +36,6 @@ PRESENTATION_KEYS = {
     "x-mint",
 }
 
-ROOT_PRESENTATION = {
-    "en": {
-        "summary": "Get API Information",
-        "description": "Returns the public Service API version and server version without requiring an API key.",
-        "tag": "Applications",
-        "example_summary": "Response Example",
-    },
-    "zh": {
-        "summary": "获取 API 信息",
-        "description": "无需 API 密钥即可获取服务 API 版本和服务器版本。",
-        "tag": "应用配置",
-        "example_summary": "响应示例",
-    },
-    "ja": {
-        "summary": "API 情報の取得",
-        "description": "API キーを使用せずに、サービス API とサーバーのバージョンを取得します。",
-        "tag": "アプリケーション設定",
-        "example_summary": "レスポンス例",
-    },
-}
-
 DEPRECATED_ALIAS_PRESENTATION = {
     "en": {
         "summary": "Deprecated Compatibility Endpoint",
@@ -401,32 +380,6 @@ def localize_unmatched_tags(
             operation["tags"] = [tag_map.get(tag, tag) for tag in tags]
 
 
-def apply_root_presentation(spec: dict[str, Any], language: str) -> None:
-    operation = spec["paths"]["/"]["get"]
-    presentation = ROOT_PRESENTATION[language]
-    operation["summary"] = presentation["summary"]
-    operation["description"] = presentation["description"]
-    operation["tags"] = [presentation["tag"]]
-    operation["x-mint"] = {
-        "href": f"/{language}/api-reference/applications/get-api-information",
-        "metadata": {
-            "title": presentation["summary"],
-            "sidebarTitle": presentation["summary"],
-        },
-    }
-    media = operation["responses"]["200"]["content"]["application/json"]
-    media["examples"] = {
-        "response": {
-            "summary": presentation["example_summary"],
-            "value": {
-                "welcome": "Dify OpenAPI",
-                "api_version": "v1",
-                "server_version": "1.17.0",
-            },
-        }
-    }
-
-
 def apply_deprecated_alias_presentation(spec: dict[str, Any], language: str) -> None:
     presentation = DEPRECATED_ALIAS_PRESENTATION[language]
     for path, _, operation in iter_operations(spec):
@@ -454,8 +407,8 @@ def align_language(
     aligned = merge_presentation(generated, current)
 
     # JSON object order is not part of the wire contract, but it controls the
-    # generated sidebar order. Keep the reviewed docs order, prepend the new
-    # public API-information endpoint, and append other generated-only paths.
+    # generated sidebar order. Keep the reviewed docs order, retain the
+    # generated root path first, and append other generated-only paths.
     generated_paths = aligned.get("paths", {})
     current_paths = current.get("paths", {})
     if isinstance(generated_paths, dict) and isinstance(current_paths, dict):
@@ -500,7 +453,6 @@ def align_language(
                 if isinstance(scheme, dict):
                     scheme["description"] = current_descriptions[0]
 
-    apply_root_presentation(aligned, language)
     apply_deprecated_alias_presentation(aligned, language)
     return aligned
 
