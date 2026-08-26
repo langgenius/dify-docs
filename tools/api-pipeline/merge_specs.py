@@ -40,7 +40,7 @@ def iter_ops(spec: dict):
     """Yield (path, method, op) for every operation in a spec."""
     for path, item in spec.get("paths", {}).items():
         for method, op in item.items():
-            if method in HTTP_METHODS:
+            if method in HTTP_METHODS and op.get("deprecated") is not True:
                 yield path, method, op
 
 
