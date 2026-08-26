@@ -2,9 +2,10 @@
 name: dify-docs-terminology-check
 description: >
   Audit terminology consistency across documentation against the codebase UI
-  labels and the glossary. Covers full files, not just diffs; excludes env var
-  docs. Use after finalizing a draft, or when the user says "check
-  terminology", "check terms", "verify glossary", or "terminology audit".
+  labels and the glossary — in prose and in the UI strings screenshots display.
+  Covers full files, not just diffs; excludes env var docs. Use after
+  finalizing a draft, or when the user says "check terminology", "check
+  terms", "verify glossary", or "terminology audit".
 ---
 
 # Terminology Consistency Check
@@ -50,6 +51,14 @@ grep -anE '^#{2,3} ' <file>          # section headings, prints line:## Heading
 The `-a` flag is required: some legacy zh/ja pages contain stray NUL bytes, and without it grep prints only `Binary file … matches` and silently drops the term inventory.
 
 Every bolded term and every heading is a candidate. Step 5 decides deterministically which are UI labels; do not pre-filter by intuition.
+
+Screenshots are candidates too:
+
+```bash
+grep -anoE '/images/[^) "]+' <file>  # local images, prints line:/images/path
+```
+
+View each listed image and read every UI string it displays; strings that are labels verify under Step 5 like bolded terms. An image showing a superseded string is a finding for re-capture — the fix is a new screenshot at the same path, never a prose edit. The pattern deliberately matches only local `/images/` paths; legacy CDN images (`assets-docs.dify.ai`) stay out of scope.
 
 ## Step 5 — Classify and verify UI labels against codebase i18n
 
@@ -107,6 +116,11 @@ Checked against Dify codebase `origin/<branch>` at `<short REF>`.
 - ✅ All UI labels (bolded terms and feature section headings) match codebase
   OR
 - ⚠️ Line {n}: **{label}** — codebase says "{expected}" (web/i18n/<locale>/<file>.json, key "<key>")
+
+**Stale Screenshots**
+- ✅ No local image shows a superseded UI string
+  OR
+- ⚠️ {image path} (line {n}): shows "{old string}"; the current label is "{new label}" (key "<key>") — re-capture needed
 
 **Glossary Gaps**
 - Terms used in docs but missing from glossary: {list}
