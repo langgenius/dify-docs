@@ -119,16 +119,39 @@ def item_identity(value: Any) -> tuple[Any, ...] | None:
     return None
 
 
-def merge_presentation(generated: Any, current: Any) -> Any:
+def is_presentation_field(key: str, parent_path: tuple[Any, ...]) -> bool:
+    """Return whether a key is OpenAPI presentation rather than user data."""
+
+    # Under a JSON Schema `properties` object these names are API fields, not
+    # OpenAPI annotations (for example, a response field named `summary`).
+    return key in PRESENTATION_KEYS and (not parent_path or parent_path[-1] != "properties")
+
+
+def is_operation_tags(key: str, parent_path: tuple[Any, ...]) -> bool:
+    """Return whether a `tags` key belongs to an OpenAPI operation."""
+
+    return (
+        key == "tags"
+        and len(parent_path) == 3
+        and parent_path[0] == "paths"
+        and parent_path[2] in HTTP_METHODS
+    )
+
+
+def merge_presentation(generated: Any, current: Any, *, path: tuple[Any, ...] = ()) -> Any:
     """Copy documentation-only fields while retaining generated structure."""
 
     if isinstance(generated, dict) and isinstance(current, dict):
         result = {}
         for key, current_value in current.items():
-            if key in PRESENTATION_KEYS or key == "tags":
+            if is_presentation_field(key, path) or is_operation_tags(key, path):
                 result[key] = copy.deepcopy(current_value)
             elif key in generated:
-                result[key] = merge_presentation(generated[key], current_value)
+                result[key] = merge_presentation(
+                    generated[key],
+                    current_value,
+                    path=path + (key,),
+                )
         for key, generated_value in generated.items():
             if key not in result:
                 result[key] = copy.deepcopy(generated_value)
@@ -152,13 +175,233 @@ def merge_presentation(generated: Any, current: Any) -> Any:
             else:
                 current_item = None
             result.append(
-                merge_presentation(generated_item, current_item)
+                merge_presentation(
+                    generated_item,
+                    current_item,
+                    path=path + (index,),
+                )
                 if current_item is not None
                 else copy.deepcopy(generated_item)
             )
         return result
 
     return copy.deepcopy(generated)
+
+
+def resolve_local_ref(root: dict[str, Any], ref: str) -> tuple[Any, tuple[str, ...]]:
+    """Resolve a local JSON pointer and return its value and path."""
+
+    if not ref.startswith("#/"):
+        raise ValueError(f"only local references are supported: {ref}")
+    path = tuple(part.replace("~1", "/").replace("~0", "~") for part in ref[2:].split("/"))
+    value: Any = root
+    for part in path:
+        if not isinstance(value, dict) or part not in value:
+            raise KeyError(f"unresolvable local reference: {ref}")
+        value = value[part]
+    return value, path
+
+
+def schema_match_score(generated: Any, current: Any, generated_root: dict[str, Any]) -> int:
+    """Score how likely two schema branches describe the same value."""
+
+    if not isinstance(generated, dict) or not isinstance(current, dict):
+        return 0
+    if isinstance(generated.get("$ref"), str):
+        generated, _ = resolve_local_ref(generated_root, generated["$ref"])
+        if not isinstance(generated, dict):
+            return 0
+
+    score = 0
+    generated_type = generated.get("type")
+    current_type = current.get("type")
+    if generated_type == current_type and generated_type is not None:
+        score += 4
+    generated_properties = generated.get("properties")
+    current_properties = current.get("properties")
+    if isinstance(generated_properties, dict) and isinstance(current_properties, dict):
+        shared = set(generated_properties) & set(current_properties)
+        score += len(shared) * 10
+        if set(generated_properties) == set(current_properties):
+            score += 5
+    if "items" in generated and "items" in current:
+        score += 3
+    generated_enum = generated.get("enum")
+    current_enum = current.get("enum")
+    if isinstance(generated_enum, list) and isinstance(current_enum, list):
+        score += len(set(generated_enum) & set(current_enum)) * 2
+    return score
+
+
+def carry_referenced_presentation(
+    generated_root: dict[str, Any],
+    current_root: dict[str, Any],
+    aligned_root: dict[str, Any],
+) -> None:
+    """Carry docs fields when generated schemas move behind local references.
+
+    ``merge_presentation`` handles fields that stay at the same JSON path. This
+    pass handles structural extraction performed by Pydantic/OpenAPI, such as
+    an inline response object becoming ``$ref: ...DocumentResponse``. It only
+    applies an old value when every matching source location agrees, so a
+    shared component never inherits endpoint-specific prose by accident.
+    """
+
+    candidates: dict[tuple[tuple[Any, ...], str], list[Any]] = defaultdict(list)
+    active_refs: set[tuple[str, str | None]] = set()
+
+    def collect_presentation(current: dict[str, Any], aligned_path: tuple[Any, ...]) -> None:
+        for key in PRESENTATION_KEYS:
+            if key in current and is_presentation_field(key, aligned_path):
+                candidates[(aligned_path, key)].append(copy.deepcopy(current[key]))
+
+    def best_variant(variants: list[Any], current: dict[str, Any]) -> tuple[int, Any] | None:
+        scored = [
+            (schema_match_score(variant, current, generated_root), index, variant)
+            for index, variant in enumerate(variants)
+            if not (isinstance(variant, dict) and variant.get("type") == "null")
+        ]
+        if not scored:
+            return None
+        scored.sort(key=lambda item: (-item[0], item[1]))
+        if scored[0][0] == 0 and len(scored) > 1:
+            return None
+        return scored[0][1], scored[0][2]
+
+    def walk(
+        generated: Any,
+        current: Any,
+        aligned: Any,
+        aligned_path: tuple[Any, ...],
+        *,
+        remapped: bool = False,
+        copy_here: bool = True,
+    ) -> None:
+        if isinstance(generated, dict) and isinstance(current, dict) and isinstance(aligned, dict):
+            generated_ref = generated.get("$ref")
+            current_ref = current.get("$ref")
+            if isinstance(generated_ref, str):
+                # Identical references are already merged at their component
+                # definitions by merge_presentation; following them again can
+                # misplace presentation from a nullable wrapper onto a branch.
+                if generated_ref == current_ref:
+                    return
+                ref_pair = (generated_ref, current_ref if isinstance(current_ref, str) else None)
+                if ref_pair in active_refs:
+                    return
+                generated_target, target_path = resolve_local_ref(generated_root, generated_ref)
+                aligned_target, _ = resolve_local_ref(aligned_root, generated_ref)
+                if isinstance(current_ref, str):
+                    current_target, _ = resolve_local_ref(current_root, current_ref)
+                    target_copy_here = True
+                else:
+                    current_target = current
+                    # Presentation on an inline schema stays beside the new
+                    # $ref; only its children move into the component.
+                    target_copy_here = False
+                active_refs.add(ref_pair)
+                walk(
+                    generated_target,
+                    current_target,
+                    aligned_target,
+                    target_path,
+                    remapped=True,
+                    copy_here=target_copy_here,
+                )
+                active_refs.remove(ref_pair)
+                return
+
+            if isinstance(current_ref, str):
+                current_target, _ = resolve_local_ref(current_root, current_ref)
+                walk(
+                    generated,
+                    current_target,
+                    aligned,
+                    aligned_path,
+                    remapped=True,
+                    copy_here=True,
+                )
+                return
+
+            if remapped and copy_here:
+                collect_presentation(current, aligned_path)
+
+            # OpenAPI 3.1 commonly wraps an old nullable schema in anyOf with
+            # a null branch. Follow the structurally matching non-null branch.
+            for union_key in ("anyOf", "oneOf"):
+                generated_variants = generated.get(union_key)
+                if isinstance(generated_variants, list) and union_key not in current:
+                    match = best_variant(generated_variants, current)
+                    if match is not None:
+                        index, generated_variant = match
+                        aligned_variants = aligned.get(union_key)
+                        if isinstance(aligned_variants, list) and index < len(aligned_variants):
+                            walk(
+                                generated_variant,
+                                current,
+                                aligned_variants[index],
+                                aligned_path + (union_key, index),
+                                remapped=True,
+                                copy_here=False,
+                            )
+                            return
+
+            for key in generated:
+                if key not in current or key not in aligned:
+                    continue
+                walk(
+                    generated[key],
+                    current[key],
+                    aligned[key],
+                    aligned_path + (key,),
+                    remapped=remapped,
+                )
+            return
+
+        if isinstance(generated, list) and isinstance(current, list) and isinstance(aligned, list):
+            unused = set(range(len(current)))
+            for generated_index, generated_item in enumerate(generated):
+                if generated_index >= len(aligned):
+                    break
+                ranked = sorted(
+                    (
+                        schema_match_score(generated_item, current[index], generated_root),
+                        index,
+                    )
+                    for index in unused
+                )
+                if not ranked:
+                    continue
+                score, current_index = ranked[-1]
+                if score == 0:
+                    current_index = generated_index if generated_index in unused else min(unused)
+                unused.remove(current_index)
+                walk(
+                    generated_item,
+                    current[current_index],
+                    aligned[generated_index],
+                    aligned_path + (generated_index,),
+                    remapped=remapped,
+                )
+
+    walk(generated_root, current_root, aligned_root, ())
+
+    for (path, key), values in candidates.items():
+        unique = {json.dumps(value, ensure_ascii=False, sort_keys=True) for value in values}
+        if len(unique) != 1:
+            continue
+        target: Any = aligned_root
+        for part in path:
+            if isinstance(part, int):
+                if not isinstance(target, list) or part >= len(target):
+                    target = None
+                    break
+            elif not isinstance(target, dict) or part not in target:
+                target = None
+                break
+            target = target[part]
+        if isinstance(target, dict) and key not in target:
+            target[key] = values[0]
 
 
 def iter_operations(spec: dict[str, Any]):
@@ -405,6 +648,7 @@ def align_language(
     language: str,
 ) -> dict[str, Any]:
     aligned = merge_presentation(generated, current)
+    carry_referenced_presentation(generated, current, aligned)
 
     # JSON object order is not part of the wire contract, but it controls the
     # generated sidebar order. Keep the reviewed docs order, retain the
@@ -464,7 +708,7 @@ def wire_shape(value: Any, *, path: tuple[Any, ...] = ()) -> Any:
         return {
             key: wire_shape(child, path=path + (key,))
             for key, child in value.items()
-            if key not in PRESENTATION_KEYS
+            if not is_presentation_field(key, path)
             and not (
                 key == "tags"
                 and len(path) == 3
@@ -514,12 +758,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("generated", type=Path, help="Dify-generated service-openapi.json")
     parser.add_argument("--docs-root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument(
+        "--presentation-root",
+        type=Path,
+        help="optional source root for the pre-alignment locale presentation",
+    )
     parser.add_argument("--write", action="store_true", help="write aligned locale specs")
     args = parser.parse_args()
 
     generated = load_json(args.generated)
+    presentation_root = args.presentation_root or args.docs_root
     current = {
-        language: load_json(args.docs_root / language / "api-reference" / "openapi_service.json")
+        language: load_json(presentation_root / language / "api-reference" / "openapi_service.json")
         for language in LANGUAGES
     }
     memories = {

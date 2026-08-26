@@ -36,6 +36,10 @@ python3 "$DOCS/tools/api-pipeline/align_service_api.py" /path/to/service-openapi
 python3 "$DOCS/tools/api-pipeline/align_service_api.py" /path/to/service-openapi.json
 ```
 
+For the initial migration, `--presentation-root` can point to a checkout of
+the pre-alignment docs so presentation follows schemas that the generator
+moved behind `$ref` components. Subsequent runs use the committed locale specs.
+
 The aligner takes paths, methods, parameters, schemas, status codes, authentication, deprecation flags, and operation IDs from Dify. It preserves localized prose, examples, operation tags and ordering, `x-mint`, `x-codeSamples`, top-level navigation tags, and the absolute server template used by the Mintlify playground. Existing JSON object keys retain their reviewed order, with generated-only keys appended, to keep contract updates diff-friendly.
 
 ## Editing the spec

@@ -4,6 +4,7 @@ import unittest
 from align_service_api import (
     apply_deprecated_alias_presentation,
     align_language,
+    carry_referenced_presentation,
     merge_presentation,
     prefix_internal_api_links,
     remove_new_untranslated_presentation,
@@ -159,8 +160,127 @@ class AlignServiceApiTest(unittest.TestCase):
             "Item": {"type": "object", "properties": {"tags": {"type": "array"}}}
         }
         aligned = align_language(copy.deepcopy(generated), self.current, "en")
+        self.assertEqual(
+            aligned["components"]["schemas"]["Item"]["properties"]["tags"]["type"],
+            "array",
+        )
         aligned["components"]["schemas"]["Item"]["properties"]["tags"]["type"] = "string"
         self.assertIn("generated component contract changed", validate_alignment(generated, aligned))
+
+    def test_schema_properties_named_like_presentation_are_wire_owned(self) -> None:
+        generated = copy.deepcopy(self.generated)
+        generated["components"]["schemas"] = {
+            "Item": {
+                "type": "object",
+                "properties": {
+                    "description": {"type": "string"},
+                    "summary": {"type": "string"},
+                    "title": {"type": "string"},
+                },
+            }
+        }
+        current = copy.deepcopy(self.current)
+        current["components"]["schemas"] = {
+            "Item": {
+                "type": "object",
+                "properties": {
+                    "description": {"type": "integer"},
+                    "summary": {"type": "integer"},
+                    "title": {"type": "integer"},
+                },
+            }
+        }
+
+        aligned = align_language(generated, current, "en")
+
+        properties = aligned["components"]["schemas"]["Item"]["properties"]
+        self.assertEqual({name: schema["type"] for name, schema in properties.items()}, {
+            "description": "string",
+            "summary": "string",
+            "title": "string",
+        })
+        properties["summary"]["type"] = "integer"
+        self.assertIn("generated component contract changed", validate_alignment(generated, aligned))
+
+    def test_presentation_moves_from_inline_schema_to_referenced_component(self) -> None:
+        generated = copy.deepcopy(self.generated)
+        generated["paths"]["/items"]["get"]["responses"]["200"] = {
+            "description": "Success",
+            "content": {
+                "application/json": {
+                    "schema": {"$ref": "#/components/schemas/ItemResponse"}
+                }
+            },
+        }
+        generated["components"]["schemas"] = {
+            "ItemResponse": {
+                "type": "object",
+                "properties": {"name": {"type": "string", "title": "Name"}},
+            }
+        }
+        current = copy.deepcopy(self.current)
+        current["paths"]["/items"]["get"]["responses"]["200"] = {
+            "description": "Curated success",
+            "content": {
+                "application/json": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "description": "Human-readable item name.",
+                            }
+                        },
+                    }
+                }
+            },
+        }
+
+        aligned = align_language(generated, current, "en")
+
+        self.assertEqual(
+            aligned["components"]["schemas"]["ItemResponse"]["properties"]["name"]["description"],
+            "Human-readable item name.",
+        )
+        self.assertNotIn("description", aligned["components"]["schemas"]["ItemResponse"])
+        self.assertEqual(validate_alignment(generated, aligned), [])
+
+    def test_conflicting_inline_descriptions_do_not_leak_into_shared_component(self) -> None:
+        generated = copy.deepcopy(self.generated)
+        generated["paths"]["/items"]["post"] = copy.deepcopy(
+            generated["paths"]["/items"]["get"]
+        )
+        generated["components"]["schemas"] = {
+            "Shared": {
+                "type": "object",
+                "properties": {"id": {"type": "string"}},
+            }
+        }
+        for method in ("get", "post"):
+            generated["paths"]["/items"][method]["responses"]["200"] = {
+                "description": "Success",
+                "content": {
+                    "application/json": {
+                        "schema": {"$ref": "#/components/schemas/Shared"}
+                    }
+                },
+            }
+        current = copy.deepcopy(generated)
+        for method, description in (("get", "Read identifier."), ("post", "Created identifier.")):
+            current["paths"]["/items"][method]["responses"]["200"]["content"]["application/json"][
+                "schema"
+            ] = {
+                "type": "object",
+                "properties": {"id": {"type": "string", "description": description}},
+            }
+        aligned = merge_presentation(generated, current)
+
+        carry_referenced_presentation(generated, current, aligned)
+
+        self.assertNotIn(
+            "description",
+            aligned["components"]["schemas"]["Shared"]["properties"]["id"],
+        )
 
 
 if __name__ == "__main__":
