@@ -130,7 +130,7 @@ Anchors are auto-generated from heading text, so they change when a heading is r
 | `<Tab>` / `<Accordion>` | `<Tab title="新 Agent" id="new-agent">` |
 | Heading inside a JSX component (e.g. within a `<Tab>`) | `<a id="give-it-a-task"></a>` on its own line above the heading — the `{#id}` syntax fails to build there, because braces inside a component parse as JSX expressions |
 
-An explicit ID **replaces** the auto-generated anchor. When adding one to an existing heading, update every link that used the old anchor in the same pass: cross-page links in all three languages and same-page `](#...)` links. Verify with:
+An explicit ID **replaces** the auto-generated anchor. When adding one to an existing heading, update every link that used the old anchor in the same pass: cross-page links in all three languages and same-page `[text](#anchor)` links. Verify with:
 
 ```bash
 python3 tools/check-links.py --internal
