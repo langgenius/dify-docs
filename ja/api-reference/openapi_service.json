@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "チャットメッセージを送信",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットアプリにメッセージを送信し、アシスタントの応答を返します。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\nチャットアプリにメッセージを送信し、アシスタントの応答を返します。ストリーミングレスポンスのイベントはアプリタイプによって異なります。",
         "operationId": "sendBasicChatMessageJa",
         "tags": [
           "チャットメッセージ"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "サーバー送信イベント (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（キープアライブ。Chatflow アプリのストリームは `ping` で始まり、その後およそ 10 秒ごとに届きます）は無視します。\n\n**アプリタイプ別のイベント**（応答イベントと、ストリームの終了方法）：\n\n- **チャットボット**：`message` チャンク（順番に連結）→ `message_end`。\n- **Agent**：`agent_thought`（推論とツール呼び出しのステップ）と `agent_message` チャンクが並行 → `message_end`。\n- **新しい Agent**：`agent_message` チャンクと `agent_thought` ステップが並行 → 完全な回答を含む終了 `message` が 1 つ（追加するテキストではなく最終回答として扱う）→ `message_end`。その `message_end` の metadata には `usage`（アノテーション一致時は `annotation_reply` も）が含まれ、`retriever_resources` は含まれません。\n- **Chatflow**：`workflow_started` → ノードイベント（`node_started`、`node_finished`、およびイテレーションとループの各バリアント）と `message` チャンクが並行 → その後、結果に応じて：\n  - **成功**：`message_end`、続いて `workflow_finished`\n  - **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` はありません\n  - **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\n**アドオン**：\n\n- テキスト読み上げの自動再生：`tts_message` の音声チャンクが間に挟まり、`tts_message_end` が終了イベントの後に続きます。\n- `reasoning_format: separated` を使う Chatflow の LLM ノードは、モデルの推論を伝える `reasoning_chunk` デルタも発行します。\n\n**共通フィールド**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（Chatflow アプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、Chatflow、新しい Agent | 回答の各チャンク（順番に連結）。新しい Agent では、完全な回答を含む最後の 1 チャンク | `answer` |\n| `agent_message` | Agent、新しい Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | Agent、新しい Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。Chatflow では `reason` も含む |\n| `reasoning_chunk` | Chatflow | 推論内容の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは推論の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、Agent、Chatflow | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（Chatflow アプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | キープアライブ。Chatflow ストリームの最初のイベントで、その後およそ 10 秒ごと | なし |"
+                  "description": "サーバー送信イベント (SSE) のストリームです。解析は [ストリーミングレスポンスの処理](/ja/api-reference/guides/streaming) に従ってください：`data:` 行を読み取り、`event` フィールドで振り分け、`ping`（キープアライブ。Chatflow アプリのストリームは `ping` で始まり、その後およそ 10 秒ごとに届きます）は無視します。\n\n**アプリタイプ別のイベント**（応答イベントと、ストリームの終了方法）：\n\n- **チャットボット**：`message` チャンク（順番に連結）→ `message_end`。\n- **レガシー Agent**：`agent_thought`（推論とツール呼び出しのステップ）と `agent_message` チャンクが並行 → `message_end`。\n- **Agent**：`agent_message` チャンクと `agent_thought` ステップが並行 → 完全な回答を含む終了 `message` が 1 つ（追加するテキストではなく最終回答として扱う）→ `message_end`。その `message_end` の metadata には `usage`（アノテーション一致時は `annotation_reply` も）が含まれ、`retriever_resources` は含まれません。\n- **Chatflow**：`workflow_started` → ノードイベント（`node_started`、`node_finished`、およびイテレーションとループの各バリアント）と `message` チャンクが並行 → その後、結果に応じて：\n  - **成功**：`message_end`、続いて `workflow_finished`\n  - **失敗**：ステータスが `failed` の `workflow_finished`、続いて `error`。`message_end` はありません\n  - **一時停止**：`human_input_required`、続いて `workflow_paused`（ストリームはここで終了し、実行は別途再開されます）\n\n**アドオン**：\n\n- テキスト読み上げの自動再生：`tts_message` の音声チャンクが間に挟まり、`tts_message_end` が終了イベントの後に続きます。\n- `reasoning_format: separated` を使う Chatflow の LLM ノードは、モデルの推論を伝える `reasoning_chunk` デルタも発行します。\n\n**共通フィールド**：`ping` を除き、すべてのイベントには `conversation_id`、`message_id`、`created_at`（Unix エポック秒）が含まれます。`error` を除くイベントには `task_id` も含まれます。ワークフロー、ノード、人間の入力イベント（Chatflow アプリ）は、ペイロードを `data` の下にネストし、`agent_log` を除いてトップレベルの `workflow_run_id` を持ちます。\n\n**応答イベント**\n\n| イベント | アプリ | 発生タイミング | 主なフィールド |\n|:---|:---|:---|:---|\n| `message` | チャットボット、Chatflow、Agent | 回答の各チャンク（順番に連結）。Agent では、完全な回答を含む最後の 1 チャンク | `answer` |\n| `agent_message` | レガシー Agent、Agent | 回答の各チャンク（順番に連結） | `answer` |\n| `agent_thought` | レガシー Agent、Agent | 推論またはツール呼び出しの各ステップ | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | すべて | 出力モデレーションがそれまでの回答を置き換える | `answer`。Chatflow では `reason` も含む |\n| `reasoning_chunk` | Chatflow | 推論内容の各デルタ（LLM ノードが `reasoning_format: separated` を使用する場合）。順番に連結してください。`is_final: true` の最終イベントは推論の完了を示し、空の `reasoning` を伴う場合があります | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | チャットボット、レガシー Agent | アシスタントがファイルを返す | `type`、`belongs_to`、`url` |\n| `message_end` | すべて | 回答が完了 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | チャットボット、レガシー Agent、Chatflow | 音声チャンク/終了（TTS 自動再生が有効な場合） | `audio` |\n\n**ワークフロー・ノードイベント**（Chatflow アプリのみ）\n\n各イベントはペイロードを `data` オブジェクトの下にネストします。\n\n| イベント | 発生タイミング | 主な `data` フィールド |\n|:---|:---|:---|\n| `workflow_started` | 実行開始 | `inputs` |\n| `node_started` | ノード開始 | `node_id`、`node_type`、`title` |\n| `node_finished` | ノード終了 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 失敗後にノードを再試行 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | イテレーションノードの進行（情報提供のみ、処理は任意） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | ループノードの進行（情報提供のみ、処理は任意） | `data` |\n| `agent_log` | Agent ノードのステップログ（情報提供のみ、処理は任意、`workflow_run_id` なし） | `data` |\n| `workflow_finished` | 実行終了 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 実行が一時停止 | `paused_nodes`、`reasons` |\n| `human_input_required` | 実行が人間の入力ノードに到達 | `form_token`、`form_content`、`expiration_time` |\n\n一時停止後、このストリームは `workflow_paused` で終了します。[人間の入力フォームを送信](/ja/api-reference/human-input/submit-human-input-form) でフォームを送信するか、タイムアウトさせてください。再開後の実行（`human_input_form_filled`/`human_input_form_timeout` から `workflow_finished` までを含む）は、[ワークフローイベントをストリーム](/ja/api-reference/workflow-runs/stream-workflow-events) からストリーミングされます。\n\n**トランスポートイベント**\n\n| イベント | 発生タイミング | 主なフィールド |\n|:---|:---|:---|\n| `error` | 失敗によりストリームが終了。HTTP は `200` のまま | `status`（例：`400`）、`code`（例：`invalid_param`）、`message` |\n| `ping` | キープアライブ。Chatflow ストリームの最初のイベントで、その後およそ 10 秒ごと | なし |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -226,7 +226,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : 新しい Agent アプリで `blocking` レスポンスモードが指定されました。\n- `invalid_param` : 新しい Agent アプリに Agent がバインドされていません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（新しい Agent アプリ）\n- `conversation_completed` : 会話は終了しています。`conversation_id` を省略して新しい会話を開始してください。",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 有効なモデルプロバイダーの認証情報が見つかりません。\n- `provider_quota_exceeded` : モデルプロバイダーのクォータが使い切られました。\n- `model_currently_not_support` : 現在のモデルは利用できません。\n- `completion_request_error` : テキスト生成に失敗しました。\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : Agent アプリで `blocking` レスポンスモードが指定されました。\n- `invalid_param` : Agent アプリに Agent がバインドされていません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（Agent アプリ）\n- `conversation_completed` : 会話は終了しています。`conversation_id` を省略して新しい会話を開始してください。",
             "content": {
               "application/json": {
                 "examples": {
@@ -434,7 +434,7 @@
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "生成を停止",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nチャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされます。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\nチャットメッセージ生成タスクを停止します。`streaming` モードでのみサポートされます。",
         "operationId": "stopBasicChatMessageGenerationJa",
         "tags": [
           "チャットメッセージ"
@@ -519,7 +519,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "次の推奨質問を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nメッセージに対して提案されたフォローアップ質問を返します。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\nメッセージに対して提案されたフォローアップ質問を返します。",
         "operationId": "getBasicChatSuggestedQuestionsJa",
         "tags": [
           "チャットメッセージ"
@@ -648,7 +648,7 @@
     "/files/upload": {
       "post": {
         "summary": "ファイルをアップロード",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nファイルをアップロードし、後続のリクエストから参照するための `id` を返します。ファイルはアップロードしたエンドユーザーに属し、同じ `user` を持つリクエストだけがそのファイルを参照できます。\n\nアプリが実際に扱えるファイル種別は、アプリのファイルアップロード設定によって決まります。[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) で確認できます。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nファイルをアップロードし、後続のリクエストから参照するための `id` を返します。ファイルはアップロードしたエンドユーザーに属し、同じ `user` を持つリクエストだけがそのファイルを参照できます。\n\nアプリが実際に扱えるファイル種別は、アプリのファイルアップロード設定によって決まります。[アプリケーションのパラメータ情報を取得](/ja/api-reference/applications/get-app-parameters) で確認できます。",
         "operationId": "uploadBasicChatFileJa",
         "tags": [
           "ファイル操作"
@@ -901,7 +901,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "エンドユーザー取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーの詳細を返します。別のエンドポイントが返したエンドユーザー ID（例：[ファイルをアップロード](/ja/api-reference/files/upload-file) レスポンスの `created_by`）を解決するのに便利です。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nID を指定してエンドユーザーの詳細を返します。別のエンドポイントが返したエンドユーザー ID（例：[ファイルをアップロード](/ja/api-reference/files/upload-file) レスポンスの `created_by`）を解決するのに便利です。",
         "operationId": "getEndUserChatJa",
         "tags": [
           "エンドユーザー"
@@ -1153,7 +1153,7 @@
     "/conversations": {
       "get": {
         "summary": "会話一覧を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\nエンドユーザーの会話を、最近アクティブな順に一覧表示します。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\nエンドユーザーの会話を、最近アクティブな順に一覧表示します。",
         "operationId": "getBasicChatConversationsListJa",
         "tags": [
           "会話管理"
@@ -1286,7 +1286,7 @@
     "/messages": {
       "get": {
         "summary": "会話履歴メッセージ一覧を取得",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話のメッセージ履歴を新しい順に返します。`first_id` を渡すと、より古いメッセージへページをさかのぼれます。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\n会話のメッセージ履歴を新しい順に返します。`first_id` を渡すと、より古いメッセージへページをさかのぼれます。",
         "operationId": "getBasicChatConversationHistoryJa",
         "tags": [
           "会話管理"
@@ -1442,7 +1442,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "会話変数の取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話に保存された変数を一覧表示します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\n会話に保存された変数を一覧表示します。",
         "operationId": "getBasicChatConversationVariablesJa",
         "tags": [
           "会話管理"
@@ -1585,7 +1585,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "会話の名前を変更",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話の名前を変更します。`auto_generate` が `true` の場合は、メッセージから名前を自動生成します。この名前は、複数会話のリストでクライアントが表示するものです。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\n会話の名前を変更します。`auto_generate` が `true` の場合は、メッセージから名前を自動生成します。この名前は、複数会話のリストでクライアントが表示するものです。",
         "operationId": "renameBasicChatConversationJa",
         "tags": [
           "会話管理"
@@ -1702,7 +1702,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "会話変数を更新",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n会話変数の値を更新します。新しい値は変数の既存の型と一致する必要があります。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\n会話変数の値を更新します。新しい値は変数の既存の型と一致する必要があります。",
         "operationId": "updateChatConversationVariableJa",
         "tags": [
           "会話管理"
@@ -1836,7 +1836,7 @@
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "会話を削除",
-        "description": "**対象アプリ**：Chatflow、新しい Agent、チャットボット、Agent。\n\n会話を削除します。",
+        "description": "**対象アプリ**：Chatflow、Agent、チャットボット、レガシー Agent。\n\n会話を削除します。",
         "operationId": "deleteBasicChatConversationJa",
         "tags": [
           "会話管理"
@@ -1928,7 +1928,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "音声をテキストに変換",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nワークスペースのデフォルト音声認識モデルを使用して、アップロードされた音声ファイルをテキストに文字起こしします。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nワークスペースのデフォルト音声認識モデルを使用して、アップロードされた音声ファイルをテキストに文字起こしします。",
         "operationId": "basicChatAudioToTextJa",
         "tags": [
           "音声・テキスト変換"
@@ -2082,7 +2082,7 @@
     "/text-to-audio": {
       "post": {
         "summary": "テキストを音声に変換",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nテキストを音声に変換します。任意のテキストを合成するには `text` を、既存のメッセージの回答を音声化するには `message_id` を渡します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nテキストを音声に変換します。任意のテキストを合成するには `text` を、既存のメッセージの回答を音声化するには `message_id` を渡します。",
         "operationId": "basicChatTextToAudioJa",
         "tags": [
           "音声・テキスト変換"
@@ -2243,7 +2243,7 @@
     "/info": {
       "get": {
         "summary": "アプリケーションの基本情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリの基本情報（名前、説明、タグ、モード、作成者）を返します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nアプリの基本情報（名前、説明、タグ、モード、作成者）を返します。",
         "operationId": "getBasicChatAppInfoJa",
         "tags": [
           "アプリケーション設定"
@@ -2287,7 +2287,7 @@
     "/parameters": {
       "get": {
         "summary": "アプリケーションのパラメータ情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリのフロントエンド設定（開始文と推奨質問、機能トグル、ユーザー入力フォーム、ファイルアップロード上限）を返します。アプリの入力をレンダリングし、正しいアップロード上限を適用するために使用します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nアプリのフロントエンド設定（開始文と推奨質問、機能トグル、ユーザー入力フォーム、ファイルアップロード上限）を返します。アプリの入力をレンダリングし、正しいアップロード上限を適用するために使用します。",
         "operationId": "getBasicChatAppParametersJa",
         "tags": [
           "アプリケーション設定"
@@ -2368,7 +2368,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（新しい Agent アプリ）",
+            "description": "- `app_unavailable` : アプリケーションが利用できないか、設定が正しくありません。\n- `agent_not_published` : バインドされた Agent が公開されていません。（Agent アプリ）",
             "content": {
               "application/json": {
                 "examples": {
@@ -2405,7 +2405,7 @@
     "/meta": {
       "get": {
         "summary": "アプリケーションのメタ情報を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nこのアプリが使用するツールの表示アイコンを、ツール名をキーとして返します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nこのアプリが使用するツールの表示アイコンを、ツール名をキーとして返します。",
         "operationId": "getBasicChatAppMetaJa",
         "tags": [
           "アプリケーション設定"
@@ -2448,7 +2448,7 @@
     "/site": {
       "get": {
         "summary": "アプリの WebApp 設定を取得",
-        "description": "**対象アプリ**：Chatflow、Workflow、新しい Agent、チャットボット、Agent、テキストジェネレーター。\n\nアプリのホスト型 Web アプリのブランディングと表示設定（タイトル、アイコン、テーマカラー、デフォルト言語など）を返します。",
+        "description": "**対象アプリ**：Chatflow、Workflow、Agent、チャットボット、レガシー Agent、テキストジェネレーター。\n\nアプリのホスト型 Web アプリのブランディングと表示設定（タイトル、アイコン、テーマカラー、デフォルト言語など）を返します。",
         "operationId": "getBasicChatWebAppSettingsJa",
         "tags": [
           "アプリケーション設定"
@@ -2516,7 +2516,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "アノテーションを作成",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションを作成します。アノテーションは、一致したときにアプリが新しい応答を生成する代わりに直接返す、事前定義された質問と回答のペアです。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\nアノテーションを作成します。アノテーションは、一致したときにアプリが新しい応答を生成する代わりに直接返す、事前定義された質問と回答のペアです。",
         "operationId": "createChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2574,7 +2574,7 @@
       },
       "get": {
         "summary": "アノテーションリストを取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリのアノテーションを、任意でキーワードでフィルタリングして一覧表示します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\nアプリのアノテーションを、任意でキーワードでフィルタリングして一覧表示します。",
         "operationId": "listChatAnnotationsJa",
         "tags": [
           "アノテーション管理"
@@ -2656,7 +2656,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "アノテーションを更新",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションの質問と回答を更新します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\nアノテーションの質問と回答を更新します。",
         "operationId": "updateChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2743,7 +2743,7 @@
       },
       "delete": {
         "summary": "アノテーションを削除",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアノテーションとその関連するヒット履歴を削除します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\nアノテーションとその関連するヒット履歴を削除します。",
         "operationId": "deleteChatAnnotationJa",
         "tags": [
           "アノテーション管理"
@@ -2794,7 +2794,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "アノテーション返信を設定",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\nアプリのアノテーション返信を有効または無効にします。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。\n\nリクエストボディはアクションの実行前に検証されるため、`disable` の場合でも `score_threshold`、`embedding_provider_name`、`embedding_model_name` が必須です。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\nアプリのアノテーション返信を有効または無効にします。非同期で実行されます。進捗は [アノテーション返信の初期設定タスクステータスを取得](/ja/api-reference/annotations/get-annotation-reply-job-status) で追跡してください。\n\nリクエストボディはアクションの実行前に検証されるため、`disable` の場合でも `score_threshold`、`embedding_provider_name`、`embedding_model_name` が必須です。",
         "operationId": "setChatAnnotationReplyJa",
         "tags": [
           "アノテーション管理"
@@ -2867,7 +2867,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "アノテーション返信の初期設定タスクステータスを取得",
-        "description": "**対象アプリ**：Chatflow、チャットボット、Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始されたアノテーション返信設定ジョブのステータスを返します。",
+        "description": "**対象アプリ**：Chatflow、チャットボット、レガシー Agent。\n\n[アノテーション返信を設定](/ja/api-reference/annotations/configure-annotation-reply) で開始されたアノテーション返信設定ジョブのステータスを返します。",
         "operationId": "getChatAnnotationReplyStatusJa",
         "tags": [
           "アノテーション管理"
@@ -13263,7 +13263,7 @@
               "streaming",
               "blocking"
             ],
-            "description": "レスポンスの返却モードです。省略した場合はブロッキングになります。\n\n- `streaming`（推奨）：応答は Server-Sent Events として届きます。\n- `blocking`：生成の完了後に返します。長時間の生成は中断されるおそれがあります。Dify Cloud では、応答がタイムアウト内に届かないと、エッジプロキシが接続を終了する場合があります。\n- Agent と新しい Agent アプリは `streaming` のみに対応します。`blocking` のリクエストは 400 で失敗します。"
+            "description": "レスポンスの返却モードです。省略した場合はブロッキングになります。\n\n- `streaming`（推奨）：応答は Server-Sent Events として届きます。\n- `blocking`：生成の完了後に返します。長時間の生成は中断されるおそれがあります。Dify Cloud では、応答がタイムアウト内に届かないと、エッジプロキシが接続を終了する場合があります。\n- レガシー Agent と Agent アプリは `streaming` のみに対応します。`blocking` のリクエストは 400 で失敗します。"
           },
           "user": {
             "type": "string",
@@ -13275,7 +13275,7 @@
           },
           "files": {
             "type": "array",
-            "description": "メッセージに添付するファイルです。ローカルファイルの場合は、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で参照します。新しい Agent アプリはファイル参照を受け付けますが、その内容は処理しません。",
+            "description": "メッセージに添付するファイルです。ローカルファイルの場合は、まず [ファイルをアップロード](/ja/api-reference/files/upload-file) でアップロードし、返された `id` を `upload_file_id` として `transfer_method: local_file` で参照します。Agent アプリはファイル参照を受け付けますが、その内容は処理しません。",
             "items": {
               "type": "object",
               "required": [
@@ -13354,7 +13354,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "アプリモード。`chat` はチャットボットアプリ、`agent-chat` は Agent アプリ、`advanced-chat` は Chatflow アプリです。"
+            "description": "アプリモード。`chat` はチャットボットアプリ、`agent-chat` はレガシー Agent アプリ、`advanced-chat` は Chatflow アプリです。"
           },
           "answer": {
             "type": "string",
@@ -14604,7 +14604,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "アプリケーションモード。`completion` はテキスト生成アプリ、`chat` は基本チャットアプリ、`agent-chat` はエージェントベースのアプリ、`advanced-chat` は Chatflow アプリ、`workflow` は Workflow アプリです、`agent` は新しい Agent アプリです。"
+            "description": "アプリケーションモード。`completion` はテキストジェネレーターアプリ、`chat` はチャットボットアプリ、`agent-chat` はレガシー Agent アプリ、`advanced-chat` は Chatflow アプリ、`workflow` は Workflow アプリ、`agent` は Agent アプリです。"
           },
           "author_name": {
             "type": "string",

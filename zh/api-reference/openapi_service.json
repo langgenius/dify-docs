@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "发送对话消息",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n向对话型应用发送一条消息并返回助手的回复。流式响应中的事件因应用类型而异。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n向对话型应用发送一条消息并返回助手的回复。流式响应中的事件因应用类型而异。",
         "operationId": "sendBasicChatMessageCn",
         "tags": [
           "对话消息"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（保活；Chatflow 应用的流以 `ping` 开头，之后约每 10 秒到达一次）。\n\n**按应用类型划分的事件**（先是回复事件，再是流的结束方式）：\n\n- **聊天助手**：`message` 片段（按顺序拼接）→ `message_end`。\n- **Agent**：`agent_thought` 推理与工具调用步骤，与 `agent_message` 片段并行 → `message_end`。\n- **新 Agent**：`agent_message` 片段与并行的 `agent_thought` 步骤 → 一个收尾的 `message` 携带完整回答（将其视为最终回答，而非要追加的额外文本）→ `message_end`。其 `message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不含 `retriever_resources`。\n- **Chatflow**：`workflow_started` → 节点事件（`node_started`、`node_finished`，以及迭代和循环的相应变体）与 `message` 片段并行 → 随后按运行结果：\n  - **成功**：`message_end`，随后 `workflow_finished`\n  - **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n  - **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n**附加事件**：\n\n- 文本转语音自动播放：`tts_message` 音频片段会穿插其间，`tts_message_end` 跟随在结束事件之后。\n- 设置 `reasoning_format: separated` 的 Chatflow LLM 节点还会发送 `reasoning_chunk` 增量，承载模型的推理内容。\n\n**通用字段**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（Chatflow 应用）会将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、Chatflow、新 Agent | 每个回答片段（按顺序拼接）；新 Agent 为携带完整回答的收尾片段 | `answer` |\n| `agent_message` | Agent、新 Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | Agent、新 Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |\n| `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、Agent、Chatflow | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅 Chatflow 应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 保活；每个 Chatflow 流以 `ping` 开头，之后约每 10 秒一次 | 无 |"
+                  "description": "Server-Sent Events (SSE) 流。按 [SSE 流式传输指南](/zh/api-reference/guides/streaming) 解析：读取 `data:` 行，根据 `event` 字段分派，忽略 `ping`（保活；Chatflow 应用的流以 `ping` 开头，之后约每 10 秒到达一次）。\n\n**按应用类型划分的事件**（先是回复事件，再是流的结束方式）：\n\n- **聊天助手**：`message` 片段（按顺序拼接）→ `message_end`。\n- **旧版 Agent**：`agent_thought` 推理与工具调用步骤，与 `agent_message` 片段并行 → `message_end`。\n- **Agent**：`agent_message` 片段与并行的 `agent_thought` 步骤 → 一个收尾的 `message` 携带完整回答（将其视为最终回答，而非要追加的额外文本）→ `message_end`。其 `message_end` 的 `metadata` 包含 `usage`（命中标注回复时还包含 `annotation_reply`），不含 `retriever_resources`。\n- **Chatflow**：`workflow_started` → 节点事件（`node_started`、`node_finished`，以及迭代和循环的相应变体）与 `message` 片段并行 → 随后按运行结果：\n  - **成功**：`message_end`，随后 `workflow_finished`\n  - **失败**：`workflow_finished`（状态为 `failed`），随后 `error`；不发送 `message_end`\n  - **暂停**：`human_input_required`，随后 `workflow_paused`（流到此结束，运行将另行恢复）\n\n**附加事件**：\n\n- 文本转语音自动播放：`tts_message` 音频片段会穿插其间，`tts_message_end` 跟随在结束事件之后。\n- 设置 `reasoning_format: separated` 的 Chatflow LLM 节点还会发送 `reasoning_chunk` 增量，承载模型的推理内容。\n\n**通用字段**：除 `ping` 外，每个事件都包含 `conversation_id`、`message_id` 和 `created_at`（Unix 纪元秒）；除 `error` 外，其余事件还包含 `task_id`。工作流、节点和人工介入事件（Chatflow 应用）会将载荷嵌套在 `data` 中，且除 `agent_log` 外都带有顶层 `workflow_run_id`。\n\n**回复事件**\n\n| 事件 | 应用 | 触发时机 | 关键字段 |\n|:---|:---|:---|:---|\n| `message` | 聊天助手、Chatflow、Agent | 每个回答片段（按顺序拼接）；Agent 为携带完整回答的收尾片段 | `answer` |\n| `agent_message` | 旧版 Agent、Agent | 每个回答片段（按顺序拼接） | `answer` |\n| `agent_thought` | 旧版 Agent、Agent | 每个推理或工具调用步骤 | `position`、`thought`、`tool`、`tool_input`（JSON）、`observation`、`message_files` |\n| `message_replace` | 全部 | 内容审核替换已生成的回答 | `answer`；Chatflow 应用还包含 `reason` |\n| `reasoning_chunk` | Chatflow | 每个推理内容增量，当 LLM 节点使用 `reasoning_format: separated` 时（按顺序拼接；`is_final: true` 的事件标志推理结束，且 `reasoning` 可能为空） | `data.message_id`、`data.reasoning`、`data.node_id`、`data.is_final` |\n| `message_file` | 聊天助手、旧版 Agent | 助手返回文件 | `type`、`belongs_to`、`url` |\n| `message_end` | 全部 | 回答完成 | `metadata`（`usage`、`retriever_resources`） |\n| `tts_message`、`tts_message_end` | 聊天助手、旧版 Agent、Chatflow | 音频片段/结束，开启 TTS 自动播放时 | `audio` |\n\n**工作流与节点事件**（仅 Chatflow 应用）\n\n每个事件都将载荷嵌套在 `data` 对象中。\n\n| 事件 | 触发时机 | 关键 `data` 字段 |\n|:---|:---|:---|\n| `workflow_started` | 运行开始 | `inputs` |\n| `node_started` | 节点开始 | `node_id`、`node_type`、`title` |\n| `node_finished` | 节点结束 | `status`、`outputs`、`execution_metadata` |\n| `node_retry` | 节点失败后重试 | `retry_index` |\n| `iteration_started`、`iteration_next`、`iteration_completed` | 迭代节点进度（信息性，可不处理） | `data` |\n| `loop_started`、`loop_next`、`loop_completed` | 循环节点进度（信息性，可不处理） | `data` |\n| `agent_log` | Agent 节点步骤日志（信息性，可不处理；无 `workflow_run_id`） | `data` |\n| `workflow_finished` | 运行结束 | `status`（`succeeded`、`failed`、`partial-succeeded`、`stopped`）、`outputs`、`total_tokens` |\n| `workflow_paused` | 运行暂停 | `paused_nodes`、`reasons` |\n| `human_input_required` | 运行到达人工介入节点 | `form_token`、`form_content`、`expiration_time` |\n\n暂停后，本流在 `workflow_paused` 处结束。通过 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 提交表单，或等待其超时；恢复后的运行（包括从 `human_input_form_filled`/`human_input_form_timeout` 到 `workflow_finished` 的事件）由 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 流式返回。\n\n**传输事件**\n\n| 事件 | 触发时机 | 关键字段 |\n|:---|:---|:---|\n| `error` | 失败导致流结束；HTTP 仍为 `200` | `status`（如 `400`）、`code`（如 `invalid_param`）、`message` |\n| `ping` | 保活；每个 Chatflow 流以 `ping` 开头，之后约每 10 秒一次 | 无 |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -226,7 +226,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 文本生成失败。\n- `bad_request` : Cannot use draft 工作流 version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : 新 Agent 应用使用了 `blocking` 响应模式。\n- `invalid_param` : 新 Agent 应用未绑定 Agent。\n- `agent_not_published` : 绑定的 Agent 尚未发布。（新 Agent 应用）\n- `conversation_completed` : 会话已结束，省略 `conversation_id` 以开启新会话。",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : 未找到有效的模型供应商凭据。\n- `provider_quota_exceeded` : 模型供应商配额已用尽。\n- `model_currently_not_support` : 当前模型不可用。\n- `completion_request_error` : 文本生成失败。\n- `bad_request` : Cannot use draft 工作流 version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : Agent 应用使用了 `blocking` 响应模式。\n- `invalid_param` : Agent 应用未绑定 Agent。\n- `agent_not_published` : 绑定的 Agent 尚未发布。（Agent 应用）\n- `conversation_completed` : 会话已结束，省略 `conversation_id` 以开启新会话。",
             "content": {
               "application/json": {
                 "examples": {
@@ -434,7 +434,7 @@
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "停止响应",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n停止聊天消息生成任务。仅在 `streaming` 模式下支持。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n停止聊天消息生成任务。仅在 `streaming` 模式下支持。",
         "operationId": "stopBasicChatMessageGenerationCn",
         "tags": [
           "对话消息"
@@ -519,7 +519,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "获取下一轮建议问题列表",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n返回为某条消息推荐的追问问题。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n返回为某条消息推荐的追问问题。",
         "operationId": "getBasicChatSuggestedQuestionsCn",
         "tags": [
           "对话消息"
@@ -648,7 +648,7 @@
     "/files/upload": {
       "post": {
         "summary": "上传文件",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n上传文件并返回其 `id`，供后续请求引用。文件归上传它的终端用户所有：只有携带相同 `user` 的请求才能引用该文件。\n\n应用实际能使用哪些文件类型，取决于它的文件上传设置；可通过 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 读取。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n上传文件并返回其 `id`，供后续请求引用。文件归上传它的终端用户所有：只有携带相同 `user` 的请求才能引用该文件。\n\n应用实际能使用哪些文件类型，取决于它的文件上传设置；可通过 [获取应用参数](/zh/api-reference/applications/get-app-parameters) 读取。",
         "operationId": "uploadBasicChatFileCn",
         "tags": [
           "文件操作"
@@ -901,7 +901,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "获取终端用户信息",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n根据 ID 返回终端用户的详细信息。当需要解析其他接口返回的终端用户 ID（例如 [上传文件](/zh/api-reference/files/upload-file) 响应中的 `created_by`）时很有用。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n根据 ID 返回终端用户的详细信息。当需要解析其他接口返回的终端用户 ID（例如 [上传文件](/zh/api-reference/files/upload-file) 响应中的 `created_by`）时很有用。",
         "operationId": "getEndUserChatCn",
         "tags": [
           "终端用户"
@@ -1153,7 +1153,7 @@
     "/conversations": {
       "get": {
         "summary": "获取会话列表",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n列出某个终端用户的会话，按最近活跃时间排序。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n列出某个终端用户的会话，按最近活跃时间排序。",
         "operationId": "getBasicChatConversationsListCn",
         "tags": [
           "会话管理"
@@ -1286,7 +1286,7 @@
     "/messages": {
       "get": {
         "summary": "获取会话历史消息",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n返回会话的消息历史，按时间倒序（最新在前）。传入 `first_id` 可向前翻页获取更早的消息。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n返回会话的消息历史，按时间倒序（最新在前）。传入 `first_id` 可向前翻页获取更早的消息。",
         "operationId": "getBasicChatConversationHistoryCn",
         "tags": [
           "会话管理"
@@ -1442,7 +1442,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "获取对话变量",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n列出会话中存储的变量。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n列出会话中存储的变量。",
         "operationId": "getBasicChatConversationVariablesCn",
         "tags": [
           "会话管理"
@@ -1585,7 +1585,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "重命名会话",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n重命名会话；当 `auto_generate` 为 `true` 时，根据会话消息自动生成名称。该名称用于客户端的多会话列表显示。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n重命名会话；当 `auto_generate` 为 `true` 时，根据会话消息自动生成名称。该名称用于客户端的多会话列表显示。",
         "operationId": "renameBasicChatConversationCn",
         "tags": [
           "会话管理"
@@ -1702,7 +1702,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "更新对话变量",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新会话变量的值。新值必须与该变量的现有类型匹配。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n更新会话变量的值。新值必须与该变量的现有类型匹配。",
         "operationId": "updateChatConversationVariableZh",
         "tags": [
           "会话管理"
@@ -1836,7 +1836,7 @@
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "删除会话",
-        "description": "**适用于**：Chatflow、新 Agent、聊天助手、Agent。\n\n删除会话。",
+        "description": "**适用于**：Chatflow、Agent、聊天助手、旧版 Agent。\n\n删除会话。",
         "operationId": "deleteBasicChatConversationCn",
         "tags": [
           "会话管理"
@@ -1928,7 +1928,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "语音转文字",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n使用工作空间的默认语音转文字模型，将上传的音频文件转写为文字。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n使用工作空间的默认语音转文字模型，将上传的音频文件转写为文字。",
         "operationId": "basicChatAudioToTextCn",
         "tags": [
           "语音与文字转换"
@@ -2082,7 +2082,7 @@
     "/text-to-audio": {
       "post": {
         "summary": "文字转语音",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n将文本转换为语音音频。传入 `text` 可合成任意文本，或传入 `message_id` 为已有消息的答案配音。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n将文本转换为语音音频。传入 `text` 可合成任意文本，或传入 `message_id` 为已有消息的答案配音。",
         "operationId": "basicChatTextToAudioCn",
         "tags": [
           "语音与文字转换"
@@ -2243,7 +2243,7 @@
     "/info": {
       "get": {
         "summary": "获取应用基本信息",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用的基本信息：名称、描述、标签、模式和作者。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n返回应用的基本信息：名称、描述、标签、模式和作者。",
         "operationId": "getBasicChatAppInfoCn",
         "tags": [
           "应用配置"
@@ -2287,7 +2287,7 @@
     "/parameters": {
       "get": {
         "summary": "获取应用参数",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用的前端配置：开场白和建议问题、功能开关、用户输入表单，以及文件上传限制。用它来渲染应用的输入项并应用正确的上传限制。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n返回应用的前端配置：开场白和建议问题、功能开关、用户输入表单，以及文件上传限制。用它来渲染应用的输入项并应用正确的上传限制。",
         "operationId": "getBasicChatAppParametersCn",
         "tags": [
           "应用配置"
@@ -2368,7 +2368,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `agent_not_published` : 应用的 Agent 尚无已发布版本。（新 Agent 应用）",
+            "description": "- `app_unavailable` : 应用不可用或配置错误。\n- `agent_not_published` : 应用的 Agent 尚无已发布版本。（Agent 应用）",
             "content": {
               "application/json": {
                 "examples": {
@@ -2405,7 +2405,7 @@
     "/meta": {
       "get": {
         "summary": "获取应用元数据",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回此应用所用工具的展示图标，以工具名为键。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n返回此应用所用工具的展示图标，以工具名为键。",
         "operationId": "getBasicChatAppMetaCn",
         "tags": [
           "应用配置"
@@ -2448,7 +2448,7 @@
     "/site": {
       "get": {
         "summary": "获取应用 WebApp 设置",
-        "description": "**适用于**：Chatflow、Workflow、新 Agent、聊天助手、Agent、文本生成应用。\n\n返回应用托管 Web 应用的品牌与展示设置，如标题、图标、主题色和默认语言。",
+        "description": "**适用于**：Chatflow、Workflow、Agent、聊天助手、旧版 Agent、文本生成应用。\n\n返回应用托管 Web 应用的品牌与展示设置，如标题、图标、主题色和默认语言。",
         "operationId": "getBasicChatWebAppSettingsCn",
         "tags": [
           "应用配置"
@@ -2516,7 +2516,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "创建标注",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n创建标注。标注是预定义的问答对，命中时应用直接返回，而不再生成新回复。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n创建标注。标注是预定义的问答对，命中时应用直接返回，而不再生成新回复。",
         "operationId": "createChatAnnotationZh",
         "tags": [
           "标注管理"
@@ -2574,7 +2574,7 @@
       },
       "get": {
         "summary": "获取标注列表",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n列出应用的标注，可按关键词筛选。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n列出应用的标注，可按关键词筛选。",
         "operationId": "listChatAnnotationsZh",
         "tags": [
           "标注管理"
@@ -2656,7 +2656,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "更新标注",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n更新标注的问题和答案。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n更新标注的问题和答案。",
         "operationId": "updateChatAnnotationZh",
         "tags": [
           "标注管理"
@@ -2743,7 +2743,7 @@
       },
       "delete": {
         "summary": "删除标注",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n删除标注及其关联的命中历史。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n删除标注及其关联的命中历史。",
         "operationId": "deleteChatAnnotationZh",
         "tags": [
           "标注管理"
@@ -2794,7 +2794,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "配置标注回复",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n为应用启用或禁用标注回复。异步执行；使用 [查询标注回复配置任务状态](/zh/api-reference/annotations/get-annotation-reply-job-status) 跟踪进度。\n\n请求体在执行操作前校验，因此即使是 `disable` 也必须提供 `score_threshold`、`embedding_provider_name` 和 `embedding_model_name`。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n为应用启用或禁用标注回复。异步执行；使用 [查询标注回复配置任务状态](/zh/api-reference/annotations/get-annotation-reply-job-status) 跟踪进度。\n\n请求体在执行操作前校验，因此即使是 `disable` 也必须提供 `score_threshold`、`embedding_provider_name` 和 `embedding_model_name`。",
         "operationId": "setChatAnnotationReplyZh",
         "tags": [
           "标注管理"
@@ -2867,7 +2867,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "查询标注回复配置任务状态",
-        "description": "**适用于**：Chatflow、聊天助手、Agent。\n\n返回由 [配置标注回复](/zh/api-reference/annotations/configure-annotation-reply) 发起的标注回复配置任务的状态。",
+        "description": "**适用于**：Chatflow、聊天助手、旧版 Agent。\n\n返回由 [配置标注回复](/zh/api-reference/annotations/configure-annotation-reply) 发起的标注回复配置任务的状态。",
         "operationId": "getChatAnnotationReplyStatusZh",
         "tags": [
           "标注管理"
@@ -13263,7 +13263,7 @@
               "streaming",
               "blocking"
             ],
-            "description": "响应返回模式。省略时默认为阻塞模式。\n\n- `streaming`（推荐）：回复以 Server-Sent Events 形式返回。\n- `blocking`：生成完成后一次性返回。生成时间较长时有中断风险：在 Dify Cloud 上，如果边缘代理在超时时间内未收到响应，就可能中断连接。\n- Agent 和新 Agent 应用仅支持 `streaming`；使用 `blocking` 会返回 400。"
+            "description": "响应返回模式。省略时默认为阻塞模式。\n\n- `streaming`（推荐）：回复以 Server-Sent Events 形式返回。\n- `blocking`：生成完成后一次性返回。生成时间较长时有中断风险：在 Dify Cloud 上，如果边缘代理在超时时间内未收到响应，就可能中断连接。\n- 旧版 Agent 和 Agent 应用仅支持 `streaming`；使用 `blocking` 会返回 400。"
           },
           "user": {
             "type": "string",
@@ -13275,7 +13275,7 @@
           },
           "files": {
             "type": "array",
-            "description": "要附加到消息的文件。本地文件需先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，再将返回的 `id` 作为 `upload_file_id` 引用，并设置 `transfer_method: local_file`。新 Agent 应用接受文件引用，但不会处理其内容。",
+            "description": "要附加到消息的文件。本地文件需先通过 [上传文件](/zh/api-reference/files/upload-file) 上传，再将返回的 `id` 作为 `upload_file_id` 引用，并设置 `transfer_method: local_file`。Agent 应用接受文件引用，但不会处理其内容。",
             "items": {
               "type": "object",
               "required": [
@@ -13354,7 +13354,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "应用模式。`chat` 表示聊天助手应用，`agent-chat` 表示 Agent 应用，`advanced-chat` 表示 Chatflow 应用。"
+            "description": "应用模式。`chat` 表示聊天助手应用，`agent-chat` 表示旧版 Agent 应用，`advanced-chat` 表示 Chatflow 应用。"
           },
           "answer": {
             "type": "string",
@@ -14604,7 +14604,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "应用模式。`completion` 为文本生成应用，`chat` 为基础对话应用，`agent-chat` 为 Agent 应用，`advanced-chat` 为 Chatflow 应用，`workflow` 为 Workflow 应用，`agent` 为新 Agent 应用。"
+            "description": "应用模式。`completion` 为文本生成应用，`chat` 为聊天助手应用，`agent-chat` 为旧版 Agent 应用，`advanced-chat` 为 Chatflow 应用，`workflow` 为 Workflow 应用，`agent` 为 Agent 应用。"
           },
           "author_name": {
             "type": "string",
