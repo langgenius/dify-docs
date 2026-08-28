@@ -13,6 +13,7 @@
 | workflow | 工作流 | ワークフロー |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
+| Legacy Agent | 旧版 Agent | レガシー Agent |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
@@ -71,6 +72,8 @@
 | Doc Extractor | 文档提取器 | テキスト抽出 |
 | List Operator | 列表操作 | リスト処理 |
 | Agent | Agent | Agent |
+| Classic Agent | 经典 Agent | クラシック Agent |
+| New Agent | 新 Agent | 新しい Agent |
 | Human Input | 人工介入 | 人間の入力 |
 | Trigger | 触发器 | トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
@@ -129,6 +132,9 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Max Iterations | 最大迭代次数 | 最大反復回数 |
+| build chat | 构建对话 | ビルドチャット |
+| build note | 构建笔记 | ビルドノート |
+| artifact | 产物 | 成果物 |
 
 ### Skills
 
@@ -417,11 +423,25 @@
 |:--------|:--------|:---------|
 | Agentic Strategy | Agent 策略 | エージェンティック戦略 |
 | Agent task | Agent 任务 | Agent タスク |
-| Edit in Agent Console | 在 Agent Console 中编辑 | Agent Console で編集 |
+| Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
+
+### New Agent Configure
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Build mode | 构建模式 | ビルドモード |
+| Build draft | Build 草稿 | ビルドドラフト |
+| File system | 文件系统 | ファイルシステム |
+| Persistent | 长期 | 永続ファイル |
+| Temporary | 临时 | 一時ファイル |
+| Legacy Agent | 旧版 Agent | レガシー Agent |
+| Start fresh | 开启新对话 | 新しく始める |
+| Web App URL | Web 应用 URL | Web アプリ URL |
+| Backend Service API | 后端服务 API | バックエンドサービス API |
 
 ### Question Classifier Node Config
 
