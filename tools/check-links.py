@@ -30,12 +30,12 @@ HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 CUSTOM_ID_RE = re.compile(r"\{#([\w-]+)\}")
 HTML_ID_RE = re.compile(r"""<a\s+[^>]*\bid=["']([\w-]+)["']""", re.IGNORECASE)
 CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
-# Mintlify components whose `title=` attribute generates an anchor (e.g.,
-# `<Tab title="Workflow Tool">` → `#workflow-tool`).
-TAB_TITLE_RE = re.compile(
-    r"""<(?:Tab|Accordion)\b[^>]*\btitle=["']([^"']+)["']""",
-    re.IGNORECASE,
-)
+# Mintlify components that generate an anchor. An explicit `id` attribute
+# replaces the default title-derived anchor (per the Tabs docs, `id` defaults
+# to the title), so a tag is matched whole and its attributes decide.
+TAB_COMPONENT_RE = re.compile(r"""<(?:Tab|Accordion)\b[^>]*>""", re.IGNORECASE)
+ATTR_TITLE_RE = re.compile(r"""\btitle=["']([^"']+)["']""", re.IGNORECASE)
+ATTR_ID_RE = re.compile(r"""\bid=["']([\w-]+)["']""", re.IGNORECASE)
 
 # Per-file anchor cache: file path -> set of valid anchor slugs
 _anchor_cache: dict[Path, set[str]] = {}
@@ -220,11 +220,19 @@ def extract_anchors(file_path: Path) -> set[str]:
     for match in HTML_ID_RE.finditer(content):
         anchors.add(match.group(1))
 
-    # Mintlify Tab/Accordion titles also produce anchors
-    for match in TAB_TITLE_RE.finditer(content):
-        slug = slugify(match.group(1))
-        if slug:
-            anchors.add(slug)
+    # Mintlify Tab/Accordion components also produce anchors: an explicit
+    # id attribute wins; otherwise the title text is slugified.
+    for match in TAB_COMPONENT_RE.finditer(content):
+        tag = match.group(0)
+        id_attr = ATTR_ID_RE.search(tag)
+        if id_attr:
+            anchors.add(id_attr.group(1))
+            continue
+        title_attr = ATTR_TITLE_RE.search(tag)
+        if title_attr:
+            slug = slugify(title_attr.group(1))
+            if slug:
+                anchors.add(slug)
 
     _anchor_cache[file_path] = anchors
     return anchors
