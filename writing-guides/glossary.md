@@ -19,6 +19,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective/engine sense: workflow-backed runs, workflow nodes, the workflow engine, and endpoints shared across app types. Localizes in zh/ja; the Workflow app type stays English. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
+| Legacy Agent | 旧版 Agent | レガシー Agent | The classic app type's UI deprecation badge, and its docs name wherever the new Agent supersedes it (nav, API guides, spec app-type labels). The node level stays Classic Agent / New Agent: the classic node is Chatflow's default, not legacy. |
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | Still valid in developer contexts (building plugins). In user-facing docs, prefer "integration" when referring to the Integrations hub; use "plugin" only for tool plugins or the develop-plugin tree. |
@@ -77,6 +78,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Doc Extractor | 文档提取器 | テキスト抽出 | Extracts text content from document files |
 | List Operator | 列表操作 | リスト処理 | Filters, sorts, and limits list data |
 | Agent | Agent | Agent | Workflow node (distinct from Agent app type above) |
+| Classic Agent | 经典 Agent | クラシック Agent | Docs name for the original Agent node's tab on the two-tab nodes page; Chatflow's default and fully supported, not legacy. In prose, lowercase adjective: the classic Agent node |
+| New Agent | 新 Agent | 新しい Agent | Docs name for the new-generation Agent node's tab; the product labels the node plain Agent with a BETA chip. In prose, lowercase adjective: the new Agent node |
 | Human Input | 人工介入 | 人間の入力 | Pauses workflow execution to request human review or decisions |
 | Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Integration Trigger. |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | Triggers workflow execution on a cron schedule |
