@@ -19,6 +19,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective/engine sense: workflow-backed runs, workflow nodes, the workflow engine, and endpoints shared across app types. Localizes in zh/ja; the Workflow app type stays English. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
+| Legacy Agent | 旧版 Agent | レガシー Agent | The classic app type's UI deprecation badge, and its docs name wherever the new Agent supersedes it (nav, API guides, spec app-type labels). The node level stays Classic Agent / New Agent: the classic node is Chatflow's default, not legacy. |
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | Still valid in developer contexts (building plugins). In user-facing docs, prefer "integration" when referring to the Integrations hub; use "plugin" only for tool plugins or the develop-plugin tree. |
