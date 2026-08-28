@@ -167,7 +167,7 @@
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
 | Explore | 探索 | 探索 |
-| Integrations | 集成 | インテグレーション |
+| Integrations | 集成 | 連携 |
 | Tools | 工具 | ツール |
 
 ### App Detail Tabs
@@ -214,7 +214,7 @@
 | Integrations | 集成 | 統合 |
 | Archived logs | 归档日志 | アーカイブされたログ |
 | Prepare download | 准备下载 | ダウンロードを準備 |
-| Default Models | 默认模型 | デフォルトモデル |
+| Default Models | 默认模型设置 | システムモデル設定 |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
@@ -222,7 +222,7 @@
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
 | Load balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
-| Usage Priority | 使用优先级 | 使用優先度 |
+| Usage Priority | 使用优先级 | 使用優先順位 |
 | API Key | API Key | API キー |
 
 ### Billing

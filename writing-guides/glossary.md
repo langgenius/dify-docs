@@ -175,7 +175,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Studio | 工作室 | スタジオ | common.menus.apps | Sidebar menu label for the app workspace |
 | Knowledge | 知识库 | ナレッジ | common.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
 | Explore | 探索 | 探索 | common.menus.explore | Sidebar menu label |
-| Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
+| Integrations | 集成 | 連携 | common.mainNav.integrations | Main navigation label for the hub containing model providers, tools, triggers, and other extensions. |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
 
 ### App Detail Tabs
@@ -222,7 +222,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
 | Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
 | Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
-| Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
+| Default Models | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
@@ -230,7 +230,7 @@ Terms in this section must match the Dify product interface exactly. When these 
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
 | Load balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
 | AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | UI option matching the general term. Renamed from "Message Credits" in v1.13.1; the section header is the all-caps `modelProvider.quotaLabel`. |
-| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
+| Usage Priority | 使用优先级 | 使用優先順位 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
 | API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
 
 ### Billing
