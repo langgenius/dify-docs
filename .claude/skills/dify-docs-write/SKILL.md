@@ -37,10 +37,10 @@ Every writing task runs the same eight stages. The work-type row sets each stage
 | `en/{cloud,self-host}/use-dify/`, `en/self-host/deploy/`, `en/develop-plugin/` | `dify-docs-guides` |
 | `{en,zh,ja}/api-reference/` | `dify-docs-api-reference` |
 | `en/cli/` | `dify-cli-docs` |
-| Dify-Enterprise-Docs `{lang}/{X.Y.x}/deploy/`, `{lang}/{X.Y.x}/administer/` | `ee-ops-docs` (in that repo, `.claude/skills/ee-ops-docs`) |
-| Dify-Enterprise-Docs `{lang}/{X.Y.x}/use/`, `{lang}/{X.Y.x}/develop/plugins/` | `dify-docs-guides` |
-| Dify-Enterprise-Docs `{lang}/{X.Y.x}/develop/api/` | `dify-docs-api-reference` |
-| Dify-Enterprise-Docs `{lang}/{X.Y.x}/develop/cli/` | `dify-cli-docs` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/deploy/`, `…/administer/` | `ee-ops-docs` (in that repo, `.claude/skills/ee-ops-docs`) |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/use/`, `…/develop/plugins/` | `dify-docs-guides` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/develop/api/` | `dify-docs-api-reference` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/develop/cli/` | `dify-cli-docs` |
 | any other path (e.g. `en/learn/`) | none — the writing guides alone govern |
 
 Packs may live in the target repo, as `ee-ops-docs` does. When the target repo carries an `AGENTS.md`, its repo-wide rules (derivation transforms, version mechanics, gate command, PR conventions) apply on top of the pack.
