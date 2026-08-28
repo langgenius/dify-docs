@@ -52,7 +52,7 @@ Packs may live in the target repo, as `ee-ops-docs` does. When the target repo c
 Environment rules, binding at every stage:
 
 - A claim whose pinned source is out of reach (missing clone or access) is marked `UNVERIFIED` in the scope report and the PR description, and stays out of the page — never written as fact.
-- A stage that calls for a STOP when no reviewer is in the session puts its deliverable (scope report, outline) in the PR description instead; approval happens at review.
+- A stage that calls for a STOP when no reviewer is in the session does not pause: it puts its deliverable (scope report, outline) in the PR description and continues. The approval the STOP would have collected happens at PR review instead.
 
 Depth at a glance (the imperatives live in the stage sections below):
 
