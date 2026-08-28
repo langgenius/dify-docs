@@ -37,11 +37,22 @@ Every writing task runs the same eight stages. The work-type row sets each stage
 | `en/{cloud,self-host}/use-dify/`, `en/self-host/deploy/`, `en/develop-plugin/` | `dify-docs-guides` |
 | `{en,zh,ja}/api-reference/` | `dify-docs-api-reference` |
 | `en/cli/` | `dify-cli-docs` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/deploy/`, `Dify-Enterprise-Docs/{lang}/{X.Y.x}/administer/` | `ee-ops-docs` (in that repo, `.claude/skills/ee-ops-docs`) |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/use/`, `Dify-Enterprise-Docs/{lang}/{X.Y.x}/develop/plugins/` | `dify-docs-guides` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/develop/api/` | `dify-docs-api-reference` |
+| `Dify-Enterprise-Docs/{lang}/{X.Y.x}/develop/cli/` | `dify-cli-docs` |
 | any other path (e.g. `en/learn/`) | none — the writing guides alone govern |
+
+Packs may live in the target repo, as `ee-ops-docs` does. When the target repo carries an `AGENTS.md`, its repo-wide rules (derivation transforms, version mechanics, gate command, PR conventions) apply on top of the pack.
 
 3. Read now, before any other work: `writing-guides/style-guide.md`, `writing-guides/formatting-guide.md`, `writing-guides/glossary.md`; the rule pack's SKILL.md plus every reference it names; `references/task-analysis.md` in this skill. If the task includes zh or ja content, also `tools/translate/formatting-{zh,ja}.md`.
 
 4. Print the route before starting S1: `ROUTE: row=<R#> pack=<name|none> pages=<paths>`.
+
+Environment rules, binding at every stage:
+
+- A claim whose pinned source is out of reach (missing clone or access) is marked `UNVERIFIED` in the scope report and the PR description, and stays out of the page — never written as fact.
+- A stage that calls for a STOP when no reviewer is in the session does not pause: it puts its deliverable (scope report, outline) in the PR description and continues. The approval the STOP would have collected happens at PR review instead.
 
 Depth at a glance (the imperatives live in the stage sections below):
 
