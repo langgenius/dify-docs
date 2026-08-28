@@ -78,6 +78,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Doc Extractor | 文档提取器 | テキスト抽出 | Extracts text content from document files |
 | List Operator | 列表操作 | リスト処理 | Filters, sorts, and limits list data |
 | Agent | Agent | Agent | Workflow node (distinct from Agent app type above) |
+| Classic Agent | 经典 Agent | クラシック Agent | Docs name for the original Agent node's tab on the two-tab nodes page; Chatflow's default and fully supported, not legacy. In prose, lowercase adjective: the classic Agent node |
+| New Agent | 新 Agent | 新しい Agent | Docs name for the new-generation Agent node's tab; the product labels the node plain Agent with a BETA chip. In prose, lowercase adjective: the new Agent node |
 | Human Input | 人工介入 | 人間の入力 | Pauses workflow execution to request human review or decisions |
 | Trigger | 触发器 | トリガー | Umbrella term for entry nodes that start a workflow automatically. Concrete types: Schedule Trigger, Webhook Trigger, Integration Trigger. |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | Triggers workflow execution on a cron schedule |

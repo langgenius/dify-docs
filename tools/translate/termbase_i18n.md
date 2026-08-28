@@ -72,6 +72,8 @@
 | Doc Extractor | 文档提取器 | テキスト抽出 |
 | List Operator | 列表操作 | リスト処理 |
 | Agent | Agent | Agent |
+| Classic Agent | 经典 Agent | クラシック Agent |
+| New Agent | 新 Agent | 新しい Agent |
 | Human Input | 人工介入 | 人間の入力 |
 | Trigger | 触发器 | トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
