@@ -429,7 +429,7 @@
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 
-### New Agent Configure
+### Agent Configure
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
