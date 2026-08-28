@@ -120,6 +120,24 @@ Do not use backticks for product names, UI labels, or general English words.
 - Use full URLs: `[Dify Marketplace](https://marketplace.dify.ai/)`
 - Ensure all external links are HTTPS.
 
+### Stable Anchors
+
+Anchors are auto-generated from heading text, so they change when a heading is reworded or translated. A heading or tab that is deep-linked from the Dify product UI, or linked from another documentation page, therefore carries an explicit anchor ID — the same English kebab-case ID in all three languages. Headings referenced nowhere get no explicit ID: an ID's presence signals that something depends on the anchor.
+
+| Position | Syntax |
+|:---------|:-------|
+| Markdown heading at the top level of a page | `## Dify 教育版 {#dify-for-education}` |
+| `<Tab>` / `<Accordion>` | `<Tab title="新 Agent" id="new-agent">` |
+| Heading inside a JSX component (e.g. within a `<Tab>`) | `<a id="give-it-a-task"></a>` on its own line above the heading — the `{#id}` syntax fails to build there, because braces inside a component parse as JSX expressions |
+
+An explicit ID **replaces** the auto-generated anchor. When adding one to an existing heading, update every link that used the old anchor in the same pass: cross-page links in all three languages and same-page `[text](#anchor)` links. Verify with:
+
+```bash
+python3 tools/check-links.py --internal
+```
+
+The run must report `Broken anchors: 0`.
+
 ---
 
 ## Images
@@ -415,6 +433,7 @@ Before submitting, verify:
 - [ ] Lists use dashes (`-`), not asterisks (`*`)
 - [ ] Code blocks have language tags
 - [ ] Internal links use absolute paths (`/en/...`)
+- [ ] Deep-linked or cross-referenced headings carry stable anchor IDs; links to them use the ID
 - [ ] Images use `<Frame>` wrapping markdown `![]()`; alt text is in title case and under 125 characters
 - [ ] Image files are stored under the correct `images/<section>/` subfolder
 - [ ] Image filenames use kebab-case, are descriptive, and contain no default tool names

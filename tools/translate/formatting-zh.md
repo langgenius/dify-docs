@@ -168,7 +168,9 @@ The **Workflow** and **Chatflow** app types stay in English, like Agent. Add 应
 
 ## Cross-Reference Anchors
 
-When a link includes `#slug`, the slug must match the **translated** text, not the English original. Mintlify generates slugs from the source text, so an untranslated anchor will break the link. This applies to both heading anchors and Tab title anchors (`<Tab title="...">` values).
+A heading or tab that carries an explicit stable anchor (`{#stable-id}`, a Tab `id` attribute, or an `<a id>` element — see the formatting guide § Stable Anchors) keeps the same English ID in every language. Link to it with that ID, never a translated slug, and never remove the ID when translating.
+
+For headings without an explicit ID, the link's `#slug` must match the **translated** text, not the English original. Mintlify generates slugs from the source text, so an untranslated anchor will break the link. This applies to both heading anchors and Tab title anchors (`<Tab title="...">` values).
 
 | English source | Chinese translation |
 |:---------------|:--------------------|

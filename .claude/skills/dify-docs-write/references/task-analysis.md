@@ -12,13 +12,13 @@ The pre-draft half of reader empathy: establish what readers are trying to do an
   route: docs → <page/section> | ui-finding | product-gap
 ```
 
-Rules: every task is a user objective passing the "I want to ___" test — never a feature description. Every question carries exactly one route. OPEN questions are never dropped; they go into the S4 report.
+Rules: every task is a user objective passing the "I want to ___" test — never a feature description. Tasks come from the reader persona's journeys. S2 findings, issue text, and briefing bullets supply evidence and scope, never tasks. Walk test: every task must be walkable as concrete product steps (the question walk enumerates them). No steps to walk, no task. Every question carries exactly one route. OPEN questions are never dropped; they go into the S4 report.
 
 ## Depths
 
 **Full (R1 / R2 / R4)**
 
-1. Build the task list from the S2 research; cluster by journey. Cross-check against S2's community pain themes: each theme maps to a task, or is listed as explicitly out of scope.
+1. Build the task list from the persona's journeys, with the S2 research as evidence; cluster by journey. Cross-check against S2's community pain themes: each theme maps to a task, or is listed as explicitly out of scope.
 2. Question walk — per task, walk its steps in the product. At each step answer four fixed prompts; write "none" when a prompt yields nothing (the prompt must still be answered):
    - **prereqs**: what must exist or be true before starting?
    - **mid-task**: what does the reader wonder right here?

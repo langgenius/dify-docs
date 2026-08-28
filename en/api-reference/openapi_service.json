@@ -100,7 +100,7 @@
     "/chat-messages": {
       "post": {
         "summary": "Send Chat Message",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nSends a message to a chat app and returns the assistant's reply. The events in the streaming response vary by app type.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nSends a message to a chat app and returns the assistant's reply. The events in the streaming response vary by app type.",
         "operationId": "sendChatMessage",
         "tags": [
           "Chat Messages"
@@ -202,7 +202,7 @@
               "text/event-stream": {
                 "schema": {
                   "type": "string",
-                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive; a Chatflow stream opens with one, then more arrive roughly every 10 seconds).\n\n**Events by app type** (the reply events, then how the stream closes):\n\n- **Chatbot**: `message` chunks (concatenate in order) → `message_end`.\n- **Agent**: `agent_thought` reasoning and tool-call steps alongside `agent_message` chunks → `message_end`.\n- **New Agent**: `agent_message` chunks with `agent_thought` steps alongside → one closing `message` carrying the complete answer (treat it as the final answer, not extra text to append) → `message_end`. Its `message_end` metadata carries `usage` (plus `annotation_reply` on an annotation match) and never `retriever_resources`.\n- **Chatflow**: `workflow_started` → node events (`node_started`, `node_finished`, plus iteration and loop variants) alongside `message` chunks → then, by outcome:\n  - **Success**: `message_end`, then `workflow_finished`\n  - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n  - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\n**Add-ons**:\n\n- Text-to-speech auto-play: `tts_message` audio chunks interleave, and `tts_message_end` trails the closing event.\n- Chatflow LLM nodes with `reasoning_format: separated` also emit `reasoning_chunk` deltas carrying the model's reasoning.\n\n**Common fields**: apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot, Chatflow, New Agent | each answer chunk (concatenate in order); for New Agent, one closing chunk with the complete answer | `answer` |\n| `agent_message` | Agent, New Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Agent, New Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |\n| `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |\n| `message_file` | Chatbot, Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | All | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Agent, Chatflow | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events** (Chatflow apps only)\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive; opens every Chatflow stream, then roughly every 10 seconds | none |"
+                  "description": "A stream of Server-Sent Events. Parse it per the [SSE Streaming guide](/en/api-reference/guides/streaming): read `data:` lines, dispatch on the `event` field, skip `ping` (keep-alive; a Chatflow stream opens with one, then more arrive roughly every 10 seconds).\n\n**Events by app type** (the reply events, then how the stream closes):\n\n- **Chatbot**: `message` chunks (concatenate in order) → `message_end`.\n- **Legacy Agent**: `agent_thought` reasoning and tool-call steps alongside `agent_message` chunks → `message_end`.\n- **Agent**: `agent_message` chunks with `agent_thought` steps alongside → one closing `message` carrying the complete answer (treat it as the final answer, not extra text to append) → `message_end`. Its `message_end` metadata carries `usage` (plus `annotation_reply` on an annotation match) and never `retriever_resources`.\n- **Chatflow**: `workflow_started` → node events (`node_started`, `node_finished`, plus iteration and loop variants) alongside `message` chunks → then, by outcome:\n  - **Success**: `message_end`, then `workflow_finished`\n  - **Failure**: `workflow_finished` with status `failed`, then `error`; no `message_end`\n  - **Pause**: `human_input_required`, then `workflow_paused` (the stream ends here; the run resumes separately)\n\n**Add-ons**:\n\n- Text-to-speech auto-play: `tts_message` audio chunks interleave, and `tts_message_end` trails the closing event.\n- Chatflow LLM nodes with `reasoning_format: separated` also emit `reasoning_chunk` deltas carrying the model's reasoning.\n\n**Common fields**: apart from `ping`, every event includes `conversation_id`, `message_id`, and `created_at` (Unix epoch seconds); all but `error` also include `task_id`. Workflow, node, and human-input events (Chatflow apps) nest their payload under `data` and, except for `agent_log`, carry a top-level `workflow_run_id`.\n\n**Reply events**\n\n| Event | App | Fires on | Key fields |\n|:---|:---|:---|:---|\n| `message` | Chatbot, Chatflow, Agent | each answer chunk (concatenate in order); for Agent, one closing chunk with the complete answer | `answer` |\n| `agent_message` | Legacy Agent, Agent | each answer chunk (concatenate in order) | `answer` |\n| `agent_thought` | Legacy Agent, Agent | each reasoning or tool-call step | `position`, `thought`, `tool`, `tool_input` (JSON), `observation`, `message_files` |\n| `message_replace` | All | output moderation replaces the answer so far | `answer`; Chatflow also `reason` |\n| `reasoning_chunk` | Chatflow | each reasoning-content delta, when an LLM node uses `reasoning_format: separated` (concatenate in order; a final `is_final: true` event marks reasoning finished and may carry an empty `reasoning`) | `data.message_id`, `data.reasoning`, `data.node_id`, `data.is_final` |\n| `message_file` | Chatbot, Legacy Agent | the assistant returns a file | `type`, `belongs_to`, `url` |\n| `message_end` | All | the answer is complete | `metadata` (`usage`, `retriever_resources`) |\n| `tts_message`, `tts_message_end` | Chatbot, Legacy Agent, Chatflow | audio chunk / end, when TTS auto-play is on | `audio` |\n\n**Workflow and node events** (Chatflow apps only)\n\nEach event nests its payload under a `data` object.\n\n| Event | Fires on | Key `data` fields |\n|:---|:---|:---|\n| `workflow_started` | the run begins | `inputs` |\n| `node_started` | a node begins | `node_id`, `node_type`, `title` |\n| `node_finished` | a node ends | `status`, `outputs`, `execution_metadata` |\n| `node_retry` | a node retries after a failure | `retry_index` |\n| `iteration_started`, `iteration_next`, `iteration_completed` | Iteration node progress (informational) | `data` |\n| `loop_started`, `loop_next`, `loop_completed` | Loop node progress (informational) | `data` |\n| `agent_log` | an Agent node step log (informational; no `workflow_run_id`) | `data` |\n| `workflow_finished` | the run ends | `status` (`succeeded`, `failed`, `partial-succeeded`, `stopped`), `outputs`, `total_tokens` |\n| `workflow_paused` | the run pauses | `paused_nodes`, `reasons` |\n| `human_input_required` | the run reaches a Human Input node | `form_token`, `form_content`, `expiration_time` |\n\nAfter a pause this stream ends at `workflow_paused`. Submit the form via [Submit Human Input Form](/en/api-reference/human-input/submit-human-input-form) or let it time out; the resumed run, including `human_input_form_filled`/`human_input_form_timeout` through `workflow_finished`, streams from [Stream Workflow Events](/en/api-reference/workflow-runs/stream-workflow-events).\n\n**Transport events**\n\n| Event | Fires on | Key fields |\n|:---|:---|:---|\n| `error` | a failure ends the stream; HTTP stays `200` | `status` (e.g. `400`), `code` (e.g. `invalid_param`), `message` |\n| `ping` | keep-alive; opens every Chatflow stream, then roughly every 10 seconds | none |"
                 },
                 "examples": {
                   "streamingResponseBasic": {
@@ -226,7 +226,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Text generation failed.\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : `blocking` response mode with a New Agent app.\n- `invalid_param` : The New Agent app has no bound Agent.\n- `agent_not_published` : The bound Agent has no published version. (New Agent apps)\n- `conversation_completed` : The conversation has ended; start a new one by omitting `conversation_id`.",
+            "description": "- `app_unavailable` : App unavailable or misconfigured.\n- `not_chat_app` : App mode does not match the API route.\n- `provider_not_initialize` : No valid model provider credentials found.\n- `provider_quota_exceeded` : Model provider quota exhausted.\n- `model_currently_not_support` : Current model unavailable.\n- `completion_request_error` : Text generation failed.\n- `bad_request` : Cannot use draft workflow version.\n- `bad_request` : Invalid `workflow_id` format.\n- `bad_request` : `blocking` response mode with an Agent app.\n- `invalid_param` : The Agent app has no bound Agent.\n- `agent_not_published` : The bound Agent has no published version. (Agent apps)\n- `conversation_completed` : The conversation has ended; start a new one by omitting `conversation_id`.",
             "content": {
               "application/json": {
                 "examples": {
@@ -434,7 +434,7 @@
     "/chat-messages/{task_id}/stop": {
       "post": {
         "summary": "Stop Chat Message Generation",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nStops a chat message generation task. Only supported in `streaming` mode.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nStops a chat message generation task. Only supported in `streaming` mode.",
         "operationId": "stopChatMessageGeneration",
         "tags": [
           "Chat Messages"
@@ -519,7 +519,7 @@
     "/messages/{message_id}/suggested": {
       "get": {
         "summary": "Get Next Suggested Questions",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nReturns the follow-up questions suggested for a message.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nReturns the follow-up questions suggested for a message.",
         "operationId": "getSuggestedQuestions",
         "tags": [
           "Chat Messages"
@@ -648,7 +648,7 @@
     "/files/upload": {
       "post": {
         "summary": "Upload File",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nUploads a file and returns its `id` for later requests to reference. The file belongs to the uploading end user: only requests carrying the same `user` can reference it.\n\nWhich file types an app actually consumes depends on its file-upload settings; read them from [Get App Parameters](/en/api-reference/applications/get-app-parameters).",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nUploads a file and returns its `id` for later requests to reference. The file belongs to the uploading end user: only requests carrying the same `user` can reference it.\n\nWhich file types an app actually consumes depends on its file-upload settings; read them from [Get App Parameters](/en/api-reference/applications/get-app-parameters).",
         "operationId": "uploadChatFile",
         "tags": [
           "Files"
@@ -806,7 +806,7 @@
     "/files/{file_id}/preview": {
       "get": {
         "summary": "Download File",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nReturns the raw bytes of a file previously returned by [Upload File](/en/api-reference/files/upload-file). A file is reachable only through the app whose messages reference it.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns the raw bytes of a file previously returned by [Upload File](/en/api-reference/files/upload-file). A file is reachable only through the app whose messages reference it.",
         "operationId": "previewChatFile",
         "tags": [
           "Files"
@@ -901,7 +901,7 @@
     "/end-users/{end_user_id}": {
       "get": {
         "summary": "Get End User Info",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns an end user's details by ID. Useful for resolving an end-user ID returned by another endpoint, such as `created_by` in the [Upload File](/en/api-reference/files/upload-file) response.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns an end user's details by ID. Useful for resolving an end-user ID returned by another endpoint, such as `created_by` in the [Upload File](/en/api-reference/files/upload-file) response.",
         "operationId": "getEndUserChat",
         "tags": [
           "End Users"
@@ -976,7 +976,7 @@
     "/messages/{message_id}/feedbacks": {
       "post": {
         "summary": "Submit Message Feedback",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nRecords a `like` or `dislike` rating, plus an optional comment, on a message. Submitting `null` for `rating` revokes the message's existing feedback.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent, Text Generator apps.\n\nRecords a `like` or `dislike` rating, plus an optional comment, on a message. Submitting `null` for `rating` revokes the message's existing feedback.",
         "operationId": "postChatMessageFeedback",
         "tags": [
           "Feedback"
@@ -1064,7 +1064,7 @@
     "/app/feedbacks": {
       "get": {
         "summary": "List App Feedbacks",
-        "description": "**Available for**: Chatflow, Chatbot, Agent, Text Generator apps.\n\nReturns a paginated list of all feedback on the app's messages, including both end-user and admin submissions.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns a paginated list of all feedback on the app's messages, including both end-user and admin submissions.",
         "operationId": "getChatAppFeedbacks",
         "tags": [
           "Feedback"
@@ -1153,7 +1153,7 @@
     "/conversations": {
       "get": {
         "summary": "List Conversations",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nLists an end user's conversations, most recently active first.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nLists an end user's conversations, most recently active first.",
         "operationId": "getConversationsList",
         "tags": [
           "Conversations"
@@ -1286,7 +1286,7 @@
     "/messages": {
       "get": {
         "summary": "List Conversation Messages",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nReturns a conversation's message history, newest first. Pass `first_id` to page backward into older messages.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nReturns a conversation's message history, newest first. Pass `first_id` to page backward into older messages.",
         "operationId": "getConversationHistory",
         "tags": [
           "Conversations"
@@ -1442,7 +1442,7 @@
     "/conversations/{conversation_id}/variables": {
       "get": {
         "summary": "List Conversation Variables",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nLists the variables stored in a conversation.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nLists the variables stored in a conversation.",
         "operationId": "getConversationVariables",
         "tags": [
           "Conversations"
@@ -1585,7 +1585,7 @@
     "/conversations/{conversation_id}/name": {
       "post": {
         "summary": "Rename Conversation",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nRenames a conversation, or auto-generates a name from its messages when `auto_generate` is `true`. The name is what clients display in a multi-conversation list.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nRenames a conversation, or auto-generates a name from its messages when `auto_generate` is `true`. The name is what clients display in a multi-conversation list.",
         "operationId": "renameConversation",
         "tags": [
           "Conversations"
@@ -1702,7 +1702,7 @@
     "/conversations/{conversation_id}/variables/{variable_id}": {
       "put": {
         "summary": "Update Conversation Variable",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdates a conversation variable's value. The new value must match the variable's existing type.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nUpdates a conversation variable's value. The new value must match the variable's existing type.",
         "operationId": "updateChatConversationVariable",
         "tags": [
           "Conversations"
@@ -1836,7 +1836,7 @@
     "/conversations/{conversation_id}": {
       "delete": {
         "summary": "Delete Conversation",
-        "description": "**Available for**: Chatflow, New Agent, Chatbot, Agent apps.\n\nDeletes a conversation.",
+        "description": "**Available for**: Chatflow, Agent, Chatbot, Legacy Agent apps.\n\nDeletes a conversation.",
         "operationId": "deleteConversation",
         "tags": [
           "Conversations"
@@ -1928,7 +1928,7 @@
     "/audio-to-text": {
       "post": {
         "summary": "Convert Audio to Text",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nTranscribes an uploaded audio file to text using the workspace's default speech-to-text model.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nTranscribes an uploaded audio file to text using the workspace's default speech-to-text model.",
         "operationId": "audioToText",
         "tags": [
           "Audio"
@@ -2082,7 +2082,7 @@
     "/text-to-audio": {
       "post": {
         "summary": "Convert Text to Audio",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nConverts text to speech audio. Pass `text` to synthesize arbitrary text, or `message_id` to voice an existing message's answer.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nConverts text to speech audio. Pass `text` to synthesize arbitrary text, or `message_id` to voice an existing message's answer.",
         "operationId": "textToAudioChat",
         "tags": [
           "Audio"
@@ -2243,7 +2243,7 @@
     "/info": {
       "get": {
         "summary": "Get App Info",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns basic information about the app: name, description, tags, mode, and author.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns basic information about the app: name, description, tags, mode, and author.",
         "operationId": "getChatAppInfo",
         "tags": [
           "Applications"
@@ -2287,7 +2287,7 @@
     "/parameters": {
       "get": {
         "summary": "Get App Parameters",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the app's front-end configuration: the opening statement and suggested questions, feature toggles, the user input form, and file-upload limits. Use it to render the app's inputs and apply the correct upload limits.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns the app's front-end configuration: the opening statement and suggested questions, feature toggles, the user input form, and file-upload limits. Use it to render the app's inputs and apply the correct upload limits.",
         "operationId": "getChatAppParameters",
         "tags": [
           "Applications"
@@ -2368,7 +2368,7 @@
             }
           },
           "400": {
-            "description": "- `app_unavailable` : The app is unavailable or misconfigured.\n- `agent_not_published` : The app's Agent has no published version yet. (New Agent apps)",
+            "description": "- `app_unavailable` : The app is unavailable or misconfigured.\n- `agent_not_published` : The app's Agent has no published version yet. (Agent apps)",
             "content": {
               "application/json": {
                 "examples": {
@@ -2405,7 +2405,7 @@
     "/meta": {
       "get": {
         "summary": "Get App Meta",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the display icons for the tools this app uses, keyed by tool name.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns the display icons for the tools this app uses, keyed by tool name.",
         "operationId": "getChatAppMeta",
         "tags": [
           "Applications"
@@ -2448,7 +2448,7 @@
     "/site": {
       "get": {
         "summary": "Get App WebApp Settings",
-        "description": "**Available for**: Chatflow, Workflow, New Agent, Chatbot, Agent, Text Generator apps.\n\nReturns the branding and display settings for the app's hosted web app, such as its title, icon, theme colors, and default language.",
+        "description": "**Available for**: Chatflow, Workflow, Agent, Chatbot, Legacy Agent, Text Generator apps.\n\nReturns the branding and display settings for the app's hosted web app, such as its title, icon, theme colors, and default language.",
         "operationId": "getChatWebAppSettings",
         "tags": [
           "Applications"
@@ -2516,7 +2516,7 @@
     "/apps/annotations": {
       "post": {
         "summary": "Create Annotation",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nCreates an annotation. Annotations are predefined question-answer pairs the app returns directly on a match, instead of generating a fresh response.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nCreates an annotation. Annotations are predefined question-answer pairs the app returns directly on a match, instead of generating a fresh response.",
         "operationId": "createAnnotation",
         "tags": [
           "Annotations"
@@ -2574,7 +2574,7 @@
       },
       "get": {
         "summary": "List Annotations",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nLists the app's annotations, optionally filtered by keyword.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nLists the app's annotations, optionally filtered by keyword.",
         "operationId": "getAnnotationList",
         "tags": [
           "Annotations"
@@ -2656,7 +2656,7 @@
     "/apps/annotations/{annotation_id}": {
       "put": {
         "summary": "Update Annotation",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nUpdates an annotation's question and answer.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nUpdates an annotation's question and answer.",
         "operationId": "updateAnnotation",
         "tags": [
           "Annotations"
@@ -2743,7 +2743,7 @@
       },
       "delete": {
         "summary": "Delete Annotation",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nDeletes an annotation and its associated hit history.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nDeletes an annotation and its associated hit history.",
         "operationId": "deleteAnnotation",
         "tags": [
           "Annotations"
@@ -2794,7 +2794,7 @@
     "/apps/annotation-reply/{action}": {
       "post": {
         "summary": "Configure Annotation Reply",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nEnables or disables annotation reply for the app. Runs asynchronously; track progress with [Get Annotation Reply Job Status](/en/api-reference/annotations/get-annotation-reply-job-status).\n\nThe body is validated before the action runs, so `score_threshold`, `embedding_provider_name`, and `embedding_model_name` are required even for `disable`.",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nEnables or disables annotation reply for the app. Runs asynchronously; track progress with [Get Annotation Reply Job Status](/en/api-reference/annotations/get-annotation-reply-job-status).\n\nThe body is validated before the action runs, so `score_threshold`, `embedding_provider_name`, and `embedding_model_name` are required even for `disable`.",
         "operationId": "initialAnnotationReplySettings",
         "tags": [
           "Annotations"
@@ -2867,7 +2867,7 @@
     "/apps/annotation-reply/{action}/status/{job_id}": {
       "get": {
         "summary": "Get Annotation Reply Job Status",
-        "description": "**Available for**: Chatflow, Chatbot, Agent apps.\n\nReturns the status of an annotation reply configuration job started by [Configure Annotation Reply](/en/api-reference/annotations/configure-annotation-reply).",
+        "description": "**Available for**: Chatflow, Chatbot, Legacy Agent apps.\n\nReturns the status of an annotation reply configuration job started by [Configure Annotation Reply](/en/api-reference/annotations/configure-annotation-reply).",
         "operationId": "getInitialAnnotationReplySettingsStatus",
         "tags": [
           "Annotations"
@@ -13263,7 +13263,7 @@
               "streaming",
               "blocking"
             ],
-            "description": "Mode of response return. Defaults to blocking when omitted.\n\n- `streaming` (recommended): the reply arrives as Server-Sent Events.\n- `blocking`: returns once generation completes. Long generations risk interruption: on Dify Cloud, the edge proxy may end the connection if the response doesn't arrive within its timeout.\n- Agent and New Agent apps support `streaming` only; a `blocking` request fails with 400."
+            "description": "Mode of response return. Defaults to blocking when omitted.\n\n- `streaming` (recommended): the reply arrives as Server-Sent Events.\n- `blocking`: returns once generation completes. Long generations risk interruption: on Dify Cloud, the edge proxy may end the connection if the response doesn't arrive within its timeout.\n- Legacy Agent and Agent apps support `streaming` only; a `blocking` request fails with 400."
           },
           "user": {
             "type": "string",
@@ -13275,7 +13275,7 @@
           },
           "files": {
             "type": "array",
-            "description": "Files to attach to the message. For a local file, first upload it via [Upload File](/en/api-reference/files/upload-file), then reference the returned `id` as `upload_file_id` with `transfer_method: local_file`. New Agent apps accept file references but do not process their contents.",
+            "description": "Files to attach to the message. For a local file, first upload it via [Upload File](/en/api-reference/files/upload-file), then reference the returned `id` as `upload_file_id` with `transfer_method: local_file`. Agent apps accept file references but do not process their contents.",
             "items": {
               "type": "object",
               "required": [
@@ -13354,7 +13354,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "App mode. `chat` for Chatbot apps, `agent-chat` for Agent apps, `advanced-chat` for Chatflow apps."
+            "description": "App mode. `chat` for Chatbot apps, `agent-chat` for Legacy Agent apps, `advanced-chat` for Chatflow apps."
           },
           "answer": {
             "type": "string",
@@ -14604,7 +14604,7 @@
           },
           "mode": {
             "type": "string",
-            "description": "Application mode. `completion` for text generation apps, `chat` for basic chat apps, `agent-chat` for agent-based apps, `advanced-chat` for Chatflow apps, `workflow` for Workflow apps, `agent` for New Agent apps."
+            "description": "Application mode. `completion` for Text Generator apps, `chat` for Chatbot apps, `agent-chat` for Legacy Agent apps, `advanced-chat` for Chatflow apps, `workflow` for Workflow apps, `agent` for Agent apps."
           },
           "author_name": {
             "type": "string",

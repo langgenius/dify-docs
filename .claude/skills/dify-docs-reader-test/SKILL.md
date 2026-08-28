@@ -12,7 +12,7 @@ Verify a finished document by having a clean-context agent read it as the target
 
 ## Procedure
 
-1. **Get the persona.** Copy the reader persona verbatim from the rule pack used for the task: `dify-docs-guides` (Reader Personas, by document path), `dify-docs-env-vars` (Reader Persona), `dify-docs-api-reference` (Reader Persona), or `dify-cli-docs` (Reader segments). If the task used no rule pack with a persona, ask the user who the target reader is before dispatching.
+1. **Get the persona.** Copy the reader persona verbatim from the rule pack used for the task: `dify-docs-guides` (Reader Personas, by document path), `dify-docs-env-vars` (Reader Persona), `dify-docs-api-reference` (Reader Persona), `dify-cli-docs` (Reader segments), or `ee-ops-docs` (Reader Personas; in Dify-Enterprise-Docs). If the task used no rule pack with a persona, ask the user who the target reader is before dispatching.
 2. **Dispatch one fresh subagent per document** with the Agent tool (`subagent_type: general-purpose`). Never run the test inline in the current conversation — this conversation contains the source context the reader must not have. The dispatch prompt is the template below verbatim, with two placeholders filled:
    - `{PATH}` — the absolute path to the finished document file. The input is the path, never pasted content: the test must run against the file on disk, not a possibly stale copy from the conversation.
    - `{PERSONA}` — the persona text from step 1, unmodified.

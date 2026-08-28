@@ -1,0 +1,151 @@
+---
+dimensions:
+  type:
+    primary: operational
+    detail: deployment
+  level: intermediate
+standard_title: Prepare a Plugin for Dify Marketplace
+language: en
+title: Prepare and Validate Your Plugin
+description: Prepare a clean .difypkg, document its behavior and risk, and run the Marketplace Toolkit before opening a submission PR
+---
+
+Marketplace review begins with the package you build. Before opening a pull request, make the package small, explain what it can access, and run the same package-level validators used by Dify's review pipeline.
+
+<CardGroup cols={3}>
+  <Card title="1. Prepare" icon="box-archive">
+    Include only runtime files and complete the plugin metadata, README, and privacy policy.
+  </Card>
+  <Card title="2. Classify" icon="shield-halved">
+    Choose a risk level and disclose sensitive capabilities, data flows, and outbound domains.
+  </Card>
+  <Card title="3. Validate" icon="check-double">
+    Run the Marketplace Toolkit locally and resolve blocking findings before submission.
+  </Card>
+</CardGroup>
+
+## What you need
+
+- A working plugin project tested with the current Dify Community Edition or Dify Cloud.
+- The [Dify plugin CLI](https://github.com/langgenius/dify-plugin-daemon) for packaging.
+- Python 3 and [`yq`](https://github.com/mikefarah/yq) for local validation.
+- A public source repository that reviewers and users can inspect.
+
+<Note>
+The Marketplace accepts a packaged `.difypkg`, not your source tree. Reviewers still use the source repository declared in your metadata and PR to understand behavior that cannot be proven from the package alone.
+</Note>
+
+## Prepare the package
+
+<Tabs>
+  <Tab title="Runtime files">
+    Include only files needed when the plugin runs: `manifest.yaml`, provider or tool definitions, source code, dependencies, README files, privacy policy, and assets.
+
+    Do not package development state such as `.git/`, virtual environments, caches, logs, `.DS_Store`, local settings, IDE files, or test artifacts. Never include `.env` files, access tokens, private keys, cloud credentials, or other secrets.
+  </Tab>
+  <Tab title="Metadata and docs">
+    Confirm that `manifest.yaml` accurately declares the author, name, version, plugin type, runner, icon, source repository, contact information, and privacy policy.
+
+    The primary `README.md` must be in English and explain setup, usage, required APIs or credentials, connection requirements, and the source repository. Put translations under `readme/README_<locale>.md`.
+  </Tab>
+  <Tab title="Dependencies">
+    Keep dependencies minimal and pinned closely enough to be reproducible. Avoid bare requirements, direct URL installs, and git-based installs unless the PR explains why they are required.
+
+    Python plugins must use `dify-plugin >= 0.9.0`. The validator also checks dependency metadata and queries the [OSV database](https://osv.dev/) for known vulnerabilities.
+  </Tab>
+</Tabs>
+
+### Document privacy and network access
+
+Your `PRIVACY.md` or hosted privacy policy must describe what user data the plugin collects, stores, logs, or sends to third parties. If the plugin collects no user data, say so explicitly.
+
+When a plugin contacts external services, you can declare the expected domains in `manifest.yaml`:
+
+```yaml
+network:
+  domains:
+    - api.example.com
+    - "*.cdn.example.com"
+```
+
+Static analysis cannot discover every URL assembled at runtime or hidden inside a vendor SDK. Declaring domains makes those destinations visible even when the scanner cannot infer them from source code.
+
+## Classify the risk
+
+Choose the highest level that matches the plugin. You will select exactly one level in the Marketplace PR template.
+
+| Level | Use it when |
+| :--- | :--- |
+| **Low** | The plugin calls fixed, documented HTTPS APIs and does not execute user-controlled code, commands, SQL, file operations, browser automation, or arbitrary network requests. |
+| **Medium** | The plugin processes uploaded files or user-provided URLs, performs write actions in a third-party service, sends user content externally, or handles personal data that is not highly sensitive. |
+| **High** | The plugin can execute code or commands, run SQL, access databases or filesystems, use SSH/SFTP, automate browsers, proxy or crawl arbitrary URLs, bundle executables, or handle sensitive personal data. |
+
+<Warning>
+If more than one level could apply, select the higher level. A lower label does not reduce review scope; it only creates inconsistent evidence and delays review.
+</Warning>
+
+For medium- and high-risk plugins, document the security boundary: how inputs are constrained, where data goes, which credentials are used, what timeouts apply, and how errors avoid exposing secrets.
+
+## Build and validate locally
+
+<Steps>
+  <Step title="Package the plugin">
+    From the directory above your plugin project, run:
+
+    ```bash
+    dify plugin package ./your-plugin
+    ```
+
+    The command creates a `.difypkg` archive. Inspect its filename and file size before continuing.
+  </Step>
+  <Step title="Clone the Marketplace Toolkit">
+    ```bash
+    git clone https://github.com/langgenius/dify-marketplace-toolkit.git
+    cd dify-marketplace-toolkit
+    ```
+  </Step>
+  <Step title="Run package validation">
+    ```bash
+    python3 validator/validate-difypkg.py /path/to/your-plugin.difypkg \
+      --output-dir ./validation-report
+    ```
+
+    To compare sensitive-capability findings with your planned PR disclosure, save the PR body to a file and add `--pr-body-file /path/to/pr-body.md`.
+  </Step>
+  <Step title="Resolve the report">
+    Open `validation-report/summary.md`, then inspect the generated `*.errors.txt` and `*.warnings.txt` files.
+
+    Exit code `0` means no blocking package-level errors were found. Exit code `1` means a blocking finding or environment error must be resolved. Warnings do not fail validation, but reviewers may ask for clarification.
+  </Step>
+</Steps>
+
+The local validator checks safe extraction, package contents and size, secret patterns, binaries, manifest and README metadata, dependency policy, Python compilation and safety patterns, outbound domains, dependency vulnerabilities, financial-activity signals, and optional sensitive-capability disclosure.
+
+<Tip>
+Only the vulnerability lookup reaches the network. Add `--offline` when necessary; the report will list dependencies without claiming that they are vulnerability-free.
+</Tip>
+
+## What CI still checks
+
+Local validation cannot reproduce checks that require GitHub or Marketplace context. The submission PR will additionally check:
+
+- Whether exactly one `.difypkg` changed and its repository path is valid.
+- Whether the PR template, title, body, risk selection, and disclosures are complete.
+- Whether the version is new and has not already been published.
+- Whether dependencies install and the plugin installs successfully with the current daemon.
+- Whether the package can be rebuilt and exercised by the Marketplace upload pipeline in test mode.
+
+<Check>
+When the package report has no blocking errors, your documentation matches actual behavior, and you can explain every warning, continue to [Submit a Marketplace Pull Request](/en/develop-plugin/publishing/marketplace-listing/submit-plugin-to-marketplace).
+</Check>
+
+## Related resources
+
+<CardGroup cols={2}>
+  <Card title="Submission requirements" icon="list-check" href="https://github.com/langgenius/dify-plugins/blob/main/docs/plugin-submission-requirements.md">
+    Read the repository's current package, metadata, dependency, and risk requirements.
+  </Card>
+  <Card title="Privacy protection guidelines" icon="user-shield" href="/en/develop-plugin/publishing/standards/privacy-protection-guidelines">
+    Write a privacy policy that matches the plugin's real data flow.
+  </Card>
+</CardGroup>
