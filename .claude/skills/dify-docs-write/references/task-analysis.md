@@ -12,7 +12,7 @@ The pre-draft half of reader empathy: establish what readers are trying to do an
   route: docs → <page/section> | ui-finding | product-gap
 ```
 
-Rules: every task is a user objective passing the "I want to ___" test — never a feature description. Tasks come from the reader persona's journeys. S2 findings, issue text, and briefing bullets supply evidence and scope, never tasks. Walk test: every task must name product steps the persona actually walks. No steps to walk, no task. Every question carries exactly one route. OPEN questions are never dropped; they go into the S4 report.
+Rules: every task is a user objective passing the "I want to ___" test — never a feature description. Tasks come from the reader persona's journeys. S2 findings, issue text, and briefing bullets supply evidence and scope, never tasks. Walk test: every task must be walkable as concrete product steps (the question walk enumerates them). No steps to walk, no task. Every question carries exactly one route. OPEN questions are never dropped; they go into the S4 report.
 
 ## Depths
 
