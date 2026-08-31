@@ -6,17 +6,117 @@ dimensions:
   level: intermediate
 standard_title: Submit a Plugin to Dify Marketplace
 language: en
-title: Submit a Marketplace Pull Request
-description: Add one .difypkg to your fork, complete the current submission template, and open a reviewable PR against langgenius/dify-plugins
+title: Submit a Plugin to Marketplace
+description: Prepare and validate a .difypkg, submit it for Marketplace review, and respond when the pull request requires action
 ---
 
-Dify Marketplace submissions are pull requests to [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins). A good submission changes one package, uses the repository template, and gives reviewers enough evidence to understand the plugin without reconstructing its intent from code.
+Publish a plugin to Dify Marketplace by preparing one reviewable package, validating it locally, and submitting it to [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins). Opening the pull request starts the automated checks. After maintainer approval and merge, the repository validates and publishes the package. You only need to respond when a check or reviewer requires action.
+
+## What You Need
+
+- A working plugin project tested with the current Dify Community Edition or Dify Cloud.
+- The [Dify plugin CLI](https://github.com/langgenius/dify-plugin-daemon) for packaging.
+- Python 3 and [`yq`](https://github.com/mikefarah/yq) for local validation.
+- A public source repository that reviewers and users can inspect.
 
 <Note>
-Run [local Marketplace validation](/en/develop-plugin/publishing/marketplace-listing/prepare-plugin-for-marketplace) before opening the PR. CI repeats package checks and adds GitHub- and Marketplace-specific checks.
+The Marketplace accepts a packaged `.difypkg`, not your source tree. Reviewers still use the source repository declared in your metadata and PR to understand behavior that cannot be proven from the package alone.
 </Note>
 
-## Choose the submission type
+## Prepare the Package
+
+<Tabs>
+  <Tab title="Runtime files">
+    Include only files needed when the plugin runs: `manifest.yaml`, provider or tool definitions, source code, dependencies, README files, privacy policy, and assets.
+
+    Do not package development state such as `.git/`, virtual environments, caches, logs, `.DS_Store`, local settings, IDE files, or test artifacts. Never include `.env` files, access tokens, private keys, cloud credentials, or other secrets.
+  </Tab>
+  <Tab title="Metadata and docs">
+    Confirm that `manifest.yaml` accurately declares the author, name, version, plugin type, runner, icon, source repository, contact information, and privacy policy.
+
+    The primary `README.md` must be in English and explain setup, usage, required APIs or credentials, connection requirements, and the source repository. Put translations under `readme/README_<locale>.md`.
+  </Tab>
+  <Tab title="Dependencies">
+    Keep dependencies minimal and pinned closely enough to be reproducible. Avoid bare requirements, direct URL installs, and git-based installs unless the PR explains why they are required.
+
+    Python plugins must use `dify-plugin >= 0.9.0`. The validator also checks dependency metadata and queries the [OSV database](https://osv.dev/) for known vulnerabilities.
+  </Tab>
+</Tabs>
+
+### Document Privacy and Network Access
+
+Your `PRIVACY.md` or hosted privacy policy must describe what user data the plugin collects, stores, logs, or sends to third parties. If the plugin collects no user data, say so explicitly.
+
+When a plugin contacts external services, you can declare the expected domains in `manifest.yaml`:
+
+```yaml
+network:
+  domains:
+    - api.example.com
+    - "*.cdn.example.com"
+```
+
+Static analysis cannot discover every URL assembled at runtime or hidden inside a vendor SDK. Declaring domains makes those destinations visible even when the scanner cannot infer them from source code.
+
+## Classify the Risk
+
+Choose the highest level that matches the plugin. You will select exactly one level in the Marketplace PR template.
+
+| Level | Use It When |
+| :--- | :--- |
+| **Low** | The plugin calls fixed, documented HTTPS APIs and does not execute user-controlled code, commands, SQL, file operations, browser automation, or arbitrary network requests. |
+| **Medium** | The plugin processes uploaded files or user-provided URLs, performs write actions in a third-party service, sends user content externally, or handles personal data that is not highly sensitive. |
+| **High** | The plugin can execute code or commands, run SQL, access databases or file systems, use SSH/SFTP, automate browsers, proxy or crawl arbitrary URLs, bundle executables, or handle sensitive personal data. |
+
+<Warning>
+If more than one level could apply, select the higher level. A lower label does not reduce review scope; it only creates inconsistent evidence and delays review.
+</Warning>
+
+For medium- and high-risk plugins, document the security boundary: how inputs are constrained, where data goes, which credentials are used, what timeouts apply, and how errors avoid exposing secrets.
+
+## Build and Validate Locally
+
+<Steps>
+  <Step title="Package the plugin">
+    From the directory above your plugin project, run:
+
+    ```bash
+    dify plugin package ./your-plugin
+    ```
+
+    The command creates a `.difypkg` archive. Inspect its filename and file size before continuing.
+  </Step>
+  <Step title="Clone the Marketplace Toolkit">
+
+    ```bash
+    git clone https://github.com/langgenius/dify-marketplace-toolkit.git
+    cd dify-marketplace-toolkit
+    ```
+
+  </Step>
+  <Step title="Run package validation">
+
+    ```bash
+    python3 validator/validate-difypkg.py /path/to/your-plugin.difypkg \
+      --output-dir ./validation-report
+    ```
+
+    To compare sensitive-capability findings with your planned PR disclosure, save the PR body to a file and add `--pr-body-file /path/to/pr-body.md`.
+  </Step>
+  <Step title="Resolve the report">
+    Open `validation-report/summary.md`, then inspect the generated `*.errors.txt` and `*.warnings.txt` files.
+
+    Exit code `0` means no blocking package-level errors were found. Exit code `1` means a blocking finding or environment error must be resolved. Warnings do not fail validation, but reviewers may ask for clarification.
+  </Step>
+</Steps>
+
+The local validator checks safe extraction, package contents and size, secret patterns, binaries, manifest and README metadata, dependency policy, Python compilation and safety patterns, outbound domains, dependency vulnerabilities, financial-activity signals, and optional sensitive-capability disclosure.
+
+<Tip>
+Only the vulnerability lookup reaches the network. Add `--offline` when necessary; the report will list dependencies without claiming that they are vulnerability-free.
+</Tip>
+
+## Choose the Submission Type
 
 <Tabs>
   <Tab title="New plugin">
@@ -49,8 +149,10 @@ Run [local Marketplace validation](/en/develop-plugin/publishing/marketplace-lis
     git switch main
     git merge --ff-only upstream/main
     ```
+
   </Step>
   <Step title="Create a focused branch">
+
     ```bash
     git switch -c add-<plugin-name>-<version>
     mkdir -p <author>/<plugin-name>
@@ -63,13 +165,16 @@ Run [local Marketplace validation](/en/develop-plugin/publishing/marketplace-lis
     git status --short
     git diff --stat
     ```
+
   </Step>
   <Step title="Commit and push">
+
     ```bash
     git add <author>/<plugin-name>/<plugin-package>.difypkg
     git commit -m "add <plugin-name> <version>"
     git push -u origin HEAD
     ```
+
   </Step>
   <Step title="Create the pull request">
     Open a PR from your fork to `langgenius/dify-plugins:main`. Keep the PR out of draft only when the package and description are ready for automated and human review.
@@ -80,7 +185,7 @@ Run [local Marketplace validation](/en/develop-plugin/publishing/marketplace-lis
 Submit one `.difypkg` per PR. Combining plugins or versions prevents CI from identifying a single package path and blocks the submission.
 </Warning>
 
-## Complete the submission template
+## Complete the Submission Template
 
 The current template is part of the review contract. Do not delete fields or replace it with a short free-form description.
 
@@ -105,7 +210,7 @@ The current template is part of the review contract. Do not delete fields or rep
   </Accordion>
 </AccordionGroup>
 
-## Write for reviewability
+## Write for Reviewability
 
 | Do | Avoid |
 | :--- | :--- |
@@ -115,15 +220,24 @@ The current template is part of the review contract. Do not delete fields or rep
 | Include concrete validation commands and results. | Saying “tested” without environment or result details. |
 | Keep package bytes and disclosure in sync. | Copying an old PR body for a changed version. |
 
-<Tip>
-CI reports both blocking errors and review warnings. A complete PR body can turn an ambiguous warning into actionable reviewer context before anyone asks a follow-up question.
-</Tip>
+## After You Submit {#after-you-submit}
 
-## After you open the PR
+Opening the PR, pushing commits, or marking a draft ready for review starts the automated checks. Use the result to decide whether you need to act.
 
-Opening, synchronizing, or marking the PR ready for review starts the pre-check workflow. The repository also derives a risk label from your template selection. Do not open replacement PRs for ordinary failures—push fixes to the same branch so the checks rerun with preserved context.
+| Result | What You Do |
+| :--- | :--- |
+| **Pass** | Wait for maintainer review. A passing check does not guarantee approval. |
+| **Blocking error** | Fix the package or PR, rebuild when needed, and update the same PR. Do not open a replacement PR. |
+| **Warning** | Review the finding. Fix an actual problem, or add context when the behavior is intentional. A warning alone does not fail the check, but a reviewer may request changes. |
+| **Changes requested** | Update the source, rebuild the package when needed, push the correction to the same PR, and respond to the reviewer. |
 
-Continue to [Checks, Review, and Marketplace Release](/en/develop-plugin/publishing/marketplace-listing/marketplace-review-and-release) to understand the report and what happens after merge.
+After approval and merge, the repository validates the package again and uploads it to the production Marketplace. You do not need to start CI or upload the approved package yourself.
+
+<Check>
+Once the plugin appears in Marketplace, use [Creator Center](/en/develop-plugin/publishing/marketplace-listing/manage-published-plugins) to review its performance, read user responses, or share management with teammates.
+</Check>
+
+## Related Resources
 
 <CardGroup cols={2}>
   <Card title="PR template" icon="file-lines" href="https://github.com/langgenius/dify-plugins/blob/main/.github/pull_request_template.md">
