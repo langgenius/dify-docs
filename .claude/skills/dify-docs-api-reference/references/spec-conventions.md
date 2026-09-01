@@ -163,7 +163,7 @@ Same concept, same words, across all operations.
 
 ## x-codeSamples
 
-Mintlify's playground auto-generates request samples from the schema; do not duplicate it. Add a hand-written `x-codeSamples` entry only where autogen fails: `multipart/form-data`, binary bodies, and SSE consumption. House format: `{"lang": "bash", "label": "cURL", "source": "curl --request …"}` with `{api_base_url}`, `{api_key}`, `{user}` placeholders. Code samples are identical across languages.
+Do not add `x-codeSamples`; `lint_specs` flags any occurrence. A hand-written sample replaces Mintlify's generated snippets for the whole operation: the playground stops reflecting typed values, and readers lose every language tab but the one provided. Autogen handles all body types — `multipart/form-data` renders as `--form`, typed values appear live, and the pristine snippet draws from schema `default`s and the request-body example. A query parameter without a `default` is absent until typed; accept that gap rather than invent a `default` the API does not have. SSE consumption mechanics (curl's `--no-buffer`) live in the [SSE Streaming guide](/en/api-reference/guides/streaming).
 
 ## Tag Naming
 
