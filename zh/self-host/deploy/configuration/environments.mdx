@@ -1461,6 +1461,35 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 单个 E2B 沙箱保持活跃的时长，覆盖一次完整的 Agent 运行。3600 同时是硬上限，更高的值会被拒绝。<br/><br/>应不低于 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`。若沙箱的活跃时长短于运行的允许时长，运行会在未超时的情况下失去沙箱。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | 沙箱控制服务在 E2B 虚拟机内监听的端口。 |
 
+### 测试可选的 Rust 本地运行时
+
+Go 本地沙箱仍为默认实现。如需将少量新建的本地沙箱绑定分配给可选的 Rust 运行时，请通过对应的 Docker Compose 覆盖文件启动服务：
+
+```bash
+cd docker
+DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT=1 \
+  docker compose \
+  -f docker-compose.yaml \
+  -f docker-compose.rust-runtime.yaml \
+  up -d --build
+```
+
+该覆盖文件会构建并启动 Rust 服务，同时保留 Go 服务。两个运行时分别使用独立的 SQLite、tmux、Home、Workspace 和 Snapshot 状态。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_IMAGE` | `dify-agent-local-sandbox-rust:local` | Docker Compose 覆盖文件使用的 Rust 本地沙箱镜像。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_ENDPOINT` | （空） | Rust 服务地址。覆盖文件会将其设为 `http://local_sandbox_rust:5004`。灰度比例大于 `0` 时必须配置。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_AUTH_TOKEN` | （空） | Rust 沙箱调用使用的可选 Bearer 令牌。未设置时，覆盖文件使用 Go 沙箱的令牌。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT` | `0` | 分配给 Rust 的新建且尚无归属绑定的百分比，取值范围为 `0` 至 `100`。如未设置，覆盖文件默认为 `100`。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_PREFLIGHT_TIMEOUT_SECONDS` | `1` | Rust 健康预检的超时时间（秒）。预检失败时，新绑定会回退到 Go。 |
+
+Agent 后端只会为新建且尚无归属的绑定选择运行时。分配结果是确定性的；Rust 健康预检失败时，新绑定会分配给 Go。已有的 Go 资源保持原有表示方式。Rust 资源引用带有 `rust+` 前缀，并在整个生命周期内保持分配给 Rust。变更状态的请求到达一个运行时后，Dify 不会在另一个运行时重放该请求。
+
+<Warning>
+如需停止向 Rust 分配新绑定，请将 `DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT` 设为 `0`，同时保留 Rust 端点配置并继续运行 Rust 服务。所有带 `rust+` 前缀的 Binding、Workspace 和 Home Snapshot 都排空后，才能移除覆盖文件。提前移除 Rust 服务会导致这些资源无法访问。
+</Warning>
+
 ## 数据库服务
 
 这些变量直接在 Docker Compose 中配置数据库容器。

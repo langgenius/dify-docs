@@ -1457,6 +1457,35 @@ Agent のサンドボックスをどこで実行するかを選択します。�
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 1 つの E2B サンドボックスがアクティブでいられる時間。Agent の 1 回の実行全体に及ぶ。3600 が上限で、それより大きい値は拒否される。<br/><br/>`DIFY_AGENT_RUN_TIMEOUT_SECONDS` 以上に設定すること。サンドボックスのアクティブ時間が実行の許容時間より短いと、実行は制限内であってもサンドボックスを失う。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | E2B VM 内でサンドボックス制御サービスが待ち受けるポート。 |
 
+### オプションの Rust ローカルランタイムのテスト
+
+Go ローカルサンドボックスが引き続きデフォルトです。新しいローカルサンドボックスのバインディングを一部だけ Rust に割り当てるには、Docker Compose のオーバーレイを使用します。
+
+```bash
+cd docker
+DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT=1 \
+  docker compose \
+  -f docker-compose.yaml \
+  -f docker-compose.rust-runtime.yaml \
+  up -d --build
+```
+
+オーバーレイは Go サービスを残したまま Rust サービスをビルドして起動します。2 つのランタイムは SQLite、tmux、Home、Workspace、Snapshot の状態を共有しません。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_IMAGE` | `dify-agent-local-sandbox-rust:local` | Compose オーバーレイが使用する Rust ローカルサンドボックスイメージ。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_ENDPOINT` | （空） | Rust サービスのアドレス。オーバーレイでは `http://local_sandbox_rust:5004` になる。カナリア比率が `0` より大きい場合は必須。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_AUTH_TOKEN` | （空） | Rust サンドボックス呼び出し用の任意の Bearer トークン。未設定の場合、オーバーレイは Go サンドボックスのトークンを使用する。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT` | `0` | 新規かつ所有先が未決定のバインディングを Rust に割り当てる比率。`0` から `100` まで。未設定の場合、オーバーレイのデフォルトは `100`。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_PREFLIGHT_TIMEOUT_SECONDS` | `1` | Rust のヘルス事前確認のタイムアウト秒数。失敗すると新しいバインディングを Go に割り当てる。 |
+
+Agent バックエンドは、新規かつ所有先が未決定のバインディングだけにランタイムを割り当てます。割り当ては決定論的です。Rust のヘルス事前確認に失敗すると Go を使用します。既存の Go リソースの表現は変わりません。Rust が所有する参照には `rust+` プレフィックスが付きます。そのライフサイクル全体で Rust に固定されます。状態を変更するリクエストが一方のランタイムに到達した後、Dify はもう一方のランタイムでそのリクエストを再実行しません。
+
+<Warning>
+Rust への新規割り当てを停止するには、`DIFY_AGENT_LOCAL_SANDBOX_RUST_CANARY_PERCENT` を `0` に設定します。Rust のエンドポイント設定とサービスは維持してください。`rust+` プレフィックス付きの Binding、Workspace、Home Snapshot がすべて排出されてから、オーバーレイを削除してください。先に Rust サービスを削除すると、これらのリソースにアクセスできなくなります。
+</Warning>
+
 ## データベースサービス
 
 Docker Compose でデータベースコンテナを直接設定します。
