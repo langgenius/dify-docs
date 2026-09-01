@@ -35,6 +35,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 |:--------|:--------|:---------|:------|
 | model | 模型 | モデル | |
 | model provider | 模型供应商 | モデルプロバイダー | |
+| AI credits | AI 消息额度 | AI クレジット | Dify Cloud credits for using supported models. Use "AI credits" in body prose. Apply normal title case in headings: "AI Credits" as a standalone term and singular "AI Credit" as a modifier, as in "AI Credit Usage." |
+| API key | API Key | API キー | Model provider credential. Use "API key" in body prose. Apply normal title case in headings: "API Key." The exact UI label is also "API Key." |
 | LLM (large language model) | 大语言模型 | 大規模言語モデル | |
 | chat model | 对话模型 | チャットモデル | Models that support role-based conversations (System/User/Assistant) |
 | completion model | 文本续写模型 | 補完モデル | Models designed for simple text continuation |
@@ -44,8 +46,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | rerank model | 重排序模型 | リランクモデル | Models that reorder retrieval results by relevance |
 | reasoning model | 推理模型 | 推論モデル | Models that output thinking process before final response |
 | moderation model | 内容审核模型 | モデレーションモデル | Models that detect and filter inappropriate content |
-| TTS model | 文字转语音模型 | TTSモデル | Text-to-speech models |
-| Speech2Text model | 语音转文字模型 | 音声認識モデル | Speech-to-text models |
+| speech-to-text model | 语音转文字模型 | 音声認識モデル | Generic term; use "Speech-to-Text Model" only for the exact UI label. |
+| text-to-speech model | 文字转语音模型 | TTSモデル | Generic term; use "Text-to-Speech Model" only for the exact UI label. |
 | token | token | token | |
 | API token | API 令牌 | APIトークン | |
 | prompt | 提示词 | プロンプト | |
@@ -189,7 +191,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Studio | 工作室 | スタジオ | common.menus.apps | Sidebar menu label for the app workspace |
 | Knowledge | 知识库 | ナレッジ | common.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
 | Explore | 探索 | 探索 | common.menus.explore | Sidebar menu label |
-| Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
+| Integrations | 集成 | 連携 | common.mainNav.integrations | Main navigation label for the hub containing model providers, tools, triggers, and other extensions. |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
 | Skills | Skills | Skills | common.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The page title (`skill.skillManagement.title`) is also "Skills" in every locale since dify #41242. |
 
@@ -249,15 +251,15 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
 | Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
 | Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
-| Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
+| Default Models | 默认模型设置 | システムモデル設定 | common.modelProvider.systemModelSettings | |
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
 | Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
 | Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
-| Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
-| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
+| Load balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
+| AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | UI option matching the general term. Renamed from "Message Credits" in v1.13.1; the section header is the all-caps `modelProvider.quotaLabel`. |
+| Usage Priority | 使用优先级 | 使用優先順位 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
 | API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
 
 ### Billing
