@@ -1,5 +1,6 @@
 ---
 title: よくある問題
+description: Community Edition セルフホストにおけるログイン、CSRF、タイムアウト、アップロードなどの障害を修正する
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/troubleshooting/common-issues) を参照してください。
@@ -8,7 +9,7 @@ title: よくある問題
 
 ### 管理者パスワードのリセット
 
-Docker Composeデプロイメントの場合：
+Docker Compose デプロイメントの場合：
 
 ```bash
 docker exec -it docker-api-1 flask reset-password
@@ -16,57 +17,112 @@ docker exec -it docker-api-1 flask reset-password
 
 プロンプトが表示されたら、アカウントのメールアドレスと新しいパスワードを入力してください。
 
-ソースコードデプロイメントの場合は、`api`ディレクトリから同じコマンドを実行してください。
+ソースコードデプロイメントの場合は、`api` ディレクトリから同じコマンドを実行してください。
 
-### ログイン後の401エラー
+### ログイン後の 401 エラー
 
 これは通常、ドメインを変更した後に発生します。以下の環境変数を更新してください：
 
-- `CONSOLE_CORS_ALLOW_ORIGINS` - コンソールCORSポリシー
+- `CONSOLE_CORS_ALLOW_ORIGINS` - コンソール CORS ポリシー
 - `WEB_API_CORS_ALLOW_ORIGINS` - Web アプリ CORS ポリシー
-- `CONSOLE_API_URL` - コンソールAPIのバックエンドURL
-- `CONSOLE_WEB_URL` - コンソールWebのフロントエンドURL
-- `SERVICE_API_URL` - サービスAPI URL
+- `CONSOLE_API_URL` - コンソール API のバックエンド URL
+- `CONSOLE_WEB_URL` - コンソール Web のフロントエンド URL
+- `SERVICE_API_URL` - サービス API URL
 - `APP_API_URL` - Web アプリ API バックエンド URL
 - `APP_WEB_URL` - Web アプリ URL
 
 設定を更新した後、再起動してください。
 
+### ログイン時の Invalid encrypted data {#401-invalid-encrypted-data-on-login}
+
+コンソールは `POST /console/api/login` の前にパスワードを Base64 エンコードします。平文を送る（またはフロントエンドと API イメージでそのエンコードが一致しない）と、本文 `Invalid encrypted data` の **401** が返ります。
+
+公式コンソールからサインインしてください。独自のログインクライアントを使う場合は、コンソールと同じ方法でパスワードを Base64 エンコードしてください。
+
+### CSRF トークン欠落による 401 {#401-csrf-token-is-missing-or-invalid}
+
+コンソールセッションは `access_token` Cookie と、`csrf_token` Cookie と一致する `X-CSRF-Token` ヘッダーを使います。この組がない認証済みコンソール呼び出しは **401** `CSRF token is missing or invalid.` になります。
+
+公式コンソールは両方を送ります。Cookie だけを転送してヘッダーを落とすスクリプトやプロキシはこの検査に失敗します。
+
+### 約 1 時間後のセッション切断 {#session-drops-after-about-one-hour}
+
+`access_token` と `csrf_token` Cookie の有効期間は `ACCESS_TOKEN_EXPIRE_MINUTES`（デフォルト `60`）です。`refresh_token` Cookie（`REFRESH_TOKEN_EXPIRE_DAYS`、デフォルト `30`）が有効な限り、コンソールはそれで前者を更新します。
+
+access Cookie だけを保存する、または更新リクエストを遮断するクライアントは、約 1 時間後にログアウトしたように見えます。`ACCESS_TOKEN_EXPIRE_MINUTES` と `REFRESH_TOKEN_EXPIRE_DAYS` は [環境変数](/ja/self-host/deploy/configuration/environments) を参照してください。
+
+### セットアップ完了後のインストールページ {#install-page-after-setup-completes}
+
+`/install` は初回ブートストラップ専用です。管理者アカウントを作成したら、そのページは終わりです。セットアップの再送信は拒否されます。
+
+`/install` ではなくサインインページ（`/`）を開いてください。
+
+### 初回起動後の SECRET_KEY 変更 {#secret_key-changed-after-first-boot}
+
+`SECRET_KEY` はセッション Cookie、JWT、ファイル URL、OAuth 資格情報の署名に使います。スタック起動後に変更すると、全員がログアウトし、署名付きファイル URL が無効になり、OAuth プラグイン資格情報は復元できなくなります。
+
+生成済みまたは選択済みの値を維持してください。詳細と生成コマンドは [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) を参照してください。
+
+### ブラウザが Docker ホスト名を呼び出す {#browser-calls-the-docker-hostname}
+
+nginx 配下のデフォルト単一ドメイン Compose では、`CONSOLE_API_URL` を空のままにしてください。web コンテナは相対パス `/console/api` を公開し、ブラウザは公開オリジンに留まります。
+
+`CONSOLE_API_URL=http://api:5001` にすると、ブラウザが Compose DNS 名 `api` を呼び出します。運用者のマシンでは解決できません。web コンテナからのサーバーサイド呼び出しには `SERVER_CONSOLE_API_URL`（デフォルト `http://api:5001`）を使います。詳細は [CONSOLE_API_URL](/ja/self-host/deploy/configuration/environments#console_api_url) を参照してください。
+
 ## 設定
 
 ### デフォルトポートの変更
 
-`.env`設定を変更してください：
+`.env` 設定を変更してください：
 
-```
+```text
 EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
-APIサービスポートを変更する場合は、`docker-compose.yaml`のnginx設定を更新してください。
+API サービスポートを変更する場合は、`docker-compose.yaml` の nginx 設定を更新してください。
 
-### ファイルアップロード制限の増加
+### ファイルアップロード制限の増加 {#increase-file-upload-limits}
 
-`.env`で以下を更新してください：
+`.env` で以下を更新してください：
 
-- `UPLOAD_FILE_SIZE_LIMIT` - 最大ファイルサイズ
-- `NGINX_CLIENT_MAX_BODY_SIZE` - 問題を避けるために一致させる必要があります
+- `UPLOAD_FILE_SIZE_LIMIT` - ドキュメントアップロードの最大サイズ（MB）
+- `NGINX_CLIENT_MAX_BODY_SIZE` - プロキシのボディ上限（デフォルト `100M`）
+
+両方を上げてください。API 側だけを上げると、nginx が API より先に **413** を返します。画像、動画、音声にはそれぞれ `UPLOAD_*_FILE_SIZE_LIMIT` があり、nginx 上限以下に保ってください。
+
+プラグインパッケージは `PLUGIN_MAX_PACKAGE_SIZE`（デフォルト 50 MB）を使い、同じ nginx 上限の対象です。詳細は [環境変数](/ja/self-host/deploy/configuration/environments#multi-modal-configuration) を参照してください。
 
 ### ワークフローの複雑さ制限
 
-`web/app/components/workflow/constants.ts`の`MAX_TREE_DEPTH`を調整してください（デフォルト：50）。
+`web/app/components/workflow/constants.ts` の `MAX_TREE_DEPTH` を調整してください（デフォルト：50）。
 
 注意：過度な深度はパフォーマンスに影響します。
 
 ### ノード実行タイムアウト
 
-ノードごとの実行時間を制御するために、`.env`で`TEXT_GENERATION_TIMEOUT_MS`を設定してください。
+ノードごとのフロントエンドストリーミング停滞タイムアウトを制御するには、`.env` で `TEXT_GENERATION_TIMEOUT_MS` を設定してください。詳細は [TEXT_GENERATION_TIMEOUT_MS](/ja/self-host/deploy/configuration/environments#web-frontend-service) を参照してください。
+
+### 長時間ワークフローの約 6 分での停止 {#long-workflows-stop-around-six-minutes}
+
+`docker/.env.example` の `GUNICORN_TIMEOUT` のデフォルトは `360` 秒（6 分）です。Nginx の `NGINX_PROXY_READ_TIMEOUT` のデフォルトは `3600s` です。長いワークフローは nginx が待つ間に Gunicorn 側で終了することがあります。
+
+どの層が切ったかを確認してください。nginx の **504** か、Gunicorn タイムアウトでの API worker 再起動です。API が先に止まった場合は `docker/.env` の `GUNICORN_TIMEOUT` を上げ、nginx が **504** を返した場合は nginx のプロキシタイムアウトを上げます。その後、`docker` ディレクトリで実行します：
+
+```bash
+docker compose up -d --force-recreate api
+docker compose up -d --force-recreate nginx
+```
+
+`API_WEBSOCKET_GUNICORN_TIMEOUT` も変えた場合は、同じ方法で `api_websocket` を再作成します。
+
+`TEXT_GENERATION_TIMEOUT_MS` は別のフロントエンド停滞タイマーです。worker の期限として扱わないでください。[ノード実行タイムアウト](#ノード実行タイムアウト) を参照してください。
 
 ## メール設定
 
-パスワードリセットメールが届きませんか？`.env`でメール設定を構成してください：
+パスワードリセットメールが届きませんか？`.env` でメール設定を構成してください：
 
-1. メールパラメータを設定（SMTP設定）
+1. メールパラメータを設定（SMTP 設定）
 2. サービスを再起動：
 
 ```bash
@@ -82,22 +138,26 @@ docker compose up -d
 
 ## データベースの問題
 
-### pg_hba.confでの接続エラー
+### pg_hba.conf での接続エラー
 
 以下のエラーが表示される場合：
-```
+
+```text
 FATAL: no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
 ```
 
-エラーのネットワークセグメントit docker-db-1 sh -c "echo 'host all all 172.19.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
+エラーに示されたネットワークセグメントからの接続を許可してください：
+
+```bash
+docker exec -it docker-db-1 sh -c "echo 'host all all 172.19.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
 docker-compose restart
 ```
 
 ### 暗号化キーのファイルが見つからないエラー
 
-このエラーは、デプロイメント方法を変更した後、または`api/storage/privkeys`を削除した後に発生します：
+このエラーは、デプロイメント方法を変更した後、または `api/storage/privkeys` を削除した後に発生します：
 
-```
+```text
 FileNotFoundError: File not found
 File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 ```
@@ -105,11 +165,13 @@ File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 暗号化キーペアをリセットしてください：
 
 Docker Compose：
+
 ```bash
 docker exec -it docker-api-1 flask reset-encrypt-key-pair
 ```
 
-ソースコード（`api`ディレクトリから）：
+ソースコード（`api` ディレクトリから）：
+
 ```bash
 flask reset-encrypt-key-pair
 ```
@@ -122,8 +184,12 @@ flask reset-encrypt-key-pair
 
 ### ワークスペース名の変更
 
-データベース内の`tenants`テーブルを直接変更してください。
+データベース内の `tenants` テーブルを直接変更してください。
 
 ### アプリケーションアクセスドメインの変更
 
-`docker-compose.yaml`で`APP_WEB_URL`を更新してください。
+`docker-compose.yaml` で `APP_WEB_URL` を更新してください。
+
+## 関連情報
+
+Community Edition 1.17 向けの実行可能なチェックリストが必要な場合は、[dify-skills](https://github.com/kabishou11/dify-skills) を利用できます。コミュニティ非公式であり、LangGenius による保守ではありません。

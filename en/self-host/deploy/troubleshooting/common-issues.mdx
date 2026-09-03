@@ -1,5 +1,6 @@
 ---
 title: Common Issues
+description: Fix login, CSRF, timeouts, uploads, and other Community Edition self-host failures
 ---
 
 ## Authentication & Access
@@ -30,25 +31,65 @@ This typically happens after changing domains. Update these environment variable
 
 Restart after updating configuration.
 
+### 401 Invalid Encrypted Data on Login {#401-invalid-encrypted-data-on-login}
+
+The console Base64-encodes the password before `POST /console/api/login`. Sending plaintext (or a frontend/API image pair that disagrees on that encoding) returns **401** with `Invalid encrypted data`.
+
+Sign in through the official console. If you built a custom login client, Base64-encode the password the same way the console does.
+
+### 401 CSRF Token Is Missing or Invalid {#401-csrf-token-is-missing-or-invalid}
+
+Console sessions use an `access_token` cookie plus an `X-CSRF-Token` header that must match the `csrf_token` cookie. Authenticated Console calls without that pair return **401** `CSRF token is missing or invalid.`
+
+The official console sends both. Scripts and proxies that forward the cookie but drop the header fail this check.
+
+### Session Drops After About One Hour {#session-drops-after-about-one-hour}
+
+`access_token` and `csrf_token` cookies last `ACCESS_TOKEN_EXPIRE_MINUTES` (default `60`). The console refreshes them with the `refresh_token` cookie (`REFRESH_TOKEN_EXPIRE_DAYS`, default `30`) as long as that refresh cookie is still valid.
+
+Clients that store only the access cookie, or that block the refresh request, look logged out after about an hour. See [Environment Variables](/en/self-host/deploy/configuration/environments) for `ACCESS_TOKEN_EXPIRE_MINUTES` and `REFRESH_TOKEN_EXPIRE_DAYS`.
+
+### Install Page After Setup Completes {#install-page-after-setup-completes}
+
+`/install` is first-time bootstrap only. Once the admin account exists, that page is done. Submitting setup again is rejected.
+
+Open the sign-in page (`/`) instead of `/install`.
+
+### SECRET_KEY Changed After First Boot {#secret_key-changed-after-first-boot}
+
+`SECRET_KEY` signs session cookies, JWTs, file URLs, and OAuth credentials. Changing it after the stack has run logs everyone out, invalidates signed file URLs, and makes OAuth plugin credentials unrecoverable.
+
+Leave the generated or chosen value in place. Details and the generation command are in [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
+
+### Browser Calls the Docker Hostname {#browser-calls-the-docker-hostname}
+
+For the default single-domain Compose stack behind nginx, leave `CONSOLE_API_URL` empty. The web container then exposes a relative `/console/api` prefix, and the browser stays on your public origin.
+
+Setting `CONSOLE_API_URL=http://api:5001` makes the *browser* call the Compose DNS name `api`, which does not resolve on the operator's machine. Use `SERVER_CONSOLE_API_URL` (default `http://api:5001`) for server-side calls from the web container. See [CONSOLE_API_URL](/en/self-host/deploy/configuration/environments#console_api_url).
+
 ## Configuration
 
 ### Change default port
 
 Modify `.env` configuration:
 
-```
+```text
 EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
 For API service port changes, update the nginx configuration in `docker-compose.yaml`.
 
-### Increase file upload limits
+### Increase file upload limits {#increase-file-upload-limits}
 
 Update in `.env`:
 
-- `UPLOAD_FILE_SIZE_LIMIT` - Maximum file size
-- `NGINX_CLIENT_MAX_BODY_SIZE` - Must match to avoid issues
+- `UPLOAD_FILE_SIZE_LIMIT` - Maximum document upload size in MB
+- `NGINX_CLIENT_MAX_BODY_SIZE` - Proxy body limit (default `100M`)
+
+Raise both. If only the API limit is higher, nginx returns **413** before the API sees the file. Image, video, and audio uploads have their own `UPLOAD_*_FILE_SIZE_LIMIT` variables; keep those at or below the nginx limit too.
+
+Plugin packages use `PLUGIN_MAX_PACKAGE_SIZE` (default 50 MB) with the same nginx ceiling. See [Environment Variables](/en/self-host/deploy/configuration/environments#multi-modal-configuration).
 
 ### Workflow complexity limits
 
@@ -58,7 +99,22 @@ Note: Excessive depth impacts performance.
 
 ### Node execution timeout
 
-Set `TEXT_GENERATION_TIMEOUT_MS` in `.env` to control runtime per node.
+Set `TEXT_GENERATION_TIMEOUT_MS` in `.env` to control the frontend streaming stall timeout. See [TEXT_GENERATION_TIMEOUT_MS](/en/self-host/deploy/configuration/environments#web-frontend-service).
+
+### Long Workflows Stop Around Six Minutes {#long-workflows-stop-around-six-minutes}
+
+`GUNICORN_TIMEOUT` defaults to `360` seconds (6 minutes) in `docker/.env.example`. Nginx `NGINX_PROXY_READ_TIMEOUT` defaults to `3600s`. A long workflow can die at Gunicorn while nginx would still wait.
+
+Check which layer cut the request: nginx **504** vs the API worker restarting at the Gunicorn timeout. Raise `GUNICORN_TIMEOUT` in `docker/.env` when the API is the one that stopped; raise the nginx proxy timeouts when nginx returned **504**. Then, from the `docker` directory:
+
+```bash
+docker compose up -d --force-recreate api
+docker compose up -d --force-recreate nginx
+```
+
+If you also changed `API_WEBSOCKET_GUNICORN_TIMEOUT`, recreate `api_websocket` the same way.
+
+`TEXT_GENERATION_TIMEOUT_MS` is a separate frontend stall timer. Do not treat it as the worker deadline; see [Node execution timeout](#node-execution-timeout).
 
 ## Email Configuration
 
@@ -83,7 +139,8 @@ In local deployments without email configured, the invitation page displays a li
 ### Connection errors with pg_hba.conf
 
 If you see:
-```
+
+```text
 FATAL: no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
 ```
 
@@ -98,7 +155,7 @@ docker-compose restart
 
 This error occurs after changing deployment methods or deleting `api/storage/privkeys`:
 
-```
+```text
 FileNotFoundError: File not found
 File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 ```
@@ -106,11 +163,13 @@ File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 Reset encryption key pairs:
 
 Docker Compose:
+
 ```bash
 docker exec -it docker-api-1 flask reset-encrypt-key-pair
 ```
 
 Source code (from `api` directory):
+
 ```bash
 flask reset-encrypt-key-pair
 ```
@@ -128,3 +187,7 @@ Modify the `tenants` table in the database directly.
 ### Change application access domain
 
 Update `APP_WEB_URL` in `docker-compose.yaml`.
+
+## Further Reading
+
+Community operators who want executable checklists for Community Edition 1.17 can use [dify-skills](https://github.com/kabishou11/dify-skills) (unofficial, not maintained by LangGenius).
