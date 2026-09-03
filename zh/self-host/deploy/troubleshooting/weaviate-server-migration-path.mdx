@@ -1,48 +1,57 @@
 ---
 title: Weaviate 服务器升级路径
-description: 如何跨小版本升级自托管 Weaviate 服务器而不丢失向量数据
+description: 如何跨小版本升级自部署 Weaviate 服务器而不丢失向量数据
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/troubleshooting/weaviate-server-migration-path)。
 
-Dify 内置的 Weaviate 镜像已从 `1.27.0` 升级到 `1.39.0`。全新部署 Dify 会直接获得新版本，无需关注本文。
+Dify 会固定其内置的 Weaviate 服务器镜像版本。该版本正在从 `1.27.0` 升级到 `1.39.0`，而已有的 Weaviate 数据卷无法一步跨越这段版本差。如果是全新部署 Dify，本文与你无关：空数据卷会直接使用固定的版本。
 
-如果已在现有数据卷上运行 Weaviate，则不能直接跳到新镜像。Weaviate 既未测试也不支持跨小版本升级，任何一个版本都可能包含磁盘数据迁移，而这类迁移要求上一个版本至少运行过一次。
+Weaviate 既未测试也不支持跨小版本升级，任何一个版本都可能包含磁盘数据迁移，而这类迁移要求上一个版本至少运行过一次。
 
-受支持的升级方式是按顺序逐个小版本推进，每次都升到该小版本的最新补丁版本。下面给出完整阶梯，以及决定向量能否存活的两个运维细节。
+受支持的升级方式是按顺序逐个小版本推进，每次都升到该小版本的最新补丁版本。下面给出完整阶梯，以及升级过程中最容易出问题的两个运维细节。
 
 <Warning>
-  开始前先备份 Weaviate 数据卷。阶梯中途出问题时，只有手上有快照才能恢复。
+  开始前请备份 Weaviate 数据卷。升级中途出问题时，只有手上有快照才能恢复。
 </Warning>
 
-## 检查当前版本
+## 确认当前版本
 
-```bash
-curl -s -H "Authorization: Bearer <WEAVIATE_API_KEY>" \
-  http://localhost:8080/v1/meta | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])"
-```
-
-若返回结果已是 `1.39.x`，说明无需升级。低于该版本，则以返回值作为阶梯起点。
-
-## 备份数据
-
-Docker 部署最简单的备份方式是离线复制数据卷。先停止 Weaviate，确保副本一致：
+Dify 默认的 `docker-compose.yaml` 不会为 Weaviate 映射宿主机端口，因此要在 Compose 网络内部执行检查，而不是访问宿主机的 `localhost`：
 
 ```bash
 cd docker
-docker compose stop weaviate
-sudo cp -r ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
+docker compose exec -T weaviate \
+  wget -qO- --header="Authorization: Bearer <WEAVIATE_API_KEY>" \
+  http://localhost:8080/v1/meta \
+  | python3 -c "import sys, json; print(json.load(sys.stdin)['version'])"
 ```
 
-生产环境建议使用 Weaviate 的 [备份模块](https://docs.weaviate.io/deploy/configuration/backups) 写入 S3、GCS 或 Azure。它生成的是可还原的快照，而非原始目录副本，且可对运行中的实例执行。本地文件系统后端仅适用于开发环境。
+URL 中的 `localhost` 指的是 Weaviate 容器自身的回环地址，而不是宿主机。Weaviate 镜像内既没有 `curl` 也没有 Python，因此请求使用 busybox `wget` 发出，JSON 则由宿主机上的 Python 格式化。
+
+如果这里已经显示 `1.39.x`，说明无需升级。低于该版本则说明应从阶梯的哪一级开始。
+
+## 备份数据
+
+对于 Docker 部署，最简单的备份方式是离线复制数据卷。请先停止 Weaviate 以保证副本一致：
+
+```bash
+cd docker
+docker compose stop -t 120 weaviate
+sudo cp -a ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
+```
+
+`cp -a` 会保留属主、权限和时间戳。用 `sudo` 执行的普通 `cp -r` 会改写这些属性，可能导致还原后的数据卷无法被 Weaviate 容器读取。
+
+生产环境建议使用 Weaviate 的 [备份模块](https://docs.weaviate.io/deploy/configuration/backups) 写入 S3、GCS 或 Azure。它生成的是可还原的快照，而不是原始目录副本，并且可以对运行中的实例执行。本地文件系统后端仅供开发使用。
 
 ## 逐个小版本升级
 
-按顺序走完每个小版本，每次都停在该小版本的最新补丁版本上。下表版本号为撰写时的最新值，开始前先确认是否有更新的补丁，有则优先使用。
+按顺序走完每个小版本，每次都停在该小版本的最新补丁版本上。
 
 | 步骤 | 镜像标签 |
 |:-----|:---------|
-| 0（当前） | `cr.weaviate.io/semitechnologies/weaviate:1.27.x` |
+| 0（当前） | `semitechnologies/weaviate:1.27.0` |
 | 1 | `cr.weaviate.io/semitechnologies/weaviate:1.27.27` |
 | 2 | `cr.weaviate.io/semitechnologies/weaviate:1.28.16` |
 | 3 | `cr.weaviate.io/semitechnologies/weaviate:1.29.11` |
@@ -53,14 +62,22 @@ sudo cp -r ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
 | 8 | `cr.weaviate.io/semitechnologies/weaviate:1.34.20` |
 | 9 | `cr.weaviate.io/semitechnologies/weaviate:1.35.23` |
 | 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
-| 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.14` |
-| 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.9` |
+| 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.15` |
+| 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.13` |
 | 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.0` |
+
+镜像仓库在第 1 步发生变化。现有部署从 Docker Hub 拉取 `semitechnologies/weaviate`，而阶梯使用 Weaviate 自有仓库 `cr.weaviate.io/semitechnologies/weaviate`，这也是 Dify 新版 Compose 文件所指向的地址。两者镜像相同，因此这里是有意同时变更仓库和版本。
+
+表中的补丁版本为撰写时的最新值。对于中间各级，开始前先确认该小版本是否有更新的补丁，有则优先使用。
+
+<Warning>
+  最后一级是例外。请停在 `docker-compose.yaml` 固定的版本上，而不是可用的最新补丁。如果先把数据卷升到更新的补丁，再应用 Dify 固定的版本，就等于在新版本已写入过的数据卷上执行降级，也就是 [回滚说明](#回滚失败的升级) 中警告的情况。
+</Warning>
 
 逐级升级还能缩小影响范围。某一级出问题时，只需回退一个版本，并且能立刻确定是哪个版本引入的问题，不必在一次跨越所有小版本的升级里二分排查。
 
 <Info>
-  紧跟最新版本才能持续拿到修复。Weaviate 只会把缺陷和安全修复合入最新小版本及其之前约三个小版本的最新补丁，落后超过三个小版本的部署将不再收到这些修复。本次迁移完成后也要定期回看，及时升到当前补丁版本。
+  紧跟最新版本才能持续拿到修复。Weaviate 只支持 [最近的三个小版本](https://weaviate.io/weaviate-eol-policy)，即当前版本及其之前的两个版本。更早的版本已终止支持，不再保证提供缺陷或安全修复。本次迁移完成后也要定期回看，及时升到当前补丁版本。
 </Info>
 
 ## 使用 Docker Compose 升级
@@ -69,88 +86,128 @@ Dify 在 `docker/docker-compose.yaml`、`docker/docker-compose.middleware.yaml` 
 
 <Steps>
   <Step title="设置下一级镜像标签">
-    把 `weaviate` 服务改成下一个小版本的最新补丁，例如 `image: cr.weaviate.io/semitechnologies/weaviate:1.28.16`。
+    把 `weaviate` 服务改为下一个小版本的最新补丁，例如 `image: cr.weaviate.io/semitechnologies/weaviate:1.28.16`。
   </Step>
   <Step title="优雅停止容器">
+
     ```bash
     cd docker
-    docker compose stop weaviate
+    docker compose stop -t 120 weaviate
     ```
 
-    切勿在此使用 `docker kill` 或 `docker rm -f`。强杀的代价详见 [优雅停止 Weaviate](#优雅停止-weaviate)。
+    切勿在此使用 `docker kill` 或 `docker rm -f`。强制杀死的代价参见 [优雅停止 Weaviate](#优雅停止-weaviate)。
   </Step>
   <Step title="启动新版本">
+
     ```bash
     docker compose up -d weaviate
     ```
+
   </Step>
-  <Step title="验证后再继续">
-    先确认上报的版本号，再按 [每一步都要验证](#每一步都要验证) 检查数据与检索是否正常，确认无误后才进入下一级。
+  <Step title="确认无误后再继续">
+    先确认上报的版本号，再按 [每一步都要验证](#每一步都要验证) 检查数据与检索是否正常，然后才进入下一级。
   </Step>
 </Steps>
 
-如果开发时通过 `docker-compose.middleware.yaml` 运行 Weaviate，同样的循环只需显式指定文件：
+如果你在源码开发时通过 `docker-compose.middleware.yaml` 运行 Weaviate，同样的循环适用，只需显式指定文件：
 
 ```bash
 cd docker
-docker compose -f docker-compose.middleware.yaml stop weaviate
+docker compose -f docker-compose.middleware.yaml stop -t 120 weaviate
 docker compose -f docker-compose.middleware.yaml --profile weaviate up -d weaviate
 ```
 
 ## 优雅停止 Weaviate
 
-这是最容易丢数据、也最容易做错的一个细节。
+这是最容易让检索失效、也最容易做错的一个细节。
 
-Weaviate 把 HNSW 向量索引放在内存中，正常关闭时才会刷写到磁盘。容器被强制杀死时（`docker kill`、`docker rm -f`、内存溢出被杀，或停止超过 Docker 的宽限期），磁盘上的向量索引提交日志可能残缺不全。
+Weaviate 把 HNSW 向量索引放在内存中，并通过提交日志写入磁盘。容器被强制杀死时（`docker kill`、`docker rm -f`、内存溢出被杀，或停止超过 Docker 的宽限期），提交日志可能残缺不全，尚未记录的对象也就不在图中。
 
-随之而来的故障非常隐蔽，这正是它危险的地方。对象本身完好无损：数量正确，按 ID 取回对象也能拿到完整向量。但 HNSW 图是截断的，向量检索会悄悄只召回其中一部分，直到索引重建完成。实测中，版本之间的一次强杀让一个含 10 个对象的集合在 `near_vector` 检索时只返回 3 条，而对象计数仍显示 10。
+丢的不是对象，而是图。在 1.39.0 上实测：向一个共 700 个对象的集合导入 500 个对象后立即强制杀死容器，结果如下：
 
-使用 `docker compose stop` 或 `docker compose down`，两者都发送 SIGTERM，并留出足够时间完成刷写。索引较大时，需要比 Docker 默认值更长的宽限期：
+| 检查项 | 结果 |
+|:-------|:-----|
+| 对象数量 | 700，正确 |
+| 列出全部对象 | 返回全部 700 个 |
+| 关键词（BM25）检索 | 能找到导入的全部 500 个 |
+| 按 ID 获取 | 返回精确的向量 |
+| `near_vector` 且 `limit: 700` | **680** |
+
+20 个对象完好地存在于存储中，向量检索却触达不到。
+
+危险之处在于没有任何提示。服务端没有报错，没有告警，关于提交日志更是只字未提，没有任何日志可供排查。而大多数人首先会看的对象数量，显示得完全正常。
+
+它也不会自行恢复。重启之后、优雅停止再启动之后、再来一次之后，以及重新写入同样的对象之后，缺失的仍是同样这 20 个。要修复，需要在 Dify 中对受影响的知识库重新索引，让集合彻底重建。
+
+因此这里的关键在于预防。请使用 `docker compose stop` 或 `docker compose down`，两者都会发送 SIGTERM，并且要留出足够时间完成刷写。索引较大时需要比 Docker 默认值更长的宽限期：
 
 ```bash
 docker compose stop -t 120 weaviate
 ```
 
-若怀疑已经发生过强杀，按下文验证召回情况，不必假定数据已丢失：对象仍然在，索引重建后即可恢复。
+要确认是否已经发生，请把对象数量和向量检索实际能触达的数量做对比。[每一步都要验证](#每一步都要验证) 给出了统计数量的命令，再用该数值作为 `limit` 执行一次 `near_vector` 查询。返回结果更少，差值就是触达不到的对象。
 
-## 重启后等待索引挂载
+## 每次重启后等待索引挂载
 
-在较新版本上，`/v1/meta` 会在各集合索引挂载完成前就先行响应。在这个窗口内发起查询会失败，报错为 `tried to browse non-existing index for Vector_index_<id>_Node`。
+在阶梯上的所有版本中，`/v1/meta` 都会在容器启动约两秒后开始响应。集合挂载则更慢，从 1.31 起慢得多。在整个阶梯上实测，从 `/v1/meta` 可用到集合查询首次成功之间的间隔为：
 
-这是暂时现象，除了稍等片刻无需其他处理。每次重启后等待几秒再依赖检索功能。如果要编写健康检查脚本，应轮询到一个简单查询成功为止，而不是只看 `/v1/meta`。
+| 服务器版本 | 查询可用前的间隔 |
+|:-----------|:-----------------|
+| 1.27～1.30 | 小于 0.3 秒 |
+| 1.31 及以后 | 4～9 秒 |
+
+在这个窗口内发出的查询不会提示「仍在启动」，而是提示数据不存在：
+
+- `GET /v1/objects?class=...` 返回 **404**，响应体为空。
+- GraphQL 查询返回 **422**，内容为 `no graphql provider present, this is most likely because no schema is present. Import a schema first!`。
+
+升级到一半看到这样的信息很容易让人紧张，但这是误报。该窗口是暂时的，除了等待无需任何处理。每次重启后请给它十秒钟再下结论；如果要编写健康检查脚本，应轮询到一个真实的集合查询成功为止，而不是只看 `/v1/meta`。
 
 ## 每一步都要验证
 
 既要确认数据还在，也要确认检索可用。服务能启动并不代表索引是健康的。
 
+先设置密钥和集合名称，然后执行三项检查：
+
 ```bash
+cd docker
 KEY="<WEAVIATE_API_KEY>"
+COLLECTION="Vector_index_<dataset_id>_Node"
 
 # 上报的服务器版本
-curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/meta \
+docker compose exec -T weaviate \
+  wget -qO- --header="Authorization: Bearer $KEY" http://localhost:8080/v1/meta \
   | python3 -c "import sys, json; print('version', json.load(sys.stdin)['version'])"
 
 # 集合是否存在
-curl -s -H "Authorization: Bearer $KEY" http://localhost:8080/v1/schema \
+docker compose exec -T weaviate \
+  wget -qO- --header="Authorization: Bearer $KEY" http://localhost:8080/v1/schema \
   | python3 -c "import sys, json; print([c['class'] for c in json.load(sys.stdin)['classes']])"
 
 # 单个集合的对象数量
-curl -s -H "Authorization: Bearer $KEY" \
-  "http://localhost:8080/v1/objects?class=<CollectionName>&limit=1" \
-  | python3 -c "import sys, json; print('totalResults', json.load(sys.stdin).get('totalResults'))"
+docker compose exec -T weaviate \
+  wget -qO- --header="Authorization: Bearer $KEY" \
+  --header="Content-Type: application/json" \
+  --post-data="{\"query\":\"{ Aggregate { $COLLECTION { meta { count } } } }\"}" \
+  http://localhost:8080/v1/graphql \
+  | python3 -c "import sys, json; print('count', json.load(sys.stdin)['data']['Aggregate']['$COLLECTION'][0]['meta']['count'])"
 ```
+
+<Warning>
+  不要用 `GET /v1/objects?class=...&limit=1` 统计对象数量。它的 `totalResults` 字段返回的是当前页的大小，而不是集合的总量，因此 `limit=1` 时永远显示 `1`。请使用上面的 `Aggregate` 查询。
+</Warning>
 
 随后在 Dify 中打开一个知识库，执行一次测试检索。能召回分段才说明向量索引存活，仅凭对象计数看不出这一点。
 
 ## 回滚失败的升级
 
-还原备份，并把镜像标签退回到最后一个正常的级别：
+还原备份，并把镜像标签改回上一个正常工作的级别：
 
 ```bash
 cd docker
-docker compose stop weaviate
+docker compose stop -t 120 weaviate
 sudo rm -rf ./volumes/weaviate
-sudo cp -r ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate
+sudo cp -a ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate
 docker compose up -d weaviate
 ```
 
@@ -160,10 +217,10 @@ docker compose up -d weaviate
 
 ## 保持不变的部分
 
-集合结构保持原样，因此无需重建索引，知识库照常可用。Dify 把每个数据集存为 `Vector_index_<dataset_id>_Node` 集合，使用自带命名向量 `default` 和余弦距离，升级前后完全一致。
+集合结构保持原样，因此无需重建索引，知识库照常可用。Dify 把每个数据集存为 `Vector_index_<dataset_id>_Node` 集合，并使用自带命名向量 `default`。Dify 不设置距离度量，因此集合采用服务器默认的余弦距离。该结构在升级前后完全一致。
 
-Python `weaviate-client` 同样无需处理。当前 Dify 附带的 `4.22.0` 可与阶梯上的所有服务器版本配合工作，因此服务器可以单独升级。
+Python `weaviate-client` 同样无需处理。使用你所用 Dify 版本固定的客户端版本即可：Dify 1.14.0 至 1.16.1 为 `4.20.5`，1.17.0 为 `4.22.0`。两者都能与阶梯上的所有服务器版本配合工作，因此服务器可以独立于 Dify 单独升级。
 
 <Info>
-  如果是从 Weaviate 1.19 或更早版本升级，或要从客户端 v3 迁移到 v4，先参考 [Weaviate v4 迁移指南](/zh/self-host/deploy/troubleshooting/weaviate-v4-migration)，它覆盖到 1.27 为止的 schema 迁移，之后再回到本文。
+  如果运行的 Weaviate 服务器早于 1.27，或要从客户端 v3 迁移到 v4，请先参考 [Weaviate v4 迁移指南](/zh/self-host/deploy/troubleshooting/weaviate-v4-migration)，它覆盖 1.19.0 至 1.26.x 以及到 1.27 为止的 schema 迁移，之后再回到本文。
 </Info>
