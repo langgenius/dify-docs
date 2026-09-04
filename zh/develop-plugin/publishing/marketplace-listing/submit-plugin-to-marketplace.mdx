@@ -4,19 +4,120 @@ dimensions:
     primary: operational
     detail: deployment
   level: intermediate
-standard_title: Submit a Plugin to Dify Marketplace
+standard_title: Publish a Plugin to Dify Marketplace
 language: zh
-title: 提交 Marketplace Pull Request
-description: 向 fork 添加 1 个 .difypkg，填写当前提交模板，并向 langgenius/dify-plugins 创建可审核的 PR
+title: 发布插件到市场
+sidebarTitle: 市场
+description: 准备并验证 .difypkg，提交市场审核，处理 Pull Request，并在创作者中心查看已发布插件的表现和反馈
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/develop-plugin/publishing/marketplace-listing/submit-plugin-to-marketplace)。
 
-Dify Marketplace 通过向 [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) 提交 Pull Request 接收插件。一份完善的提交只变更 1 个软件包，使用仓库模板，并提供足够证据，让审核者无需从源码反推插件意图。
+在 [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) 中创建 Pull Request，提交插件供市场审核。
+
+## 准备条件
+
+- 已在当前版本的 Dify Community Edition 或 Dify Cloud 中测试通过的插件项目。
+- 用于打包的 [Dify 插件 CLI](https://github.com/langgenius/dify-plugin-daemon)。
+- 用于本地验证的 Python 3 和 [`yq`](https://github.com/mikefarah/yq)。
+- 供审核者与用户检查的公开源码仓库。
 
 <Note>
-创建 PR 前，先运行 [Marketplace 本地验证](/zh/develop-plugin/publishing/marketplace-listing/prepare-plugin-for-marketplace)。CI 会重复软件包检查，并补充 GitHub 和 Marketplace 相关检查。
+市场接收打包后的 `.difypkg`，而非源码目录。审核者仍会查看元数据和 PR 中声明的源码仓库，以了解无法仅凭软件包确认的行为。
 </Note>
+
+## 准备软件包
+
+<Tabs>
+  <Tab title="运行时文件">
+    只包含插件运行所需的文件，例如 `manifest.yaml`、Provider 或工具定义、源码、依赖、README、隐私政策和资源文件。
+
+    不要打包 `.git/`、虚拟环境、缓存、日志、`.DS_Store`、本地设置、IDE 文件或测试产物。切勿包含 `.env`、访问令牌、私钥、云凭据或其他密钥。
+  </Tab>
+  <Tab title="元数据与文档">
+    确认 `manifest.yaml` 准确声明作者、名称、版本、插件类型、runner、图标、源码仓库、联系信息和隐私政策。
+
+    主 `README.md` 必须使用英文，并说明配置、用法、所需 API 或凭据、连接要求和源码仓库。译文放在 `readme/README_<locale>.md` 下。
+  </Tab>
+  <Tab title="依赖">
+    尽量减少依赖，并采用足够明确的版本约束以保证可复现性。避免无版本约束的依赖、直接 URL 安装和 Git 安装；确有必要时，应在 PR 中说明原因。
+
+    Python 插件必须使用 `dify-plugin >= 0.9.0`。验证器还会检查依赖元数据，并通过 [OSV 数据库](https://osv.dev/) 查询已知漏洞。
+  </Tab>
+</Tabs>
+
+### 说明隐私与网络访问
+
+`PRIVACY.md` 或托管的隐私政策必须说明插件会收集、存储、记录哪些用户数据，以及会向哪些第三方发送数据。插件不收集用户数据时，也应明确说明。
+
+插件访问外部服务时，可在 `manifest.yaml` 中声明预期域名：
+
+```yaml
+network:
+  domains:
+    - api.example.com
+    - "*.cdn.example.com"
+```
+
+静态分析无法发现运行时拼接的所有 URL，也无法完全分析供应商 SDK 中隐藏的请求。声明域名后，即使扫描器无法从源码推断，也能明确展示这些访问目标。
+
+## 确定风险等级
+
+选择与插件匹配的最高风险等级。填写市场 PR 模板时，只能选择 1 个等级。
+
+| 等级 | 适用情况 |
+| :--- | :--- |
+| **低风险** | 插件只调用固定且有文档的 HTTPS API，不执行用户可控的代码、命令、SQL、文件操作、浏览器自动化或任意网络请求。 |
+| **中风险** | 插件处理上传文件或用户提供的 URL、写入第三方服务、向外部发送用户内容，或处理非高度敏感的个人数据。 |
+| **高风险** | 插件可执行代码或命令、运行 SQL、访问数据库或文件系统、使用 SSH/SFTP、自动操作浏览器、代理或抓取任意 URL、捆绑可执行文件，或处理敏感个人数据。 |
+
+<Warning>
+多个等级都适用时，选择更高等级。降低标签不会缩小审核范围，只会造成证据不一致并拖慢审核。
+</Warning>
+
+对于中风险和高风险插件，应说明安全边界：如何约束输入、数据发送到哪里、使用哪些凭据、采用什么超时设置，以及错误处理如何避免泄露密钥。
+
+## 本地构建与验证
+
+<Steps>
+  <Step title="打包插件">
+    在插件项目上一级目录运行：
+
+    ```bash
+    dify plugin package ./your-plugin
+    ```
+
+    命令会生成 `.difypkg`。继续前，检查文件名和大小。
+  </Step>
+  <Step title="克隆 Marketplace Toolkit">
+
+    ```bash
+    git clone https://github.com/langgenius/dify-marketplace-toolkit.git
+    cd dify-marketplace-toolkit
+    ```
+
+  </Step>
+  <Step title="验证软件包">
+
+    ```bash
+    python3 validator/validate-difypkg.py /path/to/your-plugin.difypkg \
+      --output-dir ./validation-report
+    ```
+
+    如需核对敏感能力扫描结果与计划提交的 PR 声明，可将 PR 正文保存为文件，再添加 `--pr-body-file /path/to/pr-body.md`。
+  </Step>
+  <Step title="处理报告">
+    打开 `validation-report/summary.md`，再检查生成的 `*.errors.txt` 和 `*.warnings.txt`。
+
+    退出码 `0` 表示没有发现软件包级阻断错误。退出码 `1` 表示存在阻断项或环境错误，必须先解决。警告不会使验证失败，但审核者可能要求补充说明。
+  </Step>
+</Steps>
+
+本地验证器会检查安全解压、软件包内容与大小、密钥模式、二进制文件、manifest 与 README 元数据、依赖策略、Python 编译与安全模式、出站域名、依赖漏洞、金融活动信号，以及可选的敏感能力声明。
+
+<Tip>
+只有漏洞查询需要联网。必要时可添加 `--offline`；报告会列出依赖，但不会声称这些依赖不存在漏洞。
+</Tip>
 
 ## 选择提交类型
 
@@ -51,8 +152,10 @@ Dify Marketplace 通过向 [`langgenius/dify-plugins`](https://github.com/langge
     git switch main
     git merge --ff-only upstream/main
     ```
+
   </Step>
   <Step title="创建专用分支">
+
     ```bash
     git switch -c add-<plugin-name>-<version>
     mkdir -p <author>/<plugin-name>
@@ -65,13 +168,16 @@ Dify Marketplace 通过向 [`langgenius/dify-plugins`](https://github.com/langge
     git status --short
     git diff --stat
     ```
+
   </Step>
   <Step title="提交并推送">
+
     ```bash
     git add <author>/<plugin-name>/<plugin-package>.difypkg
     git commit -m "add <plugin-name> <version>"
     git push -u origin HEAD
     ```
+
   </Step>
   <Step title="创建 Pull Request">
     从 fork 向 `langgenius/dify-plugins:main` 创建 PR。只有软件包与说明都已可供自动和人工审核时，才将 PR 标记为 Ready for review。
@@ -107,7 +213,7 @@ Dify Marketplace 通过向 [`langgenius/dify-plugins`](https://github.com/langge
   </Accordion>
 </AccordionGroup>
 
-## 提高可审核性
+## 提供插件审核依据
 
 | 推荐做法 | 避免 |
 | :--- | :--- |
@@ -117,15 +223,53 @@ Dify Marketplace 通过向 [`langgenius/dify-plugins`](https://github.com/langge
 | 提供具体的验证命令和结果。 | 只写「已测试」，不提供环境或结果。 |
 | 保持软件包内容与披露一致。 | 插件版本已变更，仍复制旧 PR 正文。 |
 
-<Tip>
-CI 会同时报告阻断错误和审核警告。完整的 PR 正文能提前把模糊警告转化为审核者可直接判断的背景，减少来回沟通。
-</Tip>
+## 跟进 PR 检查与审核 {#after-you-submit}
 
-## 创建 PR 之后
+创建 PR、推送 commit 或将草稿标记为 Ready for review 都会启动自动检查。根据结果判断是否需要处理。
 
-PR 被创建、同步或标记为 Ready for review 时，会启动预检工作流。仓库还会根据模板中的选择生成风险标签。普通失败无需新建 PR；把修复推送到同一分支，即可保留上下文并重新运行检查。
+| 结果 | 需要执行的操作 |
+| :--- | :--- |
+| **通过** | 等待维护者审核。检查通过不代表一定会获批。 |
+| **阻断错误** | 修复软件包或 PR，必要时重新构建，再更新同一个 PR。不要新建替代 PR。 |
+| **警告** | 查看具体发现。确有问题时予以修复；行为符合预期时，补充相关背景。警告本身不会使检查失败，但审核者可能要求修改。 |
+| **要求修改** | 更新源码，必要时重新构建软件包，将修正内容推送到同一个 PR，并回复审核者。 |
 
-继续阅读 [检查、审核与 Marketplace 发布](/zh/develop-plugin/publishing/marketplace-listing/marketplace-review-and-release)，了解报告内容和合并后的流程。
+审核通过并合并后，仓库会再次验证软件包，并将其上传到正式市场。你无需自行启动 CI，也无需上传已批准的软件包。
+
+## 在创作者中心查看插件表现和反馈 {#manage-published-plugins}
+
+插件出现在市场后，可在 [创作者中心](https://creators.dify.ai/) 的 **插件** 页面查看其表现数据。在 [**消息**](https://creators.dify.ai/dashboard/inbox) 中逐条查看评分、点赞和反馈消息。
+
+### 查看已发布插件
+
+切换至个人账户后，关联用于发布插件的 GitHub 账号。如果关联了多个账号，选择要查看其插件的账号。
+
+每张插件卡都会显示下载量、总体评分、评分数量和点赞数。
+
+### 与团队共同查看插件表现和反馈
+
+选择团队使用的组织。该组织中列出的插件对所有组织成员可见。
+
+如果要为插件创建新组织，请先在插件的市场详情页查找插件 ID，再将 `/` 前的部分填入 **唯一标识**。例如，插件 ID 为 `team-name/plugin-name` 时，输入 `team-name`。
+
+<Frame caption="Marketplace 详情页中的插件 ID">
+  ![Marketplace 详情页中的插件 ID](/images/develop-plugin/publish/marketplace-plugin-id.png)
+</Frame>
+
+组织创建完成后，插件会自动显示在该组织中。邀请团队成员后，他们无需关联自己的 GitHub 账号，也能查看相同插件。
+
+#### 认领缺失的组织插件
+
+如果以你的组织名义发布的插件没有显示在该组织的 **插件** 页面，打开 **认领插件**，申请查看该插件数据和反馈的权限。
+
+1. 切换至个人账户，选择 **认领插件**。
+2. 在市场详情页复制每个插件的插件 ID，并将其与首次发布该插件的 PR 配对。
+3. 确认联系邮箱，并说明你在插件维护中的职责。如果 PR 由其他 GitHub 账号创建，说明原因。
+4. 选择 **提交认领**。
+
+在 **认领记录** 中跟踪请求。审核通过后，认领包含的插件会出现在对应的组织中。如果认领被拒绝，查看原因并选择 **新建认领**，更新证明材料后重新提交。
+
+## 相关资源
 
 <CardGroup cols={2}>
   <Card title="PR 模板" icon="file-lines" href="https://github.com/langgenius/dify-plugins/blob/main/.github/pull_request_template.md">

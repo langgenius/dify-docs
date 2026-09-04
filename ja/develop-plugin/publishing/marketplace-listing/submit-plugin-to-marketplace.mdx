@@ -4,19 +4,120 @@ dimensions:
     primary: operational
     detail: deployment
   level: intermediate
-standard_title: Submit a Plugin to Dify Marketplace
+standard_title: Publish a Plugin to Dify Marketplace
 language: ja
-title: Marketplace Pull Request の提出
-description: fork に 1 つの .difypkg を追加し、現在の提出テンプレートを完成させて、langgenius/dify-plugins へレビュー可能な PR を開きます
+title: マーケットプレイスにプラグインを公開
+sidebarTitle: マーケットプレイス
+description: .difypkg を準備、検証してマーケットプレイスに提出し、公開後のパフォーマンスとフィードバックを確認します
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/develop-plugin/publishing/marketplace-listing/submit-plugin-to-marketplace) を参照してください。
 
-Dify Marketplace への提出は、[`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) への Pull Request です。適切な提出では、1 つのパッケージだけを変更します。リポジトリのテンプレートを使い、コードから意図を推測しなくても理解できる証拠を提供してください。
+[`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) への Pull Request で、プラグインをマーケットプレイスのレビューに提出します。
+
+## 必要なもの
+
+- 現行の Dify Community Edition または Dify Cloud で動作確認済みのプラグインプロジェクト
+- パッケージ化に使用する [Dify プラグイン CLI](https://github.com/langgenius/dify-plugin-daemon)
+- ローカル検証に使用する Python 3 と [`yq`](https://github.com/mikefarah/yq)
+- レビュアーとユーザーが確認できる公開ソースリポジトリ
 
 <Note>
-PR を開く前に [Marketplace のローカル検証](/ja/develop-plugin/publishing/marketplace-listing/prepare-plugin-for-marketplace) を実行します。CI はパッケージ検証を繰り返し、GitHub と Marketplace に固有のチェックを追加します。
+マーケットプレイスに提出するのはソースツリーではなく、パッケージ化した `.difypkg` です。パッケージだけでは確認できない動作について、レビュアーはメタデータと PR に記載されたソースリポジトリを確認します。
 </Note>
+
+## パッケージの準備
+
+<Tabs>
+  <Tab title="実行時ファイル">
+    `manifest.yaml`、プロバイダーまたはツールの定義、ソースコード、依存関係、README、プライバシーポリシー、アセットなど、実行時に必要なファイルだけを含めます。
+
+    `.git/`、仮想環境、キャッシュ、ログ、`.DS_Store`、ローカル設定、IDE ファイル、テスト成果物などの開発環境の状態は含めないでください。`.env` ファイル、アクセストークン、秘密鍵、クラウド認証情報などのシークレットは絶対に含めないでください。
+  </Tab>
+  <Tab title="メタデータとドキュメント">
+    `manifest.yaml` の作成者、名前、バージョン、プラグインタイプ、ランナー、アイコン、ソースリポジトリ、連絡先、プライバシーポリシーが正確であることを確認します。
+
+    メインの `README.md` は英語で記述してください。セットアップ、使用方法、必要な API または認証情報、接続要件、ソースリポジトリを説明します。翻訳版は `readme/README_<locale>.md` に配置してください。
+  </Tab>
+  <Tab title="依存関係">
+    依存関係は最小限にし、再現できる程度にバージョンを固定します。PR で必要性を説明しない限り、バージョン指定のない要件、URL からの直接インストール、Git ベースのインストールは避けてください。
+
+    Python プラグインでは `dify-plugin >= 0.9.0` を使用する必要があります。検証ツールは依存関係のメタデータを確認し、既知の脆弱性について [OSV データベース](https://osv.dev/) に問い合わせます。
+  </Tab>
+</Tabs>
+
+### プライバシーとネットワークアクセスの記載
+
+`PRIVACY.md` または公開済みのプライバシーポリシーには、プラグインが収集、保存、記録するユーザーデータや、第三者へ送信するデータを記載します。ユーザーデータを収集しない場合も、その旨を明記してください。
+
+プラグインが外部サービスへ接続する場合、想定されるドメインを `manifest.yaml` で宣言できます。
+
+```yaml
+network:
+  domains:
+    - api.example.com
+    - "*.cdn.example.com"
+```
+
+実行時に組み立てる URL やベンダー SDK 内の URL を、静的解析ですべて検出することはできません。ドメインを宣言すると、スキャナーがソースコードから推測できない接続先も明示できます。
+
+## リスク分類
+
+プラグインに該当する最も高いレベルを選択します。マーケットプレイスの PR テンプレートでは、レベルを必ず 1 つだけ選択してください。
+
+| レベル | 適用条件 |
+| :--- | :--- |
+| **Low** | 固定された文書公開済みの HTTPS API だけを呼び出す。<br/><br/>ユーザーが制御するコード、コマンド、SQL、ファイル操作、ブラウザー自動化、任意のネットワークリクエストを実行しない。 |
+| **Medium** | アップロードファイルやユーザー指定の URL を処理する、または第三者サービスで書き込み操作を行う。<br/><br/>ユーザーコンテンツを外部へ送信するか、高度な機密性を持たない個人データを扱う。 |
+| **High** | コードやコマンドの実行、SQL の実行、データベースやファイルシステムへのアクセス、SSH/SFTP、ブラウザー自動化が可能。<br/><br/>任意 URL のプロキシやクロール、実行可能ファイルの同梱、または機微な個人データの処理が可能。 |
+
+<Warning>
+複数のレベルに該当する場合は、高い方を選択してください。低いレベルを選んでもレビュー範囲は狭まりません。証拠に不整合が生じ、レビューが遅れるだけです。
+</Warning>
+
+Medium または High に分類したプラグインでは、セキュリティ境界を記載します。入力の制約、データの送信先、使用する認証情報、タイムアウト、エラー時にシークレットの漏えいを防ぐ方法を説明してください。
+
+## ローカルでのビルドと検証
+
+<Steps>
+  <Step title="プラグインのパッケージ化">
+    プラグインプロジェクトの 1 つ上のディレクトリで、次のコマンドを実行します。
+
+    ```bash
+    dify plugin package ./your-plugin
+    ```
+
+    `.difypkg` アーカイブが作成されます。続行する前に、ファイル名とファイルサイズを確認してください。
+  </Step>
+  <Step title="Marketplace Toolkit のクローン">
+
+    ```bash
+    git clone https://github.com/langgenius/dify-marketplace-toolkit.git
+    cd dify-marketplace-toolkit
+    ```
+
+  </Step>
+  <Step title="パッケージ検証の実行">
+
+    ```bash
+    python3 validator/validate-difypkg.py /path/to/your-plugin.difypkg \
+      --output-dir ./validation-report
+    ```
+
+    機密性の高い機能に関する検出結果を、PR で予定している開示と比較できます。PR の本文をファイルに保存し、`--pr-body-file /path/to/pr-body.md` を追加してください。
+  </Step>
+  <Step title="レポートの問題解消">
+    `validation-report/summary.md` を開き、生成された `*.errors.txt` ファイルと `*.warnings.txt` ファイルを確認します。
+
+    終了コード `0` は、パッケージレベルのブロッキングエラーが見つからなかったことを示します。終了コード `1` の場合は、ブロッキングエラーまたは環境エラーを解消してください。警告があっても検証は失敗しませんが、レビュアーから説明を求められる場合があります。
+  </Step>
+</Steps>
+
+ローカル検証では、安全な展開、パッケージ内容とサイズ、シークレットパターン、バイナリ、マニフェストと README のメタデータを確認します。さらに、依存関係ポリシー、Python のコンパイルと安全性パターン、外向きドメイン、依存関係の脆弱性、金融活動の兆候、任意の機密機能開示も確認します。
+
+<Tip>
+ネットワークへ接続するのは、脆弱性の照会だけです。必要に応じて `--offline` を追加してください。レポートには依存関係が記載されますが、脆弱性がないとは判定されません。
+</Tip>
 
 ## 提出タイプの選択
 
@@ -28,12 +129,12 @@ PR を開く前に [Marketplace のローカル検証](/ja/develop-plugin/publis
     <author>/<plugin-name>/<plugin-package>.difypkg
     ```
 
-    メタデータ、ソースリポジトリ、連絡先、README、プライバシーポリシー、リスク開示が同じプラグインを示す必要があります。
+    パッケージのメタデータ、ソースリポジトリ、連絡先、README、プライバシーポリシー、リスク開示は、すべて同じプラグインを示す必要があります。
   </Tab>
   <Tab title="バージョン更新">
-    `manifest.yaml` の `version` を上げて再ビルドし、既存のプラグインディレクトリへ新しい `.difypkg` を追加します。
+    `manifest.yaml` の `version` を上げてパッケージを再ビルドし、既存のプラグインディレクトリへ新しい `.difypkg` を追加します。
 
-    更新 PR では通常、新しいパッケージファイルだけを追加します。メンテナーから指示がない限り、公開済みパッケージは残してください。**What changed** に修正、機能、移行、破壊的変更を記載します。公開パイプラインは、この内容をリリースノートに利用します。
+    更新 PR では通常、新しいパッケージファイルだけを追加します。メンテナーから明示的に指示されない限り、公開済みの古いパッケージは残してください。**What changed** に修正、機能、移行、破壊的変更をまとめます。公開パイプラインは、この内容をリリースノートに利用します。
   </Tab>
 </Tabs>
 
@@ -41,7 +142,7 @@ PR を開く前に [Marketplace のローカル検証](/ja/develop-plugin/publis
 
 <Steps>
   <Step title="リポジトリの fork と同期">
-    [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) を fork してクローンします。`main` を upstream と同期してください。
+    [`langgenius/dify-plugins`](https://github.com/langgenius/dify-plugins) を fork してクローンし、fork の `main` ブランチを upstream と同期します。
 
     ```bash
     git clone https://github.com/<your-github-name>/dify-plugins.git
@@ -51,30 +152,35 @@ PR を開く前に [Marketplace のローカル検証](/ja/develop-plugin/publis
     git switch main
     git merge --ff-only upstream/main
     ```
+
   </Step>
   <Step title="専用ブランチの作成">
+
     ```bash
     git switch -c add-<plugin-name>-<version>
     mkdir -p <author>/<plugin-name>
     cp /path/to/plugin.difypkg <author>/<plugin-name>/
     ```
 
-    変更された `.difypkg` が 1 つだけであることを確認します。
+    ブランチで変更する `.difypkg` パッケージが 1 つだけであることを確認します。
 
     ```bash
     git status --short
     git diff --stat
     ```
+
   </Step>
   <Step title="コミットとプッシュ">
+
     ```bash
     git add <author>/<plugin-name>/<plugin-package>.difypkg
     git commit -m "add <plugin-name> <version>"
     git push -u origin HEAD
     ```
+
   </Step>
   <Step title="Pull Request の作成">
-    fork から `langgenius/dify-plugins:main` へ PR を作成します。パッケージと説明の両方が自動チェックと人間のレビューに対応できる場合だけ、Ready for review にしてください。
+    fork から `langgenius/dify-plugins:main` へ PR を作成します。パッケージと説明の両方が自動チェックと人間のレビューに対応できる場合だけ、Draft を解除してください。
   </Step>
 </Steps>
 
@@ -88,50 +194,88 @@ PR を開く前に [Marketplace のローカル検証](/ja/develop-plugin/publis
 
 <AccordionGroup>
   <Accordion title="プラグイン情報">
-    作成者、プラグイン名、バージョン、公開ソースリポジトリ、確認されている連絡先を記載します。`manifest.yaml` とパッケージ文書の内容に一致させてください。
+    作成者、プラグイン名、バージョン、公開ソースリポジトリ、定期的に確認する連絡先を記載します。これらの値は `manifest.yaml` とパッケージのドキュメントに一致させてください。
   </Accordion>
   <Accordion title="提出タイプと変更内容">
-    **New plugin** または **Version update** を選択し、用途や変更点を説明します。更新時は、移行や破壊的変更を含むリリースノート相当の詳細を記載してください。
+    **New plugin** または **Version update** を選択し、プラグインの用途または今回の変更点を説明します。更新時は、移行や破壊的変更を含むリリースノート相当の詳細を記載してください。
   </Accordion>
   <Accordion title="リスクレベル">
-    **Low risk**、**Medium risk**、**High risk** のいずれか 1 つを選択します。対応する `risk:*` ラベルが付与されます。未選択または複数選択の場合、`risk: missing` と bot コメントが追加されます。
+    **Low risk**、**Medium risk**、**High risk** のいずれか 1 つを選択します。リポジトリが対応する `risk:*` ラベルを付与します。未選択または複数選択の場合、`risk: missing` と bot コメントが追加されます。
   </Accordion>
   <Accordion title="必須チェック">
-    パッケージ衛生、テスト、README の品質、プライバシー、英語ローカライズを確認してから選択します。制限がある場合は、無条件にチェックせず **Reviewer notes** で説明してください。
+    パッケージの健全性、テスト、README の品質、プライバシーの記載、英語ローカライズを確認してから、各項目を選択します。要件に制限がある場合は、無条件にチェックせず **Reviewer notes** で説明してください。
   </Accordion>
   <Accordion title="セキュリティとプライバシー">
-    コマンドやコードの実行、SQL、SSH/SFTP、ブラウザー自動化、ファイル操作、任意 URL の取得、プロキシ、機密データ処理を記載します。すべて該当しない場合のみ `None` と記載してください。
+    コマンドやコードの実行、SQL、SSH/SFTP、ブラウザー自動化、ファイル操作、任意 URL の取得、プロキシ、機密データ処理を記載します。すべて該当しない場合だけ `None` と記載してください。
   </Accordion>
   <Accordion title="ローカル検証とレビュアー向けメモ">
     検証コマンドと結果を貼り付けます。既知の制限、パッケージやバイナリの例外、移行事項、警告の判断に必要な背景を追加してください。
   </Accordion>
 </AccordionGroup>
 
-## レビューしやすい提出
+## レビューに必要な情報
 
 | 推奨 | 回避 |
 | :--- | :--- |
 | PR のタイトル、本文、メイン README を英語で記述する。 | 主要な提出フィールドに未翻訳の CJK テキストを混在させる。 |
-| パッケージに対応する正確な公開リポジトリをリンクする。 | 組織のホームページや、場所を説明しない monorepo のルートをリンクする。 |
+| パッケージに対応する正確な公開ソースリポジトリをリンクする。 | 組織のホームページや、場所を説明しない monorepo のルートをリンクする。 |
 | 機密性の高い動作が必要な理由と制約を説明する。 | オプション機能という理由で高リスク機能を低リスクと説明する。 |
 | 具体的な検証コマンドと結果を記載する。 | 環境や結果なしで「テスト済み」とだけ記載する。 |
-| パッケージ内容と開示を一致させる。 | バージョンが変わっても古い PR 本文を再利用する。 |
+| パッケージ内容と開示を一致させる。 | 変更後のバージョンに古い PR 本文を流用する。 |
 
-<Tip>
-CI はブロッキングエラーとレビュー警告の両方を報告します。PR 本文を完全に記載すると、曖昧な警告に判断材料を与え、確認の往復を減らせます。
-</Tip>
+## PR チェックとレビューへの対応 {#after-you-submit}
 
-## PR 作成後
+PR の作成、コミットのプッシュ、または Draft の解除によって、自動チェックが始まります。結果を確認し、対応が必要か判断してください。
 
-PR を作成、同期、または Ready for review にすると、プリチェックが始まります。テンプレートの選択からリスクラベルも生成されます。通常の失敗では PR を作り直さず、同じブランチへ修正をプッシュしてください。コンテキストを保ったままチェックが再実行されます。
+| 結果 | 対応 |
+| :--- | :--- |
+| **Pass** | メンテナーのレビューを待つ。チェックに合格しても、承認されるとは限らない。 |
+| **ブロッキングエラー** | パッケージまたは PR を修正し、必要に応じて再ビルドして、同じ PR を更新する。新しい PR は作成しない。 |
+| **警告** | 検出内容を確認する。実際の問題は修正し、意図した動作であれば背景を追記する。警告だけではチェックは失敗しないが、レビュアーから変更を求められる場合がある。 |
+| **変更リクエスト** | ソースを更新し、必要に応じてパッケージを再ビルドする。同じ PR に修正をプッシュし、レビュアーへ返信する。 |
 
-[チェック、レビュー、Marketplace での公開](/ja/develop-plugin/publishing/marketplace-listing/marketplace-review-and-release) では、レポートの意味とマージ後の流れを説明しています。
+承認とマージ後、リポジトリがパッケージを再検証し、本番のマーケットプレイスへアップロードします。CI を手動で開始したり、承認済みパッケージを自分でアップロードしたりする必要はありません。
+
+## クリエイターセンターでプラグインのパフォーマンスとフィードバックを確認 {#manage-published-plugins}
+
+プラグインがマーケットプレイスに表示されたら、[クリエイターセンター](https://creators.dify.ai/) の **プラグイン** ページでパフォーマンスを確認できます。個別の評価、いいね、フィードバックメッセージは [**受信トレイ**](https://creators.dify.ai/dashboard/inbox) で確認できます。
+
+### 公開済みプラグインの確認
+
+個人アカウントで、プラグインの公開に使用した GitHub アカウントを連携します。複数のアカウントを連携している場合は、表示するプラグインを公開したアカウントを選択してください。
+
+各プラグインカードには、ダウンロード数、総合評価、評価件数、いいね数が表示されます。
+
+### チームでプラグインのパフォーマンスとフィードバックを確認
+
+チームで使用する組織を選択します。ここに表示されるプラグインは、組織の全メンバーが確認できます。
+
+プラグイン用の組織を新しく作成する場合は、マーケットプレイスのプラグイン詳細ページでプラグイン ID を確認します。`/` より前の部分を **ユニークハンドル** に入力してください。たとえば、プラグイン ID が `team-name/plugin-name` なら、`team-name` と入力します。
+
+<Frame caption="Marketplace 詳細ページのプラグイン ID">
+  ![Marketplace 詳細ページのプラグイン ID](/images/develop-plugin/publish/marketplace-plugin-id.png)
+</Frame>
+
+組織を作成すると、プラグインが自動的に表示されます。チームメンバーを招待すると、それぞれが GitHub アカウントを連携しなくても同じプラグインを確認できます。
+
+#### 表示されない組織プラグインの申請
+
+組織名義で公開したプラグインが、その組織の **プラグイン** ページに表示されない場合があります。**プラグインを申請** を開き、パフォーマンスデータとフィードバックへのアクセスを申請します。
+
+1. 個人アカウントで **プラグインを申請** を選択します。
+2. 各プラグインのマーケットプレイス詳細ページからプラグイン ID をコピーし、初回公開時の PR と組み合わせます。
+3. 連絡先メールアドレスを確認し、プラグインの保守における自身の役割を説明します。別の GitHub アカウントで PR を作成した場合は、その理由も記載してください。
+4. **申請を送信** を選択します。
+
+申請状況は **申請履歴** で確認できます。承認されると、申請に含めたプラグインが対応する組織に表示されます。却下された場合は理由を確認し、**新規申請** を選択して証拠を更新し、再提出してください。
+
+## 関連リソース
 
 <CardGroup cols={2}>
   <Card title="PR テンプレート" icon="file-lines" href="https://github.com/langgenius/dify-plugins/blob/main/.github/pull_request_template.md">
-    提出前に現在のテンプレートを確認します。要件は更新される場合があります。
+    提出前に現在のテンプレートを確認してください。リポジトリの要件は更新される場合があります。
   </Card>
   <Card title="プラグインレビューガイドライン" icon="magnifying-glass" href="https://github.com/langgenius/dify-plugins/blob/main/docs/plugin-review-guidelines.md">
-    文書、依存関係、プライバシー、機密性の高い機能の確認方法を説明します。
+    メンテナーがドキュメント、依存関係、プライバシー、機密性の高い機能を確認する方法を説明します。
   </Card>
 </CardGroup>
