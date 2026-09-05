@@ -4,6 +4,21 @@ The single source of truth for how every element of a Dify OpenAPI spec must be 
 
 Every schema constraint, status code, error code, and example value here is subordinate to the code: transcribe `Field()` arguments verbatim and verify against the controller (see SKILL.md). These conventions govern *how to express* what the code dictates, never *what* it dictates.
 
+## Contents
+
+- Endpoint Summaries
+- operationId
+- Descriptions
+- Parameters
+- Success Responses
+- Error Responses
+- Schemas
+- Examples
+- Standard Texts
+- x-codeSamples
+- Tag Naming
+- Endpoint Ordering
+
 ## Endpoint Summaries
 
 Imperative verb, Title Case, verb-object order (`Upload File`, not `File Upload`). Standard vocabulary:
@@ -25,7 +40,7 @@ Imperative verb, Title Case, verb-object order (`Upload File`, not `File Upload`
 | `Update` | PUT/PATCH | Modify fields on existing resource |
 | `Delete` | DELETE | Remove resource |
 
-Do NOT use `Retrieve`; use `Get` or `List`.
+`Retrieve` is not used; `Get` or `List` covers it.
 
 ## operationId
 
@@ -39,7 +54,7 @@ Pattern: `{verb}{AppType}{Resource}`.
 | Completion | `Completion` | `createCompletionMessage` |
 | Knowledge | *(none)* | `createDataset`, `listDocuments` |
 
-**Legacy operationIds: do NOT rename.** Changing an operationId is a breaking change for SDK users. Apply this convention to new endpoints only.
+Legacy operationIds keep their names, because a changed operationId breaks SDK users. The convention applies to new endpoints only.
 
 ## Descriptions
 
@@ -53,7 +68,7 @@ A developer arrives with a task; each operation answers, in order: what does thi
 - **Nullable/conditional fields.** Explain when the field is present or `null`.
 - **Backtick all values**: literal values, field names, code references.
 - **Space between numbers and units**: `100 s`, `15 MB`, not `100s`, `15MB`.
-- **Paragraph ceiling everywhere**: no single paragraph over ~4 rendered lines (~50 words). Split multi-concern text with `\n\n`, one concern per paragraph; enumerations (operator sets, event lists, mode choices) become bullets. Inline code renders as chips wider than its character count, so code-dense text hits the ceiling sooner. Applies to every `description`: endpoint, parameter, response, schema field, and shared components (`securitySchemes` renders on every page).
+- **One concern per paragraph.** Split multi-concern text with `\n\n`, and turn enumerations (operator sets, event lists, mode choices) into bullets. Inline code renders as chips wider than its character count, so code-dense text crowds a paragraph sooner than prose does. This holds for every `description`: endpoint, parameter, response, schema field, and shared components (`securitySchemes` renders on every page).
 - **No spaces around em dashes** (`early—HTTP`, never `early — HTTP`); prefer a semicolon, colon, or parentheses over a dash.
 
 ### Endpoint vs parameter descriptions
@@ -77,28 +92,28 @@ When a description mentions another endpoint, link it with the language prefix a
 
 ## Parameters
 
-- Every parameter MUST have a `description`, and it must be specific (`"Available options."` is not acceptable).
+- Every parameter has a `description`, and a specific one: `"Available options."` tells the developer nothing.
 - **Schema constraints match code exactly.** Transcribe `Field()` arguments verbatim; never round or "correct" (`Field(le=101)` → `"maximum": 101`, not 100).
 - Mark `required` accurately from the code.
 - **No `example` field on parameters**; use the request body `examples` instead.
-- **Do NOT repeat schema metadata in descriptions.** If `default: 20` is in the schema, don't restate it in the description.
-- **Do NOT repeat enum values in descriptions** unless explaining when to choose each one.
-- **Request string fields**: use `enum` for known value sets. Trace string fields through the service layer for hidden enums (`StrEnum` cast, `Literal`, validation against a fixed list); if any exist, the spec MUST have `enum`. Exception: leave genuinely dynamic/provider-specific fields (e.g., `voice`, `embedding_model_name`) without `enum`.
-- **Response fields**: do NOT use `enum`; Mintlify renders a duplicate "Available options" list. Explain the values in the `description` instead.
+- **Schema metadata is not repeated in descriptions.** If `default: 20` is in the schema, the description leaves it out; Mintlify renders both.
+- **Enum values are not repeated in descriptions**, except to say when to choose each one.
+- **Request string fields**: use `enum` for known value sets. Trace string fields through the service layer for hidden enums (`StrEnum` cast, `Literal`, validation against a fixed list); if any exist, the spec carries `enum`. Exception: leave genuinely dynamic/provider-specific fields (e.g., `voice`, `embedding_model_name`) without `enum`.
+- **Response fields** carry no `enum`, because Mintlify renders a duplicate "Available options" list. The values are explained in the `description` instead.
 
 ## Success Responses
 
 - Only 200/201 as the primary response. For multiple modes (blocking/streaming), use markdown bullets in the 200 `description`.
-- **Every 200/201 JSON response MUST have at least one `examples` entry** with realistic values.
+- **Every 200/201 JSON response carries at least one `examples` entry** with realistic values.
 - **Response body matches actual API output, not the Pydantic entity.** Response converters (e.g., `convert_blocking_full_response`) may flatten, restructure, or inject fields; read the converter.
 - **Streaming endpoints**: verify the event-type `enum` against the events the task pipeline actually yields; every event type needs a corresponding discriminator mapping entry.
 - **Streaming schema descriptions** follow one template: a one-line parse pointer to the [SSE Streaming guide](/en/api-reference/guides/streaming) (never re-explain `data:` parsing inline), an **Events by app type** map (reply events, then the closing sequence per outcome), add-ons (TTS, reasoning), common payload fields. Field-level detail lives in the event tables; the narrative never re-tells them.
 - **Binary/file responses**: use `content` with the right media type and `{ "type": "string", "format": "binary" }` (`audio/mpeg` for fixed-format audio, `application/octet-stream` for generic files; when the code selects the media type at runtime from a known set, enumerate those types under `content` — the controller annotation may say octet-stream only because Swagger 2 cannot express the selection, and this spec is OpenAPI 3). Put details in the response `description`, not the endpoint description.
-- **Schema description duplication**: when a response uses `$ref`, the referenced schema MUST NOT have a top-level `description`; Mintlify renders both.
+- **Schema description duplication**: when a response uses `$ref`, the referenced schema has no top-level `description`, because Mintlify renders both.
 
 ## Error Responses
 
-Each endpoint lists its specific error codes, grouped by HTTP status. Document only errors the endpoint actually raises (trace `except` → `raise` → exception class); never invent or carry over phantom codes.
+Each endpoint lists its specific error codes, grouped by HTTP status. Document only errors the endpoint actually raises (trace `except` → `raise` → exception class); a code carried over from a sibling endpoint without that trace is a phantom.
 
 ### Deriving the error code and message
 
@@ -111,7 +126,7 @@ The wire `code` and `message` per exception kind are defined once, in `codebase-
 
 - **Fire-and-forget methods**: if the service method returns `None` and never raises, document no error for it.
 - **Unreachable `except`**: confirm the service method actually raises the caught exception for this endpoint before documenting it.
-- **No custom handling**: if the controller only uses `@validate_app_token` with no `try/except`, the only error is 401 (global auth). Do NOT add an empty error section.
+- **No custom handling**: if the controller only uses `@validate_app_token` with no `try/except`, the only error is 401 (global auth), and there is no error section to add.
 
 **Cloud-only errors still count.** The billing decorators in `wraps.py` raise `Forbidden` (403) and quota/rate-limit errors only on Dify Cloud (`BILLING_ENABLED`), but the specs document them anyway (as `forbidden`, `provider_quota_exceeded`, `rate_limit_error`). Keep them on the write endpoints they guard; do not drop them as self-host-irrelevant.
 
@@ -125,8 +140,8 @@ The wire `code` and `message` per exception kind are defined once, in `codebase-
 
 - **Prefer inline** over `$ref` for simple objects; use `$ref` only for genuinely reused or complex schemas.
 - **Array items must define `properties`**; no bare `"type": "object"`, which Mintlify renders as `object[]` with no expandable fields.
-- **`required` arrays on request schemas only**, never on response schemas.
-- **`oneOf` options**: each option object needs a descriptive `title`; the parent schema (the `oneOf` wrapper) must NOT have a `description`.
+- **`required` arrays on request schemas only.** A response schema carries none.
+- **`oneOf` options**: each option object needs a descriptive `title`, and the parent schema (the `oneOf` wrapper) has no `description`.
 
 ## Examples
 

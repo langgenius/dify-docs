@@ -1,10 +1,84 @@
 # Dify Documentation Style Guide
 
+## What a Good Page Does
+
+A good page gives the reader what they came for, at the moment they arrive, in the fewest words that stay clear and accurate. Everything else in this guide serves that.
+
+Picture the reader mid-task, with a question. The default sentence tells them what to do, where, and what happens: that is what they came for.
+
+A fact earns its place because that reader would ask for it here, not because it is true, verified, or absent from the interface. A reason earns its place only where the reader would otherwise do the wrong thing; a reader who has just changed a setting does not need to be told why to check it. Where there is a real choice, say which way to lean and why, so they can decide for their own case.
+
+Each section opens with the action, so the reader knows within a line whether this is the section they need. An abstract point rides on a concrete example. When an AI concept appears, say what problem it solves, because that is what a builder needs to use it well.
+
+The page sounds like a person: sentences vary in length and shape because they follow the thought, and it reads aloud without stumbling. Its words are the product's, as the interface names them, never the code's or the team's. The patterns later in this guide say how; this section says what they are for.
+
+Two failures look like finished writing and are not.
+
+**Transcribed prose** restates a fact list in complete sentences. Every sentence is true, every sentence has the same shape, and none tells the reader what to do about anything. It happens when the writer drafts toward the research, every verified fact in order, instead of toward the reader. Its symptoms: a table kept to hold one fact because a template had a table there, a description of what a dialog shows, a reason attached to an instruction the reader would have followed anyway, a "why" sentence in front of the "do this" sentence. Ask of each sentence what the reader would do differently for having read it, and cut the ones with no answer.
+
+**Dense prose** packs two or three ideas into one sentence, joined by "so", "which", or a participle, and runs a paragraph on past the point where the reader's question changed. Each sentence is defensible and the page is exhausting. A sentence carrying two separable ideas is two sentences, and a paragraph breaks where the topic turns.
+
+### Two Examples
+
+Two pages in this doc set show the register: `en/cloud/use-dify/build/new-agent/overview.mdx` for a concept page and `en/cloud/use-dify/build/new-agent/build.mdx` for a task page. Read the one in your page's genre before drafting. They calibrate the ear; this guide is the authority, and when a page and the guide disagree, the guide wins. The two examples below take one passage from each page and set it beside the facts it was written from and a version that merely states them.
+
+**A concept.** The facts, as research produced them: an agent's role, prompt, model, skills, tools, and files are stored with the agent; a run's input is the chat message when the agent runs on its own and the node's instruction inside a workflow; the stored setup is used on every run; end users cannot change it.
+
+Transcribed:
+
+```mdx
+## Configuration and Task
+
+An agent has a configuration and a task. The configuration consists of the role, prompt, model, skills, tools, and files, and is stored with the agent. The task is the input for a run: the chat message when the agent runs on its own, or the instruction in the Agent node. The configuration is used for every run and cannot be changed by end users.
+```
+
+Written:
+
+```mdx
+## Capability and Task
+
+An Agent separates what it *is* from what you ask it to *do*:
+
+- **Its *capability* (think of it as the agent's soul) is who the agent is**.
+
+  The role and prompt you write, the model it runs on, and the skills, Dify tools, and files you give it. You shape it once and keep refining it as you learn what the agent needs.
+
+- **Its *task* is what you ask it to do on a given run**.
+
+  When the agent works on its own, the task is the message you send it. When it works inside a workflow, the task is the instruction you give the node.
+
+It's the same split as hiring someone: you choose a person for what they can do, then give them a specific task. Strong results need both: the right person for the job and a clear brief.
+```
+
+The second gives the reader a way to think, not a data model. The split gets names a builder will use, one analogy carries it, and the close tells them what a good result needs from them. The end-user fact, true and verified, is left for the task page, where the reader who would ask is.
+
+**A task.** The facts: the **Agents** page has a **Create** button with two options, **Create from Blank** and **Import DSL file**; the create dialog has a required name and optional role and description; a new agent opens in **Configure**; a DSL import carries neither skills nor files.
+
+Transcribed:
+
+```mdx
+## Create an Agent
+
+The **Agents** page has a **Create** button with two options: **Create from Blank** and **Import DSL file**. **Create from Blank** opens a dialog with a name field, an optional role field, and an optional description field. After creation, the agent opens on the **Configure** tab. **Import DSL file** creates an agent from a DSL file. Skills and files are not included in the import.
+```
+
+Written:
+
+```mdx
+## Create an Agent
+
+From **Agents**, click **Create** > **Create from Blank** and give the agent a name; optionally add a role such as *Research Assistant* and a description. Then you shape everything else in **Configure**.
+
+To create an agent from a shared DSL file, choose **Import DSL file**. Skills and files aren't included, so add them after importing.
+```
+
+One sentence carries the whole action, its location, and where it lands. The dialog's fields are not described, because the reader is looking at them. The one fact kept from the import path is the one with a cost, and it arrives as the next thing to do. Both versions are correct; only the second is finished.
+
 ## Voice and Tone
 
 Use **active voice** whenever natural and clear. Passive voice is acceptable when the actor is unknown or when it reads more naturally.
 
-Be conversational but professional. Prefer everyday language over formal equivalents—"ask questions" over "submit queries". Avoid robotic, AI-sounding phrasing.
+Be conversational but professional. Prefer everyday language over formal equivalents—"ask questions" over "submit queries". Write the way someone who knows the product explains it to a colleague: plainly, with the reason attached.
 
 ## Clarity and Conciseness
 
@@ -12,7 +86,7 @@ Express ideas clearly and concisely. Every sentence should add value. Cut unnece
 
 Choose precision when it prevents confusion. A specific, descriptive term is better than a shorthand that assumes shared context with the reader.
 
-Keep every paragraph to four rendered lines or fewer (roughly 50 words). On Mintlify's content width, anything longer renders as a dense block that readers skip. When a paragraph runs long, split it at a natural boundary, typically where the topic shifts from setup to payoff, or from problem to solution.
+A paragraph carries one idea. Mintlify's content column is narrow, so a paragraph that runs past a few lines renders as a block readers skip; break it where the reader's question changes, typically where setup turns to payoff or problem to solution. Shorten by leaving things out, never by packing more into each sentence.
 
 ## Images
 
@@ -92,7 +166,7 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 ## Patterns to Use
 
-**Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice.
+**Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice. A capability the reader may not hold, granted at another permission level, is stated as a fact ("other members can hold it through a custom role"), not written as an instruction. When a task needs a role or permission the reader may not have, say so once, at the task's entry point, in an `<Info>` that names the role ("Creating and managing agents requires the Editor role or above."); don't repeat it per step, and don't add it where every reader of the page holds the permission.
 
 **Task-oriented headings.** "Import Your Data" instead of "Data Import Feature."
 
@@ -142,10 +216,11 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Information noise.** If content doesn't provide value beyond what the reader already knows or can see, it hinders rather than helps. Before including a detail, ask: does the reader need this to accomplish their goal? If it repeats the UI (see above) or restates what the previous sentence implied, cut it.
 
-**Unnecessary second sentences.** When two sentences can be merged into one without losing readability, combine them. If the "how it works" can be folded into the "what it does," a separate sentence is noise. Apply case-by-case—don't sacrifice clarity for brevity.
+**Sentences that add nothing.** Cut a sentence when the reader learns nothing from it: a "how it works" the "what it does" already implies, or a restatement of the line before. Keep a sentence that carries its own claim, however short; folding it into its neighbor trades a clear sentence for a crowded one.
 
 **Repetitive structures.** Vary sentence patterns across related sections to avoid a mechanical feel.
 
-**Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, never write a bare "see [X]" — give the link a payoff: "see [X] for details" when the surrounding context already makes clear what those details are, or name what the reader will find ("see [X] for the full flag table") when it doesn't.
+**Narrating absent infrastructure.** Public text instructs; it never announces what internal automation or process does not exist ("there is no automatic translation pipeline", "we removed X"). Absence claims read as a confession and tell outsiders about operations they never asked about. State the positive behavior instead: "every change ships all three languages; translate in the same pass." Removal narratives belong in PR descriptions, not in READMEs, agent instructions, or docs.
 
-**Over-simplification.** Don't sacrifice clarity for brevity. Choose precision when a specific term prevents confusion, even if it's longer.
+**Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, never write a bare "see [X]" — give the link a payoff: "see [X] for details" when the surrounding context already makes clear what those details are, or name what the reader will find ("see [X] for the full flag table") when it doesn't. Don't gate a link or section on who the reader is ("If you've used X, see…"); state the payoff so any reader can opt in.
+
