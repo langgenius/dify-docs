@@ -16,7 +16,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Workflow app | Workflow 应用 | Workflow アプリ | Explicit form of the Workflow app type; contrast with lowercase "workflow" below. |
 | Chatflow | Chatflow | Chatflow | Dify app type; stays English in zh/ja. |
 | Chatflow app | Chatflow 应用 | Chatflow アプリ | Explicit form of the Chatflow app type. |
-| agentic workflow | Agentic 工作流 | Agentic ワークフロー | Lowercase in prose, plural as needed; "Agentic" stays English in zh/ja. |
+| agentic workflow | Agentic 工作流 | Agentic ワークフロー | English prose: lowercase, plural as needed. zh and ja keep the English word untranslated and capitalized, as the trees already do. |
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective/engine sense: workflow-backed runs, workflow nodes, the workflow engine, and endpoints shared across app types. Localizes in zh/ja; the Workflow app type stays English. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |

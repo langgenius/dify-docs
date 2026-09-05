@@ -246,9 +246,9 @@ Specific words to drop or shorten when context allows:
 
 Chinese that reads as translated from English loses the reader's trust before the content does. Watch for these and rewrite them as a native writer would:
 
-- Essay scaffolding carried over from English connectives: 换言之、值得注意的是、综上所述、不仅…而且. Cut them; Chinese prose moves without announcing its moves.
+- Essay scaffolding carried over from English connectives (换言之、值得注意的是、综上所述、不仅…而且): cut them, because Chinese prose moves without announcing its moves.
 - Rigid 不是…而是… stacks used to contrast every pair of ideas. One is fine; a series reads as a template.
-- Nominalized abstractions in place of a plain verb: 单位生产时间、结构性超出. Say what happens, with a concrete verb.
+- Nominalized abstractions (单位生产时间、结构性超出) in place of a plain verb: say what happens, with a concrete verb.
 - 破折号 (——) as sentence punctuation. Use a full-width comma, colon, or parentheses; en dashes stay only in number and date ranges (140–205).
 - Sentence after sentence in the same parallel shape. Vary the rhythm.
 
