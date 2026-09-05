@@ -74,7 +74,7 @@ Translate from the English file on disk as it stands, not from the draft in the 
 
 Read now: `writing-guides/formatting-guide.md`; the pack's procedures labeled S7.
 
-1. Read it back per `references/drafting-turn.md` and fix what you find; a fault found once is swept across the page before it counts as fixed. Then run `dify-docs-editor-test`: a fresh agent reads the draft against the standard, the reference page, and the pack's page shape, and returns sentence-level marks and a verdict. "Needs rewrite" means the unit is rewritten whole, not patched.
+1. Read it back per `references/drafting-turn.md` and fix what you find; a fault found once is swept across the page before it counts as fixed. Then run `dify-docs-editor-test` on the English page: a fresh agent reads the draft against the standard, the reference page, and the pack's page shape, and returns sentence-level marks and a verdict. The zh and ja pages are judged by the translation guides, not by this test. "Needs rewrite" means the unit is rewritten whole, not patched.
 2. Run `dify-docs-format-check`, then `dify-docs-terminology-check`, then the pack's S7 verifiers, fixing and re-running until each is clean. A clean run is not a finished page.
 3. Run `dify-docs-reader-test` last, on the finished page.
 

@@ -20,7 +20,7 @@ Two failures look like finished writing and are not.
 
 ### Two examples
 
-Two pages in this doc set show the register: `en/cloud/use-dify/build/new-agent/overview.mdx` for a concept page and `en/cloud/use-dify/build/new-agent/build.mdx` for a task page. Read the one in your page's genre before drafting. They calibrate the ear; this guide is the authority, and when a page and the guide disagree, the guide wins. One passage from each, beside the facts it was written from and the version that merely states them.
+Two pages in this doc set show the register: `en/cloud/use-dify/build/new-agent/overview.mdx` for a concept page and `en/cloud/use-dify/build/new-agent/build.mdx` for a task page. Read the one in your page's genre before drafting. They calibrate the ear; this guide is the authority, and when a page and the guide disagree, the guide wins. The two examples below take one passage from each page and set it beside the facts it was written from and a version that merely states them.
 
 **A concept.** The facts, as research produced them: an agent's role, prompt, model, skills, tools, and files are stored with the agent; a run's input is the chat message when the agent runs on its own and the node's instruction inside a workflow; the stored setup is used on every run; end users cannot change it.
 

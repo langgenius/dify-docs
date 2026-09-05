@@ -344,7 +344,7 @@ Use for sequential procedures:
 
 ### Columns
 
-Prefer native components over raw HTML or styled `<div>`s. Side-by-side images use `<Columns cols={2}>` wrapping one `<Frame caption>` per image, with alt text identical to the caption; it reflows to one column on narrow screens without CSS.
+Prefer native components over raw HTML or styled `<div>`s. Side-by-side images use `<Columns cols={2}>` wrapping one `<Frame caption>` per image (alt text per § Alt Text above); it reflows to one column on narrow screens without CSS.
 
 ### Accordion
 

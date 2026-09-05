@@ -15,7 +15,7 @@ After completing a writing task, read the page back as its reader (the dify-docs
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
-| 1 | dify-docs-editor-test | A fresh agent judges the writing against the style guide's standard and the reference page in its genre: sentence-level marks and a ship verdict. |
+| 1 | dify-docs-editor-test | On the English page: a fresh agent judges the writing against the style guide's standard and the reference page in its genre, returning sentence-level marks and a ship verdict. The zh and ja pages follow the translation guides instead. |
 | 2 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
 | 3 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
 | 4 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
