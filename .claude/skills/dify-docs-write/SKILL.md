@@ -16,7 +16,7 @@ Each stage below names what it reads. Read at the stage, not before: the draftin
 
 ## Route
 
-Pick the rule pack from the target path (most specific match wins). When the target repo carries an `AGENTS.md`, its repo-wide rules apply on top. The pack carries what is specific to its surface. When they disagree, the guides win, over this skill too.
+Pick the rule pack from the target path (most specific match wins). When the target repo carries an `AGENTS.md`, its repo-wide rules apply on top. A page with no pack skips every pack read below; the guides alone govern it. The pack carries what is specific to its surface. When they disagree, the guides win, over this skill too.
 
 | Target path | Rule pack |
 |---|---|

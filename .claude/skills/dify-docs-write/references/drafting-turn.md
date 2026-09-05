@@ -1,4 +1,4 @@
-# The drafting turn
+# The Drafting Turn
 
 The standard is the style guide's "What a Good Page Does"; the rest of the guide says how to meet it, and the drafter reads all of it. This file is how a drafting turn holds itself to the standard.
 

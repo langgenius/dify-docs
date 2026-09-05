@@ -18,7 +18,7 @@ Two failures look like finished writing and are not.
 
 **Dense prose** packs two or three ideas into one sentence, joined by "so", "which", or a participle, and runs a paragraph on past the point where the reader's question changed. Each sentence is defensible and the page is exhausting. A sentence carrying two separable ideas is two sentences, and a paragraph breaks where the topic turns.
 
-### Two examples
+### Two Examples
 
 Two pages in this doc set show the register: `en/cloud/use-dify/build/new-agent/overview.mdx` for a concept page and `en/cloud/use-dify/build/new-agent/build.mdx` for a task page. Read the one in your page's genre before drafting. They calibrate the ear; this guide is the authority, and when a page and the guide disagree, the guide wins. The two examples below take one passage from each page and set it beside the facts it was written from and a version that merely states them.
 
@@ -39,11 +39,11 @@ Written:
 
 An Agent separates what it *is* from what you ask it to *do*:
 
-- **Its *capability* (think of it as the agent's soul) is who the agent is.**
+- **Its *capability* (think of it as the agent's soul) is who the agent is**.
 
   The role and prompt you write, the model it runs on, and the skills, Dify tools, and files you give it. You shape it once and keep refining it as you learn what the agent needs.
 
-- **Its *task* is what you ask it to do on a given run.**
+- **Its *task* is what you ask it to do on a given run**.
 
   When the agent works on its own, the task is the message you send it. When it works inside a workflow, the task is the instruction you give the node.
 
