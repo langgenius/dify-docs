@@ -12,25 +12,25 @@ The pre-draft half of reader empathy: establish what readers are trying to do an
   route: docs → <page/section> | ui-finding | product-gap
 ```
 
-Rules: every task is a user objective passing the "I want to ___" test — never a feature description. Tasks come from the reader persona's journeys. S2 findings, issue text, and briefing bullets supply evidence and scope, never tasks. Walk test: every task must be walkable as concrete product steps (the question walk enumerates them). No steps to walk, no task. Every question carries exactly one route. OPEN questions are never dropped; they go into the S4 report.
+A task is something the reader wants to do, phrased so "I want to ___" reads naturally, and it comes from the persona's own journeys through the product. Research findings, issue text, and briefing bullets tell you what is in scope and supply evidence; they don't tell you what readers are trying to do, because an issue bullet is a directive and a reader is not. A task you can't walk as concrete product steps isn't a task. Every question gets one route, and OPEN questions go into the scope report rather than being dropped.
 
 ## Depths
 
-**Full (R1 / R2 / R4)**
+**Full (new page, rewrite, pre-release feature)**
 
 1. Build the task list from the persona's journeys, with the S2 research as evidence; cluster by journey. Cross-check against S2's community pain themes: each theme maps to a task, or is listed as explicitly out of scope.
-2. Question walk — per task, walk its steps in the product. At each step answer four fixed prompts; write "none" when a prompt yields nothing (the prompt must still be answered):
+2. Question walk — per task, walk its steps in the product and, at each step, look for four things:
    - **prereqs**: what must exist or be true before starting?
    - **mid-task**: what does the reader wonder right here?
    - **overlooked**: what detail, skipped now, breaks something later?
    - **success**: how does the reader confirm it worked?
 3. Evidence check: answer immediately whatever S2 already answered, citing the evidence. Everything else is OPEN.
 
-**Delta (R5)**
+**Delta (update)**
 
 List only the tasks the change affects. For each, state what changes: steps, prereqs, limits, or outcome. Apply the four prompts to the changed steps only.
 
-**Three-question (R3)**
+**Three-question (correction)**
 
 Answer inside the S4 report: who is the reader; what task are they mid-way through; what must this text answer to keep them moving.
 

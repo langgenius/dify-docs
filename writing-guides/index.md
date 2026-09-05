@@ -4,26 +4,29 @@
 
 | Task | Skill |
 |:-----|:------|
-| Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — resolves the work type, loads the doc-type rule pack, and runs the stage pipeline |
+| Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — loads the writing guides and the doc-type rule pack, then runs the stages from research to check |
 | Prepare doc updates for a Dify release | dify-docs-release-sync — diffs the codebase between two pinned version refs, then hands execution to dify-docs-write |
 
 Everything else (research, rule packs, checks) is loaded by these two — start here, not there.
 
 ## Post-Writing Verification
 
-After completing a writing task, run these checks in order and apply the fixes before presenting the work for review — this holds even for writing that did not run through dify-docs-write (the full obligation lives in its S7 stage). Each is a self-contained skill.
+After completing a writing task, read the page back as its reader (the dify-docs-write skill's Check stage says how) and fix what you find; the checks below only catch what a reader would not. Then run them in order and apply the fixes before presenting the work, whether or not the writing went through dify-docs-write. Each is a self-contained skill.
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
-| 1 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
-| 2 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
-| 3 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
+| 1 | dify-docs-editor-test | A fresh agent judges the writing against the style guide's standard and the reference page in its genre: sentence-level marks and a ship verdict. |
+| 2 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
+| 3 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
+| 4 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
 
-Steps 1 and 2 cover all three languages and audit the whole document, not just the diff. Step 3 is always the last step because it depends on the others passing.
+Steps 2 and 3 cover all three languages and audit the whole document, not just the diff. Step 4 is always the last step because it depends on the others passing.
 
 ## Syncing the Dify codebase safely
 
 Skills that verify behavior against the dify or graphon codebase read files at a pinned ref instead of switching branches. The clone may hold a feature branch or uncommitted work — never run `git checkout` or `git pull` in a tree you have not confirmed is clean.
+
+The backend is split across two repos. Built-in workflow nodes, the graph engine, the runtime, and `model_runtime` live in `graphon`, version-pinned in `dify/api/pyproject.toml`; integration nodes (Agent, Knowledge, Datasource, Trigger), orchestration, RAG, and tools stay in `dify`. Verify against the graphon version dify pins, never graphon `main`. Code on a development branch may be in flux: when behavior is ambiguous there, ask rather than assume.
 
 1. In the codebase clone, fetch and pin the ref:
 

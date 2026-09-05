@@ -65,6 +65,8 @@ Do not include trailing punctuation (colons, commas, periods) inside bold markup
 
 ---
 
+Use the exact bolded label at the step where the reader has to find the control ("click **Keep golden question**"). Anywhere else, describe what they are doing in plain English ("save the runs that came back right as golden questions") rather than turning the label into a verb.
+
 ## Lists
 
 - Use dashes (`-`) for unordered lists, not asterisks (`*`).
@@ -340,6 +342,10 @@ Use for sequential procedures:
 </Steps>
 ````
 
+### Columns
+
+Prefer native components over raw HTML or styled `<div>`s. Side-by-side images use `<Columns cols={2}>` wrapping one `<Frame caption>` per image, with alt text identical to the caption; it reflows to one column on narrow screens without CSS.
+
 ### Accordion
 
 Use for optional or supplementary content:
@@ -349,6 +355,8 @@ Use for optional or supplementary content:
   A webhook allows one system to automatically send real-time data to another system.
 </Accordion>
 ```
+
+Troubleshooting and FAQ entry sets use `<AccordionGroup>` with one `<Accordion title="<symptom>">` per entry; the body opens with the cause, no bold lead. Titles are translated per language, since they generate anchors.
 
 ### CodeGroup
 

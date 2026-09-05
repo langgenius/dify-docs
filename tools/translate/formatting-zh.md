@@ -149,7 +149,7 @@ The paid-feature `<Tip>` pattern (`writing-guides/style-guide.md` § Paid Featur
 
 ```mdx
 <Tip>
-在 Dify Enterprise 中，你可以…。如需了解更多，请 [联系销售](https://udify.app/chat/QuwcpW1oBNcfeL55)。
+在 Dify Enterprise 中，你可以…。如需了解更多，请 [联系销售](https://share-na2.hsforms.com/1O3Rajx4URXm88UzneXYpCw40s9fk)。
 </Tip>
 ```
 
@@ -237,3 +237,19 @@ Specific words to drop or shorten when context allows:
 | English | Chinese |
 |:--------|:--------|
 | See xx for details / for more information | 详见 xx |
+
+- In callouts describing an optional path, prefer 可 over 请 (请安装 → 可直接安装).
+- Place 仅 and similar modifiers next to what they modify (Dify 对外部知识库仅拥有检索权限), and keep a disambiguating qualifier (外部知识库) even when context seems to make it obvious.
+- Prose around a UI element reuses the element's own noun (button 使用教育优惠 → prose 教育优惠, not 教育折扣); keep 将 where it carries sequence.
+
+## Machine-Translation Tells
+
+Chinese that reads as translated from English loses the reader's trust before the content does. Watch for these and rewrite them as a native writer would:
+
+- Essay scaffolding carried over from English connectives: 换言之、值得注意的是、综上所述、不仅…而且. Cut them; Chinese prose moves without announcing its moves.
+- Rigid 不是…而是… stacks used to contrast every pair of ideas. One is fine; a series reads as a template.
+- Nominalized abstractions in place of a plain verb: 单位生产时间、结构性超出. Say what happens, with a concrete verb.
+- 破折号 (——) as sentence punctuation. Use a full-width comma, colon, or parentheses; en dashes stay only in number and date ranges (140–205).
+- Sentence after sentence in the same parallel shape. Vary the rhythm.
+
+Full-width punctuation between Chinese clauses (，。：；！？（）「」) is covered under Punctuation above.

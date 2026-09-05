@@ -12,7 +12,7 @@ description: >
 
 ## Overview
 
-Compares code changes between two Dify releases (or a release and a pinned commit), identifies documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference, help documentation, and environment variables. Execution runs through the `dify-docs-write` pipeline with the matching rule pack; the approved report from this skill satisfies its S4 scope gate (the pipeline prints `S4 satisfied upstream`).
+Compares code changes between two Dify releases (or a release and a pinned commit), identifies documentation impact, generates a structured report, then executes updates after user approval. Three tracks: API reference, help documentation, and environment variables. Execution runs through the `dify-docs-write` pipeline with the matching rule pack; the approved report from this skill satisfies its S4 scope gate.
 
 **Input**: Two version references, provided by the user. Always ask if not provided.
 - Post-release: `v1.13.2` and `v1.13.3` (both tags)
@@ -222,13 +222,13 @@ python3 "$DOCS/tools/api-pipeline/parity_check.py"  # prints "TOTAL PARITY ISSUE
 
 ### Help Documentation Updates
 
-For each affected doc page, run `dify-docs-write` (row R5 update; S4 satisfied by the approved report; the `dify-docs-guides` pack loads automatically):
+For each affected doc page, run `dify-docs-write` (an update; S4 satisfied by the approved report; the `dify-docs-guides` pack loads automatically):
 1. Read the current doc and the relevant PR(s) for context
 2. Update content to reflect changes — copy scope per the Docs Branch rule above (release branch → self-host copy only); audience-specific blocks (plan gating, env-var callouts, Enterprise tips) stay per-copy
 
 ### Environment Variable Updates
 
-For each affected variable group, run `dify-docs-write` (row R5; S4 satisfied by the approved report; the `dify-docs-env-vars` pack loads automatically — its standalone release-sync diff procedure supplies the variable set):
+For each affected variable group, run `dify-docs-write` (an update; S4 satisfied by the approved report; the `dify-docs-env-vars` pack loads automatically — its standalone release-sync diff procedure supplies the variable set):
 1. Trace the variable in the release codebase
 2. Update `en/self-host/deploy/configuration/environments.mdx`
 3. Run that skill's verification script; it must report zero mismatches
