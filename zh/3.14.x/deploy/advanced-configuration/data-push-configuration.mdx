@@ -1,0 +1,112 @@
+---
+title: 数据推送配置指南
+version: '简体中文'
+---
+
+## Helm Values
+本次更新引入了以下配置：
+
+`global.otel` 配置涉及负责生成遥测数据的服务，具体包括 `dify-api` 和 `dify-worker`。
+
+`enterpriseCollector` 是一项新服务，旨在与您的自定义 OpenTelemetry (OTEL) 系统进行交互。
+
+在大多数情况下，保留默认配置值即可。
+
+```yaml
+global:
+  otel:
+    # Requires enterpriseCollector.enabled to be true
+    enabled: true
+    # Sampling rate (0.0 to 1.0, empty means default)
+    samplingRate: "0.2"
+    # Batch export schedule delay in milliseconds
+    batchExportScheduleDelay: "5000"
+    # Maximum queue size for batching
+    maxQueueSize: "2048"
+    # Maximum export batch size
+    maxExportBatchSize: "512"
+    # Metric export interval in milliseconds
+    metricExportInterval: "60000"
+    # Batch export timeout in milliseconds
+    batchExportTimeout: "30000"
+    # Metric export timeout in milliseconds
+    metricExportTimeout: "30000"
+    sender:
+      otlp:
+        # Custom headers for OTLP requests (key=value,key2=value2)
+        headers: ""
+      # Service name reported to OTEL collector
+      serviceName: "dify-api-otel"
+      # Include input/output content in traces (privacy toggle)
+      includeContent: false
+enterpriseCollector:
+  enabled: true
+  # https://github.com/langgenius/dify-enterprise/releases/tag/0.14.4
+  image:
+    repository: langgenius/dify-enterprise-collector
+    tag: "0.14.4"
+  replicas: 1
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  extraEnv:
+  # Apply your own Environment Variables if necessary. Below is demo.
+  # extraEnv:
+  #   - name: ENV_FROM_COMMUNITY1
+  #     value: env123
+  #   - name: ENV_FROM_COMMUNITY2
+  #     value: env123
+  serviceAccountName: ""
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  # livenessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 20
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  extraConfig: |
+    # yaml config for otel collector
+    # you can use this to fully customize the otel collector
+    # see https://opentelemetry.io/docs/collector/configuration/
+  # The size of the sending queues are related to the memory limit and the batch size
+  # the default value assumes 512 MiB memory limit and 512 batch size
+  # adjust correspondingly when you configure different memory limits and batch sizes
+  sendingQueues:
+    trace:
+      size: 64
+    metric:
+      size: 256
+ ```
+
+## ServiceMonitor 集成
+尽管 `enterpriseCollector` 的架构旨在将遥测数据传输到用户系统，但拉取数据仍然是收集指标的常用方法。因此，它还在 8889 端口上公开了一个指标端点，可以与 Prometheus `ServiceMonitor` 无缝集成。
+
+以下是一个示例。
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dify-enterprise-collector
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 5s
+    path: /metrics
+    port: http-metrics
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - {dify's namespace}
+  selector:
+    matchLabels:
+      app: {dify's release name}-enterprise-collector
+```

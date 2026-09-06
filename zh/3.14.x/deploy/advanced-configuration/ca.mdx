@@ -1,0 +1,374 @@
+---
+title: 自定义 CA 证书配置
+---
+
+本指南介绍如何在 Helm Chart 部署中为 Dify Enterprise 配置自定义证书颁发机构 (CA) 证书。此功能对于使用自签名证书或私有 PKI 基础设施的环境至关重要。
+
+## 概述
+
+启用后，Dify 将信任系统范围的 CA 证书以及您的自定义 CA 证书，用于所有出站 HTTPS 连接。这在以下情况下特别有用：
+
+*   您的组织使用内部 PKI（公钥基础设施）。
+*   您在具有自签名证书的气隙（Air-gapped）环境中部署。
+*   外部服务（Redis、数据库、S3、向量数据库等）使用由私有 CA 签名的证书。
+*   您需要与内部 HTTPS 端点建立信任。
+
+## 工作原理
+
+自定义 CA 实现使用以下方法：
+
+1.  **初始化**：在每个 Dify Pod 启动之前运行一个 Init Container。
+2.  **CA Bundle 创建**：Init Container 将系统 CA 证书（来自基础镜像）与您的自定义 CA 证书（来自 Kubernetes Secret）合并。
+3.  **环境设置**：配置环境变量，将 Python、Node.js、curl 和 AWS CLI 指向合并后的 CA Bundle。
+4.  **运行时信任**：所有 Dify 组件都使用合并后的 CA Bundle 进行 SSL/TLS 验证。
+
+## 前提条件
+
+*   已安装（或准备安装）Dify Helm Chart 的 Kubernetes 集群。
+*   PEM 格式的自定义 CA 证书。
+*   对集群的 `kubectl` 访问权限。
+*   对 Kubernetes Secrets 的基本了解。
+
+---
+
+## 配置步骤
+
+### 1. 准备您的 CA 证书
+
+您的 CA 证书必须是 **PEM 格式**（Base64 编码，包含在 `BEGIN CERTIFICATE` 和 `END CERTIFICATE` 标记中）。
+
+验证您的证书格式：
+
+```bash
+# 您的证书应该如下所示：
+cat your-ca.crt
+# -----BEGIN CERTIFICATE-----
+# MIIDXTCCAkWgAwIBAgIJAKJ... (Base64 content)
+# ...
+# -----END CERTIFICATE-----
+```
+
+如果您有 DER 编码的证书，请将其转换为 PEM：
+
+```bash
+openssl x509 -inform der -in your-ca.der -out your-ca.crt
+```
+
+### 2. 创建 Kubernetes Secret
+
+创建一个包含您的 CA 证书的 Kubernetes Secret。
+
+```bash
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=your-ca.crt \
+  --namespace=<your-dify-namespace>
+```
+
+> **注意**：
+> *   **Secret 名称**：`dify-custom-ca`（您可以选择任何名称）。
+> *   **Key 名称**：`ca.crt`（默认值，可以在 `values.yaml` 中自定义）。
+> *   **命名空间**：必须与您的 Dify 部署位于同一命名空间中。
+
+验证 Secret 是否已创建：
+
+```bash
+kubectl get secret dify-custom-ca -n <your-dify-namespace>
+kubectl describe secret dify-custom-ca -n <your-dify-namespace>
+```
+
+### 3. 配置 values.yaml
+
+编辑您的 Helm `values.yaml` 文件以启用自定义 CA。
+
+```yaml
+global:
+  customCA:
+    # 启用自定义 CA 证书支持
+    enabled: true
+    # 包含 CA 证书的 Kubernetes Secret 名称
+    existingSecret: "dify-custom-ca"
+    # Secret 中的 Key 名称（必须与步骤 2 中使用的 Key 匹配）
+    key: ca.crt
+    # 容器内合并后的 CA Bundle 的挂载路径
+    # （高级：通常无需更改）
+    mountPath: /etc/dify/custom-ca
+    # 用于合并系统 CA 和自定义 CA 的 Init Container 镜像
+    # 对于气隙环境，请替换为您的私有仓库
+    initImage: alpine:3.20
+```
+
+**最小配置（使用默认值）：**
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+```
+
+### 4. 部署或更新 Dify
+
+**对于新安装：**
+
+```bash
+helm install dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+**对于现有安装：**
+
+```bash
+helm upgrade dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+> **注意**：更改自定义 CA 配置需要重启 Pod 才能生效。CA Bundle 仅在 Pod 初始化期间生成一次。
+
+---
+
+## 验证
+
+部署后，验证自定义 CA 是否已正确配置。
+
+### 1. 检查 Init Containers
+
+检查 Init Container 是否成功运行。
+
+```bash
+# 列出 Pod
+kubectl get pods -n dify
+
+# 检查特定 Pod（例如 api pod）的 Init Container 日志
+kubectl logs <api-pod-name> -n dify -c init-custom-ca
+```
+
+您应该看到指示 CA Bundle 已成功创建的输出。
+
+### 2. 验证环境变量
+
+进入正在运行的 Pod 并检查环境变量。
+
+```bash
+# 进入正在运行的 Pod
+kubectl exec -it <api-pod-name> -n dify -- sh
+
+# 检查环境变量
+env | grep -E 'SSL_CERT_FILE|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|NODE_EXTRA_CA_CERTS|AWS_CA_BUNDLE'
+```
+
+**预期输出：**
+
+```bash
+SSL_CERT_FILE=/etc/dify/custom-ca/ca-bundle.crt
+REQUESTS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+CURL_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+NODE_EXTRA_CA_CERTS=/etc/dify/custom-ca/ca-bundle.crt
+AWS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+```
+
+### 3. 验证 CA Bundle 内容
+
+在 Pod 内部，验证 Bundle 是否包含您的证书。
+
+```bash
+# 在 Pod 内部
+cat /etc/dify/custom-ca/ca-bundle.crt | grep -A 5 "BEGIN CERTIFICATE" | tail -10
+
+# 统计 Bundle 中的证书数量
+grep -c "BEGIN CERTIFICATE" /etc/dify/custom-ca/ca-bundle.crt
+```
+
+该 Bundle 应包含多个证书（系统 CA + 您的自定义 CA）。
+
+---
+
+## 环境变量参考
+
+自定义 CA 功能设置以下环境变量以确保广泛的兼容性。所有变量都指向同一个合并后的 CA Bundle：`/etc/dify/custom-ca/ca-bundle.crt`（或您的自定义 `mountPath`）。
+
+| 变量 | 用途 | 使用者 |
+| :--- | :--- | :--- |
+| `SSL_CERT_FILE` | OpenSSL/LibreSSL | 通用 SSL 库，Python requests |
+| `REQUESTS_CA_BUNDLE` | Python requests 库 | Python HTTP 客户端 |
+| `CURL_CA_BUNDLE` | curl 命令 | Shell 脚本，基于 curl 的工具 |
+| `NODE_EXTRA_CA_CERTS` | Node.js | Node.js HTTPS 客户端 |
+| `AWS_CA_BUNDLE` | AWS SDK | S3，AWS 服务连接 |
+
+---
+
+## 受影响的组件
+
+启用自定义 CA 后，以下 Dify 组件会自动使用自定义 CA Bundle：
+
+*   API Server (`api-deployment`)
+*   Worker (`worker-deployment`)
+*   Worker Beat (`worker-beat-deployment`)
+*   Trigger Worker (`trigger-worker-deployment`)
+*   Enterprise Service (`enterprise-deployment`)
+*   Enterprise Audit (`enterprise-audit-deployment`)
+*   Sandbox (`sandbox-deployment`)
+*   Gateway (`caddy-deploy`)
+*   SSRF Proxy (`ssrf-proxy-deployment`)
+*   Unstructured (`unstructured-deployment`)
+*   Plugin Daemon (`plugin-daemon`)
+*   Plugin Manager (`plugin-manager`)
+*   Plugin Controller (`plugin-controller`)
+
+---
+
+## 故障排查
+
+### Pod 卡在 Init:0/1
+
+**原因**：Init Container `init-custom-ca` 失败。
+
+**解决方案**：
+
+```bash
+# 检查 Init Container 日志
+kubectl logs <pod-name> -n dify -c init-custom-ca
+```
+
+常见原因：
+1.  无法拉取 `initImage`（气隙环境）。
+2.  找不到 Secret 或命名空间错误。
+3.  Secret 中的 Key 名称错误。
+
+### 启用自定义 CA 后出现 SSL 验证错误
+
+**原因**：您的自定义 CA 证书格式可能不正确或不完整。
+
+**解决方案**：
+
+1.  验证证书是否为有效的 PEM 格式：
+    ```bash
+    openssl x509 -in your-ca.crt -text -noout
+    ```
+2.  检查是否为完整证书链（如果您的 CA 需要中间证书）。如果需要，连接多个证书：
+    ```bash
+    cat intermediate-ca.crt root-ca.crt > combined-ca.crt
+    ```
+3.  更新 Secret 并重启 Pod：
+    ```bash
+    kubectl delete secret dify-custom-ca -n dify
+    kubectl create secret generic dify-custom-ca \
+      --from-file=ca.crt=combined-ca.crt -n dify
+    kubectl rollout restart deployment -n dify
+    ```
+
+### 自定义 CA Secret 的更改未生效
+
+**原因**：CA Bundle 是在 Pod 初始化期间创建的。更新 Secret 不会自动更新正在运行的 Pod。
+
+**解决方案**：更新 Secret 后必须重启 Pod。
+
+```bash
+kubectl rollout restart deployment -n dify
+```
+
+### Init Container 无法拉取 alpine:3.20 镜像
+
+**原因**：气隙环境或受限的仓库访问。
+
+**解决方案**：在 `values.yaml` 中使用您的私有仓库。
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    initImage: your-registry.company.com/alpine:3.20
+```
+
+**支持的替代方案**：
+*   基于 Alpine：`alpine:3.20`, `alpine:3.19`
+*   基于 Debian：`ubuntu:22.04`, `debian:12`
+*   任何包含 `/etc/ssl/certs/ca-certificates.crt` (Debian/Ubuntu) 或 `/etc/ssl/cert.pem` (Alpine) 的镜像。
+
+---
+
+## 高级配置
+
+### 使用不同的 Secret Key 名称
+
+如果您的 Secret 使用不同的 Key 名称：
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "my-ca-secret"
+    key: custom-ca.pem  # 不同的 Key 名称
+```
+
+### 自定义挂载路径
+
+如果您需要更改 CA Bundle 的挂载位置：
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    mountPath: /custom/path/to/ca
+```
+
+> **注意**：更改 `mountPath` 会自动更新所有环境变量。
+
+### 多个 CA 证书
+
+如果您需要信任多个自定义 CA，请将它们连接到一个文件中：
+
+```bash
+cat ca1.crt ca2.crt ca3.crt > combined-ca.crt
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=combined-ca.crt -n dify
+```
+
+### 气隙环境
+
+对于完全气隙（Air-Gapped）部署：
+
+1.  **镜像 Init Image** 到您的私有仓库：
+    ```bash
+    docker pull alpine:3.20
+    docker tag alpine:3.20 your-registry.company.com/alpine:3.20
+    docker push your-registry.company.com/alpine:3.20
+    ```
+2.  **更新 values.yaml**：
+    ```yaml
+    global:
+      customCA:
+        enabled: true
+        existingSecret: "dify-custom-ca"
+        initImage: your-registry.company.com/alpine:3.20
+    ```
+
+---
+
+## 常见问题 (FAQ)
+
+### 启用后可以禁用自定义 CA 吗？
+
+可以，设置 `global.customCA.enabled: false` 并升级 Helm Release。Pod 将重启且不再包含自定义 CA 配置。
+
+### 这会影响 Dify 组件之间的 TLS 吗？
+
+不会，这仅影响从 Dify 到外部服务（数据库、S3、API 等）的出站 HTTPS 连接。内部组件通信不受影响。
+
+### 如果我的数据库也需要自定义 CA 怎么办？
+
+自定义 CA 功能也涵盖数据库连接。请确保您的数据库服务器证书由您配置的 CA 签名。
+
+### 可以使用中间证书吗？
+
+可以，在创建 Secret 之前，将完整证书链（中间证书 + 根 CA）连接到一个文件中。
+
+### 如何在不停机的情况下更新 CA 证书？
+
+Kubernetes Secrets 可以更新，但必须重启 Pod。对于零停机更新：
+1.  更新 Secret。
+2.  使用 `kubectl rollout restart` 并采用滚动更新策略（默认）。
+3.  Pod 将逐个重启，保持服务可用性。

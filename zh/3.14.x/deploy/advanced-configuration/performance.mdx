@@ -1,0 +1,194 @@
+---
+title: 性能调优
+Version: '简体中文'
+---
+
+## 显示 Helm Chart 值
+
+```bash
+helm show values dify/dify
+```
+
+## 1. 调整基础资源
+
+你可以通过调整 Helm Chart 中各服务的副本数和资源配置提升 Dify 的整体吞吐。实际配置应结合业务负载、集群资源、数据库连接上限和队列积压情况逐步调整。
+
+| 分类 | 组件 | Replicas | Request CPU | Request Mem | Limit CPU | Limit Mem | 备注 |
+|------|------|----------|-------------|-------------|-----------|-----------|------|
+| 核心应用组件 | API | 2 | 1 | 1 GB | 1 | 2 GB | 根据 API QPS 和响应时间横向扩容 |
+| | Worker | 4 | 4 | 4 GB | 4 | 8 GB | 默认兜底 worker，3.9.x 推荐优先参考 additionalWorkers 拆分策略 |
+| | Worker Beat | 1 | 1 | 2 GB | 2 | 4 GB | 固定 1 副本，不建议扩容 |
+| | Web | 1 | 0.5 | 1 GB | 1 | 2 GB | 根据前端访问量横向扩容 |
+| | Sandbox | 1 | 2 | 2 GB | 2 | 4 GB | 根据代码执行任务量调整 |
+| 企业版组件 | Enterprise | 1 | 2 | 2 GB | 2 | 2 GB | 按需扩容 |
+| | Enterprise_Audit | 1 | 1 | 2 GB | 2 | 4 GB | 按需扩容 |
+| | Enterprise_Frontend | 1 | 1 | 2 GB | 1 | 2 GB | 按需扩容 |
+| 插件组件 | Plugin Daemon | 1 | 1 | 2 GB | 2 | 4 GB | 插件调用和安装量较大时调整 |
+| | Plugin Controller | 1 | 0.5 | 1 GB | 1 | 2 GB | 按需扩容 |
+| | Plugin Connector | 1 | 1 | 2 GB | 1 | 2 GB | 按需扩容 |
+| | Plugin Manager | 1 | 1 | 2 GB | 2 | 4 GB | 按需扩容 |
+| 基础组件 | SSRF Proxy | 1 | 0.5 | 0.5 GB | 1 | 1 GB | 按需扩容 |
+| | Gateway | 1 | 1 | 2 GB | 2 | 4 GB | 插件流量较大时调整 |
+| | Unstructured | - | - | - | - | - | 按文档解析任务量调整 |
+| | MinIO | - | - | - | - | - | 按存储吞吐和容量调整 |
+
+基础配置示例：
+
+```yaml
+api:
+  replicas: 2
+  serverWorkerAmount: 1
+  resources:
+    requests:
+      cpu: 1
+      memory: 1Gi
+    limits:
+      cpu: 1
+      memory: 2Gi
+
+worker:
+  replicas: 4
+  celeryWorkerAmount: 1
+  resources:
+    requests:
+      cpu: 4
+      memory: 4Gi
+    limits:
+      cpu: 4
+      memory: 8Gi
+
+workerBeat:
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+```
+
+## 2. 按队列拆分 Worker
+
+3.9.x 的 Helm Chart 支持通过 `additionalWorkers` 将原本由默认 `worker` 处理的 Celery 队列拆分到独立 Deployment。这样可以对不同类型任务独立设置副本数、CPU、内存和调度策略。
+
+默认 `worker` 是兜底 worker，会消费所有队列。启用 `additionalWorkers` 后有两种常见方式：
+
+- **保守模式**：保留 `worker.enabled: true`，只额外启用热点队列的专用 worker。适合初次调优，默认 worker 继续兜底消费未拆分队列。
+- **完全拆分模式**：设置 `worker.enabled: false`，并确保所有实际使用的队列都有对应的 `additionalWorkers` 消费。否则相关后台任务会积压。
+
+常见拆分如下：
+
+| Worker | 队列 | 适用场景 |
+|--------|------|----------|
+| `dataset-worker` | `dataset,priority_dataset,pipeline,priority_pipeline` | 知识库导入、文档解析、索引构建压力较大 |
+| `workflow-worker` | `workflow,workflow_storage,workflow_based_app_execution` | 工作流执行量或工作流存储任务较多 |
+| `general-worker` | `mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry` | 邮件、会话、插件、清理、审计和遥测等后台任务 |
+| `trigger-worker` | `schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher` | 定时任务、触发器相关任务 |
+
+<Warning>
+如果关闭默认 `worker`，请确认数据集、工作流、通用后台任务和触发器队列都已有对应 worker 消费。只开启部分 `additionalWorkers` 后直接关闭默认 `worker`，可能导致未覆盖队列无人消费。
+</Warning>
+
+保守模式示例：
+
+```yaml
+worker:
+  enabled: true
+  replicas: 1
+
+additionalWorkers:
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+    resources:
+      requests:
+        cpu: 2
+        memory: 4Gi
+      limits:
+        cpu: 4
+        memory: 8Gi
+```
+
+完全拆分模式示例：
+
+```yaml
+worker:
+  enabled: false
+
+additionalWorkers:
+  - name: dataset-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "dataset,priority_dataset,pipeline,priority_pipeline"
+    celeryWorkerAmount: 4
+
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+
+  - name: general-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry"
+    celeryWorkerAmount: 1
+
+  - name: trigger-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher"
+    celeryWorkerAmount: 1
+```
+
+调优建议：
+
+- 并发任务多、队列积压明显时，优先增加对应 worker 的 `replicas`。
+- 单个任务本身很重、Pod 内存持续接近 limit 或出现 OOMKilled 时，提高对应 worker 的 memory limit。
+- 不建议盲目增大 `celeryWorkerAmount`。它会增加单 Pod 并发，也会增加数据库连接、Redis 连接和内存压力。
+- `workerBeat` 只负责定时任务调度，应保持 1 副本。
+
+## 3. 优化外部 Postgres 数据库性能
+
+### 3.1 计算数据库最大连接数
+
+在配置数据库时，需要根据 API 和所有 worker 的连接池上限估算所需的最大连接数：
+
+```
+数据库最大连接数 =
+  (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × API serverWorkerAmount × API replicas
++ (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × 默认 worker celeryWorkerAmount × 默认 worker replicas
++ Σ[(SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × additionalWorker celeryWorkerAmount × additionalWorker replicas]
+```
+
+示例：
+
+- API: replicas=2, serverWorkerAmount=1
+- 默认 Worker: replicas=4, celeryWorkerAmount=1
+- `SQLALCHEMY_POOL_SIZE=100`
+- `SQLALCHEMY_MAX_OVERFLOW=150`
+
+则最大连接数为：
+
+```
+(100 + 150) × 1 × 2 + (100 + 150) × 1 × 4 = 500 + 1000 = 1500
+```
+
+<Warning>
+建议在计算结果基础上预留 20-30% 的余量，以应对突发流量。上述示例中，建议将 `max_connections` 设置为 1800-2000 或更高，并结合数据库实例规格确认可承载。
+</Warning>
+
+## 4. 性能监控建议
+
+| 症状 | 可能原因 | 解决方案 |
+|------|----------|----------|
+| API 响应慢 | API replicas 或 `serverWorkerAmount` 不足；数据库慢查询 | 增加 API replicas，排查数据库慢查询 |
+| Workflow 队列积压 | `workflow-worker` 处理能力不足 | 增加 `workflow-worker.replicas`，必要时提高资源限制 |
+| 知识库导入慢 | `dataset-worker` 资源不足；文档解析或向量库写入慢 | 启用或扩容 `dataset-worker`，检查 Unstructured 和向量数据库 |
+| 邮件、插件、清理任务延迟 | `general-worker` 队列积压 | 启用或扩容 `general-worker` |
+| 定时任务或触发器延迟 | `trigger-worker` 队列积压 | 启用或扩容 `trigger-worker`，保持 `workerBeat` 为 1 副本 |
+| 数据库连接耗尽 | API/worker 并发和连接池配置过高 | 增加 `max_connections` 或降低连接池/并发配置 |
+| 内存溢出 | 单任务内存占用高或 memory limit 过低 | 增加对应组件 memory limit，定位高内存任务 |
+| CPU 节流 | CPU limit 过低 | 增加对应组件 CPU limit 或 replicas |

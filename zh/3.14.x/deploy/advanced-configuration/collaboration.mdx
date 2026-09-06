@@ -1,0 +1,71 @@
+---
+title: 工作流协同编辑
+---
+
+工作流协同编辑支持多人实时编辑同一个工作流草稿：多个编辑者可以同时打开同一个工作流，实时看到彼此的光标与在线状态，所有变更通过 Socket.IO 实时同步。
+
+<Note>
+需要 Dify Enterprise 3.11.1 或更高版本。
+</Note>
+
+## 开启协同编辑
+
+在 Helm chart values 中设置开关：
+
+```yaml
+collaboration:
+  enabled: true
+```
+
+然后执行：
+
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+该开关会自动完成所有必要配置，无需手动配置 `extraEnv`：
+
+- 部署独立的 Socket.IO 服务（`<release>-api-websocket`），处理全部实时协同流量。
+- 将网关上的 `/socket.io` 路由到该服务。
+- 在 API 与 Web 的 ConfigMap 中设置 `ENABLE_COLLABORATION_MODE`。
+- 根据 `global.consoleApiDomain` 与 `global.useTLS` 自动生成 Web 前端的 `NEXT_PUBLIC_SOCKET_URL`（启用 TLS 时为 `wss://`）。
+
+开启后，工作空间成员即可共同编辑工作流并在画布上评论，详见 [与团队成员协作](/zh/3.14.x/use/build/workflow-collaboration)。
+
+## 工作原理
+
+协同流量使用 Socket.IO 协议（WebSocket，支持 HTTP 长轮询降级），路径为控制台 API 域名下的 `/socket.io`。Chart 将其部署为独立于主 API Pod 的专用 Deployment：
+
+| 组件 | 值 |
+| --- | --- |
+| Deployment | `<release>-api-websocket` |
+| Service | `<release>-api-websocket-svc`，端口 `5001` |
+| 网关路由 | 控制台 API vhost 下的 `/socket.io` 与 `/socket.io/*` |
+
+websocket Deployment 固定为 **1 副本、1 个 gunicorn worker**，并使用 `Recreate` 更新策略。Socket.IO 的鉴权会话保存在进程内存中，所有 socket 流量必须共享同一个进程，请勿扩容该 Deployment。房间事件通过现有 Redis 配置广播，主 API 与 worker 仍可照常独立扩缩容。
+
+## 资源配置
+
+通过 `collaboration.websocket` 覆盖 websocket Pod 的资源配置：
+
+```yaml
+collaboration:
+  enabled: true
+  websocket:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+```
+
+## 前置条件
+
+- 编辑者的浏览器必须能够访问 `global.consoleApiDomain`；前端会连接 `wss://<consoleApiDomain>/socket.io`（未启用 TLS 时为 `ws://`）。
+- 网关前的负载均衡器或 Ingress 必须允许控制台 API 域名上的 WebSocket 协议升级。
+
+## 从手动配置迁移
+
+如果之前通过 `extraEnv` 注入 `ENABLE_COLLABORATION_MODE` / `NEXT_PUBLIC_SOCKET_URL` 来开启协同编辑，请移除这些条目并改为设置 `collaboration.enabled: true`。保留旧的 `extraEnv` 条目不会导致错误，只是冗余：容器级 `extraEnv` 的优先级高于 chart 生成的 ConfigMap 值。

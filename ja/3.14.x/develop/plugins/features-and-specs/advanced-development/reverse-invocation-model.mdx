@@ -1,0 +1,296 @@
+---
+dimensions:
+  type:
+    primary: implementation
+    detail: advanced
+  level: intermediate
+standard_title: Reverse Invocation Model
+language: ja
+title: モデルの逆呼び出し
+description: プラグインから LLM、埋め込み、リランク、TTS、音声認識、モデレーションの各モデルを呼び出す
+---
+
+プラグインは、TTS やリランクなど、プラットフォーム内のすべてのモデルタイプと機能を含む Dify の内部 LLM 機能を逆呼び出しできます。逆呼び出しの基本に慣れていない場合は、まず [Dify サービスの逆呼び出し](/ja/3.14.x/develop/plugins/features-and-specs/advanced-development/reverse-invocation) をお読みください。
+
+すべてのモデル呼び出しは `ModelConfig` 型のパラメータを受け取ります。その構造は [一般仕様定義](/ja/3.14.x/develop/plugins/features-and-specs/plugin-types/general-specifications) で定義されており、モデルタイプによってわずかに異なります。
+
+例えば、`LLM` 型のモデルでは `completion_params` と `mode` パラメータも必要です。この構造は手動で構築することも、`model-selector` 型のパラメータや設定を使用することもできます。
+
+## LLM の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.llm
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self,
+        model_config: LLMModelConfig,
+        prompt_messages: list[PromptMessage],
+        tools: list[PromptMessageTool] | None = None,
+        stop: list[str] | None = None,
+        stream: bool = True,
+    ) -> Generator[LLMResultChunk, None, None] | LLMResult:
+        pass
+```
+
+呼び出すモデルに `tool_call` 機能がない場合、ここで渡される `tools` は有効になりません。
+
+### 使用例
+
+次の例では、`Tool` 内で OpenAI の `gpt-4o-mini` モデルを呼び出します。
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+from dify_plugin import Tool
+from dify_plugin.entities.model.llm import LLMModelConfig
+from dify_plugin.entities.tool import ToolInvokeMessage
+from dify_plugin.entities.model.message import SystemPromptMessage, UserPromptMessage
+
+class LLMTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        response = self.session.model.llm.invoke(
+            model_config=LLMModelConfig(
+                provider='openai',
+                model='gpt-4o-mini',
+                mode='chat',
+                completion_params={}
+            ),
+            prompt_messages=[
+                SystemPromptMessage(
+                    content='you are a helpful assistant'
+                ),
+                UserPromptMessage(
+                    content=tool_parameters.get('query')
+                )
+            ],
+            stream=True
+        )
+
+        for chunk in response:
+            if chunk.delta.message:
+                assert isinstance(chunk.delta.message.content, str)
+                yield self.create_text_message(text=chunk.delta.message.content)
+```
+
+このコードでは、`tool_parameters` から `query` パラメータを渡している点に注意してください。
+
+### ベストプラクティス
+
+`LLMModelConfig` を手動で構築するのは避けてください。代わりに、ツールのパラメータリストに `model` パラメータを追加し、使用したいモデルを UI 上でユーザーに選択させます。
+
+```yaml
+identity:
+  name: llm
+  author: Dify
+  label:
+    en_US: LLM
+    zh_Hans: LLM
+    pt_BR: LLM
+description:
+  human:
+    en_US: A tool for invoking a large language model
+    zh_Hans: 用于调用大型语言模型的工具
+    pt_BR: A tool for invoking a large language model
+  llm: A tool for invoking a large language model
+parameters:
+  - name: prompt
+    type: string
+    required: true
+    label:
+      en_US: Prompt string
+      zh_Hans: 提示字符串
+      pt_BR: Prompt string
+    human_description:
+      en_US: used for searching
+      zh_Hans: 用于搜索网页内容
+      pt_BR: used for searching
+    llm_description: key words for searching
+    form: llm
+  - name: model
+    type: model-selector
+    scope: llm
+    required: true
+    label:
+      en_US: Model
+      zh_Hans: 使用的模型
+      pt_BR: Model
+    human_description:
+      en_US: Model
+      zh_Hans: 使用的模型
+      pt_BR: Model
+    llm_description: which Model to invoke
+    form: form
+extra:
+  python:
+    source: tools/llm.py
+```
+
+`model` パラメータの `scope` が `llm` であるため、ユーザーは `llm` 型のモデルのみを選択できます。これにより、先ほどの使用例は次のようになります。
+
+```python
+from collections.abc import Generator
+from typing import Any
+
+from dify_plugin import Tool
+from dify_plugin.entities.model.llm import LLMModelConfig
+from dify_plugin.entities.tool import ToolInvokeMessage
+from dify_plugin.entities.model.message import SystemPromptMessage, UserPromptMessage
+
+class LLMTool(Tool):
+    def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage]:
+        response = self.session.model.llm.invoke(
+            model_config=tool_parameters.get('model'),
+            prompt_messages=[
+                SystemPromptMessage(
+                    content='you are a helpful assistant'
+                ),
+                UserPromptMessage(
+                    content=tool_parameters.get('prompt')
+                )
+            ],
+            stream=True
+        )
+
+        for chunk in response:
+            if chunk.delta.message:
+                assert isinstance(chunk.delta.message.content, str)
+                yield self.create_text_message(text=chunk.delta.message.content)
+```
+
+## Summary の呼び出し
+
+このインターフェースは、現在のワークスペース内のシステムモデルを使用してテキストを要約します。
+
+### エントリーポイント
+
+```python
+    self.session.model.summary
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self, text: str, instruction: str,
+    ) -> str:
+```
+
+- **`text`**: 要約するテキストです。
+- **`instruction`**: 追加の指示で、要約のスタイルを制御できます。
+
+## TextEmbedding の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.text_embedding
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self,
+        model_config: TextEmbeddingModelConfig,
+        texts: list[str],
+        input_type: EmbeddingInputType = EmbeddingInputType.QUERY,
+    ) -> TextEmbeddingResult:
+        pass
+```
+
+## Rerank の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.rerank
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self, model_config: RerankModelConfig, docs: list[str], query: str
+    ) -> RerankResult:
+        pass
+```
+
+## TTS の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.tts
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self, model_config: TTSModelConfig, content_text: str
+    ) -> Generator[bytes, None, None]:
+        pass
+```
+
+`tts` インターフェースが返す `bytes` ストリームは `mp3` 音声バイトストリームであり、各イテレーションで完全な音声セグメントが返されます。より高度な処理を行うには、適切な音声ライブラリを選択してください。
+
+## Speech2Text の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.speech2text
+```
+
+### インターフェース
+
+```python
+    def invoke(
+        self, model_config: Speech2TextModelConfig, file: IO[bytes]
+    ) -> str:
+        pass
+```
+
+ここで `file` は `mp3` 形式でエンコードされた音声ファイルです。
+
+## Moderation の呼び出し
+
+### エントリーポイント
+
+```python
+    self.session.model.moderation
+```
+
+### インターフェース
+
+```python
+    def invoke(self, model_config: ModerationModelConfig, text: str) -> bool:
+        pass
+```
+
+戻り値が `true` の場合、`text` に機密コンテンツが含まれていることを示します。
+
+## 関連リソース
+
+- [Dify サービスの逆呼び出し](/ja/3.14.x/develop/plugins/features-and-specs/advanced-development/reverse-invocation) - 逆呼び出しの基本概念を理解する
+- [アプリの逆呼び出し](/ja/3.14.x/develop/plugins/features-and-specs/advanced-development/reverse-invocation-app) - プラットフォーム内でアプリを呼び出す方法を学ぶ
+- [ツールの逆呼び出し](/ja/3.14.x/develop/plugins/features-and-specs/advanced-development/reverse-invocation-tool) - 他のプラグインを呼び出す方法を学ぶ
+- [モデルプラグイン開発ガイド](/ja/3.14.x/develop/plugins/dev-guides-and-walkthroughs/creating-new-model-provider) - カスタムモデルプラグインの開発方法を学ぶ
+- [モデル設計ルール](/ja/3.14.x/develop/plugins/features-and-specs/plugin-types/model-designing-rules) - モデルプラグインの設計原則を理解する
+
+{/*
+Contributing Section
+DO NOT edit this section!
+It will be automatically generated by the script.
+*/}
+
+---
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/features-and-specs/advanced-development/reverse-invocation-model.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)

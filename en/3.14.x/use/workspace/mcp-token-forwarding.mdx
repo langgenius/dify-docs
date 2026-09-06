@@ -1,0 +1,63 @@
+---
+title: Forward User Identity to MCP Servers
+---
+
+By default, Dify calls an [MCP server](/en/3.14.x/use/workspace/tools) with a single, fixed workspace-level credential — every caller looks the same to the server. With **identity forwarding** turned on, each call also carries a token for the user who is *currently running the workflow*, so the MCP server can act on behalf of that real user (per-user authorization, auditing, and data scoping).
+
+<Note>
+  This page covers how to enable forwarding and what you need first. For the trust model and the full identity-provider / MCP-server requirements, see [MCP User-Identity Forwarding](/en/3.14.x/administer/sso/mcp-identity-forwarding).
+</Note>
+
+## Requirements
+
+Before you enable forwarding, make sure the following are in place:
+
+- **Enterprise edition with OIDC or OAuth2 SSO** configured for the workspace (SAML is not supported).
+- **Your identity provider issues a refresh token** at login, so Dify can mint a per-call token for each user.
+- **Your MCP server validates the forwarded token** against the same identity provider and rejects unauthenticated requests.
+
+<Note>
+  These are summarized here. For the complete requirements — the shared-issuer rule, how the token audience is handled, and exactly what your MCP server must verify — follow the setup in [MCP User-Identity Forwarding](/en/3.14.x/administer/sso/mcp-identity-forwarding).
+</Note>
+
+## Enable forwarding
+
+<Steps>
+  <Step title="Enforce OIDC or OAuth2 SSO">
+    Configure and enforce workspace SSO as OIDC or OAuth2. See [Configure SSO Authentication](/en/3.14.x/administer/sso/introduction).
+  </Step>
+  <Step title="Have each user sign in via SSO once">
+    Each user must sign in through SSO at least once so Dify can later obtain per-call tokens on their behalf. Console/workspace users and published-Web-App end users are both handled automatically.
+  </Step>
+  <Step title="Turn on the toggle for the MCP provider">
+    Go to **Tools → MCP**, select the provider, click **Edit**, enable **Forward user identity**, and save.
+
+    The toggle appears only when SSO is enforced for sign-in (it is hidden on community editions and when SSO is not configured). It is **per provider**, so an admin decides in one place which MCP servers receive caller identity.
+  </Step>
+  <Step title="Verify">
+    Run any workflow that calls the provider and confirm the MCP server receives the forwarded token and that it represents the running user.
+  </Step>
+</Steps>
+
+## How outbound calls change
+
+When forwarding is active, Dify adds a dedicated header to each request to the MCP server, alongside (not replacing) any credential already configured on the provider:
+
+```
+X-Dify-SSO-Token: <token representing the running user>
+```
+
+Your MCP server reads this header and validates the token. See [MCP User-Identity Forwarding](/en/3.14.x/administer/sso/mcp-identity-forwarding#requirements-for-your-mcp-server) for what it must check.
+
+<Note>
+  Forwarding is **not supported** for Service API calls or scheduled (Cron) runs, which have no interactive user — don't rely on it for those execution paths.
+</Note>
+
+## Troubleshooting
+
+| Situation | What to do |
+| --- | --- |
+| The running user has never signed in via SSO, or their session can no longer be refreshed | Ask the user to (re-)sign in via SSO |
+| SSO is not configured or disabled | Configure SSO in the admin console |
+
+For the supported caller matrix and more detail, see [MCP User-Identity Forwarding](/en/3.14.x/administer/sso/mcp-identity-forwarding).

@@ -1,0 +1,594 @@
+---
+title: データプッシュデータ辞書
+description: Dify Enterprise がデータプッシュ機能を通じて発出するすべてのテレメトリシグナルのフィールドレベルリファレンス
+---
+
+Dify Enterprise がデータプッシュを通じて発出するすべてのテレメトリシグナルのフィールドレベルリファレンスです。プッシュサービスの設定と運用は [データプッシュ](/ja/3.14.x/administer/data-push) を参照してください。
+
+## クイック検索とトラブルシューティングガイド
+
+すべてのテーブルを読む必要はありません。可観測性の目標に合ったシグナル層に直接ジャンプしてください。
+
+### シナリオとシグナルのマッピング表
+
+| シナリオまたはビジネスニーズ | 優先シグナル | ターゲットプラットフォーム | シグナル・イベントの例 |
+| :--- | :--- | :--- | :--- |
+| 総リクエスト数、成功率、エラー率、トークン消費 | `Metrics`（Counter） | Prometheus / Grafana | `dify.requests.total`、`dify.tokens.total` |
+| システムスループット、レイテンシ分布（P50/P95/P99） | `Metrics`（Histogram） | Prometheus / Grafana | `dify.workflow.duration`、`dify.message.time_to_first_token` |
+| Workflow が遅くなった理由、ボトルネックノード、エラーの特定 | `Traces`（Spans） | Jaeger / Tempo | `dify.workflow.run`、`dify.node.execution` |
+| 特定の実行の詳細な入出力、ツールパラメータ、検索結果 | `Structured Logs` | Loki / Elasticsearch | `span_detail`、`dify.tool.execution` |
+
+### テレメトリデータフローとルーティング
+
+Dify がエクスポートするすべてのテレメトリシグナルは OpenTelemetry 仕様に完全に準拠しています。標準の OTel Collector で分割・ルーティングできます：
+
+```text
+Dify Enterprise テレメトリエンジン（OTel Exporter）
+ ├── Metrics  ──► Prometheus Exporter ──► Prometheus / Grafana Dashboard
+ ├── Traces   ──► OTel / OTLP gRPC   ──► Jaeger / Grafana Tempo
+ └── Logs     ──► Pod 標準出力（JSON）──► 独自のログコレクター ──► Loki / Elasticsearch
+```
+
+---
+
+## 転送ルールとリソース属性
+
+### リソース属性
+
+すべてのエクスポートされた OTel シグナルに付加されるグローバル環境メタデータ：
+
+| 属性 | タイプ | 例 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `service.name` | string | `dify` | テレメトリデータを生成したサービスの名前 |
+| `host.name` | string | `dify-api-7f8b` | 生成インスタンスのホストまたは Pod 識別子 |
+
+### 共通の追跡・エンティティ識別属性
+
+Span では `dify.` プレフィックス付きの形式を使用します。指標ラベルとログの相関キー（`trace_id`、`span_id`、`tenant_id`、`user_id`）はプレフィックスなしの形式です。2 つの名称を併記した行は両形式が存在するフィールドです。
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `tenant_id` / `dify.tenant_id` | string | テナント識別子 |
+| `app_id` / `dify.app_id` | string | アプリケーション識別子。指標とログのフィルタリングの主要ディメンション |
+| `dify.workflow.id` | string | Workflow 定義 ID |
+| `dify.workflow.run_id` | string | 単一 Workflow 実行インスタンスの一意 ID |
+| `dify.message.id` | string | 一意のメッセージ ID |
+| `dify.conversation.id` | string | 会話コンテキスト ID（オプション） |
+| `trace_id` / `dify.trace_id` | string | OTel 関連 Trace ID（32 文字の 16 進数文字列） |
+| `span_id` | string | OTel Span ID（16 文字の 16 進数文字列） |
+| `user_id` / `gen_ai.user.id` | string | リクエストをトリガーしたエンドユーザー識別子（オプション） |
+
+### OTel と Prometheus の命名規則
+
+OTel シグナル名は、Prometheus に取り込まれるとアンダースコア形式に自動変換されます。Counter には `_total` サフィックスが追加され、Histogram は `_bucket`、`_sum`、`_count` のシリーズを生成します。Histogram には単位サフィックスも付きます（単位が `s` の指標は `_seconds`）。
+
+以下の表は一般的な例を示しています。その他の指標も同じ規則に従います。
+
+| OTel 名 | Prometheus クエリ名 |
+| :--- | :--- |
+| `dify.requests.total` | `dify_requests_total` |
+| `dify.errors.total` | `dify_errors_total` |
+| `dify.tokens.total` | `dify_tokens_total` |
+| `dify.workflow.duration` | `dify_workflow_duration_seconds_bucket` および関連する Histogram シリーズ |
+
+### Null 値とコンテンツ制御対象フィールド
+
+- **Null 値の動作**：値のない属性は Trace Span から省略されます。構造化ログの JSON 出力では明示的に `null` として表示されます。
+- **コンテンツゲーティング**：機密テキストを含み得る属性（Input/Output/Query/Prompt など）は、デプロイ側の `ENTERPRISE_INCLUDE_CONTENT` 設定でゲートされます。コンテンツプッシュが無効（デフォルト）の場合、元の値は `null` ではなく参照文字列（例：`ref:{id_type}={uuid}`）に置き換えられます。
+- **高カーディナリティの警告**：`tenant_id`、`app_id`、`trace_id` は高カーディナリティのディメンションです。無制限のテキストフィールドを Prometheus ラベルとして保存しないでください。
+
+---
+
+## トレースとスパン
+
+トレースは、単一の呼び出しの完全な時系列とネスト構造を示します。OTel `trace_id` はビジネス実行 ID から決定的に導出され、同一実行のすべてのシグナルで共有されます。Jaeger または Tempo ではこの `trace_id` で検索します。
+
+`dify.trace_id` 属性は元のビジネス UUID（ワークフロー実行 ID など）を保持し、ビジネスデータとの結合に使用します。
+
+### dify.workflow.run
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.trace_id` | string | ビジネス Trace ID（Workflow 実行 ID） |
+| `dify.tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.workflow.id` | string | Workflow 定義 ID |
+| `dify.workflow.run_id` | string | この実行の一意 ID |
+| `dify.workflow.status` | string | `succeeded`、`failed`、`stopped` など |
+| `dify.workflow.error` | string | 失敗時のエラーメッセージ |
+| `dify.workflow.elapsed_time` | float | 総実行時間（秒） |
+| `dify.invoke_from` | string | `api`、`webapp`、`debug` |
+| `dify.conversation.id` | string | 会話 ID（オプション） |
+| `dify.message.id` | string | メッセージ ID（オプション） |
+| `dify.invoked_by` | string | 実行をトリガーしたユーザー ID |
+| `gen_ai.usage.total_tokens` | int | すべてのノードの総トークン数（オプション） |
+| `gen_ai.user.id` | string | エンドユーザー識別子（オプション） |
+| `dify.parent.trace_id` | string | 親 Workflow Trace ID（オプション） |
+| `dify.parent.workflow.run_id` | string | 親 Workflow 実行 ID（オプション） |
+| `dify.parent.node.execution_id` | string | 親ノード実行 ID（オプション） |
+| `dify.parent.app.id` | string | 親アプリケーション ID（オプション） |
+
+### dify.node.execution
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.trace_id` | string | ビジネス Trace ID |
+| `dify.tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.workflow.id` | string | Workflow 定義 ID |
+| `dify.workflow.run_id` | string | Workflow 実行 ID |
+| `dify.message.id` | string | メッセージ ID（オプション） |
+| `dify.conversation.id` | string | 会話 ID（オプション） |
+| `dify.node.execution_id` | string | 一意のノード実行 ID |
+| `dify.node.id` | string | Workflow グラフ内のノード ID |
+| `dify.node.type` | string | ノードタイプ（付録参照） |
+| `dify.node.title` | string | 表示タイトル |
+| `dify.node.status` | string | `succeeded`、`failed` |
+| `dify.node.error` | string | 失敗時のエラーメッセージ |
+| `dify.node.elapsed_time` | float | 実行時間（秒） |
+| `dify.node.index` | int | 実行順序インデックス |
+| `dify.node.predecessor_node_id` | string | このノードをトリガーしたノードの ID |
+| `dify.node.iteration_id` | string | イテレーション ID（オプション） |
+| `dify.node.loop_id` | string | ループ ID（オプション） |
+| `dify.node.parallel_id` | string | 並列ブランチ ID（オプション） |
+| `dify.node.invoked_by` | string | 実行をトリガーしたユーザー ID |
+| `gen_ai.usage.input_tokens` | int | プロンプトトークン数（LLM ノードのみ） |
+| `gen_ai.usage.output_tokens` | int | 補完トークン数（LLM ノードのみ） |
+| `gen_ai.usage.total_tokens` | int | 総トークン数（LLM ノードのみ） |
+| `gen_ai.request.model` | string | LLM モデル名（LLM ノードのみ） |
+| `gen_ai.provider.name` | string | LLM プロバイダー名（LLM ノードのみ） |
+| `gen_ai.user.id` | string | エンドユーザー識別子（オプション） |
+
+### dify.node.execution.draft
+
+`dify.node.execution` と同じ属性を持ちますが、Studio キャンバスでの単一ノードテストまたはドラフトプレビューの実行時にのみ生成されます。本番テレメトリとテスト実行の分離に使用します。
+
+---
+
+## 指標（Metrics）
+
+### カウンター（Counter）
+
+すべてのカウンターは累積的で、サンプリングの対象外です。トレースのサンプリングレート（`ENTERPRISE_OTEL_SAMPLING_RATE`、[環境変数リファレンス](/ja/3.14.x/deploy/advanced-configuration/environment-variables) を参照）はカウンターに影響しません。
+
+#### トークンカウンター
+
+| 指標 | 単位 | 説明 |
+| :--- | :--- | :--- |
+| `dify.tokens.total` | `{token}` | 消費した総トークン数 |
+| `dify.tokens.input` | `{token}` | 入力（プロンプト）トークン数 |
+| `dify.tokens.output` | `{token}` | 出力（補完）トークン数 |
+
+**ラベル**：`tenant_id`、`app_id`、`operation_type`、`model_provider`、`model_name`、`node_type`（`node_execution` の場合のみ）
+
+<Warning>
+ワークフローレベルの `dify.tokens.total` にはすべての `node_execution` のトークンが含まれています。二重カウントを避けるために `operation_type` でフィルタリングしてください。
+</Warning>
+
+**トークン階層とクエリパターン**
+
+トークン指標は複数のレベルで発出されます。階層構造を理解することで二重カウントを防ぎます：
+
+```text
+アプリケーションレベルの合計
+├── workflow          ← すべての node_execution トークンの合計（同時に加算しないこと）
+│   └── node_execution ← ノードごとの詳細
+├── message           ← 独立（非ワークフローチャットアプリのみ）
+├── rule_generate     ← 独立した補助 LLM 呼び出し
+├── code_generate     ← 独立した補助 LLM 呼び出し
+├── structured_output ← 独立した補助 LLM 呼び出し
+└── instruction_modify← 独立した補助 LLM 呼び出し
+```
+
+**重要なルール**：`workflow` トークンにはすでにすべての `node_execution` トークンが含まれています。両方を加算しないでください。
+
+- **トークン指標で使用可能なラベル**： `tenant_id`、`app_id`、`operation_type`、`model_provider`、`model_name`、`node_type`。
+- **アプリケーション名** はトレース側のみです。「Span 付随ログ」の `dify.app.name` として提供され、指標ラベルには含まれません。指標クエリには `app_id` を使用してください。
+- **コスト**：ノード付随ログの `dify.node.total_price` フィールドのみで提供されます（「Span 付随ログ」を参照）。コストの指標はありません。
+
+#### リクエストカウンター
+
+| 指標 | 単位 | 説明 |
+| :--- | :--- | :--- |
+| `dify.requests.total` | `{request}` | 総操作数 |
+
+`type` ラベルが操作の種類を示します（例：`dify_requests_total{type="workflow"}`）。その他のラベルは `type` によって異なります：
+
+| タイプ | 追加ラベル |
+| :--- | :--- |
+| `workflow` | `tenant_id`、`app_id`、`status`、`invoke_from` |
+| `node` | `tenant_id`、`app_id`、`node_type`、`model_provider`、`model_name`、`status` |
+| `draft_node` | `tenant_id`、`app_id`、`node_type`、`model_provider`、`model_name`、`status` |
+| `message` | `tenant_id`、`app_id`、`model_provider`、`model_name`、`status`、`invoke_from` |
+| `tool` | `tenant_id`、`app_id`、`tool_name` |
+| `moderation` | `tenant_id`、`app_id` |
+| `suggested_question` | `tenant_id`、`app_id`、`model_provider`、`model_name` |
+| `dataset_retrieval` | `tenant_id`、`app_id` |
+| `generate_name` | `tenant_id`、`app_id` |
+| `prompt_generation` | `tenant_id`、`app_id`、`operation_type`、`model_provider`、`model_name`、`status` |
+
+#### エラーカウンター
+
+| 指標 | 単位 | 説明 |
+| :--- | :--- | :--- |
+| `dify.errors.total` | `{error}` | 総失敗操作数 |
+
+エラーカウンターも同じ `type` ラベルを使用します。その他のラベルは `type` によって異なります：
+
+| タイプ | 追加ラベル |
+| :--- | :--- |
+| `workflow` | `tenant_id`、`app_id` |
+| `node` | `tenant_id`、`app_id`、`node_type`、`model_provider`、`model_name` |
+| `draft_node` | `tenant_id`、`app_id`、`node_type`、`model_provider`、`model_name` |
+| `message` | `tenant_id`、`app_id`、`model_provider`、`model_name` |
+| `tool` | `tenant_id`、`app_id`、`tool_name` |
+| `prompt_generation` | `tenant_id`、`app_id`、`operation_type`、`model_provider`、`model_name` |
+
+#### その他のカウンター
+
+| 指標 | 単位 | ラベル |
+| :--- | :--- | :--- |
+| `dify.feedback.total` | `{feedback}` | `tenant_id`、`app_id`、`rating` |
+| `dify.dataset.retrievals.total` | `{retrieval}` | `tenant_id`、`app_id`、`dataset_id`、`embedding_model_provider`、`embedding_model`、`rerank_model_provider`、`rerank_model` |
+| `dify.app.created.total` | `{app}` | `tenant_id`、`app_id`、`mode` |
+| `dify.app.updated.total` | `{app}` | `tenant_id`、`app_id` |
+| `dify.app.deleted.total` | `{app}` | `tenant_id`、`app_id` |
+
+### ヒストグラム（Histogram）
+
+<Note>
+Counter は平均値しか計算できませんが、極端な値によって平均値は歪められます。Histogram は **P50 / P95 / P99 パーセンタイル** の計算をサポートし、実際の分布をより正確に表現します。
+
+Prometheus では各 Histogram は `_bucket`、`_sum`、`_count` の 3 つのシリーズに展開されます。低トラフィックの時間ウィンドウでは P95/P99 が `NaN` を返す場合があります。その場合はクエリウィンドウを広げてください。TTFT やツール呼び出しなど、レイテンシが 5 秒以内に集中する場合は、パーセンタイルの精度に限界があります。より高い精度で評価するには、クエリウィンドウを延長するか、bucket の設定について Dify チームにお問い合わせください。
+</Note>
+
+| 指標 | 単位 | ラベル |
+| :--- | :--- | :--- |
+| `dify.workflow.duration` | `s` | `tenant_id`、`app_id`、`status` |
+| `dify.node.duration` | `s` | `tenant_id`、`app_id`、`node_type`、`model_provider`、`model_name`、`plugin_name` |
+| `dify.message.duration` | `s` | `tenant_id`、`app_id`、`model_provider`、`model_name` |
+| `dify.message.time_to_first_token` | `s` | `tenant_id`、`app_id`、`model_provider`、`model_name` |
+| `dify.tool.duration` | `s` | `tenant_id`、`app_id`、`tool_name` |
+| `dify.prompt_generation.duration` | `s` | `tenant_id`、`app_id`、`operation_type`、`model_provider`、`model_name` |
+
+---
+
+## 構造化ログ
+
+構造化ログは詳細なビジネスデータを提供します。ログは 2 種類に分類されます：Span 付随ログと独立ビジネスログ。
+
+<Note>
+`ENTERPRISE_OTEL_SAMPLING_RATE` は、Jaeger や Tempo などの Trace バックエンドに送信される Span の数だけに影響します。構造化ログ（`span_detail`、`metric_only`）は常に 100% の頻度で Pod の標準出力に書き込まれ、サンプリングレートの影響を受けません。
+</Note>
+
+### Span 付随ログ
+
+シグナルタイプ：`span_detail`。これらのログは Trace Span に密接に結合されており（`trace_id` と `span_id` を共有）、コンテンツ制御対象の詳細なコンテキストを含みます。
+
+#### dify.workflow.run 付随ログ
+
+**共通属性**： すべての Span 属性（トレースセクション参照）に加えて：
+
+**イベント属性**：
+
+- `dify.event.name`：`dify.workflow.run`
+- `dify.event.signal`：`span_detail`
+- `trace_id`、`span_id`、`tenant_id`、`user_id`
+
+| 追加属性 | タイプ | 常に存在 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `dify.app.name` | string | いいえ | アプリケーション表示名 |
+| `dify.workspace.name` | string | いいえ | ワークスペース表示名 |
+| `dify.workflow.version` | string | はい | Workflow 定義バージョン |
+| `dify.workflow.inputs` | string/JSON | はい | 入力パラメータ（コンテンツゲート） |
+| `dify.workflow.outputs` | string/JSON | はい | 出力結果（コンテンツゲート） |
+| `dify.workflow.query` | string | いいえ | ユーザークエリテキスト（コンテンツゲート） |
+
+#### dify.node.execution および dify.node.execution.draft 付随ログ
+
+**共通属性**： すべての Span 属性（トレースセクション参照）に加えて：
+
+**イベント属性**：
+
+- `dify.event.name`：`dify.node.execution` または `dify.node.execution.draft`
+- `dify.event.signal`：`span_detail`
+- `trace_id`、`span_id`、`tenant_id`、`user_id`
+
+| 追加属性 | タイプ | 常に存在 | 説明 |
+| :--- | :--- | :--- | :--- |
+| `dify.app.name` | string | いいえ | アプリケーション表示名 |
+| `dify.workspace.name` | string | いいえ | ワークスペース表示名 |
+| `dify.invoke_from` | string | いいえ | 呼び出し元 |
+| `gen_ai.tool.name` | string | いいえ | ツール名（ツールノードのみ） |
+| `dify.node.total_price` | float | いいえ | コスト（LLM ノードのみ） |
+| `dify.node.currency` | string | いいえ | 通貨コード（LLM ノードのみ） |
+| `dify.node.iteration_index` | int | いいえ | イテレーションインデックス（イテレーションノード） |
+| `dify.node.loop_index` | int | いいえ | ループインデックス（ループノード） |
+| `dify.plugin.name` | string | いいえ | プラグイン名（ツール・ナレッジノード） |
+| `dify.credential.name` | string | いいえ | 認証情報名（プラグインノード） |
+| `dify.credential.id` | string | いいえ | 認証情報 ID（プラグインノード） |
+| `dify.dataset.ids` | JSON array | いいえ | データセット ID（ナレッジノード） |
+| `dify.dataset.names` | JSON array | いいえ | データセット名（ナレッジノード） |
+| `dify.node.inputs` | string/JSON | はい | ノード入力（コンテンツゲート） |
+| `dify.node.outputs` | string/JSON | はい | ノード出力（コンテンツゲート） |
+| `dify.node.process_data` | string/JSON | いいえ | 処理データ（コンテンツゲート） |
+
+### 独立ログ
+
+Trace Span を持たないログです。シグナルタイプは `metric_only` で、イベントは指標とこのログのみを生成し、付随する Span はありません。
+
+#### dify.message.run
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.message.run` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID（32 文字の 16 進数） |
+| `span_id` | string | OTel Span ID（16 文字の 16 進数） |
+| `tenant_id` | string | テナント識別子 |
+| `user_id` | string | ユーザー識別子（オプション） |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.conversation.id` | string | 会話 ID（オプション） |
+| `dify.workflow.run_id` | string | Workflow 実行 ID（オプション） |
+| `dify.invoke_from` | string | `service-api`、`web-app`、`debugger`、`explore` |
+| `gen_ai.provider.name` | string | LLM プロバイダー |
+| `gen_ai.request.model` | string | LLM モデル |
+| `gen_ai.usage.input_tokens` | int | 入力トークン数 |
+| `gen_ai.usage.output_tokens` | int | 出力トークン数 |
+| `gen_ai.usage.total_tokens` | int | 総トークン数 |
+| `dify.message.status` | string | `succeeded`、`failed` |
+| `dify.message.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.message.duration` | float | 所要時間（秒） |
+| `dify.message.time_to_first_token` | float | 最初のトークンまでの時間 / TTFT（秒） |
+| `dify.message.inputs` | string/JSON | 入力（コンテンツゲート） |
+| `dify.message.outputs` | string/JSON | 出力（コンテンツゲート） |
+
+#### dify.tool.execution
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.tool.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.tool.name` | string | ツール名 |
+| `dify.tool.duration` | float | 所要時間（秒） |
+| `dify.tool.status` | string | `succeeded`、`failed` |
+| `dify.tool.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.tool.inputs` | string/JSON | 入力（コンテンツゲート） |
+| `dify.tool.outputs` | string/JSON | 出力（コンテンツゲート） |
+| `dify.tool.parameters` | string/JSON | パラメータ（コンテンツゲート） |
+| `dify.tool.config` | string/JSON | 設定（コンテンツゲート） |
+
+#### dify.moderation.check
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.moderation.check` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.moderation.type` | string | `input`、`output` |
+| `dify.moderation.action` | string | `pass`、`block`、`flag` |
+| `dify.moderation.flagged` | boolean | コンテンツがフラグされたかどうか |
+| `dify.moderation.categories` | JSON array | フラグをトリガーしたカテゴリ |
+| `dify.moderation.query` | string | コンテンツ（コンテンツゲート） |
+
+#### dify.suggested_question.generation
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.suggested_question.generation` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.suggested_question.count` | int | 生成された質問数 |
+| `dify.suggested_question.duration` | float | 所要時間（秒） |
+| `dify.suggested_question.status` | string | `succeeded`、`failed` |
+| `dify.suggested_question.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.suggested_question.questions` | JSON array | 生成された質問（コンテンツゲート） |
+
+#### dify.dataset.retrieval
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.dataset.retrieval` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.dataset.id` | string | データセット識別子 |
+| `dify.dataset.name` | string | データセット名 |
+| `dify.dataset.embedding_providers` | JSON array | 埋め込みモデルプロバイダー（データセットごとに 1 つ） |
+| `dify.dataset.embedding_models` | JSON array | 埋め込みモデル（データセットごとに 1 つ） |
+| `dify.retrieval.rerank_provider` | string | 再ランクモデルプロバイダー |
+| `dify.retrieval.rerank_model` | string | 再ランクモデル名 |
+| `dify.retrieval.query` | string | 検索クエリ（コンテンツゲート） |
+| `dify.retrieval.document_count` | int | 検索されたドキュメント数 |
+| `dify.retrieval.duration` | float | 所要時間（秒） |
+| `dify.retrieval.status` | string | `succeeded`、`failed` |
+| `dify.retrieval.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.dataset.documents` | JSON array | ドキュメント（コンテンツゲート） |
+
+#### dify.generate_name.execution
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.generate_name.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.conversation.id` | string | 会話識別子 |
+| `dify.generate_name.duration` | float | 所要時間（秒） |
+| `dify.generate_name.status` | string | `succeeded`、`failed` |
+| `dify.generate_name.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.generate_name.inputs` | string/JSON | 入力（コンテンツゲート） |
+| `dify.generate_name.outputs` | string | 生成された名前（コンテンツゲート） |
+
+#### dify.prompt_generation.execution
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.prompt_generation.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.prompt_generation.operation_type` | string | 操作タイプ（付録参照） |
+| `gen_ai.provider.name` | string | LLM プロバイダー |
+| `gen_ai.request.model` | string | LLM モデル |
+| `gen_ai.usage.input_tokens` | int | 入力トークン数 |
+| `gen_ai.usage.output_tokens` | int | 出力トークン数 |
+| `gen_ai.usage.total_tokens` | int | 総トークン数 |
+| `dify.prompt_generation.duration` | float | 所要時間（秒） |
+| `dify.prompt_generation.status` | string | `succeeded`、`failed` |
+| `dify.prompt_generation.error` | string | エラーメッセージ（失敗した場合） |
+| `dify.prompt_generation.instruction` | string | 指示（コンテンツゲート） |
+| `dify.prompt_generation.output` | string/JSON | 出力（コンテンツゲート） |
+
+#### dify.app.created
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.created` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.app.mode` | string | `chat`、`completion`、`agent-chat`、`workflow` |
+| `dify.app.created_at` | string | タイムスタンプ（ISO 8601） |
+
+#### dify.app.updated
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.updated` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.app.updated_at` | string | タイムスタンプ（ISO 8601） |
+
+#### dify.app.deleted
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.deleted` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.app.deleted_at` | string | タイムスタンプ（ISO 8601） |
+
+#### dify.feedback.created
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.feedback.created` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | テナント識別子 |
+| `dify.app_id` | string | アプリケーション識別子 |
+| `dify.message.id` | string | メッセージ識別子 |
+| `dify.feedback.rating` | string | `like`、`dislike`、`null` |
+| `dify.feedback.content` | string | フィードバックテキスト（コンテンツゲート） |
+| `dify.feedback.created_at` | string | タイムスタンプ（ISO 8601） |
+
+#### dify.telemetry.rehydration_failed
+
+テレメトリパイプラインの健全性を示す診断イベントです。バッファされたペイロードを再構築（rehydrate）できない場合に発出されます。継続的な発生はテレメトリデータの損失を示します。
+
+| 属性 | タイプ | 説明 |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.telemetry.rehydration_failed` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | テナント識別子 |
+| `dify.telemetry.error` | string | エラーメッセージ |
+| `dify.telemetry.payload_type` | string | ペイロードタイプ（付録参照） |
+| `dify.telemetry.correlation_id` | string | 相関 ID |
+
+---
+
+## コンテンツゲート属性
+
+以下のフィールドには、ユーザー入力、モデル出力、ドキュメントコンテンツ、ツールパラメータ、フィードバックテキストが含まれる場合があります。
+
+生の値が送信されるのは、デプロイ側でコンテンツプッシュ（`ENTERPRISE_INCLUDE_CONTENT`、デフォルト `false`。[環境変数リファレンス](/ja/3.14.x/deploy/advanced-configuration/environment-variables) を参照）が有効な場合のみです。無効の場合、これらの属性は `ref:{id_type}={uuid}` に置き換えられます。
+
+`id_type` は関連エンティティ名です（例：`workflow_run_id`、`node_execution_id`、`message_id`）。その ID で Dify データベースの該当レコードを照会すると、元のコンテンツを取得できます。
+
+| 属性 | シグナル |
+| :--- | :--- |
+| `dify.workflow.inputs` | `dify.workflow.run` |
+| `dify.workflow.outputs` | `dify.workflow.run` |
+| `dify.workflow.query` | `dify.workflow.run` |
+| `dify.node.inputs` | `dify.node.execution` |
+| `dify.node.outputs` | `dify.node.execution` |
+| `dify.node.process_data` | `dify.node.execution` |
+| `dify.message.inputs` | `dify.message.run` |
+| `dify.message.outputs` | `dify.message.run` |
+| `dify.tool.inputs` | `dify.tool.execution` |
+| `dify.tool.outputs` | `dify.tool.execution` |
+| `dify.tool.parameters` | `dify.tool.execution` |
+| `dify.tool.config` | `dify.tool.execution` |
+| `dify.moderation.query` | `dify.moderation.check` |
+| `dify.suggested_question.questions` | `dify.suggested_question.generation` |
+| `dify.retrieval.query` | `dify.dataset.retrieval` |
+| `dify.dataset.documents` | `dify.dataset.retrieval` |
+| `dify.generate_name.inputs` | `dify.generate_name.execution` |
+| `dify.generate_name.outputs` | `dify.generate_name.execution` |
+| `dify.prompt_generation.instruction` | `dify.prompt_generation.execution` |
+| `dify.prompt_generation.output` | `dify.prompt_generation.execution` |
+| `dify.feedback.content` | `dify.feedback.created` |
+
+`dify.node.execution.draft` のゲート対象フィールドは `dify.node.execution` と同じです。
+
+<Warning>
+本番環境では、デフォルトでコンテンツプッシュを無効にすることを推奨します。データ分類、アクセス制御、難読化要件、保持期間、監査義務を確認した上で、管理された環境で必要に応じて有効にしてください。
+</Warning>
+
+---
+
+## 付録
+
+### 操作タイプ
+
+`workflow`、`node_execution`、`message`、`rule_generate`、`code_generate`、`structured_output`、`instruction_modify`
+
+これらの値は、トークン指標の `operation_type` ラベルと `dify.prompt_generation.operation_type` に属します。リクエストとエラーのカウンターは別の `type` ラベルを使用します（値は「カウンター」を参照）。
+
+### ノードタイプ
+
+`start`、`end`、`answer`、`llm`、`knowledge-retrieval`、`knowledge-index`、`if-else`、`code`、`template-transform`、`question-classifier`、`http-request`、`tool`、`datasource`、`variable-aggregator`、`loop`、`iteration`、`parameter-extractor`、`assigner`、`document-extractor`、`list-operator`、`agent`、`trigger-webhook`、`trigger-schedule`、`trigger-plugin`、`human-input`
+
+### ワークフローステータス
+
+`running`、`succeeded`、`failed`、`stopped`、`partial-succeeded`、`paused`
+
+### ペイロードタイプ
+
+`workflow`、`node`、`message`、`tool`、`moderation`、`suggested_question`、`dataset_retrieval`、`generate_name`、`prompt_generation`、`app`、`feedback`
+
+### Invoke From の値
+
+- ワークフロー Span（`dify.workflow.run` の `dify.invoke_from`）：`api`、`webapp`、`debug`
+- メッセージログ（`dify.message.run` の `dify.invoke_from`）：`service-api`、`web-app`、`debugger`、`explore`
+
+### Null 値の動作
+
+- **Spans**：Null 値を持つ属性は省略されます。
+- **Logs**：Null 値を持つ属性は JSON 出力で `null` として表示されます。
+- **コンテンツゲートフィールド**：`null` に設定されるのではなく、参照文字列に置き換えられます。

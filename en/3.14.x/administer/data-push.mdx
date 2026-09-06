@@ -1,0 +1,178 @@
+---
+title: Push Telemetry to Your Observability Stack
+sidebarTitle: Data Push
+description: Stream Dify application metrics, token consumption, and user behavior to your own observability stack over the OpenTelemetry protocol
+---
+
+Stream application metrics, token consumption, and user behavior data from Dify to your own monitoring system, BI platform, or data warehouse over the OpenTelemetry (OTel) open standard.
+
+Consolidating this data across workspaces supports operations analysis, cost allocation, and compliance reporting.
+
+Configure the push in the Enterprise Dashboard, under **Data Push** in the sidebar. For field-level definitions of every exported signal, see the [Data Push Data Dictionary](/en/3.14.x/administer/data-push-data-dictionary).
+
+## Before You Start
+
+- An OpenTelemetry Collector reachable from the Dify deployment, with an OTLP receiver enabled for your chosen transport (by convention port `4318` for HTTP, `4317` for gRPC). The connection originates from the platform-managed Dify Enterprise Collector.
+- Access to the Enterprise Dashboard.
+
+## What Gets Pushed
+
+| Signal | Coverage | Answers questions such as |
+| :--- | :--- | :--- |
+| **Metrics** | Request count, error rate, token consumption, latency distribution, feedback count, retrieval count, application lifecycle | How is usage growing? Is the failure rate abnormal? Which application has the highest cost? |
+| **Traces** | `dify.workflow.run`, `dify.node.execution`, `dify.node.execution.draft` | Why did a workflow slow down? Which node is the latency bottleneck? Where exactly did an error occur? |
+| **Logs** (separate pipeline) | Message runs, tool calls, content moderation, knowledge retrieval, suggested questions, prompt generation details | What were the inputs, outputs, and context for a specific business operation? |
+
+<Note>
+Data Push transmits Metrics and Traces over OTLP. Logs are not pushed: structured event logs are written as JSON to the API/Worker Pod standard output.
+
+To make them searchable, deploy your own log collector (Promtail, Fluent Bit, or Vector) to ship Pod output to Loki or OpenSearch. That log pipeline is separate from the OTel Collector configured on this page.
+</Note>
+
+## Configure the Connection
+
+1. In the Enterprise Dashboard sidebar, open **Data Push**.
+2. Click **Parameter Config** in the top-right corner to open the **Parameter Configuration** dialog.
+3. Choose a **Configuration Mode**: **Unified** pushes Metrics and Traces to one endpoint (recommended when you run an OpenTelemetry Collector); **Separate** configures the **Traces** and **Metrics** tabs independently.
+4. Fill in the connection fields:
+    - **Endpoint URL**: the OpenTelemetry Collector address, with an `http://`, `https://`, `grpc://`, or `grpcs://` scheme (e.g. `http://otel-collector:4318`). An `https://` or `grpcs://` endpoint enables TLS; the scheme does not select the wire format, so set **Transport Protocol** to match your Collector's receiver.
+    - **Transport Protocol**: `http/protobuf` (recommended), `grpc` (higher throughput; suited to stable internal networks), or `http/json` (debugging only; lower performance).
+    - **Compression**: `gzip` (recommended) or `none`.
+    - **Timeout**: push timeout as a duration in seconds, e.g. `5s`.
+    - **Headers**: key-value pairs for authentication and similar needs (e.g. `Authorization: Bearer <token>`); click **Add Header** to add entries.
+    - **Advanced Settings** (for TLS endpoints): upload the **Certificate File (CA)**, the certificate of the CA that issued your Collector's server certificate (your own CA for self-signed certificates; the issuing public CA's certificate, such as the Let's Encrypt root, otherwise). It may be omitted only when **Skip Certificate Verification** is enabled (skipping verification is not recommended for production). For **Mutual TLS (mTLS)**, also upload the **Client Key File** and **Client Certificate File**.
+5. Click **Test Connectivity**. It validates the connection and reports the reason for any failure (unreachable host, invalid certificate, etc.).
+6. Click **Save Configuration** and confirm with **Confirm Restart and Apply**. If the service is running, saving restarts the push service and may briefly interrupt data transfer.
+
+<Note>
+For production, use a TLS endpoint and configure authentication headers.
+</Note>
+
+## Start and Stop the Push Service
+
+- **Start**: when stopped, click **Connect and Push Data** and confirm. The status changes to **Service Running**.
+- **Stop**: when running, click **Stop Push Service** and confirm. The status changes to **Service Stopped**; stopping interrupts data transfer.
+
+## Verify the Setup
+
+These checks assume your Collector already routes metrics to Prometheus and traces to Jaeger; if a query returns nothing, check that routing first. Prometheus stores OTel metric names in underscore form (`dify.requests.total` becomes `dify_requests_total`).
+
+1. On the **Data Push Configuration** page, confirm the status shows **Service Running**.
+2. Run a published workflow and confirm that `dify_requests_total{type="workflow"}` is queryable in Prometheus.
+3. Run a multi-node workflow and confirm that complete `dify.workflow.run` and `dify.node.execution` traces are visible in Jaeger.
+4. Debug a workflow in Studio (the Dify app-building workspace) and confirm `dify_requests_total{type="draft_node"}` in Prometheus and the `dify.node.execution.draft` span name in Jaeger.
+5. Verify that tool call, knowledge retrieval, and content moderation events appear correctly in the log platform (requires the stdout log pipeline described in What Gets Pushed).
+6. With content push disabled (the default; see Control Input/Output Content), verify that sensitive fields are replaced with `ref:{id_type}={uuid}`. Gated fields are listed in the [Data Push Data Dictionary](/en/3.14.x/administer/data-push-data-dictionary).
+
+<Note>
+The Operation Name dropdown in a Trace platform only lists Span names that the backend has already received. It does not pre-populate with all Span names the product supports.
+</Note>
+
+## Monitor the Push Service
+
+The **Data Push Configuration** page (opened from **Data Push** in the sidebar) shows the real-time service status by default.
+
+**Status 1: Service Stopped**
+
+- The page shows "Not connected. Please configure parameters and start the connection."
+- Click **Connect and Push Data** on the right to connect, or click **Parameter Config** in the top-right to begin configuration.
+
+**Status 2: Service Running**
+
+The page displays:
+
+- **Status indicator**: green light + **Service Running**.
+- **Connection Start Time**: when the current connection began (YYYY-MM-DD HH:mm:ss).
+- **Data statistics**: **Data Pushed** (real-time, MB/GB) and **UnPushed or Buffered Data** currently held in the buffer.
+- **Recent Data Push Log**: exception and network error logs reported by OpenTelemetry.
+
+**Status 3: Service Error**
+
+- **Status indicator**: orange light + **Service Error**. Check the **Recent Data Push Log** and fix the exception to avoid data loss.
+
+<Warning>
+Push uses an asynchronous mechanism and **does not affect the main request path**. When a push fails or the connection drops, data is held in a FIFO buffer and forwarded once connectivity is restored. The built-in Span queue holds **2,048 Spans** and flushes batches every 5 seconds. When the buffer is full, the newest data is dropped to prevent user-facing latency. Metrics and structured event logs use separate paths and are not subject to this queue limit.
+
+The page surfaces the scenarios that may cause data loss: push service errors, buffer overflow from a slow downstream consumer, or a service restart.
+</Warning>
+
+Review the status and logs here regularly, and configure alerts on your Collector side (e.g. connection drops, backlog exceeding a threshold) for timely response.
+
+## Control Input/Output Content
+
+Whether Input/Output content is included is controlled by `ENTERPRISE_INCLUDE_CONTENT`, an environment variable on the Dify API service (default `false`). Changing it takes effect after a redeploy; see the [environment variable reference](/en/3.14.x/deploy/advanced-configuration/environment-variables).
+
+- **Disabled (default)**: content fields are replaced with reference strings in the form `ref:{id_type}={uuid}`; metadata such as Message ID, user ID, and application ID is still pushed. Use the UUID to look up the corresponding record (workflow run, message) in the Dify database.
+- **Enabled**: request inputs and model outputs are included in the exported data.
+
+Keep content push disabled in any environment with strict data privacy requirements.
+
+## Plan for Production
+
+### Architecture and Responsibility Boundary
+
+The diagram below shows how the Dify Enterprise telemetry engine connects to your observability stack, along with the responsibility boundary:
+
+```text
+Dify API/Worker
+    ↓ OTLP gRPC (async, built-in buffer)
+Dify Enterprise Collector (platform-managed, receives and forwards)
+    ↓ OTLP (customer-configured endpoint)
+Customer OTel Collector (customer-managed)
+    ├──► Prometheus (scrapes /metrics) → Grafana
+    └──► Jaeger / Tempo (Traces)
+
+Dify API/Worker stdout (JSON event logs)
+    └──► your log collector (Promtail / Fluent Bit / Vector) ──► Loki / OpenSearch
+```
+
+1. **Dify API** generates business metrics, traces, and events. These are written to an internal buffer first and then forwarded asynchronously by the OTel SDK.
+2. **Dify Enterprise Collector** receives data over OTLP gRPC, applies batch and aggregation processors, and writes the push service's runtime status (connection time, bytes pushed, etc.) to the Enterprise DB for display in the Enterprise Dashboard.
+3. Its **Exporter** sends data to the customer-provided OpenTelemetry Collector. The destination endpoint, protocol, TLS, and authentication are determined by the Data Push configuration.
+4. The customer Collector routes data to Prometheus/Thanos (Metrics), Jaeger/Tempo (Traces), and similar backends. Grafana or enterprise BI tools query and visualize data from those backends.
+
+<Warning>
+**Responsibility boundary**: you do not need to modify Dify's internal buffer, OTel SDK, Enterprise Collector processors, or Enterprise DB.
+
+On your side, plan the destination Collector, backend storage, query and visualization, alerting, access control, and data retention policies.
+</Warning>
+
+### Size Your Collector
+
+Estimate your daily volume first:
+
+```text
+Daily Trace volume
+≈ production workflow runs + production node executions + draft node executions
+
+Daily business event volume
+≈ messages + tool calls + moderation checks + retrievals
++ suggested question generations + conversation name generations + prompt generations + feedback events
+```
+
+The following sizing targets apply to the **customer-side OTel Collector**, not the Dify Enterprise Collector.
+
+| Concurrency scale | Recommended customer Collector config | Key concerns |
+| :--- | :--- | :--- |
+| POC / small production | 1 replica (2 vCPU, 4 GB) | Validate the destination endpoint, data routing, and dashboard alignment. |
+| Department-scale production | 2 replicas (4 vCPU, 8 GB) with HA failover | Peak queue depth, export timeouts, reliable recovery during rolling upgrades. |
+| Enterprise high-concurrency | Horizontally scaled cluster with Kafka/RabbitMQ message buffering | Partition routing, rate limiting, cross-region failover, and durable queues. |
+
+In high-concurrency deployments, prefer the `grpc` protocol, and ensure the Collector has sufficient resources: a slow consumer causes platform-side buffer overflow and data loss.
+
+The concurrency thresholds vary significantly with Workflow complexity, node count, and message frequency. Treat these specifications as starting points and validate them with load tests using actual peak traffic before procurement.
+
+### Data Retention
+
+The following are recommended starting retention values for your observability platform (Dify does not manage storage; plan storage costs on your side):
+
+- Metrics: 15–30 days to start; extend to 90 days or longer for trend analysis.
+- Traces: 3–7 days to start.
+
+## Troubleshooting
+
+- **Cannot connect to the OpenTelemetry Collector**: check that the Endpoint URL is correct and the network is reachable. For a TLS endpoint, verify the CA certificate, client key, and client certificate are valid and in the correct format. Use **Test Connectivity** to see the specific error.
+- **Data push interrupted**: check the **Recent Data Push Log** for network instability or Collector errors. Verify the Collector is running and has not reached its ingestion limit.
+- **Backlog growing continuously**: the Collector is consuming data more slowly than it is produced, or network latency is high. Backlogged data is held in the buffer and forwarded once connectivity is restored; if the buffer fills up, new data is dropped. Increase the Collector's resources or scale out.
+- **Configuration save fails**: ensure all required fields are filled in. For a TLS endpoint, confirm that the certificate files have been uploaded successfully.
+- **Data loss**: can occur during a service error, buffer overflow, or system restart (this is intentional degradation to protect the main request path). If data loss is unacceptable, increase the Collector's processing capacity to avoid sustained backlog.

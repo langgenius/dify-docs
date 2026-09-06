@@ -1,0 +1,83 @@
+---
+title: オフラインデプロイメントガイド
+---
+
+> このページは先行公開版です。内容は今後予告なく更新される可能性があります。
+
+## オフラインデプロイメント
+
+オフライン環境では、以下2つのケースのネットワーク設定のどちらでもDifyをデプロイできます。
+
+1. **ホワイトリストを許可する**ケース
+2. **完全にネットワークから隔離されている**ケース
+
+以下の手順でDifyをデプロイしてください。
+
+## ホワイトリストドメイン
+ホワイトリストを設定する場合、以下のドメインがアクセス可能であることを確認してください。
+- https://marketplace.dify.ai
+- https://pypi.org
+
+## SSO トラフィックをプロキシ経由にする
+
+外部の ID プロバイダーでサインインする場合、enterprise サービスの SSO リクエストは標準の `HTTP_PROXY`、`HTTPS_PROXY`、`NO_PROXY` 環境変数に従います。対象は OIDC discovery、token、userinfo、JWKS のリクエストです。
+
+`enterprise.extraEnv` でこれらの変数を設定すると、プロバイダーのアドレスを個別に許可しなくても、出口プロキシ経由でアクセスできます：
+
+```yaml
+enterprise:
+  extraEnv:
+    - name: HTTPS_PROXY
+      value: "http://proxy.internal:3128"
+    - name: NO_PROXY
+      value: ".cluster.local,10.0.0.0/8"
+```
+
+## マーケットプレイスアクセスの無効化
+
+外部リクエストの失敗による問題を回避するため、マーケットプレイスへの接続を無効化します。
+
+```yaml
+  marketplace:
+    enabled: false # マーケットプレイスアクセスを無効化
+    url: "https://marketplace.dify.ai"
+    apiUrl: "https://marketplace.dify.ai"
+```
+
+## カスタムイメージリポジトリの設定
+
+ネットワークが `docker.io` にアクセスできない場合は、デフォルトのイメージリポジトリの代わりにカスタムイメージリポジトリを使用できます。
+
+```yaml
+plugin_connector:
+  gatewayImage: "nginx:1.29.4-alpine"
+  shaderImage: "gcr.io/kaniko-project/executor:latest"
+  busyBoxImage: "busybox:latest"
+  awsCliImage: "amazon/aws-cli:latest"
+  generatorConf: |
+    generator:
+      repo: langgenius
+      python:
+        pipMirror: ""
+        preCompile: true
+        versions:
+          python3.14:
+            langgenius: docker.io/langgenius/dify-ee-plugin-build-base-python-3.14:3.11.0
+          python3.13:
+            langgenius: docker.io/langgenius/dify-ee-plugin-build-base-python-3.13:3.11.0
+          python3.12:
+            langgenius: docker.io/langgenius/dify-ee-plugin-build-base-python-3.12:3.11.0
+```
+
+1. プライベートイメージに置き換える必要があるイメージは以下のとおりです。
+   - `gatewayImage`：プラグインゲートウェイサービスのイメージ
+   - `shaderImage`：プラグインビルド時に使用するシェーダーイメージ
+   - `busyBoxImage`：プラグイン実行時に使用する Busybox イメージ
+   - `awsCliImage`：AWS CLIツールのイメージ（AWSを使用しない場合は無視して構いません）
+   - `python3.xx`：プラグインのビルドに使用するベースイメージ
+
+2. `pipMirror` をカスタムのミラーソースURLに置き換えてください。
+
+3. イメージをプライベートイメージリポジトリに同期してください。
+   同期方法: [プライベートレジストリへのイメージ同期](/ja/3.14.x/deploy/advanced-configuration/container-registry#syncing-images-to-a-private-registry)。
+

@@ -1,0 +1,227 @@
+---
+title: Agent Sandbox Deployment
+description: Install the agent-sandbox controller, configure the Helm values, and choose between dedicated-Pod and shared sandbox modes
+---
+
+While executing tasks, an Agent runs commands and reads/writes files inside an isolated sandbox environment. In a Kubernetes deployment, this capability consists of the following components:
+
+- `agent-backend`: the Agent runtime service, deployed by the Helm Chart.
+- `sandbox-gateway`: the sandbox control plane responsible for sandbox allocation and reclamation, deployed by the Helm Chart.
+- `agent-sandbox` controller: the official Kubernetes community project [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox), which provides the sandbox CRDs and controller. It must be installed in the cluster in advance.
+
+Each Agent session gets a dedicated sandbox Pod. A warm pool keeps allocation fast, and Pods are automatically reclaimed when the session ends or idles out. If your cluster does not allow installing third-party CRDs and controllers, use the [shared sandbox mode](#alternative-without-agent-sandbox-shared-sandbox-mode) instead, which requires no cluster-level changes.
+
+## Install the agent-sandbox controller
+
+Installation requires cluster admin privileges and is performed once per cluster:
+
+```bash
+export VERSION="v0.5.2"
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${VERSION}/sandbox-with-extensions.yaml
+```
+
+Confirm the CRDs are ready:
+
+```bash
+kubectl get crd | grep agents.x-k8s.io
+```
+
+The following 4 CRDs should be present:
+
+- `sandboxes.agents.x-k8s.io`
+- `sandboxclaims.extensions.agents.x-k8s.io`
+- `sandboxtemplates.extensions.agents.x-k8s.io`
+- `sandboxwarmpools.extensions.agents.x-k8s.io`
+
+For air-gapped environments, download the manifest above and import it into your internal network, sync the controller image to your private registry, and replace the image references accordingly.
+
+## Helm Chart configuration
+
+Both `agentBackend.enabled` and `sandboxGateway.enabled` default to `true`, so a standard deployment enables the sandbox capability out of the box, provided the controller installation above has been completed. Run `helm show values dify/dify` to see all available options. Below is an example of the Agent Sandbox related configuration:
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: true
+  provision:
+    warmPoolReplicas: 1
+    requestsCpu: "250m"
+    requestsMemory: "256Mi"
+    limitsCpu: "1"
+    limitsMemory: "1Gi"
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- `agentBackend.enabled`
+  - Whether to deploy agent-backend. When disabled, the Agent app is not available in the console.
+- `agentBackend.serverSecretKey`
+  - Encryption key for Agent tool callback tokens: a base64url-encoded 32-byte random value. The default value must be replaced in production. Generate one with:
+
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+
+- `sandboxGateway.enabled`
+  - Whether to enable the dedicated-Pod sandbox mode. When disabled, the deployment automatically falls back to the [shared sandbox mode](#alternative-without-agent-sandbox-shared-sandbox-mode) with no extra configuration.
+- `agentRuntime.image`
+  - The sandbox runtime image, shared by both the dedicated-Pod mode and the shared sandbox mode. The sandbox ships with Python 3.12, Node.js 22, pnpm, uv, git, and other common tools. See [Customize the sandbox image](#customize-the-sandbox-image) below for customization.
+- `sandboxGateway.provision.warmPoolReplicas`
+  - Warm pool size, i.e. the number of idle sandboxes kept on standby. Adjust according to Agent concurrency.
+- `sandboxGateway.provision.requestsCpu` / `requestsMemory` / `limitsCpu` / `limitsMemory`
+  - Resource configuration for a single sandbox Pod. For capacity planning, running N concurrent Agent sessions requires headroom for roughly N + `warmPoolReplicas` sandbox Pods.
+
+Other optional settings:
+
+- `sandboxGateway.namespace`: namespace for sandbox Pods, defaults to the release namespace.
+- `sandboxGateway.provision.sandboxTtl`: maximum lifetime of a single sandbox, default `1800s`.
+- `sandboxGateway.inactiveTtl`: idle reclamation time for sandboxes, default `360s`.
+- `sandboxGateway.execTimeout`: execution timeout for a single command, default `300s`.
+- `sandboxGateway.provision.extraEnv`: extra environment variables injected into sandbox Pods, e.g. egress proxy settings.
+- `sandboxGateway.provision.volumeClaimTemplates`: persistent volumes mounted into sandbox Pods; each entry creates a PVC.
+- `sandboxGateway.provision.securityContext` / `podSecurityContext`: security contexts for sandbox Pods, configure as needed when the cluster enforces Pod Security Standards.
+- The global `imagePullSecrets` is automatically propagated to sandbox Pods; no extra configuration is needed for private registries.
+
+## Sandbox network policy
+
+Egress traffic from sandbox pods is controlled by two layers, both enabled by default:
+
+**SSRF proxy**: the chart deploys a dedicated squid proxy for sandboxes (`agent-sandbox-ssrf-proxy`) and injects `HTTP_PROXY` / `HTTPS_PROXY` into sandbox pods, forcing all outbound HTTP(S) traffic through it. By default the proxy blocks requests to private (RFC1918 and similar) address ranges, providing SSRF protection. The proxy itself is configured via `sandboxGateway.ssrfProxy` (`replicas` / `image` / `resources` / `squidConf`).
+
+**NetworkPolicy**: `sandboxGateway.provision.networkPolicy` defaults to `enabled: true` and only allows the following egress: DNS (kube-dns/coredns in kube-system), agent-backend (port 5050), the SSRF proxy (port 3128), and the external internet (`allowExternalEgress: true`, excluding private ranges). Sandboxes cannot reach dify-api directly.
+
+If sandboxes need to reach other in-cluster services or internal addresses, both layers must be opened:
+
+1. Add allow rules for the target addresses via `networkPolicy.extraEgressRules`;
+2. Override `sandboxGateway.ssrfProxy.squidConf` and insert allow rules for the targets before the default `deny private_dst` rule.
+
+When opening additional egress destinations, weigh the [Security Notice: Agent Environment Variable Exfiltration Risk](/en/3.14.x/use/build/new-agent/overview): an agent that can reach the network can encode and transmit sensitive values despite output masking.
+
+Other options:
+
+- With `networkPolicy.enabled: false`, the agent-sandbox controller's secure defaults take over: only the public internet is reachable and **all private (RFC1918) addresses are blocked**.
+- `networkPolicy.management: "Unmanaged"` skips NetworkPolicy provisioning entirely, leaving it to the cluster to manage.
+
+## Home Snapshot
+
+Home Snapshot captures a sandbox's home directory into object storage and restores it into the next sandbox, carrying the agent's [persistent files](/en/3.14.x/use/build/new-agent/build#file-system) across sessions.
+
+Archives go to the bucket configured under `persistence`, so there is nothing extra to configure. Every object-storage `persistence.type` is supported, in both managed-identity and account-key modes.
+
+<Note>
+Home Snapshot requires object storage: `persistence.type: local` (the chart default) is not supported.
+</Note>
+
+Tune it under `sandboxGateway.homeSnapshot`:
+
+- `enabled`: default `true`. Turns snapshot capture and restore off entirely.
+- `keyPrefix`: default `"home-snapshots/"`. Key prefix for snapshot archives inside the bucket.
+- `maxSizeBytes`: default `67108864` (64 MiB). Largest archive the gateway accepts from a sandbox.
+- `maxConcurrent`: default `4`. How many saves and restores the gateway runs at once, across all sandboxes; requests past the limit are rejected with `429 snapshot_busy` rather than queued.
+- `snapshotTimeout`: default `"30s"`. Deadline for the sandbox runtime call; object-storage reads and writes happen outside it and are not covered.
+- `runtimePort`: default `5004`. Port the sandbox runtime's HTTP server listens on.
+- `excludes`: default empty. Home entries to leave out of snapshot archives, as gitignore patterns matched at any depth: `"*.log"`, `"**/node_modules"`, `"/build"` to anchor at the home root, `"cache/"` for directories only, `"!keep"` to re-include.
+
+<Warning>
+The gateway buffers each archive entirely in memory and ships with no resource limits. To avoid OOM under concurrent snapshots, size `sandboxGateway.resources` against `maxConcurrent × maxSizeBytes × 3` (the buffer grows geometrically, so a 64 MiB archive peaks near 192 MiB).
+</Warning>
+
+## Deploy and verify
+
+Apply the updated values with an upgrade:
+
+```bash
+helm upgrade dify dify/dify -n dify -f values.yaml
+```
+
+Helm automatically creates the `SandboxTemplate` and `SandboxWarmPool` resources in the namespace (`sandboxGateway.provision.managedByHelm` defaults to `true`); no manual creation is needed. Verify the deployment:
+
+```bash
+# Services ready
+kubectl get pods -n dify | grep -E 'agent-backend|sandbox-gateway'
+
+# Warm pool sandboxes created
+kubectl get sandboxwarmpools,sandboxes -n dify
+```
+
+Log in to the Dify console, create an Agent app, and run a task that executes commands. During execution you should see new sandbox Pods appear in the namespace, which are automatically reclaimed when the session ends or idles out.
+
+## RBAC permissions
+
+Enabling this feature introduces the following cluster permission changes, for security review reference:
+
+- The `agent-sandbox` controller is a cluster-scoped component responsible for creating and deleting sandbox Pods based on the CRDs.
+- sandbox-gateway uses a namespace-scoped Role (created by the Chart, controlled by `sandboxGateway.rbac.create`) containing only:
+  - read/write on `sandboxclaims` (sandbox lifecycle management);
+  - read-only on `sandboxtemplates` / `sandboxwarmpools` (the resources themselves are created by Helm);
+  - read-only on `sandboxes` (status queries).
+- sandbox-gateway has no permissions on native resources such as Pods, Secrets, or ConfigMaps, and no cluster-scoped permissions.
+
+To use a centrally managed ServiceAccount, set `sandboxGateway.rbac.create: false` and specify it via `sandboxGateway.serviceAccountName`.
+
+## Alternative without agent-sandbox (shared sandbox mode)
+
+If your cluster does not allow installing third-party CRDs and controllers, simply set `sandboxGateway.enabled` to `false`. The Chart then automatically deploys a long-running agent-runtime service, and all Agent sessions share a single sandbox container instead of getting dedicated Pods:
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: false
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- This mode installs no CRDs and introduces no additional RBAC permissions.
+- All sessions share one container, so isolation is weaker than the dedicated-Pod mode, and only a single replica is supported. Recommended only as a fallback for restricted environments.
+- Adjust resources via `agentRuntime.resources`.
+
+## Customize the sandbox image
+
+To provide additional tools, SDKs, or internal CA certificates inside the sandbox, build on top of the official image:
+
+```dockerfile
+FROM langgenius/dify-ee-agent-runtime:3.13.0
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends <your-packages> \
+    && rm -rf /var/lib/apt/lists/*
+
+USER dify
+```
+
+Observe the following constraints, or the sandbox will not work:
+
+1. Do not override the image's default `CMD` / `ENTRYPOINT`; the sandbox service must listen on port 5004.
+2. Do not remove the `shellctl*` and `dify-agent` binaries under `/usr/local/bin`.
+3. Switch to `USER root` to install system packages, and always switch back to `USER dify` afterwards.
+4. Keep the `/home/dify` and `/mnt/drive` directories and their ownership.
+
+After building and pushing the image, update `agentRuntime.image` in your values and run `helm upgrade`. In dedicated-Pod mode the warm pool rolls over to the new image automatically; in shared sandbox mode the agent-runtime deployment restarts on rollout.
+
+## FAQ
+
+- **No Agent app entry in the console**
+  - Confirm `agentBackend.enabled` is `true`.
+- **sandbox-gateway fails to start with CRD-not-found errors**
+  - The agent-sandbox controller is not installed. Complete the installation steps above, or switch to the shared sandbox mode if installation is not possible.
+- **Sandbox Pods stuck in Pending or ImagePullBackOff**
+  - Check node resource headroom; when using a private registry, confirm the global `imagePullSecrets` is configured.
+- **Sandbox cannot reach in-cluster services or internal addresses**
+  - Egress goes through the SSRF proxy by default and only DNS, agent-backend, and the external internet are allowed. Open both layers: add the targets to `networkPolicy.extraEgressRules` and allow them in `sandboxGateway.ssrfProxy.squidConf`; see [Sandbox network policy](#sandbox-network-policy).
+- **Agent command execution times out**
+  - A single command is limited to 300 seconds by default; adjust via `sandboxGateway.execTimeout`.
+- **Sandbox reclaimed while a session is in progress**
+  - The sandbox idled longer than `inactiveTtl` (default 360s) or lived longer than `sandboxTtl` (default 1800s); increase them as needed.

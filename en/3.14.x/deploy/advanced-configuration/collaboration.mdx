@@ -1,0 +1,71 @@
+---
+title: Workflow Collaboration
+---
+
+Workflow collaboration enables real-time multiplayer editing of workflow drafts: multiple editors can open the same workflow, see each other's cursors and presence, and changes are synchronized live over Socket.IO.
+
+<Note>
+Requires Dify Enterprise 3.11.1 or later.
+</Note>
+
+## Enable Collaboration
+
+Set the switch in your Helm chart values:
+
+```yaml
+collaboration:
+  enabled: true
+```
+
+Then apply:
+
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+This single switch drives everything required — no `extraEnv` wiring is needed:
+
+- Deploys a dedicated Socket.IO service (`<release>-api-websocket`) that handles all realtime collaboration traffic.
+- Routes `/socket.io` on the gateway to that service.
+- Sets `ENABLE_COLLABORATION_MODE` on both the API and Web ConfigMaps.
+- Derives `NEXT_PUBLIC_SOCKET_URL` for the Web frontend from `global.consoleApiDomain` and `global.useTLS` (`wss://` when TLS is enabled).
+
+Once enabled, workspace members can edit workflows together and comment on the canvas. See [Collaborate with Teammates](/en/3.14.x/use/build/workflow-collaboration) for details.
+
+## How It Works
+
+Collaboration traffic uses the Socket.IO protocol (WebSocket with HTTP long-polling fallback) on the `/socket.io` path of the console API domain. The chart runs it in a dedicated deployment separate from the main API pods:
+
+| Component | Value |
+| --- | --- |
+| Deployment | `<release>-api-websocket` |
+| Service | `<release>-api-websocket-svc`, port `5001` |
+| Gateway route | `/socket.io` and `/socket.io/*` on the console API vhost |
+
+The websocket deployment is intentionally fixed at **1 replica with 1 gunicorn worker** and uses the `Recreate` update strategy. Socket.IO authentication sessions live in process memory, so all socket traffic must share a single process. Do not scale this deployment; room events are fanned out through the existing Redis configuration, so the main API and worker deployments scale independently as usual.
+
+## Resource Configuration
+
+Override resources for the websocket pod under `collaboration.websocket`:
+
+```yaml
+collaboration:
+  enabled: true
+  websocket:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+```
+
+## Prerequisites
+
+- `global.consoleApiDomain` must be reachable from editors' browsers; the frontend connects to `wss://<consoleApiDomain>/socket.io` (or `ws://` without TLS).
+- Any load balancer or ingress in front of the gateway must allow WebSocket upgrades on the console API domain.
+
+## Upgrading from Manual Configuration
+
+If you previously enabled collaboration by injecting `ENABLE_COLLABORATION_MODE` / `NEXT_PUBLIC_SOCKET_URL` through `extraEnv`, remove those entries and set `collaboration.enabled: true` instead. Leaving the old `extraEnv` entries in place is harmless but redundant — container-level `extraEnv` values take precedence over the ConfigMap values the chart now generates.

@@ -1,0 +1,149 @@
+---
+title: Version
+description: 检查 difyctl 版本及其与 Dify 服务器的兼容性
+---
+
+运行 [`difyctl version`](#检查客户端与服务器版本) 可查看当前的 `difyctl` 版本，以及它是否与你的 Dify 服务器兼容。该命令会打印客户端版本，探测当前活跃的主机，并给出 [兼容性判定](#兼容性判定)。
+
+在脚本中，[`--check-compat`](#在脚本中根据兼容性进行控制) 会把这个判定结果转换为退出码。
+
+## 检查客户端与服务器版本
+
+```text
+difyctl version [flags]
+```
+
+### 标志
+
+| 标志 | 类型 | 默认值 | 说明 |
+|:---|:---|:---|:---|
+| `--short` | boolean | false | 仅打印客户端 semver（不探测服务器）后退出。 |
+| `--client` | boolean | false | 跳过服务器探测，判定结果报告为 `unknown`。 |
+| `--check-compat` | boolean | false | 除非判定为 `compatible`，否则以 `64` 退出。 |
+| `-o <format>` | string | text | 输出格式：`text`、`json` 或 `yaml`。 |
+
+### 示例
+
+打印完整报告：
+
+```bash
+difyctl version
+```
+
+仅打印客户端版本，便于脚本和缺陷报告使用：
+
+```bash
+difyctl version --short
+```
+
+### 输出
+
+| 格式 | stdout 输出内容 |
+|:---|:---|
+| 默认（`text`） | 完整报告：一个 `Client` 区块、一个 `Server` 区块，以及一行 `Compatibility` 判定。当版本所在的发布通道不是 `stable` 时，会追加一条建议改用 stable 通道的警告。 |
+| `-o json`、`-o yaml` | 同样的报告，以三个对象呈现：<ul><li>`client`（`version`、`commit`、`buildDate`、`channel`、`platform`、`arch`）</li><li>`server`（`endpoint`、`reachable`，以及成功时的 `version` 和 `edition`）</li><li>`compat`（`minDify`、`maxDify`、`status`、`detail`）</li></ul> |
+
+默认的 `text` 报告：
+
+```text
+Client:
+  Version:   0.2.0-alpha (channel: alpha)
+  Commit:    9f3c2ab (built 2026-06-05)
+  Platform:  darwin/arm64
+  Compat:    dify >=1.16.0, <=1.17.0
+
+Server:
+  Endpoint:  https://dify.example.com
+  Version:   1.17.0 (self_hosted)
+
+Compatibility: ok — server 1.17.0 in [1.16.0, 1.17.0]
+```
+
+`--short` 仅打印客户端 semver：
+
+```text
+0.2.0-alpha
+```
+
+`-o json`：
+
+```json
+{
+  "client": {
+    "version": "0.2.0-alpha",
+    "commit": "9f3c2ab",
+    "buildDate": "2026-06-05",
+    "channel": "alpha",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "server": {
+    "endpoint": "https://dify.example.com",
+    "reachable": true,
+    "version": "1.17.0",
+    "edition": "SELF_HOSTED"
+  },
+  "compat": {
+    "minDify": "1.16.0",
+    "maxDify": "1.17.0",
+    "status": "compatible",
+    "detail": "server 1.17.0 in [1.16.0, 1.17.0]"
+  }
+}
+```
+
+即使服务器无法访问或不兼容，该命令也会以 `0` 退出：判定结果本身就是报告，而非错误。要把它转换为退出码，使用下文的 `--check-compat`。其他命令会依据判定结果行动，详见 [命令如何应对不兼容的服务器](#命令如何应对不兼容的服务器)。
+
+### 退出码
+
+| 退出码 | 含义 |
+|:---|:---|
+| `0` | 已打印报告，无论判定结果如何 |
+| `64` | 配合 `--check-compat`：判定结果不是 `compatible` |
+
+完整方案详见 [输出格式与退出码](/zh/3.14.x/develop/cli/reference/output-formats-and-exit-codes)。
+
+## 兼容性判定
+
+`difyctl version` 会将你的构建与服务器版本进行比对，给出四种判定之一。你无需登录，但需要有一个已存储的主机供其探测。
+
+`text` 报告会在 `Compatibility:` 行打印 **显示为** 一列的标签；`-o json` 则在 `status` 中报告判定名。
+
+| 判定 | 显示为 | 含义 |
+|:---|:---|:---|
+| `compatible` | `ok` | 服务器版本处于该构建支持的范围内。 |
+| `too_old` | `incompatible (server too old)` | 服务器版本低于该构建支持的最低版本。 |
+| `too_new` | `incompatible (server too new)` | 服务器版本高于该构建测试过的最高版本。 |
+| `unknown` | `unknown` | 无法判定：未配置主机、服务器无法访问、使用 `--client` 跳过了探测，或服务器版本无法解析。 |
+
+`detail` 字段会说明具体情况，例如 `server 1.14.0 is older than the minimum 1.16.0` 或 `server 1.17.0 in [1.16.0, 1.17.0]`。
+
+## 命令如何应对不兼容的服务器
+
+`difyctl version` 只负责报告判定结果。每个需要联系服务器的命令都会在运行前依据判定行动，因此 `too_old` 的服务器会阻止这些命令，直到你解决版本不匹配：
+
+- **`too_old`**：命令在执行前即以退出码 [`6`](/zh/3.14.x/develop/cli/reference/output-formats-and-exit-codes) 停止，并提示将 Dify 服务器升级到该构建支持的最低版本（或 [安装与服务器匹配的 `difyctl`](/zh/3.14.x/develop/cli/install)）。
+- **`too_new`**：命令照常运行；在交互式终端且输出为 text 时，还会向 stderr 打印一条限频的单行警告。
+- **`unknown`**：命令照常运行，没有可依据的判定。
+
+通过最低版本检查的服务器（`compatible` 或 `too_new`）会按主机缓存约一小时，避免每条命令都重复检查。`too_old` 的服务器不会被缓存，每次都会重新检查，因此服务器一升级即可恢复使用。
+
+使用 [`auth login`](/zh/3.14.x/develop/cli/reference/auth-and-contexts) 登录时会在存储会话前执行同样的检查，版本不匹配会在登录时暴露，而不是等到第一条命令。
+
+检查是双向的：上述判定是 `difyctl` 在判断你的服务器，服务器同样也在判断 `difyctl`。
+
+如果客户端版本低于服务器接受的下限，服务器会以 HTTP `426` 拒绝请求，`difyctl` 以退出码 `6` 结束并提示升级。这就是升级 Dify 服务器可能让旧版 `difyctl` 失效的原因：服务器会拒绝旧客户端，而旧客户端自己对更新服务器的判定只是一条警告。
+
+因此可靠的做法是让 `difyctl` 与服务器保持匹配：更新的服务器只会带来警告，更旧的服务器则会被拒绝。
+
+## 在脚本中根据兼容性进行控制
+
+`--check-compat` 让判定结果可用于脚本：只要不是 `compatible`，包括所有 `unknown` 情况，都会以 `64` 退出。`difyctl version` 始终实时探测服务器，从不读取兼容性缓存，因此脚本中的门禁反映的是当前版本；该标志只是把判定转换为退出码。
+
+完整报告仍会按你选择的格式输出到 stdout，而那一行原因则输出到 stderr，因此无论结果如何，`difyctl version -o json --check-compat | jq` 都能照常工作。
+
+```bash
+difyctl version --check-compat || echo "difyctl and this Dify server are not a confirmed match"
+```
+
+退出码 `64` 是该标志专用的，`difyctl` 的其他任何失败都不会使用它。

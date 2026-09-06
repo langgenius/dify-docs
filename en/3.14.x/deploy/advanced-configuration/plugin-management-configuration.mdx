@@ -1,0 +1,87 @@
+---
+title: Plugins Manager Monitoring Configuratio
+version: 'English'
+---
+
+## Why you need to configure a metrics data source
+
+The “Load Monitoring” charts in Plugins Management rely on standard Kubernetes container metrics to draw CPU / memory / network resource curves. Because different Kubernetes distributions and monitoring stacks expose metrics differently, you must choose an appropriate metrics data source during deployment.
+
+If your cluster/monitoring system cannot provide the required metrics, set the source to `disabled` to avoid empty charts or repeated errors in the UI.
+
+## Prerequisites (required metrics)
+
+Make sure your cluster or metrics system can provide the following metrics. If any of them are missing, charts may be incomplete or not displayed:
+
+- `container_cpu_usage_seconds_total`
+- `container_memory_working_set_bytes`
+- `container_network_receive_bytes_total`
+- `container_network_transmit_bytes_total`
+
+## Display Helm chart values
+
+```bash
+helm show values dify/dify
+```
+
+## How to configure (Helm values)
+
+Below are the `plugin-manager` metrics data source configurations (typically set in `values.yaml` or your deployment configuration).
+
+### A. Prometheus (recommended)
+
+Use an external Prometheus as the metrics source (recommended for production due to stronger persistence and query capabilities):
+
+```yaml
+plugin_manager:
+  metric:
+    source: "prometheus"
+
+externalPrometheus:
+  enabled: true
+  endpoint: "http://prometheus-kube-prometheus-prometheus:9090"
+  timeout: 10s
+  username: ""
+  password: ""
+  insecure: true
+```
+
+- **`externalPrometheus.endpoint`**: Prometheus endpoint (`plugin-manager` must be able to reach it inside the cluster network)
+- **`externalPrometheus.timeout`**: Query timeout
+- **`externalPrometheus.username/password`**: Set these if Prometheus requires authentication
+- **`externalPrometheus.insecure`**: Allow insecure TLS (use only if you clearly understand the risks)
+
+### B. cAdvisor (actively collected by plugin-manager)
+
+When configured to cAdvisor mode, `plugin-manager` collects cAdvisor metrics via the node proxy:
+
+```yaml
+plugin_manager:
+  metric:
+    source: "cadvisor"
+```
+
+Notes:
+
+- **Permissions required**: You must grant `ClusterRole` permissions to read `nodes` and `nodes/proxy`, otherwise metrics cannot be collected through the node proxy.
+- **When to use**: Collected metrics are typically stored temporarily and are not persisted. This mode is better for lightweight/temporary troubleshooting and should not be your only data source for long-term audit or capacity planning.
+
+### C. disabled
+
+When metrics are disabled, the UI will not show CPU/memory/network monitoring curves:
+
+```yaml
+plugin_manager:
+  metric:
+    source: "disabled"
+```
+
+## Troubleshooting
+
+- **Charts are empty or missing lines**: First confirm the four prerequisite metrics exist. If your monitoring stack does not provide them, set `plugin_manager.metric.source` to `disabled`.
+- **Prometheus mode cannot fetch data**: Verify `externalPrometheus.endpoint` is reachable within the cluster (DNS/Service/NetworkPolicy), and check whether authentication or TLS settings are required.
+- **Permission errors in cAdvisor mode**: Confirm the cluster-level permissions for `nodes` / `nodes/proxy` are granted.
+
+## References
+
+- Kubernetes 指标说明：[Instrumentation / Metrics](https://kubernetes.io/docs/reference/instrumentation/metrics/)

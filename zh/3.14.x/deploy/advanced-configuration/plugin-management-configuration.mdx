@@ -1,0 +1,87 @@
+---
+title: 插件管理监控配置
+version: '简体中文'
+---
+
+## 为什么需要配置指标数据源
+
+插件管理页面的“负载监控”图表依赖 Kubernetes 标准容器指标来绘制 CPU / 内存 / 网络等资源曲线。不同的 K8s 发行版与监控栈对指标的暴露方式不同，因此需要在部署时选择合适的指标数据源。
+
+如果你的集群/监控系统无法提供所需指标，建议将数据源设为 `disabled`，以避免页面出现空图表或持续报错。
+
+## 前置条件（必须具备的指标）
+
+请先确认你的集群或指标系统能够提供以下指标（任一缺失都可能导致图表缺线或不显示）：
+
+- `container_cpu_usage_seconds_total`
+- `container_memory_working_set_bytes`
+- `container_network_receive_bytes_total`
+- `container_network_transmit_bytes_total`
+
+## 显示 Helm Chart 值
+
+```bash
+helm show values dify/dify
+```
+
+## 如何配置（Helm values）
+
+下面是 `plugin-manager` 的指标数据源配置方式（通常写在 `values.yaml` 或部署配置中）。
+
+### A. Prometheus（推荐）
+
+使用外部 Prometheus 作为指标来源（推荐用于生产环境，指标持久化/查询能力更强）：
+
+```yaml
+plugin_manager:
+  metric:
+    source: "prometheus"
+
+externalPrometheus:
+  enabled: true
+  endpoint: "http://prometheus-kube-prometheus-prometheus:9090"
+  timeout: 10s
+  username: ""
+  password: ""
+  insecure: true
+```
+
+- **`externalPrometheus.endpoint`**：Prometheus 访问地址（`plugin-manager` 需要能在集群网络内访问到该地址）
+- **`externalPrometheus.timeout`**：查询超时时间
+- **`externalPrometheus.username/password`**：如 Prometheus 启用了鉴权，请填写对应账号密码
+- **`externalPrometheus.insecure`**：是否允许不安全 TLS（仅在你明确知晓风险时使用）
+
+### B. cAdvisor（由 plugin-manager 主动采集）
+
+配置为 cAdvisor 模式时，`plugin-manager` 会通过节点代理采集 cAdvisor 指标数据：
+
+```yaml
+plugin_manager:
+  metric:
+    source: "cadvisor"
+```
+
+注意：
+
+- **权限要求**：需要授予读取 `nodes` 和 `nodes/proxy` 的 `ClusterRole` 权限，否则无法从节点代理采集指标。
+- **适用场景**：采集到的指标通常仅做临时存储，不提供持久化；更适合轻量/临时排障，不建议作为长期审计或容量规划的唯一数据源。
+
+### C. disabled（禁用指标）
+
+不启用指标时，页面将不会显示 CPU/内存/网络等资源监控曲线：
+
+```yaml
+plugin_manager:
+  metric:
+    source: "disabled"
+```
+
+## 常见问题与排障
+
+- **监控曲线为空/缺线**：优先确认“前置条件”中的四个指标是否存在；若你的监控栈不提供这些指标，请将 `plugin_manager.metric.source` 设为 `disabled`。
+- **Prometheus 模式无法拉取数据**：确认 `externalPrometheus.endpoint` 在集群内可达（DNS/Service/NetworkPolicy），并检查是否需要配置鉴权或 TLS 参数。
+- **cAdvisor 模式报权限错误**：检查是否已授予 `nodes` / `nodes/proxy` 的集群级权限。
+
+## 参考
+
+- Kubernetes 指标说明：[Instrumentation / Metrics](https://kubernetes.io/docs/reference/instrumentation/metrics/)

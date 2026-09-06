@@ -1,0 +1,113 @@
+---
+title: Data Push Configuration Guide
+---
+
+## Helm Values
+
+This update introduces the following configurations:
+
+`global.otel` configuration involves services responsible for generating telemetry data, specifically including `dify-api` and `dify-worker`.
+
+`enterpriseCollector` is a new service designed to interact with your custom OpenTelemetry (OTEL) system.
+
+In most cases, keeping the default configuration values is sufficient.
+
+```yaml
+global:
+  otel:
+    # Requires enterpriseCollector.enabled to be true
+    enabled: true
+    # Sampling rate (0.0 to 1.0, empty means default)
+    samplingRate: "0.2"
+    # Batch export schedule delay in milliseconds
+    batchExportScheduleDelay: "5000"
+    # Maximum queue size for batching
+    maxQueueSize: "2048"
+    # Maximum export batch size
+    maxExportBatchSize: "512"
+    # Metric export interval in milliseconds
+    metricExportInterval: "60000"
+    # Batch export timeout in milliseconds
+    batchExportTimeout: "30000"
+    # Metric export timeout in milliseconds
+    metricExportTimeout: "30000"
+    sender:
+      otlp:
+        # Custom headers for OTLP requests (key=value,key2=value2)
+        headers: ""
+      # Service name reported to OTEL collector
+      serviceName: "dify-api-otel"
+      # Include input/output content in traces (privacy toggle)
+      includeContent: false
+enterpriseCollector:
+  enabled: true
+  # https://github.com/langgenius/dify-enterprise/releases/tag/0.14.4
+  image:
+    repository: langgenius/dify-enterprise-collector
+    tag: "0.14.4"
+  replicas: 1
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  extraEnv:
+  # Apply your own Environment Variables if necessary. Below is demo.
+  # extraEnv:
+  #   - name: ENV_FROM_COMMUNITY1
+  #     value: env123
+  #   - name: ENV_FROM_COMMUNITY2
+  #     value: env123
+  serviceAccountName: ""
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  # livenessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 20
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  extraConfig: |
+    # yaml config for otel collector
+    # you can use this to fully customize the otel collector
+    # see https://opentelemetry.io/docs/collector/configuration/
+  # The size of the sending queues are related to the memory limit and the batch size
+  # the default value assumes 512 MiB memory limit and 512 batch size
+  # adjust correspondingly when you configure different memory limits and batch sizes
+  sendingQueues:
+    trace:
+      size: 64
+    metric:
+      size: 256
+ ```
+
+## ServiceMonitor Integration
+
+Although the architecture of `enterpriseCollector` is designed to transmit telemetry data to user systems, pulling data remains a common method for collecting metrics. Therefore, it also exposes a metrics endpoint on port 8889, which can be seamlessly integrated with Prometheus `ServiceMonitor`.
+
+Below is an example.
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dify-enterprise-collector
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 5s
+    path: /metrics
+    port: http-metrics
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - {dify's namespace}
+  selector:
+    matchLabels:
+      app: {dify's release name}-enterprise-collector
+```

@@ -1,0 +1,149 @@
+---
+title: データベース設定ガイド
+---
+
+本ガイドでは、Dify エンタープライズ版のデータベース設定方法について説明します。Dify エンタープライズ版は Docker Compose および Helm Chart の 2 つのデプロイ方式をサポートしており、PostgreSQL、MySQL、TiDB の 3 つのデータベースエンジンに対応しています。
+
+## アーキテクチャの概要
+
+Dify エンタープライズ版は、**単一インスタンス・マルチデータベース**アーキテクチャを採用しています。すべてのコミュニティ版およびエンタープライズ版サービスは同じデータベースサーバーに接続されますが、各サービスはそれぞれ独立したデータベースを使用します。
+
+| データベース | デフォルト名 | 使用コンポーネント |
+| :--- | :--- | :--- |
+| Dify コア | `dify` | コミュニティ版 API / Worker / Plugin Daemon, エンタープライズ版サービス |
+| エンタープライズ版 | `enterprise` | dify-enterprise, dify-audit, dify-plugin-manager |
+| 監査ログ | `audit` | dify-audit |
+| プラグイン | `dify_plugin` | Plugin Daemon, dify-plugin-manager |
+
+> **注意**：コミュニティ版サービスとエンタープライズ版サービスでは環境変数の命名規則が異なりますが、必ず**同じデータベースインスタンス**を指すように設定してください。
+
+---
+
+## Docker Compose 設定
+
+Docker Compose デプロイでは、`.env` ファイルを編集してデータベースを設定します。
+
+### 1. 環境変数リファレンス
+
+#### コミュニティ版サービス (Dify API / Worker)
+| 変数名 | 説明 | PostgreSQL デフォルト | MySQL デフォルト |
+| :--- | :--- | :--- | :--- |
+| `DB_TYPE` | データベースタイプ | `postgresql` | `mysql` |
+| `DB_USERNAME` | データベースユーザー名 | `postgres` | `root` |
+| `DB_PASSWORD` | データベースパスワード | `difyai123456` | `difyai123456` |
+| `DB_HOST` | データベースホスト名 | `db_postgres` | `db_mysql` |
+| `DB_PORT` | データベースポート | `5432` | `3306` |
+| `DB_DATABASE` | Dify コアデータベース名 | `dify` | `dify` |
+
+#### エンタープライズ版サービス
+| 変数名 | 説明 | PostgreSQL デフォルト | MySQL/TiDB デフォルト |
+| :--- | :--- | :--- | :--- |
+| `DB_ENGINE` | データベースエンジン | `postgres` | `mysql` |
+| `DB_HOST` | データベースホスト名 | `db_postgres` | `db_mysql` |
+| `DB_PORT` | データベースポート | `5432` | `3306` / `4000` (TiDB) |
+| `DB_USER` | データベースユーザー名 | `postgres` | `root` |
+| `DB_PASS` | データベースパスワード | `difyai123456` | `difyai123456` |
+| `DIFY_DB_NAME` | Dify コアデータベース名 | `dify` | `dify` |
+| `ENTERPRISE_DB_NAME` | エンタープライズ版名 | `enterprise` | `enterprise` |
+| `AUDIT_DB_NAME` | 監査ログデータベース名 | `audit` | `audit` |
+
+### 2. 外部データベースモード
+
+外部データベース（AWS RDS、Google Cloud SQL、TiDB Cloud など）を使用する場合は、以下の手順で設定してください。
+
+1.  **`.env` 環境変数の変更**：上記の変数を外部データベースのアドレスに書き換えます。
+2.  **`COMPOSE_PROFILES` の調整**（任意）：内蔵データベースコンテナの起動を防ぐため、`COMPOSE_PROFILES` からデータベースタイプ（例：`postgresql`）を削除します。
+    ```bash
+    # 例：ベクトルデータベースと非構造化データ処理サービスのみを維持
+    COMPOSE_PROFILES="weaviate,unstructured"
+    ```
+3.  **データベースの手動作成**：Dify を起動する前に、外部インスタンスで必要なデータベースを手動で作成する必要があります（詳細は後述の[データベースの初期化](#データベースの初期化)を参照）。
+
+---
+
+## Helm Chart 設定
+
+Helm デプロイでは、`values.yaml` を通じてデータベースを設定します。
+
+### 1. 内部データベースモード (PostgreSQL)
+デフォルトでは、Helm は内蔵の PostgreSQL コンテナを起動します。
+```yaml
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        postgresPassword: "your_password"
+        database: "dify"
+```
+
+### 2. 外部データベースモード (本番環境推奨)
+外部の PostgreSQL、MySQL、または TiDB に接続します。
+```yaml
+postgresql:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  # 選択肢: postgres | mysql | tidb
+  engine: "postgres"
+  host: "your-db-host"
+  port: 5432
+  user: "your-user"
+  password: "your-password"
+  databases:
+    dify: "dify"
+    enterprise: "enterprise"
+    audit: "audit"
+    plugin_daemon: "dify_plugin"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+    mysql:
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+```
+
+---
+
+## データベースの初期化
+
+### 1. 内部データベースモード
+Docker Compose または Helm の内蔵データベースを使用する場合、システムは自動的に初期化スクリプト（`dify-postgresql-init.sql` など）を実行して `enterprise` および `audit` データベースを作成します。
+
+### 2. 外部データベースモード (手動作成)
+**外部データベースを使用する場合、Dify を起動する前に以下のデータベースを手動で作成する必要があります。**
+
+#### PostgreSQL
+```sql
+CREATE DATABASE dify;
+CREATE DATABASE enterprise;
+CREATE DATABASE audit;
+-- dify_plugin は初回起動時にプラグインサービスによって自動的に作成されます
+```
+
+#### MySQL / TiDB
+```sql
+CREATE DATABASE IF NOT EXISTS dify;
+CREATE DATABASE IF NOT EXISTS enterprise;
+CREATE DATABASE IF NOT EXISTS audit;
+-- dify_plugin は初回起動時にプラグインサービスによって自動的に作成されます
+```
+
+---
+
+## よくある質問 (FAQ)
+
+### なぜ 2 組のデータベース変数があるのですか？
+
+コミュニティ版サービス（Python）とエンタープライズ版サービス（Go）で異なる設定規則を使用しているためです。設定時には、両方の変数が同じデータベースインスタンスを指していることを確認してください。
+
+### TiDB ではどのエンジンを選択すべきですか？
+
+TiDB は MySQL プロトコルと互換性があります。設定時は `DB_TYPE` と `DB_ENGINE` を両方 `mysql` に設定し、ポートを TiDB のサービスポート（デフォルト `4000`）に指定してください。
+
+### SSL/TLS 接続を有効にするにはどうすればよいですか？
+
+
+-   **Docker Compose**: `DB_SSL_MODE="require"` を設定します。MySQL/TiDB の場合は、さらに `DB_TLS="true"` を設定してください。
+-   **Helm**: `dialectOptions` 配下の対応する `sslMode` または `tls` フィールドを設定します。

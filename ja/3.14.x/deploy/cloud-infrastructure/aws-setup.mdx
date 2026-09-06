@@ -1,0 +1,671 @@
+---
+title: AWS デプロイメントガイド
+version: '日本語'
+---
+
+# Dify Enterprise Edition デプロイメントガイド（AWS）
+
+本ドキュメントでは、AWS クラウド環境に Dify Enterprise Edition をデプロイする方法について説明します。以下のいずれかの方法でデプロイできます。
+
+- **Terraform 経由（推奨）**
+- CDK 経由（非推奨・廃止予定）
+- 手動でインフラストラクチャを作成してデプロイ（非推奨）
+
+---
+
+## オプション 1：Terraform によるデプロイ
+
+> Terraform スクリプトはオープンソース化されました。最新バージョンと利用方法は [langgenius/dify-ee-terraform-aws](https://github.com/langgenius/dify-ee-terraform-aws) を参照してください。
+
+### 前提条件
+1. ローカルに `kubectl`、`helm`、`aws cli` がインストールされていること。
+2. 以下のリソースを作成する権限を持つ AWS アカウントがあること。
+
+Terraform は、Dify Enterprise Edition のデプロイに必要な以下のクラウドリソースを自動的に作成します。事前に Terraform 設定ファイルを変更することで、リソースの仕様を調整できます。
+  - AWS EKS（Elastic Kubernetes Service）：Dify コアサービスのデプロイ用。ノードはインターネットアクセスまたは NAT Gateway 設定が必要
+  - AWS S3（Simple Storage Service）：永続ストレージ用
+  - AWS ECR（Elastic Container Registry）：Dify プラグインのインストール用。Dify イメージと Helm Charts のホスティングも可能
+  - AWS RDS Aurora Postgres：アプリケーションデータと監査レコードを保存するリレーショナルデータベース
+  - AWS OpenSearch：RAG（Retrieval Augmented Generation）関連機能用のベクトルデータベース
+  - Amazon ElastiCache：データアクセスを高速化するマネージド Redis キャッシュサービス
+
+## オプション 2：CDK によるデプロイ（非推奨）
+
+> **⚠️ 非推奨：** CDK によるデプロイは新規環境では推奨されません。Terraform をご利用ください。[aws-cdk-for-dify](https://github.com/langgenius/aws-cdk-for-dify) リポジトリは履歴参照用に残されており、今後の更新は行われません。
+
+## オプション 3：手動でインフラストラクチャを作成してデプロイ
+
+### 1. インフラストラクチャの作成
+
+以下の表の推奨設定を参考に、実際の要件に合わせてインフラストラクチャを作成してください（波括弧 {} 内の値は実際の値に置き換えてください）。
+
+> **バージョンに関する注意（重要）：** 以下の表に記載しているバージョンは「利用可能な範囲／バージョン系列」の目安です。**実際のデプロイ前に、対象 AWS リージョンのコンソールまたは AWS CLI で、各サービスでサポートされているバージョン**（EKS Kubernetes、Aurora PostgreSQL、OpenSearch、ElastiCache Redis など）を必ず確認してください。リージョンによる差異やバージョンの廃止により、リソース作成に失敗する可能性があります。
+
+#### テスト環境インフラストラクチャ設定リファレンス
+
+> **注意：** 単一ノードで `unstructured` サービスを有効にする場合は、ディスク容量を 40 GB に増やしてください。
+
+| コンポーネントタイプ | 設定項目 | 仕様 | 説明 |
+| :--- | :--- | :--- | :--- |
+| **EKS クラスター** | クラスター名 | `dify-{your_custom_deployment_id}-eks-cluster` | カスタム命名 |
+| | Kubernetes バージョン | 1.2x～1.3x（対象リージョンの EKS でサポートされるバージョンに準拠） | 事前確認：対象リージョンの EKS Kubernetes バージョン対応一覧 |
+| | ノードインスタンスタイプ | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU、16GB RAM |
+| | ノード数 | 1～2（推奨：1） | 最小コスト設定 |
+| | ノードディスクサイズ | 40 GB | gp3、暗号化 |
+| | AMI タイプ | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 バケット** | バケット名 | `dify-{your_custom_deployment_id}-storage` | カスタム命名 |
+| | バージョニング | 有効 | ファイルバージョン管理 |
+| | 暗号化 | AES256 | サーバーサイド暗号化 |
+| | パブリックアクセス | 完全にブロック | セキュリティ設定 |
+| | ストレージ容量計画 | 100GB | テスト環境容量 |
+| **RDS**<br/>(Aurora Serverless v2) | クラスター識別子 | `dify-{your_custom_deployment_id}-aurora-postgres` | カスタム命名 |
+| | エンジンバージョン | Aurora PostgreSQL（PostgreSQL 14+ 互換、対象リージョンのサポートに準拠） | 事前確認：対象リージョンで選択可能な Aurora PostgreSQL エンジンバージョン |
+| | インスタンス数 | 1 | 単一インスタンス、コスト最適化 |
+| | インスタンスタイプ | db.serverless | Serverless v2 専用 |
+| | 最小/最大キャパシティ | 1 - 8 ACU | 自動スケーリング |
+| | ストレージ暗号化 | 有効 | 保存時暗号化 |
+| | バックアップ保持期間 | 7 日 | 自動バックアップ |
+| | Performance Insights | 無効 | コスト最適化 |
+| | 作成するデータベース | dify, enterprise, audit, dify_plugin_daemon | 4 つのデータベース |
+| **OpenSearch** | ドメイン名 | `dify-{your_custom_deployment_id}-opensearch` | カスタム命名 |
+| | エンジンバージョン | OpenSearch 2.x（対象リージョンのサポートに準拠） | 事前確認：Amazon OpenSearch Service がサポートするエンジンバージョン |
+| | インスタンスタイプ | t3.medium.search | 2 vCPU, 4 GB RAM |
+| | インスタンス数 | 1 | 単一ノード |
+| | ストレージタイプ/サイズ | EBS gp3 / 100 GB | テスト環境（単一ノード） |
+| | セキュリティ機能 | 保存時暗号化、ノード間暗号化、HTTPS 強制 | 包括的セキュリティ |
+| **ElastiCache**<br/>(Redis) | レプリケーショングループ ID | `dify-{your_custom_deployment_id}-redis` | カスタム命名 |
+| | エンジンバージョン | Redis 7.x（対象リージョンの ElastiCache のサポートに準拠） | 事前確認：ElastiCache for Redis がサポートするエンジンバージョン |
+| | ノードタイプ | cache.t4g.small | 2 vCPU, 1.37 GB RAM |
+| | キャッシュノード数 | 1 | 単一ノードモード |
+| | マルチ AZ | 無効 | 単一 AZ デプロイメント |
+| | スナップショット保持期間 | 0 日 | バックアップなし |
+| **IAM ロール** | EKS クラスターロール | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS ノードグループロール | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR ポリシー |
+| | S3 アクセスロール | `dify-{your_custom_deployment_id}-s3-role` | S3 フルアクセス |
+| | S3+ECR アクセスロール | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR フルアクセス |
+| | ECR プルロール | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR 読み取り専用アクセス |
+| **その他のリソース** | ECR リポジトリ | 2（メインアプリ + プラグイン） | イメージストレージ |
+| | Secrets Manager | 1 | RDS 認証情報 |
+
+#### 本番環境インフラストラクチャ設定リファレンス
+
+| コンポーネントタイプ | 設定項目 | 仕様 | 説明 |
+| :--- | :--- | :--- | :--- |
+| **EKS クラスター** | クラスター名 | `dify-{your_custom_deployment_id}-eks-cluster` | カスタム命名 |
+| | Kubernetes バージョン | 1.2x～1.3x（対象リージョンの EKS でサポートされるバージョンに準拠） | 事前確認：対象リージョンの EKS Kubernetes バージョン対応一覧 |
+| | ノードインスタンスタイプ | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU、16GB RAM |
+| | ノード数 | 6～10（推奨：6） | 本番環境構成 |
+| | ノードディスクサイズ | 20 GB | gp3、暗号化 |
+| | AMI タイプ | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 バケット** | バケット名 | `dify-{your_custom_deployment_id}-storage` | カスタム命名 |
+| | バージョニング | 有効 | ファイルバージョン管理 |
+| | 暗号化 | AES256 | サーバーサイド暗号化 |
+| | パブリックアクセス | 完全にブロック | セキュリティ設定 |
+| | ストレージ容量計画 | 512GB | 本番環境容量 |
+| **RDS**<br/>(Aurora Serverless v2) | クラスター識別子 | `dify-{your_custom_deployment_id}-aurora-postgres` | カスタム命名 |
+| | エンジンバージョン | Aurora PostgreSQL（PostgreSQL 14+ 互換、対象リージョンのサポートに準拠） | 事前確認：対象リージョンで選択可能な Aurora PostgreSQL エンジンバージョン |
+| | インスタンス数 | 1 | 単一インスタンス、コスト最適化 |
+| | インスタンスタイプ | db.serverless | Serverless v2 専用 |
+| | 最小/最大キャパシティ | 4 - 8 ACU | 自動スケーリング |
+| | ストレージ暗号化 | 有効 | 保存時暗号化 |
+| | バックアップ保持期間 | 30 日 | 自動バックアップ |
+| | Performance Insights | 有効 | 本番では有効化推奨 |
+| | 作成するデータベース | dify, enterprise, audit, dify_plugin_daemon | 4 つのデータベース |
+| **OpenSearch** | ドメイン名 | `dify-{your_custom_deployment_id}-opensearch` | カスタム命名 |
+| | エンジンバージョン | OpenSearch 2.x（対象リージョンのサポートに準拠） | 事前確認：Amazon OpenSearch Service がサポートするエンジンバージョン |
+| | インスタンスタイプ | r5.large.search | 2 vCPU, 16 GB RAM（各ノード） |
+| | インスタンス数 | 3 | 3 ノードクラスター（合計 6 vCPU, 48 GB RAM） |
+| | ストレージタイプ/サイズ | EBS gp3 / 30 GB | 各ノード 30 GB |
+| | セキュリティ機能 | 保存時暗号化、ノード間暗号化、HTTPS 強制 | 包括的セキュリティ |
+| **ElastiCache**<br/>(Redis) | レプリケーショングループ ID | `dify-{your_custom_deployment_id}-redis` | カスタム命名 |
+| | エンジンバージョン | Redis 7.x（対象リージョンの ElastiCache のサポートに準拠） | 事前確認：ElastiCache for Redis がサポートするエンジンバージョン |
+| | ノードタイプ | cache.t4g.medium | ～2 vCPU, ～3 GB RAM |
+| | キャッシュノード数 | 2 | プライマリ + 読み取りレプリカ |
+| | 自動フェイルオーバー | 有効 | 高可用性 |
+| | マルチ AZ | 有効 | クロス AZ デプロイ |
+| | スナップショット保持期間 | 7 日 | 自動バックアップ |
+| **IAM ロール** | EKS クラスターロール | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS ノードグループロール | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR ポリシー |
+| | S3 アクセスロール | `dify-{your_custom_deployment_id}-s3-role` | S3 フルアクセス |
+| | S3+ECR アクセスロール | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR フルアクセス |
+| | ECR プルロール | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR 読み取り専用アクセス |
+| **その他のリソース** | ECR リポジトリ | 2（メインアプリ + プラグイン） | イメージストレージ |
+| | Secrets Manager | 1 | RDS 認証情報 |
+
+また、インフラストラクチャのセキュリティを確保するために、適切な Virtual Private Cloud（VPC）とセキュリティグループ（SG）を作成する必要があります。
+
+### 2. values.yaml の設定
+データベース、S3、その他のインフラストラクチャを作成した後、以下の例を参考に `values.yaml` を設定してください（波括弧 {} 内の値を実際の値に置き換えてください）。設定の前に、PostgreSQL 上に `dify`、`enterprise`、`audit`、`dify_plugin_daemon` の 4 つのデータベースを作成し、`values.yaml` 内の `rds_main_database_name`、`rds_plugin_daemon_database_name`、`rds_enterprise_database_name`、`rds_audit_database_name` を、作成したデータベース名で置き換えてください。
+
+> **3.9.x の注意事項（パッチバージョンごと）：**
+> - **⚠️ 既知の問題：AWS S3 使用時、`persistence.s3.endpoint` は空文字にする必要があります（3.9.0 / 3.9.1 いずれも該当）。** 3.9.x で `useAwsS3: true` および `useAwsManagedIam: true` を指定した状態で `endpoint` に値を設定すると、プラグインのインストールが失敗します。**AWS S3 を使用する場合は `endpoint: ""` を指定してください。** これにより、SDK がリージョンに応じた適切なエンドポイントを自動的に使用します。以下の例ではすでに空にしてあります。S3 互換の非 AWS オブジェクトストレージ（MinIO、OSS など）は影響を受けません。
+> - **⚠️ 既知の問題：3.9.0 / 3.9.1 で OpenSearch をベクトルストアとして使用すると、ナレッジベースへのファイルアップロードが失敗します。** Dify 技術サポートチームに連絡し、ホットフィックスイメージを入手してください。
+> - **データベース設定構造の変更（3.9.0 以降、3.9.1 でもロールバックされていません）：** 旧 `externalPostgres` ブロックは `externalDatabase` に置き換えられました。新しい構造は Postgres / MySQL / TiDB の 3 つのエンジンに対応し、トップレベルでグローバルな `user` / `password` を 1 組指定すると、すべての論理データベース（`dify`、`enterprise`、`audit`、`plugin_daemon`）がデフォルトでこの認証情報を共有します。この変更は **3.9.1 でもロールバックされておらず**、3.9.x 系全体で `externalDatabase` を使用します。
+> - **データベース単位の認証情報の上書き `databaseCredentials`（3.9.1 以降の新機能）：** 3.9.1 から `externalDatabase` 内に `databaseCredentials` サブブロックが追加され、論理データベース単位で `user` / `password` を個別に指定し、トップレベルのグローバル認証情報を上書きできるようになりました。空または未指定の場合は、グローバル設定にフォールバックします。**3.9.0 では `databaseCredentials` は利用できません**（トップレベルのグローバル `user` / `password` のみ使用可能）。以下の例は新しい構造に基づいており、`databaseCredentials` の部分はデフォルトでコメントアウトしてあります。3.9.1 以降では、必要に応じて有効化してください。
+> - **同梱 MinIO サブチャートの削除（3.9.0 以降）：** 外部オブジェクトストレージ（本ドキュメントでは S3）が必須となります。
+> - **初回デプロイ時のプローブ待機：** Pod 内でのデータベースマイグレーションの完了を待つため、API Pod の Readiness/Liveness プローブには最大 5 分程度の待機時間を設けています（`api.readinessProbe.initialDelaySeconds=120`、`api.livenessProbe.initialDelaySeconds=300`）。`helm install` の直後に API Pod の起動が遅いのは想定内の挙動です。
+
+```yaml
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: ""                   # 3.9.0 / 3.9.1 既知の問題：AWS S3 使用時は空にする必要があります
+    accessKey: ""
+    secretKey: ""
+    region: "{region}"
+    bucketName: "{s3_bucket_name}"
+    addressType: ""
+    useAwsManagedIam: true
+    useAwsS3: true
+
+###################################
+# External Database (Postgres / MySQL / TiDB)
+###################################
+externalDatabase:
+  enabled: true
+  engine: "postgres"           # postgres | mysql | tidb のいずれか
+  host: "{rds_address}"
+  port: 5432
+  user: "postgres"
+  password: "{rds_password}"
+  timezone: "UTC"
+  databases:
+    dify: "{rds_main_database_name}"
+    plugin_daemon: "{rds_plugin_daemon_database_name}"
+    enterprise: "{rds_enterprise_database_name}"
+    audit: "{rds_audit_database_name}"
+  # 任意：データベース単位での認証情報の上書き。3.9.1 以降のみ対応。
+  # 3.9.0 ではブロック全体を省略してください。
+  # 値を指定すると、その論理データベースに対して上記のグローバルな user/password を上書きします。
+  # 空または未設定の場合は、上記のグローバル設定を継承します。
+  # databaseCredentials:
+  #   dify:
+  #     user: ""
+  #     password: ""
+  #   enterprise:
+  #     user: ""
+  #     password: ""
+  #   audit:
+  #     user: ""
+  #     password: ""
+  #   plugin_daemon:
+  #     user: ""
+  #     password: ""
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      extras: ""
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "{redis_address}"
+  port: 6379
+  username: ""
+  password: ""
+  useSSL: false
+
+###################################
+# External Vector Database
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "opensearch"
+  externalOpenSearch:
+    host: "{opensearch_address}"
+    port: 443
+    user: "{opensearch_user}"
+    password: "{opensearch_password}"
+    useTLS: true
+
+```
+
+### 3. S3 と ECR 権限の設定
+Dify サービスを正常に起動し、プラグインシステムを正しく機能させるためには、`api`、`worker`、`workerBeat`、`plugin_daemon`、`plugin_connector` の各 Deployment に S3 アクセス権限が必要です。また、DifyPlugin CR から生成されるプラグインのビルド／実行時 Pod には ECR のプッシュ／プル権限も必要です。各サービスにこれらの権限が必要な理由については、以下の ServiceAccount 権限一覧表で詳しく説明します。
+
+権限は、以下の 2 つの方法のいずれかで設定できます。
+- **IRSA モード**：IAM Roles for Service Accounts。安全できめ細かな権限制御が可能（推奨）
+- **アクセスキー（AK/SK）モード**：環境変数を介して認証情報を提供
+
+#### IRSA モード設定
+
+Dify では、IRSA を使用した ServiceAccount 権限の設定を推奨しています。IRSA を一括でセットアップするデプロイスクリプトについては、Dify 技術サポートチームにお問い合わせください。
+
+IRSA は OIDC プロバイダーを介して EKS クラスターと IAM 間の信頼関係を確立し、Pod 側にアクセスキーを設定しなくても、ServiceAccount を通じて安全に AWS 権限を取得できるようにします。全体的なアーキテクチャは以下のとおりです。
+
+```
+┌─────────────────────┐
+│   OIDC Provider     │
+└────────┬────────────┘
+         │ (Federated Trust)
+         ▼
+┌────────────────────────────────────────────────────────────┐
+│  Role: S3 アクセスロール                                     │
+│  ├─ Policy: S3 ポリシー (s3:*)                               │
+│  └─ SA: dify-api-sa, dify-plugin-connector-sa              │
+├────────────────────────────────────────────────────────────┤
+│  Role: S3+ECR アクセスロール                                  │
+│  ├─ Policy: S3 ポリシー (s3:*)                               │
+│  ├─ Policy: ECR ポリシー (ECR read/write/push + CloudTrail)  │
+│  └─ SA: dify-plugin-crd-sa                                 │
+├────────────────────────────────────────────────────────────┤
+│  Role: ECR プルロール                                        │
+│  ├─ Policy: ECR プル専用ポリシー (ECR pull only)              │
+│  └─ SA: dify-plugin-runner-sa                              │
+└────────────────────────────────────────────────────────────┘
+```
+
+> **注意（3.9.x）：** Helm チャートは、以下の 2 つの ServiceAccount を追加で自動作成します。
+>
+> - `dify-plugin-controller-sa`（`dify-crd-controller` Deployment が使用）
+> - `dify-plugin-manager-sa`（3.9.x で新規追加された `dify-plugin-manager` Deployment が使用）
+>
+> **いずれも IRSA ロールのバインドは不要です。** 必要なのはクラスター内の Kubernetes RBAC のみ（ネームスペーススコープの `Role` で CRD / Deployment / Job / Service / ConfigMap を管理）であり、これもチャートが併せて作成します。
+>
+> **`eks.amazonaws.com/role-arn` アノテーションは付与しないでください。**
+
+Dify Enterprise Edition に必要な ServiceAccount 権限の一覧は以下のとおりです。
+
+| Service Account | コンポーネント | 権限の説明 | スコープ |
+| :--- | :--- | :--- | :--- |
+| `dify-enterprise` | Enterprise サービス | `namespaces` に対する `get`、`list`、`watch` 権限を持ち、ネームスペース情報の取得と監視に使用します。 | `Role`（ネームスペースレベル） |
+| `dify-plugin-controller-sa` | `dify-crd-controller` Deployment（常駐コントローラー） | `difyplugins`（CRD）とその `finalizers`/`status`、`leases`、`events`、`services`、`configmaps`、`deployments`、`jobs`、`ingresses` などのリソースに対する完全な管理権限を持ちます。**RBAC のみで動作し、IRSA は不要です。** | `Role`（プラグインネームスペース） |
+| `dify-plugin-manager-sa` | `dify-plugin-manager` Deployment（3.9.x で新規追加） | プラグインライフサイクルのメタデータを管理するための Kubernetes API 権限。**RBAC のみで動作し、IRSA は不要です。** | `Role`（プラグインネームスペース） |
+| `dify-plugin-connector-sa` | `dify-plugin-connector` Deployment | `dify-plugin-connector-role` から権限を継承します（スコープは `dify-plugin-controller-sa` と同じ）。**加えて IRSA が必要：S3 アクセスロール**。connector が S3 上のプラグインのアセットを読み書きするために使用します。 | `Role`（プラグインネームスペース）＋ IRSA |
+| `dify-plugin-crd-sa` | **プラグインのビルド Pod**（コントローラーが DifyPlugin CR の `customServiceAccount` フィールドに従ってプラグインのインストールごとに生成するものであり、**どの Deployment からも直接使用されることはありません**） | IRSA 必須：**S3+ECR アクセスロール**。プラグインごとの Kaniko ビルド Pod が S3 からソースを取得し、ビルドしたイメージを ECR にプッシュするために使用します。 | IRSA のみ |
+| `dify-plugin-runner-sa` | **プラグインの実行時 Pod**（コントローラーが DifyPlugin CR の `runnerServiceAccount` フィールドに従って生成するものです） | IRSA 必須：**ECR プル専用ロール**。プラグインの実行時 Pod が自身のイメージを ECR からプルするために使用します。 | IRSA のみ |
+| `dify-api-sa` | `dify-api`、`dify-worker`、`dify-worker-beat`、`dify-plugin-daemon`（いずれも `values.yaml` の該当する `<service>.serviceAccountName` で明示的にバインドします。`additionalWorkers` の注意点はステップ 5 を参照） | IRSA 必須：**S3 アクセスロール**。アプリケーションがオブジェクトストレージにアクセスするために使用します。 | IRSA のみ |
+
+> 💡 **CRD インストールに関する特別な注意**
+>
+> Dify Enterprise Edition は、インストール時にネームスペースレベルの権限のみを必要とします。ただし、CRD 自体はクラスターレベルのリソースであるため、インストール時には適切なクラスター権限が必要です。クラスターレベルの権限がない場合は、先に CRD を単独でインストールし、その後に残りのコンポーネントをインストールできます。CRD 自体は Kubernetes に登録される API スキーマの宣言にすぎず、これに紐づく Controller がネームスペースレベルで動作している限り、ネームスペースをまたいでリソースにアクセスしたり変更したりすることはありません。
+
+##### **ステップ 1：IAM OIDC プロバイダーの確認**
+
+IRSA を設定する前に、クラスターで IAM OIDC プロバイダーが有効になっていることを確認してください。クラスターを手動で作成した場合は、`eksctl` コマンドラインツールを使用して有効化することをお勧めします。IAM OIDC プロバイダーは、EKS クラスターが Pod の ID を IAM に対して証明できる信頼関係を確立し、Pod が AWS 権限を安全に取得できるようにします。
+```bash
+eksctl utils associate-iam-oidc-provider --cluster <your-cluster-name> --approve
+```
+
+IRSA の設定には、AWS のロールとポリシー、およびクラスター上の ServiceAccount を作成する必要があります。ServiceAccount を作成する際は、Helm の設定と名前が競合して権限の割り当てに失敗するのを避けるため、デフォルトの名前のまま使用することをお勧めします。
+
+##### **ステップ 2：AWS IAM ポリシーの作成**
+
+以下の 3 つの IAM ポリシーを作成する必要があります。
+
+**ポリシー 1：S3 アクセスポリシー**（名前は任意。例：`DifyS3Policy`）
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::{your-s3-bucket}/*"
+        }
+    ]
+}
+```
+
+**ポリシー 2：ECR フルアクセスポリシー**（名前は任意。例：`DifyECRPolicy`）
+
+プラグインイメージのプッシュと管理に使用します。ECR 認証、リポジトリ管理、イメージプッシュ、監査ログの権限を含みます。
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuthAndDiscovery",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:DescribeRepositories",
+                "ecr:DescribeImages",
+                "ecr:GetRepositoryPolicy",
+                "ecr:GetLifecyclePolicy",
+                "ecr:GetLifecyclePolicyPreview"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRRepoManagement",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:CreateRepository",
+                "ecr:TagResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePush",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:PutImage"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        },
+        {
+            "Sid": "AuditLogging",
+            "Effect": "Allow",
+            "Action": "cloudtrail:LookupEvents",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+> `{your_ecr_repo_prefix}` は ECR リポジトリ名のプレフィックスです。たとえば、ステップ 5 で `imageRepoPrefix` を `123456789.dkr.ecr.us-east-1.amazonaws.com/dify-ee` と設定した場合、ここでの ECR リポジトリプレフィックスは `dify-ee` となり、Resource には `arn:aws:ecr:us-east-1:123456789:repository/dify-ee*` を指定します。
+
+**ポリシー 3：ECR プル専用ポリシー**（名前は任意。例：`DifyECRPullOnlyPolicy`）
+
+プラグインのランタイムイメージのプルにのみ使用します。
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuth",
+            "Effect": "Allow",
+            "Action": "ecr:GetAuthorizationToken",
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePull",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:DescribeImages"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        }
+    ]
+}
+```
+
+##### **ステップ 3：AWS IAM ロールの作成**
+以下の 3 つのロールを作成し、ステップ 2 のポリシーを該当するロールにアタッチします（ロール名は任意）。
+
+| ロール名（例） | アタッチするポリシー | 用途 |
+| :--- | :--- | :--- |
+| `DifyS3Role` | S3 アクセスポリシー | S3 ストレージアクセス |
+| `DifyS3ECRRole` | S3 アクセスポリシー + ECR フルアクセスポリシー | S3 + ECR イメージのプッシュ／管理 |
+| `DifyECRPullRole` | ECR プル専用ポリシー | ECR イメージのプル |
+
+対応するロール ARN を取得します。
+```bash
+DIFY_EE_S3_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_role_name}
+DIFY_EE_S3_ECR_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_ecr_role_name}
+DIFY_EE_ECR_PULL_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_ecr_pull_role_name}
+```
+
+各ロールの Trust Policy は、OIDC プロバイダーによるフェデレーション認証を許可するように設定する必要があります。Trust Policy のテンプレートは以下のとおりです。
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::{account_id}:oidc-provider/oidc.eks.{region}.amazonaws.com/id/{oidc_id}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity"
+        }
+    ]
+}
+```
+
+> `{oidc_id}` を EKS クラスターの OIDC プロバイダー ID に置き換えてください。以下のコマンドで取得できます。
+> ```bash
+> aws eks describe-cluster --name <cluster-name> --query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5
+> ```
+
+##### **ステップ 4：ロールを EKS ServiceAccount にバインド**
+
+> ServiceAccount（SA）は、EKS 上の Pod が特定の AWS 権限を取得し、S3 などのクラウドリソースにアクセスできるようにするための仕組みです。
+
+以下の 4 つの ServiceAccount を作成し、対応するロール ARN を `eks.amazonaws.com/role-arn` アノテーションに追加します。**IRSA バインドが必要なのは、この 4 つのみです。** `dify-plugin-controller-sa` と `dify-plugin-manager-sa` は Helm が自動作成し、RBAC のみで動作するため、role-arn は不要です。
+
+| ServiceAccount | ネームスペース | バインドするロール | 有効な権限 |
+| :--- | :--- | :--- | :--- |
+| `dify-api-sa` | dify | S3 アクセスロール | S3 アクセス。`api`、`worker`、`workerBeat`、`plugin_daemon` が使用し、いずれも `values.yaml` で明示的にバインドします（ステップ 5 を参照） |
+| `dify-plugin-crd-sa` | dify | S3+ECR アクセスロール | プラグインのインストールごとにコントローラーが生成する Kaniko ビルド Pod が使用します。S3 の読み取りと ECR へのプッシュが必要 |
+| `dify-plugin-runner-sa` | dify | ECR プルロール | プラグインの実行時 Pod が使用します。ECR のプルのみ |
+| `dify-plugin-connector-sa` | dify | S3 アクセスロール | S3 アクセス（SA 自体は Helm が自動作成するため、インストール後に role-arn アノテーションを付与してください） |
+
+ServiceAccount 作成のコマンド例（`$DIFY_EE_*` は、ステップ 3 で取得したロール ARN に置き換えてください）。
+
+```bash
+kubectl create serviceaccount dify-api-sa -n dify
+kubectl annotate serviceaccount dify-api-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-crd-sa -n dify
+kubectl annotate serviceaccount dify-plugin-crd-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ECR_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-runner-sa -n dify
+kubectl annotate serviceaccount dify-plugin-runner-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_ECR_PULL_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-connector-sa -n dify
+kubectl annotate serviceaccount dify-plugin-connector-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+```
+
+> **オプション：一部の Terraform モジュールが提供するエイリアス。**
+>
+> 新しい Dify Terraform モジュールでは、同じ 2 つの IAM ロールに対して意味を明確にした別名として、`dify-plugin-build-sa`（S3+ECR ロール）と `dify-plugin-build-run-sa`（ECR プルロール）も作成されます。Helm チャートのデフォルトではこれらの名前は参照されません。
+>
+> 使用するには、`values.yaml` で `plugin_connector.customServiceAccount: "dify-plugin-build-sa"` および `plugin_connector.runnerServiceAccount: "dify-plugin-build-run-sa"` を設定してください。チャートはこれら 2 つの値を各 DifyPlugin CR に書き込み、その CR を介してビルド／実行時 Pod に SA がバインドされます。
+>
+> `values.yaml` の値が、適切な role-arn を持つ実在の SA 名と一致していれば、どちらの命名体系でも動作します。
+
+##### **ステップ 5：values.yaml で ServiceAccount を設定**
+Helm の `values.yaml` を変更し、以下の設定を追加します（以下は ServiceAccount と ECR 関連の設定のみを示しており、その他の設定は省略しています）。`imageRepoPrefix` は任意の値に変更できます。
+
+```yaml
+api:
+  serviceAccountName: "dify-api-sa"
+worker:
+  serviceAccountName: "dify-api-sa"
+workerBeat:
+  serviceAccountName: "dify-api-sa"
+plugin_daemon:
+  serviceAccountName: "dify-api-sa"
+# additionalWorkers は単一の worker を Celery キュー単位の Deployment に分割します。
+# 重要：チャートのデフォルトでは trigger-worker.enabled=true ですが、上記のメイン worker は
+# worker.celeryQueues を上書きしないため、トリガー系キュー
+# (schedule_poller、schedule_executor、triggered_workflow_dispatcher、
+# trigger_refresh_executor) もメイン worker が消費してしまいます。両方を稼働させると、
+# すべてのスケジュールタスクが二重に実行されます。ここでは trigger-worker を明示的に
+# 無効化し、メイン worker にすべてのキューを処理させます。これは Dify が提供する
+# Terraform モジュールの構成と一致します。
+additionalWorkers:
+  - name: trigger-worker
+    enabled: false
+plugin_connector:
+  imageRepoSecret: "image-repo-secret" # 注意：IRSA モードを使用する場合でも、この Secret を作成する必要があります。値は何でも構いません。
+  customServiceAccount: "dify-plugin-crd-sa"        # プラグインのビルド Pod 用。S3+ECR ロールが必要
+  runnerServiceAccount: "dify-plugin-runner-sa"     # プラグインの実行時 Pod 用。ECR プルロールが必要
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee" 
+  imageRepoType: ecr
+  ecrRegion: "{region}"
+```
+> ‼️ `dify-plugin-connector-sa` は、`plugin_connector` Deployment 向けに Helm が自動作成します（インストール後に S3 用の role-arn アノテーションを追加してください）。
+>
+> `dify-plugin-crd-sa` と `dify-plugin-runner-sa` は、いずれの Deployment にも直接は割り当てられません。代わりに、上記で設定した `plugin_connector.customServiceAccount` / `runnerServiceAccount` の値が、チャートが生成するすべての DifyPlugin CR に書き込まれます。そして、その CR に基づいて生成されるビルド／実行時 Pod が実際に IRSA 権限を使用します。
+>
+> `dify-plugin-controller-sa` と `dify-plugin-manager-sa`（`dify-crd-controller` および `dify-plugin-manager` Deployment 自体の SA）は Helm が作成し、RBAC のみで動作します。**`plugin_controller` / `plugin_manager` に `serviceAccountName` を設定しないでください。** また、これら 2 つの SA に role-arn を付与しないでください。
+
+> ‼️ **`additionalWorkers` と IRSA について。**
+>
+> Helm チャートのテンプレートは、`worker.serviceAccountName` を `additionalWorkers` の各エントリに**伝播しません**（`templates/additional-worker-deployment.yaml` を参照）。
+>
+> `additionalWorkers[*]` のいずれかを有効化する場合（例：大規模デプロイメントでのキュー分離）は、以下の 2 つの対応が必要です。
+>
+> 1. メインの `worker` ブロックで `worker.celeryQueues` を上書きし、分離したキューを除外する。そうしないと、両方の Deployment が同一キューを消費し、重複処理が発生します。
+> 2. 有効化した各エントリに `additionalWorkers[i].serviceAccountName: "dify-api-sa"` を設定する。これを行わないと、worker Pod は IRSA 経由で S3 にアクセスできません。
+
+#### アクセスキーモード設定
+
+##### **ステップ 1：認証情報の準備**
+S3 と ECR 権限のみを持つ IAM ユーザーを作成し、そのアクセスキーとシークレットキーを取得します。
+
+##### **ステップ 2：Kubernetes Secret の作成**
+```bash
+kubectl create secret generic image-repo-secret --from-file=<path to .aws/credentials>
+```
+
+この Secret は、次のステップで `values.yaml` の `imageRepoSecret` を通じて `plugin_connector` サービスに設定する必要があります。
+
+##### **ステップ 3：values.yaml の設定**
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://s3.{region_code}.amazonaws.com"
+    region: "{region_code}"
+    bucketName: "your_bucket_name"
+    useAwsS3: true
+    useAwsManagedIam: false
+    accessKey: "{your access key}"
+    secretKey: "{your secret key}"
+
+plugin_daemon:
+  enabled: true
+  replicas: 1
+  apiKey: "dify123456"
+
+plugin_connector:
+  apiKey: "dify123456"
+  imageRepoSecret: "image-repo-secret"
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee"
+  imageRepoType: ecr
+  ecrRegion: "us-west-2"
+```
+
+### 4. AWS ALB（Application Load Balancer）のインストール
+Dify Enterprise Edition にドメイン名でアクセスできるようにするには、AWS ALB（Application Load Balancer）をインストールする必要があります。Nginx Ingress Controller など他の Ingress Controller を使用することもできますが、AWS ALB は Dify Enterprise Edition とシームレスに統合でき、優れたパフォーマンスとスケーラビリティを実現できるため、こちらを推奨します。
+
+AWS ALB のインストールガイドについては、https://docs.aws.amazon.com/eks/latest/userguide/lbc-manifest.html をご覧ください。
+
+> AWS ALB をインストールできない場合は、代替として Nginx Ingress Controller を使用できます。
+> ```bash
+> kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+> ```
+
+AWS ALB のインストールが完了したら、以下のコマンドでサービスが正常に動作しているか確認できます。
+
+```bash
+kubectl get deployment -n kube-system aws-load-balancer-controller
+```
+
+インストール後、`values.yaml` で Ingress を設定します。
+
+```yaml
+ingress:
+  enabled: true
+  className: "alb"  # AWS ALB Ingress Controller を使用
+  annotations: {
+    kubernetes.io/ingress.class: alb,
+    alb.ingress.kubernetes.io/scheme: internet-facing,
+    alb.ingress.kubernetes.io/target-type: ip,
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]',
+    alb.ingress.kubernetes.io/ssl-redirect: '443',
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:{region}:{account_id}:certificate/{cert_uuid}', # ドメイン用の AWS ACM 証明書 ARN を指定できます
+  }
+```
+
+SSL 証明書を使って Dify Enterprise Edition のサービスを公開するには、ALB アノテーションで証明書を設定し、`global` 設定で TLS を有効にします。AWS Certificate Manager でドメインを検証し、証明書を作成できます。
+
+```yaml
+global:
+  appSecretKey: 'owb3+S+C3b/4iG6YNAiWGIY4kOuX4MnUWHjcPxzyPKvGyxlQUISAWOmi'
+  consoleApiDomain: "console.dify.yourdomain.com"
+  consoleWebDomain: "console.dify.yourdomain.com"
+  serviceApiDomain: "api.dify.yourdomain.com"
+  appApiDomain: "app.dify.yourdomain.com"
+  appWebDomain: "app.dify.yourdomain.com"
+  filesDomain: "upload.dify.yourdomain.com"
+  enterpriseDomain: "enterprise.dify.yourdomain.com"
+  triggerDomain: "trigger.dify.yourdomain.com"
+  useTLS: true
+
+```
+
+### 5. インストールの実行
+
+詳細なインストール手順については、https://langgenius.github.io/dify-helm/#/ をご覧ください。
+
+> ‼️ `default` ネームスペースへの Dify のインストールは推奨されません。
+
+### 6. サービスステータスの確認
+1. kubectl のアクセス認証情報を更新します。
+
+```bash
+aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+```
+2. EKS ノードが正常に動作していることを確認します。
+
+```bash
+kubectl get nodes
+```
+
+3. Dify のサービスステータスを確認します。
+
+```bash
+kubectl get pods -n {your namespace}
+```
+
+4. ALB が正常に動作していることを確認します。
+```bash
+aws elbv2 describe-load-balancers --output json
+```
+
+> ‼️ 上記コマンドの出力に含まれる `DNSName` を、Dify で必要な各ドメインの CNAME レコードのターゲットとして設定してください。
+
+### 7. サービスの初期化
+
+これでインストールは完了です。enterprise.dify.yourdomain.com にアクセスし、Dify Enterprise Edition の管理コンソールにログインして、続けて設定や運用を進めてください。
+
+## 既知の問題（3.9.0 / 3.9.1）
+
+以下の問題は Dify Enterprise 3.9.0 / 3.9.1 に影響します。該当する設定箇所にも個別に注記していますが、確認しやすいよう本ページ末尾にもまとめています。
+
+### 1. AWS S3 利用時、`persistence.s3.endpoint` は空文字列にする必要があります
+
+`useAwsS3: true` および `useAwsManagedIam: true` を設定している状態で `persistence.s3.endpoint` に値を指定すると、プラグインのインストールが失敗します。`""` を設定することで、AWS SDK がリージョンに応じた適切なエンドポイントを自動的に使用します。
+
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    useAwsS3: true
+    useAwsManagedIam: true
+    endpoint: ""        # 3.9.0 / 3.9.1 で AWS S3 を使用する場合は空にする必要があります
+    region: "{your_region}"
+    bucketName: "{your_bucket_name}"
+```
+
+AWS 以外の S3 互換オブジェクトストレージ（MinIO、OSS など）は影響を受けません。
+
+### 2. ベクトルストアに OpenSearch を使用すると、ナレッジベースへのファイルアップロードが失敗します
+
+`vectorDB.externalType: "opensearch"` を設定している場合、ナレッジベースへのファイルアップロードができません。
+
+**回避策：** Dify 技術サポートチームにホットフィックスイメージをリクエストしてください。

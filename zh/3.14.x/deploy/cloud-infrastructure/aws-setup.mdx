@@ -1,0 +1,645 @@
+---
+title: AWS 部署指南
+version: '简体中文'
+---
+
+# Dify Enterprise Edition 部署指南（AWS）
+
+本文档介绍如何在 AWS 云环境中部署 Dify 企业版。您可以选择以下任一方式完成部署：
+
+- **通过 Terraform（推荐）**
+- 通过 CDK（已废弃，不再推荐）
+- 手动创建基础设施并部署（不推荐）
+
+---
+
+## 选项一：通过 Terraform 构建
+
+> Terraform 脚本已开源，请访问 [langgenius/dify-ee-terraform-aws](https://github.com/langgenius/dify-ee-terraform-aws) 获取最新版本与使用说明。
+
+### 前提条件
+1. 本地已安装 `kubectl`、`helm` 和 `aws cli`。
+2. 拥有具备创建以下资源权限的 AWS 账号。
+
+Terraform 将自动创建以下云资源以支持 Dify 企业版的部署。如需调整资源规格，可提前修改 Terraform 配置文件。
+  - AWS EKS（Elastic Kubernetes Service）：用于部署 Dify 核心服务，节点需能访问互联网或配置 NAT Gateway
+  - AWS S3（Simple Storage Service）：用于持久化存储
+  - AWS ECR（Elastic Container Registry）：用于 Dify 插件安装，也可用于托管 Dify 镜像与 Helm Chart
+  - AWS RDS Aurora Postgres：关系数据库，用于存储应用数据和审计记录
+  - AWS OpenSearch：向量数据库，用于 RAG（检索增强生成）相关功能
+  - Amazon ElastiCache：托管 Redis 缓存服务，用于加速数据访问
+
+## 选项二：通过 CDK 构建（已废弃）
+
+> **⚠️ 已废弃：** CDK 部署方式不再推荐使用，新部署请优先选择 Terraform。仓库 [aws-cdk-for-dify](https://github.com/langgenius/aws-cdk-for-dify) 仅作为历史参考保留，不再持续更新。
+
+## 选项三：手动创建基础设施并部署
+
+### 1. 创建基础设施
+
+请参考下表推荐的配置，根据实际需求创建基础设施。（请将双括号中的内容替换为实际值）
+
+> **版本说明（重要）：** 下表中的版本以“可用范围/版本系列”为参考。**在实际部署前，请务必在目标 AWS Region 的控制台或通过 AWS CLI 校验对应服务当前支持的版本**（EKS Kubernetes、Aurora PostgreSQL、OpenSearch、ElastiCache Redis 等），避免因区域差异或版本下线导致无法创建资源。
+
+#### 测试环境基础设施配置参考
+
+> **注意：** 若在单节点上启用 `unstructured` 服务，需将磁盘容量提升至 40 GB。
+
+| 组件类型 | 配置项 | 规格 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **EKS 集群** | 集群名称 | `dify-{your_custom_deployment_id}-eks-cluster` | 自定义命名 |
+| | Kubernetes 版本 | 1.2x～1.3x（以目标 Region EKS 当前支持为准） | 上线前校验：目标 Region 的 EKS Kubernetes 版本支持列表 |
+| | 节点实例类型 | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU, 16GB RAM |
+| | 节点数量 | 1-2 (期望: 1) | 最小成本配置 |
+| | 节点磁盘大小 | 40 GB | gp3, 加密 |
+| | AMI 类型 | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 存储桶** | 存储桶名称 | `dify-{your_custom_deployment_id}-storage` | 自定义命名 |
+| | 版本控制 | 启用 | 文件版本管理 |
+| | 加密方式 | AES256 | 服务端加密 |
+| | 公共访问 | 完全阻止 | 安全配置 |
+| | 存储容量规划 | 100GB | 测试环境容量 |
+| **RDS**<br/>(Aurora Serverless v2) | 集群标识符 | `dify-{your_custom_deployment_id}-aurora-postgres` | 自定义命名 |
+| | 引擎版本 | Aurora PostgreSQL（兼容 PostgreSQL 14+，以目标 Region 支持为准） | 上线前校验：目标 Region 可选的 Aurora PostgreSQL 引擎版本 |
+| | 实例数量 | 1 | 单实例，成本优化 |
+| | 实例类型 | db.serverless | Serverless v2 专用 |
+| | 最小/最大容量 | 1 - 8 ACU | 自动扩缩容 |
+| | 存储加密 | 启用 | 静态加密 |
+| | 备份保留期 | 7 天 | 自动备份 |
+| | 性能洞察 | 禁用 | 成本优化 |
+| | 创建数据库 | dify, enterprise, audit, dify_plugin_daemon | 4个数据库 |
+| **OpenSearch** | 域名 | `dify-{your_custom_deployment_id}-opensearch` | 自定义命名 |
+| | 引擎版本 | OpenSearch 2.x（以目标 Region 支持为准） | 上线前校验：Amazon OpenSearch Service 支持的引擎版本 |
+| | 实例类型 | t3.medium.search | 2 vCPU, 4 GB RAM |
+| | 实例数量 | 1 | 单节点 |
+| | 存储类型/大小 | EBS gp3 / 100 GB | 测试环境（单节点） |
+| | 安全特性 | 静态加密, 节点间加密, HTTPS强制 | 全面安全 |
+| **ElastiCache**<br/>(Redis) | 复制组ID | `dify-{your_custom_deployment_id}-redis` | 自定义命名 |
+| | 引擎版本 | Redis 7.x（以目标 Region ElastiCache 支持为准） | 上线前校验：ElastiCache for Redis 支持的引擎版本 |
+| | 节点类型 | cache.t4g.small | 2 vCPU, 1.37 GB RAM |
+| | 缓存节点数 | 1 | 单节点模式 |
+| | 多可用区 | 禁用 | 单AZ部署 |
+| | 快照保留 | 0 天 | 无备份 |
+| **IAM 角色** | EKS 集群角色 | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS 节点组角色 | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR 策略 |
+| | S3 访问角色 | `dify-{your_custom_deployment_id}-s3-role` | S3 完整访问 |
+| | S3+ECR 访问角色 | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR 完整访问 |
+| | ECR 拉取角色 | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR 只读访问 |
+| **其他资源** | ECR 仓库 | 2个 (主应用 + 插件) | 镜像存储 |
+| | Secrets Manager | 1个 | RDS 凭据 |
+
+#### 生产环境基础设施配置参考
+
+| 组件类型 | 配置项 | 规格 | 说明 |
+| :--- | :--- | :--- | :--- |
+| **EKS 集群** | 集群名称 | `dify-{your_custom_deployment_id}-eks-cluster` | 自定义命名 |
+| | Kubernetes 版本 | 1.2x～1.3x（以目标 Region EKS 当前支持为准） | 上线前校验：目标 Region 的 EKS Kubernetes 版本支持列表 |
+| | 节点实例类型 | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU, 16GB RAM |
+| | 节点数量 | 6～10 (期望: 6) | 生产环境配置 |
+| | 节点磁盘大小 | 20 GB | gp3, 加密 |
+| | AMI 类型 | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 存储桶** | 存储桶名称 | `dify-{your_custom_deployment_id}-storage` | 自定义命名 |
+| | 版本控制 | 启用 | 文件版本管理 |
+| | 加密方式 | AES256 | 服务端加密 |
+| | 公共访问 | 完全阻止 | 安全配置 |
+| | 存储容量规划 | 512GB | 生产环境容量 |
+| **RDS**<br/>(Aurora Serverless v2) | 集群标识符 | `dify-{your_custom_deployment_id}-aurora-postgres` | 自定义命名 |
+| | 引擎版本 | Aurora PostgreSQL（兼容 PostgreSQL 14+，以目标 Region 支持为准） | 上线前校验：目标 Region 可选的 Aurora PostgreSQL 引擎版本 |
+| | 实例数量 | 1 | 单实例，成本优化 |
+| | 实例类型 | db.serverless | Serverless v2 专用 |
+| | 最小/最大容量 | 4 - 8 ACU | 自动扩缩容 |
+| | 存储加密 | 启用 | 静态加密 |
+| | 备份保留期 | 30 天 | 自动备份 |
+| | 性能洞察 | 启用 | 推荐生产开启 |
+| | 创建数据库 | dify, enterprise, audit, dify_plugin_daemon | 4个数据库 |
+| **OpenSearch** | 域名 | `dify-{your_custom_deployment_id}-opensearch` | 自定义命名 |
+| | 引擎版本 | OpenSearch 2.x（以目标 Region 支持为准） | 上线前校验：Amazon OpenSearch Service 支持的引擎版本 |
+| | 实例类型 | r5.large.search | 2 vCPU, 16 GB RAM (每节点) |
+| | 实例数量 | 3 | 三节点集群，共 6 vCPU, 48 GB RAM |
+| | 存储类型/大小 | EBS gp3 / 30 GB | 每节点 30 GB |
+| | 安全特性 | 静态加密, 节点间加密, HTTPS强制 | 全面安全 |
+| **ElastiCache**<br/>(Redis) | 复制组ID | `dify-{your_custom_deployment_id}-redis` | 自定义命名 |
+| | 引擎版本 | Redis 7.x（以目标 Region ElastiCache 支持为准） | 上线前校验：ElastiCache for Redis 支持的引擎版本 |
+| | 节点类型 | cache.t4g.medium | ～2 vCPU, ～3 GB RAM |
+| | 缓存节点数 | 2 | 主节点 + 只读副本 |
+| | 自动故障转移 | 启用 | 高可用 |
+| | 多可用区 | 启用 | 跨AZ部署 |
+| | 快照保留 | 7 天 | 自动备份 |
+| **IAM 角色** | EKS 集群角色 | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS 节点组角色 | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR 策略 |
+| | S3 访问角色 | `dify-{your_custom_deployment_id}-s3-role` | S3 完整访问 |
+| | S3+ECR 访问角色 | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR 完整访问 |
+| | ECR 拉取角色 | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR 只读访问 |
+| **其他资源** | ECR 仓库 | 2个 (主应用 + 插件) | 镜像存储 |
+| | Secrets Manager | 1个 | RDS 凭据 |
+
+此外，您还需要创建适当的虚拟私有云（VPC）和安全组（SG）以确保基础设施的安全性。
+
+### 2. 配置 values.yaml
+完成数据库、S3 等基础设施的创建后，请参考以下示例配置 `values.yaml`（将双括号中的内容替换为实际值）。在此之前，您需要先在数据库中创建 `dify`、`enterprise`、`audit`、`dify_plugin_daemon` 四个数据库，并相应替换 `values.yaml` 中的 `rds_main_database_name` 等配置项。
+
+> **3.9.x 注意事项（按补丁版本区分）：**
+> - **⚠️ 已知问题：AWS S3 的 `persistence.s3.endpoint` 必须留空（3.9.0 / 3.9.1 均受影响）。** 3.9.x 在使用 `useAwsS3: true` + `useAwsManagedIam: true` 时，若同时填写了 `endpoint`，插件安装会失败。**使用 AWS S3 时请将 `endpoint` 置为 `""`**，让 SDK 自动推导区域域名。下方示例已置空。使用 S3 兼容的非 AWS 对象存储（MinIO、OSS 等）不受此问题影响。
+> - **⚠️ 已知问题：3.9.0 / 3.9.1 使用 OpenSearch 作为向量库时，无法上传文件到知识库。** 请联系 Dify 技术支持团队获取 hotfix 镜像。
+> - **数据库配置结构变更（3.9.0 起，3.9.1 未回滚）：** 旧的 `externalPostgres` 配置块已被 `externalDatabase` 取代。新结构支持 Postgres / MySQL / TiDB 三种引擎，并在顶层统一指定 `user` / `password`；所有逻辑数据库（`dify`、`enterprise`、`audit`、`plugin_daemon`）默认共享这一组凭证。该重命名在 3.9.1 中**没有回滚**，3.9.x 全系都使用 `externalDatabase`。
+> - **按数据库覆写凭证 `databaseCredentials`（3.9.1+ 新增）：** 从 3.9.1 起，`externalDatabase` 下新增 `databaseCredentials` 子块，可为单个逻辑数据库单独指定 `user` / `password`，覆盖顶层全局凭证；留空或未配置时回落到全局凭证。**3.9.0 不支持 `databaseCredentials`**，只能使用顶层全局 `user` / `password`。下方示例已使用新结构，`databaseCredentials` 部分默认注释，3.9.1+ 按需启用。
+> - **内置 MinIO 子 chart 移除（3.9.0 起）：** 外部对象存储（此处使用 S3）现为必需项。
+> - **首次部署的探针延迟：** API Pod 的就绪/存活探针会留出最长约 5 分钟用于 Pod 内数据库迁移完成（`api.readinessProbe.initialDelaySeconds=120`、`api.livenessProbe.initialDelaySeconds=300`）。在 `helm install` 后 API Pod 启动较慢属于预期行为。
+
+```yaml
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: ""                   # 3.9.0 / 3.9.1 已知问题：使用 AWS S3 时必须留空
+    accessKey: ""
+    secretKey: ""
+    region: "{region}"
+    bucketName: "{s3_bucket_name}"
+    addressType: ""
+    useAwsManagedIam: true
+    useAwsS3: true
+
+###################################
+# External Database (Postgres / MySQL / TiDB)
+###################################
+externalDatabase:
+  enabled: true
+  engine: "postgres"           # 可选：postgres | mysql | tidb
+  host: "{rds_address}"
+  port: 5432
+  user: "postgres"
+  password: "{rds_password}"
+  timezone: "UTC"
+  databases:
+    dify: "{rds_main_database_name}"
+    plugin_daemon: "{rds_plugin_daemon_database_name}"
+    enterprise: "{rds_enterprise_database_name}"
+    audit: "{rds_audit_database_name}"
+  # 可选：按数据库覆写凭证。仅 3.9.1+ 支持；3.9.0 请整段省略。
+  # 设置为非空时，将覆盖该逻辑数据库的全局 user/password。
+  # 留空或未设置时，沿用上方全局的 user/password。
+  # databaseCredentials:
+  #   dify:
+  #     user: ""
+  #     password: ""
+  #   enterprise:
+  #     user: ""
+  #     password: ""
+  #   audit:
+  #     user: ""
+  #     password: ""
+  #   plugin_daemon:
+  #     user: ""
+  #     password: ""
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      extras: ""
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "{redis_address}"
+  port: 6379
+  username: ""
+  password: ""
+  useSSL: false
+
+###################################
+# External Vector Database
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "opensearch"
+  externalOpenSearch:
+    host: "{opensearch_address}"
+    port: 443
+    user: "{opensearch_user}"
+    password: "{opensearch_password}"
+    useTLS: true
+
+```
+
+### 3. 配置 S3 和 ECR 权限
+为确保 Dify 服务正常启动及插件系统正常运行，`api`、`worker`、`workerBeat`、`plugin_daemon`、`plugin_connector` Deployment 需要 S3 访问权限；通过 DifyPlugin CR 派生的插件构建 / 运行时 Pod 还需要 ECR 推送 / 拉取权限。关于这些服务需要相关权限的具体原因，将在后文详细说明。
+
+您可以通过以下两种方式配置权限：
+- **IRSA 模式**：IAM Roles for Service Accounts，实现安全、精细的权限控制（推荐）
+- **Access Key（AK/SK）模式**：通过环境变量提供凭证
+
+#### IRSA 模式配置
+
+Dify 推荐使用 IRSA 配置 ServiceAccount 权限。您可联系 Dify 技术支持团队获取一键部署(one_click) IRSA 脚本。
+
+IRSA 通过 OIDC Provider 建立 EKS 集群与 IAM 之间的信任关系，使 Pod 能够通过 ServiceAccount 安全获取 AWS 权限，无需在 Pod 中配置 Access Key。整体架构如下：
+
+```
+┌─────────────────────┐
+│   OIDC Provider     │
+└────────┬────────────┘
+         │ (Federated Trust)
+         ▼
+┌────────────────────────────────────────────────────────────┐
+│  Role: s3-role                                             │
+│  ├─ Policy: s3-policy (s3:*)                               │
+│  └─ SA: dify-api-sa, dify-plugin-connector-sa              │
+├────────────────────────────────────────────────────────────┤
+│  Role: s3-ecr-role                                         │
+│  ├─ Policy: s3-policy (s3:*)                               │
+│  ├─ Policy: ecr-policy (ECR read/write/push + CloudTrail)  │
+│  └─ SA: dify-plugin-crd-sa                                 │
+├────────────────────────────────────────────────────────────┤
+│  Role: ecr-pull-role                                       │
+│  ├─ Policy: ecr-pull-only-policy (ECR pull only)           │
+│  └─ SA: dify-plugin-runner-sa                              │
+└────────────────────────────────────────────────────────────┘
+```
+
+> **注意（3.9.x）：** Helm chart 会额外自动创建两个 ServiceAccount —— `dify-plugin-controller-sa`（由 `dify-crd-controller` Deployment 使用）和 `dify-plugin-manager-sa`（由 3.9.x 新增的 `dify-plugin-manager` Deployment 使用）。**这两个 SA 均不需要 IRSA 角色绑定** —— 它们只需要集群内 Kubernetes RBAC（命名空间级 `Role`，用于管理 CRD / Deployment / Job / Service / ConfigMap），chart 会一并创建好。**请勿**为它们添加 `eks.amazonaws.com/role-arn` 注解。
+
+以下是 Dify 企业版所需的 ServiceAccount 权限说明：
+
+| Service Account | 组件 | 权限说明 | 作用域 |
+| :--- | :--- | :--- | :--- |
+| `dify-enterprise` | Enterprise 企业版服务 | 拥有对 `namespaces` 的 `get`, `list`, `watch` 权限，用于获取和监听命名空间信息。 | `Role` (命名空间级别) |
+| `dify-plugin-controller-sa` | `dify-crd-controller` Deployment（长期运行的控制器） | 拥有对 `difyplugins` (CRD) 及其 `finalizers`/`status`, `leases`, `events`, `services`, `configmaps`, `deployments`, `jobs`, `ingresses` 等资源的完全管理权限。**仅需 RBAC，无需 IRSA。** | `Role` (插件命名空间) |
+| `dify-plugin-manager-sa` | `dify-plugin-manager` Deployment（3.9.x 新增） | 管理插件生命周期元数据所需的 Kubernetes API 权限。**仅需 RBAC，无需 IRSA。** | `Role` (插件命名空间) |
+| `dify-plugin-connector-sa` | `dify-plugin-connector` Deployment | 继承 `dify-plugin-connector-role` 的权限（作用域与 `dify-plugin-controller-sa` 相同）。**同时需要 IRSA：S3 访问角色**，以便 connector 读写 S3 中的插件资源。 | `Role` (插件命名空间) + IRSA |
+| `dify-plugin-crd-sa` | **插件构建 Pod**（由控制器按 DifyPlugin CR 中 `customServiceAccount` 字段派生而来，**并非**任何 Deployment 直接使用） | 需要 IRSA：**S3+ECR 访问角色**，用于 Kaniko 构建 Pod 从 S3 拉取源、将构建好的镜像推送到 ECR。 | 仅 IRSA |
+| `dify-plugin-runner-sa` | **插件运行时 Pod**（由控制器按 DifyPlugin CR 中 `runnerServiceAccount` 字段派生而来） | 需要 IRSA：**ECR 只读拉取角色**，插件运行时据此从 ECR 拉取自身镜像。 | 仅 IRSA |
+| `dify-api-sa` | `dify-api`、`dify-worker`、`dify-worker-beat`、`dify-plugin-daemon`（每个均通过 `values.yaml` 中对应的 `<service>.serviceAccountName` 显式绑定；`additionalWorkers` 的注意事项见步骤 5） | 需要 IRSA：**S3 访问角色**，用于应用对象存储。 | 仅 IRSA |
+
+> 💡 **关于 CRD 安装的特殊说明**
+>
+> Dify 企业版在安装时仅需 namespace 级别权限。但由于 CRD 本身是集群级别资源，安装时需要相应的集群权限。如果没有集群级别权限，可以先单独安装 CRD，再安装其余组件。CRD 本身只是注册到 Kubernetes 中的 API 结构声明，当其对应的 Controller 为 namespace 级别时，不具备跨 namespace 访问或修改其他资源的能力。
+
+##### **步骤 1：验证 IAM OIDC Provider**
+
+在配置 IRSA 之前，请确保集群已启用 IAM OIDC Provider。如果是手动创建的集群，建议通过 `eksctl` 命令行工具来启用或验证。IAM OIDC Provider 建立了信任关系，允许 EKS 集群向 IAM 证明 Pod 的身份，从而让 Pod 能够安全地获取 AWS 权限。
+```bash
+eksctl utils associate-iam-oidc-provider --cluster <your-cluster-name> --approve
+```
+
+IRSA 配置需要创建 AWS 角色（Role）和策略（Policy），以及集群 ServiceAccount。创建 ServiceAccount 时建议保持默认名称，避免与 Helm 配置冲突导致权限分配失败。
+
+##### **步骤 2：创建 AWS IAM 策略**
+
+需要创建以下三个 IAM 策略：
+
+**策略 1：S3 访问策略**（名称可自定义，如 `DifyS3Policy`）
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::{your-s3-bucket}/*"
+        }
+    ]
+}
+```
+
+**策略 2：ECR 完整访问策略**（名称可自定义，如 `DifyECRPolicy`）
+
+用于插件镜像的推送和管理，包含 ECR 认证、仓库管理、镜像推送以及审计日志权限：
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuthAndDiscovery",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:DescribeRepositories",
+                "ecr:DescribeImages",
+                "ecr:GetRepositoryPolicy",
+                "ecr:GetLifecyclePolicy",
+                "ecr:GetLifecyclePolicyPreview"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRRepoManagement",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:CreateRepository",
+                "ecr:TagResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePush",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:PutImage"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        },
+        {
+            "Sid": "AuditLogging",
+            "Effect": "Allow",
+            "Action": "cloudtrail:LookupEvents",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+> `{your_ecr_repo_prefix}` 为您的 ECR 仓库名称前缀。例如您在步骤 5 中配置 `imageRepoPrefix` 为 `123456789.dkr.ecr.us-east-1.amazonaws.com/dify-ee`，则此处 ECR 仓库前缀为 `dify-ee`，对应 Resource 应填写 `arn:aws:ecr:us-east-1:123456789:repository/dify-ee*`。
+
+**策略 3：ECR 只读拉取策略**（名称可自定义，如 `DifyECRPullOnlyPolicy`）
+
+仅用于拉取插件运行时镜像：
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuth",
+            "Effect": "Allow",
+            "Action": "ecr:GetAuthorizationToken",
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePull",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:DescribeImages"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        }
+    ]
+}
+```
+
+##### **步骤 3：创建 AWS IAM 角色**
+创建以下三个角色，并将步骤 2 中的策略附加到对应角色上（角色名称可自定义）：
+
+| 角色名称（示例） | 附加的策略 | 用途 |
+| :--- | :--- | :--- |
+| `DifyS3Role` | S3 访问策略 | S3 存储访问 |
+| `DifyS3ECRRole` | S3 访问策略 + ECR 完整访问策略 | S3 + ECR 镜像推送/管理 |
+| `DifyECRPullRole` | ECR 只读拉取策略 | ECR 镜像拉取 |
+
+获取对应的角色 ARN：
+```bash
+DIFY_EE_S3_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_role_name}
+DIFY_EE_S3_ECR_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_ecr_role_name}
+DIFY_EE_ECR_PULL_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_ecr_pull_role_name}
+```
+
+每个角色的信任策略（Trust Policy）需配置为 OIDC Provider 联合认证，以下为信任策略模板：
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::{account_id}:oidc-provider/oidc.eks.{region}.amazonaws.com/id/{oidc_id}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity"
+        }
+    ]
+}
+```
+
+> 请将 `{oidc_id}` 替换为 EKS 集群的 OIDC Provider ID。可通过以下命令获取：
+> ```bash
+> aws eks describe-cluster --name <cluster-name> --query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5
+> ```
+
+##### **步骤 4：将角色绑定到 EKS 的 ServiceAccount**
+
+> ServiceAccount（SA）是一种机制，允许 EKS 中的 Pod 获取特定的 AWS 权限，以访问云资源（如 S3）。
+
+创建以下四个 ServiceAccount，并将对应的角色 ARN 添加到 `eks.amazonaws.com/role-arn` 注解中。**只有这四个 SA 需要 IRSA 绑定** —— `dify-plugin-controller-sa` 与 `dify-plugin-manager-sa` 由 Helm 自动创建，仅 RBAC，无需任何 role-arn。
+
+| ServiceAccount | 命名空间 | 绑定角色 | 有效权限 |
+| :--- | :--- | :--- | :--- |
+| `dify-api-sa` | dify | S3 访问角色 | S3 访问 —— 由 `api`、`worker`、`workerBeat`、`plugin_daemon` 使用，每个均需在 `values.yaml` 中显式绑定（见步骤 5） |
+| `dify-plugin-crd-sa` | dify | S3+ECR 访问角色 | 供控制器按插件安装动态派生的 Kaniko 构建 Pod 使用；需 S3 读取 + ECR 推送 |
+| `dify-plugin-runner-sa` | dify | ECR 拉取角色 | 供插件运行时 Pod 使用；仅 ECR 拉取 |
+| `dify-plugin-connector-sa` | dify | S3 访问角色 | S3 访问（由 Helm 自动创建该 SA，之后补上 role-arn 注解即可） |
+
+创建 ServiceAccount 的示例命令（请将 `$DIFY_EE_*` 替换为步骤 3 中获取的角色 ARN）：
+
+```bash
+kubectl create serviceaccount dify-api-sa -n dify
+kubectl annotate serviceaccount dify-api-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-crd-sa -n dify
+kubectl annotate serviceaccount dify-plugin-crd-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ECR_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-runner-sa -n dify
+kubectl annotate serviceaccount dify-plugin-runner-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_ECR_PULL_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-connector-sa -n dify
+kubectl annotate serviceaccount dify-plugin-connector-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+```
+
+> **可选 —— 部分 Terraform 模块提供的替代命名。** 较新版本的 Dify Terraform 模块会同时创建 `dify-plugin-build-sa`（S3+ECR 角色）与 `dify-plugin-build-run-sa`（ECR 拉取角色），作为上述两个 IAM 角色语义更清晰的备选名。Helm chart 默认**不引用**这两个名字 —— 若要启用，请在 `values.yaml` 中设置 `plugin_connector.customServiceAccount: "dify-plugin-build-sa"` 及 `plugin_connector.runnerServiceAccount: "dify-plugin-build-run-sa"`（chart 会把这两个值写入每个 DifyPlugin CR，进而绑定到构建 / 运行时 Pod 上）。只要 `values.yaml` 里配置的名字与实际带正确 role-arn 的 SA 一致，两套命名都可工作。
+
+##### **步骤 5：在 values.yaml 中配置 ServiceAccount**
+修改 Helm 的 `values.yaml`，添加以下配置（以下仅展示 ServiceAccount 和 ECR 相关配置，其他配置省略）。`imageRepoPrefix` 可自定义：
+
+```yaml
+api:
+  serviceAccountName: "dify-api-sa"
+worker:
+  serviceAccountName: "dify-api-sa"
+workerBeat:
+  serviceAccountName: "dify-api-sa"
+plugin_daemon:
+  serviceAccountName: "dify-api-sa"
+# additionalWorkers 将原本单一的 worker 拆分为按 Celery 队列分类的多个 Deployment。
+# 重要：chart 默认 trigger-worker.enabled=true，但上方主 worker 没有覆写
+# worker.celeryQueues —— 也就是说主 worker 同时消费触发器队列
+# (schedule_poller、schedule_executor、triggered_workflow_dispatcher、
+# trigger_refresh_executor)。两者同时运行会导致每个计划任务被重复执行。
+# 这里显式关闭 trigger-worker，让主 worker 包揽所有队列 —— 此配置与我们提供
+# 的 Terraform 模块保持一致。
+additionalWorkers:
+  - name: trigger-worker
+    enabled: false
+plugin_connector:
+  imageRepoSecret: "image-repo-secret" # 请注意即使使用 IRSA 模式，也需要创建该 Secret，可为任意内容。
+  customServiceAccount: "dify-plugin-crd-sa"        # 插件构建 Pod 使用，需要 S3+ECR 角色
+  runnerServiceAccount: "dify-plugin-runner-sa"     # 插件运行时 Pod 使用，需要 ECR 拉取角色
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee" 
+  imageRepoType: ecr
+  ecrRegion: "{region}"
+```
+> ‼️ `dify-plugin-connector-sa` 由 Helm 为 `plugin_connector` Deployment 自动创建（安装后为其补上 S3 的 role-arn 注解即可）。`dify-plugin-crd-sa` 与 `dify-plugin-runner-sa` 并非由任一 Deployment 直接挂载 —— 它们通过上方 `plugin_connector.customServiceAccount` / `runnerServiceAccount` 被 chart 写入每一个 DifyPlugin CR，真正消费 IRSA 权限的是 CR 派生出的构建 / 运行时 Pod。`dify-plugin-controller-sa` 与 `dify-plugin-manager-sa`（`dify-crd-controller` 和 `dify-plugin-manager` Deployment 自身的 SA）由 Helm 创建且仅用 RBAC —— **请勿**为 `plugin_controller` / `plugin_manager` 显式设置 `serviceAccountName`，也**请勿**为这两个 SA 添加 role-arn。
+
+> ‼️ **关于 `additionalWorkers` 与 IRSA。** Helm chart 的模板**不会**把 `worker.serviceAccountName` 传播到 `additionalWorkers` 的各条目里（见 `templates/additional-worker-deployment.yaml`）。如果您确实需要启用某个 `additionalWorkers[*]` 条目（例如在大规模部署中做队列隔离），必须：(1) 在主 `worker` 块上覆写 `worker.celeryQueues`，去掉已拆分出去的队列，否则两个 Deployment 会争抢同一队列，导致重复消费；以及 (2) 为每个启用的条目显式设置 `additionalWorkers[i].serviceAccountName: "dify-api-sa"`，否则 worker pod 无法通过 IRSA 访问 S3。
+
+#### Access Key 模式配置
+
+##### **步骤 1：准备凭证**
+创建一个仅具备 S3 和 ECR 权限的 IAM 用户，并获取其 Access Key 和 Secret Key。
+
+##### **步骤 2：创建 Kubernetes Secret**
+```bash
+kubectl create secret generic image-repo-secret --from-file=<path to .aws/credentials>
+```
+
+该 Secret 需要在下一步通过 `values.yaml` 中的 `imageRepoSecret` 配置给 `plugin_connector` 服务。
+
+##### **步骤 3：配置 values.yaml**
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://s3.{region_code}.amazonaws.com"
+    region: "{region_code}"
+    bucketName: "your_bucket_name"
+    useAwsS3: true
+    useAwsManagedIam: false
+    accessKey: "{your access key}"
+    secretKey: "{your secret key}"
+
+plugin_daemon:
+  enabled: true
+  replicas: 1
+  apiKey: "dify123456"
+
+plugin_connector:
+  apiKey: "dify123456"
+  imageRepoSecret: "image-repo-secret"
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee"
+  imageRepoType: ecr
+  ecrRegion: "us-west-2"
+```
+
+### 4. 安装 AWS ALB（Application Load Balancer）
+为使 Dify 企业版可通过域名访问，您需要安装 AWS ALB（Application Load Balancer）。您也可以选择使用 Nginx Ingress Controller 或其他 Ingress Controller。推荐使用 AWS ALB，因为它能与 Dify 企业版无缝集成，并提供更好的性能和可扩展性。
+
+请访问 https://docs.aws.amazon.com/eks/latest/userguide/lbc-manifest.html 获取 AWS ALB 安装指南。
+
+> 如果无法安装 AWS ALB，可使用 Nginx Ingress Controller 作为备选方案：
+> ```bash
+> kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+> ```
+
+AWS ALB 安装完成后，可通过以下命令确认服务是否正常运行：
+
+```bash
+kubectl get deployment -n kube-system aws-load-balancer-controller
+```
+
+安装完成后，请在 `values.yaml` 中配置 Ingress：
+
+```yaml
+ingress:
+  enabled: true
+  className: "alb"  # Use AWS ALB Ingress Controller
+  annotations: {
+    kubernetes.io/ingress.class: alb,
+    alb.ingress.kubernetes.io/scheme: internet-facing,
+    alb.ingress.kubernetes.io/target-type: ip,
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]',
+    alb.ingress.kubernetes.io/ssl-redirect: '443',
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:{region}:{account_id}:certificate/{cert_uuid}', # 可填写域名证书 AWS ACM certificate
+  }
+```
+
+*若要通过 SSL 证书发布 Dify 企业版服务，请在 ALB 注解中配置证书，并在 `global` 配置中启用 TLS。您可通过 AWS Certificate Manager 验证域名并创建证书。
+
+```yaml
+global:
+  appSecretKey: 'owb3+S+C3b/4iG6YNAiWGIY4kOuX4MnUWHjcPxzyPKvGyxlQUISAWOmi'
+  consoleApiDomain: "console.dify.yourdomain.com"
+  consoleWebDomain: "console.dify.yourdomain.com"
+  serviceApiDomain: "api.dify.yourdomain.com"
+  appApiDomain: "app.dify.yourdomain.com"
+  appWebDomain: "app.dify.yourdomain.com"
+  filesDomain: "upload.dify.yourdomain.com"
+  enterpriseDomain: "enterprise.dify.yourdomain.com"
+  triggerDomain: "trigger.dify.yourdomain.com"
+  useTLS: true
+
+```
+
+### 5. 执行安装
+
+请访问 https://langgenius.github.io/dify-helm/#/ 获取详细的安装说明。
+
+> ‼️ 不建议将 Dify 安装在 `default` 命名空间中。
+
+### 6. 验证服务状态
+1. 更新 kubectl 访问凭证：
+
+```bash
+aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+```
+2. 验证 EKS 节点已正常启动：
+
+```bash
+kubectl get nodes
+```
+
+3. 验证 Dify 服务运行状态：
+
+```bash
+kubectl get pods -n {your namespace}
+```
+
+4. 确认 ALB 是否正常工作：
+```bash
+aws elbv2 describe-load-balancers --output json
+```
+
+> ‼️ 请将上述命令输出的 `DNSName` 配置为 CNAME 记录，解析到 Dify 所需的各个域名。
+
+### 7. 初始化服务
+
+至此安装完成。请访问 enterprise.dify.yourdomain.com 登录 Dify 企业版管理后台，进行后续配置和使用。
+
+## 已知问题（3.9.0 / 3.9.1）
+
+以下问题影响 Dify 企业版 3.9.0 和 3.9.1。上文相关配置处已就近标注，这里再次集中列出，便于查阅。
+
+### 1. 使用 AWS S3 时 `persistence.s3.endpoint` 必须留空
+
+当 `useAwsS3: true` 且 `useAwsManagedIam: true` 时，给 `persistence.s3.endpoint` 填入非空值会导致插件安装失败。请将其设置为 `""`，让 AWS SDK 按 Region 自动推导终端节点：
+
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    useAwsS3: true
+    useAwsManagedIam: true
+    endpoint: ""        # 3.9.0 / 3.9.1 中使用 AWS S3 时必须留空
+    region: "{your_region}"
+    bucketName: "{your_bucket_name}"
+```
+
+非 AWS 的 S3 兼容对象存储（MinIO、OSS 等）不受此问题影响。
+
+### 2. 使用 OpenSearch 作为向量数据库时无法上传文件到知识库
+
+当 `vectorDB.externalType: "opensearch"` 时，无法上传文件到知识库。
+
+**临时方案：** 联系 Dify 技术支持团队获取 hotfix 镜像。

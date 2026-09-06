@@ -1,0 +1,63 @@
+---
+title: 向 MCP 服务转发用户身份
+---
+
+默认情况下，Dify 使用一个固定的、工作区级别的凭证去调用 [MCP 服务](/zh/3.14.x/use/workspace/tools)——在服务看来，所有调用者都是同一个身份。开启**身份转发**后，每次调用还会额外携带一个代表*当前正在运行工作流的用户*的 token，使 MCP 服务可以代表该真实用户行事（按用户授权、审计与数据隔离）。
+
+<Note>
+  本页介绍如何启用转发以及需要先具备哪些条件。关于信任模型，以及对身份提供商 / MCP 服务的完整要求，请参见 [MCP 用户身份转发](/zh/3.14.x/administer/sso/mcp-identity-forwarding)。
+</Note>
+
+## 前置要求
+
+在启用转发之前，请确保以下条件已满足：
+
+- **企业版，且工作区已配置 OIDC 或 OAuth2 SSO**（不支持 SAML）。
+- **你的身份提供商在登录时返回 refresh token**，以便 Dify 能为每个用户换取每次调用所需的 token。
+- **你的 MCP 服务会用同一个身份提供商校验转发过来的 token**，并拒绝未认证的请求。
+
+<Note>
+  此处仅为概要。关于完整要求——共享 issuer 规则、token audience 的处理方式，以及 MCP 服务必须校验的内容——请按 [MCP 用户身份转发](/zh/3.14.x/administer/sso/mcp-identity-forwarding) 中的步骤配置。
+</Note>
+
+## 启用转发
+
+<Steps>
+  <Step title="强制启用 OIDC 或 OAuth2 SSO">
+    将工作区 SSO 配置并强制为 OIDC 或 OAuth2。参见 [配置 SSO 认证](/zh/3.14.x/administer/sso/introduction)。
+  </Step>
+  <Step title="让每个用户先通过 SSO 登录一次">
+    每个用户必须至少通过 SSO 登录一次，Dify 后续才能代表他们换取每次调用所需的 token。控制台/工作区用户与已发布 Web App 的终端用户都会被自动处理。
+  </Step>
+  <Step title="为 MCP Provider 打开开关">
+    进入 **工具 → MCP**，选中 Provider，点击 **编辑**，打开 **转发用户身份** 开关并保存。
+
+    仅当登录强制启用 SSO 时才显示该开关（社区版及未配置 SSO 时隐藏）。开关是 **Provider 级别** 的，因此由管理员在一处统一决定哪些 MCP 服务能拿到调用者身份。
+  </Step>
+  <Step title="验证">
+    运行任意调用该 Provider 的工作流，确认 MCP 服务收到了转发的 token，且它代表当前运行用户。
+  </Step>
+</Steps>
+
+## 出站调用有何变化
+
+转发激活后，Dify 会在每个发往 MCP 服务的请求上增加一个专用的头——它与 Provider 上已有的凭证并存，而非替换：
+
+```
+X-Dify-SSO-Token: <代表当前运行用户的 token>
+```
+
+你的 MCP 服务读取该头并校验 token。关于它必须检查哪些内容，请参见 [MCP 用户身份转发](/zh/3.14.x/administer/sso/mcp-identity-forwarding)。
+
+<Note>
+  Service API 调用与定时（Cron）运行**不受支持**，它们没有交互用户——请勿在这些执行路径上依赖转发。
+</Note>
+
+## 故障排查
+
+| 情况 | 处理 |
+| --- | --- |
+| 当前运行用户从未通过 SSO 登录，或其会话已无法刷新 | 让用户（重新）通过 SSO 登录 |
+| SSO 未配置或已禁用 | 在管理控制台中配置 SSO |
+
+关于受支持的调用方清单及更多细节，请参见 [MCP 用户身份转发](/zh/3.14.x/administer/sso/mcp-identity-forwarding)。

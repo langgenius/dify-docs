@@ -1,0 +1,179 @@
+---
+title: 推送遥测数据至自有可观测平台
+sidebarTitle: 数据推送
+description: 通过 OpenTelemetry 协议，将 Dify 的应用指标、token 消耗与用户行为数据推送至企业自有可观测平台
+---
+
+将应用运行指标、token 消耗、用户行为等业务数据，通过 OpenTelemetry（OTel）开源标准实时推送至企业自有监控系统、BI 平台或数据仓库。
+
+跨工作空间汇总这些数据，可支撑运营分析、成本分摊与合规报告。
+
+推送在企业管理后台配置：打开侧边栏的 **数据推送** 即可。各遥测信号的字段级定义详见 [数据推送数据字典](/zh/3.14.x/administer/data-push-data-dictionary)。
+
+## 开始之前
+
+- 一个 Dify 部署可访问的 OpenTelemetry Collector，并已启用与所选传输协议匹配的 OTLP receiver（按惯例 HTTP 用 `4318` 端口，gRPC 用 `4317`）。出口连接由平台内置的 Dify Enterprise Collector 发起。
+- 企业管理后台的访问权限。
+
+## 推送哪些数据
+
+| 遥测信号 | 能力范围 | 适合回答的问题 |
+| :--- | :--- | :--- |
+| **Metrics** | 请求量、错误率、token 消耗、耗时分布、反馈数、检索数、应用生命周期 | 使用量增长趋势如何？失败率是否异常？哪个应用消耗成本最高？ |
+| **Traces** | `dify.workflow.run`、`dify.node.execution`、`dify.node.execution.draft` | 一次工作流为什么变慢？哪个节点是时延瓶颈？具体在哪个节点报错？ |
+| **Logs**（独立管道） | 消息运行、工具调用、内容审核、知识库检索、建议问题与提示词生成明细 | 特定业务操作的执行参数、返回文本及交互上下文是什么？ |
+
+<Note>
+数据推送通过 OTLP 传输的是 Metrics 和 Traces。Logs 不经推送通道：结构化事件日志以 JSON 形式写入 API/Worker Pod 标准输出。
+
+如需检索，自行部署 Promtail、Fluent Bit 或 Vector 等采集器接入 Loki/OpenSearch。该日志管道独立于本页配置的 OTel Collector。
+</Note>
+
+## 配置连接
+
+1. 在企业管理后台侧边栏打开 **数据推送**。
+2. 点击右上角 **参数配置**，打开配置弹窗。
+3. 选择 **配置模式**：**统一配置** 将 Metrics 和 Traces 推送到同一个端点（使用 OpenTelemetry Collector 时推荐）；**分别配置** 在 **Traces** 和 **Metrics** 两个标签页中分别设置端点。
+4. 填写连接参数：
+    - **Endpoint URL**：OpenTelemetry Collector 端点地址，协议头须为 `http://`、`https://`、`grpc://` 或 `grpcs://`（如 `http://otel-collector:4318`）。使用 `https://` 或 `grpcs://` 端点即启用 TLS；协议头不决定传输格式，传输格式由 **Transport Protocol** 单独选择，需与 Collector 的 receiver 匹配。
+    - **Transport Protocol**：`http/protobuf`（推荐）、`grpc`（性能更高，适合企业内部稳定网络）或 `http/json`（仅用于调试，性能较低）。
+    - **Compression**：`gzip`（推荐）或 `none`。
+    - **Timeout**：推送超时时间，以秒为单位的时长写法，如 `5s`。
+    - **Headers**：用于鉴权等用途的键值对（如 `Authorization: Bearer <token>`），点击 **添加 Header** 逐条添加。
+    - **高级设置**（TLS 端点适用）：上传 **Certificate File (CA)**，即签发 Collector 服务端证书的 CA 证书（自签名证书上传自有 CA，公网可信证书上传对应公共 CA 的证书，如 Let's Encrypt 根证书）。仅在开启 **跳过证书验证** 时可省略（生产环境不建议跳过）。如需 **双向 TLS (mTLS)**，再上传 **Client Key File** 与 **Client Certificate File**。
+5. 点击 **测试连通性**，校验连接并提示成功或失败原因（网络不通、证书无效等）。
+6. 点击 **保存配置**，在确认弹窗中点击 **确认重启并应用**。服务运行中保存会自动重启推送服务，可能产生短暂的数据传输中断。
+
+<Note>
+生产环境使用 TLS 端点，并配置鉴权 Headers。
+</Note>
+
+## 启动与停止推送服务
+
+- **启动**：未运行状态下，点击 **连接并推送数据** 并确认，状态变为 **服务运行中**。
+- **停止**：运行中状态下，点击 **停止推送服务** 并确认，状态变为 **服务未运行**；停止会中断数据传输。
+
+## 验证配置
+
+以下检查默认你的 Collector 已将指标路由至 Prometheus、链路路由至 Jaeger；若查询无结果，先排查这段路由。Prometheus 中的指标名为下划线形式（`dify.requests.total` 对应 `dify_requests_total`）。
+
+1. 在 **数据推送配置** 页面确认状态显示为 **服务运行中**。
+2. 触发运行已发布工作流，确认 Prometheus 可查询到 `dify_requests_total{type="workflow"}`。
+3. 运行多节点工作流，确认 Jaeger 可查看到完整 `dify.workflow.run` 与 `dify.node.execution` 链路。
+4. 在 Studio（Dify 应用编排界面）调试工作流，确认 Prometheus 可查询到 `dify_requests_total{type="draft_node"}`，Jaeger 中出现 `dify.node.execution.draft` Span。
+5. 验证工具调用、知识库检索与内容审核事件可正确在日志平台展现（依赖「推送哪些数据」一节所述的标准输出日志管道）。
+6. 在内容推送关闭（默认状态，见「控制 Input/Output 内容推送」）的情况下，验证敏感字段已被 `ref:{id_type}={uuid}` 脱敏替代。门控字段清单见 [数据推送数据字典](/zh/3.14.x/administer/data-push-data-dictionary)。
+
+<Note>
+Trace 平台的 Operation Name 下拉框只会显示当前后端已经接收到的 Span 名称，不会预先列出全部产品支持的 Span。
+</Note>
+
+## 监控推送服务
+
+进入 **数据推送配置** 页面（即侧边栏 **数据推送** 打开的页面）后，默认展示服务的实时运行状态。
+
+**状态 1：服务未运行**
+
+- 页面提示「未连接，请配置参数并启动连接」。
+- 点击右侧 **连接并推送数据** 开始连接，或点击右上方 **参数配置** 进入配置流程。
+
+**状态 2：服务运行中**
+
+页面展示以下关键信息：
+
+- **状态标识**：绿色指示灯 + **服务运行中**。
+- **本次连接起始时间**：当前连接的开始时间（YYYY-MM-DD HH:mm:ss）。
+- **数据统计**：**已推送数据量**（实时更新，单位 MB/GB）与 **未推送积压数据量**（缓冲区暂存数据）。
+- **最近数据推送记录**：展示 OpenTelemetry 反馈的异常日志、网络异常日志等。
+
+**状态 3：服务异常**
+
+- **状态标识**：橙色指示灯 + **服务异常**。需检查 **最近数据推送记录** 中的日志并修复异常，避免数据丢失。
+
+<Warning>
+推送采用异步机制，**不影响主业务链路**。推送失败或连接中断时，数据自动存入 FIFO 缓冲区，连接恢复后继续推送；内置 Span 队列容量为 **2048 个 Span**，每 5 秒批量刷出一次，缓冲区满载时丢弃最新数据，确保主业务用户交互不被阻塞。Metrics 指标与结构化事件日志走独立路径，不受此队列限制。
+
+页面会提示可能导致数据丢失的场景：推送服务异常、下游消费慢导致缓冲区溢出、系统重启。
+</Warning>
+
+定期在此查看运行状态与日志，并在自有 Collector 侧配置告警（如连接中断、数据积压超过阈值等），以便及时介入。
+
+## 控制 Input/Output 内容推送
+
+是否推送 Input/Output 的具体内容由 Dify API 服务的环境变量 `ENTERPRISE_INCLUDE_CONTENT` 控制（默认 `false`），修改后需重新部署生效，详见 [环境变量参考](/zh/3.14.x/deploy/advanced-configuration/environment-variables)。
+
+- **关闭（默认）**：内容字段以 `ref:{id_type}={uuid}` 格式的引用串替代，Message ID、用户 ID、应用 ID 等元数据仍会推送；可凭引用串中的 UUID 在 Dify 数据库中回查对应记录（如工作流运行、消息）。
+- **开启**：推送请求输入与模型输出的原文。
+
+对数据隐私有严格要求的场景，保持内容推送关闭。
+
+## 生产环境规划
+
+### 架构与责任边界
+
+下图展示了 Dify Enterprise 内部遥测引擎与企业可观测栈的对接架构与责任边界：
+
+```text
+Dify API/Worker
+    ↓ OTLP gRPC（异步，内置 Buffer）
+Dify Enterprise Collector（平台内置，负责接收和转发）
+    ↓ OTLP（客户配置 Endpoint）
+客户 OTel Collector（客户自行部署）
+    ├──► Prometheus（pull 抓取 /metrics）→ Grafana
+    └──► Jaeger / Tempo（Traces）
+
+Dify API/Worker 标准输出（JSON 事件日志）
+    └──► 自备日志采集器（Promtail / Fluent Bit / Vector）──► Loki / OpenSearch
+```
+
+1. **Dify API** 生成业务 Metric、Trace 和业务事件，先写入内置缓冲区，再由 OTel SDK 异步发送。
+2. **Dify Enterprise Collector** 通过 OTLP gRPC 接收数据，使用 batch、aggregation 等 Processor 处理，同时将推送服务的运行状态（连接时间、已推送量等）写入 Enterprise DB 供管理后台展示。
+3. 其 **Exporter** 将数据发送到客户提供的 OpenTelemetry Collector；出口地址、协议、TLS 和鉴权由数据推送配置决定。
+4. 客户 Collector 将数据路由到 Prometheus/Thanos（Metrics）、Jaeger/Tempo（Traces）等后端，Grafana 或企业 BI 工具从这些后端查询展示数据。
+
+<Warning>
+**责任边界**：无需改动 Dify 内部的 Buffer、OTel SDK、Enterprise Collector Processor 或 Enterprise DB。
+
+需要自行规划的是出口 Collector、后端存储、查询展示、告警、访问控制和数据保留策略。
+</Warning>
+
+### 规划 Collector 资源
+
+先估算每日数据量：
+
+```text
+每日 Trace 规模
+≈ 正式工作流运行数 + 正式节点执行数 + 调试节点执行数
+
+每日业务事件规模
+≈ 消息数 + 工具调用数 + 审核数 + 检索数
++ 建议问题生成数 + 会话名称生成数 + 提示词生成数 + 反馈数
+```
+
+以下规划对象是客户可观测栈中的 OpenTelemetry Collector，不是 Dify Enterprise Collector。
+
+| 业务并发规模 | 客户 Collector 建议配置 | 关注重点 |
+| :--- | :--- | :--- |
+| POC / 小规模生产 | 1 副本（2 vCPU、4 GB） | 验证出口 Endpoint、数据路由与仪表盘匹配。 |
+| 部门级生产 | 2 副本（4 vCPU、8 GB），具备高可用切换 | 峰值队列、导出超时、滚动升级无损恢复。 |
+| 企业级高并发 | 客户侧 OTel Collector 集群，可在 Collector 前置 Kafka/RabbitMQ 作为消息缓冲 | 分区路由、流量限流、跨区域容灾与持久化队列。 |
+
+<Note>
+大规模高并发场景下，优先使用 `grpc` 协议，并确保 Collector 资源充足：下游消费不及会导致平台侧缓冲区溢出和数据丢失。
+各档次的并发阈值因工作流复杂度、节点数量和消息频率差异较大，以上规格为参考起点，应在采购前以实际业务峰值流量压测验证。
+</Note>
+
+### 数据保留
+
+以下为自有可观测平台的建议起始保留期（Dify 不负责存储，存储成本需自行规划）：
+
+- Metrics 常见起始保留期：15～30 天，趋势分析可延长至 90 天。
+- Trace 常见起始保留期：3～7 天。
+
+## 故障排查
+
+- **无法连接到 OpenTelemetry Collector**：检查 Endpoint URL 是否正确、网络是否连通；TLS 端点需检查 CA、客户端证书与私钥的有效性和格式。使用 **测试连通性** 查看具体报错并修正配置。
+- **数据推送中断**：查看 **最近数据推送记录**，排查网络波动或 Collector 异常；检查 Collector 是否正常运行、是否达到接收上限。
+- **数据积压持续增加**：Collector 消费速度慢于数据产生速度，或网络延迟较高。积压数据暂存缓冲区，连接恢复后继续推送；缓冲区满载时丢弃新数据。建议优化 Collector 资源配置或扩容实例。
+- **配置保存失败**：检查必填项是否填写完整；TLS 端点需确认相关证书文件已正确上传。
+- **数据丢失**：可能发生在服务异常、缓冲区溢出或系统重启时（这是保护主业务的降级策略）。若关键数据不可丢失，建议提升 Collector 处理能力，避免长期积压。

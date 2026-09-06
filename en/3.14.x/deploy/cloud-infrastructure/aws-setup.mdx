@@ -1,0 +1,647 @@
+---
+title: AWS Deployment Guide
+version: 'English'
+---
+
+# Dify Enterprise Edition Deployment Guide (AWS)
+
+This document describes how to deploy Dify Enterprise Edition in an AWS cloud environment. You can choose any of the following methods to complete the deployment:
+
+- **Via Terraform (Recommended)**
+- Via CDK (Deprecated, no longer recommended)
+- Manually create infrastructure and deploy (Not recommended)
+
+---
+
+## Option 1: Build via Terraform
+
+> The Terraform scripts are now open-source. Get the latest version and usage instructions from [langgenius/dify-ee-terraform-aws](https://github.com/langgenius/dify-ee-terraform-aws).
+
+### Prerequisites
+1. `kubectl`, `helm`, and `aws cli` are installed locally.
+2. An AWS account with permissions to create the following resources.
+
+Terraform will automatically create the following cloud resources to support Dify Enterprise Edition deployment. You can modify the Terraform configuration files in advance to adjust resource specifications.
+  - AWS EKS (Elastic Kubernetes Service): For deploying Dify core services; nodes need internet access or NAT Gateway configuration
+  - AWS S3 (Simple Storage Service): For persistent storage
+  - AWS ECR (Elastic Container Registry): For Dify plugin installation; can also host Dify images and Helm Charts
+  - AWS RDS Aurora Postgres: Relational database for storing application data and audit records
+  - AWS OpenSearch: Vector database for RAG (Retrieval Augmented Generation) related features
+  - Amazon ElastiCache: Managed Redis caching service for accelerating data access
+
+## Option 2: Build via CDK (Deprecated)
+
+> **⚠️ Deprecated:** The CDK deployment path is no longer recommended for new deployments — please use Terraform instead. The [aws-cdk-for-dify](https://github.com/langgenius/aws-cdk-for-dify) repository is kept only as a historical reference and is no longer actively maintained.
+
+## Option 3: Manually Create Infrastructure and Deploy
+
+### 1. Create Infrastructure
+
+Please refer to the recommended configurations in the table below and create infrastructure according to your actual needs. (Replace content in double brackets with actual values)
+
+> **Version note (important):** The versions in the table below are provided as “available ranges/version families” for reference. **Before deployment, please make sure to verify in the AWS Console of your target AWS Region (or via AWS CLI) which versions are currently supported** (EKS Kubernetes, Aurora PostgreSQL, OpenSearch, ElastiCache Redis, etc.) to avoid resource creation failures caused by regional differences or version deprecations.
+
+#### Testing Environment Infrastructure Configuration Reference
+
+> **Note:** If enabling the `unstructured` service on a single node, increase disk capacity to 40 GB.
+
+| Component Type | Configuration Item | Specification | Description |
+| :--- | :--- | :--- | :--- |
+| **EKS Cluster** | Cluster Name | `dify-{your_custom_deployment_id}-eks-cluster` | Custom naming |
+| | Kubernetes Version | 1.2x–1.3x (subject to what EKS supports in the target Region) | Pre-launch check: EKS Kubernetes version support list for the target Region |
+| | Node Instance Type | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU, 16GB RAM |
+| | Node Count | 1-2 (desired: 1) | Minimum cost configuration |
+| | Node Disk Size | 40 GB | gp3, encrypted |
+| | AMI Type | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 Bucket** | Bucket Name | `dify-{your_custom_deployment_id}-storage` | Custom naming |
+| | Versioning | Enabled | File version management |
+| | Encryption | AES256 | Server-side encryption |
+| | Public Access | Fully blocked | Security configuration |
+| | Storage Capacity Planning | 100GB | Testing environment capacity |
+| **RDS**<br/>(Aurora Serverless v2) | Cluster Identifier | `dify-{your_custom_deployment_id}-aurora-postgres` | Custom naming |
+| | Engine Version | Aurora PostgreSQL (PostgreSQL 14+ compatible, subject to target Region support) | Pre-launch check: available Aurora PostgreSQL engine versions in the target Region |
+| | Instance Count | 1 | Single instance, cost optimized |
+| | Instance Type | db.serverless | Serverless v2 dedicated |
+| | Min/Max Capacity | 1 - 8 ACU | Auto scaling |
+| | Storage Encryption | Enabled | At-rest encryption |
+| | Backup Retention | 7 days | Automatic backup |
+| | Performance Insights | Disabled | Cost optimization |
+| | Create Databases | dify, enterprise, audit, dify_plugin_daemon | 4 databases |
+| **OpenSearch** | Domain Name | `dify-{your_custom_deployment_id}-opensearch` | Custom naming |
+| | Engine Version | OpenSearch 2.x (subject to target Region support) | Pre-launch check: supported engine versions for Amazon OpenSearch Service |
+| | Instance Type | t3.medium.search | 2 vCPU, 4 GB RAM |
+| | Instance Count | 1 | Single node |
+| | Storage Type/Size | EBS gp3 / 100 GB | Testing environment (single node) |
+| | Security Features | At-rest encryption, node-to-node encryption, HTTPS enforced | Comprehensive security |
+| **ElastiCache**<br/>(Redis) | Replication Group ID | `dify-{your_custom_deployment_id}-redis` | Custom naming |
+| | Engine Version | Redis 7.x (subject to what ElastiCache supports in the target Region) | Pre-launch check: supported engine versions for ElastiCache for Redis |
+| | Node Type | cache.t4g.small | 2 vCPU, 1.37 GB RAM |
+| | Cache Node Count | 1 | Single node mode |
+| | Multi-AZ | Disabled | Single AZ deployment |
+| | Snapshot Retention | 0 days | No backup |
+| **IAM Roles** | EKS Cluster Role | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS Node Group Role | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR policies |
+| | S3 Access Role | `dify-{your_custom_deployment_id}-s3-role` | S3 full access |
+| | S3+ECR Access Role | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR full access |
+| | ECR Pull Role | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR read-only access |
+| **Other Resources** | ECR Repository | 2 (main app + plugins) | Image storage |
+| | Secrets Manager | 1 | RDS credentials |
+
+#### Production Environment Infrastructure Configuration Reference
+
+| Component Type | Configuration Item | Specification | Description |
+| :--- | :--- | :--- | :--- |
+| **EKS Cluster** | Cluster Name | `dify-{your_custom_deployment_id}-eks-cluster` | Custom naming |
+| | Kubernetes Version | 1.2x–1.3x (subject to what EKS supports in the target Region) | Pre-launch check: EKS Kubernetes version support list for the target Region |
+| | Node Instance Type | m7a.xlarge (amd64) / m7g.xlarge (arm64) | 4 vCPU, 16GB RAM |
+| | Node Count | 6-10 (desired: 6) | Production environment configuration |
+| | Node Disk Size | 20 GB | gp3, encrypted |
+| | AMI Type | AL2023_x86_64 / ARM_64_STANDARD | Amazon Linux 2023 |
+| **S3 Bucket** | Bucket Name | `dify-{your_custom_deployment_id}-storage` | Custom naming |
+| | Versioning | Enabled | File version management |
+| | Encryption | AES256 | Server-side encryption |
+| | Public Access | Fully blocked | Security configuration |
+| | Storage Capacity Planning | 512GB | Production environment capacity |
+| **RDS**<br/>(Aurora Serverless v2) | Cluster Identifier | `dify-{your_custom_deployment_id}-aurora-postgres` | Custom naming |
+| | Engine Version | Aurora PostgreSQL (PostgreSQL 14+ compatible, subject to target Region support) | Pre-launch check: available Aurora PostgreSQL engine versions in the target Region |
+| | Instance Count | 1 | Single instance, cost optimized |
+| | Instance Type | db.serverless | Serverless v2 dedicated |
+| | Min/Max Capacity | 4 - 8 ACU | Auto scaling |
+| | Storage Encryption | Enabled | At-rest encryption |
+| | Backup Retention | 30 days | Automatic backup |
+| | Performance Insights | Enabled | Recommended to enable in production |
+| | Create Databases | dify, enterprise, audit, dify_plugin_daemon | 4 databases |
+| **OpenSearch** | Domain Name | `dify-{your_custom_deployment_id}-opensearch` | Custom naming |
+| | Engine Version | OpenSearch 2.x (subject to target Region support) | Pre-launch check: supported engine versions for Amazon OpenSearch Service |
+| | Instance Type | r5.large.search | 2 vCPU, 16 GB RAM (per node) |
+| | Instance Count | 3 | 3-node cluster, total 6 vCPU, 48 GB RAM |
+| | Storage Type/Size | EBS gp3 / 30 GB | 30 GB per node |
+| | Security Features | At-rest encryption, node-to-node encryption, HTTPS enforced | Comprehensive security |
+| **ElastiCache**<br/>(Redis) | Replication Group ID | `dify-{your_custom_deployment_id}-redis` | Custom naming |
+| | Engine Version | Redis 7.x (subject to what ElastiCache supports in the target Region) | Pre-launch check: supported engine versions for ElastiCache for Redis |
+| | Node Type | cache.t4g.medium | ~2 vCPU, ~3 GB RAM |
+| | Cache Node Count | 2 | Primary + read replica |
+| | Auto Failover | Enabled | High availability |
+| | Multi-AZ | Enabled | Cross-AZ deployment |
+| | Snapshot Retention | 7 days | Automatic backup |
+| **IAM Roles** | EKS Cluster Role | `dify-{your_custom_deployment_id}-cluster-role` | AmazonEKSClusterPolicy |
+| | EKS Node Group Role | `dify-{your_custom_deployment_id}-node-group-role` | Worker + CNI + ECR policies |
+| | S3 Access Role | `dify-{your_custom_deployment_id}-s3-role` | S3 full access |
+| | S3+ECR Access Role | `dify-{your_custom_deployment_id}-s3-ecr-role` | S3 + ECR full access |
+| | ECR Pull Role | `dify-{your_custom_deployment_id}-ecr-pull-role` | ECR read-only access |
+| **Other Resources** | ECR Repository | 2 (main app + plugins) | Image storage |
+| | Secrets Manager | 1 | RDS credentials |
+
+Additionally, you need to create appropriate Virtual Private Cloud (VPC) and Security Groups (SG) to ensure infrastructure security.
+
+### 2. Configure values.yaml
+After creating the database, S3, and other infrastructure, please refer to the following example to configure `values.yaml` (replace content in double brackets with actual values). Before this, you need to create four databases in the database: `dify`, `enterprise`, `audit`, `dify_plugin_daemon`, and replace the corresponding configuration items such as `rds_main_database_name` in `values.yaml`.
+
+> **3.9.x notes (per patch release):**
+> - **⚠️ Known issue: `persistence.s3.endpoint` must be left empty for AWS S3 (affects both 3.9.0 and 3.9.1).** When `useAwsS3: true` and `useAwsManagedIam: true` are set in 3.9.x, providing a non-empty `endpoint` breaks plugin installation. **Set `endpoint: ""` when using AWS S3** so the SDK derives the regional host automatically. The example below already reflects this. S3-compatible non-AWS object stores (MinIO, OSS, etc.) are not affected.
+> - **⚠️ Known issue: OpenSearch as a vector store breaks file uploads to the knowledge base in 3.9.0 / 3.9.1.** Contact the Dify support team to obtain a hotfix image.
+> - **Database schema change (since 3.9.0, NOT reverted in 3.9.1):** The legacy `externalPostgres` block has been replaced by `externalDatabase`. The new structure supports Postgres / MySQL / TiDB engines and exposes a single top-level `user` / `password` pair; all logical databases (`dify`, `enterprise`, `audit`, `plugin_daemon`) share this credential set by default. This rename was **not rolled back in 3.9.1** — the entire 3.9.x line uses `externalDatabase`.
+> - **Per-database credential overrides via `databaseCredentials` (added in 3.9.1):** Starting from 3.9.1, `externalDatabase` exposes a `databaseCredentials` sub-block that lets you set a separate `user` / `password` for an individual logical database, overriding the top-level global credentials; if left empty or unset, the entry falls back to the global pair. **`databaseCredentials` is NOT available in 3.9.0** — only the top-level global `user` / `password` can be used there. The example below uses the new schema with the `databaseCredentials` section commented out by default; uncomment it on 3.9.1+ as needed.
+> - **Bundled MinIO sub-chart removed (since 3.9.0):** External object storage (S3 here) is now required.
+> - **First-deploy probe delay:** The API pod's readiness/liveness probes wait up to 5 minutes for the in-pod database migration to complete (`api.readinessProbe.initialDelaySeconds=120`, `api.livenessProbe.initialDelaySeconds=300`). Slow startup of the API pod immediately after `helm install` is expected.
+
+```yaml
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: ""                   # 3.9.0 / 3.9.1 known issue: must be empty when using AWS S3
+    accessKey: ""
+    secretKey: ""
+    region: "{region}"
+    bucketName: "{s3_bucket_name}"
+    addressType: ""
+    useAwsManagedIam: true
+    useAwsS3: true
+
+###################################
+# External Database (Postgres / MySQL / TiDB)
+###################################
+externalDatabase:
+  enabled: true
+  engine: "postgres"           # postgres | mysql | tidb
+  host: "{rds_address}"
+  port: 5432
+  user: "postgres"
+  password: "{rds_password}"
+  timezone: "UTC"
+  databases:
+    dify: "{rds_main_database_name}"
+    plugin_daemon: "{rds_plugin_daemon_database_name}"
+    enterprise: "{rds_enterprise_database_name}"
+    audit: "{rds_audit_database_name}"
+  # Optional: per-database credential overrides. Available on 3.9.1+ only;
+  # omit the entire block on 3.9.0.
+  # When set (non-empty), overrides the global user/password for that logical database.
+  # Leave empty or unset to inherit the global user/password above.
+  # databaseCredentials:
+  #   dify:
+  #     user: ""
+  #     password: ""
+  #   enterprise:
+  #     user: ""
+  #     password: ""
+  #   audit:
+  #     user: ""
+  #     password: ""
+  #   plugin_daemon:
+  #     user: ""
+  #     password: ""
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      extras: ""
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "{redis_address}"
+  port: 6379
+  username: ""
+  password: ""
+  useSSL: false
+
+###################################
+# External Vector Database
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "opensearch"
+  externalOpenSearch:
+    host: "{opensearch_address}"
+    port: 443
+    user: "{opensearch_user}"
+    password: "{opensearch_password}"
+    useTLS: true
+
+```
+
+### 3. Configure S3 and ECR Permissions
+To ensure Dify services start properly and the plugin system functions correctly, the `api`, `worker`, `workerBeat`, `plugin_daemon`, and `plugin_connector` Deployments require S3 access permissions, and the per-plugin build / runtime Pods spawned via DifyPlugin CRs additionally require ECR push / pull permissions. The specific reasons why these services need these permissions will be explained in detail later.
+
+You can configure permissions in one of the following two ways:
+- **IRSA Mode**: IAM Roles for Service Accounts, enabling secure and fine-grained permission control (Recommended)
+- **Access Key (AK/SK) Mode**: Provide credentials via environment variables
+
+#### IRSA Mode Configuration
+
+Dify recommends using IRSA to configure ServiceAccount permissions. You can contact the Dify technical support team for `one-click` IRSA deployment scripts.
+
+IRSA establishes a trust relationship between the EKS cluster and IAM through an OIDC Provider, allowing Pods to securely obtain AWS permissions via ServiceAccounts without configuring Access Keys in the Pod. The overall architecture is as follows:
+
+```
+┌─────────────────────┐
+│   OIDC Provider     │
+└────────┬────────────┘
+         │ (Federated Trust)
+         ▼
+┌────────────────────────────────────────────────────────────┐
+│  Role: S3 Access Role                                      │
+│  ├─ Policy: S3 Policy (s3:*)                               │
+│  └─ SA: dify-api-sa, dify-plugin-connector-sa              │
+├────────────────────────────────────────────────────────────┤
+│  Role: S3+ECR Access Role                                  │
+│  ├─ Policy: S3 Policy (s3:*)                               │
+│  ├─ Policy: ECR Policy (ECR read/write/push + CloudTrail)  │
+│  └─ SA: dify-plugin-crd-sa                                 │
+├────────────────────────────────────────────────────────────┤
+│  Role: ECR Pull Role                                       │
+│  ├─ Policy: ECR Pull-Only Policy (ECR pull only)           │
+│  └─ SA: dify-plugin-runner-sa                              │
+└────────────────────────────────────────────────────────────┘
+```
+
+> **Note (3.9.x):** The Helm chart automatically creates two additional ServiceAccounts — `dify-plugin-controller-sa` (used by the `dify-crd-controller` Deployment) and `dify-plugin-manager-sa` (used by the `dify-plugin-manager` Deployment, new in 3.9.x). **Neither of them needs an IRSA role binding** — both only need in-cluster Kubernetes RBAC (namespace-scoped `Role` for CRD / Deployment / Job / Service / ConfigMap management), which the chart also installs. Do NOT annotate them with `eks.amazonaws.com/role-arn`.
+
+Below are the ServiceAccount permission descriptions required by Dify Enterprise Edition:
+
+| Service Account | Component | Permission Description | Scope |
+| :--- | :--- | :--- | :--- |
+| `dify-enterprise` | Enterprise service | Has `get`, `list`, `watch` permissions for `namespaces`, used to retrieve and watch namespace information. | `Role` (namespace level) |
+| `dify-plugin-controller-sa` | `dify-crd-controller` Deployment (long-running controller) | Has full management permissions for `difyplugins` (CRD) and their `finalizers`/`status`, `leases`, `events`, `services`, `configmaps`, `deployments`, `jobs`, `ingresses`, and other resources. **RBAC-only, no IRSA needed.** | `Role` (plugin namespace) |
+| `dify-plugin-manager-sa` | `dify-plugin-manager` Deployment (new in 3.9.x) | Kubernetes API access to manage plugin lifecycle metadata. **RBAC-only, no IRSA needed.** | `Role` (plugin namespace) |
+| `dify-plugin-connector-sa` | `dify-plugin-connector` Deployment | Inherits permissions from `dify-plugin-connector-role` (same scope as `dify-plugin-controller-sa`). **Also needs IRSA: S3 Access Role** so the connector can read/write plugin assets in S3. | `Role` (plugin namespace) + IRSA |
+| `dify-plugin-crd-sa` | **Plugin build Pods** (spawned per plugin install from the DifyPlugin CR's `customServiceAccount` field — not used by any Deployment directly) | Needs IRSA: **S3+ECR Access Role**, used by the per-plugin Kaniko build Pod to pull sources from S3 and push the built image to ECR. | IRSA only |
+| `dify-plugin-runner-sa` | **Plugin runtime Pods** (the actual plugin Pod spawned by the Controller — from the DifyPlugin CR's `runnerServiceAccount` field) | Needs IRSA: **ECR Pull-Only Role**, used by the plugin runtime to pull its own image from ECR. | IRSA only |
+| `dify-api-sa` | `dify-api`, `dify-worker`, `dify-worker-beat`, `dify-plugin-daemon` (each bound via the corresponding `<service>.serviceAccountName` in `values.yaml`; see Step 5 for `additionalWorkers` caveat) | Needs IRSA: **S3 Access Role**, for application object storage. | IRSA only |
+
+> 💡 **Special Note About CRD Installation**
+>
+> Dify Enterprise Edition only requires namespace-level permissions during installation. However, since CRD itself is a cluster-level resource, appropriate cluster permissions are required during installation. If you don't have cluster-level permissions, you can install the CRD separately first, then install the remaining components. The CRD itself is just an API structure declaration registered in Kubernetes. When its corresponding Controller is namespace-level, it cannot access or modify resources across namespaces.
+
+##### **Step 1: Verify IAM OIDC Provider**
+
+Before configuring IRSA, ensure the cluster has IAM OIDC Provider enabled. If the cluster was created manually, it's recommended to enable or verify using the `eksctl` command-line tool. The IAM OIDC Provider establishes a trust relationship that allows the EKS cluster to prove Pod identity to IAM, enabling Pods to securely obtain AWS permissions.
+```bash
+eksctl utils associate-iam-oidc-provider --cluster <your-cluster-name> --approve
+```
+
+IRSA configuration requires creating AWS Roles and Policies, as well as cluster ServiceAccounts. When creating ServiceAccounts, it's recommended to keep the default names to avoid permission assignment failures due to conflicts with Helm configurations.
+
+##### **Step 2: Create AWS IAM Policies**
+
+You need to create the following three IAM policies:
+
+**Policy 1: S3 Access Policy** (name is customizable, e.g. `DifyS3Policy`)
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": "s3:*",
+            "Resource": "arn:aws:s3:::{your-s3-bucket}/*"
+        }
+    ]
+}
+```
+
+**Policy 2: ECR Full Access Policy** (name is customizable, e.g. `DifyECRPolicy`)
+
+Used for plugin image push and management, including ECR authentication, repository management, image push, and audit logging permissions:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuthAndDiscovery",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:GetAuthorizationToken",
+                "ecr:DescribeRepositories",
+                "ecr:DescribeImages",
+                "ecr:GetRepositoryPolicy",
+                "ecr:GetLifecyclePolicy",
+                "ecr:GetLifecyclePolicyPreview"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRRepoManagement",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:CreateRepository",
+                "ecr:TagResource"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePush",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:CompleteLayerUpload",
+                "ecr:InitiateLayerUpload",
+                "ecr:UploadLayerPart",
+                "ecr:PutImage"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        },
+        {
+            "Sid": "AuditLogging",
+            "Effect": "Allow",
+            "Action": "cloudtrail:LookupEvents",
+            "Resource": "*"
+        }
+    ]
+}
+```
+
+> `{your_ecr_repo_prefix}` is the name prefix of your ECR repositories. For example, if you configure `imageRepoPrefix` in Step 5 as `123456789.dkr.ecr.us-east-1.amazonaws.com/dify-ee`, then the ECR repository prefix here is `dify-ee`, and the Resource should be `arn:aws:ecr:us-east-1:123456789:repository/dify-ee*`.
+
+**Policy 3: ECR Pull-Only Policy** (name is customizable, e.g. `DifyECRPullOnlyPolicy`)
+
+Used only for pulling plugin runtime images:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "ECRAuth",
+            "Effect": "Allow",
+            "Action": "ecr:GetAuthorizationToken",
+            "Resource": "*"
+        },
+        {
+            "Sid": "ECRImagePull",
+            "Effect": "Allow",
+            "Action": [
+                "ecr:BatchGetImage",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:DescribeImages"
+            ],
+            "Resource": "arn:aws:ecr:{region}:{account_id}:repository/{your_ecr_repo_prefix}*"
+        }
+    ]
+}
+```
+
+##### **Step 3: Create AWS IAM Roles**
+Create the following three roles and attach the policies from Step 2 to the corresponding roles (role names can be customized):
+
+| Role Name (Example) | Attached Policies | Purpose |
+| :--- | :--- | :--- |
+| `DifyS3Role` | S3 Access Policy | S3 storage access |
+| `DifyS3ECRRole` | S3 Access Policy + ECR Full Access Policy | S3 + ECR image push/management |
+| `DifyECRPullRole` | ECR Pull-Only Policy | ECR image pull |
+
+Obtain the corresponding role ARNs:
+```bash
+DIFY_EE_S3_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_role_name}
+DIFY_EE_S3_ECR_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_s3_ecr_role_name}
+DIFY_EE_ECR_PULL_ROLE_ARN=arn:aws:iam::{account_id}:role/{your_ecr_pull_role_name}
+```
+
+Each role's Trust Policy needs to be configured for OIDC Provider federated authentication. Below is the Trust Policy template:
+
+```json
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::{account_id}:oidc-provider/oidc.eks.{region}.amazonaws.com/id/{oidc_id}"
+            },
+            "Action": "sts:AssumeRoleWithWebIdentity"
+        }
+    ]
+}
+```
+
+> Replace `{oidc_id}` with the OIDC Provider ID of your EKS cluster. You can obtain it with the following command:
+> ```bash
+> aws eks describe-cluster --name <cluster-name> --query "cluster.identity.oidc.issuer" --output text | cut -d '/' -f 5
+> ```
+
+##### **Step 4: Bind Roles to EKS ServiceAccounts**
+
+> ServiceAccount (SA) is a mechanism that allows Pods in EKS to obtain specific AWS permissions to access cloud resources (such as S3).
+
+Create the following four ServiceAccounts and add the corresponding role ARN to the `eks.amazonaws.com/role-arn` annotation. **Only these four SAs need IRSA binding** — `dify-plugin-controller-sa` and `dify-plugin-manager-sa` are auto-created by Helm with RBAC-only permissions and do not need any role-arn.
+
+| ServiceAccount | Namespace | Bound Role | Effective Permissions |
+| :--- | :--- | :--- | :--- |
+| `dify-api-sa` | dify | S3 Access Role | S3 access — used by `api`, `worker`, `workerBeat`, `plugin_daemon` (each bound explicitly via `values.yaml`; see Step 5) |
+| `dify-plugin-crd-sa` | dify | S3+ECR Access Role | Used by plugin build Pods (Kaniko) spawned per plugin install; needs S3 read + ECR push |
+| `dify-plugin-runner-sa` | dify | ECR Pull Role | Used by plugin runtime Pods; ECR pull only |
+| `dify-plugin-connector-sa` | dify | S3 Access Role | S3 access (auto-created by Helm; add the role-arn annotation on top) |
+
+Example commands to create ServiceAccounts (replace `$DIFY_EE_*` with the role ARNs obtained in Step 3):
+
+```bash
+kubectl create serviceaccount dify-api-sa -n dify
+kubectl annotate serviceaccount dify-api-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-crd-sa -n dify
+kubectl annotate serviceaccount dify-plugin-crd-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ECR_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-runner-sa -n dify
+kubectl annotate serviceaccount dify-plugin-runner-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_ECR_PULL_ROLE_ARN
+
+kubectl create serviceaccount dify-plugin-connector-sa -n dify
+kubectl annotate serviceaccount dify-plugin-connector-sa -n dify \
+  eks.amazonaws.com/role-arn=$DIFY_EE_S3_ROLE_ARN
+```
+
+> **Optional — alternate SA names provisioned by some Terraform modules.** Newer revisions of the Dify Terraform module additionally create `dify-plugin-build-sa` (S3+ECR Role) and `dify-plugin-build-run-sa` (ECR Pull Role) as semantically clearer names for the same two IAM roles. They are not referenced by the Helm chart by default — to use them, set `plugin_connector.customServiceAccount: "dify-plugin-build-sa"` and `plugin_connector.runnerServiceAccount: "dify-plugin-build-run-sa"` in your `values.yaml` (the chart writes both values into each DifyPlugin CR, which is what actually binds the SA to build / runtime Pods). Either naming scheme works as long as the value in `values.yaml` matches an SA that carries the correct role-arn.
+
+##### **Step 5: Configure ServiceAccount in values.yaml**
+Modify Helm's `values.yaml` and add the following configuration (only ServiceAccount and ECR-related configurations are shown below, other configurations are omitted). `imageRepoPrefix` can be customized:
+
+```yaml
+api:
+  serviceAccountName: "dify-api-sa"
+worker:
+  serviceAccountName: "dify-api-sa"
+workerBeat:
+  serviceAccountName: "dify-api-sa"
+plugin_daemon:
+  serviceAccountName: "dify-api-sa"
+# additionalWorkers split the monolithic worker into per-queue Deployments.
+# IMPORTANT: the chart default has trigger-worker.enabled=true, but the main `worker`
+# block above does NOT override worker.celeryQueues — so the main worker also consumes
+# the trigger queues (schedule_poller, schedule_executor, triggered_workflow_dispatcher,
+# trigger_refresh_executor). Leaving both running causes EVERY scheduled task to be
+# executed twice. Disable trigger-worker here and let the main worker handle all
+# queues — this matches the configuration shipped by our Terraform module.
+additionalWorkers:
+  - name: trigger-worker
+    enabled: false
+plugin_connector:
+  imageRepoSecret: "image-repo-secret" # Note: Even when using IRSA mode, you need to create this Secret, which can contain any content.
+  customServiceAccount: "dify-plugin-crd-sa"        # SA for plugin build Pods; needs S3+ECR role
+  runnerServiceAccount: "dify-plugin-runner-sa"     # SA for plugin runtime Pods; needs ECR-pull role
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee" 
+  imageRepoType: ecr
+  ecrRegion: "{region}"
+```
+> ‼️ `dify-plugin-connector-sa` is auto-created by Helm for the `plugin_connector` Deployment (you only need to annotate it with the S3 role-arn after install). `dify-plugin-crd-sa` and `dify-plugin-runner-sa` are referenced via the `plugin_connector.customServiceAccount` / `runnerServiceAccount` values above — the chart writes these into every DifyPlugin CR it creates, and it is those CR-spawned Pods (build + runtime) that actually consume the IRSA permissions. `dify-plugin-controller-sa` and `dify-plugin-manager-sa` (the SAs used by the `dify-crd-controller` and `dify-plugin-manager` Deployments themselves) are Helm-created and RBAC-only — do not set `serviceAccountName` for `plugin_controller` / `plugin_manager`, and do not annotate those SAs with a role-arn.
+
+> ‼️ **About `additionalWorkers` and IRSA.** The Helm chart template does NOT propagate `worker.serviceAccountName` to entries under `additionalWorkers` (see `templates/additional-worker-deployment.yaml`). If you choose to enable any `additionalWorkers[*]` entry — e.g. for queue isolation in a larger deployment — you must (1) override `worker.celeryQueues` on the main `worker` block to exclude the queues you split out, otherwise both Deployments will consume the same queues and produce duplicate execution; AND (2) explicitly set `additionalWorkers[i].serviceAccountName: "dify-api-sa"` on each enabled entry so the worker pod can reach S3 via IRSA.
+
+#### Access Key Mode Configuration
+
+##### **Step 1: Prepare Credentials**
+Create an IAM user with only S3 and ECR permissions, and obtain its Access Key and Secret Key.
+
+##### **Step 2: Create Kubernetes Secret**
+```bash
+kubectl create secret generic image-repo-secret --from-file=<path to .aws/credentials>
+```
+
+This Secret needs to be configured for the `plugin_connector` service via `imageRepoSecret` in `values.yaml` in the next step.
+
+##### **Step 3: Configure values.yaml**
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://s3.{region_code}.amazonaws.com"
+    region: "{region_code}"
+    bucketName: "your_bucket_name"
+    useAwsS3: true
+    useAwsManagedIam: false
+    accessKey: "{your access key}"
+    secretKey: "{your secret key}"
+
+plugin_daemon:
+  enabled: true
+  replicas: 1
+  apiKey: "dify123456"
+
+plugin_connector:
+  apiKey: "dify123456"
+  imageRepoSecret: "image-repo-secret"
+  imageRepoPrefix: "{account_id}.dkr.ecr.{region}.amazonaws.com/dify-ee"
+  imageRepoType: ecr
+  ecrRegion: "us-west-2"
+```
+
+### 4. Install AWS ALB (Application Load Balancer)
+To make Dify Enterprise Edition accessible via domain name, you need to install AWS ALB (Application Load Balancer). You can also choose to use Nginx Ingress Controller or other Ingress Controllers. AWS ALB is recommended because it integrates seamlessly with Dify Enterprise Edition and provides better performance and scalability.
+
+Please visit https://docs.aws.amazon.com/eks/latest/userguide/lbc-manifest.html for the AWS ALB installation guide.
+
+> If you cannot install AWS ALB, you can use Nginx Ingress Controller as an alternative:
+> ```bash
+> kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/main/deploy/static/provider/kind/deploy.yaml
+> ```
+
+After AWS ALB installation is complete, you can confirm whether the service is running properly with the following command:
+
+```bash
+kubectl get deployment -n kube-system aws-load-balancer-controller
+```
+
+After installation, configure Ingress in `values.yaml`:
+
+```yaml
+ingress:
+  enabled: true
+  className: "alb"  # Use AWS ALB Ingress Controller
+  annotations: {
+    kubernetes.io/ingress.class: alb,
+    alb.ingress.kubernetes.io/scheme: internet-facing,
+    alb.ingress.kubernetes.io/target-type: ip,
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}, {"HTTPS": 443}]',
+    alb.ingress.kubernetes.io/ssl-redirect: '443',
+    alb.ingress.kubernetes.io/certificate-arn: 'arn:aws:acm:{region}:{account_id}:certificate/{cert_uuid}', # You can fill in the domain certificate AWS ACM certificate
+  }
+```
+
+*To publish Dify Enterprise Edition service via SSL certificate, configure the certificate in the ALB annotations and enable TLS in the `global` configuration. You can verify the domain and create a certificate through AWS Certificate Manager.
+
+```yaml
+global:
+  appSecretKey: 'owb3+S+C3b/4iG6YNAiWGIY4kOuX4MnUWHjcPxzyPKvGyxlQUISAWOmi'
+  consoleApiDomain: "console.dify.yourdomain.com"
+  consoleWebDomain: "console.dify.yourdomain.com"
+  serviceApiDomain: "api.dify.yourdomain.com"
+  appApiDomain: "app.dify.yourdomain.com"
+  appWebDomain: "app.dify.yourdomain.com"
+  filesDomain: "upload.dify.yourdomain.com"
+  enterpriseDomain: "enterprise.dify.yourdomain.com"
+  triggerDomain: "trigger.dify.yourdomain.com"
+  useTLS: true
+
+```
+
+### 5. Execute Installation
+
+Please visit https://langgenius.github.io/dify-helm/#/ for detailed installation instructions.
+
+> ‼️ It is not recommended to install Dify in the `default` namespace.
+
+### 6. Verify Service Status
+1. Update kubectl access credentials:
+
+```bash
+aws eks update-kubeconfig --region $AWS_REGION --name $CLUSTER_NAME
+```
+2. Verify EKS nodes are running properly:
+
+```bash
+kubectl get nodes
+```
+
+3. Verify Dify service status:
+
+```bash
+kubectl get pods -n {your namespace}
+```
+
+4. Confirm ALB is working properly:
+```bash
+aws elbv2 describe-load-balancers --output json
+```
+
+> ‼️ Please configure the `DNSName` from the above command output as a CNAME record, resolving to the various domains required by Dify.
+
+### 7. Initialize Service
+
+Installation is now complete. Please visit enterprise.dify.yourdomain.com to log in to the Dify Enterprise Edition admin console for further configuration and usage.
+
+## Known issues (3.9.0 / 3.9.1)
+
+The following issues affect Dify Enterprise 3.9.0 and 3.9.1. They are also called out inline next to the relevant configuration above; this section consolidates them for visibility.
+
+### 1. `persistence.s3.endpoint` must be left empty when using AWS S3
+
+When `useAwsS3: true` and `useAwsManagedIam: true` are set, providing a non-empty `persistence.s3.endpoint` breaks plugin installation. Set `endpoint: ""` so the AWS SDK derives the regional host automatically:
+
+```yaml
+persistence:
+  type: "s3"
+  s3:
+    useAwsS3: true
+    useAwsManagedIam: true
+    endpoint: ""        # must be empty for AWS S3 in 3.9.0 / 3.9.1
+    region: "{your_region}"
+    bucketName: "{your_bucket_name}"
+```
+
+S3-compatible non-AWS object stores (MinIO, OSS, etc.) are not affected.
+
+### 2. OpenSearch as a vector store: file uploads to the knowledge base fail
+
+When `vectorDB.externalType: "opensearch"` is configured, files cannot be uploaded to the knowledge base.
+
+**Workaround:** contact the Dify support team to obtain a hotfix image.
+

@@ -1,0 +1,294 @@
+---
+title: Knowledge API
+sidebarTitle: Knowledge
+tag: New
+description: Query a new knowledge base from your own code, read back what a run retrieved, and keep its documents, sources, and settings maintained
+---
+
+Query a [knowledge base](/en/3.14.x/use/knowledge-base/overview) from your own code and keep its content maintained:
+
+- Ask it a question and stream the answer
+- Look up what a query retrieved
+- Run research tasks in the background
+- Read documents and chunks
+- Label documents with metadata
+- Delete or re-index them
+- Keep sources syncing
+- Set the models of an empty knowledge base
+
+<Info>
+  This API serves the new knowledge base only. Classic knowledge bases use the classic [Knowledge API](/en/3.14.x/develop/api/guides/knowledge).
+</Info>
+
+## Get Your API Endpoint and Key
+
+Go to **Knowledge** and click **API Access** in the top-right corner:
+
+- Copy the Service API endpoint for this knowledge base.
+- Click **API Key** to create and manage the workspace's knowledge base API keys. When you create a key, you can scope it to specific knowledge bases.
+
+Send the key on every request as `Authorization: Bearer <key>`. The one exception is [Run Query](/en/3.14.x/develop/api/queries/run-query), which takes a query token instead (see [Query the Knowledge Base](#query-the-knowledge-base)).
+
+<Warning>
+Keep the key on the server side. Never put it in client-side code or a public repository.
+</Warning>
+
+## Turn On API Access
+
+Under the knowledge base's **Settings**, turn on **API access**.
+
+While it is off, every call with a valid key fails with 401 `knowledge_fs_invalid_credential`, the same error as an unknown key, so check the switch before the key on a 401.
+
+## Query the Knowledge Base
+
+A query takes two calls: get a short-lived query token, then post the query and read the answer as a stream. Decide the retrieval depth (`mode`) first, as it shapes what comes back.
+
+| Depth | What you get | Use when |
+|:------|:-------------|:---------|
+| `fast` | A digest of the retrieved chunks, section by section | You feed chunks to your own model. Read the chunks with [List Query Chunks](/en/3.14.x/develop/api/query-records/list-query-chunks) |
+| `deep` | The same digest from a wider search | Fast misses answers that involve related subjects. Slower |
+| `research` | An answer written from the retrieved chunks, streamed | You show a user an answer |
+| `auto` | One of the above, chosen by a reasoning-model call before retrieval | You cannot tell in advance. It costs more and answers later than naming the depth |
+
+Every depth caps the answer at 2,000 characters. Leave `mode` out to use the knowledge base's default [retrieval depth](/en/3.14.x/use/knowledge-base/retrieval-settings#retrieval-depth).
+
+<Steps>
+  <Step title="Create a query token">
+    Call [Create Query Token](/en/3.14.x/develop/api/queries/create-query-token), the question in `query`, and optionally `mode`. For a follow-up question, add `sessionId` (see below).
+
+    ```json
+    {"query": "What changed in the refund policy this quarter?", "mode": "fast"}
+    ```
+
+    The response holds three things you need:
+
+    - `token`: the query token, valid for 60 seconds (`expires_at`).
+    - `request`: the body to send next, exactly as returned.
+    - `url`: where to send it. Absolute when your deployment has an API base URL configured. Otherwise the path `/v1/knowledge-fs/query-stream` on the host you are already calling.
+
+    ```json
+    {
+      "token": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjIwMjYtMDkifQ.eyJ0cmFjZV9pZCI6IjNmMWU5YTdjLTJiNGQtNGU2Zi04YTkwLTFiMmMzZDRlNWY2MCIsImV4cCI6MTc4ODY4NTIwN30.…",
+      "expires_at": "2026-09-06T09:00:07Z",
+      "operation_id": "createQuery",
+      "request": {
+        "query": "What changed in the refund policy this quarter?",
+        "mode": "fast",
+        "activeDocumentIds": [],
+        "activeEntityIds": [],
+        "knowledgeSpaceId": "8d2c6a1e-5b3f-4c7d-9e01-2a3b4c5d6e7f"
+      },
+      "url": "https://api.example.com/v1/knowledge-fs/query-stream"
+    }
+    ```
+
+  </Step>
+  <Step title="Read the trace ID from the token">
+    The token is a JWT, and the response does not carry the trace ID separately. Base64url-decode the token's middle segment and read `trace_id` from the payload:
+
+    ```json
+    {"trace_id": "3f1e9a7c-2b4d-4e6f-8a90-1b2c3d4e5f60", "exp": 1788685207, "…": "…"}
+    ```
+
+    This value only authenticates the next call. It is not the query run ID.
+  </Step>
+  <Step title="Run the query">
+    `POST` the `request` object, unchanged, to `url` with `Authorization: Bearer <token>` and `X-Trace-ID: <trace_id>`. This is [Run Query](/en/3.14.x/develop/api/queries/run-query), and the response is a `text/event-stream` body.
+
+    ```bash
+    curl -N "$URL" \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "X-Trace-ID: $TRACE_ID" \
+      -H "Content-Type: application/json" \
+      -d "$REQUEST"
+    ```
+
+    Two response headers arrive before the first event. Keep both:
+
+    - `x-query-run-id`: the query run ID, also `traceId` in every event, taken by the [query record](#investigate-an-answer).
+    - `x-session-id`: the session for follow-up questions.
+  </Step>
+  <Step title="Read the events">
+    Each frame is an `event:` line naming the event and a `data:` line holding one JSON object:
+
+    ```text
+    event: answer.delta
+    data: {"delta":"Retrieval evidence answer:\n1. Policies / Refunds: The refund window is now 30 days…","traceId":"6c1f0b2e-9d3a-4f5b-8c7d-0e1f2a3b4c5d"}
+
+    event: answer.done
+    data: {"finishReason":"retrieval-evidence","metadata":{"mode":"fast","citations":[]},"traceId":"6c1f0b2e-9d3a-4f5b-8c7d-0e1f2a3b4c5d"}
+    ```
+
+    - `answer.delta` carries a piece of the answer in `delta`.
+    - `answer.done` closes a successful run, with `finishReason` (`retrieval-evidence`, or `no-retrieval-evidence` when nothing matched) and a `metadata` object holding the citations and the retrieval depth used.
+    - `answer.error` closes a failed run, with `code`, `error`, and `failure` (the error details described under [Handle Errors](#handle-errors)): `data: {"code":"KNOWLEDGE_FS_UNAVAILABLE","error":"…","failure":{…},"traceId":"…"}`.
+
+    The stream carries no other events. Treat only `answer.done` as success. An `answer.error` can arrive after deltas, under HTTP 200. Discard the partial text. A dropped connection cannot be resumed, so start again from step 1.
+  </Step>
+</Steps>
+
+Errors before the stream opens come back as JSON with a single `error` field, `{"error": "…"}`, rather than the usual error envelope. A 401 means the token expired and a 403 that `X-Trace-ID` does not match the token. In both cases, go back to step 1 for a fresh token.
+
+A session lives 30 minutes. It belongs to your API key, not to an end user, so keep one per conversation. Send the `x-session-id` value back as `sessionId` in the next Create Query Token call. An expired or unknown `sessionId` starts a new session.
+
+## Investigate an Answer
+
+Every run is recorded as a query record. When an answer looks wrong, read back what the run did:
+
+- **[List Query Records](/en/3.14.x/develop/api/query-records/list-query-records)**. Runs, newest first. `source=service_api` narrows the list to API runs.
+- **[Get Query Record](/en/3.14.x/develop/api/query-records/get-query-record)**. The recorded steps of one run. This and the three lists below take the query run ID.
+- **[List Query Chunks](/en/3.14.x/develop/api/query-records/list-query-chunks)**: the chunks the run retrieved, with scores and citations.
+- **[List Query Conflicts](/en/3.14.x/develop/api/query-records/list-query-conflicts)**: contradictions between retrieved chunks.
+- **[List Missing Chunks](/en/3.14.x/develop/api/query-records/list-missing-chunks)**: what the run expected but could not use, for example chunks your key's permissions excluded (`permission-filtered`).
+
+The chunk, conflict, and missing-chunk lists return up to 100 entries per page. Follow `next_cursor` for the next page.
+
+When the right chunks are missing or ranked low, tune retrieval in the workspace. See [Test and Tune Retrieval](/en/3.14.x/use/knowledge-base/test-and-tune) for what to adjust.
+
+## Run a Research Task
+
+A research task runs in the background and keeps its results, unlike a query in research depth, which answers within the stream. Plan and Create take the same `query` and `mode` (retrieval depth) fields as a query token. Every Create call starts a new task.
+
+<Steps>
+  <Step title="Plan">
+    Call [Plan Research Task](/en/3.14.x/develop/api/research-tasks/plan-research-task) to get the estimated cost, latency, and steps for the question without running it. Use the estimates to size `limits`, because Create rejects a task whose estimates exceed its limits with 422 and does not say which limit.
+  </Step>
+  <Step title="Create">
+    Call [Create Research Task](/en/3.14.x/develop/api/research-tasks/create-research-task). It answers 202 with the task in stage `queued`.
+  </Step>
+  <Step title="Poll">
+    Call [Get Research Task](/en/3.14.x/develop/api/research-tasks/get-research-task) until `stage` is `completed`, `failed`, or `canceled`.
+  </Step>
+  <Step title="Read the results">
+    Call [List Research Task Results](/en/3.14.x/develop/api/research-tasks/list-research-task-results). The answer is not on the task. The last result carries `answer`.
+  </Step>
+</Steps>
+
+Two fields bound a task, and they act at different moments:
+
+| Field | Acts | Effect |
+|:------|:-----|:-------|
+| `limits` | At creation | Rejects the task when the plan's estimates exceed them. Omit them and the task runs unbounded, so set them whenever a runaway task would cost you |
+| `budgetUsd` | While running | Cancels the task when spend passes it. Results written before that stay readable |
+
+[Cancel Research Task](/en/3.14.x/develop/api/research-tasks/cancel-research-task) stops a running task and keeps its record. [List Research Tasks](/en/3.14.x/develop/api/research-tasks/list-research-tasks) lists recent tasks, newest first.
+
+## Browse Documents and Chunks
+
+Two IDs matter here. A document, the item the **Document** tab shows, has a document ID. The file stored behind it is a document file with its own ID and a `version`.
+
+| ID | Where it comes from | Operations that take it |
+|:---|:--------------------|:------------------------|
+| Document file ID | [List Document Files](/en/3.14.x/develop/api/documents-and-chunks/list-document-files) | Get Document File, Get Document Outline, Delete Document File, Delete Document Files in Batch |
+| Document ID | The address bar of the open document: `/datasets/new/<knowledge base ID>/documents/<document ID>` | Update Document Metadata, List Document Revisions, List Chunks, Get Chunk |
+
+<Note>
+The API does not return document IDs, so an integration cannot discover it on its own.
+</Note>
+
+- **[List Document Files](/en/3.14.x/develop/api/documents-and-chunks/list-document-files)**: the document files in the knowledge base.
+- **[Get Document File](/en/3.14.x/develop/api/documents-and-chunks/get-document-file)**: one document file, with its current `version`.
+- **[Get Document Outline](/en/3.14.x/develop/api/documents-and-chunks/get-document-outline)**. The sections of an indexed document file. 404 until processing has finished.
+- **[List Document Revisions](/en/3.14.x/develop/api/documents-and-chunks/list-document-revisions)**: a document's revisions, newest first, each with the document file behind it.
+- **[List Chunks](/en/3.14.x/develop/api/documents-and-chunks/list-chunks)**: the chunks of one revision, by document ID and the revision number from List Document Revisions, ordered by chunk ID. `query` filters by substring.
+- **[Get Chunk](/en/3.14.x/develop/api/documents-and-chunks/get-chunk)**: one chunk's text and position.
+
+Lists return 50 items per page. Send `next_cursor` back as `cursor` for the next page.
+
+## Maintain Documents
+
+- **[Update Document Metadata](/en/3.14.x/develop/api/documents-and-chunks/update-document-metadata)**: send `expectedRowVersion` and a `patch` that sets a key to any JSON value or removes it with `null`. Names the system reserves, such as `sourceId` and `provenance`, are rejected. The operation page lists them.
+
+  Send `expectedRowVersion` 0 for a document that was never updated, and the value the last response returned after that. Every metadata update raises it by one, and changes made to the document in Dify can raise it too. The API has no read for it, and a 409 does not return it.
+
+- **[Delete Document File](/en/3.14.x/develop/api/documents-and-chunks/delete-document-file)** and **[Delete Document Files in Batch](/en/3.14.x/develop/api/documents-and-chunks/delete-document-files-in-batch)**: send an `Idempotency-Key` header (the same key with a different body is a 409) and the file's current `version` as `expectedRevision`. They answer 202 with a deletion job that this API cannot poll.
+
+  To confirm a deletion, call [Get Document Outline](/en/3.14.x/develop/api/documents-and-chunks/get-document-outline): 404 means the file is gone.
+
+  The batch call handles files one by one and stops at the first failure. The deletions before it are already running. Sending the same key and body again returns their jobs and retries the one that failed.
+
+Re-index a document when its indexing failed or came out wrong. A model change already re-indexes every document.
+
+<Steps>
+  <Step title="Re-index">
+    Call [Re-index Documents](/en/3.14.x/develop/api/documents-and-chunks/re-index-documents) with `documentIds` (document file IDs from [List Document Files](/en/3.14.x/develop/api/documents-and-chunks/list-document-files), or document IDs) or `all: true`. It answers with a `bulk_job_id` and one indexing task per file.
+  </Step>
+  <Step title="Poll">
+    Call [Get Bulk Task](/en/3.14.x/develop/api/indexing-tasks/get-bulk-task) for the whole re-index, or [Get Indexing Task](/en/3.14.x/develop/api/indexing-tasks/get-indexing-task) for one file until its `stage` is `published`, `failed`, or `canceled`.
+  </Step>
+  <Step title="Retry or cancel">
+    [Retry Indexing Task](/en/3.14.x/develop/api/indexing-tasks/retry-indexing-task) restarts one task from `failed` or `canceled`. [Cancel Indexing Task](/en/3.14.x/develop/api/indexing-tasks/cancel-indexing-task) stops one that is still running.
+  </Step>
+</Steps>
+
+## Keep Sources in Sync
+
+A source is a website crawl, an online document platform, or an online drive. It reads through a connection, the provider account or API key set up under **Integrations** > **Data Source**. 
+
+Create sources from the knowledge base's **Source** tab. Skip [Create Source](/en/3.14.x/develop/api/sources/create-source) unless you are adding a source on an existing source's `connection_id`.
+
+- **[List Sources](/en/3.14.x/develop/api/sources/list-sources)**: every source, with its latest sync run under `sync_workflow`. Poll its `state` until `completed`, `zero_results`, `failed`, or `canceled`.
+- **[Get Source](/en/3.14.x/develop/api/sources/get-source)**: one source, without the sync run that the list adds.
+- **[Update Source](/en/3.14.x/develop/api/sources/update-source)**: rename a source, pause it with `status`, or change its crawl URL and provider parameters. 
+
+    Set `syncAfterUpdate: true` to start a sync run after the update. It runs only when the update changed something (the crawl URL in `uri`, provider parameters, or metadata) and the source is not disabled.
+- **[Test Source Credentials](/en/3.14.x/develop/api/sources/test-source-credentials)**: checks a source's stored credentials with its provider. Answers a boolean `valid`, with error details when the provider rejects them.
+- **[Delete Source](/en/3.14.x/develop/api/sources/delete-source)**: needs `Idempotency-Key` and the source's `version` as `expectedRevision`. 
+
+    The `documents` query parameter decides what happens to the documents it imported: `cascade` (the default) deletes them; `keep` keeps them, and they stop refreshing, as in Dify.
+- **[List Source Pages](/en/3.14.x/develop/api/sources/list-source-pages)** and **[List Source Files](/en/3.14.x/develop/api/sources/list-source-files)**. Browse what an online document or online drive source holds, read-only.
+
+## Set Up Models Before Adding Content
+
+- **[Get Knowledge Base Settings](/en/3.14.x/develop/api/settings/get-knowledge-base-settings)**: the embedding and retrieval settings, readiness (`capabilities` says whether the knowledge base can ingest and answer yet, `issues` what is still missing), and the current `revision`.
+- **[Update Knowledge Base Settings](/en/3.14.x/develop/api/settings/update-knowledge-base-settings)**: send `expectedRevision` and the settings to change. It works only while the knowledge base has no indexed document. After that it answers 409, and change models under the knowledge base's **Settings** > **Retrieval**.
+
+## Handle Errors
+
+Errors use the same envelope as the rest of the API, `{"code": "…", "message": "…", "status": 400}`. See [Errors](/en/3.14.x/develop/api/guides/errors) for the general rules. 
+
+Some errors, at any status from 400 up, add a `failure` object. Use it when it's present:
+
+- `code`: a stable upper-case code such as `KNOWLEDGE_FS_CONFLICT`.
+- `category`: the kind of failure, such as `validation`, `conflict`, or `dependency`.
+- `message`: a fixed text per category.
+- `retryPolicy`: what to do next.
+  - `automatic` or `manual`: retry.
+  - `after_configuration`: fix the knowledge base's settings in Dify first.
+  - `never`: change the request.
+- `action`, sometimes: the suggested recovery, such as `retry` or `configure_source`.
+
+| Status | Code | Meaning |
+|:-------|:-----|:--------|
+| 400 | `knowledge_fs_invalid_request` | Malformed request. The response does not say which field failed; check the constraints on the operation page. |
+| 401 | `knowledge_fs_invalid_credential` | Unknown key or knowledge base ID, or API access is off for the knowledge base. |
+| 403 | `knowledge_fs_access_denied` | The key is scoped to other knowledge bases. |
+| 404 | `knowledge_fs_resource_not_found` | Nothing at that ID in this knowledge base. |
+| 409 | `knowledge_fs_conflict` | Stale `expectedRevision` or `expectedRowVersion`, an idempotency key reused with a different body, or a task that is already terminal. |
+| 413 | `knowledge_fs_request_too_large` | The body exceeds the operation's size limit. |
+| 422 | `knowledge_fs_request_rejected` | The request is well-formed but refused, for example a research task whose estimates exceed its limits. |
+| 429 | `knowledge_fs_rate_limit_exceeded` | The knowledge base already has the maximum number of sources (Create Source only). |
+| 502 | `knowledge_fs_upstream_unavailable` | The knowledge base did not answer in time. |
+| 503 | `knowledge_fs_operation_unavailable` | The knowledge base feature is not set up for this workspace. |
+
+Retry 502 after a pause. On 400, 409, and 422, fix the request before sending it again. A 503 needs an administrator to finish setting up the knowledge base feature.
+
+Every write that guards against concurrent changes takes the value its object's read returned. On a stale value, read the object again first.
+
+| Object | Read field | Send as | On |
+|:-------|:-----------|:--------|:---|
+| Document file | `version` | `expectedRevision` | Delete Document File, Delete Document Files in Batch |
+| Source | `version` | `expectedVersion` on update, `expectedRevision` on delete | Update Source, Delete Source |
+| Settings | `revision` | `expectedRevision` | Update Knowledge Base Settings |
+| Document | `row_version` | `expectedRowVersion` | Update Document Metadata |
+
+## Not Available Over the API
+
+Do these in Dify:
+
+- Creating a knowledge base.
+- Uploading files.
+- Creating a connection, importing pages or files from a source, and changing a source's selection or sync schedule.
+- Changing models after content exists.
+- Image queries.
+- Enabling or disabling chunks.

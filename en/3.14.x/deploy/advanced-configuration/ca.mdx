@@ -1,0 +1,374 @@
+---
+title: Custom CA Certificate Configuration
+---
+
+This guide explains how to configure custom Certificate Authority (CA) certificates for Dify Enterprise in Helm Chart deployments. This feature is essential for environments that use self-signed certificates or private PKI infrastructure.
+
+## Overview
+
+When enabled, Dify will trust both system-wide CA certificates and your custom CA certificate for all outbound HTTPS connections. This is particularly useful when:
+
+*   Your organization uses an internal PKI (Public Key Infrastructure).
+*   You are deploying in air-gapped environments with self-signed certificates.
+*   External services (Redis, databases, S3, vector databases, etc.) use certificates signed by a private CA.
+*   You need to establish trust with internal HTTPS endpoints.
+
+## How It Works
+
+The custom CA implementation uses the following approach:
+
+1.  **Initialization**: An init container runs before each Dify pod starts.
+2.  **CA Bundle Creation**: The init container combines system CA certificates (from the base image) with your custom CA certificate (from a Kubernetes Secret).
+3.  **Environment Setup**: Environment variables are configured to point Python, Node.js, curl, and AWS CLI to the combined CA bundle.
+4.  **Runtime Trust**: All Dify components use the combined CA bundle for SSL/TLS verification.
+
+## Prerequisites
+
+*   Kubernetes cluster with Dify Helm chart installed (or ready to install).
+*   Your custom CA certificate in PEM format.
+*   `kubectl` access to your cluster.
+*   Basic understanding of Kubernetes Secrets.
+
+---
+
+## Configuration Steps
+
+### 1. Prepare Your CA Certificate
+
+Your CA certificate must be in **PEM format** (Base64-encoded, enclosed in `BEGIN CERTIFICATE` and `END CERTIFICATE` markers).
+
+Verify your certificate format:
+
+```bash
+# Your certificate should look like this:
+cat your-ca.crt
+# -----BEGIN CERTIFICATE-----
+# MIIDXTCCAkWgAwIBAgIJAKJ... (Base64 content)
+# ...
+# -----END CERTIFICATE-----
+```
+
+If you have a DER-encoded certificate, convert it to PEM:
+
+```bash
+openssl x509 -inform der -in your-ca.der -out your-ca.crt
+```
+
+### 2. Create a Kubernetes Secret
+
+Create a Kubernetes Secret containing your CA certificate.
+
+```bash
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=your-ca.crt \
+  --namespace=<your-dify-namespace>
+```
+
+> **Note**:
+> *   **Secret name**: `dify-custom-ca` (you can choose any name).
+> *   **Key name**: `ca.crt` (default, can be customized in `values.yaml`).
+> *   **Namespace**: Must be in the same namespace as your Dify deployment.
+
+Verify the secret was created:
+
+```bash
+kubectl get secret dify-custom-ca -n <your-dify-namespace>
+kubectl describe secret dify-custom-ca -n <your-dify-namespace>
+```
+
+### 3. Configure values.yaml
+
+Edit your Helm `values.yaml` file to enable custom CA.
+
+```yaml
+global:
+  customCA:
+    # Enable custom CA certificate support
+    enabled: true
+    # Name of the Kubernetes secret containing your CA certificate
+    existingSecret: "dify-custom-ca"
+    # Key name in the secret (must match the key you used in Step 2)
+    key: ca.crt
+    # Mount path for the combined CA bundle inside containers
+    # (Advanced: usually no need to change this)
+    mountPath: /etc/dify/custom-ca
+    # Init container image used to combine system CAs with custom CA
+    # For air-gapped environments, replace with your private registry
+    initImage: alpine:3.20
+```
+
+**Minimal configuration (using defaults):**
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+```
+
+### 4. Deploy or Update Dify
+
+**For new installations:**
+
+```bash
+helm install dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+**For existing installations:**
+
+```bash
+helm upgrade dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+> **Note**: Changes to the custom CA configuration require a pod restart to take effect. The CA bundle is generated once during pod initialization.
+
+---
+
+## Verification
+
+After deployment, verify that the custom CA is properly configured.
+
+### 1. Check Init Containers
+
+Check if the init containers ran successfully.
+
+```bash
+# List pods
+kubectl get pods -n dify
+
+# Check init container logs for a specific pod (e.g., api pod)
+kubectl logs <api-pod-name> -n dify -c init-custom-ca
+```
+
+You should see output indicating the CA bundle was created successfully.
+
+### 2. Verify Environment Variables
+
+Exec into a running pod and check the environment variables.
+
+```bash
+# Exec into a running pod
+kubectl exec -it <api-pod-name> -n dify -- sh
+
+# Check environment variables
+env | grep -E 'SSL_CERT_FILE|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|NODE_EXTRA_CA_CERTS|AWS_CA_BUNDLE'
+```
+
+**Expected output:**
+
+```bash
+SSL_CERT_FILE=/etc/dify/custom-ca/ca-bundle.crt
+REQUESTS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+CURL_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+NODE_EXTRA_CA_CERTS=/etc/dify/custom-ca/ca-bundle.crt
+AWS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+```
+
+### 3. Verify CA Bundle Content
+
+Inside the pod, verify the bundle contains your certificate.
+
+```bash
+# Inside the pod
+cat /etc/dify/custom-ca/ca-bundle.crt | grep -A 5 "BEGIN CERTIFICATE" | tail -10
+
+# Count certificates in the bundle
+grep -c "BEGIN CERTIFICATE" /etc/dify/custom-ca/ca-bundle.crt
+```
+
+The bundle should contain multiple certificates (system CAs + your custom CA).
+
+---
+
+## Environment Variables Reference
+
+The custom CA feature sets the following environment variables to ensure broad compatibility. All variables point to the same combined CA bundle: `/etc/dify/custom-ca/ca-bundle.crt` (or your custom `mountPath`).
+
+| Variable | Purpose | Used By |
+| :--- | :--- | :--- |
+| `SSL_CERT_FILE` | OpenSSL/LibreSSL | General SSL libraries, Python requests |
+| `REQUESTS_CA_BUNDLE` | Python requests library | Python HTTP clients |
+| `CURL_CA_BUNDLE` | curl command | Shell scripts, curl-based tools |
+| `NODE_EXTRA_CA_CERTS` | Node.js | Node.js HTTPS client |
+| `AWS_CA_BUNDLE` | AWS SDK | S3, AWS service connections |
+
+---
+
+## Affected Components
+
+When custom CA is enabled, the following Dify components automatically use the custom CA bundle:
+
+*   API Server (`api-deployment`)
+*   Worker (`worker-deployment`)
+*   Worker Beat (`worker-beat-deployment`)
+*   Trigger Worker (`trigger-worker-deployment`)
+*   Enterprise Service (`enterprise-deployment`)
+*   Enterprise Audit (`enterprise-audit-deployment`)
+*   Sandbox (`sandbox-deployment`)
+*   Gateway (`caddy-deploy`)
+*   SSRF Proxy (`ssrf-proxy-deployment`)
+*   Unstructured (`unstructured-deployment`)
+*   Plugin Daemon (`plugin-daemon`)
+*   Plugin Manager (`plugin-manager`)
+*   Plugin Controller (`plugin-controller`)
+
+---
+
+## Troubleshooting
+
+### Pods stuck in Init:0/1
+
+**Cause**: Init container `init-custom-ca` is failing.
+
+**Solution**:
+
+```bash
+# Check init container logs
+kubectl logs <pod-name> -n dify -c init-custom-ca
+```
+
+Common causes:
+1.  `initImage` cannot be pulled (air-gapped environment).
+2.  Secret not found or wrong namespace.
+3.  Wrong key name in secret.
+
+### SSL verification errors after enabling custom CA
+
+**Cause**: Your custom CA certificate might not be properly formatted or is incomplete.
+
+**Solution**:
+
+1.  Verify certificate is valid PEM format:
+    ```bash
+    openssl x509 -in your-ca.crt -text -noout
+    ```
+2.  Check if it's a full chain (if your CA requires intermediate certificates). Concatenate multiple certificates if needed:
+    ```bash
+    cat intermediate-ca.crt root-ca.crt > combined-ca.crt
+    ```
+3.  Update the secret and restart pods:
+    ```bash
+    kubectl delete secret dify-custom-ca -n dify
+    kubectl create secret generic dify-custom-ca \
+      --from-file=ca.crt=combined-ca.crt -n dify
+    kubectl rollout restart deployment -n dify
+    ```
+
+### Changes to custom CA secret not taking effect
+
+**Cause**: The CA bundle is created during pod initialization. Updating the secret doesn't automatically update running pods.
+
+**Solution**: You must restart pods after updating the secret.
+
+```bash
+kubectl rollout restart deployment -n dify
+```
+
+### Init container cannot pull alpine:3.20 image
+
+**Cause**: Air-gapped environment or restricted registry access.
+
+**Solution**: Use your private registry in `values.yaml`.
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    initImage: your-registry.company.com/alpine:3.20
+```
+
+**Supported alternatives**:
+*   Alpine-based: `alpine:3.20`, `alpine:3.19`
+*   Debian-based: `ubuntu:22.04`, `debian:12`
+*   Any image containing `/etc/ssl/certs/ca-certificates.crt` (Debian/Ubuntu) or `/etc/ssl/cert.pem` (Alpine).
+
+---
+
+## Advanced Configuration
+
+### Using a Different Secret Key Name
+
+If your secret uses a different key name:
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "my-ca-secret"
+    key: custom-ca.pem  # Different key name
+```
+
+### Custom Mount Path
+
+If you need to change where the CA bundle is mounted:
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    mountPath: /custom/path/to/ca
+```
+
+> **Note**: Changing `mountPath` updates all environment variables automatically.
+
+### Multiple CA Certificates
+
+If you need to trust multiple custom CAs, concatenate them into a single file:
+
+```bash
+cat ca1.crt ca2.crt ca3.crt > combined-ca.crt
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=combined-ca.crt -n dify
+```
+
+### Air-Gapped Environments
+
+For completely air-gapped deployments:
+
+1.  **Mirror the init image** to your private registry:
+    ```bash
+    docker pull alpine:3.20
+    docker tag alpine:3.20 your-registry.company.com/alpine:3.20
+    docker push your-registry.company.com/alpine:3.20
+    ```
+2.  **Update values.yaml**:
+    ```yaml
+    global:
+      customCA:
+        enabled: true
+        existingSecret: "dify-custom-ca"
+        initImage: your-registry.company.com/alpine:3.20
+    ```
+
+---
+
+## FAQ
+
+### Can I disable custom CA after enabling it?
+
+Yes, set `global.customCA.enabled: false` and upgrade the Helm release. Pods will restart without the custom CA configuration.
+
+### Does this affect TLS between Dify components?
+
+No, this only affects outbound HTTPS connections from Dify to external services (databases, S3, APIs, etc.). Internal component communication is not affected.
+
+### What if my database also requires a custom CA?
+
+The custom CA feature covers database connections too. Ensure your database server's certificate is signed by the CA you've configured.
+
+### Can I use intermediate certificates?
+
+Yes, concatenate the full chain (intermediate + root CA) into a single file before creating the secret.
+
+### How do I update the CA certificate without downtime?
+
+Kubernetes Secrets can be updated, but pods must be restarted. For zero-downtime updates:
+1.  Update the secret.
+2.  Use `kubectl rollout restart` with rolling update strategy (default).
+3.  Pods will restart one by one, maintaining service availability.

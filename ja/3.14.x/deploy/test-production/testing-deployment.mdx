@@ -1,0 +1,272 @@
+---
+title: テスト環境のデプロイ
+version: '日本語'
+---
+
+## 要件
+> これは、テスト環境のデプロイまたはステージング環境のデプロイに推奨される構成です。必要に応じて構成を調整できます。
+
+- Kubernetes クラスター
+    - 1 ワーカーノード：4 CPU、16 GB RAM
+- コンテナレジストリ（プラグイン）
+    - AWS ECR（with AK/SK or IRSA）/ Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+- 永続ストレージ
+    - S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+    - 100 GB ストレージ
+- Postgres データベース
+    - バージョン 14+
+    - 4 CPU，8 GB RAM
+    - 少なくとも 512G SSD
+- Redis データベース
+    - バージョン 6+
+    - 1 GB RAM
+- [ベクトルデータベース VM - Qdrant シングルノード](/ja/3.14.x/deploy/advanced-configuration/qdrant/single-node)
+    - 1 VM
+    - 4 CPU，8 GB RAM
+    - 100 GB ストレージ
+
+## デプロイ
+### 1. Helm リポジトリ情報の取得
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+詳細については、[Dify Helm Chart](/ja/3.14.x/deploy/advanced-configuration/dify-helm-chart)を参照してください。
+
+### 2. Helm Chart 値の保存
+
+<Note>
+Dify 3.12 以降、Agent Sandbox（`agentBackend` と `sandboxGateway`）はデフォルトで有効になり、クラスターへの agent-sandbox controller の事前インストールが必要です。インストールできない場合は共有サンドボックスモードに切り替えてください。詳細は [Agent Sandbox のデプロイ](/ja/3.14.x/deploy/advanced-configuration/agent-sandbox)を参照してください。
+</Note>
+- Helm chart の値を `values.yaml` という名前のファイルに保存します。
+- 設定に合わせて `values.yaml` ファイルを更新します。
+
+<Warning>
+  - `#REPLACE_ME#` プレースホルダーを実際の値に置き換えてください。
+  - "dify123456" を独自の値に置き換えてください。
+  - `global.appSecretKey` と `enterprise.appSecretKey` は異なる必要があります。
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  innerApiKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+web:
+  replicas: 1
+sandbox:
+  replicas: 1
+enterpriseAudit:
+  replicas: 1
+enterprise:
+  replicas: 1
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  passwordEncryptionKey: "dify123456"
+enterpriseFrontend:
+  replicas: 1
+ssrfProxy:
+  replicas: 1
+unstructured:
+  replicas: 1
+plugin_daemon:
+  replicas: 1
+plugin_controller:
+  replicas: 1
+plugin_connector:
+  replicas: 1
+plugin_manager:
+  replicas: 1
+gateway:
+  replicas: 1
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.0 の設定
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+  user: "postgres"
+  password: "#REPLACE_ME#"
+  timezone: "UTC"
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.1 の設定
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+
+  # グローバルなデータベース認証情報（デフォルトで使用）
+  user: "postgres"
+  password: "#REPLACE_ME#"
+
+  timezone: "UTC"
+
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+
+  ###################################
+  # データベースごとの認証情報（任意）
+  ###################################
+  # 各データベースごとにユーザー名とパスワードを個別に設定するために使用します
+  # グローバルな user/password より優先されます
+  # 空の場合はグローバルな認証情報にフォールバックします
+  databaseCredentials:
+    dify:
+      user: ""
+      password: ""
+    enterprise:
+      user: ""
+      password: ""
+    audit:
+      user: ""
+      password: ""
+    plugin_daemon:
+      user: ""
+      password: ""
+
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+### 3. `コンテナレジストリ` の設定
+-  3.1 `プラグイン` コンテナレジストリの設定
+    - 詳細については、[プラグインのコンテナレジストリ設定](/ja/3.14.x/deploy/advanced-configuration/container-registry-for-plugins)を参照してください。
+- 3.2 `サービス` コンテナレジストリの設定
+    - 詳細については、[コンテナレジストリ設定](/ja/3.14.x/deploy/advanced-configuration/container-registry)を参照してください。
+
+### 4. `Persistence Storage` の設定
+- 詳細については、[Persistence Storage](/ja/3.14.x/deploy/advanced-configuration/persistent-storage)を参照してください。
+
+### 5. `External Database` の設定
+- 詳細については、[External Database](/ja/3.14.x/deploy/advanced-configuration/database)を参照してください。
+
+### 6. `External Redis` の設定
+- 詳細については、[External Redis](/ja/3.14.x/deploy/advanced-configuration/redis)を参照してください。
+
+### 7. `External Qdrant` の設定
+- 詳細については、[External Qdrant Single Node](/ja/3.14.x/deploy/advanced-configuration/qdrant/single-node)を参照してください。
+
+### 8. `Ingress Controller` の設定
+- 詳細については、[Ingress Controller 設定](/ja/3.14.x/deploy/advanced-configuration/nginx-ingress-controller)を参照してください。
+
+### 9. Dify Helm Chart のインストール
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. インストール結果の検証
+- 詳細については、[サービスステータスの検証](/ja/3.14.x/deploy/verify-services-status)を参照してください。
+
+
+## 高度な設定
+### 1. ドメインと SSL 証明書
+- 詳細については、[ドメインと SSL 証明書の設定](/ja/3.14.x/deploy/advanced-configuration/domain-and-ssl-certificate)を参照してください。
+
+### 2. メールサービスプロバイダー
+- 詳細については、[メールサービスの設定](/ja/3.14.x/deploy/advanced-configuration/email-provider)を参照してください。
+
+### 3. パフォーマンスチューニング
+- 詳細については、[パフォーマンスチューニング](/ja/3.14.x/deploy/advanced-configuration/performance)を参照してください。

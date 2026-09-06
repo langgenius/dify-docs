@@ -1,0 +1,433 @@
+---
+title: ベクトルデータベースの紹介
+version: '日本語'
+---
+
+## Helm Chart の値からベクトルデータベース設定を探す
+
+### Helm Chart の値を表示
+
+```bash
+helm show values dify/dify
+```
+
+## ベクトルデータベース設定の概要
+
+Helm chart の values 内で、`vectorDB` フィールドを通じてベクトルデータベースを設定します。Dify は 2 つのデプロイ方式をサポートしています:
+
+| モード | 利用シーン | 切り替えフィールド |
+| --- | --- | --- |
+| **外部接続**（本番環境推奨） | セルフホストまたはクラウドホスト型のベクトルデータベースに接続 | `vectorDB.useExternal: true` |
+| **ビルトインデプロイ**（テスト用途のみ） | Helm chart がクラスタ内ベクトルデータベースを自動起動 | `vectorDB.useExternal: false` |
+
+> **3.9.x chart のデフォルト値は `useExternal: true` + `externalType: "qdrant"` です。** つまり初期状態で「外部 Qdrant に接続」する状態になっています。`externalQdrant.endpoint` / `apiKey` を実際の値に置き換える必要があります。設定しない場合は、`api` / `worker` Pod はベクトルデータベースに接続できず、起動に失敗します。
+
+## 1. ビルトインベクトルデータベースの使用
+
+> ⚠️ **本番環境では使用注意**：ビルトインオプションはローカル試用と機能検証のみに適しており、高可用性、バックアップ、容量スケーリングは提供されません。本番環境では第 2 節の外部接続方式をご利用ください。
+
+Helm chart は 2 種類のクラスタ内ベクトルデータベースを提供しています。
+
+### ビルトイン Qdrant
+
+`vectorDB.useExternal` を `false` に設定し、`qdrant.enabled` を有効化することで利用できます。
+
+````yaml
+vectorDB:
+  useExternal: false
+
+qdrant:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: langgenius/qdrant
+    pullPolicy: IfNotPresent
+    tag: "v1.7.3"
+  apiKey: "dify123456"
+  persistence:
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+````
+
+| フィールド | 説明 | デフォルト値 |
+|---|---|---|
+| `qdrant.enabled` | ビルトイン Qdrant を有効化するか | `false` |
+| `qdrant.replicaCount` | レプリカ数 | `3` |
+| `qdrant.image.repository` | イメージリポジトリ | `langgenius/qdrant` |
+| `qdrant.image.tag` | イメージバージョン | `v1.7.3` |
+| `qdrant.apiKey` | Qdrant API Key | `dify123456` |
+| `qdrant.persistence.accessModes` | 永続化ストレージのアクセスモード | `["ReadWriteOnce"]` |
+| `qdrant.persistence.size` | 永続化ストレージサイズ | `10Gi` |
+| `qdrant.resources` | リソース制限（CPU / メモリ） | `{}` |
+
+### ビルトイン Weaviate
+
+`weaviate` は親 chart の `values.yaml` では `enabled` スイッチのみが明示的に列挙されていますが、実体は入れ子になった subchart です（chart tarball の `dify/charts/weaviate/` に配置、約 947 行の values）。**この subchart のすべてのフィールドは、ご自身の `values.yaml` で `weaviate.<フィールド>` の形式でオーバーライド可能です**。よく使う項目は下表の通りです。
+
+````yaml
+weaviate:
+  enabled: true
+  image:
+    repo: semitechnologies/weaviate
+    tag: "1.18.0"
+  replicas: 1
+  storage:
+    size: 32Gi
+    storageClassName: ""
+  service:
+    type: LoadBalancer  # ClusterIP / NodePort も指定可能
+  resources: {}
+  authentication: {}
+  authorization: {}
+  modules: {}
+````
+
+| フィールド | 説明 | subchart デフォルト値 |
+|---|---|---|
+| `weaviate.enabled` | ビルトイン Weaviate を有効化するか | `false` |
+| `weaviate.image.tag` | Weaviate イメージバージョン（ご自身の values で固定することを推奨） | `1.18.0` |
+| `weaviate.replicas` | レプリカ数（データ投入後はスケール変更が制限されます。subchart の説明をご参照ください） | `1` |
+| `weaviate.storage.size` | PVC 容量 | `32Gi` |
+| `weaviate.storage.storageClassName` | ストレージクラス | `""`（デフォルト SC） |
+| `weaviate.service.type` | Service タイプ | `LoadBalancer` |
+| `weaviate.resources` | リソース制限 | `{}` |
+| `weaviate.{startup,liveness,readiness}Probe` | プローブ設定 | subchart 参照 |
+| `weaviate.authentication` / `authorization` | 認証設定 | subchart 参照 |
+| `weaviate.modules` | テキスト/画像ベクトル化などの拡張モジュール（contextionary、img2vec、transformers など） | subchart 参照 |
+
+> 💡 完全なフィールドリストを取得したい場合は、chart パッケージをダウンロードして `dify/charts/weaviate/values.yaml` をご確認ください:
+>
+> ```bash
+> helm pull dify/dify --untar
+> less dify/charts/weaviate/values.yaml
+> ```
+>
+> 既存の外部 Weaviate クラスタに接続する場合は、後述 [Weaviate](#weaviate) の `externalWeaviate` 設定をご利用ください。
+
+## 2. 外部ベクトルデータベースの使用
+
+外部ベクトルデータベースは2ステップで設定できます。
+
+**ステップ 1:** `vectorDB.useExternal` を `true` に設定し、`externalType` を指定します。3.9.x の chart は既にこの状態がデフォルト（`externalType: "qdrant"`）ですので、別タイプに切り替える場合のみ `externalType` をオーバーライドしてください。
+
+````yaml
+vectorDB:
+  useExternal: true
+  externalType: "<タイプ>"
+````
+
+**ステップ 2:** 選択したタイプに応じて、対応する `externalXxx` 設定ブロックを記入します。values.yaml には各タイプ用のデフォルト雛形が予め用意されているため、**対象タイプ**のフィールドのみオーバーライドすれば OK です。他タイプのブロックを削除する必要はありません。各タイプのフィールド例は [第 4 節 付録](#4-付録各ベクトルデータベースの設定例) をご参照ください。
+
+### サポートされているタイプ
+
+#### Dify エンタープライズ版が公式サポートするタイプ
+
+Dify エンタープライズ版は以下のベクトルデータベースを公式サポートしており、ベクトルデータベース接続に関する技術サポートも併せて提供しています（第 3 節をご参照ください）。
+
+- qdrant（推奨）
+- weaviate（オプション）
+- elasticsearch（オプション）
+
+#### コミュニティサポートタイプ
+
+Dify コミュニティ版は以下のベクトルデータベースをサポートしています。これらをご利用の場合、Dify エンタープライズ版でも動作しますが、Dify が提供する技術サポートは限定的になります（第 3 節をご参照ください）。
+
+- milvus
+- relyt
+- pgvector
+- pgvecto-rs
+- tencent
+- analyticdb
+- opensearch
+- lindorm
+
+
+## 3. エンタープライズ版技術サポート範囲
+
+Dify エンタープライズ版がクラウド（AWS など）にデプロイされ、外部ベクトルデータベースに接続する場合、システム全体には通常 **Dify、ベクトルデータベースベンダー、クラウドベンダー** の 3 者が関わります。Dify サポートチームはまず、障害がどの層に属するかを判定します。
+
+### 責任共有モデル
+
+| 範囲 | 責任主体 |
+|---|---|
+| Dify 側設定：データベース設定、接続設定、ナレッジベース設定 | Dify |
+| Dify のデータベース操作ロジック：接続確立、Schema/Collection 初期化、書き込み、検索 | Dify |
+| Helm chart の `vectorDB.*` / `externalXxx` フィールドの意味と取り得る値の制約 | Dify |
+| ベクトルデータベース本体：クラスタ可用性、シャード/レプリカ、バージョンアップ、性能チューニング、バックアップ/リストア | ベクトルデータベースベンダー / マネージドサービス事業者 |
+| インフラ：VPC、サブネット、セキュリティグループ、IAM/IRSA、DNS、ロードバランサ、AZ 間ネットワーク | クラウドベンダー |
+| キャパシティプランニングと設定値：ノードスペック、ストレージ容量、QPS と並行性の見積もり | ユーザー（Dify は推奨のみ提供） |
+
+### Dify が直接サポートしない範囲
+
+以下の問題は Dify のエラーメッセージとして表面化することがありますが、根本原因は Dify 側ではなく、データベースベンダー、クラウドベンダー、またはユーザーご自身による対応が必要です。
+
+- ベクトルデータベース自体の運用：再起動、アップグレード、スケーリング、バックアップ/リストア
+- データベース側のインデックスパラメータチューニング
+- ネットワークと権限層の障害：VPC peering、セキュリティグループの許可、IAM/IRSA、TLS 証明書
+- キャパシティプランニングと負荷テスト：ノードスペック、ストレージ容量、QPS 上限の見積もり（Dify は Dify 側の推奨のみ提供）
+- データベースのバージョン bug やベンダー動作変更による回帰（Dify は追跡しますが、根本修正はベンダー側で行われます）
+
+### 2 つのサポートレベルの違い
+
+| サポートレベル | 含まれる製品 | Dify が提供する能力 |
+|---|---|---|
+| **公式サポート** | qdrant、weaviate、elasticsearch | Dify 側コネクタの保守、バージョン互換性テスト、Helm 設定問題のトラブルシュート支援 |
+| **コミュニティサポート** | milvus、relyt、pgvector、pgvecto-rs、tencent、analyticdb、opensearch、lindorm | コネクタ可用、設定ドキュメント、ベストエフォートでのトラブルシュート；深い問題はベンダーまたはコミュニティへの問い合わせを優先してください |
+
+> ご利用の Dify エンタープライズ版でサポートされるベクトルデータベースの詳細については、values.yaml をご参照ください: https://helm-watchdog.dify.ai/ 。実際の技術サポート対応範囲は、Dify エンタープライズ版サポートチームが具体的な問題内容に基づき評価のうえ判断します。
+
+## 4. 付録：各ベクトルデータベースの設定例
+
+### Qdrant
+
+`externalType: "qdrant"`
+
+````yaml
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `endpoint` | Qdrant クラスタの URL | `http://your-qdrant-cluster-url.qdrant.tech/` |
+| `apiKey` | Qdrant API Key | - |
+
+### Weaviate
+
+`externalType: "weaviate"`
+
+````yaml
+  externalWeaviate:
+    endpoint: "http://weaviate:8080"
+    apiKey: "#REPLACE_ME#"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `endpoint` | Weaviate サービスアドレス | `http://weaviate:8080` |
+| `apiKey` | Weaviate API Key | - |
+
+### Elasticsearch
+
+`externalType: "elasticsearch"`
+
+````yaml
+  externalElasticsearch:
+    host: "127.0.0.1"
+    port: 9200
+    username: "elastic"
+    password: "#REPLACE_ME#"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | Elasticsearch ホスト | `127.0.0.1` |
+| `port` | ポート番号 | `9200` |
+| `username` | ユーザー名 | `elastic` |
+| `password` | パスワード | - |
+
+### Milvus
+
+`externalType: "milvus"`
+
+````yaml
+  externalMilvus:
+    uri: "http://127.0.0.1:19530"
+    token: ""
+    user: ""
+    password: ""
+    database: "default"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `uri` | Milvus サーバー接続 URI | `http://127.0.0.1:19530` |
+| `token` | 認証トークン（オプション） | - |
+| `user` | ユーザー名（オプション） | - |
+| `password` | パスワード（オプション） | - |
+| `database` | データベース名 | `default` |
+
+### Relyt (pgvectors)
+
+`externalType: "relyt"`
+
+````yaml
+  externalRelyt:
+    host: "your-relyt.domain"
+    port: 5431
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | Relyt ホスト | `your-relyt.domain` |
+| `port` | ポート番号 | `5431` |
+| `user` | ユーザー名 | `postgres` |
+| `password` | パスワード | - |
+| `database` | データベース名 | `pgvectors` |
+
+### PgVector
+
+`externalType: "pgvector"`
+
+````yaml
+  externalPgvector:
+    host: "your-pgvector.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "dify"
+    minConnection: 1
+    maxConnection: 5
+    pgBigm: false
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | PgVector ホスト | `your-pgvector.domain` |
+| `port` | ポート番号 | `5432` |
+| `user` | ユーザー名 | `postgres` |
+| `password` | パスワード | - |
+| `database` | データベース名 | `dify` |
+| `minConnection` | 接続プールの最小接続数 | `1` |
+| `maxConnection` | 接続プールの最大接続数 | `5` |
+| `pgBigm` | 全文検索のための pg_bigm 拡張を有効化 | `false` |
+
+### PgVecto-RS
+
+`externalType: "pgvecto-rs"`
+
+````yaml
+  externalPgVectoRS:
+    host: "your-pgvectors.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | PgVecto-RS ホスト | `your-pgvectors.domain` |
+| `port` | ポート番号 | `5432` |
+| `user` | ユーザー名 | `postgres` |
+| `password` | パスワード | - |
+| `database` | データベース名 | `pgvectors` |
+
+### Tencent VectorDB
+
+`externalType: "tencent"`
+
+````yaml
+  externalTencentVectorDB:
+    host: "your-tencent-vector-db.domain"
+    apiKey: "#REPLACE_ME#"
+    timeout: 30
+    username: "tencent"
+    password: "#REPLACE_ME#"
+    shard: 1
+    replicas: 2
+    database: "tencent"
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | Tencent VectorDB ホスト | `your-tencent-vector-db.domain` |
+| `apiKey` | API Key | - |
+| `timeout` | 接続タイムアウト（秒） | `30` |
+| `username` | ユーザー名 | `tencent` |
+| `password` | パスワード | - |
+| `shard` | シャード数 | `1` |
+| `replicas` | レプリカ数 | `2` |
+| `database` | データベース名 | `tencent` |
+
+### OpenSearch
+
+`externalType: "opensearch"`
+
+````yaml
+  externalOpenSearch:
+    host: "your-opensearch.domain"
+    port: 9200
+    user: ""
+    password: "#REPLACE_ME#"
+    useTLS: false
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `host` | OpenSearch ホスト | `your-opensearch.domain` |
+| `port` | ポート番号 | `9200` |
+| `user` | ユーザー名（オプション） | - |
+| `password` | パスワード | - |
+| `useTLS` | TLS を有効化するか | `false` |
+
+### AnalyticDB
+
+`externalType: "analyticdb"`
+
+````yaml
+  externalAnalyticDB:
+    keyID: "#REPLACE_ME#"
+    keySecret: "#REPLACE_ME#"
+    regionID: "#REPLACE_ME#"
+    instanceID: "#REPLACE_ME#"
+    account: "#REPLACE_ME#"
+    password: "#REPLACE_ME#"
+    host: "#REPLACE_ME#"
+    port: 5432
+    namespace: ""
+    namespacePassword: ""
+    minConnection: 1
+    maxConnection: 5
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `keyID` | Alibaba Cloud AccessKey ID | - |
+| `keySecret` | Alibaba Cloud AccessKey Secret | - |
+| `regionID` | リージョン ID | - |
+| `instanceID` | インスタンス ID | - |
+| `account` | アカウント | - |
+| `password` | パスワード | - |
+| `host` | ホスト | - |
+| `port` | ポート番号 | `5432` |
+| `namespace` | ネームスペース（オプション） | - |
+| `namespacePassword` | ネームスペースパスワード（オプション） | - |
+| `minConnection` | 最小コネクション数 | `1` |
+| `maxConnection` | 最大コネクション数 | `5` |
+
+### Lindorm
+
+`externalType: "lindorm"`
+
+````yaml
+  externalLindorm:
+    url: "http://localhost:30070"
+    username: "admin"
+    password: "admin"
+    indexType: "hnsw"
+    distanceType: "l2"
+    usingUgc: true
+    queryTimeout: 2.0
+````
+
+| フィールド | 説明 | 例 |
+|---|---|---|
+| `url` | Lindorm 検索エンジン URL | `http://localhost:30070` |
+| `username` | ユーザー名 | `admin` |
+| `password` | パスワード | `admin` |
+| `indexType` | インデックスタイプ | `hnsw` |
+| `distanceType` | 距離計算タイプ | `l2` |
+| `usingUgc` | UGC モードを使用するか | `true` |
+| `queryTimeout` | クエリタイムアウト（秒） | `2.0` |

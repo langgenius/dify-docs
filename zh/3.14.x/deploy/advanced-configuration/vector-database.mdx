@@ -1,0 +1,433 @@
+---
+title: 向量数据库简介
+version: '简体中文'
+---
+
+## 在 Helm Chart 值中查找向量数据库配置
+
+### 显示 Helm Chart 值
+
+```bash
+helm show values dify/dify
+```
+
+## 向量数据库配置概览
+
+在 Helm chart 的 values 中，通过 `vectorDB` 字段配置向量数据库。Dify 支持两种部署方式：
+
+| 模式 | 何时选用 | 切换字段 |
+| --- | --- | --- |
+| **外部连接**（推荐生产） | 连接到自管或云托管的向量数据库 | `vectorDB.useExternal: true` |
+| **内置部署**（仅限测试） | 由 Helm chart 自动拉起一个集群内向量数据库 | `vectorDB.useExternal: false` |
+
+> **3.9.x chart 的默认值是 `useExternal: true` + `externalType: "qdrant"`。** 也就是说开箱即处于"连接外部 Qdrant"的状态——你必须把 `externalQdrant.endpoint` / `apiKey` 替换成自己集群的实际值，否则 `api` / `worker` Pod 会因无法连接向量库而启动失败。
+
+## 1. 使用内置向量库
+
+> ⚠️ **生产慎用**：内置选项仅适合本地试用与功能验证，不提供高可用、备份和容量伸缩。生产环境请使用第二部分的外部连接方式。
+
+Helm chart 提供两种集群内向量数据库可供启用。
+
+### 内置 Qdrant
+
+将 `vectorDB.useExternal` 设置为 `false`，并启用 `qdrant.enabled` 即可使用。
+
+````yaml
+vectorDB:
+  useExternal: false
+
+qdrant:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: langgenius/qdrant
+    pullPolicy: IfNotPresent
+    tag: "v1.7.3"
+  apiKey: "dify123456"
+  persistence:
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+````
+
+| 字段 | 说明 | 默认值 |
+|---|---|---|
+| `qdrant.enabled` | 是否启用内置 Qdrant | `false` |
+| `qdrant.replicaCount` | 副本数 | `3` |
+| `qdrant.image.repository` | 镜像仓库 | `langgenius/qdrant` |
+| `qdrant.image.tag` | 镜像版本 | `v1.7.3` |
+| `qdrant.apiKey` | Qdrant API Key | `dify123456` |
+| `qdrant.persistence.accessModes` | 持久化存储访问模式 | `["ReadWriteOnce"]` |
+| `qdrant.persistence.size` | 持久化存储大小 | `10Gi` |
+| `qdrant.resources` | 资源限制（CPU/内存） | `{}` |
+
+### 内置 Weaviate
+
+`weaviate` 在父 chart 的 `values.yaml` 里只显式列出 `enabled` 开关，但它实际上是一个嵌套 subchart（位于 chart tarball 的 `dify/charts/weaviate/`，约 947 行 values）。**该 subchart 的所有字段都可以在你的 `values.yaml` 中以 `weaviate.<field>` 的形式覆盖**——常用项见下表。
+
+````yaml
+weaviate:
+  enabled: true
+  image:
+    repo: semitechnologies/weaviate
+    tag: "1.18.0"
+  replicas: 1
+  storage:
+    size: 32Gi
+    storageClassName: ""
+  service:
+    type: LoadBalancer  # 也可改为 ClusterIP / NodePort
+  resources: {}
+  authentication: {}
+  authorization: {}
+  modules: {}
+````
+
+| 字段 | 说明 | subchart 默认值 |
+|---|---|---|
+| `weaviate.enabled` | 是否启用内置 Weaviate | `false` |
+| `weaviate.image.tag` | Weaviate 镜像版本（建议在自己的 values 中固定） | `1.18.0` |
+| `weaviate.replicas` | 副本数（导入数据后扩缩容受限，详见 subchart 说明） | `1` |
+| `weaviate.storage.size` | PVC 容量 | `32Gi` |
+| `weaviate.storage.storageClassName` | 存储类 | `""`（默认 SC） |
+| `weaviate.service.type` | Service 类型 | `LoadBalancer` |
+| `weaviate.resources` | 资源限制 | `{}` |
+| `weaviate.{startup,liveness,readiness}Probe` | 探针配置 | 见 subchart |
+| `weaviate.authentication` / `authorization` | 鉴权配置 | 见 subchart |
+| `weaviate.modules` | 文本/图像向量化等扩展模块（contextionary、img2vec、transformers 等） | 见 subchart |
+
+> 💡 若需要获取完整字段列表，可下载 chart 包后查看其中的 `dify/charts/weaviate/values.yaml`：
+>
+> ```bash
+> helm pull dify/dify --untar
+> less dify/charts/weaviate/values.yaml
+> ```
+>
+> 如果只是连接已有的外部 Weaviate 集群，请改用下文 [Weaviate](#weaviate) 的 `externalWeaviate` 配置。
+
+## 2. 使用外置向量库
+
+如需连接外部向量数据库，配置分为两步：
+
+**第一步：** 设置 `vectorDB.useExternal` 为 `true`，并指定 `externalType`。3.9.x 的 chart 默认即为此状态（`externalType: "qdrant"`），你只需要在切换其他类型时覆盖 `externalType`。
+
+````yaml
+vectorDB:
+  useExternal: true
+  externalType: "<类型>"
+````
+
+**第二步：** 根据所选类型，填写对应的 `externalXxx` 配置块。values.yaml 已经为每种类型预置了默认骨架，你只需覆盖**目标类型**对应的字段即可，无需删除其他类型的块。各类型的字段示例见 [第 4 节 附录](#4-附录各向量数据库的配置示例)。
+
+### 支持的类型
+
+#### Dify 企业版支持的类型
+
+Dify 企业版官方支持以下向量数据库，您同时可获得针对向量数据库连接的技术支持（详见第三节）。
+
+- qdrant（建议）
+- weaviate（可选）
+- elasticsearch（可选）
+
+#### 社区支持的类型
+
+Dify 社区版提供以下向量数据库支持。如果你想使用这些向量数据库，Dify 企业版也支持它们，但 Dify 提供有限的技术支持（详见第三节）。
+
+- milvus
+- relyt
+- pgvector
+- pgvecto-rs
+- tencent
+- analyticdb
+- opensearch
+- lindorm
+
+
+## 3. 企业版技术支持范围
+
+当 Dify 企业版部署在云上（如 AWS）并连接到外部向量数据库时，整套链路通常涉及 **Dify、向量数据库厂商、云厂商** 三方。Dify 支持团队将先判断故障所在层。
+
+### 责任共担模型
+
+| 范围 | 责任方 |
+|---|---|
+| Dify 侧配置：数据库配置、连接配置、知识库配置 | Dify |
+| Dify 数据库操作逻辑：建立连接、Schema/Collection 初始化、写入、检索召回 | Dify |
+| Helm chart 中 `vectorDB.*` / `externalXxx` 字段的语义与取值约束 | Dify |
+| 向量数据库自身：集群可用性、分片/副本、版本升级、性能调优、备份恢复 | 向量数据库厂商 / 托管服务方 |
+| 基础设施：VPC、子网、安全组、IAM/IRSA、DNS、负载均衡、跨 AZ 网络 | 云厂商 |
+| 容量规划与配置取值：节点规格、存储容量、QPS 与并发预估 | 用户（Dify 仅提供建议） |
+
+### Dify 不直接支持的范围
+
+下列问题可能在 Dify 报错信息中暴露出来，但根因不在 Dify 侧，需要由数据库厂商、云厂商或用户自行处理：
+
+- 向量数据库本身的运维：重启、升级、扩缩容、备份恢复
+- 数据库侧的索引参数调优
+- 网络与权限层故障：VPC peering、安全组放行、IAM/IRSA、TLS 证书
+- 容量规划与压测：节点规格、存储容量、QPS 上限的预估（Dify 仅提供 Dify 侧的建议）
+- 由数据库版本 bug 或厂商行为变更引起的回归（Dify 仅跟进，但根因修复在厂商侧）
+
+### 两档支持级别的差异
+
+| 支持级别 | 包含产品 | Dify 提供的能力 |
+|---|---|---|
+| **官方支持** | qdrant、weaviate、elasticsearch | Dify 侧连接器维护、版本兼容性测试、Helm 配置问题协助排查 |
+| **社区支持** | milvus、relyt、pgvector、pgvecto-rs、tencent、analyticdb、opensearch、lindorm | 连接器可用、配置文档、best-effort 排障；深度问题建议优先寻求厂商或社区支持 |
+
+> 有关您使用的 Dify 企业版所支持的向量数据库的更多详细信息，请参阅 values.yaml ：https://helm-watchdog.dify.ai/ 。实际技术支持情况将由 Dify 企业版技术支持团队基于您的具体问题进行评估后判断。
+
+## 4. 附录：各向量数据库的配置示例
+
+### Qdrant
+
+`externalType: "qdrant"`
+
+````yaml
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `endpoint` | Qdrant 集群的 URL | `http://your-qdrant-cluster-url.qdrant.tech/` |
+| `apiKey` | Qdrant API Key | - |
+
+### Weaviate
+
+`externalType: "weaviate"`
+
+````yaml
+  externalWeaviate:
+    endpoint: "http://weaviate:8080"
+    apiKey: "#REPLACE_ME#"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `endpoint` | Weaviate 服务地址 | `http://weaviate:8080` |
+| `apiKey` | Weaviate API Key | - |
+
+### Elasticsearch
+
+`externalType: "elasticsearch"`
+
+````yaml
+  externalElasticsearch:
+    host: "127.0.0.1"
+    port: 9200
+    username: "elastic"
+    password: "#REPLACE_ME#"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | Elasticsearch 主机地址 | `127.0.0.1` |
+| `port` | 端口号 | `9200` |
+| `username` | 用户名 | `elastic` |
+| `password` | 密码 | - |
+
+### Milvus
+
+`externalType: "milvus"`
+
+````yaml
+  externalMilvus:
+    uri: "http://127.0.0.1:19530"
+    token: ""
+    user: ""
+    password: ""
+    database: "default"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `uri` | Milvus 服务器连接 URI | `http://127.0.0.1:19530` |
+| `token` | 认证 Token（可选） | - |
+| `user` | 用户名（可选） | - |
+| `password` | 密码（可选） | - |
+| `database` | 数据库名称 | `default` |
+
+### Relyt (pgvectors)
+
+`externalType: "relyt"`
+
+````yaml
+  externalRelyt:
+    host: "your-relyt.domain"
+    port: 5431
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | Relyt 主机地址 | `your-relyt.domain` |
+| `port` | 端口号 | `5431` |
+| `user` | 用户名 | `postgres` |
+| `password` | 密码 | - |
+| `database` | 数据库名称 | `pgvectors` |
+
+### PgVector
+
+`externalType: "pgvector"`
+
+````yaml
+  externalPgvector:
+    host: "your-pgvector.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "dify"
+    minConnection: 1
+    maxConnection: 5
+    pgBigm: false
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | PgVector 主机地址 | `your-pgvector.domain` |
+| `port` | 端口号 | `5432` |
+| `user` | 用户名 | `postgres` |
+| `password` | 密码 | - |
+| `database` | 数据库名称 | `dify` |
+| `minConnection` | 连接池最小连接数 | `1` |
+| `maxConnection` | 连接池最大连接数 | `5` |
+| `pgBigm` | 启用 pg_bigm 扩展以支持全文检索 | `false` |
+
+### PgVecto-RS
+
+`externalType: "pgvecto-rs"`
+
+````yaml
+  externalPgVectoRS:
+    host: "your-pgvectors.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | PgVecto-RS 主机地址 | `your-pgvectors.domain` |
+| `port` | 端口号 | `5432` |
+| `user` | 用户名 | `postgres` |
+| `password` | 密码 | - |
+| `database` | 数据库名称 | `pgvectors` |
+
+### Tencent VectorDB
+
+`externalType: "tencent"`
+
+````yaml
+  externalTencentVectorDB:
+    host: "your-tencent-vector-db.domain"
+    apiKey: "#REPLACE_ME#"
+    timeout: 30
+    username: "tencent"
+    password: "#REPLACE_ME#"
+    shard: 1
+    replicas: 2
+    database: "tencent"
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | 腾讯向量数据库主机地址 | `your-tencent-vector-db.domain` |
+| `apiKey` | API Key | - |
+| `timeout` | 连接超时时间（秒） | `30` |
+| `username` | 用户名 | `tencent` |
+| `password` | 密码 | - |
+| `shard` | 分片数 | `1` |
+| `replicas` | 副本数 | `2` |
+| `database` | 数据库名称 | `tencent` |
+
+### OpenSearch
+
+`externalType: "opensearch"`
+
+````yaml
+  externalOpenSearch:
+    host: "your-opensearch.domain"
+    port: 9200
+    user: ""
+    password: "#REPLACE_ME#"
+    useTLS: false
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `host` | OpenSearch 主机地址 | `your-opensearch.domain` |
+| `port` | 端口号 | `9200` |
+| `user` | 用户名（可选） | - |
+| `password` | 密码 | - |
+| `useTLS` | 是否启用 TLS | `false` |
+
+### AnalyticDB
+
+`externalType: "analyticdb"`
+
+````yaml
+  externalAnalyticDB:
+    keyID: "#REPLACE_ME#"
+    keySecret: "#REPLACE_ME#"
+    regionID: "#REPLACE_ME#"
+    instanceID: "#REPLACE_ME#"
+    account: "#REPLACE_ME#"
+    password: "#REPLACE_ME#"
+    host: "#REPLACE_ME#"
+    port: 5432
+    namespace: ""
+    namespacePassword: ""
+    minConnection: 1
+    maxConnection: 5
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `keyID` | 阿里云 AccessKey ID | - |
+| `keySecret` | 阿里云 AccessKey Secret | - |
+| `regionID` | 地域 ID | - |
+| `instanceID` | 实例 ID | - |
+| `account` | 账号 | - |
+| `password` | 密码 | - |
+| `host` | 主机地址 | - |
+| `port` | 端口号 | `5432` |
+| `namespace` | 命名空间（可选） | - |
+| `namespacePassword` | 命名空间密码（可选） | - |
+| `minConnection` | 最小连接数 | `1` |
+| `maxConnection` | 最大连接数 | `5` |
+
+### Lindorm
+
+`externalType: "lindorm"`
+
+````yaml
+  externalLindorm:
+    url: "http://localhost:30070"
+    username: "admin"
+    password: "admin"
+    indexType: "hnsw"
+    distanceType: "l2"
+    usingUgc: true
+    queryTimeout: 2.0
+````
+
+| 字段 | 说明 | 示例 |
+|---|---|---|
+| `url` | Lindorm 搜索引擎地址 | `http://localhost:30070` |
+| `username` | 用户名 | `admin` |
+| `password` | 密码 | `admin` |
+| `indexType` | 索引类型 | `hnsw` |
+| `distanceType` | 距离计算类型 | `l2` |
+| `usingUgc` | 是否使用 UGC 模式 | `true` |
+| `queryTimeout` | 查询超时时间（秒） | `2.0` |

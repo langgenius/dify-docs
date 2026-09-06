@@ -1,0 +1,227 @@
+---
+title: Agent Sandbox 部署
+description: 安装 agent-sandbox 控制器并配置 Helm values，在独立 Pod 与共享沙箱两种模式间选择
+---
+
+Agent 在执行任务时会使用一个隔离的沙箱环境来运行命令和读写文件。在 Kubernetes 部署中，该能力包含以下组件：
+
+- `agent-backend`：Agent 运行时服务，由 Helm Chart 部署。
+- `sandbox-gateway`：沙箱控制面，负责沙箱的分配与回收，由 Helm Chart 部署。
+- `agent-sandbox` controller：Kubernetes 社区官方项目 [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox)，提供沙箱 CRD 与控制器，需要在集群中提前安装。
+
+每个 Agent 会话独占一个沙箱 Pod，由预热池（warm pool）保障分配速度，会话结束或空闲超时后自动回收。如果集群不允许安装第三方 CRD 与 controller，可以使用 [共享沙箱模式](#不引入-agent-sandbox-的替代方案（共享沙箱模式）)，无需任何集群级变更。
+
+## 安装 agent-sandbox controller
+
+安装需要集群管理员权限，每个集群执行一次：
+
+```bash
+export VERSION="v0.5.2"
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${VERSION}/sandbox-with-extensions.yaml
+```
+
+确认 CRD 已就绪：
+
+```bash
+kubectl get crd | grep agents.x-k8s.io
+```
+
+应包含以下 4 个 CRD：
+
+- `sandboxes.agents.x-k8s.io`
+- `sandboxclaims.extensions.agents.x-k8s.io`
+- `sandboxtemplates.extensions.agents.x-k8s.io`
+- `sandboxwarmpools.extensions.agents.x-k8s.io`
+
+离线环境请将上述 manifest 下载后导入内网，并将其中的 controller 镜像同步至私有镜像仓库后替换镜像地址。
+
+## Helm Chart 配置
+
+`agentBackend.enabled` 与 `sandboxGateway.enabled` 默认均为 `true`，即标准部署默认启用沙箱能力，前提是集群已完成上文的 controller 安装。完整可配置项可通过 `helm show values dify/dify` 查看，以下是 Agent Sandbox 相关配置的示例：
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: true
+  provision:
+    warmPoolReplicas: 1
+    requestsCpu: "250m"
+    requestsMemory: "256Mi"
+    limitsCpu: "1"
+    limitsMemory: "1Gi"
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- `agentBackend.enabled`
+  - 是否部署 agent-backend。关闭后控制台中不提供 Agent 应用。
+- `agentBackend.serverSecretKey`
+  - Agent 工具回调令牌的加密密钥，base64url 编码的 32 字节随机值。生产环境必须替换默认值，可通过以下命令生成：
+
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+
+- `sandboxGateway.enabled`
+  - 是否启用独立 Pod 沙箱模式。关闭后自动降级为 [共享沙箱模式](#不引入-agent-sandbox-的替代方案（共享沙箱模式）)，无需额外配置。
+- `agentRuntime.image`
+  - 沙箱运行时镜像，独立 Pod 模式与共享沙箱模式共用。沙箱内置 Python 3.12、Node.js 22、pnpm、uv、git 等常用工具。如需定制请参阅下文 [自定义沙箱镜像](#自定义沙箱镜像)。
+- `sandboxGateway.provision.warmPoolReplicas`
+  - 预热池副本数，即保持待命的空闲沙箱数量，可按 Agent 并发量调整。
+- `sandboxGateway.provision.requestsCpu` / `requestsMemory` / `limitsCpu` / `limitsMemory`
+  - 单个沙箱 Pod 的资源配置。资源规划时，并发运行 N 个 Agent 会话约需 N + `warmPoolReplicas` 个沙箱 Pod 的资源余量。
+
+其他可选配置项：
+
+- `sandboxGateway.namespace`：沙箱 Pod 所在命名空间，默认为发布命名空间。
+- `sandboxGateway.provision.sandboxTtl`：单个沙箱的最长生命周期，默认 `1800s`。
+- `sandboxGateway.inactiveTtl`：沙箱空闲回收时间，默认 `360s`。
+- `sandboxGateway.execTimeout`：单条命令的执行超时，默认 `300s`。
+- `sandboxGateway.provision.extraEnv`：注入沙箱 Pod 的额外环境变量，例如出网代理配置。
+- `sandboxGateway.provision.volumeClaimTemplates`：为沙箱 Pod 挂载持久卷，每个条目创建一个 PVC。
+- `sandboxGateway.provision.securityContext` / `podSecurityContext`：沙箱 Pod 的安全上下文，集群启用 Pod Security Standards 时按需配置。
+- 全局 `imagePullSecrets` 会自动传递给沙箱 Pod，使用私有镜像仓库时无需额外配置。
+
+## 沙箱网络策略
+
+沙箱 Pod 的出网流量默认受两层控制：
+
+**SSRF 代理**：Chart 会部署一个沙箱专用的 squid 代理（`agent-sandbox-ssrf-proxy`），并向沙箱 Pod 注入 `HTTP_PROXY` / `HTTPS_PROXY`，所有 HTTP(S) 出站流量强制经过该代理。代理默认阻断指向内网（RFC1918 等私有网段）的请求，提供 SSRF 防护。代理本身通过 `sandboxGateway.ssrfProxy` 配置（`replicas` / `image` / `resources` / `squidConf`）。
+
+**NetworkPolicy**：`sandboxGateway.provision.networkPolicy` 默认 `enabled: true`，仅放行以下出站流量：DNS（kube-system 中的 kube-dns/coredns）、agent-backend（5050 端口）、SSRF 代理（3128 端口），以及外部互联网（`allowExternalEgress: true`，不含内网网段）。沙箱不能直连 dify-api。
+
+沙箱内需要访问集群内服务或内网地址时，需同时打通两层：
+
+1. 在 `networkPolicy.extraEgressRules` 中追加对目标地址的放行规则；
+2. 覆盖 `sandboxGateway.ssrfProxy.squidConf`，在默认的 `deny private_dst` 规则之前插入对目标的 allow 规则。
+
+放宽出口范围前，参见 [安全提示：Agent 环境变量外传风险](/zh/3.14.x/use/build/new-agent/overview)：即使启用了输出脱敏，能访问网络的 Agent 仍可能将敏感值编码后外传。
+
+其他选项：
+
+- `networkPolicy.enabled: false` 时由 agent-sandbox controller 的安全默认值接管：仅允许访问公网，**阻断全部内网（RFC1918）地址**。
+- `networkPolicy.management: "Unmanaged"` 可完全跳过 NetworkPolicy 下发，由集群自行管理。
+
+## Home Snapshot
+
+Home Snapshot 会把沙箱的 Home 目录归档到对象存储，并在下一个沙箱中恢复，Agent 的 [长期文件](/zh/3.14.x/use/build/new-agent/build#文件系统) 就是靠它跨会话保留的。
+
+归档存放在 `persistence` 配置的存储桶中，无需额外配置。所有对象存储类型的 `persistence.type` 均受支持，托管身份和账户密钥两种模式均可。
+
+<Note>
+Home Snapshot 需要对象存储：`persistence.type: local`（chart 默认值）不受支持。
+</Note>
+
+可在 `sandboxGateway.homeSnapshot` 下调整：
+
+- `enabled`：默认 `true`。关闭后不再捕获和恢复快照。
+- `keyPrefix`：默认 `"home-snapshots/"`。快照归档在存储桶内的键前缀。
+- `maxSizeBytes`：默认 `67108864`（64 MiB）。网关从沙箱接收的归档大小上限。
+- `maxConcurrent`：默认 `4`。网关同时执行的保存与恢复总数（跨所有沙箱），超出上限的请求直接返回 `429 snapshot_busy`，不会排队。
+- `snapshotTimeout`：默认 `"30s"`。沙箱运行时调用的截止时间；对象存储的读写在其之外，不计入。
+- `runtimePort`：默认 `5004`。沙箱运行时 HTTP 服务监听的端口。
+- `excludes`：默认为空。归档时要排除的 Home 条目，使用 gitignore 风格模式，在任意深度匹配：`"*.log"`、`"**/node_modules"`、`"/build"` 锚定 Home 根目录、`"cache/"` 仅匹配目录、`"!keep"` 重新包含。
+
+<Warning>
+网关会把每个归档完整缓冲在内存中，且默认不带资源限制。为避免并发快照导致 OOM，请按 `maxConcurrent × maxSizeBytes × 3` 为 `sandboxGateway.resources` 预留内存（缓冲区按几何级数增长，64 MiB 的归档峰值约 192 MiB）。
+</Warning>
+
+## 部署与验证
+
+更新 values 后执行升级：
+
+```bash
+helm upgrade dify dify/dify -n dify -f values.yaml
+```
+
+Helm 会在命名空间内自动创建 `SandboxTemplate` 与 `SandboxWarmPool` 资源（`sandboxGateway.provision.managedByHelm` 默认 `true`），无需手工创建。验证部署状态：
+
+```bash
+# 服务就绪
+kubectl get pods -n dify | grep -E 'agent-backend|sandbox-gateway'
+
+# 预热池沙箱已创建
+kubectl get sandboxwarmpools,sandboxes -n dify
+```
+
+登录 Dify 控制台创建 Agent 应用，运行一个包含命令执行的任务。执行期间可观察到命名空间内新增沙箱 Pod，会话结束或空闲超时后 Pod 自动回收。
+
+## RBAC 权限说明
+
+启用本功能引入的集群权限变更如下，供安全评估参考：
+
+- `agent-sandbox` controller 为集群级组件，负责根据 CRD 创建和删除沙箱 Pod。
+- sandbox-gateway 使用命名空间级 Role（Chart 自动创建，`sandboxGateway.rbac.create` 控制），仅包含：
+  - `sandboxclaims` 的读写（沙箱生命周期管理）；
+  - `sandboxtemplates` / `sandboxwarmpools` 的只读（资源本身由 Helm 创建）；
+  - `sandboxes` 的只读（状态查询）。
+- sandbox-gateway 没有 Pod、Secret、ConfigMap 等原生资源的任何权限，也没有任何集群级权限。
+
+如需使用统一管理的 ServiceAccount，可设置 `sandboxGateway.rbac.create: false`，并通过 `sandboxGateway.serviceAccountName` 指定。
+
+## 不引入 agent-sandbox 的替代方案（共享沙箱模式）
+
+如果集群不允许安装第三方 CRD 与 controller，将 `sandboxGateway.enabled` 设为 `false` 即可。此时 Chart 会自动部署一个常驻的 agent-runtime 服务，所有 Agent 会话共享同一个沙箱容器，不再按会话分配独立 Pod：
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: false
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- 该模式不安装任何 CRD，也不引入额外的 RBAC 权限。
+- 所有会话共享同一容器，隔离性低于独立 Pod 模式，且仅支持单副本运行，建议仅作为受限环境的替代方案。
+- 资源配置通过 `agentRuntime.resources` 调整。
+
+## 自定义沙箱镜像
+
+如需在沙箱内提供额外的工具、SDK 或内部 CA 证书，可基于官方镜像定制：
+
+```dockerfile
+FROM langgenius/dify-ee-agent-runtime:3.13.0
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends <your-packages> \
+    && rm -rf /var/lib/apt/lists/*
+
+USER dify
+```
+
+定制时请遵守以下约束，否则沙箱将无法正常工作：
+
+1. 不要覆盖镜像默认的 `CMD` / `ENTRYPOINT`，沙箱服务需要在 5004 端口监听。
+2. 不要删除 `/usr/local/bin` 下的 `shellctl*` 与 `dify-agent` 二进制文件。
+3. 安装系统软件包时先切换 `USER root`，完成后必须切回 `USER dify`。
+4. 保留 `/home/dify` 与 `/mnt/drive` 目录及其属主。
+
+构建并推送镜像后，更新 values 中的 `agentRuntime.image` 并执行 `helm upgrade`。独立 Pod 模式下预热池会自动滚动替换为新镜像，共享沙箱模式下 agent-runtime 会滚动重启。
+
+## 常见问题
+
+- **控制台没有 Agent 应用入口**
+  - 确认 `agentBackend.enabled` 为 `true`。
+- **sandbox-gateway 启动报错 CRD 不存在**
+  - 未安装 agent-sandbox controller，请先完成上文安装步骤；无法安装时改用共享沙箱模式。
+- **沙箱 Pod 一直 Pending 或 ImagePullBackOff**
+  - 检查节点资源余量；使用私有镜像仓库时确认全局 `imagePullSecrets` 已配置。
+- **沙箱内访问不到集群内服务或内网地址**
+  - 出站流量默认经过 SSRF 代理且仅放行 DNS、agent-backend 和外部互联网。需同时在 `networkPolicy.extraEgressRules` 放行目标地址，并覆盖 `sandboxGateway.ssrfProxy.squidConf` 放行目标网段，参见 [沙箱网络策略](#沙箱网络策略)。
+- **Agent 执行命令超时**
+  - 单条命令默认限时 300 秒，可通过 `sandboxGateway.execTimeout` 调整。
+- **会话进行中沙箱被回收**
+  - 空闲超过 `inactiveTtl`（默认 360 秒）或沙箱存活超过 `sandboxTtl`（默认 1800 秒），可按业务调大。

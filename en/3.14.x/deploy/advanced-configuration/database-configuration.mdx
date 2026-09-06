@@ -1,0 +1,149 @@
+---
+title: Database Configuration Guide
+---
+
+This guide explains how to configure the database for Dify Enterprise. Dify Enterprise supports both Docker Compose and Helm Chart deployment methods and is compatible with PostgreSQL, MySQL, and TiDB database engines.
+
+## Architecture Overview
+
+Dify Enterprise uses a **single-instance, multi-database** architecture. All community and enterprise services connect to the same database server, but each service uses its own independent database:
+
+| Database | Default Name | Components Used |
+| :--- | :--- | :--- |
+| Dify Core | `dify` | Community API / Worker / Plugin Daemon, Enterprise Services |
+| Enterprise | `enterprise` | dify-enterprise, dify-audit, dify-plugin-manager |
+| Audit Log | `audit` | dify-audit |
+| Plugin | `dify_plugin` | Plugin Daemon, dify-plugin-manager |
+
+> **Note**: Community services and enterprise services use different environment variable naming conventions, but they must point to the **same database instance**.
+
+---
+
+## Docker Compose Configuration
+
+In a Docker Compose deployment, configure the database by modifying the `.env` file.
+
+### 1. Environment Variable Reference
+
+#### Community Services (Dify API / Worker)
+| Variable Name | Description | PostgreSQL Default | MySQL Default |
+| :--- | :--- | :--- | :--- |
+| `DB_TYPE` | Database type | `postgresql` | `mysql` |
+| `DB_USERNAME` | Database username | `postgres` | `root` |
+| `DB_PASSWORD` | Database password | `difyai123456` | `difyai123456` |
+| `DB_HOST` | Database host | `db_postgres` | `db_mysql` |
+| `DB_PORT` | Database port | `5432` | `3306` |
+| `DB_DATABASE` | Dify core database name | `dify` | `dify` |
+
+#### Enterprise Services
+| Variable Name | Description | PostgreSQL Default | MySQL/TiDB Default |
+| :--- | :--- | :--- | :--- |
+| `DB_ENGINE` | Database engine | `postgres` | `mysql` |
+| `DB_HOST` | Database host | `db_postgres` | `db_mysql` |
+| `DB_PORT` | Database port | `5432` | `3306` / `4000` (TiDB) |
+| `DB_USER` | Database username | `postgres` | `root` |
+| `DB_PASS` | Database password | `difyai123456` | `difyai123456` |
+| `DIFY_DB_NAME` | Dify core database name | `dify` | `dify` |
+| `ENTERPRISE_DB_NAME` | Enterprise database name | `enterprise` | `enterprise` |
+| `AUDIT_DB_NAME` | Audit log database name | `audit` | `audit` |
+
+### 2. External Database Mode
+
+If using an external database (such as AWS RDS, Alibaba Cloud RDS, or TiDB Cloud), follow these steps:
+
+1.  **Modify `.env` environment variables**: Point the variables above to your external database address.
+2.  **Adjust `COMPOSE_PROFILES`** (Optional): Remove the database type (e.g., `postgresql`) from `COMPOSE_PROFILES` to prevent the built-in database container from starting.
+    ```bash
+    # Example: Keep only vector database and unstructured data processing services
+    COMPOSE_PROFILES="weaviate,unstructured"
+    ```
+3.  **Manually create databases**: Before starting Dify, you must manually create the required databases in the external instance (see the [Database Initialization](#database-initialization) section below).
+
+---
+
+## Helm Chart Configuration
+
+In a Helm deployment, configure the database via `values.yaml`.
+
+### 1. Internal Database Mode (PostgreSQL)
+By default, Helm will start a built-in PostgreSQL container.
+```yaml
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        postgresPassword: "your_password"
+        database: "dify"
+```
+
+### 2. External Database Mode (Recommended for Production)
+Connect to an external PostgreSQL, MySQL, or TiDB.
+```yaml
+postgresql:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  # Options: postgres | mysql | tidb
+  engine: "postgres"
+  host: "your-db-host"
+  port: 5432
+  user: "your-user"
+  password: "your-password"
+  databases:
+    dify: "dify"
+    enterprise: "enterprise"
+    audit: "audit"
+    plugin_daemon: "dify_plugin"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+    mysql:
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+```
+
+---
+
+## Database Initialization
+
+### 1. Built-in Database Mode
+When using the built-in database for Docker Compose or Helm, the system automatically executes initialization scripts (such as `dify-postgresql-init.sql`) to create the `enterprise` and `audit` databases.
+
+### 2. External Database Mode (Manual Creation)
+**When using an external database, you must manually create the following databases before starting Dify:**
+
+#### PostgreSQL
+```sql
+CREATE DATABASE dify;
+CREATE DATABASE enterprise;
+CREATE DATABASE audit;
+-- dify_plugin will be automatically created by the plugin service upon first startup
+```
+
+#### MySQL / TiDB
+```sql
+CREATE DATABASE IF NOT EXISTS dify;
+CREATE DATABASE IF NOT EXISTS enterprise;
+CREATE DATABASE IF NOT EXISTS audit;
+-- dify_plugin will be automatically created by the plugin service upon first startup
+```
+
+---
+
+## FAQ
+
+### Why are there two sets of database variables?
+
+Community services (Python) and enterprise services (Go) use different configuration standards. When configuring, ensure both sets of variables point to the same database instance.
+
+### Which engine should I choose for TiDB?
+
+TiDB is compatible with the MySQL protocol. When configuring, set both `DB_TYPE` and `DB_ENGINE` to `mysql`, and point the port to TiDB's service port (default `4000`).
+
+### How do I enable SSL/TLS connections?
+
+
+-   **Docker Compose**: Set `DB_SSL_MODE="require"`. For MySQL/TiDB, also set `DB_TLS="true"`.
+-   **Helm**: Configure the corresponding `sslMode` or `tls` fields under `dialectOptions`.

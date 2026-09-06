@@ -1,0 +1,374 @@
+---
+title: カスタムCA証明書の設定
+---
+
+このガイドでは、Helm ChartデプロイメントにおけるDify Enterpriseのカスタム認証局（CA）証明書の設定方法について説明します。この機能は、自己署名証明書やプライベートPKIインフラストラクチャを使用する環境に不可欠です。
+
+## 概要
+
+有効にすると、Difyはすべての外部へのHTTPS接続に対して、システム全体のCA証明書とカスタムCA証明書の両方を信頼します。これは特に以下の場合に役立ちます：
+
+*   組織が内部PKI（公開鍵インフラストラクチャ）を使用している場合。
+*   自己署名証明書を使用してエアギャップ環境にデプロイしている場合。
+*   外部サービス（Redis、データベース、S3、ベクトルデータベースなど）がプライベートCAによって署名された証明書を使用している場合。
+*   内部HTTPSエンドポイントとの信頼関係を確立する必要がある場合。
+
+## 仕組み
+
+カスタムCAの実装は、以下のアプローチを使用します：
+
+1.  **初期化**：各Dify Podが起動する前に、Initコンテナが実行されます。
+2.  **CAバンドルの作成**：Initコンテナは、システムCA証明書（ベースイメージから）とカスタムCA証明書（Kubernetes Secretから）を結合します。
+3.  **環境設定**：Python、Node.js、curl、AWS CLIが結合されたCAバンドルを指すように環境変数が設定されます。
+4.  **ランタイムの信頼**：すべてのDifyコンポーネントは、SSL/TLS検証に結合されたCAバンドルを使用します。
+
+## 前提条件
+
+*   Dify Helmチャートがインストールされている（またはインストール準備ができている）Kubernetesクラスタ。
+*   PEM形式のカスタムCA証明書。
+*   クラスタへの `kubectl` アクセス。
+*   Kubernetes Secretに関する基本的な理解。
+
+---
+
+## 設定手順
+
+### 1. CA証明書の準備
+
+CA証明書は **PEM形式**（Base64エンコードされ、`BEGIN CERTIFICATE` と `END CERTIFICATE` マーカーで囲まれている）である必要があります。
+
+証明書の形式を確認します：
+
+```bash
+# 証明書は以下のようになります：
+cat your-ca.crt
+# -----BEGIN CERTIFICATE-----
+# MIIDXTCCAkWgAwIBAgIJAKJ... (Base64 content)
+# ...
+# -----END CERTIFICATE-----
+```
+
+DERエンコードされた証明書がある場合は、PEMに変換します：
+
+```bash
+openssl x509 -inform der -in your-ca.der -out your-ca.crt
+```
+
+### 2. Kubernetes Secretの作成
+
+CA証明書を含むKubernetes Secretを作成します。
+
+```bash
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=your-ca.crt \
+  --namespace=<your-dify-namespace>
+```
+
+> **注意**：
+> *   **Secret名**：`dify-custom-ca`（任意の名前を選択できます）。
+> *   **Key名**：`ca.crt`（デフォルト、`values.yaml` でカスタマイズ可能）。
+> *   **Namespace**：Difyデプロイメントと同じ名前空間にある必要があります。
+
+Secretが作成されたことを確認します：
+
+```bash
+kubectl get secret dify-custom-ca -n <your-dify-namespace>
+kubectl describe secret dify-custom-ca -n <your-dify-namespace>
+```
+
+### 3. values.yamlの設定
+
+Helmの `values.yaml` ファイルを編集して、カスタムCAを有効にします。
+
+```yaml
+global:
+  customCA:
+    # カスタムCA証明書のサポートを有効化
+    enabled: true
+    # CA証明書を含むKubernetes Secretの名前
+    existingSecret: "dify-custom-ca"
+    # Secret内のKey名（手順2で使用したKeyと一致する必要があります）
+    key: ca.crt
+    # コンテナ内の結合されたCAバンドルのマウントパス
+    # （高度な設定：通常は変更する必要はありません）
+    mountPath: /etc/dify/custom-ca
+    # システムCAとカスタムCAを結合するために使用されるInitコンテナイメージ
+    # エアギャップ環境の場合は、プライベートレジストリに置き換えてください
+    initImage: alpine:3.20
+```
+
+**最小構成（デフォルトを使用）：**
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+```
+
+### 4. Difyのデプロイまたは更新
+
+**新規インストールの場合：**
+
+```bash
+helm install dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+**既存のインストールの場合：**
+
+```bash
+helm upgrade dify dify/dify \
+  --namespace dify \
+  --values values.yaml
+```
+
+> **注意**：カスタムCA設定の変更を有効にするには、Podの再起動が必要です。CAバンドルはPodの初期化中に一度だけ生成されます。
+
+---
+
+## 検証
+
+デプロイ後、カスタムCAが正しく設定されていることを確認します。
+
+### 1. Initコンテナの確認
+
+Initコンテナが正常に実行されたか確認します。
+
+```bash
+# Podの一覧表示
+kubectl get pods -n dify
+
+# 特定のPod（例：api pod）のInitコンテナログを確認
+kubectl logs <api-pod-name> -n dify -c init-custom-ca
+```
+
+CAバンドルが正常に作成されたことを示す出力が表示されるはずです。
+
+### 2. 環境変数の確認
+
+実行中のPodに入る、環境変数を確認します。
+
+```bash
+# 実行中のPodに入る
+kubectl exec -it <api-pod-name> -n dify -- sh
+
+# 環境変数の確認
+env | grep -E 'SSL_CERT_FILE|REQUESTS_CA_BUNDLE|CURL_CA_BUNDLE|NODE_EXTRA_CA_CERTS|AWS_CA_BUNDLE'
+```
+
+**期待される出力：**
+
+```bash
+SSL_CERT_FILE=/etc/dify/custom-ca/ca-bundle.crt
+REQUESTS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+CURL_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+NODE_EXTRA_CA_CERTS=/etc/dify/custom-ca/ca-bundle.crt
+AWS_CA_BUNDLE=/etc/dify/custom-ca/ca-bundle.crt
+```
+
+### 3. CAバンドル内容の確認
+
+Pod内で、バンドルに証明書が含まれていることを確認します。
+
+```bash
+# Pod内で実行
+cat /etc/dify/custom-ca/ca-bundle.crt | grep -A 5 "BEGIN CERTIFICATE" | tail -10
+
+# バンドル内の証明書数をカウント
+grep -c "BEGIN CERTIFICATE" /etc/dify/custom-ca/ca-bundle.crt
+```
+
+バンドルには複数の証明書（システムCA + カスタムCA）が含まれているはずです。
+
+---
+
+## 環境変数リファレンス
+
+カスタムCA機能は、幅広い互換性を確保するために以下の環境変数を設定します。すべての変数は、同じ結合されたCAバンドル `/etc/dify/custom-ca/ca-bundle.crt`（またはカスタム `mountPath`）を指します。
+
+| 変数 | 目的 | 使用元 |
+| :--- | :--- | :--- |
+| `SSL_CERT_FILE` | OpenSSL/LibreSSL | 一般的なSSLライブラリ、Python requests |
+| `REQUESTS_CA_BUNDLE` | Python requestsライブラリ | Python HTTPクライアント |
+| `CURL_CA_BUNDLE` | curlコマンド | シェルスクリプト、curlベースのツール |
+| `NODE_EXTRA_CA_CERTS` | Node.js | Node.js HTTPSクライアント |
+| `AWS_CA_BUNDLE` | AWS SDK | S3、AWSサービス接続 |
+
+---
+
+## 影響を受けるコンポーネント
+
+カスタムCAが有効になっている場合、以下のDifyコンポーネントは自動的にカスタムCAバンドルを使用します：
+
+*   API Server (`api-deployment`)
+*   Worker (`worker-deployment`)
+*   Worker Beat (`worker-beat-deployment`)
+*   Trigger Worker (`trigger-worker-deployment`)
+*   Enterprise Service (`enterprise-deployment`)
+*   Enterprise Audit (`enterprise-audit-deployment`)
+*   Sandbox (`sandbox-deployment`)
+*   Gateway (`caddy-deploy`)
+*   SSRF Proxy (`ssrf-proxy-deployment`)
+*   Unstructured (`unstructured-deployment`)
+*   Plugin Daemon (`plugin-daemon`)
+*   Plugin Manager (`plugin-manager`)
+*   Plugin Controller (`plugin-controller`)
+
+---
+
+## トラブルシューティング
+
+### PodがInit:0/1でスタックする
+
+**原因**：Initコンテナ `init-custom-ca` が失敗しています。
+
+**解決策**：
+
+```bash
+# Initコンテナのログを確認
+kubectl logs <pod-name> -n dify -c init-custom-ca
+```
+
+一般的な原因：
+1.  `initImage` がプルできない（エアギャップ環境）。
+2.  Secretが見つからない、または名前空間が間違っている。
+3.  Secret内のKey名が間違っている。
+
+### カスタムCAを有効にした後にSSL検証エラーが発生する
+
+**原因**：カスタムCA証明書の形式が正しくないか、不完全である可能性があります。
+
+**解決策**：
+
+1.  証明書が有効なPEM形式であることを確認します：
+    ```bash
+    openssl x509 -in your-ca.crt -text -noout
+    ```
+2.  完全なチェーンであるか確認します（CAが中間証明書を必要とする場合）。必要に応じて複数の証明書を結合します：
+    ```bash
+    cat intermediate-ca.crt root-ca.crt > combined-ca.crt
+    ```
+3.  Secretを更新してPodを再起動します：
+    ```bash
+    kubectl delete secret dify-custom-ca -n dify
+    kubectl create secret generic dify-custom-ca \
+      --from-file=ca.crt=combined-ca.crt -n dify
+    kubectl rollout restart deployment -n dify
+    ```
+
+### カスタムCA Secretの変更が反映されない
+
+**原因**：CAバンドルはPodの初期化中に作成されます。Secretを更新しても、実行中のPodは自動的に更新されません。
+
+**解決策**：Secretの更新後、Podを再起動する必要があります。
+
+```bash
+kubectl rollout restart deployment -n dify
+```
+
+### Initコンテナがalpine:3.20イメージをプルできない
+
+**原因**：エアギャップ環境または制限されたレジストリアクセス。
+
+**解決策**：`values.yaml` でプライベートレジストリを使用します。
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    initImage: your-registry.company.com/alpine:3.20
+```
+
+**サポートされている代替イメージ**：
+*   Alpineベース：`alpine:3.20`, `alpine:3.19`
+*   Debianベース：`ubuntu:22.04`, `debian:12`
+*   `/etc/ssl/certs/ca-certificates.crt` (Debian/Ubuntu) または `/etc/ssl/cert.pem` (Alpine) を含む任意のイメージ。
+
+---
+
+## 高度な設定
+
+### 異なるSecret Key名の使用
+
+Secretで異なるKey名を使用している場合：
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "my-ca-secret"
+    key: custom-ca.pem  # 異なるKey名
+```
+
+### カスタムマウントパス
+
+CAバンドルのマウント場所を変更する必要がある場合：
+
+```yaml
+global:
+  customCA:
+    enabled: true
+    existingSecret: "dify-custom-ca"
+    mountPath: /custom/path/to/ca
+```
+
+> **注意**：`mountPath` を変更すると、すべての環境変数が自動的に更新されます。
+
+### 複数のCA証明書
+
+複数のカスタムCAを信頼する必要がある場合は、それらを単一のファイルに結合します：
+
+```bash
+cat ca1.crt ca2.crt ca3.crt > combined-ca.crt
+kubectl create secret generic dify-custom-ca \
+  --from-file=ca.crt=combined-ca.crt -n dify
+```
+
+### エアギャップ環境
+
+完全にエアギャップされたデプロイメントの場合：
+
+1.  **Initイメージをミラーリング**してプライベートレジストリにプッシュします：
+    ```bash
+    docker pull alpine:3.20
+    docker tag alpine:3.20 your-registry.company.com/alpine:3.20
+    docker push your-registry.company.com/alpine:3.20
+    ```
+2.  **values.yamlを更新**します：
+    ```yaml
+    global:
+      customCA:
+        enabled: true
+        existingSecret: "dify-custom-ca"
+        initImage: your-registry.company.com/alpine:3.20
+    ```
+
+---
+
+## FAQ
+
+### 有効化した後にカスタムCAを無効にできますか？
+
+はい、`global.customCA.enabled: false` に設定してHelmリリースをアップグレードしてください。PodはカスタムCA設定なしで再起動します。
+
+### これはDifyコンポーネント間のTLSに影響しますか？
+
+いいえ、これはDifyから外部サービス（データベース、S3、APIなど）への出站HTTPS接続にのみ影響します。内部コンポーネント間の通信には影響しません。
+
+### データベースもカスタムCAを必要とする場合はどうすればよいですか？
+
+カスタムCA機能はデータベース接続もカバーしています。データベースサーバーの証明書が、設定したCAによって署名されていることを確認してください。
+
+### 中間証明書を使用できますか？
+
+はい、Secretを作成する前に、完全なチェーン（中間証明書 + ルートCA）を単一のファイルに結合してください。
+
+### ダウンタイムなしでCA証明書を更新するにはどうすればよいですか？
+
+Kubernetes Secretは更新できますが、Podの再起動が必要です。ゼロダウンタイム更新の場合：
+1.  Secretを更新します。
+2.  ローリングアップデート戦略（デフォルト）で `kubectl rollout restart` を使用します。
+3.  Podは順次再起動され、サービスの可用性が維持されます。

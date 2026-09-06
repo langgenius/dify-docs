@@ -1,0 +1,152 @@
+---
+title: パフォーマンスチューニング
+Version: '日本語'
+---
+
+## Helm Chart の値を確認する
+
+```bash
+helm show values dify/dify
+```
+
+## 1. 基本リソースを調整する
+
+Dify のスループットは、Helm Chart の replicas と resources を調整することで改善できます。実際の値は、ワークロード、クラスタ容量、データベース接続上限、キューの滞留状況を見ながら段階的に調整してください。
+
+| カテゴリ | コンポーネント | Replicas | Request CPU | Request Mem | Limit CPU | Limit Mem | 備考 |
+|----------|----------------|----------|-------------|-------------|-----------|-----------|------|
+| コアアプリケーション | API | 2 | 1 | 1 GB | 1 | 2 GB | API QPS とレイテンシに応じてスケール |
+| | Worker | 4 | 4 | 4 GB | 4 | 8 GB | デフォルトの catch-all worker。3.9.x では additionalWorkers による分割を優先 |
+| | Worker Beat | 1 | 1 | 2 GB | 2 | 4 GB | 1 replica のまま維持 |
+| | Web | 1 | 0.5 | 1 GB | 1 | 2 GB | フロントエンドのトラフィックに応じて調整 |
+| | Sandbox | 1 | 2 | 2 GB | 2 | 4 GB | コード実行ワークロードに応じて調整 |
+| Enterprise | Enterprise | 1 | 2 | 2 GB | 2 | 2 GB | 必要に応じて調整 |
+| | Enterprise_Audit | 1 | 1 | 2 GB | 2 | 4 GB | 必要に応じて調整 |
+| | Enterprise_Frontend | 1 | 1 | 2 GB | 1 | 2 GB | 必要に応じて調整 |
+| Plugin | Plugin Daemon | 1 | 1 | 2 GB | 2 | 4 GB | プラグイン呼び出しやインストール量に応じて調整 |
+| | Plugin Controller | 1 | 0.5 | 1 GB | 1 | 2 GB | 必要に応じて調整 |
+| | Plugin Connector | 1 | 1 | 2 GB | 1 | 2 GB | 必要に応じて調整 |
+| | Plugin Manager | 1 | 1 | 2 GB | 2 | 4 GB | 必要に応じて調整 |
+| インフラ | SSRF Proxy | 1 | 0.5 | 0.5 GB | 1 | 1 GB | 必要に応じて調整 |
+| | Gateway | 1 | 1 | 2 GB | 2 | 4 GB | プラグイントラフィックに応じて調整 |
+| | Unstructured | - | - | - | - | - | ドキュメント解析量に応じて調整 |
+| | MinIO | - | - | - | - | - | ストレージスループットと容量に応じて調整 |
+
+<Warning>
+`workerBeat` は常に 1 replica で実行してください。水平スケールは推奨されません。
+</Warning>
+
+## 2. キューごとに Worker を分割する
+
+3.9.x の Helm Chart では `additionalWorkers` を利用できます。これにより、従来デフォルトの `worker` が処理していた Celery キューを専用 Deployment に分割し、キューごとに replicas、CPU、メモリ、スケジューリングポリシーを調整できます。
+
+デフォルトの `worker` は catch-all worker としてすべてのキューを消費します。`additionalWorkers` を有効化する場合は、次のどちらかの方式を選択してください。
+
+- **保守的な方式**：`worker.enabled: true` のまま、負荷の高いキューだけ専用 worker を追加します。分割していないキューはデフォルト worker が引き続き処理します。
+- **完全分割方式**：`worker.enabled: false` にし、利用しているすべてのキューが有効な `additionalWorkers` によって消費されることを確認します。未カバーのキューがあると、バックグラウンドタスクが滞留します。
+
+代表的な分割は次のとおりです。
+
+| Worker | キュー | 利用場面 |
+|--------|--------|----------|
+| `dataset-worker` | `dataset,priority_dataset,pipeline,priority_pipeline` | ナレッジベースのインポート、ドキュメント解析、インデックス作成が重い場合 |
+| `workflow-worker` | `workflow,workflow_storage,workflow_based_app_execution` | ワークフロー実行や保存タスクが多い場合 |
+| `general-worker` | `mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry` | メール、会話、プラグイン、保持期間処理、監査、テレメトリなど |
+| `trigger-worker` | `schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher` | スケジュールタスクやトリガー関連処理 |
+
+<Warning>
+デフォルトの `worker` を無効化する場合は、dataset、workflow、general background、trigger の各キューがすべて有効な worker によって消費されていることを確認してください。一部の `additionalWorkers` だけを有効化してデフォルト worker を無効化すると、未カバーのキューが消費されなくなる可能性があります。
+</Warning>
+
+保守的な方式の例：
+
+```yaml
+worker:
+  enabled: true
+  replicas: 1
+
+additionalWorkers:
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+```
+
+完全分割方式の例：
+
+```yaml
+worker:
+  enabled: false
+
+additionalWorkers:
+  - name: dataset-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "dataset,priority_dataset,pipeline,priority_pipeline"
+    celeryWorkerAmount: 4
+
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+
+  - name: general-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry"
+    celeryWorkerAmount: 1
+
+  - name: trigger-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher"
+    celeryWorkerAmount: 1
+```
+
+推奨事項：
+
+- 並行タスクが多い、またはキュー滞留が見える場合は、まず対応する worker の `replicas` を増やします。
+- 単一タスクのメモリ使用量が大きい、メモリ使用量が limit に近い、または OOMKilled が発生する場合は、対応する worker の memory limit を増やします。
+- `celeryWorkerAmount` をむやみに増やさないでください。Pod 内並行数が増える一方で、DB 接続、Redis 接続、メモリ使用量も増加します。
+- `workerBeat` は 1 replica のまま維持します。これはタスクをスケジュールするだけで、worker キューの consumer ではありません。
+
+## 3. 外部 Postgres のパフォーマンスを改善する
+
+API と worker の並行数から、必要な `max_connections` を見積もります。
+
+```
+最大データベース接続数 =
+  (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × API serverWorkerAmount × API replicas
++ (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × default worker celeryWorkerAmount × default worker replicas
++ Σ[(SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × additionalWorker celeryWorkerAmount × additionalWorker replicas]
+```
+
+例：
+
+- API: replicas=2, serverWorkerAmount=1
+- Default worker: replicas=4, celeryWorkerAmount=1
+- `SQLALCHEMY_POOL_SIZE=100`
+- `SQLALCHEMY_MAX_OVERFLOW=150`
+
+```
+(100 + 150) × 1 × 2 + (100 + 150) × 1 × 4 = 500 + 1000 = 1500
+```
+
+<Warning>
+突発的なトラフィックに備えて、計算結果に 20-30% の余裕を持たせることを推奨します。この例では `max_connections` を 1800-2000 以上に設定し、データベースインスタンスがその接続数を処理できることを確認してください。
+</Warning>
+
+## 4. パフォーマンス監視
+
+| 症状 | 考えられる原因 | 対応 |
+|------|----------------|------|
+| API レスポンスが遅い | API replicas または `serverWorkerAmount` が不足している、DB のスロークエリ | API replicas を増やし、DB のスロークエリを調査 |
+| Workflow キューが滞留する | `workflow-worker` の処理能力不足 | `workflow-worker.replicas` を増やし、必要に応じて resource limits を引き上げる |
+| ナレッジベースのインポートが遅い | `dataset-worker` のリソース不足、ドキュメント解析またはベクトル DB 書き込みが遅い | `dataset-worker` を有効化またはスケールし、Unstructured とベクトル DB を確認 |
+| メール、プラグイン、保持期間タスクが遅延する | `general-worker` のキュー滞留 | `general-worker` を有効化またはスケール |
+| スケジュールタスクやトリガーが遅延する | `trigger-worker` のキュー滞留 | `trigger-worker` を有効化またはスケールし、`workerBeat` は 1 replica を維持 |
+| データベース接続が枯渇する | API/worker の並行数や接続プール設定が高すぎる | `max_connections` を増やすか、接続プール/並行数を下げる |
+| Pod が OOMKilled になる | タスクのメモリ使用量が大きい、または memory limit が低すぎる | 対象コンポーネントの memory limit を増やし、高メモリタスクを特定 |
+| CPU throttling が発生する | CPU limit が低すぎる | 対象コンポーネントの CPU limit または replicas を増やす |

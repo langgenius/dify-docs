@@ -1,0 +1,594 @@
+---
+title: Data Push Data Dictionary
+description: Field-level reference for all telemetry signals emitted by Dify Enterprise via the Data Push feature
+---
+
+Field-level reference for every telemetry signal Dify Enterprise emits through Data Push. For configuring and operating the push service itself, see [Data Push](/en/3.14.x/administer/data-push).
+
+## Getting Started
+
+You do not need to read every table. Jump directly to the signal layer that matches your observability goal.
+
+### Scenario-to-Signal Map
+
+| Scenario or business need | Preferred signal | Target platform | Example signal or event |
+| :--- | :--- | :--- | :--- |
+| Total requests, success rate, error rate, token consumption | `Metrics` (Counter) | Prometheus / Grafana | `dify.requests.total`, `dify.tokens.total` |
+| System throughput, latency distribution (P50/P95/P99) | `Metrics` (Histogram) | Prometheus / Grafana | `dify.workflow.duration`, `dify.message.time_to_first_token` |
+| Why a workflow slowed down, bottleneck node, error location | `Traces` (Spans) | Jaeger / Tempo | `dify.workflow.run`, `dify.node.execution` |
+| Detailed inputs/outputs, tool parameters, retrieval results for a specific run | `Structured Logs` | Loki / Elasticsearch | `span_detail`, `dify.tool.execution` |
+
+### Telemetry Data Flow and Routing
+
+All telemetry signals exported by Dify comply with the OpenTelemetry specification and can be split and routed by a standard OTel Collector:
+
+```text
+Dify Enterprise Telemetry Engine (OTel Exporter)
+ ├── Metrics  ──► Prometheus Exporter ──► Prometheus / Grafana Dashboard
+ ├── Traces   ──► OTel / OTLP gRPC   ──► Jaeger / Grafana Tempo
+ └── Logs     ──► Pod stdout (JSON) ──► your log collector ──► Loki / Elasticsearch
+```
+
+---
+
+## Transmission Rules and Resource Attributes
+
+### Resource Attributes
+
+Global environment metadata attached to every exported OTel signal:
+
+| Attribute | Type | Example | Description |
+| :--- | :--- | :--- | :--- |
+| `service.name` | string | `dify` | Name of the service that produced the telemetry data |
+| `host.name` | string | `dify-api-7f8b` | Host or Pod identifier of the producing instance |
+
+### Common Identity and Correlation Attributes
+
+Spans carry the `dify.`-prefixed form; metric labels and the correlation keys on logs (`trace_id`, `span_id`, `tenant_id`, `user_id`) use the bare form. Rows listing two names cover both cases.
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `tenant_id` / `dify.tenant_id` | string | Tenant identifier |
+| `app_id` / `dify.app_id` | string | Application identifier; the primary dimension for filtering metrics and logs |
+| `dify.workflow.id` | string | Workflow definition ID |
+| `dify.workflow.run_id` | string | Unique ID for a single workflow run instance |
+| `dify.message.id` | string | Unique message ID |
+| `dify.conversation.id` | string | Conversation context ID (optional) |
+| `trace_id` / `dify.trace_id` | string | OTel correlation Trace ID (32-character hex string) |
+| `span_id` | string | OTel Span ID (16-character hex string) |
+| `user_id` / `gen_ai.user.id` | string | End-user identifier that triggered the request (optional) |
+
+### OTel-to-Prometheus Naming Conventions
+
+OTel signal names are automatically converted to underscore format when ingested by Prometheus. Counters gain a `_total` suffix; Histograms produce `_bucket`, `_sum`, and `_count` series, plus a unit suffix (`_seconds` for metrics measured in `s`), as the example below shows.
+
+The table below shows common examples; all other metrics follow the same rules.
+
+| OTel name | Prometheus query name |
+| :--- | :--- |
+| `dify.requests.total` | `dify_requests_total` |
+| `dify.errors.total` | `dify_errors_total` |
+| `dify.tokens.total` | `dify_tokens_total` |
+| `dify.workflow.duration` | `dify_workflow_duration_seconds_bucket` and related Histogram series |
+
+### Null Values and Content-Gated Fields
+
+- **Null value behavior**: attributes with no value are omitted from Trace Spans; in structured log JSON output they are explicitly rendered as `null`.
+- **Content-gating**: attributes that may hold sensitive text (Input/Output/Query/Prompt) are gated by `ENTERPRISE_INCLUDE_CONTENT`. When content push is disabled (the default), the value is replaced by a reference string (e.g. `ref:{id_type}={uuid}`) rather than `null`.
+- **High-cardinality warning**: `tenant_id`, `app_id`, and `trace_id` are high-cardinality dimensions. Do not store unbounded text fields as Prometheus labels.
+
+---
+
+## Traces and Spans
+
+Traces present the complete time sequence and nesting topology of a single call. The OTel `trace_id` is derived deterministically from the business run ID, so every signal of one run shares it; query Jaeger or Tempo by this `trace_id`.
+
+The `dify.trace_id` attribute keeps the original business UUID (for example the workflow run ID) for joining with business data.
+
+### dify.workflow.run
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.trace_id` | string | Business Trace ID (workflow run ID) |
+| `dify.tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.workflow.id` | string | Workflow definition ID |
+| `dify.workflow.run_id` | string | Unique ID for this run |
+| `dify.workflow.status` | string | `succeeded`, `failed`, `stopped`, etc. |
+| `dify.workflow.error` | string | Error message on failure |
+| `dify.workflow.elapsed_time` | float | Total execution time (seconds) |
+| `dify.invoke_from` | string | `api`, `webapp`, `debug` |
+| `dify.conversation.id` | string | Conversation ID (optional) |
+| `dify.message.id` | string | Message ID (optional) |
+| `dify.invoked_by` | string | User ID that triggered the run |
+| `gen_ai.usage.total_tokens` | int | Total token count across all nodes (optional) |
+| `gen_ai.user.id` | string | End-user identifier (optional) |
+| `dify.parent.trace_id` | string | Parent workflow trace ID (optional) |
+| `dify.parent.workflow.run_id` | string | Parent workflow run ID (optional) |
+| `dify.parent.node.execution_id` | string | Parent node execution ID (optional) |
+| `dify.parent.app.id` | string | Parent application ID (optional) |
+
+### dify.node.execution
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.trace_id` | string | Business Trace ID |
+| `dify.tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.workflow.id` | string | Workflow definition ID |
+| `dify.workflow.run_id` | string | Workflow run ID |
+| `dify.message.id` | string | Message ID (optional) |
+| `dify.conversation.id` | string | Conversation ID (optional) |
+| `dify.node.execution_id` | string | Unique node execution ID |
+| `dify.node.id` | string | Node ID in the Workflow graph |
+| `dify.node.type` | string | Node type (see Appendix) |
+| `dify.node.title` | string | Display title |
+| `dify.node.status` | string | `succeeded`, `failed` |
+| `dify.node.error` | string | Error message on failure |
+| `dify.node.elapsed_time` | float | Execution time (seconds) |
+| `dify.node.index` | int | Execution sequence index |
+| `dify.node.predecessor_node_id` | string | ID of the node that triggered this node |
+| `dify.node.iteration_id` | string | Iteration ID (optional) |
+| `dify.node.loop_id` | string | Loop ID (optional) |
+| `dify.node.parallel_id` | string | Parallel branch ID (optional) |
+| `dify.node.invoked_by` | string | User ID that triggered execution |
+| `gen_ai.usage.input_tokens` | int | Prompt token count (LLM nodes only) |
+| `gen_ai.usage.output_tokens` | int | Completion token count (LLM nodes only) |
+| `gen_ai.usage.total_tokens` | int | Total token count (LLM nodes only) |
+| `gen_ai.request.model` | string | LLM model name (LLM nodes only) |
+| `gen_ai.provider.name` | string | LLM provider name (LLM nodes only) |
+| `gen_ai.user.id` | string | End-user identifier (optional) |
+
+### dify.node.execution.draft
+
+Carries the same attributes as `dify.node.execution`, but is produced only during a single-node test or a draft preview run in the Studio canvas. Use this signal to separate production telemetry from test runs.
+
+---
+
+## Metrics
+
+### Counters
+
+All counters are cumulative and are never sampled: the trace sampling rate (`ENTERPRISE_OTEL_SAMPLING_RATE`, see the [environment variable reference](/en/3.14.x/deploy/advanced-configuration/environment-variables)) does not affect them.
+
+#### Token Counters
+
+| Metric | Unit | Description |
+| :--- | :--- | :--- |
+| `dify.tokens.total` | `{token}` | Total tokens consumed |
+| `dify.tokens.input` | `{token}` | Input (prompt) tokens |
+| `dify.tokens.output` | `{token}` | Output (completion) tokens |
+
+**Labels**: `tenant_id`, `app_id`, `operation_type`, `model_provider`, `model_name`, `node_type` (for `node_execution` only)
+
+<Warning>
+The workflow-level `dify.tokens.total` already includes tokens from all `node_execution` operations. Filter by `operation_type` to avoid double-counting.
+</Warning>
+
+**Token hierarchy and query patterns**
+
+Token metrics are emitted at multiple levels. Understanding the hierarchy prevents double-counting:
+
+```text
+App-level total
+├── workflow          ← sum of all node_execution tokens (do not add together)
+│   └── node_execution ← per-node breakdown
+├── message           ← standalone (non-workflow chat apps only)
+├── rule_generate     ← standalone auxiliary LLM call
+├── code_generate     ← standalone auxiliary LLM call
+├── structured_output ← standalone auxiliary LLM call
+└── instruction_modify← standalone auxiliary LLM call
+```
+
+**Key rule**: `workflow` tokens already include all `node_execution` tokens. Never add both together.
+
+- **Available labels on token metrics**: `tenant_id`, `app_id`, `operation_type`, `model_provider`, `model_name`, `node_type`.
+- **Application name** is carried on the trace side only, as `dify.app.name` on the span companion logs (see Span Companion Logs), never as a metric label. Use `app_id` in metric queries.
+- **Cost** exists only on the node companion logs (`dify.node.total_price`, see Span Companion Logs); there is no cost metric.
+
+#### Request Counter
+
+| Metric | Unit | Description |
+| :--- | :--- | :--- |
+| `dify.requests.total` | `{request}` | Total operation count |
+
+The `type` label identifies the operation (for example `dify_requests_total{type="workflow"}`); additional labels vary by `type`:
+
+| Type | Additional labels |
+| :--- | :--- |
+| `workflow` | `tenant_id`, `app_id`, `status`, `invoke_from` |
+| `node` | `tenant_id`, `app_id`, `node_type`, `model_provider`, `model_name`, `status` |
+| `draft_node` | `tenant_id`, `app_id`, `node_type`, `model_provider`, `model_name`, `status` |
+| `message` | `tenant_id`, `app_id`, `model_provider`, `model_name`, `status`, `invoke_from` |
+| `tool` | `tenant_id`, `app_id`, `tool_name` |
+| `moderation` | `tenant_id`, `app_id` |
+| `suggested_question` | `tenant_id`, `app_id`, `model_provider`, `model_name` |
+| `dataset_retrieval` | `tenant_id`, `app_id` |
+| `generate_name` | `tenant_id`, `app_id` |
+| `prompt_generation` | `tenant_id`, `app_id`, `operation_type`, `model_provider`, `model_name`, `status` |
+
+#### Error Counter
+
+| Metric | Unit | Description |
+| :--- | :--- | :--- |
+| `dify.errors.total` | `{error}` | Total failed operation count |
+
+The error counter uses the same `type` label; additional labels vary by `type`:
+
+| Type | Additional labels |
+| :--- | :--- |
+| `workflow` | `tenant_id`, `app_id` |
+| `node` | `tenant_id`, `app_id`, `node_type`, `model_provider`, `model_name` |
+| `draft_node` | `tenant_id`, `app_id`, `node_type`, `model_provider`, `model_name` |
+| `message` | `tenant_id`, `app_id`, `model_provider`, `model_name` |
+| `tool` | `tenant_id`, `app_id`, `tool_name` |
+| `prompt_generation` | `tenant_id`, `app_id`, `operation_type`, `model_provider`, `model_name` |
+
+#### Other Counters
+
+| Metric | Unit | Labels |
+| :--- | :--- | :--- |
+| `dify.feedback.total` | `{feedback}` | `tenant_id`, `app_id`, `rating` |
+| `dify.dataset.retrievals.total` | `{retrieval}` | `tenant_id`, `app_id`, `dataset_id`, `embedding_model_provider`, `embedding_model`, `rerank_model_provider`, `rerank_model` |
+| `dify.app.created.total` | `{app}` | `tenant_id`, `app_id`, `mode` |
+| `dify.app.updated.total` | `{app}` | `tenant_id`, `app_id` |
+| `dify.app.deleted.total` | `{app}` | `tenant_id`, `app_id` |
+
+### Histograms
+
+<Note>
+Unlike Counters, which can only produce averages (which extreme values can distort), Histograms support **calculations for the P50, P95, and P99 percentiles** that more accurately describe the actual distribution.
+
+Each Histogram in Prometheus expands into three series: `_bucket`, `_sum`, and `_count`. P95/P99 may return `NaN` in low-traffic time windows; increase the query window if this occurs. When latency is concentrated within 5 seconds, such as for TTFT or tool calls, percentile precision is limited. For higher-precision evaluation, extend the query window or contact the Dify team for bucket configuration details.
+</Note>
+
+| Metric | Unit | Labels |
+| :--- | :--- | :--- |
+| `dify.workflow.duration` | `s` | `tenant_id`, `app_id`, `status` |
+| `dify.node.duration` | `s` | `tenant_id`, `app_id`, `node_type`, `model_provider`, `model_name`, `plugin_name` |
+| `dify.message.duration` | `s` | `tenant_id`, `app_id`, `model_provider`, `model_name` |
+| `dify.message.time_to_first_token` | `s` | `tenant_id`, `app_id`, `model_provider`, `model_name` |
+| `dify.tool.duration` | `s` | `tenant_id`, `app_id`, `tool_name` |
+| `dify.prompt_generation.duration` | `s` | `tenant_id`, `app_id`, `operation_type`, `model_provider`, `model_name` |
+
+---
+
+## Structured Logs
+
+Structured logs provide detailed business data. Logs fall into two categories: Span companion logs and standalone business logs.
+
+<Note>
+`ENTERPRISE_OTEL_SAMPLING_RATE` only affects the number of Spans sent to Trace backends such as Jaeger and Tempo. Structured logs (`span_detail` and `metric_only`) are always written to Pod standard output at 100% and are not controlled by the sampling rate.
+</Note>
+
+### Span Companion Logs
+
+Signal type: `span_detail`. These logs are tightly coupled to a Trace Span (sharing `trace_id` and `span_id`) and contain content-gated detailed context.
+
+#### dify.workflow.run companion log
+
+**Common attributes**: all Span attributes (see Traces section) plus:
+
+**Event attributes**:
+
+- `dify.event.name`: `dify.workflow.run`
+- `dify.event.signal`: `span_detail`
+- `trace_id`, `span_id`, `tenant_id`, `user_id`
+
+| Additional attribute | Type | Always present | Description |
+| :--- | :--- | :--- | :--- |
+| `dify.app.name` | string | No | Application display name |
+| `dify.workspace.name` | string | No | Workspace display name |
+| `dify.workflow.version` | string | Yes | Workflow definition version |
+| `dify.workflow.inputs` | string/JSON | Yes | Input parameters (content-gated) |
+| `dify.workflow.outputs` | string/JSON | Yes | Output results (content-gated) |
+| `dify.workflow.query` | string | No | User query text (content-gated) |
+
+#### dify.node.execution and dify.node.execution.draft companion logs
+
+**Common attributes**: all Span attributes (see Traces section) plus:
+
+**Event attributes**:
+
+- `dify.event.name`: `dify.node.execution` or `dify.node.execution.draft`
+- `dify.event.signal`: `span_detail`
+- `trace_id`, `span_id`, `tenant_id`, `user_id`
+
+| Additional attribute | Type | Always present | Description |
+| :--- | :--- | :--- | :--- |
+| `dify.app.name` | string | No | Application display name |
+| `dify.workspace.name` | string | No | Workspace display name |
+| `dify.invoke_from` | string | No | Invocation source |
+| `gen_ai.tool.name` | string | No | Tool name (tool nodes only) |
+| `dify.node.total_price` | float | No | Cost (LLM nodes only) |
+| `dify.node.currency` | string | No | Currency code (LLM nodes only) |
+| `dify.node.iteration_index` | int | No | Iteration index (iteration nodes) |
+| `dify.node.loop_index` | int | No | Loop index (loop nodes) |
+| `dify.plugin.name` | string | No | Plugin name (tool / knowledge nodes) |
+| `dify.credential.name` | string | No | Credential name (plugin nodes) |
+| `dify.credential.id` | string | No | Credential ID (plugin nodes) |
+| `dify.dataset.ids` | JSON array | No | Dataset IDs (knowledge nodes) |
+| `dify.dataset.names` | JSON array | No | Dataset names (knowledge nodes) |
+| `dify.node.inputs` | string/JSON | Yes | Node inputs (content-gated) |
+| `dify.node.outputs` | string/JSON | Yes | Node outputs (content-gated) |
+| `dify.node.process_data` | string/JSON | No | Processing data (content-gated) |
+
+### Standalone Logs
+
+Logs without a structured Span. Their signal type is `metric_only`: the event feeds counters and carries its detail in this log, with no companion span.
+
+#### dify.message.run
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.message.run` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID (32-character hex) |
+| `span_id` | string | OTel Span ID (16-character hex) |
+| `tenant_id` | string | Tenant identifier |
+| `user_id` | string | User identifier (optional) |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.conversation.id` | string | Conversation ID (optional) |
+| `dify.workflow.run_id` | string | Workflow run ID (optional) |
+| `dify.invoke_from` | string | `service-api`, `web-app`, `debugger`, `explore` |
+| `gen_ai.provider.name` | string | LLM provider |
+| `gen_ai.request.model` | string | LLM model |
+| `gen_ai.usage.input_tokens` | int | Input token count |
+| `gen_ai.usage.output_tokens` | int | Output token count |
+| `gen_ai.usage.total_tokens` | int | Total token count |
+| `dify.message.status` | string | `succeeded`, `failed` |
+| `dify.message.error` | string | Error message (if failed) |
+| `dify.message.duration` | float | Duration (seconds) |
+| `dify.message.time_to_first_token` | float | Time to first token / TTFT (seconds) |
+| `dify.message.inputs` | string/JSON | Inputs (content-gated) |
+| `dify.message.outputs` | string/JSON | Outputs (content-gated) |
+
+#### dify.tool.execution
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.tool.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.tool.name` | string | Tool name |
+| `dify.tool.duration` | float | Duration (seconds) |
+| `dify.tool.status` | string | `succeeded`, `failed` |
+| `dify.tool.error` | string | Error message (if failed) |
+| `dify.tool.inputs` | string/JSON | Inputs (content-gated) |
+| `dify.tool.outputs` | string/JSON | Outputs (content-gated) |
+| `dify.tool.parameters` | string/JSON | Parameters (content-gated) |
+| `dify.tool.config` | string/JSON | Configuration (content-gated) |
+
+#### dify.moderation.check
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.moderation.check` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.moderation.type` | string | `input`, `output` |
+| `dify.moderation.action` | string | `pass`, `block`, `flag` |
+| `dify.moderation.flagged` | boolean | Whether the content was flagged |
+| `dify.moderation.categories` | JSON array | Categories that triggered the flag |
+| `dify.moderation.query` | string | Content (content-gated) |
+
+#### dify.suggested_question.generation
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.suggested_question.generation` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.suggested_question.count` | int | Number of questions generated |
+| `dify.suggested_question.duration` | float | Duration (seconds) |
+| `dify.suggested_question.status` | string | `succeeded`, `failed` |
+| `dify.suggested_question.error` | string | Error message (if failed) |
+| `dify.suggested_question.questions` | JSON array | Generated questions (content-gated) |
+
+#### dify.dataset.retrieval
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.dataset.retrieval` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.dataset.id` | string | Dataset identifier |
+| `dify.dataset.name` | string | Dataset name |
+| `dify.dataset.embedding_providers` | JSON array | Embedding model provider (one per dataset) |
+| `dify.dataset.embedding_models` | JSON array | Embedding model (one per dataset) |
+| `dify.retrieval.rerank_provider` | string | Rerank model provider |
+| `dify.retrieval.rerank_model` | string | Rerank model name |
+| `dify.retrieval.query` | string | Search query (content-gated) |
+| `dify.retrieval.document_count` | int | Number of documents retrieved |
+| `dify.retrieval.duration` | float | Duration (seconds) |
+| `dify.retrieval.status` | string | `succeeded`, `failed` |
+| `dify.retrieval.error` | string | Error message (if failed) |
+| `dify.dataset.documents` | JSON array | Documents (content-gated) |
+
+#### dify.generate_name.execution
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.generate_name.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.conversation.id` | string | Conversation identifier |
+| `dify.generate_name.duration` | float | Duration (seconds) |
+| `dify.generate_name.status` | string | `succeeded`, `failed` |
+| `dify.generate_name.error` | string | Error message (if failed) |
+| `dify.generate_name.inputs` | string/JSON | Inputs (content-gated) |
+| `dify.generate_name.outputs` | string | Generated name (content-gated) |
+
+#### dify.prompt_generation.execution
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.prompt_generation.execution` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.prompt_generation.operation_type` | string | Operation type (see Appendix) |
+| `gen_ai.provider.name` | string | LLM provider |
+| `gen_ai.request.model` | string | LLM model |
+| `gen_ai.usage.input_tokens` | int | Input token count |
+| `gen_ai.usage.output_tokens` | int | Output token count |
+| `gen_ai.usage.total_tokens` | int | Total token count |
+| `dify.prompt_generation.duration` | float | Duration (seconds) |
+| `dify.prompt_generation.status` | string | `succeeded`, `failed` |
+| `dify.prompt_generation.error` | string | Error message (if failed) |
+| `dify.prompt_generation.instruction` | string | Instruction (content-gated) |
+| `dify.prompt_generation.output` | string/JSON | Output (content-gated) |
+
+#### dify.app.created
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.created` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.app.mode` | string | `chat`, `completion`, `agent-chat`, `workflow` |
+| `dify.app.created_at` | string | Timestamp (ISO 8601) |
+
+#### dify.app.updated
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.updated` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.app.updated_at` | string | Timestamp (ISO 8601) |
+
+#### dify.app.deleted
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.app.deleted` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.app.deleted_at` | string | Timestamp (ISO 8601) |
+
+#### dify.feedback.created
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.feedback.created` |
+| `dify.event.signal` | string | `metric_only` |
+| `trace_id` | string | OTel Trace ID |
+| `span_id` | string | OTel Span ID |
+| `tenant_id` | string | Tenant identifier |
+| `dify.app_id` | string | Application identifier |
+| `dify.message.id` | string | Message identifier |
+| `dify.feedback.rating` | string | `like`, `dislike`, `null` |
+| `dify.feedback.content` | string | Feedback text (content-gated) |
+| `dify.feedback.created_at` | string | Timestamp (ISO 8601) |
+
+#### dify.telemetry.rehydration_failed
+
+A diagnostic event for telemetry pipeline health, emitted when a buffered telemetry payload cannot be reconstructed (rehydrated) for processing. A sustained rate indicates telemetry data loss.
+
+| Attribute | Type | Description |
+| :--- | :--- | :--- |
+| `dify.event.name` | string | `dify.telemetry.rehydration_failed` |
+| `dify.event.signal` | string | `metric_only` |
+| `tenant_id` | string | Tenant identifier |
+| `dify.telemetry.error` | string | Error message |
+| `dify.telemetry.payload_type` | string | Payload type (see Appendix) |
+| `dify.telemetry.correlation_id` | string | Correlation ID |
+
+---
+
+## Content-Gated Attributes
+
+The following fields may contain user inputs, model outputs, document content, tool parameters, or feedback text.
+
+Raw values are transmitted only when content push is enabled on the deployment: `ENTERPRISE_INCLUDE_CONTENT` (default `false`; see the [environment variable reference](/en/3.14.x/deploy/advanced-configuration/environment-variables)). When disabled, these attributes are replaced with `ref:{id_type}={uuid}`.
+
+The `id_type` names the correlating entity (for example `workflow_run_id`, `node_execution_id`, or `message_id`); look up that record in the Dify database to retrieve the original content.
+
+| Attribute | Signal |
+| :--- | :--- |
+| `dify.workflow.inputs` | `dify.workflow.run` |
+| `dify.workflow.outputs` | `dify.workflow.run` |
+| `dify.workflow.query` | `dify.workflow.run` |
+| `dify.node.inputs` | `dify.node.execution` |
+| `dify.node.outputs` | `dify.node.execution` |
+| `dify.node.process_data` | `dify.node.execution` |
+| `dify.message.inputs` | `dify.message.run` |
+| `dify.message.outputs` | `dify.message.run` |
+| `dify.tool.inputs` | `dify.tool.execution` |
+| `dify.tool.outputs` | `dify.tool.execution` |
+| `dify.tool.parameters` | `dify.tool.execution` |
+| `dify.tool.config` | `dify.tool.execution` |
+| `dify.moderation.query` | `dify.moderation.check` |
+| `dify.suggested_question.questions` | `dify.suggested_question.generation` |
+| `dify.retrieval.query` | `dify.dataset.retrieval` |
+| `dify.dataset.documents` | `dify.dataset.retrieval` |
+| `dify.generate_name.inputs` | `dify.generate_name.execution` |
+| `dify.generate_name.outputs` | `dify.generate_name.execution` |
+| `dify.prompt_generation.instruction` | `dify.prompt_generation.execution` |
+| `dify.prompt_generation.output` | `dify.prompt_generation.execution` |
+| `dify.feedback.content` | `dify.feedback.created` |
+
+`dify.node.execution.draft` carries the same gated fields as `dify.node.execution`.
+
+<Warning>
+In production, it is recommended to disable content push by default. Enable it in a controlled environment only after confirming data classification, access controls, redaction requirements, retention periods, and audit obligations.
+</Warning>
+
+---
+
+## Appendix
+
+### Operation Types
+
+`workflow`, `node_execution`, `message`, `rule_generate`, `code_generate`, `structured_output`, `instruction_modify`
+
+These values belong to the `operation_type` label on token metrics and to `dify.prompt_generation.operation_type`. The request and error counters use the separate `type` label; its values are listed under Counters.
+
+### Node Types
+
+`start`, `end`, `answer`, `llm`, `knowledge-retrieval`, `knowledge-index`, `if-else`, `code`, `template-transform`, `question-classifier`, `http-request`, `tool`, `datasource`, `variable-aggregator`, `loop`, `iteration`, `parameter-extractor`, `assigner`, `document-extractor`, `list-operator`, `agent`, `trigger-webhook`, `trigger-schedule`, `trigger-plugin`, `human-input`
+
+### Workflow Statuses
+
+`running`, `succeeded`, `failed`, `stopped`, `partial-succeeded`, `paused`
+
+### Payload Types
+
+`workflow`, `node`, `message`, `tool`, `moderation`, `suggested_question`, `dataset_retrieval`, `generate_name`, `prompt_generation`, `app`, `feedback`
+
+### Invoke From Values
+
+- Workflow spans (`dify.invoke_from` on `dify.workflow.run`): `api`, `webapp`, `debug`
+- Message logs (`dify.invoke_from` on `dify.message.run`): `service-api`, `web-app`, `debugger`, `explore`
+
+### Null Value Behavior
+
+- **Spans**: attributes with null values are omitted.
+- **Logs**: attributes with null values are rendered as `null` in the JSON output.
+- **Content-gated fields**: replaced by a reference string rather than set to `null`.

@@ -1,0 +1,149 @@
+---
+title: 数据库配置指南
+---
+
+本指南介绍如何为 Dify 企业版配置数据库。Dify 企业版支持 Docker Compose 和 Helm Chart 两种部署方式，并兼容 PostgreSQL、MySQL 和 TiDB 三种数据库引擎。
+
+## 架构概览
+
+Dify 企业版采用**单实例多数据库**架构。所有社区版和企业版服务都连接到同一个数据库服务器，但每个服务使用各自独立的数据库：
+
+| 数据库 | 默认名称 | 使用组件 |
+| :--- | :--- | :--- |
+| Dify 核心 | `dify` | 社区版 API / Worker / Plugin Daemon, 企业版服务 |
+| 企业版 | `enterprise` | dify-enterprise, dify-audit, dify-plugin-manager |
+| 审计日志 | `audit` | dify-audit |
+| 插件 | `dify_plugin` | Plugin Daemon, dify-plugin-manager |
+
+> **注意**：社区版服务和企业版服务使用不同的环境变量命名规范，但必须指向**同一个数据库实例**。
+
+---
+
+## Docker Compose 配置
+
+在 Docker Compose 部署中，通过修改 `.env` 文件来配置数据库。
+
+### 1. 环境变量参考
+
+#### 社区版服务 (Dify API / Worker)
+| 变量名 | 描述 | PostgreSQL 默认 | MySQL 默认 |
+| :--- | :--- | :--- | :--- |
+| `DB_TYPE` | 数据库类型 | `postgresql` | `mysql` |
+| `DB_USERNAME` | 数据库用户名 | `postgres` | `root` |
+| `DB_PASSWORD` | 数据库密码 | `difyai123456` | `difyai123456` |
+| `DB_HOST` | 数据库主机名 | `db_postgres` | `db_mysql` |
+| `DB_PORT` | 数据库端口 | `5432` | `3306` |
+| `DB_DATABASE` | Dify 核心数据库名 | `dify` | `dify` |
+
+#### 企业版服务
+| 变量名 | 描述 | PostgreSQL 默认 | MySQL/TiDB 默认 |
+| :--- | :--- | :--- | :--- |
+| `DB_ENGINE` | 数据库引擎 | `postgres` | `mysql` |
+| `DB_HOST` | 数据库主机名 | `db_postgres` | `db_mysql` |
+| `DB_PORT` | 数据库端口 | `5432` | `3306` / `4000` (TiDB) |
+| `DB_USER` | 数据库用户名 | `postgres` | `root` |
+| `DB_PASS` | 数据库密码 | `difyai123456` | `difyai123456` |
+| `DIFY_DB_NAME` | Dify 核心数据库名 | `dify` | `dify` |
+| `ENTERPRISE_DB_NAME` | 企业版数据库名 | `enterprise` | `enterprise` |
+| `AUDIT_DB_NAME` | 审计日志数据库名 | `audit` | `audit` |
+
+### 2. 外部数据库模式
+
+若使用外部数据库（如 AWS RDS、阿里云 RDS 或 TiDB Cloud），请按以下步骤配置：
+
+1. **修改 `.env` 环境变量**：将上述变量指向您的外部数据库地址。
+2. **调整 `COMPOSE_PROFILES`**（可选）：从 `COMPOSE_PROFILES` 中移除数据库类型（如 `postgresql`），以防止启动内置数据库容器。
+   ```bash
+   # 示例：仅保留向量数据库和非结构化数据处理服务
+   COMPOSE_PROFILES="weaviate,unstructured"
+   ```
+3. **手动创建数据库**：在启动 Dify 之前，必须在外部实例中手动创建所需的数据库（详见下文[数据库初始化](#数据库初始化)部分）。
+
+---
+
+## Helm Chart 配置
+
+在 Helm 部署中，通过 `values.yaml` 配置数据库。
+
+### 1. 内部数据库模式 (PostgreSQL)
+默认情况下，Helm 会启动一个内置的 PostgreSQL 容器。
+```yaml
+postgresql:
+  enabled: true
+  global:
+    postgresql:
+      auth:
+        postgresPassword: "your_password"
+        database: "dify"
+```
+
+### 2. 外部数据库模式 (推荐生产环境)
+连接外部 PostgreSQL、MySQL 或 TiDB。
+```yaml
+postgresql:
+  enabled: false
+
+externalDatabase:
+  enabled: true
+  # 可选: postgres | mysql | tidb
+  engine: "postgres"
+  host: "your-db-host"
+  port: 5432
+  user: "your-user"
+  password: "your-password"
+  databases:
+    dify: "dify"
+    enterprise: "enterprise"
+    audit: "audit"
+    plugin_daemon: "dify_plugin"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+    mysql:
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+```
+
+---
+
+## 数据库初始化
+
+### 1. 内置数据库模式
+使用 Docker Compose 或 Helm 的内置数据库时，系统会自动执行初始化脚本（如 `dify-postgresql-init.sql`）来创建 `enterprise` 和 `audit` 数据库。
+
+### 2. 外部数据库模式 (手动创建)
+**使用外部数据库时，必须在启动 Dify 之前手动创建以下数据库：**
+
+#### PostgreSQL
+```sql
+CREATE DATABASE dify;
+CREATE DATABASE enterprise;
+CREATE DATABASE audit;
+-- dify_plugin 将在首次启动时由插件服务自动创建
+```
+
+#### MySQL / TiDB
+```sql
+CREATE DATABASE IF NOT EXISTS dify;
+CREATE DATABASE IF NOT EXISTS enterprise;
+CREATE DATABASE IF NOT EXISTS audit;
+-- dify_plugin 将在首次启动时由插件服务自动创建
+```
+
+---
+
+## 常见问题 (FAQ)
+
+### 为什么有两套数据库变量？
+
+社区版服务（Python）和企业版服务（Go）使用不同的配置规范。在配置时，请确保两套变量指向同一个数据库实例。
+
+### TiDB 应该选择哪个引擎？
+
+TiDB 兼容 MySQL 协议。在配置时请将 `DB_TYPE` 和 `DB_ENGINE` 均设置为 `mysql`，并将端口指向 TiDB 的服务端口（默认 `4000`）。
+
+### 如何开启 SSL/TLS 连接？
+
+
+- **Docker Compose**: 设置 `DB_SSL_MODE="require"`。对于 MySQL/TiDB，还需设置 `DB_TLS="true"`。
+- **Helm**: 在 `dialectOptions` 下配置对应的 `sslMode` 或 `tls` 字段。

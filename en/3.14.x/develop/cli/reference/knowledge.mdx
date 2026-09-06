@@ -1,0 +1,916 @@
+---
+title: Knowledge Bases
+description: List, print, search, and compare the documents in a Dify knowledge base from the CLI
+---
+
+The seven `difyctl knowledge fs` commands read a knowledge base's documents as files in a folder tree: list them, print one, search for a phrase, check that a document is processed, compare two files. None of them changes anything and all accept the [global flags](/en/3.14.x/develop/cli/reference/global-flags).
+
+You don't need to enable API access or create an API key. Any knowledge base you can open in Dify, you can browse here.
+
+<Info>
+These commands are for account users only.
+</Info>
+
+- [`difyctl knowledge fs ls`](#list-documents) lists the documents, or one document's parts
+- [`cat`](#print-a-document) prints a document or one of its sections
+- [`grep`](#search-for-text) searches for a word or phrase
+- [`find`](#find-files-by-name-or-metadata) finds files by name or metadata
+- [`stat`](#check-a-documents-details) shows a file's details, including whether it's processed
+- [`diff`](#compare-two-documents) compares two files line by line
+- [`tree`](#show-the-folder-tree) shows the folder tree under a path
+
+## List Documents
+
+```text
+difyctl knowledge fs ls <knowledge-base-id> <path> [flags]
+```
+
+`ls` lists a folder. Every path the other commands take comes from its output.
+
+Paths start at `/knowledge`, which holds one folder, `docs`. `/knowledge/docs` holds one entry per document, named after its file with an eight-character suffix, such as `agent.mdx--3a9949ec`.
+
+A document's folder holds:
+
+- `outline.json`: the section outline, every section with its summary, as [processing](/en/3.14.x/use/knowledge-base/review-indexed-documents) produced it when the document was added.
+- `multimodal.json`: the images and tables processing found.
+- `sections/`: one Markdown file per section, named from its heading path.
+
+A document with images or tables also has a folder for each.
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<path>`: required. The folder to list: `/knowledge/docs` for the documents, or a document's path for its parts.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--limit <n>` | integer | `20` | Page size, 1 to 100. Use `100` to see a whole knowledge base at once.<br/><br/>Pages count files beneath the folder, sections included, so a page can show fewer documents than `--limit`. |
+| `--cursor <token>` | string | none | Continue from an earlier page: pass its `next_page_token`. |
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br/><br/>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+List the documents:
+
+```bash
+difyctl knowledge fs ls 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --limit 100
+```
+
+List one document's parts:
+
+```bash
+difyctl knowledge fs ls 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec --limit 100
+```
+
+Get the next page when `has_more` is true:
+
+```bash
+difyctl knowledge fs ls 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --limit 100 --cursor '%2Fknowledge%2Fdocs%2Fbuild.mdx--cceca54d%2Foutline.json|cadc86ea-7595-5898-b63a-499eea62b4d3'
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The listing as indented JSON. |
+| `-o yaml` | The listing as YAML. |
+
+The listing is a `data` array of entries, then `has_more` and `next_page_token` for the next page (`truncated` repeats `has_more`). A knowledge base with more than 100 files takes a loop: rerun with `--cursor` while `has_more` is true.  
+
+Each entry has a `kind` (`resource` for a file, `directory` for a folder), a `name`, and the `path` you pass to the other commands. A file entry also carries its document's ID as `target_id` and a `metadata` block: a document's `filename` and `mimeType`, or a section's `title` and `sectionPath`.
+
+The documents folder, trimmed:
+
+```text
+{
+  "consistency_class": null,
+  "data": [
+    {
+      "kind": "resource",
+      "metadata": {
+        "filename": "agent.mdx",
+        "mimeType": "text/mdx",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "objectKey": "namespaces/97462bdd-626a-488f-a2b4-740fb33b5ddf/spaces/b1544ec9-4aa4-5dcf-9086-cd7fc187e3d9/uploads/3a9949ec-6da9-45e3-8966-f6265d9b1a51/source"
+      },
+      "name": "agent.mdx--3a9949ec",
+      "path": "/knowledge/docs/agent.mdx--3a9949ec",
+      "resource_type": "document",
+      "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+      "version": 1
+    },
+    {
+      "kind": "resource",
+      "metadata": {
+        "filename": "build.mdx",
+        "mimeType": "text/mdx",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "objectKey": "namespaces/97462bdd-626a-488f-a2b4-740fb33b5ddf/spaces/b1544ec9-4aa4-5dcf-9086-cd7fc187e3d9/uploads/cceca54d-ed7e-496e-9b59-6656a05a1242/source"
+      },
+      "name": "build.mdx--cceca54d",
+      "path": "/knowledge/docs/build.mdx--cceca54d",
+      "resource_type": "document",
+      "target_id": "cceca54d-ed7e-496e-9b59-6656a05a1242",
+      "version": 1
+    }
+  ],
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs",
+  "preview": null,
+  "truncated": false
+}
+  ... (4 more entries)
+```
+
+One document's parts:
+
+```text
+{
+  "consistency_class": null,
+  "data": [
+    {
+      "kind": "resource",
+      "metadata": {
+        "filename": "multimodal.json",
+        "mimeType": "application/json",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "contentKind": "document-multimodal-manifest"
+      },
+      "name": "multimodal.json",
+      "path": "/knowledge/docs/agent.mdx--3a9949ec/multimodal.json",
+      "resource_type": "document",
+      "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+      "version": 1
+    },
+    {
+      "kind": "resource",
+      "metadata": {
+        "filename": "outline.json",
+        "mimeType": "application/json",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "contentKind": "document-outline"
+      },
+      "name": "outline.json",
+      "path": "/knowledge/docs/agent.mdx--3a9949ec/outline.json",
+      "resource_type": "document",
+      "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+      "version": 1
+    },
+    {
+      "kind": "directory",
+      "metadata": {},
+      "name": "sections",
+      "path": "/knowledge/docs/agent.mdx--3a9949ec/sections",
+      "resource_type": null,
+      "target_id": null,
+      "version": null
+    }
+  ],
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs/agent.mdx--3a9949ec",
+  "preview": null,
+  "truncated": false
+}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including an empty folder |
+| `1` | Error, including a knowledge base or path that isn't found, a `--limit` outside 1 to 100, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Print a Document
+
+```text
+difyctl knowledge fs cat <knowledge-base-id> <path> [flags]
+```
+
+`cat` prints a file's text to stdout. Folders can't be printed.
+
+A document's path prints the whole document: Markdown, MDX, plain text, JSON, and XML files as stored, PDF and Office files as the Markdown that processing produced. 
+
+A section file prints that section, starting at its heading, and `outline.json` prints the outline. 
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<path>`: required. From [`ls`](#list-documents): a document, one of its section files, or its `outline.json`.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br></br><br></br>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Print a document:
+
+```bash
+difyctl knowledge fs cat 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec
+```
+
+Save a Word document's text as Markdown:
+
+```bash
+difyctl knowledge fs cat 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/Document1.docx--3fdf5e66 > document1.md
+```
+
+Print one section, with its path from `ls`:
+
+```bash
+difyctl knowledge fs cat 01a05c49-48c5-7d97-81d7-d3867ee2f18d '/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md'
+```
+
+Get the text as JSON for a script:
+
+```bash
+difyctl knowledge fs cat 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec -o json | jq -r .text
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`) | The text only, so it pipes into a file or another command. |
+| `-o json`, `-o yaml` | The text as `text`, with its `content_type` and `path`. A parsed Office file reports `text/markdown`. The paging fields are always false for a document. |
+
+A document in text mode, trimmed:
+
+```text
+---
+title: Agent
+description: Run an agent as a step in your workflow, reasoning and using tools to complete a task
+---
+
+<Tabs>
+  <Tab title="Classic Agent" id="classic-agent">
+  The classic Agent node gives your LLM autonomous control over tools, enabling it to iteratively decide which tools to use and when to use them. Instead of pre-planning every step, the Agent reasons through problems dynami
+...
+```
+
+A section file starts at its heading:
+
+```text
+# Why Agentic Workflows
+
+How structured agentic workflows improve the reliability and control of AI-driven processes.
+```
+
+A Word document under `-o json`, trimmed:
+
+```text
+{
+  "content_type": "text/markdown",
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs/Document1.docx--3fdf5e66",
+  "text": "> ## Documentation Index\n\n> Fetch the complete documentation index at: https://docs.dify.ai/llms.txt\n\n> Use this file to discover all available pages before exploring further.\n\n# Workflow & Chatflow\n\n...",
+  "truncated": false
+}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Error, including a knowledge base or path that isn't found, a folder as the path, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Search for Text
+
+```text
+difyctl knowledge fs grep <knowledge-base-id> <text> <path> [flags]
+```
+
+`grep` is a literal, case-insensitive substring search: no regular expressions, and no matching by meaning. To search by meaning, query from the [Service API](/en/3.14.x/develop/api/guides/knowledge-base#query-the-knowledge-base). 
+
+The search covers every document under the path, section by section. Each match names a section file, quotes the whole section as `snippet`, and gives the character offsets of the first occurrence within that snippet.
+
+<Tip>
+When you know which document holds the text, search that document's `sections` folder instead of the whole knowledge base: the search finishes faster, and each match is a section path you can pass straight to `cat`. Find the document with `ls` or `find` first.
+</Tip>
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<text>`: required. What to find, 1 to 4,000 characters.
+- `<path>`: required. Where to search: `/knowledge/docs` for the whole knowledge base, or a document's path from [`ls`](#list-documents).
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--limit <n>` | integer | `20` | Matches per page, 1 to 100. |
+| `--cursor <token>` | string | none | Continue from an earlier page: pass its `next_page_token`, as on [List Documents](#list-documents). |
+| `--timeout-ms <n>` | integer | no limit | A time budget for the search in milliseconds, 1 to 10,000, for scripts that must not wait on a slow search. <br/><br/>A search that runs past it fails instead of returning partial results. |
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br></br><br></br>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Search the whole knowledge base for a word:
+
+```bash
+difyctl knowledge fs grep 01a05c49-48c5-7d97-81d7-d3867ee2f18d trigger /knowledge/docs --limit 100
+```
+
+Search one document's sections:
+
+```bash
+difyctl knowledge fs grep 01a05c49-48c5-7d97-81d7-d3867ee2f18d trigger /knowledge/docs/Document1.docx--3fdf5e66/sections --limit 100
+```
+
+Search for a phrase and get the matches as JSON:
+
+```bash
+difyctl knowledge fs grep 01a05c49-48c5-7d97-81d7-d3867ee2f18d "build note" /knowledge/docs --limit 100 -o json
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The matches as indented JSON. |
+| `-o yaml` | The matches as YAML. |
+
+`data` holds the matches, then `has_more` and `next_page_token` for the next page. A search with no match returns an empty `data` and exits 0.
+
+Searching a document's own path returns at most one match, for the whole document. For one match per section, search its `sections` folder.
+
+The first of four matches, with the snippet trimmed:
+
+```text
+{
+  "data": [
+    {
+      "end_offset": 563,
+      "kind": "segment",
+      "metadata": {
+        "title": "Workflow & Chatflow",
+        "filename": "Workflow-&-Chatflow--2e19d578.md",
+        "mimeType": "text/markdown",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "outlineId": "c3df910f-1b58-59f7-b2ff-2cd1c2dae2e3",
+        "contentKind": "document-section",
+        "sectionPath": [
+          "Workflow & Chatflow"
+        ],
+        "outlineNodeId": "2e19d578-c9d6-53ab-8ff5-69975c1ffcdc"
+      },
+      "node_id": null,
+      "path": "/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow--2e19d578.md",
+      "segment_id": null,
+      "snippet": "# Workflow & Chatflow\n\nDify agentic workflows improve production reliability by orchestrating AI models, tools, and logic through explicit steps, conditions, ch...",
+      "start_offset": 556
+    }
+  ],
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs",
+  "truncated": false
+}
+  ... (3 more matches)
+```
+
+No match:
+
+```text
+{
+  "data": [],
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs",
+  "truncated": false
+}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including no matches |
+| `1` | Error, including a knowledge base or path that isn't found, empty search text, a `--limit` or `--timeout-ms` outside its range, a search that ran past `--timeout-ms`, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Find Files by Name or Metadata
+
+```text
+difyctl knowledge fs find <knowledge-base-id> <path> [flags]
+```
+
+`find` searches every folder beneath a path and returns the files that match a filter, so you don't have to walk the tree with `ls`. 
+
+Use it to locate a document by part of its file name, or to list one kind of file across every document, such as every section file. Without a filter, it lists every file.
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<path>`: required. Where to look: `/knowledge/docs` for the whole knowledge base, or a document's path from [`ls`](#list-documents).
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--name-contains <text>` | string | none | Keep files whose name, as `ls` shows it, contains this text, case-insensitive. Up to 240 characters. |
+| `--metadata-key <key>` | string | none | The metadata field to match, up to 120 characters. Required together with `--metadata-value`.<br></br><br></br>Useful keys: `filename` (a document's original file name), `title` (a section's heading, exactly as `ls` shows it), and `contentKind` (`document-section` or `document-outline`). |
+| `--metadata-value <value>` | string | none | The exact value `--metadata-key` must have. Up to 4,000 characters. |
+| `--limit <n>` | integer | `20` | Page size, 1 to 100. Use `100` to see a whole knowledge base at once.<br/><br/>Pages count files beneath the folder, sections included, so a page can hold fewer entries than `--limit`. |
+| `--cursor <token>` | string | none | Continue from an earlier page: pass its `next_page_token`, as on [List Documents](#list-documents). |
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br></br><br></br>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Find files by part of their name:
+
+```bash
+difyctl knowledge fs find 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --name-contains chatflow --limit 100
+```
+
+Find the sections titled "Why Agentic Workflows":
+
+```bash
+difyctl knowledge fs find 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --metadata-key title --metadata-value "Why Agentic Workflows" --limit 100
+```
+
+List every section file in the knowledge base:
+
+```bash
+difyctl knowledge fs find 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --metadata-key contentKind --metadata-value document-section --limit 100
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The listing as indented JSON, in the same shape as [List Documents](#list-documents). |
+| `-o yaml` | The listing as YAML. |
+
+A name filter matches sections as well as documents, so a document's own entry and its section files can both appear.
+
+A name filter matches sections as well as documents, so a document's own entry and its section files can both appear.
+
+Files whose name contains "chatflow", trimmed:
+
+```text
+{
+  "consistency_class": null,
+  "data": [
+    {
+      "kind": "resource",
+      "metadata": {
+        "title": "Workflow & Chatflow",
+        "filename": "Workflow-&-Chatflow--2e19d578.md",
+        "mimeType": "text/markdown",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "outlineId": "c3df910f-1b58-59f7-b2ff-2cd1c2dae2e3",
+        "contentKind": "document-section",
+        "sectionPath": [
+          "Workflow & Chatflow"
+        ],
+        "outlineNodeId": "2e19d578-c9d6-53ab-8ff5-69975c1ffcdc"
+      },
+      "name": "Workflow-&-Chatflow--2e19d578.md",
+      "path": "/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow--2e19d578.md",
+      "resource_type": "document",
+      "target_id": "3fdf5e66-fb63-406d-bc98-fd766bfbfbd4",
+      "version": 1
+    },
+    {
+      "kind": "resource",
+      "metadata": {
+        "title": "Why Agentic Workflows",
+        "filename": "Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md",
+        "mimeType": "text/markdown",
+        "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+        "outlineId": "c3df910f-1b58-59f7-b2ff-2cd1c2dae2e3",
+        "contentKind": "document-section",
+        "sectionPath": [
+          "Workflow & Chatflow",
+          "Why Agentic Workflows"
+        ],
+        "outlineNodeId": "c77c7090-3615-510e-a19b-cbe42fd5fa26"
+      },
+      "name": "Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md",
+      "path": "/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md",
+      "resource_type": "document",
+      "target_id": "3fdf5e66-fb63-406d-bc98-fd766bfbfbd4",
+      "version": 1
+    }
+  ],
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs",
+  "preview": null,
+  "truncated": false
+}
+  ... (4 more entries)
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success, including no matching files |
+| `1` | Error, including a knowledge base or path that isn't found, a `--limit` outside 1 to 100, `--metadata-key` without `--metadata-value`, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Check a Document's Details
+
+```text
+difyctl knowledge fs stat <knowledge-base-id> <path> [flags]
+```
+
+`stat` shows a file's details, including whether it has been processed.
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<path>`: required. A document or one of its files, from [`ls`](#list-documents).
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br></br><br></br>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Check a document:
+
+```bash
+difyctl knowledge fs stat 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec
+```
+
+Read just the processing status in a script:
+
+```bash
+difyctl knowledge fs stat 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec -o json | jq -r .parser_status
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The details as indented JSON. |
+| `-o yaml` | The details as YAML. |
+
+On a section file, `size_bytes`, `sha256`, and `content_type` are the parent document's, and `target_id` is the document.
+
+For the `parser_status` field:
+
+- `parsed` means processing finished and the document is searchable.
+- `pending` means it hasn't finished yet. Wait and check again.
+- `failed` means processing stopped. Check the document's status in the knowledge base's **Document** tab to see why.
+
+A document:
+
+```text
+{
+  "consistency_class": null,
+  "content_type": "text/mdx",
+  "metadata": {
+    "filename": "agent.mdx",
+    "mimeType": "text/mdx",
+    "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+    "objectKey": "namespaces/97462bdd-626a-488f-a2b4-740fb33b5ddf/spaces/b1544ec9-4aa4-5dcf-9086-cd7fc187e3d9/uploads/3a9949ec-6da9-45e3-8966-f6265d9b1a51/source"
+  },
+  "parser_status": "parsed",
+  "path": "/knowledge/docs/agent.mdx--3a9949ec",
+  "preview": null,
+  "resource_type": "document",
+  "sha256": "2c5e3ac81221116110df7c3e21204c16bb97482eba1ca0282d6d75b2539dcd44",
+  "size_bytes": 9598,
+  "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+  "version": 1
+}
+```
+
+A section file, whose `target_id` is its document:
+
+```text
+{
+  "consistency_class": null,
+  "content_type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "metadata": {
+    "title": "Why Agentic Workflows",
+    "filename": "Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md",
+    "mimeType": "text/markdown",
+    "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+    "outlineId": "c3df910f-1b58-59f7-b2ff-2cd1c2dae2e3",
+    "contentKind": "document-section",
+    "sectionPath": [
+      "Workflow & Chatflow",
+      "Why Agentic Workflows"
+    ],
+    "outlineNodeId": "c77c7090-3615-510e-a19b-cbe42fd5fa26"
+  },
+  "parser_status": "parsed",
+  "path": "/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow-Why-Agentic-Workflows--c77c7090.md",
+  "preview": null,
+  "resource_type": "document",
+  "sha256": "58d0acde770141adeddc44f58bb89dea1b18b311b598c20d31423552ae0c251f",
+  "size_bytes": 326418,
+  "target_id": "3fdf5e66-fb63-406d-bc98-fd766bfbfbd4",
+  "version": 1
+}
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Error, including a knowledge base or path that isn't found, a folder as the path, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Compare Two Documents
+
+```text
+difyctl knowledge fs diff <knowledge-base-id> <old-path> <new-path> [flags]
+```
+
+`diff` compares two files line by line. 
+
+Reach for it when you've uploaded a new version of a document beside the old one and want to see what changed before you delete the old one.
+
+Any two files work: two documents, a document and one of its sections, two sections, or two outline files. PDF and Office files compare on their parsed text.
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<old-path>`: required. The file the comparison starts from, from [`ls`](#list-documents).
+- `<new-path>`: required. The file to compare it with.
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br></br><br></br>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Compare two documents:
+
+```bash
+difyctl knowledge fs diff 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec /knowledge/docs/build.mdx--cceca54d
+```
+
+Compare two sections, with their paths from `ls`:
+
+```bash
+difyctl knowledge fs diff 01a05c49-48c5-7d97-81d7-d3867ee2f18d '/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-Types-Ending-Nodes--6d017541.md' '/knowledge/docs/Document1.docx--3fdf5e66/sections/Workflow-&-Chatflow-Workflow-vs.-Chatflow-Starting-and-Ending-Nodes--bd626599.md'
+```
+
+Print only the changed lines:
+
+```bash
+difyctl knowledge fs diff 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec /knowledge/docs/build.mdx--cceca54d -o json | jq -r '.operations[] | select(.kind != "equal") | "\(.kind): \(.text)"'
+```
+
+Get only the counts:
+
+```bash
+difyctl knowledge fs diff 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs/agent.mdx--3a9949ec /knowledge/docs/build.mdx--cceca54d -o json | jq .stats
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The comparison as indented JSON. |
+| `-o yaml` | The comparison as YAML. |
+
+`operations` lists the differences in order, each `equal`, `insert`, or `delete` with its text and 1-based line ranges on each side. `stats` counts them by kind.
+
+`operations` lists the differences in order, each `equal`, `insert`, or `delete` with its text and 1-based line ranges on each side. `stats` counts them by kind.
+
+Two documents, trimmed to the first three operations:
+
+```text
+{
+  "mode": "line",
+  "new_path": "/knowledge/docs/build.mdx--cceca54d",
+  "old_path": "/knowledge/docs/agent.mdx--3a9949ec",
+  "operations": [
+    {
+      "kind": "equal",
+      "new_end": 1,
+      "new_start": 1,
+      "old_end": 1,
+      "old_start": 1,
+      "text": "---"
+    },
+    {
+      "kind": "delete",
+      "new_end": null,
+      "new_start": null,
+      "old_end": 3,
+      "old_start": 2,
+      "text": "title: Agent\ndescription: Run an agent as a step in your workflow, reasoning and..."
+    },
+    {
+      "kind": "insert",
+      "new_end": 4,
+      "new_start": 2,
+      "old_end": null,
+      "old_start": null,
+      "text": "title: Build an Agent\nsidebarTitle: Build\ndescription: Create an agent and shape..."
+    }
+  ],
+  "semantic": null,
+  "stats": {
+    "delete": 118,
+    "equal": 81,
+    "insert": 133
+  }
+}
+  ... (237 more operations)
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Error, including a knowledge base or path that isn't found, a missing second path, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.
+
+## Show the Folder Tree
+
+```text
+difyctl knowledge fs tree <knowledge-base-id> <path> [flags]
+```
+
+`tree` is a nested listing under a path, up to eight levels deep, for seeing a knowledge base's layout in one call. A document appears as a file entry and, when it has parts, also as a folder of the same name holding them.
+
+### Arguments
+
+- `<knowledge-base-id>`: required. What follows `new/` in your browser's address bar while the knowledge base is open.
+- `<path>`: required. The folder to start from: `/knowledge/docs` for the whole knowledge base, or a document's path from [`ls`](#list-documents).
+
+### Flags
+
+| Flag | Type | Default | Description |
+|:---|:---|:---|:---|
+| `--depth <n>` | integer | `8` | How many levels below the path to show, 1 to 8. |
+| `--limit <n>` | integer | `20` | Page size, 1 to 100. Use `100` to keep a knowledge base on one page. <br/><br/>A page is a slice of files, so a folder's children can split across pages.|
+| `--cursor <token>` | string | none | Continue from an earlier page: pass its `next_page_token`, as on [List Documents](#list-documents). |
+| `-w, --workspace <id>` | string | active workspace | Run against another workspace for this invocation only.<br/><br/>For how `difyctl` resolves the workspace, see [How difyctl Picks a Workspace](/en/3.14.x/develop/cli/reference/workspaces#how-difyctl-picks-a-workspace). |
+| `-o <format>` | string | `text` | Output format: `json`, `yaml`, or `text`. |
+
+### Examples
+
+Show the documents and their parts, two levels deep:
+
+```bash
+difyctl knowledge fs tree 01a05c49-48c5-7d97-81d7-d3867ee2f18d /knowledge/docs --depth 2 --limit 100
+```
+
+### Output
+
+| Format | What stdout gets |
+|:---|:---|
+| default (`text`), `-o json` | The tree as indented JSON. |
+| `-o yaml` | The tree as YAML. |
+
+`root` is the path as a folder. Its `children` are entries as on [List Documents](#list-documents), and each folder among them has its own `children`, which is empty past `--depth`. `has_more` and `next_page_token` follow.
+
+The documents folder two levels deep, trimmed to the first document:
+
+```text
+{
+  "consistency_class": null,
+  "has_more": false,
+  "next_page_token": null,
+  "path": "/knowledge/docs",
+  "preview": null,
+  "root": {
+    "kind": "directory",
+    "metadata": {},
+    "name": "docs",
+    "path": "/knowledge/docs",
+    "resource_type": null,
+    "target_id": null,
+    "version": null,
+    "children": [
+      {
+        "kind": "resource",
+        "metadata": {
+          "filename": "agent.mdx",
+          "mimeType": "text/mdx",
+          "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+          "objectKey": "namespaces/97462bdd-626a-488f-a2b4-740fb33b5ddf/spaces/b1544ec9-4aa4-5dcf-9086-cd7fc187e3d9/uploads/3a9949ec-6da9-45e3-8966-f6265d9b1a51/source"
+        },
+        "name": "agent.mdx--3a9949ec",
+        "path": "/knowledge/docs/agent.mdx--3a9949ec",
+        "resource_type": "document",
+        "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+        "version": 1,
+        "children": null
+      },
+      {
+        "kind": "directory",
+        "metadata": {},
+        "name": "agent.mdx--3a9949ec",
+        "path": "/knowledge/docs/agent.mdx--3a9949ec",
+        "resource_type": null,
+        "target_id": null,
+        "version": null,
+        "children": [
+          {
+            "kind": "resource",
+            "metadata": {
+              "filename": "multimodal.json",
+              "mimeType": "application/json",
+              "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+              "contentKind": "document-multimodal-manifest"
+            },
+            "name": "multimodal.json",
+            "path": "/knowledge/docs/agent.mdx--3a9949ec/multimodal.json",
+            "resource_type": "document",
+            "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+            "version": 1,
+            "children": null
+          },
+          {
+            "kind": "resource",
+            "metadata": {
+              "filename": "outline.json",
+              "mimeType": "application/json",
+              "tenantId": "97462bdd-626a-488f-a2b4-740fb33b5ddf",
+              "contentKind": "document-outline"
+            },
+            "name": "outline.json",
+            "path": "/knowledge/docs/agent.mdx--3a9949ec/outline.json",
+            "resource_type": "document",
+            "target_id": "3a9949ec-6da9-45e3-8966-f6265d9b1a51",
+            "version": 1,
+            "children": null
+          },
+          {
+            "kind": "directory",
+            "metadata": {},
+            "name": "sections",
+            "path": "/knowledge/docs/agent.mdx--3a9949ec/sections",
+            "resource_type": null,
+            "target_id": null,
+            "version": null,
+            "children": []
+          }
+        ]
+      }
+    ]
+  },
+  "truncated": false
+}
+  ... (more children)
+```
+
+### Exit Codes
+
+| Code | Meaning |
+|:---|:---|
+| `0` | Success |
+| `1` | Error, including a knowledge base or path that isn't found, a `--depth` outside 1 to 8, a `--limit` outside 1 to 100, or a workspace you're not a member of |
+| `2` | Usage error, such as `-o name` or a `--workspace` value that isn't a UUID |
+| `4` | Authentication failure, including an external SSO session |
+| `7` | Rate limited (HTTP 429) |
+
+See [Output Formats and Exit Codes](/en/3.14.x/develop/cli/reference/output-formats-and-exit-codes) for the full scheme.

@@ -1,0 +1,173 @@
+---
+title: Performance Tuning
+Version: 'English'
+---
+
+## Display Helm Chart Values
+
+```bash
+helm show values dify/dify
+```
+
+## 1. Adjust Base Resources
+
+Tune replicas and resource limits based on workload, cluster capacity, database connection limits, and queue backlog.
+
+| Category | Component | Replicas | Request CPU | Request Mem | Limit CPU | Limit Mem | Notes |
+|----------|-----------|----------|-------------|-------------|-----------|-----------|-------|
+| Core Application | API | 2 | 1 | 1 GB | 1 | 2 GB | Scale based on API QPS and latency |
+| | Worker | 4 | 4 | 4 GB | 4 | 8 GB | Default catch-all worker; for 3.9.x, prefer the additionalWorkers split strategy |
+| | Worker Beat | 1 | 1 | 2 GB | 2 | 4 GB | Keep one replica |
+| | Web | 1 | 0.5 | 1 GB | 1 | 2 GB | Scale based on frontend traffic |
+| | Sandbox | 1 | 2 | 2 GB | 2 | 4 GB | Tune based on code execution workload |
+| Enterprise | Enterprise | 1 | 2 | 2 GB | 2 | 2 GB | Scale as needed |
+| | Enterprise_Audit | 1 | 1 | 2 GB | 2 | 4 GB | Scale as needed |
+| | Enterprise_Frontend | 1 | 1 | 2 GB | 1 | 2 GB | Scale as needed |
+| Plugin | Plugin Daemon | 1 | 1 | 2 GB | 2 | 4 GB | Tune for plugin call and install volume |
+| | Plugin Controller | 1 | 0.5 | 1 GB | 1 | 2 GB | Scale as needed |
+| | Plugin Connector | 1 | 1 | 2 GB | 1 | 2 GB | Scale as needed |
+| | Plugin Manager | 1 | 1 | 2 GB | 2 | 4 GB | Scale as needed |
+| Infrastructure | SSRF Proxy | 1 | 0.5 | 0.5 GB | 1 | 1 GB | Scale as needed |
+| | Gateway | 1 | 1 | 2 GB | 2 | 4 GB | Tune for plugin traffic |
+| | Unstructured | - | - | - | - | - | Tune based on document parsing workload |
+| | MinIO | - | - | - | - | - | Tune based on storage throughput and capacity |
+
+Base configuration example:
+
+```yaml
+api:
+  replicas: 2
+  serverWorkerAmount: 1
+
+worker:
+  replicas: 4
+  celeryWorkerAmount: 1
+
+workerBeat:
+  resources:
+    requests:
+      cpu: 1
+      memory: 2Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+```
+
+<Warning>
+`workerBeat` should always run as a single replica. Do not scale it horizontally.
+</Warning>
+
+## 2. Split Workers by Queue
+
+In 3.9.x, the Helm chart supports `additionalWorkers`. It splits Celery queues that were previously handled by the default `worker` into dedicated Deployments. Each worker can have its own replicas, CPU, memory, and scheduling policy.
+
+The default `worker` is a catch-all worker and consumes all queues. After enabling `additionalWorkers`, use one of the following patterns:
+
+- **Conservative mode**: keep `worker.enabled: true` and only enable dedicated workers for hot queues. The default worker continues to consume queues that have not been split out.
+- **Full split mode**: set `worker.enabled: false` and make sure every queue used by your deployment is consumed by an enabled `additionalWorkers` entry. Otherwise, background tasks in uncovered queues will accumulate.
+
+Common worker splits:
+
+| Worker | Queues | When to use |
+|--------|--------|-------------|
+| `dataset-worker` | `dataset,priority_dataset,pipeline,priority_pipeline` | Heavy knowledge base import, document parsing, or indexing workloads |
+| `workflow-worker` | `workflow,workflow_storage,workflow_based_app_execution` | High workflow execution or workflow storage load |
+| `general-worker` | `mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry` | Email, conversation, plugin, retention, audit, and telemetry background tasks |
+| `trigger-worker` | `schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher` | Scheduled tasks and trigger-related workloads |
+
+<Warning>
+If you disable the default `worker`, confirm that dataset, workflow, general background, and trigger queues are all covered by enabled workers. Disabling the default worker after enabling only part of `additionalWorkers` can leave some queues without consumers.
+</Warning>
+
+Conservative mode example:
+
+```yaml
+worker:
+  enabled: true
+  replicas: 1
+
+additionalWorkers:
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+```
+
+Full split mode example:
+
+```yaml
+worker:
+  enabled: false
+
+additionalWorkers:
+  - name: dataset-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "dataset,priority_dataset,pipeline,priority_pipeline"
+    celeryWorkerAmount: 4
+
+  - name: workflow-worker
+    enabled: true
+    replicas: 2
+    celeryQueues: "workflow,workflow_storage,workflow_based_app_execution"
+    celeryWorkerAmount: 2
+
+  - name: general-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "mail,ops_trace,app_deletion,conversation,api_token,plugin,retention,enterprise_telemetry"
+    celeryWorkerAmount: 1
+
+  - name: trigger-worker
+    enabled: true
+    replicas: 1
+    celeryQueues: "schedule_poller,schedule_executor,triggered_workflow_dispatcher,trigger_refresh_executor,trigger_refresh_publisher"
+    celeryWorkerAmount: 1
+```
+
+Recommendations:
+
+- If concurrency is high or a queue backlog is visible, increase the corresponding worker's `replicas` first.
+- If a single task is memory-heavy, memory usage stays close to the limit, or pods are OOMKilled, increase the corresponding worker's memory limit.
+- Do not blindly increase `celeryWorkerAmount`. It increases per-pod concurrency and may increase database connections, Redis connections, and memory usage.
+- Keep `workerBeat` at one replica. It schedules tasks but does not replace worker queue consumers.
+
+## 3. Improve External Postgres Performance
+
+Estimate required `max_connections` from API and worker concurrency:
+
+```
+Maximum database connections =
+  (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × API serverWorkerAmount × API replicas
++ (SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × default worker celeryWorkerAmount × default worker replicas
++ Σ[(SQLALCHEMY_POOL_SIZE + SQLALCHEMY_MAX_OVERFLOW) × additionalWorker celeryWorkerAmount × additionalWorker replicas]
+```
+
+Example:
+
+- API: replicas=2, serverWorkerAmount=1
+- Default worker: replicas=4, celeryWorkerAmount=1
+- `SQLALCHEMY_POOL_SIZE=100`
+- `SQLALCHEMY_MAX_OVERFLOW=150`
+
+```
+(100 + 150) × 1 × 2 + (100 + 150) × 1 × 4 = 500 + 1000 = 1500
+```
+
+<Warning>
+Reserve 20-30% headroom for traffic spikes. In this example, set `max_connections` to 1800-2000 or higher, and confirm that your database instance can support it.
+</Warning>
+
+## 4. Performance Monitoring
+
+| Symptom | Possible Cause | Solution |
+|---------|----------------|----------|
+| Slow API responses | Insufficient API replicas or `serverWorkerAmount`; database slow queries | Increase API replicas and investigate database slow queries |
+| Workflow queue backlog | Insufficient `workflow-worker` capacity | Increase `workflow-worker.replicas`; raise resource limits if needed |
+| Slow knowledge base import | Insufficient `dataset-worker` resources; slow document parsing or vector DB writes | Enable or scale `dataset-worker`; check Unstructured and vector database performance |
+| Delayed email, plugin, or retention jobs | `general-worker` queue backlog | Enable or scale `general-worker` |
+| Delayed scheduled tasks or triggers | `trigger-worker` queue backlog | Enable or scale `trigger-worker`; keep `workerBeat` at one replica |
+| Database connections exhausted | API/worker concurrency and pool settings are too high | Increase `max_connections` or reduce pool/concurrency settings |
+| OOMKilled pods | Task memory usage is high or memory limit is too low | Increase memory limits for the affected component and identify memory-heavy tasks |
+| CPU throttling | CPU limit is too low | Increase CPU limits or replicas for the affected component |

@@ -1,0 +1,433 @@
+---
+title: Vector Database
+version: 'English'
+---
+
+## Find Vector Database Configuration in Helm Chart Values
+
+### Display Helm Chart Values
+
+```bash
+helm show values dify/dify
+```
+
+## Vector Database Configuration Overview
+
+In the Helm chart values, vector databases are configured through the `vectorDB` field. Dify supports two deployment modes:
+
+| Mode | When to use | Toggle field |
+| --- | --- | --- |
+| **External connection** (recommended for production) | Connect to a self-managed or cloud-hosted vector database | `vectorDB.useExternal: true` |
+| **Built-in deployment** (testing only) | Helm chart provisions an in-cluster vector database | `vectorDB.useExternal: false` |
+
+> **The 3.9.x chart defaults to `useExternal: true` + `externalType: "qdrant"`.** Out of the box it is in "connect to external Qdrant" mode — you must replace `externalQdrant.endpoint` / `apiKey` with your actual cluster values, otherwise the `api` / `worker` Pods will fail to start because they cannot reach the vector database.
+
+## 1. Using a Built-in Vector Database
+
+> ⚠️ **Use with caution in production**: Built-in options are only suitable for local trials and feature validation. They do not provide high availability, backups, or capacity scaling. Use the external connection method in section 2 for production environments.
+
+The Helm chart provides two in-cluster vector databases that can be enabled.
+
+### Built-in Qdrant
+
+Set `vectorDB.useExternal` to `false` and enable `qdrant.enabled` to use this option.
+
+````yaml
+vectorDB:
+  useExternal: false
+
+qdrant:
+  enabled: true
+  replicaCount: 3
+  image:
+    repository: langgenius/qdrant
+    pullPolicy: IfNotPresent
+    tag: "v1.7.3"
+  apiKey: "dify123456"
+  persistence:
+    accessModes: ["ReadWriteOnce"]
+    size: 10Gi
+  resources: {}
+    # limits:
+    #   cpu: 100m
+    #   memory: 128Mi
+    # requests:
+    #   cpu: 100m
+    #   memory: 128Mi
+````
+
+| Field | Description | Default |
+|---|---|---|
+| `qdrant.enabled` | Whether to enable built-in Qdrant | `false` |
+| `qdrant.replicaCount` | Number of replicas | `3` |
+| `qdrant.image.repository` | Image repository | `langgenius/qdrant` |
+| `qdrant.image.tag` | Image version | `v1.7.3` |
+| `qdrant.apiKey` | Qdrant API Key | `dify123456` |
+| `qdrant.persistence.accessModes` | Persistent storage access modes | `["ReadWriteOnce"]` |
+| `qdrant.persistence.size` | Persistent storage size | `10Gi` |
+| `qdrant.resources` | Resource limits (CPU / memory) | `{}` |
+
+### Built-in Weaviate
+
+`weaviate` only exposes the `enabled` toggle in the parent chart's `values.yaml`, but it is actually a nested subchart (located at `dify/charts/weaviate/` in the chart tarball, with about 947 lines of values). **All fields of this subchart can be overridden in your `values.yaml` as `weaviate.<field>`** — the common ones are listed below.
+
+````yaml
+weaviate:
+  enabled: true
+  image:
+    repo: semitechnologies/weaviate
+    tag: "1.18.0"
+  replicas: 1
+  storage:
+    size: 32Gi
+    storageClassName: ""
+  service:
+    type: LoadBalancer  # also accepts ClusterIP / NodePort
+  resources: {}
+  authentication: {}
+  authorization: {}
+  modules: {}
+````
+
+| Field | Description | Subchart default |
+|---|---|---|
+| `weaviate.enabled` | Whether to enable built-in Weaviate | `false` |
+| `weaviate.image.tag` | Weaviate image version (recommend pinning in your own values) | `1.18.0` |
+| `weaviate.replicas` | Number of replicas (scaling is restricted after data is imported, see subchart notes) | `1` |
+| `weaviate.storage.size` | PVC capacity | `32Gi` |
+| `weaviate.storage.storageClassName` | Storage class | `""` (default SC) |
+| `weaviate.service.type` | Service type | `LoadBalancer` |
+| `weaviate.resources` | Resource limits | `{}` |
+| `weaviate.{startup,liveness,readiness}Probe` | Probe configuration | See subchart |
+| `weaviate.authentication` / `authorization` | Authentication configuration | See subchart |
+| `weaviate.modules` | Extension modules for text/image vectorization (contextionary, img2vec, transformers, etc.) | See subchart |
+
+> 💡 To get the complete field list, download the chart and inspect `dify/charts/weaviate/values.yaml`:
+>
+> ```bash
+> helm pull dify/dify --untar
+> less dify/charts/weaviate/values.yaml
+> ```
+>
+> If you are connecting to an existing external Weaviate cluster, use the `externalWeaviate` configuration in [Weaviate](#weaviate) below instead.
+
+## 2. Using an External Vector Database
+
+To connect to an external vector database, configuration takes two steps:
+
+**Step 1:** Set `vectorDB.useExternal` to `true` and specify `externalType`. The 3.9.x chart already defaults to this state (`externalType: "qdrant"`), so you only need to override `externalType` when switching to a different type.
+
+````yaml
+vectorDB:
+  useExternal: true
+  externalType: "<type>"
+````
+
+**Step 2:** Based on the chosen type, fill in the corresponding `externalXxx` configuration block. The values.yaml already provides a default skeleton for each type — you only need to override the fields of your **target type**; there is no need to delete the other type blocks. See [Section 4 Appendix](#4-appendix-configuration-examples-for-each-vector-database) for field examples of each type.
+
+### Supported Types
+
+#### Types officially supported by Dify Enterprise
+
+Dify Enterprise officially supports the following vector databases. You also receive technical support for the database connection (see Section 3).
+
+- qdrant (recommended)
+- weaviate (optional)
+- elasticsearch (optional)
+
+#### Community-supported types
+
+Dify Community offers support for the following vector databases. If you want to use these, Dify Enterprise also supports them, but with limited technical support (see Section 3).
+
+- milvus
+- relyt
+- pgvector
+- pgvecto-rs
+- tencent
+- analyticdb
+- opensearch
+- lindorm
+
+
+## 3. Enterprise Edition Technical Support Scope
+
+When Dify Enterprise is deployed on a cloud (e.g., AWS) and connects to an external vector database, the entire chain typically involves three parties: **Dify, the vector database vendor, and the cloud provider**. The Dify support team will first identify which layer the issue belongs to.
+
+### Shared Responsibility Model
+
+| Scope | Responsible party |
+|---|---|
+| Dify-side configuration: database config, connection config, knowledge base config | Dify |
+| Dify database operation logic: connection, Schema/Collection initialization, write, retrieval | Dify |
+| Semantics and value constraints of `vectorDB.*` / `externalXxx` fields in the Helm chart | Dify |
+| Vector database itself: cluster availability, sharding/replicas, version upgrades, performance tuning, backup/restore | Vector database vendor / managed service provider |
+| Infrastructure: VPC, subnets, security groups, IAM/IRSA, DNS, load balancing, cross-AZ network | Cloud provider |
+| Capacity planning and config values: node specs, storage capacity, QPS and concurrency estimation | User (Dify provides recommendations only) |
+
+### What Dify Does Not Directly Support
+
+The following issues may surface in Dify error messages, but the root cause is not on the Dify side and must be handled by the database vendor, cloud provider, or the user:
+
+- Vector database operations: restart, upgrade, scaling, backup/restore
+- Index parameter tuning on the database side
+- Network and permission-layer failures: VPC peering, security group rules, IAM/IRSA, TLS certificates
+- Capacity planning and load testing: node specs, storage capacity, QPS limit estimation (Dify only provides Dify-side recommendations)
+- Regressions caused by database version bugs or vendor behavior changes (Dify will follow up, but root-cause fixes are on the vendor side)
+
+### Differences Between the Two Support Tiers
+
+| Support tier | Included products | Capabilities provided by Dify |
+|---|---|---|
+| **Officially supported** | qdrant, weaviate, elasticsearch | Dify-side connector maintenance, version compatibility testing, Helm config troubleshooting |
+| **Community supported** | milvus, relyt, pgvector, pgvecto-rs, tencent, analyticdb, opensearch, lindorm | Connector availability, configuration documentation, best-effort troubleshooting; deeper issues should be escalated to the vendor or community first |
+
+> For more details about the vector databases supported by your Dify Enterprise version, see values.yaml at: https://helm-watchdog.dify.ai/ . Actual technical support coverage will be evaluated by the Dify Enterprise support team based on your specific issue.
+
+## 4. Appendix: Configuration Examples for Each Vector Database
+
+### Qdrant
+
+`externalType: "qdrant"`
+
+````yaml
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `endpoint` | Qdrant cluster URL | `http://your-qdrant-cluster-url.qdrant.tech/` |
+| `apiKey` | Qdrant API Key | - |
+
+### Weaviate
+
+`externalType: "weaviate"`
+
+````yaml
+  externalWeaviate:
+    endpoint: "http://weaviate:8080"
+    apiKey: "#REPLACE_ME#"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `endpoint` | Weaviate service address | `http://weaviate:8080` |
+| `apiKey` | Weaviate API Key | - |
+
+### Elasticsearch
+
+`externalType: "elasticsearch"`
+
+````yaml
+  externalElasticsearch:
+    host: "127.0.0.1"
+    port: 9200
+    username: "elastic"
+    password: "#REPLACE_ME#"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | Elasticsearch host | `127.0.0.1` |
+| `port` | Port | `9200` |
+| `username` | Username | `elastic` |
+| `password` | Password | - |
+
+### Milvus
+
+`externalType: "milvus"`
+
+````yaml
+  externalMilvus:
+    uri: "http://127.0.0.1:19530"
+    token: ""
+    user: ""
+    password: ""
+    database: "default"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `uri` | Milvus server connection URI | `http://127.0.0.1:19530` |
+| `token` | Auth token (optional) | - |
+| `user` | Username (optional) | - |
+| `password` | Password (optional) | - |
+| `database` | Database name | `default` |
+
+### Relyt (pgvectors)
+
+`externalType: "relyt"`
+
+````yaml
+  externalRelyt:
+    host: "your-relyt.domain"
+    port: 5431
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | Relyt host | `your-relyt.domain` |
+| `port` | Port | `5431` |
+| `user` | Username | `postgres` |
+| `password` | Password | - |
+| `database` | Database name | `pgvectors` |
+
+### PgVector
+
+`externalType: "pgvector"`
+
+````yaml
+  externalPgvector:
+    host: "your-pgvector.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "dify"
+    minConnection: 1
+    maxConnection: 5
+    pgBigm: false
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | PgVector host | `your-pgvector.domain` |
+| `port` | Port | `5432` |
+| `user` | Username | `postgres` |
+| `password` | Password | - |
+| `database` | Database name | `dify` |
+| `minConnection` | Minimum connection pool size | `1` |
+| `maxConnection` | Maximum connection pool size | `5` |
+| `pgBigm` | Enable the pg_bigm extension for full-text search | `false` |
+
+### PgVecto-RS
+
+`externalType: "pgvecto-rs"`
+
+````yaml
+  externalPgVectoRS:
+    host: "your-pgvectors.domain"
+    port: 5432
+    user: "postgres"
+    password: "#REPLACE_ME#"
+    database: "pgvectors"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | PgVecto-RS host | `your-pgvectors.domain` |
+| `port` | Port | `5432` |
+| `user` | Username | `postgres` |
+| `password` | Password | - |
+| `database` | Database name | `pgvectors` |
+
+### Tencent VectorDB
+
+`externalType: "tencent"`
+
+````yaml
+  externalTencentVectorDB:
+    host: "your-tencent-vector-db.domain"
+    apiKey: "#REPLACE_ME#"
+    timeout: 30
+    username: "tencent"
+    password: "#REPLACE_ME#"
+    shard: 1
+    replicas: 2
+    database: "tencent"
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | Tencent VectorDB host | `your-tencent-vector-db.domain` |
+| `apiKey` | API Key | - |
+| `timeout` | Connection timeout (seconds) | `30` |
+| `username` | Username | `tencent` |
+| `password` | Password | - |
+| `shard` | Number of shards | `1` |
+| `replicas` | Number of replicas | `2` |
+| `database` | Database name | `tencent` |
+
+### OpenSearch
+
+`externalType: "opensearch"`
+
+````yaml
+  externalOpenSearch:
+    host: "your-opensearch.domain"
+    port: 9200
+    user: ""
+    password: "#REPLACE_ME#"
+    useTLS: false
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `host` | OpenSearch host | `your-opensearch.domain` |
+| `port` | Port | `9200` |
+| `user` | Username (optional) | - |
+| `password` | Password | - |
+| `useTLS` | Whether to enable TLS | `false` |
+
+### AnalyticDB
+
+`externalType: "analyticdb"`
+
+````yaml
+  externalAnalyticDB:
+    keyID: "#REPLACE_ME#"
+    keySecret: "#REPLACE_ME#"
+    regionID: "#REPLACE_ME#"
+    instanceID: "#REPLACE_ME#"
+    account: "#REPLACE_ME#"
+    password: "#REPLACE_ME#"
+    host: "#REPLACE_ME#"
+    port: 5432
+    namespace: ""
+    namespacePassword: ""
+    minConnection: 1
+    maxConnection: 5
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `keyID` | Alibaba Cloud AccessKey ID | - |
+| `keySecret` | Alibaba Cloud AccessKey Secret | - |
+| `regionID` | Region ID | - |
+| `instanceID` | Instance ID | - |
+| `account` | Account | - |
+| `password` | Password | - |
+| `host` | Host | - |
+| `port` | Port | `5432` |
+| `namespace` | Namespace (optional) | - |
+| `namespacePassword` | Namespace password (optional) | - |
+| `minConnection` | Minimum connections | `1` |
+| `maxConnection` | Maximum connections | `5` |
+
+### Lindorm
+
+`externalType: "lindorm"`
+
+````yaml
+  externalLindorm:
+    url: "http://localhost:30070"
+    username: "admin"
+    password: "admin"
+    indexType: "hnsw"
+    distanceType: "l2"
+    usingUgc: true
+    queryTimeout: 2.0
+````
+
+| Field | Description | Example |
+|---|---|---|
+| `url` | Lindorm search engine URL | `http://localhost:30070` |
+| `username` | Username | `admin` |
+| `password` | Password | `admin` |
+| `indexType` | Index type | `hnsw` |
+| `distanceType` | Distance metric | `l2` |
+| `usingUgc` | Whether to use UGC mode | `true` |
+| `queryTimeout` | Query timeout (seconds) | `2.0` |

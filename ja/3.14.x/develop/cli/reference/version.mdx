@@ -1,0 +1,149 @@
+---
+title: Version
+description: difyctl のビルドと Dify サーバーとの互換性を確認する
+---
+
+[`difyctl version`](#クライアントとサーバーのバージョンを確認) を実行すると、現在の `difyctl` のビルドと、それが Dify サーバーで動作するかどうかを確認できます。このコマンドはクライアントのビルドを表示し、アクティブなホストを探査して、[互換性の判定](#互換性の判定) を報告します。
+
+スクリプトでは、[`--check-compat`](#スクリプトを互換性でゲートする) がその判定を終了コードに変換します。
+
+## クライアントとサーバーのバージョンを確認
+
+```text
+difyctl version [flags]
+```
+
+### フラグ
+
+| フラグ | 型 | デフォルト | 説明 |
+|:---|:---|:---|:---|
+| `--short` | boolean | false | クライアントの semver のみを表示し（サーバー探査なし）、終了する。 |
+| `--client` | boolean | false | サーバー探査をスキップし、判定を `unknown` として報告する。 |
+| `--check-compat` | boolean | false | 判定が `compatible` でない限り `64` で終了する。 |
+| `-o <format>` | string | text | 出力形式：`text`、`json`、`yaml`。 |
+
+### 例
+
+完全なレポートを表示します。
+
+```bash
+difyctl version
+```
+
+スクリプトやバグレポート向けに、クライアントのバージョンのみを表示します。
+
+```bash
+difyctl version --short
+```
+
+### 出力
+
+| 形式 | stdout に出力される内容 |
+|:---|:---|
+| デフォルト（`text`） | 完全なレポート：`Client` ブロック、`Server` ブロック、1 行の `Compatibility` 判定。`stable` 以外のチャンネルのビルドでは、stable チャンネルを推奨する警告が追加される。 |
+| `-o json`、`-o yaml` | 同じレポートを 3 つのオブジェクトとして出力：<ul><li>`client`（`version`、`commit`、`buildDate`、`channel`、`platform`、`arch`）</li><li>`server`（`endpoint`、`reachable`、成功時は `version` と `edition`）</li><li>`compat`（`minDify`、`maxDify`、`status`、`detail`）</li></ul> |
+
+デフォルトの `text` レポート：
+
+```text
+Client:
+  Version:   0.2.0-alpha (channel: alpha)
+  Commit:    9f3c2ab (built 2026-06-05)
+  Platform:  darwin/arm64
+  Compat:    dify >=1.16.0, <=1.17.0
+
+Server:
+  Endpoint:  https://dify.example.com
+  Version:   1.17.0 (self_hosted)
+
+Compatibility: ok — server 1.17.0 in [1.16.0, 1.17.0]
+```
+
+`--short` はクライアントの semver のみを表示します。
+
+```text
+0.2.0-alpha
+```
+
+`-o json`：
+
+```json
+{
+  "client": {
+    "version": "0.2.0-alpha",
+    "commit": "9f3c2ab",
+    "buildDate": "2026-06-05",
+    "channel": "alpha",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "server": {
+    "endpoint": "https://dify.example.com",
+    "reachable": true,
+    "version": "1.17.0",
+    "edition": "SELF_HOSTED"
+  },
+  "compat": {
+    "minDify": "1.16.0",
+    "maxDify": "1.17.0",
+    "status": "compatible",
+    "detail": "server 1.17.0 in [1.16.0, 1.17.0]"
+  }
+}
+```
+
+サーバーが到達不能でも互換性がなくても、このコマンドは `0` で終了します。判定はエラーではなく、レポートそのものです。終了コードに変換するには後述の `--check-compat` を使います。他のコマンドは判定に基づいて動作します。詳細は [互換性のないサーバーに対するコマンドの動作](#互換性のないサーバーに対するコマンドの動作) を参照してください。
+
+### 終了コード
+
+| コード | 意味 |
+|:---|:---|
+| `0` | 判定の内容にかかわらず、レポートが表示された |
+| `64` | `--check-compat` 使用時：判定が `compatible` ではなかった |
+
+完全な体系については [出力形式と終了コード](/ja/3.14.x/develop/cli/reference/output-formats-and-exit-codes) を参照してください。
+
+## 互換性の判定
+
+`difyctl version` はビルドをサーバーのバージョンと比較し、4 種類の判定のいずれかを報告します。サインインは不要ですが、探査の対象として保存済みのホストが必要です。
+
+`text` レポートは `Compatibility:` 行に **表示** 列のラベルを表示します。`-o json` では判定名が `status` に入ります。
+
+| 判定 | 表示 | 意味 |
+|:---|:---|:---|
+| `compatible` | `ok` | サーバーのバージョンが、このビルドのサポート範囲内にある。 |
+| `too_old` | `incompatible (server too old)` | サーバーが、このビルドがサポートする最低バージョンより古い。 |
+| `too_new` | `incompatible (server too new)` | サーバーが、このビルドの検証済み最高バージョンより新しい。 |
+| `unknown` | `unknown` | 判定なし：ホストが未設定、サーバーが到達不能、`--client` で探査をスキップ、またはサーバーのバージョンが解析できなかった。 |
+
+`detail` フィールドは具体的なケースを示します。例：`server 1.14.0 is older than the minimum 1.16.0`、`server 1.17.0 in [1.16.0, 1.17.0]`。
+
+## 互換性のないサーバーに対するコマンドの動作
+
+`difyctl version` は判定を報告するだけです。サーバーと通信する各コマンドは実行前に判定に基づいて動作するため、`too_old` のサーバーでは、バージョン不一致を解消するまでそれらのコマンドは停止します：
+
+- **`too_old`**：コマンドは処理前に終了コード [`6`](/ja/3.14.x/develop/cli/reference/output-formats-and-exit-codes) で停止します。Dify サーバーをこのビルドがサポートする最低バージョン以上にアップグレードするか、[サーバーに合った `difyctl` をインストール](/ja/3.14.x/develop/cli/install) してください。
+- **`too_new`**：コマンドは実行されます。対話型ターミナルかつ text 出力の場合は、頻度制限付きの 1 行警告が stderr にも出力されます。
+- **`unknown`**：コマンドは実行されます。ゲートの根拠がないためです。
+
+最低バージョンを満たしたサーバー（`compatible` または `too_new`）はホストごとに約 1 時間キャッシュされ、コマンドのたびにチェックが繰り返されることはありません。`too_old` のサーバーはキャッシュされず毎回チェックされるため、サーバーをアップグレードすればすぐに使えるようになります。
+
+[`auth login`](/ja/3.14.x/develop/cli/reference/auth-and-contexts) でのサインインでも、セッションを保存する前に同じチェックが実行されます。バージョン不一致は最初のコマンドではなく、サインイン時に表面化します。
+
+チェックは双方向です。上記の判定は `difyctl` がサーバーを判定するもので、サーバーも同様に `difyctl` を判定します。
+
+クライアントがサーバーの許容下限より古い場合、サーバーはリクエストを HTTP `426` で拒否します。`difyctl` はアップグレードを促すメッセージとともに終了コード `6` で終了します。Dify サーバーのアップグレードで古い `difyctl` が動かなくなるのはこのためです。サーバーは古いクライアントを拒否しますが、クライアント自身による新しいサーバーへの判定は警告にとどまります。
+
+したがって確実なのは、`difyctl` をサーバーに合わせておくことです。新しいサーバーは警告付きで許容されますが、古いサーバーは拒否されます。
+
+## スクリプトを互換性でゲートする
+
+`--check-compat` は判定をスクリプトで扱えるようにします。`compatible` 以外はすべて、`unknown` のあらゆるケースを含め、`64` で終了します。`difyctl version` は常にサーバーをリアルタイムで探査し、互換性キャッシュを読むことはありません。スクリプトのゲートは現在のバージョンを反映し、この flag は判定を終了コードに変換するだけです。
+
+完全なレポートは選択した形式で stdout に出力され、1 行の理由は stderr に出力されます。そのため、どちらの結果でも `difyctl version -o json --check-compat | jq` は同じように動作します。
+
+```bash
+difyctl version --check-compat || echo "difyctl and this Dify server are not a confirmed match"
+```
+
+終了コード `64` はこの flag に固有のものです。`difyctl` の他の失敗でこのコードが使われることはありません。

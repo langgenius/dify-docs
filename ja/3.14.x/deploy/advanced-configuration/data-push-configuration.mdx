@@ -1,0 +1,111 @@
+---
+title: データプッシュ設定ガイド
+---
+
+## Helm Values
+今回のアップデートでは、以下の設定が導入されました。
+
+`global.otel` 設定は、テレメトリデータの生成を担当するサービスに関連しており、具体的には `dify-api` と `dify-worker` が含まれます。
+
+`enterpriseCollector` は、カスタムの OpenTelemetry (OTEL) システムとやり取りするために設計された新しいサービスです。
+
+ほとんどの場合、デフォルトの設定値をそのまま使用することで問題ありません。
+
+```yaml
+global:
+  otel:
+    # enterpriseCollector.enabled を true に設定する必要があります
+    enabled: true
+    # サンプリングレート (0.0 から 1.0、空の場合はデフォルト)
+    samplingRate: "0.2"
+    # バッチエクスポートのスケジュール遅延（ミリ秒）
+    batchExportScheduleDelay: "5000"
+    # バッチ処理の最大キューサイズ
+    maxQueueSize: "2048"
+    # 最大エクスポートバッチサイズ
+    maxExportBatchSize: "512"
+    # メトリクスのエクスポート間隔（ミリ秒）
+    metricExportInterval: "60000"
+    # バッチエクスポートのタイムアウト（ミリ秒）
+    batchExportTimeout: "30000"
+    # メトリクスエクスポートのタイムアウト（ミリ秒）
+    metricExportTimeout: "30000"
+    sender:
+      otlp:
+        # OTLP リクエストのカスタムヘッダー (key=value,key2=value2)
+        headers: ""
+      # OTEL コレクターに報告されるサービス名
+      serviceName: "dify-api-otel"
+      # トレースに入力/出力内容を含める（プライバシー設定）
+      includeContent: false
+enterpriseCollector:
+  enabled: true
+  # https://github.com/langgenius/dify-enterprise/releases/tag/0.14.4
+  image:
+    repository: langgenius/dify-enterprise-collector
+    tag: "0.14.4"
+  replicas: 1
+  resources: {}
+  nodeSelector: {}
+  affinity: {}
+  tolerations: []
+  extraEnv:
+  # 必要に応じて独自の環境変数を適用してください。以下はデモです。
+  # extraEnv:
+  #   - name: ENV_FROM_COMMUNITY1
+  #     value: env123
+  #   - name: ENV_FROM_COMMUNITY2
+  #     value: env123
+  serviceAccountName: ""
+  # readinessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 30
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  # livenessProbe:
+  #   tcpSocket:
+  #     port: 8080
+  #   initialDelaySeconds: 20
+  #   periodSeconds: 10
+  #   successThreshold: 1
+  #   timeoutSeconds: 3
+  extraConfig: |
+    # otel collector 用の yaml 設定
+    # これを使用して otel collector を完全にカスタマイズできます
+    # 詳細は https://opentelemetry.io/docs/collector/configuration/ を参照
+  # 送信キューのサイズはメモリ制限とバッチサイズに関連しています
+  # デフォルト値は 512 MiB のメモリ制限と 512 のバッチサイズを想定しています
+  # 異なるメモリ制限やバッチサイズを設定する場合は、適宜調整してください
+  sendingQueues:
+    trace:
+      size: 64
+    metric:
+      size: 256
+ ```
+
+## ServiceMonitor の統合
+`enterpriseCollector` のアーキテクチャはテレメトリデータをユーザーシステムに送信するように設計されていますが、データのプル（取得）は依然としてメトリクス収集の一般的な方法です。そのため、8889 ポートでメトリクスエンドポイントを公開しており、Prometheus の `ServiceMonitor` とシームレスに統合できます。
+
+以下に例を示します。
+
+```yaml
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dify-enterprise-collector
+  namespace: monitoring
+spec:
+  endpoints:
+  - interval: 5s
+    path: /metrics
+    port: http-metrics
+    scheme: http
+  namespaceSelector:
+    matchNames:
+    - {dify の名前空間}
+  selector:
+    matchLabels:
+      app: {dify のリリース名}-enterprise-collector
+```

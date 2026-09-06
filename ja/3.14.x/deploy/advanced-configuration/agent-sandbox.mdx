@@ -1,0 +1,227 @@
+---
+title: Agent Sandbox のデプロイ
+description: agent-sandbox コントローラーの導入と Helm values の設定、モードの選び方
+---
+
+Agent はタスク実行時に、隔離されたサンドボックス環境でコマンドの実行やファイルの読み書きを行います。Kubernetes デプロイでは、この機能は以下のコンポーネントで構成されます。
+
+- `agent-backend`：Agent ランタイムサービス。Helm Chart によりデプロイされます。
+- `sandbox-gateway`：サンドボックスの割り当てと回収を担うコントロールプレーン。Helm Chart によりデプロイされます。
+- `agent-sandbox` controller：Kubernetes コミュニティ公式プロジェクト [kubernetes-sigs/agent-sandbox](https://github.com/kubernetes-sigs/agent-sandbox)。サンドボックスの CRD とコントローラーを提供し、事前にクラスターへのインストールが必要です。
+
+各 Agent セッションは専用のサンドボックス Pod を占有します。ウォームプール（warm pool）により割り当てが高速化され、セッション終了またはアイドルタイムアウト後に自動回収されます。サードパーティの CRD やコントローラーのインストールが許可されないクラスターでは、クラスターレベルの変更が不要な [共有サンドボックスモード](#agent-sandbox-を導入しない代替案（共有サンドボックスモード）) を利用できます。
+
+## agent-sandbox controller のインストール
+
+インストールにはクラスター管理者権限が必要で、クラスターごとに一度実行します。
+
+```bash
+export VERSION="v0.5.2"
+kubectl apply -f https://github.com/kubernetes-sigs/agent-sandbox/releases/download/${VERSION}/sandbox-with-extensions.yaml
+```
+
+CRD の準備完了を確認します。
+
+```bash
+kubectl get crd | grep agents.x-k8s.io
+```
+
+以下の 4 つの CRD が存在するはずです。
+
+- `sandboxes.agents.x-k8s.io`
+- `sandboxclaims.extensions.agents.x-k8s.io`
+- `sandboxtemplates.extensions.agents.x-k8s.io`
+- `sandboxwarmpools.extensions.agents.x-k8s.io`
+
+オフライン環境では、上記 manifest をダウンロードして内部ネットワークに取り込みます。controller イメージをプライベートレジストリに同期し、イメージ参照を置き換えてください。
+
+## Helm Chart の設定
+
+`agentBackend.enabled` と `sandboxGateway.enabled` はいずれもデフォルトで `true` です。つまり、上記の controller のインストールが完了していれば、標準デプロイでサンドボックス機能が既定で有効になります。設定可能な項目の全体は `helm show values dify/dify` で確認できます。以下は Agent Sandbox 関連設定の例です。
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: true
+  provision:
+    warmPoolReplicas: 1
+    requestsCpu: "250m"
+    requestsMemory: "256Mi"
+    limitsCpu: "1"
+    limitsMemory: "1Gi"
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- `agentBackend.enabled`
+  - agent-backend をデプロイするかどうか。無効にするとコンソールに Agent アプリが表示されません。
+- `agentBackend.serverSecretKey`
+  - Agent ツールコールバックトークンの暗号化キー。base64url エンコードされた 32 バイトのランダム値です。本番環境ではデフォルト値を必ず置き換えてください。以下のコマンドで生成できます。
+
+  ```bash
+  python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+  ```
+
+- `sandboxGateway.enabled`
+  - 専用 Pod サンドボックスモードを有効にするかどうか。無効にすると追加設定なしで [共有サンドボックスモード](#agent-sandbox-を導入しない代替案（共有サンドボックスモード）) に自動的にフォールバックします。
+- `agentRuntime.image`
+  - サンドボックスのランタイムイメージ。専用 Pod モードと共有サンドボックスモードで共通です。サンドボックスには Python 3.12、Node.js 22、pnpm、uv、git などの一般的なツールが同梱されています。カスタマイズは後述の [サンドボックスイメージのカスタマイズ](#サンドボックスイメージのカスタマイズ) を参照してください。
+- `sandboxGateway.provision.warmPoolReplicas`
+  - ウォームプールのレプリカ数、つまり待機させておくアイドルサンドボックスの数。Agent の同時実行数に応じて調整してください。
+- `sandboxGateway.provision.requestsCpu` / `requestsMemory` / `limitsCpu` / `limitsMemory`
+  - サンドボックス Pod 1 つあたりのリソース設定。キャパシティプランニングでは、N 個の Agent セッションを同時実行するには約 N + `warmPoolReplicas` 個分のサンドボックス Pod のリソース余裕が必要です。
+
+その他のオプション設定：
+
+- `sandboxGateway.namespace`：サンドボックス Pod の名前空間。デフォルトはリリースの名前空間です。
+- `sandboxGateway.provision.sandboxTtl`：サンドボックス 1 つの最大生存期間。デフォルト `1800s`。
+- `sandboxGateway.inactiveTtl`：サンドボックスのアイドル回収時間。デフォルト `360s`。
+- `sandboxGateway.execTimeout`：コマンド 1 回あたりの実行タイムアウト。デフォルト `300s`。
+- `sandboxGateway.provision.extraEnv`：サンドボックス Pod に注入する追加の環境変数。例：外向きプロキシ設定。
+- `sandboxGateway.provision.volumeClaimTemplates`：サンドボックス Pod にマウントする永続ボリューム。各エントリが PVC を作成します。
+- `sandboxGateway.provision.securityContext` / `podSecurityContext`：サンドボックス Pod のセキュリティコンテキスト。クラスターが Pod Security Standards を強制する場合に設定してください。
+- グローバルの `imagePullSecrets` はサンドボックス Pod に自動的に伝播されるため、プライベートレジストリ利用時の追加設定は不要です。
+
+## サンドボックスのネットワークポリシー
+
+サンドボックス Pod の外向き通信は、デフォルトで 2 層の制御を受けます。
+
+**SSRF プロキシ**：Chart はサンドボックス専用の squid プロキシ（`agent-sandbox-ssrf-proxy`）をデプロイします。サンドボックス Pod には `HTTP_PROXY` / `HTTPS_PROXY` が注入され、すべての HTTP(S) 送信トラフィックがこのプロキシ経由になります。プロキシはデフォルトで内部ネットワーク（RFC1918 などのプライベートアドレス帯）宛のリクエストを遮断し、SSRF 対策を提供します。プロキシ自体は `sandboxGateway.ssrfProxy`（`replicas` / `image` / `resources` / `squidConf`）で設定します。
+
+**NetworkPolicy**：`sandboxGateway.provision.networkPolicy` はデフォルトで `enabled: true` です。許可される送信先は DNS（kube-system の kube-dns/coredns）、agent-backend（5050 ポート）、SSRF プロキシ（3128 ポート）、外部インターネット（`allowExternalEgress: true`、内部アドレス帯を除く）のみです。サンドボックスから dify-api へ直接アクセスすることはできません。
+
+サンドボックスからクラスター内の他サービスや内部アドレスへアクセスする必要がある場合は、次の 2 層を両方開放します。
+
+1. `networkPolicy.extraEgressRules` に対象アドレスの許可ルールを追加する。
+2. `sandboxGateway.ssrfProxy.squidConf` を上書きし、デフォルトの `deny private_dst` ルールより前に対象への allow ルールを挿入する。
+
+送信先を追加で開放する際は、[セキュリティに関する注意：Agent 環境変数の外部送信リスク](/ja/3.14.x/use/build/new-agent/overview) を確認してください。出力のマスキングが有効でも、ネットワークにアクセスできる Agent は機密値をエンコードして送信できる場合があります。
+
+その他のオプション：
+
+- `networkPolicy.enabled: false` の場合、agent-sandbox controller のセキュアデフォルトが適用されます。パブリックインターネットのみ許可され、**内部（RFC1918）アドレスはすべて遮断されます**。
+- `networkPolicy.management: "Unmanaged"` を指定すると NetworkPolicy の配布を完全にスキップし、クラスター側の管理に委ねます。
+
+## Home Snapshot
+
+Home Snapshot は、サンドボックスの Home ディレクトリをオブジェクトストレージにアーカイブし、次のサンドボックスに復元します。Agent の [永続ファイル](/ja/3.14.x/use/build/new-agent/build#ファイルシステム) は、この仕組みによってセッションをまたいで保持されます。
+
+アーカイブは `persistence` で設定したバケットに保存され、追加の設定は不要です。オブジェクトストレージ型の `persistence.type` はすべてサポートされ、マネージド ID とアカウントキーのどちらのモードでも使えます。
+
+<Note>
+Home Snapshot にはオブジェクトストレージが必要です。`persistence.type: local`（chart のデフォルト）はサポートされません。
+</Note>
+
+`sandboxGateway.homeSnapshot` で調整できます：
+
+- `enabled`：デフォルト `true`。無効にすると、スナップショットの取得と復元を行いません。
+- `keyPrefix`：デフォルト `"home-snapshots/"`。バケット内でスナップショットアーカイブに付くキープレフィックス。
+- `maxSizeBytes`：デフォルト `67108864`（64 MiB）。ゲートウェイがサンドボックスから受け取るアーカイブの上限サイズ。
+- `maxConcurrent`：デフォルト `4`。ゲートウェイが同時に実行する保存・復元の合計数（全サンドボックス共通）。上限を超えたリクエストはキューに入らず、`429 snapshot_busy` で拒否されます。
+- `snapshotTimeout`：デフォルト `"30s"`。サンドボックスランタイム呼び出しの期限。オブジェクトストレージの読み書きはこの期限の対象外です。
+- `runtimePort`：デフォルト `5004`。サンドボックスランタイムの HTTP サーバーが待ち受けるポート。
+- `excludes`：デフォルトは空。アーカイブから除外する Home 内のエントリを gitignore 形式のパターンで指定し、任意の深さで一致します。例：`"*.log"`、`"**/node_modules"`、`"/build"`（Home ルートに固定）、`"cache/"`（ディレクトリのみ）、`"!keep"`（再び含める）。
+
+<Warning>
+ゲートウェイは各アーカイブを丸ごとメモリにバッファし、デフォルトではリソース制限を持ちません。同時スナップショットでの OOM を避けるため、`sandboxGateway.resources` は `maxConcurrent × maxSizeBytes × 3` を目安に確保してください。バッファは幾何級数的に拡大するため、64 MiB のアーカイブでピークは約 192 MiB になります。
+</Warning>
+
+## デプロイと検証
+
+values を更新してアップグレードを実行します。
+
+```bash
+helm upgrade dify dify/dify -n dify -f values.yaml
+```
+
+Helm が名前空間内に `SandboxTemplate` と `SandboxWarmPool` リソースを自動作成するため（`sandboxGateway.provision.managedByHelm` デフォルト `true`）、手動作成は不要です。デプロイ状態を検証します。
+
+```bash
+# サービスの準備完了
+kubectl get pods -n dify | grep -E 'agent-backend|sandbox-gateway'
+
+# ウォームプールのサンドボックスが作成済み
+kubectl get sandboxwarmpools,sandboxes -n dify
+```
+
+Dify コンソールにログインして Agent アプリを作成し、コマンド実行を含むタスクを実行してください。実行中は名前空間内に新しいサンドボックス Pod が作成され、セッション終了またはアイドルタイムアウト後に自動回収されることを確認できます。
+
+## RBAC 権限の説明
+
+本機能の有効化により導入されるクラスター権限の変更は以下のとおりです。セキュリティ評価の参考にしてください。
+
+- `agent-sandbox` controller はクラスタースコープのコンポーネントで、CRD に基づいてサンドボックス Pod の作成と削除を行います。
+- sandbox-gateway は名前空間スコープの Role を使用します（Chart が自動作成、`sandboxGateway.rbac.create` で制御）。内容は以下のみです。
+  - `sandboxclaims` の読み書き（サンドボックスのライフサイクル管理）
+  - `sandboxtemplates` / `sandboxwarmpools` の読み取り専用（リソース自体は Helm が作成）
+  - `sandboxes` の読み取り専用（ステータス照会）
+- sandbox-gateway は Pod、Secret、ConfigMap などのネイティブリソースへの権限を持ちません。クラスタースコープの権限もありません。
+
+一元管理された ServiceAccount を使用する場合は、`sandboxGateway.rbac.create: false` を設定し、`sandboxGateway.serviceAccountName` で指定してください。
+
+## agent-sandbox を導入しない代替案（共有サンドボックスモード）
+
+サードパーティの CRD やコントローラーのインストールが許可されないクラスターでは、`sandboxGateway.enabled` を `false` に設定するだけで構いません。Chart が常駐の agent-runtime サービスを自動的にデプロイします。すべての Agent セッションは、専用 Pod ではなく単一のサンドボックスコンテナを共有します。
+
+```yaml
+agentBackend:
+  enabled: true
+  serverSecretKey: "#REPLACE_ME#"
+
+sandboxGateway:
+  enabled: false
+
+agentRuntime:
+  image:
+    repository: langgenius/dify-ee-agent-runtime
+    tag: "3.13.0"
+```
+
+- このモードでは CRD のインストールも追加の RBAC 権限も不要です。
+- すべてのセッションが 1 つのコンテナを共有するため、隔離性は専用 Pod モードより低く、シングルレプリカでのみ動作します。制約のある環境向けの代替案としてのみ推奨します。
+- リソースは `agentRuntime.resources` で調整します。
+
+## サンドボックスイメージのカスタマイズ
+
+サンドボックス内に追加のツール、SDK、内部 CA 証明書などを組み込む場合は、公式イメージをベースにカスタマイズします。
+
+```dockerfile
+FROM langgenius/dify-ee-agent-runtime:3.13.0
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends <your-packages> \
+    && rm -rf /var/lib/apt/lists/*
+
+USER dify
+```
+
+カスタマイズ時は以下の制約を守ってください。守らない場合、サンドボックスは正常に動作しません。
+
+1. イメージデフォルトの `CMD` / `ENTRYPOINT` を上書きしないでください。サンドボックスサービスはポート 5004 で待ち受ける必要があります。
+2. `/usr/local/bin` 配下の `shellctl*` と `dify-agent` バイナリを削除しないでください。
+3. システムパッケージのインストール時は `USER root` に切り替え、完了後は必ず `USER dify` に戻してください。
+4. `/home/dify` と `/mnt/drive` ディレクトリおよびその所有者を維持してください。
+
+イメージをビルドしてプッシュした後、values の `agentRuntime.image` を更新して `helm upgrade` を実行します。専用 Pod モードではウォームプールが新イメージへ自動的にローリング更新されます。共有サンドボックスモードでは agent-runtime がローリング再起動します。
+
+## FAQ
+
+- **コンソールに Agent アプリの入口がない**
+  - `agentBackend.enabled` が `true` であることを確認してください。
+- **sandbox-gateway が CRD 不存在エラーで起動しない**
+  - agent-sandbox controller がインストールされていません。上記のインストール手順を完了するか、インストールできない場合は共有サンドボックスモードに切り替えてください。
+- **サンドボックス Pod が Pending または ImagePullBackOff のまま**
+  - ノードのリソース余裕を確認してください。プライベートレジストリ利用時はグローバルの `imagePullSecrets` が設定済みであることを確認してください。
+- **サンドボックスからクラスター内サービスや内部アドレスにアクセスできない**
+  - 送信トラフィックはデフォルトで SSRF プロキシを経由し、許可されるのは DNS、agent-backend、外部インターネットのみです。`networkPolicy.extraEgressRules` への許可追加と `sandboxGateway.ssrfProxy.squidConf` の上書きの両方が必要です。[サンドボックスのネットワークポリシー](#サンドボックスのネットワークポリシー) を参照してください。
+- **Agent のコマンド実行がタイムアウトする**
+  - コマンド 1 回のデフォルト制限は 300 秒です。`sandboxGateway.execTimeout` で調整できます。
+- **セッション実行中にサンドボックスが回収される**
+  - アイドル時間が `inactiveTtl`（デフォルト 360 秒）を超えたか、生存時間が `sandboxTtl`（デフォルト 1800 秒）を超えています。業務に応じて延長してください。

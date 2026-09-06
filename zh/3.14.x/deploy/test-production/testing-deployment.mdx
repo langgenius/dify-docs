@@ -1,0 +1,272 @@
+---
+title: 测试环境部署
+version: '简体中文'
+---
+
+## 要求
+> 这是测试环境部署或预发布环境部署的推荐配置。你可以根据自己的需求调整配置。
+
+- Kubernetes 集群
+    - 1 个工作节点：4 CPU，16 GB RAM
+- 容器镜像仓库（插件）
+    - AWS ECR（with AK/SK or IRSA）/ Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+- 持久化存储
+    - S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+    - 100 GB 存储
+- Postgres 数据库
+    - 版本 14+
+    - 4 CPU，8 GB RAM
+    - 至少 512G SSD
+- Redis 数据库
+    - 版本 6+
+    - 1 GB RAM
+- [向量数据库虚拟机 - Qdrant 单节点](/zh/3.14.x/deploy/advanced-configuration/qdrant/single-node)
+    - 1 个虚拟机
+    - 4 CPU，8 GB RAM
+    - 100 GB 存储
+
+## 部署
+### 1. 获取 Helm 仓库信息
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+有关更多信息，请参阅 [Dify Helm Chart](/zh/3.14.x/deploy/advanced-configuration/dify-helm-chart)。
+
+### 2. 保存 Helm Chart 值
+
+<Note>
+Dify 3.12 起默认启用 Agent Sandbox（`agentBackend` 与 `sandboxGateway`），需要在集群中预装 agent-sandbox controller；无法安装时可切换为共享沙箱模式。详见 [Agent Sandbox 部署](/zh/3.14.x/deploy/advanced-configuration/agent-sandbox)。
+</Note>
+- 将 Helm chart 值保存到名为 `values.yaml` 的文件中。
+- 使用你的配置更新 `values.yaml` 文件。
+
+<Warning>
+  - 请将 `#REPLACE_ME#` 占位符替换为你的实际值。
+  - 请将 "dify123456" 替换为你自己的值。
+  - `global.appSecretKey` 和 `enterprise.appSecretKey` 必须不同。
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  innerApiKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+web:
+  replicas: 1
+sandbox:
+  replicas: 1
+enterpriseAudit:
+  replicas: 1
+enterprise:
+  replicas: 1
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  passwordEncryptionKey: "dify123456"
+enterpriseFrontend:
+  replicas: 1
+ssrfProxy:
+  replicas: 1
+unstructured:
+  replicas: 1
+plugin_daemon:
+  replicas: 1
+plugin_controller:
+  replicas: 1
+plugin_connector:
+  replicas: 1
+plugin_manager:
+  replicas: 1
+gateway:
+  replicas: 1
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.0 配置
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+  user: "postgres"
+  password: "#REPLACE_ME#"
+  timezone: "UTC"
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.1配置
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+
+  # 全局数据库账号（默认使用）
+  user: "postgres"
+  password: "#REPLACE_ME#"
+
+  timezone: "UTC"
+
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+
+  ###################################
+  # Per-database credentials（可选）
+  ###################################
+  # 用于为每个数据库单独配置账号密码
+  # 优先级高于全局 user/password
+  # 如果为空，则回退使用全局账号
+  databaseCredentials:
+    dify:
+      user: ""
+      password: ""
+    enterprise:
+      user: ""
+      password: ""
+    audit:
+      user: ""
+      password: ""
+    plugin_daemon:
+      user: ""
+      password: ""
+
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+### 3. 配置 `容器镜像仓库`
+-  3.1 配置 `插件` 容器镜像仓库
+    - 更多信息，请参考 [插件的容器镜像仓库配置](/zh/3.14.x/deploy/advanced-configuration/container-registry-for-plugins)。
+- 3.2 配置 `服务` 容器镜像仓库
+    - 更多信息，请参考 [容器镜像仓库配置](/zh/3.14.x/deploy/advanced-configuration/container-registry)。
+
+### 4. 配置 `Persistence Storage`
+- 更多信息，请参考 [Persistence Storage](/zh/3.14.x/deploy/advanced-configuration/persistent-storage)。
+
+### 5. 配置 `External Database`
+- 更多信息，请参考 [External Database](/zh/3.14.x/deploy/advanced-configuration/database)。
+
+### 6. 配置 `External Redis`
+- 更多信息，请参考 [External Redis](/zh/3.14.x/deploy/advanced-configuration/redis)。
+
+### 7. 配置 `External Qdrant`
+- 更多信息，请参考 [External Qdrant Single Node](/zh/3.14.x/deploy/advanced-configuration/qdrant/single-node)。
+
+### 8. 配置 `Ingress Controller`
+- 更多信息，请参考 [Ingress Controller 配置](/zh/3.14.x/deploy/advanced-configuration/nginx-ingress-controller)。
+
+### 9. 安装 Dify Helm Chart
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. 验证安装结果
+- 更多信息，请参考 [服务状态验证](/zh/3.14.x/deploy/verify-services-status)。
+
+
+## 高级配置
+### 1. 域名与 SSL 证书
+- 更多信息，请参考 [域名与 SSL 证书配置](/zh/3.14.x/deploy/advanced-configuration/domain-and-ssl-certificate)。
+
+### 2. 邮件服务提供商
+- 更多信息，请参考 [邮件服务配置](/zh/3.14.x/deploy/advanced-configuration/email-provider)。
+
+### 3. 性能调优
+- 更多信息，请参考 [性能调优](/zh/3.14.x/deploy/advanced-configuration/performance)。

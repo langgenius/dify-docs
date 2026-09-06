@@ -1,0 +1,65 @@
+---
+title: Redis
+version: '简体中文'
+---
+
+## 显示 Helm Chart 值
+```bash
+helm show values dify/dify
+```
+
+以下是 Helm chart 值中外部 Redis 配置的示例代码。
+
+```yaml
+externalRedis:
+  enabled: true
+  useSSL: false
+  host: "redis.example"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  db: 0
+
+  sentinel:
+    enabled: false
+    nodes: ""          # 以逗号分隔的 Redis Sentinel 节点列表（host:port）
+    serviceName: ""    # 需要监控的 Redis Sentinel 服务名称
+    username: ""
+    password: "#REPLACE_ME#"
+    socketTimeout: 0.1 # Redis Sentinel 连接的套接字超时时间（秒）
+
+  # Event Bus — 仅社区版的 API <-> worker 发布/订阅流。`url` 留空则复用上方的
+  # 主 Redis；填写后可将 Event Bus 指向独立的 Redis（通常是 Redis Cluster），
+  # 当该 URL 为 Redis Cluster 时将 `useClusters` 设为 `true`。chart 随后会注入
+  # EVENT_BUS_REDIS_URL / EVENT_BUS_REDIS_USE_CLUSTERS。dify-enterprise Go 服务不消费这些变量。
+  eventBus:
+    url: ""              # 例如 redis://cluster-seed:7001/0
+    useClusters: false   # 当 `url` 指向 Redis Cluster 时设为 true
+```
+
+## Redis SSL 配置
+
+- 要启用 Redis 的 SSL 功能，请将 `useSSL` 字段设置为 `true`。
+- 非 SSL 连接的 `port` 字段应设置为 `6379`，SSL 连接的 `port` 字段应设置为 `6380`。
+
+## 高可用
+
+- **Sentinel（哨兵）**：将 `sentinel.enabled` 设置为 `true`，并填写 `sentinel.nodes` 和 `sentinel.serviceName`。
+
+主 Redis（缓存、Celery broker 以及 dify-enterprise Go 服务）仅支持 **standalone** 或 **sentinel** 模式。主 Redis 不支持 Redis Cluster：Celery 无法寻址 cluster broker，Go 服务在启动时拒绝 cluster 模式，且企业版队列使用跨键操作，会在 cluster 上触发 `CROSSSLOT` 错误。
+
+## Event Bus
+
+Event Bus 是**仅社区版**的 API ↔ worker 发布/订阅流。默认情况下（`eventBus.url` 留空）它复用上方的主 `externalRedis` 连接。如需将其迁移到独立的 Redis（通常是 Redis Cluster，以实现集群级扇出），请设置 `eventBus.url`，并在该 URL 为 Redis Cluster 时设置 `eventBus.useClusters: true`。chart 随后会将 `EVENT_BUS_REDIS_URL` / `EVENT_BUS_REDIS_USE_CLUSTERS` 注入共享 ConfigMap。dify-enterprise Go 服务不消费这些变量。
+
+通道类型默认为 `pubsub`。如需使用 `sharded` 或 `streams`，请在 `api`、`worker`、`worker-beat`、附加 worker 以及 `plugin_daemon` 上通过 `extraEnv` 覆盖 `EVENT_BUS_REDIS_CHANNEL_TYPE`：
+
+```yaml
+extraEnv:
+  - name: EVENT_BUS_REDIS_CHANNEL_TYPE
+    value: "sharded"
+```
+
+<Warning>
+**从 3.9.x 或更早版本升级：** `externalRedis.cluster` 配置块已移除。若仍设置 `cluster.enabled: true`，`helm template` / `helm upgrade` 现在会直接失败。请移除该配置，并将主 Redis 保持在 standalone 或 sentinel 模式。如需集群级扇出，请将 Redis Cluster 置于 Event Bus 之后（`eventBus.url` + `eventBus.useClusters: true`）。
+</Warning>

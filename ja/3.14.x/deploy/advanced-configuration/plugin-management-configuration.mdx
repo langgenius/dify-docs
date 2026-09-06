@@ -1,0 +1,86 @@
+---
+title: プラグイン管理の監視設定
+---
+
+## メトリクスのデータソースを設定する理由
+
+プラグイン管理画面の「負荷監視」グラフは、Kubernetes の標準コンテナメトリクスを利用して CPU / メモリ / ネットワークなどのリソース推移を描画します。Kubernetes のディストリビューションや監視スタックによってメトリクスの公開方法が異なるため、デプロイ時に適切なメトリクスのデータソースを選択する必要があります。
+
+必要なメトリクスをクラスタ/監視システムが提供できない場合は、UI 上で空のグラフやエラーが繰り返し表示されるのを避けるため、データソースを `disabled` に設定してください。
+
+## 前提条件（必要なメトリクス）
+
+クラスタまたはメトリクスシステムが、以下のメトリクスを提供できることを確認してください（いずれかが欠けると、グラフの線が欠けたり表示されなかったりする可能性があります）。
+
+- `container_cpu_usage_seconds_total`
+- `container_memory_working_set_bytes`
+- `container_network_receive_bytes_total`
+- `container_network_transmit_bytes_total`
+
+## Helm Chart の値を表示
+
+```bash
+helm show values dify/dify
+```
+
+## 設定方法（Helm values）
+
+以下は `plugin-manager` のメトリクスデータソース設定例です（通常は `values.yaml` またはデプロイ設定に記載します）。
+
+### A. Prometheus（推奨）
+
+外部 Prometheus をメトリクスの取得元として利用します（永続化やクエリ能力の観点から本番環境に推奨）。
+
+```yaml
+plugin_manager:
+  metric:
+    source: "prometheus"
+
+externalPrometheus:
+  enabled: true
+  endpoint: "http://prometheus-kube-prometheus-prometheus:9090"
+  timeout: 10s
+  username: ""
+  password: ""
+  insecure: true
+```
+
+- **`externalPrometheus.endpoint`**：Prometheus のアクセス先（`plugin-manager` からクラスタ内ネットワーク経由で到達できる必要があります）
+- **`externalPrometheus.timeout`**：クエリのタイムアウト
+- **`externalPrometheus.username/password`**：Prometheus に認証がある場合に設定します
+- **`externalPrometheus.insecure`**：安全でない TLS を許可（リスクを理解した上でのみ使用してください）
+
+### B. cAdvisor（plugin-manager が能動的に収集）
+
+cAdvisor モードに設定すると、`plugin-manager` がノードプロキシ経由で cAdvisor メトリクスを収集します。
+
+```yaml
+plugin_manager:
+  metric:
+    source: "cadvisor"
+```
+
+注意：
+
+- **権限要件**：`nodes` および `nodes/proxy` を読み取る `ClusterRole` 権限が必要です（付与されていない場合、ノードプロキシ経由で収集できません）。
+- **適用シーン**：収集したメトリクスは通常一時保存のみで永続化されません。軽量/一時的なトラブルシュート向けであり、長期監査やキャパシティプランニングの唯一のデータソースとしては推奨しません。
+
+### C. disabled（メトリクス無効）
+
+メトリクスを有効化しない場合、UI 上に CPU/メモリ/ネットワークなどの監視曲線は表示されません。
+
+```yaml
+plugin_manager:
+  metric:
+    source: "disabled"
+```
+
+## よくある問題とトラブルシューティング
+
+- **グラフが空/線が欠ける**：まず「前提条件」の 4 つのメトリクスが存在するか確認してください。監視スタックがこれらを提供しない場合は、`plugin_manager.metric.source` を `disabled` に設定してください。
+- **Prometheus モードでデータ取得できない**：`externalPrometheus.endpoint` がクラスタ内から到達可能か（DNS/Service/NetworkPolicy）を確認し、必要に応じて認証や TLS 設定を見直してください。
+- **cAdvisor モードで権限エラー**：`nodes` / `nodes/proxy` のクラスタレベル権限が付与されているか確認してください。
+
+## 参考
+
+- Kubernetes メトリクスの説明：[Instrumentation / Metrics](https://kubernetes.io/docs/reference/instrumentation/metrics/)

@@ -1,0 +1,64 @@
+---
+title: Redis
+---
+
+## Helm Chartの設定値を表示する
+```bash
+helm show values dify/dify
+```
+
+これはHelm Chartの設定ファイルにおける外部Redis設定の一例です。
+```yaml
+externalRedis:
+  enabled: true
+  useSSL: false
+  host: "redis.example"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  db: 0
+
+  sentinel:
+    enabled: false
+    nodes: ""          # カンマ区切りのRedis Sentinelノード一覧（host:port）
+    serviceName: ""    # 監視対象のRedis Sentinelサービス名
+    username: ""
+    password: "#REPLACE_ME#"
+    socketTimeout: 0.1 # Redis Sentinel接続のソケットタイムアウト（秒）
+
+  # Event Bus — コミュニティ版のみの API <-> worker パブリッシュ/サブスクライブ
+  # ストリーム。`url` を空にすると上記のメイン Redis を共用します。値を設定すると
+  # Event Bus を別の Redis（通常は Redis Cluster）に向けられます。その URL が
+  # Redis Cluster の場合は `useClusters: true` を設定します。chart は
+  # EVENT_BUS_REDIS_URL / EVENT_BUS_REDIS_USE_CLUSTERS を出力します。
+  # dify-enterprise の Go サービスはこれらを消費しません。
+  eventBus:
+    url: ""              # 例: redis://cluster-seed:7001/0
+    useClusters: false   # `url` が Redis Cluster を指す場合は true
+```
+
+## RedisのSSL設定について
+- SSL対応のRedisを利用するには、`useSSL` 項目を `true` に設定してください。
+- `port` 項目については、SSL非対応時は `6379` を、SSL対応時は `6380` を指定します。
+
+## 高可用性（HA）
+
+- **Sentinel**：`sentinel.enabled` を `true` に設定し、`sentinel.nodes` と `sentinel.serviceName` を指定します。
+
+メイン Redis（キャッシュ、Celery ブローカー、および dify-enterprise の Go サービス）は **standalone** または **sentinel** モードのみをサポートします。メイン Redis は Redis Cluster をサポートしません。Celery は cluster ブローカーをアドレス指定できず、Go サービスは起動時に cluster モードを拒否し、エンタープライズ版のキューはキーをまたぐ操作を使用するため cluster 上で `CROSSSLOT` エラーを引き起こします。
+
+## Event Bus
+
+Event Bus は**コミュニティ版のみ**の API ↔ worker パブリッシュ/サブスクライブストリームです。デフォルト（`eventBus.url` が空）ではメインの `externalRedis` 接続を共用します。これを専用の Redis（通常はクラスター規模のファンアウト向けに Redis Cluster）へ移すには、`eventBus.url` を設定し、その URL が Redis Cluster の場合は `eventBus.useClusters: true` を設定します。chart は `EVENT_BUS_REDIS_URL` / `EVENT_BUS_REDIS_USE_CLUSTERS` を共有 ConfigMap に注入します。dify-enterprise の Go サービスはこれらの変数を消費しません。
+
+チャネルタイプはデフォルトで `pubsub` です。`sharded` または `streams` を使用するには、`api`、`worker`、`worker-beat`、追加 worker、`plugin_daemon` の `extraEnv` で `EVENT_BUS_REDIS_CHANNEL_TYPE` を上書きします。
+
+```yaml
+extraEnv:
+  - name: EVENT_BUS_REDIS_CHANNEL_TYPE
+    value: "sharded"
+```
+
+<Warning>
+**3.9.x 以前からのアップグレード：** `externalRedis.cluster` ブロックは削除されました。`cluster.enabled: true` が設定されたままだと、`helm template` / `helm upgrade` が即座に失敗します。これを削除し、メイン Redis を standalone または sentinel に保ってください。クラスター規模のファンアウトが必要な場合は、Redis Cluster を Event Bus の背後に配置します（`eventBus.url` + `eventBus.useClusters: true`）。
+</Warning>

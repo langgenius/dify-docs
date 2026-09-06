@@ -1,0 +1,1379 @@
+---
+title: 环境变量
+description: Dify 企业版 Helm 部署所用环境变量参考
+---
+
+Dify 企业版通过 Helm 部署，大多数变量在 `values.yaml` 文件中配置。Helm chart 会将一组固定变量写入 API、web、worker 和 enterprise 这几个 ConfigMap（默认值取自 `values.yaml`），其余 Dify 应用变量则通过各服务的 `extraEnv` 字段暴露。
+
+<Note>
+此处列出的变量仅供参考。Dify 应用读取的变量远多于 Helm chart 直接设置的部分。完整的应用级变量列表见上游 [`.env.example`](https://github.com/langgenius/dify/blob/main/docker/.env.example)。任何未在 `values.yaml` 中设置的变量都可通过 `extraEnv` 添加（见 [常见问题](#常见问题)）。如果在 `values.yaml` 中找不到某个变量，通过 `extraEnv` 设置即可。
+</Note>
+
+<Tip>
+标注为 **(Helm default)** 的默认值是 chart 从 `values.yaml` 写入 ConfigMap 的值。其余默认值均为 Dify 应用的内置默认值，在变量未通过 `extraEnv` 设置时生效。
+</Tip>
+
+## 通用变量
+
+以下 URL 变量用于配置 Dify 各服务的公开地址。Helm chart 根据 `values.yaml` 中的域名设置（`global.consoleApiDomain`、`global.consoleWebDomain` 等）推导这些变量，因此通常设置域名即可，无需直接设置变量。
+
+### CONSOLE_API_URL
+
+默认值：由 `global.consoleApiDomain` 推导
+
+Dify 后端 API 的公开 URL。用于构造 OAuth 授权回调（GitHub、Google 登录）、Notion 集成，以及任何需要 OAuth 的插件。同时决定是否使用安全（仅 HTTPS）Cookie。
+
+范例：`https://api.console.dify.ai`
+
+### CONSOLE_WEB_URL
+
+默认值：由 `global.consoleWebDomain` 推导
+
+Dify 控制台前端的公开 URL。用于构造所有系统邮件（邀请、密码重置、通知）中的链接，并在 OAuth 登录后将用户重定向回控制台。当 `CONSOLE_CORS_ALLOW_ORIGINS` 未设置时，它还作为默认的 CORS 允许来源。
+
+范例：`https://console.dify.ai`
+
+### SERVICE_API_URL
+
+默认值：由 `global.serviceApiDomain` 推导
+
+控制台中向开发者展示的 API Base URL，即开发者复制到代码里调用 Dify API 的地址。当服务器可通过多个地址访问时，设置该变量可确保 URL 一致。
+
+范例：`https://api.dify.ai`
+
+### APP_API_URL
+
+默认值：由 `global.appApiDomain` 推导
+
+WebApp 前端（已发布应用）使用的后端 API URL。该变量由 web 前端容器使用，而非 Python 后端。
+
+范例：`https://api.app.dify.ai`
+
+### APP_WEB_URL
+
+默认值：由 `global.appWebDomain` 推导
+
+已发布 WebApp 的公开访问 URL。工作流中的 Human Input 节点必须设置此项：邮件通知里的表单链接按 `{APP_WEB_URL}/form/{token}` 构造。若为空，Human Input 邮件将无法包含有效的表单链接。
+
+范例：`https://app.dify.ai`
+
+### TRIGGER_URL
+
+默认值：由 `global.triggerDomain` 推导
+
+Webhook 和集成触发端点的公开访问 URL。外部系统通过该地址调用你的工作流。Dify 按 `{TRIGGER_URL}/triggers/webhook/{id}` 构造触发器回调 URL 并在控制台中展示。要让触发器正常工作，此项必须指向外部系统可访问的公开域名或 IP。
+
+### FILES_URL
+
+默认值：由 `global.filesDomain` 推导
+
+文件预览与下载链接的基础 URL。Dify 为所有文件（上传的文档、工具输出、工作空间 Logo）生成带签名、有时效的 URL，并提供给前端和多模态模型。为防止伪造，文件 URL 经过签名并会过期（见 `FILES_ACCESS_TIMEOUT`）。
+
+范例：`https://upload.example.com`
+
+### INTERNAL_FILES_URL
+
+默认值：（为空；回退到 `FILES_URL`）
+
+集群内部服务之间通信所用的文件访问 URL（例如插件守护进程和文档提取器）。若外部 `FILES_URL` 通过 ingress 或公开域名路由，内部服务可能无法访问。当内部服务无法访问外部 URL 时，通过 `extraEnv` 设置此项。
+
+范例：`http://dify-api-svc:5001`
+
+### FILES_ACCESS_TIMEOUT
+
+默认值：`300`（5 分钟）
+
+签名文件 URL 的有效时长（秒）。超过该时间后 URL 会被拒绝，文件需重新请求。长耗时流程可调大；追求更严格的安全性可调小。
+
+***
+
+## 服务器配置
+
+### 日志
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `LOG_LEVEL` | `INFO` (Helm default) | 最低日志级别。级别由低到高：`DEBUG`、`INFO`、`WARNING`、`ERROR`、`CRITICAL`。生产环境用 `ERROR` 可减少噪声。 |
+| `LOG_OUTPUT_FORMAT` | `json` (Helm default) | `json` 生成适合聚合工具（ELK、Datadog）的结构化日志，`text` 生成可读性更好的文本行。chart 默认 `json`，应用自身默认 `text`。 |
+| `LOG_FILE` | `/app/logs/server.log` | 日志文件路径。设置后启用基于文件的日志记录并自动轮转；为空时日志仅输出到控制台。 |
+| `LOG_FILE_MAX_SIZE` | `20` | 触发轮转的日志文件最大体积（MB）。 |
+| `LOG_FILE_BACKUP_COUNT` | `5` | 保留的轮转日志文件数量。 |
+| `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | 文本格式日志的时间戳格式（strftime 代码）。 |
+| `LOG_TZ` | `UTC` | 日志时间戳的时区，同时设置 Celery 的任务调度时区。 |
+
+### 通用
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MODE` | `api` / `worker` / `beat` (Helm default) | 服务角色。chart 会按 ConfigMap 分别设置，不要覆盖。 |
+| `DEBUG` | `false` | 启用详细日志：节点输入/输出、工具执行细节、完整的 LLM 提示词与响应。不建议在生产环境使用。 |
+| `FLASK_DEBUG` | `false` | 标准 Flask 调试标志。Dify 并未实际使用，主要由 `DEBUG` 控制。 |
+| `ENABLE_REQUEST_LOGGING` | `false` | 为每个 HTTP 请求记录一行简洁的访问日志。在 `LOG_LEVEL=DEBUG` 下，还会记录完整的请求与响应体。 |
+| `DEPLOY_ENV` | `PRODUCTION` (Helm default) | 在 Sentry 和 OpenTelemetry 中为监控数据打标签，便于按环境过滤。同时作为 `X-Env` 响应头发送。 |
+| `MIGRATION_ENABLED` | `true` (API), `false` (worker/beat) (Helm default) | 为 `true` 时，在容器启动时自动执行数据库 schema 迁移。chart 仅为 API 服务启用。 |
+| `CHECK_UPDATE_URL` | `https://updates.dify.ai` (Helm default) | 控制台通过该 URL 检查 Dify 新版本。离网（air-gapped）环境可置空。 |
+| `OPENAI_API_BASE` | `https://api.openai.com/v1` | 遗留变量，Dify 自身代码并未实际使用。 |
+
+### SECRET_KEY
+
+默认值：由 chart 设置（见你部署的 secret 配置）
+
+用于会话 Cookie 签名、JWT 鉴权令牌、文件 URL 签名（HMAC-SHA256），以及加密第三方 OAuth 凭据（AES-256）。Helm chart 通过一个 secret 管理该值。
+
+<Warning>
+部署后更改此密钥会立即登出所有用户、使所有文件 URL 失效，并破坏所有使用 OAuth 的插件集成，因为它们的加密凭据将无法恢复。
+</Warning>
+
+### Token 与请求限制
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | 登录会话的访问令牌保持有效的时长（分钟）。浏览器会用刷新令牌静默续期。 |
+| `REFRESH_TOKEN_EXPIRE_DAYS` | `30` | 用户无需重新输入凭据即可保持登录的时长（天）。 |
+| `APP_MAX_EXECUTION_TIME` | `3600` | 单次应用执行在被终止前可运行的最长时间（秒）。与 `WORKFLOW_MAX_EXECUTION_TIME` 配合生效。 |
+| `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | 未设置自定义上限时，每个应用的默认并发请求上限。`0` 表示不限。 |
+| `APP_MAX_ACTIVE_REQUESTS` | `0` | 每个应用并发请求的全局上限。`0` 表示不限。 |
+
+### Worker 配置
+
+Helm chart 通过 `values.yaml` 而非环境变量管理 worker 数量。`serverWorkerAmount` 控制 API Gunicorn worker 数，`celeryWorkerAmount` 控制每个 worker 部署的 Celery worker 数。请在 `values.yaml` 中设置。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SERVER_WORKER_AMOUNT` | `1` (Helm default) | Gunicorn worker 进程数。使用 gevent（默认）时，1 通常足够。通过 `values.yaml` 中的 `api.serverWorkerAmount` 设置。 |
+| `GUNICORN_TIMEOUT` | `360` (Helm default) | 若 worker 在该秒数内无响应，Gunicorn 会重启它。360 可支持长连接的 SSE 流式输出。 |
+| `CELERY_WORKER_AMOUNT` | `1` (Helm default) | 每个 worker 部署的 Celery worker 进程数。通过 `values.yaml` 中的 `worker.celeryWorkerAmount` 设置。 |
+| `SERVER_WORKER_CLASS` | `gevent` | Gunicorn worker 类型。保持默认值，其他值会破坏 psycopg2 和 gRPC 的猴子补丁。 |
+| `SERVER_WORKER_CONNECTIONS` | `10` | 每个 worker 的最大并发连接数。仅对异步（gevent）worker 生效。 |
+| `CELERY_WORKER_CLASS` | （为空；默认 gevent） | Celery worker 类型。强烈不建议更改。 |
+
+### API Tool 配置
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `API_TOOL_DEFAULT_CONNECT_TIMEOUT` | `10` | API Tool 节点调用外部 API 时，建立 TCP 连接的最长等待时间（秒）。 |
+| `API_TOOL_DEFAULT_READ_TIMEOUT` | `60` | API Tool 节点从外部 API 接收响应数据的最长等待时间（秒）。 |
+
+### 数据库配置
+
+Helm chart 通过 `values.yaml` 和共享的数据库 ConfigMap 配置主数据库连接（主机、端口、凭据、数据库名），而非通过各个 `DB_*` 变量。下列变量用于调优应用的连接池，可通过 `extraEnv` 设置。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SQLALCHEMY_POOL_SIZE` | `250` (Helm default) | 连接池中保持的持久连接数。chart 默认 250（应用默认 30）。通过 `api.db.poolSize` / `worker.db.poolSize` 设置。 |
+| `SQLALCHEMY_POOL_RECYCLE` | `3600` (Helm default) | 连接在该秒数后回收，以避免陈旧连接。 |
+| `SQLALCHEMY_MAX_OVERFLOW` | `10` | 连接池满时允许的额外临时连接数。 |
+| `SQLALCHEMY_POOL_TIMEOUT` | `30` | 连接池耗尽时，等待可用连接的时长。 |
+| `SQLALCHEMY_POOL_RESET_ON_RETURN` | `rollback` | 连接归还到池时执行的动作。`rollback` 清除未提交的事务状态，`commit` 则提交。 |
+| `SQLALCHEMY_POOL_PRE_PING` | `false` | 使用前用一条轻量查询测试每个连接。可避免「连接丢失」错误，但会增加少量延迟。 |
+| `SQLALCHEMY_POOL_USE_LIFO` | `false` | 复用最近归还的连接（LIFO），而非均匀轮换（FIFO）。 |
+| `SQLALCHEMY_ECHO` | `false` | 将所有 SQL 语句打印到日志。便于排查查询问题。 |
+
+### Redis 配置
+
+Helm chart 通过 `values.yaml`（共享的 Redis 配置）配置 Redis 连接。应用支持单机、Sentinel 和 Cluster 三种模式。下列变量是应用级调节项；在 Helm 部署中，优先使用 chart 的 Redis 设置，调优时再用 `extraEnv`。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `REDIS_KEY_PREFIX` | （为空） | 应用于所有 Redis 键、pub/sub 频道、Streams 名称和 Celery broker 队列的可选全局前缀。当多个 Dify 实例共用一个 Redis 部署时很有用。在已有部署上启用前缀，会让之前前缀下写入的键被遗弃。 |
+| `REDIS_USE_SSL` | `false` | 为 Redis 连接启用 SSL/TLS。不会自动应用于 Sentinel 协议。 |
+| `REDIS_MAX_CONNECTIONS` | （为空） | Redis 连接池的最大连接数。不设置则使用库的默认值。 |
+
+#### Redis SSL 配置
+
+仅在 `REDIS_USE_SSL=true` 时生效。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `REDIS_SSL_CERT_REQS` | `CERT_NONE` | 证书校验级别：`CERT_NONE`、`CERT_OPTIONAL` 或 `CERT_REQUIRED`。 |
+| `REDIS_SSL_CA_CERTS` | （为空） | 用于校验 Redis 服务器的 CA 证书文件路径。 |
+| `REDIS_SSL_CERTFILE` | （为空） | 用于双向 TLS 的客户端证书路径。 |
+| `REDIS_SSL_KEYFILE` | （为空） | 用于双向 TLS 的客户端私钥路径。 |
+
+#### Redis 连接弹性
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `REDIS_RETRY_RETRIES` | `3` | 瞬时故障时每条 Redis 命令的最大重试次数。设为 `0` 可禁用。采用带抖动的指数退避。 |
+| `REDIS_RETRY_BACKOFF_BASE` | `1.0` | 重试间指数退避的基础延迟（秒）。 |
+| `REDIS_RETRY_BACKOFF_CAP` | `10.0` | 重试间退避延迟的上限（秒）。 |
+| `REDIS_SOCKET_TIMEOUT` | `5.0` | Redis 读/写操作的套接字超时（秒）。 |
+| `REDIS_SOCKET_CONNECT_TIMEOUT` | `5.0` | 建立 Redis 连接的套接字超时（秒）。 |
+| `REDIS_HEALTH_CHECK_INTERVAL` | `30` | 对空闲连接进行客户端健康检查的间隔（秒）。设为 `0` 可禁用。Cluster 模式下不生效。 |
+
+### Celery 配置
+
+Helm chart 通过 `values.yaml` 和共享的 Celery secret 管理 Celery broker 连接。下列变量是应用级调优项。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CELERY_BACKEND` | `redis` | Celery 存放任务结果的位置。可选：`redis`（快速、内存型）或 `database`。 |
+| `BROKER_USE_SSL` | `false` | 当 broker URL 使用 `rediss://` 协议时自动启用。 |
+| `CELERY_USE_SENTINEL` | `false` | 为 Celery broker 启用 Redis Sentinel 模式。 |
+| `CELERY_SENTINEL_MASTER_NAME` | （为空） | Sentinel 服务名（Master Name）。 |
+| `CELERY_SENTINEL_PASSWORD` | （为空） | Sentinel 鉴权密码。 |
+| `CELERY_SENTINEL_SOCKET_TIMEOUT` | `0.1` | 连接 Sentinel 的超时（秒）。 |
+| `CELERY_TASK_ANNOTATIONS` | `null` | 为特定任务应用运行时设置（例如速率限制）。格式为 JSON 字典。多数用户无需配置。 |
+
+### CORS 配置
+
+控制前端的跨域访问策略。chart 仅在 `values.yaml` 中设置时才写入这些变量。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WEB_API_CORS_ALLOW_ORIGINS` | `*` | 允许向 Web API 发起跨域请求的来源。范例：`https://dify.app` |
+| `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | 允许向控制台 API 发起跨域请求的来源。未设置时回退到 `CONSOLE_WEB_URL`。 |
+| `COOKIE_DOMAIN` | （为空） | 当前后端运行在不同子域时，设为共享的顶级域名（例如 `example.com`），以便跨子域共享鉴权 Cookie。 |
+
+### 文件存储配置
+
+配置 Dify 存放上传文件、知识库文档和加密密钥的位置。每种存储类型都有各自的凭据变量，只需配置你使用的那种。在 Helm 部署中，除非 chart 已暴露，否则通过 `extraEnv` 设置。
+
+### STORAGE_TYPE
+
+默认值：`opendal`
+
+选择文件存储后端。支持的值：`opendal`、`s3`、`azure-blob`、`aliyun-oss`、`google-storage`、`huawei-obs`、`volcengine-tos`、`tencent-cos`、`baidu-obs`、`oci-storage`、`supabase`、`clickzetta-volume`、`local`（已弃用；内部通过 OpenDAL 的 filesystem 协议实现）。
+
+<AccordionGroup>
+<Accordion title="OpenDAL（默认）">
+
+默认存储后端，基于 [Apache OpenDAL](https://opendal.apache.org/)，提供支持多种存储服务的统一接口。Dify 会自动扫描匹配 `OPENDAL_<SCHEME>_*` 的环境变量并传给 OpenDAL。例如当 `OPENDAL_SCHEME=s3` 时，设置 `OPENDAL_S3_ACCESS_KEY_ID`、`OPENDAL_S3_SECRET_ACCESS_KEY` 等。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `OPENDAL_SCHEME` | `fs` | 使用的存储服务。范例：`fs`（本地文件系统）、`s3`、`gcs`、`azblob`。 |
+| `OPENDAL_FS_ROOT` | `storage` | 本地文件系统存储的根目录（配合 `fs` 协议使用）。 |
+
+所有可用协议及其配置选项，见 [OpenDAL 服务文档](https://github.com/apache/opendal/tree/main/core/services)。
+
+</Accordion>
+
+<Accordion title="S3">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `S3_ENDPOINT` | （为空） | S3 端点地址。非 AWS 的 S3 兼容服务（MinIO 等）必填。 |
+| `S3_REGION` | `us-east-1` | S3 区域。 |
+| `S3_BUCKET_NAME` | `difyai` | S3 存储桶名称。 |
+| `S3_ACCESS_KEY` | （为空） | S3 Access Key。使用 IAM 角色时无需填写。 |
+| `S3_SECRET_KEY` | （为空） | S3 Secret Key。使用 IAM 角色时无需填写。 |
+| `S3_ADDRESS_STYLE` | `auto` | S3 寻址方式：`auto`、`path` 或 `virtual`。仅在 `S3_USE_AWS_MANAGED_IAM` 为 `false` 时生效。 |
+| `S3_USE_AWS_MANAGED_IAM` | `false` | 使用 AWS IAM 角色（EC2 实例配置文件、EKS 服务账户）而非显式密钥。凭据会从实例元数据自动发现。 |
+
+</Accordion>
+
+<Accordion title="Azure Blob">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `AZURE_BLOB_ACCOUNT_NAME` | `difyai` | Azure 存储账户名。 |
+| `AZURE_BLOB_ACCOUNT_KEY` | `difyai` | Azure 存储账户密钥。 |
+| `AZURE_BLOB_CONTAINER_NAME` | `difyai-container` | Azure Blob 容器名。 |
+| `AZURE_BLOB_ACCOUNT_URL` | `https://<your_account_name>.blob.core.windows.net` | Azure Blob 账户 URL。 |
+
+</Accordion>
+
+<Accordion title="Google Cloud Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `GOOGLE_STORAGE_BUCKET_NAME` | （为空） | Google Cloud Storage 存储桶名称。 |
+| `GOOGLE_STORAGE_SERVICE_ACCOUNT_JSON_BASE64` | （为空） | Base64 编码的服务账户 JSON 密钥。 |
+
+</Accordion>
+
+<Accordion title="Alibaba Cloud OSS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ALIYUN_OSS_BUCKET_NAME` | （为空） | OSS 存储桶名称。 |
+| `ALIYUN_OSS_ACCESS_KEY` | （为空） | OSS access key。 |
+| `ALIYUN_OSS_SECRET_KEY` | （为空） | OSS secret key。 |
+| `ALIYUN_OSS_ENDPOINT` | `https://oss-ap-southeast-1-internal.aliyuncs.com` | OSS 端点。[区域与端点参考](https://www.alibabacloud.com/help/en/oss/user-guide/regions-and-endpoints)。 |
+| `ALIYUN_OSS_REGION` | `ap-southeast-1` | OSS 区域。 |
+| `ALIYUN_OSS_AUTH_VERSION` | `v4` | OSS 鉴权版本。 |
+| `ALIYUN_OSS_PATH` | （为空） | 对象路径前缀。不要以 `/` 开头。[参考](https://www.alibabacloud.com/help/en/oss/support/0016-00000005)。 |
+| `ALIYUN_CLOUDBOX_ID` | （为空） | 基于 CloudBox 的 OSS 部署所用的 CloudBox ID。 |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud COS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `TENCENT_COS_BUCKET_NAME` | （为空） | COS 存储桶名称。 |
+| `TENCENT_COS_SECRET_KEY` | （为空） | COS secret key。 |
+| `TENCENT_COS_SECRET_ID` | （为空） | COS secret ID。 |
+| `TENCENT_COS_REGION` | （为空） | COS 区域，例如 `ap-guangzhou`。[参考](https://cloud.tencent.com/document/product/436/6224)。 |
+| `TENCENT_COS_SCHEME` | （为空） | 访问 COS 的协议（`http` 或 `https`）。 |
+| `TENCENT_COS_CUSTOM_DOMAIN` | （为空） | 访问 COS 的自定义域名。 |
+
+</Accordion>
+
+<Accordion title="OCI Object Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `OCI_ENDPOINT` | （为空） | OCI 端点 URL。 |
+| `OCI_BUCKET_NAME` | （为空） | OCI 存储桶名称。 |
+| `OCI_ACCESS_KEY` | （为空） | OCI access key。 |
+| `OCI_SECRET_KEY` | （为空） | OCI secret key。 |
+| `OCI_REGION` | `us-ashburn-1` | OCI 区域。 |
+
+</Accordion>
+
+<Accordion title="Huawei OBS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `HUAWEI_OBS_BUCKET_NAME` | （为空） | OBS 存储桶名称。 |
+| `HUAWEI_OBS_ACCESS_KEY` | （为空） | OBS access key。 |
+| `HUAWEI_OBS_SECRET_KEY` | （为空） | OBS secret key。 |
+| `HUAWEI_OBS_SERVER` | （为空） | OBS 服务器 URL。[参考](https://support.huaweicloud.com/sdk-python-devg-obs/obs_22_0500.html)。 |
+| `HUAWEI_OBS_PATH_STYLE` | `false` | 使用 path-style URL 而非 virtual-hosted-style。 |
+
+</Accordion>
+
+<Accordion title="Volcengine TOS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `VOLCENGINE_TOS_BUCKET_NAME` | （为空） | TOS 存储桶名称。 |
+| `VOLCENGINE_TOS_ACCESS_KEY` | （为空） | TOS access key。 |
+| `VOLCENGINE_TOS_SECRET_KEY` | （为空） | TOS secret key。 |
+| `VOLCENGINE_TOS_ENDPOINT` | （为空） | TOS 端点 URL。[参考](https://www.volcengine.com/docs/6349/107356)。 |
+| `VOLCENGINE_TOS_REGION` | （为空） | TOS 区域，例如 `cn-guangzhou`。 |
+
+</Accordion>
+
+<Accordion title="Baidu OBS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `BAIDU_OBS_BUCKET_NAME` | （为空） | 百度 OBS 存储桶名称。 |
+| `BAIDU_OBS_ACCESS_KEY` | （为空） | 百度 OBS access key。 |
+| `BAIDU_OBS_SECRET_KEY` | （为空） | 百度 OBS secret key。 |
+| `BAIDU_OBS_ENDPOINT` | （为空） | 百度 OBS 服务器 URL。 |
+
+</Accordion>
+
+<Accordion title="Supabase">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SUPABASE_BUCKET_NAME` | （为空） | Supabase 存储桶名称。 |
+| `SUPABASE_API_KEY` | （为空） | Supabase API key。 |
+| `SUPABASE_URL` | （为空） | Supabase 服务器 URL。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta Volume">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CLICKZETTA_VOLUME_TYPE` | `user` | Volume 类型。可选：`user`、`table`、`external`。 |
+| `CLICKZETTA_VOLUME_NAME` | （为空） | 外部 Volume 名称（仅在 `TYPE=external` 时必填）。 |
+| `CLICKZETTA_VOLUME_TABLE_PREFIX` | `dataset_` | Table volume 的表前缀（仅在 `TYPE=table` 时使用）。 |
+| `CLICKZETTA_VOLUME_DIFY_PREFIX` | `dify_km` | Dify 文件目录前缀，用于与其他应用隔离。 |
+
+ClickZetta Volume 复用 Vector Database 部分配置的 `CLICKZETTA_*` 连接参数。
+
+</Accordion>
+</AccordionGroup>
+
+#### 归档存储
+
+用于归档工作流运行日志的独立 S3 兼容存储。把超过保留期的工作流运行记录归档为 JSONL 格式。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ARCHIVE_STORAGE_ENABLED` | `false` | 为工作流日志归档启用归档存储。 |
+| `ARCHIVE_STORAGE_ENDPOINT` | （为空） | S3 兼容端点 URL。 |
+| `ARCHIVE_STORAGE_ARCHIVE_BUCKET` | （为空） | 存放已归档工作流运行日志的存储桶。 |
+| `ARCHIVE_STORAGE_EXPORT_BUCKET` | （为空） | 存放工作流运行导出的存储桶。 |
+| `ARCHIVE_STORAGE_ACCESS_KEY` | （为空） | Access key。 |
+| `ARCHIVE_STORAGE_SECRET_KEY` | （为空） | Secret key。 |
+| `ARCHIVE_STORAGE_REGION` | `auto` | 存储区域。 |
+
+### 向量数据库配置
+
+配置用于知识库嵌入存储和相似度搜索的向量数据库。每个供应商都有各自的凭据变量，只需配置你使用的那个。
+
+### VECTOR_STORE
+
+默认值：`weaviate`
+
+选择向量数据库后端。如果某个数据集已建立索引，该数据集存储的类型优先于此设置。
+
+支持的值：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `VECTOR_INDEX_NAME_PREFIX` | `Vector_index` | 添加到向量数据库 collection 名称的前缀。如果多个 Dify 部署共用一个向量数据库实例，请更改此项。 |
+
+<AccordionGroup>
+<Accordion title="Weaviate">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API 端点。 |
+| `WEAVIATE_API_KEY` | （为空） | Weaviate 鉴权用的 API key。 |
+| `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 用于高性能二进制协议的独立 gRPC 端点。未设置时回退为从 HTTP 端点推断。 |
+| `WEAVIATE_TOKENIZATION` | `word` | 分词方式。可选：`word`、`whitespace`、`character`（对 CJK 语言更友好）。 |
+
+</Accordion>
+
+<Accordion title="OceanBase / seekdb">
+
+seekdb 是 OceanBase 的精简版，使用相同的连接配置。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` | 主机名或 IP 地址。 |
+| `OCEANBASE_VECTOR_PORT` | `2881` | 端口号。 |
+| `OCEANBASE_VECTOR_USER` | `root@test` | 数据库用户名。 |
+| `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | 数据库密码。 |
+| `OCEANBASE_VECTOR_DATABASE` | `test` | 数据库名。 |
+| `OCEANBASE_ENABLE_HYBRID_SEARCH` | `false` | 在向量搜索之外启用 BM25 查询的全文索引。要求 OceanBase >= 4.3.5.1。启用后必须重建 collection。 |
+| `OCEANBASE_FULLTEXT_PARSER` | `ik` | 全文解析器。内置：`ngram`、`beng`、`space`、`ngram2`、`ik`。 |
+
+</Accordion>
+
+<Accordion title="Qdrant">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `QDRANT_URL` | `http://qdrant:6333` | Qdrant 端点地址。 |
+| `QDRANT_API_KEY` | `difyai123456` | Qdrant 的 API key。 |
+| `QDRANT_CLIENT_TIMEOUT` | `20` | 客户端超时（秒）。 |
+| `QDRANT_GRPC_ENABLED` | `false` | 启用 gRPC 通信。 |
+| `QDRANT_GRPC_PORT` | `6334` | gRPC 端口。 |
+| `QDRANT_REPLICATION_FACTOR` | `1` | 每个分片的副本数。 |
+
+</Accordion>
+
+<Accordion title="Milvus">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI。使用 [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials) 时填 Public Endpoint。 |
+| `MILVUS_DATABASE` | （为空） | 数据库名。 |
+| `MILVUS_TOKEN` | （为空） | 鉴权令牌。使用 Zilliz Cloud 时填 API Key。 |
+| `MILVUS_USER` | （为空） | 用户名。 |
+| `MILVUS_PASSWORD` | （为空） | 密码。 |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | 为全文检索启用 BM25 稀疏索引。要求 Milvus >= 2.5.0。 |
+| `MILVUS_ANALYZER_PARAMS` | （为空） | 文本字段的分析器参数。 |
+| `MILVUS_SECURE` | `false` | 为 Milvus 连接启用单向 TLS。启用后，客户端通过 TLS 加密的 gRPC 连接并验证服务器证书。 |
+| `MILVUS_SERVER_PEM_PATH` | （为空） | 容器内 Milvus 服务器证书（PEM）的路径，在启用 `MILVUS_SECURE` 时用于验证服务器。 |
+| `MILVUS_SERVER_NAME` | （为空） | 用于验证的服务器名称（TLS SNI，需与证书的 CN 或 SAN 匹配）。设置 `MILVUS_SERVER_PEM_PATH` 时必填。 |
+
+</Accordion>
+
+<Accordion title="MyScale">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MYSCALE_HOST` | `myscale` | MyScale 主机。 |
+| `MYSCALE_PORT` | `8123` | MyScale 端口。 |
+| `MYSCALE_USER` | `default` | 用户名。 |
+| `MYSCALE_PASSWORD` | （为空） | 密码。 |
+| `MYSCALE_DATABASE` | `dify` | 数据库名。 |
+| `MYSCALE_FTS_PARAMS` | （为空） | 全文检索参数。[参考](https://myscale.com/docs/en/text-search/#understanding-fts-index-parameters)。 |
+
+</Accordion>
+
+<Accordion title="Couchbase">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `COUCHBASE_CONNECTION_STRING` | `couchbase://couchbase-server` | Couchbase 集群的连接字符串。 |
+| `COUCHBASE_USER` | `Administrator` | 用户名。 |
+| `COUCHBASE_PASSWORD` | `password` | 密码。 |
+| `COUCHBASE_BUCKET_NAME` | `Embeddings` | 存储桶名称。 |
+| `COUCHBASE_SCOPE_NAME` | `_default` | Scope 名称。 |
+
+</Accordion>
+
+<Accordion title="Hologres">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `HOLOGRES_HOST` | （为空） | 主机名。 |
+| `HOLOGRES_PORT` | `80` | 端口号。 |
+| `HOLOGRES_DATABASE` | （为空） | 数据库名。 |
+| `HOLOGRES_ACCESS_KEY_ID` | （为空） | Access key ID（用作 PG 用户名）。 |
+| `HOLOGRES_ACCESS_KEY_SECRET` | （为空） | Access key secret（用作 PG 密码）。 |
+| `HOLOGRES_SCHEMA` | `public` | Schema 名称。 |
+| `HOLOGRES_TOKENIZER` | `jieba` | 文本字段的分词器。 |
+| `HOLOGRES_DISTANCE_METHOD` | `Cosine` | 距离度量方法。 |
+| `HOLOGRES_BASE_QUANTIZATION_TYPE` | `rabitq` | 量化类型。 |
+| `HOLOGRES_MAX_DEGREE` | `64` | HNSW 最大度数。 |
+| `HOLOGRES_EF_CONSTRUCTION` | `400` | HNSW ef_construction 参数。 |
+
+</Accordion>
+
+<Accordion title="PGVector">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PGVECTOR_HOST` | `pgvector` | 主机名。 |
+| `PGVECTOR_PORT` | `5432` | 端口号。 |
+| `PGVECTOR_USER` | `postgres` | 用户名。 |
+| `PGVECTOR_PASSWORD` | `difyai123456` | 密码。 |
+| `PGVECTOR_DATABASE` | `dify` | 数据库名。 |
+| `PGVECTOR_MIN_CONNECTION` | `1` | 连接池最小连接数。 |
+| `PGVECTOR_MAX_CONNECTION` | `5` | 连接池最大连接数。 |
+| `PGVECTOR_PG_BIGM` | `false` | 启用 pg_bigm 扩展用于全文检索。 |
+
+</Accordion>
+
+<Accordion title="Vastbase">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `VASTBASE_HOST` | `vastbase` | 主机名。 |
+| `VASTBASE_PORT` | `5432` | 端口号。 |
+| `VASTBASE_USER` | `dify` | 用户名。 |
+| `VASTBASE_PASSWORD` | `Difyai123456` | 密码。 |
+| `VASTBASE_DATABASE` | `dify` | 数据库名。 |
+| `VASTBASE_MIN_CONNECTION` | `1` | 连接池最小连接数。 |
+| `VASTBASE_MAX_CONNECTION` | `5` | 连接池最大连接数。 |
+
+</Accordion>
+
+<Accordion title="PGVecto.RS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PGVECTO_RS_HOST` | `pgvecto-rs` | 主机名。 |
+| `PGVECTO_RS_PORT` | `5432` | 端口号。 |
+| `PGVECTO_RS_USER` | `postgres` | 用户名。 |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | 密码。 |
+| `PGVECTO_RS_DATABASE` | `dify` | 数据库名。 |
+
+</Accordion>
+
+<Accordion title="AnalyticDB">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ANALYTICDB_KEY_ID` | （为空） | 阿里云 access key ID。[创建 AccessKey](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/support/create-an-accesskey-pair)。 |
+| `ANALYTICDB_KEY_SECRET` | （为空） | 阿里云 access key secret。 |
+| `ANALYTICDB_REGION_ID` | `cn-hangzhou` | 区域标识。 |
+| `ANALYTICDB_INSTANCE_ID` | （为空） | 实例 ID，例如 `gp-xxxxxx`。[创建实例](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/create-an-instance-1)。 |
+| `ANALYTICDB_ACCOUNT` | （为空） | 账户名。[创建账户](https://help.aliyun.com/zh/analyticdb/analyticdb-for-postgresql/getting-started/createa-a-privileged-account)。 |
+| `ANALYTICDB_PASSWORD` | （为空） | 账户密码。 |
+| `ANALYTICDB_NAMESPACE` | `dify` | 命名空间（schema）。不存在时自动创建。 |
+| `ANALYTICDB_NAMESPACE_PASSWORD` | （为空） | 命名空间密码。 |
+| `ANALYTICDB_HOST` | （为空） | 直连主机（基于 API 访问的替代方案）。 |
+| `ANALYTICDB_PORT` | `5432` | 直连端口。 |
+| `ANALYTICDB_MIN_CONNECTION` | `1` | 连接池最小连接数。 |
+| `ANALYTICDB_MAX_CONNECTION` | `5` | 连接池最大连接数。 |
+
+</Accordion>
+
+<Accordion title="TiDB Vector">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `TIDB_VECTOR_HOST` | `tidb` | 主机名。 |
+| `TIDB_VECTOR_PORT` | `4000` | 端口号。 |
+| `TIDB_VECTOR_USER` | （为空） | 用户名。 |
+| `TIDB_VECTOR_PASSWORD` | （为空） | 密码。 |
+| `TIDB_VECTOR_DATABASE` | `dify` | 数据库名。 |
+
+</Accordion>
+
+<Accordion title="MatrixOne">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MATRIXONE_HOST` | `matrixone` | 主机名。 |
+| `MATRIXONE_PORT` | `6001` | 端口号。 |
+| `MATRIXONE_USER` | `dump` | 用户名。 |
+| `MATRIXONE_PASSWORD` | `111` | 密码。 |
+| `MATRIXONE_DATABASE` | `dify` | 数据库名。 |
+
+</Accordion>
+
+<Accordion title="Chroma">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CHROMA_HOST` | `127.0.0.1` | Chroma 服务器主机。 |
+| `CHROMA_PORT` | `8000` | Chroma 服务器端口。 |
+| `CHROMA_TENANT` | `default_tenant` | 租户名称。 |
+| `CHROMA_DATABASE` | `default_database` | 数据库名。 |
+| `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | 鉴权 provider 类。 |
+| `CHROMA_AUTH_CREDENTIALS` | （为空） | 鉴权凭据。 |
+
+</Accordion>
+
+<Accordion title="Oracle">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ORACLE_USER` | `dify` | Oracle 用户名。 |
+| `ORACLE_PASSWORD` | `dify` | Oracle 密码。 |
+| `ORACLE_DSN` | `oracle:1521/FREEPDB1` | 数据源名称。 |
+| `ORACLE_CONFIG_DIR` | `/app/api/storage/wallet` | Oracle 配置目录。 |
+| `ORACLE_WALLET_LOCATION` | `/app/api/storage/wallet` | Autonomous DB 的 wallet 位置。 |
+| `ORACLE_WALLET_PASSWORD` | `dify` | Wallet 密码。 |
+| `ORACLE_IS_AUTONOMOUS` | `false` | 是否使用 Oracle Autonomous Database。 |
+
+</Accordion>
+
+<Accordion title="AlibabaCloud MySQL">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ALIBABACLOUD_MYSQL_HOST` | `127.0.0.1` | 主机名。 |
+| `ALIBABACLOUD_MYSQL_PORT` | `3306` | 端口号。 |
+| `ALIBABACLOUD_MYSQL_USER` | `root` | 用户名。 |
+| `ALIBABACLOUD_MYSQL_PASSWORD` | `difyai123456` | 密码。 |
+| `ALIBABACLOUD_MYSQL_DATABASE` | `dify` | 数据库名。 |
+| `ALIBABACLOUD_MYSQL_MAX_CONNECTION` | `5` | 连接池最大连接数。 |
+| `ALIBABACLOUD_MYSQL_HNSW_M` | `6` | HNSW M 参数。 |
+
+</Accordion>
+
+<Accordion title="Relyt">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `RELYT_HOST` | `db` | 主机名。 |
+| `RELYT_PORT` | `5432` | 端口号。 |
+| `RELYT_USER` | `postgres` | 用户名。 |
+| `RELYT_PASSWORD` | `difyai123456` | 密码。 |
+| `RELYT_DATABASE` | `postgres` | 数据库名。 |
+
+</Accordion>
+
+<Accordion title="OpenSearch">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `OPENSEARCH_HOST` | `opensearch` | 主机名。 |
+| `OPENSEARCH_PORT` | `9200` | 端口号。 |
+| `OPENSEARCH_SECURE` | `true` | 使用 HTTPS。 |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | 校验 SSL 证书。 |
+| `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` 使用用户名/密码，`aws_managed_iam` 通过 Boto3 凭据使用 AWS SigV4 请求签名。 |
+| `OPENSEARCH_USER` | `admin` | 用户名。仅在 `basic` 鉴权时使用。 |
+| `OPENSEARCH_PASSWORD` | `admin` | 密码。仅在 `basic` 鉴权时使用。 |
+| `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS 区域。仅在 `aws_managed_iam` 鉴权时使用。 |
+| `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS 服务类型：`es`（Managed Cluster）或 `aoss`（OpenSearch Serverless）。 |
+
+</Accordion>
+
+<Accordion title="Tencent Cloud VectorDB">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `TENCENT_VECTOR_DB_URL` | `http://127.0.0.1` | 访问地址。[控制台](https://console.cloud.tencent.com/vdb)。 |
+| `TENCENT_VECTOR_DB_API_KEY` | `dify` | API key。[密钥管理](https://cloud.tencent.com/document/product/1709/95108)。 |
+| `TENCENT_VECTOR_DB_TIMEOUT` | `30` | 请求超时（秒）。 |
+| `TENCENT_VECTOR_DB_USERNAME` | `dify` | 账户名。[账户管理](https://cloud.tencent.com/document/product/1709/115833)。 |
+| `TENCENT_VECTOR_DB_DATABASE` | `dify` | 数据库名。[创建数据库](https://cloud.tencent.com/document/product/1709/95822)。 |
+| `TENCENT_VECTOR_DB_SHARD` | `1` | 分片数。 |
+| `TENCENT_VECTOR_DB_REPLICAS` | `2` | 副本数。 |
+| `TENCENT_VECTOR_DB_ENABLE_HYBRID_SEARCH` | `false` | 启用混合检索。[稀疏向量文档](https://cloud.tencent.com/document/product/1709/110110)。 |
+
+</Accordion>
+
+<Accordion title="Elasticsearch">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ELASTICSEARCH_HOST` | `0.0.0.0` | 主机名。 |
+| `ELASTICSEARCH_PORT` | `9200` | 端口号。 |
+| `ELASTICSEARCH_USERNAME` | `elastic` | 用户名。 |
+| `ELASTICSEARCH_PASSWORD` | `elastic` | 密码。 |
+| `ELASTICSEARCH_USE_CLOUD` | `false` | 切换到 Elastic Cloud 模式。为 `true` 时使用 `ELASTICSEARCH_CLOUD_URL` 和 `ELASTICSEARCH_API_KEY`，而非主机/端口/用户名/密码。 |
+| `ELASTICSEARCH_CLOUD_URL` | （为空） | Elastic Cloud 端点 URL。`ELASTICSEARCH_USE_CLOUD=true` 时必填。 |
+| `ELASTICSEARCH_API_KEY` | （为空） | Elastic Cloud API key。`ELASTICSEARCH_USE_CLOUD=true` 时必填。 |
+| `ELASTICSEARCH_VERIFY_CERTS` | `false` | 校验 SSL 证书。 |
+| `ELASTICSEARCH_CA_CERTS` | （为空） | CA 证书路径。 |
+| `ELASTICSEARCH_REQUEST_TIMEOUT` | `100000` | 请求超时（毫秒）。 |
+| `ELASTICSEARCH_RETRY_ON_TIMEOUT` | `true` | 超时时重试。 |
+| `ELASTICSEARCH_MAX_RETRIES` | `10` | 最大重试次数。 |
+
+</Accordion>
+
+<Accordion title="Baidu Vector DB">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `BAIDU_VECTOR_DB_ENDPOINT` | `http://127.0.0.1:5287` | 端点 URL。 |
+| `BAIDU_VECTOR_DB_CONNECTION_TIMEOUT_MS` | `30000` | 连接超时（毫秒）。 |
+| `BAIDU_VECTOR_DB_ACCOUNT` | `root` | 账户名。 |
+| `BAIDU_VECTOR_DB_API_KEY` | `dify` | API key。 |
+| `BAIDU_VECTOR_DB_DATABASE` | `dify` | 数据库名。 |
+| `BAIDU_VECTOR_DB_SHARD` | `1` | 分片数。 |
+| `BAIDU_VECTOR_DB_REPLICAS` | `3` | 副本数。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_ANALYZER` | `DEFAULT_ANALYZER` | 倒排索引分析器。 |
+| `BAIDU_VECTOR_DB_INVERTED_INDEX_PARSER_MODE` | `COARSE_MODE` | 倒排索引解析器模式。 |
+| `BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT` | `500` | 触发自动重建索引的行数绝对增量。与 `_RATIO` 配合，任一阈值先达到即触发。 |
+| `BAIDU_VECTOR_DB_AUTO_BUILD_ROW_COUNT_INCREMENT_RATIO` | `0.05` | 触发自动重建索引的相对增长。任一阈值先达到即触发。 |
+| `BAIDU_VECTOR_DB_REBUILD_INDEX_TIMEOUT_IN_SECONDS` | `300` | 客户端等待索引重建完成的最长时间。 |
+
+</Accordion>
+
+<Accordion title="VikingDB">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `VIKINGDB_ACCESS_KEY` | （为空） | Access key。 |
+| `VIKINGDB_SECRET_KEY` | （为空） | Secret key。 |
+| `VIKINGDB_REGION` | `cn-shanghai` | 区域。 |
+| `VIKINGDB_HOST` | `api-vikingdb.xxx.volces.com` | API 主机。替换为你所在区域的端点。 |
+| `VIKINGDB_SCHEME` | `http` | 协议（`http` 或 `https`）。 |
+| `VIKINGDB_CONNECTION_TIMEOUT` | `30` | 连接超时（秒）。 |
+| `VIKINGDB_SOCKET_TIMEOUT` | `30` | 套接字超时（秒）。 |
+
+</Accordion>
+
+<Accordion title="Lindorm">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `LINDORM_URL` | `http://localhost:30070` | Lindorm 搜索引擎 URL。[控制台](https://lindorm.console.aliyun.com/)。 |
+| `LINDORM_USERNAME` | `admin` | 用户名。 |
+| `LINDORM_PASSWORD` | `admin` | 密码。 |
+| `LINDORM_USING_UGC` | `true` | 使用 UGC 模式。 |
+| `LINDORM_QUERY_TIMEOUT` | `1` | 查询超时（秒）。 |
+
+</Accordion>
+
+<Accordion title="OpenGauss">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `OPENGAUSS_HOST` | `opengauss` | 主机名。 |
+| `OPENGAUSS_PORT` | `6600` | 端口号。 |
+| `OPENGAUSS_USER` | `postgres` | 用户名。 |
+| `OPENGAUSS_PASSWORD` | `Dify@123` | 密码。 |
+| `OPENGAUSS_DATABASE` | `dify` | 数据库名。 |
+| `OPENGAUSS_MIN_CONNECTION` | `1` | 连接池最小连接数。 |
+| `OPENGAUSS_MAX_CONNECTION` | `5` | 连接池最大连接数。 |
+| `OPENGAUSS_ENABLE_PQ` | `false` | 启用 PQ 加速。 |
+
+</Accordion>
+
+<Accordion title="Huawei Cloud Search">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `HUAWEI_CLOUD_HOSTS` | `https://127.0.0.1:9200` | 集群端点 URL。 |
+| `HUAWEI_CLOUD_USER` | `admin` | 用户名。 |
+| `HUAWEI_CLOUD_PASSWORD` | `admin` | 密码。 |
+
+</Accordion>
+
+<Accordion title="Upstash Vector">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `UPSTASH_VECTOR_URL` | （为空） | Upstash Vector 端点 URL。 |
+| `UPSTASH_VECTOR_TOKEN` | （为空） | Upstash Vector API 令牌。 |
+
+</Accordion>
+
+<Accordion title="TableStore">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `TABLESTORE_ENDPOINT` | `https://instance-name.cn-hangzhou.ots.aliyuncs.com` | 端点地址。将 `instance-name` 替换为你的实例。 |
+| `TABLESTORE_INSTANCE_NAME` | （为空） | 实例名称。 |
+| `TABLESTORE_ACCESS_KEY_ID` | （为空） | Access key ID。 |
+| `TABLESTORE_ACCESS_KEY_SECRET` | （为空） | Access key secret。 |
+| `TABLESTORE_NORMALIZE_FULLTEXT_BM25_SCORE` | `false` | 归一化全文 BM25 分数。 |
+
+</Accordion>
+
+<Accordion title="ClickZetta">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CLICKZETTA_USERNAME` | （为空） | 用户名。 |
+| `CLICKZETTA_PASSWORD` | （为空） | 密码。 |
+| `CLICKZETTA_INSTANCE` | （为空） | 实例名称。 |
+| `CLICKZETTA_SERVICE` | `api.clickzetta.com` | 服务端点。 |
+| `CLICKZETTA_WORKSPACE` | `quick_start` | 工作空间名称。 |
+| `CLICKZETTA_VCLUSTER` | `default_ap` | 虚拟集群。 |
+| `CLICKZETTA_SCHEMA` | `dify` | Schema 名称。 |
+| `CLICKZETTA_BATCH_SIZE` | `100` | 操作的批处理大小。 |
+| `CLICKZETTA_ENABLE_INVERTED_INDEX` | `true` | 启用倒排索引。 |
+| `CLICKZETTA_ANALYZER_TYPE` | `chinese` | 分析器类型。 |
+| `CLICKZETTA_ANALYZER_MODE` | `smart` | 分析器模式。 |
+| `CLICKZETTA_VECTOR_DISTANCE_FUNCTION` | `cosine_distance` | 距离函数。 |
+
+</Accordion>
+
+<Accordion title="InterSystems IRIS">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `IRIS_HOST` | `iris` | 主机名。 |
+| `IRIS_SUPER_SERVER_PORT` | `1972` | Super server 端口。 |
+| `IRIS_USER` | `_SYSTEM` | 用户名。 |
+| `IRIS_PASSWORD` | `Dify@1234` | 密码。 |
+| `IRIS_DATABASE` | `USER` | 数据库名。 |
+| `IRIS_SCHEMA` | `dify` | Schema 名称。 |
+| `IRIS_CONNECTION_URL` | （为空） | 完整连接 URL（覆盖单项设置）。 |
+| `IRIS_MIN_CONNECTION` | `1` | 连接池最小连接数。 |
+| `IRIS_MAX_CONNECTION` | `3` | 连接池最大连接数。 |
+| `IRIS_TEXT_INDEX` | `true` | 启用文本索引。 |
+| `IRIS_TEXT_INDEX_LANGUAGE` | `en` | 文本索引语言。 |
+
+</Accordion>
+</AccordionGroup>
+
+### 知识库配置
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `UPLOAD_FILE_SIZE_LIMIT` | `15` (Helm default) | 文档上传（PDF、Word 文档等）的最大文件大小（MB）。超出时用户会看到「文件过大」错误。通过 `values.yaml` 中的 `api.limits.uploadFileSize` 设置。 |
+| `UPLOAD_FILE_BATCH_LIMIT` | `5` (Helm default) | 单次上传批次允许的最大文件数。通过 `api.limits.uploadFileBatchCount` 设置。 |
+| `UPLOAD_FILE_EXTENSION_BLACKLIST` | （为空） | 禁止上传的文件扩展名安全黑名单。逗号分隔、小写、不带点。范例：`exe,bat,cmd,com,scr,vbs,ps1,msi,dll`。 |
+| `SINGLE_CHUNK_ATTACHMENT_LIMIT` | `10` | 单个知识库分段（chunk）中可嵌入的最大图片数。 |
+| `IMAGE_FILE_BATCH_LIMIT` | `10` | 单次上传批次的最大图片文件数。 |
+| `ATTACHMENT_IMAGE_FILE_SIZE_LIMIT` | `2` | 知识库索引期间从外部 URL 抓取图片的最大大小（MB）。区别于针对直接上传的 `UPLOAD_IMAGE_FILE_SIZE_LIMIT`。 |
+| `ATTACHMENT_IMAGE_DOWNLOAD_TIMEOUT` | `60` | 知识库索引期间从外部 URL 下载图片的超时（秒）。 |
+| `ETL_TYPE` | `dify` (Helm default) | 文档提取库。`dify` 支持 txt、md、pdf、html、xlsx、docx、csv，`Unstructured` 额外支持 doc、msg、eml、ppt、pptx、xml、epub。当 `global.rag.etlType` 为 `Unstructured` 时，chart 会设置 `Unstructured` 并自动接入 `UNSTRUCTURED_API_URL`。 |
+| `UNSTRUCTURED_API_URL` | （为空；`etlType=Unstructured` 时由 chart 设置） | Unstructured.io API 端点。`ETL_TYPE` 为 `Unstructured` 时必填。 |
+| `UNSTRUCTURED_API_KEY` | （为空） | Unstructured.io 鉴权用的 API key。 |
+| `SCARF_NO_ANALYTICS` | `true` | 禁用 Unstructured 库的遥测采集。 |
+| `TOP_K_MAX_VALUE` | `10` (Helm default) | 用户在知识库检索中可为 `top_k` 参数设置的最大值。通过 `global.rag.topKMaxValue` 设置。 |
+| `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | 每次 dataset API 请求的最大分段数。`0` 表示不限。 |
+
+#### 标注导入
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ANNOTATION_IMPORT_FILE_SIZE_LIMIT` | `2` | 标注导入的最大 CSV 文件大小（MB）。超出时返回 HTTP 413。 |
+| `ANNOTATION_IMPORT_MAX_RECORDS` | `10000` | 每次标注导入的最大记录数。 |
+| `ANNOTATION_IMPORT_MIN_RECORDS` | `1` | 每次标注导入所需的最少有效记录数。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_MINUTE` | `5` | 每个工作空间每分钟的最大标注导入请求数。超出时返回 HTTP 429。 |
+| `ANNOTATION_IMPORT_RATE_LIMIT_PER_HOUR` | `20` | 每个工作空间每小时的最大标注导入请求数。 |
+| `ANNOTATION_IMPORT_MAX_CONCURRENT` | `5` | 每个工作空间的最大并发标注导入任务数。 |
+
+### 模型配置
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_BASED_TOKEN_COUNTING_ENABLED` | `false` | 使用基于插件的 token 计数以精确跟踪用量。禁用时 token 计数返回 0（更快，但成本跟踪不够准确）。 |
+
+### 多模态配置
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MULTIMODAL_SEND_FORMAT` | `base64` | 文件发送给多模态 LLM 的方式。`base64` 将文件数据嵌入请求（兼容性更好），`url` 发送签名 URL 供模型抓取（更快、请求更小，但模型必须能访问 `FILES_URL`）。 |
+| `UPLOAD_IMAGE_FILE_SIZE_LIMIT` | `5` (Helm default) | 直接上传的最大图片文件大小（MB，jpg、png、webp、gif、svg）。chart 默认 5（应用默认 10）。通过 `api.limits.uploadImageFileSize` 设置。 |
+| `UPLOAD_VIDEO_FILE_SIZE_LIMIT` | `100` | 直接上传的最大视频文件大小（MB，mp4、mov、mpeg、webm）。 |
+| `UPLOAD_AUDIO_FILE_SIZE_LIMIT` | `50` | 直接上传的最大音频文件大小（MB，mp3、m4a、wav、amr、mpga）。 |
+
+### Sentry 配置
+
+Sentry 提供错误跟踪和性能监控。在 Helm 部署中，通过 `values.yaml`（`api.sentry`、`worker.sentry`、`web.sentry`）按服务启用 Sentry。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SENTRY_DSN` | （为空） | Sentry DSN。启用 Sentry 时由 chart 按服务设置。 |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | 纳入性能追踪的请求比例（0.01 = 1%）。 |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 纳入 CPU/内存性能分析的请求比例。 |
+| `PLUGIN_SENTRY_ENABLED` | `false` | 为插件守护进程服务启用 Sentry。 |
+| `PLUGIN_SENTRY_DSN` | （为空） | 插件守护进程的 Sentry DSN。 |
+
+### Notion 集成配置
+
+将 Dify 连接到 Notion 作为知识库数据源。在 [https://www.notion.so/my-integrations](https://www.notion.so/my-integrations) 获取集成凭据。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `NOTION_INTEGRATION_TYPE` | `public` | `public` 使用标准 OAuth 2.0（需要 HTTPS 重定向 URL，以及 CLIENT_ID 和 CLIENT_SECRET），`internal` 使用直连集成令牌（支持 HTTP）。 |
+| `NOTION_CLIENT_SECRET` | （为空） | OAuth client secret。`public` 集成必填。 |
+| `NOTION_CLIENT_ID` | （为空） | OAuth client ID。`public` 集成必填。 |
+| `NOTION_INTERNAL_SECRET` | （为空） | 来自 Notion 的直连集成令牌。`internal` 集成必填。 |
+
+### 邮件配置
+
+Dify 会为账户邀请、密码重置、登录验证码和 Human Input 节点通知发送邮件。配置三种受支持的服务商之一。邮件链接要求设置 `CONSOLE_WEB_URL`（见 [通用变量](#console_web_url)）。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MAIL_TYPE` | `resend` | 邮件服务商：`resend`、`smtp` 或 `sendgrid`。 |
+| `MAIL_DEFAULT_SEND_FROM` | （为空） | 所有外发邮件的默认「From」地址。必填。 |
+
+<AccordionGroup>
+<Accordion title="Resend">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `RESEND_API_URL` | `https://api.resend.com` | Resend API 端点。自托管 Resend 或代理时可覆盖。 |
+| `RESEND_API_KEY` | （为空） | Resend API key。`MAIL_TYPE=resend` 时必填。 |
+
+</Accordion>
+
+<Accordion title="SMTP">
+
+三种 TLS 模式：隐式 TLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=false`、端口 465）、STARTTLS（`SMTP_USE_TLS=true`、`SMTP_OPPORTUNISTIC_TLS=true`、端口 587）或明文（`SMTP_USE_TLS=false`、端口 25）。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SMTP_SERVER` | （为空） | SMTP 服务器地址。 |
+| `SMTP_PORT` | `465` | SMTP 服务器端口。STARTTLS 模式用 `587`。 |
+| `SMTP_USERNAME` | （为空） | SMTP 用户名。对 IP 白名单服务器可为空。 |
+| `SMTP_PASSWORD` | （为空） | SMTP 密码。对 IP 白名单服务器可为空。 |
+| `SMTP_USE_TLS` | `true` | 启用 TLS。配合 `SMTP_OPPORTUNISTIC_TLS=false` 时使用隐式 TLS。 |
+| `SMTP_OPPORTUNISTIC_TLS` | `false` | 使用 STARTTLS（显式 TLS）而非隐式 TLS。必须与 `SMTP_USE_TLS=true` 一起使用。 |
+| `SMTP_LOCAL_HOSTNAME` | （为空） | 覆盖 SMTP HELO/EHLO 中发送的主机名。当你的 SMTP 服务器拒绝容器主机名时必填（Google Workspace、Microsoft 365 常见）。 |
+
+</Accordion>
+
+<Accordion title="SendGrid">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SENDGRID_API_KEY` | （为空） | SendGrid API key。`MAIL_TYPE=sendgrid` 时必填。 |
+
+更多细节见 [SendGrid 文档](https://www.twilio.com/docs/sendgrid/for-developers/sending-email/api-getting-started)。
+
+</Accordion>
+</AccordionGroup>
+
+### 其他配置
+
+#### 索引
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH` | `4000` (Helm default) | 为知识库分段文档时，每个文本片段的最大 token 长度。值越大每个分段保留的上下文越多，值越小粒度越细。通过 `global.rag.indexingMaxSegmentationTokensLength` 设置。 |
+
+#### Token 与邀请
+
+所有 token 过期变量都控制存于 Redis 的一次性令牌保持有效的时长。过期后用户须重新申请新令牌。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `INVITE_EXPIRY_HOURS` | `72` | 工作空间邀请链接的有效时长（小时）。 |
+| `RESET_PASSWORD_TOKEN_EXPIRY_MINUTES` | `5` | 密码重置令牌的有效期（分钟）。 |
+| `EMAIL_REGISTER_TOKEN_EXPIRY_MINUTES` | `5` | 邮箱注册令牌的有效期（分钟）。 |
+| `OWNER_TRANSFER_TOKEN_EXPIRY_MINUTES` | `5` | 工作空间所有者转移令牌的有效期（分钟）。 |
+
+#### 代码执行沙箱
+
+沙箱是一个独立服务，在隔离环境中运行 Python、JavaScript 和 Jinja2 代码节点。chart 会自动将 `CODE_EXECUTION_ENDPOINT` 指向集群内的沙箱服务。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CODE_EXECUTION_ENDPOINT` | 集群内沙箱服务 (Helm default) | 沙箱服务端点。chart 将其指向内置的沙箱服务。 |
+| `CODE_EXECUTION_API_KEY` | `dify-sandbox` | 沙箱鉴权用的 API key。必须与沙箱服务中的 `SANDBOX_API_KEY` 一致。 |
+| `CODE_EXECUTION_SSL_VERIFY` | `true` | 校验沙箱连接的 SSL。 |
+| `CODE_EXECUTION_CONNECT_TIMEOUT` | `10` | 连接超时（秒）。 |
+| `CODE_EXECUTION_READ_TIMEOUT` | `60` | 读取超时（秒）。 |
+| `CODE_EXECUTION_WRITE_TIMEOUT` | `10` | 写入超时（秒）。 |
+| `CODE_EXECUTION_POOL_MAX_CONNECTIONS` | `100` | 到沙箱服务的最大并发 HTTP 连接数。 |
+| `CODE_EXECUTION_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | 沙箱连接池中保持存活的最大空闲连接数。 |
+| `CODE_EXECUTION_POOL_KEEPALIVE_EXPIRY` | `5.0` | 空闲沙箱连接被关闭前的秒数。 |
+| `CODE_MAX_NUMBER` | `9223372036854775807` | 代码节点输出允许的最大数值。 |
+| `CODE_MIN_NUMBER` | `-9223372036854775808` | 代码节点输出允许的最小数值。 |
+| `CODE_MAX_STRING_LENGTH` | `400000` | 代码节点输出的最大字符串长度。 |
+| `CODE_MAX_DEPTH` | `5` | 输出数据结构的最大嵌套深度。 |
+| `CODE_MAX_PRECISION` | `20` | 输出中浮点数的最大小数位数。 |
+| `CODE_MAX_STRING_ARRAY_LENGTH` | `30` | 字符串数组输出的最大元素数。 |
+| `CODE_MAX_OBJECT_ARRAY_LENGTH` | `30` | 对象数组输出的最大元素数。 |
+| `CODE_MAX_NUMBER_ARRAY_LENGTH` | `1000` | 数值数组输出的最大元素数。 |
+| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | 模板转换节点输出的最大字符长度。 |
+
+#### 工作流运行时
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 单次工作流运行的最大节点执行数。超出会终止工作流。 |
+| `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | 单次工作流运行的最大墙钟时间（秒）。 |
+| `WORKFLOW_CALL_MAX_DEPTH` | `5` | 工作流嵌套调用工作流的最大深度。防止无限递归。 |
+| `MAX_VARIABLE_SIZE` | `204800` | 单个工作流变量的最大大小（字节，200 KB）。 |
+| `WORKFLOW_FILE_UPLOAD_LIMIT` | `10` | 单次工作流执行可上传的最大文件数。 |
+| `WORKFLOW_NODE_EXECUTION_STORAGE` | `rdbms` | 工作流节点执行记录的存储位置。`rdbms` 将所有内容存于数据库，`hybrid` 将新数据存于对象存储并从两者读取。 |
+| `DSL_EXPORT_ENCRYPT_DATASET_ID` | `true` | 导出 DSL 文件时加密 dataset ID。设为 `false` 可导出明文 ID，便于跨环境导入。 |
+
+#### 工作流存储仓库
+
+以下变量选择由哪个后端实现处理工作流执行数据。默认的 SQLAlchemy 仓库将所有内容存于数据库。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CORE_WORKFLOW_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_execution_repository.SQLAlchemyWorkflowExecutionRepository` | 工作流执行记录的仓库实现。 |
+| `CORE_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `core.repositories.sqlalchemy_workflow_node_execution_repository.SQLAlchemyWorkflowNodeExecutionRepository` | 工作流节点执行记录的仓库实现。 |
+| `API_WORKFLOW_RUN_REPOSITORY` | `repositories.sqlalchemy_api_workflow_run_repository.DifyAPISQLAlchemyWorkflowRunRepository` | 工作流运行 API 操作的服务层仓库。 |
+| `API_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `repositories.sqlalchemy_api_workflow_node_execution_repository.DifyAPISQLAlchemyWorkflowNodeExecutionRepository` | 工作流节点执行 API 操作的服务层仓库。 |
+| `LOOP_NODE_MAX_COUNT` | `100` | Loop 节点的最大迭代次数。防止无限循环。 |
+| `MAX_PARALLEL_LIMIT` | `10` | 工作流中并行分支的最大数量。 |
+
+#### GraphEngine Worker 池
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `GRAPH_ENGINE_MIN_WORKERS` | `3` | 每个 GraphEngine 实例的最小 worker 数。 |
+| `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的最大 worker 数。 |
+| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `3` | 触发新增 worker 的队列深度。 |
+| `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 移除多余 worker 前的空闲时间（秒）。 |
+
+#### 工作流日志清理
+
+chart 通过 `workerBeat.enableWorkflowLogCleanup` 启用此功能，它会在 beat ConfigMap 上设置 `WORKFLOW_LOG_CLEANUP_ENABLED`。其余变量不由 chart 设置，请通过 worker 和 beat 服务的 `extraEnv` 配置。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WORKFLOW_LOG_CLEANUP_ENABLED` | `false` (Helm default) | 启用每天凌晨 2:00 自动清理工作流执行日志。通过 `workerBeat.enableWorkflowLogCleanup` 设置。 |
+| `WORKFLOW_LOG_RETENTION_DAYS` | `30` | 清理前保留工作流日志的天数。 |
+| `WORKFLOW_LOG_CLEANUP_BATCH_SIZE` | `100` | 每个清理批次处理的日志条数。 |
+| `WORKFLOW_LOG_CLEANUP_SPECIFIC_WORKFLOW_IDS` | （为空） | 限定清理范围的工作流 ID 列表，逗号分隔。为空时清理所有工作流日志。 |
+
+#### HTTP Request 节点
+
+以下变量用于配置工作流中调用外部 API 的 HTTP Request 节点。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `HTTP_REQUEST_NODE_MAX_TEXT_SIZE` | `1048576` | 最大文本响应大小（字节，1 MB）。超过此值的响应会被截断。 |
+| `HTTP_REQUEST_NODE_MAX_BINARY_SIZE` | `10485760` | 最大二进制响应大小（字节，10 MB）。 |
+| `HTTP_REQUEST_NODE_SSL_VERIFY` | `true` | 校验 SSL 证书。用自签名证书测试时可禁用。 |
+| `HTTP_REQUEST_MAX_CONNECT_TIMEOUT` | `10` | 用户在工作流编辑器中可设置的最大连接超时（秒）。 |
+| `HTTP_REQUEST_MAX_READ_TIMEOUT` | `600` | 读取超时上限（秒）。 |
+| `HTTP_REQUEST_MAX_WRITE_TIMEOUT` | `600` | 写入超时上限（秒）。 |
+
+#### Webhook
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `WEBHOOK_REQUEST_BODY_MAX_SIZE` | `10485760` | 最大 webhook 负载大小（字节，10 MB）。更大的负载会被拒绝并返回 413 错误。 |
+
+#### SSRF 防护
+
+Dify 所有出站 HTTP 请求（HTTP 节点、图片下载等）都经由一个代理路由，该代理会拦截发往内部/私有 IP 段的请求，防止服务端请求伪造（SSRF）攻击。启用 SSRF 代理时，chart 会自动设置 `SSRF_PROXY_HTTP_URL` 和 `SSRF_PROXY_HTTPS_URL`。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SSRF_PROXY_HTTP_URL` | 集群内 SSRF 代理 (Helm default) | HTTP 请求的 SSRF 代理 URL。 |
+| `SSRF_PROXY_HTTPS_URL` | 集群内 SSRF 代理 (Helm default) | HTTPS 请求的 SSRF 代理 URL。 |
+| `SSRF_POOL_MAX_CONNECTIONS` | `100` | SSRF HTTP 客户端池的最大并发连接数。 |
+| `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | SSRF 池中保持存活的最大空闲连接数。 |
+| `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | 空闲 SSRF 连接被关闭前的秒数。 |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （为空） | 允许通过代理的私有 IP 或 CIDR 网段列表（以逗号或空格分隔），用于覆盖默认对私有网络的拦截。当 HTTP 或工具请求需要访问特定内部主机时使用。 |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （为空） | 允许通过代理的内部域名列表（以逗号或空格分隔），用于覆盖默认对私有网络的拦截。 |
+| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | 信任反向代理传来的 X-Forwarded-For/Proto/Port 头。仅在单个可信反向代理之后启用。 |
+
+#### Agent 配置
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `MAX_TOOLS_NUM` | `10` | 一个 agent 可同时使用的最大工具数。 |
+| `MAX_ITERATIONS_NUM` | `99` | 单次 agent 执行的最大推理迭代次数。 |
+
+#### UPLOAD_SKILL_FILE_SIZE_LIMIT
+
+默认值：`50`
+
+导入 Skill 库或作为内嵌 Skill 上传到 Agent 的 `.zip` 或 `.skill` 包的最大大小（MB）。通过 `api.extraEnv` 设置。
+
+#### Dify CLI 与编程 API
+
+| 变量 | 默认值 | 说明 |
+|:---|:---|:---|
+| `OPENAPI_ENABLED` | `false` | 启用 `/openapi/v1/*` 接口组（供 `difyctl` 及其他编程客户端使用）。为 `false` 时 chart 同时会关闭网关路由。通过 `api.openapi.enabled` 设置。 |
+| `ENABLE_OAUTH_BEARER` | `true` | OAuth bearer 中间件：校验设备流令牌与服务 API 的 bearer 认证。CLI 登录流程依赖它。通过 `api.enableOauthBearer` 设置。 |
+
+## Web 前端服务
+
+以下变量仅由 Next.js web 前端容器使用，不影响 Python 后端。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `TEXT_GENERATION_TIMEOUT_MS` | `60000` | 流式文本生成 UI 的前端超时。若数据流停滞超过此时长，UI 会暂停渲染。 |
+| `ALLOW_INLINE_STYLES` | `false` | 允许用户生成的 Markdown 内容中使用内联 `style` 属性和 `<style>` 块。出于安全考虑默认禁用。 |
+| `ALLOW_UNSAFE_DATA_SCHEME` | `false` | 允许渲染使用 `data:` 协议的 URL。出于安全考虑默认禁用。 |
+| `MARKETPLACE_URL` | 由 chart 设置 (Helm default) | 前端中展示的市场 web URL。通过 `global.marketplace.url` 设置。 |
+
+## 企业版专属配置
+
+以下变量仅适用于 Dify 企业版。当 `enterprise.enabled` 为 `true` 时，Helm chart 会将它们设置到 API 和 worker 的 ConfigMap 上。
+
+<Warning>
+Dify Enterprise 3.13.0 用 `DEPLOYMENT_EDITION`（取值 `ENTERPRISE` 或 `COMMUNITY`）替代了 `ENTERPRISE_ENABLED`。chart 会自动设置新变量；升级时请同步更新仍引用 `ENTERPRISE_ENABLED` 的 `extraEnv` 条目、自定义 overlay 或自动化脚本。
+</Warning>
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `DEPLOYMENT_EDITION` | `ENTERPRISE`（启用企业版时由 chart 设置） | 服务运行的部署版本：`COMMUNITY` 或 `ENTERPRISE`，自 Dify Enterprise 3.13.0 起替代 `ENTERPRISE_ENABLED`。启用企业版功能前请就授权事宜联系你的 Dify 代表。 |
+| `CAN_REPLACE_LOGO` | `true`（启用企业版时的 Helm default） | 允许自定义工作空间/控制台 Logo。chart 为企业版部署将其设为 `true`。 |
+| `MODEL_LB_ENABLED` | `true`（启用企业版时的 Helm default） | 为某个模型在多个凭据间启用负载均衡。chart 为企业版部署将其设为 `true`（应用默认为 `false`）。 |
+| `ENTERPRISE_API_URL` | 集群内企业版服务 (Helm default) | 企业版后端服务的内部 URL。由 chart 自动设置。 |
+| `ENTERPRISE_REQUEST_TIMEOUT` | `5` | Dify API 调用企业版后端的最大超时（秒）。 |
+| `ENTERPRISE_DISABLE_RUNTIME_CREDENTIAL_CHECK` | `false` | 为 `true` 时，凭据策略检查仅在保存工作流时进行，而非运行时。以一致性换取运行时性能。 |
+| `ENABLE_LICENSE_EXPIRY_NOTICE` | `true` | 许可证临近到期时，在控制台显示到期倒计时角标。设为 `false` 可隐藏角标，许可证状态与相关限制不受影响。通过 api 服务的 `extraEnv` 配置（chart 不设置此变量）。Dify Enterprise 3.12.1 起可用。 |
+| `RBAC_ENABLED` | `true`（`enterpriseRbac.enabled` 为 `true` 时由 chart 设置） | 启用 RBAC 权限服务集成。Dify Enterprise 3.12.1 起，chart 也会将其设置到 worker 的 ConfigMap，使 worker 执行相同的权限检查。 |
+| `ENTERPRISE_RBAC_API_URL` | 集群内 RBAC 服务（Helm 默认） | 企业版 RBAC 服务的内部地址。由 chart 随 `RBAC_ENABLED` 一同自动设置。 |
+| `INNER_API` | `true`（启用 inner API 时由 chart 设置） | 启用用于服务间调用的内部 API。 |
+| `EDITION` | `SELF_HOSTED` | 部署形态标识，在控制台侧暴露为 `deployment_edition`。保持默认值；其他取值会启用企业部署中无法工作的托管服务行为。通过 `global.edition` 设置。 |
+| `WEBAPP_PUBLIC_ACCESS_ENABLED` | `true` | 是否允许将 Web 应用的访问级别设为公开（任何拥有链接的人无需认证即可访问）。设为 `false` 将在整个部署关闭公开访问，Web 应用访问控制中的「任何人」选项会置灰。通过 `enterprise.webappPublicAccessEnabled` 设置。 |
+
+### 企业版遥测
+
+用于企业版审计和追踪的 OpenTelemetry 导出。当 `enterprise.enabled` 和 `global.otel.enabled` 均为 `true` 时，chart 会启用这些变量，并将端点接入集群内的企业版收集器。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ENTERPRISE_TELEMETRY_ENABLED` | `false`（启用 OTel 时由 chart 设为 `true`） | 启用企业版遥测采集。同时要求企业版部署（`DEPLOYMENT_EDITION=ENTERPRISE`）。 |
+| `ENTERPRISE_OTLP_ENDPOINT` | 集群内收集器 (Helm default) | 企业版 OTel 收集器端点。 |
+| `ENTERPRISE_OTLP_PROTOCOL` | `grpc`（Helm default；应用默认 `http`） | OTLP 协议：`http` 或 `grpc`。 |
+| `ENTERPRISE_OTLP_HEADERS` | （为空） | OTLP 导出的鉴权头（`key=value,key2=value2`）。 |
+| `ENTERPRISE_OTLP_API_KEY` | （为空） | 企业版 OTLP 导出鉴权的 Bearer 令牌。 |
+| `ENTERPRISE_INCLUDE_CONTENT` | `false` | 在追踪中包含输入/输出内容。默认关闭，以免记录敏感数据。 |
+| `ENTERPRISE_SERVICE_NAME` | `dify` | OTel 资源上报的服务名。 |
+| `ENTERPRISE_OTEL_SAMPLING_RATE` | `1.0` | 企业版追踪的采样率（0.0 到 1.0）。 |
+
+## 模型供应商与工具排序配置
+
+自定义应用界面中可用的工具和模型供应商及其显示顺序。使用逗号分隔的值，各项之间不加空格。chart 从 `values.yaml` 中的 `api.positionTool` 和 `api.positionProvider` 写入这些变量。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `POSITION_TOOL_PINS` | （为空） | 将特定工具置顶。范例：`bing,google`。 |
+| `POSITION_TOOL_INCLUDES` | （为空） | 仅显示列出的工具。不设置时所有工具均可用。 |
+| `POSITION_TOOL_EXCLUDES` | （为空） | 隐藏特定工具（置顶的工具不受影响）。 |
+| `POSITION_PROVIDER_PINS` | （为空） | 将特定模型供应商置顶。范例：`openai,anthropic`。 |
+| `POSITION_PROVIDER_INCLUDES` | （为空） | 仅显示列出的供应商。不设置时所有供应商均可用。 |
+| `POSITION_PROVIDER_EXCLUDES` | （为空） | 隐藏特定供应商（置顶的供应商不受影响）。 |
+
+## 插件守护进程配置
+
+插件守护进程是一个独立服务，管理插件生命周期（安装、执行、升级）。启用插件守护进程时，chart 会自动设置守护进程 URL、密钥和市场相关设置。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_DAEMON_URL` | 集群内插件守护进程服务 (Helm default) | 插件守护进程服务 URL。 |
+| `PLUGIN_DAEMON_KEY` | 由 chart 设置 (Helm default) | 插件守护进程的鉴权密钥。从 `global.innerApiKey` 派生。 |
+| `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 在 Redis 中缓存各租户插件模型供应商列表的时长（秒），默认 24 小时。租户安装、卸载或升级插件时，Dify 会使该缓存失效。 |
+| `PLUGIN_DAEMON_PORT` | `5002` (Helm default) | 插件守护进程监听端口。 |
+| `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求的超时（秒）。 |
+| `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` (Helm default) | 最大插件包大小（字节，50 MB）。 |
+| `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 schema 的时长（秒）。 |
+| `MARKETPLACE_ENABLED` | `true` (Helm default) | 启用插件市场。禁用时仅可使用本地安装的插件。通过 `global.marketplace.enabled` 设置。 |
+| `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` (Helm default) | 市场 API 端点。通过 `global.marketplace.apiUrl` 设置。 |
+| `FORCE_VERIFYING_SIGNATURE` | `true` | 安装插件前要求有效签名。 |
+| `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | 插件执行超时（秒，插件守护进程一侧）。 |
+| `PIP_MIRROR_URL` | （为空） | 插件守护进程安装插件依赖时使用的自定义 PyPI 镜像 URL。适用于离网环境。 |
+| `ENDPOINT_URL_TEMPLATE` | 由 `global.consoleApiDomain` 推导 (Helm default) | 插件端点的 URL 模板。`{hook_id}` 会被替换为实际的 hook ID。 |
+| `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `false`（chart 固定值） | 是否在 Redis 中缓存各租户的插件模型供应商列表。由于插件也可能从控制面板安装、绕过会使缓存失效的租户流程，chart 将其关闭。该变量设置在 API ConfigMap 上。 |
+
+## Agent Backend 配置
+
+以下变量设置在 agent-backend 服务上，该服务为 Agent 功能提供支撑。完整部署方式见 [Agent Sandbox 部署](/zh/3.14.x/deploy/advanced-configuration/agent-sandbox)。
+
+| 变量 | 默认值 | 说明 |
+|:---|:---|:---|
+| `DIFY_AGENT_SERVER_SECRET_KEY` | 开发默认值（生产环境必须替换） | Agent 工具回调令牌的加密密钥，base64url 编码的 32 字节随机值。通过 `agentBackend.serverSecretKey` 设置。 |
+| `DIFY_AGENT_API_TOKEN` | 自动派生 | agent-backend 访问 Dify API 的认证令牌。chart 从 `global.innerApiKey` 派生，无需单独设置。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行的模型与工具循环的墙钟截止时间（秒）。Agent 运行同时受 `APP_MAX_EXECUTION_TIME` 和 `WORKFLOW_MAX_EXECUTION_TIME` 约束，实际上限取三者中的最小值。通过 `agentBackend.extraEnv` 设置。 |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | Agent 经 Agent Stub 上传路径保存或返回的单个文件大小上限（MiB）。通过 `agentBackend.extraEnv` 设置。 |
+| `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | 在内置凭证脱敏之外，对 Agent 模型读取的命令输出额外脱敏的正则模式，JSON 数组格式。通过 `agentBackend.extraEnv` 设置。 |
+
+## OTLP / OpenTelemetry 配置
+
+应用级 OpenTelemetry 埋点（区别于上面的企业版遥测）。启用时，Dify 会对 Flask 进行埋点并将遥测数据导出到 OTLP 收集器。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ENABLE_OTEL` | `false` | 应用级 OpenTelemetry 埋点的总开关。 |
+| `OTLP_TRACE_ENDPOINT` | （为空） | 专用的 trace 端点 URL。未设置时回退到 `{OTLP_BASE_ENDPOINT}/v1/traces`。 |
+| `OTLP_METRIC_ENDPOINT` | （为空） | 专用的 metric 端点 URL。未设置时回退到 `{OTLP_BASE_ENDPOINT}/v1/metrics`。 |
+| `OTLP_BASE_ENDPOINT` | `http://localhost:4318` | OTLP 收集器基础 URL。 |
+| `OTLP_API_KEY` | （为空） | OTLP 鉴权用的 API key。以 `Authorization: Bearer` 头发送。 |
+| `OTEL_EXPORTER_TYPE` | `otlp` | 导出器类型。`otlp` 导出到收集器，其他值使用控制台导出器。 |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | （为空） | OTLP 导出协议。`grpc` 使用 gRPC 导出器，其他值使用 HTTP。 |
+| `OTEL_SAMPLING_RATE` | `0.1` | 追踪的请求比例（0.1 = 10%）。 |
+| `OTEL_BATCH_EXPORT_SCHEDULE_DELAY` | `5000` | 批量导出之间的延迟（毫秒）。 |
+| `OTEL_MAX_QUEUE_SIZE` | `2048` | 丢弃前队列中 span 的最大数量。 |
+| `OTEL_MAX_EXPORT_BATCH_SIZE` | `512` | 每个导出批次的最大 span 数。 |
+| `OTEL_METRIC_EXPORT_INTERVAL` | `60000` | Metric 导出间隔（毫秒）。 |
+| `OTEL_BATCH_EXPORT_TIMEOUT` | `10000` | 批量 span 导出超时（毫秒）。 |
+| `OTEL_METRIC_EXPORT_TIMEOUT` | `30000` | Metric 导出超时（毫秒）。 |
+
+## 杂项
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `CSP_WHITELIST` | （为空） | 在 Content Security Policy 头中额外允许的域名。 |
+| `ALLOW_EMBED` | `false` | 允许 Dify 页面被嵌入 iframe。为 `false` 时设置 `X-Frame-Options: DENY` 以防点击劫持。 |
+| `SWAGGER_UI_ENABLED` | `false` (Helm default) | 暴露 Swagger UI 以浏览 API 文档。Swagger 端点会绕过鉴权。chart 默认禁用。 |
+| `SWAGGER_UI_PATH` | `/swagger-ui.html` | Swagger UI 的 URL 路径。 |
+| `MAX_SUBMIT_COUNT` | `100` | 并行执行工作流节点所用线程池的最大并发任务提交数。 |
+| `TENANT_ISOLATED_TASK_CONCURRENCY` | `1` | 每个租户同时处理的文档索引或 RAG 流水线任务数。 |
+
+### 定时任务配置
+
+Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ENABLE_CLEAN_EMBEDDING_CACHE_TASK` | `false` | 每天凌晨 2:00 删除过期的嵌入缓存记录。 |
+| `ENABLE_CLEAN_UNUSED_DATASETS_TASK` | `false` | 禁用保留期内无活动的知识库中的文档。每天凌晨 3:00 运行。 |
+| `ENABLE_CLEAN_MESSAGES` | `false` | 每天凌晨 4:00 删除超过保留期的会话消息。 |
+| `ENABLE_MAIL_CLEAN_DOCUMENT_NOTIFY_TASK` | `false` | 向工作空间所有者发送邮件，列出被清理任务自动禁用了文档的知识库。每周一上午 10:00 运行。 |
+| `ENABLE_DATASETS_QUEUE_MONITOR` | `false` | 监控 Redis 中数据集处理队列的积压。队列超过阈值时发送邮件告警。 |
+| `QUEUE_MONITOR_INTERVAL` | `30` | 检查队列的频率（分钟）。 |
+| `QUEUE_MONITOR_THRESHOLD` | `200` | 触发告警邮件的队列大小。 |
+| `QUEUE_MONITOR_ALERT_EMAILS` | （为空） | 接收队列告警的邮箱地址（逗号分隔）。 |
+| `ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK` | `true` | 每 15 分钟检查市场中是否有更新的插件版本。 |
+| `ENABLE_WORKFLOW_SCHEDULE_POLLER_TASK` | `true` | 启用触发定时工作流运行的工作流调度轮询器。 |
+| `WORKFLOW_SCHEDULE_POLLER_INTERVAL` | `1` | 检查到期定时工作流的频率（分钟）。 |
+| `WORKFLOW_SCHEDULE_POLLER_BATCH_SIZE` | `100` | 每个轮询周期获取的最大到期计划数。 |
+| `WORKFLOW_SCHEDULE_MAX_DISPATCH_PER_TICK` | `0` | 熔断器：每个 tick 派发的最大计划数。`0` 表示不限。 |
+| `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | 启用工作流运行记录的自动清理。 |
+| `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | 为向量数据库池化预创建 TiDB Serverless 集群。 |
+| `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的 Human Input 表单，并恢复或停止超时的工作流。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期 Human Input 表单的频率（分钟）。 |
+
+#### 记录保留与清理
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `SANDBOX_EXPIRED_RECORDS_RETENTION_DAYS` | `30` | 超过这么多天的记录可被删除。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_SIZE` | `1000` | 每个清理批次处理的记录数。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_BATCH_MAX_INTERVAL` | `200` | 清理批次之间的最大随机延迟（毫秒）。 |
+| `SANDBOX_EXPIRED_RECORDS_CLEAN_TASK_LOCK_TTL` | `90000` | Redis 锁 TTL（秒，约 25 小时），防止清理任务并发执行。 |
+
+## 阿里云 SLS Logstore 配置
+
+与阿里云日志服务（SLS）的可选集成，将工作流执行日志存于外部而非数据库。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `ALIYUN_SLS_ACCESS_KEY_ID` | （为空） | SLS 鉴权用的阿里云 access key ID。 |
+| `ALIYUN_SLS_ACCESS_KEY_SECRET` | （为空） | SLS 鉴权用的阿里云 access key secret。 |
+| `ALIYUN_SLS_ENDPOINT` | （为空） | SLS 服务端点 URL（例如 `cn-hangzhou.log.aliyuncs.com`）。 |
+| `ALIYUN_SLS_REGION` | （为空） | 阿里云区域（例如 `cn-hangzhou`）。 |
+| `ALIYUN_SLS_PROJECT_NAME` | （为空） | 存储工作流日志的 SLS 项目名。 |
+| `ALIYUN_SLS_LOGSTORE_TTL` | `365` | SLS logstore 的数据保留天数。`3650` 表示永久存储。 |
+| `LOGSTORE_DUAL_WRITE_ENABLED` | `false` | 同时将工作流数据写入 SLS 和 PostgreSQL。迁移到 SLS 期间很有用。 |
+| `LOGSTORE_DUAL_READ_ENABLED` | `true` | 当 SLS 无结果时回退到 PostgreSQL。 |
+| `LOGSTORE_ENABLE_PUT_GRAPH_FIELD` | `true` | 在 SLS 日志中包含完整的工作流图定义。设为 `false` 可减少存储。 |
+
+## 事件总线配置
+
+API 与 Celery worker 之间基于 Redis 的事件传输。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `EVENT_BUS_REDIS_URL` | （为空） | 事件流的 Redis 连接 URL。为空时使用主 Redis 连接设置。 |
+| `EVENT_BUS_REDIS_CHANNEL_TYPE` | `pubsub` | 传输类型：`pubsub`、`sharded` 或 `streams`（至少一次投递）。 |
+| `EVENT_BUS_REDIS_USE_CLUSTERS` | `false` | 为事件总线启用 Redis Cluster 模式。大型部署推荐。 |
+
+## 插件守护进程存储配置
+
+插件守护进程可将插件包存于不同的存储后端。只需配置与 `PLUGIN_STORAGE_TYPE` 匹配的那个供应商。
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_STORAGE_TYPE` | `local` | 插件存储后端：`local`、`aws_s3`、`tencent_cos`、`azure_blob`、`aliyun_oss`、`volcengine_tos`。 |
+| `PLUGIN_STORAGE_LOCAL_ROOT` | `/app/storage` | 本地插件存储的根目录。 |
+| `PLUGIN_WORKING_PATH` | `/app/storage/cwd` | 插件执行的工作目录。 |
+| `PLUGIN_INSTALLED_PATH` | `plugin` | 已安装插件的子目录。 |
+| `PLUGIN_PACKAGE_CACHE_PATH` | `plugin_packages` | 缓存插件包的子目录。 |
+| `PLUGIN_MEDIA_CACHE_PATH` | `assets` | 缓存媒体资源的子目录。 |
+| `PLUGIN_STORAGE_OSS_BUCKET` | （为空） | 对象存储桶名称（在 S3/COS/OSS/TOS 各供应商间共用）。 |
+| `PLUGIN_PYTHON_ENV_INIT_TIMEOUT` | `120` | 为插件初始化 Python 环境的超时（秒）。 |
+| `PLUGIN_STDIO_BUFFER_SIZE` | `1024` | 插件 stdio 通信的缓冲区大小（字节）。 |
+| `PLUGIN_STDIO_MAX_BUFFER_SIZE` | `5242880` | 插件 stdio 通信的最大缓冲区大小（字节，5 MB）。 |
+
+<AccordionGroup>
+<Accordion title="Plugin S3 Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_S3_USE_AWS` | `false` | 使用 AWS S3（区别于 S3 兼容服务）。 |
+| `PLUGIN_S3_USE_AWS_MANAGED_IAM` | `false` | 使用 IAM 角色而非显式凭据。 |
+| `PLUGIN_S3_ENDPOINT` | （为空） | S3 端点 URL。 |
+| `PLUGIN_S3_USE_PATH_STYLE` | `false` | 使用 path-style URL 而非 virtual-hosted。 |
+| `PLUGIN_AWS_ACCESS_KEY` | （为空） | AWS access key。 |
+| `PLUGIN_AWS_SECRET_KEY` | （为空） | AWS secret key。 |
+| `PLUGIN_AWS_REGION` | （为空） | AWS 区域。 |
+
+</Accordion>
+
+<Accordion title="Plugin Azure Blob Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_AZURE_BLOB_STORAGE_CONTAINER_NAME` | （为空） | Azure Blob 容器名。 |
+| `PLUGIN_AZURE_BLOB_STORAGE_CONNECTION_STRING` | （为空） | Azure Blob 连接字符串。 |
+
+</Accordion>
+
+<Accordion title="Plugin Tencent COS Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_TENCENT_COS_SECRET_KEY` | （为空） | 腾讯 COS secret key。 |
+| `PLUGIN_TENCENT_COS_SECRET_ID` | （为空） | 腾讯 COS secret ID。 |
+| `PLUGIN_TENCENT_COS_REGION` | （为空） | 腾讯 COS 区域。 |
+
+</Accordion>
+
+<Accordion title="Plugin Aliyun OSS Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_ALIYUN_OSS_REGION` | （为空） | 阿里云 OSS 区域。 |
+| `PLUGIN_ALIYUN_OSS_ENDPOINT` | （为空） | 阿里云 OSS 端点。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_ID` | （为空） | 阿里云 OSS access key ID。 |
+| `PLUGIN_ALIYUN_OSS_ACCESS_KEY_SECRET` | （为空） | 阿里云 OSS access key secret。 |
+| `PLUGIN_ALIYUN_OSS_AUTH_VERSION` | `v4` | 阿里云 OSS 鉴权版本。 |
+| `PLUGIN_ALIYUN_OSS_PATH` | （为空） | 阿里云 OSS 路径前缀。 |
+
+</Accordion>
+
+<Accordion title="Plugin Volcengine TOS Storage">
+
+| Variable | Default | Description |
+|:---|:---|:---|
+| `PLUGIN_VOLCENGINE_TOS_ENDPOINT` | （为空） | 火山引擎 TOS 端点。 |
+| `PLUGIN_VOLCENGINE_TOS_ACCESS_KEY` | （为空） | 火山引擎 TOS access key。 |
+| `PLUGIN_VOLCENGINE_TOS_SECRET_KEY` | （为空） | 火山引擎 TOS secret key。 |
+| `PLUGIN_VOLCENGINE_TOS_REGION` | （为空） | 火山引擎 TOS 区域。 |
+
+</Accordion>
+</AccordionGroup>
+
+## 常见问题
+
+### 如何设置 `values.yaml` 中没有的变量？
+
+通过需要该变量的服务（`api`、`worker` 或 `web`）的 `extraEnv` 字段添加。例如，在 API 服务上设置两个变量：
+
+```yaml
+api:
+  extraEnv:
+    - name: ENV_FROM_COMMUNITY1
+      value: "env123"
+    - name: ENV_FROM_COMMUNITY2
+      value: "env123"
+```
+
+同样的方式适用于 `worker.extraEnv` 和 `web.extraEnv`。在每个读取该变量的服务上都设置一遍。
+
+### 如何配置 `HTTP_PROXY` 和 `HTTPS_PROXY`？
+
+出于安全考虑，你可能需要让 Dify API 服务的出站流量经由代理路由。使用 `extraEnv` 字段：
+
+```yaml
+api:
+  extraEnv:
+    - name: "HTTP_PROXY"
+      value: "http://proxy.example.com:8080"
+    - name: "HTTPS_PROXY"
+      value: "http://proxy.example.com:8080"
+```

@@ -1,0 +1,271 @@
+---
+title: Testing Environment Deployment
+---
+
+## Requirements
+> This is the recommended configuration for testing environment deployment or staging environment deployment. You can adjust the configuration according to your needs.
+
+- Kubernetes Cluster
+    - 1 Worker Node: 4 CPU, 16 GB RAM
+- Container Registry (Plugins)
+    - AWS ECR (with AK/SK or IRSA) / Azure ACR / Aliyun ACR (with AK/SK) / Tencent TCR (with AK/SK) / Dockerhub / Google Artifact Registry
+- Persistent Storage
+    - S3 / AWS S3 (with AK/SK or IRSA) / Azure Blob / Aliyun OSS (with AK/SK) / Tencent COS (with AK/SK) / Google GCS
+    - 100 GB Storage
+- Postgres Database
+    - Version 14+
+    - 4 CPU, 8 GB RAM
+    - At least 512G SSD
+- Redis Database
+    - Version 6+
+    - 1 GB RAM
+- [Vector Database VM - Qdrant Single Node](/en/3.14.x/deploy/advanced-configuration/qdrant/single-node)
+    - 1 VM
+    - 4 CPU, 8 GB RAM
+    - 100 GB Storage
+
+## Deployment
+### 1. Get Helm Repository Info
+```bash
+helm repo add dify https://langgenius.github.io/dify-helm
+helm repo update
+```
+
+For more information, please refer to [Dify Helm Chart](/en/3.14.x/deploy/advanced-configuration/dify-helm-chart).
+
+### 2. Save Helm Chart Values
+
+<Note>
+Starting from Dify 3.12, Agent Sandbox (`agentBackend` and `sandboxGateway`) is enabled by default and requires the agent-sandbox controller to be pre-installed in the cluster; if installation is not possible, switch to the shared sandbox mode. See [Agent Sandbox Deployment](/en/3.14.x/deploy/advanced-configuration/agent-sandbox).
+</Note>
+- Save Helm chart values to a file named `values.yaml`.
+- Update the `values.yaml` file with your configuration.
+
+<Warning>
+  - Please replace the `#REPLACE_ME#` placeholder with your actual values.
+  - Please replace "dify123456" with your own value.
+  - `global.appSecretKey` and `enterprise.appSecretKey` must be different.
+</Warning>
+
+```yaml
+###################################
+# Please replace "dify123456" with your own value
+###################################
+global:
+  appSecretKey: 'dify123456'
+  innerApiKey: 'dify123456'
+  consoleApiDomain: "console.dify.local"
+  consoleWebDomain: "console.dify.local"
+  serviceApiDomain: "api.dify.local"
+  appApiDomain: "app.dify.local"
+  appWebDomain: "app.dify.local"
+  filesDomain: "upload.dify.local"
+  enterpriseDomain: "enterprise.dify.local"
+
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations: {
+    # set file upload size limit
+    nginx.ingress.kubernetes.io/proxy-body-size: "15m"
+  }
+
+api:
+  replicas: 3
+  serverWorkerAmount: 1
+worker:
+  replicas: 3
+  celeryWorkerAmount: 1
+web:
+  replicas: 1
+sandbox:
+  replicas: 1
+enterpriseAudit:
+  replicas: 1
+enterprise:
+  replicas: 1
+  appSecretKey: "dify123456"
+  adminAPIsSecretKeySalt: "dify123456"
+  passwordEncryptionKey: "dify123456"
+enterpriseFrontend:
+  replicas: 1
+ssrfProxy:
+  replicas: 1
+unstructured:
+  replicas: 1
+plugin_daemon:
+  replicas: 1
+plugin_controller:
+  replicas: 1
+plugin_connector:
+  replicas: 1
+plugin_manager:
+  replicas: 1
+gateway:
+  replicas: 1
+
+###################################
+# Persistence Configration
+###################################
+persistence:
+  type: "s3"
+  s3:
+    endpoint: "https://xxx.r2.cloudflarestorage.com"
+    accessKey: "#REPLACE_ME#"
+    secretKey: "#REPLACE_ME#"
+    region: "us-east-1"
+    bucketName: "your-bucket-name"
+    addressType: ""
+    useAwsManagedIam: false
+    useAwsS3: true
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.0 configuration
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+  user: "postgres"
+  password: "#REPLACE_ME#"
+  timezone: "UTC"
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External database (Postgres/MySQL/TiDB) v3.9.1 configuration
+###################################
+externalDatabase:
+  enabled: false
+  # postgres | mysql | tidb
+  engine: "postgres"
+  host: "localhost"
+
+  # Default ports: postgres=5432, mysql=3306, tidb=4000
+  # Note: when switching engine, remember to update port accordingly
+  port: 5432
+
+  # Global database credentials (used by default)
+  user: "postgres"
+  password: "#REPLACE_ME#"
+
+  timezone: "UTC"
+
+  databases:
+    dify: "dify"
+    plugin_daemon: "dify_plugin_daemon"
+    enterprise: "enterprise"
+    audit: "audit"
+
+  ###################################
+  # Per-database credentials (optional)
+  ###################################
+  # Configure username and password independently for each database
+  # These take precedence over the global user/password
+  # If empty, fallback to the global credentials
+  databaseCredentials:
+    dify:
+      user: ""
+      password: ""
+    enterprise:
+      user: ""
+      password: ""
+    audit:
+      user: ""
+      password: ""
+    plugin_daemon:
+      user: ""
+      password: ""
+
+  dialectOptions:
+    postgres:
+      sslMode: "require"
+      uriScheme: "postgresql"
+      # extras: "options=-c search_path=your-schema -c your-other-option=xxx"
+      extras: ""
+
+    mysql:
+      # MySQL/TiDB params, e.g. charset=utf8mb4&parseTime=true&loc=UTC
+      params: "charset=utf8mb4&parseTime=true&loc=UTC"
+      tls: false
+
+###################################
+# External Redis
+###################################
+externalRedis:
+  enabled: true
+  host: "#REPLACE_ME#"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  useSSL: false
+
+###################################
+# External Qdrant
+###################################
+vectorDB:
+  useExternal: true
+  externalType: "qdrant"
+  externalQdrant:
+    endpoint: "http://your-qdrant-cluster-url.qdrant.tech/"
+    apiKey: "#REPLACE_ME#"
+
+imagePullSecrets: []
+```
+
+### 3. Configure `Container Registry`
+-  3.1 Configure `Plugin` Container Registry
+    - For more information, please refer to [Container Registry Configuration for Plugins](/en/3.14.x/deploy/advanced-configuration/container-registry-for-plugins).
+- 3.2 Configure `Service` Container Registry
+    - For more information, please refer to [Container Registry Configuration](/en/3.14.x/deploy/advanced-configuration/container-registry).
+
+### 4. Configure `Persistence Storage`
+- For more information, please refer to [Persistence Storage](/en/3.14.x/deploy/advanced-configuration/persistent-storage).
+
+### 5. Configure `External Database`
+- For more information, please refer to [External Database](/en/3.14.x/deploy/advanced-configuration/database).
+
+### 6. Configure `External Redis`
+- For more information, please refer to [External Redis](/en/3.14.x/deploy/advanced-configuration/redis).
+
+### 7. Configure `External Qdrant`
+- For more information, please refer to [External Qdrant Single Node](/en/3.14.x/deploy/advanced-configuration/qdrant/single-node).
+
+### 8. Configure `Ingress Controller`
+- For more information, please refer to [Ingress Controller Configuration](/en/3.14.x/deploy/advanced-configuration/nginx-ingress-controller).
+
+### 9. Install Dify Helm Chart
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+### 10. Verify Installation Results
+- For more information, please refer to [Service Status Verification](/en/3.14.x/deploy/verify-services-status).
+
+
+## Advanced Configuration
+### 1. Domain and SSL Certificate
+- For more information, please refer to [Domain and SSL Certificate Configuration](/en/3.14.x/deploy/advanced-configuration/domain-and-ssl-certificate).
+
+### 2. Email Service Provider
+- For more information, please refer to [Email Service Configuration](/en/3.14.x/deploy/advanced-configuration/email-provider).
+
+### 3. Performance Tuning
+- For more information, please refer to [Performance Tuning](/en/3.14.x/deploy/advanced-configuration/performance).

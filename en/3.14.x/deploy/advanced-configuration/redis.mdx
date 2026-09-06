@@ -1,0 +1,63 @@
+---
+title: Redis
+version: 'English'
+---
+
+## Display Helm Chart Values
+```bash
+helm show values dify/dify
+```
+
+Example of the external Redis configuration in the Helm chart values:
+```yaml
+externalRedis:
+  enabled: true
+  useSSL: false
+  host: "redis.example"
+  port: 6379
+  username: ""
+  password: "#REPLACE_ME#"
+  db: 0
+
+  sentinel:
+    enabled: false
+    nodes: ""          # Comma-separated list of Redis Sentinel nodes (host:port)
+    serviceName: ""    # Name of the Redis Sentinel service to monitor
+    username: ""
+    password: "#REPLACE_ME#"
+    socketTimeout: 0.1 # Socket timeout in seconds for Redis Sentinel connections
+
+  # Event Bus — a community-only API <-> worker pub/sub stream. Leave `url`
+  # empty to ride on the main Redis above. Set it to put the Event Bus on a
+  # separate Redis (typically a Redis Cluster); set `useClusters: true` when
+  # that URL is a Redis Cluster. The chart then emits EVENT_BUS_REDIS_URL /
+  # EVENT_BUS_REDIS_USE_CLUSTERS. dify-enterprise Go services ignore these.
+  eventBus:
+    url: ""              # e.g. redis://cluster-seed:7001/0
+    useClusters: false   # set true when `url` points at a Redis Cluster
+```
+
+## Redis SSL Configuration
+- To enable Redis with SSL, set the `useSSL` field to `true`.
+- The `port` field should be set to `6379` for non-SSL connections and `6380` for SSL connections.
+
+## High Availability
+- **Sentinel**: set `sentinel.enabled` to `true`, then provide `sentinel.nodes` and `sentinel.serviceName`.
+
+The main Redis (cache, Celery broker, and the dify-enterprise Go services) runs in **standalone** or **sentinel** mode only. Redis Cluster is not supported for the main Redis: Celery cannot address a cluster broker, the Go services reject cluster mode at startup, and enterprise queues use cross-key operations that trigger `CROSSSLOT` errors on a cluster.
+
+## Event Bus
+
+The Event Bus is a **community-only** API ↔ worker pub/sub stream. By default (`eventBus.url` empty) it rides on the main `externalRedis` connection. To move it onto a dedicated Redis — typically a Redis Cluster, for cluster-scale fan-out — set `eventBus.url`, and set `eventBus.useClusters: true` when that URL is a Redis Cluster. The chart then injects `EVENT_BUS_REDIS_URL` / `EVENT_BUS_REDIS_USE_CLUSTERS` into the shared ConfigMap. dify-enterprise Go services do not consume these variables.
+
+The channel type defaults to `pubsub`. To use `sharded` or `streams`, override `EVENT_BUS_REDIS_CHANNEL_TYPE` via `extraEnv` on `api`, `worker`, `worker-beat`, additional workers, and `plugin_daemon`:
+
+```yaml
+extraEnv:
+  - name: EVENT_BUS_REDIS_CHANNEL_TYPE
+    value: "sharded"
+```
+
+<Warning>
+**Upgrading from 3.9.x or earlier:** the `externalRedis.cluster` block has been removed. If `cluster.enabled: true` is still set, `helm template` / `helm upgrade` now fails fast. Remove it and keep the main Redis on standalone or sentinel. For cluster-scale fan-out, move the Redis Cluster behind the Event Bus (`eventBus.url` + `eventBus.useClusters: true`).
+</Warning>

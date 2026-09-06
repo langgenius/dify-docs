@@ -1,0 +1,58 @@
+---
+title: 新 Agent API
+sidebarTitle: 新 Agent
+description: 面向新 Agent 应用的 API，涵盖流式对话消息、会话管理、文件上传及应用配置
+tag: Beta
+---
+
+<Info>
+    新 Agent 与 [Chatbot 和 Agent](/zh/3.14.x/develop/api/guides/chat) 中介绍的 Agent 应用（`agent-chat`）是两种不同的应用类型。
+</Info>
+
+[新 Agent 应用](/zh/3.14.x/use/build/new-agent/overview) 运行在 `agent` 模式下：发送消息、流式接收生成中的回复，并通过会话保留多轮上下文。
+
+模型会自主推理并调用工具，这些过程也会出现在事件流中：回复文本以 `agent_message` 事件增量流式返回，每个推理步骤和工具调用则以 `agent_thought` 事件同步返回。
+
+每轮回复结束时，会先收到一个携带完整回答的 `message` 事件，然后是 `message_end`。实时渲染按 `agent_message` 增量拼接即可；收尾的 `message` 就是最终回答，不要再追加拼接。
+
+每个 `agent_thought` 事件都包含该步骤的 `thought`、所调用的 `tool` 及其 `tool_input`，以及工具返回的 `observation`。完整的流式事件结构，详见 [发送对话消息](/zh/3.14.x/develop/api/chat-messages/send-chat-message)。
+
+<Info>
+认证方式、基础 URL，以及按终端用户区分数据的 `user` 字段，详见 [快速开始](/zh/3.14.x/develop/api/guides/get-started) 和 [终端用户身份](/zh/3.14.x/develop/api/guides/end-user-identity)。
+</Info>
+
+## 发送消息并接收流式回复
+
+- **[发送对话消息](/zh/3.14.x/develop/api/chat-messages/send-chat-message)**：向新 Agent 应用发送用户提问。仅支持流式返回，使用阻塞式返回会收到 400 `bad_request` 错误。
+
+    收尾的 `message_end` 事件会报告 token 用量，但不会包含知识检索引用（`retriever_resources`）。
+
+- **[停止响应](/zh/3.14.x/develop/api/chat-messages/stop-chat-message-generation)**：在回复完成前中断流式输出。
+- **[获取下一轮建议问题列表](/zh/3.14.x/develop/api/chat-messages/get-next-suggested-questions)**：回复完成后，基于当前对话内容推荐后续问题。
+
+## 管理会话
+
+- **[获取会话列表](/zh/3.14.x/develop/api/conversations/list-conversations)**：按最近活跃时间排序，返回当前用户的会话。
+- **[获取会话历史消息](/zh/3.14.x/develop/api/conversations/list-conversation-messages)**：返回某个会话的历史消息，适合滚动加载的聊天界面。每条消息的 `agent_thoughts` 数组会包含该轮的推理步骤。
+- **[重命名会话](/zh/3.14.x/develop/api/conversations/rename-conversation)**：为会话设置名称，或根据会话内容自动生成名称。
+- **[删除会话](/zh/3.14.x/develop/api/conversations/delete-conversation)**：删除会话及其消息。
+
+## 上传文件
+
+- **[上传文件](/zh/3.14.x/develop/api/files/upload-file)**：上传图片、文档、音频或视频文件，仅限上传的终端用户使用。
+
+    传给 [发送对话消息](/zh/3.14.x/develop/api/chat-messages/send-chat-message) 的文件，会作为可下载的引用提供给 Agent，Agent 可在其沙箱中获取并查看。
+
+- **[获取终端用户信息](/zh/3.14.x/develop/api/end-users/get-end-user-info)**：根据终端用户 ID（例如上传文件响应中的 `created_by`）查询该用户的详细信息。
+
+## 语音转写与合成
+
+- **[语音转文字](/zh/3.14.x/develop/api/audio/convert-audio-to-text)**：将上传的音频文件（MP3、M4A、WAV、AMR 或 MPGA，最大 30 MB）转写为文字，让终端用户用语音代替打字输入。
+- **[文字转语音](/zh/3.14.x/develop/api/audio/convert-text-to-audio)**：将回复合成为语音。
+
+## 获取应用信息与配置
+
+- **[获取应用基本信息](/zh/3.14.x/develop/api/applications/get-app-info)**：返回应用的名称、描述、标签和模式。
+- **[获取应用参数](/zh/3.14.x/develop/api/applications/get-app-parameters)**：返回调用需在 `inputs` 中传入的字段（名称、类型、默认值），以及应用的功能开关，可据此构建请求或客户端界面。
+- **[获取应用元数据](/zh/3.14.x/develop/api/applications/get-app-meta)**：返回应用的配置元数据；对新 Agent 应用，`tool_icons` 为空。
+- **[获取应用 Web 应用设置](/zh/3.14.x/develop/api/applications/get-app-webapp-settings)**：返回 Web 应用的站点配置、主题和自定义选项。

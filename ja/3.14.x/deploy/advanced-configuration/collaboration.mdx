@@ -1,0 +1,71 @@
+---
+title: ワークフローコラボレーション
+---
+
+ワークフローコラボレーションは、ワークフロードラフトのリアルタイム共同編集を可能にします。複数の編集者が同じワークフローを同時に開き、互いのカーソルやプレゼンスを確認でき、変更は Socket.IO を通じてリアルタイムに同期されます。
+
+<Note>
+Dify Enterprise 3.11.1 以降が必要です。
+</Note>
+
+## コラボレーションを有効にする
+
+Helm chart の values でスイッチを設定します:
+
+```yaml
+collaboration:
+  enabled: true
+```
+
+その後、適用します:
+
+```bash
+helm upgrade -i dify -f values.yaml dify/dify
+```
+
+このスイッチひとつで必要な設定がすべて行われます。`extraEnv` の手動設定は不要です:
+
+- リアルタイムコラボレーション通信をすべて処理する専用の Socket.IO サービス（`<release>-api-websocket`）をデプロイします。
+- ゲートウェイの `/socket.io` をそのサービスにルーティングします。
+- API と Web の ConfigMap に `ENABLE_COLLABORATION_MODE` を設定します。
+- `global.consoleApiDomain` と `global.useTLS` から Web フロントエンド用の `NEXT_PUBLIC_SOCKET_URL` を自動生成します（TLS 有効時は `wss://`）。
+
+有効にすると、ワークスペースメンバーはワークフローを共同編集し、キャンバス上でコメントできます。詳細は [チームメンバーと共同作業](/ja/3.14.x/use/build/workflow-collaboration) を参照してください。
+
+## 仕組み
+
+コラボレーション通信は、コンソール API ドメインの `/socket.io` パスで Socket.IO プロトコル（WebSocket、HTTP ロングポーリングへのフォールバックあり）を使用します。Chart はこれをメイン API Pod とは別の専用 Deployment として実行します:
+
+| コンポーネント | 値 |
+| --- | --- |
+| Deployment | `<release>-api-websocket` |
+| Service | `<release>-api-websocket-svc`、ポート `5001` |
+| ゲートウェイルート | コンソール API vhost の `/socket.io` と `/socket.io/*` |
+
+websocket Deployment は意図的に **1 レプリカ / 1 gunicorn worker** に固定され、`Recreate` 更新戦略を使用します。Socket.IO の認証セッションはプロセスメモリに保持されるため、すべてのソケット通信は単一プロセスを共有する必要があります。この Deployment はスケールしないでください。ルームイベントは既存の Redis 設定を通じて配信されるため、メイン API と worker はこれまでどおり独立してスケールできます。
+
+## リソース設定
+
+`collaboration.websocket` で websocket Pod のリソースを上書きできます:
+
+```yaml
+collaboration:
+  enabled: true
+  websocket:
+    resources:
+      requests:
+        cpu: 250m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+```
+
+## 前提条件
+
+- 編集者のブラウザから `global.consoleApiDomain` に到達できる必要があります。フロントエンドは `wss://<consoleApiDomain>/socket.io`（TLS 無効時は `ws://`）に接続します。
+- ゲートウェイの前段にあるロードバランサーや Ingress は、コンソール API ドメインでの WebSocket アップグレードを許可する必要があります。
+
+## 手動設定からの移行
+
+以前に `extraEnv` で `ENABLE_COLLABORATION_MODE` / `NEXT_PUBLIC_SOCKET_URL` を注入してコラボレーションを有効にしていた場合は、それらのエントリを削除し、代わりに `collaboration.enabled: true` を設定してください。古い `extraEnv` エントリを残しても問題はありませんが冗長です。コンテナレベルの `extraEnv` の値は、chart が生成する ConfigMap の値より優先されます。

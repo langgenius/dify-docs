@@ -1,0 +1,129 @@
+---
+title: MCP 用户身份转发
+---
+
+将**当前正在运行工作流的用户**的 SSO 身份，转发到该工作流所调用的下游 [MCP 服务](/zh/3.14.x/use/workspace/tools)。MCP 服务因此可以代表真正的终端用户行事——按用户授权、审计与数据隔离——而不再把每个 Dify 请求都视为同一个固定账号。
+
+<Note>
+  这是一项企业版功能，构建在 [SSO 认证](/zh/3.14.x/administer/sso/introduction) 和 [MCP 工具](/zh/3.14.x/use/workspace/tools) 之上。它把你的身份提供商（IdP）和 MCP 服务都当作黑盒——本页只列出它们必须具备的能力。
+</Note>
+
+## 工作原理
+
+当工作流调用 MCP 服务上的工具时，Dify 默认使用在 MCP Provider 上配置的一个**固定的、工作区级别的凭证**去调用。在 MCP 服务看来，所有调用者都是同一个身份。
+
+启用身份转发后，Dify 会在每个出站请求上额外附带一个**按用户区分的 token**——它正是 IdP 早已为当前运行用户签发的 token。Dify 从不自行签发任何 token，只是把 IdP 已签发、并限定到你 MCP 服务范围的 token 转交过去，由 MCP 服务用**同一个 IdP** 校验。
+
+该 token 通过一个专用的 HTTP 头发送，因此完全不影响 Provider 上已有的凭证：
+
+```
+X-Dify-SSO-Token: <代表当前运行用户的 token>
+```
+
+```
+当前运行用户（已通过 SSO 登录）
+        │  身份
+        ▼
+   Dify 工作流 ──[ 用户的 IdP token ]──▶ MCP 服务
+                                            │
+                                            └─ 用同一个 IdP 校验该 token
+```
+
+核心思想：**MCP 服务与 Dify 信任同一个 IdP。**
+
+### 适用范围
+
+| 调用方 | 是否转发 |
+| --- | --- |
+| 工作区用户在控制台手动运行工作流 | 支持 |
+| 工作区用户通过应用调用工作流（含会话型应用） | 支持 |
+| 已发布 Web App 的终端用户 | 支持 |
+| Service API 调用 | 不支持 |
+| 定时任务 / Cron 触发 | 不支持 |
+| 通过 SAML SSO 登录的用户 | 不支持 |
+| 社区版（非企业版）部署 | 不可用 |
+
+<Note>
+  身份转发仅适用于上述受支持的调用方。Service API 调用与定时（Cron）运行**不受支持**，它们没有交互用户——请勿在这些执行路径上依赖它。
+</Note>
+
+## 对身份提供商（IdP）的要求
+
+你已经把一个 IdP 接入了 Dify SSO。要让转发生效，这**同一个** IdP 必须满足以下条件——无需新增 IdP，也无需任何额外服务。
+
+1. **共享 issuer。** 给 Dify 用户做认证的 IdP，必须与 MCP 服务所信任的 IdP 是同一个。两侧都用它的 issuer 来校验 token。
+
+2. **协议为 OIDC 或 OAuth2。** 不支持 SAML。
+
+3. **IdP 在登录时返回 refresh token。** 这是转发唯一依赖的能力。如何开启取决于 IdP 类型：
+
+   | IdP 类型 | 需要开启什么 |
+   | --- | --- |
+   | 标准 OIDC / OAuth2（Microsoft Entra ID、Okta、Auth0、Keycloak、Ping、OneLogin 等） | 在客户端上允许 `offline_access` scope，并启用 refresh-token 授权类型。 |
+   | 不通过 `offline_access` scope 下发 refresh token 的 IdP（例如 Google） | 管理员无需操作——Dify 会自动处理。 |
+   | OAuth2 模式的客户端 | 在配置的 scope 列表中包含可换取 refresh 的 scope（`offline_access`，或 Salesforce 的 `refresh_token`）。 |
+
+4. **audience 约定。** Dify 会请求 IdP 把每个按用户签发的 token（其 `aud`）限定到你的 MCP 服务上。许多 IdP 默认不这么做，而是把 audience 设为 SSO 客户端的标识符。两种情况都可接受，只要**两端对期望值达成一致**。任选其一：
+
+   - 配置 IdP 把 audience 绑定到 MCP 服务，或
+   - *（最简单）* 让 MCP 服务接受 SSO 的**客户端标识符**作为其期望的 audience。
+
+   <Warning>
+     无论选哪种，MCP 服务都**必须**校验 audience——否则任何被该 IdP 信任的 token 都能调用它。
+   </Warning>
+
+其余内容（重定向 URI、用户开通等）都属于你已有的 SSO 配置，保持不变。
+
+## 对 MCP 服务的要求
+
+MCP 服务被当作黑盒处理。要消费转发过来的身份，它必须满足以下条件——除此之外，Dify 调用它的方式不发生任何变化。
+
+1. **读取转发头。** 当 `X-Dify-SSO-Token` 存在时，把它当作终端用户 token 的承载头。
+2. **用 IdP 校验 token**——通过 IdP 校验其签名（例如使用 IdP 公布的签名公钥，或 token introspection）。
+3. **校验 issuer** 等于你的 IdP。
+4. **校验 audience**，与你上面所选方式一致。绝不能跳过此检查。
+5. **从标准 token 声明派生用户**（`sub`、`email` 等），按你的业务需要使用。
+6. **拒绝未认证请求**——当缺少有效 token 时，不要回退到匿名访问。
+
+## 启用身份转发
+
+当 IdP 与 MCP 服务都满足上述要求后，开启此功能。
+
+<Steps>
+  <Step title="配置 OIDC 或 OAuth2 SSO">
+    在管理控制台中，将工作区 SSO 配置为 OIDC 或 OAuth2（不可为 SAML）。参见 [配置 SSO 认证](/zh/3.14.x/administer/sso/introduction)。SSO 配置变更即时生效，无需重启。
+  </Step>
+  <Step title="执行数据库迁移">
+    执行该版本附带的数据库迁移。存量 MCP Provider 不受影响——转发默认关闭。
+  </Step>
+  <Step title="让每个用户先通过 SSO 登录一次">
+    每个用户必须至少通过 SSO 登录一次，Dify 后续才能代表他们换取每次调用所需的 token。控制台/工作区用户与已发布 Web App 的终端用户都会被自动处理。
+  </Step>
+  <Step title="逐个 MCP Provider 开启转发">
+    进入 **工具 → MCP**，选中 Provider，点击 **编辑**，打开 **转发用户身份** 开关并保存。
+
+    仅当登录强制启用 SSO 时才显示该开关（社区版及未配置 SSO 时隐藏）。开关是 **Provider 级别** 的，因此由管理员在一处统一控制哪些 MCP 服务能拿到调用者身份。
+  </Step>
+  <Step title="验证">
+    运行任意调用该 Provider 的工作流，确认 MCP 服务收到了转发的 token，且它代表当前运行用户。
+  </Step>
+</Steps>
+
+## 故障排查
+
+如果对受支持的调用方转发未生效，请检查以下各项：
+
+| 情况 | 处理 |
+| --- | --- |
+| 当前运行用户从未通过 SSO 登录，或其会话已无法刷新 | 让用户（重新）通过 SSO 登录 |
+| SSO 未配置或已禁用 | 在管理控制台中配置 SSO |
+
+## 上线前检查清单
+
+- 工作区 SSO 为 OIDC 或 OAuth2（非 SAML）。
+- IdP 客户端允许 refresh token（`offline_access` scope / refresh 授权；Google 类自动处理）。
+- 已确定 audience 的绑定方式（由 IdP 绑定，或由 MCP 服务接受 SSO 客户端标识符）。
+- MCP 服务会校验 IdP token（签名、issuer、audience）并拒绝匿名请求。
+- 已执行数据库迁移。
+- 用户至少通过 SSO 登录过一次。
+- 目标 MCP Provider 上已开启 **转发用户身份**。
