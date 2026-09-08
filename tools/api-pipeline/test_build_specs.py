@@ -50,7 +50,7 @@ class AnnotationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "contract change"):
             list(annotation_changes(self.base, edited))
 
-    def test_capture_rejects_required_enum_and_media_type_changes(self):
+    def test_capture_rejects_required_and_enum_changes(self):
         for key, value in (("required", []), ("enum", ["invented"])):
             with self.subTest(key=key):
                 edited = copy.deepcopy(self.base)

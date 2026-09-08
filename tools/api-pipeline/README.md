@@ -8,7 +8,6 @@ Builds `{en,zh,ja}/api-reference/openapi_service.json` from Dify's generated Ser
 |:-----|:-----|
 | `upstream/service-openapi.json` | Unmodified Dify export for `/v1` |
 | `upstream/source.json` | Source repository, full commit SHA, and snapshot checksum |
-| `upstream/source.patch` | Optional source changes on top of the recorded SHA for paired local development |
 | `publication.json` | Explicitly excludes the root operation and five deprecated aliases, with reasons |
 | `overlays/{en,zh,ja}.json` | Documentation annotations, including legacy operation IDs and Mintlify page metadata |
 | `build_specs.py` | Import a snapshot, build the three specs, or capture reviewed annotations |
@@ -61,10 +60,6 @@ DIFY_EXPORT=$(mktemp -d)
    `capture` rejects technical changes, including fields, types, `$ref`, `required`, `enum`, response statuses, and security. Fix those in Dify and export/import again. Do not delete response constraints or rewrite references for rendering. Capture saves annotations; it does not verify their meaning.
 
 5. Run the checks below and review the generated pages. Commit the snapshot, provenance, overlays, three generated specs, and any navigation changes together.
-
-### Paired local changes
-
-For an export generated from uncommitted Dify changes, pass `--patch /absolute/path/to/source.patch` to `import`. The patch must contain the source changes used for that export, relative to the recorded commit; `source.json` records its checksum. This records the current two-repository integration before Dify has a new commit. After the Dify changes merge, export from the clean merged SHA and import without `--patch`; the tool removes `source.patch`. Never label a modified checkout's export as an unchanged commit.
 
 ## Documentation-only changes
 

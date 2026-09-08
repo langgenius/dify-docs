@@ -7,7 +7,7 @@ Mapping of concepts to file paths in the Dify codebase and docs repo.
 | What | Path |
 |------|------|
 | Generated OpenAPI specs | `{en,zh,ja}/api-reference/openapi_service.json` |
-| Upstream contract and provenance | `tools/api-pipeline/upstream/service-openapi.json`, `source.json`, optional `source.patch` |
+| Upstream contract and provenance | `tools/api-pipeline/upstream/service-openapi.json`, `source.json` |
 | Publication selection and annotations | `tools/api-pipeline/publication.json`, `overlays/{en,zh,ja}.json` |
 | Manual update and validation workflow | `tools/api-pipeline/README.md` |
 | Navigation config | `docs.json` |

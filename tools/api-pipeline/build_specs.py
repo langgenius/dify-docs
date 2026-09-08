@@ -170,10 +170,6 @@ def publication_base(pipeline=PIPELINE):
     digest = hashlib.sha256(raw_path.read_bytes()).hexdigest()
     if source["sha256"] != digest:
         raise ValueError("upstream snapshot checksum differs from source.json; import it again")
-    if "patch_sha256" in source:
-        patch = (upstream_dir / "source.patch").read_bytes()
-        if hashlib.sha256(patch).hexdigest() != source["patch_sha256"]:
-            raise ValueError("source patch checksum differs from source.json")
     spec = read_json(raw_path)
     excluded = read_json(pipeline / "publication.json")["excluded_operations"]
     available = dict(operations(spec))
@@ -229,11 +225,11 @@ def build(args):
     print(f"{'checked' if args.check else 'built'} {len(specs)} languages, {len(dict(operations(base)))} operations each")
 
 
-def capture(args):
+def capture(_args):
     base = publication_base()
     overlays = {}
     for lang in LANGUAGES:
-        path = args.input_dir / lang / "api-reference" / "openapi_service.json"
+        path = ROOT / lang / "api-reference" / "openapi_service.json"
         edited = read_json(path)
         check_publication(edited, lang)
         overlays[lang] = {"annotations": list(annotation_changes(base, edited))}
@@ -255,15 +251,6 @@ def import_source(args):
     directory.mkdir(parents=True, exist_ok=True)
     source = {"repository": "https://github.com/langgenius/dify", "revision": args.revision,
               "sha256": hashlib.sha256(data).hexdigest()}
-    patch_path = directory / "source.patch"
-    if args.patch:
-        patch = args.patch.read_bytes()
-        if not patch:
-            raise ValueError("source patch is empty; omit --patch for a clean commit")
-        source["patch_sha256"] = hashlib.sha256(patch).hexdigest()
-        patch_path.write_bytes(patch)
-    else:
-        patch_path.unlink(missing_ok=True)
     (directory / "service-openapi.json").write_bytes(data)
     write_json(directory / "source.json", source)
     print("imported upstream snapshot; review its diff and annotations before building")
@@ -276,12 +263,10 @@ def main():
     command.add_argument("--check", action="store_true", help="fail if generated files differ")
     command.set_defaults(run=build)
     command = commands.add_parser("capture", help="save reviewed prose/example edits as annotations")
-    command.add_argument("--input-dir", type=Path, default=ROOT)
     command.set_defaults(run=capture)
     command = commands.add_parser("import", help="record an explicitly selected upstream export")
     command.add_argument("--spec", type=Path, required=True)
     command.add_argument("--revision", required=True, help="full Dify source commit SHA")
-    command.add_argument("--patch", type=Path, help="source patch on top of that commit, for paired local changes")
     command.set_defaults(run=import_source)
     args = parser.parse_args()
     try:

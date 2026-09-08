@@ -4,7 +4,7 @@ Use when auditing an existing spec against the Dify codebase. `spec-conventions.
 
 ## Pre-Audit
 
-1. **Pin the refs**: read `tools/api-pipeline/upstream/source.json` for the imported Dify commit SHA and any `source.patch` for paired local changes. For graph-engine behavior, record the graphon version pinned in `dify/api/pyproject.toml` (read at that ref per `writing-guides/index.md` § "Syncing the Dify codebase safely"). Every finding cites file:line at those refs and identifies any relevant patch changes.
+1. **Pin the refs**: read `tools/api-pipeline/upstream/source.json` for the imported Dify commit SHA. For graph-engine behavior, record the graphon version pinned in `dify/api/pyproject.toml` (read at that ref per `writing-guides/index.md` § "Syncing the Dify codebase safely"). Every finding cites file:line at those refs.
 2. **Identify which app types each operation serves** (its availability line and `tools/api-pipeline/memberships.json`). Every check is filtered through that app-type scope.
 3. **Compare routes mechanically.** From the docs repo root, with `WT` pointing at a dify checkout of the pinned ref (use the detached-worktree recipe in the safe-sync section if the clone is not on it; requires Python ≥ 3.10 — the script AST-parses dify controllers that use `match`):
 
