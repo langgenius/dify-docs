@@ -450,7 +450,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
 | Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
 | Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
-| Web App URL | Web 应用 URL | Web アプリ URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab |
+| Access URL | 访问 URL | アクセス URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab; renamed from "Web App URL" in 1.17.1. The same key labels the Workflow and Chatflow card and the Agent card |
 | Backend Service API | 后端服务 API | バックエンドサービス API | agent-v-2.agentDetail.access.serviceApi.title | Access Point tab |
 
 ### Question Classifier Node Config

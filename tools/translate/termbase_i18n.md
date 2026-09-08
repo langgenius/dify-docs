@@ -440,7 +440,7 @@
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
-| Web App URL | Web 应用 URL | Web アプリ URL |
+| Access URL | 访问 URL | アクセス URL |
 | Backend Service API | 后端服务 API | バックエンドサービス API |
 
 ### Question Classifier Node Config
