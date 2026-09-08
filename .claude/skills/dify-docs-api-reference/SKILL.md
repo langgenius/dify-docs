@@ -21,7 +21,7 @@ Not an entry point for writing — editing or creating specs runs under `dify-do
 All four are non-negotiable.
 
 1. **S1 — scope.** Identify which app types the operation serves from the AppMode table in `references/codebase-paths.md`; every later check is filtered through that app-type lens (see [App-Type Scoping](#app-type-scoping)). Read code at the ref pinned in S1 per `writing-guides/index.md` § "Syncing the Dify codebase safely"; never `git checkout` or `git pull` in a tree you have not confirmed is clean.
-2. **S5 — write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here. At S6, say that this pack modifies the stage: all three language specs are edited directly in the same pass (see [Spec Structure](#spec-structure)); `parity_check` replaces a separate translate step.
+2. **S5 — write or edit to the conventions.** Apply `references/spec-conventions.md` for every element: summaries, operationId, descriptions, parameters, responses, error format, schemas, examples, tags, ordering. That file is the single source for formatting rules; do not reinvent them here. At S6, update the documentation annotations for all three languages in the same pass (see [Spec Structure](#spec-structure)); capture them in the overlays and run `parity_check`. Technical changes come from a new Dify export, not translated edits.
 3. **S2/S7 — verify every detail against the code.** Nothing ships unverified (see [Verifying Against Code](#verifying-against-code)). Use `references/codebase-paths.md` to locate controllers, error definitions, and global handlers. Flag suspected code bugs; never silently document them (see [Flagging Suspected Bugs](#flagging-suspected-bugs)).
 4. **S7 verifiers** (after the pipeline's check chain): the independent subagent audit — required for new or **substantially changed** endpoints — and the example/schema consistency pass (both under [S7 Verifiers](#s7-verifiers)). **Substantially changed** = any change to paths, methods, parameters, schema fields or constraints, status codes, error codes, example values, or availability; only pure prose rewording (summaries, descriptions, translations) is exempt.
 
@@ -31,7 +31,9 @@ Backend developers integrating Dify apps or knowledge bases via REST. Strong cod
 
 ## Spec Structure
 
-One spec per language — `{en,zh,ja}/api-reference/openapi_service.json` — is the spec of record. Edit it directly, in all three languages; `parity_check` enforces structural parity with en. (The five legacy per-app-type source specs and the merge pipeline that consolidated them are retired; recover from git history if needed.)
+One generated spec per language lives at `{en,zh,ja}/api-reference/openapi_service.json`. Its technical contract comes from `tools/api-pipeline/upstream/service-openapi.json`; `source.json` pins the Dify commit and checksum. `publication.json` records excluded operations, and `overlays/{en,zh,ja}.json` stores documentation annotations. Follow `tools/api-pipeline/README.md` to export, import, build, and validate.
+
+For prose, examples, and page metadata, edit the generated files in all three languages, review them, then run `build_specs.py capture` and `build_specs.py build --check`. Capture rejects changes to fields, constraints, references, status codes, or authentication; fix those in Dify and re-export. Preserve the generated contract, including response `required` and `enum`. `parity_check` compares the complete contract and page URLs while allowing historical language-specific operation IDs. A recorded `upstream/source.patch` identifies paired local Dify changes; replace it with a clean export from the merged SHA when available.
 
 App types map to `AppMode` values. The one mapping table (docs names, spec groups, key endpoints, and the modes the Service API does not cover) is `references/codebase-paths.md` § "AppMode ↔ app-type names" — use it, never memory.
 
@@ -39,15 +41,15 @@ Shared endpoints (file upload, audio, feedback, app info, parameters, meta, site
 
 Every operation carries `x-mint.href` (`/{lang}/api-reference/{en-tag-kebab}/{en-summary-kebab}` — English slugs in all languages for language-switcher parity) and `x-mint.metadata.title`/`sidebarTitle` (the translated summary; without them the sidebar shows the English slug). Set all of these when adding an operation, and keep the `tags` arrays index-aligned across languages.
 
-After structural edits (adding, removing, retitling, or reordering operations, or changing availability): update `memberships.json` and the app-type overview pages, then run `wire`, `check-coverage`, `lint_specs`, and `parity_check` per `tools/api-pipeline/README.md`. Description-only edits need the lints but not `wire`.
+New operations need page metadata in every language overlay before the build passes. After adding, removing, retitling, or reordering operations, or changing availability, update `memberships.json`, navigation labels as needed, and the app-type overview pages, then run the build, validation, lint, parity, `wire`, and `check-coverage` commands in `tools/api-pipeline/README.md`. Description-only edits skip `wire`. Stale annotation targets fail the build; applying annotations successfully does not establish semantic accuracy.
 
 ### App-Type Scoping
 
 The codebase shares controllers and Pydantic models across app modes; the merged spec documents each shared endpoint once, mode-aware. Filter every claim through the app types the operation actually serves (its availability line and `memberships.json`):
 
-- **Shared models**: include only fields that have an effect in at least one supported mode; mark mode-specific fields in a mode note.
-- **Shared error handlers**: include only errors triggerable in a supported mode.
-- **Internal-only fields** (e.g., `retriever_from`): omit from the spec.
+- **Shared models**: explain which supported modes use each field; preserve the exported schema.
+- **Shared error handlers**: verify errors are triggerable in a supported mode; fix unreachable error declarations in Dify before exporting.
+- **Internal-only fields** (e.g., `retriever_from`): exclude them in Dify's public schema, not through a docs overlay.
 
 To judge relevance, check the controller's `AppMode` guard; when in doubt, trace through `AppGenerateService.generate()`. For example, `workflow_id` matters in chatflow mode, not chat.
 
@@ -68,7 +70,7 @@ Every detail in the spec MUST be verifiable against the codebase.
 1. **Identify the correct controller.** These specs are the Service API (`servers` base ends in `/v1`; `controllers/service_api/`). The same route name often also exists on the `web` or `console` blueprint with a different path, auth model, and required params (e.g., a required `user`); match the blueprint whose base URL matches `servers`, not the first controller you find.
 2. Read the controller method.
 3. For each parameter, find the Pydantic model or `request.args.get()` and note the `Field()` arguments.
-4. **Trace string fields beyond the controller.** A controller `str` may be cast to `StrEnum`/`Literal` or validated against a fixed list downstream; if so, the spec needs `enum`.
+4. **Trace string fields beyond the controller.** A controller `str` may be cast to `StrEnum`/`Literal` or validated against a fixed list downstream; if the exported schema misses that constraint, fix Dify's public schema and re-export.
 5. For errors, trace `except` to `raise` to the exception class and its `error_code`/`code` in `error.py`, and through the global handlers in `api/libs/external_api.py`.
 6. For responses, read the `return` statement AND any response converter (they flatten, restructure, or inject fields).
 7. For service calls, read the service method to see what it actually returns or raises.
@@ -101,7 +103,7 @@ Treat the audit as authoritative over your draft; reconcile every discrepancy be
 
 ### Example and schema consistency
 
-A quick mechanical pass, independent of the audit:
+Run `validate_specs.py` with the pinned validator command in `tools/api-pipeline/README.md` for OpenAPI validity and structured example validation. Separately review example coverage; the validator does not prove that examples match runtime behavior:
 
 - Every key in a request or response example appears in the corresponding schema, and every documented field appears in at least one example.
 - Every documented enum value and `oneOf` branch is exercised by at least one example.

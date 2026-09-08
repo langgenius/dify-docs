@@ -206,19 +206,13 @@ Verify against the Dify codebase (configured as an additional working directory)
 
 ### API Reference Updates
 
-The spec of record is `{en,zh,ja}/api-reference/openapi_service.json` — one hand-maintained spec per language, edited directly. Shared endpoints exist once, with availability noted in their descriptions; there are no per-app-type specs and no cross-spec propagation.
+The three `{en,zh,ja}/api-reference/openapi_service.json` files are generated from the pinned Dify Service API export and language-specific overlays. Shared endpoints appear once per language, with availability in their descriptions. Follow `tools/api-pipeline/README.md` for the complete manual workflow and commands.
 
-1. Dispatch audit agents with the `dify-docs-api-reference` skill, one per affected tag group: audit the group's endpoints against the code at the pinned ref, focusing on the report's changes but reading each touched endpoint fully (PRs have side effects).
-2. Apply fixes to the `en` spec, then mirror the same structural change into `zh` and `ja` (translate summaries and descriptions; keep wire strings verbatim).
-3. If operations were added, removed, retitled, or reordered: update `tools/api-pipeline/memberships.json` (and the app-type overview pages) if availability changed, then regenerate navigation with `python3 "$DOCS/tools/api-pipeline/merge_specs.py" wire --lang en zh ja` (rewrites the `docs.json` API menus and redirects). Description-only edits skip this step.
-4. Run the gate from the docs repo root. The gate is each command's printed zero line, not its exit status — `lint_specs.py` exits 0 even with issues. Any nonzero printed count (or nonzero exit) blocks the track — fix and re-run:
-
-```bash
-export DOCS="$(git rev-parse --show-toplevel)"
-python3 "$DOCS/tools/api-pipeline/merge_specs.py" check-coverage --lang en zh ja  # prints "coverage failures: 0"
-python3 "$DOCS/tools/api-pipeline/lint_specs.py"    # prints "TOTAL ISSUES: 0"
-python3 "$DOCS/tools/api-pipeline/parity_check.py"  # prints "TOTAL PARITY ISSUES: 0"
-```
+1. Dispatch audit agents with `dify-docs-api-reference`, one per affected tag group, to verify changes against the pinned ref. Correct technical contract defects in Dify before exporting; do not hand-edit fields, constraints, references, response statuses, or security in the docs output.
+2. Export `service-openapi.json` from Dify, import it with its full commit SHA, and review the raw diff and affected overlay text/examples. `source.patch` is only for recorded paired local changes; replace it with a clean export from the merged SHA when available.
+3. Build all three specs. Review and edit their prose/examples in all three languages, run `build_specs.py capture`, then `build_specs.py build --check`. Resolve stale annotation targets explicitly. Capture rejects technical changes but does not verify prose or example semantics.
+4. For new operations, add translated labels and `x-mint` metadata in every overlay; preserve existing operation IDs and page URLs. Update `memberships.json`, navigation labels as needed, and app-type overview pages for operation or availability changes, then run `wire` and `check-coverage`.
+5. Run the OpenAPI/example validator, documentation lint, and complete contract/URL parity checks from the pipeline README. Each check exits nonzero on failure. Review rendered pages and commit the snapshot, provenance, overlays, and generated specs together.
 
 ### Help Documentation Updates
 
@@ -235,7 +229,7 @@ For each affected variable group, run `dify-docs-write` (an update; S4 satisfied
 
 ### Parallel Execution
 
-- API spec audits: one agent per affected tag group (parallel, read-only); apply the resulting spec edits sequentially — all edits target the same three `openapi_service.json` files
+- API spec audits: one agent per affected tag group (parallel, read-only); apply documentation edits and capture overlays sequentially — all authors share the same three generated specs and overlays
 - Help doc updates: one agent per doc page (parallel)
 - Env var updates: sequential (single target file)
 - API, help doc, and env var tracks: can run in parallel
@@ -245,7 +239,8 @@ For each affected variable group, run `dify-docs-write` (an update; S4 satisfied
 | What | Path |
 |---|---|
 | Dify codebase | Configured as an additional working directory |
-| Service API spec (per language) | `{en,zh,ja}/api-reference/openapi_service.json` |
+| Generated Service API specs | `{en,zh,ja}/api-reference/openapi_service.json` |
+| Upstream snapshot, provenance, and overlays | `tools/api-pipeline/upstream/`, `tools/api-pipeline/overlays/` |
 | API pipeline gate + usage docs | `tools/api-pipeline/` (`README.md` holds the full usage block) |
 | App-type availability | `tools/api-pipeline/memberships.json` |
 | GitHub repo | `langgenius/dify` |

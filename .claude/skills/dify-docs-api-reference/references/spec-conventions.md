@@ -1,8 +1,8 @@
 # Spec Conventions
 
-The single source of truth for how every element of a Dify OpenAPI spec must be written. Load this when writing, editing, or auditing a spec. SKILL.md owns the workflow and code-verification method; this file owns the formatting, structural, and readability rules.
+The writing conventions for Dify OpenAPI documentation annotations. Load this when writing, editing, or auditing a spec. SKILL.md owns the workflow and code-verification method; `tools/api-pipeline/README.md` owns the import/build/capture commands.
 
-Every schema constraint, status code, error code, and example value here is subordinate to the code: transcribe `Field()` arguments verbatim and verify against the controller (see SKILL.md). These conventions govern *how to express* what the code dictates, never *what* it dictates.
+The generated Dify contract is authoritative for fields, types, constraints, references, status codes, and security. Keep it unchanged in the docs pipeline. Correct contract defects in Dify and re-export; do not use presentation rules to remove response `enum` or `required`, inline a `$ref`, or alter schema structure. These conventions apply to descriptions, examples, titles, and navigation metadata, all verified against the pinned code.
 
 ## Contents
 
@@ -93,22 +93,21 @@ When a description mentions another endpoint, link it with the language prefix a
 ## Parameters
 
 - Every parameter has a `description`, and a specific one: `"Available options."` tells the developer nothing.
-- **Schema constraints match code exactly.** Transcribe `Field()` arguments verbatim; never round or "correct" (`Field(le=101)` → `"maximum": 101`, not 100).
-- Mark `required` accurately from the code.
+- **Schema constraints match code exactly.** Verify the exported `Field()` arguments; never round or "correct" (`Field(le=101)` → `"maximum": 101`, not 100). Fix mismatches upstream.
+- Preserve exported `required` flags and arrays, including on responses.
 - **No `example` field on parameters**; use the request body `examples` instead.
 - **Schema metadata is not repeated in descriptions.** If `default: 20` is in the schema, the description leaves it out; Mintlify renders both.
 - **Enum values are not repeated in descriptions**, except to say when to choose each one.
-- **Request string fields**: use `enum` for known value sets. Trace string fields through the service layer for hidden enums (`StrEnum` cast, `Literal`, validation against a fixed list); if any exist, the spec carries `enum`. Exception: leave genuinely dynamic/provider-specific fields (e.g., `voice`, `embedding_model_name`) without `enum`.
-- **Response fields** carry no `enum`, because Mintlify renders a duplicate "Available options" list. The values are explained in the `description` instead.
+- **String fields**: preserve generated `enum` values on requests and responses. Trace missing request constraints through the service layer (`StrEnum`, `Literal`, or a fixed validation list) and correct Dify's public schema when needed. Leave dynamic/provider-specific fields (e.g., `voice`, `embedding_model_name`) unconstrained unless the code defines a fixed set.
 
 ## Success Responses
 
-- Only 200/201 as the primary response. For multiple modes (blocking/streaming), use markdown bullets in the 200 `description`.
+- Preserve exported success status codes and body shapes. For multiple modes (blocking/streaming), use markdown bullets in the response `description`; do not add a body to a bodyless response.
 - **Every 200/201 JSON response carries at least one `examples` entry** with realistic values.
 - **Response body matches actual API output, not the Pydantic entity.** Response converters (e.g., `convert_blocking_full_response`) may flatten, restructure, or inject fields; read the converter.
-- **Streaming endpoints**: verify the event-type `enum` against the events the task pipeline actually yields; every event type needs a corresponding discriminator mapping entry.
+- **Streaming endpoints**: verify event names and examples against the task pipeline. Keep the exported stream schema; when it is a string, document event details in its description and the streaming guide rather than replacing it with a docs-only schema.
 - **Streaming schema descriptions** follow one template: a one-line parse pointer to the [SSE Streaming guide](/en/api-reference/guides/streaming) (never re-explain `data:` parsing inline), an **Events by app type** map (reply events, then the closing sequence per outcome), add-ons (TTS, reasoning), common payload fields. Field-level detail lives in the event tables; the narrative never re-tells them.
-- **Binary/file responses**: use `content` with the right media type and `{ "type": "string", "format": "binary" }` (`audio/mpeg` for fixed-format audio, `application/octet-stream` for generic files; when the code selects the media type at runtime from a known set, enumerate those types under `content` — the controller annotation may say octet-stream only because Swagger 2 cannot express the selection, and this spec is OpenAPI 3). Put details in the response `description`, not the endpoint description.
+- **Binary/file responses**: preserve exported media types and binary schemas, including `*/*` for a runtime-selected MIME type. Verify them against the controller and fix incorrect declarations in Dify. Put download and MIME-selection details in the response `description`.
 - **Schema description duplication**: when a response uses `$ref`, the referenced schema has no top-level `description`, because Mintlify renders both.
 
 ## Error Responses
@@ -132,16 +131,15 @@ The wire `code` and `message` per exception kind are defined once, in `codebase-
 
 ### Error format
 
-- **No `$ref` schema** in error responses; omit `"schema"` entirely.
+- Preserve any exported error schema and `$ref`. If the export has no schema, add descriptions and examples without inventing one in the overlay.
 - `description` lists the error codes as markdown bullets with backticked names. **Each bullet names the trigger condition** ("the file's extension is on the deployment's blacklist"), never a restatement of the code name ("File type not allowed.").
 - **Examples required** for every error response (provides the Mintlify dropdown selector). No unresolved format placeholders like `{message}`; use realistic static text.
 
 ## Schemas
 
-- **Prefer inline** over `$ref` for simple objects; use `$ref` only for genuinely reused or complex schemas.
-- **Array items must define `properties`**; no bare `"type": "object"`, which Mintlify renders as `object[]` with no expandable fields.
-- **`required` arrays on request schemas only.** A response schema carries none.
-- **`oneOf` options**: each option object needs a descriptive `title`, and the parent schema (the `oneOf` wrapper) has no `description`.
+- Preserve the exported schema structure: `$ref`, object properties, array items, composition branches, discriminators, `required`, and `enum` remain upstream-owned.
+- If a concrete object's fields are missing, fix its Dify response/request declaration and re-export. Do not invent properties for intentionally dynamic objects.
+- Give composition branches descriptive titles where useful; titles and descriptions may be annotated without restructuring the branches.
 
 ## Examples
 

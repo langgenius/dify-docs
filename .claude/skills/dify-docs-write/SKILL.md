@@ -66,7 +66,7 @@ Uncertain content is left out and recorded, never hedged. Concept sections descr
 
 Read now: `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and the glossary.
 
-Every English change ships `zh/` and `ja/` in the same pass. A new page is registered in all three navigation sections of `docs.json` in the same PR. The API pack edits its three specs directly and gates on its parity check.
+Every English change ships `zh/` and `ja/` in the same pass. A new page is registered in all three navigation sections of `docs.json` in the same PR. The API pack captures reviewed prose and examples as language annotations, rebuilds its three specs from the upstream contract, and gates on its build and parity checks.
 
 Translate from the English file on disk as it stands, not from the draft in the conversation. After a review round, diff the English file and carry every changed sentence, structural edits included, into zh and ja; a stated sync is intent, not verified state, and a deletion of content you drafted is confirmed with the owner before it is mirrored. A page that already exists translated in a sibling tree is copied and adjusted (links, the disclaimer backlink, the audience-specific fragment), never re-translated. When the owner deletes from one translation, mirror the deletion in the other.
 
