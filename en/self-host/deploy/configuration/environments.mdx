@@ -124,6 +124,8 @@ To disable collaboration, set this to `false`. On Docker Compose, also remove `c
 
 If you use your own reverse proxy, forward `Upgrade` and `Connection` headers on `/socket.io/` (the bundled nginx template already does this). Running multiple API replicas requires sticky sessions.
 
+If the editor keeps dropping and reconnecting while collaborators work on a large workflow, raise `WEBSOCKET_MAX_HTTP_BUFFER_SIZE`.
+
 ### System Encoding
 
 | Variable | Default | Description |
@@ -209,6 +211,7 @@ Optional security gate for first-time setup. When set, the `/install` page requi
 | `APP_MAX_EXECUTION_TIME` | `3600` | Maximum time in seconds an app execution can run before it is terminated. <br/><br/>An outer limit alongside `WORKFLOW_MAX_EXECUTION_TIME`: both default to one hour, with this one applied at the app queue level and the other at the workflow engine level. Increase both together if your workflows need more time.<br/><br/>If you run agents, keep these outer limits at or above the agent run deadline (`DIFY_AGENT_RUN_TIMEOUT_SECONDS`); otherwise agent runs are cut short. |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | Default concurrent request limit per app, used when an app doesn't have a custom limit set in the UI. `0` means unlimited. The effective limit is the smaller of this and `APP_MAX_ACTIVE_REQUESTS`. |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | Global ceiling for concurrent requests per app. Overrides per-app settings if they exceed this value. `0` means unlimited. |
+| `WEBSOCKET_MAX_HTTP_BUFFER_SIZE` | `10485760` | Maximum collaboration WebSocket message size in bytes (10 MiB by default). Raise it if saving a large workflow causes repeated disconnections because the workflow graph exceeds this limit.<br/><br/>Set it on the API process serving `/socket.io/`: the `api_websocket` container in Docker Compose. |
 
 ### Container Startup Configuration
 
@@ -1358,6 +1361,7 @@ These variables are used by the Next.js web frontend container only, and do not 
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | Allow rendering URLs with the `data:` scheme. Disabled by default for security. |
 | `MAX_TREE_DEPTH` | `50` | Maximum number of nodes along a single execution path. Longer paths cannot be published. Changes apply only to newly published workflows. |
 | `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | (empty) | Extra characters accepted in the `name` attributes of form fields that apps render from Markdown in chat responses.<br/><br/>By default a field name must start with a letter and may contain letters, digits, underscores, and hyphens; fields whose names use other characters are not rendered.<br/><br/>Set the additional characters as one string; both half-width and full-width characters work, e.g. `()！？`. |
+| `MARKDOWN_FORM_FIELD_NAME_MAX_LENGTH` | `128` | Maximum length of the `name` attribute of form fields that apps render from Markdown in chat responses; fields with longer names are not rendered. Works alongside `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS`, which governs the characters a name may contain.<br/><br/>Raise it if generated field names run past the limit and the rendered form is missing those fields. Must be a positive integer. |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1424,7 +1428,11 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_REDIS_URL` | (empty; derives from `REDIS_PASSWORD`) | Redis connection for the agent backend's run state; the Compose default points at the bundled `redis` on database 2. |
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Key prefix for the agent backend's Redis entries. |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | How long a stopping agent backend waits for in-flight runs to finish. |
-| `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | How long finished run records are retained (3 days by default). |
+| `DIFY_AGENT_RUN_RETENTION_SECONDS` | `7200` | How long to keep each agent run's record and event stream in Redis, in seconds after its last write (2 hours by default). Lower it to free Redis memory sooner, at the cost of a shorter window for replaying events after a dropped connection. |
+| `DIFY_AGENT_RUN_EVENT_STREAM_MAX_LENGTH` | `5000` | Approximate maximum number of events to keep in each agent run's Redis stream. Lower it to reduce Redis memory use per run.<br/><br/>New events trim the oldest ones once the limit is reached. Trimmed events cannot be replayed after a dropped connection. |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | Batches consecutive model text deltas before writing them to Redis and streaming them. Keep enabled to reduce Redis writes and event counts.<br/><br/>Set to `false` to stream each delta separately. Tool calls and other non-text events remain unchanged and in order. |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | Target interval in milliseconds for publishing batched text deltas. Lower it for more frequent text updates; raise it for fewer, larger batches.<br/><br/>This is not a strict timing limit. Batches can be published sooner when they reach `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS`. Minimum: 1. To disable batching, set `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` to `false`. |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | Character threshold for publishing a text-delta batch before the flush interval elapses. Lower it to publish smaller batches sooner.<br/><br/>A batch can exceed this threshold because deltas are added whole. Minimum: 1. |
 | `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so values above an hour only take effect on the `local` backend. |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
@@ -1441,6 +1449,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`. |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which still works as a legacy alias. |
 | `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | (empty) | Optional bearer token securing the agent backend's calls to the sandbox; Compose passes the same value to both services. <br/><br/>Replaces the former `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`, which still works as a legacy alias. |
+| `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | Host port at which the middleware stack for [source-code deployments](/en/self-host/deploy/advanced-deployments/local-source-code) publishes the agent sandbox, so an agent backend run from source reaches it at `http://localhost:5004`. Set it in that stack's `middleware.env`; if you change it, point `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` in the agent backend's `.env` at the new port.<br/><br/>Middleware stack only: the full Compose stack keeps the sandbox on an internal network. |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | Dify API address the sandboxed agent uses for file transfers. Keep the default on Docker Compose. A remote sandbox backend needs your publicly reachable Dify address here. |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | How long the API waits when fetching a file from an agent's sandbox before failing the transfer. Keep it above the agent-side `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`. |

@@ -61,21 +61,58 @@ These topics are built into the CLI. For which variables `difyctl` actually read
 
 ## Machine-Readable Help
 
-Every help surface accepts `-o json` and `-o yaml`. The top-level form emits the complete command surface in one document:
+Every help surface accepts `-o json` and `-o yaml`. A coding agent driving `difyctl` works from two of them: the [compact command map](#compact-command-map) to pick a command, then that command's [descriptor](#per-command-descriptor) for its arguments and flags. The [full document](#full-document) adds the cross-command contract and the topic list in one read.
+
+### Compact Command Map
+
+Add `--compact` to top-level help to get every command as a three-field entry:
+- Its `command` path
+- One-line `description`
+- `effect` label (`read`, `write`, or `destructive`)
+
+Nothing else is included, so the whole map stays small enough to read in one pass before choosing a command:
 
 ```bash
-difyctl help -o json
+difyctl help -o json --compact
 ```
 
-The document has four top-level keys:
+The first entries of the map:
 
-- `bin`, `contract`: exit codes, output formats, the shape of error output, and cross-command rules 
-- `commands`: one descriptor per command
-- `topics`: the available guide topics by name, with each topic's text read via `difyctl help <topic>`
+```json
+{
+  "commands": [
+    {
+      "command": "auth devices list",
+      "description": "List active sessions for the current bearer",
+      "effect": "read"
+    },
+    {
+      "command": "auth devices revoke",
+      "description": "Revoke one or all session devices",
+      "effect": "destructive"
+    },
+    {
+      "command": "auth list",
+      "description": "List all authenticated contexts (host + account pairs)",
+      "effect": "read"
+    },
+    {
+      "command": "auth login",
+      "description": "Sign in to Dify via OAuth device flow",
+      "effect": "write"
+    }
+  ]
+}
+```
 
-Per-command help in JSON returns just that command's descriptor:
+`--compact` applies to top-level help only and needs `-o json` or `-o yaml`. On per-command help, or without a structured format, it fails as a usage error with exit code `2`.
+
+### Per-Command Descriptor
+
+Once a command is chosen, its descriptor supplies everything the map leaves out. Both per-command help forms return it:
 
 ```bash
+difyctl help auth whoami -o json
 difyctl auth whoami --help -o json
 ```
 
@@ -104,7 +141,22 @@ difyctl auth whoami --help -o json
 }
 ```
 
-Each descriptor carries the command's arguments and flags with types and defaults, an `effect` label (`read`, `write`, or `destructive`), and an `agentGuide` string where one exists. This is how coding agents discover `difyctl`.
+Each descriptor carries the command's arguments and flags with types and defaults, its examples, the `effect` label, and an `agentGuide` string of command-specific guidance for agents, where one exists.
+
+### Full Document
+
+Without `--compact`, top-level help emits the complete command surface in one document:
+
+```bash
+difyctl help -o json
+```
+
+The document has four top-level keys:
+
+- `bin`: the executable name, `difyctl`
+- `contract`: exit codes, output formats, the shape of error output, and cross-command rules
+- `commands`: one full descriptor per command
+- `topics`: the guide topics by name and one-line summary; each topic's text comes from `difyctl help <topic>`
 
 ## Exit Codes
 
@@ -112,5 +164,6 @@ Each descriptor carries the command's arguments and flags with types and default
 |:---|:---|
 | `0` | Help printed |
 | `1` | Unknown help topic or command name |
+| `2` | `--compact` outside top-level `-o json` or `-o yaml` help |
 
 See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes) for the full scheme.
