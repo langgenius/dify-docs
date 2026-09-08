@@ -133,16 +133,15 @@ for f in SPEC_FILES:
                         check_example(ex, schema, spec, f"{where} resp{code}[{name}]", rel)
                         collect_enum_usage(ex, all_example_values, spec)
 
-            # param examples + collect enums; x-codeSamples guard
-            req_query = []
+            # param examples + collect enums
             for prm in op.get("parameters", []) or []:
                 sch = resolve(prm.get("schema", {}), spec)
                 if isinstance(sch, dict) and "enum" in sch:
                     all_enums.append((f"{where} param `{prm['name']}`", sch["enum"]))
-                if prm.get("in") == "query" and prm.get("required"):
-                    req_query.append(prm["name"])
-            if req_query and m.lower() == "get" and not op.get("x-codeSamples"):
-                issues[rel].append(f"{where}: required query {req_query} but no x-codeSamples override")
+
+            # x-codeSamples guard: a static sample freezes the playground snippet
+            if "x-codeSamples" in op:
+                issues[rel].append(f"{where}: x-codeSamples present; remove it and let the playground autogenerate")
 
             # link targets in descriptions
             desc = op.get("description", "") or ""

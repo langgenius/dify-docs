@@ -1,25 +1,14 @@
 # Dify Documentation — AI Agent Instructions
 
-Documentation for Dify, built with Mintlify. English is the source language, and every content change ships all three languages together: finalize the English change, then produce the zh and ja translations in the same pass, following `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`. This applies to external contributions too.
+Documentation for Dify, built with Mintlify. English is the source, and every change ships English, Chinese, and Japanese together, external contributions included.
 
-For documentation tasks, read these guides before starting:
+## Working on the docs
 
-1. `writing-guides/style-guide.md` — Voice, tone, writing patterns
-2. `writing-guides/formatting-guide.md` — MDX formatting, Mintlify components
-3. `writing-guides/glossary.md` — Standardized terminology
+Write or revise any page, spec, or reference through the pipeline in `.claude/skills/dify-docs-write/SKILL.md`, a one-line correction included. It loads the writing guides and the doc-type rule pack at the stages that need them, verifies claims against the codebase at a pinned ref, ships all three languages with their navigation, and checks the work before it is presented. Hosts that do not auto-discover `.claude/skills` load that file explicitly. `writing-guides/index.md` maps tasks to skills and carries the codebase-sync procedure.
 
-For task-specific guidance, see `writing-guides/index.md`.
+## Repository rules
 
-After any documentation edit, check the work against these guides and the matching skill under `.claude/skills/`, and apply the corrections before presenting it — the dify-docs-write skill's Verify stage (S7) is the procedure.
-
-## Key Rules
-
-- English first: write and finalize content in English, then translate to zh and ja in the same pass per the rules in `tools/translate/`. Keep the translation Note at the top of zh/ja pages.
-- `docs.json` has one navigation section per language. Structural changes (added, moved, renamed pages) must be mirrored across all three sections in the same PR.
-- MDX files require `title` and `description` in YAML frontmatter.
-- When writing about a feature, verify behavior against the Dify codebase, not just existing docs. Existing docs may be outdated or completely wrong. When rewriting a page, treat every claim in the original as unverified. Check field names, types, required/optional status, and behavior descriptions against the current code. Never carry forward details from legacy docs without independent verification. The backend is split across two repos: built-in workflow nodes, the graph engine, runtime, and model_runtime live in the `graphon` repo (version-pinned in `dify/api/pyproject.toml`); integration nodes (Agent, Knowledge, Datasource, Trigger), orchestration, RAG, and tools stay in `dify`. Verify against the graphon version actually pinned by dify, not graphon `main`.
-- For new features, the user may specify a development branch. Code on development branches may be in flux—when behavior is ambiguous, ask rather than assume.
-- When adding or updating internal-only instructions, tooling, configs, or other non-public files, ensure all paths that should not be exposed by Mintlify are covered in `.mintignore`.
+- Paths that Mintlify must not publish (internal instructions, tooling, configs) are covered in `.mintignore`.
 - Never use `--no-verify` when committing.
 
 ## Repository Structure
