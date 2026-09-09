@@ -12,7 +12,7 @@ Verify a finished document by having a clean-context agent read it as the target
 
 ## Procedure
 
-1. **Get the persona.** Copy the reader persona verbatim from the rule pack used for the task: `dify-docs-guides` (Reader Personas, by document path), `dify-docs-env-vars` (Reader Persona), `dify-docs-api-reference` (Reader Persona), `dify-cli-docs` (Reader segments), or `ee-ops-docs` (Reader Personas; in Dify-Enterprise-Docs). If the task used no rule pack with a persona, ask the user who the target reader is before dispatching.
+1. **Get the persona.** Copy the reader persona verbatim from the rule pack used for the task: `dify-docs-guides` (Reader Personas, by document path), `dify-docs-env-vars` (Reader Persona), `dify-docs-api-reference` (Reader Persona), `dify-cli-docs` (Readers), or `ee-ops-docs` (Reader Personas; in Dify-Enterprise-Docs). If the task used no rule pack with a persona, ask the user who the target reader is before dispatching.
 2. **Dispatch one fresh subagent per document** with the Agent tool (`subagent_type: general-purpose`). Never run the test inline in the current conversation — this conversation contains the source context the reader must not have. The dispatch prompt is the template below verbatim, with two placeholders filled:
    - `{PATH}` — the absolute path to the finished document file. The input is the path, never pasted content: the test must run against the file on disk, not a possibly stale copy from the conversation.
    - `{PERSONA}` — the persona text from step 1, unmodified.
@@ -48,15 +48,20 @@ Read the document once, top to bottom, as this person, and answer:
 - Is the information I need actually here, or do I have to guess?
 - Do the code examples make sense on their own?
 - After reading, do I know what to do next?
+- Where did I want advice (what to choose, what to avoid, what happens
+  if I get it wrong) and get only a description?
+- Which sentences told me something I could already see on screen, or
+  would have assumed without being told?
 
-Do NOT review style or formatting, fact-check claims against any other
+Do not review style or formatting, fact-check claims against any other
 source, or rewrite anything. Only report where a first-time reader
-struggles.
+struggles or is left wanting.
 
 Reply with exactly this structure:
 
 - **Got stuck at**: [section/step where understanding broke down, or "nowhere"]
 - **Didn't understand**: [terms, concepts, or references that were unclear, or "nothing"]
 - **Missing context**: [assumptions the document makes that weren't established, or "none"]
+- **Wanted but didn't get**: [places I needed a judgment and got a description, and sentences that told me nothing new, or "none"]
 - **Verdict**: Clear / Minor gaps / Needs revision
 ```

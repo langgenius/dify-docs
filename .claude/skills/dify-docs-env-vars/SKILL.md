@@ -61,7 +61,7 @@ Cover: what the variable does in practical terms; the specific features that dep
 
 ### Step 4 (S4 contribution): Report
 
-The S4 scope report presents: the plain-language explanations, the proposed descriptions, and the pinned ref. The spine's S4 gate applies.
+The S4 scope report presents: the plain-language explanations, the proposed descriptions, and the pinned ref. The pipeline's S4 gate applies.
 
 ### Step 5 (S5/S6): Edit the documentation
 

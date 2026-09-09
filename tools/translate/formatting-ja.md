@@ -185,7 +185,7 @@ The paid-feature `<Tip>` pattern (`writing-guides/style-guide.md` § Paid Featur
 
 ```mdx
 <Tip>
-Dify Enterprise では、…できます。詳しくは [営業担当](https://udify.app/chat/QuwcpW1oBNcfeL55) までお問い合わせください。
+Dify Enterprise では、…できます。詳しくは [営業担当](https://share-na2.hsforms.com/176RpklY3TLeHo6qmuAdRKQ40s9fk) までお問い合わせください。
 </Tip>
 ```
 

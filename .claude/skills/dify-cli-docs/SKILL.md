@@ -1,86 +1,70 @@
 ---
 name: dify-cli-docs
 description: >
-  Rule pack for the Dify CLI (`difyctl`) doc set — en/cli/. Covers reader
-  segments, the writing rules, content ownership, and codebase-verification
-  rules. Loaded by dify-docs-write; not an entry point.
+  Rule pack for the Dify CLI (`difyctl`) doc set: en/cli/ and the Enterprise
+  develop/cli/ trees. Readers, source of truth, house style, page shape, and
+  content ownership. Loaded by dify-docs-write.
 ---
 
 # Dify CLI Documentation
 
-Not an entry point — run under `dify-docs-write`; this pack's rules implement its stages for `en/cli/` pages.
+Not an entry point: `dify-docs-write` loads this pack for `en/cli/` pages and the Enterprise `develop/cli/` trees.
 
-## Procedures by stage
+## Readers
 
-1. **S1**: Confirm edition scope: CE-first; badge and defer Cloud-only content (see Editions below).
-2. **S2/S7**: Verify every behavior claim against `langgenius/dify` `cli/` on `origin/main`, read at the pinned SHA per `writing-guides/index.md` "Syncing the Dify codebase safely"; record that SHA in your report.
-3. **S5**: Mirror an existing page of the same type (see Before starting); draft per the Command Reference structure; apply the Writing rules and Content ownership (state each fact once, link elsewhere).
-4. **S7 verifiers**: the numbered checks under Verification below, after the spine's check chain.
+Developers, DevOps engineers, and technical PMs who have a Dify account and sign in through the browser device flow. They know their shell and tools like kubectl and gh, so never explain shell basics. They may not know Dify's concepts: one sentence and a link to the main docs, never a re-teach. The "Integrate Your Agents" section is for engineers wiring their own agent to call Dify apps as tools; write for that builder, at engineering depth, and keep it distinct from building agents inside Dify Studio. SSO sign-in (`dfoe_` tokens) is Enterprise-only and is documented only in the Enterprise trees.
 
-**Critical (source of truth):** `cli/` on `origin/main` only. Never `feat/cli` or `cli/README.md`; both drift from shipped reality.
+## Source of truth (S2)
 
-## Before starting
+Every behavior claim is verified in `cli/` on `langgenius/dify` `origin/main`, read at the pinned SHA per `writing-guides/index.md` § "Syncing the Dify codebase safely", and the report records that SHA. Not `feat/cli`, not `cli/README.md`, not the CLI's own help text: all three drift from what shipped. Where to look:
 
-For page structure, mirror an existing page of the same type (command reference → `en/cli/reference/apps.mdx`; task page → `en/cli/common-tasks.mdx`). For the IA, see `docs.json`.
+- exact strings and exit codes: the e2e suite `cli/test/e2e/suites/**`
+- flags and args: `cli/src/commands/<verb>/<resource>/index.ts` (verb-only commands in `cli/src/commands/<verb>/index.ts`)
+- error codes: `cli/src/errors/codes.ts`
+- env vars: `cli/src/env/registry.ts`
 
-## Reader segments
+A claim you cannot verify is left out or marked `{/* VERIFY: … */}`, never softened into a fact. For project context (known bugs, what is shipped versus planned), ask the user.
 
-`en/cli/` is CE + Cloud only (EE is separate), and launches CE-first (see Editions below).
+## Three rules that protect users
 
-- **CE and Cloud users** (default): have a Dify account, sign in with the browser device flow. Developers, DevOps, technical PMs; assume kubectl/gh familiarity. Explain Dify concepts by linking the main docs, never shell basics. One audience: don't split hairs over account type or token prefix in prose.
-- **Integrate Your Agents** (a task section, not a persona): engineers wiring their own agent to call Dify apps as tools. Write for the human builder; engineering-deep. Disambiguate from building agents inside Dify Studio.
-- SSO (`dfoe_`) is EE-only; its docs live in the EE repo, not here.
+- The only documented way to authenticate is the browser device flow. `DIFY_TOKEN` and other non-interactive tokens are never shown as working auth, because readers copy auth examples into scripts.
+- Runnable examples never contain `<your-app-id>`: app and workspace IDs are UUID-shaped, because a non-UUID fails validation and the reader's first attempt errors. The reader's own identity is `<your-*>`; values they received stay concrete.
+- The `en/cli/` doc set launched CE-first. Cloud-only content, which is anything that needs more than one workspace (workspace switching and membership, `--workspace`, `-A`), carries `<Badge color="blue">Cloud</Badge>` on its heading or list item rather than a "Cloud only" sentence; CE prose has one workspace and no "another workspace" framing.
+- Host examples use `dify.example.com`, never `cloud.dify.ai`, and since `auth login` defaults to `cloud.dify.ai`, steer the reader to enter their host rather than stating the default. If a CE release requires removing Cloud-only sections, list the exact sections and stop for approval, then remove them in a dedicated commit so git history can restore them. The Enterprise trees have multiple workspaces, so these edition rules do not apply there.
 
-## Editions: CE-first and the Cloud badge
+## House style
 
-The CLI launches **CE-first**: the shipped docs are CE-only, with Cloud content added when Cloud supports the CLI. EE is a separate doc set (never add EE content here).
+A command section opens with when and why you would run it, front-loads its key limitation, and shows real terminal output, because a reader scanning for their case decides in the first line whether to stay. The vocabulary and conventions this doc set has settled on:
 
-- **CE = one workspace.** No workspace switching, no `--workspace` / `-A` multi-workspace flags, no "another/every workspace" framing; `difyctl` runs against your single workspace.
-- **Cloud-only content** (workspace switching and membership, and anything that needs more than one workspace) gets a `<Badge color="blue">Cloud</Badge>` on its heading or list item. Mark with the badge; don't write a "Cloud only" sentence. When a CE release requires removing Cloud-only sections, list the exact sections and STOP — do not remove until the user approves; then remove them in a dedicated commit so they can be restored from git history when Cloud ships.
-- **Host examples are self-hosted:** use `dify.example.com`, never `cloud.dify.ai`; the server edition shows `self_hosted`. (`auth login`'s real default is still `cloud.dify.ai`, so steer the reader to enter their host rather than stating the default.)
-- A `<Badge>` inside a heading changes the heading's anchor: the badge text joins the slug (`## Switch Your Workspace <Badge color="blue">Cloud</Badge>` → `#switch-your-workspace-cloud`). Link to the real anchor; `python3 tools/check-links.py --internal` validates this.
+- **host vs server.** "host" is the connection target (`--host`, `hosts.yml`, `use host`, "Active host", "known hosts"); "server" is the backend acting ("the server returns", "Network or server error") or its version ("client and server versions").
+- **JSON, described plainly.** "A `data` array with the paging fields `page`/`limit`/`total`/`has_more`"; error JSON is "a structured JSON object". Never "envelope".
+- **App types** as the product names them: Chatbot, Chatflow, Agent, Workflow, Text Generator. API mode names (`chat`, `advanced-chat`, …) only inside literal output.
+- **Configurable values.** When a value can be set by flag, env var, and config, say which wins in a way that leaves no doubt; a numbered list often reads clearest for a chain. A chained "A overrides B, which overrides C" leaves the referent of "which" unclear, and a bare "or" hides the order. "Override" is fine with one clear referent ("the `--limit` flag overrides `DIFY_LIMIT`") or a named, linked target.
+- **Openers stay general** over volatile lists; the table carries the specifics, so a new config key changes one row rather than the opener.
+- **Cross-references** make the command the actor ("Run `auth devices list` to see your sessions"), and an owned fact is linked with a short payoff instead of re-explained.
+- **Backtick the typeable token**, not the category word ("list commands such as `get app`").
+- **No version numbers in prose** (the `version` page shows real output), no "See Also" sections, and shipped reality only, except a fix the user confirms is in flight, verified before publish.
 
-## Writing rules
+## Page shape
 
-House overrides on top of the writing-guides.
+A command reference page covers one resource, one H2 per command, headings phrased as the task ("List Your Apps", never the literal command). Read a sibling page (`en/cli/reference/apps.mdx`; for a task page, `en/cli/common-tasks.mdx`) for the shape before writing, and match it where the content is alike.
 
-**Non-negotiable (correctness and security):**
+Within a command, the reader's questions come in this order, and the sections follow it:
 
-- **Never document `DIFY_TOKEN` or any non-interactive token as working auth** — the only path is the browser device flow.
-- **Never `<your-app-id>` in runnable code** (it fails validation; see Placeholders).
-- **No `--workspace` / `-A` or multi-workspace framing in CE** (one workspace; see Editions).
+1. What do I type: the synopsis in `<required>` `[optional]` `...repeatable` notation, plus one line on when you would reach for it.
+2. What do the positional arguments mean and where do I get them: `### Arguments`, noting the source ("`<app-id>` from `get app`").
+3. What flags exist: `### Flags`, a table with Flag, Type, Default, Description. A recurring flag is described in full each time, because readers land mid-page.
+4. What does an invocation look like: `### Examples`, a verb-led caption and the command block, no result samples.
+5. What comes back: `### Output`, stdout and stderr per mode, success included. `-o` commands get a `| Format | What stdout gets |` table with captioned samples (except `export` and `--json`-only commands). Describe failures rather than quoting error strings.
+6. What the exit codes mean: `### Exit Codes`, linking Output Formats and Exit Codes for the full table.
 
-The non-obvious style rules:
+A section that would carry a single fact becomes a sentence instead; the shape serves the reader, not the reverse.
 
-- **host vs server.** "host" = the connection target (`--host`, `hosts.yml`, `use host`, "Active host", "known hosts"). "server" = the backend as actor ("the server returns", "Network or server error") or its version ("client and server versions").
-- **No "envelope" jargon.** Describe JSON plainly ("a `data` array with the paging fields `page`/`limit`/`total`/`has_more`"); error JSON is "a structured JSON object".
-- **App types:** Chatbot, Chatflow, Agent, Workflow, Text Generator in prose; API mode names (`chat`, `advanced-chat`, ...) only inside literal output blocks.
-- **Configurable values:** when a value is settable by flag, env var, and/or config, name the methods and make their precedence unambiguous, in prose or a numbered list, whichever is clearer (a list is often clearest for a multi-step chain). Clarity is the test, not a fixed phrase: avoid the chained "A overrides B, which overrides C" (the referent of "which" is unclear) and a bare "or" (hides the order). "Override" is fine with one clear referent ("the `--limit` flag overrides `DIFY_LIMIT`") or a named target ("overrides the resolution chain", linking the owner).
-- **Openers stay general** over volatile lists (don't enumerate config keys in an opener); the table carries the specifics.
-- **Cross-references:** make the command the actor ("Run `auth devices list` to see your sessions"), not "to do X, see [section]"; for an owned fact, link with a short payoff instead of re-explaining.
-- **Placeholders:** app/workspace IDs are UUID-shaped (non-UUID fails validation); the reader's own identity is `<your-*>`; received values stay concrete.
-- Backtick the typeable token, not the category word ("list commands such as `get app`"; never `list`).
-- No version numbers in prose (the `version` page shows real output); no See Also; shipped reality only, except a fix the user confirms is in flight may be documented as expected behavior, verified before publish.
-- Task-oriented openers (lead with when/why you run it), front-load the key limitation, show real terminal output.
-
-Style nits: ~3-4 line paragraphs, few semicolons, em dashes by judgment.
-
-## Command Reference structure
-
-One page per resource; each command an H2, task-phrased (never the literal command). Per-command order:
-
-1. **Synopsis** (CLI notation `<required>` `[optional]` `...repeatable`) + a one-line description.
-2. **`### Arguments`** — required wherever a positional arg exists, parallel to `### Flags`; note an arg's source ("`<app-id>` from `get app`").
-3. **`### Flags`** — Flag / Type / Default / Description; a recurring flag gets its full description in every command that takes it.
-4. **`### Examples`** — a verb-led caption + the command block. No result samples here.
-5. **`### Output`** — what stdout and stderr get in each mode, success included. `-o` commands get a `| Format | What stdout gets |` table + captioned samples (exempt: `export`, `--json`-only). Describe failures, don't quote error strings.
-6. **`### Exit Codes`** — link to Output Formats and Exit Codes for the full table.
-
-Multi-command pages open with a one-line lead-in + a mini-index of anchor links; one-command pages get a plain sentence. Put a page-level "how it works" / owned section at the END, after the commands, but when a section is tightly coupled to one command (pause/resume belongs with run/resume), keep it beside that command rather than exiled to the bottom.
+Multi-command pages open with a one-line lead-in and an index of anchor links; a one-command page opens with a plain sentence. Page-level material (how the resource works, shared concepts) goes after the commands, unless it belongs beside one command (pause and resume stay with run), in which case it stays there.
 
 ## Content ownership
 
-Write each cross-cutting fact ONCE on its owner; link the anchor everywhere else. Never re-teach Dify platform concepts (one sentence + a link to the main docs).
+Each cross-cutting fact lives on one page; everywhere else links it with a short payoff.
 
 | Content | Owner |
 |---|---|
@@ -95,13 +79,6 @@ Write each cross-cutting fact ONCE on its owner; link the anchor everywhere else
 | Env-var inventory | Environment Variables |
 | Compat probe and range | version |
 
-## Verification
+## Checks (S7)
 
-Source of truth is the code (per the Critical note above), not the docs or in-CLI help (both drift). Where to look: best source for exact strings and exit codes is the e2e suite `cli/test/e2e/suites/**`; flags/args → `cli/src/commands/<verb>/<resource>/index.ts` (verb-only commands: `cli/src/commands/<verb>/index.ts`); error codes → `cli/src/errors/codes.ts`; env vars → `cli/src/env/registry.ts`. Can't verify a claim? Skip it, soften it, or flag `{/* VERIFY: ... */}`.
-
-For project context (known bugs, decisions, what's shipped vs planned), ask the user.
-
-S7 verifiers — run after the spine's check chain:
-
-1. Run `python3 tools/check-links.py --internal`; it must print `Broken links: 0` and `Broken anchors: 0`.
-2. Confirm no owned fact is re-explained (check each changed page against the Content ownership table).
+After the pipeline's own checks: `python3 tools/check-links.py --internal` must print `Broken links: 0` and `Broken anchors: 0` (a `<Badge>` in a heading joins the anchor slug, so `## Switch Your Workspace <Badge color="blue">Cloud</Badge>` is `#switch-your-workspace-cloud`); and confirm against the ownership table that no owned fact is re-explained on the changed page.
