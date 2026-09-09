@@ -9,10 +9,10 @@ Pre-writing research that combines codebase analysis with community feedback to 
 
 ## Depths
 
-When invoked from the `dify-docs-write` pipeline, its S1 supplies the feature, ref, and target pages — consume them instead of re-asking (Before Starting 1–3), and run at the depth the caller's row sets:
+When invoked from the `dify-docs-write` pipeline, its S1 supplies the feature, ref, and target pages — consume them instead of re-asking (Before Starting 1–3), and run at the depth the caller sets:
 
 - **full**: everything below.
-- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why; Phase 2 runs when the caller's row requires it; otherwise skip it and say so in the summary.
+- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why; Phase 2 runs when the caller requires it; otherwise skip it and say so in the summary.
 
 Standalone use (no caller): run Before Starting 1–3 and full depth.
 
