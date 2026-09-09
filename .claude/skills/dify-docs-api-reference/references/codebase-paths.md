@@ -6,13 +6,18 @@ Mapping of concepts to file paths in the Dify codebase and docs repo.
 
 | What | Path |
 |------|------|
-| OpenAPI specs (spec of record) | `{en,zh,ja}/api-reference/openapi_service.json` |
+| Generated OpenAPI specs | `{en,zh,ja}/api-reference/openapi_service.json` |
+| Upstream contract and provenance | `tools/api-pipeline/upstream/service-openapi.json`, `source.json` |
+| Publication selection and annotations | `tools/api-pipeline/publication.json`, `overlays/{en,zh,ja}.json` |
+| Manual update and validation workflow | `tools/api-pipeline/README.md` |
 | Navigation config | `docs.json` |
 
 ## Dify Codebase
 
 | What | Path |
 |------|------|
+| OpenAPI exporter (`service-openapi.json` for `/v1`) | `api/dev/generate_swagger_specs.py` |
+| Schema registration and conversion | `api/controllers/common/schema.py`, `api/libs/flask_restx_compat.py` |
 | App controllers | `api/controllers/service_api/app/` |
 | Dataset controllers | `api/controllers/service_api/dataset/` |
 | App error definitions | `api/controllers/service_api/app/error.py` |

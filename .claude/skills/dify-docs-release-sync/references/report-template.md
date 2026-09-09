@@ -15,7 +15,7 @@ Skeleton for the Phase 2 doc sync report. Fill in the comparison refs, counts, a
 
 ## API Reference Changes
 
-Target: `{lang}/api-reference/openapi_service.json` (one spec per language; edit all three).
+Target: `{lang}/api-reference/openapi_service.json`. Import contract changes from Dify, update documentation annotations in all three languages, and capture/rebuild them through `tools/api-pipeline/README.md`.
 
 | PR | Title | Tag Group | Change Type | Details | Doc Status |
 |---|---|---|---|---|---|

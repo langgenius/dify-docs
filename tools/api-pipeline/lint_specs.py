@@ -193,3 +193,4 @@ for f in sorted(issues):
         seen.add(msg)
         print("  -", msg)
     print()
+sys.exit(1 if total else 0)
