@@ -5,9 +5,14 @@ description: Give your coding agent access to your Dify apps by installing one s
 
 Run [`difyctl skills install`](/en/cli/reference/skills#install-the-skill) to write a skill file for the coding agents on your machine. The agent picks it up and onboards itself from there.
 
-The installed `SKILL.md` is a bootstrap, not a manual. It tells the agent the one thing that matters: run [`difyctl help -o json`](/en/cli/reference/help#machine-readable-help) and treat that output as the source of truth.
+The installed `SKILL.md` is a bootstrap, not a manual. It walks the agent through discovery against the installed `difyctl` in two steps:
 
-At runtime, the agent reads the full command surface from the installed `difyctl`.
+1. The agent reads the [compact command map](/en/cli/reference/help#compact-command-map) with `difyctl help -o json --compact` and picks the one command that fits the request.
+2. Before running it, the agent reads that command's [descriptor](/en/cli/reference/help#per-command-descriptor) with `difyctl help <path> -o json`, where `<path>` is the command as the map lists it, such as `get app`. The descriptor is its only source for the command's arguments and flags.
+
+The skill also sends the agent to `difyctl help agent` for exit codes, error output, paused workflows, and retry rules. 
+
+The descriptor's `effect` label (`read`, `write`, or `destructive`) doubles as a confirmation gate: the skill has the agent confirm with you before it runs any `write` or `destructive` command.
 
 ## When to Use the Skill
 
@@ -15,7 +20,7 @@ At runtime, the agent reads the full command surface from the installed `difyctl
 - The agent can run shell commands. The skill drives `difyctl` through the agent's shell tool.
 - You want zero maintenance: the skill never goes stale, because it lists no commands.
 
-If your runtime doesn't read skills, your agent can still drive `difyctl` directly by reading [`difyctl help -o json`](/en/cli/reference/help#machine-readable-help) at runtime.
+If your runtime doesn't read skills, give the agent the same two commands in its own instructions. See [Onboard Your Agent](/en/cli/integrate-agents/overview#onboard-your-agent) for the line to add.
 
 ## Prerequisites
 
@@ -68,8 +73,8 @@ See the [Skills reference page](/en/cli/reference/skills) for detection, target 
 
 The install prints the path it wrote; open that file to confirm the skill is there. Then check that the agent actually uses it:
 
-1. **Discovery**: In a fresh session, ask the agent: *"What can you do with `difyctl`?"* A correctly onboarded agent runs `difyctl help -o json` and answers from its output rather than guessing commands.
-2. **End to end**: Ask the agent to list your Dify apps and run one. Watch for `difyctl get app -o json` followed by a `describe`/`run` sequence with real IDs from the list.
+1. **Discovery**: In a fresh session, ask the agent: *"What can you do with `difyctl`?"* A correctly onboarded agent runs `difyctl help -o json --compact` and answers from its output rather than guessing commands.
+2. **End to end**: Ask the agent to list your Dify apps and run one. Watch for `difyctl get app -o json` followed by a `describe`/`run` sequence with real IDs from the list. Expect it to check with you before the run, since `run app` is a `write` command.
 3. **Pause handling**: If you have a Workflow or Chatflow app with a human-input step, ask the agent to run it. A paused run [exits 0 and reports `"status": "paused"` on stdout](/en/cli/reference/apps#when-a-workflow-pauses). The agent should recognize the pause and offer to resume, not report a failure or retry the run.
 
 ## Troubleshooting

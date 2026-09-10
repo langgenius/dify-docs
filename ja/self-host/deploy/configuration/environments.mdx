@@ -122,6 +122,8 @@ Docker ネットワーク内のサービス間通信で使用されるファイ�
 
 独自のリバースプロキシを使用する場合は `/socket.io/` パスで `Upgrade` および `Connection` ヘッダーを転送してください（同梱の nginx テンプレートにはこの設定が含まれています）。API を複数レプリカで運用する場合はスティッキーセッションが必要です。
 
+大きなワークフローの共同編集中にエディタが切断と再接続を繰り返す場合は、`WEBSOCKET_MAX_HTTP_BUFFER_SIZE` を上げてください。
+
 ### システムエンコーディング
 
 | 変数 | デフォルト値 | 説明 |
@@ -207,6 +209,7 @@ openssl rand -base64 42
 | `APP_MAX_EXECUTION_TIME` | `3600` | アプリ実行の最大実行時間（秒）。超過すると終了されます。`WORKFLOW_MAX_EXECUTION_TIME` と連動する外側の制限で、両方ともデフォルトは 1 時間です。これはアプリキューレベル、もう一方はワークフローエンジンレベルで適用されます。ワークフローにより多くの時間が必要な場合は、両方を増やしてください。<br/><br/>Agent を利用する場合は、この 2 つの外側の制限を Agent の実行期限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）以上に保ってください。下回ると Agent の実行が途中で打ち切られます。 |
 | `APP_DEFAULT_ACTIVE_REQUESTS` | `0` | アプリごとのデフォルト同時リクエスト制限。UI でカスタム制限が設定されていないアプリに使用されます。`0`は無制限を意味します。有効な制限はこの値と `APP_MAX_ACTIVE_REQUESTS` の小さい方になります。 |
 | `APP_MAX_ACTIVE_REQUESTS` | `0` | アプリごとのグローバル同時リクエスト上限。アプリのカスタム設定がこの値を超える場合、オーバーライドされます。`0` は無制限を意味します。 |
+| `WEBSOCKET_MAX_HTTP_BUFFER_SIZE` | `10485760` | 共同編集用 WebSocket が受け付ける 1 メッセージの最大バイト数（デフォルトは 10 MiB）。大きなワークフローの保存時にグラフが上限を超え、切断が繰り返される場合は値を上げる。<br/><br/>`/socket.io/` を処理する API プロセスに設定する。Docker Compose では `api_websocket` コンテナが該当する。 |
 
 ### コンテナ起動設定
 
@@ -1356,6 +1359,7 @@ Dify からのすべてのアウトバウンド HTTP リクエスト（HTTP ノ�
 | `ALLOW_UNSAFE_DATA_SCHEME` | `false` | `data:` スキームの URL レンダリングを許可。セキュリティのためデフォルトでは無効です。 |
 | `MAX_TREE_DEPTH` | `50` | 1 つの実行パスの最大ノード数。上限を超えるワークフローは公開できません。変更は新たに公開するワークフローにのみ適用されます。 |
 | `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` | （空） | チャット応答内の Markdown からアプリがレンダリングするフォームで、フィールドの `name` 属性に追加で許可する文字。<br/><br/>デフォルトでは、フィールド名は文字で始まり、文字・数字・アンダースコア・ハイフンのみ使用できます。それ以外の文字を名前に含むフィールドはレンダリングされません。<br/><br/>追加する文字は 1 つの文字列として設定します。半角と全角のどちらも使用できます。例：`()！？` |
+| `MARKDOWN_FORM_FIELD_NAME_MAX_LENGTH` | `128` | チャット応答内の Markdown からアプリがレンダリングするフォームで、フィールドの `name` 属性に許可する最大長。これより長い名前のフィールドはレンダリングされません。名前に使える文字は `MARKDOWN_FORM_FIELD_NAME_EXTRA_CHARS` で決まり、この変数は長さを制限します。<br/><br/>生成されたフィールド名が上限を超え、レンダリングされたフォームにフィールドが欠ける場合は、この値を上げてください。正の整数を指定します。 |
 
 ### NEXT_PUBLIC_ENABLE_FEATURE_PREVIEW
 
@@ -1416,7 +1420,11 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_REDIS_URL` | （空。`REDIS_PASSWORD` から導出） | Agent バックエンドが実行状態を保存する Redis 接続。Compose のデフォルトは同梱の `redis` のデータベース 2。 |
 | `DIFY_AGENT_REDIS_PREFIX` | `dify-agent` | Agent バックエンドの Redis キーのプレフィックス。 |
 | `DIFY_AGENT_SHUTDOWN_GRACE_SECONDS` | `30` | Agent バックエンドの停止時に、進行中の実行の完了を待つ秒数。 |
-| `DIFY_AGENT_RUN_RETENTION_SECONDS` | `259200` | 終了した実行レコードの保持期間（デフォルトは 3 日）。 |
+| `DIFY_AGENT_RUN_RETENTION_SECONDS` | `7200` | 各 Agent 実行のレコードとイベントストリームを Redis に保持する秒数。最後の書き込みから数える（デフォルトは 2 時間）。値を下げると Redis メモリを早く解放できるが、切断後にイベントを再生できる期間も短くなる。 |
+| `DIFY_AGENT_RUN_EVENT_STREAM_MAX_LENGTH` | `5000` | 各 Agent 実行の Redis ストリームに保持するイベント数の上限（概算）。値を下げると、1 回の実行が使う Redis メモリを減らせる。<br/><br/>上限に達すると、新しいイベントの書き込み時に古いイベントから削除する。削除したイベントは切断後に再生できない。 |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | モデルが連続して出力するテキスト差分をまとめて、Redis に書き込み、配信する。有効のままにすると、Redis への書き込み回数とイベント数を減らせる。<br/><br/>差分を個別に配信するには `false` に設定する。ツール呼び出しなど、テキスト以外のイベントの内容と順序は変わらない。 |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | まとめたテキスト差分を配信する間隔の目安（ミリ秒）。値を下げるとテキストの更新頻度が上がる。上げると、1 回の配信量が増え、配信回数が減る。<br/><br/>厳密な時間制限ではない。`DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` に達すると早めに配信する。最小値は 1。結合を無効にするには `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` を `false` にする。 |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | まとめたテキスト差分を、フラッシュ間隔を待たずに配信する文字数のしきい値。値を下げると、小さなまとまりで早めに配信できる。<br/><br/>差分は分割せずに追加するため、文字数がこの値を超える場合がある。最小値は 1。 |
 | `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、1 時間を超える値が効くのは `local` バックエンドのみ。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | ストリーム切断時、実行を失敗と判定するまでに API が再接続を試みる回数。 |
@@ -1433,6 +1441,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_INNER_API_KEY` | （空。`PLUGIN_DIFY_INNER_API_KEY` から導出） | API サービスの `INNER_API_KEY_FOR_PLUGIN` と一致させる（`INNER_API_KEY` ではない）。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。旧 `DIFY_AGENT_SHELLCTL_ENTRYPOINT` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | Agent バックエンドからサンドボックスへの呼び出しを保護する任意の Bearer トークン。Compose は同じ値を両サービスに渡す。<br/><br/>旧 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
+| `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックが Agent サンドボックスを公開するホスト側のポート。ソースから起動した Agent バックエンドは `http://localhost:5004` でサンドボックスに到達できる。設定はそのスタックの `middleware.env` で行う。変更した場合は、Agent バックエンドの `.env` にある `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` を新しいポートに合わせる。<br/><br/>ミドルウェアスタック専用。フル構成の Compose スタックでは、サンドボックスは内部ネットワークに留まる。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | サンドボックス内の Agent がファイル転送に使う Dify API アドレス。Docker Compose ではデフォルトのまま使う。リモートサンドボックスバックエンドでは、公開されている Dify アドレスを指定する。 |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API が Agent のサンドボックスからファイルを取得する際の待ち時間。超過すると転送は失敗する。Agent 側の `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` より高く保つこと。 |
@@ -1712,6 +1721,8 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 | `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | GSE トークナイザーを有効化（中国語）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | Kagome トークナイザーを有効化（日本語）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | Kagome トークナイザーを有効化（韓国語）。 |
+| `EXPOSE_WEAVIATE_PORT` | `8080` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックにおける Weaviate REST API のホスト側ポート。ソースから起動した Dify は `http://localhost:8080` で Weaviate に到達できる。<br/><br/>ホスト側で 8080 が使用中の場合は、そのスタックの `middleware.env` で別のポートに変更し、[`WEAVIATE_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。<br/><br/>ミドルウェアスタック専用。フル構成の Compose スタックでは、Weaviate は内部ネットワークに留まる。 |
+| `EXPOSE_WEAVIATE_GRPC_PORT` | `50051` | 同じスタックにおける Weaviate gRPC のホスト側ポート。`grpc://localhost:50051` で到達できる。<br/><br/>変更した場合は、[`WEAVIATE_GRPC_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。 |
 
 </Accordion>
 
