@@ -3,7 +3,7 @@ title: Weaviate Server Upgrade Path
 description: How to move a self-hosted Weaviate server across minor versions without losing vector data
 ---
 
-Dify pins the Weaviate server image it ships with. That pin is moving from `1.27.0` to `1.39.2`, and an existing Weaviate data volume cannot cross that gap in one step. Deploy Dify fresh and none of this applies to you—you get the pinned version on an empty volume.
+Dify 1.17.1 updates its bundled Weaviate server from `1.27.0` to `1.39.2`, and an existing Weaviate data volume cannot cross that gap in one step. This procedure covers Dify's default, single-node Docker Compose deployment. Fresh deployments start with the new version on an empty volume and do not need this procedure.
 
 Weaviate neither tests nor supports skipping minor versions, and any release may carry an on-disk migration that expects the previous version to have run at least once.
 
@@ -15,7 +15,7 @@ The supported path is to step through every minor release in order, landing on t
 
 ## Check Your Current Version
 
-Dify's default `docker-compose.yaml` does not publish a host port for Weaviate, so run the check inside the Compose network rather than against `localhost` on your host:
+From the Dify repository root, enter the `docker` directory and keep the shell there. The default `docker-compose.yaml` does not publish a host port for Weaviate, so run the check inside the Compose network rather than against `localhost` on your host:
 
 ```bash
 cd docker
@@ -27,16 +27,21 @@ docker compose exec -T weaviate \
 
 The `localhost` in the URL is the Weaviate container's own loopback, not your host's. The Weaviate image has no `curl` and no Python, so the request uses busybox `wget` and the JSON is formatted by Python on your host.
 
-If this already reports `1.39.x`, you are done. Anything lower tells you where to start on the ladder.
+If this reports `1.39.2`, you are done. Continue below only from `1.27.0`; for an earlier version, follow the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration) first.
 
 ## Back Up Your Data
 
-For a Docker deployment, the simplest backup is an offline copy of the volume. Stop Weaviate first so the copy is consistent:
+For a Docker deployment, the simplest backup is an offline copy of the volume. First stop Dify's request and worker services, and keep them stopped until the final rung passes:
 
 ```bash
-cd docker
-docker compose stop -t 120 weaviate
-sudo cp -a ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d)
+docker compose stop -t 120 nginx api api_websocket worker worker_beat || exit 1
+```
+
+Run [Verify Each Step](#verify-each-step) once to record the starting object count and confirm synchronization. Then stop Weaviate and copy the volume:
+
+```bash
+docker compose stop -t -1 weaviate || exit 1
+sudo cp -a ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d) || exit 1
 ```
 
 `cp -a` preserves ownership, permissions and timestamps. A plain `cp -r` run under `sudo` rewrites them, which can leave the restored volume unreadable by the Weaviate container.
@@ -89,8 +94,7 @@ Dify pins the Weaviate image in `docker/docker-compose.yaml`, `docker/docker-com
   <Step title="Stop the Container Gracefully">
 
     ```bash
-    cd docker
-    docker compose stop -t 120 weaviate
+    docker compose stop -t -1 weaviate || exit 1
     ```
 
     Never use `docker kill` or `docker rm -f` here. See [Stop Weaviate Gracefully](#stop-weaviate-gracefully) for what a hard kill costs you.
@@ -103,15 +107,14 @@ Dify pins the Weaviate image in `docker/docker-compose.yaml`, `docker/docker-com
 
   </Step>
   <Step title="Verify Before Moving On">
-    Confirm the reported version, then check that data and search both work, as described in [Verify Each Step](#verify-each-step). Only then continue to the next rung.
+    Run [Verify Each Step](#verify-each-step) before continuing.
   </Step>
 </Steps>
 
 If you run Weaviate through `docker-compose.middleware.yaml` while developing from source, the same loop applies with the file named explicitly:
 
 ```bash
-cd docker
-docker compose -f docker-compose.middleware.yaml stop -t 120 weaviate
+docker compose -f docker-compose.middleware.yaml stop -t -1 weaviate || exit 1
 docker compose -f docker-compose.middleware.yaml --profile weaviate up -d weaviate
 ```
 
@@ -137,10 +140,10 @@ What makes this dangerous is that nothing announces it. The server logged no err
 
 It also does not heal on its own. The same twenty stayed missing after the restart, after a graceful stop and start, after a second one, and after re-writing the same objects. To repair it, re-index the affected knowledge base in Dify so the collection is built again from scratch.
 
-So prevention is the whole game here. Use `docker compose stop` or `docker compose down`, both of which send SIGTERM, and give the process enough time to finish flushing. Large indexes need a longer grace period than Docker's default:
+So prevention is the whole game here. Use `docker compose stop` or `docker compose down`, both of which send SIGTERM, and let the process finish flushing. A timeout of `-1` waits indefinitely instead of falling back to SIGKILL:
 
 ```bash
-docker compose stop -t 120 weaviate
+docker compose stop -t -1 weaviate || exit 1
 ```
 
 To check whether it already happened, compare the object count against what vector search can actually reach. [Verify Each Step](#verify-each-step) gives you the count; run a `near_vector` query with `limit` set to that number. Fewer results back means the difference is your unreachable objects.
@@ -165,10 +168,9 @@ That is alarming to read halfway through an upgrade, and it is a false alarm. Th
 
 Confirm that data survived and that search works. A server that boots is not evidence of a healthy index.
 
-Set your key and collection name once, then run the three checks. Dify replaces every hyphen in the knowledge base ID with an underscore when it names the collection, so copy the exact name from the second check rather than building it by hand:
+Set your key and collection name once, then run the four checks. Dify replaces every hyphen in the knowledge base ID with an underscore when it names the collection, so copy the exact name from the second check rather than building it by hand:
 
 ```bash
-cd docker
 KEY="<WEAVIATE_API_KEY>"
 # Knowledge base ID from its Dify URL (/datasets/<id>/documents), hyphens as underscores
 COLLECTION="Vector_index_9f4e2b7a_1c3d_4e5f_8a9b_0c1d2e3f4a5b_Node"
@@ -190,23 +192,31 @@ docker compose exec -T weaviate \
   --post-data="{\"query\":\"{ Aggregate { $COLLECTION { meta { count } } } }\"}" \
   http://localhost:8080/v1/graphql \
   | python3 -c "import sys, json; print('count', json.load(sys.stdin)['data']['Aggregate']['$COLLECTION'][0]['meta']['count'])"
+
+# Single-node metadata is synchronized
+docker compose exec -T weaviate \
+  wget -qO- --header="Authorization: Bearer $KEY" \
+  http://localhost:8080/v1/cluster/statistics \
+  | python3 -c "import sys, json; d=json.load(sys.stdin); assert d.get('synchronized') is True and len(d.get('statistics', [])) == 1; print('synchronized')"
 ```
+
+Continue only if the reported version matches the current rung, the object count is unchanged, and the synchronization check succeeds.
 
 <Warning>
   Do not use `GET /v1/objects?class=...&limit=1` to count objects. Its `totalResults` field reports the size of the page it returned, not the size of the collection, so with `limit=1` it always prints `1`. Use the `Aggregate` query above.
 </Warning>
 
-Then open a knowledge base in Dify and run a test retrieval. Getting chunks back confirms the vector index survived, which the object count alone does not tell you.
+After `1.39.2` passes, revert only the temporary image edit without running Compose, then follow the [Docker Compose upgrade instructions](/en/self-host/deploy/quick-start/docker-compose#upgrade) for Dify 1.17.1. Run a test retrieval before returning the deployment to service; getting chunks back confirms the vector index survived, which the object count alone does not tell you.
 
 ## Roll Back a Failed Step
 
-Restore the backup and return the image tag to the last rung that worked:
+Before starting Dify 1.17.1, set the Weaviate image back to `semitechnologies/weaviate:1.27.0`, then restore the initial backup:
 
 ```bash
-cd docker
-docker compose stop -t 120 weaviate
-sudo rm -rf ./volumes/weaviate
-sudo cp -a ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate
+docker compose stop -t -1 weaviate || exit 1
+test -d ./volumes/weaviate_backup_YYYYMMDD || exit 1
+sudo mv ./volumes/weaviate ./volumes/weaviate_failed_$(date +%Y%m%dT%H%M%S) || exit 1
+sudo cp -a ./volumes/weaviate_backup_YYYYMMDD ./volumes/weaviate || exit 1
 docker compose up -d weaviate
 ```
 
@@ -214,11 +224,13 @@ docker compose up -d weaviate
   Rolling the image tag back without restoring the data is not safe. Once a newer version has written to the volume, an older binary may not read it.
 </Warning>
 
+Verify Weaviate, then start the original Dify stack and run a test retrieval.
+
 ## What Does Not Change
 
 Your collections keep their existing layout, so no re-indexing is required and your knowledge bases keep working as they are. Dify stores each dataset as a `Vector_index_<dataset_id>_Node` collection, with the ID's hyphens replaced by underscores, and a self-provided named vector `default`. Dify does not set a distance metric, so the collection uses the server default of cosine. That structure is identical before and after the upgrade.
 
-The Python `weaviate-client` also needs no attention. Use the version your Dify release pins: `4.20.5` for Dify 1.14.0 through 1.16.1, and `4.22.0` for 1.17.0. Both work against every server version on the ladder, so you can upgrade the server independently of Dify.
+The Python `weaviate-client` also needs no attention. Use the version your Dify release pins: `4.20.5` for Dify 1.14.0 through 1.16.1, and `4.22.0` for 1.17.0 through 1.17.1. Both work against every server version on the ladder, so you can upgrade the server independently of Dify.
 
 <Info>
   Running a Weaviate server older than 1.27, or moving from client v3 to v4? Start with the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration), which covers 1.19.0 through 1.26.x and the schema migration up to 1.27, then return here.
