@@ -64,7 +64,7 @@ says. Do not rewrite. Judge only whether a native reader would take this
 page for one written in {LANG}.
 
 Reply with exactly this, once per page, under the page's path:
-- **Marked, in this change**: [quoted sentence — tag — five words on why; for rule, the section], one per line, or "none"
+- **Marked, in this change**: [quoted sentence, or the missing English unit — tag — five words on why; for rule, the section], one per line, or "none"
 - **Marked, elsewhere on the page**: same form, or "none"
 - **Best passage**: [the section that reads as written, in a phrase]
 - **Verdict**: [one of the three, and the deciding sentence]
