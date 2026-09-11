@@ -34,10 +34,18 @@ KEY_RE = re.compile(r"\b[a-z][A-Za-z0-9-]*(?:\.[A-Za-z0-9_-]+)+\b")
 
 
 def git_show(dify: Path, ref: str, path: str) -> str | None:
+    """The file's text at ref, or None when the path does not exist there. Any
+    other git failure is fatal: a wrong clone or an unreadable object must not
+    read as a set of dead keys."""
     proc = subprocess.run(
-        ["git", "-C", str(dify), "show", f"{ref}:{path}"], capture_output=True, text=True
+        ["git", "-C", str(dify), "show", f"{ref}:{path}"], capture_output=True, text=True, encoding="utf-8"
     )
-    return proc.stdout if proc.returncode == 0 else None
+    if proc.returncode == 0:
+        return proc.stdout
+    err = proc.stderr.strip()
+    if "does not exist" in err or "exists on disk, but not in" in err:
+        return None
+    sys.exit(f"git show {ref}:{path} failed in {dify}: {err}")
 
 
 def resolves(data: dict, parts: list[str]) -> bool:
@@ -101,6 +109,7 @@ def main() -> int:
     if not keys:
         print(f"no i18n Key cells found in {GLOSSARY}; the table header may have changed", file=sys.stderr)
         return 2
+    loaded = 0
     for n, section, key in keys:
         ns, *parts = key.split(".")
         if ns not in files:
@@ -109,9 +118,13 @@ def main() -> int:
             fname = re.sub(r"(?<!^)(?=[A-Z])", "-", ns).lower()
             raw = git_show(dify, pinned, f"web/i18n/en-US/{fname}.json")
             files[ns] = json.loads(raw) if raw else None
+            loaded += files[ns] is not None
         data = files[ns]
         if data is None or not resolves(data, parts):
             dead.append((n, section, key))
+    if not loaded:
+        print(f"no web/i18n/en-US namespace file could be read at {ref_label}; is {dify} the Dify repository?", file=sys.stderr)
+        return 2
     for n, section, key in dead:
         print(f"DEAD: {key}  (glossary.md:{n}, {section})")
     if dead:
