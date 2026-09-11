@@ -15,12 +15,13 @@ After completing a writing task, read the page back as its reader (the dify-docs
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
-| 1 | dify-docs-editor-test | On the English page: a fresh agent judges the writing against the style guide's standard and the reference page in its genre, returning sentence-level marks and a ship verdict. The zh and ja pages follow the translation guides instead. |
-| 2 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
-| 3 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
-| 4 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
+| 1 | dify-docs-editor-test | On the English page: a fresh agent judges the writing against the style guide and the reference page in its genre, returning sentence-level marks and a ship verdict on this round's work. |
+| 2 | dify-docs-translation-test | On the zh and ja pages: a fresh agent judges each beside its English source against the language's formatting guide and the glossary, with the same form of marks and verdict; the API pack's specs use its parity check instead. |
+| 3 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
+| 4 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
+| 5 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
 
-Steps 2 and 3 cover all three languages and audit the whole document, not just the diff. Step 4 is always the last step because it depends on the others passing.
+Steps 3 and 4 cover all three languages and audit the whole document, not just the diff. Step 5 is always the last step because it depends on the others passing.
 
 ## Syncing the Dify codebase safely
 
