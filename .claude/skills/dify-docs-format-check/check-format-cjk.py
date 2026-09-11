@@ -56,13 +56,15 @@ def _strip_inline_code(line: str) -> str:
 
 
 def _strip_code_and_urls(line: str) -> str:
-    s = INLINE_CODE_RE.sub('', line)
-    # collapse markdown image syntax ![alt](url) -> alt first so the leading
-    # `!` doesn't survive as prose punctuation adjacent to the alt text
-    s = re.sub(r'!\[([^\]\n]+)\]\([^)\n]+\)', r'\1', s)
-    # collapse markdown link syntax [text](url) -> text so the bracket and
-    # paren characters don't count as prose punctuation
-    s = re.sub(r'\[([^\]\n]+)\]\([^)\n]+\)', r'\1', s)
+    # Collapse links and images BEFORE stripping inline code. A label written
+    # entirely in code -- [`CONSOLE_WEB_URL`](/path) -- would otherwise be
+    # emptied first, so the link pattern no longer matches and `](/path)` is
+    # left behind for the prose checks to count as characters and punctuation.
+    # Images first, so the leading `!` doesn't survive next to the alt text.
+    s = re.sub(r'!\[([^\]\n]*)\]\([^)\n]*\)', r'\1', line)
+    # then links, so the bracket and paren characters don't count as prose
+    s = re.sub(r'\[([^\]\n]*)\]\([^)\n]*\)', r'\1', s)
+    s = INLINE_CODE_RE.sub('', s)
     s = URL_RE.sub('', s)
     return s
 
