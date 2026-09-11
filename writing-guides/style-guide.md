@@ -188,6 +188,8 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Adjustable parameter guidance.** When documenting parameters users can tune (thresholds, limits, intervals), describe the trade-off direction—not a recommended value. Tell users what happens when they go higher vs. lower so they can decide based on their own context. For example: "Higher thresholds return fewer, more relevant results; lower thresholds include broader matches."
 
+**Switches and defaults.** Write a setting as the change the reader might make, not as its default. A switch that is off by default is written as when to turn it on and how ("To show readers which documents an answer came from, enable **Citations and Attributions**"); one that is on by default, as when to turn it off and how. The default is visible where the switch is, so a sentence reporting it gives the reader nothing to do.
+
 **Limits and quotas.** Match the claim to what the reader can change. A hardcoded product limit gets a plain number ("up to 50 MB") — on Cloud pages every limit reads this way, since readers there have no deployment configuration to change. On self-host pages, a deployment-configurable limit states the default and names the environment variable, linked to the environment variable reference ("up to 15 MB by default; adjust with `UPLOAD_FILE_SIZE_LIMIT`"); presenting a configurable default as a fixed rule breaks on any deployment that changed it.
 
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
@@ -223,4 +225,6 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 **Narrating absent infrastructure.** Public text instructs; it never announces what internal automation or process does not exist ("there is no automatic translation pipeline", "we removed X"). Absence claims read as a confession and tell outsiders about operations they never asked about. State the positive behavior instead: "every change ships all three languages; translate in the same pass." Removal narratives belong in PR descriptions, not in READMEs, agent instructions, or docs.
 
 **Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, never write a bare "see [X]" — give the link a payoff: "see [X] for details" when the surrounding context already makes clear what those details are, or name what the reader will find ("see [X] for the full flag table") when it doesn't. Don't gate a link or section on who the reader is ("If you've used X, see…"); state the payoff so any reader can opt in.
+
+The reader is the subject of the sentence and the page is what they open: "See [Manage Members] for how roles change." Never make the page the subject ("The Manage Members guide explains how roles change", "X says what to do"): a page that talks gives the reader nothing to do.
 

@@ -13,26 +13,28 @@ Verify a finished document by having a clean-context agent read it as the target
 ## Procedure
 
 1. **Get the persona.** Copy the reader persona verbatim from the rule pack used for the task: `dify-docs-guides` (Reader Personas, by document path), `dify-docs-env-vars` (Reader Persona), `dify-docs-api-reference` (Reader Persona), `dify-cli-docs` (Readers), or `ee-ops-docs` (Reader Personas; in Dify-Enterprise-Docs). If the task used no rule pack with a persona, ask the user who the target reader is before dispatching.
-2. **Dispatch one fresh subagent per document** with the Agent tool (`subagent_type: general-purpose`). Never run the test inline in the current conversation — this conversation contains the source context the reader must not have. The dispatch prompt is the template below verbatim, with two placeholders filled:
-   - `{PATH}` — the absolute path to the finished document file. The input is the path, never pasted content: the test must run against the file on disk, not a possibly stale copy from the conversation.
+2. **Agree the dispatch with the owner**: how many readers, and which pages each reads. A page written or rewritten whole gets its own reader. A round that changed parts of several pages can send them to one reader, who reads each whole; the reader is never told what changed, because a first-time reader does not know either. One reader per page is a choice, not the default. When no reviewer is in the session, state the dispatch in the report or PR description and proceed.
+3. **Dispatch the fresh subagent(s)** with the Agent tool (`subagent_type: general-purpose`). Never run the test inline in the current conversation — this conversation contains the source context the reader must not have. The dispatch prompt is the template below verbatim, with two placeholders filled:
+   - `{PATHS}` — the absolute path of each finished document file, one per line. The input is the path, never pasted content: the test must run against the file on disk, not a possibly stale copy from the conversation.
    - `{PERSONA}` — the persona text from step 1, unmodified.
-3. **Put nothing else in the dispatch prompt.** Each of these invalidates the test if included:
+4. **Put nothing else in the dispatch prompt.** Each of these invalidates the test if included:
    - what the page covers, what changed, or why it was written
    - source material, code excerpts, codebase paths, or feature briefings
    - paths or links to other docs, the glossary, or the writing guides
    - your own summary of, concerns about, or questions about the draft
-4. **Relay the subagent's report to the user unedited.** Add your own comments after it if needed, never merged into it.
-5. **On a "Needs revision" verdict:** fix the document, then repeat from step 2 with a new subagent. Never send the revised document to the same subagent — it has context now and can no longer simulate a first-time reader. Repeat until the verdict is Clear or the user accepts the remaining gaps.
+5. **Relay the subagent's report to the user unedited.** Then, under it, take a position on each finding: fix on this page, belongs on another page (name it), or decline, with the reason in a clause. The owner decides; nothing from the report reaches the page before that. A reader's want is evidence of a gap, not an instruction about where to fill it.
+6. **On a "Needs revision" verdict**, after the owner's decisions: fix the document, then repeat from step 3 with a new subagent. Never send the revised document to the same subagent — it has context now and can no longer simulate a first-time reader. Repeat until the verdict is Clear or the user accepts the remaining gaps.
 
 ## Dispatch prompt template
 
 ```text
 You are testing a documentation page by reading it as a first-time reader.
 
-Read exactly one file: {PATH}
+Read exactly these files, each whole, one at a time:
+{PATHS}
 
 Do not read any other file, search the repository or the web, or run any
-other command. Everything you may use is in that one file; if something
+other command. Everything you may use is in those files; if something
 you need is missing, that is a finding to report, not a reason to look
 elsewhere.
 
@@ -40,7 +42,8 @@ You are this reader:
 
 {PERSONA}
 
-Read the document once, top to bottom, as this person, and answer:
+Read each document once, top to bottom, as this person, and answer for
+it:
 
 - Can I accomplish the task described without prior knowledge?
 - Are there steps that assume context not provided on this page?
@@ -57,7 +60,7 @@ Do not review style or formatting, fact-check claims against any other
 source, or rewrite anything. Only report where a first-time reader
 struggles or is left wanting.
 
-Reply with exactly this structure:
+Reply with exactly this structure, once per file, under the file's path:
 
 - **Got stuck at**: [section/step where understanding broke down, or "nowhere"]
 - **Didn't understand**: [terms, concepts, or references that were unclear, or "nothing"]
