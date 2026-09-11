@@ -49,8 +49,9 @@ FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
 class Section:
-    def __init__(self, level: int) -> None:
+    def __init__(self, level: int, title: str = "") -> None:
         self.level = level
+        self.title = title
         self.counts: Counter = Counter()
         self.components: list[str] = []
         self.anchors: list[str] = []
@@ -79,7 +80,7 @@ def sections_of(text: str) -> list[Section]:
             continue
         h = HEADING_RE.match(line)
         if h:
-            out.append(Section(len(h.group(1))))
+            out.append(Section(len(h.group(1)), h.group(2)))
             m = CUSTOM_ID_RE.search(h.group(2))
             if m:
                 out[-1].anchors.append(m.group(1))
@@ -114,10 +115,27 @@ def sections_of(text: str) -> list[Section]:
     return out
 
 
+def labels_for(en: list[Section]) -> list[str]:
+    """Name each section by its English heading, so a mismatch keeps its name when
+    a section is inserted or removed elsewhere on the page; the base comparison
+    subtracts by these names. Repeated headings get a counter."""
+    seen: Counter = Counter()
+    out = []
+    for sec in en:
+        if sec.level == 0:
+            out.append("preamble")
+            continue
+        title = re.sub(r"\s+", " ", CUSTOM_ID_RE.sub("", INLINE_TAG_RE.sub("", sec.title))).strip()[:60]
+        seen[title] += 1
+        out.append(f'section "{title}"' + (f" ({seen[title]})" if seen[title] > 1 else ""))
+    return out
+
+
 def compare_texts(rel_en: str, en_text: str, twins: dict[str, str | None]) -> list[str]:
     """Mismatch lines for one English page against its twins' texts (None = missing)."""
     issues: list[str] = []
     en = sections_of(en_text)
+    names = labels_for(en)
     rest = rel_en.split("/", 1)[1]
     for lang in TWINS:
         trel = f"{lang}/{rest}"
@@ -132,7 +150,7 @@ def compare_texts(rel_en: str, en_text: str, twins: dict[str, str | None]) -> li
                 " (sections compared in order as far as they align)"
             )
         for i, (a, b) in enumerate(zip(en, tw)):
-            where = "preamble" if i == 0 else f"section {i}"
+            where = names[i]
             if a.level != b.level:
                 issues.append(f"{trel}: {where}: heading level {b.level}, en {a.level}")
             for kind in sorted(set(a.counts) | set(b.counts)):
