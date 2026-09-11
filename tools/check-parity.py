@@ -45,7 +45,11 @@ LIST_RE = re.compile(r"^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+")
 TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}")
 COMPONENT_RE = re.compile(r"^\s*<([A-Z][A-Za-z]*)\b")
-HTML_BLOCK_RE = re.compile(r"^\s*<(video|img|iframe|h[1-6]|p|div|table|ul|ol|details|summary)\b")
+HTML_BLOCK_RE = re.compile(r"^\s*<(video|img|iframe|p|div|table|ul|ol|details|summary)\b")
+HTML_HEADING_RE = re.compile(r"^\s*<h([1-6])\b[^>]*>(.*?)</h[1-6]>", re.I)
+HTML_ROW_RE = re.compile(r"<tr\b", re.I)
+HTML_CELL_RE = re.compile(r"<t[dh]\b", re.I)
+LIST_MARK_RE = re.compile(r"^(\s*)(?:>\s*)*([-*+]|\d+[.)])\s+")
 INLINE_TAG_RE = re.compile(r"<([A-Z][A-Za-z]*)\b")
 COMMENT_RE = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
@@ -79,10 +83,12 @@ def sections_of(text: str) -> list[Section]:
         if in_fence:
             continue
         if in_tag:
-            # continuation lines of a tag opened on an earlier line: attributes only
+            # continuation lines of a tag opened on an earlier line: attributes,
+            # then whatever follows the closing bracket on the same line
             cur.anchors.extend(TAG_ID_RE.findall(line))
             if ">" in line:
                 in_tag = False
+                cur.components.extend(INLINE_TAG_RE.findall(line.split(">", 1)[1]))
             continue
         if not line.strip():
             in_para = False
@@ -90,6 +96,11 @@ def sections_of(text: str) -> list[Section]:
         if any(m in line for m in DISCLAIMER) or COMMENT_RE.match(line):
             continue
         cur.anchors.extend(TAG_ID_RE.findall(line))
+        hh = HTML_HEADING_RE.match(line)
+        if hh:
+            out.append(Section(int(hh.group(1)), hh.group(2)))
+            in_para = False
+            continue
         h = HEADING_RE.match(line)
         if h:
             out.append(Section(len(h.group(1)), h.group(2)))
@@ -107,6 +118,14 @@ def sections_of(text: str) -> list[Section]:
             cur.components.extend(INLINE_TAG_RE.findall(line))
             in_para = False
             continue
+        if HTML_ROW_RE.search(line) or HTML_CELL_RE.search(line):
+            cur.counts["table rows"] += len(HTML_ROW_RE.findall(line))
+            cur.counts["table cells"] += len(HTML_CELL_RE.findall(line))
+            if HTML_ROW_RE.search(line):
+                cur.blocks.append("row")
+            cur.components.extend(INLINE_TAG_RE.findall(line))
+            in_para = False
+            continue
         c = COMPONENT_RE.match(line) or HTML_BLOCK_RE.match(line)
         if c:
             cur.components.append(c.group(1))
@@ -120,9 +139,11 @@ def sections_of(text: str) -> list[Section]:
         if line.lstrip().startswith("<"):
             in_para = False
             continue
-        if LIST_RE.match(line):
+        lm = LIST_MARK_RE.match(line)
+        if lm:
             cur.counts["list items"] += 1
-            cur.blocks.append("item")
+            kind = "ordered" if lm.group(2)[0].isdigit() else "item"
+            cur.blocks.append(f"{kind}@{len(lm.group(1)) // 2}")
             in_para = False
             continue
         cur.anchors.extend(CUSTOM_ID_RE.findall(line))
