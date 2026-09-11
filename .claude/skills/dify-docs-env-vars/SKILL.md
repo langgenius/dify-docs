@@ -4,26 +4,12 @@ description: >
   Rule pack for the environment variable reference —
   en/self-host/deploy/configuration/environments.mdx. Carries the tracing
   procedure, description rules, verifier, and document structure. Loaded by
-  dify-docs-write; not an entry point. Its release-sync diff is a standalone
-  procedure invoked by dify-docs-release-sync.
+  dify-docs-write; not an entry point.
 ---
 
 # Dify Environment Variable Documentation
 
 Not an entry point — run under `dify-docs-write`; the procedure below implements its stages for `en/self-host/deploy/configuration/environments.mdx`. Read `references/style-overrides.md` (in this skill directory — env-var-specific style rules and description anti-patterns) together with this pack. Use the ref pinned at S1; cite it in the S4 scope report.
-
-## Standalone procedure: release-sync diff
-
-Invoked from `dify-docs-release-sync` only. Run this before any tracing. Per-PR detection misses vars from untagged PRs, and the verifier's Missing-from-docs list hides genuinely new vars inside old backlog.
-
-```bash
-python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
-  --compare-rev <last-release-tag> <target-release-tag> \
-  --repo <path-to-dify-repo> \
-  --docs en/self-host/deploy/configuration/environments.mdx
-```
-
-Pin exact tags or SHAs (e.g., `--compare-rev 1.14.1 1.15.0`), never a branch name. The script prints the vars **added / removed / default-changed** between the refs, then `=== NEW vars NOT documented and NOT in ignored-vars (<n>) — TRIAGE ===`, and exits 0. Every triage var must end the task either documented or in `env-ignored-vars.md` with a reason — never as silent backlog.
 
 ## Procedure (S2 → S6)
 
@@ -84,7 +70,7 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
 
 Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
 
-Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every release-sync-diff triage var must be resolved.
+Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every triage var from the release diff must be resolved.
 
 ### Update the ignore list if needed
 

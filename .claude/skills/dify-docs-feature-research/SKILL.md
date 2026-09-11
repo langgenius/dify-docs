@@ -36,7 +36,7 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
 
 ### Phase 1: Codebase Investigation
 
-1. Decide which repo owns the backend implementation. Node ownership (which workflow nodes live in dify vs graphon) is maintained in one place: `.claude/skills/dify-docs-release-sync/references/detection-tables.md`. Read that file to route the feature; do not route from memory.
+1. Decide which repo owns the backend implementation. Node ownership (which workflow nodes live in dify vs graphon) is maintained in one place: `.claude/skills/dify-docs-feature-research/references/detection-tables.md`. Read that file to route the feature; do not route from memory.
    - Human Input is split across both repos: graphon executes the node (`src/graphon/nodes/human_input/`), while dify owns the boundary, callback, and session-binding code (`api/core/workflow/nodes/human_input/`). Research both halves.
 2. Locate the code:
 
