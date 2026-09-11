@@ -63,14 +63,19 @@ The canonical command scans BOTH env sources — never pass only one:
 python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
   --env-example <path-to-dify-repo>/docker/.env.example \
   --env-example <path-to-dify-repo>/docker/envs \
+  --compose <path-to-dify-repo>/docker \
   --docs en/self-host/deploy/configuration/environments.mdx
 ```
 
-`--env-example` is repeatable; a directory argument is globbed `**/*.env.example` recursively. The script first prints the list of files it parsed — confirm it shows `docker/.env.example` plus the files under `docker/envs/`. A single-source run under-scans and produces false "extra in docs" results.
+`--compose` reads the `${VAR}` references in `docker/docker-compose*.y*ml`. A variable a compose file consumes with no `.env.example` entry is invisible to every other check — `EXPOSE_WEAVIATE_GRPC_PORT` went undocumented for eleven months that way — so the script lists them under `=== IN COMPOSE BUT NOT IN ANY .env.example (<n>) ===` and treats them as source variables from then on. `--compare-rev` reads the compose files at both refs on its own. `docker-compose.pytest.ports.yaml` is skipped in both modes and the skip is printed: it publishes vector-store ports for the integration tests, and nothing a deployment reads.
+
+`--env-example` is repeatable; a directory argument is globbed `**/*.env.example` recursively. The script first prints the list of files it parsed — confirm it shows `docker/.env.example` plus the files under `docker/envs/`, then the compose file count. A single-source run under-scans and produces false "extra in docs" results.
 
 Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
 
-Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every triage var from the release diff must be resolved.
+**Cadence.** The full command above is the baseline audit, and the baseline was cleared at dify tag `1.17.1`. A release pass runs `--compare-rev` — it diffs both the `.env.example` files and the compose references between two refs, so a clean baseline stays clean incrementally. Re-run the full command whenever this script, the ignore list's location, or the `.env.example` layout changes, and after any pass that touched more than a handful of variables; it must end on `ALL CHECKS PASSED` or every remaining line must be accounted for in the ignore list. Run it against the `zh` and `ja` pages too — the parser understands `默认值：`, `デフォルト値：` and `（空）`, so their counts are as meaningful as English's.
+
+Pass bar for every task: the full command ends on `ALL CHECKS PASSED`, or every remaining line is accounted for in the ignore list with a reason. **Missing from docs** stopped being standing backlog when the baseline was cleared at tag `1.17.1`: a nonzero count now means a variable arrived since, and it is documented or ignored before the task ends. If the script prints `WARNING: ignore list not found`, the run is invalid — fix the path before reading any count.
 
 ### Update the ignore list if needed
 
