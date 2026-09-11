@@ -2,56 +2,69 @@
 """Check that a page's zh and ja twins carry the same structure as the English page.
 
 Usage:
-    python3 tools/check-parity.py en/cloud/use-dify/build/agent.mdx ...
+    python3 tools/check-parity.py --base origin/main <changed en/zh/ja pages...>
     python3 tools/check-parity.py --all
 
-Each English page is split into sections at its headings, and every section
-is compared with the same section of the zh and ja pages: heading level,
-then the number of paragraphs, list items, fenced code blocks, tables,
-Mintlify components, tabs, and explicit anchor ids. Heading text is not
-compared, because it is translated. The translation disclaimer at the top of
-a zh or ja page is skipped.
+Each page is split into sections at its headings, and every section is
+compared with the same section of the zh and ja pages: heading level, then
+the paragraphs, list items, fenced code blocks, table rows, the sequence of
+component names, and explicit anchor ids. Heading text is not compared,
+because it is translated. The translation disclaimer at the top of a zh or ja
+page is skipped. A zh or ja path is checked through its English twin.
 
-Prints one line per mismatch and ends with `PARITY OK: <n> pages` (exit 0) or
-`PARITY ISSUES: <n>` (exit 1).
+With --base, the same comparison runs on the files at that ref, and only
+mismatches that are not already there count: the corpus carries older drift,
+and a round is judged on what it introduced. Pre-existing mismatches are
+listed under their own heading.
+
+Ends with `PARITY OK: <n> pages` (exit 0) or `PARITY ISSUES: <n>` (exit 1).
 """
 
 from __future__ import annotations
 
 import argparse
 import re
+import subprocess
 import sys
 from collections import Counter
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent  # overridden by --repo
+LANGS = ("en", "zh", "ja")
 TWINS = ("zh", "ja")
 DISCLAIMER = ("本文档由 AI 自动翻译", "このドキュメントは AI によって自動翻訳")
 
 FM_RE = re.compile(r"\A---\n.*?\n---\n", re.S)
-HEADING_RE = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
+HEADING_RE = re.compile(r"^\s*(#{1,6})\s+(.*?)\s*$")
 CUSTOM_ID_RE = re.compile(r"\{#([\w-]+)\}")
+TAG_ID_RE = re.compile(r"""\bid=["']([\w-]+)["']""")
 LIST_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}")
 COMPONENT_RE = re.compile(r"^\s*<([A-Z][A-Za-z]*)\b")
-TAB_RE = re.compile(r"^\s*<Tab\b")
 COMMENT_RE = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
 
-def section_counts(text: str) -> list[tuple[int, Counter]]:
-    """Return one (heading level, counts) per section; the preamble is level 0."""
+class Section:
+    def __init__(self, level: int) -> None:
+        self.level = level
+        self.counts: Counter = Counter()
+        self.components: list[str] = []
+        self.anchors: list[str] = []
+
+
+def sections_of(text: str) -> list[Section]:
+    """Split a page into sections; the preamble is level 0."""
     text = FM_RE.sub("", text, count=1)
-    sections: list[tuple[int, Counter]] = [(0, Counter())]
-    in_fence = False
-    in_para = False
+    out = [Section(0)]
+    in_fence = in_para = False
     for raw in text.split("\n"):
         line = raw.rstrip()
-        c = sections[-1][1]
+        cur = out[-1]
         if FENCE_RE.match(line):
             if not in_fence:
-                c["code blocks"] += 1
+                cur.counts["code blocks"] += 1
             in_fence = not in_fence
             in_para = False
             continue
@@ -64,88 +77,151 @@ def section_counts(text: str) -> list[tuple[int, Counter]]:
             continue
         h = HEADING_RE.match(line)
         if h:
-            sections.append((len(h.group(1)), Counter()))
-            if CUSTOM_ID_RE.search(h.group(2)):
-                sections[-1][1]["anchor ids"] += 1
+            out.append(Section(len(h.group(1))))
+            m = CUSTOM_ID_RE.search(h.group(2))
+            if m:
+                out[-1].anchors.append(m.group(1))
             in_para = False
             continue
         if TABLE_ROW_RE.match(line):
             if not TABLE_SEP_RE.match(line):
-                c["table rows"] += 1
+                cur.counts["table rows"] += 1
             in_para = False
             continue
-        if COMPONENT_RE.match(line):
-            if TAB_RE.match(line):
-                c["tabs"] += 1
-            else:
-                c["components"] += 1
+        c = COMPONENT_RE.match(line)
+        if c:
+            cur.components.append(c.group(1))
+            cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
-        if line.lstrip().startswith("</"):
+        if line.lstrip().startswith("<"):
+            cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
         if LIST_RE.match(line):
-            c["list items"] += 1
+            cur.counts["list items"] += 1
             in_para = False
             continue
-        if CUSTOM_ID_RE.search(line):
-            c["anchor ids"] += 1
+        cur.anchors.extend(CUSTOM_ID_RE.findall(line))
         if not in_para:
-            c["paragraphs"] += 1
+            cur.counts["paragraphs"] += 1
             in_para = True
-    return sections
+    return out
 
 
-def compare(en_path: Path) -> list[str]:
-    rel = en_path.relative_to(REPO)
+def compare_texts(rel_en: str, en_text: str, twins: dict[str, str | None]) -> list[str]:
+    """Mismatch lines for one English page against its twins' texts (None = missing)."""
     issues: list[str] = []
-    en_sections = section_counts(en_path.read_text(encoding="utf-8"))
+    en = sections_of(en_text)
+    rest = rel_en.split("/", 1)[1]
     for lang in TWINS:
-        twin = REPO / lang / Path(*rel.parts[1:])
-        if not twin.is_file():
-            issues.append(f"{lang}/{'/'.join(rel.parts[1:])}: missing twin")
+        trel = f"{lang}/{rest}"
+        text = twins.get(lang)
+        if text is None:
+            issues.append(f"{trel}: missing twin")
             continue
-        tw_sections = section_counts(twin.read_text(encoding="utf-8"))
-        trel = twin.relative_to(REPO)
-        if len(tw_sections) != len(en_sections):
+        tw = sections_of(text)
+        if len(tw) != len(en):
             issues.append(
-                f"{trel}: {len(tw_sections) - 1} headings, en {len(en_sections) - 1}"
+                f"{trel}: {len(tw) - 1} headings, en {len(en) - 1}"
                 " (sections not compared until the headings match)"
             )
             continue
-        for i, ((en_lvl, en_c), (tw_lvl, tw_c)) in enumerate(zip(en_sections, tw_sections)):
+        for i, (a, b) in enumerate(zip(en, tw)):
             where = "preamble" if i == 0 else f"section {i}"
-            if en_lvl != tw_lvl:
-                issues.append(f"{trel}: {where}: heading level {tw_lvl}, en {en_lvl}")
-            for kind in sorted(set(en_c) | set(tw_c)):
-                if en_c[kind] != tw_c[kind]:
-                    issues.append(f"{trel}: {where}: {kind} {tw_c[kind]}, en {en_c[kind]}")
+            if a.level != b.level:
+                issues.append(f"{trel}: {where}: heading level {b.level}, en {a.level}")
+            for kind in sorted(set(a.counts) | set(b.counts)):
+                if a.counts[kind] != b.counts[kind]:
+                    issues.append(f"{trel}: {where}: {kind} {b.counts[kind]}, en {a.counts[kind]}")
+            if a.components != b.components:
+                issues.append(
+                    f"{trel}: {where}: components {','.join(b.components) or 'none'}, "
+                    f"en {','.join(a.components) or 'none'}"
+                )
+            if sorted(a.anchors) != sorted(b.anchors):
+                issues.append(
+                    f"{trel}: {where}: anchor ids {','.join(sorted(b.anchors)) or 'none'}, "
+                    f"en {','.join(sorted(a.anchors)) or 'none'}"
+                )
     return issues
+
+
+def read_working(rel: str) -> str | None:
+    p = REPO / rel
+    return p.read_text(encoding="utf-8") if p.is_file() else None
+
+
+def read_at(ref: str, rel: str) -> str | None:
+    proc = subprocess.run(
+        ["git", "-C", str(REPO), "show", f"{ref}:{rel}"], capture_output=True, text=True
+    )
+    return proc.stdout if proc.returncode == 0 else None
+
+
+def to_en(rel: str) -> str | None:
+    parts = rel.split("/", 1)
+    if len(parts) != 2 or parts[0] not in LANGS:
+        return None
+    return f"en/{parts[1]}"
 
 
 def main() -> int:
     global REPO
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("pages", nargs="*", help="English pages (en/...mdx), relative to the repo root")
+    ap.add_argument("pages", nargs="*", help="changed pages under en/, zh/, or ja/, relative to the repo root")
     ap.add_argument("--all", action="store_true", help="check every page under en/")
+    ap.add_argument("--base", help="git ref; mismatches already present there are listed, not counted")
     ap.add_argument("--repo", type=Path, default=REPO, help="repo root (default: the script's repo)")
     args = ap.parse_args()
     REPO = args.repo.resolve()
+
     if args.all:
-        pages = sorted((REPO / "en").rglob("*.mdx"))
+        pages = sorted(str(p.relative_to(REPO)) for p in (REPO / "en").rglob("*.md*"))
     else:
-        pages = [(REPO / p).resolve() for p in args.pages]
-    pages = [p for p in pages if p.is_file() and p.suffix == ".mdx" and (REPO / "en") in p.parents]
+        pages = []
+        for raw in args.pages:
+            rel = str(Path(raw).resolve().relative_to(REPO)) if Path(raw).is_absolute() else raw
+            en = to_en(rel)
+            if en and Path(en).suffix in (".mdx", ".md") and en not in pages:
+                pages.append(en)
     if not pages:
-        print("no English pages given; pass en/...mdx paths or --all", file=sys.stderr)
+        print("no pages given; pass paths under en/, zh/, or ja/, or --all", file=sys.stderr)
         return 2
-    issues: list[str] = []
-    for p in pages:
-        issues.extend(compare(p))
-    for line in issues:
+
+    new: list[str] = []
+    old: list[str] = []
+    for en in pages:
+        en_text = read_working(en)
+        if en_text is None:
+            new.append(f"{en}: missing English page")
+            continue
+        rest = en.split("/", 1)[1]
+        now = compare_texts(en, en_text, {lang: read_working(f"{lang}/{rest}") for lang in TWINS})
+        if args.base:
+            base_en = read_at(args.base, en)
+            before = (
+                compare_texts(en, base_en, {lang: read_at(args.base, f"{lang}/{rest}") for lang in TWINS})
+                if base_en is not None else []
+            )
+            seen = Counter(before)
+            for line in now:
+                if seen[line]:
+                    seen[line] -= 1
+                    old.append(line)
+                else:
+                    new.append(line)
+        else:
+            new.extend(now)
+
+    for line in new:
         print(line)
-    if issues:
-        print(f"PARITY ISSUES: {len(issues)}")
+    if old:
+        print(f"pre-existing at {args.base} ({len(old)}):")
+        for line in old:
+            print(f"  {line}")
+    if new:
+        print(f"PARITY ISSUES: {len(new)}")
         return 1
     print(f"PARITY OK: {len(pages)} pages")
     return 0

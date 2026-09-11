@@ -7,9 +7,9 @@ The summary is what the drafter writes from, so its shape becomes the page's sha
 ```md
 # Facts: [the page], verified at [repo, ref]
 
-Every fact below is verified. Add no fact that is not on this sheet, and
-do not state every fact that is: a fact goes on the page because the
-reader would ask for it at that section. Facts marked "background" are
+Every fact under a section heading is verified. Add no product fact that
+is not on this sheet, and do not state every fact that is: a fact goes on
+the page because the reader would ask for it at that section. Facts marked "background" are
 here so you understand the product; the reader would not ask for them, so
 they stay off the page.
 
@@ -29,10 +29,10 @@ reader block at the top of the drafting turn is filled from this.]
 [The product's words, and the UI labels, bold when named as controls.]
 
 ## Visible in the UI at the moment of use: do not describe
-- [What the screen shows when the reader is there.]
+- [What the screen shows when the reader is there, minus what is consequential enough to repeat: data loss, permissions, cost.]
 
 ## Not on this page
-- [Owned by another page, with the link. Not true. Internal. Unverified.]
+- [Owned by another page, with the link. Not true. Internal. Unverified, recorded here so it is reported and never stated.]
 ```
 
 The session that did the research owns the two closing lists: what another page carries and what the screen shows are decisions about the doc set and the product, made with both in view. The drafter owns the rest, sentence by sentence: whether this reader, at this section, would ask for this fact. That judgment needs room, so the summary reaches the drafter slightly fuller than the page will be. A summary trimmed to exactly the page is an outline with facts, and it gets transcribed.
@@ -63,4 +63,4 @@ What the drafter wrote from it:
 >
 > Bad cases also open on their own when a question from one of your apps comes back with nothing, so check the list once your apps are live, not only while you're testing.
 
-The two background facts stayed off the page. The fix for each reason went in whole, because that is the judgment the reader came for. The last bullet became a sentence with a consequence the summary did not state, because the drafter asked what the reader would do with the fact.
+The two background facts stayed off the page. The fix for each reason went in whole, because that is the judgment the reader came for. The last bullet became a sentence with the reader's next move, which the summary did not state and did not need to: the product fact is the sheet's to verify, and what the reader does with it is the drafter's to say.
