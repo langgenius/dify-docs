@@ -42,6 +42,7 @@ LIST_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
 TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}")
 COMPONENT_RE = re.compile(r"^\s*<([A-Z][A-Za-z]*)\b")
+INLINE_TAG_RE = re.compile(r"<([A-Z][A-Za-z]*)\b")
 COMMENT_RE = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
 
@@ -86,14 +87,16 @@ def sections_of(text: str) -> list[Section]:
         if TABLE_ROW_RE.match(line):
             if not TABLE_SEP_RE.match(line):
                 cur.counts["table rows"] += 1
-            in_para = False
-            continue
-        c = COMPONENT_RE.match(line)
-        if c:
-            cur.components.append(c.group(1))
+            cur.components.extend(INLINE_TAG_RE.findall(line))
             cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
+        if COMPONENT_RE.match(line):
+            cur.components.extend(INLINE_TAG_RE.findall(line))
+            cur.anchors.extend(TAG_ID_RE.findall(line))
+            in_para = False
+            continue
+        cur.components.extend(INLINE_TAG_RE.findall(line))
         if line.lstrip().startswith("<"):
             cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
@@ -183,7 +186,10 @@ def main() -> int:
         for raw in args.pages:
             rel = str(Path(raw).resolve().relative_to(REPO)) if Path(raw).is_absolute() else raw
             en = to_en(rel)
-            if en and Path(en).suffix in (".mdx", ".md") and en not in pages:
+            if not en or Path(en).suffix not in (".mdx", ".md") or not (REPO / rel).is_file():
+                print(f"not a page under en/, zh/, or ja/: {raw}", file=sys.stderr)
+                return 2
+            if en not in pages:
                 pages.append(en)
     if not pages:
         print("no pages given; pass paths under en/, zh/, or ja/, or --all", file=sys.stderr)
