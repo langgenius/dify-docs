@@ -148,7 +148,7 @@ Combine both phases into a structured research record. It is research output, no
 - [What to explicitly omit and why (bugs, unreleased features, UI-discoverable mechanics)]
 ```
 
-Present the record to the user. STOP — do not start the writing phase until the user reviews the findings and confirms the scope.
+Present the record to the user. STOP — do not start the writing phase until the user reviews the findings and confirms the scope. Under `dify-docs-write` with no reviewer in the session, that skill's rule applies: the record goes into the PR description and the run continues.
 
 ## Important
 
