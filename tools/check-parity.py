@@ -41,10 +41,11 @@ FM_RE = re.compile(r"\A---\n.*?\n---\n", re.S)
 HEADING_RE = re.compile(r"^\s*(#{1,6})\s+(.*?)\s*$")
 CUSTOM_ID_RE = re.compile(r"\{#([\w-]+)\}")
 TAG_ID_RE = re.compile(r"""\bid=["']([\w-]+)["']""")
-LIST_RE = re.compile(r"^\s*(?:[-*+]|\d+[.)])\s+")
+LIST_RE = re.compile(r"^\s*(?:>\s*)*(?:[-*+]|\d+[.)])\s+")
 TABLE_ROW_RE = re.compile(r"^\s*\|.*\|\s*$")
 TABLE_SEP_RE = re.compile(r"^\s*\|?\s*:?-{3,}")
 COMPONENT_RE = re.compile(r"^\s*<([A-Z][A-Za-z]*)\b")
+HTML_BLOCK_RE = re.compile(r"^\s*<(video|img|iframe|h[1-6]|p|div|table|ul|ol|details|summary)\b")
 INLINE_TAG_RE = re.compile(r"<([A-Z][A-Za-z]*)\b")
 COMMENT_RE = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
 FENCE_RE = re.compile(r"^\s*(```|~~~)")
@@ -57,29 +58,38 @@ class Section:
         self.counts: Counter = Counter()
         self.components: list[str] = []
         self.anchors: list[str] = []
+        self.blocks: list[str] = []  # block kinds in order
 
 
 def sections_of(text: str) -> list[Section]:
     """Split a page into sections; the preamble is level 0."""
     text = FM_RE.sub("", text, count=1)
     out = [Section(0)]
-    in_fence = in_para = False
+    in_fence = in_para = in_tag = False
     for raw in text.split("\n"):
         line = raw.rstrip()
         cur = out[-1]
         if FENCE_RE.match(line):
             if not in_fence:
                 cur.counts["code blocks"] += 1
+                cur.blocks.append("code")
             in_fence = not in_fence
             in_para = False
             continue
         if in_fence:
+            continue
+        if in_tag:
+            # continuation lines of a tag opened on an earlier line: attributes only
+            cur.anchors.extend(TAG_ID_RE.findall(line))
+            if ">" in line:
+                in_tag = False
             continue
         if not line.strip():
             in_para = False
             continue
         if any(m in line for m in DISCLAIMER) or COMMENT_RE.match(line):
             continue
+        cur.anchors.extend(TAG_ID_RE.findall(line))
         h = HEADING_RE.match(line)
         if h:
             out.append(Section(len(h.group(1)), h.group(2)))
@@ -92,27 +102,33 @@ def sections_of(text: str) -> list[Section]:
         if TABLE_ROW_RE.match(line):
             if not TABLE_SEP_RE.match(line):
                 cur.counts["table rows"] += 1
+                cur.counts["table cells"] += len(line.strip().strip("|").split("|"))
+                cur.blocks.append("row")
             cur.components.extend(INLINE_TAG_RE.findall(line))
-            cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
-        if COMPONENT_RE.match(line):
-            cur.components.extend(INLINE_TAG_RE.findall(line))
-            cur.anchors.extend(TAG_ID_RE.findall(line))
+        c = COMPONENT_RE.match(line) or HTML_BLOCK_RE.match(line)
+        if c:
+            cur.components.append(c.group(1))
+            cur.components.extend(INLINE_TAG_RE.findall(line)[1:] if COMPONENT_RE.match(line) else INLINE_TAG_RE.findall(line))
+            cur.blocks.append(c.group(1))
+            if ">" not in line:
+                in_tag = True
             in_para = False
             continue
         cur.components.extend(INLINE_TAG_RE.findall(line))
         if line.lstrip().startswith("<"):
-            cur.anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
         if LIST_RE.match(line):
             cur.counts["list items"] += 1
+            cur.blocks.append("item")
             in_para = False
             continue
         cur.anchors.extend(CUSTOM_ID_RE.findall(line))
         if not in_para:
             cur.counts["paragraphs"] += 1
+            cur.blocks.append("para")
             in_para = True
     return out
 
@@ -127,7 +143,7 @@ def labels_for(en: list[Section]) -> list[str]:
         if sec.level == 0:
             out.append("preamble")
             continue
-        title = re.sub(r"\s+", " ", CUSTOM_ID_RE.sub("", INLINE_TAG_RE.sub("", sec.title))).strip()[:60]
+        title = re.sub(r"\s+", " ", CUSTOM_ID_RE.sub("", re.sub(r"<[^>]*>", "", sec.title))).strip()[:60]
         seen[title] += 1
         out.append(f'section "{title}"' + (f" ({seen[title]})" if seen[title] > 1 else ""))
     return out
@@ -163,11 +179,13 @@ def compare_texts(rel_en: str, en_text: str, twins: dict[str, str | None]) -> li
                     f"{trel}: {where}: components {','.join(b.components) or 'none'}, "
                     f"en {','.join(a.components) or 'none'}"
                 )
-            if sorted(a.anchors) != sorted(b.anchors):
+            if a.anchors != b.anchors:
                 issues.append(
-                    f"{trel}: {where}: anchor ids {','.join(sorted(b.anchors)) or 'none'}, "
-                    f"en {','.join(sorted(a.anchors)) or 'none'}"
+                    f"{trel}: {where}: anchor ids {','.join(b.anchors) or 'none'}, "
+                    f"en {','.join(a.anchors) or 'none'}"
                 )
+            if a.counts == b.counts and a.components == b.components and a.blocks != b.blocks:
+                issues.append(f"{trel}: {where}: block order {','.join(b.blocks)}, en {','.join(a.blocks)}")
     return issues
 
 
@@ -178,9 +196,21 @@ def read_working(rel: str) -> str | None:
 
 def read_at(ref: str, rel: str) -> str | None:
     proc = subprocess.run(
-        ["git", "-C", str(REPO), "show", f"{ref}:{rel}"], capture_output=True, text=True
+        ["git", "-C", str(REPO), "show", f"{ref}:{rel}"], capture_output=True, text=True, encoding="utf-8"
     )
     return proc.stdout if proc.returncode == 0 else None
+
+
+def issues_for(en: str, read) -> list[str] | None:
+    """All mismatch lines for one English page as seen through `read`; None when the
+    page is absent in every language there (a deletion, or a page new since)."""
+    rest = en.split("/", 1)[1]
+    en_text = read(en)
+    if en_text is None:
+        orphans = [f"{lang}/{rest}: translation without an English page"
+                   for lang in TWINS if read(f"{lang}/{rest}") is not None]
+        return orphans or None
+    return compare_texts(en, en_text, {lang: read(f"{lang}/{rest}") for lang in TWINS})
 
 
 def to_en(rel: str) -> str | None:
@@ -241,23 +271,11 @@ def main() -> int:
     new: list[str] = []
     old: list[str] = []
     for en in pages:
-        en_text = read_working(en)
-        rest = en.split("/", 1)[1]
-        if en_text is None:
-            # A page removed in all three languages is a synchronized deletion,
-            # which the changed-file list will hand us; only a surviving twin
-            # is a fault.
-            for lang in TWINS:
-                if read_working(f"{lang}/{rest}") is not None:
-                    new.append(f"{lang}/{rest}: translation without an English page")
-            continue
-        now = compare_texts(en, en_text, {lang: read_working(f"{lang}/{rest}") for lang in TWINS})
+        now = issues_for(en, read_working)
+        if now is None:
+            continue  # removed in every language: a deletion, nothing to compare
         if args.base:
-            base_en = read_at(args.base, en)
-            before = (
-                compare_texts(en, base_en, {lang: read_at(args.base, f"{lang}/{rest}") for lang in TWINS})
-                if base_en is not None else []
-            )
+            before = issues_for(en, lambda rel: read_at(args.base, rel)) or []
             seen = Counter(before)
             for line in now:
                 if seen[line]:
