@@ -194,9 +194,14 @@ def main() -> int:
     else:
         pages = []
         for raw in args.pages:
-            rel = str(Path(raw).resolve().relative_to(REPO)) if Path(raw).is_absolute() else raw
+            given = Path(raw)
+            full = (given if given.is_absolute() else REPO / given).resolve()
+            try:
+                rel = str(full.relative_to(REPO))
+            except ValueError:
+                rel = ""
             en = to_en(rel)
-            if not en or Path(en).suffix not in (".mdx", ".md") or not (REPO / rel).is_file():
+            if not en or Path(en).suffix not in (".mdx", ".md"):
                 print(f"not a page under en/, zh/, or ja/: {raw}", file=sys.stderr)
                 return 2
             if en not in pages:
