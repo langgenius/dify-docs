@@ -29,6 +29,11 @@ Read-only audit. Verify that documentation terms match the glossary (general ter
    REF=$(git rev-parse origin/<branch>)
    ```
    All i18n lookups below use `"$REF"`; the report cites it (short form, e.g. `61d2ad572a`).
+3. Check that the glossary's keys still exist at that ref. In the docs repo:
+   ```bash
+   python3 tools/translate/check-glossary-keys.py --dify <path to the Dify clone> --ref "$REF"
+   ```
+   Success signal: `GLOSSARY KEYS OK: {n} resolve at {ref}`. Each `DEAD:` line names a glossary row whose key no longer exists at the ref. A dead row is not evidence for its label in this audit: resolve that label from the code per the glossary's own rule (the key whose en-US value matches on the surface being documented), do not flag a page for disagreeing with the dead row, and list the dead rows in the report for a glossary fix.
 
 ## Step 3 — Set the scope
 
