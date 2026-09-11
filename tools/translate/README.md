@@ -10,6 +10,7 @@ Chinese and Japanese documentation is translated alongside each English change �
 | `formatting-ja.md` | Japanese formatting and localization rules — read before writing any ja content |
 | `termbase_i18n.md` | Terminology database (en/zh/ja) — derived from `writing-guides/glossary.md` |
 | `derive-termbase.py` | Regenerates the termbase from the glossary; `--check` verifies sync (used by CI) |
+| `check-glossary-keys.py` | Checks that every i18n key the glossary cites still exists in the Dify web UI strings at a pinned ref; run by the terminology check |
 | `json_formatter.py` | Format-preserving JSON writer for `docs.json` edits (keeps diffs clean) |
 | `openapi/` | OpenAPI spec translation utilities: extract translatable fields to markdown, rehydrate translated values back into the JSON |
 
