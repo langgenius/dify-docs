@@ -357,6 +357,13 @@ def parse_compose_text(text: str) -> dict[str, str]:
     return found
 
 
+def is_test_compose(name: str) -> bool:
+    """docker/docker-compose.pytest.ports.yaml publishes vector-store ports for the
+    integration tests; nothing a deployment reads. Skipped whether it arrives via a
+    directory glob, an explicit path, or a git ref."""
+    return "pytest" in name
+
+
 def collect_compose_files(sources: list[str]) -> list[Path]:
     files: list[Path] = []
     for source in sources:
@@ -364,17 +371,16 @@ def collect_compose_files(sources: list[str]) -> list[Path]:
         if not p.exists():
             print(f"ERROR: compose source not found: {source}", file=sys.stderr)
             sys.exit(1)
+        candidates = [p]
         if p.is_dir():
+            candidates = []
             for pattern in ("docker-compose*.yaml", "docker-compose*.yml"):
-                for f in sorted(p.glob(pattern)):
-                    if "pytest" in f.name:
-                        # docker/docker-compose.pytest.ports.yaml publishes vector-store ports
-                        # for the integration tests; nothing a deployment reads.
-                        print(f"(skipped {f.name}: test harness, not a deployment file)")
-                        continue
-                    files.append(f)
-        else:
-            files.append(p)
+                candidates.extend(sorted(p.glob(pattern)))
+        for f in candidates:
+            if is_test_compose(f.name):
+                print(f"(skipped {f.name}: test harness, not a deployment file)")
+                continue
+            files.append(f)
     return files
 
 
@@ -399,8 +405,8 @@ def compose_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
         name = Path(path).name
         if not (name.startswith("docker-compose") and name.endswith((".yaml", ".yml"))):
             continue
-        if "pytest" in name:
-            continue  # test harness; see collect_compose_files
+        if is_test_compose(name):
+            continue
         text = subprocess.run(
             ["git", "-C", repo, "show", f"{ref}:{path}"],
             capture_output=True, text=True, check=True,
