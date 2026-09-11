@@ -15,7 +15,7 @@ The CJK linter measures mechanics. This test measures the translation: whether i
 ## Procedure
 
 1. Agree the dispatch with the owner before sending anything: one judge per language per round is the usual shape, reading every page that round touched in that language; a page translated whole can have its own judge when the round is large. When no reviewer is in the session, state the dispatch in the report or PR description and proceed.
-2. Dispatch the fresh sub-agent(s) (`subagent_type: general-purpose`) with the template below, filling `{LANG}` (Chinese or Japanese), `{GUIDE}` (`tools/translate/formatting-zh.md` or `tools/translate/formatting-ja.md`), `{GLOSSARY}` (`writing-guides/glossary.md`), `{SOURCE}` (the English page, absolute path), `{DRAFT}` (the translated page, absolute path), and `{CHANGED}` ("the whole page", or the sections this round changed). When one judge reads several pages, the page block (files 3 and 4 and the changed line) and the reply repeat per page, under the page's path. Put nothing else in the prompt.
+2. Dispatch the fresh sub-agent(s) (`subagent_type: general-purpose`) with the template below, filling `{LANG}` (Chinese or Japanese), `{GUIDE}` (`tools/translate/formatting-zh.md` or `tools/translate/formatting-ja.md`), `{GLOSSARY}` (`writing-guides/glossary.md`), `{SOURCE}` (the English page, absolute path), `{DRAFT}` (the translated page, absolute path), and `{CHANGED}` ("the whole page", or the sections and paragraphs this round changed). When one judge reads several pages, the page block (files 3 and 4 and the changed line) and the reply repeat per page, under the page's path. Put nothing else in the prompt.
 3. Relay the report unedited. Then act on it as the editor test does: the verdict judges this round's work; "Ship with light edits" means fix the marked sentences, "Needs heavy edits" means retranslate the marked units whole from the English, "Needs retranslation" means a fresh translator takes the page from the English file on disk. A revised page goes to a new judge. Marks outside the change go to the owner as a list with a proposal for each.
 
 ## Dispatch prompt
@@ -26,8 +26,8 @@ translated page the way its owner would before deciding whether it can ship.
 
 Read exactly these files, in this order:
 1. {GUIDE}: the whole guide. Its translation-quality sections describe
-   the failures you are looking for; the rest are the rules the page has
-   to meet.
+   the failures you are looking for; the rest of the guide is context for
+   them, and its formatting rules are checked elsewhere.
 2. {GLOSSARY}: the terms and UI labels, with their {LANG} forms.
 
 Then, for each page under review:
@@ -44,10 +44,12 @@ Mark every sentence that falls short, quoting it, with one tag each:
 - structure: carries the English clause structure or sentence order where
   a native writer would not
 - register: a word in the wrong register for its context
-- term: a term or UI label that differs from the glossary or from the
-  English page's label
+- term: a term or UI label whose {LANG} form is not the glossary's, or
+  that does not correspond to the label the English page names
 - tell: a translationese pattern the guide lists
-- rule: breaks another rule in the guide; name the section
+- rule: breaks a translation rule the guide states and the tags above do
+  not name (a standard phrase, a katakana convention, an app-type name);
+  name the section
 
 Then give one verdict on this round's work: Ship with light edits / Needs
 heavy edits / Needs retranslation, with one sentence on what decided it.
