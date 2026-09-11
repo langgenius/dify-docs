@@ -21,7 +21,7 @@ After completing a writing task, read the page back as its reader (the dify-docs
 | 4 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
 | 5 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
 
-Steps 3 and 4 cover all three languages and audit the whole document, not just the diff. Step 5 is always the last step because it depends on the others passing.
+Steps 3 and 4 cover all three languages and audit the whole document, not just the diff; step 3 also checks that the zh and ja pages carry the same sections and blocks as the English page. Step 5 is always the last step because it depends on the others passing.
 
 ## Syncing the Dify codebase safely
 
