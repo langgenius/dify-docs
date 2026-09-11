@@ -33,7 +33,7 @@ Read-only audit. Verify that documentation terms match the glossary (general ter
    ```bash
    python3 tools/translate/check-glossary-keys.py --dify <path to the Dify clone> --ref "$REF"
    ```
-   Success signal: `GLOSSARY KEYS OK: {n} resolve at {ref}`. Each `DEAD:` line names a glossary row whose key no longer exists at the ref. A dead row is not evidence for its label in this audit: resolve that label from the code per the glossary's own rule (the key whose en-US value matches on the surface being documented), do not flag a page for disagreeing with the dead row, and list the dead rows in the report for a glossary fix.
+   It ends with `GLOSSARY KEYS OK: {n} resolve at {ref}` or `GLOSSARY KEYS: {n} checked, {m} dead at {ref}`; either way the audit continues, because a dead row is a glossary defect, not a page defect. Each `DEAD:` line names a glossary row whose key no longer exists at the ref. A dead row is not evidence for its label in this audit: resolve that label from the code per the glossary's own rule (the key whose en-US value matches on the surface being documented), do not flag a page for disagreeing with the dead row, and list the dead rows in the report for a glossary fix.
 
 ## Step 3 — Set the scope
 

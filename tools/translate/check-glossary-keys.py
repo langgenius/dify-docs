@@ -12,8 +12,10 @@ glossary row whose key is dead is not evidence for the label it carries:
 the label may have moved to another key, or left the product.
 
 Prints `DEAD: <key>  (glossary.md:<line>, <section>)` per dead key and ends
-with `GLOSSARY KEYS OK: <n> resolve at <ref>` (exit 0) or
-`GLOSSARY KEYS: <n> checked, <m> dead at <ref>` (exit 1).
+with `GLOSSARY KEYS OK: <n> resolve at <ref>` or
+`GLOSSARY KEYS: <n> checked, <m> dead at <ref>`. Dead rows are a report for
+a glossary fix, not a failed audit, so the exit code is 0 either way unless
+--strict is given.
 """
 
 from __future__ import annotations
@@ -39,16 +41,14 @@ def git_show(dify: Path, ref: str, path: str) -> str | None:
 
 
 def resolves(data: dict, parts: list[str]) -> bool:
-    """True if the dotted path exists, nested or flattened, or is a parent of flattened keys."""
+    """True if the dotted path exists, nested or as a flattened key. A descendant
+    of the path does not count: the cited key must itself exist."""
     node = data
     for i, part in enumerate(parts):
         if isinstance(node, dict) and part in node:
             node = node[part]
             continue
-        rest = ".".join(parts[i:])
-        if isinstance(node, dict) and (rest in node or any(k.startswith(rest + ".") for k in node)):
-            return True
-        return False
+        return isinstance(node, dict) and ".".join(parts[i:]) in node
     return True
 
 
@@ -82,6 +82,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--dify", type=Path, default=os.environ.get("DIFY_REPO"), help="path to the dify clone (or set DIFY_REPO)")
     ap.add_argument("--ref", default="origin/main", help="ref to read the i18n files at (default origin/main)")
+    ap.add_argument("--strict", action="store_true", help="exit 1 when any key is dead (default: report and exit 0)")
     args = ap.parse_args()
     if not args.dify or not (Path(args.dify) / ".git").exists():
         print("dify clone not found: pass --dify <path> or set DIFY_REPO", file=sys.stderr)
@@ -93,6 +94,7 @@ def main() -> int:
         return 2
     short = sha.stdout.strip()
     ref_label = short if args.ref.startswith(short) else f"{args.ref} ({short})"
+    pinned = subprocess.run(["git", "-C", str(dify), "rev-parse", args.ref], capture_output=True, text=True).stdout.strip()
     files: dict[str, dict | None] = {}
     dead: list[tuple[int, str, str]] = []
     keys = glossary_keys()
@@ -102,7 +104,7 @@ def main() -> int:
             # Namespaces are cited as the code writes them (appLog) or as the
             # file is named (app-log); the file is always kebab-case.
             fname = re.sub(r"(?<!^)(?=[A-Z])", "-", ns).lower()
-            raw = git_show(dify, args.ref, f"web/i18n/en-US/{fname}.json")
+            raw = git_show(dify, pinned, f"web/i18n/en-US/{fname}.json")
             files[ns] = json.loads(raw) if raw else None
         data = files[ns]
         if data is None or not resolves(data, parts):
@@ -111,7 +113,7 @@ def main() -> int:
         print(f"DEAD: {key}  (glossary.md:{n}, {section})")
     if dead:
         print(f"GLOSSARY KEYS: {len(keys)} checked, {len(dead)} dead at {ref_label}")
-        return 1
+        return 1 if args.strict else 0
     print(f"GLOSSARY KEYS OK: {len(keys)} resolve at {ref_label}")
     return 0
 
