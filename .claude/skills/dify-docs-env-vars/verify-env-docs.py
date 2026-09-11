@@ -152,11 +152,13 @@ def _read_ignored_text(path: str) -> str:
                 print(f"(ignore list not in the working tree; read origin/main:{rel})")
                 return result.stdout
             break
+    # An empty ignore set would let a run end on ALL CHECKS PASSED by accident, so the
+    # run is invalid rather than noisy: stop here instead of reporting against nothing.
     msg = (f"WARNING: ignore list not found at {path} and no committed copy could be read; "
-           "every ignorable variable will be reported. Set DIFY_DOCS_REGISTRY or pass --ignored.")
+           "the run is invalid. Set DIFY_DOCS_REGISTRY or pass --ignored.")
     print(msg)
     print(msg, file=sys.stderr)
-    return ""
+    sys.exit(2)
 
 
 def parse_mdx_docs(path: str) -> dict[str, str]:
@@ -406,6 +408,7 @@ def compose_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
         if not (name.startswith("docker-compose") and name.endswith((".yaml", ".yml"))):
             continue
         if is_test_compose(name):
+            print(f"(skipped {name} at {ref}: test harness, not a deployment file)")
             continue
         text = subprocess.run(
             ["git", "-C", repo, "show", f"{ref}:{path}"],

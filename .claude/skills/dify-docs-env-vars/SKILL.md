@@ -75,7 +75,7 @@ Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — do
 
 **Cadence.** The full command above is the baseline audit, and the baseline was cleared at dify tag `1.17.1`. A release pass runs `--compare-rev` — it diffs both the `.env.example` files and the compose references between two refs, so a clean baseline stays clean incrementally. Re-run the full command whenever this script, the ignore list's location, or the `.env.example` layout changes, and after any pass that touched more than a handful of variables; it must end on `ALL CHECKS PASSED` or every remaining line must be accounted for in the ignore list. Run it against the `zh` and `ja` pages too — the parser understands `默认值：`, `デフォルト値：` and `（空）`, so their counts are as meaningful as English's.
 
-Pass bar for every task: the full command ends on `ALL CHECKS PASSED`, or every remaining line is accounted for in the ignore list with a reason. **Missing from docs** stopped being standing backlog when the baseline was cleared at tag `1.17.1`: a nonzero count now means a variable arrived since, and it is documented or ignored before the task ends. If the script prints `WARNING: ignore list not found`, the run is invalid — fix the path before reading any count.
+Pass bar for every task: the full command ends on `ALL CHECKS PASSED`, or every remaining line is accounted for in the ignore list with a reason. **Missing from docs** stopped being standing backlog when the baseline was cleared at tag `1.17.1`: a nonzero count now means a variable arrived since, and it is documented or ignored before the task ends. If the script prints `WARNING: ignore list not found`, it stops with exit status 2 and prints no counts: fix the path and re-run.
 
 ### Update the ignore list if needed
 
