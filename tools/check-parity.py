@@ -254,6 +254,9 @@ def main() -> int:
     ap.add_argument("--repo", type=Path, default=REPO, help="repo root (default: the script's repo)")
     args = ap.parse_args()
     REPO = args.repo.resolve()
+    if not (REPO / "en").is_dir():
+        print(f"not a docs repository (no en/ directory): {REPO}", file=sys.stderr)
+        return 2
     if args.base:
         ok = subprocess.run(
             ["git", "-C", str(REPO), "rev-parse", "--verify", "--quiet", f"{args.base}^{{commit}}"],
