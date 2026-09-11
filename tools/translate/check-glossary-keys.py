@@ -98,6 +98,9 @@ def main() -> int:
     files: dict[str, dict | None] = {}
     dead: list[tuple[int, str, str]] = []
     keys = glossary_keys()
+    if not keys:
+        print(f"no i18n Key cells found in {GLOSSARY}; the table header may have changed", file=sys.stderr)
+        return 2
     for n, section, key in keys:
         ns, *parts = key.split(".")
         if ns not in files:
