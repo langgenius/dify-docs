@@ -55,14 +55,7 @@ Scope signals, in order of authority:
 | staging image SHA | what code the cloud release candidate runs | maintainers |
 | staging feature flags | whether shipped code is **enabled** | maintainers |
 
-Maintainers read the staging signals from the internal GitOps config (`saas-deploy` repo). Staging is the cloud release candidate: the team merges each release's functional updates there before cutting it.
-
-```bash
-# upper ref -> diff <last-release-tag>..<SHA>, not ..main
-grep newTag saas-deploy/environments/staging/dify/api/kustomization.yaml
-# feature flags for the shipped code
-cat saas-deploy/environments/staging/dify/{api,web}/env.properties
-```
+Staging is the cloud release candidate: the team merges each release's functional updates there before cutting it. Maintainers read the staging image SHA and the flag states from the internal Cloud deployment configuration.
 
 Without staging access: use the release tag once it exists; before that, pin a `main` SHA scoped by the milestone plus the merged-PR range (1.1b), and ask a maintainer to confirm the staging SHA and flag states.
 
@@ -249,5 +242,4 @@ For each affected variable group, run `dify-docs-write` (an update; S4 satisfied
 | API pipeline gate + usage docs | `tools/api-pipeline/` (`README.md` holds the full usage block) |
 | App-type availability | `tools/api-pipeline/memberships.json` |
 | GitHub repo | `langgenius/dify` |
-| Staging image SHA (maintainers) | `saas-deploy/environments/staging/dify/api/kustomization.yaml` (`newTag`) |
-| Staging feature flags (maintainers) | `saas-deploy/environments/staging/dify/{api,web}/env.properties` |
+| Staging image SHA and feature flags | Internal Cloud deployment configuration (maintainers) |
