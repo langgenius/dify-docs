@@ -4,26 +4,12 @@ description: >
   Rule pack for the environment variable reference —
   en/self-host/deploy/configuration/environments.mdx. Carries the tracing
   procedure, description rules, verifier, and document structure. Loaded by
-  dify-docs-write; not an entry point. Its release-sync diff is a standalone
-  procedure invoked by dify-docs-release-sync.
+  dify-docs-write; not an entry point.
 ---
 
 # Dify Environment Variable Documentation
 
 Not an entry point — run under `dify-docs-write`; the procedure below implements its stages for `en/self-host/deploy/configuration/environments.mdx`. Read `references/style-overrides.md` (in this skill directory — env-var-specific style rules and description anti-patterns) together with this pack. Use the ref pinned at S1; cite it in the S4 scope report.
-
-## Standalone procedure: release-sync diff
-
-Invoked from `dify-docs-release-sync` only. Run this before any tracing. Per-PR detection misses vars from untagged PRs, and the verifier's Missing-from-docs list hides genuinely new vars inside old backlog.
-
-```bash
-python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
-  --compare-rev <last-release-tag> <target-release-tag> \
-  --repo <path-to-dify-repo> \
-  --docs en/self-host/deploy/configuration/environments.mdx
-```
-
-Pin exact tags or SHAs (e.g., `--compare-rev 1.14.1 1.15.0`), never a branch name. The script prints the vars **added / removed / default-changed** between the refs, then `=== NEW vars NOT documented and NOT in ignored-vars (<n>) — TRIAGE ===`, and exits 0. Every triage var must end the task either documented or in `ignored-vars.md` with a reason — never as silent backlog.
 
 ## Procedure (S2 → S6)
 
@@ -84,11 +70,11 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
 
 Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
 
-Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every release-sync-diff triage var must be resolved.
+Pass bar for every task: **Extra in docs: 0** and **Default mismatches: 0**. **Missing from docs** is standing backlog and may stay nonzero, but no variable you touched may appear in it, and every triage var from the release diff must be resolved.
 
-### Update `ignored-vars.md` if needed
+### Update the ignore list if needed
 
-The verifier filters out variables listed in `ignored-vars.md` (in this skill directory). When you:
+The verifier filters out variables listed in the registry's `guides/env-ignored-vars.md`. That list stays in the private registry because its entries name unreleased work. The verifier finds it through `$DIFY_DOCS_REGISTRY` or a sibling clone of this repo; pass `--ignored PATH` to point somewhere else. When you:
 
 - Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)**.
 - Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
@@ -108,12 +94,12 @@ The verifier reads both — always use the canonical verifier command above, whi
 | Var location | Action |
 |---|---|
 | In any `.env.example` file, uncommented | Document. |
-| In any `.env.example` file, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `ignored-vars.md` (the verifier can't parse defaults from comments). |
+| In any `.env.example` file, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `env-ignored-vars.md` (the verifier can't parse defaults from comments). |
 | Only in `api/configs/` Pydantic, not in any `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate `.env.example` file first. |
 | In `.env.example` and still parsed, but upstream-deprecated with a replacement | Keep the row; lead the description with the deprecation and the replacement: "Deprecated; use `X`." Deprecated means still parsed — a removed var never gets a Deprecated label. |
 | Removed from `.env.example` because the code no longer reads it | **Remove from docs — no tombstone rows** (a documented row implies the var still takes effect). If a successor variable replaced it, add one clause to the successor's description so the old names stay findable via search: "Replaces the former `EDITION`, ignored from 1.17.0 onward." With no successor, remove without trace; upgrader discoverability belongs in upstream Dify release notes. |
 
-**The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `ignored-vars.md`.**
+**The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `env-ignored-vars.md`.**
 
 ## Document Structure
 

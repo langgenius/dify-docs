@@ -27,7 +27,7 @@ def resolve(schema, spec, depth=0):
     return schema
 
 
-CHECKS = {"examples": 0, "links": 0}
+CHECKS = {"examples": 0, "links": 0, "wire_messages": 0}
 
 def check_example(example, schema, spec, where, f, path=""):
     if not path:
@@ -83,7 +83,24 @@ def collect_enum_usage(node, used, spec, depth=0):
         used.add(node)
 
 
+def iter_wire_examples(spec):
+    """Yield ((path, method, status, example name), message) for examples that carry
+    an error `code` and `message`."""
+    for path, ops in spec.get("paths", {}).items():
+        for method, op in ops.items():
+            if not isinstance(op, dict):
+                continue
+            for status, resp in op.get("responses", {}).items():
+                media = resp.get("content", {}).get("application/json", {})
+                for name, ex in media.get("examples", {}).items():
+                    val = ex.get("value")
+                    if isinstance(val, dict) and "code" in val and "message" in val:
+                        yield (path, method, status, name), val["message"]
+
+
 SPEC_FILES = [f"{DOCS}/{lang}/api-reference/openapi_service.json" for lang in ("en", "zh", "ja")]
+wire_by_lang: dict = {}
+rel_by_lang: dict = {}
 missing = [f for f in SPEC_FILES if not os.path.exists(f)]
 if missing:
     for f in missing:
@@ -95,6 +112,11 @@ for f in SPEC_FILES:
     with open(f, encoding="utf-8") as _fh:
         spec = json.load(_fh)
     lang = rel.split("/")[0]
+
+    for _key, _msg in iter_wire_examples(spec):
+        wire_by_lang.setdefault(lang, {})[_key] = _msg
+        rel_by_lang[lang] = rel
+        CHECKS["wire_messages"] += 1
 
     # Build valid page slugs for this language from the already-loaded spec
     valid_pages = set()
@@ -180,6 +202,22 @@ for f in SPEC_FILES:
     # keep enum sweep opt-in via env (noisy)
     if os.environ.get("ENUM_SWEEP"):
         walk_schemas(spec.get("components", {}).get("schemas", {}), "components", 0)
+
+# Wire strings — the error `code` and `message` an example shows — are what the server
+# returns, so they stay English in every language spec. A translated or invented message
+# is a defect the schema lint cannot see, because each side is independently well formed.
+_en_wire = wire_by_lang.get("en", {})
+for _lang, _msgs in wire_by_lang.items():
+    if _lang == "en":
+        continue
+    for _key, _msg in _msgs.items():
+        _want = _en_wire.get(_key)
+        if _want is not None and _msg != _want:
+            _path, _method, _status, _name = _key
+            issues[rel_by_lang[_lang]].append(
+                f"wire message differs from en ({_method.upper()} {_path} {_status} "
+                f"example '{_name}'): {_msg!r} != {_want!r}"
+            )
 
 total = sum(len(v) for v in issues.values())
 print(f"checked: {CHECKS}")

@@ -21,6 +21,7 @@ Usage:
 """
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -121,14 +122,37 @@ def parse_ignored_vars(path: str) -> set[str]:
     The header row `| Variable | ...` is skipped naturally because it isn't backticked.
     """
     ignored: set[str] = set()
-    if not Path(path).exists():
-        return ignored
-    with open(path, encoding="utf-8") as f:
-        for line in f:
-            match = re.match(r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|", line)
-            if match:
-                ignored.add(match.group(1))
+    text = _read_ignored_text(path)
+    for line in text.splitlines():
+        match = re.match(r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|", line)
+        if match:
+            ignored.add(match.group(1))
     return ignored
+
+
+def _read_ignored_text(path: str) -> str:
+    """Read the ignore list, falling back to the registry's committed copy.
+
+    The registry clone is shared and often sits on another branch, so the file can be
+    absent from its working tree while present on `origin/main`. Reading the committed
+    copy keeps the ignore list from silently parsing as empty, which would report every
+    ignored variable as missing documentation.
+    """
+    target = Path(path)
+    if target.exists():
+        return target.read_text(encoding="utf-8")
+    for parent in target.parents:
+        if (parent / ".git").exists():
+            rel = target.relative_to(parent).as_posix()
+            result = subprocess.run(
+                ["git", "-C", str(parent), "show", f"origin/main:{rel}"],
+                capture_output=True, text=True,
+            )
+            if result.returncode == 0:
+                print(f"(ignore list not in the working tree; read origin/main:{rel})")
+                return result.stdout
+            break
+    return ""
 
 
 def parse_mdx_docs(path: str) -> dict[str, str]:
@@ -268,7 +292,19 @@ def normalize(value: str) -> str:
     return v
 
 
-DEFAULT_IGNORED_PATH = Path(__file__).parent / "ignored-vars.md"
+def _default_ignored_path() -> Path:
+    """The ignore list lives in the private registry: its entries name unreleased work.
+    Resolve $DIFY_DOCS_REGISTRY first, then a sibling clone of this repo. When neither
+    is present the list parses as empty and every variable is reported, which is the
+    safe direction."""
+    registry = os.environ.get("DIFY_DOCS_REGISTRY")
+    if registry:
+        return Path(registry) / "guides" / "env-ignored-vars.md"
+    docs_root = Path(__file__).resolve().parents[3]
+    return docs_root.parent / "dify-docs-registry" / "guides" / "env-ignored-vars.md"
+
+
+DEFAULT_IGNORED_PATH = _default_ignored_path()
 
 
 def _env_example_paths_at_ref(repo: str, ref: str) -> list[str]:
@@ -345,7 +381,7 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
         print(f"=== NEW vars NOT documented and NOT in ignored-vars ({len(gaps)}) — TRIAGE ===")
         for n in gaps:
             print(f"  {n}={new_vars[n]}")
-        print("(Document each, or add to ignored-vars.md with a reason. Never leave a")
+        print("(Document each, or add to env-ignored-vars.md with a reason. Never leave a")
         print(" new-this-release var as silent backlog.)")
     else:
         print("\n(Pass --docs to also flag which NEW vars are still undocumented.)")
