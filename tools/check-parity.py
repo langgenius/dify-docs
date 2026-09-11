@@ -49,6 +49,7 @@ HTML_BLOCK_RE = re.compile(r"^\s*<(video|img|iframe|p|div|table|ul|ol|details|su
 HTML_HEADING_RE = re.compile(r"^\s*<h([1-6])\b[^>]*>(.*?)</h[1-6]>", re.I)
 HTML_ROW_RE = re.compile(r"<tr\b", re.I)
 HTML_CELL_RE = re.compile(r"<t[dh]\b", re.I)
+HTML_ITEM_RE = re.compile(r"<li\b", re.I)
 LIST_MARK_RE = re.compile(r"^(\s*)(?:>\s*)*([-*+]|\d+[.)])\s+")
 INLINE_TAG_RE = re.compile(r"<([A-Z][A-Za-z]*)\b")
 COMMENT_RE = re.compile(r"^\s*\{/\*.*\*/\}\s*$")
@@ -96,6 +97,7 @@ def sections_of(text: str) -> list[Section]:
         if any(m in line for m in DISCLAIMER) or COMMENT_RE.match(line):
             continue
         cur.anchors.extend(TAG_ID_RE.findall(line))
+        cur.counts["list items"] += len(HTML_ITEM_RE.findall(line))
         hh = HTML_HEADING_RE.match(line)
         if hh:
             out.append(Section(int(hh.group(1)), hh.group(2)))
