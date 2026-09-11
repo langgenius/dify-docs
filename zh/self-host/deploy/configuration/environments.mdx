@@ -1467,17 +1467,23 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 |---|---|---|
 | `DIFY_AGENT_E2B_API_KEY` | （空；回退到 `E2B_API_KEY`/`E2B_API_TOKEN`） | E2B 账户密钥；`e2b` 后端必填。 |
 | `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent 运行所用的 E2B 沙箱模板。 |
+| `EXPOSE_AGENT_BACKEND_PORT` | `15050` | `docker-compose.e2b.yaml` 叠加文件将 Agent 后端（容器端口 `5050`）发布到宿主机的端口。宿主机上 15050 已被占用时改用其他端口。 |
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 单个 E2B 沙箱保持活跃的时长，覆盖一次完整的 Agent 运行。3600 同时是硬上限，更高的值会被拒绝。<br/><br/>应不低于 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`。若沙箱的活跃时长短于运行的允许时长，运行会在未超时的情况下失去沙箱。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | 沙箱控制服务在 E2B 虚拟机内监听的端口。 |
 
 ## 数据库服务
 
-这些变量直接在 Docker Compose 中配置数据库容器。
+这些变量直接在 Docker Compose 中配置数据库与 Redis 容器。标注「中间件栈」的行只适用于 [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所启动的那套栈，在其 `middleware.env` 中设置；完整的 Compose 栈将这些服务保留在内部网络中。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `PGDATA` | `/var/lib/postgresql/data/pgdata` | 容器内 PostgreSQL 数据目录。 |
 | `MYSQL_HOST_VOLUME` | `./volumes/mysql/data` | 挂载为 MySQL 数据卷的宿主机路径。 |
+| `PGDATA_HOST_VOLUME` | `./volumes/db/data` | 挂载为 PostgreSQL 数据卷的宿主机路径。中间件栈；完整的 Compose 栈直接挂载 `./volumes/db/data`。 |
+| `REDIS_HOST_VOLUME` | `./volumes/redis/data` | 挂载为 Redis 数据卷的宿主机路径。中间件栈。 |
+| `EXPOSE_POSTGRES_PORT` | `5432` | 中间件栈将 PostgreSQL 发布到宿主机的端口。 |
+| `EXPOSE_MYSQL_PORT` | `3306` | 中间件栈将 MySQL 发布到宿主机的端口。 |
+| `EXPOSE_REDIS_PORT` | `6379` | 中间件栈将 Redis 发布到宿主机的端口。 |
 
 ## 沙箱服务
 
@@ -1531,6 +1537,8 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SSRF_HTTP_PORT` | `3128` | 代理监听端口。 |
+| `EXPOSE_SSRF_PROXY_PORT` | `3128` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将代理的 `SSRF_HTTP_PORT` 发布到宿主机的端口。在该栈的 `middleware.env` 中设置；完整的 Compose 栈将代理保留在内部网络中。 |
+| `EXPOSE_SANDBOX_PORT` | `8194` | 中间件栈将代理的沙箱端口（`SSRF_SANDBOX_PROXY_PORT`）发布到宿主机的端口，从源码运行的代码经代理访问沙箱。 |
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF 代理用于将出站流量反向代理转发到沙箱服务的监听端口。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF 代理转发到的沙箱服务主机名。 |
@@ -1571,6 +1579,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | 插件守护进程服务 URL。 |
 | `PLUGIN_DAEMON_KEY` | （自动生成） | 插件守护进程的认证密钥。 |
 | `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
+| `DB_SSL_MODE` | `disable` | 插件守护进程连接 PostgreSQL 时使用的 `sslmode`。数据库强制 TLS 时设为 `require`。`.env.example` 中没有这一项，在 `docker/.env` 中设置。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
 | `PLUGIN_MAX_FILE_SIZE` | `52428800` | 插件返回给 Dify 的单个文件的最大大小（字节，50 MB），例如工具插件输出的生成图片或文档。超过限制的文件会使本次调用失败，并报「file is too large」错误。 |
@@ -1629,6 +1638,7 @@ OpenTelemetry 提供分布式追踪和指标收集。启用后，Dify 对 Flask 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `CSP_WHITELIST` | （空） | 在 Content Security Policy 头中允许的额外域名。 |
+| `NEXT_TELEMETRY_DISABLED` | `0` | 设为 `1` 可关闭 Next.js 的匿名遥测，Compose 栈默认保持开启。 |
 | `ALLOW_EMBED` | `false` | 允许 Dify 页面在 iframe 中嵌入。为 `false` 时设置 `X-Frame-Options: DENY` 以防止点击劫持。 |
 | `SWAGGER_UI_ENABLED` | `false` | 在 `SWAGGER_UI_PATH` 暴露 Swagger UI 以浏览 API 文档。Swagger 端点绕过认证。 |
 | `SWAGGER_UI_PATH` | `/swagger-ui.html` | Swagger UI 的 URL 路径。 |
@@ -1725,8 +1735,9 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 | `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | 启用 GSE 分词器（中文）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | 启用 Kagome 分词器（日文）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | 启用 Kagome 分词器（韩文）。 |
-| `EXPOSE_WEAVIATE_PORT` | `8080` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用中间件栈中 Weaviate REST API 的宿主机端口。从源码运行的 Dify 通过 `http://localhost:8080` 访问 Weaviate。<br/><br/>若宿主机上 8080 已被占用，在该栈的 `middleware.env` 中改用其他端口，并将 [`WEAVIATE_ENDPOINT`](#向量数据库配置) 指向新端口。<br/><br/>仅适用于中间件栈。完整的 Compose 栈将 Weaviate 保留在内部网络中。 |
-| `EXPOSE_WEAVIATE_GRPC_PORT` | `50051` | 同一栈中 Weaviate gRPC 接口的宿主机端口，访问地址为 `grpc://localhost:50051`。<br/><br/>改动后需将 [`WEAVIATE_GRPC_ENDPOINT`](#向量数据库配置) 指向新端口。 |
+| `WEAVIATE_HOST_VOLUME` | `./volumes/weaviate` | 挂载为 Weaviate 数据卷的宿主机路径。中间件栈（[源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code)），在其 `middleware.env` 中设置；完整的 Compose 栈直接挂载 `./volumes/weaviate`。 |
+| `EXPOSE_WEAVIATE_PORT` | `8080` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将 Weaviate REST API 发布到宿主机的端口，从源码运行的 Dify 通过 `http://localhost:8080` 访问。<br/><br/>若宿主机上 8080 已被占用，改用其他端口，并将 [`WEAVIATE_ENDPOINT`](#向量数据库配置) 指向新端口。仅适用于中间件栈；完整的 Compose 栈将 Weaviate 保留在内部网络中。 |
+| `EXPOSE_WEAVIATE_GRPC_PORT` | `50051` | 中间件栈将 Weaviate gRPC 接口发布到宿主机的端口，访问地址为 `grpc://localhost:50051`。<br/><br/>改动后需将 [`WEAVIATE_GRPC_ENDPOINT`](#向量数据库配置) 指向新端口。 |
 
 </Accordion>
 
