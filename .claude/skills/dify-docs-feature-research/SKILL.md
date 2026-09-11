@@ -152,7 +152,7 @@ Present the record to the user. STOP — do not start the writing phase until th
 
 ## Important
 
-- This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope.
+- This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope; under `dify-docs-write` with no reviewer in the session, that skill's rule applies.
 - Research findings exist to make the page's claims accurate, not to be exhaustively included. When recommending scope, apply the style guide's "Repeating the UI" filter: UI-discoverable mechanics stay out of the page unless especially consequential.
 - When scope is confirmed and writing begins, return to the `dify-docs-write` pipeline — it loads the doc-type rule pack and the writing guides. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.

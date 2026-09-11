@@ -10,9 +10,10 @@ The summary is what the drafter writes from, so its shape becomes the page's sha
 Every fact in a question-headed section is verified. Add no product fact
 that is not on this sheet, and do not state every fact that is: a fact
 goes on the page because the reader would ask for it at that section. The
-closing lists hold what stays off the page, unverified claims included. Facts marked "background" are
-here so you understand the product; the reader would not ask for them, so
-they stay off the page.
+closing lists hold what stays off the page, unverified claims included.
+Facts marked "background" are here so you understand the product; the
+reader would not ask for them, so they stay off the page too, marked in
+place rather than repeated in the lists.
 
 ## The writing task
 [The page, its place in the nav, what it links to, and which sections are
