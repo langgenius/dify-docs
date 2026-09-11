@@ -7,9 +7,10 @@ The summary is what the drafter writes from, so its shape becomes the page's sha
 ```md
 # Facts: [the page], verified at [repo, ref]
 
-Every fact under a section heading is verified. Add no product fact that
-is not on this sheet, and do not state every fact that is: a fact goes on
-the page because the reader would ask for it at that section. Facts marked "background" are
+Every fact in a question-headed section is verified. Add no product fact
+that is not on this sheet, and do not state every fact that is: a fact
+goes on the page because the reader would ask for it at that section. The
+closing lists hold what stays off the page, unverified claims included. Facts marked "background" are
 here so you understand the product; the reader would not ask for them, so
 they stay off the page.
 

@@ -112,7 +112,7 @@ For each relevant issue or discussion, read the body and top comments to underst
 
 ### Phase 3: Synthesize
 
-Combine both phases into a structured research summary:
+Combine both phases into a structured research record. It is research output, not the drafter's brief: at S3 the pipeline writes the summary the drafter gets from this record, in the shape `dify-docs-write/references/research-summary.md` gives.
 
 ```
 ## Feature: [Name]
