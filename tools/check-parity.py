@@ -96,11 +96,10 @@ def sections_of(text: str) -> list[Section]:
             continue
         if any(m in line for m in DISCLAIMER) or COMMENT_RE.match(line):
             continue
-        cur.anchors.extend(TAG_ID_RE.findall(line))
-        cur.counts["list items"] += len(HTML_ITEM_RE.findall(line))
         hh = HTML_HEADING_RE.match(line)
         if hh:
             out.append(Section(int(hh.group(1)), hh.group(2)))
+            out[-1].anchors.extend(TAG_ID_RE.findall(line))
             in_para = False
             continue
         h = HEADING_RE.match(line)
@@ -109,9 +108,12 @@ def sections_of(text: str) -> list[Section]:
             m = CUSTOM_ID_RE.search(h.group(2))
             if m:
                 out[-1].anchors.append(m.group(1))
+            out[-1].anchors.extend(TAG_ID_RE.findall(h.group(2)))
             out[-1].components.extend(INLINE_TAG_RE.findall(h.group(2)))
             in_para = False
             continue
+        cur.anchors.extend(TAG_ID_RE.findall(line))
+        cur.counts["list items"] += len(HTML_ITEM_RE.findall(line))
         if TABLE_ROW_RE.match(line):
             if not TABLE_SEP_RE.match(line):
                 cur.counts["table rows"] += 1
