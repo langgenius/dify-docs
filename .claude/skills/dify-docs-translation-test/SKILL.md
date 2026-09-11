@@ -44,8 +44,8 @@ Mark every sentence that falls short, quoting it, with one tag each:
 - structure: carries the English clause structure or sentence order where
   a native writer would not
 - register: a word in the wrong register for its context
-- term: a term or UI label whose {LANG} form is not the glossary's, or
-  that does not correspond to the label the English page names
+- term: a general term whose {LANG} form is not the glossary's, or a UI
+  label that does not correspond to the label the English page names
 - tell: a translationese pattern the guide lists
 - rule: breaks a translation rule the guide states and the tags above do
   not name (a standard phrase, a katakana convention, an app-type name);
