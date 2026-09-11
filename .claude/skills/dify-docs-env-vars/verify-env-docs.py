@@ -152,7 +152,13 @@ def _read_ignored_text(path: str) -> str:
                 print(f"(ignore list not in the working tree; read origin/main:{rel})")
                 return result.stdout
             break
-    return ""
+    # An empty ignore set would let a run end on ALL CHECKS PASSED by accident, so the
+    # run is invalid rather than noisy: stop here instead of reporting against nothing.
+    msg = (f"WARNING: ignore list not found at {path} and no committed copy could be read; "
+           "the run is invalid. Set DIFY_DOCS_REGISTRY or pass --ignored.")
+    print(msg)
+    print(msg, file=sys.stderr)
+    sys.exit(2)
 
 
 def parse_mdx_docs(path: str) -> dict[str, str]:
@@ -183,8 +189,9 @@ def parse_mdx_docs(path: str) -> dict[str, str]:
             backtick_match = re.match(r"^`(.*)`$", default_cell)
             if backtick_match:
                 variables[name] = backtick_match.group(1)
-            elif default_cell.startswith("("):
+            elif default_cell.startswith(("(", "（")):
                 # (empty), (empty; falls back to...), (auto-generated), etc.
+                # zh/ja pages write these with full-width parentheses: （空）
                 variables[name] = ""
             else:
                 variables[name] = default_cell
@@ -202,14 +209,15 @@ def parse_mdx_docs(path: str) -> dict[str, str]:
                 next_line = lines[i + j].strip()
                 if not next_line:
                     continue
-                default_match = re.match(r"^Default:\s*(.+)", next_line)
+                # en "Default:", zh "默认值：", ja "デフォルト値："
+                default_match = re.match(r"^(?:Default|默认值|デフォルト値)\s*[:：]\s*(.+)", next_line)
                 if default_match:
                     raw = default_match.group(1).strip()
                     # Extract from backticks
                     bt = re.match(r"^`(.*)`", raw)
                     if bt:
                         variables[name] = bt.group(1)
-                    elif raw.startswith("("):
+                    elif raw.startswith(("(", "（")):
                         variables[name] = ""
                     else:
                         variables[name] = raw
@@ -326,6 +334,100 @@ def _env_example_paths_at_ref(repo: str, ref: str) -> list[str]:
     return sorted(files, key=precedence)
 
 
+_COMPOSE_REF_RE = re.compile(r"(?<!\$)\$\{([A-Z][A-Z0-9_]*)(?::-((?:[^{}]|\$\{[^{}]*\})*))?\}")
+
+
+def parse_compose_text(text: str) -> dict[str, str]:
+    """Collect ${VAR} and ${VAR:-fallback} references from a compose file.
+
+    A compose file can consume a variable that has no .env.example entry at all;
+    such a variable is invisible to every .env.example-based check (EXPOSE_WEAVIATE_GRPC_PORT
+    went unseen for eleven months this way). The value recorded is the innermost literal
+    fallback — what compose substitutes when nothing is set. `$${...}` is compose's escape
+    for a literal `$` (a shell variable inside a command) and is skipped.
+    """
+    found: dict[str, str] = {}
+    def visit(chunk: str) -> None:
+        for m in _COMPOSE_REF_RE.finditer(chunk):
+            name, fallback = m.group(1), (m.group(2) or "")
+            value = resolve_expansion(fallback) if fallback else ""
+            if name not in found or (not found[name] and value):
+                found[name] = value
+            if "${" in fallback:
+                visit(fallback)
+    visit(text)
+    return found
+
+
+def is_test_compose(name: str) -> bool:
+    """docker/docker-compose.pytest.ports.yaml publishes vector-store ports for the
+    integration tests; nothing a deployment reads. Skipped whether it arrives via a
+    directory glob, an explicit path, or a git ref."""
+    return "pytest" in name
+
+
+def collect_compose_files(sources: list[str]) -> list[Path]:
+    files: list[Path] = []
+    for source in sources:
+        p = Path(source)
+        if not p.exists():
+            print(f"ERROR: compose source not found: {source}", file=sys.stderr)
+            sys.exit(1)
+        candidates = [p]
+        if p.is_dir():
+            candidates = []
+            for pattern in ("docker-compose*.yaml", "docker-compose*.yml"):
+                candidates.extend(sorted(p.glob(pattern)))
+        for f in candidates:
+            if is_test_compose(f.name):
+                print(f"(skipped {f.name}: test harness, not a deployment file)")
+                continue
+            files.append(f)
+    return files
+
+
+def parse_compose(sources: list[str]) -> tuple[dict[str, str], list[Path]]:
+    files = collect_compose_files(sources)
+    merged: dict[str, str] = {}
+    for f in files:
+        for name, value in parse_compose_text(f.read_text(encoding="utf-8")).items():
+            if name not in merged or (not merged[name] and value):
+                merged[name] = value
+    return merged, files
+
+
+def compose_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
+    """${VAR} references in docker/docker-compose*.y*ml at a git ref."""
+    out = subprocess.run(
+        ["git", "-C", repo, "ls-tree", "-r", "--name-only", ref, "--", "docker/"],
+        capture_output=True, text=True, check=True,
+    ).stdout.splitlines()
+    merged: dict[str, str] = {}
+    for path in out:
+        name = Path(path).name
+        if not (name.startswith("docker-compose") and name.endswith((".yaml", ".yml"))):
+            continue
+        if is_test_compose(name):
+            print(f"(skipped {name} at {ref}: test harness, not a deployment file)")
+            continue
+        text = subprocess.run(
+            ["git", "-C", repo, "show", f"{ref}:{path}"],
+            capture_output=True, text=True, check=True,
+        ).stdout
+        for var, value in parse_compose_text(text).items():
+            if var not in merged or (not merged[var] and value):
+                merged[var] = value
+    return merged
+
+
+def merge_compose_only(env_vars: dict[str, str], compose_vars: dict[str, str]) -> list[str]:
+    """Add compose-only variables to the source map at lowest precedence; return their names."""
+    only = sorted(n for n in compose_vars if n not in env_vars)
+    for n in only:
+        env_vars[n] = compose_vars[n]
+    return only
+
+
 def env_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
     """Return the merged {VAR: default} from all docker/ *.env.example files at a git ref."""
     merged: dict[str, str] = {}
@@ -348,6 +450,8 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
     try:
         old_vars = env_vars_at_ref(repo, old_ref)
         new_vars = env_vars_at_ref(repo, new_ref)
+        merge_compose_only(old_vars, compose_vars_at_ref(repo, old_ref))
+        new_compose_only = merge_compose_only(new_vars, compose_vars_at_ref(repo, new_ref))
     except subprocess.CalledProcessError as e:
         print(f"ERROR: git failed: {e.stderr.strip() or e}", file=sys.stderr)
         return 2
@@ -362,10 +466,11 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
         if normalize(old_vars[n]) != normalize(new_vars[n])
     )
 
-    print(f"=== ENV VAR DIFF {old_ref}..{new_ref} (uncommented .env.example vars) ===")
+    print(f"=== ENV VAR DIFF {old_ref}..{new_ref} (uncommented .env.example vars + compose ${{VAR}} refs) ===")
     print(f"NEW ({len(added)}):")
     for n in added:
-        print(f"  + {n}={new_vars[n]}")
+        tag = "  (compose-only)" if n in new_compose_only else ""
+        print(f"  + {n}={new_vars[n]}{tag}")
     print(f"REMOVED ({len(removed)}):")
     for n in removed:
         print(f"  - {n} (was {old_vars[n]!r})")
@@ -400,6 +505,15 @@ def main():
             "May be repeated. When given a directory, the verifier globs "
             "**/*.env.example recursively. Pass both `docker/.env.example` and "
             "`docker/envs/` to capture the post-PR-#31586 layout."
+        ),
+    )
+    parser.add_argument(
+        "--compose",
+        action="append",
+        help=(
+            "Path to a docker-compose*.y*ml file or a directory holding them (pass "
+            "`<repo>/docker`). May be repeated. Variables a compose file consumes with "
+            "no .env.example entry are otherwise invisible to this check."
         ),
     )
     parser.add_argument(
@@ -450,6 +564,18 @@ def main():
     print(f"Parsed {len(doc_vars)} variables from documentation")
     print(f"Loaded {len(ignored)} ignored variables from {args.ignored}")
     print()
+
+    compose_only: list[str] = []
+    if args.compose:
+        compose_vars, compose_files = parse_compose(args.compose)
+        print(f"Parsed {len(compose_vars)} ${{VAR}} references from {len(compose_files)} compose file(s)")
+        compose_only = merge_compose_only(env_vars, compose_vars)
+        if compose_only:
+            print(f"=== IN COMPOSE BUT NOT IN ANY .env.example ({len(compose_only)}) ===")
+            for name in compose_only:
+                print(f"  {name} (compose fallback: {env_vars[name]!r})")
+            print("(Only --compose sees these. Document each, or add it to env-ignored-vars.md with a reason.)")
+            print()
 
     # --- Check 1: Variables in .env.example but missing from docs ---
     missing_from_docs = sorted(

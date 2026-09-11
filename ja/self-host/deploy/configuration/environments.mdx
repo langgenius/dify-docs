@@ -1463,17 +1463,23 @@ Agent のサンドボックスをどこで実行するかを選択します。�
 |---|---|---|
 | `DIFY_AGENT_E2B_API_KEY` | （空；`E2B_API_KEY`/`E2B_API_TOKEN` にフォールバック） | E2B アカウントキー。`e2b` バックエンドでは必須。 |
 | `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent が実行される E2B サンドボックステンプレート。 |
+| `EXPOSE_AGENT_BACKEND_PORT` | `15050` | `docker-compose.e2b.yaml` オーバーレイが Agent バックエンド（コンテナポート `5050`）を公開するホスト側のポート。ホスト側で 15050 が使用中の場合は別のポートに変更する。 |
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 1 つの E2B サンドボックスがアクティブでいられる時間。Agent の 1 回の実行全体に及ぶ。3600 が上限で、それより大きい値は拒否される。<br/><br/>`DIFY_AGENT_RUN_TIMEOUT_SECONDS` 以上に設定すること。サンドボックスのアクティブ時間が実行の許容時間より短いと、実行は制限内であってもサンドボックスを失う。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | E2B VM 内でサンドボックス制御サービスが待ち受けるポート。 |
 
 ## データベースサービス
 
-Docker Compose でデータベースコンテナを直接設定します。
+Docker Compose でデータベースと Redis のコンテナを直接設定します。「ミドルウェアスタック」と記した行は、[ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で起動するスタックにのみ適用され、そのスタックの `middleware.env` で設定します。フル構成の Compose スタックでは、これらのサービスは内部ネットワークに留まります。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `PGDATA` | `/var/lib/postgresql/data/pgdata` | コンテナ内の PostgreSQL データディレクトリ。 |
 | `MYSQL_HOST_VOLUME` | `./volumes/mysql/data` | MySQL データボリュームとしてマウントされるホストパス。 |
+| `PGDATA_HOST_VOLUME` | `./volumes/db/data` | PostgreSQL データボリュームとしてマウントされるホストパス。ミドルウェアスタック。フル構成の Compose スタックは `./volumes/db/data` を直接マウントする。 |
+| `REDIS_HOST_VOLUME` | `./volumes/redis/data` | Redis データボリュームとしてマウントされるホストパス。ミドルウェアスタック。 |
+| `EXPOSE_POSTGRES_PORT` | `5432` | ミドルウェアスタックが PostgreSQL を公開するホスト側のポート。 |
+| `EXPOSE_MYSQL_PORT` | `3306` | ミドルウェアスタックが MySQL を公開するホスト側のポート。 |
+| `EXPOSE_REDIS_PORT` | `6379` | ミドルウェアスタックが Redis を公開するホスト側のポート。 |
 
 ## サンドボックスサービス
 
@@ -1527,6 +1533,8 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `SSRF_HTTP_PORT` | `3128` | プロキシのリッスンポート。 |
+| `EXPOSE_SSRF_PROXY_PORT` | `3128` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックがプロキシの `SSRF_HTTP_PORT` を公開するホスト側のポート。そのスタックの `middleware.env` で設定する。フル構成の Compose スタックではプロキシは内部ネットワークに留まる。 |
+| `EXPOSE_SANDBOX_PORT` | `8194` | ミドルウェアスタックがプロキシのサンドボックス用ポート（`SSRF_SANDBOX_PROXY_PORT`）を公開するホスト側のポート。ソースから起動したコードはプロキシ経由でサンドボックスに到達する。 |
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | コアダンプディレクトリ。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF プロキシがサンドボックスサービスへの送信トラフィックをリバースプロキシするためにリッスンするポート。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF プロキシの転送先となるサンドボックスサービスのホスト名。 |
@@ -1567,6 +1575,7 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | プラグインデーモンサービス URL。 |
 | `PLUGIN_DAEMON_KEY` | （自動生成） | プラグインデーモンの認証キー。 |
 | `PLUGIN_DAEMON_PORT` | `5002` | プラグインデーモンのリッスンポート。 |
+| `DB_SSL_MODE` | `disable` | プラグインデーモンが PostgreSQL に接続する際の `sslmode`。データベースが TLS を必須とする場合は `require` にする。`.env.example` には項目がない。フル構成の Compose スタックでは `docker/.env`、ミドルウェアスタックでは `middleware.env` で設定する。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | すべてのプラグインデーモンリクエスト（インストール、実行、リスト表示）のタイムアウト（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | プラグインパッケージの最大サイズ（バイト、50 MB）。マーケットプレイスダウンロード時に検証されます。 |
 | `PLUGIN_MAX_FILE_SIZE` | `52428800` | プラグインが Dify に返す単一ファイルの最大サイズ（バイト、50 MB）。ツールプラグインが生成した画像やドキュメントの出力などが対象です。上限を超えるファイルは「file is too large」エラーで呼び出しが失敗します。 |
@@ -1625,6 +1634,7 @@ OpenTelemetry は分散トレーシングとメトリクス収集を提供しま
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `CSP_WHITELIST` | （空） | Content Security Policy ヘッダーで許可する追加ドメイン。 |
+| `NEXT_TELEMETRY_DISABLED` | `0` | `1` にすると Next.js の匿名テレメトリを無効にする。Compose スタックではデフォルトで有効のまま。 |
 | `ALLOW_EMBED` | `false` | Dify ページの iframe 埋め込みを許可。`false`の場合、クリックジャッキングを防止するため `X-Frame-Options: DENY` を設定します。 |
 | `SWAGGER_UI_ENABLED` | `false` | `SWAGGER_UI_PATH` で Swagger UI を公開し、API ドキュメントをブラウジングできるようにします。Swagger エンドポイントは認証をバイパスします。 |
 | `SWAGGER_UI_PATH` | `/swagger-ui.html` | Swagger UI の URL パス。 |
@@ -1721,8 +1731,9 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 | `WEAVIATE_ENABLE_TOKENIZER_GSE` | `false` | GSE トークナイザーを有効化（中国語）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_JA` | `false` | Kagome トークナイザーを有効化（日本語）。 |
 | `WEAVIATE_ENABLE_TOKENIZER_KAGOME_KR` | `false` | Kagome トークナイザーを有効化（韓国語）。 |
-| `EXPOSE_WEAVIATE_PORT` | `8080` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックにおける Weaviate REST API のホスト側ポート。ソースから起動した Dify は `http://localhost:8080` で Weaviate に到達できる。<br/><br/>ホスト側で 8080 が使用中の場合は、そのスタックの `middleware.env` で別のポートに変更し、[`WEAVIATE_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。<br/><br/>ミドルウェアスタック専用。フル構成の Compose スタックでは、Weaviate は内部ネットワークに留まる。 |
-| `EXPOSE_WEAVIATE_GRPC_PORT` | `50051` | 同じスタックにおける Weaviate gRPC のホスト側ポート。`grpc://localhost:50051` で到達できる。<br/><br/>変更した場合は、[`WEAVIATE_GRPC_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。 |
+| `WEAVIATE_HOST_VOLUME` | `./volumes/weaviate` | Weaviate データボリュームとしてマウントされるホストパス。ミドルウェアスタック（[ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code)）。そのスタックの `middleware.env` で設定する。フル構成の Compose スタックは `./volumes/weaviate` を直接マウントする。 |
+| `EXPOSE_WEAVIATE_PORT` | `8080` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックが Weaviate REST API を公開するホスト側のポート。ソースから起動した Dify は `http://localhost:8080` で到達できる。<br/><br/>ホスト側で 8080 が使用中の場合は別のポートに変更し、[`WEAVIATE_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。ミドルウェアスタック専用。フル構成の Compose スタックでは Weaviate は内部ネットワークに留まる。 |
+| `EXPOSE_WEAVIATE_GRPC_PORT` | `50051` | ミドルウェアスタックが Weaviate gRPC を公開するホスト側のポート。`grpc://localhost:50051` で到達できる。<br/><br/>変更した場合は [`WEAVIATE_GRPC_ENDPOINT`](#ベクトルデータベース設定) を新しいポートに合わせる。 |
 
 </Accordion>
 
