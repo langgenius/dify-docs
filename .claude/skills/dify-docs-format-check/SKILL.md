@@ -43,6 +43,14 @@ Read-only audit of documentation formatting. Mechanical rules are enforced by tw
 
    Success signal: each run prints one block per file and ends with `Total violations: {n}`; exit code is 0 when n = 0, 1 otherwise. A file passed to the wrong script is skipped with a stderr note (`skip (non-en)` / `skip (non-zh/ja)`); `check-format-cjk.py` selects the zh or ja rule set from the file path.
 
+   Then, for the `en/` files in scope, check that their zh and ja twins carry the same structure:
+
+   ```bash
+   python3 tools/check-parity.py <en files...>
+   ```
+
+   Success signal: `PARITY OK: {n} pages`; otherwise one line per mismatch and `PARITY ISSUES: {n}`, exit 1. The check compares each English page with its twins by path: heading count and level, then per section the paragraphs, list items, code blocks, table rows, components, tabs, and anchor ids. Heading text is not compared, and the translation disclaimer is skipped. A mismatch in a section this round touched is fixed; one elsewhere on the page is reported to the owner with the other pre-existing findings, because much of the corpus predates this check.
+
    The scripts are the authoritative deterministic rule list. Violation lines print as `line [rule-id] message` and the messages are self-describing, so do not re-summarize each rule. Rule-ID families: `F-` frontmatter, `H-` headings, `B-` bold/italic, `L-` lists, `C-` code, `Li-` links, `I-` images, `M-` Mintlify components, `U-` UI element references (en only), `S-` spacing, `P-` punctuation, `CJK-` both CJK languages, `ZH-` Chinese only, `JA-` Japanese only.
 
    Four IDs need context the message alone does not give:
