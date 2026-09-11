@@ -194,7 +194,7 @@ def main() -> int:
     global REPO
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("pages", nargs="*", help="changed pages under en/, zh/, or ja/, relative to the repo root")
-    ap.add_argument("--all", action="store_true", help="check every page under en/")
+    ap.add_argument("--all", action="store_true", help="check every page in any language tree")
     ap.add_argument("--base", help="git ref; mismatches already present there are listed, not counted")
     ap.add_argument("--repo", type=Path, default=REPO, help="repo root (default: the script's repo)")
     args = ap.parse_args()
@@ -210,7 +210,15 @@ def main() -> int:
         args.base = ok.stdout.strip()
 
     if args.all:
-        pages = sorted(str(p.relative_to(REPO)) for p in (REPO / "en").rglob("*.md*"))
+        # Every page in any language, mapped to its English twin, so a
+        # translation that outlives its English page is visited too.
+        found = set()
+        for lang in LANGS:
+            for p in (REPO / lang).rglob("*.md*"):
+                en = to_en(str(p.relative_to(REPO)))
+                if en and p.suffix in (".mdx", ".md"):
+                    found.add(en)
+        pages = sorted(found)
     else:
         pages = []
         for raw in args.pages:
