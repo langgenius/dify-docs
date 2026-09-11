@@ -15,7 +15,8 @@ page is skipped. A zh or ja path is checked through its English twin.
 With --base, the same comparison runs on the files at that ref, and only
 mismatches that are not already there count: the corpus carries older drift,
 and a round is judged on what it introduced. Pre-existing mismatches are
-listed under their own heading.
+listed under their own heading. The ref is verified first; a page absent at
+the ref is new, and all of its mismatches count.
 
 Ends with `PARITY OK: <n> pages` (exit 0) or `PARITY ISSUES: <n>` (exit 1).
 """
@@ -82,6 +83,7 @@ def sections_of(text: str) -> list[Section]:
             m = CUSTOM_ID_RE.search(h.group(2))
             if m:
                 out[-1].anchors.append(m.group(1))
+            out[-1].components.extend(INLINE_TAG_RE.findall(h.group(2)))
             in_para = False
             continue
         if TABLE_ROW_RE.match(line):
@@ -127,9 +129,8 @@ def compare_texts(rel_en: str, en_text: str, twins: dict[str, str | None]) -> li
         if len(tw) != len(en):
             issues.append(
                 f"{trel}: {len(tw) - 1} headings, en {len(en) - 1}"
-                " (sections not compared until the headings match)"
+                " (sections compared in order as far as they align)"
             )
-            continue
         for i, (a, b) in enumerate(zip(en, tw)):
             where = "preamble" if i == 0 else f"section {i}"
             if a.level != b.level:
@@ -178,6 +179,15 @@ def main() -> int:
     ap.add_argument("--repo", type=Path, default=REPO, help="repo root (default: the script's repo)")
     args = ap.parse_args()
     REPO = args.repo.resolve()
+    if args.base:
+        ok = subprocess.run(
+            ["git", "-C", str(REPO), "rev-parse", "--verify", "--quiet", f"{args.base}^{{commit}}"],
+            capture_output=True, text=True,
+        )
+        if ok.returncode != 0:
+            print(f"base ref not found in {REPO}: {args.base}", file=sys.stderr)
+            return 2
+        args.base = ok.stdout.strip()
 
     if args.all:
         pages = sorted(str(p.relative_to(REPO)) for p in (REPO / "en").rglob("*.md*"))
@@ -223,7 +233,7 @@ def main() -> int:
     for line in new:
         print(line)
     if old:
-        print(f"pre-existing at {args.base} ({len(old)}):")
+        print(f"pre-existing at {args.base[:12]} ({len(old)}):")
         for line in old:
             print(f"  {line}")
     if new:
