@@ -39,11 +39,12 @@ Then, for each page under review:
 Read nothing else and run no other command.
 
 Mark every sentence that falls short, quoting it, with one tag each. A
-sentence or section of the English page with no counterpart in the
-translation is marked too, quoting the English:
+sentence, block (a list, table, code block, callout, or image), or section
+of the English page with no counterpart in the translation is marked too,
+quoting the English:
 - meaning: says something the English does not, or drops something it
   does (a condition, a restriction, a qualifier such as "only", a whole
-  sentence or section)
+  sentence, block, or section)
 - structure: carries the English clause structure or sentence order where
   a native writer would not
 - register: a word in the wrong register for its context
