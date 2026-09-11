@@ -16,7 +16,9 @@ With --base, the same comparison runs on the files at that ref, and only
 mismatches that are not already there count: the corpus carries older drift,
 and a round is judged on what it introduced. Pre-existing mismatches are
 listed under their own heading. The ref is verified first; a page absent at
-the ref is new, and all of its mismatches count.
+the ref is new, and all of its mismatches count. A page absent in all three
+languages is a deletion and reports nothing; a translation that outlives its
+English page is reported.
 
 Ends with `PARITY OK: <n> pages` (exit 0) or `PARITY ISSUES: <n>` (exit 1).
 """
@@ -232,10 +234,15 @@ def main() -> int:
     old: list[str] = []
     for en in pages:
         en_text = read_working(en)
-        if en_text is None:
-            new.append(f"{en}: missing English page")
-            continue
         rest = en.split("/", 1)[1]
+        if en_text is None:
+            # A page removed in all three languages is a synchronized deletion,
+            # which the changed-file list will hand us; only a surviving twin
+            # is a fault.
+            for lang in TWINS:
+                if read_working(f"{lang}/{rest}") is not None:
+                    new.append(f"{lang}/{rest}: translation without an English page")
+            continue
         now = compare_texts(en, en_text, {lang: read_working(f"{lang}/{rest}") for lang in TWINS})
         if args.base:
             base_en = read_at(args.base, en)
