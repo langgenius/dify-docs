@@ -74,7 +74,7 @@ Each cross-cutting fact lives on one page; everywhere else links it with a short
 | `-o` schemas, exit codes, stdout/stderr discipline | Output Formats and Exit Codes |
 | Global flag inventory | Global Flags |
 | Help forms and topics | help |
-| Agent discovery (`help -o json`, `agentGuide`) | The Agent Contract |
+| Agent discovery (`help -o json`, `agentGuide`) | help, "Machine-Readable Help" |
 | Sign-in and token storage | Authenticate |
 | Env-var inventory | Environment Variables |
 | Compat probe and range | version |
