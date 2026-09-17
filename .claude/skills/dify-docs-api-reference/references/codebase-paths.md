@@ -25,7 +25,6 @@ Mapping of concepts to file paths in the Dify codebase and docs repo.
 | Provider identifiers (`GenericProviderID`) | `api/models/provider_ids.py` |
 | File extension lists | `api/constants/__init__.py` |
 | Upload limits, feature flags | `api/configs/feature/__init__.py` |
-| In-product API templates | `web/app/components/develop/template/template_*.mdx` |
 
 ### How error responses actually render
 
