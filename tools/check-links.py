@@ -5,14 +5,17 @@ Usage:
     python3 tools/check-links.py --internal     # Check internal links (fast, no network)
     python3 tools/check-links.py --external     # Check external links (slow, network requests)
     python3 tools/check-links.py --all          # Check both
+    python3 tools/check-links.py --external --report out.json   # JSON summary for CI
 """
 
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -409,7 +412,95 @@ def check_internal_links():
     return len(broken) + len(broken_anchors) + len(docs_json_issues)
 
 
-def check_external_links():
+# Hosts the external check never requests. Placeholders never resolve;
+# support.huaweicloud.com answers automated requests with a bot-verification
+# page (HTTP 404) that browsers never see, so a genuine 404 there is
+# indistinguishable and stays hidden — re-check those links by hand.
+SKIP_HOSTS = {
+    "assets-docs.dify.ai",   # CDN, blocks HEAD
+    "volcengine.com",        # geo-restricted
+    "twitter.com",
+    "x.com",
+    "support.huaweicloud.com",
+    "your-dify-host",        # placeholder in the embedding page
+}
+
+# Statuses that mean "try again", not "the page is gone". GitHub answers
+# bursts of HEAD requests with 503; a retry a few seconds later returns 200.
+TRANSIENT_STATUSES = {408, 425, 429, 502, 503, 504}
+RETRY_DELAYS = (3, 8)  # seconds between the first, second and third attempt
+TRANSIENT_ERRORS = (ConnectionResetError, ConnectionAbortedError, http.client.HTTPException)
+USER_AGENT = "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"
+
+
+def skip_host(url: str) -> bool:
+    try:
+        host = urllib.parse.urlparse(url).hostname or ""
+    except Exception:
+        return False
+    return any(host == d or host.endswith("." + d) for d in SKIP_HOSTS)
+
+
+def fetch_status(url: str) -> tuple[str, str]:
+    """Return ("ok" | "skipped" | "broken", detail) for one URL.
+
+    HEAD first, GET when the host rejects HEAD (405). Transient statuses and
+    timeouts are retried with a pause; 403 counts as skipped because many
+    hosts block automated requests without the page being gone.
+    """
+    def attempt(method: str) -> tuple[str, str]:
+        req = urllib.request.Request(url, method=method, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            status = resp.getcode()
+        return ("ok", "") if status < 400 else ("broken", f"HTTP {status}")
+
+    method = "HEAD"
+    last: tuple[str, str] = ("broken", "no attempt")
+    attempts = 0
+    while attempts <= len(RETRY_DELAYS):
+        if attempts:
+            time.sleep(RETRY_DELAYS[attempts - 1])
+        attempts += 1
+        try:
+            return attempt(method)
+        except urllib.error.HTTPError as e:
+            if e.code == 405 and method == "HEAD":
+                # The host rejects HEAD: switch to GET right away, without
+                # spending an attempt or a pause on it.
+                method = "GET"
+                attempts -= 1
+                continue
+            if e.code == 403:
+                return ("skipped", "HTTP 403")
+            last = ("broken", f"HTTP {e.code}")
+            if e.code not in TRANSIENT_STATUSES:
+                return last
+            method = "GET"  # some hosts only rate-limit HEAD
+        except urllib.error.URLError as e:
+            last = ("broken", f"URL error: {e.reason}")
+            if not isinstance(e.reason, (TimeoutError, TRANSIENT_ERRORS)) and "timed out" not in str(e.reason):
+                return last
+        except TimeoutError as e:
+            last = ("broken", f"Timeout: {e}")
+        except TRANSIENT_ERRORS as e:
+            # A host that hangs up on a burst instead of answering 503.
+            last = ("broken", f"Error: {e}")
+        except Exception as e:
+            return ("broken", f"Error: {e}")
+    return last
+
+
+def is_transient(error: str) -> bool:
+    """Whether a recorded error is the kind a later attempt may clear."""
+    if error.startswith("HTTP "):
+        try:
+            return int(error.split()[1]) in TRANSIENT_STATUSES
+        except ValueError:
+            return False
+    return error.startswith(("Timeout", "Error:")) or "timed out" in error
+
+
+def check_external_links(report_path: Path | None = None):
     """Check all external links for 404s."""
     files = find_mdx_files()
     urls_to_check: dict[str, list[tuple[str, int]]] = {}  # url -> [(file, line)]
@@ -434,21 +525,13 @@ def check_external_links():
     broken = []
     skipped = 0
 
-    # Domains that reliably block automated requests or are geo-restricted
-    skip_domains = {"assets-docs.dify.ai", "volcengine.com", "twitter.com", "x.com"}
-
     for i, url in enumerate(unique_urls):
         if (i + 1) % 50 == 0:
             print(f"  Progress: {i + 1}/{len(unique_urls)}")
 
-        # Skip unreliable domains by checking parsed hostname
-        try:
-            host = urllib.parse.urlparse(url).hostname or ""
-            if any(host == d or host.endswith("." + d) for d in skip_domains):
-                skipped += 1
-                continue
-        except Exception:
-            pass
+        if skip_host(url):
+            skipped += 1
+            continue
 
         # Encode non-ASCII characters in URL path, preserving existing percent-escapes
         try:
@@ -459,42 +542,25 @@ def check_external_links():
         except Exception:
             encoded_url = url
 
-        try:
-            req = urllib.request.Request(
-                encoded_url,
-                method="HEAD",
-                headers={"User-Agent": "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"}
-            )
-            resp = urllib.request.urlopen(req, timeout=10)
-            status = resp.getcode()
-            if status >= 400:
-                broken.append((url, f"HTTP {status}", urls_to_check[url]))
-        except urllib.error.HTTPError as e:
-            # Some sites block HEAD, try GET for 405
-            if e.code == 405:
-                try:
-                    req = urllib.request.Request(
-                        encoded_url,
-                        method="GET",
-                        headers={"User-Agent": "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"}
-                    )
-                    resp = urllib.request.urlopen(req, timeout=10)
-                except urllib.error.HTTPError as get_e:
-                    if get_e.code == 403:
-                        skipped += 1
-                    else:
-                        broken.append((url, f"HTTP {get_e.code}", urls_to_check[url]))
-                except Exception as get_e:
-                    broken.append((url, f"GET fallback error: {get_e}", urls_to_check[url]))
-            elif e.code == 403:
-                # Many sites block automated requests — don't report as broken
+        verdict, detail = fetch_status(encoded_url)
+        if verdict == "skipped":
+            skipped += 1
+        elif verdict == "broken":
+            broken.append((url, detail, urls_to_check[url]))
+
+    # Second pass: the sweep itself puts minutes between the first and this
+    # attempt, which is what clears a host's rate limit when 11 seconds of
+    # inline retries did not. Hard failures (404, DNS) are not re-checked.
+    deferred = [(url, err, locs) for url, err, locs in broken if is_transient(err)]
+    if deferred:
+        print(f"  Re-checking {len(deferred)} transient failure(s) after the sweep...")
+        broken = [b for b in broken if not is_transient(b[1])]
+        for url, _err, locs in deferred:
+            verdict, detail = fetch_status(url)
+            if verdict == "skipped":
                 skipped += 1
-            else:
-                broken.append((url, f"HTTP {e.code}", urls_to_check[url]))
-        except urllib.error.URLError as e:
-            broken.append((url, f"URL error: {e.reason}", urls_to_check[url]))
-        except Exception as e:
-            broken.append((url, f"Error: {e}", urls_to_check[url]))
+            elif verdict == "broken":
+                broken.append((url, detail, locs))
 
     print(f"\nBroken external links: {len(broken)}")
     print(f"Skipped (CDN/403): {skipped}")
@@ -508,6 +574,18 @@ def check_external_links():
             if len(locations) > 3:
                 print(f"    ... and {len(locations) - 3} more")
 
+    if report_path is not None:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+        report_path.write_text(json.dumps({
+            "checked": len(unique_urls) - skipped,
+            "skipped": skipped,
+            "broken": [
+                {"url": url, "error": error,
+                 "locations": [f"{f}:L{n}" for f, n in locations]}
+                for url, error, locations in broken
+            ],
+        }, indent=2), encoding="utf-8")
+
     return len(broken)
 
 
@@ -517,7 +595,11 @@ def main():
     group.add_argument("--internal", action="store_true", help="Check internal links only")
     group.add_argument("--external", action="store_true", help="Check external links only")
     group.add_argument("--all", action="store_true", help="Check both internal and external")
+    parser.add_argument("--report", type=Path, metavar="FILE",
+                        help="Write the external-link result as JSON to FILE (for CI notifications)")
     args = parser.parse_args()
+    if args.report and not (args.external or args.all):
+        parser.error("--report only applies to --external or --all")
 
     exit_code = 0
 
@@ -525,7 +607,7 @@ def main():
         exit_code = check_internal_links()
 
     if args.external or args.all:
-        exit_code += check_external_links()
+        exit_code += check_external_links(args.report)
 
     sys.exit(1 if exit_code > 0 else 0)
 
