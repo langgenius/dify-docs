@@ -477,9 +477,12 @@ def fetch_status(url: str) -> tuple[str, str]:
                 return last
             method = "GET"  # some hosts only rate-limit HEAD
         except urllib.error.URLError as e:
-            last = ("broken", f"URL error: {e.reason}")
-            if not isinstance(e.reason, (TimeoutError, TRANSIENT_ERRORS)) and "timed out" not in str(e.reason):
-                return last
+            if isinstance(e.reason, (TimeoutError, TRANSIENT_ERRORS)) or "timed out" in str(e.reason):
+                # Transient at the connection level; label it so the
+                # post-sweep re-check (is_transient) picks it up.
+                last = ("broken", f"Error: {e.reason}")
+            else:
+                return ("broken", f"URL error: {e.reason}")
         except TimeoutError as e:
             last = ("broken", f"Timeout: {e}")
         except TRANSIENT_ERRORS as e:
