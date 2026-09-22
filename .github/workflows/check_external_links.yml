@@ -1,14 +1,30 @@
 name: Check External Links
 
+# Weekly sweep of every external URL in en/, zh/, ja/. GitHub only emails a
+# scheduled run's failure to whoever last edited the cron line, so the result
+# is also posted to a Feishu bot: a message per failing run with the broken
+# list, and one all-clear when the first green run follows a red one.
+#
+# Secrets: FEISHU_LINK_CHECK_WEBHOOK = the bot's webhook URL;
+# FEISHU_LINK_CHECK_WEBHOOK_SECRET = only if the bot has signature
+# verification enabled. Without the webhook the notify step is a no-op.
+
 on:
   workflow_dispatch:
   schedule:
     - cron: '0 9 * * 1'  # Every Monday at 9:00 UTC
 
+permissions:
+  contents: read
+  actions: read
+
 jobs:
   external-links:
     name: Check external links
     runs-on: depot-ubuntu-24.04
+    # Worst case: 15 min of retries, then one 8 s attempt per remaining URL
+    # (~200 URLs → ~30 min), so the sweep finishes and reports well inside this.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
@@ -17,4 +33,86 @@ jobs:
           python-version: '3.11'
 
       - name: Check external links
-        run: python3 tools/check-links.py --external
+        id: check
+        run: python3 tools/check-links.py --external --report "$RUNNER_TEMP/link-report.json"
+
+      - name: Notify Feishu on failure / all-clear on recovery
+        if: always()
+        env:
+          FEISHU_WEBHOOK: ${{ secrets.FEISHU_LINK_CHECK_WEBHOOK }}
+          FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_LINK_CHECK_WEBHOOK_SECRET }}
+          GH_TOKEN: ${{ github.token }}
+          RESULT: ${{ steps.check.outcome }}
+          REPORT: ${{ runner.temp }}/link-report.json
+        run: |
+          set -euo pipefail
+          if [ -z "${FEISHU_WEBHOOK:-}" ]; then
+            echo "FEISHU_LINK_CHECK_WEBHOOK secret not configured; skipping."
+            exit 0
+          fi
+
+          # Same signing scheme as dify-docs-registry's notify workflows:
+          # HMAC-SHA256 with key "timestamp\nsecret" over an EMPTY message, base64.
+          send() {
+            local payload ts key sign body code
+            payload="$(jq -n --arg t "$1" '{msg_type: "text", content: {text: $t}}')"
+            if [ -n "${FEISHU_WEBHOOK_SECRET:-}" ]; then
+              ts="$(date +%s)"
+              key="$(printf '%s\n%s' "$ts" "$FEISHU_WEBHOOK_SECRET")"
+              sign="$(printf '' | openssl dgst -sha256 -hmac "$key" -binary | base64 | tr -d '\n')"
+              payload="$(jq --arg ts "$ts" --arg sign "$sign" '. + {timestamp: $ts, sign: $sign}' <<<"$payload")"
+            fi
+            body="$(mktemp)"
+            code="$(curl -sS --retry 3 --retry-connrefused --max-time 20 \
+              -o "$body" -w '%{http_code}' -X POST "$FEISHU_WEBHOOK" \
+              -H 'Content-Type: application/json' -d "$payload")"
+            echo "Feishu HTTP ${code}: $(cat "$body")"
+            [ "$code" -lt 400 ] && [ "$(jq -r '.code // 0' "$body")" = "0" ]
+          }
+
+          RUN_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+          # Previous completed run of this workflow on THIS branch (the current one
+          # is still in progress, so [0] is the one before it). Scoping by branch
+          # keeps a manual run on a feature branch from faking or hiding a
+          # recovery on main. The file name is derived so a rename cannot
+          # silently disable the all-clear.
+          WF="${GITHUB_WORKFLOW_REF%@*}"; WF="${WF##*/}"
+          PREV="$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/${WF}/runs?branch=${GITHUB_REF_NAME}&status=completed&per_page=1" \
+            --jq '.workflow_runs[0].conclusion // "success"' 2>/dev/null || echo "success")"
+
+          if [ "$RESULT" = "success" ]; then
+            if [ "$PREV" = "failure" ]; then
+              # A rejected send must not turn a green week red: that would make the
+              # next run see "failure" and fire a bogus all-clear, forever.
+              send "[dify-docs] ✅ 外链周检已恢复正常，0 条失效。
+          运行详情：${RUN_URL}" || echo "::warning::Feishu all-clear not delivered"
+            else
+              echo "check green, previous run green — nothing to send."
+            fi
+            exit 0
+          fi
+
+          if [ "$RESULT" = "cancelled" ]; then
+            send "[dify-docs] ⚠️ 外链周检被取消（超时或人工取消），本周没有结果。
+          运行详情：${RUN_URL}"
+            exit 0
+          fi
+
+          if [ ! -s "$REPORT" ]; then
+            send "[dify-docs] ⚠️ 外链周检未能完成（检查脚本本身出错，未产出报告）。
+          运行详情：${RUN_URL}"
+            exit 0
+          fi
+
+          COUNT="$(jq '.broken | length' "$REPORT")"
+          CHECKED="$(jq '.checked' "$REPORT")"
+          SKIPPED="$(jq '.skipped' "$REPORT")"
+          # First 15 broken URLs with their first location; the run log has the rest.
+          LIST="$(jq -r '.broken[:15][] | "· \(.error)：\(.url)\n  ↳ \(.locations[0])"' "$REPORT")"
+          MORE=""
+          [ "$COUNT" -gt 15 ] && MORE="
+          …另有 $((COUNT - 15)) 条，见运行日志。"
+          send "[dify-docs] ⚠️ 外链周检失败：${COUNT} 条失效（已检查 ${CHECKED} 条，跳过 ${SKIPPED} 条）
+          ${LIST}${MORE}
+          运行详情：${RUN_URL}
+          处理：把本条消息发给 agent 并说「fix the broken external links」。"
