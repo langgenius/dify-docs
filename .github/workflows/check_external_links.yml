@@ -22,7 +22,9 @@ jobs:
   external-links:
     name: Check external links
     runs-on: depot-ubuntu-24.04
-    timeout-minutes: 45
+    # Worst case: 15 min of retries, then one 8 s attempt per remaining URL
+    # (~200 URLs → ~30 min), so the sweep finishes and reports well inside this.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
 
@@ -35,7 +37,7 @@ jobs:
         run: python3 tools/check-links.py --external --report "$RUNNER_TEMP/link-report.json"
 
       - name: Notify Feishu on failure / all-clear on recovery
-        if: ${{ !cancelled() }}
+        if: always()
         env:
           FEISHU_WEBHOOK: ${{ secrets.FEISHU_LINK_CHECK_WEBHOOK }}
           FEISHU_WEBHOOK_SECRET: ${{ secrets.FEISHU_LINK_CHECK_WEBHOOK_SECRET }}
@@ -87,6 +89,12 @@ jobs:
             else
               echo "check green, previous run green — nothing to send."
             fi
+            exit 0
+          fi
+
+          if [ "$RESULT" = "cancelled" ]; then
+            send "[dify-docs] ⚠️ 外链周检被取消（超时或人工取消），本周没有结果。
+          运行详情：${RUN_URL}"
             exit 0
           fi
 

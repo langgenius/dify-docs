@@ -429,6 +429,17 @@ SKIP_HOSTS = {
 # bursts of HEAD requests with 503; a retry a few seconds later returns 200.
 TRANSIENT_STATUSES = {408, 425, 429, 502, 503, 504}
 RETRY_DELAYS = (3, 8)  # seconds between the first, second and third attempt
+REQUEST_TIMEOUT = 15
+# Retries are per URL, so a broad outage could multiply into hours on a serial
+# sweep. After this many seconds the sweep degrades to one short attempt per
+# URL and skips the post-sweep re-check, so it always finishes and reports.
+RETRY_BUDGET_SECONDS = 15 * 60
+DEGRADED_TIMEOUT = 8
+_deadline: float | None = None
+
+
+def retries_allowed() -> bool:
+    return _deadline is None or time.monotonic() < _deadline
 TRANSIENT_ERRORS = (ConnectionResetError, ConnectionAbortedError, http.client.HTTPException)
 USER_AGENT = "Mozilla/5.0 (Dify-Docs-LinkChecker/1.0)"
 
@@ -448,16 +459,20 @@ def fetch_status(url: str) -> tuple[str, str]:
     timeouts are retried with a pause; 403 counts as skipped because many
     hosts block automated requests without the page being gone.
     """
+    retrying = retries_allowed()
+    timeout = REQUEST_TIMEOUT if retrying else DEGRADED_TIMEOUT
+    max_attempts = len(RETRY_DELAYS) + 1 if retrying else 1
+
     def attempt(method: str) -> tuple[str, str]:
         req = urllib.request.Request(url, method=method, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             status = resp.getcode()
         return ("ok", "") if status < 400 else ("broken", f"HTTP {status}")
 
     method = "HEAD"
     last: tuple[str, str] = ("broken", "no attempt")
     attempts = 0
-    while attempts <= len(RETRY_DELAYS):
+    while attempts < max_attempts:
         if attempts:
             time.sleep(RETRY_DELAYS[attempts - 1])
         attempts += 1
@@ -527,6 +542,9 @@ def check_external_links(report_path: Path | None = None):
 
     broken = []
     skipped = 0
+    encoded: dict[str, str] = {}  # url -> the request URL actually used
+    global _deadline
+    _deadline = time.monotonic() + RETRY_BUDGET_SECONDS
 
     for i, url in enumerate(unique_urls):
         if (i + 1) % 50 == 0:
@@ -544,6 +562,7 @@ def check_external_links(report_path: Path | None = None):
             ))
         except Exception:
             encoded_url = url
+        encoded[url] = encoded_url
 
         verdict, detail = fetch_status(encoded_url)
         if verdict == "skipped":
@@ -555,11 +574,14 @@ def check_external_links(report_path: Path | None = None):
     # attempt, which is what clears a host's rate limit when 11 seconds of
     # inline retries did not. Hard failures (404, DNS) are not re-checked.
     deferred = [(url, err, locs) for url, err, locs in broken if is_transient(err)]
-    if deferred:
+    if deferred and not retries_allowed():
+        print(f"  Retry budget ({RETRY_BUDGET_SECONDS // 60} min) exhausted: "
+              f"{len(deferred)} transient failure(s) reported without a re-check.")
+    elif deferred:
         print(f"  Re-checking {len(deferred)} transient failure(s) after the sweep...")
         broken = [b for b in broken if not is_transient(b[1])]
         for url, _err, locs in deferred:
-            verdict, detail = fetch_status(url)
+            verdict, detail = fetch_status(encoded[url])
             if verdict == "skipped":
                 skipped += 1
             elif verdict == "broken":
