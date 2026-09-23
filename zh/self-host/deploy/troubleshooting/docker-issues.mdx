@@ -1,30 +1,31 @@
 ---
 title: Docker 问题
+description: 排查 Docker Compose 上的 nginx 502、环境变量注入、WebSocket 卡住以及插件运行时故障
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/troubleshooting/docker-issues)。
 
 ## 网络与连接
 
-### 502 Bad Gateway
+### 502 Bad Gateway {#502-bad-gateway}
 
-Nginx 正在转发到错误的容器 IP。获取当前容器 IP：
+自带的 nginx 模板将流量代理到 Compose DNS 名称（`api:5001`、`web:3000`，以及 `/socket.io/` 对应的 `api_websocket:5001`）。它们通过 Docker 内嵌 DNS 解析这些名称（`resolver 127.0.0.11 valid=30s`）。不要把服务名换成容器 IP。IP 会在重建后变化，下一次重启又会 502。
+
+本页命令在 Dify 克隆的 `docker` 目录下执行。
+
+重建 `api` 或 `web` 后，nginx 最长可能 30 秒仍使用过期上游。重新加载 nginx 以再次解析：
 
 ```bash
-docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+docker compose exec nginx nginx -s reload
 ```
 
-找到这些行：
-```
-/docker-web-1: 172.19.0.5
-/docker-api-1: 172.19.0.7
+`NGINX_*` 在容器启动时由 nginx 入口脚本用 `envsubst` 写入模板。`nginx -s reload` 不会再次执行替换。在 `docker/.env` 中更改 `NGINX_*` 后，请重建 nginx：
+
+```bash
+docker compose up -d --force-recreate nginx
 ```
 
-更新 `dify/docker/nginx/conf.d`：
-- 将 `http://api:5001` 替换为 `http://172.19.0.7:5001`
-- 将 `http://web:3000` 替换为 `http://172.19.0.5:3000`
-
-重启 nginx 或重新加载配置。注意：IP 在容器重启时会发生变化。
+若 `/socket.io/` 返回 **502**，且日志为 `api_websocket` 的 `host not found`，说明该服务未运行。见 [画布卡住或 WebSocket 502](#canvas-hang-or-websocket-502)。
 
 ### 无法访问 localhost 服务
 
@@ -34,7 +35,7 @@ Docker 容器无法通过 `127.0.0.1` 访问主机服务。请使用你机器的
 
 ### 页面一直加载并出现 CORS 错误
 
-域名/URL 更改会导致跨源问题。在 `docker-compose.yml` 中更新：
+域名/URL 更改会导致跨源问题。在 `docker/.env` 中更新：
 
 - `CONSOLE_API_URL` - 控制台 API 的后端 URL
 - `CONSOLE_WEB_URL` - 控制台 Web 的前端 URL
@@ -42,12 +43,63 @@ Docker 容器无法通过 `127.0.0.1` 访问主机服务。请使用你机器的
 - `APP_API_URL` - Web 应用 API 后端 URL
 - `APP_WEB_URL` - Web 应用 URL
 
+默认经 nginx 的单域名部署请保持 `CONSOLE_API_URL` 为空。将其指向 `http://api:5001` 会让浏览器请求只有 Compose 能解析的主机名。见 [浏览器请求 Docker 主机名](/zh/self-host/deploy/troubleshooting/common-issues#browser-calls-the-docker-hostname)。
+
+## 环境文件 {#environment-files}
+
+启动必需项在 `docker/.env`（从 `docker/.env.example` 复制）。可选模板在 `docker/envs/`。将模板复制到同目录并去掉 `.example` 后缀，例如 `cp envs/core-services/shared.env.example envs/core-services/shared.env`。Compose 的 `env_file` 为 `required: false`，缺失文件会被跳过，这些参数也就不会进入容器。
+
+在加载 `env_file` 的服务上，`docker/.env` 列在最后，因此优先于 `docker/envs/*.env`。
+
+`api`、`api_websocket`、`worker`、`web`、`plugin_daemon` 和 `sandbox` 会加载 `env_file`。`nginx`、`ssrf_proxy`、`weaviate`、`redis` 和数据库服务不会：它们只接收 `docker-compose.yaml` 里 `environment:`（或写入 `command` 的插值）所列出的键，而 Compose 从 `docker/.env` 读取这些值。把 `docker/envs/infrastructure/nginx.env.example` 复制为 `nginx.env` 并不会配置 nginx 容器。
+
+确认容器内实际值：
+
+```bash
+docker compose exec api printenv GUNICORN_TIMEOUT
+docker compose exec nginx printenv NGINX_CLIENT_MAX_BODY_SIZE
+docker compose exec worker printenv CELERY_WORKER_AMOUNT
+```
+
+### 重建与重载 {#recreate-vs-reload}
+
+| 变更 | 做法 |
+|:-----|:-----|
+| `docker/.env` 中的 `NGINX_*` | 重建 nginx。`envsubst` 在入口执行；重载不会。 |
+| 重建 `api` 或 `web` 后出现过期 **502** | `docker compose exec nginx nginx -s reload`（或等待 30 秒 DNS 缓存过期）。 |
+| `CELERY_*` | 重建 `worker`。 |
+| 空的 `CELERY_WORKER_AMOUNT` | worker 入口使用 `-c ${CELERY_WORKER_AMOUNT:-1}`，并发变为 `1`。请设置明确整数（Compose 示例为 `4`）。 |
+| `api`、`web` 或 `plugin_daemon` 上其他 `env_file` / `.env` 键 | 重建该服务以重新加载文件。 |
+
+## 画布卡住或 WebSocket 502 {#canvas-hang-or-websocket-502}
+
+工作流编辑器的实时协作走 nginx 的 `location /socket.io/`，再代理到 `NGINX_SOCKET_IO_UPSTREAM`（默认 `api_websocket:5001`）。`api_websocket` 容器由 `docker/.env` 中 `COMPOSE_PROFILES` 的 `collaboration` profile 启动（示例值已包含 `collaboration`）。
+
+若 `api_websocket` 未运行，nginx 会对该上游记录 `host not found`，编辑器卡住或 502。在 `ENABLE_COLLABORATION_MODE` 为 `true` 时保留 `COMPOSE_PROFILES` 中的 `collaboration`，并确认容器已启动：
+
+```bash
+docker compose ps api_websocket
+```
+
+浏览器必须能解析到 WebSocket URL。不在 `localhost` 上访问时，将 `NEXT_PUBLIC_SOCKET_URL` 设为 `ws(s)://` 加上你的公网主机。详见 [ENABLE_COLLABORATION_MODE](/zh/self-host/deploy/configuration/environments#enable_collaboration_mode)。
+
+## 插件 {#plugins}
+
+在 Marketplace 点击安装或上传包会启动安装任务。只有 `plugin_daemon` 完成本地运行时（依赖安装与进程启动）后，插件才可用。控制台的插件列表由 daemon 提供。以该列表和 `docker compose logs plugin_daemon` 为准，不要只看任务横幅。
+
+Marketplace 安装由 `api` 容器下载 `.difypkg`（`MARKETPLACE_API_URL`，默认 `https://marketplace.dify.ai`）。若 `api` 无法访问 Marketplace，下载会失败。不要靠放开主机防火墙来绕过。在能访问 Marketplace 的机器上下载 `.difypkg`，然后在控制台使用 **本地集成包** 安装。
+
+失败任务会一直显示为红色，直到清除。安装失败后，控制台会显示 **安装失败的集成**。打开它，使用 **清除所有**，然后重试。
+
+上传超过 nginx 或 daemon 上限的包会返回 **413**。同时提高 `PLUGIN_MAX_PACKAGE_SIZE`（字节，默认 `52428800`）和 `NGINX_CLIENT_MAX_BODY_SIZE`，然后重建 `api`、`plugin_daemon` 和 `nginx`。普通文件上传同样是两层限制，见 [增加文件上传限制](/zh/self-host/deploy/troubleshooting/common-issues#increase-file-upload-limits)。
+
 ## 挂载与卷
 
 ### Nginx 配置挂载失败
 
 错误信息：
-```
+
+```text
 Error mounting "/run/desktop/mnt/host/d/Documents/docker/nginx/nginx.conf" to rootfs at "/etc/nginx/nginx.conf": not a directory
 ```
 
@@ -64,12 +116,14 @@ docker compose up -d
 端口 80 已被使用？可选择：
 
 1. 停止冲突的服务（通常是 Apache/Nginx）：
+
    ```bash
    sudo service nginx stop
    sudo service apache2 stop
    ```
 
 2. 或在 `docker-compose.yaml` 中更改端口映射：
+
    ```yaml
    ports:
      - "8080:80"  # 映射到不同端口
@@ -80,11 +134,13 @@ docker compose up -d
 ### 查看后台 shell 输出
 
 列出运行中的 shell：
+
 ```bash
 docker exec -it docker-api-1 ls /tmp/shells/
 ```
 
 检查 shell 输出：
+
 ```bash
 docker exec -it docker-api-1 cat /tmp/shells/[shell-id]/output.log
 ```
@@ -108,7 +164,7 @@ docker compose up -d
 
 编辑 `docker/volumes/ssrf_proxy/squid.conf` 添加 ACL 规则：
 
-```
+```text
 # 阻止访问敏感内部 IP
 acl restricted_ip dst 192.168.101.19
 acl localnet src 192.168.101.0/24
@@ -123,3 +179,7 @@ http_access deny all
 ### 为什么需要 SSRF_PROXY？ {#why-is-ssrf-proxy-needed}
 
 防止服务向内网资源发出未授权请求。代理会拦截并过滤来自沙盒服务的所有出站请求。
+
+## 延伸阅读
+
+需要 Community Edition 1.17 可执行检查清单的运营者，可使用 [dify-skills](https://github.com/kabishou11/dify-skills)（社区非官方，非 LangGenius 维护）。

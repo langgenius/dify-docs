@@ -1,28 +1,29 @@
 ---
 title: Docker Issues
+description: Fix nginx 502s, environment injection, WebSocket hangs, and plugin runtime failures on Docker Compose
 ---
 
 ## Network & Connectivity
 
-### 502 Bad Gateway
+### 502 Bad Gateway {#502-bad-gateway}
 
-Nginx is forwarding to wrong container IPs. Get current container IPs:
+The bundled nginx templates proxy to Compose DNS names (`api:5001`, `web:3000`, and `api_websocket:5001` for `/socket.io/`). They resolve those names through Docker's embedded DNS (`resolver 127.0.0.11 valid=30s`). Do not replace the service names with container IP addresses. Those IPs change on recreate and the next restart 502s again.
+
+Run the commands in this page from the `docker` directory of your Dify clone.
+
+After you recreate `api` or `web`, nginx can keep a stale upstream for up to 30 seconds. Reload nginx so it resolves again:
 
 ```bash
-docker ps -q | xargs -n 1 docker inspect --format '{{ .Name }}: {{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}'
+docker compose exec nginx nginx -s reload
 ```
 
-Find these lines:
-```
-/docker-web-1: 172.19.0.5
-/docker-api-1: 172.19.0.7
+`NGINX_*` values are substituted into the templates at container start (`envsubst` in the nginx entrypoint). `nginx -s reload` does not re-run that substitution. After changing `NGINX_*` in `docker/.env`, recreate nginx:
+
+```bash
+docker compose up -d --force-recreate nginx
 ```
 
-Update `dify/docker/nginx/conf.d`:
-- Replace `http://api:5001` with `http://172.19.0.7:5001`
-- Replace `http://web:3000` with `http://172.19.0.5:3000`
-
-Restart nginx or reload configuration. Note: IPs change on container restart.
+If `/socket.io/` returns **502** with `host not found` for `api_websocket`, that service is not running. See [Canvas Hang or WebSocket 502](#canvas-hang-or-websocket-502).
 
 ### Cannot access localhost services
 
@@ -32,7 +33,7 @@ Example: For OpenLLM running on host, configure Dify with `http://192.168.1.100:
 
 ### Page loads forever with CORS errors
 
-Domain/URL changes cause cross-origin issues. Update in `docker-compose.yml`:
+Domain/URL changes cause cross-origin issues. Update in `docker/.env`:
 
 - `CONSOLE_API_URL` - Backend URL for console API
 - `CONSOLE_WEB_URL` - Frontend URL for console web
@@ -40,12 +41,63 @@ Domain/URL changes cause cross-origin issues. Update in `docker-compose.yml`:
 - `APP_API_URL` - Web app API backend URL
 - `APP_WEB_URL` - Web app URL
 
+Leave `CONSOLE_API_URL` empty for the default nginx single-domain setup. Pointing it at `http://api:5001` makes the browser call a hostname only Compose can resolve. See [Browser Calls the Docker Hostname](/en/self-host/deploy/troubleshooting/common-issues#browser-calls-the-docker-hostname).
+
+## Environment Files {#environment-files}
+
+Essential startup values live in `docker/.env` (copied from `docker/.env.example`). Optional templates live under `docker/envs/`. Copy a template next to itself and drop the `.example` suffix, for example `cp envs/core-services/shared.env.example envs/core-services/shared.env`. Compose `env_file` entries are `required: false`, so a missing file is skipped and those knobs never appear in the container.
+
+`docker/.env` is listed last on services that load `env_file`, so it wins over `docker/envs/*.env`.
+
+`api`, `api_websocket`, `worker`, `web`, `plugin_daemon`, and `sandbox` load `env_file`. `nginx`, `ssrf_proxy`, `weaviate`, `redis`, and the database services do **not**: they only receive the keys listed under `environment:` (or interpolated into `command`) from Compose, which reads `docker/.env`. Copying `docker/envs/infrastructure/nginx.env.example` to `nginx.env` does not configure the nginx container.
+
+Confirm what a container actually has:
+
+```bash
+docker compose exec api printenv GUNICORN_TIMEOUT
+docker compose exec nginx printenv NGINX_CLIENT_MAX_BODY_SIZE
+docker compose exec worker printenv CELERY_WORKER_AMOUNT
+```
+
+### Recreate vs Reload {#recreate-vs-reload}
+
+| Change | What to do |
+|:-------|:-----------|
+| `NGINX_*` in `docker/.env` | Recreate nginx. `envsubst` runs at entrypoint; reload does not. |
+| Stale **502** after recreating `api` or `web` | `docker compose exec nginx nginx -s reload` (or wait out the 30s DNS cache). |
+| `CELERY_*` | Recreate `worker`. |
+| Empty `CELERY_WORKER_AMOUNT` | The worker entrypoint uses `-c ${CELERY_WORKER_AMOUNT:-1}`, so concurrency becomes `1`. Set an explicit integer (Compose example: `4`). |
+| Other `env_file` / `.env` keys on `api`, `web`, or `plugin_daemon` | Recreate that service so it reloads the file. |
+
+## Canvas Hang or WebSocket 502 {#canvas-hang-or-websocket-502}
+
+Realtime workflow-editor collaboration goes to nginx `location /socket.io/`, which proxies to `NGINX_SOCKET_IO_UPSTREAM` (default `api_websocket:5001`). The `api_websocket` container is started by the `collaboration` profile in `COMPOSE_PROFILES` (set in `docker/.env`; the example value includes `collaboration`).
+
+If `api_websocket` is down, nginx logs `host not found` for that upstream and the editor hangs or 502s. Keep `collaboration` in `COMPOSE_PROFILES` when `ENABLE_COLLABORATION_MODE` is `true`, and confirm the container is up:
+
+```bash
+docker compose ps api_websocket
+```
+
+Browsers must reach a WebSocket URL they can resolve. Off `localhost`, set `NEXT_PUBLIC_SOCKET_URL` to `ws(s)://` plus your public host. See [ENABLE_COLLABORATION_MODE](/en/self-host/deploy/configuration/environments#enable_collaboration_mode).
+
+## Plugins {#plugins}
+
+A Marketplace click or a package upload starts an install *task*. The plugin is usable only after `plugin_daemon` finishes the local runtime (dependency install and process start). The console plugin list is served from the daemon. Trust that list and `docker compose logs plugin_daemon`, not the task banner alone.
+
+Marketplace install downloads the `.difypkg` *from the `api` container* (`MARKETPLACE_API_URL`, default `https://marketplace.dify.ai`). If `api` has no egress to the Marketplace, that download fails. Do not open host firewalls as a workaround. Download the `.difypkg` on a machine that can reach the Marketplace, then in the console use **Install from Local Package File**.
+
+Failed tasks stay red until you clear them. After a failed install, the console shows **Failed to Install Integrations**. Open it and use **Clear all**, then retry.
+
+Uploading a package larger than nginx or the daemon allows returns **413**. Raise `PLUGIN_MAX_PACKAGE_SIZE` (bytes, default `52428800`) and `NGINX_CLIENT_MAX_BODY_SIZE` together, then recreate `api`, `plugin_daemon`, and `nginx`. File uploads have the same two-layer rule; see [Increase file upload limits](/en/self-host/deploy/troubleshooting/common-issues#increase-file-upload-limits).
+
 ## Mounting & Volumes
 
 ### Nginx configuration mount failure
 
 Error:
-```
+
+```text
 Error mounting "/run/desktop/mnt/host/d/Documents/docker/nginx/nginx.conf" to rootfs at "/etc/nginx/nginx.conf": not a directory
 ```
 
@@ -62,12 +114,14 @@ docker compose up -d
 Port 80 already in use? Either:
 
 1. Stop the conflicting service (usually Apache/Nginx):
+
    ```bash
    sudo service nginx stop
    sudo service apache2 stop
    ```
 
 2. Or change port mapping in `docker-compose.yaml`:
+
    ```yaml
    ports:
      - "8080:80"  # Map to different port
@@ -78,11 +132,13 @@ Port 80 already in use? Either:
 ### View background shell outputs
 
 List running shells:
+
 ```bash
 docker exec -it docker-api-1 ls /tmp/shells/
 ```
 
 Check shell output:
+
 ```bash
 docker exec -it docker-api-1 cat /tmp/shells/[shell-id]/output.log
 ```
@@ -106,7 +162,7 @@ The `ssrf_proxy` container prevents Server-Side Request Forgery attacks.
 
 Edit `docker/volumes/ssrf_proxy/squid.conf` to add ACL rules:
 
-```
+```text
 # Block access to sensitive internal IP
 acl restricted_ip dst 192.168.101.19
 acl localnet src 192.168.101.0/24
@@ -121,3 +177,7 @@ Restart the proxy container after changes.
 ### Why is SSRF_PROXY needed? {#why-is-ssrf-proxy-needed}
 
 Prevents services from making unauthorized requests to internal network resources. The proxy intercepts and filters all outbound requests from sandboxed services.
+
+## Further Reading
+
+Community operators who want executable checklists for Community Edition 1.17 can use [dify-skills](https://github.com/kabishou11/dify-skills) (unofficial, not maintained by LangGenius).
