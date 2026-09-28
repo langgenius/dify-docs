@@ -6,7 +6,7 @@ Formatting rules specific to Chinese (zh) translations. These supplement the gen
 
 ## CJK-Latin Spacing
 
-Always insert a space between Chinese characters and adjacent Latin letters, numbers, or backticked code.
+In prose, insert a space between Chinese characters and adjacent Latin letters, numbers, or backticked code.
 
 | Correct | Incorrect |
 |:--------|:----------|
@@ -14,6 +14,8 @@ Always insert a space between Chinese characters and adjacent Latin letters, num
 | 最大文件大小为 15 MB | 最大文件大小为15MB |
 | 设置 `Temperature` 参数 | 设置`Temperature`参数 |
 | 支持 3 种模型 | 支持3种模型 |
+
+**UI labels:** When quoting a UI label in bold, preserve the product's exact spacing inside the label, for example `**管理MCP**`. Do not insert or remove spaces inside a literal label. Surrounding prose still follows this rule, and spaces outside the bold markup follow [Emphasis](#emphasis).
 
 **Exception:** No space between two adjacent punctuation marks. Punctuation includes full-width CJK marks (。、，；：）, backticks, and markdown brackets (`[`, `]`, `(`, `)`).
 
