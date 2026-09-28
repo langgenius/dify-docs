@@ -10,6 +10,7 @@
 | Workflow app | Workflow 应用 | Workflow アプリ |
 | Chatflow | Chatflow | Chatflow |
 | Chatflow app | Chatflow 应用 | Chatflow アプリ |
+| agentic workflow | Agentic 工作流 | Agentic ワークフロー |
 | workflow | 工作流 | ワークフロー |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
@@ -57,7 +58,6 @@
 | Output | 输出 | 出力 |
 | Answer | 直接回复 | 回答 |
 | LLM | LLM | LLM |
-| Knowledge Retrieval | 知识检索 | ナレッジ検索 |
 | Question Classifier | 问题分类器 | 質問分類器 |
 | IF/ELSE | 条件分支 | IF/ELSE |
 | Code | 代码执行 | コード実行 |
@@ -290,7 +290,7 @@
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
-| Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 |
+| Web App Access Control | Web 应用访问权限 | アクセス権限 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 

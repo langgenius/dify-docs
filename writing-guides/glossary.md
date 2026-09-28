@@ -64,7 +64,6 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Output | 输出 | 出力 | End node for Workflows; defines output variables |
 | Answer | 直接回复 | 回答 | End node for Chatflows; streams response text to the user |
 | LLM | LLM | LLM | Node that calls large language models to generate responses |
-| Knowledge Retrieval | 知识检索 | ナレッジ検索 | Retrieves relevant information from knowledge bases |
 | Question Classifier | 问题分类器 | 質問分類器 | Classifies user input into categories using an LLM |
 | IF/ELSE | 条件分支 | IF/ELSE | Splits workflow into branches based on conditions |
 | Code | 代码执行 | コード実行 | Executes custom Python or JavaScript code |
@@ -301,7 +300,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
-| Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 | app.accessControl | |
+| Web App Access Control | Web 应用访问权限 | アクセス権限 | app.accessControlDialog.title | |
 | Branding | 品牌设置 | ブランディング | app-overview.overview.appInfo.settings.title | Publish-panel action opening the client-side web app settings (name, description, language, copyright, privacy policy, custom disclaimer) |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド | app-overview.overview.appInfo.customize.title | Publish-panel action, sibling to Branding; covers forking the web client or calling the API directly |
 
