@@ -64,14 +64,14 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Output | 输出 | 出力 | End node for Workflows; defines output variables |
 | Answer | 直接回复 | 回答 | End node for Chatflows; streams response text to the user |
 | LLM | LLM | LLM | Node that calls large language models to generate responses |
-| Knowledge Retrieval | 知识检索 | ナレッジ検索 | Retrieves relevant information from knowledge bases |
+| Knowledge Retrieval | 知识检索 | 知識検索 | Retrieves relevant information from knowledge bases. Use this name for the node; generic retrieval prose may use descriptive wording. |
 | Question Classifier | 问题分类器 | 質問分類器 | Classifies user input into categories using an LLM |
 | IF/ELSE | 条件分支 | IF/ELSE | Splits workflow into branches based on conditions |
 | Code | 代码执行 | コード実行 | Executes custom Python or JavaScript code |
 | Template | 模板转换 | テンプレート | Transforms data using Jinja2 templates |
 | HTTP Request | HTTP 请求 | HTTP リクエスト | Sends HTTP requests to external APIs |
 | Variable Aggregator | 变量聚合器 | 変数集約器 | Aggregates multi-branch variables into one |
-| Variable Assigner | 变量赋值器 | 変数代入器 | Assigns values to conversation/environment variables |
+| Variable Assigner | 变量赋值 | 変数代入 | Assigns values to conversation/environment variables |
 | Tool | 工具 | ツール | Calls external tools and services |
 | Parameter Extractor | 参数提取器 | パラメータ抽出 | Extracts structured parameters from natural language using an LLM |
 | Iteration | 迭代 | イテレーション | Processes array items sequentially |
@@ -96,6 +96,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
+| chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
 | retrieval | 检索 | 検索 | Always lowercase in body text |
 | retrieval mode | 检索模式 | 検索モード | Strategy for finding and ranking relevant chunks |
 | indexing | 索引 | インデックス | Use "Index Method" consistently in documentation |
@@ -301,7 +302,6 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
-| Web App Access Control | Web 应用访问控制 | Web アプリアクセス制御 | app.accessControl | |
 | Branding | 品牌设置 | ブランディング | app-overview.overview.appInfo.settings.title | Publish-panel action opening the client-side web app settings (name, description, language, copyright, privacy policy, custom disclaimer) |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド | app-overview.overview.appInfo.customize.title | Publish-panel action, sibling to Branding; covers forking the web client or calling the API directly |
 
@@ -309,6 +309,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
+| Web App Access Control | Web 应用访问权限 | アクセス権限 | app.accessControlDialog.title | Dialog title, bold UI references only. Opened by clicking the current access level on the Web App card. The Japanese value is shared with `permission.accessRule.accessPermission`. Keep descriptive wording in prose about web app access control. |
 | Anyone with the link | 任何人 | リンクを知っているすべてのユーザー | app.accessControlDialog.accessItems.anyone | |
 | Authenticated external users | 经认证的外部用户 | 認証済みの外部ユーザー | app.accessControlDialog.accessItems.external | |
 | All members within the platform | 平台内所有成员 | プラットフォーム内の全メンバー | app.accessControlDialog.accessItems.organization | |
@@ -348,6 +349,15 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー | workflow.blocks.trigger-plugin | Renamed from "Plugin Trigger" in v1.15.0; internal id unchanged |
 | Knowledge Base | 知识库 | 知識ベース | workflow.blocks.knowledge-index | Knowledge index node |
+
+### Knowledge Pipeline Tool Names
+
+For these plugin-provided labels, verify the tool schema instead of a core i18n key. The schemas below are in `langgenius/dify-official-plugins`; check the installed plugin version. Japanese falls back to English when the schema has no `ja_JP` label. Use the displayed name for a specific node; general prose follows the chunk, chunking, and chunker terms above.
+
+| English (UI) | Chinese (UI) | Japanese (UI) | Tool Schema | Notes |
+|:-------------|:-------------|:--------------|:------------|:------|
+| General Chunker | 通用文本分块 | General Chunker | `tools/general_chunk/tools/general.yaml`, `identity.label` | Plugin node name; Japanese uses the English fallback. |
+| Parent-child Chunker | 父子文本分块 | Parent-child Chunker | `tools/parent_child_chunk/tools/parent_child_chunk.yaml`, `identity.label` | Plugin node name; Japanese uses the English fallback. |
 
 ### Workflow Controls
 
@@ -469,7 +479,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Vector Search | 向量检索 | ベクトル検索 | dataset.retrieval.semantic_search.title | |
 | Full-Text Search | 全文检索 | 全文検索 | dataset.retrieval.full_text_search.title | |
 | Hybrid Search | 混合检索 | ハイブリッド検索 | dataset.retrieval.hybrid_search.title | |
-| Inverted Index | 倒排索引 | 転置インデックス | dataset.retrieval.invertedIndex.title | |
+| Inverted Index | 倒排索引 | 逆インデックス | dataset.retrieval.keyword_search.title | Economical retrieval option in the Knowledge Base node. Use this consuming key; `dataset.retrieval.invertedIndex.title` has a different Japanese value. |
 | Weighted Score | 权重设置 | ウェイト設定 | dataset.weightedScore.title | Rerank strategy option |
 
 ### Knowledge Settings
