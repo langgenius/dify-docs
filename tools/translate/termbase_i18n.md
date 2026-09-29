@@ -58,13 +58,14 @@
 | Output | 输出 | 出力 |
 | Answer | 直接回复 | 回答 |
 | LLM | LLM | LLM |
+| Knowledge Retrieval | 知识检索 | 知識検索 |
 | Question Classifier | 问题分类器 | 質問分類器 |
 | IF/ELSE | 条件分支 | IF/ELSE |
 | Code | 代码执行 | コード実行 |
 | Template | 模板转换 | テンプレート |
 | HTTP Request | HTTP 请求 | HTTP リクエスト |
 | Variable Aggregator | 变量聚合器 | 変数集約器 |
-| Variable Assigner | 变量赋值器 | 変数代入器 |
+| Variable Assigner | 变量赋值 | 変数代入 |
 | Tool | 工具 | ツール |
 | Parameter Extractor | 参数提取器 | パラメータ抽出 |
 | Iteration | 迭代 | イテレーション |
@@ -290,7 +291,6 @@
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
-| Web App Access Control | Web 应用访问权限 | アクセス権限 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 
@@ -298,6 +298,7 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
+| Web App Access Control | Web 应用访问权限 | アクセス権限 |
 | Anyone with the link | 任何人 | リンクを知っているすべてのユーザー |
 | Authenticated external users | 经认证的外部用户 | 認証済みの外部ユーザー |
 | All members within the platform | 平台内所有成员 | プラットフォーム内の全メンバー |
@@ -337,6 +338,13 @@
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー |
 | Knowledge Base | 知识库 | 知識ベース |
+
+### Knowledge Pipeline Tool Names
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| General Chunker | 通用文本分块 | General Chunker |
+| Parent-child Chunker | 父子文本分块 | Parent-child Chunker |
 
 ### Workflow Controls
 
@@ -458,7 +466,7 @@
 | Vector Search | 向量检索 | ベクトル検索 |
 | Full-Text Search | 全文检索 | 全文検索 |
 | Hybrid Search | 混合检索 | ハイブリッド検索 |
-| Inverted Index | 倒排索引 | 転置インデックス |
+| Inverted Index | 倒排索引 | 逆インデックス |
 | Weighted Score | 权重设置 | ウェイト設定 |
 
 ### Knowledge Settings
