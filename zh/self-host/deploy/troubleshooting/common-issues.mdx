@@ -1,5 +1,6 @@
 ---
 title: 常见问题
+description: 排查 Community Edition 自部署中的登录、CSRF、超时、上传及其他故障
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/troubleshooting/common-issues)。
@@ -32,25 +33,65 @@ docker exec -it docker-api-1 flask reset-password
 
 更新配置后重启服务。
 
+### 登录返回 401 Invalid encrypted data {#401-invalid-encrypted-data-on-login}
+
+控制台在 `POST /console/api/login` 之前会将密码做 Base64 编码。发送明文（或前端与 API 镜像对该编码不一致）会返回 **401**，正文为 `Invalid encrypted data`。
+
+请通过官方控制台登录。若使用自定义登录客户端，须按控制台同样方式对密码做 Base64 编码。
+
+### CSRF 令牌缺失或无效导致 401 {#401-csrf-token-is-missing-or-invalid}
+
+控制台会话使用 `access_token` Cookie，以及必须与 `csrf_token` Cookie 一致的 `X-CSRF-Token` 请求头。已认证的控制台调用缺少这一对会返回 **401** `CSRF token is missing or invalid.`
+
+官方控制台会同时发送二者。只转发 Cookie、丢掉请求头的脚本或代理会触发该检查。
+
+### 约 1 小时后会话中断 {#session-drops-after-about-one-hour}
+
+`access_token` 和 `csrf_token` Cookie 的有效期为 `ACCESS_TOKEN_EXPIRE_MINUTES`（默认 `60`）。只要 `refresh_token` Cookie 仍有效（`REFRESH_TOKEN_EXPIRE_DAYS`，默认 `30`），控制台就会用它刷新前两者。
+
+只保存了 access Cookie，或拦截了刷新请求的客户端，会在约 1 小时后看起来像已退出。详见 [环境变量](/zh/self-host/deploy/configuration/environments) 中的 `ACCESS_TOKEN_EXPIRE_MINUTES` 和 `REFRESH_TOKEN_EXPIRE_DAYS`。
+
+### 完成初始化后仍打开安装页 {#install-page-after-setup-completes}
+
+`/install` 仅用于首次引导。管理员账户创建完成后，该页面即结束。再次提交会被拒绝。
+
+请打开登录页（`/`），不要再访问 `/install`。
+
+### 首次启动后更改 SECRET_KEY {#secret_key-changed-after-first-boot}
+
+`SECRET_KEY` 用于签署会话 Cookie、JWT、文件 URL 和 OAuth 凭据。堆栈已运行后再更改，会让所有人退出、使已签名文件 URL 失效，并使 OAuth 插件凭据无法恢复。
+
+保留已生成或已选定的值。说明与生成命令见 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
+
+### 浏览器请求 Docker 主机名 {#browser-calls-the-docker-hostname}
+
+默认单域名、经 nginx 的 Compose 部署应保持 `CONSOLE_API_URL` 为空。此时 web 容器对外使用相对路径 `/console/api`，浏览器留在你的公网源上。
+
+将 `CONSOLE_API_URL=http://api:5001` 会使 **浏览器** 去解析 Compose DNS 名 `api`，运营者本机无法解析该名称。web 容器的服务端请求应使用 `SERVER_CONSOLE_API_URL`（默认 `http://api:5001`）。详见 [CONSOLE_API_URL](/zh/self-host/deploy/configuration/environments#console_api_url)。
+
 ## 配置
 
 ### 更改默认端口
 
 修改 `.env` 配置：
 
-```
+```text
 EXPOSE_NGINX_PORT=80
 EXPOSE_NGINX_SSL_PORT=443
 ```
 
 如需更改 API 服务端口，请更新 `docker-compose.yaml` 中的 nginx 配置。
 
-### 增加文件上传限制
+### 增加文件上传限制 {#increase-file-upload-limits}
 
 在 `.env` 中更新：
 
-- `UPLOAD_FILE_SIZE_LIMIT` - 最大文件大小
-- `NGINX_CLIENT_MAX_BODY_SIZE` - 必须匹配以避免问题
+- `UPLOAD_FILE_SIZE_LIMIT` - 文档上传的最大大小（MB）
+- `NGINX_CLIENT_MAX_BODY_SIZE` - 代理请求体上限（默认 `100M`）
+
+两处都要提高。若只提高 API 限制，nginx 会在 API 看到文件之前返回 **413**。图片、视频、音频上传各自有 `UPLOAD_*_FILE_SIZE_LIMIT`，同样须不超过 nginx 上限。
+
+插件包使用 `PLUGIN_MAX_PACKAGE_SIZE`（默认 50 MB），并受同一 nginx 上限约束。详见 [环境变量](/zh/self-host/deploy/configuration/environments#多模态配置)。
 
 ### 工作流复杂度限制
 
@@ -60,7 +101,22 @@ EXPOSE_NGINX_SSL_PORT=443
 
 ### 节点执行超时
 
-在 `.env` 中设置 `TEXT_GENERATION_TIMEOUT_MS` 以控制每个节点的运行时间。
+在 `.env` 中设置 `TEXT_GENERATION_TIMEOUT_MS`，控制前端流式输出的停滞超时。详见 [TEXT_GENERATION_TIMEOUT_MS](/zh/self-host/deploy/configuration/environments#web-前端服务)。
+
+### 长工作流在约 6 分钟时停止 {#long-workflows-stop-around-six-minutes}
+
+`docker/.env.example` 中 `GUNICORN_TIMEOUT` 默认为 `360` 秒（6 分钟）。Nginx 的 `NGINX_PROXY_READ_TIMEOUT` 默认为 `3600s`。长工作流可能在 Gunicorn 处被杀掉，而 nginx 仍会继续等待。
+
+确认是哪一层切断了请求：nginx **504**，还是 API worker 在 Gunicorn 超时后重启。API 先停则在 `docker/.env` 中提高 `GUNICORN_TIMEOUT`；nginx 返回 **504** 则提高 nginx 代理超时。然后在 `docker` 目录执行：
+
+```bash
+docker compose up -d --force-recreate api
+docker compose up -d --force-recreate nginx
+```
+
+若同时改了 `API_WEBSOCKET_GUNICORN_TIMEOUT`，用同样方式重建 `api_websocket`。
+
+`TEXT_GENERATION_TIMEOUT_MS` 是另一套前端停滞计时，不要当成 worker 截止时间。见 [节点执行超时](#节点执行超时)。
 
 ## 邮件配置
 
@@ -85,22 +141,27 @@ docker compose up -d
 ### pg_hba.conf 连接错误
 
 如果你看到：
-```
+
+```text
 FATAL: no pg_hba.conf entry for host "172.19.0.7", user "postgres", database "dify", no encryption
 ```
 
 允许来自错误中网络段的连接：
 
+<Warning>
+`trust` 会禁用数据库认证，请勿照抄到生产环境。
+</Warning>
+
 ```bash
 docker exec -it docker-db-1 sh -c "echo 'host all all 172.19.0.0/16 trust' >> /var/lib/postgresql/data/pgdata/pg_hba.conf"
-docker-compose restart
+docker compose restart
 ```
 
 ### 加密密钥文件未找到错误
 
 此错误发生在更改部署方法或删除 `api/storage/privkeys` 之后：
 
-```
+```text
 FileNotFoundError: File not found
 File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 ```
@@ -108,11 +169,13 @@ File "/www/wwwroot/dify/dify/api/libs/rsa.py", line 45, in decrypt
 重置加密密钥对：
 
 Docker Compose：
+
 ```bash
 docker exec -it docker-api-1 flask reset-encrypt-key-pair
 ```
 
 源代码（在 `api` 目录下）：
+
 ```bash
 flask reset-encrypt-key-pair
 ```
@@ -130,3 +193,7 @@ flask reset-encrypt-key-pair
 ### 更改应用访问域名
 
 在 `docker-compose.yaml` 中更新 `APP_WEB_URL`。
+
+## 延伸阅读
+
+需要 Community Edition 1.17 可执行检查清单的运营者，可使用 [dify-skills](https://github.com/kabishou11/dify-skills)（社区非官方，非 LangGenius 维护）。
