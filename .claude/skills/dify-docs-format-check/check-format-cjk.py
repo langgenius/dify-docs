@@ -457,13 +457,19 @@ def check_cjk_latin_spacing(lines: list[str]) -> list[Violation]:
     # (excluding punctuation-adjacent cases)
     pat_cjk_latin = re.compile(rf'{CJK}[A-Za-z0-9`]')
     pat_latin_cjk = re.compile(rf'[A-Za-z0-9`]{CJK}')
+    bold_pat = re.compile(r'\*\*[^*\n]+?\*\*')
     for i, line in enumerate(lines, 1):
         if FENCE_RE.match(line):
             in_fence = not in_fence
             continue
         if in_fence:
             continue
+        # Bold UI labels preserve the product's spacing. The mask cannot
+        # distinguish labels from emphasized prose; review bold spans by hand.
+        # With an unmatched marker, keep the whole line visible to this check.
         s = _strip_code_and_urls(line)
+        if s.count('**') % 2 == 0:
+            s = bold_pat.sub(' ', s)
         if pat_cjk_latin.search(s) or pat_latin_cjk.search(s):
             vs.append(Violation(
                 i, 'CJK-latin-spacing',

@@ -6,7 +6,7 @@ Formatting rules specific to Chinese (zh) translations. These supplement the gen
 
 ## CJK-Latin Spacing
 
-Always insert a space between Chinese characters and adjacent Latin letters, numbers, or backticked code.
+Always insert a space between Chinese characters and adjacent Latin letters, numbers, or backticked code. The only exception is a literal UI label quoted in bold (see **UI labels** below).
 
 | Correct | Incorrect |
 |:--------|:----------|
@@ -23,6 +23,8 @@ Always insert a space between Chinese characters and adjacent Latin letters, num
 | `"page"`、`"database"` | `"page"` 、 `"database"` |
 | 详见（[链接](/path)）。 | 详见（ [链接](/path) ）。 |
 | 返回。`streaming` 模式 | 返回。 `streaming` 模式 |
+
+**UI labels:** When quoting a UI label in bold, preserve the product's exact spacing inside the label, for example `**管理MCP**`. Do not insert or remove spaces inside a literal label. Surrounding prose still follows this rule, and spaces outside the bold markup follow [Emphasis](#emphasis).
 
 ## Punctuation
 

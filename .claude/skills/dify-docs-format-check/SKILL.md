@@ -53,12 +53,15 @@ Read-only audit of documentation formatting. Mechanical rules are enforced by tw
 
    The scripts are the authoritative deterministic rule list. Violation lines print as `line [rule-id] message` and the messages are self-describing, so do not re-summarize each rule. Rule-ID families: `F-` frontmatter, `H-` headings, `B-` bold/italic, `L-` lists, `C-` code, `Li-` links, `I-` images, `M-` Mintlify components, `U-` UI element references (en only), `S-` spacing, `P-` punctuation, `CJK-` both CJK languages, `ZH-` Chinese only, `JA-` Japanese only.
 
-   Four IDs need context the message alone does not give:
+   Five IDs need context the message alone does not give:
 
    - `H-ing-verb` (en): section-name gerunds (`Troubleshooting`, `Logging`, `Getting Started`, etc.) are exempt via the `SKIP_ING_HEADINGS` constant in `check-format-en.py`. If a flagged heading is a legitimate section concept, propose the addition to `SKIP_ING_HEADINGS` in your report — do not edit the script.
    - `I-alt-empty` (en): flags every empty alt as a prompt to confirm the image is genuinely decorative, not as a hard error.
    - `CJK-disclaimer-missing`: the script looks for the translation disclaimer only within the ~10 lines below the frontmatter, so a disclaimer placed lower in the file still trips it. Pages whose frontmatter sets `mode: "custom"` or `mode: "frame"` are exempt — chrome-less landing pages carry no disclaimer (see the formatting guides' Translation Disclaimer exception).
    - `CJK-cross-lang-link`: `/en/...` links are flagged everywhere except on the disclaimer line, which is allowed to point at the English source.
+   - `CJK-latin-spacing`: on lines with an even number of `**` markers, the script skips every complete bold span, not only UI labels. Manually check each bold span with CJK and Latin/digit adjacency: a literal UI label preserves the product's spacing; emphasized prose needs the normal space. Lines with an odd number of `**` markers remain fully checked after code and URLs are stripped. Non-bold quoted labels are not exempt.
+
+   When changing the CJK checker, run `python3 .claude/skills/dify-docs-format-check/test_check_format_cjk.py`. The regression suite must end with `OK` and exit 0.
 
 4. **Judgment review — `en/` files.** Digest of `writing-guides/formatting-guide.md` (section names in parentheses; the guide wins on conflict). Read each file and check:
 

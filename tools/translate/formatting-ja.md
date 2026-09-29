@@ -19,7 +19,7 @@ Use **敬体 (です/ます form)** throughout body text. Never mix 敬体 and �
 
 ## CJK-Latin Spacing
 
-Insert a space between Japanese characters and adjacent Latin letters, numbers, or backticked code—same principle as Chinese.
+Always insert a space between Japanese characters and adjacent Latin letters, numbers, or backticked code, as in Chinese. The only exception is a literal UI label quoted in bold (see **UI labels** below).
 
 | Correct | Incorrect |
 |:--------|:----------|
@@ -37,6 +37,8 @@ This rule also applies before Japanese particles (を、は、が、の、に、
 | `"page"`、`"database"` | `"page"` 、 `"database"` |
 | 参照（[リンク](/path)）。 | 参照（ [リンク](/path) ）。 |
 | です。`streaming` モード | です。 `streaming` モード |
+
+**UI labels:** When quoting a UI label in bold, preserve the product's exact spacing inside the label, for example `**Skillを表示**` or `**API拡張設定を管理**`. Do not insert or remove spaces inside a literal label. Surrounding prose still follows this rule, and spaces outside the bold markup follow [Emphasis](#emphasis).
 
 ## Punctuation
 
@@ -250,7 +252,7 @@ Specific patterns to drop or shorten when context allows:
 
 ### Other Quality Issues
 
-- **Missing CJK-Latin spaces.** The most visible quality signal. Missing spaces immediately mark output as machine-translated.
+- **Missing CJK-Latin spaces in prose.** Follow [CJK-Latin Spacing](#cjk-latin-spacing), including its carve-out for literal UI labels.
 - **Literal English syntax.** Restructure English relative clauses and long modifier chains into natural Japanese clause order.
 - **Inconsistent terminology.** Always follow the glossary. Do not alternate between different translations of the same term.
 - **Over-translation.** Brand names, feature names, API parameter names, and code identifiers must remain in English.
