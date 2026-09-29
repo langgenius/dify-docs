@@ -90,6 +90,7 @@
 | knowledge base | 知识库 | ナレッジベース |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
+| chunker | 分段器 | チャンカー |
 | retrieval | 检索 | 検索 |
 | retrieval mode | 检索模式 | 検索モード |
 | indexing | 索引 | インデックス |

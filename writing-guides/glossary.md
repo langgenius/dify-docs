@@ -96,6 +96,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
+| chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
 | retrieval | 检索 | 検索 | Always lowercase in body text |
 | retrieval mode | 检索模式 | 検索モード | Strategy for finding and ranking relevant chunks |
 | indexing | 索引 | インデックス | Use "Index Method" consistently in documentation |
@@ -351,7 +352,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 
 ### Knowledge Pipeline Tool Names
 
-For these plugin-provided labels, verify the tool schema instead of a core i18n key. The schemas below are in `langgenius/dify-official-plugins`; check the installed plugin version. Japanese falls back to English when the schema has no `ja_JP` label. Use the displayed name for a specific node; general prose follows the chunk and chunking terms above.
+For these plugin-provided labels, verify the tool schema instead of a core i18n key. The schemas below are in `langgenius/dify-official-plugins`; check the installed plugin version. Japanese falls back to English when the schema has no `ja_JP` label. Use the displayed name for a specific node; general prose follows the chunk, chunking, and chunker terms above.
 
 | English (UI) | Chinese (UI) | Japanese (UI) | Tool Schema | Notes |
 |:-------------|:-------------|:--------------|:------------|:------|
