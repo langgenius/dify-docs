@@ -44,6 +44,20 @@ class CjkLatinSpacingTests(unittest.TestCase):
             '**Skillを表示', 'APIを設定**',
         ])], [1, 2])
 
+    def test_odd_bold_markers_do_not_hide_prose(self):
+        lines = [
+            '- **Dify Marketplaceは現在、**無料**です。',
+            '**説明** 使用API**',
+            '**説明** **APIを設定** **',
+        ]
+        self.assertEqual([v.line for v in check_latin_spacing(lines)], [1, 2, 3])
+
+    def test_bold_markers_in_code_and_urls_do_not_affect_balance(self):
+        self.assertEqual(check_latin_spacing([
+            '`**` と **Skillを表示** を選択します。',
+            '[**Skillを表示**](https://example.com/**) を選択します。',
+        ]), [])
+
     def test_masking_does_not_join_surrounding_prose(self):
         self.assertEqual(check_latin_spacing(['日本語**Skillを表示**API']), [])
 
@@ -71,8 +85,9 @@ class CjkLatinSpacingTests(unittest.TestCase):
         violations = check_latin_spacing([
             '[APIを設定](/ja/page)',
             '使用API 和 3种模型',
+            '「ライセンスID」を入力します。',
         ])
-        self.assertEqual([v.line for v in violations], [1, 2])
+        self.assertEqual([v.line for v in violations], [1, 2, 3])
 
 
 if __name__ == '__main__':
