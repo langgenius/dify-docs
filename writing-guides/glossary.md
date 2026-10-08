@@ -449,9 +449,6 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
 | Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
-| Query Text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrieval.queryText | Knowledge retrieval node input |
-| Query Images | 查询图片 | 画像を検索 | workflow.nodes.knowledgeRetrieval.queryAttachment | Knowledge retrieval node input; shown only when a selected knowledge base is multimodal |
-| Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
 
 ### Agent Configure
 
@@ -473,6 +470,17 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Class Name | 分类名称 | クラス名 | workflow.nodes.questionClassifiers.outputVars.className | Output variable; classifier-facing description used in the LLM prompt |
 | Class Label | 分类标签 | クラスラベル | workflow.nodes.questionClassifiers.outputVars.classLabel | Output variable; user-facing branch title |
 | CLASS {{index}} | 分类 {{index}} | クラス {{index}} | workflow.nodes.questionClassifiers.defaultLabel | Default class title; index is 1-based |
+
+### Knowledge Retrieval Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Query Text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrieval.queryText | Node input |
+| Query Images | 查询图片 | 画像を検索 | workflow.nodes.knowledgeRetrieval.queryAttachment | Node input; shown only when a selected knowledge base is multimodal |
+| Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | |
+| Disabled | 禁用 | 無効 | workflow.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
+| Automatic | 自动 | 自動生成 | workflow.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
+| Manual | 手动 | 手動設定 | workflow.nodes.knowledgeRetrieval.metadata.options.manual.title | Metadata filtering mode |
 
 ### Knowledge Retrieval Methods
 

@@ -437,9 +437,6 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
-| Query Text | 查询文本 | クエリテキスト |
-| Query Images | 查询图片 | 画像を検索 |
-| Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 
 ### Agent Configure
 
@@ -461,6 +458,17 @@
 | Class Name | 分类名称 | クラス名 |
 | Class Label | 分类标签 | クラスラベル |
 | CLASS {{index}} | 分类 {{index}} | クラス {{index}} |
+
+### Knowledge Retrieval Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Query Text | 查询文本 | クエリテキスト |
+| Query Images | 查询图片 | 画像を検索 |
+| Metadata Filtering | 元数据过滤 | メタデータフィルタ |
+| Disabled | 禁用 | 無効 |
+| Automatic | 自动 | 自動生成 |
+| Manual | 手动 | 手動設定 |
 
 ### Knowledge Retrieval Methods
 
