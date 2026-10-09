@@ -28,7 +28,7 @@ A task is something the reader wants to do, phrased so "I want to ___" reads nat
 
 **Delta (changed behavior, or a gap filled on a page whose product hasn't changed)**
 
-List only the tasks the change or the gap affects. For a change, state what changes for each (steps, prereqs, limits, or outcome) and apply the four prompts to the changed steps. For a gap, apply them to the steps the docs don't yet cover. Either way, cross-check S2's community pain themes as in Full step 1.
+List only the tasks the change or the gap affects. For a change, state what changes for each (steps, prereqs, limits, or outcome) and apply the four prompts to whatever changed, whether a step, a prerequisite, a limit, or the outcome. For a gap, apply them to the steps the docs don't yet cover. Either way, cross-check S2's community pain themes as in Full step 1.
 
 **Three-question (correction)**
 

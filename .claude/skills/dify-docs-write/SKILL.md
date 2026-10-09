@@ -70,7 +70,7 @@ Uncertain content is left out and recorded, never hedged. Concept sections descr
 
 Read now: `writing-guides/formatting-guide.md`; the pack's procedures labeled S7.
 
-Checking runs in two passes, the English first and the translations after S6, because every English change made after translation sends its sentences back through translation and the translation test. The API pack edits its three specs in one pass, so for a spec the owner reviews all three languages together in step 4, and its parity check stands in for the second pass.
+Checking runs in two passes, the English first and the translations after S6, because every English change made after translation sends its sentences back through translation and the translation test. The API pack edits its three specs together at S5, so for a spec the English pass checks and the owner reviews all three languages at once, and its parity check stands in for the second pass.
 
 When a round carries text that already passed these tests on the page it came from, as a cloud and self-host pair does, the round's work is the adaptation: the links, the disclaimer backlink, and the audience-specific fragments. Those are the sentences the editor test is told this round changed and the translation test reads on the zh and ja copies; both are skipped when none changed, and both read the whole carried text when you cannot confirm the source round ran them. The format and terminology checks run either way, at the target copy's release, because a carry can leave a link or a label that was right in the source tree and is wrong here.
 
