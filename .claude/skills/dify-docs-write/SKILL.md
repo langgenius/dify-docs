@@ -66,6 +66,19 @@ Review the whole draft, then sort the corrections by one question: does this cha
 
 Uncertain content is left out and recorded, never hedged. Concept sections describe, task pages instruct. Frontmatter descriptions are written last, from the finished page.
 
+## Check (S7)
+
+Read now: `writing-guides/formatting-guide.md`; the pack's procedures labeled S7.
+
+Checking runs in two passes, the English first and the translations after S6, because every English change made after translation sends its sentences back through translation and the translation test.
+
+When a round carries text that already passed these tests on the page it came from, as a cloud and self-host pair does, the round's work is the adaptation: the links, the disclaimer backlink, and the audience-specific fragments. Those are the sentences the editor test is told this round changed and the translation test reads on the zh and ja copies; both are skipped when none changed, and both read the whole carried text when you cannot confirm the source round ran them. The format and terminology checks run either way, at the target copy's release, because a carry can leave a link or a label that was right in the source tree and is wrong here.
+
+1. Read it back per `references/drafting-turn.md` and fix what you find; a fault found once is swept across the page before it counts as fixed. Then run `dify-docs-editor-test` on the English page: a fresh agent reads it against its standard and returns sentence-level marks and a verdict on this round's work. On a partial edit the test gets the changed sections named; marks elsewhere on the page go to the owner as a list, not into the fix. "Needs rewrite" means the unit is redone whole, not patched.
+2. Run `dify-docs-reader-test` on the English page. It is the check most likely to add or move content, so it runs before translation, not last. A page carried in part waits for the whole.
+3. Run `dify-docs-format-check`, then `dify-docs-terminology-check`, then the pack's S7 verifiers on the English, fixing and re-running until each is clean; the terminology check is clean when its only remaining findings sit under its report's Dead glossary rows. A clean run is not a finished page.
+4. Bring the owner the English. Their approval freezes it for translation. When no reviewer is in the session, state the freeze in the PR description and continue. A single-page correction skips this stop.
+
 ## Translate (S6)
 
 Read now: `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and the glossary.
@@ -74,13 +87,9 @@ Every English change ships `zh/` and `ja/` in the same pass. A new page is regis
 
 Translate from the English file on disk as it stands, not from the draft in the conversation. After a review round, diff the English file and carry every changed sentence, structural edits included, into zh and ja; a stated sync is intent, not verified state, and a deletion of content you drafted is confirmed with the owner before it is mirrored. Before translating a `use-dify` page, look for its translation in the sibling audience tree: swap `cloud` and `self-host` in the path under `zh/` and `ja/`. A page that already exists translated there is copied and adjusted (links, the disclaimer backlink, the audience-specific fragment), never re-translated, once its English source is confirmed to match this page's English on the shared content, the audience-specific block being an allowed difference; the two trees can sit on different releases, and a sibling from another release is translated from the current source instead. When the owner deletes from one translation, mirror the deletion in the other.
 
-## Check (S7)
+## Check the Translations (S7, continued)
 
-Read now: `writing-guides/formatting-guide.md`; the pack's procedures labeled S7.
-
-1. Read it back per `references/drafting-turn.md` and fix what you find; a fault found once is swept across the page before it counts as fixed. Then run `dify-docs-editor-test` on the English page and `dify-docs-translation-test` on the zh and ja pages: a fresh agent reads each against its standard and returns sentence-level marks and a verdict on this round's work. On a partial edit the tests get the changed sections named; marks elsewhere on the page go to the owner as a list, not into the fix. When a round carries text that already passed these tests on the page it came from, as a cloud and self-host pair does, the round's work is the adaptation: the links, the disclaimer backlink, and the audience-specific fragments. Those are the sentences the editor test is told this round changed and the translation test reads on the zh and ja copies; both are skipped when none changed, and both read the whole carried text when you cannot confirm the source round ran them. The reader test waits for a page carried whole. The format and terminology checks run either way, at the target copy's release, because a carry can leave a link or a label that was right in the source tree and is wrong here. An English correction accepted at any step of this stage returns the page to S6, and the translation test runs on the changed sentences after it, so the zh and ja pages are judged as they will ship. The API pack's specs are gated by its parity check instead. "Needs rewrite" and "Needs retranslation" mean the unit is redone whole, not patched.
-2. Run `dify-docs-format-check`, then `dify-docs-terminology-check`, then the pack's S7 verifiers, fixing and re-running until each is clean; the terminology check is clean when its only remaining findings sit under its report's Dead glossary rows. A clean run is not a finished page.
-3. Run `dify-docs-reader-test` last, on the finished page. A page carried in part is not finished; the test waits for the whole.
+Run `dify-docs-translation-test` on the zh and ja pages, then `dify-docs-format-check`, `dify-docs-terminology-check`, and the pack's S7 verifiers on them, fixing and re-running until each is clean. On a partial edit the test gets the changed sections named. "Needs retranslation" means the unit is redone whole. An English correction accepted here returns that sentence to the English pass and then to S6, so the zh and ja pages are judged as they will ship. The API pack's specs are gated by its parity check instead.
 
 This applies to every edit, including a one-line correction made without the rest of this pipeline: check the work before presenting it. Process documents (plans, design notes) are exempt. If you skip or change a stage, say so and why.
 
