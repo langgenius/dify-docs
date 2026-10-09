@@ -34,7 +34,7 @@ Read now: `writing-guides/style-guide.md`; the pack's reader and vocabulary sect
 
 ## Understand before you write (S1–S3)
 
-Read now: `writing-guides/index.md` § "Syncing the Dify codebase safely"; the pack's procedures labeled S2; `references/task-analysis.md`; `references/research-summary.md`.
+Read now: `writing-guides/index.md` § "Syncing the Dify codebase safely"; the pack's procedures labeled S2 and S3; `references/task-analysis.md`; `references/research-summary.md`.
 
 Pin the code ref first (for a pre-release feature, the development branch the user names) and verify every claim there. Existing docs are not evidence, because pages go stale, so a rewrite re-checks everything it keeps. Code presence is not a working feature either: behavior inferred from code rather than confirmed is reported as unverified and stays off the page, and so is a claim whose source you cannot reach, marked `UNVERIFIED` in the scope report and the PR description. The depth follows what changed for the reader, not how much of the page changes. A correction, where the page says something wrong (a claim, or a label the product renamed) but what the reader does is unchanged, verifies the one disputed claim and records the evidence. A changed behavior, where a task the reader already does now has different steps, prerequisites, limits, or outcome, runs `dify-docs-feature-research` at targeted depth on the surfaces the change touches. A new capability, something the reader could not do before, runs it in full even when it lands as one section of an existing page, and so do a new page, a rewrite, and a pre-release feature; a rewrite also re-verifies every claim carried over. Filling a gap on a page whose product hasn't changed runs at targeted depth, or in full when the gap is a whole task. Targeted and full research both include what users have reported, because the reports show what the code cannot: what readers expected, misread, or tried instead. Run the pack's S2 discovery and record each result, including "no match".
 
@@ -70,7 +70,7 @@ Uncertain content is left out and recorded, never hedged. Concept sections descr
 
 Read now: `writing-guides/formatting-guide.md`; the pack's procedures labeled S7.
 
-Checking runs in two passes, the English first and the translations after S6, because every English change made after translation sends its sentences back through translation and the translation test.
+Checking runs in two passes, the English first and the translations after S6, because every English change made after translation sends its sentences back through translation and the translation test. The API pack edits its three specs in one pass, so for a spec the owner reviews all three languages together in step 4, and its parity check stands in for the second pass.
 
 When a round carries text that already passed these tests on the page it came from, as a cloud and self-host pair does, the round's work is the adaptation: the links, the disclaimer backlink, and the audience-specific fragments. Those are the sentences the editor test is told this round changed and the translation test reads on the zh and ja copies; both are skipped when none changed, and both read the whole carried text when you cannot confirm the source round ran them. The format and terminology checks run either way, at the target copy's release, because a carry can leave a link or a label that was right in the source tree and is wrong here.
 

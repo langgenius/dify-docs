@@ -13,7 +13,7 @@ Not an entry point — run under `dify-docs-write`; the procedure below implemen
 
 ## Procedure (S2 → S6)
 
-Work through in order. **Every variable goes through the trace, explanation, description, and report steps without exception** — do not skip a variable because it seems "obvious".
+Work through in order. **Every variable goes through the trace, explanation, task-analysis, report, and description steps without exception** — do not skip a variable because it seems "obvious".
 
 ### Step 1 (S2): Trace each variable in the codebase
 
