@@ -40,7 +40,11 @@ Cover: what the variable does in practical terms; the specific features that dep
 
 Run the pipeline's task analysis, at the depth its change sets, for every variable a change adds or alters. The operator arrives with a goal rather than a variable name, so the lead text and rows must answer what the goal needs: prerequisites, which file a setting takes effect in, how to confirm it works. For a single variable the analysis is usually short, because its Step 2 explanation already answers most of it. A group that sets up something new, such as a runtime backend or an exporter, needs the whole walk.
 
-### Step 4 (S5): Write the user-facing description
+### Step 4 (S4 contribution): Report
+
+The S4 scope report presents: the plain-language explanations, the task analysis, and the pinned ref. The pipeline's S4 gate applies.
+
+### Step 5 (S5): Write the user-facing description
 
 - Lead with the practical impact, not the technical mechanism
 - Name the features that require the variable (e.g., "Required for the Human Input node")
@@ -48,10 +52,6 @@ Run the pipeline's task analysis, at the depth its change sets, for every variab
 - Mention fallback behavior if any (e.g., "falls back to `CONSOLE_API_URL`")
 - Include relationships with other variables when relevant
 - Apply every rule in `references/style-overrides.md`
-
-### Step 5 (S4 contribution): Report
-
-The S4 scope report presents: the plain-language explanations, the task analysis, the proposed descriptions, and the pinned ref. The pipeline's S4 gate applies.
 
 ### Step 6 (S5/S6): Edit the documentation
 
