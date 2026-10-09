@@ -25,6 +25,10 @@ Every behavior claim is verified in `cli/` on `langgenius/dify` `origin/main`, r
 
 A claim you cannot verify is left out or marked `{/* VERIFY: … */}`, never softened into a fact. For project context (known bugs, what is shipped versus planned), ask the user.
 
+## Reader tasks (S3)
+
+Run the pipeline's task analysis, at the depth the change sets, for each command or concept a change adds or alters. CLI readers arrive with a job rather than a command name: sign in on a server or in a container, run an app from a script, let an agent drive the CLI, recover from an exit code. The questions on the way to that job decide what a page says beyond the CLI's own help: what to set up first, how to confirm it worked, what to do when it fails. They go into the S4 scope report.
+
 ## Three rules that protect users
 
 - The only documented way to authenticate is the browser device flow. `DIFY_TOKEN` and other non-interactive tokens are never shown as working auth, because readers copy auth examples into scripts.
