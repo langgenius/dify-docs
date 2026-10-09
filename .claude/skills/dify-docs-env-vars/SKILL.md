@@ -38,7 +38,7 @@ Cover: what the variable does in practical terms; the specific features that dep
 
 ### Step 3 (S3): Find the operator's task
 
-Run the pipeline's task analysis, at the depth its change sets, for a group of variables that adds or changes something an operator sets up: a new runtime backend, an exporter, limits that now behave differently. The operator arrives with a goal rather than a variable name, so the group's lead text and rows must answer what the goal needs: prerequisites, which file a setting takes effect in, how to confirm it works. A variable that changes one value of a setup the operator already has needs no task analysis, because its Step 2 explanation already answers it.
+Run the pipeline's task analysis, at the depth its change sets, for every variable a change adds or alters. The operator arrives with a goal rather than a variable name, so the lead text and rows must answer what the goal needs: prerequisites, which file a setting takes effect in, how to confirm it works. For a single variable the analysis is usually short, because its Step 2 explanation already answers most of it. A group that sets up something new, such as a runtime backend or an exporter, needs the whole walk.
 
 ### Step 4 (S5): Write the user-facing description
 
@@ -51,7 +51,7 @@ Run the pipeline's task analysis, at the depth its change sets, for a group of v
 
 ### Step 5 (S4 contribution): Report
 
-The S4 scope report presents: the plain-language explanations, the task analysis for groups that have one, the proposed descriptions, and the pinned ref. The pipeline's S4 gate applies.
+The S4 scope report presents: the plain-language explanations, the task analysis, the proposed descriptions, and the pinned ref. The pipeline's S4 gate applies.
 
 ### Step 6 (S5/S6): Edit the documentation
 
