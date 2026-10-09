@@ -1,6 +1,6 @@
 ---
 name: dify-docs-feature-research
-description: "Research a Dify feature before writing or optimizing documentation. Use when starting any doc task that requires understanding a feature's implementation, user pain points, or community feedback. Triggers: 'research this feature', 'investigate the code for', 'what do users say about', 'let's understand how X works before writing', or any documentation task where the current docs are being rewritten or significantly expanded."
+description: "Research a Dify feature before writing or optimizing documentation. Use when starting any doc task that requires understanding a feature's implementation, user pain points, or community feedback. Triggers: 'research this feature', 'investigate the code for', 'what do users say about', 'let's understand how X works before writing', or any documentation task where the current docs are being rewritten, or where they must cover a new capability or a changed behavior."
 ---
 
 # Dify Feature Research
@@ -12,7 +12,7 @@ Pre-writing research that combines codebase analysis with community feedback to 
 When invoked from the `dify-docs-write` pipeline, its S1 supplies the feature, ref, and target pages — consume them instead of re-asking (Before Starting 1–3), and run at the depth the caller sets:
 
 - **full**: everything below.
-- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why; Phase 2 runs when the caller requires it; otherwise skip it and say so in the summary.
+- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why. Phase 2 searches reports on the same features.
 
 Standalone use (no caller): run Before Starting 1–3 and full depth.
 
@@ -73,7 +73,7 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
 
 ### Phase 2: Community Feedback
 
-Search for user-reported problems and questions across these channels:
+Search for reports on the feature, the problem it solves, the behavior it replaces, and its sibling features. A feature that hasn't shipped has no reports of its own, but the problem behind it often has many. Search these channels:
 
 **GitHub Issues** — Run multiple searches with varied terms. Always search dify; also search graphon when the feature is a built-in workflow node, the graph engine, runtime, or model_runtime:
 
