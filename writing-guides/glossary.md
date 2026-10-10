@@ -255,8 +255,8 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル | common.modelProvider.speechToTextModel.key | |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
 | AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
 | Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
@@ -348,7 +348,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | workflow.blocks.trigger-webhook | |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー | workflow.blocks.trigger-plugin | Renamed from "Plugin Trigger" in v1.15.0; internal id unchanged |
-| Knowledge Base | 知识库 | 知識ベース | workflow.blocks.knowledge-index | Knowledge index node |
+| Knowledge Base | 知识库 | ナレッジベース | workflow.blocks.knowledge-index | Knowledge index node |
 
 ### Knowledge Pipeline Tool Names
 
@@ -486,7 +486,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース | dataset.externalKnowledgeBase | |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース | dataset.externalKnowledgeBase | |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID | dataset.externalKnowledgeId | Identifier for a specific knowledge source in an external system |
 | External API | 外部 API | 外部 API | dataset.externalAPI | |
 | Service API | 服务 API | サービスAPI | dataset.serviceApi.title | |
