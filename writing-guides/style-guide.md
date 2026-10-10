@@ -222,7 +222,7 @@ Where a Community Edition capability ends and Dify Enterprise extends it, add a 
 
 **Repetitive structures.** Vary sentence patterns across related sections to avoid a mechanical feel.
 
-**Narrating absent infrastructure.** Public text instructs; it never announces what internal automation or process does not exist ("there is no automatic translation pipeline", "we removed X"). Absence claims read as a confession and tell outsiders about operations they never asked about. State the positive behavior instead: "every change ships all three languages; translate in the same pass." Removal narratives belong in PR descriptions, not in READMEs, agent instructions, or docs.
+**Narrating absent infrastructure.** Public text instructs; it never announces what internal automation or process does not exist ("there is no automatic translation pipeline", "we removed X"). Absence claims read as a confession and tell outsiders about operations they never asked about. State the positive behavior instead: "every change ships all three languages in the same PR." Removal narratives belong in PR descriptions, not in READMEs, agent instructions, or docs.
 
 **Vague cross-references.** Don't link to another page unless the reader gains something by clicking. If the current page already provides sufficient context, the link is noise. When linking, never write a bare "see [X]" — give the link a payoff: "see [X] for details" when the surrounding context already makes clear what those details are, or name what the reader will find ("see [X] for the full flag table") when it doesn't. Don't gate a link or section on who the reader is ("If you've used X, see…"); state the payoff so any reader can opt in.
 
