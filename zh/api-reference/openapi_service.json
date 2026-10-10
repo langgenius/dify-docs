@@ -2614,6 +2614,11 @@
             "description": "知识库名称。",
             "type": "string"
           },
+          "doc_metadata": {
+            "description": "源文档的元数据值，以元数据字段名称为键。知识库启用内置字段时，也包含内置字段。文档没有元数据时为 `null`。\n\n外部知识库的记录中，该字段仅在 Chatflow 应用中有值，包含外部知识 API 返回的记录 `metadata`，以及 Dify 添加的 `score`、`title`、`dataset_id` 和 `dataset_name`。其他类型的应用中，外部记录的该字段为 `null`。",
+            "nullable": true,
+            "type": "object"
+          },
           "document_id": {
             "description": "文档 ID。",
             "format": "uuid",
@@ -2622,6 +2627,41 @@
           "document_name": {
             "description": "文档名称。",
             "type": "string"
+          },
+          "files": {
+            "description": "检索到的分段中与查询匹配的图片。仅 Chatflow 应用返回，且仅在通过图片命中时返回；其他情况为 `null`，分段按文本命中时也是如此。",
+            "items": {
+              "properties": {
+                "extension": {
+                  "description": "文件扩展名，包含开头的点（例如 `.png`）。",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "上传图片文件的 ID。",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "mime_type": {
+                  "description": "文件的 MIME 类型。",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "文件名。",
+                  "type": "string"
+                },
+                "size": {
+                  "description": "文件大小（字节）。",
+                  "type": "integer"
+                },
+                "source_url": {
+                  "description": "图片的签名预览 URL，有效期由 `FILES_ACCESS_TIMEOUT` [环境变量](/zh/self-host/deploy/configuration/environments#files_access_timeout) 设定，默认为 300 秒。",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
           },
           "hit_count": {
             "description": "该块被命中的次数。",
@@ -2661,6 +2701,11 @@
           },
           "summary": {
             "description": "块内容的摘要。",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "外部知识库记录的标题，与 `document_name` 的值相同。仅在旧版 Agent 应用从外部知识库检索到记录时返回，其他情况下为 `null`。",
             "nullable": true,
             "type": "string"
           },
@@ -7204,6 +7249,10 @@
                             "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\" \"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\"",
                             "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb",
                             "dataset_name": "iPhone",
+                            "doc_metadata": {
+                              "category": "Smartphones",
+                              "release_year": 2021
+                            },
                             "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00",
                             "document_name": "iPhone List",
                             "position": 1,
@@ -8464,7 +8513,7 @@
         "operationId": "listDatasets",
         "parameters": [
           {
-            "description": "页码。",
+            "description": "页码。小于 `1` 的值按 `1` 处理。",
             "in": "query",
             "name": "page",
             "schema": {
@@ -8473,7 +8522,7 @@
             }
           },
           {
-            "description": "每页条目数。服务器上限为 `100`。",
+            "description": "每页条目数。服务器上限为 `100`，小于 `1` 的值按 `1` 处理。",
             "in": "query",
             "name": "limit",
             "schema": {
@@ -10732,7 +10781,7 @@
             }
           },
           {
-            "description": "页码。",
+            "description": "页码。小于 `1` 的值按 `1` 处理。",
             "in": "query",
             "name": "page",
             "schema": {
@@ -10741,7 +10790,7 @@
             }
           },
           {
-            "description": "每页的项目数量。服务器上限为 `100`。",
+            "description": "每页的项目数量。服务器上限为 `100`，小于 `1` 的值按 `1` 处理。",
             "in": "query",
             "name": "limit",
             "schema": {
@@ -11169,23 +11218,6 @@
               }
             },
             "description": "文档元数据更新成功。"
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "invalid_param": {
-                    "summary": "invalid_param",
-                    "value": {
-                      "code": "invalid_param",
-                      "message": "Another document metadata operation is running, please wait a moment.",
-                      "status": 400
-                    }
-                  }
-                }
-              }
-            },
-            "description": "`invalid_param` : 本次请求中的文档已有另一个元数据操作正在进行。"
           },
           "403": {
             "content": {
@@ -15703,18 +15735,26 @@
             "content": {
               "application/json": {
                 "examples": {
-                  "not_found": {
-                    "summary": "not_found",
+                  "not_found_1": {
+                    "summary": "not_found (knowledge base)",
                     "value": {
                       "code": "not_found",
                       "message": "Dataset not found.",
+                      "status": 404
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found (metadata)",
+                    "value": {
+                      "code": "not_found",
+                      "message": "Metadata not found.",
                       "status": 404
                     }
                   }
                 }
               }
             },
-            "description": "`not_found` : 未找到知识库。"
+            "description": "- `not_found` : 未找到知识库。\n- `not_found` : `metadata_id` 指定的元数据字段在该知识库中不存在。"
           }
         },
         "summary": "删除元数据字段",
@@ -15862,18 +15902,26 @@
             "content": {
               "application/json": {
                 "examples": {
-                  "not_found": {
-                    "summary": "not_found",
+                  "not_found_1": {
+                    "summary": "not_found (knowledge base)",
                     "value": {
                       "code": "not_found",
                       "message": "Dataset not found.",
+                      "status": 404
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found (metadata)",
+                    "value": {
+                      "code": "not_found",
+                      "message": "Metadata not found.",
                       "status": 404
                     }
                   }
                 }
               }
             },
-            "description": "`not_found` : 未找到知识库。"
+            "description": "- `not_found` : 未找到知识库。\n- `not_found` : `metadata_id` 指定的元数据字段在该知识库中不存在。"
           }
         },
         "summary": "更新元数据字段",
