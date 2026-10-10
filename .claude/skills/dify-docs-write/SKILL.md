@@ -91,7 +91,7 @@ Translate from the English file on disk as it stands, not from the draft in the 
 
 ## Check the Translations (S7, continued)
 
-Run `dify-docs-translation-test` on the zh and ja pages, then `dify-docs-format-check`, `dify-docs-terminology-check`, and the pack's S7 verifiers on them, fixing and re-running until each is clean. On a partial edit the test gets the changed sections named. "Needs retranslation" means the unit is redone whole. An English correction accepted here goes through the editor test and the owner as a changed sentence, then back to S6, so the zh and ja pages are judged as they will ship.
+Run `dify-docs-translation-test` on the zh and ja pages, then `dify-docs-format-check`, `dify-docs-terminology-check`, and the pack's S7 verifiers on them, fixing and re-running until each is clean. On a partial edit the test gets the changed sections named. "Needs retranslation" means the unit is redone whole. An English correction accepted here goes back through the English pass except the reader test, which reads whole pages: the editor test on the changed sentences, step 3, then the owner's freeze. It then returns to S6, so the zh and ja pages are judged as they will ship.
 
 ## Close (S8)
 
