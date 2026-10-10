@@ -373,6 +373,8 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Error Handling | 异常处理 | 例外処理 |
+| Fail Branch | 异常分支 | 例外分岐 |
 
 ### Collaboration
 
@@ -435,6 +437,7 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
+| Output Routes | 输出路由 | 出力ルート |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 

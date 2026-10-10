@@ -385,6 +385,8 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
+| Error Handling | 异常处理 | 例外処理 | workflow.nodes.common.errorHandle.title | Node panel setting on nodes that support it |
+| Fail Branch | 异常分支 | 例外分岐 | workflow.nodes.common.errorHandle.failBranch.title | Error Handling option; also labels the branch on the node |
 
 ### Collaboration
 
@@ -447,6 +449,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
 | Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
+| Output Routes | 输出路由 | 出力ルート | workflow.nodes.agent.outputRoutes.title | New Agent surface |
 | Query Variable | 查询变量 | 検索変数 | workflow.nodes.knowledgeRetrieval.queryVariable | Knowledge retrieval node config |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | Knowledge retrieval node config |
 
