@@ -17,5 +17,5 @@ Chinese and Japanese documentation is translated alongside each English change â
 ## Translation workflow
 
 1. Make the English change.
-2. Update the zh and ja counterparts in the same pass: read `formatting-zh.md` / `formatting-ja.md` and `writing-guides/glossary.md` first; check codebase i18n strings for UI labels; keep the translation Note at the top of zh/ja pages.
+2. Once the English is final, update the zh and ja counterparts in the same PR: read `formatting-zh.md` / `formatting-ja.md` and `writing-guides/glossary.md` first; check codebase i18n strings for UI labels; keep the translation Note at the top of zh/ja pages.
 3. If `docs.json` structure changed, mirror the change in the zh and ja navigation sections.

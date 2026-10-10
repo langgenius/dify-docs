@@ -1,6 +1,6 @@
 ---
 name: dify-docs-feature-research
-description: "Research a Dify feature before writing or optimizing documentation. Use when starting any doc task that requires understanding a feature's implementation, user pain points, or community feedback. Triggers: 'research this feature', 'investigate the code for', 'what do users say about', 'let's understand how X works before writing', or any documentation task where the current docs are being rewritten, or where they must cover a new capability or a changed behavior."
+description: "Research a Dify feature before writing or optimizing documentation. Use when starting any doc task that requires understanding a feature's implementation, user pain points, or community feedback. Triggers: 'research this feature', 'investigate the code for', 'what do users say about', 'let's understand how X works before writing', or any documentation task where the current docs are being rewritten, or where they must cover a new capability, a changed behavior, or a gap the docs leave."
 ---
 
 # Dify Feature Research
@@ -12,7 +12,7 @@ Pre-writing research that combines codebase analysis with community feedback to 
 When invoked from the `dify-docs-write` pipeline, its S1 supplies the feature, ref, and target pages — consume them instead of re-asking (Before Starting 1–3), and run at the depth the caller sets:
 
 - **full**: everything below.
-- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why. Phase 2 searches reports on the same features.
+- **targeted**: Phase 1 scoped to the surfaces the caller names — the coverage gate still applies, with out-of-scope surfaces recorded as `N/A` plus why. Phase 2 runs as written, for the feature behind those surfaces.
 
 Standalone use (no caller): run Before Starting 1–3 and full depth.
 
@@ -148,11 +148,10 @@ Combine both phases into a structured research record. It is research output, no
 - [What to explicitly omit and why (bugs, unreleased features, UI-discoverable mechanics)]
 ```
 
-Present the record to the user. STOP — do not start the writing phase until the user reviews the findings and confirms the scope. Under `dify-docs-write` with no reviewer in the session, that skill's rule applies: the record goes into the PR description and the run continues.
+Present the record to the user and STOP before writing until they confirm the scope. Under `dify-docs-write`, the pipeline's S4 stop is this review: the record feeds the research summary and task analysis shown there, and with no reviewer in the session that skill's rule applies.
 
 ## Important
 
-- This skill produces research only. Do not start writing documentation until the user reviews the findings and confirms the scope; under `dify-docs-write` with no reviewer in the session, that skill's rule applies.
 - Research findings exist to make the page's claims accurate, not to be exhaustively included. When recommending scope, apply the style guide's "Repeating the UI" filter: UI-discoverable mechanics stay out of the page unless especially consequential.
 - When scope is confirmed and writing begins, return to the `dify-docs-write` pipeline — it loads the doc-type rule pack and the writing guides. This skill carries none of the writing rules.
 - Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.

@@ -16,7 +16,7 @@ A task is something the reader wants to do, phrased so "I want to ___" reads nat
 
 ## Depths
 
-**Full (new capability, new page, rewrite, pre-release feature)**
+**Full (new capability, a gap that is a whole task, new page, rewrite, pre-release feature)**
 
 1. Build the task list from the persona's journeys, with the S2 research as evidence; cluster by journey. Cross-check against S2's community pain themes: each theme maps to a task, or is listed as explicitly out of scope.
 2. Question walk — per task, walk its steps in the product and, at each step, look for four things:
@@ -26,9 +26,9 @@ A task is something the reader wants to do, phrased so "I want to ___" reads nat
    - **success**: how does the reader confirm it worked?
 3. Evidence check: answer immediately whatever S2 already answered, citing the evidence. Everything else is OPEN.
 
-**Delta (changed behavior, or a gap filled on a page whose product hasn't changed)**
+**Delta (changed behavior, or a gap inside a task on a page whose product hasn't changed)**
 
-List only the tasks the change or the gap affects. For a change, state what changes for each (steps, prereqs, limits, or outcome) and apply the four prompts to whatever changed, whether a step, a prerequisite, a limit, or the outcome. For a gap, apply them to the steps the docs don't yet cover. Either way, cross-check S2's community pain themes as in Full step 1.
+List only the tasks the change or the gap affects. For a change, state what changes for each task (its steps, prerequisites, limits, or outcome) and apply the four prompts to that part. For a gap, apply them to the steps the docs don't yet cover. Either way, cross-check S2's community pain themes as in Full step 1.
 
 **Three-question (correction)**
 

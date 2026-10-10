@@ -85,4 +85,4 @@ Each cross-cutting fact lives on one page; everywhere else links it with a short
 
 ## Checks (S7)
 
-After the pipeline's own checks: `python3 tools/check-links.py --internal` must print `Broken links: 0` and `Broken anchors: 0` (a `<Badge>` in a heading joins the anchor slug, so `## Switch Your Workspace <Badge color="blue">Cloud</Badge>` is `#switch-your-workspace-cloud`); and confirm against the ownership table that no owned fact is re-explained on the changed page.
+In each check pass, after the format and terminology checks: `python3 tools/check-links.py --internal` must print `Broken links: 0` and `Broken anchors: 0` (a `<Badge>` in a heading joins the anchor slug, so `## Switch Your Workspace <Badge color="blue">Cloud</Badge>` is `#switch-your-workspace-cloud`); and confirm against the ownership table that no owned fact is re-explained on the changed page.
