@@ -245,8 +245,8 @@
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
@@ -338,7 +338,7 @@
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー |
-| Knowledge Base | 知识库 | 知識ベース |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Pipeline Tool Names
 
@@ -373,6 +373,8 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Error Handling | 异常处理 | 例外処理 |
+| Fail Branch | 异常分支 | 例外分岐 |
 
 ### Collaboration
 
@@ -435,6 +437,7 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
+| Output Routes | 输出路由 | 出力ルート |
 | Query Variable | 查询变量 | 検索変数 |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 
@@ -474,7 +477,7 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
 | External API | 外部 API | 外部 API |
 | Service API | 服务 API | サービスAPI |
