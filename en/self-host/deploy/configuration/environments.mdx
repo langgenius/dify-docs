@@ -611,6 +611,7 @@ Separate S3-compatible storage for archiving workflow run logs. The `archive-wor
 | `ARCHIVE_STORAGE_ACCESS_KEY` | (empty) | Access key. |
 | `ARCHIVE_STORAGE_SECRET_KEY` | (empty) | Secret key. |
 | `ARCHIVE_STORAGE_REGION` | `auto` | Storage region. |
+| `ARCHIVE_STORAGE_ADDRESS_STYLE` | `path` | S3 addressing style for archive storage, which sets where the bucket name goes in request URLs. Switch to `virtual` if your provider rejects path-style requests. <ul><li>`path` puts it in the path (`https://<endpoint>/<bucket>/...`)</li><li>`virtual` in the hostname (`https://<bucket>.<endpoint>/...`)</li><li>`auto` lets the S3 client decide.</li></ul>Applies to both the archive and export buckets, including the download links for CSV exports. <br/><br/>Set separately from `S3_ADDRESS_STYLE`, which has a different default. |
 
 ### Vector Database Configuration
 
@@ -1412,9 +1413,34 @@ Set to `false` to hide it and fall back to the classic Agent node. Replaces `ENA
 
 Default: `50`
 
-Maximum size in MB for a skill package (`.zip` or `.skill`), whether uploaded to an agent as an embedded skill or imported into the skill library. Larger packages are rejected with a size error.
+Maximum size in MB for a skill package (`.zip` or `.skill`), whether uploaded to an agent or imported into the skill library. Larger packages are rejected with a size error.
 
-A skill's unpacked content is separately capped at 200 MB and 5000 files. For library imports, folders also count toward the 5000 limit. This variable doesn't change either limit. If you raise it above 100, also raise `NGINX_CLIENT_MAX_BODY_SIZE` to match; otherwise Nginx rejects the upload with a 413 error.
+If you raise it above 100, also raise `NGINX_CLIENT_MAX_BODY_SIZE` to match; otherwise Nginx rejects the upload with a 413 error.
+
+This variable limits only the packed file. What's inside the package has its own limits, set in bytes:
+
+| Variable | Default | Description |
+|---|---|---|
+| `SKILL_PACKAGE_MAX_UNCOMPRESSED_BYTES` | `209715200` | Maximum total unpacked size of a skill package in bytes (200 MB). Packages over it are rejected with `archive_too_large` (uploads to an agent) or `skill_too_large` (skill library). |
+| `SKILL_PACKAGE_MAX_ENTRIES` | `5000` | Maximum number of entries in a skill package. Folders count, for uploads to an agent as well as library imports. Packages over it are rejected with `too_many_entries` or `too_many_files`. |
+| `SKILL_PACKAGE_MAX_SKILL_MD_BYTES` | `1048576` | Maximum size in bytes (1 MB) of the package's `SKILL.md`, rejected with `skill_md_too_large`.<br/><br/>Applies to skills uploaded to an agent and to skills bundled in app packages, not to skill library imports. |
+
+### Agent and App Package Limits
+
+These limits apply to every app package (`.ifpkg`), not only to agents: every app type exports to this format by default. They're checked on export and on import, whether the package is uploaded as a file or imported from a URL. A package over any of them fails the whole export or import until you raise the limit it exceeds.
+
+For package uploads above 100 MB, also raise `NGINX_CLIENT_MAX_BODY_SIZE`; otherwise Nginx rejects them first.
+
+Each skill bundled in a package must also fit the [skill limits](#upload_skill_file_size_limit):
+
+- On import, a skill over `UPLOAD_SKILL_FILE_SIZE_LIMIT` fails the whole import. A skill over a `SKILL_PACKAGE_*` limit is skipped instead, and the import finishes with a warning. To bring that skill in, raise the limit it exceeds and import the package again.
+- On export, a skill over a `SKILL_PACKAGE_*` limit fails the whole export until you raise that limit.
+
+| Variable | Default | Description |
+|---|---|---|
+| `AGENT_PACKAGE_MAX_BYTES` | `536870912` | Maximum package size in bytes (512 MB), checked both packed and unpacked. The unpacked size includes the contents of bundled skills.<br/><br/>Raise it when apps or agents with large bundled files or skills fail to export or import. |
+| `AGENT_PACKAGE_MAX_MANIFEST_BYTES` | `5242880` | Maximum size in bytes (5 MB) of each YAML file in a package: the manifest and, in an agent package, the agent's configuration.<br/><br/>Bundled skills and files count toward `AGENT_PACKAGE_MAX_BYTES` instead, so raise this one only if an agent's configuration alone outgrows 5 MB.<br/><br/>Doesn't apply to an app's DSL, which keeps its fixed 10 MB limit. |
+| `AGENT_PACKAGE_MAX_ENTRIES` | `5000` | Maximum number of items in a package: one per bundled skill, file, and icon, plus a few fixed entries.<br/><br/>Raise it if an app or agent with thousands of bundled skills and files fails to export or import. |
 
 ### AGENT_BACKEND_BASE_URL
 
@@ -1434,7 +1460,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | Batches consecutive model text deltas before writing them to Redis and streaming them. Keep enabled to reduce Redis writes and event counts.<br/><br/>Set to `false` to stream each delta separately. Tool calls and other non-text events remain unchanged and in order. |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | Target interval in milliseconds for publishing batched text deltas. Lower it for more frequent text updates; raise it for fewer, larger batches.<br/><br/>This is not a strict timing limit. Batches can be published sooner when they reach `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS`. Minimum: 1. To disable batching, set `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` to `false`. |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | Character threshold for publishing a text-delta batch before the flush interval elapses. Lower it to publish smaller batches sooner.<br/><br/>A batch can exceed this threshold because deltas are added whole. Minimum: 1. |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so values above an hour only take effect on the `local` backend. |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`. Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend, the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so E2B runs stay capped at one hour. On the `local` backend, values above an hour take effect: to allow longer runs, raise this and both API-side limits. |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
@@ -1451,7 +1477,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which still works as a legacy alias. |
 | `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | (empty) | Optional bearer token securing the agent backend's calls to the sandbox; Compose passes the same value to both services. <br/><br/>Replaces the former `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`, which still works as a legacy alias. |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | Host port at which the middleware stack for [source-code deployments](/en/self-host/deploy/advanced-deployments/local-source-code) publishes the agent sandbox, so an agent backend run from source reaches it at `http://localhost:5004`. Set it in that stack's `middleware.env`; if you change it, point `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` in the agent backend's `.env` at the new port.<br/><br/>Middleware stack only: the full Compose stack keeps the sandbox on an internal network. |
-| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. |
+| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. Keep the default with the bundled `local` sandbox.<br/><br/>On the `openshell` backend, sandboxes can't resolve Compose service names. Set this in `docker/.env` to an address they can reach that routes to the agent backend's `/agent-stub` path, and publish or proxy the agent backend's port 5050. |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | Dify API address the sandboxed agent uses for file transfers. Keep the default on Docker Compose. A remote sandbox backend needs your publicly reachable Dify address here. |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | How long the API waits when fetching a file from an agent's sandbox before failing the transfer. Keep it above the agent-side `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`. |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | How long the API waits on agent backend calls that transfer a home snapshot: capturing or deleting one, and starting a run that restores one.<br/><br/>If applying a build or starting runs fails for agents with large home environments, increase this. |
@@ -1459,14 +1485,26 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | Maximum size in MiB for one file the sandboxed agent uploads back to Dify, such as the files it generates for a reply. |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.13 or later; on older kernels the sandbox logs a warning and runs without it. Set in `docker/envs/core-services/local-sandbox.env`; `.env` values don't reach the sandbox container. |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys. The agent's internal bearer token is always masked. |
+| `LOGFIRE_CONSOLE` | `false` | Set to `true` while debugging to have the agent backend print its own request, outbound HTTP, and Redis spans to its container log. Unrelated to [trajectory export](#agent-trajectory-export), which never prints there.<br/><br/>Since 1.18.0, agent-run spans no longer appear in this log. To follow agent runs, use trajectory export. |
 
 ### DIFY_AGENT_RUNTIME_BACKEND
 
 Default: `local`
 
-Selects where agent sandboxes run. The default `local` uses the bundled sandbox container. Set to `e2b` to run each agent's sandbox as an [E2B](https://e2b.dev) cloud VM instead, for stronger isolation than the bundled container provides.
+Selects where agent sandboxes run:
 
-The `e2b` backend reads its own group of variables, and the `docker/docker-compose.e2b.yaml` overlay adjusts the Compose stack for it:
+- `local`: the bundled sandbox container.
+- `e2b`: an [E2B](https://e2b.dev) cloud VM for each agent's sandbox, for stronger isolation than the bundled container provides.
+- `openshell`: an NVIDIA OpenShell gateway you operate, so sandboxes run on your own infrastructure.
+
+Set this and the two callback addresses, `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, in `docker/.env`. Compose passes these three to the agent backend from there, so values in `envs/core-services/dify-agent.env` have no effect.
+
+Each remote backend reads its own group of variables:
+
+<AccordionGroup>
+<Accordion title="E2B">
+
+The `docker/docker-compose.e2b.yaml` overlay adjusts the Compose stack for this backend.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1475,6 +1513,86 @@ The `e2b` backend reads its own group of variables, and the `docker/docker-compo
 | `EXPOSE_AGENT_BACKEND_PORT` | `15050` | Host port at which the `docker-compose.e2b.yaml` overlay publishes the agent backend (container port `5050`). Change it when 15050 is already taken on the host. |
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | How long one E2B sandbox stays active, spanning a complete agent run. 3600 is also the hard ceiling: higher values are rejected. <br/><br/>Keep it at or above `DIFY_AGENT_RUN_TIMEOUT_SECONDS`. If the sandbox's active time is shorter than the run's allowed time, runs lose their sandbox while still within their limit. |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | Port the sandbox control service listens on inside the E2B VM. |
+
+</Accordion>
+
+<Accordion title="OpenShell">
+
+Before switching to `openshell`, have these in place:
+
+- An OpenShell gateway, version 0.0.106 or later, reachable from the `agent_backend` container.
+- Gateway credentials: a bearer token, an mTLS client certificate pair, or both. Compose ships no certificate mount, so mount the files into `agent_backend` yourself, read-only and readable by UID 1001.
+- A runtime image that the gateway can start sandboxes from.
+- A shared volume for the persistent files agents keep across conversations, created outside Compose so that `docker compose down -v` can't delete it.
+- A network path from the sandboxes back to Dify:
+  - Callback addresses the sandboxes can reach.
+  - A route to the agent backend's `/agent-stub` path. The base Compose file doesn't publish the agent backend's port 5050, and that port also serves the API that starts agent runs, so expose only `/agent-stub`, for example through a reverse proxy.
+
+To switch to OpenShell:
+
+1. See the [OpenShell setup guide](https://github.com/langgenius/dify/blob/1.18.0/dify-agent/docs/dify-agent/guide/openshell.md) to set up the gateway and everything above: building the runtime image, initializing the volume, mounting certificates, Kubernetes setup, and a smoke test.
+2. In `docker/.env`, set `DIFY_AGENT_RUNTIME_BACKEND` to `openshell` and fill in the variables below.
+3. Recreate the agent backend with `docker compose up -d`. It refuses to start if a required value is missing or malformed.
+4. Run an agent to confirm the setup. The agent backend first contacts the gateway when an agent runs, or when you click **Apply** in an Agent's build chat, so a wrong endpoint, credential, or image shows up only then, as a failed run or a failed apply.
+
+Sandboxes keep running on the gateway after a run ends, until Dify removes them, so plan gateway capacity for idle sandboxes as well as active ones.
+
+The bundled sandbox's egress proxy doesn't cover OpenShell sandboxes. To restrict their network access, set `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW`.
+
+| Variable | Default | Description |
+|---|---|---|
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. Address of the OpenShell gateway as `host:port`, with no scheme.<br/><br/>It must be reachable from inside the `agent_backend` container. For a gateway on the Docker host, use `host.docker.internal:<port>` rather than `localhost`, and on Linux also map that name to the host with `extra_hosts`.<br/><br/>Example: `gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | (empty) | OIDC bearer token the agent backend presents to the gateway. Use it, the mTLS client certificate pair, or both, to match how your gateway authenticates.<br/><br/>Read once at startup: after rotating it, recreate the agent backend. |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | (empty) | Path inside the `agent_backend` container to the CA certificate that signed the gateway's certificate. Ignored when `DIFY_AGENT_OPENSHELL_INSECURE` is `true`. |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | (empty) | Path inside the `agent_backend` container to the mTLS client certificate. Set it together with `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` or leave both empty; with only one set, the agent backend won't start. |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | (empty) | Path inside the `agent_backend` container to the mTLS client private key. Set it together with `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` or leave both empty; with only one set, the agent backend won't start. |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | Connects to the gateway over plaintext gRPC instead of TLS, without using the TLS paths. A bearer token, if set, is still sent over that connection.<br/><br/>Only for local development against a plaintext gateway. |
+| `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | OpenShell workspace in which the agent backend creates and manages sandboxes. This is a namespace on the gateway, not a Dify workspace. |
+| `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | Container image the gateway starts for each sandbox. The default is the tag that the build command in the OpenShell setup guide produces.<br/><br/>The image must be available to the gateway's compute driver, not only to the Docker daemon running Dify: load it into the gateway's Docker daemon, or push it to a registry the gateway pulls from and use that reference.<br/><br/>Set it explicitly. If no env file sets it, the agent backend falls back to `langgenius/dify-agent-local-sandbox:latest`, which may be an older image that can't start under OpenShell. |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | (empty) | Required for the `openshell` backend. JSON the gateway's compute driver applies to every sandbox; it must mount the shared volume at `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`. Its shape depends on the driver.<br/><br/>Invalid JSON or an empty object stops the agent backend from starting. Dify doesn't check the mounts themselves, so the agent backend starts even if the volume is mounted at another path. Double-check the target.<br/><br/>Example for the Docker driver: `{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
+| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | Where the shared volume is mounted inside each sandbox; must match the mount target in `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG`. Agents' persistent files are saved here each time you click **Apply** in an Agent's build chat.<br/><br/>Must be an absolute path, or the agent backend won't start. |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. Shared secret that authenticates the agent backend to the command service it starts inside each sandbox. Set any random string.<br/><br/>Separate from `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`, which secures the bundled sandbox. |
+| `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | (empty) | Comma-separated `host:port` endpoints that sandboxes may connect to, with no scheme or path. Empty sends no network policy, so egress follows the gateway's default.<br/><br/>When set, sandboxes reach only the listed endpoints, so package installs and web access stop working unless their hosts are listed. Include the hosts of `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, or agent runs can't call back into Dify.<br/><br/>A malformed entry stops the agent backend from starting.<br/><br/>Example: `agent.example.com:443,dify.example.com:443` |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | Loopback port the command service listens on inside each sandbox. The agent backend reaches it through the gateway, so no port needs opening. Change it only if your runtime image already uses 5004. |
+| `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | How long in seconds to wait for a new or restarted sandbox to become ready. If agent runs fail while sandboxes are still starting on a busy gateway, raise it. |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Time limit in seconds for each setup command the agent backend runs in a sandbox through the gateway, such as copying in an agent's persistent files or starting the command service. Doesn't limit the commands the agent itself runs.<br/><br/>If new sessions of agents with large persistent files fail to start, raise it. |
+
+</Accordion>
+</AccordionGroup>
+
+### Agent Trajectory Export
+
+To see what your agents did in a tracing backend you already run, turn on trajectory export. The agent backend then sends a trace of each agent run, with its model requests and tool calls, to an OpenTelemetry collector over OTLP/HTTP. One collector receives the runs of every workspace on the deployment.
+
+Every span carries the IDs of its workspace, app, agent, end user, conversation, workflow run, and node, so you can narrow traces to one app or one conversation by attributes such as `dify.app_id` or `dify.conversation.id`. These IDs are exported even with content export off.
+
+Trajectory export is separate from [LLMOps Trace Delivery](#llmops-trace-delivery), which app builders set up per app with providers such as Langfuse, and from the [OpenTelemetry instrumentation](#otlp-/-opentelemetry-configuration) of the API and Worker. Their settings don't affect it.
+
+To turn it on:
+
+1. In `docker/.env`, set `DIFY_AGENT_TRAJECTORY_ENABLED` to `true` and `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` to your collector's traces URL. Put any credentials in `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS`.
+
+    These variables have no effect in `shared.env`, which the agent backend doesn't read.
+
+2. Recreate the agent backend with `docker compose up -d`. If a value is invalid, the agent backend won't start, and agent runs fail until you fix it.
+3. Run an agent on a task that calls a tool, then look in your tracing backend for a tool-call span under the service name `dify-agent-trajectory`.
+
+<Warning>
+With `DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` set to `true`, the collector receives prompts, system instructions, model replies, and tool arguments and results from every workspace. Restrict access to the collector as you would to the conversations themselves.
+</Warning>
+
+| Variable | Default | Description |
+|---|---|---|
+| `DIFY_AGENT_TRAJECTORY_ENABLED` | `false` | Turns trajectory export on. Requires `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT`; with `true` and no endpoint, the agent backend won't start. |
+| `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` | (empty) | Full URL of your collector's OTLP/HTTP traces endpoint, including the path; it's used as is. gRPC endpoints aren't supported.<br/><br/>Must use `http` or `https`, with no credentials and no `#` fragment, or the agent backend won't start. Put credentials in `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` instead.<br/><br/>Example: `https://collector.example.com/v1/traces` |
+| `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` | `{}` | Headers sent with every export, as a JSON object, such as `{"Authorization":"Bearer <token>"}`. Use it for collector credentials.<br/><br/>A value that isn't JSON, such as `Authorization=Bearer <token>`, stops the agent backend from starting. |
+| `DIFY_AGENT_TRAJECTORY_SERVICE_NAME` | `dify-agent-trajectory` | The `service.name` set on every exported span, to filter on in your tracing backend. Can't be empty. |
+| `DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` | `false` | Set to `true` to add conversation content to the spans: prompts, system instructions, model replies, and tool arguments and results. Binary content is never exported.<br/><br/>Without it, traces show each run's steps and timing but not what was said. Turn it on when you need to see why an agent answered or acted as it did, and only if your collector may hold every workspace's conversations. |
+| `DIFY_AGENT_TRAJECTORY_TRACE_CONTEXT_MODE` | `isolated` | How agent spans relate to other traces. `isolated` starts a new trace for each agent run. `shared` makes agent spans join the current trace and follow its sampling decision.<br/><br/>Keep `isolated` unless the agent backend's own telemetry also goes to this tracing backend, which happens only if you've set `LOGFIRE_TOKEN` or the standard `OTEL_EXPORTER_OTLP_*` variables for it. Otherwise `shared` can leave traces with missing root spans. |
+| `DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE` | `2048` | Maximum number of spans waiting to be exported. If spans go missing under heavy load, raise it. |
+| `DIFY_AGENT_TRAJECTORY_MAX_EXPORT_BATCH_SIZE` | `512` | Maximum number of spans per export request. Must not exceed `DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE`, or the agent backend won't start. |
+| `DIFY_AGENT_TRAJECTORY_SCHEDULE_DELAY_MS` | `5000` | Delay in milliseconds between batch exports. |
+| `DIFY_AGENT_TRAJECTORY_EXPORT_TIMEOUT_MS` | `5000` | Time limit in milliseconds for exporting one batch. Doesn't change the timeout of each HTTP request to the collector, which is fixed at 5 seconds. |
 
 ## Database Service
 

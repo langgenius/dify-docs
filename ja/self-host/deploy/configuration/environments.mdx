@@ -609,6 +609,7 @@ ClickZetta Volume は、ベクトルデータベースセクションで設定�
 | `ARCHIVE_STORAGE_ACCESS_KEY` | （空） | Access key。 |
 | `ARCHIVE_STORAGE_SECRET_KEY` | （空） | Secret key。 |
 | `ARCHIVE_STORAGE_REGION` | `auto` | ストレージリージョン。 |
+| `ARCHIVE_STORAGE_ADDRESS_STYLE` | `path` | アーカイブストレージの S3 アドレッシングスタイル。リクエスト URL のどこにバケット名を置くかを決めます。プロバイダーがパス形式のリクエストを拒否する場合は、`virtual` に切り替えてください。<ul><li>`path` はパスに置く（`https://<endpoint>/<bucket>/...`）。</li><li>`virtual` はホスト名に置く（`https://<bucket>.<endpoint>/...`）。</li><li>`auto` は S3 クライアントに判断を任せる。</li></ul>アーカイブ用とエクスポート用の両方のバケットに適用され、CSV エクスポートのダウンロードリンクも対象です。<br/><br/>`S3_ADDRESS_STYLE` とは別に設定し、デフォルトも異なります。 |
 
 ### ベクトルデータベース設定
 
@@ -1404,9 +1405,34 @@ Dify API が Agent バックエンドの実行 API を呼び出す際に提示�
 
 デフォルト値：`50`
 
-スキルパッケージ（`.zip` または `.skill`）の最大サイズを MB 単位で指定します。Agent に埋め込みスキルとしてアップロードする場合と、スキルライブラリへインポートする場合の両方に適用されます。上限を超えるパッケージはサイズエラーで拒否されます。
+スキルパッケージ（`.zip` または `.skill`）の最大サイズを MB 単位で指定します。Agent にアップロードする場合と、スキルライブラリへインポートする場合の両方に適用されます。上限を超えるパッケージはサイズエラーで拒否されます。
 
-展開後の内容には、200 MB と 5000 ファイルという別の上限があります。スキルライブラリへインポートする場合、フォルダーも 5000 件の上限に含まれます。この環境変数では、どちらの上限も変更できません。100 より大きくする場合は、`NGINX_CLIENT_MAX_BODY_SIZE` も同じ値以上に設定してください。設定しないと、Nginx が 413 エラーでアップロードを拒否します。
+100 より大きくする場合は、`NGINX_CLIENT_MAX_BODY_SIZE` も同じ値以上に設定してください。設定しないと、Nginx が 413 エラーでアップロードを拒否します。
+
+この環境変数が制限するのは、パッケージファイル自体のサイズだけです。パッケージの中身には、バイト単位で設定する別の上限があります：
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `SKILL_PACKAGE_MAX_UNCOMPRESSED_BYTES` | `209715200` | 展開したスキルパッケージの合計サイズの上限（バイト単位、200 MB）。超過したパッケージは拒否され、Agent へのアップロードでは `archive_too_large`、スキルライブラリでは `skill_too_large` が返る。 |
+| `SKILL_PACKAGE_MAX_ENTRIES` | `5000` | スキルパッケージ内のエントリ数の上限。フォルダーもエントリとして数えられる。Agent へのアップロードとライブラリへのインポートのどちらでも同じ。超過したパッケージは `too_many_entries` または `too_many_files` で拒否される。 |
+| `SKILL_PACKAGE_MAX_SKILL_MD_BYTES` | `1048576` | パッケージ内の `SKILL.md` のサイズ上限（バイト単位、1 MB）。超過すると `skill_md_too_large` で拒否される。<br/><br/>Agent にアップロードするスキルと、アプリパッケージに同梱されたスキルに適用される。スキルライブラリへのインポートには適用されない。 |
+
+### Agent とアプリのパッケージ制限
+
+これらの制限は、Agent に限らず、すべてのアプリパッケージ（`.ifpkg`）に適用されます。どのアプリタイプも、デフォルトではこの形式でエクスポートされるためです。制限はエクスポート時とインポート時の両方でチェックされ、ファイルとしてアップロードする場合も URL からインポートする場合も対象です。いずれかの制限を超えるパッケージは、超えた制限を引き上げるまで、エクスポートやインポート全体が失敗します。
+
+100 MB を超えるパッケージをアップロードする場合は、`NGINX_CLIENT_MAX_BODY_SIZE` も引き上げてください。引き上げないと、Nginx が先にリクエストを拒否します。
+
+パッケージに同梱する各スキルも、[スキルの制限](#upload_skill_file_size_limit) を満たす必要があります：
+
+- インポート時、`UPLOAD_SKILL_FILE_SIZE_LIMIT` を超えるスキルがあると、インポート全体が失敗します。`SKILL_PACKAGE_*` の制限を超えるスキルはスキップされ、インポートは警告付きで完了します。そのスキルを取り込むには、超えた制限を引き上げてから、パッケージを再度インポートしてください。
+- エクスポート時、`SKILL_PACKAGE_*` の制限を超えるスキルがあると、その制限を引き上げるまでエクスポート全体が失敗します。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `AGENT_PACKAGE_MAX_BYTES` | `536870912` | パッケージの最大サイズ（バイト単位、512 MB）。圧縮時と展開後の両方でチェックする。展開後のサイズには、同梱スキルの中身も含まれる。<br/><br/>大きなファイルやスキルを同梱したアプリや Agent のエクスポート・インポートが失敗する場合に引き上げる。 |
+| `AGENT_PACKAGE_MAX_MANIFEST_BYTES` | `5242880` | パッケージ内の各 YAML ファイルの最大サイズ（バイト単位、5 MB）。対象はマニフェストと、Agent パッケージでは Agent の設定ファイル。<br/><br/>同梱スキルやファイルは `AGENT_PACKAGE_MAX_BYTES` に計上されるため、この値を引き上げるのは、Agent の設定だけで 5 MB を超える場合に限られる。<br/><br/>アプリの DSL には適用されない。DSL は固定の 10 MB 上限のまま。 |
+| `AGENT_PACKAGE_MAX_ENTRIES` | `5000` | パッケージ内の項目数の上限。パッケージの項目は、同梱するスキル・ファイル・アイコンごとに 1 件と、いくつかの固定項目からなる。<br/><br/>数千のスキルやファイルを同梱したアプリや Agent のエクスポート・インポートが失敗する場合に引き上げる。 |
 
 ### AGENT_BACKEND_BASE_URL
 
@@ -1426,7 +1452,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | モデルが連続して出力するテキスト差分をまとめて、Redis に書き込み、配信する。有効のままにすると、Redis への書き込み回数とイベント数を減らせる。<br/><br/>差分を個別に配信するには `false` に設定する。ツール呼び出しなど、テキスト以外のイベントの内容と順序は変わらない。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | まとめたテキスト差分を配信する間隔の目安（ミリ秒）。値を下げるとテキストの更新頻度が上がる。上げると、1 回の配信量が増え、配信回数が減る。<br/><br/>厳密な時間制限ではない。`DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` に達すると早めに配信する。最小値は 1。結合を無効にするには `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` を `false` にする。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | まとめたテキスト差分を、フラッシュ間隔を待たずに配信する文字数のしきい値。値を下げると、小さなまとまりで早めに配信できる。<br/><br/>差分は分割せずに追加するため、文字数がこの値を超える場合がある。最小値は 1。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、1 時間を超える値が効くのは `local` バックエンドのみ。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、E2B での実行は 1 時間が上限のまま。`local` バックエンドでは 1 時間を超える値も有効になる。より長い実行を許可するには、この値と API 側の 2 つの制限をすべて引き上げる。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | ストリーム切断時、実行を失敗と判定するまでに API が再接続を試みる回数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空。`PLUGIN_DAEMON_URL` から導出） | Agent バックエンドがツール呼び出しに使うプラグインデーモンのアドレス。 |
@@ -1443,7 +1469,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。旧 `DIFY_AGENT_SHELLCTL_ENTRYPOINT` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | Agent バックエンドからサンドボックスへの呼び出しを保護する任意の Bearer トークン。Compose は同じ値を両サービスに渡す。<br/><br/>旧 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックが Agent サンドボックスを公開するホスト側のポート。ソースから起動した Agent バックエンドは `http://localhost:5004` でサンドボックスに到達できる。設定はそのスタックの `middleware.env` で行う。変更した場合は、Agent バックエンドの `.env` にある `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` を新しいポートに合わせる。<br/><br/>ミドルウェアスタック専用。フル構成の Compose スタックでは、サンドボックスは内部ネットワークに留まる。 |
-| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。 |
+| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。同梱の `local` サンドボックスではデフォルトのままにする。<br/><br/>`openshell` バックエンドでは、サンドボックスが Compose のサービス名を解決できない。`docker/.env` で、サンドボックスから到達でき、Agent バックエンドの `/agent-stub` パスにルーティングされるアドレスを設定する。あわせて、Agent バックエンドのポート 5050 を公開するかプロキシする。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | サンドボックス内の Agent がファイル転送に使う Dify API アドレス。Docker Compose ではデフォルトのまま使う。リモートサンドボックスバックエンドでは、公開されている Dify アドレスを指定する。 |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API が Agent のサンドボックスからファイルを取得する際の待ち時間。超過すると転送は失敗する。Agent 側の `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` より高く保つこと。 |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | home snapshot の転送を伴う Agent バックエンド呼び出し（スナップショットの取得・削除、スナップショットを復元する実行の開始）を API が待つ時間。<br/><br/>home 環境が大きい Agent でビルドの適用や実行開始が失敗する場合は、値を大きくしてください。 |
@@ -1451,22 +1477,114 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | サンドボックス内の Agent が Dify にアップロードする 1 ファイルの上限サイズ（MiB）。返信のために生成したファイルなどが対象。 |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | カーネルレベルの Landlock でサンドボックスが読み書きできるパスを制限する。Linux 5.13 以降が必要。未対応のカーネルでは警告を記録し、分離なしで実行される。`docker/envs/core-services/local-sandbox.env` で設定する。`.env` の値はサンドボックスコンテナには渡されない。 |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | シェル出力を Agent が読む前にマスクする正規表現の JSON 配列。API キーなどの機密を保護する。Agent の内部トークンは常にマスクされる。 |
+| `LOGFIRE_CONSOLE` | `false` | デバッグ時に `true` にすると、Agent バックエンドが自身のリクエスト、外向き HTTP、Redis のスパンをコンテナログに出力する。[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) とは無関係で、そちらはこのログに何も出力しない。<br/><br/>1.18.0 以降、Agent 実行のスパンはこのログに表示されない。Agent の実行を追跡するには、トラジェクトリのエクスポートを使う。 |
 
 ### DIFY_AGENT_RUNTIME_BACKEND
 
 デフォルト値：`local`
 
-Agent のサンドボックスをどこで実行するかを選択します。デフォルトの `local` は同梱のサンドボックスコンテナを使います。`e2b` に設定すると、各 Agent のサンドボックスを [E2B](https://e2b.dev) のクラウド VM で実行でき、同梱コンテナより強い分離が得られます。
+Agent のサンドボックスをどこで実行するかを選択します：
 
-`e2b` バックエンドには専用の変数グループがあり、`docker/docker-compose.e2b.yaml` オーバーレイが Compose 構成を調整します：
+- `local`：同梱のサンドボックスコンテナを使います。
+- `e2b`：Agent ごとのサンドボックスを [E2B](https://e2b.dev) のクラウド VM で実行します。同梱コンテナより強い分離が得られます。
+- `openshell`：自社で運用する NVIDIA OpenShell ゲートウェイを使い、サンドボックスを自社のインフラ上で実行します。
 
-| 変数 | デフォルト | 説明 |
+この変数と 2 つのコールバックアドレス（`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）は、`docker/.env` で設定します。Compose はこの 3 つを `docker/.env` から Agent バックエンドに渡すため、`envs/core-services/dify-agent.env` に書いた値は反映されません。
+
+リモートバックエンドごとに、専用の変数グループがあります：
+
+<AccordionGroup>
+<Accordion title="E2B">
+
+`docker/docker-compose.e2b.yaml` オーバーレイが、このバックエンド向けに Compose 構成を調整します。
+
+| 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `DIFY_AGENT_E2B_API_KEY` | （空；`E2B_API_KEY`/`E2B_API_TOKEN` にフォールバック） | E2B アカウントキー。`e2b` バックエンドでは必須。 |
 | `DIFY_AGENT_E2B_TEMPLATE` | `difys-default-team/dify-agent-local-sandbox` | Agent が実行される E2B サンドボックステンプレート。 |
 | `EXPOSE_AGENT_BACKEND_PORT` | `15050` | `docker-compose.e2b.yaml` オーバーレイが Agent バックエンド（コンテナポート `5050`）を公開するホスト側のポート。ホスト側で 15050 が使用中の場合は別のポートに変更する。 |
-| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 1 つの E2B サンドボックスがアクティブでいられる時間。Agent の 1 回の実行全体に及ぶ。3600 が上限で、それより大きい値は拒否される。<br/><br/>`DIFY_AGENT_RUN_TIMEOUT_SECONDS` 以上に設定すること。サンドボックスのアクティブ時間が実行の許容時間より短いと、実行は制限内であってもサンドボックスを失う。 |
+| `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 1 つの E2B サンドボックスがアクティブでいられる時間。Agent の 1 回の実行全体に及ぶ。3600 が上限で、それより大きい値は拒否される。<br/><br/>`DIFY_AGENT_RUN_TIMEOUT_SECONDS` 以上に設定すること。サンドボックスのアクティブ時間が実行の許容時間より短いと、実行が制限時間内でもサンドボックスが先に終了してしまう。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | E2B VM 内でサンドボックス制御サービスが待ち受けるポート。 |
+
+</Accordion>
+
+<Accordion title="OpenShell">
+
+`openshell` に切り替える前に、次の準備を済ませてください：
+
+- `agent_backend` コンテナから到達できる OpenShell ゲートウェイ（バージョン 0.0.106 以降）を用意します。
+- ゲートウェイの認証情報として、Bearer トークン、mTLS クライアント証明書のペア、またはその両方を用意します。Compose には証明書のマウント設定が含まれていないため、ファイルを読み取り専用で `agent_backend` に自分でマウントし、UID 1001 から読み取れるようにします。
+- ゲートウェイがサンドボックスの起動に使うランタイムイメージを用意します。
+- Agent が会話をまたいで保持する永続ファイル用に、共有ボリュームを用意します。`docker compose down -v` で削除されないよう、Compose の外で作成します。
+- サンドボックスから Dify へ戻るネットワーク経路を確保します：
+  - サンドボックスから到達できるコールバックアドレスを用意します。
+  - Agent バックエンドの `/agent-stub` パスへのルートを用意します。ベースの Compose ファイルは、Agent バックエンドのポート 5050 を公開しません。このポートは Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って `/agent-stub` だけを公開します。
+
+OpenShell に切り替えるには、次の手順を実行します：
+
+1. [OpenShell セットアップガイド](https://github.com/langgenius/dify/blob/1.18.0/dify-agent/docs/dify-agent/guide/openshell.md) を参照して、ゲートウェイと上記の準備をすべて整えます。ガイドには、ランタイムイメージのビルド、ボリュームの初期化、証明書のマウント、Kubernetes でのセットアップ、スモークテストの手順が記載されています。
+2. `docker/.env` で `DIFY_AGENT_RUNTIME_BACKEND` を `openshell` に設定し、以下の変数を入力します。
+3. `docker compose up -d` で Agent バックエンドを再作成します。必須の値が欠けているか、形式が正しくない場合、Agent バックエンドは起動しません。
+4. Agent を実行して、設定を確認します。Agent バックエンドが初めてゲートウェイに接続するのは、Agent の実行時か、Agent のビルドチャットで **適用** をクリックしたときです。そのため、エンドポイント、認証情報、イメージの誤りは、その時点で初めて実行や適用の失敗として表面化します。
+
+サンドボックスは実行が終わっても、Dify が削除するまでゲートウェイ上で動き続けます。ゲートウェイの容量は、アクティブなサンドボックスだけでなく、アイドル状態のサンドボックスも見込んで計画してください。
+
+同梱サンドボックスの外向きプロキシは、OpenShell サンドボックスには適用されません。ネットワークアクセスを制限するには、`DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` を設定してください。
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。OpenShell ゲートウェイのアドレスを、スキームなしの `host:port` 形式で指定する。<br/><br/>`agent_backend` コンテナ内から到達できる必要がある。Docker ホスト上のゲートウェイには `localhost` ではなく `host.docker.internal:<port>` を使い、Linux では `extra_hosts` でこの名前をホストにマッピングする。<br/><br/>例：`gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | （空） | Agent バックエンドがゲートウェイに提示する OIDC Bearer トークン。ゲートウェイの認証方式に合わせて、このトークン、mTLS クライアント証明書のペア、またはその両方を使う。<br/><br/>起動時に一度だけ読み込まれる。ローテーションした後は Agent バックエンドを再作成する。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | ゲートウェイの証明書に署名した CA 証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_INSECURE` が `true` の場合は無視される。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS クライアント秘密鍵の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | TLS ではなく平文の gRPC でゲートウェイに接続し、TLS のパスは使わない。Bearer トークンを設定している場合は、この接続でも送信される。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
+| `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent バックエンドがサンドボックスを作成・管理する OpenShell ワークスペース。ゲートウェイ上の名前空間であり、Dify のワークスペースではない。 |
+| `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | ゲートウェイが各サンドボックス用に起動するコンテナイメージ。デフォルトは、OpenShell セットアップガイドのビルドコマンドが生成するタグ。<br/><br/>Dify を動かす Docker デーモンだけでなく、ゲートウェイのコンピュートドライバーからも利用できる必要がある。ゲートウェイの Docker デーモンにイメージを読み込むか、ゲートウェイがプルできるレジストリにプッシュして、その参照を指定する。<br/><br/>明示的に設定すること。どの env ファイルでも設定しない場合、Agent バックエンドは `langgenius/dify-agent-local-sandbox:latest` にフォールバックする。このイメージは古い可能性があり、その場合は OpenShell で起動できない。 |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | `openshell` バックエンドでは必須。ゲートウェイのコンピュートドライバーがすべてのサンドボックスに適用する JSON。共有ボリュームを `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` にマウントする必要がある。形式はドライバーによって異なる。<br/><br/>JSON が不正、または空のオブジェクトだと Agent バックエンドは起動しない。Dify はマウント自体を確認しないため、ボリュームが別のパスにマウントされていても Agent バックエンドは起動する。マウント先は必ず再確認すること。<br/><br/>Docker ドライバーの例：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
+| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 各サンドボックス内で共有ボリュームをマウントする場所。`DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` のマウント先と一致させる。Agent のビルドチャットで **適用** をクリックするたびに、Agent の永続ファイルがここに保存される。<br/><br/>絶対パスでなければ、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。Agent バックエンドが各サンドボックス内で起動するコマンドサービスに対し、自身を認証するための共有シークレット。任意のランダムな文字列を設定する。<br/><br/>同梱サンドボックスを保護する `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` とは別のもの。 |
+| `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | サンドボックスが接続できる `host:port` エンドポイントのカンマ区切りリスト。スキームやパスは付けない。空の場合はネットワークポリシーを送らず、外向き通信はゲートウェイのデフォルトに従う。<br/><br/>設定すると、サンドボックスはリストにあるエンドポイントにしか接続できない。パッケージのインストールや Web アクセスも、そのホストをリストに入れない限り機能しなくなる。`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL` のホストも含めること。含めないと、Agent の実行が Dify にコールバックできない。<br/><br/>形式が不正なエントリがあると、Agent バックエンドは起動しない。<br/><br/>例：`agent.example.com:443,dify.example.com:443` |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | 各サンドボックス内でコマンドサービスが待ち受けるループバックポート。Agent バックエンドはゲートウェイ経由で到達するため、ポートを開放する必要はない。ランタイムイメージがすでに 5004 を使っている場合にのみ変更する。 |
+| `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | 新規作成または再起動したサンドボックスが準備完了になるまで待つ時間（秒）。混雑したゲートウェイでサンドボックスの起動中に Agent の実行が失敗する場合は、値を引き上げる。 |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent バックエンドがゲートウェイ経由でサンドボックス内で実行する、各セットアップコマンドの制限時間（秒）。Agent の永続ファイルのコピーやコマンドサービスの起動などが対象。Agent 自身が実行するコマンドは制限しない。<br/><br/>永続ファイルが大きい Agent で新しいセッションを開始できない場合は、値を引き上げる。 |
+
+</Accordion>
+</AccordionGroup>
+
+### Agent トラジェクトリのエクスポート
+
+すでに運用しているトレーシングバックエンドで Agent の動作を確認するには、トラジェクトリのエクスポートを有効にします。有効にすると、Agent バックエンドは各 Agent 実行のトレースを OTLP/HTTP で OpenTelemetry コレクターに送信します。トレースには、モデルへのリクエストとツール呼び出しが含まれます。デプロイ内のすべてのワークスペースの実行が、1 つのコレクターに届きます。
+
+各スパンには、ワークスペース、アプリ、Agent、エンドユーザー、会話、ワークフロー実行、ノードの ID が付与されます。`dify.app_id` や `dify.conversation.id` などの属性で、トレースを 1 つのアプリや 1 つの会話に絞り込めます。これらの ID は、コンテンツのエクスポートを無効にしていてもエクスポートされます。
+
+トラジェクトリのエクスポートは、[LLMOps トレース配信](#llmops-トレース配信) とは別の仕組みです。LLMOps トレース配信は、アプリ作成者がアプリごとに Langfuse などのプロバイダーで設定します。API と Worker の [OpenTelemetry 計装](#otlp-/-opentelemetry-設定) とも別で、どちらの設定もトラジェクトリのエクスポートには影響しません。
+
+有効にするには、次の手順を実行します：
+
+1. `docker/.env` で、`DIFY_AGENT_TRAJECTORY_ENABLED` を `true` に、`DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` をコレクターのトレース URL に設定します。認証情報が必要な場合は `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` に指定します。
+
+    Agent バックエンドは `shared.env` を読み込まないため、これらの変数を `shared.env` に設定しても反映されません。
+
+2. `docker compose up -d` で Agent バックエンドを再作成します。値が不正な場合、Agent バックエンドは起動せず、修正するまで Agent の実行は失敗します。
+3. ツールを呼び出すタスクを Agent に実行させ、トレーシングバックエンドでサービス名 `dify-agent-trajectory` のツール呼び出しスパンを探します。
+
+<Warning>
+`DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` を `true` にすると、すべてのワークスペースのプロンプト、システムインストラクション、モデルの応答、ツールの引数と結果がコレクターに送られます。コレクターへのアクセスは、会話そのものと同じように制限してください。
+</Warning>
+
+| 変数 | デフォルト値 | 説明 |
+|---|---|---|
+| `DIFY_AGENT_TRAJECTORY_ENABLED` | `false` | トラジェクトリのエクスポートを有効にする。`DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` が必要で、`true` にしてエンドポイントがない場合、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` | （空） | コレクターの OTLP/HTTP トレースエンドポイントの完全な URL。パスまで含め、そのまま使われる。gRPC エンドポイントには対応していない。<br/><br/>`http` または `https` を使い、認証情報や `#` フラグメントを含めないこと。条件を満たさないと Agent バックエンドは起動しない。認証情報は `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` に指定する。<br/><br/>例：`https://collector.example.com/v1/traces` |
+| `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` | `{}` | エクスポートのたびに送信するヘッダー。`{"Authorization":"Bearer <token>"}` のような JSON オブジェクトで指定する。コレクターの認証情報に使う。<br/><br/>`Authorization=Bearer <token>` のように JSON でない値を指定すると、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_TRAJECTORY_SERVICE_NAME` | `dify-agent-trajectory` | エクスポートするすべてのスパンに設定する `service.name`。トレーシングバックエンドでの絞り込みに使う。空にはできない。 |
+| `DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` | `false` | `true` にすると、スパンに会話の内容（プロンプト、システムインストラクション、モデルの応答、ツールの引数と結果）を追加する。バイナリコンテンツはエクスポートされない。<br/><br/>無効の場合、トレースには各実行のステップとタイミングが表示されるが、やり取りの内容は含まれない。Agent がなぜそう回答・行動したかを確認したいときに有効にする。ただし、コレクターがすべてのワークスペースの会話を保持してよい場合に限る。 |
+| `DIFY_AGENT_TRAJECTORY_TRACE_CONTEXT_MODE` | `isolated` | Agent のスパンと他のトレースとの関係。`isolated` は Agent 実行ごとに新しいトレースを開始する。`shared` は Agent のスパンを現在のトレースに参加させ、そのサンプリング判定に従わせる。<br/><br/>Agent バックエンド自身のテレメトリもこのトレーシングバックエンドに送っている場合を除き、`isolated` のままにする。これに当たるのは、Agent バックエンド自身のテレメトリ用に `LOGFIRE_TOKEN` または標準の `OTEL_EXPORTER_OTLP_*` 変数を設定している場合だけ。それ以外で `shared` にすると、ルートスパンが欠けたトレースが残ることがある。 |
+| `DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE` | `2048` | エクスポート待ちのスパン数の上限。高負荷時にスパンが欠落する場合は引き上げる。 |
+| `DIFY_AGENT_TRAJECTORY_MAX_EXPORT_BATCH_SIZE` | `512` | 1 回のエクスポートリクエストに含めるスパン数の上限。`DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE` を超えると、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_TRAJECTORY_SCHEDULE_DELAY_MS` | `5000` | バッチエクスポートの間隔（ミリ秒）。 |
+| `DIFY_AGENT_TRAJECTORY_EXPORT_TIMEOUT_MS` | `5000` | 1 バッチのエクスポートにかける制限時間（ミリ秒）。コレクターへの各 HTTP リクエストのタイムアウトは変わらず、5 秒に固定されている。 |
 
 ## データベースサービス
 
