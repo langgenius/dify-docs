@@ -9,11 +9,11 @@ description: >
 
 # Dify Environment Variable Documentation
 
-Not an entry point — run under `dify-docs-write`; the procedure below implements its stages for `en/self-host/deploy/configuration/environments.mdx`. Read `references/style-overrides.md` (in this skill directory — env-var-specific style rules and description anti-patterns) together with this pack. Use the ref pinned at S1; cite it in the S4 scope report.
+Not an entry point — run under `dify-docs-write`; the procedure below implements its stages for `en/self-host/deploy/configuration/environments.mdx`. Read `references/style-overrides.md` (in this skill directory — env-var-specific style rules and description anti-patterns) together with this pack. Use the ref pinned at S1.
 
-## Procedure (S2 → S6)
+## Procedure (S2 → S5)
 
-Work through in order. **Every variable goes through steps 1–4 without exception** — do not skip a variable because it seems "obvious".
+Work through in order. **Every variable goes through the trace, explanation, task-analysis, report, and description steps without exception** — do not skip a variable because it seems "obvious".
 
 ### Step 1 (S2): Trace each variable in the codebase
 
@@ -34,9 +34,17 @@ Full trace:
 
 ### Step 2 (S2): Write a plain-language explanation
 
-Cover: what the variable does in practical terms; the specific features that depend on it (name them); what happens if left empty; what happens if set; key code file paths (no line numbers — they shift). This explanation goes into the S4 scope report.
+Cover: what the variable does in practical terms; the specific features that depend on it (name them); what happens if left empty; what happens if set; key code file paths (no line numbers — they shift).
 
-### Step 3 (S5): Write the user-facing description
+### Step 3 (S3): Find the operator's task
+
+For every variable a change adds or alters, run the pipeline's task analysis at the depth that change sets. The operator arrives with a goal rather than a variable name, so the lead text and rows must answer what the goal needs: prerequisites, which file a setting takes effect in, how to confirm it works. For a single variable the walk is usually short: Step 2 already covers what breaks when it is empty or wrong, which leaves what to set up first and how to confirm it took effect. A group that sets up something new, such as a runtime backend or an exporter, needs the whole walk.
+
+### Step 4 (S4 contribution): Report
+
+The S4 scope report presents: the plain-language explanations, the task analysis, and the pinned ref. The pipeline's S4 gate applies.
+
+### Step 5 (S5): Write the user-facing description
 
 - Lead with the practical impact, not the technical mechanism
 - Name the features that require the variable (e.g., "Required for the Human Input node")
@@ -45,13 +53,9 @@ Cover: what the variable does in practical terms; the specific features that dep
 - Include relationships with other variables when relevant
 - Apply every rule in `references/style-overrides.md`
 
-### Step 4 (S4 contribution): Report
+### Step 6 (S5): Edit the documentation
 
-The S4 scope report presents: the plain-language explanations, the proposed descriptions, and the pinned ref. The pipeline's S4 gate applies.
-
-### Step 5 (S5/S6): Edit the documentation
-
-Edit `en/self-host/deploy/configuration/environments.mdx` following [Document Structure](#document-structure). Update the `zh/` and `ja/` copies in the same pass, per `tools/translate/formatting-zh.md`, `tools/translate/formatting-ja.md`, and `writing-guides/glossary.md`.
+Edit `en/self-host/deploy/configuration/environments.mdx` following [Document Structure](#document-structure). The `zh/` and `ja/` copies follow at the pipeline's S6, after the owner freezes the English.
 
 ## S7 verifiers
 
@@ -119,4 +123,4 @@ The doc groups variables by subsystem, broadly following the `docker/.env.exampl
 
 ## Reader Persona
 
-Same audience as `en/self-host/deploy/` documentation (see the `dify-docs-guides` pack): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge. Readers are actively configuring a deployment and scanning for a specific variable, not reading linearly. They need to know what each variable does, when to change it, and what breaks if they get it wrong.
+Same audience as `en/self-host/deploy/` documentation (see the `dify-docs-guides` pack): DevOps engineers and system administrators deploying Dify. Assume strong infrastructure knowledge. Readers arrive two ways, neither reading linearly: scanning for a specific variable while configuring a deployment, or setting up something new, such as a runtime backend or an exporter, and looking for everything it needs. They need to know what each variable does, when to change it, and what breaks if they get it wrong.

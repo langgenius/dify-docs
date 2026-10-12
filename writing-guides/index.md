@@ -11,17 +11,17 @@ Everything else (research, rule packs, checks) is loaded by these two — start 
 
 ## Post-Writing Verification
 
-After completing a writing task, read the page back as its reader (the dify-docs-write skill's Check stage says how) and fix what you find; the checks below only catch what a reader would not. Then run them in order and apply the fixes before presenting the work, whether or not the writing went through dify-docs-write. Each is a self-contained skill.
+After completing a writing task, read the page back as its reader (the dify-docs-write skill's Check stage says how) and fix what you find; the checks below only catch what a reader would not. Then run them in order and apply the fixes before presenting the work, whether or not the writing went through dify-docs-write. The English is checked and final before zh and ja are translated, because an English change made after translation sends its sentences back through translation. Each is a self-contained skill.
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
 | 1 | dify-docs-editor-test | On the English page: a fresh agent judges the writing against the style guide and the reference page in its genre, returning sentence-level marks and a ship verdict on this round's work. |
-| 2 | dify-docs-translation-test | On the zh and ja pages: a fresh agent judges each beside its English source against the language's formatting guide and the glossary, with the same form of marks and verdict; the API pack's specs use its parity check instead. |
+| 2 | dify-docs-reader-test | On the English page: read it from a first-time reader's perspective and flag comprehension gaps. It is the check most likely to add or move content, so it runs before the linters and before translation; a unit it changes goes back through step 1. |
 | 3 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
 | 4 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
-| 5 | dify-docs-reader-test | Read each page from a first-time reader's perspective and flag comprehension gaps. |
+| 5 | dify-docs-translation-test | On the zh and ja pages, once they are translated from the final English: a fresh agent judges each beside its English source against the language's formatting guide and the glossary, with the same form of marks and verdict; the API pack's specs use its parity check instead. |
 
-Steps 3 and 4 cover all three languages and audit the whole document, not just the diff; step 3 also checks that the zh and ja pages carry the same sections and blocks as the English page. Step 5 is always the last step because it depends on the others passing.
+Steps 3 and 4 audit the whole document, not just the diff, and run on the English before translation and on zh and ja after step 5. Step 3 also checks that the zh and ja pages carry the same sections and blocks as the English page, which passes only once the translations are in.
 
 ## Syncing the Dify codebase safely
 
