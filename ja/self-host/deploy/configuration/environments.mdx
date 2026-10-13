@@ -1340,7 +1340,6 @@ Dify からのすべてのアウトバウンド HTTP リクエスト（HTTP ノ�
 | `SSRF_POOL_MAX_CONNECTIONS` | `100` | SSRF HTTP クライアントプール内の最大同時接続数。 |
 | `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | SSRF プールで維持する最大アイドル接続数。 |
 | `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | アイドルな SSRF 接続が閉じられるまでの秒数。 |
-| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | リバースプロキシからの X-Forwarded-For/Proto/Port ヘッダーを信頼。単一の信頼されたリバースプロキシの背後でのみ有効化してください。それ以外では IP スプーフィングが可能になります。 |
 
 #### エージェント設定
 
@@ -1613,7 +1612,7 @@ Docker Compose でデータベースと Redis のコンテナを直接設定し�
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 保護用 HTTPS プロキシ。 |
 | `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。 |
 
-## Nginx リバースプロキシ
+## Nginx リバースプロキシ {#nginx-reverse-proxy}
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
@@ -1644,6 +1643,20 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 | `CERTBOT_DOMAIN` | （空） | SSL 証明書のドメイン名。 |
 | `CERTBOT_OPTIONS` | （空） | 追加の certbot CLI オプション（例：`--force-renewal`、`--dry-run`）。 |
 
+### RESPECT_XFORWARD_HEADERS_ENABLED
+
+デフォルト値：Docker Compose では `true`、ソースコードからのデプロイでは `false`
+
+有効にすると、Dify は API の直前にあるプロキシが送る `X-Forwarded-For` ヘッダーから、各ユーザーの IP アドレスを取得します。
+
+Docker Compose を Cloudflare やロードバランサーなどのプロキシの背後で運用する場合は、この変数を有効のままにします。そのうえで、[同梱の Nginx がプロキシを信頼するよう設定](/ja/self-host/deploy/quick-start/faqs#sign-in-emails-blocked-behind-proxy) してください。設定が済むまでは、すべてのユーザーがプロキシのアドレスからのアクセスとして扱われます。サインインメールの送信制限なども、そのアドレス単位で全ユーザーが共有することになります。
+
+<Warning>
+有効にしている間は、API に直接アクセスできる人なら誰でも、Dify が認識するアドレスを自由に指定できます。API のポートは非公開のままにしてください。Docker Compose の初期設定でも公開されていません。すでに公開している場合は、この変数を無効にするのではなく、ポートを閉じてください。無効にすると、すべてのユーザーが Nginx のアドレスからのアクセスとして扱われます。
+</Warning>
+
+ソースコードからのデプロイでは、API の前段にプロキシが 1 つだけあり、API へのアクセスがそのプロキシ経由に限られる場合に有効にしてください。そのプロキシは `X-Forwarded-For` を設定している必要があります。
+
 ## SSRF プロキシ
 
 内部/プライベートネットワークへのリクエストをブロックする Squid ベースの SSRF プロキシコンテナの設定です。
@@ -1656,8 +1669,8 @@ HTTPS を有効化した後、 [共通変数](#共通変数) の URL 変数（�
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | コアダンプディレクトリ。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF プロキシがサンドボックスサービスへの送信トラフィックをリバースプロキシするためにリッスンするポート。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF プロキシの転送先となるサンドボックスサービスのホスト名。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | プロキシ経由を許可する非公開 IP または CIDR 範囲のリスト（カンマまたはスペース区切り）。プライベートネットワークへのデフォルトのブロックを上書きします。HTTP またはツールのリクエストが特定の内部ホストへ到達する必要がある場合に使用します。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | プロキシ経由を許可する内部ドメインのリスト（カンマまたはスペース区切り）。プライベートネットワークへのデフォルトのブロックを上書きします。 |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | SSRF プロキシが通過を許可するプライベート IP アドレスまたは CIDR 範囲（カンマ区切り）。対象は HTTP リクエストノード、ツール、およびセルフホストの Firecrawl または WaterCrawl サーバーを使う **ウェブサイトから同期**。ホスト名を許可するには `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` を使う。<br/><br/>許可した範囲内のアドレスには、どの HTTP リクエストノードやツールからも到達できるようになる。プライベートネットワーク全体ではなく、Dify が到達する必要のあるホストだけを指定すること。<br/><br/>`docker/.env` で設定する。`envs/infrastructure/ssrf-proxy.env` に書いた値は反映されない。<br/><br/>例：`192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | プライベートアドレスに解決される場合でも SSRF プロキシが通過を許可するホスト名（カンマ区切り）。名前は完全一致で照合される。先頭にドットを付けると（`.corp.internal`）、サブドメインも対象になる。<br/><br/>`SSRF_PROXY_ALLOW_PRIVATE_IPS` と同じく対象を必要最小限に絞り、同じ方法で設定する。`docker/.env.example` にはこの変数の行がないため、自分で追加する。<br/><br/>例：`firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | プロキシされたリクエストのデフォルト全体タイムアウト（秒）。 |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | デフォルト接続タイムアウト（秒）。 |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | デフォルト読み取りタイムアウト（秒）。 |

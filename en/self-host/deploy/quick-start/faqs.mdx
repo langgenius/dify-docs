@@ -79,3 +79,80 @@ docker compose up -d
 ```
 
 Cookies cannot cross top-level domains, so the frontend and backend must share the same registrable domain. For full details, see [environment variables](/en/self-host/deploy/configuration/environments).
+
+### Sign-In Emails Blocked for Everyone Behind Cloudflare or Another Proxy {#sign-in-emails-blocked-behind-proxy}
+
+Everyone is refused sign-in codes and password-reset emails at once: "Too many emails have been sent from this IP address recently. Please try again later." From 1.18.0, this can happen on any deployment with Cloudflare, a load balancer, or another proxy in front of the bundled Nginx.
+
+Dify takes each visitor's IP address from the bundled Nginx. Behind a proxy, Nginx sees only the proxy's address, so all your visitors share its limits.
+
+If your proxy forwards straight to the `api` and `web` containers and bypasses the bundled Nginx, as some Cloudflare Tunnel and Nginx Proxy Manager setups do, skip the steps below. Instead, make sure that:
+
+- Your proxy sets `X-Forwarded-For`. Otherwise every visitor appears with the proxy's address.
+- The API is reachable only through your proxy. Anyone who can reach it directly can choose the address Dify sees.
+
+If your proxy forwards to the bundled Nginx, tell Nginx which proxy to trust:
+
+<Steps>
+  <Step title="Find Your Proxy's Address">
+    Each line of the Nginx access log (`docker compose logs nginx`) starts with the address your proxy connects from. Take it from the log even for a proxy on the same server, rather than assuming `127.0.0.1`.
+
+    For Cloudflare connecting directly to Nginx, skip this step.
+  </Step>
+  <Step title="Create real-ip.conf">
+    Create `docker/nginx/conf.d/real-ip.conf` for your setup. Nginx already loads every `.conf` file in that directory, and upgrades leave yours in place.
+
+    <Tabs>
+      <Tab title="Load Balancer or Reverse Proxy">
+        For a proxy that sets `X-Forwarded-For`:
+
+        ```nginx
+        # Replace with the address or CIDR range your proxy connects from.
+        set_real_ip_from 192.0.2.10/32;
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+      </Tab>
+      <Tab title="Cloudflare">
+        For Cloudflare connecting directly to Nginx, trust each of [Cloudflare's IP ranges](https://www.cloudflare.com/ips/):
+
+        ```nginx
+        # One line for each IPv4 and IPv6 range Cloudflare lists.
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header CF-Connecting-IP;
+        ```
+
+        Those ranges identify Cloudflare's network, not your zone, so also [restrict who can reach your origin](https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/), for example with Authenticated Origin Pulls.
+      </Tab>
+      <Tab title="More Than One Proxy">
+        For a chain such as Cloudflare and then a proxy on your own server, trust every proxy in it: your server's proxy and each of [Cloudflare's IP ranges](https://www.cloudflare.com/ips/). If you trust only the nearest proxy, Dify sees Cloudflare's addresses instead of your visitors'.
+
+        ```nginx
+        # Replace with the address your server's proxy connects from.
+        set_real_ip_from 192.0.2.10/32;
+        # One line for each IPv4 and IPv6 range Cloudflare lists.
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+        Each proxy in the chain must append to `X-Forwarded-For`.
+      </Tab>
+    </Tabs>
+
+    <Warning>
+      Never trust `0.0.0.0/0`, `::/0`, or a network that untrusted machines share. Anyone who can reach Nginx could then choose the IP address Dify sees.
+    </Warning>
+  </Step>
+  <Step title="Reload Nginx">
+
+    ```bash
+    docker compose exec nginx nginx -s reload
+    ```
+
+    New lines in `docker compose logs nginx` should now start with visitors' own addresses instead of the proxy's. Visitors no longer share the blocked address, so they can request emails again right away.
+  </Step>
+</Steps>
