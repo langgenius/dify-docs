@@ -4,10 +4,11 @@
 
 | Task | Skill |
 |:-----|:------|
+| Review or draft UI copy | dify-ux-copy; reads the shared Glossary and UX Copy Standards, then traces usage and checks the user's context |
 | Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — loads the writing guides and the doc-type rule pack, then runs the stages from research to check |
 | Prepare doc updates for a Dify release | Maintainers run the release-sync skill from the team's private registry; it diffs the codebase between two pinned version refs and hands execution to dify-docs-write |
 
-Everything else (research, rule packs, checks) is loaded by these two — start here, not there.
+Documentation research, rule packs, and checks are loaded by the documentation entry points above. UI copy tasks can invoke `dify-ux-copy` directly.
 
 ## Post-Writing Verification
 
@@ -60,3 +61,4 @@ Record the SHA you verified against (`$REF`) in your report.
 - **style-guide.md** — Voice, tone, writing patterns, callout usage
 - **formatting-guide.md** — MDX formatting, Mintlify components, headings, lists, code
 - **glossary.md** — Standardized terminology with Chinese and Japanese translations
+- **ux-copy-standards.md**: Shared principles for UI copy drafting and review
