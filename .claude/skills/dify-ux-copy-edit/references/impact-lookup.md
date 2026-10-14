@@ -9,7 +9,7 @@ Use this reference before revising existing UI copy, or when asked to find where
 3. Run the collector with a complete visible string. This worked example inspects a canvas confirmation without modifying it:
 
    ```sh
-   python3 .claude/skills/dify-ux-copy/scripts/collect_impact.py \
+   python3 .claude/skills/dify-ux-copy-edit/scripts/collect_impact.py \
      --mode lookup --product-repo "$UX_PRODUCT_REPO" --docs-repo . \
      --head "$UX_PRODUCT_REF" --docs-ref "$UX_DOCS_REF" \
      --text 'Clear the canvas?' --output-dir "$UX_REPORT_DIR"
@@ -28,7 +28,7 @@ Use this reference before revising existing UI copy, or when asked to find where
 For committed changes, omit `--mode lookup` and use `--base` and `--head`. For a PR, use its merge base and head. Text and locale lookup arguments are not accepted in diff mode. Example, with `UX_BASE_REF` set to the baseline:
 
 ```sh
-python3 .claude/skills/dify-ux-copy/scripts/collect_impact.py \
+python3 .claude/skills/dify-ux-copy-edit/scripts/collect_impact.py \
   --product-repo "$UX_PRODUCT_REPO" --docs-repo . \
   --base "$UX_BASE_REF" --head "$UX_PRODUCT_REF" --docs-ref "$UX_DOCS_REF" \
   --key app:export --output-dir "$UX_REPORT_DIR"
@@ -57,7 +57,7 @@ From the docs repository root:
 
 ```sh
 PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover \
-  -s .claude/skills/dify-ux-copy/scripts -p 'test_*.py' -v
+  -s .claude/skills/dify-ux-copy-edit/scripts -p 'test_*.py' -v
 ```
 
 Expected: all tests pass and the runner prints `OK`. Tests create isolated temporary repositories and cover lookup ambiguity, missing targets, localized input, immutable snapshots, diff behavior, related-copy and test-text candidates, report limits, and output protection.

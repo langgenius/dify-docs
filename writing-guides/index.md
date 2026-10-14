@@ -4,11 +4,12 @@
 
 | Task | Skill |
 |:-----|:------|
-| Review or draft UI copy | dify-ux-copy; reads the shared Glossary and UX Copy Standards, then traces usage and checks the user's context |
+| Draft new UI copy or review design copy | [dify-ux-copy](../.claude/skills/dify-ux-copy/SKILL.md); uses the shared Glossary and UX Copy Standards and verifies the user's context |
+| Revise historical UI copy or check a string's impact | [dify-ux-copy-edit](../.claude/skills/dify-ux-copy-edit/SKILL.md); collects reuse, translation, test, and documentation evidence before proposing changes |
 | Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — loads the writing guides and the doc-type rule pack, then runs the stages from research to check |
 | Prepare doc updates for a Dify release | Maintainers run the release-sync skill from the team's private registry; it diffs the codebase between two pinned version refs and hands execution to dify-docs-write |
 
-Documentation research, rule packs, and checks are loaded by the documentation entry points above. UI copy tasks can invoke `dify-ux-copy` directly.
+Documentation research, rule packs, and checks are loaded by the documentation entry points above. UI copy tasks use the drafting or revision skill listed above; both read the same Glossary and UX Copy Standards.
 
 ## Post-Writing Verification
 
@@ -70,5 +71,6 @@ Record the SHA you verified against (`$REF`) in your report.
 
 ### Supporting tools
 
-- [UX Copy Impact Review Skill](../.claude/skills/dify-ux-copy/SKILL.md): Use `dify-ux-copy` to investigate the impact of historical UI copy changes and review wording in context. It also supports drafting new copy.
-- [Impact Check Usage Guide](../.claude/skills/dify-ux-copy/references/impact-lookup.md): Inputs, commands, report contents, and limits of the read-only impact collector.
+- [UX Copy Drafting and Review Skill](../.claude/skills/dify-ux-copy/SKILL.md): The original `dify-ux-copy` procedure, adapted for new-copy drafting and design reviews with shared resources.
+- [UX Copy Revision and Impact Review Skill](../.claude/skills/dify-ux-copy-edit/SKILL.md): Use `dify-ux-copy-edit` to check historical copy changes and propose context-aware revisions.
+- [Impact Check Usage Guide](../.claude/skills/dify-ux-copy-edit/references/impact-lookup.md): Inputs, commands, report contents, and limits of the read-only impact collector bundled with `dify-ux-copy-edit`.
