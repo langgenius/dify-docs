@@ -2614,6 +2614,11 @@
             "description": "Name of the knowledge base.",
             "type": "string"
           },
+          "doc_metadata": {
+            "description": "Metadata values of the source document, keyed by metadata field name. Includes the built-in fields when they are enabled for the knowledge base. `null` if the document has no metadata.\n\nFor a record from an external knowledge base, it's filled only in Chatflow apps, with the record's `metadata` from the external knowledge API plus the `score`, `title`, `dataset_id`, and `dataset_name` that Dify adds. In other app types it's `null` for external records.",
+            "nullable": true,
+            "type": "object"
+          },
           "document_id": {
             "description": "ID of the document.",
             "format": "uuid",
@@ -2622,6 +2627,41 @@
           "document_name": {
             "description": "Name of the document.",
             "type": "string"
+          },
+          "files": {
+            "description": "Images in the retrieved chunk that matched the query. Returned only by Chatflow apps, and only when the match came from an image; `null` otherwise, including when the chunk matched on its text.",
+            "items": {
+              "properties": {
+                "extension": {
+                  "description": "File extension, including the leading dot (for example, `.png`).",
+                  "type": "string"
+                },
+                "id": {
+                  "description": "ID of the uploaded image file.",
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "mime_type": {
+                  "description": "MIME type of the file.",
+                  "type": "string"
+                },
+                "name": {
+                  "description": "File name.",
+                  "type": "string"
+                },
+                "size": {
+                  "description": "File size in bytes.",
+                  "type": "integer"
+                },
+                "source_url": {
+                  "description": "Signed preview URL for the image, valid for the time set by the `FILES_ACCESS_TIMEOUT` [environment variable](/en/self-host/deploy/configuration/environments#files_access_timeout) (300 seconds by default).",
+                  "type": "string"
+                }
+              },
+              "type": "object"
+            },
+            "nullable": true,
+            "type": "array"
           },
           "hit_count": {
             "description": "Number of times this chunk was hit.",
@@ -2661,6 +2701,11 @@
           },
           "summary": {
             "description": "Summary of the chunk content.",
+            "nullable": true,
+            "type": "string"
+          },
+          "title": {
+            "description": "Title of the external knowledge base record, the same value as `document_name`. Returned only for external knowledge base records retrieved by Legacy Agent apps; otherwise `null`.",
             "nullable": true,
             "type": "string"
           },
@@ -7204,6 +7249,10 @@
                             "content": "\"Model\",\"Release Date\",\"Display Size\",\"Resolution\",\"Processor\",\"RAM\",\"Storage\",\"Camera\",\"Battery\",\"Operating System\" \"iPhone 13 Pro Max\",\"September 24, 2021\",\"6.7 inch\",\"1284 x 2778\",\"Hexa-core (2x3.23 GHz Avalanche + 4x1.82 GHz Blizzard)\",\"6 GB\",\"128, 256, 512 GB, 1TB\",\"12 MP\",\"4352 mAh\",\"iOS 15\"",
                             "dataset_id": "101b4c97-fc2e-463c-90b1-5261a4cdcafb",
                             "dataset_name": "iPhone",
+                            "doc_metadata": {
+                              "category": "Smartphones",
+                              "release_year": 2021
+                            },
                             "document_id": "8dd1ad74-0b5f-4175-b735-7d98bbbb4e00",
                             "document_name": "iPhone List",
                             "position": 1,
@@ -8464,7 +8513,7 @@
         "operationId": "listDatasets",
         "parameters": [
           {
-            "description": "Page number.",
+            "description": "Page number. Values below `1` are treated as `1`.",
             "in": "query",
             "name": "page",
             "schema": {
@@ -8473,7 +8522,7 @@
             }
           },
           {
-            "description": "Number of items per page. Server caps at `100`.",
+            "description": "Number of items per page. Server caps at `100`, and values below `1` are treated as `1`.",
             "in": "query",
             "name": "limit",
             "schema": {
@@ -10732,7 +10781,7 @@
             }
           },
           {
-            "description": "Page number.",
+            "description": "Page number. Values below `1` are treated as `1`.",
             "in": "query",
             "name": "page",
             "schema": {
@@ -10741,7 +10790,7 @@
             }
           },
           {
-            "description": "Number of items per page. Server caps at `100`.",
+            "description": "Number of items per page. Server caps at `100`, and values below `1` are treated as `1`.",
             "in": "query",
             "name": "limit",
             "schema": {
@@ -11169,23 +11218,6 @@
               }
             },
             "description": "Document metadata updated successfully."
-          },
-          "400": {
-            "content": {
-              "application/json": {
-                "examples": {
-                  "invalid_param": {
-                    "summary": "invalid_param",
-                    "value": {
-                      "code": "invalid_param",
-                      "message": "Another document metadata operation is running, please wait a moment.",
-                      "status": 400
-                    }
-                  }
-                }
-              }
-            },
-            "description": "`invalid_param` : Another metadata operation is already running for a document in this request."
           },
           "403": {
             "content": {
@@ -15703,18 +15735,26 @@
             "content": {
               "application/json": {
                 "examples": {
-                  "not_found": {
-                    "summary": "not_found",
+                  "not_found_1": {
+                    "summary": "not_found (knowledge base)",
                     "value": {
                       "code": "not_found",
                       "message": "Dataset not found.",
+                      "status": 404
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found (metadata)",
+                    "value": {
+                      "code": "not_found",
+                      "message": "Metadata not found.",
                       "status": 404
                     }
                   }
                 }
               }
             },
-            "description": "`not_found` : Dataset not found."
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : The metadata field identified by `metadata_id` does not exist in this knowledge base."
           }
         },
         "summary": "Delete Metadata Field",
@@ -15862,18 +15902,26 @@
             "content": {
               "application/json": {
                 "examples": {
-                  "not_found": {
-                    "summary": "not_found",
+                  "not_found_1": {
+                    "summary": "not_found (knowledge base)",
                     "value": {
                       "code": "not_found",
                       "message": "Dataset not found.",
+                      "status": 404
+                    }
+                  },
+                  "not_found_2": {
+                    "summary": "not_found (metadata)",
+                    "value": {
+                      "code": "not_found",
+                      "message": "Metadata not found.",
                       "status": 404
                     }
                   }
                 }
               }
             },
-            "description": "`not_found` : Dataset not found."
+            "description": "- `not_found` : Knowledge base not found.\n- `not_found` : The metadata field identified by `metadata_id` does not exist in this knowledge base."
           }
         },
         "summary": "Update Metadata Field",
