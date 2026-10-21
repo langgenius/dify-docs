@@ -1,0 +1,84 @@
+---
+title: 管理登录
+sidebarTitle: 登录与会话
+description: 续期过期的登录，切换或添加服务器和账户，查看令牌的存储位置，并结束不再使用的会话
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/manage-sign-in)。
+
+## 续期登录
+
+登录默认有效 14 天（可通过 [`OAUTH_TTL_DAYS`](/zh/self-host/deploy/configuration/environments#dify-cli-与编程-api) 调整），期间使用 `difyctl` 也不会延长有效期。过期后，所有用到这次登录的命令都会报 `auth_expired` 错误（退出码 4），直到你重新登录。登录何时过期，可在 [会话列表](#查看和结束会话) 的 `expires_at` 中查看。
+
+<Info>
+`ACCESS_TOKEN_EXPIRE_MINUTES` 和 `REFRESH_TOKEN_EXPIRE_DAYS` 不影响 `difyctl` 登录的有效期，它们决定的是 Dify 网页控制台的登录时长。
+</Info>
+
+要续期，再次运行 [`login`](/zh/cli/get-started#登录)。它会先退出当前登录，再开始新的登录。如果新的登录失败，你会一直处于退出状态，直到登录成功为止。
+
+## 使用多个服务器或账户
+
+每个 [配置目录](#令牌的存储位置) 只保存一份登录信息，新的登录会替换掉它。要切换服务器，运行 `login` 并用 `--server` 指定新服务器。要切换账户，运行 `login`，然后在浏览器中用另一个账户登录 Dify 并批准。
+
+要同时登录多个服务器或账户，用 `DIFY_CONFIG_DIR` 为每个登录分配单独的目录，并在用到该登录的每条命令中都设置它：
+
+```bash
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl login --server https://staging.dify.example.com
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl describe account
+```
+
+在一台机器上，如果用同一账户登录同一台服务器，两个目录无法各自保持登录：在一个目录中登录后，另一个目录的会话随即结束。
+
+## 令牌的存储位置
+
+`difyctl` 把令牌保存在操作系统的凭据存储中，服务名为 `difyctl`：macOS 上是 Keychain，Windows 上是 Credential Manager，Linux 上是 Secret Service。
+
+以下情况下，它会改为把令牌写入配置目录中的 `tokens.yml`：
+
+- 你使用 `--no-keyring` 登录。
+- 你在没有桌面会话总线的 Linux 上登录（未设置 `DBUS_SESSION_BUS_ADDRESS`）。
+- 登录时凭据存储无法使用。
+
+<Note>
+不要把 `tokens.yml` 打包进容器镜像、放进会共享给他人的备份，或提交到版本控制系统。
+</Note>
+
+配置目录的位置如下：
+
+- **macOS**：`~/.config/difyctl`
+- **Linux**：`$XDG_CONFIG_HOME/difyctl`，未设置 `XDG_CONFIG_HOME` 时为 `~/.config/difyctl`
+- **Windows**：`%APPDATA%\difyctl`
+
+要改用其他目录，设置 `DIFY_CONFIG_DIR`。
+
+## 登出
+
+<Tip>
+要切换账户，直接运行 `login` 即可，它会先让你退出当前账户。
+</Tip>
+
+不再使用某台机器时，运行 `logout`：
+
+```bash
+difyctl logout
+```
+
+`logout` 会结束你在服务器上的会话，并删除本机保存的令牌和登录记录。如果连不上服务器，`logout` 仍会清除本机的数据，但服务器上的会话依然有效，直到它到期，或者你 [手动结束这个会话](#查看和结束会话)。
+
+### 查看和结束会话
+
+要查看你在哪些机器上登录了，列出所有会话：
+
+```bash
+difyctl get account session
+```
+
+每个会话都会显示 `id`、机器的主机名 `device_label` 和过期时间 `expires_at`。
+
+要结束另一台机器上的会话（例如已经不在你手上的机器），按 ID 删除它。根据 `device_label` 选择要删除的会话，以免误删你正在使用的这台机器上的会话。
+
+```bash
+difyctl delete account session --session-id <session-id>
+```
+
+要结束当前正在使用的会话，改为运行 `logout`：按 ID 删除会把已保存的登录信息留在本机，下一条命令就会报 `auth_expired` 错误。
