@@ -13,14 +13,14 @@ Run every programmatic invocation with `-o json`. The channel discipline is stri
 - **Failure**: stdout is empty, and stderr is a structured JSON object. The entire trimmed stderr parses as JSON.
 - **Paused**: a Workflow that stops for human input also exits `0` on the success channel, with `"status": "paused"` on stdout. [Treat it as success](#a-pause-is-success-not-an-error), not failure.
 
-So the parse rule is: exit code first, then `JSON.parse(stdout)` on success and `JSON.parse(stderr)` on failure. See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes#errors) for the error object's fields and a full sample.
+So the parse rule is: exit code first, then `JSON.parse(stdout)` on success and `JSON.parse(stderr)` on failure. See [Output Formats and Exit Codes](/en/cloud/cli/reference/output-formats-and-exit-codes#errors) for the error object's fields and a full sample.
 
 ## Branch on the Exit Code
 
-See [Output Formats and Exit Codes](/en/cli/reference/output-formats-and-exit-codes#exit-codes) for the full exit-code table. For an agent, the branches that matter:
+See [Output Formats and Exit Codes](/en/cloud/cli/reference/output-formats-and-exit-codes#exit-codes) for the full exit-code table. For an agent, the branches that matter:
 
 - **Exit `7`—rate limited**: The server returned a 429. Back off and retry.
-- **Exit `4`—auth**: No session, or the session expired. Re-establish the session before doing anything else. Don't retry the same command as-is, which just burns calls. See [Authenticate Where Your Agent Runs](/en/cli/integrate-agents/auth-for-agent-deployments).
+- **Exit `4`—auth**: No session, or the session expired. Re-establish the session before doing anything else. Don't retry the same command as-is, which just burns calls. See [Authenticate Where Your Agent Runs](/en/cloud/cli/integrate-agents/auth-for-agent-deployments).
 - **Exit `1`—generic or server error**: Network failure, server error, app not found, or an unknown flag or command. Parse the error object and inspect `error.code`. Don't blindly retry.
 - **Exit `2`—invalid input**: The CLI rejected a value before any request went out: malformed `--inputs` JSON, a non-UUID app ID, or an out-of-range flag such as `--limit 0`. Fix the call; retrying it unchanged fails the same way.
 - **A paused run is exit `0`**: A workflow that hit a human-input step exits `0` with `"status": "paused"` on stdout, not an error. It's [handled separately](#a-pause-is-success-not-an-error).
@@ -44,7 +44,7 @@ if r.returncode == 0:
         ...
 ```
 
-See [When a Workflow Pauses](/en/cli/reference/apps#when-a-workflow-pauses) for the full paused payload, the resume command, and the expiry rules. A resumed run can pause again at a later step, so run the same check after every `resume app`.
+See [When a Workflow Pauses](/en/cloud/cli/reference/apps#when-a-workflow-pauses) for the full paused payload, the resume command, and the expiry rules. A resumed run can pause again at a later step, so run the same check after every `resume app`.
 
 ## Branch on `error.code`
 
@@ -61,14 +61,14 @@ When the failure came from the server, the error object may also include `error.
 
 ## Retry Deliberately
 
-`difyctl` already retries idempotent requests (GET, PUT, DELETE) on transient failures with exponential backoff. See [Global Flags](/en/cli/reference/global-flags#http-retries) for the budget and the `--http-retry` override.
+`difyctl` already retries idempotent requests (GET, PUT, DELETE) on transient failures with exponential backoff. See [Global Flags](/en/cloud/cli/reference/global-flags#http-retries) for the budget and the `--http-retry` override.
 
 What it never retries automatically is POST, and that's the call that matters: every `run app` is a POST. When `run app` fails mid-flight, the CLI doesn't know whether the server already started executing, so by default it won't re-send.
 
-The one opt-in is [`run app --retry-on-limit`](/en/cli/reference/apps#run-an-app), which retries specifically on a 429 with bounded backoff. It stays off by default because an app run isn't idempotent.
+The one opt-in is [`run app --retry-on-limit`](/en/cloud/cli/reference/apps#run-an-app), which retries specifically on a 429 with bounded backoff. It stays off by default because an app run isn't idempotent.
 
 The same applies to your agent's logic: re-running a failed `run app` is a new execution, not a resume of the old one. For a Chatbot, that's usually acceptable (re-ask the question). For a Workflow with side effects, gate the retry on what the workflow does.
 
-Keep agent-side retries for the transient errors above, cap the attempts, and log every retry decision. An agent that silently re-runs writes is the failure mode the [`effect` labels](/en/cli/reference/help#machine-readable-help) exist to prevent.
+Keep agent-side retries for the transient errors above, cap the attempts, and log every retry decision. An agent that silently re-runs writes is the failure mode the [`effect` labels](/en/cloud/cli/reference/help#machine-readable-help) exist to prevent.
 
 Every command carries the tag `read`, `write`, or `destructive`, in the compact command map and in its own descriptor alike, so your loop can gate auto-retry on the tag and never re-send a `write` blindly.

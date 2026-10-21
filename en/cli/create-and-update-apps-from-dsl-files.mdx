@@ -1,0 +1,229 @@
+---
+title: Create and Update Apps from DSL Files
+sidebarTitle: Create or Update from DSL
+description: Update a Dify app from a DSL file with difyctl and publish it, roll it back, create apps from a file or an app package, and change web app settings
+---
+
+<Tip>
+To hand the work over to your coding agent, [set it up with the `difyctl` skill](/en/cli/get-started#set-up-your-coding-agent) and point it to this page.
+</Tip>
+
+## Before You Start
+
+- Each app you export from or update needs Service API access.
+
+- If the apps are on two Dify servers, [sign in to each](/en/cli/manage-sign-in#use-several-servers-or-accounts) with `DIFY_CONFIG_DIR` set to a folder of its own. Then run `difyctl version` with each folder to check that both servers match your `difyctl`.
+
+    <Info>
+    Run each command with the folder for the server its app is on.
+    </Info>
+
+## Update an App
+
+Only Workflow and Chatflow apps can be updated from a file. For another type, [create one from the file](#create-an-app-from-a-dsl-file) instead.
+
+Updating keeps the app's web app URL and API keys ([what else it keeps](/en/self-host/use-dify/workspace/export-import-apps#update-an-existing-app){/* VERIFY: link pending: console page lives on docs/ce1180-app-packages */}). The import replaces the app's draft, including any changes not yet published. The new workflow goes live when you publish.
+
+<Tip>
+To run these steps in a pipeline, also see [Use `difyctl` in CI and Automation](/en/cli/scripts-and-ci) for how the job signs in and stops on failures.
+</Tip>
+
+<Steps>
+  <Step title="Find the App IDs">
+    List your apps and note the `id` of the app you're updating and of any app you'll export the file from:
+
+    ```bash
+    difyctl get console_app
+    ```
+
+    The examples on this page update the production app Order Status with a file exported from its tested copy, Order Status (staging):
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d",
+          "name": "Order Status",
+      "mode": "workflow",
+          …
+        },
+        {
+          "id": "5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f",
+          "name": "Order Status (staging)",
+      "mode": "workflow",
+          …
+        },
+        …
+      ],
+      …
+    }
+    ```
+
+  </Step>
+  <Step title="Get the File">
+    If your [DSL file](/en/learn/key-concepts#dify-dsl) is already in Git, skip to step 3. Otherwise, export it from another app, such as a tested copy of the one you're updating.
+
+    First, in that app, set the [web app settings](#change-the-web-app-and-app-details), such as its title, to what your users should see. The file carries them, and the import shows them to your users at once.
+
+    Then export the app's live version, the one `get console_app version` marks `current: true`:
+
+    ```bash
+    V=$(difyctl get console_app version --app-id 5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f | jq -r '.data[] | select(.current) | .id')
+    difyctl export console_app dsl --app-id 5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f --workflow-id $V | jq -r .data > order-status.yml
+    ```
+
+    To export its unpublished changes instead, leave out `--workflow-id`.
+
+    The export leaves secrets blank. Add `--include-secret` only if the app you're updating should take this app's secret values in place of its own. A file exported this way holds them in plain text, so keep it out of Git and anywhere it's shared.
+
+  </Step>
+  <Step title="Check the File">
+
+    ```bash
+    difyctl check console_app dsl --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --yaml-content "$(cat order-status.yml)"
+    ```
+
+    If the result has `valid: true`, the import will accept the file. Otherwise, fix each issue whose `severity` is `error`, at the node and field its `loc` names, and check again.
+
+    An issue whose `severity` is `warning` doesn't stop the import. It points to a missing credential or model, which you set up in step 5.
+  </Step>
+  <Step title="Import the File">
+    Read the app's draft hash, then import the file with it. With the hash, the import is refused if someone changes the draft in the meantime, instead of replacing their changes.
+
+    <Warning>
+    The file's name, description, icon, and web app settings replace the app's as soon as you import, **without publishing**.
+    </Warning>
+
+    To keep the app's name and description, pass them with `--name` and `--description`. If the file's icon or web app settings aren't right for this app, [change them](#change-the-web-app-and-app-details) right after the import.
+
+    ```bash
+    H=$(difyctl export console_app dsl --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d | jq -r .draft_hash)
+    difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat order-status.yml)" \
+      --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --draft-hash $H --name "Order Status" --description "Summarizes an order's status."
+    ```
+
+    A successful import returns `status: completed`, or `completed-with-warnings` with warnings to read before you go on. Otherwise:
+
+    - If the draft changed after you read the hash, the import is refused with exit code 1: `The draft changed after it was exported.`
+
+      In Studio, find what changed in the draft.
+
+      - If those changes can be discarded, read the hash again and import: the import replaces them.
+      - If they need to be kept, make them in the file too, or in the app you export it from, and start again from step 2.
+
+    - If the file's DSL `version` is newer than your server supports, `status` is `pending`. To import it anyway, [run its hint](/en/cli/find-and-run-commands#follow-hints), `confirm console_app dsl_import`.
+
+    - If the file is invalid, the import is refused with exit code 1. Check the file as in step 3, fix what it reports, and import again.
+
+    For any other error, see [Troubleshooting](/en/cli/reference/results-errors-and-exit-codes#troubleshooting) for what to do.
+
+    To discard the imported workflow, [restore the live version](#roll-back-an-update) into the draft. It's already live, so there's nothing to publish.
+  </Step>
+  <Step title="Install Missing Integrations">
+    A file can pass the check and import even when the workspace lacks an integration it uses. List the missing ones within 10 minutes of the import. After that, the list comes back empty:
+
+    ```bash
+    difyctl check console_app dependency --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    To install one from the Marketplace, [run its hint](/en/cli/find-and-run-commands#follow-hints). In Studio, add the credentials any integration needs, before you test in step 7.
+  </Step>
+  <Step title="Set Environment Variables">
+    The import gave the app the file's environment variable values. Set any that should differ in this app, such as the address of an API it calls.
+
+    List the app's environment variables. A secret that kept this app's value shows as a row of asterisks, an empty one as `""`:
+
+    ```bash
+    difyctl get console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    Set each value that needs changing, including empty secrets, with the variable's `id` as `--env-id`:
+
+    ```bash
+    # a secret, read from a shell variable to keep it out of your shell history
+    difyctl set console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --env-id 2a7c4e9b-6d1f-4b3a-9e8c-5f0d1a2b3c4d --name ORDERS_API_KEY --value "$ORDERS_API_KEY" --value-type secret
+
+    # a plain value
+    difyctl set console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --env-id 6f3b8d1e-4c2a-4e7f-a9b5-0d8c7e6f5a4b --name API_BASE_URL --value "https://orders.example.com/api" --value-type string
+    ```
+
+  </Step>
+  <Step title="Test the Draft">
+    Run the draft once with a typical input. The test uses this app's environment variables, such as its real API keys, so pick an input that's safe to run for real. `describe console_app` shows [which inputs the app takes](/en/cli/run-apps#check-an-apps-inputs).
+
+    ```bash
+    difyctl test console_app workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --inputs '{"topic": "order 1042"}'
+    ```
+
+    For a Chatflow app, use `test console_app advanced_chat` instead.
+
+    A run that passes has `status: ended`. One that fails has `status: failed`, with the reason in `error.message`. Fix the workflow in the file or in the app you export it from, then start again from step 2.
+
+    If a file with a newer DSL version doesn't run on this server, [restore the live version](#roll-back-an-update) into the draft instead. That version is already live, so you don't need to publish it.
+  </Step>
+  <Step title="Confirm the Draft Is Ready">
+
+    ```bash
+    difyctl check console_app release --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    `ready: true` means the draft is valid and passed its last test.
+
+    If `ready` is `false`, [follow its hints](/en/cli/find-and-run-commands#follow-hints) and check again.
+
+    Before you publish, review `changes` for what differs from the published version.
+  </Step>
+  <Step title="Publish">
+
+    ```bash
+    difyctl publish console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --marked-name v2
+    ```
+
+  </Step>
+</Steps>
+
+## Roll Back an Update
+
+If an update you published goes wrong, list the app's published versions, restore an earlier one into the draft by its `id`, and publish it. You can skip the test and readiness check, since that version was live before.
+
+Restoring replaces the draft. To keep the draft, export it first without `--workflow-id`.
+
+```bash
+difyctl get console_app version --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+
+difyctl restore console_app version --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --version-id 8e1d3c5a-2b4f-4a6e-9c7d-1f0b2a3c4d5e
+
+difyctl publish console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+```
+
+Environment variables go back to that version's values. The name, description, icon, and web app settings stay as the import set them. To put those back too, [change them](#change-the-web-app-and-app-details).
+
+## Create an App from a DSL File
+
+Import the file without `--app-id` to create a new app of the file's type, and name it with `--name`:
+
+```bash
+difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat order-status.yml)" --name "Order Status (Acme)"
+```
+
+Use the result's `app_id` as `--app-id` from here on.
+
+The new app's web app title comes from the file, not from `--name`. If its users shouldn't see that title, [change it](#change-the-web-app-and-app-details).
+
+To finish a Workflow or Chatflow app, follow steps 5 to 9 of [Update an App](#update-an-app). For another type, only step 5 applies.
+
+## Import an App Package
+
+To import an [app package](/en/learn/key-concepts#dify-dsl){/* VERIFY: link pending: Key Concepts defines app packages on docs/ce1180-app-packages */} (`.ifpkg`) exported from Studio, unzip it and use the `app.yaml` inside as your DSL file. Uploaded icons don't carry over. [Set them again](#change-the-web-app-and-app-details) after the import.
+
+## Change the Web App and App Details
+
+To change the web app's settings, such as its title, use `set webapp`. To change the app's name, description, or icon, use `set app_info`. Only the fields you pass change.
+
+```bash
+difyctl set webapp workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --title "Order Status"
+
+difyctl set app_info workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --name "Order Status"
+```
+
+For an app that isn't a Workflow app, run `difyctl help set webapp` or `difyctl help set app_info` to find its command.

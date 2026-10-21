@@ -1,0 +1,162 @@
+---
+title: Use `difyctl` in CI and Automation
+sidebarTitle: CI and Automation
+description: Install difyctl in a CI job, give it a sign-in, and stop it on the right failures, with an example that updates an app on merge
+---
+
+<Tip>
+To hand the work over to your coding agent, [set it up with the `difyctl` skill](/en/cli/get-started#set-up-your-coding-agent) and point it to this page.
+</Tip>
+
+## Install `difyctl` in the Job
+
+Use the [installer](/en/cli/get-started#install), and always set `DIFY_VERSION` to your server's version, so a new Dify release doesn't change the build the job gets. If the installer stops at GitHub's rate limit, set `GITHUB_TOKEN` or `GH_TOKEN` in the job's environment.
+
+## Sign In
+
+For a job that runs unattended, sign in yourself and pass it the token. When someone can approve a code each time, a script can sign in itself.
+
+### Pass a Token to the Job
+
+Get the token with an account used only for CI, or on a machine you don't otherwise run `difyctl` on. The account needs the Editor role or above to import, test, and publish. If the same account signs in again on that machine, the job's sign-in ends.
+
+Use `--no-keyring`, so you can copy the token from a file:
+
+```bash
+difyctl login --server https://dify.example.com --no-keyring
+```
+
+Copy it from `tokens.yml` in the [config folder](/en/cli/manage-sign-in#where-your-token-lives):
+
+```yaml
+tokens:
+  dify.example.com:
+    ci@example.com: dfoa_…
+```
+
+Store it as a CI secret, and set these [environment variables](/en/cli/reference/configuration#environment-variables) in the job:
+
+- `DIFY_SERVER`: the address you signed in with.
+- `DIFY_TOKEN`: the token, from the secret.
+- `DIFY_WORKSPACE_ID`: the workspace's `id`, which `difyctl get workspace` lists.
+
+If the job can't write to its default config folder, set `DIFY_CONFIG_DIR` to a folder it can.
+
+Then delete `tokens.yml`, so the token lives only in the CI secret. This signs out the machine you signed in from, while the job keeps working. Running `logout` instead would end the job's sign-in too.
+
+#### Renew the Sign-In
+
+When the job's commands fail with `auth_expired` (exit code 4), sign in again and replace the token in the CI secret.
+
+The sign-in stops working when:
+
+- It expires: after 14 days by default, or the number of days [`OAUTH_TTL_DAYS`](/en/self-host/deploy/configuration/environments#dify-cli-and-programmatic-api) sets on your server.
+- The same account signs in again on that machine, even in another config folder.
+
+To renew before the job fails, run `difyctl get account session` in the job and check `expires_at` on the session whose `device_label` is the machine you signed in from.
+
+### Sign In from a Script
+
+Start the sign-in with `--no-wait`. Like any `login`, it first signs out the current session, then prints the code and exits without waiting:
+
+```bash
+difyctl login --server https://dify.example.com --no-wait
+```
+
+```json
+{"status":"pending","verification_uri":"…","user_code":"…","expires_in":900}
+```
+
+Pass `verification_uri` and `user_code` to someone who can open the URL and approve the code within 15 minutes. Until you finish the sign-in, don't start another `login`: it discards this one, so approving its code no longer signs you in.
+
+Then finish the sign-in in the same config folder:
+
+```bash
+difyctl login --resume
+```
+
+- Until the code is approved, it prints `{"status":"pending"}` and exits with 0, so check `status` rather than the exit code.
+- Once the code is approved, it prints the signed-in `account` instead, with no `status`.
+- If the code is denied or expires first, it fails with exit code 4. Start over with `login --no-wait`.
+
+For what to check before you approve a coding agent's code, see [Sign In](/en/cli/get-started#sign-in).
+
+## Handle Failures
+
+Run each step in bash with `set -eo pipefail`.
+
+These commands exit 0 even when the job should stop. Check their output with `jq -e`, which fails when its test is false:
+
+- `check console_app dsl`, when the file is invalid: `jq -e '.valid'`
+- `import console_app dsl`, when the import is left pending for someone to confirm: `jq -e '.status | startswith("completed")'`
+- `check console_app dependency`, when the workspace lacks integrations the app uses: `jq -e '.leaked_dependencies | length == 0'`
+- `test console_app workflow`, when the run [paused or was cut off](/en/cli/reference/results-errors-and-exit-codes#check-how-a-run-ended): `jq -e '.status == "ended"'`
+- `check console_app release`, when the draft isn't ready to publish: `jq -e '.ready'`
+
+A command that exits 7 hit the [rate limit](/en/cli/reference/results-errors-and-exit-codes#rate-limit) and did nothing. Have the job wait a minute and run it again.
+
+## Example: Update an App on Merge
+
+This GitHub Actions workflow checks the app's DSL file, `apps/order-status.yml`, against the app when a pull request changes it. On merge to `main`, it updates and publishes the app. For what each step does, see [Update an App](/en/cli/create-and-update-apps-from-dsl-files#update-an-app).
+
+<Warning>
+Each import replaces the app's draft, including changes someone made in Studio, so change the app only through the repository. The import also applies the file's name, description, icon, and web app settings right away. If a later step fails, the live workflow stays as it was.
+</Warning>
+
+To use it, in the repository's **Settings** > **Secrets and variables** > **Actions**, add the secret `DIFY_TOKEN` and the variable `DIFY_WORKSPACE_ID`. Then replace the example values with your own: the server address, the app's ID and name (`difyctl get console_app` lists both), the file path, the Dify version, and the test inputs.
+
+```yaml .github/workflows/update-order-status.yml
+name: Update Order Status
+
+on:
+  pull_request:
+    paths: [apps/order-status.yml]
+  push:
+    branches: [main]
+    paths: [apps/order-status.yml]
+
+defaults:
+  run:
+    shell: bash  # runs steps with pipefail, unlike the default
+
+env:
+  DIFY_SERVER: https://dify.example.com
+  DIFY_TOKEN: ${{ secrets.DIFY_TOKEN }}
+  DIFY_WORKSPACE_ID: ${{ vars.DIFY_WORKSPACE_ID }}
+  APP_ID: 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+  FILE: apps/order-status.yml
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install difyctl
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.18.0 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Check the file against the app
+        run: difyctl check console_app dsl --app-id "$APP_ID" --yaml-content "$(cat "$FILE")" | jq -e '.valid'
+
+  update:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install difyctl
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.18.0 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Import the file
+        run: |
+          H=$(difyctl export console_app dsl --app-id "$APP_ID" | jq -r .draft_hash)
+          difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat "$FILE")" \
+            --app-id "$APP_ID" --draft-hash "$H" --name "Order Status" | jq -e '.status | startswith("completed")'
+          difyctl check console_app dependency --app-id "$APP_ID" | jq -e '.leaked_dependencies | length == 0'
+      - name: Test and publish
+        run: |
+          difyctl test console_app workflow --app-id "$APP_ID" --inputs '{"topic": "order 1042"}' | jq -e '.status == "ended"'
+          difyctl check console_app release --app-id "$APP_ID" | jq -e '.ready'
+          difyctl publish console_app --app-id "$APP_ID" --marked-name "${GITHUB_SHA::7}"
+```
