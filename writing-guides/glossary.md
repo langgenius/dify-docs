@@ -18,6 +18,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Chatflow app | Chatflow 应用 | Chatflow アプリ | Explicit form of the Chatflow app type. |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー | English prose: lowercase, plural as needed. zh and ja keep the English word untranslated and capitalized, as the trees already do. |
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective/engine sense: workflow-backed runs, workflow nodes, the workflow engine, and endpoints shared across app types. Localizes in zh/ja; the Workflow app type stays English. |
+| workflow tool | 工作流工具 | ワークフローツール | A Workflow app published as a tool. Lowercase in prose. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
 | Legacy Agent | 旧版 Agent | レガシー Agent | The classic app type's UI deprecation badge, and its docs name wherever the new Agent supersedes it (nav, API guides, spec app-type labels). The node level stays Classic Agent / New Agent: the classic node is Chatflow's default, not legacy. |
@@ -94,6 +95,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン | Lowercase in prose. |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
 | chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
@@ -381,7 +383,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Test Run | 测试运行 | テスト実行 | workflow.common.run | |
 | Features | 功能 | 機能 | workflow.common.features | Panel for web app features |
 | Version History | 版本历史 | バージョン履歴 | workflow.common.versionHistory | |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する | workflow.common.workflowAsTool | REVIEW: ZH/JA much longer than EN label |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 | navigation.common.workflowAsTool | Publish-menu action that turns a Workflow into a tool |
 | Needs Setup | 需要进行配置 | 設定が必要 | workflow.common.configureRequired | Workflow as Tool badge before first configuration; renamed from "Configure Required" in v1.16.2 |
 | Ready | 已就绪 | 準備完了 | workflow.common.workflowAsToolReady | Workflow as Tool status |
 | Update Needed | 需要更新 | 更新が必要 | workflow.common.workflowAsToolUpdateNeeded | Workflow as Tool status; the workflow changed after the tool was configured |
@@ -445,6 +447,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Function Calling | Function Calling | 関数呼び出し | app-debug.agent.agentModeType.functionCall | Agent mode; ZH keeps English |
 | ReAct | ReAct | ReAct | app-debug.agent.agentModeType.ReACT | Agent mode |
 | Agent Settings | Agent 设置 | エージェント設定 | app-debug.agent.setting.name | |
+| TRACING | 追踪 | 実行追跡 | run-log.tracing | Run detail tab, and the button on a Tool node that called a workflow tool; ja differs from Tracing (app.tracing.tracing) |
 
 ### Agent Node Config
 

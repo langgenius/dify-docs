@@ -12,6 +12,7 @@
 | Chatflow app | Chatflow 应用 | Chatflow アプリ |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー |
 | workflow | 工作流 | ワークフロー |
+| workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
@@ -88,6 +89,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | knowledge base | 知识库 | ナレッジベース |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
@@ -369,7 +371,7 @@
 | Test Run | 测试运行 | テスト実行 |
 | Features | 功能 | 機能 |
 | Version History | 版本历史 | バージョン履歴 |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 |
 | Needs Setup | 需要进行配置 | 設定が必要 |
 | Ready | 已就绪 | 準備完了 |
 | Update Needed | 需要更新 | 更新が必要 |
@@ -433,6 +435,7 @@
 | Function Calling | Function Calling | 関数呼び出し |
 | ReAct | ReAct | ReAct |
 | Agent Settings | Agent 设置 | エージェント設定 |
+| TRACING | 追踪 | 実行追跡 |
 
 ### Agent Node Config
 
