@@ -193,6 +193,7 @@
 | Orchestrate | 编排 | オーケストレート |
 | Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
+| Monitoring (Agent) | 监控 | モニタリング |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
@@ -294,6 +295,9 @@
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
+| Agent data capture | Agent 数据采集 | Agent データ収集 |
+| Capture content | 采集内容 | 内容を収集 |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 

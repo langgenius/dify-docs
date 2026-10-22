@@ -203,6 +203,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
 | Access Point | 访问入口 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
+| Monitoring (Agent) | 监控 | モニタリング | agent-v-2.agentDetail.sections.monitoring | Section of the Agent detail page; zh/ja differ from the app tab Monitoring (common.appMenus.overview) |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
@@ -304,6 +305,9 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
+| Agent data capture | Agent 数据采集 | Agent データ収集 | app.tracing.captureTitle | Tracing settings group, shown when Agent tracing is enabled |
+| Capture content | 采集内容 | 内容を収集 | app.tracing.captureContent | |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 | app.tracing.captureAgent | |
 | Branding | 品牌设置 | ブランディング | app-overview.overview.appInfo.settings.title | Publish-panel action opening the client-side web app settings (name, description, language, copyright, privacy policy, custom disclaimer) |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド | app-overview.overview.appInfo.customize.title | Publish-panel action, sibling to Branding; covers forking the web client or calling the API directly |
 
