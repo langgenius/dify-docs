@@ -201,7 +201,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
-| Access Point | 访问点 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
+| Access Point | 访问入口 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |

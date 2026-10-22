@@ -191,7 +191,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Orchestrate | 编排 | オーケストレート |
-| Access Point | 访问点 | アクセスポイント |
+| Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
