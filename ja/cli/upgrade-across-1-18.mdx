@@ -1,0 +1,225 @@
+---
+title: Dify 1.18.0 へのアップグレード
+sidebarTitle: 1.18.0 へのアップグレード
+description: Dify サーバーが 1.17.x 以前から 1.18.0 以降に移行したときの対応。サインインし直して後片付けを行い、コマンド、スクリプト、コーディングエージェントをそれぞれ更新する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/upgrade-across-1-18) を参照してください。
+
+<Info>
+古い `difyctl` が `catalog_stale`（`The request was built from a catalog that is not this server's current catalog`）で失敗するようになった場合、Dify サーバーはすでに 1.18.0 以降に移行しています。
+</Info>
+
+## 新しいビルドへの切り替え
+
+<Steps>
+  <Step title="新しいビルドのインストール">
+    サーバーに合った `difyctl` を [インストール](/ja/cli/get-started#インストール) します。
+
+    CI イメージ内など、ほかの場所にある古いビルドのコピーもすべて削除します。新しいビルドでサインインした後に古いビルドの `auth logout` を実行すると、新しいビルドの保存済みトークンが削除されることがあります。その場合は、もう一度サインインが必要です。
+
+    1.17.x 以前のサーバー用に、古いビルドも引き続き必要になることがあります。たとえば、ステージング環境を先に移行し、本番環境はまだ移行していない場合です。そのときは、`DIFYCTL_PREFIX` で古いビルドを専用のフォルダにインストールし、専用の設定フォルダを指定して実行します。この設定フォルダは最初は空なので、そこで古いビルドでもう一度サインインします：
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.17.1 DIFYCTL_PREFIX=$HOME/difyctl-1.17 sh
+    DIFY_CONFIG_DIR=$HOME/.config/difyctl-1.17 $HOME/difyctl-1.17/bin/difyctl auth login --host https://dify-prod.example.com
+    DIFY_CONFIG_DIR=$HOME/.config/difyctl-1.17 $HOME/difyctl-1.17/bin/difyctl get app
+    ```
+
+  </Step>
+  <Step title="再サインイン">
+
+    ```bash
+    difyctl login --server https://dify.example.com
+    ```
+
+    `difyctl describe account` で、サインインできたことを確認します。
+
+    サインインのオプションと、新しいビルドがトークンを保存する場所については、[サインインの管理](/ja/cli/manage-sign-in) を参照してください。CI ジョブでサインインする方法は、[CI と自動化での `difyctl` の使用](/ja/cli/scripts-and-ci) を参照してください。
+  </Step>
+  <Step title="古いセッションの終了">
+    新しいビルドでサインインしても、サーバー上にある古いビルドのセッションは終了しません。このセッションは、既定では最大 14 日間有効です。共有マシンを使っている場合や設定フォルダをコピーした場合など、古いトークンがほかの人の手に渡っている可能性があるときは、すぐに終了させてください。そうでなければ、期限切れになるまでそのままにしてもかまいません。
+
+    終了するには、セッションを一覧表示し、`difyctl on <your-machine-name>` というラベルのセッションを削除します。新しいセッションのラベルは、マシン名だけです。削除時に確認は求められないため、実行前に ID をよく確認してください。
+
+    ```bash
+    difyctl get account session
+    difyctl delete account session --session-id <session-id>
+    ```
+
+  </Step>
+  <Step title="difyctl スキルの再インストール">
+    Claude Code や Codex などのコーディングエージェントが difyctl スキル経由で `difyctl` を使っている場合は、スキルを再インストールしてください。問題がなさそうに見えても、再インストールは必要です。
+
+    古いビルドの `skills install --yes` は、検出したすべてのコーディングエージェントに difyctl スキルをインストールしていました。次のフォルダのうち、どれが存在するかを確認します：
+
+    ```bash
+    ls -d ~/.claude/skills/difyctl \
+      ~/.agents/skills/difyctl \
+      ~/.config/opencode/skills/difyctl \
+      ~/.cursor/skills/difyctl \
+      ~/.pi/agent/skills/difyctl 2>/dev/null
+    ```
+
+    `install skills` が difyctl スキルを置き換えるのは、引数に指定したスキルフォルダだけです。引き続き使うコーディングエージェントごとに実行し、残りのスキルフォルダからは `difyctl` フォルダを削除します：
+
+    ```bash
+    difyctl install skills ~/.claude/skills   # Claude Code
+    difyctl install skills ~/.agents/skills   # Codex
+    ```
+
+    古い `skills install <dir>` は、`SKILL.md` を `<dir>` の直下に書き込んでいました。コーディングエージェントのスキルフォルダを指定していた場合は、そこに残っている `~/.claude/skills/SKILL.md` などのファイルを削除します。
+
+    コーディングエージェントが `difyctl` を使うために必要なその他の準備については、[コーディングエージェントのセットアップ](/ja/cli/get-started#コーディングエージェントのセットアップ) を参照してください。
+  </Step>
+</Steps>
+
+## 古いコマンドの置き換え
+
+ほとんどのコマンドは、ID などの値を位置引数ではなく、`--app-id` のような名前付きフラグで受け取るようになりました。
+
+各コマンドで使えるフラグをすべて確認するには、`difyctl help <command>` を実行します。
+
+残っているグローバルフラグは `--verbose`、`--json`、`--help` の 3 つだけです。`-v`、`-y`、`-w` などの短縮フラグは廃止されました。`--verbose` は、エラーにサーバーの生のレスポンスを追加するだけになりました。確認を求めるコマンドはないため、`--yes` は削除してください。
+
+### サインインとセッション
+
+| 古いビルド | 新しいビルド | 備考 |
+|:---|:---|:---|
+| `auth login --host <url>` | `login --server <url>` | `--server` は必須。`--no-browser` と `--insecure` は引き続き使える。 |
+| `auth whoami` | `describe account` | |
+| `auth logout` | `logout` | |
+| `auth devices list` | `get account session` | |
+| `auth devices revoke <id>` | `delete account session --session-id <id>` | `--all` はない。複数のセッションを終了するには、セッションごとに 1 回ずつ実行する。 |
+| `auth list`、`use host`、`use account` | なし | サインインは設定フォルダごとに 1 つ。複数のサーバーを使うには、`DIFY_CONFIG_DIR` でサーバーごとに別の設定フォルダを指定する。アカウントを切り替えるには、サインインし直す。 |
+
+### アプリ
+
+| 古いビルド | 新しいビルド | 備考 |
+|:---|:---|:---|
+| `get app` | `get console_app` | `--mode`、`--name`、`--page`、`--limit` は引き続き使える。 |
+| `describe app <id>`、`get app <id>` | `describe console_app --app-id <id>` | |
+| `run app <id> "<message>"`（チャットボット、レガシー Agent アプリ） | `run console_app chat --app-id <id> --query "<message>"` | |
+| `run app`（Chatflow アプリ） | `run console_app advanced_chat --app-id <id> --query "<message>"` | |
+| `run app`（テキストジェネレーター） | `run console_app completion --app-id <id>` | |
+| `run app`（Workflow アプリ） | `run console_app workflow --app-id <id> --inputs '{…}'` | |
+| `--inputs-file <file>` | `--inputs @<file>` | |
+| `--file <key>=@<path>` | `--files '{"<key>":"<path>"}'` | Web 上のファイルは `--inputs` で渡す。 |
+| `--conversation <id>` | `--conversation-id <id>` | |
+| `--stream` | `--stream` | 生の JSON イベントを出力するようになった。`--only <event>` で絞り込める。 |
+| `--think`、`--retry-on-limit` | なし | |
+
+アプリの種類がわからない場合は、`describe console_app` で確認できます。
+
+チャットボットの実行と、ファイルから入力を渡す Workflow アプリの実行は、次のように変わります：
+
+```bash
+# 古いビルド
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "営業時間を教えてください。"
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs-file inputs.json
+
+# 新しいビルド
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "営業時間を教えてください。"
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs @inputs.json
+```
+
+### 人間の入力
+
+人間の入力を待って停止した実行は、`"paused"` ではなく `"status": "suspended"` を返すようになりました。`paused` を確認しているスクリプトは更新してください。この結果の `hints` には、アクションごとの `submit run form` コマンドが含まれており、フォームトークンも入力済みです。
+
+フォームを自分で送信する場合、`resume app` は `submit run form` に変わります：
+
+```bash
+# 古いビルド
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b <form-token> --workflow-run-id <workflow-run-id> --action approve --inputs '{"comment":"問題ありません"}'
+
+# 新しいビルド
+difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token <form-token> --action approve --inputs '{"comment":"問題ありません"}'
+```
+
+`resume app` と違い、`submit run form` は実行を追跡しません。実行の続きを取得するには、返されたヒントの `get run event` を実行します。
+
+### DSL のエクスポートとインポート
+
+| 古いビルド | 新しいビルド | 備考 |
+|:---|:---|:---|
+| `export studio-app <id>` | `export console_app dsl --app-id <id>` | YAML をそのままではなく、JSON に包んで出力する。 |
+| `import studio-app --from-file <file>` | `import console_app dsl --mode yaml-content --yaml-content "$(cat <file>)"` | |
+| `import studio-app --from-url <url>` | `import console_app dsl --mode yaml-url --yaml-url <url>` | |
+
+エクスポートをファイルに保存するには、`.data` を取り出します：
+
+```bash
+difyctl export console_app dsl --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b | jq -r '.data' > app.yml
+```
+
+古いビルドは保留中のインポートを自動で確定していましたが、新しいビルドは確定しません。ファイルの DSL バージョンがサーバーより新しい場合や、メジャーバージョンが古い場合、インポートは保留中になります。ファイルを信頼できる場合は、`confirm console_app dsl_import --import-id <import-id>` でインポートを完了します。
+
+古いビルドは、インポート後に不足している統合も一覧表示していました。現在は、`check console_app dependency` を実行して確認します。
+
+### ワークスペースとメンバー
+
+| 古いビルド | 新しいビルド | 備考 |
+|:---|:---|:---|
+| `get member` | `get workspace member` | |
+| `create member` | `invite workspace member` | |
+| `set member` | `set workspace member_role` | |
+| `delete member` | `delete workspace member` | |
+
+### 設定、difyctl スキル、ヘルプ、バージョン
+
+| 古いビルド | 新しいビルド | 備考 |
+|:---|:---|:---|
+| `config get`、`config view`、`config path` | `get config [<key>]` | 設定の保存先パスも表示する。 |
+| `config set` | `set config` | 残っている設定項目は `http.timeout` だけ。 |
+| `config unset` | `unset config` | |
+| `env list` | なし | `difyctl` が読み取る変数については、[環境変数](/ja/cli/reference/configuration#環境変数) を参照。 |
+| `skills install` | `install skills <skills-root>` | コーディングエージェントごとの再インストール方法は、[新しいビルドへの切り替え](#新しいビルドへの切り替え) の手順 4 を参照。 |
+| `--short`、`--client`、`--check-compat`、`-o` を付けた `version` | `version` | フラグを受け付けない。 |
+| `help -o json --compact`、`help <command> -o json` | `help`、`help <command>` | スクリプト内などでパイプした場合は JSON を出力する。 |
+
+## スクリプトのその他の更新
+
+### JSON 形式での結果の読み取り
+
+結果は常に JSON で出力されるようになり、`-o` は不明なフラグとしてエラーになります。スクリプトから `-o json` を削除してください。
+
+`-o name` や `-o yaml` など、別の形式を指定していたスクリプトでは、`jq` などを使って JSON を自分で整形します。チャットボットの応答だけをテキストとして取り出すには、次のようにします：
+
+```bash
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "営業時間を教えてください。" | jq -r '.text.answer'
+```
+
+スクリプトでは `DIFY_OUTPUT=json` を設定するか `--json` を渡して、どこで実行してもエラーが JSON で出力されるようにします。設定しない場合、stderr に出力されるエラーは、パイプでは JSON、ターミナルではテキストになります。
+
+### 新しい終了コードとエラーコードへの対応
+
+終了コードの番号はそのままですが、次の 2 つの変更があります：
+
+- 6 は、`difyctl` がサーバー上でコマンドを見つけられなかったことを表すようになりました。サーバーのコマンド一覧を取得できなかった場合と、入力した内容に一致するコマンドが一覧にない場合です。以前はバージョンの不一致を表していました。
+- 64 は、`version --check-compat` とともに廃止されました。
+
+スクリプトでエラーコードによって分岐している場合は、次のように対応します：
+
+- `server_4xx_other` と `server_5xx` は `server_error` に置き換え、あわせて返される HTTP ステータスを確認します。
+- `token_expired` と `expired_token` は、終了コード 4 で終了する `auth_expired` に置き換えます。
+- `version_skew`、`unsupported_endpoint`、`client_error`、`illegal_argument`、`config_schema_unsupported` の分岐は削除します。
+
+`input_invalid` や `catalog_unavailable` など、新しいコードの意味については、[結果、エラー、終了コード](/ja/cli/reference/results-errors-and-exit-codes) を参照してください。
+
+### スクリプトでのリトライ
+
+新しいビルドは、失敗したリクエストをリトライしません。`--http-retry` も廃止されました。リトライを前提としていたスクリプトには、独自のリトライ処理を追加してください。どのコマンドなら安全にリトライできるかについては、[失敗したコマンドのリトライ](/ja/cli/reference/results-errors-and-exit-codes#失敗したコマンドのリトライ) を参照してください。
+
+### 環境変数の更新
+
+スクリプトと CI の設定から、次の環境変数を削除します：
+
+- `DIFY_LIMIT`：代わりに `--limit` を渡します。
+- `DIFYCTL_HTTP_RETRY`：代替手段はありません。
+- `DIFYCTL_NO_COLOR`：代わりに `NO_COLOR` を使用します。
+- `DIFY_CACHE_DIR`：キャッシュは設定フォルダに保存されるようになったため、`DIFY_CONFIG_DIR` だけで足ります。
+
+`DIFY_CONFIG_DIR` と `DIFY_WORKSPACE_ID` は、これまでどおり使えます。
+
+新しいビルドが読み取るすべての環境変数については、[環境変数](/ja/cli/reference/configuration#環境変数) を参照してください。

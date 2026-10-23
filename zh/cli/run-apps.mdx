@@ -1,0 +1,177 @@
+---
+title: 运行应用
+sidebarTitle: 运行
+description: 用 difyctl 运行 Dify 应用，传入变量和文件，流式查看或停止耗时较长的运行，填写人工介入表单，并排查运行失败的原因
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/run-apps)。
+
+<Tip>
+    要交给编码 Agent 来做，先 [为它配置好 `difyctl` Skill](/zh/cli/get-started#配置编码-agent)，再把这个页面发给它。
+</Tip>
+
+## 查找应用
+
+运行 `difyctl get console_app` 列出你的应用。只有开启了服务 API 访问的应用才会列出，也只有这些应用能运行。
+
+```bash
+difyctl get console_app
+
+# 按名称片段或 mode 筛选，也可两者同时使用
+difyctl get console_app --name report --mode workflow
+```
+
+在其他命令中，把应用的 `id` 传给 `--app-id`。`mode` 是应用的类型，决定了用哪条命令运行它：
+
+| `mode` | 应用类型 | 运行命令 |
+|:---|:---|:---|
+| `workflow` | Workflow | `run console_app workflow` |
+| `advanced-chat` | Chatflow | `run console_app advanced_chat` |
+| `chat` | 聊天助手 | `run console_app chat` |
+| `agent-chat` | 旧版 Agent | `run console_app chat` |
+| `completion` | 文本生成应用 | `run console_app completion` |
+
+<Info>
+`difyctl` 不会列出或运行用新 Agent 构建的应用。这类应用要改为通过 [服务 API](/zh/api-reference/guides/agent) 调用。
+</Info>
+
+## 查看应用的输入变量
+
+运行 `difyctl describe console_app` 查看应用的变量：名称、类型，以及哪些是必填的。
+
+```bash
+difyctl describe console_app --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+## 运行 Workflow 应用
+
+用 `--inputs` 把应用的变量传给 `difyctl run console_app workflow`，格式为以变量名为键的 JSON。应用的答案在结果的 `outputs` 中，键名对应输出节点的变量。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "季度报告"}'
+
+# 从文件读取变量
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs @inputs.json
+```
+
+<Note>
+必填变量名拼错时，运行会失败，报 `topic is required in input form` 之类的错误。可选变量名拼错则不会报错，运行会直接略过这个变量。变量名可用 [`describe console_app`](#查看应用的输入变量) 核对。
+</Note>
+
+## 发送消息或生成文本
+
+按 [查找应用](#查找应用) 中的应用类型，选用对应的 `run console_app` 命令。消息放在 `--query` 中，变量（如有）放在 `--inputs` 中。文本生成应用通常只需要 `--inputs`。回复在结果的 `text.answer` 中。
+
+```bash
+# 聊天助手或旧版 Agent 应用
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "你们的营业时间是几点？"
+
+# 带一个变量的 Chatflow 应用
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "这个季度有什么变化？" --inputs '{"topic": "季度报告"}'
+
+# 文本生成应用
+difyctl run console_app completion --app-id 5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9 --inputs '{"topic": "季度报告"}'
+```
+
+## 继续会话
+
+用 `--conversation-id` 传回结果中的 `conversation_id`。
+
+```bash
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "这个季度有什么变化？" --inputs '{"topic": "季度报告"}'
+
+# 在同一会话中回复，变量保持不变
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --conversation-id 9f8e7d6c-5b4a-4321-8fed-cba987654321 --query "那上个季度呢？" --inputs '{"topic": "季度报告"}'
+```
+
+<Note>
+每轮对话都要重新传入应用的必填变量。漏传时，消息会发送失败。
+</Note>
+
+## 发送文件
+
+任何运行命令都可用 `--files` 为每个文件变量指定一个本地路径。文件列表变量则指定一组路径。网络上的文件改为通过 `--inputs` 传入。每个文件变量只能通过 `--files` 或 `--inputs` 中的一个传入，不能两处都传。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "季度报告"}' --files '{"document": "./report.pdf", "appendices": ["./q1.pdf", "./q2.pdf"]}'
+
+# 网络上的文件
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"document": {"transfer_method": "remote_url", "url": "https://example.com/report.pdf", "type": "document"}}'
+```
+
+## 跟踪耗时较长的运行
+
+要边运行边查看进展，就加上 `--stream`。每个事件一发生就会打印出来，每行一个 JSON 对象。Workflow 应用运行时，最后一个事件 `workflow_finished` 会在 `data.outputs` 中给出结果。只想打印部分事件时，用 `--only` 逐个指定事件名。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "季度报告"}' --stream
+
+# 只打印最后一个事件
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "季度报告"}' --stream --only workflow_finished
+```
+
+## 停止运行
+
+要想之后能停止某次运行，就得用 `--stream` 启动它。停止时，把它第一个事件中的 `task_id` 传给 `difyctl stop run`：
+
+```bash
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
+
+Workflow 或 Chatflow 应用的运行停止后，它的流以 `workflow_finished` 事件结束，事件中的 `data.status` 为 `stopped`。流式命令以退出码 1 退出。在脚本中，要根据 `data.status` 判断运行是否已停止，不要看退出码。
+
+<Note>
+传给 `stop run` 的应是 `task_id`，而不是每个事件中都有的 `workflow_run_id`。传错 ID 时，命令仍会打印 `{"result": "success"}`，但运行会继续进行。
+</Note>
+
+## 填写人工介入表单
+
+<Info>
+只有人工介入节点的提交方式为 **Webapp** 时，才能在 `difyctl` 中填写表单。
+</Info>
+
+运行在表单处暂停时，会返回 `status` 为 `suspended` 的结果，每个操作按钮各对应一条提示。找到你要执行的操作对应的提示，把其中 `inputs` 里的每个 `null` 换成你的回答，再 [运行这条提示](/zh/cli/find-and-run-commands#按提示运行后续命令)。
+
+也可先看看表单有哪些字段再填写：从任一提示中取出 `form_token`，用 `describe run form` 查看，再用 `submit run form` 提交回答。
+
+无论用哪种方式，之后都用 `get run event` 跟踪恢复后的运行。别被标志名误导：`--task-id` 要传的是暂停时返回结果中的 `run_id`。一定要带上 `--include-state-snapshot`，否则该命令可能长达 5 分钟没有任何输出。
+
+```bash
+# 查看表单字段
+difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE
+
+# 选择一个操作并提交；表单没有字段时，用 --inputs '{}'
+difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "没问题"}'
+
+# 跟踪恢复后的运行
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+
+# 如果运行之后还可能在其他表单处暂停，持续跟踪
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+```
+
+## 排查运行失败的原因
+
+Workflow 或 Chatflow 应用运行失败时，可从失败结果中的 `run_id` 入手，也可用 `difyctl get run` 列出失败的运行。然后用 `describe run` 查看这次运行，用 `get run node` 查看它的各个节点。
+
+```bash
+difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status failed
+
+# 运行的输入、输出、状态和错误
+difyctl describe run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+
+# 各个节点；失败的节点带有错误信息
+difyctl get run node --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+```
+
+<Note>
+一定要带上 `--triggered-from app-run`。不带的话，列表只显示草稿的测试运行。
+</Note>
+
+## 故障排查
+
+| 错误信息 | 处理方法 |
+|:--|:--|
+| `invalid run input`，但输入无误 | 应用可能从未发布过。发布后再运行。 |
+
+任何命令都可能遇到的错误，详见「结果、错误与退出码」中的 [故障排查](/zh/cli/reference/results-errors-and-exit-codes#故障排查)。

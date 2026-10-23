@@ -1,0 +1,117 @@
+---
+title: コマンドの検索と実行
+description: 作業に合った difyctl コマンドを探し、フラグまたは JSON で値を渡して実行する。結果が提案する次のステップも実行する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/find-and-run-commands) を参照してください。
+
+## コマンドの検索
+
+作業内容を短い言葉で `help` に伝えると、一致するコマンドが一覧表示されます。たとえば、アプリを公開するコマンドを探すには、次のように実行します：
+
+```bash
+difyctl help publish app
+```
+
+一覧から探す場合は、`difyctl help` を引数なしで実行します。`get` や `run` など、コマンドの先頭に来る語が一覧表示されます。そのうちの 1 つを付けて実行すると、その語で始まるコマンドがすべて表示されます：
+
+```bash
+difyctl help get
+```
+
+目的のコマンドが見つかったら、コマンド名全体を指定して `help` を実行し、受け取るフィールド（渡す値）を確認します：
+
+```bash
+difyctl help describe console_app
+```
+
+コマンド自体に `--help` または `-h` を付けても確認できます。
+
+## コマンドの実行
+
+<Warning>
+`difyctl` は、コマンドの実行前に確認を求めません。`delete` コマンドのように、ヘルプで `destructive` と表示されるコマンドも同様です。
+
+破壊的なコマンドを実行する前に、対応する `get` コマンドなどで、対象の ID を確認してください。
+</Warning>
+
+### フラグによる値の指定
+
+必要なフィールドごとに、対応するフラグに続けて値を指定します。コマンドのヘルプには、各フラグの型、既定値、必須かどうかが表示されます。たとえば、`run console_app workflow` のヘルプの一部は次のとおりです：
+
+```text
+Flags
+  --app-id       string             required
+  --inputs       map<string, json>  optional  Variables declared by the app. …
+  --workflow-id  string             optional  Pin a published workflow version
+```
+
+値の渡し方は型によって決まります。ほとんどのフィールドには、値をそのまま渡します。たとえば、アプリの詳細を表示するには、`difyctl get console_app` の一覧にあるアプリ ID を次のように指定します：
+
+```bash
+difyctl describe console_app --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789
+```
+
+ただし、次の 3 種類のフィールドは渡し方が異なります：
+
+- `boolean` 型のフィールドでは、フラグだけを指定すると true、`=false` を付けると false になります。たとえば、`run console_app chat` の `--auto-generate-name=false` のように指定します。
+
+- `string[]` などのリスト型のフィールドでは、値ごとにフラグを繰り返し指定します。たとえば、`install plugin` の `--identifiers a --identifiers b` のように指定します。
+
+- 型が `json`、`object`、`map` のフィールドでは、JSON テキストをフラグの値として渡します。たとえば、上のヘルプにある `--inputs` の場合は次のようになります：
+
+  ```bash
+  difyctl run console_app workflow --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --inputs '{"topic": "AI"}'
+  ```
+
+JSON をファイルから読み込むには、`--inputs @inputs.json` のように、`@` に続けてファイルのパスを指定します。stdin から読み込むには、`--inputs @-` と指定します。
+
+`string` 型のフィールドでは、`@` を付けてもファイルは読み込まれないので注意してください。`--yaml-content @app.yml` と指定すると、ファイルの内容ではなく、`@app.yml` という文字列がそのまま送信されます。ファイルの内容を送るには、`--yaml-content "$(cat app.yml)"` のようにシェルでファイルを読み込みます。
+
+### JSON によるリクエストの一括指定
+
+リクエストをスクリプトで組み立てる場合や、ファイルに保存しておく場合は、すべてのフィールドを 1 つの JSON オブジェクトにまとめて `--input` で渡します。`--input` は単数形で、上で説明した `--inputs` フィールドとは別のものです。
+
+各フィールドは名前で記述します。名前は、フラグから `--` を除き、ハイフンをアンダースコアに置き換えたものです（`--app-id` ではなく `app_id`）：
+
+```bash
+difyctl run console_app workflow --input '{"app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "inputs": {"topic": "AI"}}'
+```
+
+`--input` でも、`--input @request.json` のようにファイルから、または `--input @-` で stdin から読み込めます。
+
+フラグは、`--input` 内の同じフィールドより優先されます。そのため、リクエストをファイルに保存しておき、実行ごとに 1 つの値だけを変えられます。`request.json` の内容が `{"mode": "workflow", "limit": 50, "page": 1}` の場合、次のコマンドは Workflow アプリの一覧の 2 ページ目を表示します：
+
+```bash
+difyctl get console_app --input @request.json --page 2
+```
+
+## ヒントの活用
+
+結果によっては `hints` が含まれます。これはサーバーが次に実行するよう提案するコマンドで、サーバーが把握している値はあらかじめ入力されています。ヒントが次に行いたい操作と一致する場合は、自分でコマンドを組み立てずに、そのヒントを実行します。
+
+たとえば、`difyctl run console_app chat` でチャットアプリが応答すると、結果には次のヒントが含まれます：
+
+```json
+{
+  "hints": [
+    {
+      "summary": "Reply in this conversation",
+      "op": "run.console_app.chat",
+      "input": {
+        "app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789",
+        "conversation_id": "9f8e7d6c-5b4a-4321-8fed-cba987654321",
+        "query": null,
+        "inputs": {}
+      }
+    }
+  ],
+  …
+}
+```
+
+ヒントを実行するには、`op` のドットをスペースに置き換えてコマンドにし、`input` を `--input` に渡します。その際、各 `null` を自分の値に置き換えます。このヒントの場合は、`difyctl run console_app chat` を実行し、会話で次に送るメッセージを `query` に指定します：
+
+```bash
+difyctl run console_app chat --input '{"app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "conversation_id": "9f8e7d6c-5b4a-4321-8fed-cba987654321", "query": "週末はどうですか？", "inputs": {}}'
+```
