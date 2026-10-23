@@ -1558,7 +1558,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 - OpenShell 网关，版本不低于 0.0.106，且 `agent_backend` 容器能访问到它。
 - 网关凭证：Bearer 令牌、mTLS 客户端证书对，或两者兼有。Compose 未内置证书挂载，需自行将证书文件以只读方式挂载到 `agent_backend`，并确保 UID 1001 可读取。
 - 网关可用来启动沙箱的运行时镜像。
-- 一个共享卷，用于存放 Agent 跨对话保留的长期文件。该卷需在 Compose 之外创建，以免被 `docker compose down -v` 删除。
+- 一个共享卷，用于存放 Agent 跨对话保留的长期文件。该卷需在 Compose 之外创建，以免被 `docker compose down -v` 删除。如果部署要服务彼此不信任的租户，请为每个租户分别准备 OpenShell 工作空间和卷。多个租户共用一个卷时，无法可靠地阻止一个租户访问另一个租户的长期文件。
 - 沙箱回连 Dify 的网络路径：
   - 沙箱可访问的回调地址。
   - 通往 Agent 后端 `/agent-stub` 路径的路由。基础 Compose 文件没有发布 Agent 后端的 5050 端口。这个端口同时承载启动 Agent 运行的 API，所以不要整个暴露，只暴露 `/agent-stub` 路径，比如通过反向代理。
@@ -1584,7 +1584,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | 改用明文 gRPC 而非 TLS 连接网关，不使用 TLS 路径。若设置了 Bearer 令牌，仍会通过该连接发送。<br/><br/>仅用于对接明文网关的本地开发。 |
 | `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent 后端创建和管理沙箱所在的 OpenShell 工作空间。这是网关上的命名空间，不是 Dify 工作空间。 |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | 网关为每个沙箱启动的容器镜像。默认值即 OpenShell 配置指南中构建命令生成的标签。<br/><br/>网关的计算驱动必须能取到该镜像，只放在运行 Dify 的 Docker 守护进程上还不够：将镜像加载到网关的 Docker 守护进程中，或推送到网关可拉取的镜像仓库，并在此填写对应的镜像引用。<br/><br/>请显式设置此变量。若没有任何 env 文件设置它，Agent 后端会回退到 `langgenius/dify-agent-local-sandbox:latest`，该镜像可能版本较旧，无法在 OpenShell 下启动。 |
-| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | 使用 `openshell` 后端时必填。网关的计算驱动会给每个沙箱应用一份 JSON 配置，这份配置必须把共享卷挂载到 `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`。具体结构取决于驱动。<br/><br/>JSON 无效或为空对象时，Agent 后端无法启动。Dify 不检查挂载本身，即使共享卷挂载到了其他路径，Agent 后端也会照常启动，因此请仔细核对挂载目标。<br/><br/>Docker 驱动示例：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | 使用 `openshell` 后端时必填。网关的计算驱动会给每个沙箱应用一份 JSON 配置，这份配置必须把共享卷挂载到 `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`。具体结构取决于驱动。<br/><br/>JSON 无效或为空对象时，Agent 后端无法启动。Dify 不检查挂载本身，即使共享卷挂载到了其他路径，Agent 后端也会照常启动，因此请仔细核对挂载目标。<br/><br/>Docker 驱动示例（单租户，例如本地开发）：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
 | `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 共享卷在每个沙箱内的挂载位置，必须与 `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` 中的挂载目标一致。每次在 Agent 的构建对话中点击 **应用** 时，Agent 的长期文件都会保存到这里。<br/><br/>必须为绝对路径，否则 Agent 后端无法启动。 |
 | `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。Agent 后端会在每个沙箱内启动命令服务，并用这个共享密钥向该服务证明身份。可设为任意随机字符串。<br/><br/>与保护内置沙箱的 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 相互独立。 |
 | `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | 沙箱允许连接的 `host:port` 端点，以逗号分隔，不带协议前缀或路径。留空时不下发网络策略，出站访问遵循网关的默认设置。<br/><br/>设置后，沙箱只能访问列出的端点，除非列出相应主机，否则安装软件包、访问网页都会失败。需包含 `DIFY_AGENT_STUB_API_BASE_URL` 和 `DIFY_AGENT_SANDBOX_FILES_BASE_URL` 的主机，否则 Agent 运行无法回调 Dify。<br/><br/>任一条目格式有误，Agent 后端都无法启动。<br/><br/>示例：`agent.example.com:443,dify.example.com:443` |
@@ -1603,7 +1603,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 轨迹导出独立于 API 和 Worker 的 [OpenTelemetry 插桩](#otlp-/-opentelemetry-配置)。
 
-[LLMOps 追踪投递](#llmops-追踪投递) 则会影响它。LLMOps 追踪投递由各应用自行配置 Langfuse 等供应商。在其中开启 Agent 追踪后，已由所在应用追踪的运行只发往该应用的追踪供应商，其余 Agent 运行仍进入收集器。
+[LLMOps 追踪投递](#llmops-追踪投递) 则会影响它。LLMOps 追踪投递需要应用开发者在每个应用中单独配置 Langfuse 等供应商。在其中开启 Agent 追踪后，已由所在应用追踪的运行只发往该应用的追踪供应商，其余 Agent 运行仍进入收集器。
 
 按以下步骤开启轨迹导出：
 
