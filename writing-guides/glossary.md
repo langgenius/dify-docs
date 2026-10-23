@@ -302,8 +302,11 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Duplicate | 复制 | 複製 | app.duplicate | |
-| Export DSL | 导出 DSL | DSL をエクスポート | app.export | |
-| Import DSL file | 导入 DSL 文件 | DSL ファイルをインポート | app.importDSL | |
+| Export App | 导出应用 | アプリをエクスポート | app.exportApp | Studio app menus and workflow version history |
+| Export Agent | 导出 Agent | エージェントをエクスポート | agent-v-2.exportAgent | Agent card menu, agent detail menu, and agent version history |
+| Import App | 导入应用 | アプリをインポート | app.importApp | Under **Create** in Studio and Agents, and in a Workflow or Chatflow's app menu |
+| Export secret values | 导出 secret 值 | シークレット値を含む | workflow.env.export.checkbox | Export dialog checkbox, shown when a Workflow or Chatflow has Secret-type environment variables |
+| App package | 应用包 | アプリパッケージ | app.appPackage | File type in the Import App dialog; prose writes lowercase "app package" for the `.ifpkg` file |
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |

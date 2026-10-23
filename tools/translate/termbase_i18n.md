@@ -292,8 +292,11 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Duplicate | 复制 | 複製 |
-| Export DSL | 导出 DSL | DSL をエクスポート |
-| Import DSL file | 导入 DSL 文件 | DSL ファイルをインポート |
+| Export App | 导出应用 | アプリをエクスポート |
+| Export Agent | 导出 Agent | エージェントをエクスポート |
+| Import App | 导入应用 | アプリをインポート |
+| Export secret values | 导出 secret 值 | シークレット値を含む |
+| App package | 应用包 | アプリパッケージ |
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
