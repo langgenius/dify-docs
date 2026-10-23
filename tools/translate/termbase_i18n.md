@@ -12,6 +12,7 @@
 | Chatflow app | Chatflow 应用 | Chatflow アプリ |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー |
 | workflow | 工作流 | ワークフロー |
+| workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
@@ -88,6 +89,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | knowledge base | 知识库 | ナレッジベース |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
@@ -178,9 +180,10 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
+| Home | 主页 | ホーム |
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
-| Explore | 探索 | 探索 |
+| Web apps | WEB APPS | Webアプリ |
 | Integrations | 集成 | インテグレーション |
 | Tools | 工具 | ツール |
 | Skills | Skills | Skills |
@@ -190,8 +193,9 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Orchestrate | 编排 | オーケストレート |
-| Access Point | 访问点 | アクセスポイント |
+| Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
+| Monitoring (Agent) | 监控 | モニタリング |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
@@ -204,6 +208,8 @@
 | API Endpoint | API Endpoint | API エンドポイント |
 | API Key | API 密钥 | API キー |
 | MCP Server | MCP 服务 | MCP サーバー |
+| Configure | 配置 | コンフィグ |
+| Launch | 启动 | 公開 |
 | Trigger | 触发器 | トリガー |
 
 ### Log Page
@@ -231,7 +237,7 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| My account | 我的账户 | マイアカウント |
+| My Account | 我的账户 | マイアカウント |
 | Members | 成员 | メンバー |
 | Model Provider | 模型供应商 | モデルプロバイダー |
 | Data Source | 数据来源 | データソース |
@@ -245,8 +251,8 @@
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
@@ -277,7 +283,6 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| Assistant | 助手 | アシスタント |
 | Chatbot | 聊天助手 | チャットボット |
 | Chatflow | Chatflow | チャットフロー |
 | Completion | 文本生成 | テキスト生成 |
@@ -292,6 +297,9 @@
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
+| Agent data capture | Agent 数据采集 | Agent データ収集 |
+| Capture content | 采集内容 | 内容を収集 |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 
@@ -338,7 +346,7 @@
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー |
-| Knowledge Base | 知识库 | 知識ベース |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Pipeline Tool Names
 
@@ -356,7 +364,6 @@
 | Published | 已发布 | 公開済み |
 | Unpublished | 未发布 | 未公開 |
 | Not published yet | 尚未发布 | まだ公開されていません |
-| No changes | 无更改 | 変更なし |
 | Unpublished changes | 有未发布的更改 | 未公開の変更 |
 | Up to date | 已是最新 | 最新です |
 | Open web app | 打开 Web 应用 | Web アプリを開く |
@@ -364,7 +371,7 @@
 | Test Run | 测试运行 | テスト実行 |
 | Features | 功能 | 機能 |
 | Version History | 版本历史 | バージョン履歴 |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 |
 | Needs Setup | 需要进行配置 | 設定が必要 |
 | Ready | 已就绪 | 準備完了 |
 | Update Needed | 需要更新 | 更新が必要 |
@@ -373,6 +380,8 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Error Handling | 异常处理 | 例外処理 |
+| Fail Branch | 异常分支 | 例外分岐 |
 
 ### Collaboration
 
@@ -395,6 +404,7 @@
 | File List | 文件列表 | ファイルリスト |
 | API-based Variable | 基于 API 的变量 | API ベースの変数 |
 | Label Name | 显示名称 | ラベル名 |
+| Query variable | 查询变量 | クエリ変数 |
 
 ### Prompt Generation
 
@@ -425,6 +435,7 @@
 | Function Calling | Function Calling | 関数呼び出し |
 | ReAct | ReAct | ReAct |
 | Agent Settings | Agent 设置 | エージェント設定 |
+| TRACING | 追踪 | 実行追跡 |
 
 ### Agent Node Config
 
@@ -435,8 +446,7 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
-| Query Variable | 查询变量 | 検索変数 |
-| Metadata Filtering | 元数据过滤 | メタデータフィルタ |
+| Output Routes | 输出路由 | 出力ルート |
 
 ### Agent Configure
 
@@ -450,7 +460,6 @@
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
 | Access URL | 访问 URL | アクセス URL |
-| Backend Service API | 后端服务 API | バックエンドサービス API |
 
 ### Question Classifier Node Config
 
@@ -459,6 +468,17 @@
 | Class Name | 分类名称 | クラス名 |
 | Class Label | 分类标签 | クラスラベル |
 | CLASS {{index}} | 分类 {{index}} | クラス {{index}} |
+
+### Knowledge Retrieval Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Query Text | 查询文本 | クエリテキスト |
+| Query Images | 查询图片 | 画像を検索 |
+| Metadata Filtering | 元数据过滤 | メタデータフィルタ |
+| Disabled | 禁用 | 無効 |
+| Automatic | 自动 | 自動生成 |
+| Manual | 手动 | 手動設定 |
 
 ### Knowledge Retrieval Methods
 
@@ -474,10 +494,13 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
-| External API | 外部 API | 外部 API |
+| External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API |
 | Service API | 服务 API | サービスAPI |
+| Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス |
+| All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
+| Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
 | Multimodal | 多模态 | マルチモーダル |
 
 ### Chunking Mode Labels
@@ -500,8 +523,6 @@
 | Economical | 经济 | 経済的 |
 | Chunk Settings | 分段设置 | チャンク設定 |
 | Text Pre-processing Rules | 文本预处理规则 | テキストの前処理ルール |
-| Automatic | 自动分段与清洗 | 自動 |
-| Custom | 自定义 | カスタム |
 | Preview Chunk | 预览块 | チャンクをプレビュー |
 | Data Source | 选择数据源 | データソース |
 | Document Processing | 文本分段与清洗 | テキスト進行中 |
@@ -528,8 +549,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Chunking Setting | 分段模式 | チャンキングモード |
-| High-quality mode | 高质量模式 | 高品質モード |
-| Economy mode | 经济模式 | 経済モード |
+| Custom | 自定义 | カスタム |
 
 ## General Guidelines
 
