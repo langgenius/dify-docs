@@ -1,0 +1,125 @@
+---
+title: Results, Errors, and Exit Codes
+sidebarTitle: Results and Errors
+description: Read what a difyctl command prints, check how a run ended, and act on errors, exit codes, retries, and the rate limit
+---
+
+## Where Output Goes
+
+A command's result is always JSON on stdout. Errors and notices go to stderr:
+
+- Errors: as text in your terminal, and as JSON when you send stderr to a file or another program, such as with `2> errors.log`. To get errors as JSON in your terminal too, add `--json`.
+- Notices, such as `stream ended early: …`: always as plain text.
+
+## Read a Run's Result
+
+The result of a `run console_app` command holds the app's answer and the IDs you'll need next:
+
+| Field | Holds |
+|:--|:--|
+| `text.answer` | The response from a Chatbot, legacy Agent, Chatflow, or Text Generator app. Empty for a Workflow. |
+| `outputs` | A Workflow's answer, keyed by its Output node's variables. For a Chatflow, the reply again, with any files it returns. |
+| `run_id` | For a Workflow or Chatflow, the run's ID, which `describe run` and `get run node` take. |
+| `conversation_id` | For a Chatbot, legacy Agent, or Chatflow, the ID to pass back with `--conversation-id` to continue the conversation. |
+
+### Check How a Run Ended
+
+In a script, read the result's `status`. A run that finished, paused, or was cut off exits 0 all the same, and `status` tells them apart:
+
+- `ended`: the run finished.
+- `suspended`: the run paused at a Human Input form. Its `hints` carry one command per action button: to [answer the form](/en/cli/run-apps#answer-a-human-input-form), run the one for your action.
+- `incomplete`: the result was cut off before the run ended, for example when you press Ctrl+C. It holds only what arrived by then. A Workflow or Chatflow run keeps going on the server: to see how it ends, pass the result's `run_id` to `difyctl describe run`.
+- `failed` (exit code 1): the run failed or was stopped, and `error.message` says why.
+
+A failed run prints its result on stdout like any other run, and nothing goes to stderr. For example, a Workflow run without its required input:
+
+```json
+{
+  "status": "failed",
+  "text": {
+    "answer": ""
+  },
+  "hints": [],
+  "run_id": "f16c3509-ef54-4618-ae93-770724ab278d",
+  "total_tokens": 0,
+  "error": {
+    "message": "topic is required in input form"
+  }
+}
+```
+
+## Read an Error
+
+A command that fails before it produces a result prints nothing on stdout and an error on stderr. Here's the error as JSON for an app ID that doesn't exist:
+
+```json
+{
+  "error": {
+    "code": "server_error",
+    "message": "app not found",
+    "http_status": 404,
+    "method": "GET",
+    "url": "https://dify.example.com/openapi/v1/apps/00000000-0000-4000-8000-000000000000",
+    "server": {
+      "code": "not_found",
+      "message": "app not found",
+      "status": 404
+    }
+  }
+}
+```
+
+Every error has a `code` and a `message`. Branch on `code`. Depending on the failure, the error also carries:
+
+- `hint`: what to try next, as a sentence, such as `run difyctl help get console_app`.
+- `http_status`, `method`, `url`, and `server` (the server's own error), when the server returned the error. For `server_error`, branch on `http_status` or `server.code`, such as `404` and `not_found` above.
+- `details`, when a value fails `difyctl`'s own check (`input_invalid`): each field that failed, with its flag and the reason, such as `"field": "--limit", "msg": "must be integer"`.
+
+In a terminal, the error's first line shows the server's own code when there is one. For the missing app above, that's `not_found: app not found`. Take the codes your script branches on from the JSON, where this one is `server_error`.
+
+When `message` doesn't explain the failure, add `--verbose` to include `raw_response`, the server's full response.
+
+## Exit Codes
+
+Every command exits with one of these codes:
+
+| Exit code | Means | Error codes |
+|:--|:--|:--|
+| 0 | Success, including a run that paused (`suspended`) or was cut off (`incomplete`) | |
+| 1 | A [failed run](#check-how-a-run-ended), or an error the other rows don't cover, such as a server or network error | `server_error`, `network_connection`, `keyring_unavailable`, `skill_missing`, `unknown` |
+| 2 | `difyctl` rejected the command before sending it: an unknown flag, a missing required flag, or a value of the wrong type | `usage_invalid_flag`, `usage_missing_arg`, `input_invalid`, `config_invalid_key`, `config_invalid_value` |
+| 4 | You're not signed in, your sign-in expired, or you don't have access | `not_logged_in`, `auth_expired`, `access_denied` |
+| 6 | The command isn't on your server, or `difyctl` couldn't get your server's command list | `unknown_op`, `catalog_unavailable` |
+| 7 | You hit the [rate limit](#rate-limit) | `rate_limited` |
+
+On exit code 1, look at stdout first: a failed run's result is there. Any other error is on stderr.
+
+To fix a specific error, see [Troubleshooting](#troubleshooting).
+
+## Retry a Failed Command
+
+Commands that read, such as `get` and `describe`, are safe to retry. `help` shows each command's label, `read`, `write`, or `destructive`, next to its description.
+
+Before you retry a `write` or `destructive` command, check whether the first attempt took effect, for example with the matching `get` or `describe` command. A run is `write`, and retrying it starts a new run.
+
+After exit code 7, any command is safe to retry, runs included: a command refused by the [rate limit](#rate-limit) did nothing on the server.
+
+Exit codes 2 and 4 come back on every retry until you fix the cause, such as a wrong flag or an [expired sign-in](/en/cli/manage-sign-in#renew-your-sign-in).
+
+### Rate Limit
+
+When a command exits 7, wait a minute, then retry.
+
+Each sign-in gets 60 requests a minute by default. To change the limit, set [`OPENAPI_RATE_LIMIT_PER_TOKEN`](/en/self-host/deploy/configuration/environments#dify-cli-and-programmatic-api) on your server, or set it to `0` to turn the limit off.
+
+## Troubleshooting
+
+| Message | Code | What to do |
+|:--|:--|:--|
+| `invalid bearer` | `auth_expired` | Your sign-in expired or was ended. [Sign in again](/en/cli/manage-sign-in#renew-your-sign-in). |
+| `not logged in: …` | `not_logged_in` | Sign in. If you already did, point `DIFY_CONFIG_DIR` at the folder you signed in with. |
+| Varies, such as `insufficient workspace role` | `access_denied` | Your workspace role, or a workspace setting such as who can install integrations, doesn't allow this. |
+| `no command or server operation named <words>` | `unknown_op` | Check the command with `difyctl help`. If it's spelled right, your server's Dify version doesn't have it. |
+| `failed to fetch the catalog: …` | `catalog_unavailable` | Check that your server is up and that you signed in to the right address. |
+| `<method> <url> timed out after <ms>ms` | `network_connection` | Raise [`http.timeout`](/en/cli/reference/configuration#settings). |
+| `Internal Server Error`, HTTP 503, on every command | `server_error` | Set `ENABLE_OAUTH_BEARER` to `true` on your server. |

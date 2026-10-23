@@ -81,3 +81,80 @@ docker compose up -d
 ```
 
 Cookie はトップレベルドメインを越えて共有できないため、フロントエンドとバックエンドは同じ登録可能ドメイン内にある必要があります。詳細は [環境変数](/ja/self-host/deploy/configuration/environments) を参照してください。
+
+### Cloudflare などのプロキシ背後で全ユーザーのサインインメールがブロックされる問題 {#sign-in-emails-blocked-behind-proxy}
+
+全ユーザーが一斉に、サインインコードやパスワードリセットのメールを受け取れなくなります。表示されるメッセージは「Too many emails have been sent from this IP address recently. Please try again later.」です。1.18.0 以降、同梱の Nginx の前段に Cloudflare やロードバランサーなどのプロキシを置いているデプロイでは、この問題が起こり得ます。
+
+Dify は、各ユーザーの IP アドレスを同梱の Nginx から受け取ります。プロキシの背後では、Nginx にはプロキシのアドレスしか見えません。そのため、プロキシのアドレスに対する制限を全ユーザーで共有することになります。
+
+構成によっては、プロキシが同梱の Nginx を経由せず、`api` と `web` のコンテナへ直接転送します。Cloudflare Tunnel や Nginx Proxy Manager の一部の構成がこれに当たります。この場合は以下の手順を飛ばし、代わりに次の点を確認してください：
+
+- プロキシが `X-Forwarded-For` を設定していること。設定していないと、すべてのユーザーがプロキシのアドレスからのアクセスとして扱われます。
+- API にはプロキシ経由でしかアクセスできないこと。API に直接アクセスできる人は、Dify が認識するアドレスを自由に指定できてしまいます。
+
+プロキシが同梱の Nginx に転送している場合は、信頼するプロキシを Nginx に設定します：
+
+<Steps>
+  <Step title="プロキシのアドレスを確認">
+    Nginx のアクセスログ（`docker compose logs nginx`）では、各行の先頭にプロキシの接続元アドレスが記録されています。プロキシが同じサーバー上にある場合も、`127.0.0.1` と仮定せず、ログで確認してください。
+
+    Cloudflare が Nginx に直接接続している場合、この手順は飛ばしてください。
+  </Step>
+  <Step title="real-ip.conf を作成">
+    構成に合わせて `docker/nginx/conf.d/real-ip.conf` を作成します。Nginx はこのディレクトリ内の `.conf` ファイルをすべて読み込むよう設定済みです。作成したファイルは、アップグレード後もそのまま残ります。
+
+    <Tabs>
+      <Tab title="ロードバランサーまたはリバースプロキシ">
+        `X-Forwarded-For` を設定するプロキシの場合：
+
+        ```nginx
+        # プロキシの接続元アドレスまたは CIDR 範囲に置き換えてください。
+        set_real_ip_from 192.0.2.10/32;
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+      </Tab>
+      <Tab title="Cloudflare">
+        Cloudflare が Nginx に直接接続している場合は、[Cloudflare の IP 範囲](https://www.cloudflare.com/ips/) をすべて信頼します：
+
+        ```nginx
+        # Cloudflare が公開している IPv4 と IPv6 の範囲ごとに 1 行ずつ記述します。
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header CF-Connecting-IP;
+        ```
+
+        これらの範囲は Cloudflare のネットワーク全体を表すもので、自分のゾーン専用ではありません。そのため、[オリジンサーバーへのアクセス元も制限](https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/) してください。独自の証明書を使ったゾーンレベルまたはホスト名単位の Authenticated Origin Pulls を使ってください。Cloudflare Tunnel 経由でオリジンに接続する方法もあります。
+      </Tab>
+      <Tab title="複数のプロキシ">
+        Cloudflare を通ったあと、さらに自分のサーバー上のプロキシを経由するような多段構成では、経路上のプロキシをすべて信頼します。対象は、自分のサーバー上のプロキシと [Cloudflare の IP 範囲](https://www.cloudflare.com/ips/) のすべてです。Nginx の直前のプロキシだけを信頼すると、Dify にはユーザーのアドレスではなく Cloudflare のアドレスが見えてしまいます。
+
+        ```nginx
+        # 自サーバーで動くプロキシの接続元アドレスに置き換えてください。
+        set_real_ip_from 192.0.2.10/32;
+        # Cloudflare が公開している IPv4 と IPv6 の範囲ごとに 1 行ずつ記述します。
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+        経路上の各プロキシが、`X-Forwarded-For` に追記する設定になっている必要があります。
+      </Tab>
+    </Tabs>
+
+    <Warning>
+      `0.0.0.0/0`、`::/0`、および信頼できないマシンも接続しているネットワークは、決して信頼しないでください。信頼すると、Nginx にアクセスできる人なら誰でも、Dify が認識する IP アドレスを自由に指定できてしまいます。
+    </Warning>
+  </Step>
+  <Step title="Nginx をリロード">
+
+    ```bash
+    docker compose exec nginx nginx -s reload
+    ```
+
+    これで、`docker compose logs nginx` に出力される新しい行の先頭が、プロキシではなく各ユーザー自身のアドレスになるはずです。ユーザーはブロックされたアドレスを共有しなくなるため、すぐにメールを再リクエストできます。
+  </Step>
+</Steps>

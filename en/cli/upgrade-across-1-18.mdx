@@ -1,0 +1,223 @@
+---
+title: Upgrade Across Dify 1.18.0
+sidebarTitle: Upgrade Across 1.18.0
+description: Sign in again, clean up, and update each command, script, and coding agent when your Dify server moves from 1.17.x or earlier to 1.18.0 or later
+---
+
+<Info>
+If your old `difyctl` started failing with `catalog_stale` ("The request was built from a catalog that is not this server's current catalog"), your Dify server has already moved to 1.18.0 or later.
+</Info>
+
+## Switch to the New Build
+
+<Steps>
+  <Step title="Install the New Build">
+    [Install](/en/cli/get-started#install) the `difyctl` that matches your server.
+
+    Remove any other copy of the old build, such as in a CI image. Running its `auth logout` after you've signed in with the new build can delete the new build's saved token, and you'd have to sign in again.
+
+    If you still need the old build for a server that's on 1.17.x or earlier, such as production while staging moves first, install it to its own folder with `DIFYCTL_PREFIX` and run it with its own config folder. That folder starts empty, so sign the old build in again there:
+
+    ```bash
+    curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.17.1 DIFYCTL_PREFIX=$HOME/difyctl-1.17 sh
+    DIFY_CONFIG_DIR=$HOME/.config/difyctl-1.17 $HOME/difyctl-1.17/bin/difyctl auth login --host https://dify-prod.example.com
+    DIFY_CONFIG_DIR=$HOME/.config/difyctl-1.17 $HOME/difyctl-1.17/bin/difyctl get app
+    ```
+
+  </Step>
+  <Step title="Sign In Again">
+
+    ```bash
+    difyctl login --server https://dify.example.com
+    ```
+
+    Check that it worked with `difyctl describe account`.
+
+    For sign-in options and where the new build keeps your token, see [Manage Your Sign-In](/en/cli/manage-sign-in). To sign in a CI job, see [Use `difyctl` in CI and Automation](/en/cli/scripts-and-ci).
+  </Step>
+  <Step title="End the Old Session">
+    Signing in with the new build doesn't end the old build's session on the server. It stays valid for up to 14 days by default. End it now if anyone else could have the old token, such as on a shared machine or in a copied config folder. Otherwise, you can let it expire.
+
+    To end it, list your sessions and delete the one labeled `difyctl on <your-machine-name>`. Your new session is labeled with just your machine's name. The delete doesn't ask for confirmation, so check the ID before you run it.
+
+    ```bash
+    difyctl get account session
+    difyctl delete account session --session-id <session-id>
+    ```
+
+  </Step>
+  <Step title="Reinstall the difyctl Skill">
+    If a coding agent such as Claude Code or Codex uses `difyctl` through the difyctl skill, reinstall it, even if nothing looks broken.
+
+    The old build's `skills install --yes` installed the difyctl skill for every coding agent it detected. Check which of these folders you have:
+
+    ```bash
+    ls -d ~/.claude/skills/difyctl \
+      ~/.agents/skills/difyctl \
+      ~/.config/opencode/skills/difyctl \
+      ~/.cursor/skills/difyctl \
+      ~/.pi/agent/skills/difyctl 2>/dev/null
+    ```
+
+    `install skills` replaces the difyctl skill only in the skills folder you pass it. Run it for each coding agent you still use, and delete the `difyctl` folder from the rest:
+
+    ```bash
+    difyctl install skills ~/.claude/skills   # Claude Code
+    difyctl install skills ~/.agents/skills   # Codex
+    ```
+
+    The old `skills install <dir>` wrote `SKILL.md` straight into `<dir>`. If you pointed it at a coding agent's skills folder, delete the file it left there, such as `~/.claude/skills/SKILL.md`.
+
+    For everything else a coding agent needs to use `difyctl`, see [Set Up Your Coding Agent](/en/cli/get-started#set-up-your-coding-agent).
+  </Step>
+</Steps>
+
+## Replace Your Old Commands
+
+Most commands now take IDs and other values as named flags, such as `--app-id`, rather than by position.
+
+For every flag a command takes, run `difyctl help <command>`.
+
+The only global flags left are `--verbose`, `--json`, and `--help`. Short flags such as `-v`, `-y`, and `-w` are gone. `--verbose` now only adds the server's raw response to errors. No command asks for confirmation, so drop `--yes`.
+
+### Sign-In and Sessions
+
+| Old build | New build | Note |
+|:---|:---|:---|
+| `auth login --host <url>` | `login --server <url>` | `--server` is required. `--no-browser` and `--insecure` still work. |
+| `auth whoami` | `describe account` | |
+| `auth logout` | `logout` | |
+| `auth devices list` | `get account session` | |
+| `auth devices revoke <id>` | `delete account session --session-id <id>` | No `--all`. To end several sessions, run it once for each. |
+| `auth list`, `use host`, `use account` | None | You have one sign-in per config folder. To work with several servers, give each its own folder with `DIFY_CONFIG_DIR`. To switch accounts, sign in again. |
+
+### Apps
+
+| Old build | New build | Note |
+|:---|:---|:---|
+| `get app` | `get console_app` | `--mode`, `--name`, `--page`, and `--limit` still work. |
+| `describe app <id>`, `get app <id>` | `describe console_app --app-id <id>` | |
+| `run app <id> "<message>"` on a Chatbot or legacy Agent app | `run console_app chat --app-id <id> --query "<message>"` | |
+| `run app` on a Chatflow | `run console_app advanced_chat --app-id <id> --query "<message>"` | |
+| `run app` on a Text Generator | `run console_app completion --app-id <id>` | |
+| `run app` on a Workflow | `run console_app workflow --app-id <id> --inputs '{…}'` | |
+| `--inputs-file <file>` | `--inputs @<file>` | |
+| `--file <key>=@<path>` | `--files '{"<key>":"<path>"}'` | A file on the web goes in `--inputs`. |
+| `--conversation <id>` | `--conversation-id <id>` | |
+| `--stream` | `--stream` | Now prints raw JSON events. Filter them with `--only <event>`. |
+| `--think`, `--retry-on-limit` | None | |
+
+If you're not sure of an app's type, `describe console_app` shows it.
+
+Here's how a Chatbot run and a Workflow run with inputs from a file change:
+
+```bash
+# Old build
+difyctl run app 0a1b2c3d-4e5f-6789-abcd-ef0123456789 "What are your business hours?"
+difyctl run app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs-file inputs.json
+
+# New build
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "What are your business hours?"
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs @inputs.json
+```
+
+### Human Input
+
+A run that stops for human input now reports `"status": "suspended"` instead of `"paused"`, so update any script that checks for `paused`. The suspended result's `hints` carry the `submit run form` command for each action, with the form token filled in.
+
+To submit the form yourself, `resume app` becomes `submit run form`:
+
+```bash
+# Old build
+difyctl resume app 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b <form-token> --workflow-run-id <workflow-run-id> --action approve --inputs '{"comment":"Looks good"}'
+
+# New build
+difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token <form-token> --action approve --inputs '{"comment":"Looks good"}'
+```
+
+Unlike `resume app`, `submit run form` doesn't follow the run. To get the rest of it, run the hint it returns, `get run event`.
+
+### DSL Export and Import
+
+| Old build | New build | Note |
+|:---|:---|:---|
+| `export studio-app <id>` | `export console_app dsl --app-id <id>` | Prints the YAML wrapped in JSON, not as plain YAML. |
+| `import studio-app --from-file <file>` | `import console_app dsl --mode yaml-content --yaml-content "$(cat <file>)"` | |
+| `import studio-app --from-url <url>` | `import console_app dsl --mode yaml-url --yaml-url <url>` | |
+
+To save an export to a file, extract `.data`:
+
+```bash
+difyctl export console_app dsl --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b | jq -r '.data' > app.yml
+```
+
+The old build confirmed a pending import on its own, and the new build doesn't. An import is pending when the file's DSL version is newer than the server's, or a major version older. If you trust the file, finish it with `confirm console_app dsl_import --import-id <import-id>`.
+
+The old build also listed missing integrations after an import. Run `check console_app dependency` for that now.
+
+### Workspaces and Members
+
+| Old build | New build | Note |
+|:---|:---|:---|
+| `get member` | `get workspace member` | |
+| `create member` | `invite workspace member` | |
+| `set member` | `set workspace member_role` | |
+| `delete member` | `delete workspace member` | |
+
+### Config, the difyctl Skill, Help, and Version
+
+| Old build | New build | Note |
+|:---|:---|:---|
+| `config get`, `config view`, `config path` | `get config [<key>]` | Also shows the config path. |
+| `config set` | `set config` | The only setting left is `http.timeout`. |
+| `config unset` | `unset config` | |
+| `env list` | None | For the variables `difyctl` reads, see [Environment Variables](/en/cli/reference/configuration#environment-variables). |
+| `skills install` | `install skills <skills-root>` | To reinstall it for each coding agent, see step 4 of [Switch to the New Build](#switch-to-the-new-build). |
+| `version` with `--short`, `--client`, `--check-compat`, or `-o` | `version` | Takes no flags. |
+| `help -o json --compact`, `help <command> -o json` | `help`, `help <command>` | Prints JSON when piped, as in a script. |
+
+## Update the Rest of Your Scripts
+
+### Read Results as JSON
+
+Results are always JSON now. `-o` fails as an unknown flag, so drop `-o json` from your scripts.
+
+Where a script asked for another format, such as `-o name` or `-o yaml`, reshape the JSON yourself, for example with `jq`. To keep only a Chatbot's reply as text:
+
+```bash
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "What are your business hours?" | jq -r '.text.answer'
+```
+
+Set `DIFY_OUTPUT=json` in your scripts, or pass `--json`, so errors are JSON wherever they run. Without it, errors on stderr are JSON in a pipe but text in a terminal.
+
+### Handle the New Exit and Error Codes
+
+Exit codes keep their numbers, with two changes:
+
+- 6 now means `difyctl` couldn't find the command on your server: it couldn't fetch the server's command list, or nothing on the list matches what you typed. It used to mean a version mismatch.
+- 64 is gone, along with `version --check-compat`.
+
+If a script branches on error codes:
+
+- Replace `server_4xx_other` and `server_5xx` with `server_error`, and check the HTTP status that comes with it.
+- Replace `token_expired` and `expired_token` with `auth_expired`, which exits 4.
+- Drop branches for `version_skew`, `unsupported_endpoint`, `client_error`, `illegal_argument`, and `config_schema_unsupported`.
+
+For what the new codes mean, such as `input_invalid` and `catalog_unavailable`, see [Results, Errors, and Exit Codes](/en/cli/reference/results-errors-and-exit-codes).
+
+### Retry in Your Scripts
+
+The new build doesn't retry failed requests, and `--http-retry` is gone. If a script counted on retries, add your own. For which commands are safe to retry, see [Retry a Failed Command](/en/cli/reference/results-errors-and-exit-codes#retry-a-failed-command).
+
+### Update Environment Variables
+
+Remove these from your scripts and CI settings:
+
+- `DIFY_LIMIT`: pass `--limit` instead.
+- `DIFYCTL_HTTP_RETRY`: nothing replaces it.
+- `DIFYCTL_NO_COLOR`: use `NO_COLOR` instead.
+- `DIFY_CACHE_DIR`: the cache now lives in the config folder, so `DIFY_CONFIG_DIR` covers it.
+
+These work as before: `DIFY_CONFIG_DIR` and `DIFY_WORKSPACE_ID`.
+
+For every variable the new build reads, see [Environment Variables](/en/cli/reference/configuration#environment-variables).

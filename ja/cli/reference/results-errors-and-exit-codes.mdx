@@ -1,0 +1,127 @@
+---
+title: 結果、エラー、終了コード
+sidebarTitle: 結果とエラー
+description: difyctl コマンドの出力を読み、実行がどう終わったかを確認する。エラー、終了コード、リトライ、レート制限にも対処する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/reference/results-errors-and-exit-codes) を参照してください。
+
+## 出力先
+
+コマンドの結果は、常に JSON として stdout に出力されます。エラーと通知は stderr に出力されます：
+
+- エラー：ターミナルではテキストで表示されます。`2> errors.log` などでファイルや別のプログラムに送る場合は JSON になります。ターミナルでもエラーを JSON で表示するには、`--json` を付けます。
+- `stream ended early: …` などの通知：常にプレーンテキストです。
+
+## 実行結果の読み方
+
+`run console_app` コマンドの結果には、アプリの回答と、次の操作に必要な ID が含まれます：
+
+| フィールド | 内容 |
+|:--|:--|
+| `text.answer` | チャットボット、レガシー Agent アプリ、Chatflow アプリ、テキストジェネレーターの応答。Workflow アプリでは空になる。 |
+| `outputs` | Workflow アプリの回答。出力ノードの変数がキーになる。Chatflow アプリでは応答がここにも入り、アプリが返したファイルがあればそれも入る。 |
+| `run_id` | Workflow アプリまたは Chatflow アプリの実行 ID。`describe run` と `get run node` で指定する。 |
+| `conversation_id` | チャットボット、レガシー Agent アプリ、Chatflow アプリで、会話を続けるときに `--conversation-id` で渡す ID。 |
+
+### 実行の終了状態の確認
+
+スクリプトでは、結果の `status` を確認します。実行が完了しても、一時停止しても、途中で打ち切られても、終了コードはどれも 0 です。違いは `status` で見分けます：
+
+- `ended`：実行が完了したことを表します。
+- `suspended`：実行が人間の入力フォームで一時停止したことを表します。結果の `hints` には、アクションボタンごとにコマンドが 1 つずつ含まれます。[フォームに回答](/ja/cli/run-apps#人間の入力フォームへの回答) するには、選んだアクションのコマンドを実行します。
+- `incomplete`：Ctrl+C を押した場合など、実行が終わる前に結果が打ち切られたことを表します。結果には、それまでに届いた内容だけが含まれます。Workflow アプリや Chatflow アプリの場合、実行はサーバー上で続きます。実行がどう終わるかを確認するには、結果の `run_id` を `difyctl describe run` に渡します。
+- `failed`（終了コード 1）：実行が失敗したか、停止されたことを表します。理由は `error.message` で確認できます。
+
+失敗した実行も、ほかの実行と同じく結果を stdout に出力し、stderr には何も出力しません。たとえば、必須の入力を渡さずに Workflow アプリを実行した場合は次のようになります：
+
+```json
+{
+  "status": "failed",
+  "text": {
+    "answer": ""
+  },
+  "hints": [],
+  "run_id": "f16c3509-ef54-4618-ae93-770724ab278d",
+  "total_tokens": 0,
+  "error": {
+    "message": "topic is required in input form"
+  }
+}
+```
+
+## エラーの読み方
+
+結果を出す前に失敗したコマンドは、stdout には何も出力せず、stderr にエラーを出力します。存在しないアプリ ID を指定した場合、エラーは JSON で次のようになります：
+
+```json
+{
+  "error": {
+    "code": "server_error",
+    "message": "app not found",
+    "http_status": 404,
+    "method": "GET",
+    "url": "https://dify.example.com/openapi/v1/apps/00000000-0000-4000-8000-000000000000",
+    "server": {
+      "code": "not_found",
+      "message": "app not found",
+      "status": 404
+    }
+  }
+}
+```
+
+どのエラーにも `code` と `message` があります。分岐には `code` を使います。失敗の内容によっては、エラーに次のフィールドも含まれます：
+
+- `hint`：`run difyctl help get console_app` のように、次に試すことを文で示します。
+- `http_status`、`method`、`url`、`server`（サーバー側のエラー）：サーバーがエラーを返した場合に含まれます。`server_error` では、`http_status` または `server.code` で分岐します。上の例では `404` と `not_found` です。
+- `details`：値が `difyctl` 側の検証に通らなかった場合（`input_invalid`）に含まれます。失敗したフィールドごとに、`"field": "--limit", "msg": "must be integer"` のようにフラグと理由が入ります。
+
+ターミナルでは、サーバー側のコードがある場合、エラーの 1 行目にそのコードが表示されます。上の例（存在しないアプリ）では、`not_found: app not found` と表示されます。スクリプトの分岐に使うコードは、JSON から取得してください。この例の JSON では `server_error` です。
+
+`message` だけでは失敗の原因がわからない場合は、`--verbose` を付けます。サーバーのレスポンス全体が、`raw_response` として含まれるようになります。
+
+## 終了コード
+
+すべてのコマンドは、次のいずれかの終了コードで終了します：
+
+| 終了コード | 意味 | エラーコード |
+|:--|:--|:--|
+| 0 | 成功。一時停止した実行（`suspended`）や、途中で打ち切られた実行（`incomplete`）も含む。 | |
+| 1 | [失敗した実行](#実行の終了状態の確認)、またはサーバーエラーやネットワークエラーなど、ほかの行に当てはまらないエラー。 | `server_error`、`network_connection`、`keyring_unavailable`、`skill_missing`、`unknown` |
+| 2 | `difyctl` が送信前にコマンドを拒否した。原因は、不明なフラグ、必須フラグの指定漏れ、型の合わない値のいずれか。 | `usage_invalid_flag`、`usage_missing_arg`、`input_invalid`、`config_invalid_key`、`config_invalid_value` |
+| 4 | サインインしていない、サインインの期限が切れた、またはアクセス権がない。 | `not_logged_in`、`auth_expired`、`access_denied` |
+| 6 | コマンドがサーバーにない、または `difyctl` がサーバーのコマンド一覧を取得できなかった。 | `unknown_op`、`catalog_unavailable` |
+| 7 | [レート制限](#レート制限) に達した。 | `rate_limited` |
+
+終了コードが 1 の場合は、まず stdout を確認します。失敗した実行の結果は stdout に出力されています。それ以外のエラーは stderr に出力されます。
+
+特定のエラーを解決するには、[トラブルシューティング](#トラブルシューティング) を参照してください。
+
+## 失敗したコマンドのリトライ
+
+`get` や `describe` など、読み取りを行うコマンドは安全にリトライできます。`help` では、各コマンドの説明の横に `read`、`write`、`destructive` のいずれかのラベルが表示されます。
+
+`write` または `destructive` のコマンドをリトライする前に、対応する `get` や `describe` コマンドなどで、最初の試行が反映されたかどうかを確認してください。アプリの実行は `write` に分類され、リトライすると新しい実行が開始されます。
+
+終了コード 7 の後は、実行を含め、どのコマンドも安全にリトライできます。[レート制限](#レート制限) で拒否されたコマンドは、サーバー側では何も処理されていないためです。
+
+終了コード 2 と 4 は、誤ったフラグや [サインインの期限切れ](/ja/cli/manage-sign-in#サインインの更新) などの原因を解消するまで、何度リトライしても返されます。
+
+### レート制限
+
+コマンドが終了コード 7 で終了した場合は、1 分待ってからリトライします。
+
+サインインごとの上限は、既定で 1 分あたり 60 リクエストです。上限を変更するには、サーバーで [`OPENAPI_RATE_LIMIT_PER_TOKEN`](/ja/self-host/deploy/configuration/environments#dify-cli-とプログラマティック-api) を設定します。`0` に設定すると、上限を無効にできます。
+
+## トラブルシューティング
+
+| メッセージ | コード | 対処方法 |
+|:--|:--|:--|
+| `invalid bearer` | `auth_expired` | サインインの期限が切れたか、無効にされた。[サインインし直す](/ja/cli/manage-sign-in#サインインの更新)。 |
+| `not logged in: …` | `not_logged_in` | サインインする。すでにサインインしている場合は、サインイン時に使ったフォルダを `DIFY_CONFIG_DIR` で指定する。 |
+| 場合による（`insufficient workspace role` など） | `access_denied` | ワークスペースのロール、または統合のインストール権限などのワークスペース設定で、この操作が許可されていない。 |
+| `no command or server operation named <words>` | `unknown_op` | `difyctl help` でコマンドを確認する。スペルが正しい場合は、サーバーの Dify バージョンにそのコマンドがない。 |
+| `failed to fetch the catalog: …` | `catalog_unavailable` | サーバーが稼働しているか、正しいアドレスにサインインしたかを確認する。 |
+| `<method> <url> timed out after <ms>ms` | `network_connection` | [`http.timeout`](/ja/cli/reference/configuration#設定項目) の値を大きくする。 |
+| `Internal Server Error`（HTTP 503）がすべてのコマンドで返される | `server_error` | サーバーで `ENABLE_OAUTH_BEARER` を `true` に設定する。 |

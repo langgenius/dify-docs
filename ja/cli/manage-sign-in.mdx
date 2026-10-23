@@ -1,0 +1,84 @@
+---
+title: サインインの管理
+sidebarTitle: サインインとセッション
+description: 期限切れのサインインの更新、サーバーやアカウントの切り替えと追加、トークンの保存場所、使わなくなったセッションの終了について
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/manage-sign-in) を参照してください。
+
+## サインインの更新
+
+サインインの有効期間は既定で 14 日間です（[`OAUTH_TTL_DAYS`](/ja/self-host/deploy/configuration/environments#dify-cli-とプログラマティック-api) で変更できます）。`difyctl` を使っても延長されません。期限が切れると、サインインし直すまで、サインインを使うすべてのコマンドが `auth_expired`（終了コード 4）で失敗します。期限は [セッション一覧](#セッションの確認と終了) の `expires_at` で確認できます。
+
+<Info>
+`ACCESS_TOKEN_EXPIRE_MINUTES` と `REFRESH_TOKEN_EXPIRE_DAYS` を変更しても、`difyctl` のサインインの有効期間は変わりません。これらの変数が決めるのは、Dify の Web コンソールへのサインインの有効期間です。
+</Info>
+
+更新するには、もう一度 [`login`](/ja/cli/get-started#サインイン) を実行します。`login` はまずサインアウトし、それから新しいサインインを開始します。新しいサインインに失敗した場合は、成功するまでサインアウトした状態が続きます。
+
+## 複数のサーバーやアカウントの利用
+
+1 つの [設定フォルダ](#トークンの保存場所) に保持できるサインインは 1 つで、新しくサインインすると置き換わります。サーバーを切り替えるには、新しい `--server` を指定して `login` を実行します。アカウントを切り替えるには、`login` を実行し、切り替え先のアカウントで Dify にサインインしたブラウザで承認します。
+
+複数のサーバーやアカウントに同時にサインインしておくには、`DIFY_CONFIG_DIR` でサインインごとに別のフォルダを指定します。そのサインインを使うコマンドでは、毎回この変数を設定してください：
+
+```bash
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl login --server https://staging.dify.example.com
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl describe account
+```
+
+なお、1 台のマシンから同じサーバーに同じアカウントでサインインする場合、2 つのフォルダに別々のサインインは保持できません。一方のフォルダでサインインすると、もう一方のセッションは終了します。
+
+## トークンの保存場所
+
+`difyctl` は、トークンを OS のキーチェーンにサービス名 `difyctl` で保存します。macOS では Keychain、Windows では Credential Manager、Linux では Secret Service です。
+
+次の場合は、代わりに設定フォルダ内の `tokens.yml` にトークンを書き込みます：
+
+- `--no-keyring` を付けてサインインした場合
+- デスクトップのセッションバスがない Linux を使っている場合（`DBUS_SESSION_BUS_ADDRESS` が未設定）
+- サインイン時にキーチェーンを使用できない場合
+
+<Note>
+`tokens.yml` は、コンテナイメージ、共有するバックアップ、バージョン管理に含めないでください。
+</Note>
+
+設定フォルダの場所は次のとおりです：
+
+- **macOS**：`~/.config/difyctl`
+- **Linux**：`$XDG_CONFIG_HOME/difyctl`。`XDG_CONFIG_HOME` が未設定の場合は `~/.config/difyctl`
+- **Windows**：`%APPDATA%\difyctl`
+
+別のフォルダを使うには、`DIFY_CONFIG_DIR` を設定します。
+
+## サインアウト
+
+<Tip>
+アカウントを切り替える場合は、そのまま `login` を実行します。`login` はまず現在のアカウントからサインアウトします。
+</Tip>
+
+マシンを使い終えたら、`logout` を実行します：
+
+```bash
+difyctl logout
+```
+
+`logout` はサーバー上のセッションを終了し、このマシンからトークンとサインイン情報を削除します。サーバーに接続できない場合も、このマシン上の情報は削除されます。ただし、サーバー上のセッションは、期限が切れるか自分で [終了する](#セッションの確認と終了) まで有効なままです。
+
+### セッションの確認と終了
+
+どこでサインインしているかを確認するには、セッションを一覧表示します：
+
+```bash
+difyctl get account session
+```
+
+各セッションには、`id`、マシンのホスト名を示す `device_label`、有効期限を示す `expires_at` が表示されます。
+
+もう手元にないマシンなど、別のマシンのセッションを終了するには、ID を指定して削除します。使用中のマシンのセッションを誤って終了しないよう、`device_label` で対象を選んでください。
+
+```bash
+difyctl delete account session --session-id <session-id>
+```
+
+現在使用中のセッションを終了するには、代わりに `logout` を実行します。ID を指定して削除すると、保存済みのサインイン情報が残ったままになり、次のコマンドが `auth_expired` で失敗します。

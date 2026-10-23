@@ -131,7 +131,6 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 | `LANG` | `C.UTF-8` | 系统区域设置，确保使用 UTF-8 编码。 |
 | `LC_ALL` | `C.UTF-8` | 覆盖所有类别的区域设置。 |
 | `PYTHONIOENCODING` | `utf-8` | Python I/O 编码。 |
-| `UV_CACHE_DIR` | `/tmp/.uv-cache` | UV 包管理器缓存目录。避免因不存在的主目录导致权限问题。 |
 
 ## 服务器配置
 
@@ -151,7 +150,7 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `DEBUG` | `false` | 启用详细日志记录：工作流节点输入/输出、工具执行详情、完整 LLM 提示和响应、应用启动耗时。适用于本地开发；不建议在生产环境使用，因为可能在日志中暴露敏感数据。 |
+| `DEBUG` | `false` | 启用详细日志记录：工具执行详情、完整 LLM 提示和响应、应用启动耗时。适用于本地开发；不建议在生产环境使用，因为可能在日志中暴露敏感数据。 |
 | `FLASK_DEBUG` | `false` | 标准 Flask 调试模式标志。Dify 未主动使用；`DEBUG` 是主要控制变量。 |
 | `ENABLE_REQUEST_LOGGING` | `false` | 为每个 HTTP 请求记录一条紧凑的访问日志（`METHOD PATH STATUS DURATION TRACE_ID`）。当 `LOG_LEVEL` 同时设为 `DEBUG` 时，还会以 JSON 格式记录完整的请求和响应体。 |
 | `DEPLOY_ENV` | `PRODUCTION` | 在 Sentry 和 OpenTelemetry 中标记监控数据，以便按环境过滤错误和追踪。也作为 `X-Env` 响应头发送。不改变应用行为。 |
@@ -173,6 +172,30 @@ openssl rand -base64 42
 <Warning>
 部署后更改此密钥将立即使所有用户登出、使所有文件 URL 失效，并破坏使用 OAuth 的插件集成，其加密凭证将无法恢复。
 </Warning>
+
+### PASSWORD_PEPPER
+
+默认值：（空）
+
+服务端密钥，Dify 会将其混入成员的登录密码。这样即使数据库泄露，仅凭其中的数据也无法破解密码。留空则一切照旧。
+
+如需启用，请在首次安装时、创建管理员账户之前设置此变量。取值应为高熵随机值，例如用以下命令生成：
+
+```bash
+openssl rand -base64 32
+```
+
+使用 Docker Compose 部署时，在 `docker/envs/core-services/api.env` 中设置（如尚未创建该文件，可从 `api.env.example` 复制）。不要写在 `docker/.env` 中，因为 Compose 也会把该文件中的变量传给 Worker、插件守护进程、Agent 后端、Web 前端和代码沙箱。源码部署则在 `api/.env` 中设置。
+
+<Warning>
+已有账户后再设置、修改或移除该值，这些账户用现有密码登录时都会提示密码无效。若是误操作，改回原值即可，其间未重置的密码都会恢复可用。请像保管 `SECRET_KEY` 一样妥善保管该值。
+</Warning>
+
+已有账户的部署若要启用，事后需确保每位成员都能重新登录：
+
+- 在 API 容器中运行 `flask reset-password`，逐个重置账户密码。完整命令详见 [重置管理员密码](/zh/self-host/deploy/troubleshooting/common-issues#重置管理员密码)。
+- 让成员通过「忘记密码」邮件自行重置密码，前提是已配置 [邮件发送](#邮件配置)。
+- 如果启用了 `ENABLE_EMAIL_CODE_LOGIN`，成员也可改用邮件验证码登录。
 
 ### KEY_PROVIDER_TYPE
 
@@ -423,13 +446,14 @@ sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<re
 
 ### Dify CLI 与编程 API
 
-`/openapi/v1/*` 是面向用户的编程 API，[Dify CLI](/zh/cli/quick-start)（`difyctl`）等客户端通过 OAuth Bearer Token 访问。该接口默认关闭：将 `OPENAPI_ENABLED` 和 `ENABLE_OAUTH_BEARER` 都设为 `true` 后，CLI 才能连接你的部署。
+`/openapi/v1/*` 是面向用户的编程 API，[Dify CLI](/zh/cli/get-started)（`difyctl`）等客户端通过 OAuth Bearer Token 访问。该接口默认关闭：将 `OPENAPI_ENABLED` 和 `ENABLE_OAUTH_BEARER` 都设为 `true` 后，CLI 才能连接你的部署。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `OPENAPI_ENABLED` | `false` | `/openapi/v1/*` 编程 API 的总开关，Dify CLI（`difyctl`）依赖该接口。<br/>为 `false` 时所有 `/openapi/v1/*` 端点返回 404，`difyctl login` 无法开始。需与 `ENABLE_OAUTH_BEARER` 一同开启。 |
 | `ENABLE_OAUTH_BEARER` | `false` | 为 `/openapi/v1/*` 绑定 OAuth Bearer 鉴权器，并控制设备流登录的批准端点。<br/>若只开启 `OPENAPI_ENABLED` 而此项为 `false`，`difyctl login` 会在批准环节收到 503。两者都为 `true` 时 CLI 才可用。 |
 | `OPENAPI_KNOWN_CLIENT_IDS` | `difyctl` | 允许发起设备流登录的 OAuth 客户端 ID，逗号分隔。<br/>新增 ID 即可接入其他客户端，无需改代码；移除 `difyctl` 会让 CLI 登录报 `unsupported_client`。 |
+| `OAUTH_TTL_DAYS` | `14` | `difyctl login` 登录的有效天数，从登录时起算。可设为 1～365，超出范围时自动取最接近的边界值。<br/>修改后仅对新登录生效。 |
 | `OPENAPI_CORS_ALLOW_ORIGINS` | （空） | 允许跨域调用 `/openapi/v1/*` 的浏览器来源，逗号分隔。<br/>为空表示全部拒绝：标准部署下没有影响，CLI 等非浏览器客户端也不受 CORS 限制。 |
 | `OPENAPI_RATE_LIMIT_PER_TOKEN` | `60` | 每个 OAuth Bearer Token 在 `/openapi/v1/*` 上的每分钟请求上限，经 Redis 在多副本间共享。<br/>超限返回 429 并附 `Retry-After` 头。设为 `0` 可关闭限流。 |
 | `DEVICE_FLOW_APPROVE_RATE_LIMIT_PER_HOUR` | `10` | 单个浏览器会话每小时可批准或拒绝的设备流登录次数。<br/>超出后批准请求返回 429，需等待窗口重置。不能设为 `0`。 |
@@ -609,6 +633,7 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 | `ARCHIVE_STORAGE_ACCESS_KEY` | （空） | Access key。 |
 | `ARCHIVE_STORAGE_SECRET_KEY` | （空） | Secret key。 |
 | `ARCHIVE_STORAGE_REGION` | `auto` | 存储区域。 |
+| `ARCHIVE_STORAGE_ADDRESS_STYLE` | `path` | 归档存储的 S3 寻址方式，决定存储桶名称在请求 URL 中的位置。如果服务商拒绝路径式请求，改用 `virtual`。<ul><li>`path`：存储桶名称放在路径中（`https://<endpoint>/<bucket>/...`）</li><li>`virtual`：存储桶名称放在主机名中（`https://<bucket>.<endpoint>/...`）</li><li>`auto`：由 S3 客户端决定</li></ul>归档存储桶和导出存储桶都受此设置影响，CSV 导出文件的下载链接也包括在内。<br/><br/>此变量与 `S3_ADDRESS_STYLE` 分开设置，两者默认值不同。 |
 
 ### 向量数据库配置
 
@@ -1199,6 +1224,9 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | 设为 `true` 后，LangSmith 和 Arize/Phoenix 的追踪数据采用统一结构，记录工作流运行、节点及其父子关系。默认值 `false` 保留各供应商原有的追踪实现。其他供应商不受影响。<br/><br/>各应用仍需单独开启 LLMOps 并配置供应商。 |
+| `OPS_AGENT_TRACE_ENABLED` | `false` | 设为 `true` 后，Agent 应用以及含 Agent 节点的 Workflow、Chatflow 应用，其追踪数据会包含每个 Agent 的模型调用和工具调用。还需将 `DIFY_AGENT_APPLICATION_TRACING_ENABLED` 设为 `true`。<br/><br/>为 `false` 时，Agent、Workflow 和 Chatflow 应用的追踪设置中会提示 Agent 追踪不可用。各应用仍需单独开启追踪并配置供应商。 |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `shared.env`：Agent 后端不读取这个文件。 |
+| `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | 仅在 `OPS_AGENT_TRACE_ENABLED` 为 `true` 时生效。每 30 秒运行一次后台任务，重新发送仍在等待投递的 Agent 追踪数据，并在保留期（默认 7 天）结束后删除已存储的 Agent 追踪数据。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
 | `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | `3900` | 父工作流追踪上下文的保留时长（秒），供后到的嵌套子追踪挂接。<br/><br/>当 `OPS_TRACE_UNIFIED_ENABLED` 为 `true` 时，取值必须不低于重试窗口（次数 × 间隔）。低于此值会导致 Dify 无法加载配置。 |
@@ -1271,7 +1299,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 每次工作流运行的最大节点执行数。超过此值将终止工作流。 |
+| `WORKFLOW_MAX_EXECUTION_STEPS` | `500` | 每次工作流运行的最大节点执行数。工具节点调用工作流工具时，工具内部的节点也计入。超过此值将终止工作流。 |
 | `WORKFLOW_MAX_EXECUTION_TIME` | `3600` | 每次工作流运行的最大实际运行时间（秒）。超过此值将终止工作流。<br/><br/>与 `APP_MAX_EXECUTION_TIME` 配对的外层限制（两者默认均为一小时）：请同时增大两者。如果你使用 Agent，还需保持不低于 Agent 的运行时限（`DIFY_AGENT_RUN_TIMEOUT_SECONDS`）。 |
 | `WORKFLOW_CALL_MAX_DEPTH` | `5` | 嵌套工作流调用工作流的最大深度。防止无限递归。 |
 | `MAX_VARIABLE_SIZE` | `204800` | 单个工作流变量的最大大小（字节，200 KB）。 |
@@ -1291,15 +1319,7 @@ API 和 Worker 会对代码节点和模板转换节点的输出强制执行这�
 | `API_WORKFLOW_NODE_EXECUTION_REPOSITORY` | `repositories.sqlalchemy_api_workflow_node_execution_repository.DifyAPISQLAlchemyWorkflowNodeExecutionRepository` | 工作流节点执行 API 操作的服务层仓库。 |
 | `LOOP_NODE_MAX_COUNT` | `100` | 循环节点的最大迭代次数。防止无限循环。 |
 | `MAX_PARALLEL_LIMIT` | `10` | 工作流中并行分支的最大数量。 |
-
-#### GraphEngine 工作线程池
-
-| 变量 | 默认值 | 说明 |
-|---|---|---|
-| `GRAPH_ENGINE_MIN_WORKERS` | `3` | 每个 GraphEngine 实例的最小工作线程数。 |
-| `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的最大工作线程数。 |
-| `GRAPH_ENGINE_SCALE_UP_THRESHOLD` | `0` | 允许多少个任务等待空闲工作线程，超过即新增工作线程，上限为 `GRAPH_ENGINE_MAX_WORKERS`。<br/><br/>默认值 `0` 表示一旦有任务等待就立即新增；调大可先容忍短暂积压再扩容。 |
-| `GRAPH_ENGINE_SCALE_DOWN_IDLE_TIME` | `5.0` | 多余工作线程在空闲此秒数后被移除。 |
+| `GRAPH_ENGINE_MAX_WORKERS` | `10` | 每个 GraphEngine 实例的工作线程数。 |
 
 #### 工作流日志清理
 
@@ -1340,7 +1360,6 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `SSRF_POOL_MAX_CONNECTIONS` | `100` | SSRF HTTP 客户端连接池的最大并发连接数。 |
 | `SSRF_POOL_MAX_KEEPALIVE_CONNECTIONS` | `20` | SSRF 连接池中保持的最大空闲连接数。 |
 | `SSRF_POOL_KEEPALIVE_EXPIRY` | `5.0` | 空闲 SSRF 连接关闭前的等待秒数。 |
-| `RESPECT_XFORWARD_HEADERS_ENABLED` | `false` | 信任来自反向代理的 X-Forwarded-For/Proto/Port 头。仅在单个受信反向代理后启用，否则允许 IP 欺骗。 |
 
 #### Agent 配置
 
@@ -1370,7 +1389,7 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 
 ## 新版 Agent
 
-新 Agent 在 Docker Compose 部署中以额外服务运行：一个 Agent 后端、一个沙箱，以及供沙箱使用的专用出站代理，它们会随 `docker compose up` 自动启动。该功能默认启用，且大部分设置会从现有的 Compose 配置中自动推导，因此通常只需关注下面这几个变量。
+新 Agent 在 Docker Compose 部署中以额外服务运行：一个 Agent 后端、一个沙箱，以及供沙箱使用的专用出站代理。设置好 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](#dify_agent_local_sandbox_auth_token) 后，它们都会随 `docker compose up` 启动。该功能默认启用，且大部分设置会从现有的 Compose 配置中自动推导，因此通常只需关注下面这几个变量。
 
 ### DIFY_AGENT_SERVER_SECRET_KEY
 
@@ -1396,6 +1415,22 @@ Dify API 调用 Agent 后端运行接口时出示的 Bearer 令牌。Compose 会
 
 默认值是一个公开的开发令牌，部署可开箱即用；但任何能访问 Agent 后端且知道该令牌的人都能发起运行，生产环境使用前务必替换为你自己的随机值。
 
+### DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN
+
+默认值：（空；[运行时后端](#dify_agent_runtime_backend) 为默认的 `local` 时必填）
+
+Agent 后端向内置沙箱证明身份时使用的共享密钥。留空时，这两个服务一启动就会退出并反复重启，所以要在启动 Dify 之前设置好。
+
+在 `docker/.env` 中设置一次即可，Compose 会把它传给两个服务。只写在 `docker/envs/` 下某个文件里的值不会生效。
+
+可用以下命令生成：
+
+```bash
+openssl rand -base64 32
+```
+
+取代原 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`，旧名仍可作为兼容别名使用。
+
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
 默认值：`true`
@@ -1408,9 +1443,34 @@ Dify API 调用 Agent 后端运行接口时出示的 Bearer 令牌。Compose 会
 
 默认值：`50`
 
-Skill 包（`.zip` 或 `.skill`）的最大大小，单位为 MB。无论将包作为内嵌 Skill 上传到 Agent，还是导入 Skill 库，都受此限制。超过限制时会返回大小错误。
+Skill 包（`.zip` 或 `.skill`）的最大大小，单位为 MB。无论将包上传到 Agent，还是导入 Skill 库，都受此限制。超过限制时会返回大小错误。
 
-Skill 解压后的内容另有两项上限：200 MB 和 5000 个文件；导入 Skill 库时，文件夹也计入 5000 个条目。此变量不会改变这两项限制。若将其提高到 100 以上，还需同步提高 `NGINX_CLIENT_MAX_BODY_SIZE`，否则 Nginx 会以 413 错误拒绝上传。
+若将其提高到 100 以上，还需同步提高 `NGINX_CLIENT_MAX_BODY_SIZE`，否则 Nginx 会以 413 错误拒绝上传。
+
+此变量只限制打包后的文件。包内的内容另有上限，以字节为单位设置：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `SKILL_PACKAGE_MAX_UNCOMPRESSED_BYTES` | `209715200` | Skill 包解压后的总大小上限，单位为字节（200 MB）。超限的包会被拒绝：上传到 Agent 时报 `archive_too_large`，导入 Skill 库时报 `skill_too_large`。 |
+| `SKILL_PACKAGE_MAX_ENTRIES` | `5000` | Skill 包内的条目数上限。无论上传到 Agent 还是导入 Skill 库，文件夹都计入条目数。超限的包会被拒绝，报 `too_many_entries` 或 `too_many_files`。 |
+| `SKILL_PACKAGE_MAX_SKILL_MD_BYTES` | `1048576` | 包内 `SKILL.md` 的大小上限，单位为字节（1 MB），超限时报 `skill_md_too_large`。<br/><br/>适用于上传到 Agent 的 Skill 和应用包内附带的 Skill，不适用于导入 Skill 库的 Skill。 |
+
+### Agent 包与应用包限制
+
+这些限制适用于所有应用包（`.ifpkg`），不只针对 Agent：所有类型的应用默认都导出为这种格式。导出和导入时都会检查这些限制，无论包是以文件上传还是从 URL 导入。只要超出任一限制，整个导出或导入就会失败，需先调高超出的那项限制再重试。
+
+上传超过 100 MB 的包时，还需调高 `NGINX_CLIENT_MAX_BODY_SIZE`，否则 Nginx 会先拒绝请求。
+
+包内附带的每个 Skill 还须符合 [Skill 限制](#upload_skill_file_size_limit)：
+
+- 导入时，超出 `UPLOAD_SKILL_FILE_SIZE_LIMIT` 的 Skill 会导致整个导入失败；超出某项 `SKILL_PACKAGE_*` 限制的 Skill 则会被跳过，导入完成时给出警告。要导入该 Skill，调高它超出的限制后重新导入包。
+- 导出时，超出某项 `SKILL_PACKAGE_*` 限制的 Skill 会导致整个导出失败，调高该限制后才能导出。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `AGENT_PACKAGE_MAX_BYTES` | `536870912` | 包的大小上限，单位为字节（512 MB），打包后和解压后的大小都会检查。解压后的大小包含附带 Skill 的内容。<br/><br/>附带大文件或大型 Skill 的应用或 Agent 导出、导入失败时，可调高此值。 |
+| `AGENT_PACKAGE_MAX_MANIFEST_BYTES` | `5242880` | 包内每个 YAML 文件的大小上限，单位为字节（5 MB）。这些文件包括清单文件，以及 Agent 包中的 Agent 配置。<br/><br/>附带的 Skill 和文件计入 `AGENT_PACKAGE_MAX_BYTES`，因此只有 Agent 配置本身超过 5 MB 时才需调高此值。<br/><br/>不适用于应用的 DSL，DSL 仍保持固定的 10 MB 上限。 |
+| `AGENT_PACKAGE_MAX_ENTRIES` | `5000` | 包内的条目数上限：附带的每个 Skill、文件和图标各算一个，另有几个固定条目。<br/><br/>附带数千个 Skill 和文件的应用或 Agent 导出、导入失败时，可调高此值。 |
 
 ### AGENT_BACKEND_BASE_URL
 
@@ -1430,7 +1490,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | 将模型连续输出的文本增量合并成批，再写入 Redis 并流式发送。保持启用可减少 Redis 写入次数和事件数量。<br/><br/>设为 `false` 可单独发送每个增量。工具调用等非文本事件的内容和顺序不变。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | 合并后的文本增量按此间隔发布，单位为毫秒。调低可更频繁地更新文本，调高则每批文本更多、批次数更少。<br/><br/>此间隔并非严格的时间限制。达到 `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` 时可提前发布。最小值为 1。要关闭合并，将 `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` 设为 `false`。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | 一批文本增量达到此字符数后，无需等待刷新间隔即可发布。调低可让较小的批次更早发布。<br/><br/>每个增量都会完整加入批次，因此一批的字符数可能超过此阈值。最小值为 1。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限，超时的运行以 `agent_run_limit_exceeded` 失败。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此高于 1 小时的值只在 `local` 后端下有效。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限。超时的运行会失败，错误为 `agent_run_limit_exceeded`。取代原 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此 E2B 上的运行最长仍为 1 小时。在 `local` 后端下，高于 1 小时的值会生效：如需更长的运行时间，同时调高此值和 API 侧的两项限制。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
@@ -1445,24 +1505,35 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。取代原 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`，旧名仍可作为兼容别名使用。 |
-| `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` | （空） | 可选的 Bearer 令牌，用于保护 Agent 后端对沙箱的调用；Compose 会把同一值传给两个服务。<br/><br/>取代原 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`，旧名仍可作为兼容别名使用。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将 Agent 沙箱发布到宿主机的端口，供从源码运行的 Agent 后端通过 `http://localhost:5004` 访问。在该栈的 `middleware.env` 中设置；改动后，需将 Agent 后端 `.env` 中的 `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` 指向新端口。<br/><br/>仅适用于中间件栈。完整的 Compose 栈将沙箱保留在内部网络中。 |
-| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。 |
+| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。使用内置的 `local` 沙箱时保持默认值即可。<br/><br/>在 `openshell` 后端下，沙箱无法解析 Compose 服务名。需在 `docker/.env` 中将其设为沙箱可访问、且能路由到 Agent 后端 `/agent-stub` 路径的地址，并发布或代理 Agent 后端的 5050 端口。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API 从 Agent 沙箱取文件时的等待时长，超时则传输失败。应高于 Agent 侧的 `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`。 |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API 等待 Agent 后端传输 home snapshot（捕获、删除快照，以及启动需要恢复快照的运行）的时长。<br/><br/>如果 home 环境较大的 Agent 在应用构建或启动运行时失败，可调大该值。 |
 | `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | 沙箱中负责输出该文件的命令可运行的时长。默认值低于 API 侧超时，以便先呈现 Agent 自身的错误。 |
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | 沙箱中的 Agent 向 Dify 回传单个文件的大小上限（MiB），例如它为回复生成的文件。 |
-| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.13 及以上；内核不支持时，沙箱会记录警告并在无隔离状态下运行。在 `docker/envs/core-services/local-sandbox.env` 中设置；`.env` 中的值不会传给沙箱容器。 |
+| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.13 及以上，并已启用 Landlock。自 1.18.0 起，如果 Landlock 无法生效，沙箱会拒绝执行任何命令。在 `docker/envs/core-services/local-sandbox.env` 中设置；`.env` 中的值不会传给沙箱容器。 |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密。Agent 的内部令牌始终会被遮盖。 |
+| `LOGFIRE_CONSOLE` | `false` | 调试时设为 `true`，Agent 后端会把自身的请求、对外 HTTP 调用和 Redis 的 span 输出到容器日志。与 [轨迹导出](#agent-轨迹导出) 无关，轨迹导出从不往这里输出。<br/><br/>自 1.18.0 起，Agent 运行的 span 不再出现在此日志中；要跟踪 Agent 运行，请使用轨迹导出。 |
 
 ### DIFY_AGENT_RUNTIME_BACKEND
 
 默认值：`local`
 
-选择 Agent 沙箱的运行位置。默认的 `local` 使用内置沙箱容器；设为 `e2b` 时，每个 Agent 的沙箱会运行在 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
+选择 Agent 沙箱的运行位置：
 
-`e2b` 后端使用自己的一组变量，`docker/docker-compose.e2b.yaml` overlay 会相应调整 Compose 配置：
+- `local`：使用内置沙箱容器。
+- `e2b`：每个 Agent 的沙箱运行在一台 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
+- `openshell`：通过你自行运维的 NVIDIA OpenShell 网关，让沙箱运行在你自己的基础设施上。
+
+此变量和两个回调地址（`DIFY_AGENT_STUB_API_BASE_URL` 与 `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）都需在 `docker/.env` 中设置。Compose 从这里把这三个值传给 Agent 后端，因此写在 `envs/core-services/dify-agent.env` 中不会生效。
+
+每种远程后端各有一组专用变量：
+
+<AccordionGroup>
+<Accordion title="E2B">
+
+`docker/docker-compose.e2b.yaml` 叠加文件会为此后端调整 Compose 配置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1471,6 +1542,86 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `EXPOSE_AGENT_BACKEND_PORT` | `15050` | `docker-compose.e2b.yaml` 叠加文件将 Agent 后端（容器端口 `5050`）发布到宿主机的端口。宿主机上 15050 已被占用时改用其他端口。 |
 | `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` | `3600` | 单个 E2B 沙箱保持活跃的时长，覆盖一次完整的 Agent 运行。3600 同时是硬上限，更高的值会被拒绝。<br/><br/>应不低于 `DIFY_AGENT_RUN_TIMEOUT_SECONDS`。若沙箱的活跃时长短于运行的允许时长，运行会在未超时的情况下失去沙箱。 |
 | `DIFY_AGENT_E2B_SHELLCTL_PORT` | `5004` | 沙箱控制服务在 E2B 虚拟机内监听的端口。 |
+
+</Accordion>
+
+<Accordion title="OpenShell">
+
+切换到 `openshell` 前，需准备好以下各项：
+
+- OpenShell 网关，版本不低于 0.0.106，且 `agent_backend` 容器能访问到它。
+- 网关凭证：Bearer 令牌、mTLS 客户端证书对，或两者兼有。Compose 未内置证书挂载，需自行将证书文件以只读方式挂载到 `agent_backend`，并确保 UID 1001 可读取。
+- 网关可用来启动沙箱的运行时镜像。
+- 一个共享卷，用于存放 Agent 跨对话保留的长期文件。该卷需在 Compose 之外创建，以免被 `docker compose down -v` 删除。
+- 沙箱回连 Dify 的网络路径：
+  - 沙箱可访问的回调地址。
+  - 通往 Agent 后端 `/agent-stub` 路径的路由。基础 Compose 文件没有发布 Agent 后端的 5050 端口。这个端口同时承载启动 Agent 运行的 API，所以不要整个暴露，只暴露 `/agent-stub` 路径，比如通过反向代理。
+
+按以下步骤切换到 OpenShell：
+
+1. 参照 [OpenShell 配置指南](https://github.com/langgenius/dify/blob/1.18.0/dify-agent/docs/dify-agent/guide/openshell.md) 搭建网关并完成上述准备，包括构建运行时镜像、初始化共享卷、挂载证书、Kubernetes 配置和冒烟测试。
+2. 在 `docker/.env` 中将 `DIFY_AGENT_RUNTIME_BACKEND` 设为 `openshell`，并填写下表中的变量。
+3. 运行 `docker compose up -d` 重建 Agent 后端。必填值缺失或格式有误时，Agent 后端会拒绝启动。
+4. 运行一个 Agent，确认配置无误。Agent 后端要等到 Agent 运行时，或在 Agent 的构建对话中点击 **应用** 时，才会首次连接网关。因此端点、凭证或镜像配置有误，要到那时才会暴露出来，表现为运行失败或 **应用** 失败。
+
+运行结束后，沙箱会继续在网关上运行，直到 Dify 将其移除。因此规划网关容量时，除了活跃的沙箱，也要算上空闲的沙箱。
+
+内置沙箱的出站代理不覆盖 OpenShell 沙箱。如需限制其网络访问，设置 `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW`。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。OpenShell 网关的地址，格式为 `host:port`，不带协议前缀。<br/><br/>必须能从 `agent_backend` 容器内部访问。网关运行在 Docker 宿主机上时，使用 `host.docker.internal:<port>` 而非 `localhost`；在 Linux 上还需通过 `extra_hosts` 将该名称映射到宿主机。<br/><br/>示例：`gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | （空） | Agent 后端向网关出示的 OIDC Bearer 令牌。根据网关的认证方式，使用此令牌、mTLS 客户端证书对，或两者同时使用。<br/><br/>仅在启动时读取一次：轮换令牌后需重建 Agent 后端。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | 签发网关证书的 CA 证书在 `agent_backend` 容器内的路径。`DIFY_AGENT_OPENSHELL_INSECURE` 为 `true` 时忽略。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS 客户端证书在 `agent_backend` 容器内的路径。需与 `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` 同时设置或同时留空；只设置其一时，Agent 后端无法启动。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS 客户端私钥在 `agent_backend` 容器内的路径。需与 `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` 同时设置或同时留空；只设置其一时，Agent 后端无法启动。 |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | 改用明文 gRPC 而非 TLS 连接网关，不使用 TLS 路径。若设置了 Bearer 令牌，仍会通过该连接发送。<br/><br/>仅用于对接明文网关的本地开发。 |
+| `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent 后端创建和管理沙箱所在的 OpenShell 工作空间。这是网关上的命名空间，不是 Dify 工作空间。 |
+| `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | 网关为每个沙箱启动的容器镜像。默认值即 OpenShell 配置指南中构建命令生成的标签。<br/><br/>网关的计算驱动必须能取到该镜像，只放在运行 Dify 的 Docker 守护进程上还不够：将镜像加载到网关的 Docker 守护进程中，或推送到网关可拉取的镜像仓库，并在此填写对应的镜像引用。<br/><br/>请显式设置此变量。若没有任何 env 文件设置它，Agent 后端会回退到 `langgenius/dify-agent-local-sandbox:latest`，该镜像可能版本较旧，无法在 OpenShell 下启动。 |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | 使用 `openshell` 后端时必填。网关的计算驱动会给每个沙箱应用一份 JSON 配置，这份配置必须把共享卷挂载到 `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`。具体结构取决于驱动。<br/><br/>JSON 无效或为空对象时，Agent 后端无法启动。Dify 不检查挂载本身，即使共享卷挂载到了其他路径，Agent 后端也会照常启动，因此请仔细核对挂载目标。<br/><br/>Docker 驱动示例：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
+| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 共享卷在每个沙箱内的挂载位置，必须与 `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` 中的挂载目标一致。每次在 Agent 的构建对话中点击 **应用** 时，Agent 的长期文件都会保存到这里。<br/><br/>必须为绝对路径，否则 Agent 后端无法启动。 |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。Agent 后端会在每个沙箱内启动命令服务，并用这个共享密钥向该服务证明身份。可设为任意随机字符串。<br/><br/>与保护内置沙箱的 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 相互独立。 |
+| `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | 沙箱允许连接的 `host:port` 端点，以逗号分隔，不带协议前缀或路径。留空时不下发网络策略，出站访问遵循网关的默认设置。<br/><br/>设置后，沙箱只能访问列出的端点，除非列出相应主机，否则安装软件包、访问网页都会失败。需包含 `DIFY_AGENT_STUB_API_BASE_URL` 和 `DIFY_AGENT_SANDBOX_FILES_BASE_URL` 的主机，否则 Agent 运行无法回调 Dify。<br/><br/>任一条目格式有误，Agent 后端都无法启动。<br/><br/>示例：`agent.example.com:443,dify.example.com:443` |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | 命令服务在每个沙箱内监听的回环端口。Agent 后端经由网关访问该端口，无需开放端口。仅当运行时镜像已占用 5004 时才需修改。 |
+| `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | 等待新建或重启的沙箱就绪的时长（秒）。如果网关繁忙、沙箱仍在启动时 Agent 运行就已失败，可调高此值。 |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent 后端经由网关在沙箱中执行每条初始化命令的时限（秒），例如复制 Agent 的长期文件或启动命令服务。不限制 Agent 自身执行的命令。<br/><br/>长期文件较大的 Agent 无法启动新会话时，可调高此值。 |
+
+</Accordion>
+</AccordionGroup>
+
+### Agent 轨迹导出
+
+想在已有的追踪后端中查看 Agent 做了什么，可开启轨迹导出。开启后，Agent 后端会通过 OTLP/HTTP 把每次 Agent 运行的追踪数据（包括模型请求和工具调用）发送到 OpenTelemetry 收集器。部署中所有工作空间的运行都发往同一个收集器。
+
+每个 span 都带有所属工作空间、应用、Agent、终端用户、对话、工作流运行和节点的 ID，因此可按 `dify.app_id`、`dify.conversation.id` 等属性，把追踪数据筛选到单个应用或单个对话。即使关闭内容导出，这些 ID 也会导出。
+
+轨迹导出独立于 [LLMOps 追踪投递](#llmops-追踪投递)（由应用构建者为每个应用单独配置 Langfuse 等供应商），也独立于 API 和 Worker 的 [OpenTelemetry 插桩](#otlp-/-opentelemetry-配置)，两者的设置都不影响轨迹导出。
+
+按以下步骤开启轨迹导出：
+
+1. 在 `docker/.env` 中，将 `DIFY_AGENT_TRAJECTORY_ENABLED` 设为 `true`，将 `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` 设为收集器的 traces URL。凭证（如有）写在 `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` 中。
+
+    Agent 后端不读取 `shared.env`，因此这些变量写在其中不会生效。
+
+2. 运行 `docker compose up -d` 重建 Agent 后端。任一值无效时，Agent 后端都无法启动，修正之前 Agent 运行会一直失败。
+3. 让 Agent 执行一个会调用工具的任务，然后在追踪后端中查找服务名为 `dify-agent-trajectory` 的工具调用 span。
+
+<Warning>
+`DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` 设为 `true` 时，收集器会收到所有工作空间的提示词、系统指令、模型回复，以及工具参数和结果。请像保护对话本身一样限制对收集器的访问。
+</Warning>
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `DIFY_AGENT_TRAJECTORY_ENABLED` | `false` | 开启轨迹导出。需同时设置 `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT`；设为 `true` 却未设置端点时，Agent 后端无法启动。 |
+| `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` | （空） | 收集器 OTLP/HTTP traces 端点的完整 URL，需包含路径，会按原样使用。不支持 gRPC 端点。<br/><br/>必须使用 `http` 或 `https`，且不能包含凭证或 `#` 片段，否则 Agent 后端无法启动。凭证应写在 `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` 中。<br/><br/>示例：`https://collector.example.com/v1/traces` |
+| `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` | `{}` | 每次导出时随请求发送的请求头，格式为 JSON 对象，如 `{"Authorization":"Bearer <token>"}`。用于传递收集器凭证。<br/><br/>值不是 JSON 时（如 `Authorization=Bearer <token>`），Agent 后端无法启动。 |
+| `DIFY_AGENT_TRAJECTORY_SERVICE_NAME` | `dify-agent-trajectory` | 写入每个导出 span 的 `service.name`，可在追踪后端中据此筛选。不能为空。 |
+| `DIFY_AGENT_TRAJECTORY_INCLUDE_CONTENT` | `false` | 设为 `true` 可在 span 中加入对话内容：提示词、系统指令、模型回复，以及工具参数和结果。二进制内容始终不会导出。<br/><br/>不开启时，追踪数据只显示每次运行的步骤和耗时，看不到具体说了什么。需要弄清 Agent 为何如此回答或行动时再开启，且前提是收集器可以存放所有工作空间的对话。 |
+| `DIFY_AGENT_TRAJECTORY_TRACE_CONTEXT_MODE` | `isolated` | Agent span 与其他追踪的关系。`isolated` 为每次 Agent 运行开启新的追踪；`shared` 让 Agent span 加入当前追踪，并沿用其采样决策。<br/><br/>除非 Agent 后端自身的遥测数据也发往这个追踪后端，否则保持 `isolated`。只有为此设置了 `LOGFIRE_TOKEN` 或标准的 `OTEL_EXPORTER_OTLP_*` 变量，才会出现这种情况。其他情况下使用 `shared`，可能导致追踪缺少根 span。 |
+| `DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE` | `2048` | 等待导出的 span 数量上限。高负载下出现 span 丢失时，可调高此值。 |
+| `DIFY_AGENT_TRAJECTORY_MAX_EXPORT_BATCH_SIZE` | `512` | 每次导出请求包含的 span 数量上限。不得超过 `DIFY_AGENT_TRAJECTORY_MAX_QUEUE_SIZE`，否则 Agent 后端无法启动。 |
+| `DIFY_AGENT_TRAJECTORY_SCHEDULE_DELAY_MS` | `5000` | 两次批量导出之间的间隔（毫秒）。 |
+| `DIFY_AGENT_TRAJECTORY_EXPORT_TIMEOUT_MS` | `5000` | 导出单个批次的时限（毫秒）。不影响发往收集器的每个 HTTP 请求的超时，后者固定为 5 秒。 |
 
 ## 数据库服务
 
@@ -1500,7 +1651,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
 | `SANDBOX_PORT` | `8194` | 沙箱服务端口。 |
 
-## Nginx 反向代理
+## Nginx 反向代理 {#nginx-reverse-proxy}
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1531,6 +1682,26 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `CERTBOT_DOMAIN` | （空） | SSL 证书的域名。 |
 | `CERTBOT_OPTIONS` | （空） | 额外的 certbot CLI 选项（例如 `--force-renewal`、`--dry-run`）。 |
 
+### RESPECT_XFORWARD_HEADERS_ENABLED
+
+默认值：Docker Compose 部署为 `true`，源码部署为 `false`
+
+开启后，Dify 会读取 API 前面那一层代理发来的 `X-Forwarded-For` 请求头，从中获取每个访问者的 IP 地址。
+
+Docker Compose 部署位于 Cloudflare、负载均衡器或其他代理之后时，保持开启，并 [配置自带的 Nginx 信任你的代理](/zh/self-host/deploy/quick-start/faqs#sign-in-emails-blocked-behind-proxy)。配置完成前，所有访问者都会显示为代理的地址，共用同一份限额，比如登录邮件的发送限额。
+
+<Warning>
+此变量开启时，凡是能直接连接 API 的来源，都可以任意指定 Dify 看到的地址。伪造的地址可以绕过按 IP 的限流，也会留在账户最近登录 IP 这类记录里。
+
+Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容器（比如代码沙箱）仍然可以直接连接。把 Docker 网络设为 `internal` 也拦不住它们。
+
+只允许可信的调用方直接连接 API。如果这些容器运行着不可信的代码，请用网络或防火墙规则把它们隔离开。这些容器仍需发出的 API 请求，都要经过一个会重写 `X-Forwarded-For` 的网关。
+
+如已发布 API 端口，请把端口关掉，不要拿关闭此变量来代替。变量一旦关闭，所有访问者都会显示为 Nginx 的地址。
+</Warning>
+
+源码部署时，如果 API 前面只有一层代理，这层代理会设置 `X-Forwarded-For`，而且是访问 API 的唯一入口，就开启此变量。
+
 ## SSRF 代理
 
 这些变量配置基于 Squid 的 SSRF 代理容器，该容器阻止对内部/私有网络的请求。
@@ -1543,8 +1714,8 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF 代理用于将出站流量反向代理转发到沙箱服务的监听端口。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF 代理转发到的沙箱服务主机名。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 允许通过代理的私有 IP 或 CIDR 网段列表（以逗号或空格分隔），用于覆盖默认对私有网络的拦截。当 HTTP 或工具请求需要访问特定内部主机时使用。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 允许通过代理的内部域名列表（以逗号或空格分隔），用于覆盖默认对私有网络的拦截。 |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段。HTTP 请求节点、工具，以及 **同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时）发往这些地址的请求，SSRF 代理会放行。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `docker/.env` 中设置。写在 `envs/infrastructure/ssrf-proxy.env` 中的值不会生效。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，即使解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，设置方式也相同。`docker/.env.example` 中没有这一行，需自行添加。<br/><br/>示例：`firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | 代理请求的默认总超时（秒）。 |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | 默认连接超时（秒）。 |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | 默认读取超时（秒）。 |
@@ -1605,12 +1776,12 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 Creator Center（`creators.dify.ai`）是用户将 Dify 应用以模板形式提交的入口。提交的模板经审核通过后会在 Dify Marketplace 上线。Dify 控制台会在新的浏览器标签页中打开 Creator Center 页面。
 
-控制台中的「发布到 Marketplace」操作会导出应用的 DSL（应用的 YAML 格式定义文件）并上传至 Creator Center，用户随后在该处完成提交。详见 [发布应用到市场](/zh/self-host/use-dify/publish/publish-to-marketplace)。
+工作室中的「发布到 Marketplace」操作会把应用导出为应用包（`.ifpkg`）并上传至 Creator Center，用户随后在那里完成提交。详见 [发布应用到市场](/zh/self-host/use-dify/publish/publish-to-marketplace)。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `CREATORS_PLATFORM_FEATURES_ENABLED` | `true` | 控制应用的「发布」面板中是否显示「发布到 Marketplace」操作。设为 `false` 时该操作被隐藏，对应的控制台 API 也会返回 403。适用于不希望用户拥有一键对外提交模板路径的部署。 |
-| `CREATORS_PLATFORM_API_URL` | `https://creators.dify.ai` | Creator Center 服务的基础 URL。「发布到 Marketplace」由 API 服务将应用 DSL 上传至该地址，用户浏览器也会访问同一地址来完成提交，因此两端都需要能访问它。 |
+| `CREATORS_PLATFORM_API_URL` | `https://creators.dify.ai` | Creator Center 服务的基础 URL。API 服务和用户浏览器都会使用这个地址，因此两端都必须能访问它。 |
 | `CREATORS_PLATFORM_OAUTH_CLIENT_ID` | （空） | 用于免登录 SSO 进入 Creator Center 的 OAuth 客户端 ID。自部署环境请保持为空。留空时仍可发布，但尚未登录的用户需要手动登录 Creator Center。填入未在本部署 OAuth 服务中注册的 ID 会导致「发布到 Marketplace」失败。 |
 
 ## OTLP / OpenTelemetry 配置
