@@ -18,6 +18,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Chatflow app | Chatflow 应用 | Chatflow アプリ | Explicit form of the Chatflow app type. |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー | English prose: lowercase, plural as needed. zh and ja keep the English word untranslated and capitalized, as the trees already do. |
 | workflow | 工作流 | ワークフロー | Always lowercase in English. Collective/engine sense: workflow-backed runs, workflow nodes, the workflow engine, and endpoints shared across app types. Localizes in zh/ja; the Workflow app type stays English. |
+| workflow tool | 工作流工具 | ワークフローツール | A Workflow app published as a tool. Lowercase in prose. |
 | Agent | Agent | Agent | Dify App type (alongside Workflow, Chatflow, etc.) that autonomously uses tools |
 | Agent app | Agent 应用 | Agent アプリ | Explicit form of the Agent app type; use when context could confuse it with the Agent workflow node |
 | Legacy Agent | 旧版 Agent | レガシー Agent | The classic app type's UI deprecation badge, and its docs name wherever the new Agent supersedes it (nav, API guides, spec app-type labels). The node level stays Classic Agent / New Agent: the classic node is Chatflow's default, not legacy. |
@@ -94,6 +95,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン | Lowercase in prose. |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
 | chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
@@ -201,8 +203,9 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
-| Access Point | 访问点 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
+| Access Point | 访问入口 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
+| Monitoring (Agent) | 监控 | モニタリング | agent-v-2.agentDetail.sections.monitoring | Section of the Agent detail page; zh/ja differ from the app tab Monitoring (common.appMenus.overview) |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
@@ -258,8 +261,8 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
 | Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
 | Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル | common.modelProvider.speechToTextModel.key | |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル | common.modelProvider.ttsModel.key | |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル | common.modelProvider.speechToTextModel.key | |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル | common.modelProvider.ttsModel.key | |
 | Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
 | AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
 | Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
@@ -304,6 +307,9 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
+| Agent data capture | Agent 数据采集 | Agent データ収集 | app.tracing.captureTitle | Tracing settings group, shown when Agent tracing is enabled |
+| Capture content | 采集内容 | 内容を収集 | app.tracing.captureContent | |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 | app.tracing.captureAgent | |
 | Branding | 品牌设置 | ブランディング | app-overview.overview.appInfo.settings.title | Publish-panel action opening the client-side web app settings (name, description, language, copyright, privacy policy, custom disclaimer) |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド | app-overview.overview.appInfo.customize.title | Publish-panel action, sibling to Branding; covers forking the web client or calling the API directly |
 
@@ -350,7 +356,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | workflow.blocks.trigger-webhook | |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー | workflow.blocks.trigger-plugin | Renamed from "Plugin Trigger" in v1.15.0; internal id unchanged |
-| Knowledge Base | 知识库 | 知識ベース | workflow.blocks.knowledge-index | Knowledge index node |
+| Knowledge Base | 知识库 | ナレッジベース | workflow.blocks.knowledge-index | Knowledge index node |
 
 ### Knowledge Pipeline Tool Names
 
@@ -377,7 +383,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Test Run | 测试运行 | テスト実行 | workflow.common.run | |
 | Features | 功能 | 機能 | workflow.common.features | Panel for web app features |
 | Version History | 版本历史 | バージョン履歴 | workflow.common.versionHistory | |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する | workflow.common.workflowAsTool | REVIEW: ZH/JA much longer than EN label |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 | navigation.common.workflowAsTool | Publish-menu action that turns a Workflow into a tool |
 | Needs Setup | 需要进行配置 | 設定が必要 | workflow.common.configureRequired | Workflow as Tool badge before first configuration; renamed from "Configure Required" in v1.16.2 |
 | Ready | 已就绪 | 準備完了 | workflow.common.workflowAsToolReady | Workflow as Tool status |
 | Update Needed | 需要更新 | 更新が必要 | workflow.common.workflowAsToolUpdateNeeded | Workflow as Tool status; the workflow changed after the tool was configured |
@@ -386,6 +392,8 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Conversation Variables | 会话变量 | 会話変数 | workflow.chatVariable.panelTitle | Panel label |
 | Environment Variables | 环境变量 | 環境変数 | workflow.env.envPanelTitle | Panel label |
 | System Variables | 系统变量 | システム変数 | workflow.globalVar.title | Panel label |
+| Error Handling | 异常处理 | 例外処理 | workflow.nodes.common.errorHandle.title | Node panel setting on nodes that support it |
+| Fail Branch | 异常分支 | 例外分岐 | workflow.nodes.common.errorHandle.failBranch.title | Error Handling option; also labels the branch on the node |
 
 ### Collaboration
 
@@ -439,6 +447,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Function Calling | Function Calling | 関数呼び出し | app-debug.agent.agentModeType.functionCall | Agent mode; ZH keeps English |
 | ReAct | ReAct | ReAct | app-debug.agent.agentModeType.ReACT | Agent mode |
 | Agent Settings | Agent 设置 | エージェント設定 | app-debug.agent.setting.name | |
+| TRACING | 追踪 | 実行追跡 | run-log.tracing | Run detail tab, and the button on a Tool node that called a workflow tool; ja differs from Tracing (app.tracing.tracing) |
 
 ### Agent Node Config
 
@@ -449,6 +458,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
 | Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
+| Output Routes | 输出路由 | 出力ルート | workflow.nodes.agent.outputRoutes.title | New Agent surface |
 
 ### Agent Configure
 
@@ -496,7 +506,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース | dataset.externalKnowledgeBase | |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース | dataset.externalKnowledgeBase | |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID | dataset.externalKnowledgeId | Identifier for a specific knowledge source in an external system |
 | External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API | dataset.externalAPIPanelTitle | Knowledge list button and panel title. The knowledge base settings form uses dataset-settings.form.externalKnowledgeAPI (外部知识 API / 外部ナレッジベース API) |
 | Service API | 服务 API | サービスAPI | dataset.serviceApi.title | |
