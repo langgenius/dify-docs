@@ -1224,8 +1224,8 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | `true` にすると、LangSmith と Arize/Phoenix のトレースに共通の構造を使います。ワークフロー実行、ノード、それらの親子関係を記録します。デフォルトの `false` では、各プロバイダーの従来のトレース実装を使います。他のプロバイダーには影響しません。<br/><br/>各アプリで LLMOps を有効にし、プロバイダーを設定する必要があります。 |
-| `OPS_AGENT_TRACE_ENABLED` | `false` | `true` にすると、Agent のモデル呼び出しとツール呼び出しがトレースに含まれます。対象は Agent アプリと、Agent ノードを含む Workflow アプリおよび Chatflow アプリです。アプリが呼び出す [ワークフローツール](/ja/self-host/use-dify/workspace/tools#workflow) 内の Agent は含まれません。あわせて `DIFY_AGENT_APPLICATION_TRACING_ENABLED` も `true` にしてください。<br/><br/>`false` の間は、Agent、Workflow、Chatflow アプリのトレース設定に、Agent トレースを利用できない旨が表示されます。各アプリでトレースを有効にしてプロバイダーを設定し、**Agent の内部処理を収集** をオンのままにしておく必要もあります（デフォルトはオン）。 |
-| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | `OPS_AGENT_TRACE_ENABLED` と対になる Agent バックエンド側の設定です。Agent をトレースするには両方を `true` にしてください。<br/><br/>`docker/envs/core-services/dify-agent.env` で設定します。Agent バックエンドは `shared.env` を読み込まないため、そちらに設定しても反映されません。 |
+| `OPS_AGENT_TRACE_ENABLED` | `false` | `true` にすると、Agent のモデル呼び出しとツール呼び出しがトレースに含まれます。対象は Agent アプリと、新しい Agent ノードを含む Workflow アプリおよび Chatflow アプリです。アプリが呼び出す [ワークフローツール](/ja/self-host/use-dify/workspace/tools#workflow) 内の Agent は含まれません。あわせて `DIFY_AGENT_APPLICATION_TRACING_ENABLED` も `true` にしてください。<br/><br/>`false` の間は、Agent、Workflow、Chatflow アプリのトレース設定に、Agent トレースを利用できない旨が表示されます。各アプリでトレースを有効にしてプロバイダーを設定し、**Agent の内部処理を収集** をオンのままにしておく必要もあります（デフォルトはオン）。 |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | `OPS_AGENT_TRACE_ENABLED` と対になる Agent バックエンド側の設定です。Agent をトレースするには両方を `true` にしてください。<br/><br/>`docker/envs/core-services/dify-agent.env` で設定します。Agent バックエンドは `shared.env` を読み込まないため、そちらに設定しても反映されません。<br/><br/>有効にしている間、アプリでトレースされる Agent 実行は、[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) ではなく、そのアプリのトレースプロバイダーに送られます。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | `OPS_AGENT_TRACE_ENABLED` が `true` の場合のみ有効です。30 秒ごとにバックグラウンドジョブを実行し、配信待ちの Agent トレースを再送します。保持期間（デフォルトで 7 日）を過ぎると、Dify が保存している Agent トレースデータも削除します。トレースプロバイダーにすでに配信されたデータは削除されません。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/><br/>デフォルトのリトライ時間（回数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）は、1 時間のワークフロー上限とエクスポート猶予期間を上回るよう設定されています。<br/><br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 65 分）です。<br/><br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
@@ -1593,11 +1593,13 @@ OpenShell に切り替えるには、次の手順を実行します：
 
 ### Agent トラジェクトリのエクスポート
 
-すでに運用しているトレーシングバックエンドで Agent の動作を確認するには、トラジェクトリのエクスポートを有効にします。有効にすると、Agent バックエンドは各 Agent 実行のトレースを OTLP/HTTP で OpenTelemetry コレクターに送信します。トレースには、モデルへのリクエストとツール呼び出しが含まれます。デプロイ内のすべてのワークスペースの実行が、1 つのコレクターに届きます。
+すでに運用しているトレーシングバックエンドで Agent の動作を確認するには、トラジェクトリのエクスポートを有効にします。有効にすると、Agent バックエンドは Agent 実行のトレースを OTLP/HTTP で OpenTelemetry コレクターに送信します。トレースには、モデルへのリクエストとツール呼び出しが含まれます。デプロイ内のすべてのワークスペースの実行が、1 つのコレクターに届きます。
 
 各スパンには、ワークスペース、アプリ、Agent、エンドユーザー、会話、ワークフロー実行、ノードの ID が付与されます。`dify.app_id` や `dify.conversation.id` などの属性で、トレースを 1 つのアプリや 1 つの会話に絞り込めます。これらの ID は、コンテンツのエクスポートを無効にしていてもエクスポートされます。
 
-トラジェクトリのエクスポートは、[LLMOps トレース配信](#llmops-トレース配信) とは別の仕組みです。LLMOps トレース配信は、アプリ作成者がアプリごとに Langfuse などのプロバイダーで設定します。API と Worker の [OpenTelemetry 計装](#otlp-/-opentelemetry-設定) とも別で、どちらの設定もトラジェクトリのエクスポートには影響しません。
+トラジェクトリのエクスポートは、API と Worker の [OpenTelemetry 計装](#otlp-/-opentelemetry-設定) とは別の仕組みです。
+
+一方、[LLMOps トレース配信](#llmops-トレース配信) の設定はトラジェクトリのエクスポートに影響します。LLMOps トレース配信は、アプリ作成者がアプリごとに Langfuse などのプロバイダーを選んで設定するものです。LLMOps トレース配信で Agent トレースを有効にすると、アプリでトレースされる実行は、そのアプリのトレースプロバイダーにだけ送られます。それ以外の Agent 実行はコレクターに届きます。
 
 有効にするには、次の手順を実行します：
 

@@ -1226,8 +1226,8 @@ Traces of app runs are delivered to the configured LLMOps provider (Langfuse, La
 | Variable | Default | Description |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | Set to `true` to give LangSmith and Arize/Phoenix traces a common structure for workflow runs, nodes, and their parent-child relationships. The default `false` uses each provider's original tracing implementation. Other providers are unaffected.<br/><br/>Each app still needs LLMOps enabled and a provider configured. |
-| `OPS_AGENT_TRACE_ENABLED` | `false` | Set to `true` to include Agent model and tool calls in the traces of Agent apps and of Workflow and Chatflow apps with an Agent node. Agents inside a [workflow tool](/en/self-host/use-dify/workspace/tools#workflow) that the app calls aren't included. Also set `DIFY_AGENT_APPLICATION_TRACING_ENABLED` to `true`.<br/><br/>While this is `false`, the tracing settings of Agent, Workflow, and Chatflow apps say Agent tracing isn't available. Each app still needs tracing enabled, a provider configured, and **Capture Agent internals** on (the default). |
-| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | The agent backend's half of `OPS_AGENT_TRACE_ENABLED`; set both to `true` to trace Agents.<br/><br/>Set it in `docker/envs/core-services/dify-agent.env`, not `shared.env`: the agent backend doesn't read that file. |
+| `OPS_AGENT_TRACE_ENABLED` | `false` | Set to `true` to include Agent model and tool calls in the traces of Agent apps and of Workflow and Chatflow apps with a new Agent node. Agents inside a [workflow tool](/en/self-host/use-dify/workspace/tools#workflow) that the app calls aren't included. Also set `DIFY_AGENT_APPLICATION_TRACING_ENABLED` to `true`.<br/><br/>While this is `false`, the tracing settings of Agent, Workflow, and Chatflow apps say Agent tracing isn't available. Each app still needs tracing enabled, a provider configured, and **Capture Agent internals** on (the default). |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | The agent backend's half of `OPS_AGENT_TRACE_ENABLED`; set both to `true` to trace Agents.<br/><br/>Set it in `docker/envs/core-services/dify-agent.env`, not `shared.env`: the agent backend doesn't read that file.<br/><br/>While it's on, an Agent run that its app traces goes to the app's tracing provider instead of [trajectory export](#agent-trajectory-export). |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | Used only when `OPS_AGENT_TRACE_ENABLED` is `true`. Runs a background job every 30 seconds that resends Agent traces still waiting for delivery and deletes the Agent trace data Dify stores after the retention period (7 days by default). Traces already delivered to your tracing provider stay there. |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | How many times a trace delivery is retried after a transient failure before the trace is dropped. <br/><br/>The default retry window (retries × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`) is sized to outlast the one-hour workflow limit plus the export grace period. <br/><br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 65 minutes at defaults).<br/><br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
@@ -1601,11 +1601,13 @@ The bundled sandbox's egress proxy doesn't cover OpenShell sandboxes. To restric
 
 ### Agent Trajectory Export
 
-To see what your agents did in a tracing backend you already run, turn on trajectory export. The agent backend then sends a trace of each agent run, with its model requests and tool calls, to an OpenTelemetry collector over OTLP/HTTP. One collector receives the runs of every workspace on the deployment.
+To see what your agents did in a tracing backend you already run, turn on trajectory export. The agent backend then sends traces of agent runs, with their model requests and tool calls, to an OpenTelemetry collector over OTLP/HTTP. One collector receives the runs of every workspace on the deployment.
 
 Every span carries the IDs of its workspace, app, agent, end user, conversation, workflow run, and node, so you can narrow traces to one app or one conversation by attributes such as `dify.app_id` or `dify.conversation.id`. These IDs are exported even with content export off.
 
-Trajectory export is separate from [LLMOps Trace Delivery](#llmops-trace-delivery), which app builders set up per app with providers such as Langfuse, and from the [OpenTelemetry instrumentation](#otlp-/-opentelemetry-configuration) of the API and Worker. Their settings don't affect it.
+Trajectory export is separate from the [OpenTelemetry instrumentation](#otlp-/-opentelemetry-configuration) of the API and Worker.
+
+It isn't separate from [LLMOps Trace Delivery](#llmops-trace-delivery), which app builders set up per app with providers such as Langfuse. With Agent tracing turned on there, a run that its app traces goes only to the app's tracing provider, and every other Agent run reaches the collector.
 
 To turn it on:
 
