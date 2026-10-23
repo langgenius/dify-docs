@@ -12,6 +12,7 @@
 | Chatflow app | Chatflow 应用 | Chatflow アプリ |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー |
 | workflow | 工作流 | ワークフロー |
+| workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
@@ -88,6 +89,7 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | knowledge base | 知识库 | ナレッジベース |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
@@ -191,8 +193,9 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Orchestrate | 编排 | オーケストレート |
-| Access Point | 访问点 | アクセスポイント |
+| Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
+| Monitoring (Agent) | 监控 | モニタリング |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
@@ -248,8 +251,8 @@
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
@@ -289,11 +292,17 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Duplicate | 复制 | 複製 |
-| Export DSL | 导出 DSL | DSL をエクスポート |
-| Import DSL file | 导入 DSL 文件 | DSL ファイルをインポート |
+| Export App | 导出应用 | アプリをエクスポート |
+| Export Agent | 导出 Agent | エージェントをエクスポート |
+| Import App | 导入应用 | アプリをインポート |
+| Export secret values | 导出 secret 值 | シークレット値を含む |
+| App package | 应用包 | アプリパッケージ |
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
 | Tracing | 追踪 | 追跡 |
+| Agent data capture | Agent 数据采集 | Agent データ収集 |
+| Capture content | 采集内容 | 内容を収集 |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 
@@ -340,7 +349,7 @@
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー |
-| Knowledge Base | 知识库 | 知識ベース |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Pipeline Tool Names
 
@@ -365,7 +374,7 @@
 | Test Run | 测试运行 | テスト実行 |
 | Features | 功能 | 機能 |
 | Version History | 版本历史 | バージョン履歴 |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 |
 | Needs Setup | 需要进行配置 | 設定が必要 |
 | Ready | 已就绪 | 準備完了 |
 | Update Needed | 需要更新 | 更新が必要 |
@@ -374,6 +383,8 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Error Handling | 异常处理 | 例外処理 |
+| Fail Branch | 异常分支 | 例外分岐 |
 
 ### Collaboration
 
@@ -427,6 +438,7 @@
 | Function Calling | Function Calling | 関数呼び出し |
 | ReAct | ReAct | ReAct |
 | Agent Settings | Agent 设置 | エージェント設定 |
+| TRACING | 追踪 | 実行追跡 |
 
 ### Agent Node Config
 
@@ -437,6 +449,7 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
+| Output Routes | 输出路由 | 出力ルート |
 
 ### Agent Configure
 
@@ -484,7 +497,7 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
 | External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API |
 | Service API | 服务 API | サービスAPI |

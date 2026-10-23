@@ -1,0 +1,231 @@
+---
+title: DSL ファイルからのアプリの作成と更新
+sidebarTitle: DSL からの作成・更新
+description: difyctl で DSL ファイルから Dify アプリを更新し、公開やロールバックを行う。ファイルやアプリパッケージからのアプリ作成と、Web アプリ設定の変更も扱う
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/create-and-update-apps-from-dsl-files) を参照してください。
+
+<Tip>
+作業をコーディングエージェントに任せるには、[`difyctl` スキルでエージェントをセットアップ](/ja/cli/get-started#コーディングエージェントのセットアップ) し、このページを渡してください。
+</Tip>
+
+## 前提条件
+
+- エクスポート元のアプリと更新するアプリには、いずれもサービス API アクセスが必要です。
+
+- アプリが 2 つの Dify サーバーにまたがる場合は、`DIFY_CONFIG_DIR` でサーバーごとに別のフォルダを指定して、[それぞれにサインインします](/ja/cli/manage-sign-in#複数のサーバーやアカウントの利用)。次に、それぞれのフォルダを指定して `difyctl version` を実行し、どちらのサーバーのバージョンも手元の `difyctl` と一致していることを確認します。
+
+    <Info>
+    各コマンドは、対象のアプリがあるサーバーのフォルダを指定して実行します。
+    </Info>
+
+## アプリの更新
+
+ファイルから更新できるのは、Workflow アプリと Chatflow アプリだけです。ほかの種類のアプリは、代わりに [ファイルからアプリを作成](#dsl-ファイルからのアプリの作成) してください。
+
+更新しても、アプリの Web アプリ URL と API キーはそのまま残ります（[ほかに残るもの](/ja/self-host/use-dify/workspace/export-import-apps#update-an-existing-app)）。インポートすると、まだ公開していない変更も含めて、アプリのドラフトが置き換わります。新しいワークフローは、公開した時点で有効になります。
+
+<Tip>
+これらの手順をパイプラインで実行する場合は、[CI と自動化での `difyctl` の使用](/ja/cli/scripts-and-ci) もあわせて参照してください。ジョブのサインイン方法と、失敗時にジョブを止める方法を説明しています。
+</Tip>
+
+<Steps>
+  <Step title="アプリ ID の確認">
+    アプリを一覧表示し、更新するアプリと、ファイルのエクスポート元にするアプリの `id` を控えておきます：
+
+    ```bash
+    difyctl get console_app
+    ```
+
+    このページの例では、本番用のアプリ「Order Status」を更新します。使うのは、テスト済みのコピー「Order Status (staging)」からエクスポートしたファイルです：
+
+    ```json
+    {
+      "data": [
+        {
+          "id": "9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d",
+          "name": "Order Status",
+          "mode": "workflow",
+          …
+        },
+        {
+          "id": "5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f",
+          "name": "Order Status (staging)",
+          "mode": "workflow",
+          …
+        },
+        …
+      ],
+      …
+    }
+    ```
+
+  </Step>
+  <Step title="ファイルの取得">
+    [DSL ファイル](/ja/learn/key-concepts#dify-dsl) がすでに Git にある場合は、手順 3 に進みます。ない場合は、更新するアプリのテスト済みコピーなど、別のアプリからエクスポートします。
+
+    まず、そのアプリで、タイトルなどの [Web アプリ設定](#web-アプリとアプリ情報の変更) を、ユーザーに見せる内容にしておきます。設定はファイルに含まれ、インポートするとすぐにユーザーに表示されます。
+
+    次に、そのアプリで公開中のバージョンをエクスポートします。`get console_app version` で `current: true` と表示されるバージョンです：
+
+    ```bash
+    V=$(difyctl get console_app version --app-id 5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f | jq -r '.data[] | select(.current) | .id')
+    difyctl export console_app dsl --app-id 5c1e8f2a-7b3d-4e9a-8f6c-2d4b1a9e7c3f --workflow-id $V | jq -r .data > order-status.yml
+    ```
+
+    代わりに未公開の変更をエクスポートするには、`--workflow-id` を省略します。
+
+    エクスポートしたファイルでは、シークレットの値が空になります。更新するアプリのシークレットを、このアプリの値で置き換える場合に限り、`--include-secret` を付けます。この方法でエクスポートしたファイルには値が平文で含まれるため、Git や共有される場所には置かないでください。
+
+  </Step>
+  <Step title="ファイルの検証">
+
+    ```bash
+    difyctl check console_app dsl --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --yaml-content "$(cat order-status.yml)"
+    ```
+
+    結果が `valid: true` であれば、そのファイルはインポートできます。そうでない場合は、`severity` が `error` の各問題を、`loc` が示すノードとフィールドで修正し、もう一度検証します。
+
+    `severity` が `warning` の問題があっても、インポートは止まりません。この問題は、認証情報やモデルが不足していることを示します。不足分は手順 5 で設定します。
+  </Step>
+  <Step title="ファイルのインポート">
+    アプリのドラフトハッシュを取得し、そのハッシュを指定してファイルをインポートします。その間に誰かがドラフトを変更した場合、ハッシュを指定したインポートは拒否されます。その人の変更が上書きされることはありません。
+
+    <Warning>
+    インポートすると、**公開しなくても**、アプリの名前、説明、アイコン、Web アプリ設定がすぐにファイルの内容に置き換わります。
+    </Warning>
+
+    アプリの名前と説明を残すには、`--name` と `--description` で現在の値を渡します。ファイルのアイコンや Web アプリ設定がこのアプリに合わない場合は、インポートの直後に [変更します](#web-アプリとアプリ情報の変更)。
+
+    ```bash
+    H=$(difyctl export console_app dsl --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d | jq -r .draft_hash)
+    difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat order-status.yml)" \
+      --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --draft-hash $H --name "Order Status" --description "注文のステータスをまとめます。"
+    ```
+
+    インポートに成功すると、`status: completed` が返されます。警告がある場合は `completed-with-warnings` が返されるので、先に進む前に警告を読んでください。それ以外の結果になった場合は、次のように対処します：
+
+    - ハッシュを取得した後にドラフトが変更された場合、インポートは終了コード 1 で拒否され、`The draft changed after it was exported.` と表示されます。
+
+      スタジオで、ドラフトの変更内容を確認します。
+
+      - 変更を破棄してよい場合は、ハッシュを取得し直してインポートします。変更はインポートで置き換わります。
+      - 変更を残す必要がある場合は、ファイルかエクスポート元のアプリに同じ変更を加え、手順 2 からやり直します。
+
+    - ファイルの DSL `version` がサーバーの対応範囲より新しい場合、`status` は `pending` になります。それでもインポートするには、`confirm console_app dsl_import` という [ヒントを実行](/ja/cli/find-and-run-commands#ヒントの活用) します。
+
+    - ファイルが無効な場合、インポートは終了コード 1 で拒否されます。手順 3 と同じようにファイルを検証し、報告された問題を修正してから、もう一度インポートします。
+
+    その他のエラーの対処方法については、[トラブルシューティング](/ja/cli/reference/results-errors-and-exit-codes#トラブルシューティング) を参照してください。
+
+    インポートしたワークフローを破棄するには、[公開中のバージョンをドラフトに復元](#更新のロールバック) します。そのバージョンはすでに公開中なので、公開し直す必要はありません。
+  </Step>
+  <Step title="不足している統合のインストール">
+    ファイルで使われている統合がワークスペースになくても、検証とインポートは成功することがあります。不足している統合は、インポートから 10 分以内に一覧表示してください。10 分を過ぎると、空の一覧が返されます：
+
+    ```bash
+    difyctl check console_app dependency --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    マーケットプレイスから統合をインストールするには、その [ヒントを実行](/ja/cli/find-and-run-commands#ヒントの活用) します。認証情報が必要な統合があれば、手順 7 でテストする前に、スタジオで追加しておきます。
+  </Step>
+  <Step title="環境変数の設定">
+    インポートにより、アプリの環境変数にはファイルの値が設定されています。呼び出す API のアドレスなど、このアプリで別の値にすべきものを設定し直します。
+
+    アプリの環境変数を一覧表示します。このアプリの値が残っているシークレットはアスタリスクの列で、空のシークレットは `""` で表示されます：
+
+    ```bash
+    difyctl get console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    変更が必要な値を、空のシークレットも含めてそれぞれ設定します。変数の `id` を `--env-id` に指定します：
+
+    ```bash
+    # シークレット。シェルの履歴に残らないよう、シェル変数から読み込む
+    difyctl set console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --env-id 2a7c4e9b-6d1f-4b3a-9e8c-5f0d1a2b3c4d --name ORDERS_API_KEY --value "$ORDERS_API_KEY" --value-type secret
+
+    # 通常の値
+    difyctl set console_app env --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --env-id 6f3b8d1e-4c2a-4e7f-a9b5-0d8c7e6f5a4b --name API_BASE_URL --value "https://orders.example.com/api" --value-type string
+    ```
+
+  </Step>
+  <Step title="ドラフトのテスト">
+    典型的な入力で、ドラフトを 1 回実行します。テストでは、本番の API キーなど、このアプリの環境変数が使われます。実際に実行しても問題のない入力を選んでください。`describe console_app` を実行すると、[アプリが受け取る入力](/ja/cli/run-apps#アプリの入力の確認) を確認できます。
+
+    ```bash
+    difyctl test console_app workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --inputs '{"topic": "order 1042"}'
+    ```
+
+    Chatflow アプリでは、代わりに `test console_app advanced_chat` を使います。
+
+    実行に成功すると `status: ended` に、失敗すると `status: failed` になります。失敗の理由は `error.message` で確認できます。ファイルかエクスポート元のアプリでワークフローを修正し、手順 2 からやり直します。
+
+    DSL バージョンの新しいファイルがこのサーバーで動作しない場合は、代わりに [公開中のバージョンをドラフトに復元](#更新のロールバック) します。そのバージョンはすでに公開中なので、公開する必要はありません。
+  </Step>
+  <Step title="公開準備の確認">
+
+    ```bash
+    difyctl check console_app release --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+    ```
+
+    `ready: true` は、ドラフトが有効で、直近のテストに合格したことを表します。
+
+    `ready` が `false` の場合は、[ヒントに従って](/ja/cli/find-and-run-commands#ヒントの活用) 対処し、もう一度確認します。
+
+    公開する前に、`changes` で公開済みのバージョンとの違いを確認します。
+  </Step>
+  <Step title="公開">
+
+    ```bash
+    difyctl publish console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --marked-name v2
+    ```
+
+  </Step>
+</Steps>
+
+## 更新のロールバック
+
+公開した更新に問題がある場合は、アプリの公開済みバージョンを一覧表示し、以前のバージョンを `id` で指定してドラフトに復元してから公開します。そのバージョンは以前に公開されていたものなので、テストと公開準備の確認は省略できます。
+
+復元すると、ドラフトが置き換わります。ドラフトを残すには、先に `--workflow-id` を付けずにエクスポートしておきます。
+
+```bash
+difyctl get console_app version --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+
+difyctl restore console_app version --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --version-id 8e1d3c5a-2b4f-4a6e-9c7d-1f0b2a3c4d5e
+
+difyctl publish console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+```
+
+環境変数は、そのバージョンの値に戻ります。名前、説明、アイコン、Web アプリ設定は、インポートで設定されたままです。これらも元に戻すには、[設定し直してください](#web-アプリとアプリ情報の変更)。
+
+## DSL ファイルからのアプリの作成
+
+`--app-id` を付けずにファイルをインポートすると、ファイルと同じ種類のアプリが新しく作成されます。アプリ名は `--name` で指定します：
+
+```bash
+difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat order-status.yml)" --name "Order Status (Acme)"
+```
+
+以降のコマンドでは、結果の `app_id` を `--app-id` に指定します。
+
+作成したアプリでは、Web アプリのタイトルに `--name` ではなくファイルの値が使われます。そのタイトルをユーザーに見せたくない場合は、[変更してください](#web-アプリとアプリ情報の変更)。
+
+Workflow アプリや Chatflow アプリを仕上げるには、[アプリの更新](#アプリの更新) の手順 5 から 9 を行います。ほかの種類のアプリに必要なのは、手順 5 だけです。
+
+## アプリパッケージのインポート
+
+スタジオからエクスポートした [アプリパッケージ](/ja/learn/key-concepts#dify-dsl)（`.ifpkg`）をインポートするには、パッケージを展開し、中にある `app.yaml` を DSL ファイルとして使います。アップロードしたアイコンは引き継がれません。インポート後に [設定し直してください](#web-アプリとアプリ情報の変更)。
+
+## Web アプリとアプリ情報の変更
+
+タイトルなどの Web アプリ設定を変更するには、`set webapp` を使います。アプリの名前、説明、アイコンを変更するには、`set app_info` を使います。変更されるのは、渡したフィールドだけです。
+
+```bash
+difyctl set webapp workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --title "Order Status"
+
+difyctl set app_info workflow --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d --name "Order Status"
+```
+
+Workflow アプリ以外のアプリでは、`difyctl help set webapp` または `difyctl help set app_info` を実行して、対応するコマンドを確認します。

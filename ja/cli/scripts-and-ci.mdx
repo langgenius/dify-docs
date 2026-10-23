@@ -1,0 +1,164 @@
+---
+title: CI と自動化での `difyctl` の使用
+sidebarTitle: CI と自動化
+description: CI ジョブに difyctl をインストールしてサインイン情報を渡し、見過ごせない失敗が起きたときにジョブを止める。マージ時にアプリを更新する例も紹介する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/scripts-and-ci) を参照してください。
+
+<Tip>
+作業をコーディングエージェントに任せるには、[`difyctl` スキルでエージェントをセットアップ](/ja/cli/get-started#コーディングエージェントのセットアップ) し、このページを渡してください。
+</Tip>
+
+## ジョブでの `difyctl` のインストール
+
+[インストーラー](/ja/cli/get-started#インストール) を使い、`DIFY_VERSION` には必ずサーバーのバージョンを指定します。こうしておけば、Dify の新しいリリースが出ても、ジョブがインストールするビルドは変わりません。インストーラーが GitHub のレート制限で止まる場合は、ジョブの環境に `GITHUB_TOKEN` または `GH_TOKEN` を設定します。
+
+## サインイン
+
+無人で実行するジョブには、自分でサインインしてトークンを渡します。コードを毎回承認できる人がいる場合は、スクリプトからサインインすることもできます。
+
+### ジョブへのトークンの受け渡し
+
+トークンは、CI 専用のアカウントで取得するか、普段 `difyctl` を使わないマシンで取得してください。インポート、テスト、公開を行うには、アカウントにエディター以上のロールが必要です。そのマシンで同じアカウントがもう一度サインインすると、ジョブのサインインは終了します。
+
+トークンをファイルからコピーできるよう、`--no-keyring` を付けてサインインします：
+
+```bash
+difyctl login --server https://dify.example.com --no-keyring
+```
+
+[設定フォルダ](/ja/cli/manage-sign-in#トークンの保存場所) 内の `tokens.yml` から、トークンをコピーします：
+
+```yaml
+tokens:
+  dify.example.com:
+    ci@example.com: dfoa_…
+```
+
+トークンを CI のシークレットとして保存し、ジョブに次の [環境変数](/ja/cli/reference/configuration#環境変数) を設定します：
+
+- `DIFY_SERVER`：サインイン時に指定したアドレス
+- `DIFY_TOKEN`：シークレットから読み込んだトークン
+- `DIFY_WORKSPACE_ID`：`difyctl get workspace` の一覧に表示される、ワークスペースの `id`
+
+ジョブが既定の設定フォルダに書き込めない場合は、`DIFY_CONFIG_DIR` に書き込み可能なフォルダを指定します。
+
+その後、`tokens.yml` を削除して、トークンが CI のシークレットにだけ残るようにします。削除すると、サインインに使ったマシンはサインアウトした状態になりますが、ジョブはそのまま動き続けます。代わりに `logout` を実行すると、ジョブのサインインも終了してしまいます。
+
+#### サインインの更新
+
+ジョブのコマンドが `auth_expired`（終了コード 4）で失敗するようになったら、サインインし直して、CI のシークレットのトークンを置き換えます。
+
+サインインは、次の場合に使えなくなります：
+
+- 有効期限が切れた場合（既定では 14 日。サーバーで [`OAUTH_TTL_DAYS`](/ja/self-host/deploy/configuration/environments#dify-cli-とプログラマティック-api) を設定していれば、その日数）
+- そのマシンで同じアカウントがもう一度サインインした場合（別の設定フォルダでのサインインも含む）
+
+ジョブが失敗する前に更新するには、ジョブで `difyctl get account session` を実行します。`device_label` がサインインに使ったマシンになっているセッションの `expires_at` を確認してください。
+
+### スクリプトからのサインイン
+
+`--no-wait` を付けてサインインを開始します。ほかの `login` と同様に、まず現在のセッションからサインアウトし、コードを表示して、承認を待たずに終了します：
+
+```bash
+difyctl login --server https://dify.example.com --no-wait
+```
+
+```json
+{"status":"pending","verification_uri":"…","user_code":"…","expires_in":900}
+```
+
+`verification_uri` と `user_code` を、URL を開いて 15 分以内にコードを承認できる人に渡します。サインインを完了するまでは、別の `login` を開始しないでください。開始するとこのサインインが破棄され、そのコードを承認してもサインインできなくなります。
+
+その後、同じ設定フォルダでサインインを完了します：
+
+```bash
+difyctl login --resume
+```
+
+- コードが承認されるまでは、`{"status":"pending"}` を表示して終了コード 0 で終了します。そのため、終了コードではなく `status` を確認してください。
+- コードが承認されると、代わりにサインインした `account` を表示します。`status` は含まれません。
+- 承認前にコードが拒否されるか期限切れになると、終了コード 4 で失敗します。その場合は `login --no-wait` からやり直します。
+
+コーディングエージェントのコードを承認する前に確認すべき点については、[サインイン](/ja/cli/get-started#サインイン) を参照してください。
+
+## 失敗への対処
+
+各ステップは、`set -eo pipefail` を有効にした bash で実行します。
+
+次のコマンドは、ジョブを止めるべき場合でも終了コード 0 で終了します。`jq -e` は条件が偽の場合に失敗するため、各コマンドの出力を次のように `jq -e` で確認してください：
+
+- `check console_app dsl`（ファイルが無効な場合）：`jq -e '.valid'`
+- `import console_app dsl`（インポートが確認待ちのまま保留された場合）：`jq -e '.status | startswith("completed")'`
+- `check console_app dependency`（アプリが使う統合がワークスペースにない場合）：`jq -e '.leaked_dependencies | length == 0'`
+- `test console_app workflow`（実行が [一時停止したか、途中で打ち切られた](/ja/cli/reference/results-errors-and-exit-codes#実行の終了状態の確認) 場合）：`jq -e '.status == "ended"'`
+- `check console_app release`（ドラフトを公開する準備ができていない場合）：`jq -e '.ready'`
+
+終了コード 7 で終了したコマンドは、[レート制限](/ja/cli/reference/results-errors-and-exit-codes#レート制限) に達しており、何も処理していません。ジョブで 1 分待ってから、そのコマンドを再実行します。
+
+## 例：マージ時のアプリの更新
+
+次の GitHub Actions ワークフローは、プルリクエストでアプリの DSL ファイル `apps/order-status.yml` が変更されると、そのファイルをアプリと照らし合わせて検証します。`main` にマージされると、アプリを更新して公開します。各ステップの内容については、[アプリの更新](/ja/cli/create-and-update-apps-from-dsl-files#アプリの更新) を参照してください。
+
+<Warning>
+インポートのたびに、スタジオで加えられた変更も含めて、アプリのドラフトが置き換わります。そのため、アプリの変更はリポジトリを通してのみ行ってください。また、インポートすると、ファイルの名前、説明、アイコン、Web アプリ設定がすぐに適用されます。後続のステップが失敗しても、公開中のワークフローは変わりません。
+</Warning>
+
+このワークフローを使うには、まずシークレット `DIFY_TOKEN` と変数 `DIFY_WORKSPACE_ID` をリポジトリに追加します。追加先は、リポジトリの **Settings** > **Secrets and variables** > **Actions** です。次に、例に示した値を自分の値に置き換えます。置き換えるのは、サーバーのアドレス、アプリの ID と名前、ファイルパス、Dify のバージョン、テストの入力です。アプリの ID と名前は、どちらも `difyctl get console_app` で確認できます。
+
+```yaml .github/workflows/update-order-status.yml
+name: Update Order Status
+
+on:
+  pull_request:
+    paths: [apps/order-status.yml]
+  push:
+    branches: [main]
+    paths: [apps/order-status.yml]
+
+defaults:
+  run:
+    shell: bash  # 既定のシェルと違い、pipefail を有効にしてステップを実行する
+
+env:
+  DIFY_SERVER: https://dify.example.com
+  DIFY_TOKEN: ${{ secrets.DIFY_TOKEN }}
+  DIFY_WORKSPACE_ID: ${{ vars.DIFY_WORKSPACE_ID }}
+  APP_ID: 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+  FILE: apps/order-status.yml
+
+jobs:
+  check:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install difyctl
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.18.0 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Check the file against the app
+        run: difyctl check console_app dsl --app-id "$APP_ID" --yaml-content "$(cat "$FILE")" | jq -e '.valid'
+
+  update:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install difyctl
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/langgenius/dify/main/cli/scripts/install-cli.sh | DIFY_VERSION=1.18.0 sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Import the file
+        run: |
+          H=$(difyctl export console_app dsl --app-id "$APP_ID" | jq -r .draft_hash)
+          difyctl import console_app dsl --mode yaml-content --yaml-content "$(cat "$FILE")" \
+            --app-id "$APP_ID" --draft-hash "$H" --name "Order Status" | jq -e '.status | startswith("completed")'
+          difyctl check console_app dependency --app-id "$APP_ID" | jq -e '.leaked_dependencies | length == 0'
+      - name: Test and publish
+        run: |
+          difyctl test console_app workflow --app-id "$APP_ID" --inputs '{"topic": "order 1042"}' | jq -e '.status == "ended"'
+          difyctl check console_app release --app-id "$APP_ID" | jq -e '.ready'
+          difyctl publish console_app --app-id "$APP_ID" --marked-name "${GITHUB_SHA::7}"
+```

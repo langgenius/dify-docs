@@ -1,0 +1,82 @@
+---
+title: Manage Your Sign-In
+sidebarTitle: Sign-In and Sessions
+description: Renew an expired sign-in, switch or add servers and accounts, find where your token is stored, and end sessions you no longer use
+---
+
+## Renew Your Sign-In
+
+A sign-in lasts 14 days by default (adjustable with [`OAUTH_TTL_DAYS`](/en/self-host/deploy/configuration/environments#dify-cli-and-programmatic-api)), and using `difyctl` doesn't extend it. After that, every command that uses your sign-in fails with `auth_expired` (exit code 4) until you sign in again. To see when yours expires, check `expires_at` in [your sessions](#see-and-end-your-sessions).
+
+<Info>
+`ACCESS_TOKEN_EXPIRE_MINUTES` and `REFRESH_TOKEN_EXPIRE_DAYS` don't change how long a `difyctl` sign-in lasts. They set how long a sign-in to the Dify web console lasts.
+</Info>
+
+To renew it, run [`login`](/en/cli/get-started#sign-in) again. It signs you out first, then starts the new sign-in. If the new sign-in fails, you stay signed out until one succeeds.
+
+## Use Several Servers or Accounts
+
+Each [config folder](#where-your-token-lives) holds one sign-in, and a new sign-in replaces it. To switch servers, run `login` with the new `--server`. To switch accounts, run `login` and approve it in a browser signed in to Dify as the other account.
+
+To stay signed in to several at once, give each sign-in its own folder with `DIFY_CONFIG_DIR`, and set it on every command that uses it:
+
+```bash
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl login --server https://staging.dify.example.com
+DIFY_CONFIG_DIR=~/.config/difyctl-staging difyctl describe account
+```
+
+Two folders can't hold separate sign-ins to the same server with the same account on one machine: signing in from one ends the other's session.
+
+## Where Your Token Lives
+
+`difyctl` keeps your token in the OS keychain, under the service name `difyctl`: Keychain on macOS, Credential Manager on Windows, and Secret Service on Linux.
+
+It writes the token to `tokens.yml` in the config folder instead, when:
+
+- You sign in with `--no-keyring`.
+- You're on Linux with no desktop session bus (`DBUS_SESSION_BUS_ADDRESS` is unset).
+- The keychain can't be used when you sign in.
+
+<Note>
+Keep `tokens.yml` out of container images, backups you share, and version control.
+</Note>
+
+The config folder is:
+
+- **macOS**: `~/.config/difyctl`
+- **Linux**: `$XDG_CONFIG_HOME/difyctl`, or `~/.config/difyctl` if `XDG_CONFIG_HOME` is unset
+- **Windows**: `%APPDATA%\difyctl`
+
+To use another folder, set `DIFY_CONFIG_DIR`.
+
+## Sign Out
+
+<Tip>
+To switch accounts, run `login` directly. It signs you out of the current account first.
+</Tip>
+
+Run `logout` when you're done with a machine:
+
+```bash
+difyctl logout
+```
+
+`logout` ends your session on the server and deletes your token and saved sign-in from this machine. If the server can't be reached, `logout` still clears this machine, but the session stays valid on the server until it expires or you [end it](#see-and-end-your-sessions).
+
+### See and End Your Sessions
+
+To see where you're signed in, list your sessions:
+
+```bash
+difyctl get account session
+```
+
+Each session shows its `id`, the machine's hostname as `device_label`, and when it expires as `expires_at`.
+
+To end a session on another machine, such as one you no longer have, delete it by ID. Pick it by `device_label`, so you don't end the session on the machine you're using.
+
+```bash
+difyctl delete account session --session-id <session-id>
+```
+
+To end the session you're using right now, run `logout` instead: deleting it by ID leaves your saved sign-in behind, and your next command fails with `auth_expired`.
