@@ -81,3 +81,80 @@ docker compose up -d
 ```
 
 Cookie 无法跨顶级域名共享，因此前端和后端必须位于同一可注册域名下。详见 [环境变量](/zh/self-host/deploy/configuration/environments)。
+
+### 部署在 Cloudflare 或其他代理之后，所有人的登录邮件都被拦截 {#sign-in-emails-blocked-behind-proxy}
+
+所有人同时无法获取登录验证码和密码重置邮件，报错均为：「Too many emails have been sent from this IP address recently. Please try again later.」从 1.18.0 起，只要 Dify 自带的 Nginx 前面还有 Cloudflare、负载均衡器或其他代理，任何部署都可能遇到这个问题。
+
+Dify 从自带的 Nginx 获取每个访问者的 IP 地址。有代理在前时，Nginx 只能看到代理的地址，所有访问者都算在这个地址名下，共用同一份限额。
+
+如果代理绕过自带的 Nginx，直接转发到 `api` 和 `web` 容器（部分 Cloudflare Tunnel 和 Nginx Proxy Manager 配置就是如此），跳过下面的步骤，改为确认：
+
+- 代理会设置 `X-Forwarded-For`，否则所有访问者都会显示为代理的地址。
+- 只能通过代理访问 API。任何能直连 API 的人都可以任意指定 Dify 看到的地址。
+
+如果代理转发到自带的 Nginx，需告诉 Nginx 信任哪个代理：
+
+<Steps>
+  <Step title="确定代理的地址">
+    Nginx 访问日志（`docker compose logs nginx`）的每一行都以代理连接时使用的地址开头。即使代理与 Dify 在同一台服务器上，也要以日志中的地址为准，不要想当然地填 `127.0.0.1`。
+
+    如果是 Cloudflare 直连 Nginx，跳过此步骤。
+  </Step>
+  <Step title="创建 real-ip.conf">
+    根据你的部署情况创建 `docker/nginx/conf.d/real-ip.conf`。Nginx 本身就会加载该目录下的每个 `.conf` 文件，升级也不会覆盖你创建的文件。
+
+    <Tabs>
+      <Tab title="负载均衡器或反向代理">
+        适用于会设置 `X-Forwarded-For` 的代理：
+
+        ```nginx
+        # 替换为代理连接时使用的地址或 CIDR 网段。
+        set_real_ip_from 192.0.2.10/32;
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+      </Tab>
+      <Tab title="Cloudflare">
+        Cloudflare 直连 Nginx 时，逐一信任 [Cloudflare 公布的 IP 段](https://www.cloudflare.com/ips/)：
+
+        ```nginx
+        # Cloudflare 公布的每个 IPv4 和 IPv6 网段各写一行。
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header CF-Connecting-IP;
+        ```
+
+        这些 IP 段代表的是整个 Cloudflare 网络，并不专属于你的站点，因此还需 [限制源站的访问来源](https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/)：用你自己的证书启用站点级或按主机名的 Authenticated Origin Pulls，或者通过 Cloudflare Tunnel 连接源站。
+      </Tab>
+      <Tab title="多层代理">
+        如果请求要经过多层代理，例如先到 Cloudflare，再到你服务器上的代理，就要信任链路中的每一层：服务器上的代理，以及 [Cloudflare 公布的每个 IP 段](https://www.cloudflare.com/ips/)。只信任最近的一层代理时，Dify 看到的将是 Cloudflare 的地址，而不是访问者的地址。
+
+        ```nginx
+        # 替换为服务器上的代理连接时使用的地址。
+        set_real_ip_from 192.0.2.10/32;
+        # Cloudflare 公布的每个 IPv4 和 IPv6 网段各写一行。
+        set_real_ip_from <cloudflare-range>;
+        # ...
+        real_ip_header X-Forwarded-For;
+        real_ip_recursive on;
+        ```
+
+        链路中的每一层代理都必须向 `X-Forwarded-For` 追加地址。
+      </Tab>
+    </Tabs>
+
+    <Warning>
+      切勿信任 `0.0.0.0/0`、`::/0`，或与不受信任的机器共用的网络。否则任何能访问 Nginx 的人都可以任意指定 Dify 看到的 IP 地址。
+    </Warning>
+  </Step>
+  <Step title="重新加载 Nginx">
+
+    ```bash
+    docker compose exec nginx nginx -s reload
+    ```
+
+    此后 `docker compose logs nginx` 中新增的日志行应改为以访问者自己的地址开头。访问者不再共用被拦截的那个地址，可立即重新请求邮件。
+  </Step>
+</Steps>
