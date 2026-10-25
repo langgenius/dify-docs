@@ -359,7 +359,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー | workflow.blocks.trigger-webhook | |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー | workflow.blocks.trigger-schedule | |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー | workflow.blocks.trigger-plugin | Renamed from "Plugin Trigger" in v1.15.0; internal id unchanged |
-| Knowledge Base | 知识库 | ナレッジベース | workflow.blocks.knowledge-index | Knowledge index node |
+| Knowledge Base | 知识库 | ナレッジベース | workflow.blocks.knowledge-index | Knowledge index node. The Knowledge Retrieval node's field of the same name is workflow.nodes.knowledgeRetrieval.knowledge |
 
 ### Knowledge Pipeline Tool Names
 
@@ -474,6 +474,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
 | Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
 | Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース | agent-v-2.agentDetail.configure.knowledgeFs.title | Configure section and its dialog title. The built-in tool of the same name has no ja label, so ja shows the English |
 | Access URL | 访问 URL | アクセス URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab; renamed from "Web App URL" in 1.17.1. The same key labels the Workflow and Chatflow card and the Agent card |
 
 ### Question Classifier Node Config
@@ -494,6 +495,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Disabled | 禁用 | 無効 | workflow.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
 | Automatic | 自动 | 自動生成 | workflow.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
 | Manual | 手动 | 手動設定 | workflow.nodes.knowledgeRetrieval.metadata.options.manual.title | Metadata filtering mode |
+| Knowledge Base | 知识库 | ナレッジベース | workflow.nodes.knowledgeRetrieval.knowledge | Field that picks the knowledge bases to search; renamed from "Knowledge" in 1.18.0 (en only). Not the Knowledge Base node (workflow.blocks.knowledge-index) |
 
 ### Knowledge Retrieval Methods
 
@@ -516,6 +518,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス | app-api.apiKeyModal.knowledgeBaseAccess | Knowledge Service API key modal only: the key's scope setting |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース | app-api.apiKeyModal.scopeAllDatasets | Scope option in that modal |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース | app-api.apiKeyModal.scopeSpecificDatasets | Scope option in that modal |
+| Creators | 创建者 | 作成者 | dataset.creatorFilter.creators | Knowledge list filter; new in 1.18.0 |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
 
 ### Chunking Mode Labels
