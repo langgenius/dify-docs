@@ -309,6 +309,8 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | App package | 应用包 | アプリパッケージ | app.appPackage | File type in the Import App dialog; prose writes lowercase "app package" for the `.ifpkg` file |
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
+| Details | 详情 | 詳細 | explore.appCard.try | Template card button that opens a template's details, despite the key name |
+| Try it | 试用 | お試し | explore.tryApp.tabHeader.try | Tab in a template's details where you chat with it before creating from it |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
 | Agent data capture | Agent 数据采集 | Agent データ収集 | app.tracing.captureTitle | Tracing settings group, shown when Agent tracing is enabled |
 | Capture content | 采集内容 | 内容を収集 | app.tracing.captureContent | |
