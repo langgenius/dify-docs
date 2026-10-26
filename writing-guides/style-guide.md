@@ -117,7 +117,7 @@ Place critical limitations at the start of a section when users need them before
 
 ## Paid Feature Callouts
 
-Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`); Enterprise mentions appear only on self-host pages, as a `<Tip>`. Never both patterns in one copy.
+Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`). The Enterprise `<Tip>` appears on self-host pages, and on Cloud pages where Dify Enterprise goes beyond what Cloud offers. A Cloud page can carry both: badges for what a plan gates, the Tip for what only Enterprise adds.
 
 ### Cloud pages: plan badges
 
@@ -148,9 +148,11 @@ Adding chunks is available on <Badge color="blue">Professional</Badge> and <Badg
 Unlimited log retention is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge> for the duration of the active subscription. [Learn more](https://dify.ai/pricing).
 ```
 
-### Self-host pages: Enterprise Tip
+### Enterprise Tip
 
-Where a Community Edition capability ends and Dify Enterprise extends it, add a `<Tip>` at that point. It names a different product, not the reader's own, so it is not an audience restatement. Link **Contact sales** to the sales form for the page's language, never to the pricing page, the Enterprise docs, or a webapp. Do not add Enterprise mentions where CE isn't restricted, and no orphan headings for Enterprise-only features.
+Where a Community Edition or Cloud capability ends and Dify Enterprise extends it, add a `<Tip>` at that point. It names a different product, not the reader's own, so it is not an audience restatement. Link **Contact sales** to the sales form for the page's language, never to the pricing page, the Enterprise docs, or a webapp. Do not add Enterprise mentions where the reader's edition isn't restricted, and no orphan headings for Enterprise-only features.
+
+On a Cloud page, add the Tip only where Enterprise does something no Cloud plan does, such as running an app in separate environments. Where a paid Cloud plan covers it, the plan badges are enough.
 
 | Language | Sales form link |
 |:---------|:----------------|
