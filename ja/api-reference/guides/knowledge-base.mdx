@@ -1,0 +1,277 @@
+---
+title: Agent ナレッジベース API
+tag: Cloud
+sidebarTitle: Agent ナレッジベース
+description: 自分のコードから Agent ナレッジベースにクエリを送り、実行で検索された内容を確認し、ドキュメント、ソース、設定を管理する
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/api-reference/guides/knowledge-base) を参照してください。
+
+<Info>
+  この API の対象は [Agent ナレッジベース](/ja/cloud/use-dify/knowledge-base/overview) のみです。従来型ナレッジベースには [従来型ナレッジベース API](/ja/api-reference/guides/knowledge) を使います。
+</Info>
+
+ナレッジベースとそのメタデータフィールドの作成、ファイルのアップロード、ドキュメントの有効化と無効化など、一部の操作は Dify 上でしか行えません。
+
+## ナレッジベースのエンドポイントの取得 {#get-the-knowledge-bases-endpoint}
+
+API キーとそのアクセス範囲については、[ナレッジベース API](/ja/api-reference/guides/knowledge-base-api) を参照してください。
+
+Dify でナレッジベースを開き、左下の **API アクセス** をクリックしてエンドポイントをコピーします。エンドポイントの末尾は `/knowledge-fs/spaces/<knowledge base ID>` で、この ID が各操作で指定する `knowledge_base_id` です。
+
+## ナレッジベースへのクエリ {#query-the-knowledge-base}
+
+まず、検索の深度（`mode`）を決めます。
+
+| 深度 | 得られるもの | 使う場面 |
+|:------|:-------------|:---------|
+| `fast` | 検索されたチャンクをセクションごとにまとめたダイジェスト | 単純な質問の多く。まずはここから |
+| `deep` | より広く時間をかけた検索による、同じ形式のダイジェスト | 回答が関連する主題にまたがり、`fast` では取りこぼす |
+| `research` | 検索されたチャンクをもとに作成し、ストリーミングで返す回答 | Dify に回答を書かせたい場合や、複数回の検索が必要な質問 |
+
+以下のスクリプトには Bash、curl、jq、Python 3 が必要です。2 つのコードブロックを順番に `query.sh` へコピーし、`bash query.sh` を実行します。求められたら、コピーしたエンドポイントと API キーを入力してください。
+
+<Steps>
+  <Step title="クエリトークンの作成">
+    [クエリトークンを作成](/ja/api-reference/queries/create-query-token) を呼び出し、`query` に質問を、`mode` に深度を指定します。
+
+    ```bash
+    set -euo pipefail
+    read -r -p "Knowledge base Service API endpoint: " ENDPOINT
+    ENDPOINT="${ENDPOINT%/}"
+    read -r -s -p "Knowledge base API key: " API_KEY
+    printf '\n'
+
+    ADMISSION=$(curl --fail-with-body -sS "$ENDPOINT/queries/admission" \
+      -H "Authorization: Bearer $API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"query":"What changed in the refund policy this quarter?","mode":"fast"}')
+    TOKEN=$(printf '%s' "$ADMISSION" | jq -er '.token')
+    REQUEST=$(printf '%s' "$ADMISSION" | jq -c '.request')
+    URL=$(printf '%s' "$ADMISSION" | jq -er '.url')
+    TRACE_ID=$(printf '%s' "$ADMISSION" | jq -er '.trace_id')
+    URL=$(python3 -c '
+    import sys
+    from urllib.parse import urljoin
+    print(urljoin(sys.argv[1] + "/", sys.argv[2]))
+    ' "$ENDPOINT" "$URL")
+    ```
+
+  </Step>
+  <Step title="クエリの実行">
+    `request` を変更せずに [クエリを実行](/ja/api-reference/queries/run-query) へ POST します。API キーの代わりにクエリトークンを使い、`trace_id` を `X-Trace-ID` ヘッダーで送ります。
+
+    ```bash
+    curl --fail-with-body -sS -N "$URL" \
+      -D query-headers.txt \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "X-Trace-ID: $TRACE_ID" \
+      -H "Content-Type: application/json" \
+      -d "$REQUEST"
+
+    QUERY_RECORD_ID=$(awk 'tolower($1) == "x-query-run-id:" {sub(/\r$/, "", $2); print $2}' query-headers.txt)
+    SESSION_ID=$(awk 'tolower($1) == "x-session-id:" {sub(/\r$/, "", $2); print $2}' query-headers.txt)
+    printf '\nQuery record: %s\nSession: %s\n' "$QUERY_RECORD_ID" "$SESSION_ID"
+    ```
+
+    [回答を調べる](#investigate-an-answer) ときに使うので、レスポンスヘッダー `x-query-run-id` のクエリ記録 ID を保存しておきます。ステップ 1 の `trace_id` とは別の値です。
+  </Step>
+  <Step title="イベントの読み取り">
+    成功とみなすのは `answer.done` だけです。`answer.delta` フレームの後に、HTTP 200 のまま `answer.error` が届くことがあります。その場合は途中までのテキストを破棄してください。接続が切れた場合、再開はできません。ストリームが開く前でも後でも、失敗したらステップ 1 からやり直します。
+
+    クライアントの読み取りタイムアウトは、使う深度のうち最も遅いものに合わせて設定します。「クエリを実行」はキープアライブイベントを送らないため、既定のタイムアウトのままだと `deep` や `research` のストリームが途中で切れることがあります。
+
+    どの深度でも、返されるテキストは 2,000 文字で打ち切られ、打ち切られたかどうかは示されません。`answer.done` の `metadata.evidenceBundle` にあるチャンクのテキストは短縮されないため、検索されたテキストを全文読む必要があるときはそちらを使ってください。
+  </Step>
+</Steps>
+
+同じセッションで続けて質問するには、前回のレスポンスの `x-session-id` を [クエリトークンを作成](/ja/api-reference/queries/create-query-token) の `sessionId` に指定します。自分で用意した ID を指定することもできます。存在しない ID なら、その ID で新しいセッションが始まります。Dify はセッションをエンドユーザーではなく API キーに紐づけます。そのため、複数のユーザーが使うアプリでは、自分で生成した UUID などを使い、ユーザーごとに別のセッション ID を割り当ててください。
+
+## 回答の調査 {#investigate-an-answer}
+
+回答が誤っているように見える場合は、そのクエリ記録 ID を [クエリ記録を取得](/ja/api-reference/query-records/get-query-record) に渡し、実行時に記録されたステップを確認します。同じ ID で根拠も調べられます。
+
+- [クエリのチャンク一覧を取得](/ja/api-reference/query-records/list-query-chunks) を呼び出し、検索されたチャンク、スコア、引用を確認します。
+- 検索されたテキスト同士が矛盾している場合は、[クエリの矛盾一覧を取得](/ja/api-reference/query-records/list-query-conflicts) を呼び出し、矛盾するチャンクを特定します。
+- [欠落チャンク一覧を取得](/ja/api-reference/query-records/list-missing-chunks) を呼び出し、実行に必要だったのに使えなかったチャンクとその理由を確認します。
+
+適切なチャンクが検索されなかった、または順位が低かった場合は、Dify で [検索をチューニング](/ja/cloud/use-dify/knowledge-base/test-and-tune#問題ケース) します。
+
+ID を保存していなかった場合は、[クエリ記録一覧を取得](/ja/api-reference/query-records/list-query-records) で該当する実行を探します。
+
+## 重複書き込みと上書き競合の防止 {#prevent-duplicate-and-stale-writes}
+
+`Idempotency-Key` ヘッダーを受け付ける書き込みでは、毎回このヘッダーを送ります。レスポンスを受け取れなかった場合は、同じキーで同じリクエストを送り直します。2 つ目のタスク、実行、ジョブは作られず、最初のものが返ります。同じキーを再び使うと、完了済みのものであっても以前の結果が返るため、新しい操作には毎回新しいキーを使ってください。
+
+オブジェクトを更新または削除する直前に現在のバージョンを読み取り、操作のバージョンフィールドに指定します。そのうえで 409 が返ったら、読み取った後にオブジェクトが変更されています。もう一度読み取り、加える変更がまだ妥当かを確認してから再送します。409 は、`Idempotency-Key` が別のリクエストですでに使われていることを示す場合もあります。その場合は新しいキーを使ってください。
+
+## リサーチタスクの実行 {#run-a-research-task}
+
+`research` の深度で実行するクエリはストリームの中で回答を返しますが、リサーチタスクはバックグラウンドで実行され、結果が保存されます。ユーザーが回答を待っている場合はクエリを、急ぎでない場合や後で結果が必要になる場合はリサーチタスクを使います。
+
+<Steps>
+  <Step title="計画">
+    [リサーチタスクを計画](/ja/api-reference/research-tasks/plan-research-task) を呼び出し、`query` に質問を、`mode` と `topK` に実際に使う値を指定します。この操作は何も開始せずに、コスト、レイテンシ、ステップの見積もりを返します。
+  </Step>
+  <Step title="作成">
+    同じ質問と設定で [リサーチタスクを作成](/ja/api-reference/research-tasks/create-research-task) を呼び出します。見積もりが許容できる範囲を超えるタスクを事前に拒否するには、`limits` を追加します。見積もりが `limits` を超えるタスクは 422 で失敗します。実行中の支出に上限を設けるには、`budgetUsd` を追加します。回答の作成を始める前に予算で停止したタスクは、回答なしで終了します。回答が必要な場合は、計画の `estimates.costUsd.max` より高い予算を設定してください。
+  </Step>
+  <Step title="ポーリング">
+    タスクが終了するまで、返されたタスク ID で [リサーチタスクを取得](/ja/api-reference/research-tasks/get-research-task) を呼び出します。
+  </Step>
+  <Step title="結果の読み取り">
+    [リサーチタスクの結果一覧を取得](/ja/api-reference/research-tasks/list-research-task-results) を呼び出し、最後の結果に `answer` があるか確認します。
+  </Step>
+</Steps>
+
+## ドキュメントとチャンクの参照 {#browse-documents-and-chunks}
+
+ドキュメントとは、**ドキュメント** ページに表示される項目です。ドキュメントにはドキュメント ID があり、その実体として保存されたファイルには別のドキュメントファイル ID があります。ソースの同期によるものも含め、内容を更新すると新しい ID で新しいファイルが保存されますが、ドキュメントの ID は変わりません。保存する ID はドキュメント ID とし、内容の履歴はリビジョンでたどってください。
+
+| ID | 取得元 | この ID を使う操作 |
+|:---|:--------------------|:------------------------|
+| ドキュメントファイル ID | [ドキュメントファイル一覧を取得](/ja/api-reference/documents-and-chunks/list-document-files)、引用の `documentAssetId`、または [クエリのチャンク一覧を取得](/ja/api-reference/query-records/list-query-chunks) の `metadata.documentId`（名前とは異なり、値はドキュメントファイル ID） | [ドキュメントファイルを取得](/ja/api-reference/documents-and-chunks/get-document-file)、[ドキュメントのアウトラインを取得](/ja/api-reference/documents-and-chunks/get-document-outline)、[ファイルからドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document-by-file)、[ドキュメントファイルを削除](/ja/api-reference/documents-and-chunks/delete-document-file)、[ドキュメントファイルを一括削除](/ja/api-reference/documents-and-chunks/delete-document-files-in-batch) |
+| ドキュメント ID | [ドキュメント一覧を取得](/ja/api-reference/documents-and-chunks/list-documents)、[ファイルからドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document-by-file)、または開いているドキュメントのアドレスバー（`/datasets/new/<knowledge base ID>/documents/<document ID>`） | [ドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document)、[ドキュメントメタデータを更新](/ja/api-reference/documents-and-chunks/update-document-metadata)、[ドキュメントリビジョン一覧を取得](/ja/api-reference/documents-and-chunks/list-document-revisions)、[チャンク一覧を取得](/ja/api-reference/documents-and-chunks/list-chunks)、[チャンクを取得](/ja/api-reference/documents-and-chunks/get-chunk)、[ドキュメントのインデックスタスク一覧を取得](/ja/api-reference/indexing-tasks/list-document-indexing-tasks)、[ドキュメントのインデックスタスクを取得](/ja/api-reference/indexing-tasks/get-document-indexing-task) |
+
+引用元のドキュメントを表示するには、引用の `documentAssetId` を [ファイルからドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document-by-file) に渡し、`document_asset_version` に `1` を指定します。ドキュメントファイルのバージョンはすべて `1` です。
+
+ドキュメントのチャンクを読むには、ドキュメント ID とリビジョン番号を [チャンク一覧を取得](/ja/api-reference/documents-and-chunks/list-chunks) に渡します。現在検索に使われている内容なら、[ドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document) の `active.revision` を使います。以前の内容なら、[ドキュメントリビジョン一覧を取得](/ja/api-reference/documents-and-chunks/list-document-revisions) でリビジョンを探します。
+
+CMS やチケット管理ツールなど、別のシステムからドキュメントのメタデータを設定するには、[ドキュメントメタデータを更新](/ja/api-reference/documents-and-chunks/update-document-metadata) を呼び出します。
+
+## ソースの追加 {#add-a-source}
+
+ソースは接続を通じてデータを読み込みます。接続とは、**連携** > **データソース** で設定し、このナレッジベースにリンクしたプロバイダーのアカウントまたは API キーです。各プロバイダーの最初のソースは、Dify でナレッジベースの **ソース** ページから追加します。2 つ目以降を API で追加する手順は次のとおりです。
+
+1. [ソースの接続一覧を取得](/ja/api-reference/sources/list-source-connections) を呼び出し、`active` の接続のうち、`configuration` に目的のプロバイダーが示されているものを選びます。
+2. [ソースを作成](/ja/api-reference/sources/create-source) を呼び出し、接続の `id` を `connectionId` に、その `configuration.providerKind` を `metadata.providerKind` に指定します。`type` と `uri` は、ソースが読み込む対象に応じて設定します。
+
+    - ウェブサイト：`type: web`、`uri` はサイトのルート URL
+    - オンラインドキュメントのプラットフォームまたはオンラインドライブ：`type: connector`、`uri` は `connector://<connectionId>`
+
+    「ソースを作成」は `Idempotency-Key` を受け付けないため、2 回送るとソースが 2 つ作成されます。一意の `metadata.client_request_id` を含めてください。レスポンスを受け取れなかった場合は、ソースを作成し直す前に [ソース一覧を取得](/ja/api-reference/sources/list-sources) でその値を探します。
+
+## ウェブサイトのページのインポート {#import-website-pages}
+
+ウェブサイトソースにページを取り込む方法は次の 3 つです。
+
+- クロールプレビューからページを選びます。
+- URL がわかっているページをインポートします。
+- ページリストをまだ持たないソースを [同期](#sync-and-schedule-sources) します。Dify がサイト全体をクロールし、見つかったページをすべてインポートします。
+
+インポートのたびにソースのページリストが置き換わるため、新しいページだけでなく、残したいページをすべて送ってください。以降の同期では、リストにあるページが更新されます。
+
+クロールプレビューからページを選ぶ手順は次のとおりです。
+
+<Steps>
+  <Step title="クロールのプレビュー">
+    [ウェブサイトのクロールをプレビュー](/ja/api-reference/source-syncs-and-imports/preview-website-crawl) を呼び出し、返された `id` で [ソースの実行を取得](/ja/api-reference/source-syncs-and-imports/get-source-run) をポーリングします。`state` が `preview_ready` になるか、実行が終了するまで続けます。
+
+    `zero_results` で終了した実行では、ページが 1 つも見つかっていません。ソースの URL とクロール設定を確認してから、もう一度プレビューします。
+  </Step>
+  <Step title="ページの選択">
+    実行 ID を使って [クロールプレビューのページ一覧を取得](/ja/api-reference/source-syncs-and-imports/list-crawl-preview-pages) をページ送りしながら、インポートする各ページの `page_id` を集めます。
+  </Step>
+  <Step title="インポート">
+    同じ実行に対して、集めた `pageIds` を指定して [選択したページをインポート](/ja/api-reference/source-syncs-and-imports/import-selected-pages) を呼び出します。実行は同じ ID のまま続くので、終了するまで [追跡](#follow-source-runs) します。
+  </Step>
+</Steps>
+
+URL がわかっているページをインポートするには、それらを `sourceUrls` に指定して [ウェブサイトのページをインポート](/ja/api-reference/source-syncs-and-imports/import-website-pages) を呼び出します。指定しなかったページのドキュメントは、次回の同期で削除されます。次回の同期ではなく同じ実行で削除するには、`replaceExistingSelection: true` も設定します。
+
+## オンラインドキュメントとドライブファイルのインポート {#import-online-documents-and-drive-files}
+
+API で新しい `connector` ソースにアイテムを取り込めるのは 1 回だけです。Dify または API でソースが一度アイテムをインポートした後は、インポートでできるのはアイテムを外すことだけです。新しいアイテムを指定したインポートは失敗します。その `failure` は再試行を勧めますが、新しいアイテムは Dify で追加してください。
+
+送ったアイテムがソースの内容のすべてになり、含めなかったアイテムのドキュメントは同じ実行で削除されます。
+
+1. ソースの `metadata.providerKind` に応じてアイテムを参照します。オンラインドキュメントのソースなら [ソースのページ一覧を取得](/ja/api-reference/sources/list-source-pages)、オンラインドライブなら [ソースのファイル一覧を取得](/ja/api-reference/sources/list-source-files) を使います。
+2. プロバイダーに合った `kind` と、参照結果から組み立てた `items` を指定して、[ソースのアイテムをインポート](/ja/api-reference/source-syncs-and-imports/import-source-items) を呼び出します。`providerItemId` は、この操作で定められた形式に正確に従ってください。
+3. 返された `id` で [実行を追跡](#follow-source-runs) します。
+
+## ソースの実行の追跡 {#follow-source-runs}
+
+実行を開始したレスポンスの `id` を使い、実行が終了するまで [ソースの実行を取得](/ja/api-reference/source-syncs-and-imports/get-source-run) で追跡します。`completed` に達した実行は、インポートまたは更新したすべてのアイテムのインデックス作成と有効化を済ませています。そのため、インデックス処理を別に追跡する必要はありません。
+
+1 つのソースで処理できる実行は一度に 1 つだけです。実行の進行中に別の同期やインポートを始めると、502 で失敗します。進行中の実行が終わるのを待つか、[ソースの実行をキャンセル](/ja/api-reference/source-syncs-and-imports/cancel-source-run) でキャンセルしてください。クロールプレビューは、そこからインポートするかキャンセルするまで、進行中の実行として扱われます。そのため、インポートに使わないプレビューはキャンセルしてください。
+
+スケジュール同期や Dify で開始された実行など、自分で開始していない実行を探すには、[ソースの実行一覧を取得](/ja/api-reference/source-syncs-and-imports/list-source-runs) を呼び出します。
+
+実行が失敗した場合は、`failure` で原因を確認します。認証情報の問題かどうかを確かめるには、[ソースの認証情報をテスト](/ja/api-reference/sources/test-source-credentials) を呼び出します。`valid` が `false` なら、Dify で接続の認証情報を修正してください。
+
+`failed` または `canceled` の実行を同じ ID のまま最初からやり直すには、[ソースの実行を再試行](/ja/api-reference/source-syncs-and-imports/retry-source-run) を呼び出します。キャンセルしたクロールプレビューや、失敗した [ウェブサイトのページをインポート](/ja/api-reference/source-syncs-and-imports/import-website-pages) の実行をやり直す場合は、代わりにプレビューまたはインポートを新たに開始します。その際は新しい `Idempotency-Key` を使ってください。
+
+## ソースの同期とスケジュール設定 {#sync-and-schedule-sources}
+
+ソースの最新の内容を今すぐ取得するには、[ソースを同期](/ja/api-reference/source-syncs-and-imports/sync-source) を呼び出し、返された [実行を追跡](#follow-source-runs) します。
+
+スケジュールに沿って同期するには、ソースごとにスケジュールを保存します。
+
+<Steps>
+  <Step title="2 つのバージョンの読み取り">
+    [ソースを取得](/ja/api-reference/sources/get-source) でソースの `version` を、続けて [同期ポリシーを取得](/ja/api-reference/sources/get-sync-policy) でスケジュールの `revision` を読み取ります。スケジュールがまだないソースでは、「同期ポリシーを取得」が 404 を返します。その場合は、リビジョンに `0` を使います。
+  </Step>
+  <Step title="スケジュールの保存">
+    `revision` を `expectedRevision` に、`version` を `expectedSourceVersion` に指定して、[同期ポリシーを更新](/ja/api-reference/sources/update-sync-policy) を呼び出します。
+  </Step>
+</Steps>
+
+最初のスケジュール同期は、保存してから同期間隔 1 回分が経過した後に実行されます。すぐに最新の内容が必要な場合は、あわせて今すぐ同期してください。
+
+スケジュール同期を停止するには、`mode: manual` と `enabled: false` を保存します。[ソースを更新](/ja/api-reference/sources/update-source) でソースの `status` を `disabled` にしても一時停止になるだけで、その間に予定時刻を迎えた同期は、ソースが再び有効になるとすぐに実行されます。
+
+## 再インデックスとインデックス処理の追跡 {#track-indexing}
+
+インデックス処理が失敗した場合やキャンセルされた場合は、[インデックスタスクを再試行](/ja/api-reference/indexing-tasks/retry-indexing-task) でタスクをやり直します。インデックス処理は完了したものの結果が正しくないドキュメントは、再インデックスします。モデルを変更しても再インデックスは不要です。変更の影響を受ける部分は自動で再構築されます。
+
+`documentIds` または `all: true` を指定して [ドキュメントを再インデックス](/ja/api-reference/documents-and-chunks/re-index-documents) を呼び出します。タスクが開始されたのは `queued` のアイテムだけです。それぞれの `compilation_job.id` を保存してください。
+
+新しい内容がいつ使われ始めるかを知るには、インデックスタスクが終了するまでポーリングします。
+
+- 再インデックスの場合は、`compilation_job.id` で [インデックスタスクを取得](/ja/api-reference/indexing-tasks/get-indexing-task) をポーリングします。
+- Dify でのアップロードなど、API 以外で開始したインデックス処理の場合は、[ドキュメントを取得](/ja/api-reference/documents-and-chunks/get-document) または [ドキュメント一覧を取得](/ja/api-reference/documents-and-chunks/list-documents) で `latest_task.id` を読み取ります。ドキュメント ID とそのタスク ID で [ドキュメントのインデックスタスクを取得](/ja/api-reference/indexing-tasks/get-document-indexing-task) をポーリングします。
+
+## モデルと検索設定の変更 {#change-models-or-retrieval-settings}
+
+モデルは [利用可能なモデルを取得](/ja/api-reference/models/get-available-models) の結果から選びます。この操作には、すべてのナレッジベースにアクセスできるキーが必要です。特定のナレッジベースにアクセス範囲を限定したキーでは、403 `forbidden` が返ります。
+
+最初のドキュメントがインデックスされる前にモデルを設定した場合、そのドキュメントがインデックスされるまでモデルは検証されません。インデックス後に [ナレッジベース設定を取得](/ja/api-reference/settings/get-knowledge-base-settings) の `issues` を確認してください。ナレッジベースが利用可能になるのを妨げている項目が一覧で示されます。
+
+ドキュメントのインデックス処理中にモデルを変更すると、409 で拒否されます。先にインデックス処理の完了を待つか、そのタスクをキャンセルしてください。
+
+ナレッジベースにインデックス済みの内容がある場合、ほとんどの設定変更は設定の移行としてバックグラウンドで実行されます。
+
+<Steps>
+  <Step title="更新">
+    [ナレッジベース設定を更新](/ja/api-reference/settings/update-knowledge-base-settings) を呼び出します。202 が返った場合は、変更によって移行が始まっています。`migration.id` を保存してください。
+  </Step>
+  <Step title="ポーリング">
+    移行が終了するまで、`migration.id` で [設定の移行を取得](/ja/api-reference/settings/get-settings-migration) を呼び出します。
+  </Step>
+</Steps>
+
+1 回の更新で変更できるのは、埋め込みモデルと検索設定のどちらか一方だけです。両方を含む呼び出しは 422 で拒否されます。両方を変更するには、まず埋め込みモデルの変更を送ります。その移行が成功するのを待ってから、検索設定の変更を送ります。
+
+## ドキュメントとソースの削除 {#delete-documents-and-sources}
+
+ドキュメント全体を削除するには、Dify で削除します。API で削除できるのは、ドキュメントファイル（[ドキュメントファイルを削除](/ja/api-reference/documents-and-chunks/delete-document-file)、[ドキュメントファイルを一括削除](/ja/api-reference/documents-and-chunks/delete-document-files-in-batch)）とソース（[ソースを削除](/ja/api-reference/sources/delete-source)）です。
+
+ソースを削除すると、そのソースがインポートしたドキュメントも削除されます。ドキュメントを残すには、まず [ドキュメントファイル一覧を取得](/ja/api-reference/documents-and-chunks/list-document-files) で、その `source_id` を持つファイルの ID を保存しておきます。削除が完了すると、ファイルの `source_id` が `null` になるためです。その後、`documents=keep` を指定してソースを削除します。残したドキュメントは削除が完了するまで非表示になり、完了後はどのソースからも更新されません。
+
+削除の完了を確認するには、ジョブが終了するまで `job.id` で [削除ジョブを取得](/ja/api-reference/deletion-jobs/get-deletion-job) をポーリングします。
+
+バッチの場合は、`results` のすべてのエントリが `rejected` になるか、そのジョブが終了するまで、`batch_id` で [削除バッチを取得](/ja/api-reference/deletion-jobs/get-deletion-batch) をポーリングします。`rejected` のファイルは削除されておらず、その理由は `error` でわかります。`pending` のエントリはバッチが途中で止まったことを示し、ポーリングを続けても状態は変わりません。`pending` のファイルだけを再試行するには、同じ `Idempotency-Key` で同じリクエストを再送します。
+
+`failed` で終了した削除は、API でも Dify でも、再試行もクリアもできません。削除対象だったものは非表示のまま残ります。`documents=keep` を指定して削除したソースのドキュメントも同様です。
+
+## エラーの処理 {#handle-errors}
+
+エラーには、[エラーとレート制限](/ja/api-reference/guides/errors) で説明している共通の `code`、`message`、`status` が含まれます。多くのエラーにはさらに `failure` オブジェクトが加わり、その `retryPolicy` で再試行が有効かどうかがわかります。[クエリを実行](/ja/api-reference/queries/run-query) のエラーは独自の形式で、そのページに記載されています。
+
+502 が返った場合、読み取りは少し待ってから再試行します。書き込みは、レスポンスが失われる前に反映されている可能性があります。[同じ `Idempotency-Key` で再送](#prevent-duplicate-and-stale-writes) するか、キーを受け付けない書き込みであれば、結果を確認してから送り直してください。同期やインポートの開始時に返る 502 は、そのソースですでに実行が進行中であることを示す場合もあります。[ソースの実行の追跡](#follow-source-runs) を参照してください。
+
+[利用可能なモデルを取得](/ja/api-reference/models/get-available-models) を除き、403 `forbidden` は、ワークスペースがナレッジベースの [リクエストレート制限](/ja/cloud/use-dify/knowledge/knowledge-request-rate-limit) に達したことを意味します。この制限はワークスペース全体で共有され、読み取りを含むすべての呼び出しがカウントされます。制限によって拒否された呼び出しもカウントされるため、バックオフしてから再試行し、ポーリングの間隔を空けてください。多数のインデックスタスクや一括タスクを 1 回の呼び出しでポーリングするには、それらの ID を `task_ids` として [バックグラウンドタスク一覧を取得](/ja/api-reference/indexing-tasks/list-background-tasks) に渡します。
+
+### リクエストサイズの制限 {#request-size-limits}
+
+各リクエストは、操作ページに記載されたバイト数の上限より、余裕を持って小さく抑えてください。Dify は既定値と独自のフィールドを追加した後でリクエストのサイズを測るため、すべてのフィールドが文字数制限内に収まっていても、上限を超えることがあります。
