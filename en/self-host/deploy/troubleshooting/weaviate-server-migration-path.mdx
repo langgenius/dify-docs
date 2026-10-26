@@ -3,7 +3,7 @@ title: Weaviate Server Upgrade Path
 description: How to move a self-hosted Weaviate server across minor versions without losing vector data
 ---
 
-Dify 1.17.1 updates its bundled Weaviate server from `1.27.0` to `1.39.2`, and an existing Weaviate data volume cannot cross that gap in one step. This procedure covers Dify's default, single-node Docker Compose deployment. Fresh deployments start with the new version on an empty volume and do not need this procedure.
+Dify 1.17.1 updates its bundled Weaviate server from `1.27.0` to `1.39.2`, and an existing Weaviate data volume cannot cross that gap in one step. The same applies if you skip 1.17.1 and upgrade straight to Dify 1.18.0, which bundles `1.39.13`. This procedure covers Dify's default, single-node Docker Compose deployment. Fresh deployments start with the new version on an empty volume and do not need this procedure.
 
 Weaviate neither tests nor supports skipping minor versions, and any release may carry an on-disk migration that expects the previous version to have run at least once.
 
@@ -27,7 +27,12 @@ docker compose exec -T weaviate \
 
 The `localhost` in the URL is the Weaviate container's own loopback, not your host's. The Weaviate image has no `curl` and no Python, so the request uses busybox `wget` and the JSON is formatted by Python on your host.
 
-If this reports `1.39.2`, you are done. Continue below from `1.27.0`; if it reports an intermediate version in the ladder, resume with the next rung. For a version earlier than `1.27.0`, follow the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration) first.
+What to do next depends on the version it reports:
+
+- `1.39.2` or later: you don't need this procedure.
+- `1.27.0`: start from the first rung below.
+- A version partway up the ladder: resume with the next rung.
+- Earlier than `1.27.0`: follow the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration) first.
 
 ## Back Up Your Data
 
@@ -69,14 +74,15 @@ Move through every minor release in order, always landing on that minor's latest
 | 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
 | 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.16` |
 | 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.14` |
-| 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13 (Dify 1.17.1) | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13 (Dify 1.18.0) | `cr.weaviate.io/semitechnologies/weaviate:1.39.13` |
 
 The registry changes at step 1. Existing deployments pull `semitechnologies/weaviate` from Docker Hub; the ladder uses `cr.weaviate.io/semitechnologies/weaviate`, Weaviate's own registry, which is what Dify's updated Compose file points at. The images are the same, so you are changing both registry and version as one deliberate move.
 
 Patch versions were current at the time of writing. For the intermediate rungs, check for a newer patch of that minor before you start and prefer it.
 
 <Warning>
-  The final rung is the exception. Land on the version your `docker-compose.yaml` pins, not the newest patch available. If you take the volume to a newer patch and then apply Dify's pin, you have downgraded onto a volume the newer binary already wrote to—the case the [rollback warning](#roll-back-a-failed-step) covers.
+  The final rung is the exception. Land on the step 13 version for the Dify release you're upgrading to, not the newest patch available. If you take the volume to a newer patch and then apply Dify's pin, you have downgraded onto a volume the newer binary already wrote to—the case the [rollback warning](#roll-back-a-failed-step) covers.
 </Warning>
 
 Stepping one minor at a time also limits your blast radius. When a rung misbehaves, you roll back a single version and know exactly which release caused it, instead of bisecting a jump that crossed every minor at once.
@@ -208,11 +214,13 @@ Continue only if the reported version matches the current rung, the object count
   Do not use `GET /v1/objects?class=...&limit=1` to count objects. Its `totalResults` field reports the size of the page it returned, not the size of the collection, so with `limit=1` it always prints `1`. Use the `Aggregate` query above.
 </Warning>
 
-After `1.39.2` passes, run `docker compose stop -t -1 weaviate || exit 1`. Revert only the temporary image edit without running Compose, then follow the [Docker Compose upgrade instructions](/en/self-host/deploy/quick-start/docker-compose#upgrade) for Dify 1.17.1. Run a test retrieval before returning the deployment to service; getting chunks back confirms the vector index survived, which the object count alone does not tell you.
+After the final rung passes, run `docker compose stop -t -1 weaviate || exit 1`, then undo your image edit. Don't run Compose again before the upgrade: the restored file would start `1.27.0` on a volume a newer version has already written to. Follow the [Docker Compose upgrade instructions](/en/self-host/deploy/quick-start/docker-compose#upgrade) for the Dify version you're upgrading to.
+
+Run a test retrieval before returning the deployment to service. Getting chunks back confirms the vector index survived; the object count alone doesn't tell you that.
 
 ## Roll Back a Failed Step
 
-Before starting Dify 1.17.1, set the Weaviate image back to `semitechnologies/weaviate:1.27.0`, then restore the initial backup:
+Before starting the new Dify version, set the Weaviate image back to `semitechnologies/weaviate:1.27.0`, then restore the initial backup:
 
 ```bash
 docker compose stop -t -1 weaviate || exit 1
@@ -232,7 +240,7 @@ Verify Weaviate, then start the original Dify stack and run a test retrieval.
 
 Your collections keep their existing layout, so no re-indexing is required and your knowledge bases keep working as they are. Dify stores each dataset as a `Vector_index_<dataset_id>_Node` collection, with the ID's hyphens replaced by underscores, and a self-provided named vector `default`. Dify does not set a distance metric, so the collection uses the server default of cosine. That structure is identical before and after the upgrade.
 
-The Python `weaviate-client` also needs no attention. Use the version your Dify release pins: `4.20.5` for Dify 1.14.0 through 1.16.1, and `4.22.0` for 1.17.0 through 1.17.1. Both work against every server version on the ladder, so you can upgrade the server independently of Dify.
+The Python `weaviate-client` also needs no attention: every Dify release from 1.14.0 through 1.18.0 pins a client that works with every server version on the ladder, so you can upgrade the server independently of Dify.
 
 <Info>
   Running a Weaviate server older than 1.27, or moving from client v3 to v4? Start with the [Weaviate v4 migration guide](/en/self-host/deploy/troubleshooting/weaviate-v4-migration), which covers 1.19.0 through 1.26.x and the schema migration up to 1.27, then return here.
