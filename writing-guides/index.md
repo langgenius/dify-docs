@@ -57,6 +57,12 @@ Record the SHA you verified against (`$REF`) in your report.
 
 ## Reference Files
 
-- **style-guide.md** — Voice, tone, writing patterns, callout usage
-- **formatting-guide.md** — MDX formatting, Mintlify components, headings, lists, code
-- **glossary.md** — Standardized terminology with Chinese and Japanese translations
+### Shared language resources
+
+- [Glossary](./glossary.md): Standardized terms and UI labels with Chinese and Japanese translations.
+- [UX Copy Standards](./ux-copy-standards.md): Principles and examples for drafting and reviewing English UI copy.
+
+### Documentation writing
+
+- [Style Guide](./style-guide.md): Voice, tone, writing patterns, and callout usage.
+- [Formatting Guide](./formatting-guide.md): MDX formatting, Mintlify components, headings, lists, and code.
