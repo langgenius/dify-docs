@@ -1,0 +1,275 @@
+---
+title: Agent Knowledge Base API
+tag: Cloud
+sidebarTitle: Agent Knowledge Base
+description: Query an Agent Knowledge Base from your own code, read back what a run retrieved, and keep its documents, sources, and settings maintained
+---
+
+<Info>
+  This API serves [agent knowledge bases](/en/cloud/use-dify/knowledge-base/overview) only. Classic knowledge bases use the [Classic Knowledge Base API](/en/api-reference/guides/knowledge).
+</Info>
+
+Some work happens only in Dify, such as creating the knowledge base and its metadata fields, uploading files, and enabling or disabling documents.
+
+## Get the Knowledge Base's Endpoint {#get-the-knowledge-bases-endpoint}
+
+For the API key and its scope, see [Knowledge Base API](/en/api-reference/guides/knowledge-base-api).
+
+Open the knowledge base in Dify, click **API Access** in the lower-left corner, and copy the endpoint. It ends with `/knowledge-fs/spaces/<knowledge base ID>`, and that ID is the `knowledge_base_id` every operation takes.
+
+## Query the Knowledge Base {#query-the-knowledge-base}
+
+Decide the retrieval depth (`mode`) first:
+
+| Depth | What you get | Use when |
+|:------|:-------------|:---------|
+| `fast` | A digest of the retrieved chunks, section by section | Most direct questions. Start here |
+| `deep` | The same digest from a wider, slower search | Answers span related subjects and `fast` misses them |
+| `research` | An answer written from the retrieved chunks, streamed | You want Dify to write the answer, or the question needs several searches |
+
+The script below needs Bash, curl, jq, and Python 3. Copy its two code blocks, in order, into `query.sh`, run `bash query.sh`, and when prompted, enter the endpoint you copied and an API key.
+
+<Steps>
+  <Step title="Create a query token">
+    Call [Create Query Token](/en/api-reference/queries/create-query-token) with the question in `query` and the depth in `mode`.
+
+    ```bash
+    set -euo pipefail
+    read -r -p "Knowledge base Service API endpoint: " ENDPOINT
+    ENDPOINT="${ENDPOINT%/}"
+    read -r -s -p "Knowledge base API key: " API_KEY
+    printf '\n'
+
+    ADMISSION=$(curl --fail-with-body -sS "$ENDPOINT/queries/admission" \
+      -H "Authorization: Bearer $API_KEY" \
+      -H "Content-Type: application/json" \
+      -d '{"query":"What changed in the refund policy this quarter?","mode":"fast"}')
+    TOKEN=$(printf '%s' "$ADMISSION" | jq -er '.token')
+    REQUEST=$(printf '%s' "$ADMISSION" | jq -c '.request')
+    URL=$(printf '%s' "$ADMISSION" | jq -er '.url')
+    TRACE_ID=$(printf '%s' "$ADMISSION" | jq -er '.trace_id')
+    URL=$(python3 -c '
+    import sys
+    from urllib.parse import urljoin
+    print(urljoin(sys.argv[1] + "/", sys.argv[2]))
+    ' "$ENDPOINT" "$URL")
+    ```
+
+  </Step>
+  <Step title="Run the query">
+    Post `request` to [Run Query](/en/api-reference/queries/run-query) unchanged, with the query token in place of the API key and `trace_id` as the `X-Trace-ID` header.
+
+    ```bash
+    curl --fail-with-body -sS -N "$URL" \
+      -D query-headers.txt \
+      -H "Authorization: Bearer $TOKEN" \
+      -H "X-Trace-ID: $TRACE_ID" \
+      -H "Content-Type: application/json" \
+      -d "$REQUEST"
+
+    QUERY_RECORD_ID=$(awk 'tolower($1) == "x-query-run-id:" {sub(/\r$/, "", $2); print $2}' query-headers.txt)
+    SESSION_ID=$(awk 'tolower($1) == "x-session-id:" {sub(/\r$/, "", $2); print $2}' query-headers.txt)
+    printf '\nQuery record: %s\nSession: %s\n' "$QUERY_RECORD_ID" "$SESSION_ID"
+    ```
+
+    Keep the query record ID from the `x-query-run-id` response header to [investigate the answer](#investigate-an-answer). It isn't step 1's `trace_id`.
+  </Step>
+  <Step title="Read the events">
+    Treat only `answer.done` as success. An `answer.error` can arrive after `answer.delta` frames, under HTTP 200: discard the partial text. A dropped connection can't be resumed. After any failure, before or after the stream opens, start again from step 1.
+
+    Set your client's read timeout to allow for your slowest depth. Run Query sends no keep-alive events, and a default timeout can cut off a `deep` or `research` stream.
+
+    The returned text stops at 2,000 characters at every depth, with no sign when it was cut off. The chunk text in `metadata.evidenceBundle` of `answer.done` is never shortened, so read the retrieved text there when you need all of it.
+  </Step>
+</Steps>
+
+To ask a follow-up in the same session, send the previous response's `x-session-id` as `sessionId` in [Create Query Token](/en/api-reference/queries/create-query-token). You can also send an ID of your own: an unknown ID starts a new session under it. Dify ties a session to your API key, not to an end user, so in a multi-user app give each user their own session ID, such as a UUID you generate.
+
+## Investigate an Answer {#investigate-an-answer}
+
+When an answer looks wrong, pass its query record ID to [Get Query Record](/en/api-reference/query-records/get-query-record) to read the run's recorded steps. Use the same ID to inspect the evidence:
+
+- Call [List Query Chunks](/en/api-reference/query-records/list-query-chunks) to read the retrieved chunks, scores, and citations.
+- If the retrieved text contradicts itself, call [List Query Conflicts](/en/api-reference/query-records/list-query-conflicts) to find the conflicting chunks.
+- Call [List Missing Chunks](/en/api-reference/query-records/list-missing-chunks) to see chunks the run needed but couldn't use, and why.
+
+When the right chunks weren't retrieved or ranked low, [tune retrieval](/en/cloud/use-dify/knowledge-base/test-and-tune#bad-cases) in Dify.
+
+If you didn't keep the ID, look for the run in [List Query Records](/en/api-reference/query-records/list-query-records).
+
+## Prevent Duplicate and Stale Writes {#prevent-duplicate-and-stale-writes}
+
+Send an `Idempotency-Key` header with every write that takes one. If the response is lost, send the same request with the same key: you get the original task, run, or job back instead of a second one. Use a new key for each new operation, since a repeated key returns the earlier result, even one that has finished.
+
+Read an object's current version right before you update or delete it, and send it in the operation's version field. A 409 then means it changed after you read it: read it again, check that your change still applies, and resend. A 409 can also mean the `Idempotency-Key` was already used for a different request: use a new key.
+
+## Run a Research Task {#run-a-research-task}
+
+Unlike a query at `research` depth, which answers within the stream, a research task runs in the background and keeps its results. Use a query when a user is waiting for the answer, and a research task when the work can wait or you'll need the results later.
+
+<Steps>
+  <Step title="Plan">
+    Send your question as `query` to [Plan Research Task](/en/api-reference/research-tasks/plan-research-task), with the `mode` and `topK` you want to use. It returns the estimated cost, latency, and steps without starting anything.
+  </Step>
+  <Step title="Create">
+    Call [Create Research Task](/en/api-reference/research-tasks/create-research-task) with the same question and settings. To reject the task up front when its estimates go beyond what you'll accept, add `limits`: a task whose estimates exceed them fails with 422. To cap spending while the task runs, add `budgetUsd`. A task stopped by its budget before it starts writing the answer ends with no answer, so set the budget above the plan's `estimates.costUsd.max` when you need one.
+  </Step>
+  <Step title="Poll">
+    Call [Get Research Task](/en/api-reference/research-tasks/get-research-task) with the returned task ID until the task ends.
+  </Step>
+  <Step title="Read the results">
+    Call [List Research Task Results](/en/api-reference/research-tasks/list-research-task-results) and check the last result for `answer`.
+  </Step>
+</Steps>
+
+## Browse Documents and Chunks {#browse-documents-and-chunks}
+
+A document is the item the **Document** tab shows. It has a document ID, and the file stored behind it has a separate document file ID. A content update, including one from a source sync, stores a new file with a new ID, but the document keeps its ID. Store the document ID, and follow its revisions for the content history.
+
+| ID | Where it comes from | Operations that take it |
+|:---|:--------------------|:------------------------|
+| Document file ID | [List Document Files](/en/api-reference/documents-and-chunks/list-document-files), `documentAssetId` in a citation, or `metadata.documentId` in [List Query Chunks](/en/api-reference/query-records/list-query-chunks), which holds a document file ID despite its name | [Get Document File](/en/api-reference/documents-and-chunks/get-document-file), [Get Document Outline](/en/api-reference/documents-and-chunks/get-document-outline), [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file), [Delete Document File](/en/api-reference/documents-and-chunks/delete-document-file), [Delete Document Files in Batch](/en/api-reference/documents-and-chunks/delete-document-files-in-batch) |
+| Document ID | [List Documents](/en/api-reference/documents-and-chunks/list-documents), [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file), or the address bar of the open document (`/datasets/new/<knowledge base ID>/documents/<document ID>`) | [Get Document](/en/api-reference/documents-and-chunks/get-document), [Update Document Metadata](/en/api-reference/documents-and-chunks/update-document-metadata), [List Document Revisions](/en/api-reference/documents-and-chunks/list-document-revisions), [List Chunks](/en/api-reference/documents-and-chunks/list-chunks), [Get Chunk](/en/api-reference/documents-and-chunks/get-chunk), [List Document Indexing Tasks](/en/api-reference/indexing-tasks/list-document-indexing-tasks), [Get Document Indexing Task](/en/api-reference/indexing-tasks/get-document-indexing-task) |
+
+To show which document a citation came from, pass its `documentAssetId` to [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file) with `1` as `document_asset_version`, since every document file is at version `1`.
+
+To read a document's chunks, pass the document ID and a revision number to [List Chunks](/en/api-reference/documents-and-chunks/list-chunks). For the content in use for retrieval, take `active.revision` from [Get Document](/en/api-reference/documents-and-chunks/get-document). For older content, find the revision in [List Document Revisions](/en/api-reference/documents-and-chunks/list-document-revisions).
+
+To set a document's metadata from another system, such as a CMS or a ticketing tool, call [Update Document Metadata](/en/api-reference/documents-and-chunks/update-document-metadata).
+
+## Add a Source {#add-a-source}
+
+A source reads through a connection: the provider account or API key set up under **Integrations** > **Data Source** and linked to this knowledge base. Add the first source from each provider in Dify, on the knowledge base's **Source** tab. To add more over the API:
+
+1. Call [List Source Connections](/en/api-reference/sources/list-source-connections) and pick an `active` connection whose `configuration` names the provider you want.
+2. Call [Create Source](/en/api-reference/sources/create-source) with the connection's `id` as `connectionId` and its `configuration.providerKind` as `metadata.providerKind`. Set `type` and `uri` by what the source reads:
+
+    - A website: `type: web`, with the site's root URL as `uri`.
+    - An online document platform or drive: `type: connector`, with `connector://<connectionId>` as `uri`.
+
+    Create Source takes no `Idempotency-Key`, and sending it twice creates two sources. Include a unique `metadata.client_request_id`: if the response is lost, look for it in [List Sources](/en/api-reference/sources/list-sources) before you create the source again.
+
+## Import Website Pages {#import-website-pages}
+
+Fill a website source in one of three ways:
+
+- Pick pages from a crawl preview.
+- Import URLs you already know.
+- [Sync](#sync-and-schedule-sources) a source that has no page list yet: Dify crawls the whole site and imports every page it finds.
+
+Each import replaces the source's page list, so send every page you want to keep, not only new ones. Later syncs refresh the pages on the list.
+
+To pick pages from a crawl preview:
+
+<Steps>
+  <Step title="Preview the crawl">
+    Call [Preview Website Crawl](/en/api-reference/source-syncs-and-imports/preview-website-crawl), then poll [Get Source Run](/en/api-reference/source-syncs-and-imports/get-source-run) with the returned `id` until `state` is `preview_ready` or the run ends.
+
+    A run that ends `zero_results` found no pages. Check the source's URL and crawl settings, then preview again.
+  </Step>
+  <Step title="Pick pages">
+    Page through [List Crawl Preview Pages](/en/api-reference/source-syncs-and-imports/list-crawl-preview-pages) with the run ID, and collect the `page_id` of each page to import.
+  </Step>
+  <Step title="Import">
+    Call [Import Selected Pages](/en/api-reference/source-syncs-and-imports/import-selected-pages) on the same run with those `pageIds`. The run continues under the same ID: [follow it](#follow-source-runs) until it ends.
+  </Step>
+</Steps>
+
+To import pages whose URLs you already know, call [Import Website Pages](/en/api-reference/source-syncs-and-imports/import-website-pages) with them as `sourceUrls`. Pages you leave out lose their documents at the next sync. To delete them in the same run instead, also set `replaceExistingSelection: true`.
+
+## Import Online Documents and Drive Files {#import-online-documents-and-drive-files}
+
+Over the API, you can fill a new `connector` source once. After a source has imported items, in Dify or over the API, an import can only drop items: one that names a new item fails, even though its `failure` suggests a retry. Add new items in Dify.
+
+The items you send become the source's whole content: documents for items you leave out are removed in the same run.
+
+1. Browse with [List Source Pages](/en/api-reference/sources/list-source-pages) for an online document source, or [List Source Files](/en/api-reference/sources/list-source-files) for an online drive, as the source's `metadata.providerKind` says.
+2. Call [Import Source Items](/en/api-reference/source-syncs-and-imports/import-source-items) with the `kind` that matches the provider and `items` built from what you browsed, following the operation's `providerItemId` format exactly.
+3. [Follow the run](#follow-source-runs) with the returned `id`.
+
+## Follow Source Runs {#follow-source-runs}
+
+Follow a run with [Get Source Run](/en/api-reference/source-syncs-and-imports/get-source-run), using the `id` from the response that started it, until it ends. A run that reaches `completed` has already indexed and activated every item it imported or refreshed, so there's no indexing to track separately.
+
+A source handles one run at a time: starting another sync or import while one is active fails with 502. Wait for the active run to end, or cancel it with [Cancel Source Run](/en/api-reference/source-syncs-and-imports/cancel-source-run). A crawl preview counts as active until you import from it or cancel it, so cancel a preview you won't import from.
+
+To find a run you didn't start, such as a scheduled sync or one started in Dify, call [List Source Runs](/en/api-reference/source-syncs-and-imports/list-source-runs).
+
+When a run fails, read its `failure` to see why. To rule out bad credentials, call [Test Source Credentials](/en/api-reference/sources/test-source-credentials): if `valid` is `false`, correct the connection's credentials in Dify.
+
+To run a `failed` or `canceled` run again from the start, under the same ID, call [Retry Source Run](/en/api-reference/source-syncs-and-imports/retry-source-run). To repeat a canceled crawl preview or a failed [Import Website Pages](/en/api-reference/source-syncs-and-imports/import-website-pages) run, start a new preview or import with a new `Idempotency-Key` instead.
+
+## Sync and Schedule Sources {#sync-and-schedule-sources}
+
+To fetch a source's latest content now, call [Sync Source](/en/api-reference/source-syncs-and-imports/sync-source), then [follow the run](#follow-source-runs) it returns.
+
+To sync on a schedule, save one for each source:
+
+<Steps>
+  <Step title="Read both versions">
+    Read the source's `version` from [Get Source](/en/api-reference/sources/get-source), then the schedule's `revision` from [Get Sync Policy](/en/api-reference/sources/get-sync-policy). For a source with no schedule yet, Get Sync Policy returns 404: use `0` as the revision.
+  </Step>
+  <Step title="Save the schedule">
+    Call [Update Sync Policy](/en/api-reference/sources/update-sync-policy) with `revision` as `expectedRevision` and `version` as `expectedSourceVersion`.
+  </Step>
+</Steps>
+
+The first scheduled sync runs one interval after you save, so sync now as well if you want fresh content right away.
+
+To stop scheduled syncs, save `mode: manual` with `enabled: false`. Setting the source's `status` to `disabled` with [Update Source](/en/api-reference/sources/update-source) only pauses them, and a sync that came due in the meantime runs as soon as the source is active again.
+
+## Re-index and Track Indexing {#track-indexing}
+
+When indexing fails or is canceled, restart the task with [Retry Indexing Task](/en/api-reference/indexing-tasks/retry-indexing-task). When a document indexed but came out wrong, re-index it. A model change needs no re-index: it rebuilds what it affects on its own.
+
+Call [Re-index Documents](/en/api-reference/documents-and-chunks/re-index-documents) with `documentIds` or with `all: true`. Only `queued` items started a task: keep `compilation_job.id` from each of them.
+
+To know when new content is in use, poll the indexing task until it ends:
+
+- For a re-index, poll [Get Indexing Task](/en/api-reference/indexing-tasks/get-indexing-task) with `compilation_job.id`.
+- For indexing you didn't start over the API, such as an upload in Dify, read `latest_task.id` from [Get Document](/en/api-reference/documents-and-chunks/get-document) or [List Documents](/en/api-reference/documents-and-chunks/list-documents). Poll [Get Document Indexing Task](/en/api-reference/indexing-tasks/get-document-indexing-task) with the document ID and that task ID.
+
+## Change Models or Retrieval Settings {#change-models-or-retrieval-settings}
+
+Choose models from [Get Available Models](/en/api-reference/models/get-available-models). It needs a key with access to all knowledge bases: a key scoped to specific ones gets 403 `forbidden`.
+
+If you set models before the first document is indexed, they aren't validated until that document is indexed. Then check `issues` in [Get Knowledge Base Settings](/en/api-reference/settings/get-knowledge-base-settings): it lists whatever keeps the knowledge base from being ready.
+
+While a document is being indexed, a model change is rejected with 409: wait for indexing to finish, or cancel its tasks, first.
+
+Once the knowledge base has indexed content, most settings changes run as a migration in the background:
+
+<Steps>
+  <Step title="Update">
+    Call [Update Knowledge Base Settings](/en/api-reference/settings/update-knowledge-base-settings). A 202 means the change started a migration: keep `migration.id`.
+  </Step>
+  <Step title="Poll">
+    Call [Get Settings Migration](/en/api-reference/settings/get-settings-migration) with `migration.id` until the migration ends.
+  </Step>
+</Steps>
+
+Each update can change either the embedding model or the retrieval settings, not both: a call with both is rejected with 422. To change both, send the embedding change, wait for its migration to succeed, then send the retrieval change.
+
+## Delete Documents and Sources {#delete-documents-and-sources}
+
+To remove a whole document, delete it in Dify. Over the API, you can delete document files ([Delete Document File](/en/api-reference/documents-and-chunks/delete-document-file), [Delete Document Files in Batch](/en/api-reference/documents-and-chunks/delete-document-files-in-batch)) and sources ([Delete Source](/en/api-reference/sources/delete-source)).
+
+Deleting a source also deletes the documents it imported. To keep them, first save the IDs of files with that `source_id` from [List Document Files](/en/api-reference/documents-and-chunks/list-document-files), because their `source_id` becomes `null` once the deletion completes. Then delete the source with `documents=keep`. The kept documents are hidden until the deletion completes, and after that no source updates them.
+
+To confirm a deletion finished, poll [Get Deletion Job](/en/api-reference/deletion-jobs/get-deletion-job) with `job.id` until the job ends.
+
+For a batch, poll [Get Deletion Batch](/en/api-reference/deletion-jobs/get-deletion-batch) with `batch_id` until every entry in `results` is `rejected` or its job has ended. A `rejected` file wasn't deleted, and `error` says why. A `pending` entry means the batch stopped partway, and polling won't move it: send the same request again with the same `Idempotency-Key` to retry only the `pending` files.
+
+A deletion that ends `failed` can't be retried or cleared, over the API or in Dify. What it was deleting stays hidden, including the documents of a source deleted with `documents=keep`.
+
+## Handle Errors {#handle-errors}
+
+Errors carry the same `code`, `message`, and `status` described in [Errors](/en/api-reference/guides/errors), and many add a `failure` object: its `retryPolicy` says whether a retry can help. [Run Query](/en/api-reference/queries/run-query) errors have their own shape, listed on its page.
+
+On a 502, retry a read after a pause. A write may have taken effect before its response was lost. [Resend it with the same `Idempotency-Key`](#prevent-duplicate-and-stale-writes), or, for a write that takes no key, check its outcome before sending it again. A 502 when starting a sync or import can also mean the source already has an active run: see [Follow Source Runs](#follow-source-runs).
+
+Except on [Get Available Models](/en/api-reference/models/get-available-models), 403 `forbidden` means the workspace has reached its knowledge base [request rate limit](/en/cloud/use-dify/knowledge/knowledge-request-rate-limit). The whole workspace shares the limit, and every call counts, reads included. A call the limit rejects counts too, so back off before retrying, and space out your polling. To poll many indexing or bulk tasks in one call, pass their IDs to [List Background Tasks](/en/api-reference/indexing-tasks/list-background-tasks) as `task_ids`.
+
+### Request Size Limits {#request-size-limits}
+
+Keep each request below the byte budget on its operation page, with some room to spare. Dify measures the request after adding defaults and its own fields, so it can go over even when every field is within its character limit.
