@@ -110,17 +110,45 @@ difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -
 
 ## Stop a Run
 
-To be able to stop a run later, start it with `--stream`. To stop it, pass the `task_id` from its first event to `difyctl stop run`:
+To stop a Workflow or Chatflow run, pass its run ID to `difyctl stop run`. This works on a run that's still going, and on one paused at a Human Input form. A paused run stops right away, and its forms stop accepting answers.
 
 ```bash
-difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
 ```
 
-A stopped Workflow or Chatflow run's stream ends with a `workflow_finished` event whose `data.status` is `stopped`. The streaming command exits with code 1. In a script, check `data.status`, not the exit code, to see that the run was stopped.
+<Info>
+Pressing Ctrl+C stops only `difyctl`, not the run on the server. To stop the run too, pass the `run_id` from its `incomplete` result to `stop run`.
+</Info>
+
+Take the run ID from wherever you have it:
+
+- The run's result, in `run_id`.
+- Any event of a `--stream` run, in `workflow_run_id`.
+- The app's list of running runs, if you started the run some other way:
+
+  ```bash
+  difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status running
+  ```
+
+  To find a test run of the draft instead, leave out `--triggered-from app-run`.
+
+If you're following the run with `--stream`, its stream ends with a `workflow_finished` event whose `data.status` is `stopped`. The streaming command exits with code 1. In a script, check `data.status`, not the exit code. Without a stream, run `describe run` with the same run ID to check its status.
+
+A Chatbot, legacy Agent, or Text Generator reply has no run ID. To be able to stop one, start it with `--stream`. Then pass the `task_id` from its first event to `difyctl stop task`:
+
+```bash
+difyctl stop task --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
 
 <Note>
-Pass `stop run` the `task_id`, not the `workflow_run_id` that every event also carries. Given the wrong one, it still prints `{"result": "success"}`, but the run keeps going.
+`stop task` prints `{"result": "success"}` even for a task ID that doesn't exist, or a reply that has already finished. The reply has stopped when its stream ends.
 </Note>
+
+When a stop fails, the error in your terminal starts with one of these codes. To branch on them in a script, see [Read an Error](/en/cli/reference/results-errors-and-exit-codes#read-an-error).
+
+- `run_not_found`: the app has no run with that ID. Check that you passed the run ID, not a `task_id`, and that `--app-id` is the app the run belongs to.
+- `run_not_stoppable`: the run has already finished. A run that started before your server was upgraded can also get this while it's still going, and `difyctl` can't stop it.
+- `app_mode_mismatch`: the command doesn't match the app's type. Use `stop run` for a Workflow or Chatflow app, and `stop task` for the other types.
 
 ## Answer a Human Input Form
 
@@ -132,7 +160,7 @@ A run that pauses at the form returns a result whose `status` is `suspended`, wi
 
 Or, to see the form's fields before you answer, take `form_token` from any hint and use `describe run form`, then answer with `submit run form`.
 
-Either way, follow the resumed run with `get run event`. Despite the flag's name, pass the paused result's `run_id` as `--task-id`. Keep `--include-state-snapshot`, or the command can sit silent for up to 5 minutes.
+Either way, follow the resumed run with `get run event`, passing the paused result's `run_id` as `--run-id`. Keep `--include-state-snapshot`, or the command can sit silent for up to 5 minutes.
 
 ```bash
 # show the form's fields
@@ -142,10 +170,10 @@ difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-t
 difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "Looks good"}'
 
 # follow the resumed run
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
 
 # keep following if the run can pause at another form later
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
 ```
 
 ## Find Why a Run Failed
