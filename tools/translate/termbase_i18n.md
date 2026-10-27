@@ -15,6 +15,7 @@
 | workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
+| coding agent | 编码 Agent | コーディングエージェント |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
