@@ -200,6 +200,8 @@ These elements must be translated, not left in English:
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/ja-JP/`. Refer to the glossary. For labels not in the glossary, resolve the exact i18n key first (see the glossary's UI Labels section), then take the value at that key — never match by value across namespaces.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
 
+Configured values the product returns as entered, such as a moderation preset reply, stay in English: they're settings the reader enters, not text the page narrates.
+
 ## App-Type Names: Workflow and Chatflow
 
 The **Workflow** and **Chatflow** app types stay in English, like Agent. Add アプリ when naming the app (「Workflow アプリ」「Chatflow アプリ」). Use ワークフロー only for the lowercase collective sense: the workflow engine, workflow-backed runs, workflow nodes, and endpoints shared across app types. Never write ワークフロー for the Workflow app type, or チャットフロー for Chatflow. Exception: a bold quote of the type-selector UI label mirrors the product UI string (the ja UI labels the types ワークフロー/チャットフロー), e.g. **ワークフロー** を選択.

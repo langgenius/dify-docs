@@ -6,17 +6,19 @@ A good page gives the reader what they came for, at the moment they arrive, in t
 
 Picture the reader mid-task, with a question. The default sentence tells them what to do, where, and what happens: that is what they came for.
 
-A fact earns its place because that reader would ask for it here, not because it is true, verified, or absent from the interface. A reason earns its place only where the reader would otherwise do the wrong thing; a reader who has just changed a setting does not need to be told why to check it. Where there is a real choice, say which way to lean and why, so they can decide for their own case.
+A fact earns its place because that reader would ask for it here, not because it is true, verified, absent from the interface, or reported once. A reason earns its place only where the reader would otherwise do the wrong thing; a reader who has just changed a setting does not need to be told why to check it. Where there is a real choice, say which way to lean and why, so they can decide for their own case.
 
-Each section opens with the action, so the reader knows within a line whether this is the section they need. An abstract point rides on a concrete example. When an AI concept appears, say what problem it solves, because that is what a builder needs to use it well.
+The page follows the reader's order, not the product's: what they need first, then each step, with each fact at the step where they act on it. A page for several kinds of readers is written for the task they share, and one reader's case appears as an example, not as the frame.
 
-The page sounds like a person: sentences vary in length and shape because they follow the thought, and it reads aloud without stumbling. Its words are the product's, as the interface names them, never the code's or the team's. The patterns later in this guide say how; this section says what they are for.
+Each section opens with the action, so the reader knows within a line whether this is the section they need. Within it, each sentence sits beside what it depends on: a condition where its situation arises, a pointer word after what it points to. An abstract point rides on a concrete example. When an AI concept appears, say what problem it solves, because that is what a builder needs to use it well.
+
+The page sounds like a person: sentences vary in length and shape because they follow the thought, and it reads aloud without stumbling. Its words are the product's, as the interface names them, never the code's or the team's. A name the reader types or looks up, such as an environment variable or an error code, counts as the product's. The patterns later in this guide say how; this section says what they are for.
 
 Two failures look like finished writing and are not.
 
 **Transcribed prose** restates a fact list in complete sentences. Every sentence is true, every sentence has the same shape, and none tells the reader what to do about anything. It happens when the writer drafts toward the research, every verified fact in order, instead of toward the reader. Its symptoms: a table kept to hold one fact because a template had a table there, a description of what a dialog shows, a reason attached to an instruction the reader would have followed anyway, a "why" sentence in front of the "do this" sentence. Ask of each sentence what the reader would do differently for having read it, and cut the ones with no answer.
 
-**Dense prose** packs two or three ideas into one sentence, joined by "so", "which", or a participle, and runs a paragraph on past the point where the reader's question changed. Each sentence is defensible and the page is exhausting. A sentence carrying two separable ideas is two sentences, and a paragraph breaks where the topic turns.
+**Dense prose** packs two or three ideas into one sentence, joined by "so", "which", or a participle, and runs a paragraph on past the point where the reader's question changed. Each sentence is defensible and the page is exhausting. A sentence carrying two separable ideas is two sentences; ideas are separable when the reader can take each one alone, and the connecting word only shows where to look. A paragraph breaks where the topic turns.
 
 ### Two Examples
 
@@ -76,7 +78,7 @@ One sentence carries the whole action, its location, and where it lands. The dia
 
 ## Voice and Tone
 
-Use **active voice** whenever natural and clear. Passive voice is acceptable when the actor is unknown or when it reads more naturally.
+Use **active voice** whenever natural and clear. Passive voice is acceptable when the actor is unknown, when who acts doesn't change what the reader does, or when it reads more naturally.
 
 Be conversational but professional. Prefer everyday language over formal equivalents—"ask questions" over "submit queries". Write the way someone who knows the product explains it to a colleague: plainly, with the reason attached.
 
@@ -170,7 +172,7 @@ On a Cloud page, add the Tip only where Enterprise does something no Cloud plan 
 
 **Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice. A capability the reader may not hold, granted at another permission level, is stated as a fact ("other members can hold it through a custom role"), not written as an instruction. When a task needs a role or permission the reader may not have, say so once, at the task's entry point, in an `<Info>` that names the role ("Creating and managing agents requires the Editor role or above."); don't repeat it per step, and don't add it where every reader of the page holds the permission.
 
-**Task-oriented headings.** "Import Your Data" instead of "Data Import Feature."
+**Task-oriented headings.** "Import Your Data" instead of "Data Import Feature." The section under it answers that heading and stays on it.
 
 **Location-first instructions.** When an operation involves a specific UI location, name the location before the action: "In the **Settings** panel, enable the toggle." This prevents users from completing an action in the wrong place.
 
@@ -196,7 +198,7 @@ On a Cloud page, add the Tip only where Enterprise does something no Cloud plan 
 
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
-**Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck.
+**Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck. When the limitation already shows the way forward, as "can't be done from the CLI" points to the UI or a role limit points to an admin, it needs nothing added.
 
 ## Patterns to Avoid
 
@@ -206,15 +208,17 @@ On a Cloud page, add the Tip only where Enterprise does something no Cloud plan 
 
 **Feature-centric framing.** "This feature allows you to..." → "You can..." When an action is optional, "you can" is preferable; when it's required, use the imperative.
 
+**Negative framing.** Say what something is, what happens, and what the reader does. "It's not X" plants the misreading it means to prevent, and a clause that grades the product, such as "with no `failure` to say why" or "an error that reads like an outage", tells the reader nothing to do. A consequence that costs the reader (data, quota, money, access) is still stated, plainly, with the action that avoids it.
+
 **Feature names users don't see.** If a feature's official name doesn't appear in the product UI, don't use it as a sentence subject in body text. Describe what users do instead. "Collaboration lets workspace members edit..." → "You can edit the same workflow alongside your teammates..." Section headings and navigation labels can still use the name.
 
 **Redundant phrases.** Cut "in order to", "it should be noted that", "please note that", and similar filler.
 
-**Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading.
+**Repeating context.** Don't restate conditions already established by the section heading or earlier prose. If a section is titled "Configure Webhooks", individual steps shouldn't keep saying "to configure webhooks." The first sentence after a heading should add new information, not paraphrase the heading. At the top of a page, the description under the title plays that heading's part, so the opening doesn't restate what the page is for.
 
 **Repeating the UI.** Apply the moment-of-use test: if the interface shows the fact at the moment the reader acts—a button's next state, an unread marker, a notice that appears in context, a Retry label after a failure, the filename of a download—leave it out. Document what the interface cannot say at that moment: hidden affordances (hover-only actions), behavior connecting two screens, what a search field actually matches, and the system rules behind a label. Repeat a UI-visible fact only when it's especially consequential: data loss, permissions, or cost.
 
-**Navigation hand-holding.** State where a surface lives once; don't re-explain routes to standard chrome (the avatar menu, **Settings**) or spell out a next step the restriction already implies ("ask an admin"). Location-first instructions cover the step being performed, not repeated wayfinding.
+**Navigation hand-holding.** State where a surface lives once; don't re-explain routes to standard chrome (the avatar menu, **Settings**). Location-first instructions cover the step being performed, not repeated wayfinding.
 
 **Describing the documentation.** Don't narrate the page's own structure or the doc set like "This section covers". Readers want the product, not a tour of the page. Lead with what the user does or needs.
 
