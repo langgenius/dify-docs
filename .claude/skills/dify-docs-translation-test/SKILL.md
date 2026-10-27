@@ -14,9 +14,9 @@ The CJK linter measures mechanics. This test measures the translation: whether i
 
 ## Procedure
 
-1. Agree the dispatch with the owner before sending anything: one judge per language per round is the usual shape, reading every page that round touched in that language; a page translated whole can have its own judge when the round is large. When no reviewer is in the session, state the dispatch in the report or PR description and proceed.
+1. Agree the dispatch with the owner before sending anything: one judge per language per round is the usual shape, reading every page that round touched in that language; a page translated whole can have its own judge when the round is large.
 2. Dispatch the fresh sub-agent(s) (`subagent_type: general-purpose`) with the template below, filling `{LANG}` (Chinese or Japanese), `{GUIDE}` (`tools/translate/formatting-zh.md` or `tools/translate/formatting-ja.md`), `{GLOSSARY}` (`writing-guides/glossary.md`), `{SOURCE}` (the English page, absolute path), `{DRAFT}` (the translated page, absolute path), and `{CHANGED}` ("the whole page", or the sections and paragraphs this round changed). When one judge reads several pages, the page block (files 3 and 4 and the changed line) and the reply repeat per page, under the page's path. Put nothing else in the prompt.
-3. Relay the report unedited. Then act on it as the editor test does: the verdict judges this round's work; "Ship with light edits" means fix the marked sentences, "Needs heavy edits" means retranslate the marked units whole from the English, "Needs retranslation" means a fresh translator takes the page from the English file on disk. A revised page goes to a new judge. Marks outside the change go to the owner as a list with a proposal for each.
+3. Relay the report unedited. Then act on it: the verdict judges this round's work; "Ship with light edits" means fix the marked sentences, "Needs heavy edits" means retranslate the marked units whole from the English, "Needs retranslation" means a fresh translator takes the page from the English file on disk. A revised page goes to a new judge. Marks outside the change go to the owner as a list with a proposal for each.
 
 ## Dispatch prompt
 

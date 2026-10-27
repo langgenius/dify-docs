@@ -112,7 +112,7 @@ For each relevant issue or discussion, read the body and top comments to underst
 
 ### Phase 3: Synthesize
 
-Combine both phases into a structured research record. It is research output, not the drafter's brief: at S3 the pipeline writes the summary the drafter gets from this record, in the shape `dify-docs-write/references/research-summary.md` gives.
+Combine both phases into a structured research record. It is research output, not the drafter's brief: at S3, in the drafter modes, the pipeline writes the summary the drafter gets from this record, in the shape `dify-docs-write/references/research-summary.md` gives.
 
 ```
 ## Feature: [Name]
@@ -148,12 +148,12 @@ Combine both phases into a structured research record. It is research output, no
 - [What to explicitly omit and why (bugs, unreleased features, UI-discoverable mechanics)]
 ```
 
-Present the record to the user and STOP before writing until they confirm the scope. Under `dify-docs-write`, the pipeline's S4 stop is this review: the record feeds the research summary and task analysis shown there, and with no reviewer in the session that skill's rule applies.
+Present the record to the user and STOP before writing until they confirm the scope. Under `dify-docs-write`, the pipeline's S4 stop is this review: the record feeds the research summary and task analysis shown there.
 
 ## Important
 
 - Research findings exist to make the page's claims accurate, not to be exhaustively included. When recommending scope, apply the style guide's "Repeating the UI" filter: UI-discoverable mechanics stay out of the page unless especially consequential.
 - When scope is confirmed and writing begins, return to the `dify-docs-write` pipeline — it loads the doc-type rule pack and the writing guides. This skill carries none of the writing rules.
-- Flag code-inferred behavior as unverified. Ask the user to test before documenting as fact.
+- Flag behavior that isn't confirmed, as `dify-docs-write` S1 defines it, as inferred, and ask the user to test what the page would depend on.
 - Distinguish bugs from documentation gaps. Documenting buggy behavior as intended causes more harm than leaving a gap.
 - Note issue numbers for traceability. The user may want to reference them when prioritizing what to cover.
