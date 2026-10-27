@@ -25,6 +25,10 @@ Every behavior claim is verified in `cli/` on `langgenius/dify` `origin/main`, r
 
 A claim you cannot verify is left out or marked `{/* VERIFY: … */}`, never softened into a fact. For project context (known bugs, what is shipped versus planned), ask the user.
 
+## Live tests (S2)
+
+A test that runs `difyctl` against a real server is isolated from its first command, `version` and `help` included: run every call as `env -i PATH=/usr/bin:/bin HOME=<scratch>/home DIFY_CONFIG_DIR=<scratch>/cfg <full path to difyctl> …`, sign in only with `login --no-keyring`, and report any call made outside that. The fake home keeps the run out of the tester's own config, cache, and keychain. Isolation doesn't cover the server side: signing in as an account ends that account's other sign-ins on the machine, so test with an account the tester isn't using, or expect to sign them back in.
+
 ## Reader tasks (S3)
 
 Run the pipeline's task analysis, at the depth the change sets, for each command or concept a change adds or alters. CLI readers arrive with a job rather than a command name: sign in on a server or in a container, run an app from a script, let an agent drive the CLI, recover from an exit code. The questions on the way to that job decide what a page says beyond the CLI's own help: what to set up first, how to confirm it worked, what to do when it fails. They go into the S4 scope report.
