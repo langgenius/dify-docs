@@ -514,6 +514,7 @@
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
 | Multimodal | 多模态 | マルチモーダル |
+| TOP K | Top K | トップ K |
 
 ### Chunking Mode Labels
 

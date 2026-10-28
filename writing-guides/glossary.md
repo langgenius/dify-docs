@@ -526,6 +526,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース | app-api.apiKeyModal.scopeAllDatasets | Scope option in that modal |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース | app-api.apiKeyModal.scopeSpecificDatasets | Scope option in that modal |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
+| TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
 
 ### Chunking Mode Labels
 
