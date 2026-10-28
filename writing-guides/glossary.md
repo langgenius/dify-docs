@@ -96,6 +96,9 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
+| agent knowledge base | Agent 知识库 | Agent ナレッジベース | Lowercase "agent" in English prose; the UI names the product Agent Knowledge Base. |
+| classic knowledge base | 经典知识库 | 従来型ナレッジベース | Lowercase in prose; the knowledge base type that agent knowledge bases sit beside. |
+| golden question | 参考问题 | 評価用の基準質問 | A question paired with the chunks it should return; the UI tab is Golden questions (knowledge-quality.qualityPage.goldenTab). |
 | knowledge pipeline | 知识流水线 | ナレッジパイプライン | Lowercase in prose. |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
@@ -103,7 +106,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | retrieval | 检索 | 検索 | Always lowercase in body text |
 | retrieval mode | 检索模式 | 検索モード | Strategy for finding and ranking relevant chunks |
 | indexing | 索引 | インデックス | Use "Index Method" consistently in documentation |
-| index method | 索引方法 | インデックス方法 | Also referred to as "Index Method" in some UI contexts |
+| index method | 索引方式 | インデックス方法 | Matches the UI label Index Method (dataset-creation.stepTwo.indexMode). |
 | embedding | 嵌入 | 埋め込み | |
 | metadata | 元数据 | メタデータ | |
 | delimiter | 分隔符 | デリミタ | The character or sequence used to split text during chunking |
@@ -195,7 +198,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Studio | 工作室 | スタジオ | common.menus.apps | Sidebar menu label for the app workspace |
 | Knowledge | 知识库 | ナレッジ | common.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
 | Web apps | WEB APPS | Webアプリ | explore.sidebar.webApps | Sidebar section listing the web apps you can open; the en label shows as WEB APPS. Replaced the "Explore" item in v1.17.0 |
-| Integrations | 集成 | インテグレーション | common.menus.plugins | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. JA main nav uses インテグレーション; docs use 統合 for consistency (see `settings.integrations`). |
+| Integrations | 集成 | 連携 | navigation.mainNav.integrations | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. A click path that starts from the main nav uses this label (ja 連携, not the hub header's 統合). |
 | Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
 | Skills | Skills | Skills | common.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The page title (`skill.skillManagement.title`) is also "Skills" in every locale since dify #41242. |
 
@@ -240,6 +243,8 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 |:-------------|:-------------|:--------------|:---------|:------|
 | Documents | 文档 | ドキュメント | common.datasetMenus.documents | |
 | API Access | 访问 API | API アクセス | common.appMenus.apiAccess | Knowledge detail tab; since v1.16.2 the app side uses the Access Point tab instead |
+| API Access | API 访问 | API アクセス | knowledge-space.apiAgentAccess | Agent knowledge base only: the button in its lower-left corner that shows the knowledge base's endpoint and opens API key management. The classic knowledge base tab is the row above |
+| API access | API 访问 | API アクセス | knowledge-settings.settings.apiAccessLabel | Agent knowledge base settings: the switch that allows Service API calls to this knowledge base |
 | Retrieval Testing | 召回测试 | 検索テスト | common.datasetMenus.hitTesting | |
 | Settings | 设置 | 設定 | common.datasetMenus.settings | |
 | Pipeline | 流水线 | パイプライン | common.datasetMenus.pipeline | |
@@ -255,7 +260,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Custom Endpoint | 自定义端点 | カスタム API | common.settings.customEndpoint | Renamed from "API Extension" in v1.15.0; moved from Settings to Integrations hub |
 | Billing | 账单 | 請求 | common.settings.billing | |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
-| Integrations | 集成 | 統合 | common.settings.integrations | Hub header label; JA nav uses インテグレーション (`menus.plugins`) but hub header uses 統合 (`settings.integrations`). Docs use 統合 for consistency. |
+| Integrations | 集成 | 統合 | navigation.settings.integrations | Hub header label, shown once the hub is open. A click path from the main nav uses navigation.mainNav.integrations (ja 連携). |
 | Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
 | Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
 | Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
@@ -310,6 +315,8 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | App package | 应用包 | アプリパッケージ | app.appPackage | File type in the Import App dialog; prose writes lowercase "app package" for the `.ifpkg` file |
 | Create from Blank | 创建空白应用 | 最初から作成 | app.newApp.startFromBlank | |
 | Create from Template | 从应用模板创建 | テンプレートから作成 | app.newApp.startFromTemplate | |
+| Details | 详情 | 詳細 | explore.appCard.try | Template card button that opens a template's details, despite the key name |
+| Try it | 试用 | お試し | explore.tryApp.tabHeader.try | Tab in a template's details where you chat with it before creating from it |
 | Tracing | 追踪 | 追跡 | app.tracing.tracing | LLMOps tracing feature |
 | Agent data capture | Agent 数据采集 | Agent データ収集 | app.tracing.captureTitle | Tracing settings group, shown when Agent tracing is enabled |
 | Capture content | 采集内容 | 内容を収集 | app.tracing.captureContent | |
@@ -342,6 +349,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | User Input | 用户输入 | ユーザー入力 | workflow.blocks.start | Start node display name |
 | LLM | LLM | LLM | workflow.blocks.llm | |
 | Knowledge Retrieval | 知识检索 | 知識検索 | workflow.blocks.knowledge-retrieval | |
+| Agent Knowledge Retrieval | Agent 知识检索 | Agent ナレッジ検索 | workflow.blocks.knowledge-retrieval-v2 | Node that searches agent knowledge bases |
 | IF/ELSE | 条件分支 | IF/ELSE | workflow.blocks.if-else | |
 | Code | 代码执行 | コード実行 | workflow.blocks.code | |
 | Template | 模板转换 | テンプレート | workflow.blocks.template-transform | Jinja template transform node |
@@ -492,6 +500,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 |:-------------|:-------------|:--------------|:---------|:------|
 | Query Text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrieval.queryText | Node input |
 | Query Images | 查询图片 | 画像を検索 | workflow.nodes.knowledgeRetrieval.queryAttachment | Node input; shown only when a selected knowledge base is multimodal |
+| Query text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrievalV2.queryText | Agent Knowledge Retrieval node input; the classic node's label is the Query Text row |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | |
 | Disabled | 禁用 | 無効 | workflow.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
 | Automatic | 自动 | 自動生成 | workflow.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
@@ -521,6 +530,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース | app-api.apiKeyModal.scopeSpecificDatasets | Scope option in that modal |
 | Creators | 创建者 | 作成者 | dataset.creatorFilter.creators | Knowledge list filter; new in 1.18.0 |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
+| TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
 
 ### Chunking Mode Labels
 
@@ -562,6 +572,15 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Queuing | 排队中 | キューイング中 | dataset-documents.list.status.queuing | |
 | Paused | 已暂停 | 一時停止中 | dataset-documents.list.status.paused | |
 | Error | 错误 | エラー | dataset-documents.list.status.error | |
+
+### Golden Question Status Labels
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Active | 有效 | 有効 | knowledge-quality.qualityPage.goldenStatus.active | Agent knowledge base, **Quality** page; evaluations run only these |
+| Draft | 草稿 | 下書き | knowledge-quality.qualityPage.goldenStatus.draft | |
+| Paused | 已暂停 | 一時停止 | knowledge-quality.qualityPage.goldenStatus.paused | Not the document status Paused (一時停止中) |
+| Stale | 已过时 | 要更新 | knowledge-quality.qualityPage.goldenStatus.stale | |
 
 ### Document Embedding Modes
 
