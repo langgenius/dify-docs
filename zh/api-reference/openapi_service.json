@@ -22476,7 +22476,7 @@
     },
     "/knowledge-fs/spaces/{knowledge_base_id}/documents/bulk": {
       "delete": {
-        "description": "一次调用请求删除最多 100 个文档文件，并返回每个文件的处理结果。\n\n此 `DELETE` 请求需携带 JSON 请求体。如果客户端默认不为 DELETE 请求发送请求体，需将其配置为显式发送。\n\n文件先按 `documentId`、再按 `expectedRevision` 排序，并逐个独立处理。文件不存在、`expectedRevision` 已过时、已在删除中，或该密钥无权删除时，该文件会以 `rejected` 出现在 `results` 中，其他文件照常处理。遇到基础设施故障时，处理会中止，剩余文件保持 `pending`。\n\n基础设施故障后，或整个调用失败后，如需继续，使用同一个 `Idempotency-Key` 再次发送相同的请求。它会返回原批次及其中已受理的作业，并且只重试 `pending` 的文件。\n\n此调用不会创建批量任务。\n\n删除流程详见 [删除文档和数据源](/zh/api-reference/guides/knowledge-base#delete-documents-and-sources)。",
+        "description": "一次调用请求删除最多 100 个文档文件，并返回每个文件的处理结果。与 [删除文档文件](/zh/api-reference/documents-and-chunks/delete-document-file) 一样，不要删除生效修订版本的文件。\n\n此 `DELETE` 请求需携带 JSON 请求体。如果客户端默认不为 DELETE 请求发送请求体，需将其配置为显式发送。\n\n文件先按 `documentId`、再按 `expectedRevision` 排序，并逐个独立处理。文件不存在、`expectedRevision` 已过时、已在删除中，或该密钥无权删除时，该文件会以 `rejected` 出现在 `results` 中，其他文件照常处理。遇到基础设施故障时，处理会中止，剩余文件保持 `pending`。\n\n基础设施故障后，或整个调用失败后，如需继续，使用同一个 `Idempotency-Key` 再次发送相同的请求。它会返回原批次及其中已受理的作业，并且只重试 `pending` 的文件。\n\n此调用不会创建批量任务。\n\n删除流程详见 [删除文档和数据源](/zh/api-reference/guides/knowledge-base#delete-documents-and-sources)。",
         "operationId": "deleteDocumentFilesInBatch",
         "parameters": [
           {
@@ -23471,7 +23471,7 @@
     },
     "/knowledge-fs/spaces/{knowledge_base_id}/documents/{document_file_id}": {
       "delete": {
-        "description": "请求删除一个文档文件，并返回删除作业。基于该文件构建的所有修订版本都不再通过 [获取分段列表](/zh/api-reference/documents-and-chunks/list-chunks) 返回分段。\n\n此 `DELETE` 请求需携带 JSON 请求体。如果客户端默认不为 DELETE 请求发送请求体，需将其配置为显式发送。\n\n删除流程详见 [删除文档和数据源](/zh/api-reference/guides/knowledge-base#delete-documents-and-sources)。",
+        "description": "请求删除一个文档文件，并返回删除作业。基于该文件构建的所有修订版本都不再通过 [获取分段列表](/zh/api-reference/documents-and-chunks/list-chunks) 返回分段。\n\n不要删除文档生效修订版本的文件。删除后，文档状态变为 `failed`，不再有生效的修订版本，也会从 [获取文档列表](/zh/api-reference/documents-and-chunks/list-documents) 和 Dify 的文档列表中消失。文档仍会占用文档配额。\n\n此 `DELETE` 请求需携带 JSON 请求体。如果客户端默认不为 DELETE 请求发送请求体，需将其配置为显式发送。\n\n删除流程详见 [删除文档和数据源](/zh/api-reference/guides/knowledge-base#delete-documents-and-sources)。",
         "operationId": "deleteDocumentFile",
         "parameters": [
           {
@@ -28056,7 +28056,7 @@
                     "type": "string"
                   },
                   "sessionId": {
-                    "description": "查询会话 ID，格式为 UUID。省略则开启新会话。[运行查询](/zh/api-reference/queries/run-query) 会在 `x-session-id` 响应头中返回会话 ID。\n\n一个会话保存最近 20 次查询，30 分钟内没有查询即过期。\n\n传入已过期或未知的 ID 时，会以该 ID 开启一个新会话，因此你自行生成的 UUID 始终可以用作该会话的 ID。",
+                    "description": "查询会话 ID，格式为 UUID。省略则开启新会话。[运行查询](/zh/api-reference/queries/run-query) 会在 `x-session-id` 响应头中返回会话 ID。\n\n一个会话保存最近 20 次查询，但不会把它们带入之后的回答。30 分钟内没有查询，会话即过期。\n\n传入已过期或未知的 ID 时，会以该 ID 开启一个新会话，因此你自行生成的 UUID 始终可以用作该会话的 ID。",
                     "nullable": true,
                     "type": "string"
                   }
@@ -28733,7 +28733,7 @@
                 "description": "需提供非空白的 `query`。",
                 "properties": {
                   "budgetUsd": {
-                    "description": "花费上限（USD）。在任务运行期间生效，创建时不检查。即使 [规划研究任务](/zh/api-reference/research-tasks/plan-research-task) 的估算超出该上限，任务也会被受理。每次调用模型之前，任务会用这次调用的最坏情况成本对照预算检查；如果这次调用可能超出预算，任务会被取消，不再发起调用。\n\n单次调用的实际成本仍可能高于其最坏情况估算，因此 `cost.totalUsd` 最终可能超过 `budgetUsd`。如果任务在 `generating` 阶段之前因预算被取消，就不会有回答。如果无论如何都需要得到回答，将上限设得高于规划结果中的 `estimates.costUsd.max`。",
+                    "description": "花费上限（USD）。在任务运行期间生效，创建时不检查。即使 [规划研究任务](/zh/api-reference/research-tasks/plan-research-task) 的估算超出该上限，任务也会被受理。每次调用模型之前，任务会用这次调用的最坏情况成本对照预算检查；如果这次调用可能超出预算，任务会被取消，不再发起调用。\n\n单次调用的实际成本仍可能高于其最坏情况估算，因此 `cost.totalUsd` 最终可能超过 `budgetUsd`。如果任务在 `generating` 阶段之前因预算被取消，就不会有回答。最坏情况成本通常远高于规划结果中的估算，因此需要得到回答时，把上限设得远高于 `estimates.costUsd.max`；`topK` 较大时还要更高。\n\n因预算停止的任务，`stage` 为 `canceled`。",
                     "minimum": 0,
                     "nullable": true,
                     "type": "number"
@@ -38249,7 +38249,7 @@
         }
       },
       "put": {
-        "description": "设置数据源的定时同步，替换原有设置，并返回新设置。\n\n保存不会启动同步。第一次定时同步在更新后满一个间隔时到期，之后每次在上一次进入队列后满一个间隔时到期。要立即同步，调用 [同步数据源](/zh/api-reference/source-syncs-and-imports/sync-source)。\n\n要暂停定时同步而不改动其设置，用 [更新数据源](/zh/api-reference/sources/update-source) 将数据源的 `status` 设为 `disabled`。暂停期间到期的同步，会在数据源恢复为 `active` 时运行。\n\n先读取再保存的流程，详见 [同步数据源与定时同步](/zh/api-reference/guides/knowledge-base#sync-and-schedule-sources)。",
+        "description": "设置数据源的定时同步，替换原有设置，并返回新设置。\n\n保存不会启动同步。第一次定时同步在更新后满一个间隔时到期，之后每次在上一次进入队列后满一个间隔时到期。要立即同步，调用 [同步数据源](/zh/api-reference/source-syncs-and-imports/sync-source)。\n\n每次向该数据源导入完成后，都要用数据源新的 `version` 重新保存定时同步。导入会改变 `version`，仍绑定在旧值上的定时同步会在下一次到期时自行关闭。\n\n要暂停定时同步而不改动其设置，用 [更新数据源](/zh/api-reference/sources/update-source) 将数据源的 `status` 设为 `disabled`。暂停期间到期的同步，会在数据源恢复为 `active` 时运行。\n\n先读取再保存的流程，详见 [同步数据源与定时同步](/zh/api-reference/guides/knowledge-base#sync-and-schedule-sources)。",
         "operationId": "updateSourceSyncPolicy",
         "parameters": [
           {

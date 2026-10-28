@@ -85,7 +85,7 @@ API 密钥及其访问范围详见 [知识库 API](/zh/api-reference/guides/know
   </Step>
 </Steps>
 
-要在同一会话中追问，在 [创建查询令牌](/zh/api-reference/queries/create-query-token) 中把上一次响应的 `x-session-id` 作为 `sessionId` 传入。也可传入你自己的 ID：未知的 ID 会开启一个新会话，并以它作为会话 ID。Dify 将会话绑定到 API 密钥，而非终端用户，因此在多用户应用中，要为每个用户分配各自的会话 ID，例如你自己生成的 UUID。
+每次查询都会单独作答，即使把之前响应的 `x-session-id` 作为 `sessionId` 传入也一样，所以追问需要的信息都要写进这次的 `query`。
 
 ## 排查回答 {#investigate-an-answer}
 
@@ -114,7 +114,9 @@ API 密钥及其访问范围详见 [知识库 API](/zh/api-reference/guides/know
     把问题作为 `query` 发送给 [规划研究任务](/zh/api-reference/research-tasks/plan-research-task)，同时传入想用的 `mode` 和 `topK`。它会返回预估的成本、延迟和步骤，但不会启动任何任务。
   </Step>
   <Step title="创建">
-    调用 [创建研究任务](/zh/api-reference/research-tasks/create-research-task)，传入相同的问题和设置。想在预估超出可接受范围时直接拒绝任务，就加上 `limits`：预估超出这些限制的任务会失败，返回 422。如需限制任务运行期间的花费，加上 `budgetUsd`。任务如果在开始撰写回答之前就因预算而停止，最终不会有回答，因此需要回答时，把预算设得高于规划结果中的 `estimates.costUsd.max`。
+    调用 [创建研究任务](/zh/api-reference/research-tasks/create-research-task)，传入相同的问题和设置。想在预估超出可接受范围时直接拒绝任务，就加上 `limits`：预估超出这些限制的任务会失败，返回 422。
+
+    如需限制任务运行期间的花费，加上 `budgetUsd`。需要回答时，把预算设得远高于规划结果中的 `estimates.costUsd.max`，因为每次调用模型时，预算都要容得下这次调用最多可能的花费。因预算停止的任务，状态为 `canceled`。
   </Step>
   <Step title="轮询">
     用返回的任务 ID 调用 [获取研究任务](/zh/api-reference/research-tasks/get-research-task)，直到任务结束。
@@ -218,6 +220,8 @@ API 密钥及其访问范围详见 [知识库 API](/zh/api-reference/guides/know
 
 第一次定时同步会在保存后经过一个同步间隔才运行，如果想马上拿到最新内容，现在也手动同步一次。
 
+每次向设有定时同步的数据源导入完成后，都要重新读取这两个值，再保存一次定时同步。导入会改变数据源的 `version`，仍绑定在旧值上的定时同步会在下一次到期时自行关闭。
+
 要停止定时同步，保存 `mode: manual` 并设置 `enabled: false`。用 [更新数据源](/zh/api-reference/sources/update-source) 把数据源的 `status` 设为 `disabled` 只会暂停定时同步，暂停期间到期的同步会在数据源重新启用后立即运行。
 
 ## 重新索引并跟踪索引进度 {#track-indexing}
@@ -255,6 +259,8 @@ API 密钥及其访问范围详见 [知识库 API](/zh/api-reference/guides/know
 ## 删除文档和数据源 {#delete-documents-and-sources}
 
 要删除整个文档，需在 Dify 中操作。通过 API 可删除文档文件（[删除文档文件](/zh/api-reference/documents-and-chunks/delete-document-file)、[批量删除文档文件](/zh/api-reference/documents-and-chunks/delete-document-files-in-batch)）和数据源（[删除数据源](/zh/api-reference/sources/delete-source)）。
+
+删除文档文件只会删除基于该文件的修订版本，不会删除文档本身。不要删除生效修订版本的文件：旧的修订版本不会顶替上来，文档也会从获取文档列表的结果和 Dify 的文档列表中消失。但文档并没有被删除，仍会占用文档配额。
 
 删除数据源会同时删除它导入的文档。要保留这些文档，先从 [获取文档文件列表](/zh/api-reference/documents-and-chunks/list-document-files) 中保存带有该 `source_id` 的文件 ID，因为删除完成后，这些文件的 `source_id` 会变为 `null`。然后用 `documents=keep` 删除数据源。保留的文档在删除完成前处于隐藏状态，之后也不再随任何数据源更新。
 
