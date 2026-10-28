@@ -6,12 +6,17 @@ Usage:
     DIFY_REPO=<path> python3 tools/translate/check-glossary-keys.py
 
 Reads every "i18n Key" cell in writing-guides/glossary.md, resolves each key
-against web/i18n/en-US/<namespace>.json at the given ref (read with
-`git show`, never a checkout), and lists the keys that no longer resolve. A
-glossary row whose key is dead is not evidence for the label it carries:
-the label may have moved to another key, or left the product.
+against <i18n root>/en-US/<namespace>.json at the given ref (read with
+`git show`, never a checkout), and lists the keys that no longer resolve. The
+i18n root is web/i18n/locales where that directory exists at the ref (dify
+main since langgenius/dify#42482, and CE 1.18.0 on), else web/i18n (the 1.17.x
+lines). A glossary row whose key is dead is not evidence for the label it
+carries: the label may have moved to another key, or left the product.
 
-Prints `DEAD: <key>  (glossary.md:<line>, <section>)` per dead key and ends
+Prints `I18N ROOT: <root> at <ref>` first, then
+`DEAD: <key>  (glossary.md:<line>, <section>)` per dead key, with
+`; same key under: <ns>.<key>` appended when another namespace file at the ref
+holds the same key path (a namespace split, not a removal), and ends
 with `GLOSSARY KEYS OK: <n> resolve at <ref>` or
 `GLOSSARY KEYS: <n> checked, <m> dead at <ref>`. Dead rows are a report for
 a glossary fix, not a failed audit, so the exit code is 0 either way unless
@@ -46,6 +51,38 @@ def git_show(dify: Path, ref: str, path: str) -> str | None:
     if "does not exist" in err or "exists on disk, but not in" in err:
         return None
     sys.exit(f"git show {ref}:{path} failed in {dify}: {err}")
+
+
+def i18n_root(dify: Path, ref: str) -> str:
+    """The directory holding the <locale>/ folders at ref: web/i18n/locales on
+    the new layout, web/i18n on the old one."""
+    proc = subprocess.run(
+        ["git", "-C", str(dify), "cat-file", "-e", f"{ref}:web/i18n/locales/en-US"], capture_output=True, text=True
+    )
+    return "web/i18n/locales" if proc.returncode == 0 else "web/i18n"
+
+
+def namespace_files(dify: Path, ref: str, root: str) -> dict[str, dict]:
+    """Every en-US namespace file at ref, keyed by file stem."""
+    proc = subprocess.run(
+        ["git", "-C", str(dify), "ls-tree", "--name-only", f"{ref}:{root}/en-US"], capture_output=True, text=True
+    )
+    if proc.returncode != 0:
+        sys.exit(f"git ls-tree {ref}:{root}/en-US failed in {dify}: {proc.stderr.strip()}")
+    out: dict[str, dict] = {}
+    for name in proc.stdout.split():
+        if name.endswith(".json"):
+            raw = git_show(dify, ref, f"{root}/en-US/{name}")
+            if raw:
+                out[name[: -len(".json")]] = json.loads(raw)
+    return out
+
+
+def same_key_under(every: dict[str, dict], key: str) -> list[str]:
+    """The keys in other namespace files with the same path as key: where a key
+    lands after a namespace split. A path match, not a value match."""
+    ns, *parts = key.split(".")
+    return sorted(f"{stem}.{'.'.join(parts)}" for stem, data in every.items() if stem != ns and resolves(data, parts))
 
 
 def resolves(data: dict, parts: list[str]) -> bool:
@@ -109,6 +146,7 @@ def main() -> int:
     if not keys:
         print(f"no i18n Key cells found in {GLOSSARY}; the table header may have changed", file=sys.stderr)
         return 2
+    root = i18n_root(dify, pinned)
     loaded = 0
     for n, section, key in keys:
         ns, *parts = key.split(".")
@@ -116,17 +154,21 @@ def main() -> int:
             # Namespaces are cited as the code writes them (appLog) or as the
             # file is named (app-log); the file is always kebab-case.
             fname = re.sub(r"(?<!^)(?=[A-Z])", "-", ns).lower()
-            raw = git_show(dify, pinned, f"web/i18n/en-US/{fname}.json")
+            raw = git_show(dify, pinned, f"{root}/en-US/{fname}.json")
             files[ns] = json.loads(raw) if raw else None
             loaded += files[ns] is not None
         data = files[ns]
         if data is None or not resolves(data, parts):
             dead.append((n, section, key))
     if not loaded:
-        print(f"no web/i18n/en-US namespace file could be read at {ref_label}; is {dify} the Dify repository?", file=sys.stderr)
+        print(f"no {root}/en-US namespace file could be read at {ref_label}; is {dify} the Dify repository?", file=sys.stderr)
         return 2
+    print(f"I18N ROOT: {root} at {ref_label}")
+    every = namespace_files(dify, pinned, root) if dead else {}
     for n, section, key in dead:
-        print(f"DEAD: {key}  (glossary.md:{n}, {section})")
+        moved = same_key_under(every, key)
+        hint = f"; same key under: {', '.join(moved)}" if moved else ""
+        print(f"DEAD: {key}  (glossary.md:{n}, {section}){hint}")
     if dead:
         print(f"GLOSSARY KEYS: {len(keys)} checked, {len(dead)} dead at {ref_label}")
         return 1 if args.strict else 0
