@@ -48,8 +48,8 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
 | Workflow orchestration in Flask routes and Celery tasks | dify | `api/controllers/`, `api/tasks/`, `api/services/` |
 | RAG and knowledge retrieval logic | dify | `api/core/rag/` |
 | Tool plugins | dify | `api/core/tools/` |
-| Frontend UI (all features; the web app was never split out) | dify | nodes: `web/app/components/workflow/nodes/<node-name>/` (kebab-case); other features: `web/app/components/<area>/` |
-| UI labels / i18n strings | dify | `web/i18n/{en-US,zh-Hans,ja-JP}/` |
+| Frontend UI (all features; the web app was never split out) | dify | nodes: `web/app/components/workflow/nodes/<node-name>/` (kebab-case); other features: `web/app/components/<area>/`, and newer feature modules under `web/features/<area>/` (e.g. `agent-v2/`, `new-rag/`) |
+| UI labels / i18n strings | dify | `web/i18n/locales/{en-US,zh-Hans,ja-JP}/` (CE 1.18.0 onward and `main`); `web/i18n/{en-US,zh-Hans,ja-JP}/` on the 1.17.x lines |
 | Feature flags + env defaults | dify | backend `api/configs/`; frontend `NEXT_PUBLIC_*`; shipped defaults `docker/.env.example`, `docker/envs/**` |
 
 3. Read the backend implementation:
@@ -60,7 +60,7 @@ Run Phase 1 and Phase 2 in parallel: dispatch one subagent per phase. If subagen
    - Panel component (what configuration options users see)
    - Type definitions (data shape)
    - Default values and validation rules
-   - **Permission-gated behavior (RBAC/ACL):** the effective gate is here — read the capability map (`web/utils/permission.ts`: `getAppACLCapabilities` / `getDatasetACLCapabilities`) and the UI that consumes it (e.g. a `canEdit` → read-only hook), and confirm it in a test environment. A backend `@rbac_permission_required` decorator can be looser than the frontend and never fire, so treat it as a lower bound. Permission labels for docs: `web/i18n/{en-US,zh-Hans,ja-JP}/permission-keys.json`.
+   - **Permission-gated behavior (RBAC/ACL):** the effective gate is here — read the capability map (`web/utils/permission.ts`: `getAppACLCapabilities` / `getDatasetACLCapabilities`) and the UI that consumes it (e.g. a `canEdit` → read-only hook), and confirm it in a test environment. A backend `@rbac_permission_required` decorator can be looser than the frontend and never fire, so treat it as a lower bound. Permission labels for docs: `web/i18n/locales/{en-US,zh-Hans,ja-JP}/permission-keys.json` (`web/i18n/{en-US,zh-Hans,ja-JP}/` on the 1.17.x lines).
 5. Trace the API surface: how the feature's output reaches the API response. Check controllers, response converters, and serialization (all in dify).
 6. **Coverage gate — account for every surface before concluding.** What users experience is the composition of backend + frontend + configuration; a conclusion read off a single surface is not a finding. A backend permission decorator can be looser than the frontend gate and never fire; a frontend option can be dead without its backend flag; a shipped default can disable the code path you just read. For each surface — backend, frontend UI, i18n labels, feature flags / env defaults, API, plugin SDK (plugin-facing features only) — record the files read, or `N/A` plus why that surface cannot affect this feature. Carry the filled table into the Phase 3 summary.
 7. Produce a summary of:

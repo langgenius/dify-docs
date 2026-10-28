@@ -18,7 +18,7 @@ Read-only audit. Verify that documentation terms match the glossary (general ter
    - `## General Terms` — standard body-text terms with English/Chinese/Japanese columns.
    - `## UI Labels` — product UI strings with an `i18n Key` column mapping each label to the codebase.
 2. Locate the Dify codebase. If it is available as an additional working directory, use it; otherwise ask the user for the local path to their Dify repo.
-3. Ask the user: **"Which branch in the Dify codebase should I check UI labels against?"** (e.g., `main`, a feature branch). Default to `main` if they have no preference.
+3. Ask the user: **"Which branch in the Dify codebase should I check UI labels against?"** (e.g., `main`, a feature branch). Default to `main` if they have no preference, except for a Dify Enterprise page: check it against the dify ref its EE version is composed from, named in the release lock (see the Enterprise docs repo's `.claude/skills/ee-ops-docs/references/source-map.md`, § Resolve the refs first).
 
 ## Step 2 — Pin the codebase ref
 
@@ -28,12 +28,16 @@ Read-only audit. Verify that documentation terms match the glossary (general ter
    git fetch --tags origin
    REF=$(git rev-parse origin/<branch>)
    ```
-   All i18n lookups below use `"$REF"`; the report cites it (short form, e.g. `61d2ad572a`).
+   All i18n lookups below use `"$REF"`; the report cites it (short form, e.g. `61d2ad572a`). Then set the i18n root for that ref:
+   ```bash
+   I18N=$(git cat-file -e "${REF}:web/i18n/locales/en-US" 2>/dev/null && echo web/i18n/locales || echo web/i18n)
+   ```
+   dify `main` and CE 1.18.0 onward keep the UI strings under `web/i18n/locales/<locale>/`; the 1.17.x lines, and Enterprise versions composed from them, under `web/i18n/<locale>/`. The lookups below use `$I18N`.
 3. Check that the glossary's keys still exist at that ref. In the docs repo:
    ```bash
    python3 tools/translate/check-glossary-keys.py --dify <path to the Dify clone> --ref "$REF"
    ```
-   It ends with `GLOSSARY KEYS OK: {n} resolve at {ref}` or `GLOSSARY KEYS: {n} checked, {m} dead at {ref}`; either way the audit continues, because a dead row is a glossary defect, not a page defect. Each `DEAD:` line names a glossary row whose key no longer exists at the ref. A dead row is not evidence for its label in this audit: resolve that label from the code per the glossary's own rule (the key whose en-US value matches on the surface being documented), do not flag a page for disagreeing with the dead row, and list the dead rows under the report's Dead glossary rows.
+   Its first line is `I18N ROOT: <root> at {ref}`, and it ends with `GLOSSARY KEYS OK: {n} resolve at {ref}` or `GLOSSARY KEYS: {n} checked, {m} dead at {ref}`; either way the audit continues, because a dead row is a glossary defect, not a page defect. Each `DEAD:` line names a glossary row whose key no longer exists at the ref. A dead row is not evidence for its label in this audit: resolve that label from the code per the glossary's own rule (the key whose en-US value matches on the surface being documented), do not flag a page for disagreeing with the dead row, and list the dead rows under the report's Dead glossary rows. A `DEAD:` line ending in `; same key under: <keys>` usually means the key moved to another namespace file: verify a listed key as Step 5 verifies any label (its render site, then its en-US value), and list the row as moved.
 
 ## Step 3 — Set the scope
 
@@ -67,7 +71,7 @@ View each listed image and read every UI string it displays; strings that are la
 
 ## Step 5 — Classify and verify UI labels against codebase i18n
 
-The codebase i18n is the source of truth for UI labels: `web/i18n/en-US/` (flat JSON files with dot-flattened keys, e.g. `"menus.apps": "Studio"`), plus `zh-Hans/` and `ja-JP/` siblings. The glossary's `i18n Key` column maps to them: `common.menus.apps` → file `common.json`, key `"menus.apps"`.
+The codebase i18n is the source of truth for UI labels: `$I18N/en-US/` (flat JSON files with dot-flattened keys, e.g. `"menus.apps": "Studio"`), plus `zh-Hans/` and `ja-JP/` siblings. The glossary's `i18n Key` column maps to them: `navigation.menus.apps` → file `navigation.json`, key `"menus.apps"`.
 
 A key's value counts as the visible label only after checking its render site: `git grep` the key under `web/` and confirm it lands in on-screen text. Values feeding `aria-label`, tooltips, or placeholders are not the label, and shared generic keys (`common.operation.*`) often supply the visible text instead — the Skills section's add button renders `operation.add` ("Add") while `skills.add` ("Add skill") is its aria-label. A product or staging screenshot outranks any code inference. A term's presence on sibling pages is not evidence either: neighbors drift together, so a word found across the doc set is traced to the UI like any other ("console" appeared on several pages and nowhere in the product). When a term fails, sweep the whole page for every occurrence before reporting; a finding is not done at one instance.
 
@@ -76,21 +80,21 @@ For each candidate term (use the English term; for zh/ja files, take the candida
 1. If the term has a `## UI Labels` row in the glossary, read its `i18n Key`; skip to substep 3 to confirm the codebase still agrees.
 2. Otherwise search the en-US i18n values. In the Dify repo:
    ```bash
-   git grep -nF '"<Term>"' "$REF" -- 'web/i18n/en-US/*.json'
+   git grep -nF '"<Term>"' "$REF" -- "$I18N/en-US/*.json"
    ```
-   - Exact-value hit (e.g., `<REF>:web/i18n/en-US/common.json:285:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
-   - Multiple exact hits → the value is shared by several keys; pick by tracing which component the documented surface renders (`git grep -nF '<key>' "$REF" -- 'web/app/**'`; components may reference the key without its file prefix, so retry with the suffix when there are no hits), and record which key you chose and why. Never assume the closest-looking key.
-   - No hit → retry case-insensitively: `git grep -inF '<term>' "$REF" -- 'web/i18n/en-US/*.json'`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
+   - Exact-value hit (e.g., `<REF>:web/i18n/locales/en-US/navigation.json:25:  "menus.apps": "Studio",`) → it is a UI label; note the file and key.
+   - Multiple exact hits → the value is shared by several keys; pick by tracing which component the documented surface renders (`git grep -nF '<key>' "$REF" -- 'web/app/**' 'web/features/**'`; components may reference the key without its file prefix, so retry with the suffix when there are no hits), and record which key you chose and why. Never assume the closest-looking key.
+   - No hit → retry case-insensitively: `git grep -inF '<term>' "$REF" -- "$I18N/en-US/*.json"`. A hit here means the doc's casing or wording deviates from the UI string — flag it.
    - Still no hit → not a UI label. Headings fall out of scope here; bolded terms go to Step 6 (general terms) instead.
 3. Confirm the exact string at the key:
    ```bash
-   git grep -nF '"<key>"' "$REF" -- web/i18n/en-US/<file>.json
+   git grep -nF '"<key>"' "$REF" -- "$I18N/en-US/<file>.json"
    ```
    The doc's English term must match the printed value exactly (casing included). If the glossary row disagrees with the codebase, the codebase wins — record a glossary gap.
 4. For zh/ja siblings, look up the same key in the matching locale:
    ```bash
-   git grep -nF '"<key>"' "$REF" -- web/i18n/zh-Hans/<file>.json
-   git grep -nF '"<key>"' "$REF" -- web/i18n/ja-JP/<file>.json
+   git grep -nF '"<key>"' "$REF" -- "$I18N/zh-Hans/<file>.json"
+   git grep -nF '"<key>"' "$REF" -- "$I18N/ja-JP/<file>.json"
    ```
    Each prints one line with the localized string; the zh/ja doc's bolded term must match it exactly.
 
@@ -120,7 +124,7 @@ Checked against Dify codebase `origin/<branch>` at `<short REF>`.
 **UI Labels**
 - ✅ All UI labels (bolded terms and feature section headings) match codebase
   OR
-- ⚠️ Line {n}: **{label}** — codebase says "{expected}" (web/i18n/<locale>/<file>.json, key "<key>")
+- ⚠️ Line {n}: **{label}** — codebase says "{expected}" (<i18n root>/<locale>/<file>.json, key "<key>")
 
 **Stale Screenshots**
 - ✅ No local image shows a superseded UI string
@@ -135,6 +139,7 @@ Checked against Dify codebase `origin/<branch>` at `<short REF>`.
 - ✅ Every cited i18n key resolves at `<short REF>`
   OR
 - ⚠️ {key} (glossary.md:{n}, {section}) — no longer exists; label resolved from the code as "{current label}"
+- ⚠️ {key} (glossary.md:{n}, {section}) — moved to {new key}; label there is "{label}"
 ```
 
 ## Step 8 — Glossary updates (only after user approval)
