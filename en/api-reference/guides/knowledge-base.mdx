@@ -83,7 +83,7 @@ The script below needs Bash, curl, jq, and Python 3. Copy its two code blocks, i
   </Step>
 </Steps>
 
-To ask a follow-up in the same session, send the previous response's `x-session-id` as `sessionId` in [Create Query Token](/en/api-reference/queries/create-query-token). You can also send an ID of your own: an unknown ID starts a new session under it. Dify ties a session to your API key, not to an end user, so in a multi-user app give each user their own session ID, such as a UUID you generate.
+Each query is answered on its own, even when you send an earlier response's `x-session-id` as `sessionId`, so put everything a follow-up needs into its `query`.
 
 ## Investigate an Answer {#investigate-an-answer}
 
@@ -112,7 +112,9 @@ Unlike a query at `research` depth, which answers within the stream, a research 
     Send your question as `query` to [Plan Research Task](/en/api-reference/research-tasks/plan-research-task), with the `mode` and `topK` you want to use. It returns the estimated cost, latency, and steps without starting anything.
   </Step>
   <Step title="Create">
-    Call [Create Research Task](/en/api-reference/research-tasks/create-research-task) with the same question and settings. To reject the task up front when its estimates go beyond what you'll accept, add `limits`: a task whose estimates exceed them fails with 422. To cap spending while the task runs, add `budgetUsd`. A task stopped by its budget before it starts writing the answer ends with no answer, so set the budget above the plan's `estimates.costUsd.max` when you need one.
+    Call [Create Research Task](/en/api-reference/research-tasks/create-research-task) with the same question and settings. To reject the task up front when its estimates go beyond what you'll accept, add `limits`: a task whose estimates exceed them fails with 422.
+
+    To cap spending while the task runs, add `budgetUsd`. When you need an answer, set it well above the plan's `estimates.costUsd.max`, because each model call has to fit in the budget at the most it could cost. A task that reaches its budget ends as `canceled`.
   </Step>
   <Step title="Poll">
     Call [Get Research Task](/en/api-reference/research-tasks/get-research-task) with the returned task ID until the task ends.
@@ -131,7 +133,7 @@ A document is the item the **Document** tab shows. It has a document ID, and the
 | Document file ID | [List Document Files](/en/api-reference/documents-and-chunks/list-document-files), `documentAssetId` in a citation, or `metadata.documentId` in [List Query Chunks](/en/api-reference/query-records/list-query-chunks), which holds a document file ID despite its name | [Get Document File](/en/api-reference/documents-and-chunks/get-document-file), [Get Document Outline](/en/api-reference/documents-and-chunks/get-document-outline), [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file), [Delete Document File](/en/api-reference/documents-and-chunks/delete-document-file), [Delete Document Files in Batch](/en/api-reference/documents-and-chunks/delete-document-files-in-batch) |
 | Document ID | [List Documents](/en/api-reference/documents-and-chunks/list-documents), [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file), or the address bar of the open document (`/datasets/new/<knowledge base ID>/documents/<document ID>`) | [Get Document](/en/api-reference/documents-and-chunks/get-document), [Update Document Metadata](/en/api-reference/documents-and-chunks/update-document-metadata), [List Document Revisions](/en/api-reference/documents-and-chunks/list-document-revisions), [List Chunks](/en/api-reference/documents-and-chunks/list-chunks), [Get Chunk](/en/api-reference/documents-and-chunks/get-chunk), [List Document Indexing Tasks](/en/api-reference/indexing-tasks/list-document-indexing-tasks), [Get Document Indexing Task](/en/api-reference/indexing-tasks/get-document-indexing-task) |
 
-To show which document a citation came from, pass its `documentAssetId` to [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file) with `1` as `document_asset_version`, since every document file is at version `1`.
+To show which document a citation came from, pass its `documentAssetId` to [Get Document by File](/en/api-reference/documents-and-chunks/get-document-by-file) with `1` as `document_asset_version`.
 
 To read a document's chunks, pass the document ID and a revision number to [List Chunks](/en/api-reference/documents-and-chunks/list-chunks). For the content in use for retrieval, take `active.revision` from [Get Document](/en/api-reference/documents-and-chunks/get-document). For older content, find the revision in [List Document Revisions](/en/api-reference/documents-and-chunks/list-document-revisions).
 
@@ -216,6 +218,8 @@ To sync on a schedule, save one for each source:
 
 The first scheduled sync runs one interval after you save, so sync now as well if you want fresh content right away.
 
+After each import into a scheduled source finishes, read both values again and save the schedule. An import changes the source's `version`, and a schedule still bound to the old one turns itself off at its next due time.
+
 To stop scheduled syncs, save `mode: manual` with `enabled: false`. Setting the source's `status` to `disabled` with [Update Source](/en/api-reference/sources/update-source) only pauses them, and a sync that came due in the meantime runs as soon as the source is active again.
 
 ## Re-index and Track Indexing {#track-indexing}
@@ -253,6 +257,8 @@ Each update can change either the embedding model or the retrieval settings, not
 ## Delete Documents and Sources {#delete-documents-and-sources}
 
 To remove a whole document, delete it in Dify. Over the API, you can delete document files ([Delete Document File](/en/api-reference/documents-and-chunks/delete-document-file), [Delete Document Files in Batch](/en/api-reference/documents-and-chunks/delete-document-files-in-batch)) and sources ([Delete Source](/en/api-reference/sources/delete-source)).
+
+Deleting a document file deletes only the revision built on it, not the document. Avoid deleting the active revision's file. No older revision takes its place, and the document drops out of List Documents and Dify's document list. It isn't deleted, though, and still counts toward your document quota.
 
 Deleting a source also deletes the documents it imported. To keep them, first save the IDs of files with that `source_id` from [List Document Files](/en/api-reference/documents-and-chunks/list-document-files), because their `source_id` becomes `null` once the deletion completes. Then delete the source with `documents=keep`. The kept documents are hidden until the deletion completes, and after that no source updates them.
 

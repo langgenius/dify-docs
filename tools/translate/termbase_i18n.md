@@ -486,6 +486,7 @@
 |:--------|:--------|:---------|
 | Query Text | 查询文本 | クエリテキスト |
 | Query Images | 查询图片 | 画像を検索 |
+| Query text | 查询文本 | クエリテキスト |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 | Disabled | 禁用 | 無効 |
 | Automatic | 自动 | 自動生成 |
@@ -513,6 +514,7 @@
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
 | Multimodal | 多模态 | マルチモーダル |
+| TOP K | Top K | トップ K |
 
 ### Chunking Mode Labels
 
@@ -554,6 +556,15 @@
 | Queuing | 排队中 | キューイング中 |
 | Paused | 已暂停 | 一時停止中 |
 | Error | 错误 | エラー |
+
+### Golden Question Status Labels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Active | 有效 | 有効 |
+| Draft | 草稿 | 下書き |
+| Paused | 已暂停 | 一時停止 |
+| Stale | 已过时 | 要更新 |
 
 ### Document Embedding Modes
 

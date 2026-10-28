@@ -498,6 +498,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 |:-------------|:-------------|:--------------|:---------|:------|
 | Query Text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrieval.queryText | Node input |
 | Query Images | 查询图片 | 画像を検索 | workflow.nodes.knowledgeRetrieval.queryAttachment | Node input; shown only when a selected knowledge base is multimodal |
+| Query text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrievalV2.queryText | Agent Knowledge Retrieval node input; the classic node's label is the Query Text row |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | |
 | Disabled | 禁用 | 無効 | workflow.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
 | Automatic | 自动 | 自動生成 | workflow.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
@@ -525,6 +526,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース | app-api.apiKeyModal.scopeAllDatasets | Scope option in that modal |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース | app-api.apiKeyModal.scopeSpecificDatasets | Scope option in that modal |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
+| TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
 
 ### Chunking Mode Labels
 
@@ -566,6 +568,15 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Queuing | 排队中 | キューイング中 | dataset-documents.list.status.queuing | |
 | Paused | 已暂停 | 一時停止中 | dataset-documents.list.status.paused | |
 | Error | 错误 | エラー | dataset-documents.list.status.error | |
+
+### Golden Question Status Labels
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Active | 有效 | 有効 | knowledge-quality.qualityPage.goldenStatus.active | Agent knowledge base, **Quality** page; evaluations run only these |
+| Draft | 草稿 | 下書き | knowledge-quality.qualityPage.goldenStatus.draft | |
+| Paused | 已暂停 | 一時停止 | knowledge-quality.qualityPage.goldenStatus.paused | Not the document status Paused (一時停止中) |
+| Stale | 已过时 | 要更新 | knowledge-quality.qualityPage.goldenStatus.stale | |
 
 ### Document Embedding Modes
 
