@@ -164,6 +164,8 @@ These elements must be translated, not left in English:
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/zh-Hans/`. Refer to the glossary. For labels not in the glossary, resolve the exact i18n key first (see the glossary's UI Labels section), then take the value at that key — never match by value across namespaces.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.
 
+Configured values the product returns as entered, such as a moderation preset reply, stay in English: they're settings the reader enters, not text the page narrates.
+
 ## App-Type Names: Workflow and Chatflow
 
 The **Workflow** and **Chatflow** app types stay in English, like Agent. Add 应用 when naming the app (「Workflow 应用」「Chatflow 应用」). Use 工作流 only for the lowercase collective sense: the workflow engine, workflow-backed runs, workflow nodes, and endpoints shared across app types. Never write 工作流 for the Workflow app type, or 对话流 for Chatflow. Exception: a bold quote of the type-selector UI label mirrors the product UI string (the zh UI labels the Workflow type 工作流), e.g. 选择 **工作流**.

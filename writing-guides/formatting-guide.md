@@ -17,7 +17,7 @@ description: A concise summary of what this page covers
 ---
 ```
 
-- `title` is **required**. `description` is required for new pages; existing pages should be updated over time.
+- `title` is **required**. `description` is required for new pages; an existing page without one gets one over time.
 - `description` should not end with a period.
 - `sidebarTitle` is optional. Add it when the title is too long for the sidebar, or when other pages in the same group follow a specific `sidebarTitle` convention.
 - Leave values unquoted by default. Wrap a value in double quotes only when it contains a colon followed by a space, for example `title: "Step 1: Create Knowledge Pipeline"`. Without the quotes, YAML will misread everything after the colon.
@@ -417,7 +417,7 @@ Use for showing multiple code variants of the same operation:
 
 - **Em dashes**: No spaces around em dashes. Write `word—word`, not `word — word`.
 - **En dashes**: No spaces around en dashes in ranges. Write `2–4`, not `2 – 4`.
-- **Use em dashes sparingly, but don't avoid them entirely.** A well-placed em dash can improve readability by setting off an aside or emphasizing a clause. The problem is overuse: stacked em dashes lose their effect and read as an AI tell. Apply judgment and keep them occasional across a page. Reach for a comma, parentheses, a colon, or a new sentence if possible, but not at the cost of readability and clarity.
+- **Choosing marks**: Choose each mark for what the sentence does: a colon announces what follows (a list, an example, the point), a semicolon joins two closely tied clauses that could each stand alone, an em dash sets off an aside or a turn, parentheses hold a side detail, and a period ends the thought. Then look across the page: when one mark keeps recurring, check whether some of those sentences want a different mark or none, and keep every mark that fits. Repeated structure keeps one mark, such as the colon after each bold label in a list.
 
 ---
 
@@ -448,5 +448,5 @@ Before submitting, verify:
 - [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
-- [ ] Em dashes used sparingly: none stacked in a single sentence, no pile-up across the page
+- [ ] Each punctuation mark fits its sentence, and no mark recurs where another would fit better
 - [ ] Dollar signs in prose are escaped as `\$` (not needed inside code)
