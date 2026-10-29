@@ -470,6 +470,7 @@
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース |
 | Access URL | 访问 URL | アクセス URL |
 
 ### Question Classifier Node Config
@@ -491,6 +492,7 @@
 | Disabled | 禁用 | 無効 |
 | Automatic | 自动 | 自動生成 |
 | Manual | 手动 | 手動設定 |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Retrieval Methods
 
@@ -513,6 +515,7 @@
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
+| Creators | 创建者 | 作成者 |
 | Multimodal | 多模态 | マルチモーダル |
 | TOP K | Top K | トップ K |
 
