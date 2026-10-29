@@ -2307,7 +2307,7 @@
             "type": "boolean"
           },
           "can_retry": {
-            "description": "当前能否重试该任务。`task_kind: document` 的任务可用 `id` 调用 [重试索引任务](/zh/api-reference/indexing-tasks/retry-indexing-task) 重试。该操作只接受 `failed` 或 `canceled` 的任务，但语义增强失败的 `completed` 索引任务，其 `can_retry` 也为 `true`。",
+            "description": "当前能否重试该任务。`task_kind: document` 的任务可用 `id` 调用 [重试索引任务](/zh/api-reference/indexing-tasks/retry-indexing-task) 重试。",
             "type": "boolean"
           },
           "completed_at": {
@@ -2422,7 +2422,7 @@
                 "$ref": "#/components/schemas/KnowledgeBaseSemanticEnrichment"
               }
             ],
-            "description": "索引任务内容的知识图谱构建状态。深度检索和研究检索会沿知识图谱进行。其他类型的任务为 `null`。",
+            "description": "索引任务发布后的知识图谱构建；其他类型的任务为 `null`。索引会在发布前建好知识图谱，因此不会安排这一步。任务运行期间 `state` 为 `not_scheduled`，任务结束后为 `disabled`。`nodes_completed` 始终为 `0`。",
             "nullable": true
           },
           "source_id": {
@@ -2436,7 +2436,7 @@
             "type": "string"
           },
           "state": {
-            "description": "`queued`、`running`、`completed`、`failed` 或 `canceled`，由任务自身的状态映射而来：\n\n- 索引任务一经发布即为 `completed`，即使其语义增强仍在运行。\n- 等待选择页面的抓取预览为 `completed`。\n\n要查看确切状态，用 [获取索引任务](/zh/api-reference/indexing-tasks/get-indexing-task) 读取索引任务，用 [获取数据源运行](/zh/api-reference/source-syncs-and-imports/get-source-run) 读取数据源运行。",
+            "description": "`queued`、`running`、`completed`、`failed` 或 `canceled`，由任务自身的状态映射而来。抓取预览在等待选择页面期间为 `completed`。\n\n要查看确切状态，用 [获取索引任务](/zh/api-reference/indexing-tasks/get-indexing-task) 读取索引任务，用 [获取数据源运行](/zh/api-reference/source-syncs-and-imports/get-source-run) 读取数据源运行。",
             "type": "string"
           },
           "task_kind": {
@@ -2952,7 +2952,7 @@
                 "$ref": "#/components/schemas/KnowledgeBaseSemanticEnrichment"
               }
             ],
-            "description": "已索引内容的知识图谱构建状态。深度检索和研究检索会沿知识图谱进行。未安排构建时，任务运行期间 `state` 为 `not_scheduled`，任务结束后为 `disabled`。",
+            "description": "修订版本发布后的知识图谱构建。索引会在发布前建好知识图谱，因此不会安排这一步。任务运行期间 `state` 为 `not_scheduled`，任务结束后为 `disabled`。`nodes_completed` 始终为 `0`。",
             "nullable": true
           },
           "stage": {
@@ -2960,11 +2960,11 @@
             "type": "string"
           },
           "state": {
-            "description": "运行状态：\n\n- `dispatch_pending`、`queued`：等待工作进程处理。\n- `retry_wait`：已安排在 `retry_at` 自动重试。\n- `running`：工作进程正在索引。\n- `succeeded`：修订版本已发布，可响应查询。`semantic_enrichment` 可能仍在运行。\n- `failed`：详见 `failure`。可用 [重试索引任务](/zh/api-reference/indexing-tasks/retry-indexing-task) 重新启动。\n- `canceled`。\n- `superseded`：较新的一次尝试取代了本次尝试。\n\n`succeeded`、`failed`、`canceled` 和 `superseded` 为终态。",
+            "description": "运行状态：\n\n- `dispatch_pending`、`queued`：等待工作进程处理。\n- `retry_wait`：已安排在 `retry_at` 自动重试。\n- `running`：工作进程正在索引。\n- `succeeded`：修订版本已发布，可响应查询。\n- `failed`：详见 `failure`。可用 [重试索引任务](/zh/api-reference/indexing-tasks/retry-indexing-task) 重新启动。\n- `canceled`。\n- `superseded`：较新的一次尝试取代了本次尝试。\n\n`succeeded`、`failed`、`canceled` 和 `superseded` 为终态。",
             "type": "string"
           },
           "updated_at": {
-            "description": "任务或其语义增强最后变更时间，ISO 8601 格式。",
+            "description": "任务最后变更时间，ISO 8601 格式。",
             "type": "string"
           }
         },
@@ -3656,7 +3656,7 @@
             "type": "integer"
           },
           "state": {
-            "description": "`not_scheduled`、`pending`、`running`、`ready`、`failed` 或 `disabled`。索引任务发布修订版本后，知识图谱构建仍可能处于 `pending` 或 `running`。",
+            "description": "`not_scheduled`、`pending`、`running`、`ready`、`failed` 或 `disabled`。",
             "type": "string"
           },
           "updated_at": {
@@ -20554,7 +20554,7 @@
     },
     "/knowledge-fs/spaces/{knowledge_base_id}/background-tasks": {
       "get": {
-        "description": "在同一个列表中汇总知识库的后台工作，或按 ID 查找指定任务：\n\n- 不传 `task_ids` 时：返回最新的索引任务、批量任务和数据源运行，合并后最新的在前。属于某个批量任务的索引任务会以该批量任务的形式出现，除非其内容已投入使用，但知识图谱仍在构建或构建失败。沿 `next_cursor` 可获取更早的任务。\n- 传入 `task_ids` 时：最多查找 100 个索引任务或批量任务 ID。未知 ID、该密钥无法查看的任务以及数据源运行 ID 会被排除。该列表不分页。\n\n如需在此跟踪 [重新索引文档](/zh/api-reference/documents-and-chunks/re-index-documents) 请求，查找其 `bulk_job_id`。\n\n各任务操作的适用场景，详见 [跟踪索引进度](/zh/api-reference/guides/knowledge-base#track-indexing)。",
+        "description": "在同一个列表中汇总知识库的后台工作，或按 ID 查找指定任务：\n\n- 不传 `task_ids` 时：返回最新的索引任务、批量任务和数据源运行，合并后最新的在前。属于批量任务的索引任务，会合并显示为该批量任务。沿 `next_cursor` 可获取更早的任务。\n- 传入 `task_ids` 时：最多查找 100 个索引任务或批量任务 ID。未知 ID、该密钥无法查看的任务以及数据源运行 ID 会被排除。该列表不分页。\n\n如需在此跟踪 [重新索引文档](/zh/api-reference/documents-and-chunks/re-index-documents) 请求，查找其 `bulk_job_id`。\n\n各任务操作的适用场景，详见 [跟踪索引进度](/zh/api-reference/guides/knowledge-base#track-indexing)。",
         "operationId": "listBackgroundTasks",
         "parameters": [
           {
@@ -20686,18 +20686,18 @@
                             "error_code": null,
                             "error_message": null,
                             "failure": null,
-                            "nodes_completed": 18,
-                            "nodes_total": 18,
-                            "provider_calls": 12,
-                            "provider_calls_maximum": 200,
-                            "state": "ready",
-                            "updated_at": "2026-10-20T08:17:30Z"
+                            "nodes_completed": 0,
+                            "nodes_total": null,
+                            "provider_calls": null,
+                            "provider_calls_maximum": null,
+                            "state": "disabled",
+                            "updated_at": null
                           },
                           "source_id": null,
                           "source_title": null,
                           "state": "completed",
                           "task_kind": "document",
-                          "updated_at": "2026-10-20T08:17:30Z"
+                          "updated_at": "2026-10-20T08:16:05Z"
                         }
                       ],
                       "next_cursor": "eyJ2ZXJzaW9uIjoxLCJzb3VyY2UiOnsiY3JlYXRlZEF0IjoiMjAyNi0xMC0yMFQxMDowMDowMC4wMDBaIiwiaWQiOiJlMWYyYTNiNC1jNWQ2LTRlN2YtOGE5Yi0wYzFkMmUzZjRhNWIifSwiYnVsayI6eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTIwVDA5OjMwOjAwLjAwMFoiLCJpZCI6ImM3ZDllMWYzLTVhN2ItNGM5ZC04ZTBmLTFhMmIzYzRkNWU2ZiJ9LCJkb2N1bWVudCI6eyJjcmVhdGVkQXQiOiIyMDI2LTEwLTIwVDA4OjE1OjQyLjAwMFoiLCJpZCI6ImM0ZThhMmY2LTFiM2QtNGU1Zi04YTliLTBjMWQyZTNmNGE1YiJ9fQ"
@@ -26729,18 +26729,18 @@
                               "error_code": null,
                               "error_message": null,
                               "failure": null,
-                              "nodes_completed": 18,
-                              "nodes_total": 18,
-                              "provider_calls": 12,
-                              "provider_calls_maximum": 200,
-                              "state": "ready",
-                              "updated_at": "2026-10-20T08:17:30Z"
+                              "nodes_completed": 0,
+                              "nodes_total": null,
+                              "provider_calls": null,
+                              "provider_calls_maximum": null,
+                              "state": "disabled",
+                              "updated_at": null
                             },
                             "source_id": null,
                             "source_title": null,
                             "state": "completed",
                             "task_kind": "document",
-                            "updated_at": "2026-10-20T08:17:30Z"
+                            "updated_at": "2026-10-20T08:16:05Z"
                           },
                           "provider_item_id": null,
                           "row_version": 4,
@@ -27090,18 +27090,18 @@
                           "error_code": null,
                           "error_message": null,
                           "failure": null,
-                          "nodes_completed": 18,
-                          "nodes_total": 18,
-                          "provider_calls": 12,
-                          "provider_calls_maximum": 200,
-                          "state": "ready",
-                          "updated_at": "2026-10-20T08:17:30Z"
+                          "nodes_completed": 0,
+                          "nodes_total": null,
+                          "provider_calls": null,
+                          "provider_calls_maximum": null,
+                          "state": "disabled",
+                          "updated_at": null
                         },
                         "source_id": null,
                         "source_title": null,
                         "state": "completed",
                         "task_kind": "document",
-                        "updated_at": "2026-10-20T08:17:30Z"
+                        "updated_at": "2026-10-20T08:16:05Z"
                       },
                       "provider_item_id": null,
                       "row_version": 4,
@@ -27450,16 +27450,16 @@
                             "error_code": null,
                             "error_message": null,
                             "failure": null,
-                            "nodes_completed": 18,
-                            "nodes_total": 18,
-                            "provider_calls": 12,
-                            "provider_calls_maximum": 200,
-                            "state": "ready",
-                            "updated_at": "2026-10-20T08:17:30Z"
+                            "nodes_completed": 0,
+                            "nodes_total": null,
+                            "provider_calls": null,
+                            "provider_calls_maximum": null,
+                            "state": "disabled",
+                            "updated_at": null
                           },
                           "stage": "published",
                           "state": "succeeded",
-                          "updated_at": "2026-10-20T08:17:30Z"
+                          "updated_at": "2026-10-20T08:16:05Z"
                         }
                       ],
                       "next_cursor": null
@@ -27700,7 +27700,7 @@
     },
     "/knowledge-fs/spaces/{knowledge_base_id}/logical-documents/{document_id}/processing-tasks/{task_id}": {
       "get": {
-        "description": "返回文档的一个索引任务，包括其进度和知识图谱状态。轮询直到 `state` 为 `succeeded`、`failed`、`canceled` 或 `superseded`。\n\n对于由 [重新索引文档](/zh/api-reference/documents-and-chunks/re-index-documents) 启动的任务，改用 `compilation_job.id` 轮询 [获取索引任务](/zh/api-reference/indexing-tasks/get-indexing-task)。\n\n各任务操作的适用场景，详见 [跟踪索引进度](/zh/api-reference/guides/knowledge-base#track-indexing)。",
+        "description": "返回文档的一个索引任务及其进度。轮询直到 `state` 为 `succeeded`、`failed`、`canceled` 或 `superseded`。\n\n由 [重新索引文档](/zh/api-reference/documents-and-chunks/re-index-documents) 启动的任务，要改用 `compilation_job.id` 轮询 [获取索引任务](/zh/api-reference/indexing-tasks/get-indexing-task)。\n\n各任务操作的适用场景，详见 [跟踪索引进度](/zh/api-reference/guides/knowledge-base#track-indexing)。",
         "operationId": "getDocumentIndexingTask",
         "parameters": [
           {
