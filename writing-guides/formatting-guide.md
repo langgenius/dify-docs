@@ -124,7 +124,7 @@ Do not use backticks for product names, UI labels, or general English words.
 
 ### Stable Anchors
 
-Anchors are auto-generated from heading text, so they change when a heading is reworded or translated. A heading or tab that is deep-linked from the Dify product UI, or linked from another documentation page, therefore carries an explicit anchor ID — the same English kebab-case ID in all three languages. Headings referenced nowhere get no explicit ID: an ID's presence signals that something depends on the anchor.
+Anchors are auto-generated from heading text, so they change when a heading is reworded or translated. A heading or tab that the Dify product UI deep-links to therefore carries an explicit anchor ID, the same English kebab-case ID in all three languages, because the internal link check cannot see links in the product code. A link between documentation pages needs no new ID: it can use the auto-generated anchor, since the link check fails the pull request when a heading change breaks it. An explicit ID already in place stays, and links to that heading use the ID.
 
 | Position | Syntax |
 |:---------|:-------|
@@ -441,7 +441,7 @@ Before submitting, verify:
 - [ ] Lists use dashes (`-`), not asterisks (`*`)
 - [ ] Code blocks have language tags
 - [ ] Internal links use absolute paths (`/en/...`)
-- [ ] Deep-linked or cross-referenced headings carry stable anchor IDs; links to them use the ID
+- [ ] Headings the product UI deep-links to carry stable anchor IDs; links to a heading with an ID use the ID
 - [ ] Images use `<Frame>` wrapping markdown `![]()`; alt text is in title case and under 125 characters
 - [ ] Image files are stored under the correct `images/<section>/` subfolder
 - [ ] Image filenames use kebab-case, are descriptive, and contain no default tool names
