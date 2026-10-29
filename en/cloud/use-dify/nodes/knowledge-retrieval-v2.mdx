@@ -1,0 +1,104 @@
+---
+title: Agent Knowledge Retrieval
+description: Search Agent Knowledge Bases and pass relevant content to later nodes
+---
+
+<Info>
+The Agent Knowledge Retrieval node is in beta.
+</Info>
+
+Use **Agent Knowledge Retrieval** to find relevant content in [agent knowledge bases](/en/cloud/use-dify/knowledge-base/overview) for later nodes to use—for example, as context for an LLM's answer.
+
+<Info>
+For [classic knowledge bases](/en/cloud/use-dify/knowledge/readme), use the [Classic Knowledge Retrieval node](/en/cloud/use-dify/nodes/knowledge-retrieval) instead.
+</Info>
+
+## Set the Query
+
+Search with text, images, or both:
+
+- **Query text**: Select a text variable. Text can contain up to 16,000 characters.
+
+    - In a Chatflow, use the built-in `userinput.query` variable for the current user message.
+
+    - In a Workflow, use a **User Input** variable or text prepared by an earlier node.
+
+- **Query Images**: Select a variable containing one image or an array of images. A query can include up to four GIF, JPEG, PNG, or WebP images, up to 10 MB each and 32 MB total.
+
+    Images over these limits, or a file that isn't an image, make the node fail. In a Chatflow, set [File Upload](/en/cloud/use-dify/build/additional-features#file-upload) to accept images only, up to four per message.
+
+    For supported model combinations, see [Multimodal Retrieval](/en/cloud/use-dify/knowledge-base/multimodal-retrieval).
+
+    <Note>
+    For image-only searches, make sure every selected knowledge base uses a vision-capable embedding or reasoning model. Otherwise, the node fails and returns no results.
+    </Note>
+
+## Select Agent Knowledge Bases
+
+Select up to 10 knowledge bases. For each query, the node searches all selected knowledge bases and combines the results.
+
+If you cannot find a knowledge base in the picker, ask whoever can manage its permissions to grant you access.
+
+<Note>
+If retrieval fails for any selected knowledge base, the node returns no partial results and the current run stops.
+</Note>
+
+## Adjust Retrieval
+
+Keep each knowledge base's configured [retrieval depth](/en/cloud/use-dify/knowledge-base/retrieval-settings#retrieval-depth), or apply the same depth to all knowledge bases in this node. 
+
+<Info>
+    Unlike in retrieval tests, Research returns only matching chunks without generating an answer.
+</Info>
+
+The rerank model, Top K, and score threshold apply to the combined results from all selected knowledge bases. For image-only searches, the node does not rerank the results. 
+
+See [Retrieval Settings](/en/cloud/use-dify/knowledge-base/retrieval-settings) for details on each setting.
+
+## Limit the Search to Specific Documents {#filter-by-metadata}
+
+Retrieval normally searches every document in a knowledge base. With metadata, you can narrow a search to only the documents that match a condition. A typical case is one knowledge base that serves several apps, each of which should answer from only part of it.
+
+Say an internal knowledge base of company policies holds regional guidelines for different countries, and each region has an assistant app for its employees built on it. Without a filter, the EU assistant can answer a parental-leave question from the US guideline.
+
+To prevent this, label each document with facts about it, then filter searches by those labels:
+
+1. On the knowledge base's **Document** page, click **Meta Data** and add a field for each fact you'll filter on. For the policy knowledge base, that's one `region` field of type string.
+
+    Pick the type with the filter in mind, since it can't be changed later: number for values you'll compare, time for dates you'll filter before or after.
+
+2. Open each document, click **Start labeling**, pick the field, and enter its value. The EU guidelines get `eu`, the US ones `us`.
+
+    Labels survive source syncs that update a document's content.
+
+3. In this node, set **Metadata Filtering** to **Manual** and add the condition: *`region` is `eu`* for the EU assistant, whose answers now come from EU guidelines alone.
+
+    You can also choose **Automatic** and let a model work out the conditions from each question. Searches run unfiltered when the LLM can't determine one, so use **Manual** wherever the filter must hold.
+
+    If the node searches several knowledge bases at once, give shared fields the same name and type in each. Filters can only use fields that exist in all of them.
+
+## Generate an Answer from Retrieved Content
+
+In a later [LLM node](/en/cloud/use-dify/nodes/llm) on the same execution path:
+
+<Steps>
+    <Step title="Pass the retrieved content">
+        Select this node's `result` variable in **Context**, then insert the **Context** variable into the prompt.
+    </Step>
+    <Step title="Pass the query">
+        Insert the same query variable or variables into the LLM node's **User** message. For image queries, choose a vision-capable model.
+    </Step>
+    <Step title="Guide the answer">
+        In the prompt, instruct the LLM to answer the query using the retrieved content.
+    </Step>
+</Steps>
+
+<Info>
+Images found in the knowledge base reach later nodes only as text: their caption, alt text, or the text read from them. The image files themselves aren't passed on.
+</Info>
+
+## Handle No Matches
+
+The node still succeeds when no content matches, returning an empty `result`. 
+
+If the LLM should not answer without retrieved content, add an [IF/ELSE node](/en/cloud/use-dify/nodes/ifelse) after this node and before the LLM, then check whether `result` is empty.

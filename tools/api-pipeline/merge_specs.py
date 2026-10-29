@@ -62,10 +62,12 @@ def load_nav_labels() -> dict:
 def nav_groups_for(lang: str, labels: dict) -> list:
     """The API menu's three groups: Guides, App APIs, Knowledge API.
 
-    Guides lists the hand-maintained overview pages (guides_order). The two
-    reference tiers group the merged spec's operations into tag subgroups,
-    ordered and labeled per nav_labels.json, with per-tag op ordering
-    overrides from op_order.
+    Guides lists the hand-maintained overview pages (guides_layout); an
+    entry in an overview group's apps can be a nested group with its own
+    root page. The two reference tiers group the merged spec's operations
+    into tag subgroups, ordered and labeled per nav_labels.json, with per-tag
+    op ordering overrides from op_order. A tier with subgroups nests its tag
+    subgroups one level deeper (the knowledge APIs: agent and classic).
     """
     memberships = load_memberships()
     with open(REPO / lang / "api-reference" / "openapi_service.json", encoding="utf-8") as _fh:
@@ -99,17 +101,40 @@ def nav_groups_for(lang: str, labels: dict) -> list:
         if "page" in entry:
             guides_pages.append(f"{lang}/{entry['page']}")
         else:
-            sub = {"group": entry["labels"][lang],
-                   "pages": [f"{lang}/{memberships['pages'][k]['page']}" for k in entry["apps"]]}
+            def page_of(app):
+                cfg = memberships["pages"].get(app)
+                return f"{lang}/{cfg['page'] if cfg else app}"
+
+            pages = []
+            for app in entry["apps"]:
+                if isinstance(app, dict):
+                    pages.append({"group": app["labels"][lang], "root": f"{lang}/{app['root']}",
+                                  "pages": [page_of(p) for p in app["pages"]]})
+                else:
+                    pages.append(page_of(app))
+            sub = {"group": entry["labels"][lang], "pages": pages}
             if entry.get("expanded"):
                 sub["expanded"] = True
             guides_pages.append(sub)
     guides = {"group": labels["guides_group"][lang], "pages": guides_pages}
 
+    def tag_groups(tag_order):
+        return [{"group": tag_map[t], "openapi": f"{lang}/api-reference/openapi_service.json",
+                 "pages": ops_by_en_tag[t]} for t in tag_order if t in ops_by_en_tag]
+
     def tier(cfg):
-        return {"group": cfg["labels"][lang], "pages": [
-            {"group": tag_map[t], "openapi": f"{lang}/api-reference/openapi_service.json",
-             "pages": ops_by_en_tag[t]} for t in cfg["tag_order_en"] if t in ops_by_en_tag]}
+        if "subgroups" not in cfg:
+            return {"group": cfg["labels"][lang], "pages": tag_groups(cfg["tag_order_en"])}
+        subs = []
+        for sub in cfg["subgroups"]:
+            pages = tag_groups(sub["tag_order_en"])
+            if not pages:
+                continue
+            group = {"group": sub["labels"][lang], "pages": pages}
+            if "tag" in sub:
+                group["tag"] = sub["tag"]
+            subs.append(group)
+        return {"group": cfg["labels"][lang], "pages": subs}
 
     return [guides, tier(labels["reference"]["app_apis"]), tier(labels["reference"]["knowledge_api"])]
 
