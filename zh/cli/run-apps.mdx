@@ -112,17 +112,49 @@ difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -
 
 ## 停止运行
 
-要想之后能停止某次运行，就得用 `--stream` 启动它。停止时，把它第一个事件中的 `task_id` 传给 `difyctl stop run`：
+要停止 Workflow 或 Chatflow 应用的运行，把它的运行 ID 传给 `difyctl stop run`。仍在进行的运行，以及在人工介入表单处暂停的运行，都可这样停止。暂停的运行会立即停止，表单也不再接受回答。
 
 ```bash
-difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
 ```
 
-Workflow 或 Chatflow 应用的运行停止后，它的流以 `workflow_finished` 事件结束，事件中的 `data.status` 为 `stopped`。流式命令以退出码 1 退出。在脚本中，要根据 `data.status` 判断运行是否已停止，不要看退出码。
+<Info>
+按下 Ctrl+C 只会停止 `difyctl`，服务器上的运行不会停止。要连运行一起停止，把 `incomplete` 结果中的 `run_id` 传给 `stop run`。
+</Info>
+
+运行 ID 可从以下任一处取得：
+
+- 从运行结果中取 `run_id`。
+- 从 `--stream` 运行的任一事件中取 `workflow_run_id`。
+- 如果运行是用其他方式启动的，从应用正在进行的运行列表中查找：
+
+  ```bash
+  difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status running
+  ```
+
+  要找的是草稿的测试运行时，去掉 `--triggered-from app-run`。
+
+要确认运行已停止，就看启动这次运行的命令如何结束。该命令以退出码 1 退出，与运行失败时相同，所以在脚本中要看输出，不要看退出码。用了 `--stream` 时，最后一个事件是 `workflow_finished`，其中的 `data.status` 为 `stopped`。
+
+没有用 `--stream` 时，结果和 [运行失败](/zh/cli/reference/results-errors-and-exit-codes#判断运行如何结束) 时一模一样：`status` 为 `failed`。要确认运行是停止了而不是失败了，就把运行 ID 传给 `describe run`。已停止的运行，`status` 为 `stopped`。不再跟踪的运行（例如按 Ctrl+C 退出跟踪的运行）也可这样查看。
+
+聊天助手、旧版 Agent 应用或文本生成应用的回复没有运行 ID。要想之后能停止这类回复，就得用 `--stream` 启动它。停止时，把它第一个事件中的 `task_id` 传给 `difyctl stop task`：
+
+```bash
+difyctl stop task --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
 
 <Note>
-传给 `stop run` 的应是 `task_id`，而不是每个事件中都有的 `workflow_run_id`。传错 ID 时，命令仍会打印 `{"result": "success"}`，但运行会继续进行。
+任务 ID 不存在，或回复已经结束时，`stop task` 同样会打印 `{"result": "success"}`。所以要从待停止回复的第一个事件中取 `task_id`，并趁流还没结束时运行 `stop task`。
+
+回复本身也不会标明自己已停止。流和正常结束的回复一样，以 `message_end` 结束。回答中只有停止前已收到的内容。如果脚本要用到回答，就让它记下自己调用过 `stop task`，否则分不清回答是截断的还是完整的。
 </Note>
+
+停止失败时，终端中的错误以下列某个错误码开头。要在脚本中根据错误码走不同分支，详见 [解读错误信息](/zh/cli/reference/results-errors-and-exit-codes#解读错误信息)。
+
+- `run_not_found`：应用中没有这个 ID 的运行。检查传入的是运行 ID 而不是 `task_id`，并确认 `--app-id` 是该运行所属的应用。
+- `run_not_stoppable`：运行已经结束。如果运行在服务器升级之前就已启动，即使它仍在进行，也可能遇到这个错误，此时 `difyctl` 无法停止它。
+- `app_mode_mismatch`：命令与应用类型不符。Workflow 或 Chatflow 应用用 `stop run`，其他类型的应用用 `stop task`。
 
 ## 填写人工介入表单
 
@@ -134,7 +166,7 @@ Workflow 或 Chatflow 应用的运行停止后，它的流以 `workflow_finished
 
 也可先看看表单有哪些字段再填写：从任一提示中取出 `form_token`，用 `describe run form` 查看，再用 `submit run form` 提交回答。
 
-无论用哪种方式，之后都用 `get run event` 跟踪恢复后的运行。别被标志名误导：`--task-id` 要传的是暂停时返回结果中的 `run_id`。一定要带上 `--include-state-snapshot`，否则该命令可能长达 5 分钟没有任何输出。
+无论用哪种方式，之后都用 `get run event` 跟踪恢复后的运行，把暂停时返回结果中的 `run_id` 传给 `--run-id`。一定要带上 `--include-state-snapshot`，否则该命令可能长达 5 分钟没有任何输出。
 
 ```bash
 # 查看表单字段
@@ -144,10 +176,10 @@ difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-t
 difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "没问题"}'
 
 # 跟踪恢复后的运行
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
 
 # 如果运行之后还可能在其他表单处暂停，持续跟踪
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
 ```
 
 ## 排查运行失败的原因
