@@ -1221,15 +1221,16 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 应用运行的追踪数据由后台任务投递给所配置的 LLMOps 供应商（Langfuse、LangSmith、Arize/Phoenix 等）。使用 Docker Compose 部署时，在 `docker/envs/core-services/shared.env` 中设置这些变量。
 
+自 1.19.0 起，`OPS_TRACE_UNIFIED_ENABLED`、`OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES`、`OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` 和 `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` 已不再生效，可从 env 文件中删除。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPS_TRACE_UNIFIED_ENABLED` | `false` | 设为 `true` 后，LangSmith 和 Arize/Phoenix 的追踪数据采用统一结构，记录工作流运行、节点及其父子关系。默认值 `false` 保留各供应商原有的追踪实现。其他供应商不受影响。<br/><br/>各应用仍需单独开启 LLMOps 并配置供应商。 |
+| `OPS_TRACE_QUEUE` | `ops_trace_v2` | 追踪相关任务所用的 Celery 队列，包括追踪投递及其重试、Agent 追踪导出和每日追踪清理。修改此值时，API、Worker 和 Celery Beat 需设为相同的值。<br/><br/>Docker Compose 自带的 Worker 会自动监听该队列。如果你自行设置了 `CELERY_QUEUES` 或 `CELERY_WORKER_QUEUES`，或用自己的 `-Q` 列表启动 Worker，需将该队列加入其中。滚动升级时，按 Dify 仓库中的 [Ops 追踪滚动升级](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) 说明操作。<br/><br/>只能包含字母、数字、`_`、`.` 和 `-`。 |
+| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | 追踪供应商暂时不可用时，Dify 发送一条追踪数据最多尝试的次数，首次发送也计算在内。供应商拒收的追踪数据不会重试。不能小于 1。<br/><br/>两次尝试的间隔从 10 秒开始，每次翻倍，最长 10 分钟。按默认值，最后一次尝试约在首次发送 5 分钟后进行；如果供应商故障持续更久，可调高此值。 |
+| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Celery Beat 每天 03:30 运行一次清理，删除投递中断后遗留在存储中、且已超过 2 天的追踪数据。时间以 `LOG_TZ` 为准（未设置时为 UTC）。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | 设为 `true` 后，Agent 应用以及含新 Agent 节点的 Workflow、Chatflow 应用，其追踪数据会包含 Agent 的模型调用和工具调用。应用调用的 [工作流工具](/zh/self-host/use-dify/workspace/tools#workflow) 内部的 Agent 不在其中。还需将 `DIFY_AGENT_APPLICATION_TRACING_ENABLED` 设为 `true`。<br/><br/>为 `false` 时，Agent、Workflow 和 Chatflow 应用的追踪设置中会提示 Agent 追踪不可用。各应用仍需单独开启追踪、配置供应商，并保持 **采集 Agent 内部过程** 开启（默认开启）。 |
 | `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `shared.env`：Agent 后端不读取这个文件。<br/><br/>开启后，如果 Agent 运行已由所在应用追踪，就会发往该应用的追踪供应商，不再进入 [轨迹导出](#agent-轨迹导出)。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | 仅在 `OPS_AGENT_TRACE_ENABLED` 为 `true` 时生效。每 30 秒运行一次后台任务，重新发送仍在等待投递的 Agent 追踪数据，并在保留期（默认 7 天）结束后删除 Dify 自己存储的 Agent 追踪数据。已经发送到追踪供应商的数据不受影响。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
-| `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | `3900` | 父工作流追踪上下文的保留时长（秒），供后到的嵌套子追踪挂接。<br/><br/>当 `OPS_TRACE_UNIFIED_ENABLED` 为 `true` 时，取值必须不低于重试窗口（次数 × 间隔）。低于此值会导致 Dify 无法加载配置。 |
 
 #### 索引
 

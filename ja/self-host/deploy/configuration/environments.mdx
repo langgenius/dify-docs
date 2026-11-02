@@ -1221,15 +1221,16 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 アプリ実行のトレースは、バックグラウンドタスクが LLMOps プロバイダーへ配信します。対象のプロバイダーは Langfuse、LangSmith、Arize/Phoenix などです。Docker Compose でデプロイする場合は、`docker/envs/core-services/shared.env` にこれらの変数を設定します。
 
+1.19.0 以降、`OPS_TRACE_UNIFIED_ENABLED`、`OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES`、`OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`、`OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` は設定しても効果がありません。env ファイルから削除してかまいません。
+
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `OPS_TRACE_UNIFIED_ENABLED` | `false` | `true` にすると、LangSmith と Arize/Phoenix のトレースに共通の構造を使います。ワークフロー実行、ノード、それらの親子関係を記録します。デフォルトの `false` では、各プロバイダーの従来のトレース実装を使います。他のプロバイダーには影響しません。<br/><br/>各アプリで LLMOps を有効にし、プロバイダーを設定する必要があります。 |
+| `OPS_TRACE_QUEUE` | `ops_trace_v2` | トレース配信とそのリトライ、Agent トレースのエクスポート、毎日のトレースクリーンアップを処理する Celery キュー。変更する場合は、API、Worker、Celery Beat に同じ値を設定してください。<br/><br/>Docker Compose に同梱の Worker は、このキューを自動でリッスンします。`CELERY_QUEUES` や `CELERY_WORKER_QUEUES` を独自に設定している場合や、独自の `-Q` リストで Worker を起動する場合は、このキューを含めてください。ローリングアップグレードの手順は、Dify リポジトリの [Ops トレースのローリングアップグレード](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) を参照してください。<br/><br/>使用できる文字は英字、数字、`_`、`.`、`-` のみです。 |
+| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | トレースプロバイダーが一時的に利用できない間に、Dify がトレースの送信を試みる最大回数（初回を含む）。プロバイダーが拒否したトレースはリトライしません。1 以上を指定してください。<br/><br/>試行の間隔は 10 秒から始まって毎回 2 倍になり、最大 10 分です。デフォルトでは、最後の試行は初回の約 5 分後です。プロバイダーの障害がそれより長く続く場合は、値を引き上げてください。 |
+| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Celery Beat が毎日 03:30 にクリーンアップを実行します。配信の中断でストレージに残ったトレースデータのうち、2 日を超えたものを削除します。時刻は `LOG_TZ` に従います（未設定の場合は UTC）。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | `true` にすると、Agent のモデル呼び出しとツール呼び出しがトレースに含まれます。対象は Agent アプリと、新しい Agent ノードを含む Workflow アプリおよび Chatflow アプリです。アプリが呼び出す [ワークフローツール](/ja/self-host/use-dify/workspace/tools#workflow) 内の Agent は含まれません。あわせて `DIFY_AGENT_APPLICATION_TRACING_ENABLED` も `true` にしてください。<br/><br/>`false` の間は、Agent、Workflow、Chatflow アプリのトレース設定に、Agent トレースを利用できない旨が表示されます。各アプリでトレースを有効にしてプロバイダーを設定し、**Agent の内部処理を収集** をオンのままにしておく必要もあります（デフォルトはオン）。 |
 | `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | `OPS_AGENT_TRACE_ENABLED` と対になる Agent バックエンド側の設定です。Agent をトレースするには両方を `true` にしてください。<br/><br/>`docker/envs/core-services/dify-agent.env` で設定します。Agent バックエンドは `shared.env` を読み込まないため、そちらに設定しても反映されません。<br/><br/>有効にしている間、アプリでトレースされる Agent 実行は、[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) ではなく、そのアプリのトレースプロバイダーに送られます。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | `OPS_AGENT_TRACE_ENABLED` が `true` の場合のみ有効です。30 秒ごとにバックグラウンドジョブを実行し、配信待ちの Agent トレースを再送します。保持期間（デフォルトで 7 日）を過ぎると、Dify が保存している Agent トレースデータも削除します。トレースプロバイダーにすでに配信されたデータは削除されません。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/><br/>デフォルトのリトライ時間（回数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）は、1 時間のワークフロー上限とエクスポート猶予期間を上回るよう設定されています。<br/><br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 65 分）です。<br/><br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
-| `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | `3900` | 親ワークフローのトレースコンテキストを保持する時間（秒）。保持中は、後から届くネストした子トレースが親に接続できます。<br/><br/>`OPS_TRACE_UNIFIED_ENABLED` が `true` の場合、リトライ時間（回数 × 間隔）以上に設定してください。これより小さいと、Dify は設定を読み込めません。 |
 
 #### インデックス作成
 
