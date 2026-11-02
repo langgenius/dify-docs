@@ -11,6 +11,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import html
 import http.client
 import json
 import re
@@ -29,7 +30,9 @@ DOCS_JSON = REPO_ROOT / "docs.json"
 MD_LINK_RE = re.compile(r"\[([^\]]*)\]\(([^)]+)\)")
 HTML_HREF_RE = re.compile(r'href="([^"]+)"')
 HTML_SRC_RE = re.compile(r'src="([^"]+)"')
-HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
+# Leading whitespace is allowed: headings indented inside <Tab> and other
+# components get an id on the rendered page like any other heading.
+HEADING_RE = re.compile(r"^[ \t]*(#{1,6})\s+(.+?)\s*$", re.MULTILINE)
 CUSTOM_ID_RE = re.compile(r"\{#([\w-]+)\}")
 HTML_ID_RE = re.compile(r"""<a\s+[^>]*\bid=["']([\w-]+)["']""", re.IGNORECASE)
 CODE_FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
@@ -150,16 +153,24 @@ def resolve_internal_link(url: str, source_file: Path) -> Path | None:
     return None
 
 
-def slugify(text: str) -> str:
+def slugify(text: str, keep: str = "&/") -> str:
     """Convert heading text to a Mintlify-style anchor slug.
 
-    Lowercase, strip ASCII punctuation and markdown markers, turn
-    whitespace into hyphens, collapse and trim. Non-ASCII characters (CJK
-    text and full-width punctuation like "：") are kept, matching Mintlify,
-    so an English heading's ASCII ":" is dropped while a zh/ja heading's
-    "：" is preserved.
+    Lowercase, strip ASCII punctuation except "&" and "/" and markdown
+    markers, turn whitespace into hyphens, collapse and trim. Non-ASCII
+    characters (CJK text and full-width punctuation like "：") are kept,
+    matching Mintlify, so an English heading's ASCII ":" is dropped while a
+    zh/ja heading's "：" is preserved. Mintlify keeps "&" and "/" too:
+    "OTLP / OpenTelemetry Configuration" renders as
+    `id="otlp-/-opentelemetry-configuration"` and "Token & Invitation" as
+    `id="token-&-invitation"`. A Tab title passes `keep=""`: the live site
+    percent-encodes those characters in Tab ids, which the old stripping
+    approximates better than keeping them.
     """
-    s = text.lower().strip()
+    s = html.unescape(text).lower().strip()
+    # A link in a heading contributes only its text: "1. [Register/Login](url)
+    # to Arize" renders as `id="1-register/login-to-arize"`.
+    s = MD_LINK_RE.sub(r"\1", s)
     # Strip JSX/HTML tags but keep their inner text. Mintlify renders a
     # heading's components and includes their text in the anchor, e.g.
     # `## Switch Your Workspace <Badge color="blue">Cloud</Badge>` ->
@@ -172,15 +183,25 @@ def slugify(text: str) -> str:
     s = re.sub(r"[`*]", "", s)
     # Strip Pandoc/kramdown custom-id syntax if embedded in heading text
     s = CUSTOM_ID_RE.sub("", s)
-    # Strip ASCII punctuation only; the negated class keeps every non-ASCII
-    # char (CJK text and full-width punctuation like "："), which Mintlify
-    # preserves in the slug.
-    s = re.sub(r"[^\w\s\u0080-\U0010ffff-]", "", s, flags=re.UNICODE)
+    # Strip ASCII punctuation except the kept characters; the negated class
+    # keeps every non-ASCII char (CJK text and full-width punctuation like
+    # "："), which Mintlify preserves in the slug.
+    s = re.sub(rf"[^\w\s\u0080-\U0010ffff{re.escape(keep)}-]", "", s, flags=re.UNICODE)
     # Whitespace → hyphen
     s = re.sub(r"\s+", "-", s)
     # Collapse hyphens, trim
     s = re.sub(r"-+", "-", s).strip("-")
     return s
+
+
+def accordion_slug(title: str) -> str:
+    """The id Mintlify gives an Accordion from its title: "&" becomes "and",
+    and each run of other characters, non-ASCII included, becomes one hyphen.
+    `<Accordion title="OceanBase / seekdb">` renders as `id="oceanbase-seekdb"`,
+    and "Form & Workflow Apps" as `id="form-and-workflow-apps"`.
+    """
+    s = html.unescape(title).lower().replace("&", " and ")
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
 
 
 def extract_anchors(file_path: Path) -> set[str]:
@@ -224,7 +245,8 @@ def extract_anchors(file_path: Path) -> set[str]:
         anchors.add(match.group(1))
 
     # Mintlify Tab/Accordion components also produce anchors: an explicit
-    # id attribute wins; otherwise the title text is slugified.
+    # id attribute wins; otherwise an Accordion's title goes through
+    # accordion_slug and a Tab's through slugify with no kept characters.
     for match in TAB_COMPONENT_RE.finditer(content):
         tag = match.group(0)
         id_attr = ATTR_ID_RE.search(tag)
@@ -233,7 +255,9 @@ def extract_anchors(file_path: Path) -> set[str]:
             continue
         title_attr = ATTR_TITLE_RE.search(tag)
         if title_attr:
-            slug = slugify(title_attr.group(1))
+            title = title_attr.group(1)
+            is_accordion = tag[1:].lower().startswith("accordion")
+            slug = accordion_slug(title) if is_accordion else slugify(title, keep="")
             if slug:
                 anchors.add(slug)
 

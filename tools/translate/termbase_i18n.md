@@ -15,6 +15,7 @@
 | workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
+| coding agent | 编码 Agent | コーディングエージェント |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
@@ -89,6 +90,9 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | knowledge base | 知识库 | ナレッジベース |
+| agent knowledge base | Agent 知识库 | Agent ナレッジベース |
+| classic knowledge base | 经典知识库 | 従来型ナレッジベース |
+| golden question | 参考问题 | 評価用の基準質問 |
 | knowledge pipeline | 知识流水线 | ナレッジパイプライン |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
@@ -96,7 +100,7 @@
 | retrieval | 检索 | 検索 |
 | retrieval mode | 检索模式 | 検索モード |
 | indexing | 索引 | インデックス |
-| index method | 索引方法 | インデックス方法 |
+| index method | 索引方式 | インデックス方法 |
 | embedding | 嵌入 | 埋め込み |
 | metadata | 元数据 | メタデータ |
 | delimiter | 分隔符 | デリミタ |
@@ -184,7 +188,7 @@
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
 | Web apps | WEB APPS | Webアプリ |
-| Integrations | 集成 | インテグレーション |
+| Integrations | 集成 | 連携 |
 | Tools | 工具 | ツール |
 | Skills | Skills | Skills |
 
@@ -229,6 +233,8 @@
 |:--------|:--------|:---------|
 | Documents | 文档 | ドキュメント |
 | API Access | 访问 API | API アクセス |
+| API Access | API 访问 | API アクセス |
+| API access | API 访问 | API アクセス |
 | Retrieval Testing | 召回测试 | 検索テスト |
 | Settings | 设置 | 設定 |
 | Pipeline | 流水线 | パイプライン |
@@ -299,6 +305,8 @@
 | App package | 应用包 | アプリパッケージ |
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
+| Details | 详情 | 詳細 |
+| Try it | 试用 | お試し |
 | Tracing | 追踪 | 追跡 |
 | Agent data capture | Agent 数据采集 | Agent データ収集 |
 | Capture content | 采集内容 | 内容を収集 |
@@ -331,6 +339,7 @@
 | User Input | 用户输入 | ユーザー入力 |
 | LLM | LLM | LLM |
 | Knowledge Retrieval | 知识检索 | 知識検索 |
+| Agent Knowledge Retrieval | Agent 知识检索 | Agent ナレッジ検索 |
 | IF/ELSE | 条件分支 | IF/ELSE |
 | Code | 代码执行 | コード実行 |
 | Template | 模板转换 | テンプレート |
@@ -462,6 +471,7 @@
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース |
 | Access URL | 访问 URL | アクセス URL |
 
 ### Question Classifier Node Config
@@ -478,10 +488,12 @@
 |:--------|:--------|:---------|
 | Query Text | 查询文本 | クエリテキスト |
 | Query Images | 查询图片 | 画像を検索 |
+| Query text | 查询文本 | クエリテキスト |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 | Disabled | 禁用 | 無効 |
 | Automatic | 自动 | 自動生成 |
 | Manual | 手动 | 手動設定 |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Retrieval Methods
 
@@ -504,7 +516,9 @@
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
+| Creators | 创建者 | 作成者 |
 | Multimodal | 多模态 | マルチモーダル |
+| TOP K | Top K | トップ K |
 
 ### Chunking Mode Labels
 
@@ -546,6 +560,15 @@
 | Queuing | 排队中 | キューイング中 |
 | Paused | 已暂停 | 一時停止中 |
 | Error | 错误 | エラー |
+
+### Golden Question Status Labels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Active | 有效 | 有効 |
+| Draft | 草稿 | 下書き |
+| Paused | 已暂停 | 一時停止 |
+| Stale | 已过时 | 要更新 |
 
 ### Document Embedding Modes
 
