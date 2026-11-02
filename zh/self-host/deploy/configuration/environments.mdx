@@ -5,22 +5,30 @@ description: Dify 自部署使用的所有环境变量参考
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/configuration/environments)。
 
-Dify 使用默认配置即可开箱即用。如需自定义部署，编辑相关文件中的环境变量：
+使用 Docker Compose 2.35.0 或更高版本，并在相应的本地文件中修改所需设置：
 
-- **必要的启动值** 位于 `docker/.env` 文件中（部署时从 `docker/.env.example` 复制创建）。直接编辑即可。
+- **`docker/.env`** 保存启动值、共享凭据，以及 Compose 在容器启动前读取的设置：profile、对外发布的端口、挂载路径和健康检查调度设置。新部署需从 `docker/.env.example` 复制创建；升级时保留现有文件。
 
-- **可选或特定提供商的设置** 在 `docker/envs/` 下有对应模板。要覆盖默认值，复制相应模板（去掉 `.example` 后缀），然后编辑副本。例如：
+- **`docker/envs/**/*.defaults` 文件** 提供自带的服务默认值，并会自动加载。如需自定义服务，将其 `.defaults` 文件复制到注释中指定的本地 `.env` 路径。例如，将 `envs/infrastructure/nginx.defaults` 复制为 `envs/infrastructure/nginx.env`。若副本已存在，直接编辑即可。
 
-  ```bash
-  cd dify/docker
-  cp envs/vectorstores/milvus.env.example envs/vectorstores/milvus.env
-  ```
+- **仍保留的 `docker/envs/**/*.env.example` 模板** 用于可选的应用或提供商设置。复制时只去掉 `.example` 后缀，例如将 `milvus.env.example` 复制为 `milvus.env`。
 
-`docker/.env` 中的值优先于任何 `docker/envs/*.env` 文件中的值。
+查找某个设置的模板时，在 `docker/envs/` 中搜索变量名，再按文件注释中的路径复制。编辑 `.defaults` 文件的副本时，修改输入值，取消所需可选设置的注释，并保留 **Container variable mappings** 下的表达式不变。
 
-<Tip>
-升级 Dify 后，对照各 `.env.example` 文件检查对应的 `.env`，确认是否有新增或变更的变量。
-</Tip>
+对于服务加载的值，`docker/.env` 优先于本地服务 `.env`，后者又优先于自带或应用中的默认值。每个服务只读取为其指定的 env 文件。KnowledgeFS 在 `docker/envs/core-services/knowledge-fs.env` 中配置；只有 Compose 中显式映射的根变量才会覆盖该文件。
+
+进行变量插值时，Shell 变量的优先级更高；Compose 中显式设置的 `environment` 条目优先于 `env_file` 中的值。
+
+在 `dify/docker` 中运行以下命令以应用修改：
+
+```bash
+docker compose config --quiet
+docker compose up -d
+```
+
+`docker compose restart` 不会重新加载环境变量。完整示例和生效值的检查方法，详见 [自定义](/zh/self-host/deploy/quick-start/docker-compose#自定义)。
+
+更新已有部署前，按照 [升级](/zh/self-host/deploy/quick-start/docker-compose#升级) 步骤保留自定义配置，并检查服务文件中现在开始生效的设置。
 
 ## 通用变量
 
@@ -185,7 +193,7 @@ openssl rand -base64 42
 openssl rand -base64 32
 ```
 
-使用 Docker Compose 部署时，在 `docker/envs/core-services/api.env` 中设置（如尚未创建该文件，可从 `api.env.example` 复制）。不要写在 `docker/.env` 中，因为 Compose 也会把该文件中的变量传给 Worker、插件守护进程、Agent 后端、Web 前端和代码沙箱。源码部署则在 `api/.env` 中设置。
+使用 Docker Compose 部署时，在 `docker/envs/core-services/api.env` 中设置（如尚未创建该文件，可从 `api.defaults` 复制）。不要写在 `docker/.env` 中，因为 Compose 也会把该文件中的变量传给 Worker、插件守护进程、Agent 后端、Web 前端和代码沙箱。源码部署则在 `api/.env` 中设置。
 
 <Warning>
 已有账户后再设置、修改或移除该值，这些账户用现有密码登录时都会提示密码无效。若是误操作，改回原值即可，其间未重置的密码都会恢复可用。请像保管 `SECRET_KEY` 一样妥善保管该值。
@@ -261,9 +269,9 @@ openssl rand -base64 32
 
 ### MODE
 
-默认值：`worker`（worker 服务 env 文件的预置值；完全未设置该变量时，容器运行 API 服务）
+默认值：按服务而定（Docker Compose 中为 `api`、`worker` 或 `beat`）
 
-决定 `dify-api` 镜像在容器启动时运行的进程。三个 env 示例文件分别为各自服务固定取值：`worker.env.example` 为 `worker`，`api.env.example` 为 `api`，`worker-beat.env.example` 为 `beat`。可选值：
+决定 `dify-api` 镜像在容器启动时运行的进程。自带的 Compose 文件在各服务的 `environment` 中设置 `MODE`，该值优先于 env 文件中的值。可选值：
 
 - `api`（空值或无法识别的值同样生效）：API 服务
 - `worker`：Celery 任务消费进程
@@ -271,7 +279,7 @@ openssl rand -base64 32
 - `job`：执行一条 Flask CLI 命令后退出
 - `migration`：配合 `MIGRATION_ENABLED=true`，完成数据库迁移后退出
 
-自带的 Compose 文件已为每个服务固定正确的值，只有 Kubernetes 等自定义部署才需要设置。配置错误会让容器运行错误的进程：没有 worker 时，索引和邮件任务会一直排队。
+只有 Kubernetes 等自定义部署才需要设置。配置错误会让容器运行错误的进程：没有 worker 时，索引和邮件任务会一直排队。
 
 ### API 工具配置
 
@@ -643,7 +651,9 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 
 默认值：`weaviate`
 
-选择向量数据库后端。如果数据集已有索引，数据集存储的类型优先于此设置。在 Docker Compose 中切换提供商时，`COMPOSE_PROFILES` 会根据此值自动启动匹配的容器。
+选择向量数据库后端。如果数据集已有索引，数据集存储的类型优先于此设置。
+
+切换到另一个自带的提供商时，还需更新 `docker/.env` 中的 `COMPOSE_PROFILES`，以启动对应容器。profile 列表默认为 `weaviate,postgresql,collaboration`，修改 `VECTOR_STORE` 或 `DB_TYPE` 不会改变该列表。切换提供商不会迁移现有数据；就地升级时，保留现有提供商。
 
 支持的值：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
 
@@ -1126,15 +1136,15 @@ Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分�
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `SENTRY_DSN` | （空） | 跨服务共享的 Sentry DSN。 |
-| `API_SENTRY_DSN` | （空） | API 服务的 Sentry DSN。如果设置，覆盖 `SENTRY_DSN`。为空则禁用后端的 Sentry。 |
-| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | 包含在性能追踪中的请求比例（0.01 = 1%，1.0 = 100%）。追踪跨服务跟踪请求流。 |
-| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 包含在 CPU/内存性能分析中的请求比例（0.01 = 1%）。分析显示代码中时间花费在哪里。 |
-| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | `API_SENTRY_TRACES_SAMPLE_RATE` 的直接变量名，供 `docker/envs/core-services/` 下的配置文件使用。<br/>Compose 部署中以 `API_SENTRY_*` 的值为准。Sentry DSN 为空时不生效。 |
-| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | `API_SENTRY_PROFILES_SAMPLE_RATE` 的直接变量名，用途同上。<br/>性能分析只在已被追踪采样的请求中采样，实际采样量约为两个比例的乘积。 |
-| `WEB_SENTRY_DSN` | （空） | Web 前端（Next.js）的 Sentry DSN。仅前端使用。 |
+| `SENTRY_DSN` | （空） | 容器中的 Sentry DSN 变量。使用 Docker Compose 时，设置映射输入：API 和 Worker 使用 `API_SENTRY_DSN`，Web 前端使用 `WEB_SENTRY_DSN`，插件守护进程使用 `PLUGIN_SENTRY_DSN`。 |
+| `API_SENTRY_DSN` | （空） | API 和 Worker 的 Sentry DSN，映射到其容器中的 `SENTRY_DSN`。为空则禁用这些服务的 Sentry。 |
+| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | API 和 Worker 请求中纳入性能追踪的比例（0.01 = 1%，1.0 = 100%）。追踪记录请求跨服务的流转过程。<br/><br/>映射到容器中的 `SENTRY_TRACES_SAMPLE_RATE`。 |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | API 和 Worker 请求中纳入 CPU/内存性能分析的比例（0.01 = 1%）。性能分析用于查看代码各部分的耗时。<br/><br/>映射到容器中的 `SENTRY_PROFILES_SAMPLE_RATE`。 |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | 容器中的性能追踪采样率变量。使用 Docker Compose 时，通过 `API_SENTRY_TRACES_SAMPLE_RATE` 为 API 和 Worker 设置。<br/><br/>Sentry DSN 为空时不生效。 |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 容器中的性能分析采样率变量。使用 Docker Compose 时，通过 `API_SENTRY_PROFILES_SAMPLE_RATE` 为 API 和 Worker 设置。<br/><br/>性能分析只对追踪阶段选中的请求采样，因此有效采样率为追踪采样率 × 性能分析采样率。 |
+| `WEB_SENTRY_DSN` | （空） | Web 前端（Next.js）的 Sentry DSN，映射到其容器中的 `SENTRY_DSN`。 |
 | `PLUGIN_SENTRY_ENABLED` | `false` | 为插件守护进程服务启用 Sentry。 |
-| `PLUGIN_SENTRY_DSN` | （空） | 插件守护进程的 Sentry DSN。 |
+| `PLUGIN_SENTRY_DSN` | （空） | 插件守护进程的 Sentry DSN，映射到其容器中的 `SENTRY_DSN`。 |
 
 ### Notion 集成配置
 
@@ -1393,7 +1403,7 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 
 ### DIFY_AGENT_SERVER_SECRET_KEY
 
-默认值：（`.env.example` 中预填了开发密钥，生产环境必须替换）
+默认值：（自带默认值中的开发密钥，生产环境必须替换）
 
 Agent 后端的根密钥，用于派生各类内部令牌的密钥，其中包括沙箱内 Agent 回调后端时使用的令牌。
 
@@ -1409,9 +1419,9 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ### DIFY_AGENT_API_TOKEN
 
-默认值：（`.env.example` 中预填了开发令牌，生产环境必须替换）
+默认值：（自带默认值中的开发令牌，生产环境必须替换）
 
-Dify API 调用 Agent 后端运行接口时出示的 Bearer 令牌。Compose 会把同一个值传给两侧服务，设置一次即可保持一致。
+Dify API 和 Worker 调用 Agent 后端运行接口时出示的 Bearer 令牌。在 `docker/.env` 中设置，确保 API、Worker 和 Agent 后端使用相同的值。
 
 默认值是一个公开的开发令牌，部署可开箱即用；但任何能访问 Agent 后端且知道该令牌的人都能发起运行，生产环境使用前务必替换为你自己的随机值。
 
@@ -1421,12 +1431,12 @@ Dify API 调用 Agent 后端运行接口时出示的 Bearer 令牌。Compose 会
 
 Agent 后端向内置沙箱证明身份时使用的共享密钥。留空时，这两个服务一启动就会退出并反复重启，所以要在启动 Dify 之前设置好。
 
-在 `docker/.env` 中设置一次即可，Compose 会把它传给两个服务。只写在 `docker/envs/` 下某个文件里的值不会生效。
+在 `docker/.env` 中设置一次，让 Agent 后端和内置沙箱都能读取到它。如果只在 Agent 后端的服务文件中设置，沙箱就没有匹配的凭据。
 
 可用以下命令生成：
 
 ```bash
-openssl rand -base64 32
+openssl rand -hex 32
 ```
 
 取代原 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`，旧名仍可作为兼容别名使用。
@@ -1500,7 +1510,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
-| `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空；由 `PLUGIN_DAEMON_KEY` 推导） | 插件守护进程的凭证。 |
+| `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | （空；由 `PLUGIN_DAEMON_KEY` 推导） | 插件守护进程的凭证。使用自带服务时，在 `docker/.env` 中设置 `PLUGIN_DAEMON_KEY`，并保留此变量的映射表达式不变。 |
 | `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Agent 服务对外 HTTP 调用（如工具与插件流量）的连接超时（秒）。 |
 | `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | 读取超时（秒）；默认较宽松，以便较慢的工具响应和大文件下载能够完成。 |
 | `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | 对外请求的写入超时（秒）。 |
@@ -1509,10 +1519,10 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | 保留供复用的空闲连接数。 |
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | 空闲连接在关闭前保留的秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
-| `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。 |
+| `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 回调 Dify API 的插件接口时使用的凭据。必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。<br/><br/>使用自带服务时，在 `docker/.env` 中设置 `PLUGIN_DIFY_INNER_API_KEY`，并保留此变量的映射表达式不变。 |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。取代原 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`，旧名仍可作为兼容别名使用。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将 Agent 沙箱发布到宿主机的端口，供从源码运行的 Agent 后端通过 `http://localhost:5004` 访问。在该栈的 `middleware.env` 中设置；改动后，需将 Agent 后端 `.env` 中的 `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` 指向新端口。<br/><br/>仅适用于中间件栈。完整的 Compose 栈将沙箱保留在内部网络中。 |
-| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。使用内置的 `local` 沙箱时保持默认值即可。<br/><br/>在 `openshell` 后端下，沙箱无法解析 Compose 服务名。需在 `docker/.env` 中将其设为沙箱可访问、且能路由到 Agent 后端 `/agent-stub` 路径的地址，并发布或代理 Agent 后端的 5050 端口。 |
+| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。使用内置的 `local` 沙箱时保持默认值即可。<br/><br/>在 `openshell` 后端下，沙箱无法解析 Compose 服务名。需将其设为沙箱可访问、且能路由到 Agent 后端 `/agent-stub` 路径的地址，并发布或代理 Agent 后端的 5050 端口。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API 从 Agent 沙箱取文件时的等待时长，超时则传输失败。应高于 Agent 侧的 `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`。 |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API 等待 Agent 后端传输 home snapshot（捕获、删除快照，以及启动需要恢复快照的运行）的时长。<br/><br/>如果 home 环境较大的 Agent 在应用构建或启动运行时失败，可调大该值。 |
@@ -1532,14 +1542,14 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 - `e2b`：每个 Agent 的沙箱运行在一台 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
 - `openshell`：通过你自行运维的 NVIDIA OpenShell 网关，让沙箱运行在你自己的基础设施上。
 
-此变量和两个回调地址（`DIFY_AGENT_STUB_API_BASE_URL` 与 `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）都需在 `docker/.env` 中设置。Compose 从这里把这三个值传给 Agent 后端，因此写在 `envs/core-services/dify-agent.env` 中不会生效。
+此变量和两个回调地址（`DIFY_AGENT_STUB_API_BASE_URL` 与 `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）都需在 `docker/envs/core-services/dify-agent.env` 中设置，该文件从 `dify-agent.defaults` 复制创建。`docker/.env` 中的值会覆盖该服务文件中的值。
 
 每种远程后端各有一组专用变量：
 
 <AccordionGroup>
 <Accordion title="E2B">
 
-`docker/docker-compose.e2b.yaml` 叠加文件会为此后端调整 Compose 配置。
+`docker/docker-compose.e2b.yaml` 叠加文件将 `DIFY_AGENT_RUNTIME_BACKEND` 固定为 `e2b`。它用于分支验证，并使用独立的 PostgreSQL 数据卷，因此不要将其应用到已有部署来切换后端。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1647,14 +1657,14 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 ## 沙箱服务
 
-沙箱是用于执行代码节点（Python、JavaScript、Jinja2）的隔离服务。可以禁用网络访问以增强安全性。
+沙箱是运行代码执行节点（Python、JavaScript、Jinja2）的隔离服务。如需自定义，将 `docker/envs/core-services/sandbox.defaults` 复制为同目录下的 `sandbox.env`，再修改输入值。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SANDBOX_API_KEY` | `dify-sandbox` | 沙箱认证的 API key。必须与 API 服务中的 `CODE_EXECUTION_API_KEY` 匹配。 |
 | `SANDBOX_GIN_MODE` | `release` | 沙箱服务模式：`release` 或 `debug`。 |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | 单次代码运行的最大执行时间（秒）。 |
-| `SANDBOX_ENABLE_NETWORK` | `true` | 允许代码发起出站 HTTP 请求。禁用可防止代码节点访问外部服务。 |
+| `SANDBOX_ENABLE_NETWORK` | `true` | 允许脚本请求网络访问权限。<br/><br/>Dify 的代码执行节点会请求启用网络的执行环境，因此将此变量设为 `false` 会导致这些请求被拒绝。使用代码执行节点时，应保持启用。 |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 网络启用时用于 SSRF 防护的 HTTP 代理。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
 | `SANDBOX_PORT` | `8194` | 沙箱服务端口。 |
@@ -1722,8 +1732,8 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF 代理用于将出站流量反向代理转发到沙箱服务的监听端口。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF 代理转发到的沙箱服务主机名。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段。HTTP 请求节点、工具，以及 **同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时）发往这些地址的请求，SSRF 代理会放行。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `docker/.env` 中设置。写在 `envs/infrastructure/ssrf-proxy.env` 中的值不会生效。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，即使解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，设置方式也相同。`docker/.env.example` 中没有这一行，需自行添加。<br/><br/>示例：`firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段。HTTP 请求节点、工具，以及 **同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时）发往这些地址的请求，SSRF 代理会放行。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `docker/envs/infrastructure/ssrf-proxy.env` 中设置，该文件从 `ssrf-proxy.defaults` 复制创建。`docker/.env` 中的值优先生效。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，即使解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，并在 `docker/envs/infrastructure/ssrf-proxy.env` 中设置。`docker/.env` 中的值优先生效。<br/><br/>示例：`firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | 代理请求的默认总超时（秒）。 |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | 默认连接超时（秒）。 |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | 默认读取超时（秒）。 |
@@ -1731,9 +1741,11 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 
 ## Docker Compose
 
+将 Compose 设置保存在 `docker/.env` 中：profile、对外发布的端口、挂载路径和健康检查调度设置都在容器启动前读取。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql},collaboration` | 选择启动哪些服务容器。默认包含匹配的向量存储和数据库（如设置 `DB_TYPE=mysql` 将启动 MySQL 而非 PostgreSQL），以及启动专用 `api_websocket` 容器的 `collaboration` profile。移除 `collaboration` 即可跳过独立的 WebSocket 服务。 |
+| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | 选择启动哪些服务容器。在 `docker/.env` 中设置；选择其他自带的提供商时，与 `VECTOR_STORE` 或 `DB_TYPE` 一同更新。这些选择变量不会改写 profile 列表。<br/><br/>`collaboration` profile 启动专用的 `api_websocket` 容器；移除它即可跳过该服务。 |
 | `EXPOSE_NGINX_PORT` | `80` | 映射到 Nginx HTTP 的宿主机端口。 |
 | `EXPOSE_NGINX_SSL_PORT` | `443` | 映射到 Nginx HTTPS 的宿主机端口。 |
 
@@ -1757,17 +1769,17 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | 插件守护进程服务 URL。 |
-| `PLUGIN_DAEMON_KEY` | （自动生成） | 插件守护进程的认证密钥。 |
+| `PLUGIN_DAEMON_KEY` | （自带默认值中的开发密钥；生产环境需替换） | API、Worker 和 Agent 后端向插件守护进程认证时使用的密钥。在 `docker/.env` 中设置，确保守护进程及其客户端使用相同的值；值不匹配会导致认证失败。<br/><br/>使用高强度密钥，且与 `PLUGIN_DIFY_INNER_API_KEY` 不同。升级时保留现有可用的值。 |
 | `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
-| `DB_SSL_MODE` | `disable` | 插件守护进程连接 PostgreSQL 时使用的 `sslmode`。数据库强制 TLS 时设为 `require`。`.env.example` 中没有这一项：完整的 Compose 栈在 `docker/.env` 中设置，中间件栈在 `middleware.env` 中设置。 |
+| `DB_SSL_MODE` | `disable` | 插件守护进程连接 PostgreSQL 时使用的 `sslmode`。数据库强制 TLS 时设为 `require`。<br/><br/>完整的 Compose 栈在 `docker/envs/core-services/plugin-daemon.env` 中设置，该文件从 `plugin-daemon.defaults` 复制创建。独立的中间件栈在 `middleware.env` 中设置。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
 | `PLUGIN_MAX_FILE_SIZE` | `52428800` | 插件返回给 Dify 的单个文件的最大大小（字节，50 MB），例如工具插件输出的生成图片或文档。超过限制的文件会使本次调用失败，并报「file is too large」错误。 |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 Schema 的时间（秒）。减少重复查找。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | 是否在 Redis 中缓存各租户的插件模型供应商列表。当插件由外部系统安装、无法在租户插件变更时使本部署的缓存失效时，应关闭此项。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 在 Redis 中缓存各租户插件模型供应商列表的时长（秒），默认 24 小时。租户安装、卸载或升级插件时，Dify 会使该缓存失效。 |
-| `PLUGIN_DIFY_INNER_API_KEY` | （自动生成） | 插件守护进程回调 Dify API 使用的 API key。必须与插件守护进程服务配置中的 `DIFY_INNER_API_KEY` 匹配。 |
-| `INNER_API_KEY_FOR_PLUGIN` | （env 示例中已预填；生产环境必须更换） | 同一密钥在 API 服务侧的直接变量名，来自 `docker/envs/core-services/`；Compose 部署中由 `PLUGIN_DIFY_INNER_API_KEY` 同时写入两侧。<br/>API 在每次插件回调（模型调用、工具调用、文件传输）时校验该密钥，两侧不一致时这些调用会失败，但插件安装不受影响。<br/>务必更换预填的默认值：它公开在 Dify 仓库中，而且是插件回调 API 唯一的鉴权手段。 |
+| `PLUGIN_DIFY_INNER_API_KEY` | （自带默认值中的开发密钥；生产环境需替换） | 回调 Dify API 时使用的共享凭据。在 `docker/.env` 中设置，确保 API、Worker、插件守护进程、Agent 后端和 KnowledgeFS 使用相同的值。自带映射会将此值赋给 API 的 `INNER_API_KEY_FOR_PLUGIN` 和插件守护进程的 `DIFY_INNER_API_KEY`。<br/><br/>使用高强度密钥，且与 `PLUGIN_DAEMON_KEY` 不同。升级时保留现有可用的值；值不匹配会导致认证失败。 |
+| `INNER_API_KEY_FOR_PLUGIN` | （自带默认值中的开发密钥；生产环境需替换） | API 和 Worker 容器中的插件回调密钥变量。使用自带的 Compose 栈时，在 `docker/.env` 中设置 `PLUGIN_DIFY_INNER_API_KEY`，并保留映射表达式不变。<br/><br/>API 在插件回调时校验此密钥，包括模型调用、工具调用和文件传输。值不匹配时，这些调用会失败，但插件安装可能仍可正常进行。 |
 | `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | 插件守护进程回调的内部 API URL。 |
 | `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | 插件远程调试连接的主机。 |
 | `PLUGIN_DEBUGGING_PORT` | `5003` | 插件远程调试连接的端口。 |

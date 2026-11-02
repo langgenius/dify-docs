@@ -3,24 +3,30 @@ title: Environment Variables
 description: Reference for all environment variables used by Dify self-hosted deployments
 ---
 
-Dify works out of the box with default settings. To customize your deployment, edit environment variables in the relevant file:
+Use Docker Compose 2.35.0 or later and edit the local file for the setting you want to change:
 
-- **Essential startup values** live in `docker/.env`, which you created from `docker/.env.example` during deployment. Edit them directly.
+- **`docker/.env`** holds startup values, shared credentials, and settings Compose uses before containers start: profiles, published ports, mount paths, and health-check scheduling. Create it from `docker/.env.example` for a new deployment; keep the existing file when upgrading.
 
-- **Optional or provider-specific settings** have templates under `docker/envs/`. To override a default value, copy the matching template (drop the `.example` suffix), then edit your copy.
+- **`docker/envs/**/*.defaults` files** provide the bundled service defaults and load automatically. To customize a service, copy its `.defaults` file to the local `.env` path named in its comments. For example, copy `envs/infrastructure/nginx.defaults` to `envs/infrastructure/nginx.env`. Edit an existing copy directly.
 
-  For example:
+- **Remaining `docker/envs/**/*.env.example` templates** hold optional application or provider settings. Remove only `.example` when copying them, such as `milvus.env.example` to `milvus.env`.
 
-  ```bash
-  cd dify/docker
-  cp envs/vectorstores/milvus.env.example envs/vectorstores/milvus.env
-  ```
+To locate a setting's template, search `docker/envs/` for its variable name and follow the copy path in that file's comments. In a copy of a `.defaults` file, edit the inputs, uncomment any optional settings you need, and leave the expressions under **Container variable mappings** unchanged.
 
-Values in `docker/.env` take precedence over values in any `docker/envs/*.env` files.
+For values a service loads, `docker/.env` overrides its local service `.env`, which overrides the bundled or application defaults. Services read only the env files assigned to them. Configure KnowledgeFS in `docker/envs/core-services/knowledge-fs.env`; only root variables explicitly mapped in Compose override that file.
 
-<Tip>
-After upgrading Dify, compare each `.env.example` with its matching `.env` for new or changed variables.
-</Tip>
+Shell variables take precedence for interpolated inputs, and explicit Compose `environment` entries take precedence over `env_file` values.
+
+From `dify/docker`, apply changes with:
+
+```bash
+docker compose config --quiet
+docker compose up -d
+```
+
+`docker compose restart` doesn't reload environment variables. For a worked example and an active-value check, see [Customize](/en/self-host/deploy/quick-start/docker-compose#customize).
+
+Before updating an existing deployment, follow [Upgrade](/en/self-host/deploy/quick-start/docker-compose#upgrade) to preserve your overrides and review service-file settings that now take effect.
 
 ## Common Variables
 
@@ -187,7 +193,7 @@ To use a pepper, set it before you create the admin account during first-time se
 openssl rand -base64 32
 ```
 
-On Docker Compose, set it in `docker/envs/core-services/api.env` (create the file from `api.env.example` if you haven't). Keep it out of `docker/.env`, which Compose also passes to the worker, plugin daemon, agent backend, web frontend, and code sandbox. On source deployments, set it in `api/.env`.
+On Docker Compose, set it in `docker/envs/core-services/api.env` (create the file from `api.defaults` if you haven't). Keep it out of `docker/.env`, which Compose also passes to the worker, plugin daemon, agent backend, web frontend, and code sandbox. On source deployments, set it in `api/.env`.
 
 <Warning>
 Setting, changing, or removing the pepper once accounts exist makes their current passwords fail at sign-in as invalid. To undo a mistake, put back the previous value, and every password that wasn't reset in the meantime works again. Keep the value as safe as `SECRET_KEY`.
@@ -263,9 +269,9 @@ Only effective when starting with Docker image or Docker Compose.
 
 ### MODE
 
-Default: `worker` (the worker service's shipped value; with the variable unset entirely, the container runs the API server)
+Default: service-specific (`api`, `worker`, or `beat` in Docker Compose)
 
-What the `dify-api` image runs at container start. Each of the three env example files pins the value for its own service: `worker` in `worker.env.example`, `api` in `api.env.example`, and `beat` in `worker-beat.env.example`. Accepted values:
+Selects what the `dify-api` image runs at container start. The bundled Compose file sets `MODE` in each service's `environment`, which takes precedence over env-file values. Accepted values:
 
 - `api` (and any empty or unrecognized value): the API server
 - `worker`: the Celery task consumer
@@ -273,7 +279,7 @@ What the `dify-api` image runs at container start. Each of the three env example
 - `job`: run one Flask CLI command, then exit
 - `migration`: with `MIGRATION_ENABLED=true`, migrate the database and exit
 
-The bundled Compose file pins the right value per service, so you only set this in custom setups such as Kubernetes. A wrong value runs the wrong process—with no worker, indexing and mail tasks queue forever.
+Set this only in custom setups such as Kubernetes. A wrong value runs the wrong process—with no worker, indexing and mail tasks queue forever.
 
 ### API Tool Configuration
 
@@ -645,7 +651,9 @@ Configure the vector database used for knowledge base embedding storage and simi
 
 Default: `weaviate`
 
-Selects the vector database backend. If a dataset already has an index, the dataset's stored type takes precedence over this setting. When switching providers in Docker Compose, `COMPOSE_PROFILES` automatically starts the matching container based on this value.
+Selects the vector database backend. If a dataset already has an index, the dataset's stored type takes precedence over this setting.
+
+When switching to another bundled provider, also update `COMPOSE_PROFILES` in `docker/.env` to start its container. The profile list defaults to `weaviate,postgresql,collaboration` and stays unchanged when you edit `VECTOR_STORE` or `DB_TYPE`. Changing providers doesn't migrate existing data; keep your existing providers during an in-place upgrade.
 
 Supported values: `weaviate`, `oceanbase`, `seekdb`, `qdrant`, `milvus`, `myscale`, `relyt`, `pgvector`, `pgvecto-rs`, `chroma`, `opensearch`, `oracle`, `tencent`, `elasticsearch`, `elasticsearch-ja`, `analyticdb`, `couchbase`, `vikingdb`, `opengauss`, `tablestore`, `vastbase`, `tidb`, `tidb_on_qdrant`, `baidu`, `lindorm`, `huawei_cloud`, `upstash`, `matrixone`, `clickzetta`, `alibabacloud_mysql`, `iris`, `hologres`.
 
@@ -1128,15 +1136,15 @@ Sentry provides error tracking and performance monitoring. Each service has its 
 
 | Variable | Default | Description |
 |---|---|---|
-| `SENTRY_DSN` | (empty) | Sentry DSN shared across services. |
-| `API_SENTRY_DSN` | (empty) | Sentry DSN for the API service. Overrides `SENTRY_DSN` if set. Empty disables Sentry for the backend. |
-| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in performance tracing (0.01 = 1%, 1.0 = 100%). Traces track request flow across services. |
-| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of requests to include in CPU/memory profiling (0.01 = 1%). Profiles show where time is spent in code. |
-| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Direct name for `API_SENTRY_TRACES_SAMPLE_RATE`, used by the config files under `docker/envs/core-services/`.<br/>In the Compose stack the `API_SENTRY_*` value wins. No effect while the Sentry DSN is empty. |
-| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Direct name for `API_SENTRY_PROFILES_SAMPLE_RATE`, used by the same config files.<br/>Profiling only samples requests already selected by the traces rate, so effective volume is traces rate × profiles rate. |
-| `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend (Next.js). Frontend-only. |
+| `SENTRY_DSN` | (empty) | Container variable for the Sentry DSN. In Docker Compose, set the mapped input: `API_SENTRY_DSN` for the API and workers, `WEB_SENTRY_DSN` for the web frontend, or `PLUGIN_SENTRY_DSN` for the plugin daemon. |
+| `API_SENTRY_DSN` | (empty) | Sentry DSN for the API and workers, mapped to their container `SENTRY_DSN`. Empty disables Sentry for those services. |
+| `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of API and worker requests to include in performance tracing (0.01 = 1%, 1.0 = 100%). Traces track request flow across services.<br/><br/>Mapped to container `SENTRY_TRACES_SAMPLE_RATE`. |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of API and worker requests to include in CPU/memory profiling (0.01 = 1%). Profiles show where time is spent in code.<br/><br/>Mapped to container `SENTRY_PROFILES_SAMPLE_RATE`. |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Container variable for the performance tracing sample rate. In Docker Compose, set `API_SENTRY_TRACES_SAMPLE_RATE` for the API and workers.<br/><br/>No effect while the Sentry DSN is empty. |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Container variable for the profiling sample rate. In Docker Compose, set `API_SENTRY_PROFILES_SAMPLE_RATE` for the API and workers.<br/><br/>Profiling only samples requests already selected by the traces rate, so the effective sampling rate is traces rate × profiles rate. |
+| `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend (Next.js), mapped to its container `SENTRY_DSN`. |
 | `PLUGIN_SENTRY_ENABLED` | `false` | Enable Sentry for the plugin daemon service. |
-| `PLUGIN_SENTRY_DSN` | (empty) | Sentry DSN for the plugin daemon. |
+| `PLUGIN_SENTRY_DSN` | (empty) | Sentry DSN for the plugin daemon, mapped to its container `SENTRY_DSN`. |
 
 ### Notion Integration Configuration
 
@@ -1397,7 +1405,7 @@ The feature is enabled by default, and most of its settings derive from your exi
 
 ### DIFY_AGENT_SERVER_SECRET_KEY
 
-Default: (development key pre-filled in `.env.example`; must be replaced for production)
+Default: (development key in the bundled defaults; must be replaced for production)
 
 Root secret the agent backend uses to derive the keys for its internal tokens, including the bearer tokens that authenticate the sandboxed agent's calls back into the backend. 
 
@@ -1413,9 +1421,9 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 ### DIFY_AGENT_API_TOKEN
 
-Default: (development token pre-filled in `.env.example`; must be replaced for production)
+Default: (development token in the bundled defaults; must be replaced for production)
 
-Bearer token the Dify API presents when calling the agent backend's run API. Compose passes the same value to both services, so setting it once keeps them in agreement.
+Bearer token the Dify API and workers present when calling the agent backend's run API. Set it in `docker/.env` so the API, workers, and agent backend use the same value.
 
 A publicly known development token ships as the default, so the stack starts out of the box—but anyone who can reach the agent backend and knows the token can start runs. Replace it with your own random value before production use.
 
@@ -1425,12 +1433,12 @@ Default: (empty; required with the default `local` [runtime backend](#dify_agent
 
 Shared secret that authenticates the agent backend to the bundled sandbox. While it's empty, both services exit at startup and keep restarting, so set it before you start Dify.
 
-Set it once in `docker/.env`, and Compose passes it to both services. A value set only in a file under `docker/envs/` doesn't take effect.
+Set it once in `docker/.env` so both the agent backend and the bundled sandbox receive it. Setting it only in the agent backend's service file leaves the sandbox without the matching credential.
 
 Generate one with:
 
 ```bash
-openssl rand -base64 32
+openssl rand -hex 32
 ```
 
 Replaces the former `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`, which still works as a legacy alias.
@@ -1504,7 +1512,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
-| `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | (empty; derives from `PLUGIN_DAEMON_KEY`) | Credential for the plugin daemon. |
+| `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` | (empty; derives from `PLUGIN_DAEMON_KEY`) | Credential for the plugin daemon. With the bundled services, set `PLUGIN_DAEMON_KEY` in `docker/.env` and leave this variable's mapping expression unchanged. |
 | `DIFY_AGENT_OUTBOUND_HTTP_CONNECT_TIMEOUT` | `10` | Connect timeout in seconds for the agent service's outbound HTTP calls, such as tool and plugin traffic. |
 | `DIFY_AGENT_OUTBOUND_HTTP_READ_TIMEOUT` | `600` | Read timeout in seconds; generous by default so slow tool responses and large downloads can finish. |
 | `DIFY_AGENT_OUTBOUND_HTTP_WRITE_TIMEOUT` | `30` | Write timeout in seconds for outbound requests. |
@@ -1513,10 +1521,10 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_OUTBOUND_HTTP_MAX_KEEPALIVE_CONNECTIONS` | `20` | How many idle connections stay pooled for reuse. |
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | Seconds an idle pooled connection is kept before it closes. |
 | `DIFY_AGENT_INNER_API_URL` | (empty; derives from `PLUGIN_DIFY_INNER_API_URL`) | Dify API address for the agent backend's internal calls. |
-| `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`. |
+| `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Credential for the Dify API's plugin callbacks. Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`.<br/><br/>With the bundled services, set `PLUGIN_DIFY_INNER_API_KEY` in `docker/.env` and leave this variable's mapping expression unchanged. |
 | `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which still works as a legacy alias. |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | Host port at which the middleware stack for [source-code deployments](/en/self-host/deploy/advanced-deployments/local-source-code) publishes the agent sandbox, so an agent backend run from source reaches it at `http://localhost:5004`. Set it in that stack's `middleware.env`; if you change it, point `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` in the agent backend's `.env` at the new port.<br/><br/>Middleware stack only: the full Compose stack keeps the sandbox on an internal network. |
-| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. Keep the default with the bundled `local` sandbox.<br/><br/>On the `openshell` backend, sandboxes can't resolve Compose service names. Set this in `docker/.env` to an address they can reach that routes to the agent backend's `/agent-stub` path, and publish or proxy the agent backend's port 5050. |
+| `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. Keep the default with the bundled `local` sandbox.<br/><br/>On the `openshell` backend, sandboxes can't resolve Compose service names. Set this to an address they can reach that routes to the agent backend's `/agent-stub` path, and publish or proxy the agent backend's port 5050. |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | Dify API address the sandboxed agent uses for file transfers. Keep the default on Docker Compose. A remote sandbox backend needs your publicly reachable Dify address here. |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | How long the API waits when fetching a file from an agent's sandbox before failing the transfer. Keep it above the agent-side `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`. |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | How long the API waits on agent backend calls that transfer a home snapshot: capturing or deleting one, and starting a run that restores one.<br/><br/>If applying a build or starting runs fails for agents with large home environments, increase this. |
@@ -1536,14 +1544,14 @@ Selects where agent sandboxes run:
 - `e2b`: an [E2B](https://e2b.dev) cloud VM for each agent's sandbox, for stronger isolation than the bundled container provides.
 - `openshell`: an NVIDIA OpenShell gateway you operate, so sandboxes run on your own infrastructure.
 
-Set this and the two callback addresses, `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, in `docker/.env`. Compose passes these three to the agent backend from there, so values in `envs/core-services/dify-agent.env` have no effect.
+Set this and the two callback addresses, `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, in `docker/envs/core-services/dify-agent.env`, copied from `dify-agent.defaults`. Values in `docker/.env` override that service file.
 
 Each remote backend reads its own group of variables:
 
 <AccordionGroup>
 <Accordion title="E2B">
 
-The `docker/docker-compose.e2b.yaml` overlay adjusts the Compose stack for this backend.
+The `docker/docker-compose.e2b.yaml` overlay pins `DIFY_AGENT_RUNTIME_BACKEND` to `e2b`. It is intended for branch validation and uses an isolated PostgreSQL volume, so don't apply it to an existing deployment to switch backends.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1651,14 +1659,14 @@ These configure the database and Redis containers directly in Docker Compose. Ro
 
 ## Sandbox Service
 
-The sandbox is an isolated service for executing code nodes (Python, JavaScript, Jinja2). Network access can be disabled for security.
+The sandbox is an isolated service for executing code nodes (Python, JavaScript, Jinja2). To customize it, copy `docker/envs/core-services/sandbox.defaults` to `sandbox.env` in the same directory and edit the inputs.
 
 | Variable | Default | Description |
 |---|---|---|
 | `SANDBOX_API_KEY` | `dify-sandbox` | API key for sandbox authentication. Must match `CODE_EXECUTION_API_KEY` in the API service. |
 | `SANDBOX_GIN_MODE` | `release` | Sandbox service mode: `release` or `debug`. |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | Maximum execution time in seconds for a single code run. |
-| `SANDBOX_ENABLE_NETWORK` | `true` | Allow code to make outbound HTTP requests. Disable to prevent code nodes from accessing external services. |
+| `SANDBOX_ENABLE_NETWORK` | `true` | Allows scripts to request network access.<br/><br/>Dify's Code nodes request network-enabled execution, so setting this to `false` rejects their requests. Keep it enabled when using Code nodes. |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection when network is enabled. |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | HTTPS proxy for SSRF protection. |
 | `SANDBOX_PORT` | `8194` | Sandbox service port. |
@@ -1726,8 +1734,8 @@ These configure the Squid-based SSRF proxy container that blocks requests to int
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | Core dump directory. |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | Port the SSRF proxy listens on to reverse-proxy egress to the sandbox service. |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | Hostname of the sandbox service the SSRF proxy forwards to. |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through for HTTP Request nodes, tools, and **Sync from website** with a self-hosted Firecrawl or WaterCrawl server. For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `docker/.env`. A value in `envs/infrastructure/ssrf-proxy.env` has no effect.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address. A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS` and set it the same way. `docker/.env.example` has no line for it, so add one.<br/><br/>Example: `firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through for HTTP Request nodes, tools, and **Sync from website** with a self-hosted Firecrawl or WaterCrawl server. For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `docker/envs/infrastructure/ssrf-proxy.env`, copied from `ssrf-proxy.defaults`. A value in `docker/.env` takes precedence.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address. A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS` and set it in `docker/envs/infrastructure/ssrf-proxy.env`. A value in `docker/.env` takes precedence.<br/><br/>Example: `firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | Default overall timeout in seconds for proxied requests. |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | Default connection timeout in seconds. |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | Default read timeout in seconds. |
@@ -1735,11 +1743,11 @@ These configure the Squid-based SSRF proxy container that blocks requests to int
 
 ## Docker Compose
 
-These variables stay in `docker/.env` because Docker Compose uses them to select profiles and expose ports before containers start.
+Keep Compose settings in `docker/.env`: profiles, published ports, mount paths, and health-check scheduling are read before containers start.
 
 | Variable | Default | Description |
 |---|---|---|
-| `COMPOSE_PROFILES` | `${VECTOR_STORE:-weaviate},${DB_TYPE:-postgresql},collaboration` | Selects which service containers to start. The default includes the matching vector store and database (so `DB_TYPE=mysql` starts MySQL instead of PostgreSQL), plus the `collaboration` profile that starts the dedicated `api_websocket` container. Remove `collaboration` to skip the separate WebSocket service. |
+| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | Selects which service containers to start. Set it in `docker/.env` and update it alongside `VECTOR_STORE` or `DB_TYPE` when choosing another bundled provider. Those selectors don't rewrite the profile list.<br/><br/>The `collaboration` profile starts the dedicated `api_websocket` container; remove it to skip that service. |
 | `EXPOSE_NGINX_PORT` | `80` | Host port mapped to Nginx HTTP. |
 | `EXPOSE_NGINX_SSL_PORT` | `443` | Host port mapped to Nginx HTTPS. |
 
@@ -1763,17 +1771,17 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | Variable | Default | Description |
 |---|---|---|
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | Plugin daemon service URL. |
-| `PLUGIN_DAEMON_KEY` | (auto-generated) | Authentication key for the plugin daemon. |
+| `PLUGIN_DAEMON_KEY` | (development key in the bundled defaults; replace for production) | Authenticates the API, workers, and agent backend to the plugin daemon. Set it in `docker/.env` so the daemon and its clients use the same value; mismatches cause authentication failures.<br/><br/>Use a strong secret separate from `PLUGIN_DIFY_INNER_API_KEY`. When upgrading, retain the working value. |
 | `PLUGIN_DAEMON_PORT` | `5002` | Plugin daemon listening port. |
-| `DB_SSL_MODE` | `disable` | PostgreSQL `sslmode` for the plugin daemon's database connection. Set `require` when the database enforces TLS. There is no `.env.example` entry: set it in `docker/.env` for the full Compose stack, or in `middleware.env` for the middleware stack. |
+| `DB_SSL_MODE` | `disable` | PostgreSQL `sslmode` for the plugin daemon's database connection. Set `require` when the database enforces TLS.<br/><br/>For the full Compose stack, set it in `docker/envs/core-services/plugin-daemon.env`, copied from `plugin-daemon.defaults`. For the separate middleware stack, set it in `middleware.env`. |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | Timeout in seconds for all plugin daemon requests (installation, execution, listing). |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | Maximum plugin package size in bytes (50 MB). Validated during marketplace downloads. |
 | `PLUGIN_MAX_FILE_SIZE` | `52428800` | Maximum size in bytes (50 MB) for a single file a plugin returns to Dify, such as a tool plugin outputting a generated image or document. A larger file fails the invocation with a "file is too large" error. |
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | Whether each tenant's plugin model provider list is cached in Redis at all. Disable when plugins are installed by an external system that can't invalidate this deployment's cache when a tenant's plugins change. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | How long to cache each tenant's plugin model provider list in Redis, in seconds (24 hours). Dify invalidates this cache when a tenant installs, uninstalls, or upgrades a plugin. |
-| `PLUGIN_DIFY_INNER_API_KEY` | (auto-generated) | API key the plugin daemon uses to call back to the Dify API. Must match `DIFY_INNER_API_KEY` in the plugin daemon service config. |
-| `INNER_API_KEY_FOR_PLUGIN` | (pre-filled in the env example; replace for production) | The API-service side of the same secret, under its direct name from `docker/envs/core-services/`; in the Compose stack `PLUGIN_DIFY_INNER_API_KEY` feeds both sides.<br/>The API checks it on every plugin callback (model invocation, tool calls, file transfer). On mismatch those calls fail while plugin install keeps working.<br/>Replace the shipped default: it is public in the Dify repo and is the only auth on the plugin callback API. |
+| `PLUGIN_DIFY_INNER_API_KEY` | (development key in the bundled defaults; replace for production) | Shared credential for callbacks to the Dify API. Set it in `docker/.env` so the API, workers, plugin daemon, agent backend, and KnowledgeFS use the same value. The bundled mappings supply the API's `INNER_API_KEY_FOR_PLUGIN` and the plugin daemon's `DIFY_INNER_API_KEY`.<br/><br/>Use a strong secret separate from `PLUGIN_DAEMON_KEY`. Keep the working value during upgrades; mismatches cause authentication failures. |
+| `INNER_API_KEY_FOR_PLUGIN` | (development key in the bundled defaults; replace for production) | API and worker container variable for the plugin callback secret. In the bundled Compose stack, set `PLUGIN_DIFY_INNER_API_KEY` in `docker/.env` and leave the mapping expression unchanged.<br/><br/>The API checks this secret on plugin callbacks, including model invocation, tool calls, and file transfer. On mismatch, those calls fail while plugin installation can still work. |
 | `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | Internal API URL the plugin daemon calls back to. |
 | `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | Host for plugin remote debugging connections. |
 | `PLUGIN_DEBUGGING_PORT` | `5003` | Port for plugin remote debugging connections. |

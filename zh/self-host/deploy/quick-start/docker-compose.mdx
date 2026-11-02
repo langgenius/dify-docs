@@ -22,9 +22,11 @@ sidebarTitle: Docker Compose
 
 | 操作系统 | 所需软件 | 说明 |
 | :--- | :--- | :--- |
-| macOS 10.14 或更高版本 | Docker Desktop（含 Docker Compose 2.24.0+） | Docker 虚拟机至少配置 2 个虚拟 CPU 和 8 GiB 内存。<br/><br/>安装说明详见 [Mac 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/mac/install/)。 |
-| Linux 发行版 | Docker 19.03+<br/><br/>Docker Compose 2.24.0+ | 安装说明详见 [Docker 引擎安装指南](https://docs.docker.com/engine/install/) 和 [Docker Compose 安装指南](https://docs.docker.com/compose/install/)。 |
-| Windows（启用 WSL 2） | Docker Desktop（含 Docker Compose 2.24.0+） | 源代码和绑定到 Linux 容器的数据建议存储在 Linux 文件系统中，而非 Windows。<br/><br/>安装说明详见 [Windows 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)。 |
+| macOS 10.14 或更高版本 | Docker Desktop（含 Docker Compose 2.35.0+） | Docker 虚拟机至少配置 2 个虚拟 CPU 和 8 GiB 内存。<br/><br/>安装说明详见 [Mac 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/mac/install/)。 |
+| Linux 发行版 | Docker 19.03+<br/><br/>Docker Compose 2.35.0+ | 安装说明详见 [Docker 引擎安装指南](https://docs.docker.com/engine/install/) 和 [Docker Compose 安装指南](https://docs.docker.com/compose/install/)。 |
+| Windows（启用 WSL 2） | Docker Desktop（含 Docker Compose 2.35.0+） | 源代码和绑定到 Linux 容器的数据建议存储在 Linux 文件系统中，而非 Windows。<br/><br/>安装说明详见 [Windows 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)。 |
+
+运行 `docker compose version` 检查版本。需要 Compose 2.35.0 或更高版本，才能确保服务文件解析变量时，`docker/.env` 中的值优先生效。
 
 ## 部署并启动
 
@@ -51,32 +53,33 @@ sidebarTitle: Docker Compose
   </Step>
   <Step title="启动 Dify">
 
+    <Note>
+      已有部署应保留当前的 `.env`，并按照 [升级](#升级) 步骤保留其中的设置。
+    </Note>
+
     1. 进入 Dify 源代码中的 `docker` 目录：
 
         ```bash
         cd dify/docker
         ```
 
-    2. 复制必要的环境配置文件：
+    2. 新部署需复制必要的环境配置文件：
 
         ```bash
         cp .env.example .env
         ```
 
-        如需自定义部署，参见 [自定义](#自定义)。
+        使用默认服务栈时，保留 `COMPOSE_PROFILES=weaviate,postgresql,collaboration`。API、Worker 和配套服务会自动加载自带的默认值，无需其他配置文件。
 
     3. 为 Agent 沙箱生成一个令牌：
 
         ```bash
-        openssl rand -base64 32
+        openssl rand -hex 32
         ```
 
         在 `.env` 中，把 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。不设置的话，Agent 后端和它的沙箱都无法启动。
 
     4. 启动容器：
-        <Note>
-          Dify 需要 Docker Compose 2.24.0 或更高版本。运行 `docker compose version` 确认版本。
-        </Note>
 
         ```bash
         docker compose up -d
@@ -88,13 +91,14 @@ sidebarTitle: Docker Compose
         - 8 个依赖组件：`weaviate`、`db_postgres`、`redis`、`nginx`、`ssrf_proxy`、`agent_ssrf_proxy`、`sandbox`、`local_sandbox`
         - 1 个一次性任务：`init_permissions`，用于设置存储文件权限，完成后自动退出。
 
-    5. 验证所有容器是否成功运行：
+    5. 检查服务和初始化任务：
 
         ```bash
-        docker compose ps
+        docker compose ps --all
         ```
 
-        每个容器的状态应为 `Up` 或 `healthy`。`init_permissions` 状态显示为 `Exited` 是正常的。
+        15 个持续运行的容器应处于 `Up` 或 `healthy` 状态。`init_permissions` 任务完成后应显示 `Exited (0)`。
+
   </Step>
 </Steps>
 
@@ -122,45 +126,100 @@ sidebarTitle: Docker Compose
 
 ## 自定义
 
-如需自定义部署，编辑相关文件中的环境变量，然后重启 Dify。
+在 `dify/docker` 目录中运行以下命令。将修改保存在本地 `.env` 文件中，以便升级时更新自带的模板。
 
 <Steps>
   <Step title="编辑环境变量">
 
-    - **必要的启动值** 位于 `docker/.env` 文件中（部署时从 `docker/.env.example` 复制创建）。直接编辑即可。
+    - **启动和 Compose 设置** 应保存在 `docker/.env` 中，包括 profile、对外发布的端口、挂载路径和健康检查调度设置。
 
-    - **可选或特定提供商的设置** 在 `docker/envs/` 下有对应模板。要覆盖默认值，复制相应模板（去掉 `.example` 后缀），然后编辑副本。
+    - **服务设置** 在 `docker/envs/` 下有自带的 `.defaults` 文件。将相应文件复制到其注释中指定的 `.env` 路径，再编辑副本。如果该 `.env` 已存在，直接编辑即可。
 
-      例如：
+      例如，要提高 Nginx 的请求体大小上限：
 
-        ```bash
-        cd dify/docker
-        cp envs/vectorstores/milvus.env.example envs/vectorstores/milvus.env
-        ```
+      ```bash
+      cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
+      ```
 
-    `docker/.env` 中的值优先于任何 `docker/envs/*.env` 文件中的值。
+      在 `nginx.env` 中设置 `NGINX_CLIENT_MAX_BODY_SIZE=200M`。
 
-    <Tip>
-      所有变量的说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments)。
-    </Tip>
+    - **可选的应用和提供商设置** 仍使用 `.env.example` 模板。复制时只去掉 `.example` 后缀，例如将 `milvus.env.example` 复制为 `milvus.env`。
+
+    取消所需可选设置的注释。编辑 `.defaults` 文件的副本时，修改输入值，并保留 **Container variable mappings** 下的表达式不变。
+
+    `docker/.env` 中的值会覆盖相应服务文件中的设置。完整的优先级规则和变量说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments)。
+
+    将 `DB_TYPE` 或 `VECTOR_STORE` 改为另一个自带的提供商时，同步更新 `docker/.env` 中的 `COMPOSE_PROFILES`。修改服务文件中的选择变量不会更新根文件中的 profile 列表。切换提供商不会迁移数据；就地升级时，保留现有提供商。
+
+    将共享凭据保存在 `docker/.env` 中：`PLUGIN_DAEMON_KEY`、`PLUGIN_DIFY_INNER_API_KEY`、`DIFY_AGENT_API_TOKEN` 和 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`。生产环境中，为两个插件凭据分别配置不同的强密钥。
+
+    保留 `envs/core-services/dify-agent.env` 中 `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` 和 `DIFY_AGENT_INNER_API_KEY` 的映射不变，确保所有服务使用一致的凭据。值不匹配会导致认证失败。升级时，保留现有可用的密钥。
 
   </Step>
-  <Step title="重启 Dify">
+  <Step title="应用并验证">
 
     ```bash
-    docker compose down
+    docker compose config --quiet
     docker compose up -d
     ```
+
+    `up -d` 会重建配置发生变化的容器。`docker compose restart` 不会重新加载环境变量。
+
+    对于上面的 Nginx 示例，检查实际生效的上限：
+
+    ```bash
+    docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
+    ```
+
+    输出应包含 `client_max_body_size 200M;`。如果显示其他值，检查 `docker/.env` 中是否有覆盖该值的设置。
 
   </Step>
 </Steps>
 
 ## 升级
 
-不同版本的升级步骤可能有所不同。详见 [Releases](https://github.com/langgenius/dify/releases) 页面中提供的目标版本升级指南。
+查看 [Releases](https://github.com/langgenius/dify/releases) 页面中目标版本的升级说明，再按以下步骤保留并更新现有配置。
 
-<Note>
-  升级后，对照各 `.env.example` 文件检查对应的 `.env`，确认是否有新增或变更的变量。
-  
-  若你自定义过 `docker-compose.yaml`，请把自定义内容重新应用到新版本的文件上，而不是沿用旧文件。新版本可能新增 Dify 运行所需的服务。
-</Note>
+<Steps>
+  <Step title="备份当前可用的部署">
+    按现有备份流程保存 `docker/.env`、本地服务 `.env` 文件、自定义 Compose 文件和持久化数据。保留当前可用的密钥和数据卷路径。
+
+    保存当前 `docker compose config` 的输出，用于更新后对比。输出中包含密钥，保存和比较时均应限制访问。
+  </Step>
+  <Step title="同步更新 Compose 文件和模板">
+    一并安装目标版本的 Compose 文件和 `envs/` 模板，包括 `.defaults` 文件。如果曾直接修改模板，先将这些修改移到本地 `.env` 副本中，再替换模板。
+
+    将现有的 `.env` 和服务 `.env` 文件保留在原路径。用精简的 `.env.example` 替换根文件会丢失自定义配置。
+
+    将自定义的 Compose 修改重新应用到新版本文件上。沿用旧 Compose 文件可能遗漏新版本所需的服务。
+  </Step>
+  <Step title="将新增输入合并到现有文件">
+    对比新的 `.env.example` 与根 `.env`。逐一将本地服务文件与对应的 `.defaults` 或仍保留的 `.env.example` 模板进行比较。添加 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 等必需的输入，并保留现有可用的值。
+
+    使用新模板中的输入名称。例如，API 和 Worker 的 Sentry 设置使用 `API_SENTRY_DSN`；旧配置中直接写入的 `SENTRY_DSN` 无法设置映射后的值。
+
+    将 `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY` 保存在根 `.env` 中。如果服务文件中设置了这些密钥，将其移到根文件，并保留现有可用的值。如果此前用 `INNER_API_KEY_FOR_PLUGIN` 设置回调密钥，将根文件中的 `PLUGIN_DIFY_INNER_API_KEY` 设为相同的值。保留 `envs/core-services/dify-agent.env` 中 `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` 和 `DIFY_AGENT_INNER_API_KEY` 的映射不变。
+
+    确保 `COMPOSE_PROFILES` 与 `DB_TYPE` 和 `VECTOR_STORE` 一致。
+
+    沿用数据库凭据和数据卷：修改 env 文件中的数据库初始化密码不会更改已有数据库的密码。
+  </Step>
+  <Step title="检查现在开始生效的设置">
+    保留下来的服务文件中，部分值以前会被旧 Compose 文件忽略，现在会生效，即使当初只是复制文件、没有做任何修改，也可能如此。
+
+    例如，旧的 `db-postgres.env` 中可能有 `POSTGRES_MAX_CONNECTIONS=100`，但之前的服务栈实际使用的是 `200`。更新后，文件中保留的值会生效。选择你希望使用的值；如需保留之前的行为，显式设置为 `200`。
+
+    启动服务前，将新的 `docker compose config` 输出与保存的配置进行比较。检查自定义设置，以及服务文件中开始生效的值。
+  </Step>
+  <Step title="应用并检查升级结果">
+    在 `dify/docker` 中运行：
+
+    ```bash
+    docker compose config --quiet
+    docker compose up -d
+    docker compose ps --all
+    ```
+
+    检查受影响的服务，包括实际生效的配置和服务间认证。Nginx 配置的检查方法见 [自定义](#自定义)。
+  </Step>
+</Steps>
