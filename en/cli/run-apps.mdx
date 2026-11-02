@@ -110,49 +110,57 @@ difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -
 
 ## Stop a Run
 
-To stop a Workflow or Chatflow run, pass its run ID to `difyctl stop run`. This works on a run that's still going, and on one paused at a Human Input form. A paused run stops right away, and its forms stop accepting answers.
+To stop a Workflow or Chatflow run that's still going or paused at a Human Input form, pass its run ID to `difyctl stop run`. For a Chatbot, legacy Agent, or Text Generator reply, use [`stop task`](#stop-a-chatbot-legacy-agent-or-text-generator-reply) instead.
 
 ```bash
 difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
 ```
 
-<Info>
-Pressing Ctrl+C stops only `difyctl`, not the run on the server. To stop the run too, pass the `run_id` from its `incomplete` result to `stop run`.
-</Info>
-
 Take the run ID from wherever you have it:
 
-- The run's result, in `run_id`.
-- Any event of a `--stream` run, in `workflow_run_id`.
-- The app's list of running runs, if you started the run some other way:
+- A `suspended` or `incomplete` result, in `run_id`.
+- A `--stream` run's events, in `workflow_run_id`. In a Chatflow, `message` and `message_end` events don't carry it: take it from `workflow_started` or a node event.
+- The app's list of running runs, when you have no run ID, such as for a run started from the web app, or an `incomplete` result without a `run_id`:
 
   ```bash
   difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status running
   ```
 
-  To find a test run of the draft instead, leave out `--triggered-from app-run`.
+  For a run paused at a form, leave out `--status` and look for runs whose `status` is `paused`: `--status` can't select them. To find a test run of the draft instead, leave out `--triggered-from app-run`.
 
-To check that the run stopped, look at how the command that started it ends. It exits with code 1, as it does when a run fails, so in a script, check the output rather than the exit code. With `--stream`, the last event is `workflow_finished` with `data.status` set to `stopped`.
+<Info>
+Pressing Ctrl+C during a Workflow or Chatflow run stops only `difyctl`, not the run on the server. To stop the run too, pass its run ID to `stop run`.
+</Info>
 
-Without a stream, the result looks just like a [failed run's](/en/cli/reference/results-errors-and-exit-codes#check-how-a-run-ended): its `status` is `failed`. To be sure a run was stopped and didn't fail, run `describe run` with its run ID. A stopped run's `status` is `stopped`. This also works for a run you're no longer following, such as one you left with Ctrl+C.
+A run that's still going stops right away. A model call or HTTP request already under way still completes, and its cost and side effects remain. When you stop a run paused at a form, its forms stop accepting answers.
 
-A Chatbot, legacy Agent, or Text Generator reply has no run ID. To be able to stop one, start it with `--stream`. Then pass the `task_id` from its first event to `difyctl stop task`:
+To confirm the run stopped, pass its run ID to `difyctl describe run` and check that its `status` is `stopped`. It can still show `running` for a while after the stop, so check again after a moment. Running `stop run` again is safe: on a run you've already stopped, it succeeds too.
+
+If the command that started the run is still following it when the stop lands, the command exits 1, as for a [failed run](/en/cli/reference/results-errors-and-exit-codes#check-how-a-run-ended). With `--stream`, its last event shows the stop: `workflow_finished`, with `data.status` set to `stopped`. Without `--stream`, its result's `status` is `failed`. To tell a stop from a failure in a script, check the run's `status` with `describe run`.
+
+A stopped Chatflow run's result has no `conversation_id`, so you can't continue the conversation from it.
+
+When a stop fails, the error in your terminal starts with one of these codes. To branch on them in a script, see [Read an Error](/en/cli/reference/results-errors-and-exit-codes#read-an-error).
+
+- `run_not_found`: the app has no run with that ID. Check that you passed the run ID, not a `task_id`, and that `--app-id` is the app the run belongs to.
+- `run_not_stoppable`: the run already succeeded, failed, or partially succeeded, or the server stopped it for exceeding a time or step limit.
+
+  A run paused at a form can get this code too. If you started it yourself, such as with `difyctl` or as a test run, run `get run event` once with its run ID and `--include-state-snapshot`, then run `stop run` again. Any other such run, including one started from a shared web app or through the Service API, can't be stopped from `difyctl`.
+- `app_mode_mismatch`: the command doesn't match the app's type. Use `stop run` for a Workflow or Chatflow app, and `stop task` for the other types.
+
+### Stop a Chatbot, Legacy Agent, or Text Generator Reply
+
+To be able to stop a reply, start it with `--stream`. Then pass the `task_id` from its first event to `difyctl stop task`.
 
 ```bash
 difyctl stop task --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --task-id 26992456-d005-4add-a26d-8dff91d5f13d
 ```
 
 <Note>
-`stop task` prints `{"result": "success"}` even for a task ID that doesn't exist, or a reply that has already finished. So take the `task_id` from the first event of the reply you want to stop, and run `stop task` while its stream is still open.
+`stop task` prints `{"result": "success"}` even for a task ID that doesn't exist, or a reply that has already finished. So check that the `task_id` is from the reply you want to stop, and run `stop task` while its stream is still open.
 
-Nothing in the reply marks the stop either. Its stream ends with `message_end`, as a finished reply's does. The answer holds only what arrived before the stop. If your script uses the answer, have it record that it called `stop task`. Otherwise it can't tell a cut-off answer from a complete one.
+Nothing in the reply marks the stop, either. Its stream ends with `message_end`, and the command that started it exits with code 0, as for a finished reply. The answer holds only what arrived before the stop. If your script uses the answer, have it record that it called `stop task`.
 </Note>
-
-When a stop fails, the error in your terminal starts with one of these codes. To branch on them in a script, see [Read an Error](/en/cli/reference/results-errors-and-exit-codes#read-an-error).
-
-- `run_not_found`: the app has no run with that ID. Check that you passed the run ID, not a `task_id`, and that `--app-id` is the app the run belongs to.
-- `run_not_stoppable`: the run has already finished. A run that started before your server was upgraded can also get this while it's still going, and `difyctl` can't stop it.
-- `app_mode_mismatch`: the command doesn't match the app's type. Use `stop run` for a Workflow or Chatflow app, and `stop task` for the other types.
 
 ## Answer a Human Input Form
 
@@ -203,5 +211,6 @@ Keep `--triggered-from app-run`. Without it, the list shows only test runs of th
 | Message | What to do |
 |:--|:--|
 | `invalid run input`, though the inputs are right | The app may never have been published. Publish it, then run it again. |
+| `unknown flag "--task-id"` from `stop run` or `get run event` | Pass the run ID as `--run-id` instead, such as a result's `run_id`. To stop a Chatbot, legacy Agent, or Text Generator reply by its `task_id`, use [`stop task`](#stop-a-chatbot-legacy-agent-or-text-generator-reply). |
 
 For errors that can come from any command, see [Troubleshooting](/en/cli/reference/results-errors-and-exit-codes#troubleshooting) on Results, Errors, and Exit Codes.
