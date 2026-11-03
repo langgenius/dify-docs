@@ -698,25 +698,27 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 
 ### 向量数据库配置
 
-配置用于知识库嵌入存储和相似性搜索的向量数据库。每个提供商有各自的凭证变量，仅配置你使用的那个。
+配置用于知识库嵌入存储和相似性搜索的向量数据库。保留知识库仍在使用的每个提供商的连接设置。
 
 ### VECTOR_STORE
 
 默认值：`weaviate`
 
-选择向量数据库后端。如果数据集已有索引，数据集存储的类型优先于此设置。
+选择新索引默认使用的向量数据库。已有知识库继续使用其索引中记录的后端。
 
-修改 `VECTOR_STORE` 不会迁移已有数据。
+修改 `VECTOR_STORE` 不会迁移已有数据。对每个仍在使用的后端，保留连接设置并保持服务运行；使用自带服务时，还需保留其 Compose profile。
 
 使用自带的向量数据库时，在 `docker/.env` 中同时设置 `VECTOR_STORE` 和对应的 `COMPOSE_PROFILES` 条目。两者都要更新：修改选择变量不会自动改写 profile 列表。Qdrant 示例详见 [Docker Compose](/zh/self-host/deploy/quick-start/docker-compose#自定义)。
 
 API 和 Worker 会自动加载所选提供商的 `envs/vectorstores/<VECTOR_STORE>.defaults`。将 `VECTOR_STORE` 保留在根目录 `docker/.env` 中：Compose 在读取服务环境文件之前就会选择提供商的默认配置文件。使用自带的连接默认值时，无需复制模板。
 
+选择其他提供商后，自带 Weaviate 的连接默认值仍然可用。`weaviate.env`、`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然生效；根目录 `docker/.env` 优先。
+
 以下自带提供商均有对应的 Compose profile：`weaviate`、`qdrant`、`oceanbase`、`seekdb`、`couchbase`、`pgvector`、`pgvecto-rs`、`vastbase`、`chroma`、`iris`、`oracle`、`milvus`、`opensearch`、`opengauss`、`myscale`、`matrixone`、`elasticsearch` 和 `elasticsearch-ja`。
 
 如需自定义连接，将提供商的 `.defaults` 文件复制到注释中指定的 `.env` 路径；覆盖文件已存在时，直接编辑。Elasticsearch 的两个选择值均使用 `elasticsearch.env`。
 
-根目录 `docker/.env` 会覆盖模板中通过映射或插值读取的输入值。`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然受支持。
+根目录 `docker/.env` 会覆盖模板中通过映射或插值读取的输入值。更改 `VECTOR_STORE` 后，自带提供商的 `.env` 文件、`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然生效。
 
 在 `dify/docker` 中运行 `docker compose up -d` 应用修改。
 
@@ -981,12 +983,18 @@ API 和 Worker 会自动加载所选提供商的 `envs/vectorstores/<VECTOR_STOR
 | `OPENSEARCH_HOST` | `opensearch` | 主机名。 |
 | `OPENSEARCH_PORT` | `9200` | 端口号。 |
 | `OPENSEARCH_SECURE` | `true` | 使用 HTTPS。 |
-| `OPENSEARCH_VERIFY_CERTS` | `false` | 验证 TLS 证书。自带的演示证书默认不验证；服务器使用受信任的证书时，应启用验证。 |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | 验证 OpenSearch HTTPS 连接的 TLS 证书。无论是否启用 `opensearch` Compose profile，自带和外部服务器均适用。 |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` 使用用户名/密码。`aws_managed_iam` 通过 Boto3 凭证使用 AWS SigV4 请求签名（适用于 AWS 托管的 OpenSearch 或 Serverless）。 |
 | `OPENSEARCH_USER` | `admin` | 用户名。仅在 `basic` 认证下使用。 |
 | `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | `basic` 认证的密码。未显式覆盖时，默认使用 `OPENSEARCH_INITIAL_ADMIN_PASSWORD` 的值。 |
 | `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS 区域。仅在 `aws_managed_iam` 认证下使用。 |
 | `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS 服务类型：`es`（托管集群）或 `aoss`（OpenSearch Serverless）。仅在 `aws_managed_iam` 认证下使用。 |
+
+生产环境和外部 HTTPS 服务器应使用客户端信任的证书，并保持证书验证开启。
+
+自带的 OpenSearch 镜像使用演示证书。在本地开发中使用这些证书时，在 `envs/vectorstores/opensearch.env` 或根目录 `docker/.env` 中显式设置 `OPENSEARCH_VERIFY_CERTS=false`。
+
+升级后，已保存的 `OPENSEARCH_VERIFY_CERTS=false` 仍然生效。检查此设置，并删除该赋值或将其设为 `true`，以启用验证。
 
 </Accordion>
 
@@ -1849,11 +1857,11 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 
 将 Compose 设置保存在 `docker/.env` 中：profile、对外发布的端口、挂载路径和健康检查调度设置都在容器启动前读取。
 
-修改 `DB_TYPE` 或 `VECTOR_STORE` 时，同时更新 `COMPOSE_PROFILES`，以启动对应的自带服务。例如，使用自带 PostgreSQL 和 Qdrant 的部署需设置 `DB_TYPE=postgresql`、`VECTOR_STORE=qdrant` 和 `COMPOSE_PROFILES=qdrant,postgresql,collaboration`。
+修改 `DB_TYPE` 或 `VECTOR_STORE` 时，同时更新 `COMPOSE_PROFILES`，以启动对应的自带服务。例如，使用自带 PostgreSQL 和 Qdrant 的全新部署需设置 `DB_TYPE=postgresql`、`VECTOR_STORE=qdrant` 和 `COMPOSE_PROFILES=qdrant,postgresql,collaboration`。
 
 使用 MySQL 时，选择 `mysql` profile，并按 [数据库配置](#数据库配置) 设置连接字段。仅修改 profile 不会更改 PostgreSQL 的连接默认值。使用外部提供商时，不添加其对应的内置服务 profile。
 
-修改这些设置不会迁移现有数据库或向量数据库中的数据。
+修改这些设置不会迁移现有数据库或向量数据库中的数据。保留已有知识库仍在使用的每个自带向量数据库的 profile。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -2018,7 +2026,7 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 
 ## 向量数据库服务配置
 
-这些变量配置向量数据库容器本身（而非 Dify 客户端连接）。仅与你选择的 `VECTOR_STORE` 相关的变量有效。
+这些变量配置向量数据库容器本身。为知识库仍在使用的每个自带服务配置相应变量。
 
 <AccordionGroup>
 <Accordion title="Weaviate 服务">

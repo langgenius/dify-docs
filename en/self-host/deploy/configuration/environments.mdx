@@ -698,25 +698,27 @@ Separate S3-compatible storage for archiving workflow run logs. The `archive-wor
 
 ### Vector Database Configuration
 
-Configure the vector database used for knowledge base embedding storage and similarity search. Each provider has its own set of credential variables—configure only the one you're using.
+Configure the vector databases used for knowledge base embedding storage and similarity search. Keep the connection settings for every provider your knowledge bases still use.
 
 ### VECTOR_STORE
 
 Default: `weaviate`
 
-Selects the vector database backend. If a dataset already has an index, the dataset's stored type takes precedence over this setting.
+Selects the default vector database for new indexes. Existing knowledge bases continue to use the backend recorded with their indexes.
 
-Changing `VECTOR_STORE` does not migrate existing data.
+Changing `VECTOR_STORE` does not migrate existing data. Preserve the connection settings and running services for every backend still in use, including its Compose profile for a bundled service.
 
 For a bundled provider, set `VECTOR_STORE` and its matching `COMPOSE_PROFILES` entry in `docker/.env`. Update both: the selector does not rewrite the profile list. See [Docker Compose](/en/self-host/deploy/quick-start/docker-compose#customize) for a Qdrant example.
 
 The API and workers automatically load the selected provider's `envs/vectorstores/<VECTOR_STORE>.defaults`. Keep `VECTOR_STORE` in root `docker/.env`: Compose selects the provider's defaults file before reading service environment files. You don't need to copy a template to use the bundled connection defaults.
 
+Bundled Weaviate connection defaults remain available when another provider is selected. Existing overrides in `weaviate.env`, `api-worker.env`, and `shared.env` still apply; root `docker/.env` takes precedence.
+
 Bundled providers with matching Compose profiles: `weaviate`, `qdrant`, `oceanbase`, `seekdb`, `couchbase`, `pgvector`, `pgvecto-rs`, `vastbase`, `chroma`, `iris`, `oracle`, `milvus`, `opensearch`, `opengauss`, `myscale`, `matrixone`, `elasticsearch`, and `elasticsearch-ja`.
 
 To customize the connection, copy the provider's `.defaults` file to the `.env` path named in its comments, or edit the existing override file. Both Elasticsearch selectors use `elasticsearch.env`.
 
-Root `docker/.env` overrides the template's mapped or interpolated inputs. Existing overrides in `api-worker.env` and `shared.env` remain supported.
+Root `docker/.env` overrides the template's mapped or interpolated inputs. Existing overrides in bundled providers' `.env` files, `api-worker.env`, and `shared.env` remain effective when `VECTOR_STORE` changes.
 
 Apply changes with `docker compose up -d` from `dify/docker`.
 
@@ -981,12 +983,18 @@ Keep `VASTBASE_USER` and `VASTBASE_PASSWORD` in sync with `VB_USERNAME` and `VB_
 | `OPENSEARCH_HOST` | `opensearch` | Hostname. |
 | `OPENSEARCH_PORT` | `9200` | Port number. |
 | `OPENSEARCH_SECURE` | `true` | Use HTTPS. |
-| `OPENSEARCH_VERIFY_CERTS` | `false` | Verify TLS certificates. Disabled for the bundled demo certificates; enable it when the server uses trusted certificates. |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | Verify TLS certificates for OpenSearch HTTPS connections. Applies to bundled and external servers, regardless of whether the `opensearch` Compose profile is enabled. |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` uses username/password. `aws_managed_iam` uses AWS SigV4 request signing via Boto3 credentials (for AWS Managed OpenSearch or Serverless). |
 | `OPENSEARCH_USER` | `admin` | Username. Only used with `basic` auth. |
 | `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | Password for `basic` authentication. Defaults to `OPENSEARCH_INITIAL_ADMIN_PASSWORD` unless explicitly overridden. |
 | `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS region. Only used with `aws_managed_iam` auth. |
 | `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS service type: `es` (Managed Cluster) or `aoss` (OpenSearch Serverless). Only used with `aws_managed_iam` auth. |
+
+Use certificates trusted by the client and keep verification enabled for production and external HTTPS servers.
+
+The bundled OpenSearch image uses demo certificates. For local development with those certificates, explicitly set `OPENSEARCH_VERIFY_CERTS=false` in `envs/vectorstores/opensearch.env` or root `docker/.env`.
+
+On upgrade, a saved `OPENSEARCH_VERIFY_CERTS=false` stays in effect. Review it and remove the assignment or set it to `true` to enable verification.
 
 </Accordion>
 
@@ -1851,11 +1859,11 @@ These configure the Squid-based SSRF proxy container that blocks requests to int
 
 Keep Compose settings in `docker/.env`: profiles, published ports, mount paths, and health-check scheduling are read before containers start.
 
-When changing `DB_TYPE` or `VECTOR_STORE`, update `COMPOSE_PROFILES` to start the matching bundled services. For example, a deployment with bundled PostgreSQL and Qdrant uses `DB_TYPE=postgresql`, `VECTOR_STORE=qdrant`, and `COMPOSE_PROFILES=qdrant,postgresql,collaboration`.
+When changing `DB_TYPE` or `VECTOR_STORE`, update `COMPOSE_PROFILES` to start the matching bundled services. For example, a new deployment with bundled PostgreSQL and Qdrant uses `DB_TYPE=postgresql`, `VECTOR_STORE=qdrant`, and `COMPOSE_PROFILES=qdrant,postgresql,collaboration`.
 
 For MySQL, use the `mysql` profile and set the connection fields under [Database Configuration](#database-configuration). The profile alone leaves the PostgreSQL connection defaults unchanged. For an external provider, omit its bundled service profile.
 
-Changing these settings does not migrate existing database or vector-store data.
+Changing these settings does not migrate existing database or vector-store data. Keep the profiles for every bundled vector store still used by existing knowledge bases.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -2020,7 +2028,7 @@ Redis-based event transport between API and Celery workers.
 
 ## Vector Database Service Configuration
 
-These configure the vector database containers themselves (not the Dify client connection). Only the variables for your chosen `VECTOR_STORE` are relevant.
+These variables configure the vector database containers themselves. Configure each bundled service that your knowledge bases still use.
 
 <AccordionGroup>
 <Accordion title="Weaviate Service">

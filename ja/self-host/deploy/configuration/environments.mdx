@@ -698,25 +698,27 @@ ClickZetta Volume は、ベクトルデータベースセクションで設定�
 
 ### ベクトルデータベース設定
 
-ナレッジベースのエンベディング保存と類似検索に使用するベクトルデータベースを設定します。各プロバイダーには独自の資格情報変数があります。使用するもののみを設定してください。
+ナレッジベースの埋め込み保存と類似検索に使用するベクトルデータベースを設定します。ナレッジベースが引き続き使う各プロバイダーの接続設定を保持してください。
 
 ### VECTOR_STORE
 
 デフォルト値：`weaviate`
 
-ベクトルデータベースバックエンドを選択します。データセットに既にインデックスがある場合、データセットに保存されたタイプがこの設定より優先されます。
+新規インデックスに使うデフォルトのベクトルデータベースを選択します。既存のナレッジベースは、インデックスに記録されたバックエンドを引き続き使います。
 
-`VECTOR_STORE` を変更しても、既存のデータは移行されません。
+`VECTOR_STORE` を変更しても、既存のデータは移行されません。まだ使用しているバックエンドは、接続設定を保持し、サービスの稼働を維持してください。同梱サービスを使っている場合は、その Compose プロファイルも保持します。
 
 同梱のプロバイダーを使う場合は、`docker/.env` で `VECTOR_STORE` と対応する `COMPOSE_PROFILES` の項目を設定します。プロバイダーを選択してもプロファイル一覧は書き換わらないため、両方を更新してください。Qdrant の例は [Docker Compose](/ja/self-host/deploy/quick-start/docker-compose#カスタマイズ) を参照してください。
 
 API とワーカーは、選択したプロバイダーの `envs/vectorstores/<VECTOR_STORE>.defaults` を自動で読み込みます。`VECTOR_STORE` はルートの `docker/.env` に設定してください。Compose は、サービスの環境変数ファイルを読む前に、プロバイダーのデフォルト設定ファイルを選択します。同梱の接続設定を使う場合、テンプレートをコピーする必要はありません。
 
+別のプロバイダーを選択しても、同梱の Weaviate の接続デフォルト値は利用できます。`weaviate.env`、`api-worker.env`、`shared.env` の既存の上書き設定は引き続き適用されます。ルートの `docker/.env` が優先されます。
+
 対応する Compose プロファイルがある同梱のプロバイダー：`weaviate`、`qdrant`、`oceanbase`、`seekdb`、`couchbase`、`pgvector`、`pgvecto-rs`、`vastbase`、`chroma`、`iris`、`oracle`、`milvus`、`opensearch`、`opengauss`、`myscale`、`matrixone`、`elasticsearch`、`elasticsearch-ja`。
 
 接続設定を変更するには、プロバイダーの `.defaults` ファイルをコピーします。コピー先の `.env` パスは、そのファイルのコメントを確認してください。上書き用ファイルが既にある場合は、そのファイルを編集します。Elasticsearch は、どちらの選択値でも `elasticsearch.env` を使います。
 
-ルートの `docker/.env` は、テンプレートでマッピングまたは変数展開される入力値より優先されます。`api-worker.env` と `shared.env` にある既存の上書き設定も引き続き使えます。
+ルートの `docker/.env` は、テンプレートでマッピングまたは変数展開される入力値より優先されます。`VECTOR_STORE` を変更しても、同梱プロバイダーの `.env` ファイルにある上書き設定は引き続き適用されます。`api-worker.env` と `shared.env` の上書き設定も有効なままです。
 
 `dify/docker` で `docker compose up -d` を実行して変更を適用します。
 
@@ -981,12 +983,18 @@ API とワーカーは、選択したプロバイダーの `envs/vectorstores/<V
 | `OPENSEARCH_HOST` | `opensearch` | ホスト名。 |
 | `OPENSEARCH_PORT` | `9200` | ポート番号。 |
 | `OPENSEARCH_SECURE` | `true` | HTTPS を使用。 |
-| `OPENSEARCH_VERIFY_CERTS` | `false` | TLS 証明書を検証。同梱のデモ用証明書では無効。サーバーが信頼された証明書を使う場合は有効にする。 |
+| `OPENSEARCH_VERIFY_CERTS` | `true` | OpenSearch の HTTPS 接続で TLS 証明書を検証。`opensearch` Compose プロファイルの有効・無効にかかわらず、同梱・外部の両方のサーバーに適用。 |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic`はユーザー名/パスワードを使用。`aws_managed_iam` は Boto3 資格情報による AWS SigV4 リクエスト署名を使用（AWS Managed OpenSearch または Serverless 用）。 |
 | `OPENSEARCH_USER` | `admin` | ユーザー名。`basic` 認証でのみ使用。 |
 | `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | `basic` 認証用パスワード。明示的に上書きしない限り、`OPENSEARCH_INITIAL_ADMIN_PASSWORD` の値を使う。 |
 | `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS リージョン。`aws_managed_iam` 認証でのみ使用。 |
 | `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS サービスタイプ：`es`（Managed Cluster）または `aoss`（OpenSearch Serverless）。`aws_managed_iam` 認証でのみ使用。 |
+
+本番環境と外部の HTTPS サーバーでは、クライアントが信頼する証明書を使ってください。証明書の検証は有効のままにします。
+
+同梱の OpenSearch イメージはデモ用証明書を使います。ローカル開発でこの証明書を使う場合は、検証を明示的に無効にしてください。`envs/vectorstores/opensearch.env` またはルートの `docker/.env` に `OPENSEARCH_VERIFY_CERTS=false` を設定します。
+
+アップグレードしても、保存済みの `OPENSEARCH_VERIFY_CERTS=false` は引き続き適用されます。この設定を確認してください。検証を有効にするには、代入行を削除するか、値を `true` に変更します。
 
 </Accordion>
 
@@ -1847,11 +1855,11 @@ API への直接接続は、信頼できる呼び出し元だけに許可して�
 
 Compose の設定は `docker/.env` に記述してください。プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などは、コンテナの起動前に読み込まれます。
 
-`DB_TYPE` または `VECTOR_STORE` を変更する際は、`COMPOSE_PROFILES` も更新してください。対応する同梱サービスを起動するために必要です。たとえば、同梱の PostgreSQL と Qdrant を使う構成では、`DB_TYPE=postgresql`、`VECTOR_STORE=qdrant`、`COMPOSE_PROFILES=qdrant,postgresql,collaboration` を設定します。
+`DB_TYPE` または `VECTOR_STORE` を変更する際は、`COMPOSE_PROFILES` も更新してください。対応する同梱サービスを起動するために必要です。たとえば、同梱の PostgreSQL と Qdrant を使う新規デプロイでは、`DB_TYPE=postgresql`、`VECTOR_STORE=qdrant`、`COMPOSE_PROFILES=qdrant,postgresql,collaboration` を設定します。
 
 MySQL には `mysql` プロファイルを使い、[データベース設定](#データベース設定) に従って接続項目も設定してください。プロファイルだけを変更しても、PostgreSQL 用の接続デフォルト値は変わりません。外部のプロバイダーを使う場合は、対応する同梱サービスのプロファイルを省いてください。
 
-これらの設定を変更しても、既存のデータベースやベクトルストアのデータは移行されません。
+これらの設定を変更しても、既存のデータベースやベクトルストアのデータは移行されません。既存のナレッジベースが引き続き使う同梱ベクトルストアのプロファイルは、すべて保持してください。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
@@ -2016,7 +2024,7 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 
 ## ベクトルデータベースサービス設定
 
-ベクトルデータベースコンテナ自体の設定です（Dify クライアント接続ではありません）。選択した `VECTOR_STORE` の変数のみが関連します。
+これらの変数は、ベクトルデータベースのコンテナ自体を設定します。ナレッジベースが引き続き使う同梱サービスごとに設定してください。
 
 <AccordionGroup>
 <Accordion title="Weaviate サービス">
