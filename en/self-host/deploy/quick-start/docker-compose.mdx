@@ -3,225 +3,173 @@ title: Deploy Dify with Docker Compose
 sidebarTitle: Docker Compose
 ---
 
+The default Docker Compose deployment includes PostgreSQL, Weaviate, and the supporting services Dify needs to run. Service defaults load automatically; initial setup uses the startup settings in `docker/.env`.
+
 <Tip>
-    For common deployment questions, see [FAQs](/en/self-host/deploy/quick-start/faqs).
+For common deployment questions, see [FAQs](/en/self-host/deploy/quick-start/faqs).
 </Tip>
 
 ## Before Deployment
 
-Make sure your machine meets the following minimum system requirements.
-
 ### Hardware
 
-- CPU >= 2 Core
-- RAM >= 4 GiB
+- CPU: at least 2 cores
+- RAM: at least 4 GiB
 
 ### Software
 
-| Operating System              | Required Software                        | Notes |
-| :----------------------------- | :---------------------------------------- | :----- |
-| macOS 10.14 or later          | Docker Desktop with Docker Compose 2.35.0+ | Configure the Docker virtual machine with at least 2 virtual CPUs and 8 GiB of memory. <br></br><br></br>For installation instructions, see [Install Docker Desktop on Mac](https://docs.docker.com/desktop/mac/install/). |
-| Linux distributions           | Docker 19.03+<br></br><br></br>Docker Compose 2.35.0+ | For installation instructions, see [Install Docker Engine](https://docs.docker.com/engine/install/) and [Install Docker Compose](https://docs.docker.com/compose/install/). |
-| Windows with WSL 2 enabled    | Docker Desktop with Docker Compose 2.35.0+ | Store source code and data bound to Linux containers in the Linux file system rather than Windows. <br></br><br></br>For installation instructions, see [Install Docker Desktop on Windows](https://docs.docker.com/desktop/windows/install/#wsl-2-backend). |
+Install Docker with Docker Compose 2.35.0 or later, and make sure the Docker daemon is running. You also need Git to download Dify and OpenSSL to generate the sandbox token.
 
-Run `docker compose version` to check your version. Compose 2.35.0 or later is required for values in `docker/.env` to take precedence when the service files resolve variables.
+| Operating System | Installation |
+|:---|:---|
+| macOS | Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) on a supported macOS version. Configure its virtual machine with at least 2 virtual CPUs and 8 GiB of memory. |
+| Linux | Follow the instructions for your distribution to install [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/). |
+| Windows with WSL 2 | Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Store the source code and container data in the Linux file system. |
+
+Check the Compose version before starting:
+
+```bash
+docker compose version
+```
 
 ## Deploy and Start
 
+For an existing deployment, follow [Upgrade](#upgrade) to preserve its configuration and data.
+
 <Steps>
-  <Step title="Clone Dify">
-    Clone the Dify source code to your local machine.
+  <Step title="Get a Dify Release">
+    Choose a version from [Dify releases](https://github.com/langgenius/dify/releases). Replace `<version>` with its release tag and clone it:
 
     ```bash
-    git clone --branch "$(curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name)" https://github.com/langgenius/dify.git
+    git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
+    cd dify/docker
     ```
 
-    <Info>
-      This command requires `git`, `curl`, and `jq`. If you see a `command not found` error, install the missing tool and run the command again.
-
-      When the clone fails with `fatal: Remote branch null not found in upstream origin`, retry with an explicit version, using the latest version number from [Dify releases](https://github.com/langgenius/dify/releases):
-
-      ```bash
-      git clone --branch <version> https://github.com/langgenius/dify.git
-      ```
-
-      See [Clone Fails with "Remote branch null not found"](/en/self-host/deploy/quick-start/faqs#clone-fails-with-remote-branch-null-not-found) for details.
-
-    </Info>
   </Step>
-  <Step title="Start Dify">
+  <Step title="Configure Startup Settings">
+    Create the local configuration file:
 
-    <Note>
-      For an existing deployment, keep your current `.env` and follow [Upgrade](#upgrade) to preserve its settings.
-    </Note>
+    ```bash
+    cp .env.example .env
+    ```
 
-    1. Navigate to the `docker` directory in the Dify source code:
+    Keep `COMPOSE_PROFILES=weaviate,postgresql,collaboration` for the default deployment.
 
-        ```bash
-        cd dify/docker
-        ```
-    
-    2. For a new deployment, copy the essential environment configuration file:
+    Generate a token for the agent sandbox:
 
-        ```bash
-        cp .env.example .env
-        ```
+    ```bash
+    openssl rand -hex 32
+    ```
 
-        Keep `COMPOSE_PROFILES=weaviate,postgresql,collaboration` for the default stack. The API, worker, and supporting services load their bundled defaults automatically; no other configuration file is needed.
+    In `.env`, set `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` to the output. The agent backend and its local sandbox require this shared token to start.
+  </Step>
+  <Step title="Start and Check the Services">
+    From `dify/docker`, run:
 
-    3. Generate a token for the agent sandbox:
+    ```bash
+    docker compose up -d
+    docker compose ps --all
+    ```
 
-        ```bash
-        openssl rand -hex 32
-        ```
-
-        In `.env`, set `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` to the output. The agent backend and its sandbox don't start without it.
-
-    4. Start the containers:
-
-        ```bash
-        docker compose up -d
-        ```
-
-        The following containers will be started:
-
-        - 7 core services: `api`, `api_websocket`, `worker`, `worker_beat`, `web`, `plugin_daemon`, `agent_backend`
-        - 8 dependent components: `weaviate`, `db_postgres`, `redis`, `nginx`, `ssrf_proxy`, `agent_ssrf_proxy`, `sandbox`, `local_sandbox`
-        - 1 one-time task: `init_permissions`, which sets storage file permissions and exits when done
-    
-    5. Check the services and initialization task:
-
-        ```bash
-        docker compose ps --all
-        ```
-
-        The 15 long-running containers should be `Up` or `healthy`. The `init_permissions` task should show `Exited (0)` after it finishes.
-
+    The long-running services should show `Up` or `healthy`. The `init_permissions` task runs once to prepare storage permissions and should show `Exited (0)` after it finishes.
   </Step>
 </Steps>
 
 ## Access
 
-1. Open the administrator initialization page to set up the admin account:
+Before exposing the deployment publicly, configure [HTTPS](/en/self-host/deploy/configuration/environments#nginx-reverse-proxy) and replace the development credentials described under [Plugin Daemon Configuration](/en/self-host/deploy/configuration/environments#plugin-daemon-configuration) and [Agent settings](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key).
 
-    ```bash
-    # Local environment
-    http://localhost/install
+Open [http://localhost/install](http://localhost/install) in your browser and create the administrator account. After setup, sign in at [http://localhost](http://localhost).
 
-    # Server environment
-    http://your_server_ip/install
-    ```
-
-2. After completing the admin account setup, log in to Dify at:
-
-    ```bash
-    # Local environment
-    http://localhost  
-
-    # Server environment
-    http://your_server_ip
-    ```
+For a remote deployment, replace `localhost` with the server's IP address or domain. The default HTTP port is `80`. Set `NEXT_PUBLIC_SOCKET_URL` in `docker/.env` to the browser-facing WebSocket address, such as `wss://dify.example.com` for HTTPS, and apply it with `docker compose up -d`. For the endpoint format, see [WebSocket Configuration](/en/self-host/deploy/configuration/environments#cors-configuration).
 
 ## Customize
 
-Run the following commands from the `dify/docker` directory. Keep your changes in local `.env` files so you can update the bundled templates when you upgrade.
+Keep deployment settings and shared credentials in `docker/.env`. Compose reads settings such as profiles, published ports, mount paths, and health-check scheduling from this file before containers start.
+
+Services load their bundled `.defaults` files under `docker/envs/` automatically. To change a service setting, create the local `.env` file named in its template's comments, or edit the existing local file. Optional provider and security settings also have `.env.example` templates; copy those without the `.example` suffix.
+
+For settings shared by the API, workers, and scheduled tasks, use `envs/core-services/shared.defaults` to create `shared.env`. Uncomment only the settings you need, and leave the expressions under **Container variable mappings** unchanged. See [Environment Variables](/en/self-host/deploy/configuration/environments#configuration-files) for file precedence, shared credentials, and individual settings.
+
+For example, to set Nginx's maximum request body size to `200M`, run these commands from `dify/docker`:
 
 <Steps>
-  <Step title="Edit Environment Variables">
+  <Step title="Set the Override">
+    If `envs/infrastructure/nginx.env` doesn't exist, create it:
 
-    - **Startup and Compose settings** belong in `docker/.env`. This includes profiles, published ports, mount paths, and health-check scheduling.
+    ```bash
+    cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
+    ```
 
-    - **Service settings** have bundled `.defaults` files under `docker/envs/`. Copy the relevant file to the `.env` path given in its comments, then edit the copy. If that `.env` already exists, edit it directly.
+    In `envs/infrastructure/nginx.env`, set:
 
-      For example, to raise Nginx's request body limit:
-
-      ```bash
-      cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
-      ```
-
-      In `nginx.env`, set `NGINX_CLIENT_MAX_BODY_SIZE=200M`.
-
-    - **Optional application and provider settings** still use `.env.example` templates. Remove only the `.example` suffix when copying them, such as `milvus.env.example` to `milvus.env`.
-
-    Uncomment optional settings you want to use. In copies of `.defaults` files, edit the inputs and leave the expressions under **Container variable mappings** unchanged.
-
-    Values in `docker/.env` override the corresponding service-file settings. For the full precedence rules and variable descriptions, see [Environment Variables](/en/self-host/deploy/configuration/environments).
-
-    When changing `DB_TYPE` or `VECTOR_STORE` to another bundled provider, update `COMPOSE_PROFILES` in `docker/.env` to match. Changing a selector in a service file won't update the root profile list. Changing providers doesn't migrate your data; keep your existing providers during an in-place upgrade.
-
-    Keep shared credentials in `docker/.env`: `PLUGIN_DAEMON_KEY`, `PLUGIN_DIFY_INNER_API_KEY`, `DIFY_AGENT_API_TOKEN`, and `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`. For production, use separate strong values for the two plugin keys.
-
-    In `envs/core-services/dify-agent.env`, leave the mappings for `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` and `DIFY_AGENT_INNER_API_KEY` unchanged so all services use matching credentials. Mismatches cause authentication failures. When upgrading, retain your existing working secrets.
+    ```dotenv
+    NGINX_CLIENT_MAX_BODY_SIZE=200M
+    ```
 
   </Step>
-  <Step title="Apply and Verify">
+  <Step title="Apply the Configuration">
+    Validate the configuration, then recreate the affected containers:
 
     ```bash
     docker compose config --quiet
     docker compose up -d
     ```
 
-    `up -d` recreates containers whose configuration changed. `docker compose restart` doesn't reload environment variables.
-
-    For the Nginx example, check the active limit:
+    `docker compose restart` keeps the existing container environment. Use `up -d` when changing environment variables.
+  </Step>
+  <Step title="Check the Active Value">
+    Read Nginx's active configuration:
 
     ```bash
     docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
     ```
 
-    The output should show `client_max_body_size 200M;`. If it shows another value, check for an override in `docker/.env`.
-
+    The output should include `client_max_body_size 200M;`. If it shows another value, check `docker/.env` for an override, then check shell variables and explicit Compose `environment` entries. See [Precedence](/en/self-host/deploy/configuration/environments#precedence) for how these values are resolved.
   </Step>
 </Steps>
 
 ## Upgrade
 
-Check the upgrade instructions for your target version on the [Releases](https://github.com/langgenius/dify/releases) page, then use the following steps to carry your configuration forward.
+Choose the target version from [Dify releases](https://github.com/langgenius/dify/releases) and read its upgrade instructions before updating.
 
 <Steps>
-  <Step title="Back Up the Working Deployment">
-    Use your existing backup process to save `docker/.env`, local service `.env` files, custom Compose files, and persistent data. Keep the working secrets and volume paths.
+  <Step title="Back Up the Deployment">
+    Use your deployment's backup process to save `docker/.env`, local service `.env` files, custom Compose files, and persistent data. Preserve your working secrets and volume paths, including the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
 
-    Save the current output of `docker compose config` for comparison after the update. It contains secrets, so store and compare it privately.
+    For the default deployment, include `docker/volumes/` and the `local_sandbox` named volumes: `dify_agent_local_sandbox_home` and `dify_agent_local_sandbox_workspace`. Use consistent database backups; a file copy while databases are writing is not a reliable backup. Include external databases and storage if you configured them.
+
+    From `dify/docker`, save the output of `docker compose config` for comparison after the update. It contains secrets, so store and compare it privately.
   </Step>
-  <Step title="Update the Compose Files and Templates Together">
-    Install the release's Compose files and `envs/` templates together, including the `.defaults` files. Before replacing templates you edited directly, move those changes into their local `.env` copies.
+  <Step title="Update to the Selected Release">
+    Save any edits to tracked files before checkout. Keep your local `.env` files at their existing paths.
 
-    Preserve your existing `.env` and service `.env` files, including `envs/core-services/shared.env`, at their current paths. They don't need to be renamed or copied again. Replacing the root file with the minimal `.env.example` would discard your overrides.
+    From the repository root, fetch the release tags and check out the version you chose:
 
-    Reapply custom Compose changes to the release's new files. Keeping an old Compose file can leave out services the new release needs.
+    ```bash
+    git fetch --tags origin
+    git checkout <version>
+    ```
+
+    Reapply your custom Compose settings to the release's files. Use the Compose files and `envs/` templates from the same release.
   </Step>
-  <Step title="Merge New Inputs into Your Existing Files">
-    Compare the new `.env.example` with your root `.env`. For each local service file, compare it with the matching `.defaults` or remaining `.env.example` template. Add required inputs such as `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` and keep your working values.
+  <Step title="Review Your Configuration">
+    Compare `docker/.env.example` with your existing `docker/.env` for required inputs. Compare each local service file with its `.defaults` or `.env.example` template, including `shared.env` with `shared.defaults`.
 
-    For `envs/core-services/shared.env`, compare with `shared.defaults`, which replaces the `shared.env.example` template.
+    Update your existing files with the settings you need; copying a template over them discards your overrides. Use the input names in the current templates and leave container mapping expressions unchanged. Keep the existing database and vector store during an in-place upgrade; changing their selectors does not migrate data.
 
-    Use the input names from the new templates. For example, API and worker Sentry settings use `API_SENTRY_DSN`; an old direct `SENTRY_DSN` entry won't configure the mapped value.
-
-    Keep `PLUGIN_DAEMON_KEY` and `PLUGIN_DIFY_INNER_API_KEY` in the root `.env`. Move any overrides for these keys from service files to the root, preserving their working values. If you set the callback secret as `INNER_API_KEY_FOR_PLUGIN`, use that same value for the root `PLUGIN_DIFY_INNER_API_KEY`. In `envs/core-services/dify-agent.env`, leave the mappings for `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` and `DIFY_AGENT_INNER_API_KEY` unchanged.
-
-    Keep `COMPOSE_PROFILES` aligned with `DB_TYPE` and `VECTOR_STORE`.
-
-    Reuse your database credentials and volumes: changing a database initialization password in an env file doesn't rotate an existing database's password.
-  </Step>
-  <Step title="Review Settings That Now Take Effect">
-    Retained service files can now apply values that older Compose files ignored, even if you copied those files without editing them.
-
-    For example, an old `db-postgres.env` can contain `POSTGRES_MAX_CONNECTIONS=100` while the previous stack ran with `200`. After the update, that retained value takes effect. Choose the value you intend to run; set `200` explicitly if you need to preserve that previous behavior.
-
-    An empty `CELERY_WORKER_AMOUNT=` assignment overrides the bundled fallback. Remove or comment out that line if it was accidental to restore the Docker default of `4`; keep intentional overrides.
-
-    Compare the new output of `docker compose config` with your saved configuration before starting services. Review the settings you customized and any newly active service-file values.
+    From `dify/docker`, compare the resolved output of `docker compose config` with your saved configuration, keeping both private. Review changes to credentials, volume paths, profiles, and the settings you customized.
   </Step>
   <Step title="Apply and Check the Upgrade">
     From `dify/docker`, run:
 
     ```bash
     docker compose config --quiet
+    docker compose pull
     docker compose up -d
     docker compose ps --all
     ```
 
-    Check the affected services, including their active configuration and authentication between services. For an Nginx change, use the check in [Customize](#customize).
+    Check that the long-running services are `Up` or `healthy` and that `init_permissions` finishes with `Exited (0)`. Open Dify and check the features that use your custom settings. For an Nginx change, use the active-value check in [Customize](#customize).
   </Step>
 </Steps>

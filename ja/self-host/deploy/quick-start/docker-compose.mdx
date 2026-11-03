@@ -5,225 +5,173 @@ sidebarTitle: Docker Compose
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/quick-start/docker-compose) を参照してください。
 
+デフォルトの Docker Compose 構成には、PostgreSQL、Weaviate と、Dify の稼働に必要なサービスが含まれます。サービスのデフォルト設定は自動で読み込まれます。初期設定には `docker/.env` の起動設定を使用します。
+
 <Tip>
-    一般的なデプロイの問題は [FAQ](/ja/self-host/deploy/quick-start/faqs) を参照してください。
+一般的なデプロイの問題については [FAQ](/ja/self-host/deploy/quick-start/faqs) を参照してください。
 </Tip>
 
 ## デプロイ前の準備
 
-マシンが以下の最小システム要件を満たしているか確認してください。
-
 ### ハードウェア
 
-- CPU >= 2 コア
-- RAM >= 4 GiB
+- CPU：2 コア以上
+- RAM：4 GiB 以上
 
 ### ソフトウェア
 
-| オペレーティングシステム | 必要なソフトウェア | 備考 |
-| :--- | :--- | :--- |
-| macOS 10.14 以降 | Docker Desktop / Docker Compose 2.35.0+ | 2 vCPU 以上、8 GiB 以上のメモリを割り当てます。<br></br><br></br>[Mac 用 Docker Desktop のインストール](https://docs.docker.com/desktop/mac/install/) を参照してください。 |
-| Linux | Docker 19.03+ / Docker Compose 2.35.0+ | 手順は以下を参照してください。<br></br><br></br>[Docker Engine のインストール](https://docs.docker.com/engine/install/) / [Docker Compose のインストール](https://docs.docker.com/compose/install/) |
-| Windows (WSL 2) | Docker Desktop / Docker Compose 2.35.0+ | ソースコードとデータは Linux ファイルシステムに保存。<br></br><br></br>[Windows 用 Docker Desktop のインストール](https://docs.docker.com/desktop/windows/install/#wsl-2-backend) を参照してください。 |
+Docker と Docker Compose 2.35.0 以降をインストールし、Docker デーモンを起動してください。Dify のダウンロードには Git、サンドボックストークンの生成には OpenSSL も必要です。
 
-`docker compose version` を実行してバージョンを確認してください。サービスファイルが変数を解決する際に `docker/.env` の値を優先するには、Compose 2.35.0 以降が必要です。
+| オペレーティングシステム | インストール |
+|:---|:---|
+| macOS | 対応する macOS バージョンに [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) をインストールします。仮想マシンに 2 つ以上の仮想 CPU と 8 GiB 以上のメモリを割り当ててください。 |
+| Linux | ディストリビューションの手順に従い、[Docker Engine](https://docs.docker.com/engine/install/) と [Docker Compose](https://docs.docker.com/compose/install/) をインストールします。 |
+| Windows（WSL 2） | [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) をインストールします。ソースコードとコンテナのデータは Linux ファイルシステムに保存してください。 |
+
+開始前に Compose のバージョンを確認します：
+
+```bash
+docker compose version
+```
 
 ## デプロイと起動
 
+既存のデプロイでは、設定とデータを保持するため [アップグレード](#アップグレード) の手順に従ってください。
+
 <Steps>
-  <Step title="Dify をクローン">
-    Dify のソースコードをローカルマシンにクローンします。
+  <Step title="Dify リリースの取得">
+    [Dify のリリース](https://github.com/langgenius/dify/releases) からバージョンを選びます。`<version>` をリリースタグに置き換え、クローンしてください：
 
     ```bash
-    git clone --branch "$(curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name)" https://github.com/langgenius/dify.git
+    git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
+    cd dify/docker
     ```
 
-    <Info>
-      このコマンドには `git`、`curl`、`jq` が必要です。`command not found` エラーが表示された場合は、不足しているツールをインストールしてから再実行してください。
-
-      クローンが `fatal: Remote branch null not found in upstream origin` エラーで失敗したときは、[Dify releases](https://github.com/langgenius/dify/releases) で最新バージョンを確認し、バージョンを明示して再実行してください：
-
-      ```bash
-      git clone --branch <version> https://github.com/langgenius/dify.git
-      ```
-
-      詳細は [クローン時の「Remote branch null not found」エラー](/ja/self-host/deploy/quick-start/faqs#クローン時の「remote-branch-null-not-found」エラー) を参照してください。
-
-    </Info>
   </Step>
-  <Step title="Dify を起動">
+  <Step title="起動設定">
+    ローカルの設定ファイルを作成します：
 
-    <Note>
-      既存のデプロイでは現在の `.env` を保持してください。設定を引き継ぐには [アップグレード](#アップグレード) の手順に従ってください。
-    </Note>
+    ```bash
+    cp .env.example .env
+    ```
 
-    1. Dify ソースコード内の `docker` ディレクトリに移動します：
+    デフォルト構成では、`COMPOSE_PROFILES=weaviate,postgresql,collaboration` をそのまま使用します。
 
-        ```bash
-        cd dify/docker
-        ```
+    Agent サンドボックス用のトークンを生成します：
 
-    2. 新規デプロイでは、必須の環境設定ファイルをコピーします：
+    ```bash
+    openssl rand -hex 32
+    ```
 
-        ```bash
-        cp .env.example .env
-        ```
+    `.env` の `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` に、出力された値を設定します。Agent バックエンドとローカルサンドボックスの起動には、この共有トークンが必要です。
+  </Step>
+  <Step title="サービスの起動と確認">
+    `dify/docker` で次のコマンドを実行します：
 
-        デフォルトの構成では、`COMPOSE_PROFILES=weaviate,postgresql,collaboration` をそのまま使用します。API、ワーカー、関連サービスは同梱のデフォルト設定を自動で読み込むため、ほかの設定ファイルは不要です。
+    ```bash
+    docker compose up -d
+    docker compose ps --all
+    ```
 
-    3. Agent サンドボックス用のトークンを生成します：
-
-        ```bash
-        openssl rand -hex 32
-        ```
-
-        `.env` で、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` に出力された値を設定します。設定しないと、Agent バックエンドもサンドボックスも起動しません。
-
-    4. コンテナを起動します：
-
-        ```bash
-        docker compose up -d
-        ```
-
-        以下のコンテナが起動します：
-
-        - 7 つのコアサービス：`api`、`api_websocket`、`worker`、`worker_beat`、`web`、`plugin_daemon`、`agent_backend`
-        - 8 つの依存コンポーネント：`weaviate`、`db_postgres`、`redis`、`nginx`、`ssrf_proxy`、`agent_ssrf_proxy`、`sandbox`、`local_sandbox`
-        - 1 回だけ実行するタスク（1 つ）：`init_permissions`（ストレージのファイル権限を設定し、完了後に終了します）
-
-    5. サービスと初期化タスクの状態を確認します：
-
-        ```bash
-        docker compose ps --all
-        ```
-
-        常駐する 15 個のコンテナは `Up` または `healthy` になっていれば正常です。`init_permissions` タスクは、完了すると `Exited (0)` になります。
-
+    常駐サービスに `Up` または `healthy` と表示されていれば正常です。`init_permissions` はストレージの権限を設定するために 1 回だけ実行されます。完了後に `Exited (0)` と表示されることを確認してください。
   </Step>
 </Steps>
 
 ## アクセス
 
-1. 管理者初期化ページを開いて、管理者アカウントを設定します：
+インターネットに公開する前に、[HTTPS](/ja/self-host/deploy/configuration/environments#nginx-reverse-proxy) を設定してください。[プラグインデーモン設定](/ja/self-host/deploy/configuration/environments#プラグインデーモン設定) と [Agent の設定](/ja/self-host/deploy/configuration/environments#dify_agent_server_secret_key) にある開発用の認証情報も置き換えます。
 
-    ```bash
-    # ローカル環境
-    http://localhost/install
+ブラウザで [http://localhost/install](http://localhost/install) を開き、管理者アカウントを作成します。設定後は [http://localhost](http://localhost) でサインインします。
 
-    # サーバー環境
-    http://your_server_ip/install
-    ```
-
-2. 管理者アカウントの設定が完了したら、以下のアドレスで Dify にログインします：
-
-    ```bash
-    # ローカル環境
-    http://localhost  
-
-    # サーバー環境
-    http://your_server_ip
-    ```
+リモート環境では、`localhost` をサーバーの IP アドレスまたはドメインに置き換えてください。デフォルトの HTTP ポートは `80` です。`docker/.env` の `NEXT_PUBLIC_SOCKET_URL` に、ブラウザからアクセスできる WebSocket アドレスを設定します。HTTPS の例は `wss://dify.example.com` です。`docker compose up -d` で適用してください。エンドポイントの形式は [WebSocket 設定](/ja/self-host/deploy/configuration/environments#cors-設定) を参照してください。
 
 ## カスタマイズ
 
-以下のコマンドは `dify/docker` ディレクトリから実行してください。アップグレード時に同梱のテンプレートを更新できるよう、変更はローカルの `.env` ファイルに保存します。
+デプロイの設定と共有の認証情報は `docker/.env` に保存します。Compose は、プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などを、コンテナ起動前にこのファイルから読み込みます。
+
+各サービスは、`docker/envs/` 内の同梱の `.defaults` ファイルを自動で読み込みます。設定を変更するには、テンプレートのコメントに記載されたローカルの `.env` ファイルを作成してください。既にある場合は直接編集します。プロバイダーやセキュリティに関するオプション設定には、`.env.example` テンプレートもあります。`.example` を外してコピーしてください。
+
+API、ワーカー、定期タスクで共通の設定には、`envs/core-services/shared.defaults` から `shared.env` を作成します。必要な設定だけコメントを解除し、**Container variable mappings** の式は変更しないでください。ファイルの優先順位、共有の認証情報、個別の設定については、[環境変数](/ja/self-host/deploy/configuration/environments#設定ファイル) を参照してください。
+
+たとえば、Nginx のリクエストボディの上限を `200M` にするには、`dify/docker` で次の手順を実行します：
 
 <Steps>
-  <Step title="環境変数を編集">
+  <Step title="上書き値の設定">
+    `envs/infrastructure/nginx.env` がない場合は作成します：
 
-    - **起動と Compose の設定** は `docker/.env` に記述します。プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などが該当します。
+    ```bash
+    cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
+    ```
 
-    - **サービスの設定** は `docker/envs/` の `.defaults` ファイルに同梱されています。対象ファイルを、コメントに記載された `.env` パスにコピーして編集します。その `.env` が既にある場合は、直接編集します。
+    `envs/infrastructure/nginx.env` に次の値を設定します：
 
-      たとえば、Nginx のリクエストボディの上限を引き上げる場合は、次のコマンドを実行します：
-
-      ```bash
-      cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
-      ```
-
-      `nginx.env` で `NGINX_CLIENT_MAX_BODY_SIZE=200M` を設定します。
-
-    - **アプリケーションやプロバイダーのオプション設定** には、引き続き `.env.example` テンプレートを使用します。コピー時には `.example` だけを外します。たとえば、`milvus.env.example` は `milvus.env` にコピーします。
-
-    使用するオプション設定のコメントを解除します。`.defaults` ファイルのコピーでは入力値を編集し、**Container variable mappings** にある式は変更しないでください。
-
-    `docker/.env` の値は、対応するサービスファイルの設定より優先されます。優先順位の詳細と各変数の説明は [環境変数](/ja/self-host/deploy/configuration/environments) を参照してください。
-
-    `DB_TYPE` や `VECTOR_STORE` を別の同梱プロバイダーに変更する場合は、`docker/.env` の `COMPOSE_PROFILES` も合わせて更新します。サービスファイルの選択値を変えても、ルートのプロファイル一覧は更新されません。プロバイダーを変更してもデータは移行されません。既存の環境をそのままアップグレードする場合は、現在のプロバイダーを維持してください。
-
-    共有の認証情報は `docker/.env` に保存します。対象は `PLUGIN_DAEMON_KEY`、`PLUGIN_DIFY_INNER_API_KEY`、`DIFY_AGENT_API_TOKEN`、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` です。本番環境では、推測されにくいシークレットを使用してください。2 つのプラグインキーには別々の値を設定します。
-
-    すべてのサービスで認証情報を一致させるため、`envs/core-services/dify-agent.env` の `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` と `DIFY_AGENT_INNER_API_KEY` のマッピングは変更しないでください。値が一致しないと認証に失敗します。アップグレード時には、正常稼働時のシークレットを保持してください。
+    ```dotenv
+    NGINX_CLIENT_MAX_BODY_SIZE=200M
+    ```
 
   </Step>
-  <Step title="設定の適用と確認">
+  <Step title="設定の適用">
+    設定を検証し、影響を受けるコンテナを再作成します：
 
     ```bash
     docker compose config --quiet
     docker compose up -d
     ```
 
-    `up -d` は設定が変わったコンテナを再作成します。`docker compose restart` では環境変数は再読み込みされません。
-
-    Nginx の例では、実際に適用された上限を確認します：
+    `docker compose restart` は、コンテナの既存の環境変数を保持します。環境変数を変更した場合は `up -d` を使用してください。
+  </Step>
+  <Step title="適用値の確認">
+    Nginx が使用している設定を確認します：
 
     ```bash
     docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
     ```
 
-    出力に `client_max_body_size 200M;` と表示されれば正常です。別の値が表示される場合は、`docker/.env` に上書き設定がないか確認してください。
-
+    出力に `client_max_body_size 200M;` が含まれていれば正常です。別の値が表示される場合は、まず `docker/.env` の上書き設定を確認します。その後、シェル変数と Compose の明示的な `environment` 設定を確認してください。値がどのように決まるかは、[優先順位](/ja/self-host/deploy/configuration/environments#優先順位) を参照してください。
   </Step>
 </Steps>
 
 ## アップグレード
 
-[Releases](https://github.com/langgenius/dify/releases) ページで対象バージョンのアップグレード手順を確認してください。そのうえで、以下の手順に従って設定を引き継ぎます。
+[Dify のリリース](https://github.com/langgenius/dify/releases) から対象バージョンを選び、更新前にそのアップグレード手順を確認してください。
 
 <Steps>
-  <Step title="稼働中の環境のバックアップ">
-    通常のバックアップ手順で、`docker/.env`、ローカルのサービス `.env` ファイル、カスタム Compose ファイル、永続データを保存します。正常稼働時のシークレットとボリュームパスを保持してください。
+  <Step title="デプロイのバックアップ">
+    通常のバックアップ手順で、`docker/.env`、ローカルのサービス `.env` ファイル、カスタム Compose ファイル、永続データを保存します。正常稼働時のシークレットとボリュームパスを保持してください。明示的に設定した、またはストレージ内に保存された [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) も対象です。
 
-    更新後に比較できるよう、現在の `docker compose config` の出力を保存します。出力にはシークレットが含まれるため、非公開の場所で保存・比較してください。
+    デフォルト構成では、`docker/volumes/` と `local_sandbox` の名前付きボリュームも対象です。名前は `dify_agent_local_sandbox_home` と `dify_agent_local_sandbox_workspace` です。データベースは整合性を保てる方法でバックアップしてください。書き込み中のファイルコピーでは、確実なバックアップになりません。外部のデータベースやストレージを設定している場合は、それらも含めます。
+
+    `dify/docker` で `docker compose config` の出力を保存し、更新後の比較に備えます。出力にはシークレットが含まれるため、非公開の場所で保存・比較してください。
   </Step>
-  <Step title="Compose ファイルとテンプレートの一括更新">
-    リリースの Compose ファイルと `envs/` テンプレートを、`.defaults` ファイルも含めて一緒に更新します。直接編集したテンプレートを置き換える前に、変更をローカルの `.env` コピーへ移してください。
+  <Step title="選択したリリースへの更新">
+    チェックアウト前に、追跡対象ファイルへの変更を保存します。ローカルの `.env` ファイルは既存のパスに保持してください。
 
-    `envs/core-services/shared.env` を含め、既存の `.env` とサービス `.env` ファイルは現在のパスに保持します。名前の変更や再コピーは不要です。ルートファイルを最小構成の `.env.example` で置き換えると、上書き設定が失われます。
+    リポジトリのルートでリリースタグを取得し、選択したバージョンをチェックアウトします：
 
-    Compose のカスタマイズは、リリースの新しいファイルに適用し直します。古い Compose ファイルを使い続けると、新しいリリースに必要なサービスが欠ける場合があります。
+    ```bash
+    git fetch --tags origin
+    git checkout <version>
+    ```
+
+    Compose のカスタマイズを、リリースのファイルに適用し直してください。Compose ファイルと `envs/` テンプレートは、同じリリースのものを使用します。
   </Step>
-  <Step title="新しい入力項目の既存ファイルへの統合">
-    新しい `.env.example` とルートの `.env` を比較します。各ローカルサービスファイルも、対応する `.defaults` または残っている `.env.example` テンプレートと比較してください。`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` などの必須項目を追加し、既存の正常稼働時の設定値は保持します。
+  <Step title="設定の確認">
+    `docker/.env.example` を既存の `docker/.env` と比較し、必須項目を確認します。各ローカルサービスファイルも、対応する `.defaults` または `.env.example` テンプレートと比較してください。`shared.env` は `shared.defaults` と比較します。
 
-    `envs/core-services/shared.env` は `shared.defaults` と比較してください。従来の `shared.env.example` テンプレートはこちらに置き換わっています。
+    必要な設定は既存のファイルに追加・変更してください。テンプレートを上書きコピーすると、独自の設定が失われます。現在のテンプレートにある入力名を使い、コンテナのマッピング式は変更しないでください。既存の環境をそのままアップグレードする場合は、現在のデータベースとベクトルストアを維持します。選択値を変更しても、データは移行されません。
 
-    入力名は新しいテンプレートに合わせてください。たとえば、API とワーカーの Sentry 設定には `API_SENTRY_DSN` を使用します。旧来の直接指定 `SENTRY_DSN` では、マッピング先の値を設定できません。
-
-    `PLUGIN_DAEMON_KEY` と `PLUGIN_DIFY_INNER_API_KEY` はルートの `.env` に保存します。サービスファイルでこれらのキーを上書きしている場合は、正常稼働時の設定値を保持したままルートに移してください。コールバック用シークレットを `INNER_API_KEY_FOR_PLUGIN` として設定していた場合は、ルートの `PLUGIN_DIFY_INNER_API_KEY` に同じ値を使用します。`envs/core-services/dify-agent.env` の `DIFY_AGENT_PLUGIN_DAEMON_API_KEY` と `DIFY_AGENT_INNER_API_KEY` のマッピングは変更しないでください。
-
-    `COMPOSE_PROFILES` を `DB_TYPE` と `VECTOR_STORE` に合わせます。
-
-    データベースの認証情報とボリュームを再利用してください。env ファイルでデータベースの初期化パスワードを変えても、既存のデータベースのパスワードは変更されません。
-  </Step>
-  <Step title="新たに反映される設定の確認">
-    保持したサービスファイルの値が、更新後に反映されるようになる場合があります。以前の Compose ファイルでは無視されていた値も対象です。ファイルをコピーしただけで編集していない場合も確認してください。
-
-    たとえば、以前の構成が `200` で動作していても、古い `db-postgres.env` に `POSTGRES_MAX_CONNECTIONS=100` が含まれている場合があります。更新後は、保持されたこの値が反映されます。使用したい値を選び、以前の動作を維持する必要があれば `200` を明示的に設定してください。
-
-    空の `CELERY_WORKER_AMOUNT=` 設定は、同梱のデフォルト値を上書きします。誤って残った行であれば、削除するかコメントアウトして Docker のデフォルト値 `4` に戻します。意図的に指定した上書き値は保持してください。
-
-    サービスを起動する前に、新しい `docker compose config` の出力を保存済みの設定と比較します。カスタマイズした設定と、新たに有効になったサービスファイルの値を確認してください。
+    `dify/docker` で `docker compose config` を実行し、保存しておいた設定と比較します。どちらの出力も非公開で扱ってください。認証情報、ボリュームパス、プロファイル、カスタマイズした設定の変更を確認します。
   </Step>
   <Step title="アップグレードの適用と確認">
-    `dify/docker` から実行します：
+    `dify/docker` で次のコマンドを実行します：
 
     ```bash
     docker compose config --quiet
+    docker compose pull
     docker compose up -d
     docker compose ps --all
     ```
 
-    影響を受けるサービスについて、実際に適用された設定とサービス間の認証を確認します。Nginx の変更は [カスタマイズ](#カスタマイズ) にあるコマンドで確認してください。
+    常駐サービスが `Up` または `healthy` であることを確認します。`init_permissions` は、完了後に `Exited (0)` と表示されることを確認してください。Dify を開き、カスタマイズした設定を使う機能を確認します。Nginx の変更は、[カスタマイズ](#カスタマイズ) にあるコマンドで適用値を確認してください。
   </Step>
 </Steps>

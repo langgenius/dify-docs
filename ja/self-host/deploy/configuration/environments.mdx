@@ -5,30 +5,51 @@ description: Dify セルフホストデプロイで使用されるすべての�
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/configuration/environments) を参照してください。
 
-Docker Compose 2.35.0 以降を使用し、変更したい設定に対応するローカルファイルを編集します：
+## 設定ファイル
 
-- **`docker/.env`** には、起動に必要な値、共有の認証情報、コンテナ起動前に Compose が使用する設定を記述します。プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などが該当します。新規デプロイでは `docker/.env.example` から作成し、アップグレード時は既存のファイルを保持してください。
+Docker Compose はサービスのデフォルト設定を自動で読み込みます。カスタマイズする設定は、ローカルの環境変数ファイルに保存します。この構成には Docker Compose 2.35.0 以降が必要です。
 
-- **`docker/envs/**/*.defaults` ファイル** には、サービスのデフォルト設定が同梱されており、自動で読み込まれます。サービスをカスタマイズするには、その `.defaults` ファイルをコメントに記載されたローカルの `.env` パスにコピーします。たとえば、`envs/infrastructure/nginx.defaults` は `envs/infrastructure/nginx.env` にコピーします。既存のコピーは直接編集してください。
+| ファイル | 用途 |
+|:---|:---|
+| `docker/.env` | デプロイの入力値と上書き設定。共有の認証情報や、コンテナ起動前に Compose が読む設定を保存する。プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などが対象。新規デプロイでは `docker/.env.example` から作成する。 |
+| `docker/envs/**/*.defaults` | 同梱の Docker デフォルト設定と、コメントアウトされたオプション設定の例。各サービスは、Compose で割り当てられたファイルを読み込む。 |
+| `docker/envs/` 内のローカル `.env` ファイル | 各ファイルを読み込むサービスの上書き設定。作成するローカルファイルは、テンプレートのコメントに記載されている。 |
+| `docker/envs/**/*.env.example` | オプションやプロバイダー固有の設定のテンプレート。`.example` を外してコピーすると、ローカルの `.env` ファイルになる。 |
 
-- **残っている `docker/envs/**/*.env.example` テンプレート** には、アプリケーションやプロバイダーのオプション設定が含まれます。コピー時には `.example` だけを外します。たとえば、`milvus.env.example` は `milvus.env` にコピーします。
+`envs/core-services/shared.defaults` は、API、ワーカー、定期タスクで共通の設定を機能別にまとめたファイルです。ローカルの上書き設定には `shared.env` を使用します。API 固有の設定には `api.defaults`、ワーカープロセスの設定には `worker.defaults` を使用してください。その他のサービスやプロバイダーには、`envs/` 内にそれぞれのファイルがあります。
 
-設定のテンプレートを見つけるには、`docker/envs/` 内で変数名を検索します。そのファイルのコメントに記載されたコピー先を使用してください。`.defaults` ファイルのコピーでは入力値を編集し、必要なオプション設定のコメントを解除します。**Container variable mappings** にある式は変更しないでください。
+### 上書き設定
 
-サービスが読み込む値は、`docker/.env`、ローカルのサービス `.env`、同梱またはアプリケーションのデフォルト値の順に優先されます。各サービスは、割り当てられた env ファイルだけを読み込みます。KnowledgeFS は `docker/envs/core-services/knowledge-fs.env` で設定してください。ルートの変数のうち、Compose で明示的にマッピングされたものだけが、このファイルの値より優先されます。
+`docker/envs/` 内で変数を探し、テンプレートのコメントに記載されたローカルファイルを作成します。既にある場合は直接編集してください。たとえば、Nginx の設定には `nginx.defaults` から作成した `envs/infrastructure/nginx.env` を使います。
 
-入力値を変数展開する際は、シェル変数の値が優先されます。また、Compose の明示的な `environment` 設定は、`env_file` の値より優先されます。
+ローカルのコピーで入力値を編集し、必要なオプション設定だけコメントを解除します。**Container variable mappings** の式は変更しないでください。これらの式が、各コンテナの使う変数名に入力値を渡します。
 
-`dify/docker` から次のコマンドを実行し、変更を適用します：
+共有の認証情報は、それを使うすべてのサービスで値が一致するよう `docker/.env` に設定します。対象は `PLUGIN_DAEMON_KEY`、`PLUGIN_DIFY_INNER_API_KEY`、`DIFY_AGENT_API_TOKEN`、`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` です。2 つのプラグインキーには、別々の推測されにくい値を使ってください。サービス固有のマッピングはそのまま使用できます。
+
+同梱のデフォルト値を使うには、上書き設定を削除するかコメントアウトします。空の値を代入した場合の動作は設定によって異なり、デフォルト値を上書きすることがあります。
+
+たとえば、`CELERY_WORKER_AMOUNT=` は Docker のデフォルト値 `4` を上書きします。オートスケーリングが無効な場合、ワーカーは `1` を使用します。Docker のデフォルト値を使うには、`4` を明示的に設定するか、空の代入行を削除してください。
+
+### 優先順位
+
+サービスが読み込む設定は、`docker/.env`、ローカルのサービス `.env`、同梱またはアプリケーションのデフォルト値の順に優先されます。各サービスは、割り当てられたファイルだけを読み込みます。無関係なサービスファイルに値を書いても反映されません。
+
+`knowledge_fs` サービスは `envs/core-services/knowledge-fs.env` を読み込みます。ルートの変数で上書きできるのは、Compose で明示的にマッピングされたものだけです。別のサービスとして動く KnowledgeFS ワーカーは、ルートの `.env` も読み込みます。
+
+入力値を変数展開する際は、シェル変数の値が優先されます。Compose の明示的な `environment` 設定は、ルートの `.env` を含む `env_file` の値より優先されます。
+
+### 変更の適用
+
+`dify/docker` で設定を検証し、影響を受けるコンテナを再作成します：
 
 ```bash
 docker compose config --quiet
 docker compose up -d
 ```
 
-`docker compose restart` では環境変数は再読み込みされません。具体例と実際の適用値を確認する方法は、[カスタマイズ](/ja/self-host/deploy/quick-start/docker-compose#カスタマイズ) を参照してください。
+`docker compose restart` は、コンテナの既存の環境変数を保持します。解決後の値は `docker compose config` で確認できます。出力にはシークレットが含まれるため、非公開で扱ってください。稼働中のサービスで設定を確認する具体例は、[カスタマイズ](/ja/self-host/deploy/quick-start/docker-compose#カスタマイズ) を参照してください。
 
-既存のデプロイを更新する前に、[アップグレード](/ja/self-host/deploy/quick-start/docker-compose#アップグレード) の手順に従ってください。上書き設定を保持し、新たに反映されるサービスファイルの設定を確認します。
+リリース更新時は、[アップグレード](/ja/self-host/deploy/quick-start/docker-compose#アップグレード) の手順でローカルファイル、シークレット、データを保持してください。
 
 ## 共通変数
 
@@ -162,23 +183,29 @@ Docker ネットワーク内のサービス間通信で使用されるファイ�
 | `FLASK_DEBUG` | `false` | 標準 Flask デバッグモードフラグ。Dify では積極的に使用されていません。`DEBUG` が主要な制御変数です。 |
 | `ENABLE_REQUEST_LOGGING` | `false` | すべての HTTP リクエストに対してコンパクトなアクセスログ（`METHOD PATH STATUS DURATION TRACE_ID`）を記録します。`LOG_LEVEL`が `DEBUG` に設定されている場合、完全なリクエストとレスポンスボディも JSON 形式で記録されます。 |
 | `DEPLOY_ENV` | `PRODUCTION` | Sentry と OpenTelemetry の監視データにタグ付けし、環境別にエラーとトレースをフィルタリングできるようにします。`X-Env` レスポンスヘッダーとしても送信されます。アプリケーションの動作は変更しません。 |
-| `DEPLOYMENT_EDITION` | `COMMUNITY` | デプロイのエディション（`COMMUNITY`、`ENTERPRISE`、`CLOUD`）。デフォルトのまま使用してください。<br/><br/>従来の `EDITION`、`ENTERPRISE_ENABLED`、`BILLING_ENABLED` を置き換えるものです。これらの旧変数は 1.17.0 以降無視されます。 |
+| `DEPLOYMENT_EDITION` | `COMMUNITY` | デプロイのエディション（`COMMUNITY`、`ENTERPRISE`、`CLOUD`）。デフォルトのまま使用してください。 |
 | `MIGRATION_ENABLED` | `true` | `true`の場合、コンテナ起動時にデータベーススキーママイグレーション（`flask upgrade-db`）を自動実行します。Docker のみ。マイグレーションを別途実行する場合は `false`に設定してください。ソースコードからの起動では、`flask db upgrade` を手動で実行してください。 |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | コンソールがこの URL で Dify の新バージョンを確認します。空に設定すると無効化されます。エアギャップ環境や外部 HTTP コールを防止したい場合に有用です。 |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | レガシー変数。Dify 自身のコードでは積極的に使用されていません。環境に存在する場合、OpenAI Python SDK に読み取られる可能性があります。 |
 
 ### SECRET_KEY
 
-デフォルト値：（`.env.example` にプリセット；本番環境では必ず置き換えてください）
+デフォルト値：（空。生成したキーを、設定されたストレージに保存）
 
-セッション Cookie 署名、JWT 認証トークンに使用されます。さらに、ファイル URL 署名（HMAC-SHA256）とサードパーティ OAuth 資格情報の暗号化（AES-256）にも使用されます。初回起動前に、強力なキーを生成してください：
+認証トークンとファイル URL の署名、システムレベルの OAuth クライアント認証情報の暗号化に使います。
+
+この変数が空の場合、Dify は設定されたストレージの `.dify_secret_key` にあるキーを再利用します。キーがない場合は生成して保存します。同梱のファイルシステムストレージでは、ホスト側のパスは `docker/volumes/app/storage/.dify_secret_key` です。
+
+空でない `SECRET_KEY` は、保存されたキーより優先されます。独自のキーを使うには、推測されにくいランダムなキーを生成し、初回起動前に設定してください：
 
 ```bash
 openssl rand -base64 42
 ```
 
+生成したキーを保存できない場合、Dify の初期化は失敗します。設定されたストレージを書き込み可能にするか、キーを明示的に指定してください。
+
 <Warning>
-デプロイ後にこのキーを変更すると、すべてのユーザーが即座にログアウトされ、すべてのファイル URL が無効になり、OAuth を使用するプラグイン連携が壊れます。暗号化された資格情報は復元できなくなります。
+明示的に指定する場合も永続ストレージに保存する場合も、アップグレードと復元では同じキーを保持してください。変更すると、既存の認証トークンと署名付きファイル URL が無効になります。既存のシステムレベルの OAuth クライアント認証情報も復号できなくなります。元のキーに戻すと、その認証情報を再び使えるようになります。
 </Warning>
 
 ### PASSWORD_PEPPER
@@ -449,7 +476,7 @@ sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<re
 | `CONSOLE_CORS_ALLOW_ORIGINS` | `*` | コンソール API へのクロスオリジンリクエストの許可オリジン。設定されていない場合、`CONSOLE_WEB_URL` にフォールバックします。 |
 | `COOKIE_DOMAIN` | （空） | フロントエンドとバックエンドが異なるサブドメインで実行される場合、共有トップレベルドメイン（例：`example.com`）に設定します。これにより認証 Cookie をサブドメイン間で共有できます。空の場合、Cookie は最もセキュアな `__Host-` プレフィックスを使用し、単一ドメインにロックされます。 |
 | `NEXT_PUBLIC_COOKIE_DOMAIN` | （空） | クロスサブドメイン Cookie のフロントエンドフラグ。`1`（または任意の非空値）に設定して有効化します。実際のドメインはバックエンドで `COOKIE_DOMAIN` から読み取られます。 |
-| `NEXT_PUBLIC_SOCKET_URL` | `ws://localhost` | リアルタイム共同編集のためのブラウザ側 WebSocket エンドポイント。スキーム + ホスト + ポートのみを指定します（パス `/socket.io/` は固定）。`http(s)://` を `ws(s)://` に置き換えてください。例：`wss://dify.example.com`。デフォルトは同梱 nginx の 80 番ポートに対応します。ランタイムで適用されるため、コンテナ再起動で反映されます。 |
+| `NEXT_PUBLIC_SOCKET_URL` | `ws://localhost` | リアルタイム共同編集のためのブラウザ側 WebSocket エンドポイント。スキーム + ホスト + ポートのみを指定する（パス `/socket.io/` は固定）。`http(s)://` を `ws(s)://` に置き換える。例：`wss://dify.example.com`。デフォルトは同梱の nginx の 80 番ポート。リモートアクセスでは、ブラウザからアクセスできるアドレスを設定し、`docker compose up -d` で適用する。 |
 | `NEXT_PUBLIC_BATCH_CONCURRENCY` | `5` | フロントエンドのみ。バッチ操作時に UI が発行する同時 API コール数を制御します。 |
 
 ### Dify CLI とプログラマティック API
@@ -653,7 +680,7 @@ ClickZetta Volume は、ベクトルデータベースセクションで設定�
 
 ベクトルデータベースバックエンドを選択します。データセットに既にインデックスがある場合、データセットに保存されたタイプがこの設定より優先されます。
 
-別の同梱プロバイダーに切り替える場合は、コンテナが起動するよう `docker/.env` の `COMPOSE_PROFILES` も更新してください。プロファイル一覧のデフォルトは `weaviate,postgresql,collaboration` です。`VECTOR_STORE` や `DB_TYPE` を編集しても、この一覧は変わりません。プロバイダーを変えても既存のデータは移行されません。既存の環境をそのままアップグレードする場合は、現在のプロバイダーを維持してください。
+同梱のプロバイダーを使う場合は、`docker/.env` で `VECTOR_STORE` と対応する `COMPOSE_PROFILES` の項目を設定します。プロファイル一覧は、`VECTOR_STORE` や `DB_TYPE` とは別に設定します。どちらの選択値を変えても、データは移行されません。プロファイルの例は [Docker Compose](#docker-compose) を参照してください。
 
 サポートされる値：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
 
@@ -667,7 +694,7 @@ ClickZetta Volume は、ベクトルデータベースセクションで設定�
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API エンドポイント。 |
-| `WEAVIATE_API_KEY` | （空） | Weaviate 認証用 API キー。 |
+| `WEAVIATE_API_KEY` | （同梱のデフォルト設定に開発用キーあり） | API とワーカーが Weaviate の認証に使う API キー。変更時は Weaviate サーバーの許可するキーも更新し、クライアントとサーバーで値を一致させる。 |
 | `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 高性能バイナリプロトコル用の別の gRPC エンドポイント。バッチ操作が大幅に高速になります。未設定の場合、HTTP エンドポイントから推測されます。 |
 | `WEAVIATE_TOKENIZATION` | `word` | テキストフィールドのトークン化方法。オプション：`word`（空白と句読点で分割）、`whitespace`（空白のみで分割）、`character`（文字レベル、CJK 言語に適しています）。 |
 
@@ -1291,12 +1318,14 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 #### コードとテンプレートの出力制限
 
-API と Worker は、コードノードとテンプレート変換ノードの出力にこれらの制限を適用します。サンドボックスサービスはこれらの変数を読み取りません。変更を反映するには、サンドボックスではなく API と Worker を再起動してください。
+API とワーカープロセスは、コード実行ノードとテンプレートノードの出力にこれらの制限を適用します。サンドボックスサービスはこれらの変数を読み取りません。
+
+上書き値は `docker/envs/core-services/shared.env` に設定します。必要に応じて `shared.defaults` から作成し、変更する設定行のコメントを解除してください。`dify/docker` で `docker compose up -d` を実行すると、新しい環境変数が API とワーカーに適用されます。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `CODE_MAX_NUMBER` | `9223372036854775807` | コードノード出力で許可される最大数値（最大 64 ビット符号付き整数）。 |
-| `CODE_MIN_NUMBER` | `-9223372036854775808` | コードノード出力で許可される最小数値（最小 64 ビット符号付き整数）。 |
+| `CODE_MIN_NUMBER` | `-9223372036854775807` | コード実行ノードの出力で許可される最小数値。 |
 | `CODE_MAX_STRING_LENGTH` | `400000` | コードノード出力の最大文字列長。無制限の文字列生成によるメモリ枯渇を防止します。 |
 | `CODE_MAX_DEPTH` | `5` | 出力データ構造の最大ネスト深度。 |
 | `CODE_MAX_PRECISION` | `20` | 出力の浮動小数点数の最大小数桁数。 |
@@ -1405,9 +1434,9 @@ Go to Anything コマンドパレットの `/create` と `/refine` コマンド�
 
 デフォルト値：（同梱のデフォルト設定に開発用キーあり。本番環境では必ず置き換えてください）
 
-Agent バックエンドが内部トークンの鍵を導出するためのルートシークレットです。サンドボックス内の Agent がバックエンドを呼び出す際のトークンもここから導出されます。
+Agent バックエンドが内部トークンの鍵を導出するためのルートシークレットです。サンドボックス内の Agent からバックエンドへの呼び出しを認証する Bearer トークンの鍵も、このシークレットから導出します。
 
-デフォルトは公開された開発用キーのため、デプロイはそのまま起動しますが、このキーを知っていれば誰でもトークンを偽造できます。本番環境で使用する前に置き換えてください。
+同梱のデフォルト値は、公開された開発用キーです。このキーを知っていれば誰でもトークンを偽造できるため、本番環境で使用する前に置き換えてください。
 
 値はパディングなしの base64url テキストで、デコードするとちょうど 32 バイトになる必要があります。値が不正な場合、Agent バックエンドは起動しません。次のコマンドで生成できます：
 
@@ -1421,7 +1450,7 @@ python3 -c "import secrets; print(secrets.token_urlsafe(32))"
 
 Dify API とワーカーが Agent バックエンドの実行 API を呼び出す際に提示する Bearer トークンです。API、ワーカー、Agent バックエンドで同じ値を使うよう、`docker/.env` で設定してください。
 
-デフォルトは公開された開発用トークンのため、デプロイはそのまま起動します。ただし、Agent バックエンドに到達でき、トークンを知っていれば誰でも実行を開始できます。本番環境で使用する前に、独自のランダムな値に置き換えてください。
+同梱のデフォルト値は、公開された開発用トークンです。Agent バックエンドに到達でき、トークンを知っていれば誰でも実行を開始できます。本番環境で使用する前に、独自のランダムな値に置き換えてください。
 
 ### DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN
 
@@ -1437,13 +1466,13 @@ Agent バックエンドと同梱のサンドボックスの両方に値を渡�
 openssl rand -hex 32
 ```
 
-旧 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` を置き換えます。旧名も互換エイリアスとして引き続き使えます。
-
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
 デフォルト値：`true`
 
-新しい Agent を Web UI に表示します。表示されるのは、メインナビゲーションの **Agents** 項目と、Workflow アプリのノード一覧にある新しい Agent ノードです。`false` にすると非表示になり、クラシック Agent ノードにフォールバックします。`ENABLE_AGENT_V2` を置き換えるもので、こちらは引き続きフォールバックとして機能します。
+新しい Agent を Web UI に表示します。表示されるのは、メインナビゲーションの **Agents** 項目と、Workflow アプリのノード一覧にある新しい Agent ノードです。
+
+`false` にすると非表示になり、クラシック Agent ノードにフォールバックします。
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW
 
@@ -1502,7 +1531,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | モデルが連続して出力するテキスト差分をまとめて、Redis に書き込み、配信する。有効のままにすると、Redis への書き込み回数とイベント数を減らせる。<br/><br/>差分を個別に配信するには `false` に設定する。ツール呼び出しなど、テキスト以外のイベントの内容と順序は変わらない。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | まとめたテキスト差分を配信する間隔の目安（ミリ秒）。値を下げるとテキストの更新頻度が上がる。上げると、1 回の配信量が増え、配信回数が減る。<br/><br/>厳密な時間制限ではない。`DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` に達すると早めに配信する。最小値は 1。結合を無効にするには `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` を `false` にする。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | まとめたテキスト差分を、フラッシュ間隔を待たずに配信する文字数のしきい値。値を下げると、小さなまとまりで早めに配信できる。<br/><br/>差分は分割せずに追加するため、文字数がこの値を超える場合がある。最小値は 1。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。旧 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` を置き換える。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、E2B での実行は 1 時間が上限のまま。`local` バックエンドでは 1 時間を超える値も有効になる。より長い実行を許可するには、この値と API 側の 2 つの制限をすべて引き上げる。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。<br/><br/>`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、E2B での実行は 1 時間が上限のまま。`local` バックエンドでは 1 時間を超える値も有効になる。より長い実行を許可するには、この値と API 側の 2 つの制限をすべて引き上げる。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | ストリーム切断時、実行を失敗と判定するまでに API が再接続を試みる回数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空。`PLUGIN_DAEMON_URL` から導出） | Agent バックエンドがツール呼び出しに使うプラグインデーモンのアドレス。 |
@@ -1516,7 +1545,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | アイドル接続を閉じるまで保持する秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空。`PLUGIN_DIFY_INNER_API_URL` から導出） | Agent バックエンドの内部呼び出し用 Dify API アドレス。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空。`PLUGIN_DIFY_INNER_API_KEY` から導出） | Dify API へのプラグインコールバックに使う認証情報。API サービスの `INNER_API_KEY_FOR_PLUGIN` と一致させる（`INNER_API_KEY` ではない）。<br/><br/>同梱のサービスを使用する場合は、`docker/.env` で `PLUGIN_DIFY_INNER_API_KEY` を設定し、この変数のマッピング式は変更しない。 |
-| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。旧 `DIFY_AGENT_SHELLCTL_ENTRYPOINT` を置き換える。旧名も互換エイリアスとして引き続き使える。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 同梱のサンドボックスサービスのアドレス。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [ソースコードからのデプロイ](/ja/self-host/deploy/advanced-deployments/local-source-code) で使うミドルウェアスタックが Agent サンドボックスを公開するホスト側のポート。ソースから起動した Agent バックエンドは `http://localhost:5004` でサンドボックスに到達できる。設定はそのスタックの `middleware.env` で行う。変更した場合は、Agent バックエンドの `.env` にある `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` を新しいポートに合わせる。<br/><br/>ミドルウェアスタック専用。フル構成の Compose スタックでは、サンドボックスは内部ネットワークに留まる。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。同梱の `local` サンドボックスではデフォルトのままにする。<br/><br/>`openshell` バックエンドでは、サンドボックスが Compose のサービス名を解決できない。サンドボックスから到達でき、Agent バックエンドの `/agent-stub` パスにルーティングされるアドレスを設定する。あわせて、Agent バックエンドのポート 5050 を公開するかプロキシする。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | サンドボックス内の Agent がファイル転送に使う Dify API アドレス。Docker Compose ではデフォルトのまま使う。リモートサンドボックスバックエンドでは、公開されている Dify アドレスを指定する。 |
@@ -1653,17 +1682,17 @@ Docker Compose でデータベースと Redis のコンテナを直接設定し�
 
 ## サンドボックスサービス
 
-サンドボックスは、コード実行ノード（Python、JavaScript、Jinja2）を実行するための隔離されたサービスです。カスタマイズするには、`docker/envs/core-services/sandbox.defaults` を同じディレクトリの `sandbox.env` にコピーし、入力値を編集します。
+`sandbox` サービスは、コード実行ノードを実行します。設定を変更するには、必要に応じて `sandbox.defaults` から `docker/envs/core-services/sandbox.env` を作成し、入力値を編集してください。**Container variable mappings** の式は変更しないでください。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `SANDBOX_API_KEY` | `dify-sandbox` | サンドボックス認証用 API キー。API サービスの `CODE_EXECUTION_API_KEY` と一致する必要があります。 |
+| `SANDBOX_API_KEY` | `dify-sandbox` | サンドボックス認証用 API キー。API とワーカーの `CODE_EXECUTION_API_KEY` と一致する必要がある。 |
 | `SANDBOX_GIN_MODE` | `release` | サンドボックスサービスモード：`release`または `debug`。 |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | 単一コード実行の最大実行時間（秒）。 |
 | `SANDBOX_ENABLE_NETWORK` | `true` | スクリプトによるネットワークアクセスの要求を許可する。<br/><br/>Dify のコード実行ノードは、ネットワークを有効にした実行を要求する。この値を `false` にすると、これらの要求は拒否される。コード実行ノードを使用する場合は、有効のままにする。 |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | ネットワーク有効時の SSRF 保護用 HTTP プロキシ。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 保護用 HTTPS プロキシ。 |
-| `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。 |
+| `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。変更時は、`docker/envs/core-services/shared.env` の `CODE_EXECUTION_ENDPOINT` も同じポートに更新する。 |
 
 ## Nginx リバースプロキシ {#nginx-reverse-proxy}
 
@@ -1738,6 +1767,10 @@ API への直接接続は、信頼できる呼び出し元だけに許可して�
 ## Docker Compose
 
 Compose の設定は `docker/.env` に記述してください。プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などは、コンテナの起動前に読み込まれます。
+
+`DB_TYPE`、`VECTOR_STORE`、`COMPOSE_PROFILES` は合わせて設定してください。たとえば、同梱の PostgreSQL と Qdrant を使う構成では、`DB_TYPE=postgresql`、`VECTOR_STORE=qdrant`、`COMPOSE_PROFILES=qdrant,postgresql,collaboration` を設定します。同梱の MySQL サービスは `mysql`、pgvector は `pgvector` プロファイルを使用します。外部のプロバイダーを使う場合は、対応する同梱サービスのプロファイルを省いてください。
+
+これらの設定を変更しても、既存のデータベースやベクトルストアのデータは移行されません。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
@@ -1915,7 +1948,7 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 | `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | デフォルトのベクトライザーモジュール。 |
 | `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | クラスターノードのホスト名。 |
 | `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | API キー認証を有効化。 |
-| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （自動生成） | 許可される API キー。クライアント設定の `WEAVIATE_API_KEY` と一致する必要があります。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （同梱のデフォルト設定に開発用キーあり） | 許可する API キー。同梱のキーは `WEAVIATE_API_KEY` のデフォルト値と一致する。変更時はクライアント側のキーも更新する。 |
 | `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | API キーに関連付けられたユーザー。 |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | 管理者リスト認可を有効化。 |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | 管理者ユーザー。 |
@@ -1966,7 +1999,7 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `PGVECTOR_PGUSER` | `postgres` | PGVector コンテナの PostgreSQL ユーザー。 |
-| `PGVECTOR_POSTGRES_PASSWORD` | （自動生成） | PGVector コンテナの PostgreSQL パスワード。 |
+| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | PGVector コンテナの初期化用パスワード。クライアント設定の `PGVECTOR_PASSWORD` と一致させる。この値を変更しても、既存のデータベースのパスワードは更新されない。 |
 | `PGVECTOR_POSTGRES_DB` | `dify` | PGVector コンテナ内のデータベース名。 |
 | `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | コンテナ内のデータディレクトリ。 |
 | `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | pg_bigm 拡張のバージョン。 |
@@ -1979,7 +2012,7 @@ API と Celery ワーカー間の Redis ベースのイベント転送です。
 |---|---|---|
 | `ORACLE_PWD` | `Dify123456` | コンテナの Oracle データベースパスワード。 |
 | `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle 文字セット。 |
-| `CHROMA_SERVER_AUTHN_CREDENTIALS` | （自動生成） | Chroma サーバーコンテナの認証資格情報。 |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Chroma サーバーコンテナの認証資格情報。 |
 | `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Chroma サーバーの認証プロバイダー。 |
 | `CHROMA_IS_PERSISTENT` | `TRUE` | Chroma の永続ストレージを有効化。 |
 | `KIBANA_PORT` | `5601` | Kibana ポート（Elasticsearch UI）。 |
