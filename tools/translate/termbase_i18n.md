@@ -471,6 +471,7 @@
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Knowledge Retrieval | 知识检索 | ナレッジ検索 |
 | Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース |
 | Access URL | 访问 URL | アクセス URL |
 
