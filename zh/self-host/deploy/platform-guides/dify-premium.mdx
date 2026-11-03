@@ -21,30 +21,40 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
 
 ### 配置
 
+使用 Docker Compose 2.35.0 或更高版本。运行 `docker compose version` 检查版本。
+
 <Steps>
     <Step title="编辑环境变量">
         在 EC2 实例中，编辑相关文件中的环境变量：
 
         - **必要的启动值** 位于 `/dify/.env` 文件中。直接编辑即可。
 
-        - **可选或特定提供商的设置** 在 `/dify/envs/` 下有对应模板。要覆盖默认值，复制相应模板（去掉 `.example` 后缀），然后编辑副本。
+        - **可选或特定提供商的设置** 在 `/dify/envs/` 下有对应模板。Compose 自动加载 `.defaults` 文件。如果本地 `.env` 文件已存在，直接编辑即可。否则，将对应的 `.defaults` 文件复制到注释指定的本地 `.env` 路径。
 
-            例如：
+            对于 `.env.example` 模板，复制时去掉 `.example` 后缀。
+
+            例如，如果尚未创建 OpenSearch 覆盖文件，运行：
 
             ```bash
             cd /dify
-            cp envs/vectorstores/opensearch.env.example envs/vectorstores/opensearch.env
+            cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
             ```
 
-        `/dify/.env` 中的值优先于任何 `/dify/envs/*.env` 文件中的值。
+        在副本中修改输入值，保留 **Container variable mappings** 下的表达式。
 
-        如果你的 AWS 部署通过 `docker-compose.override.yaml` 注入变量，将这些设置保留在该文件中。Compose 中服务级别的 `environment:` 值优先于 env 文件中的值。
+        对于上述 OpenSearch 设置，`/dify/.env` 的值优先于 `opensearch.env`。其他服务以各自模板的注释为准；部分服务只加载自己的配置文件或指定的根配置输入。
+
+        如果 AWS 部署通过 `docker-compose.override.yaml` 注入变量，将这些设置保留在该文件中。Compose 中服务级别的 `environment:` 值优先于 env 文件中的值。
     </Step>
-    <Step title="重启 Dify">
+    <Step title="应用更改">
+        在 `/dify` 中校验配置，并重建受影响的服务。两个命令都保留现有的 AWS 覆盖文件；如果没有该文件，去掉 `-f docker-compose.override.yaml`。
+
         ```bash
-        docker compose down
+        cd /dify
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml config --quiet
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
         ```
+
     </Step>
 </Steps>
 
@@ -55,60 +65,56 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
 ## 升级
 
 <Warning>
-    - 升级前，查看 GitHub 上的 [Release Notes](https://github.com/langgenius/dify/releases) 了解特定版本的升级说明。某些版本可能需要额外步骤，例如数据库迁移或配置更改。
 
-    - Dify 的 Docker Compose 文件现在需要 Docker Compose 2.24.0 或更高版本。升级前运行 `docker compose version` 确认。
+    - 从 [Release Notes](https://github.com/langgenius/dify/releases) 中选择目标版本，并在更新前阅读其升级说明。
+
+    - 当前 Docker 文件需要 Docker Compose 2.35.0 或更高版本。升级前运行 `docker compose version` 确认。
+
 </Warning>
 
-在 EC2 实例中，运行以下命令：
+在 EC2 实例上运行命令，沿用现有部署的 Compose 项目名称和文件。如果使用了 `-p` 或 `COMPOSE_PROJECT_NAME`，保留原值，以继续挂载原有命名卷。如果没有 `docker-compose.override.yaml`，去掉下面命令中对应的 `-f` 选项。
 
 <Steps>
-    <Step title="停止运行中的服务">
+    <Step title="备份部署">
+        备份 `/dify/.env`、`/dify/envs/` 下所有本地 `.env` 文件、`docker-compose.override.yaml` 和其他自定义部署文件。保留现有密钥和卷路径，包括显式设置或已存储的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
+
+        按照部署的备份流程保存持久化数据。备份范围包括 `/dify/volumes/`、外部数据库或存储，以及已配置的 `local_sandbox` 命名卷：`dify_agent_local_sandbox_home` 和 `dify_agent_local_sandbox_workspace`。卷的实际名称可能带有 Compose 项目前缀。
+
+        使用能保证一致性的数据库备份；在数据库写入期间复制数据文件无法保证备份可靠。
+    </Step>
+    <Step title="更新到所选版本">
+        将 `<version>` 替换为选定的版本标签，同时复制该版本的 Docker 文件和模板：
+
+        ```bash
+        release_tag="<version>"
+        upgrade_dir="$(mktemp -d)"
+        git clone --depth 1 --branch "$release_tag" https://github.com/langgenius/dify.git "$upgrade_dir/dify"
+        rsync -av --exclude='.env' --exclude='*.env' \
+          --exclude='docker-compose.override.yaml' --exclude='volumes/' \
+          "$upgrade_dir/dify/docker/" /dify/
+        ```
+
+        排除规则会保留本地环境文件、AWS 覆盖文件和运行数据。其他部署文件中的自定义更改，需从备份中重新应用。
+    </Step>
+    <Step title="检查配置">
+        对照 `/dify/.env.example`，检查现有 `/dify/.env` 是否包含必要的启动输入。将各个本地服务 `.env` 文件与对应的 `.defaults` 或 `.env.example` 模板比较。
+
+        现有 `shared.env` 文件仍受支持。`api-worker.env` 和已有的 `shared.env` 都应与 `envs/core-services/api-worker.defaults` 比较。
+
+        将需要的设置添加到现有文件中；用模板覆盖文件会丢失自定义设置。如果缺少本地沙箱令牌，运行 `openssl rand -hex 32` 生成一个。在 `/dify/.env` 中，将 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) 设为生成的值。
+
+        保留现有的数据库、向量存储选择项和卷路径。更改选择项不会迁移数据。如需新增可选覆盖文件，按 [配置](#配置) 中的步骤创建。
+    </Step>
+    <Step title="应用并检查升级">
+
         ```bash
         cd /dify
-        docker compose down
-        ```
-    </Step>
-    <Step title="备份数据">
-        备份 `.env` 文件、`envs/` 下你创建的任何可选 env 文件，以及包含数据库、存储和其他持久化数据的 `volumes` 目录：
-
-        ```bash
-        cp /dify/.env /dify/.env.bak
-        tar -cvf envs-$(date +%s).tgz envs
-        tar -cvf volumes-$(date +%s).tgz volumes
-        ```
-    </Step>
-    <Step title="更新 Dify">
-        <Warning>
-            升级过程将覆盖配置模板，但不会影响 `.env` 文件、本地的 `/dify/envs/*.env` 文件或 `volumes/` 目录中的运行时数据（如数据库和上传的文件）。
-
-            如果你手动修改过 `.env` 和 `/dify/envs/*.env` 以外的任何配置文件，请在升级前备份它们。
-        </Warning>
-
-        拉取最新代码并同步配置文件：
-
-        ```bash
-        git clone https://github.com/langgenius/dify.git /tmp/dify
-        rsync -av /tmp/dify/docker/ /dify/
-        rm -rf /tmp/dify
-        ```
-    </Step>
-    <Step title="检查新的环境变量">
-        新版本可能在 `.env.example` 或 `envs/` 下的可选模板中引入新变量。将每个模板与对应的本地 env 文件进行比较，并添加任何你需要的缺失变量：
-
-        ```bash
-        diff /dify/.env /dify/.env.example
-        find /dify/envs -name "*.env" -print | while read -r env_file; do
-          diff "$env_file" "$env_file.example"
-        done
-        ```
-
-        如需自定义新增的可选模板，复制该文件（去掉 `.example` 后缀）后再编辑。详见 [配置](#配置)。
-    </Step>
-    <Step title="启动服务">
-        ```bash
-        docker compose pull
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml config --quiet
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml pull
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all
         ```
+
+        确认常驻服务显示为 `Up` 或 `healthy`，且 `init_permissions` 以 `Exited (0)` 结束。打开 Dify，检查使用了自定义设置的功能。
     </Step>
 </Steps>

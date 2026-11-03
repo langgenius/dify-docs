@@ -21,30 +21,40 @@ AMI がデプロイされた後、EC2 コンソールで確認できるインス
 
 ### 設定
 
+Docker Compose 2.35.0 以降を使用します。`docker compose version` で確認してください。
+
 <Steps>
-    <Step title="環境変数を編集">
-        EC2 インスタンスで、関連するファイルの環境変数を編集します：
+    <Step title="環境変数の編集">
+        EC2 インスタンスで、該当するファイルの環境変数を編集します。
 
-        - **必須の起動値** は `/dify/.env` にあります。直接編集します。
+        - **起動に必要な設定値** は `/dify/.env` にあります。直接編集します。
 
-        - **オプションまたはプロバイダー固有の設定** は `/dify/envs/` にテンプレートとして用意されています。デフォルト値を上書きするには、対応するテンプレートをコピーし（`.example` 拡張子を外す）、コピーを編集します。
+        - **オプションまたはプロバイダー固有の設定** は `/dify/envs/` にテンプレートがあります。Compose は `.defaults` ファイルを自動で読み込みます。ローカルの `.env` ファイルがある場合は、そのファイルを直接編集します。なければ、コメントに記載されたローカルの `.env` パスに `.defaults` ファイルをコピーします。
 
-            例：
+            `.env.example` テンプレートは、`.example` を外してコピーします。
+
+            たとえば、OpenSearch の上書きファイルがまだない場合は、次を実行します。
 
             ```bash
             cd /dify
-            cp envs/vectorstores/opensearch.env.example envs/vectorstores/opensearch.env
+            cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
             ```
 
-        `/dify/.env` の値は、`/dify/envs/*.env` ファイルの値より優先されます。
+        コピーしたファイルで入力値を変更し、**Container variable mappings** の式はそのまま残します。
 
-        AWS デプロイで `docker-compose.override.yaml` を通じて変数が注入されている場合は、それらの設定をそのまま残してください。Compose のサービスレベル `environment:` の値は、env ファイルから読み込まれる値より優先されます。
+        この OpenSearch の設定では、`/dify/.env` の値が `opensearch.env` より優先されます。他のサービスは各テンプレートのコメントに従ってください。専用の設定ファイルや、指定されたルート設定の値だけを読み込むサービスもあります。
+
+        AWS の設定を `docker-compose.override.yaml` で渡している場合は、そこに残してください。Compose のサービス単位の `environment:` は、env ファイルの値より優先されます。
     </Step>
-    <Step title="Dify を再起動">
+    <Step title="変更の適用">
+        `/dify` で設定を検証し、変更対象のサービスを再作成します。両方のコマンドで、既存の AWS 上書きファイルを指定してください。そのファイルがない場合は、`-f docker-compose.override.yaml` を省略します。
+
         ```bash
-        docker compose down
+        cd /dify
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml config --quiet
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
         ```
+
     </Step>
 </Steps>
 
@@ -55,60 +65,56 @@ AMI がデプロイされた後、EC2 コンソールで確認できるインス
 ## アップグレード
 
 <Warning>
-    - アップグレード前に、GitHub の [リリースノート](https://github.com/langgenius/dify/releases) でバージョン固有のアップグレード手順を確認してください。一部のバージョンでは、データベースの移行や設定変更などの追加手順が必要な場合があります。
 
-    - Dify の Docker Compose ファイルは現在 Docker Compose 2.24.0 以降を必要とします。アップグレード前に `docker compose version` を実行して確認してください。
+    - [リリースノート](https://github.com/langgenius/dify/releases) から対象バージョンを選び、更新前にアップグレード手順を確認してください。
+
+    - 現在の Docker ファイルには Docker Compose 2.35.0 以降が必要です。アップグレード前に `docker compose version` で確認してください。
+
 </Warning>
 
-EC2 インスタンスで、以下のコマンドを実行します：
+EC2 インスタンスでは、既存のデプロイと同じ Compose プロジェクト名とファイルを使って実行します。`-p` や `COMPOSE_PROJECT_NAME` を指定している場合は、その値を維持してください。既存の名前付きボリュームを引き続き使うために必要です。`docker-compose.override.yaml` がない場合は、以下のコマンドから該当する `-f` オプションを省略します。
 
 <Steps>
-    <Step title="実行中のサービスを停止">
+    <Step title="デプロイのバックアップ">
+        `/dify/.env`、`/dify/envs/` 内のローカル `.env` ファイル、`docker-compose.override.yaml`、その他のカスタムデプロイファイルをバックアップします。既存のシークレットとボリュームパスを維持します。明示的に設定した、または保存済みの [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) も対象です。
+
+        デプロイのバックアップ手順に従って永続データを保存します。`/dify/volumes/`、外部データベースやストレージを含めてください。`local_sandbox` を設定している場合は、名前付きボリュームの `dify_agent_local_sandbox_home` と `dify_agent_local_sandbox_workspace` も対象です。実際の名前には Compose プロジェクトのプレフィックスが付く場合があります。
+
+        データベースは整合性のある方法でバックアップしてください。書き込み中のデータファイルをコピーしても、信頼できるバックアップにはなりません。
+    </Step>
+    <Step title="選択したリリースへの更新">
+        `<version>` を選択したリリースタグに置き換えます。そのリリースの Docker ファイルとテンプレートをまとめてコピーします。
+
+        ```bash
+        release_tag="<version>"
+        upgrade_dir="$(mktemp -d)"
+        git clone --depth 1 --branch "$release_tag" https://github.com/langgenius/dify.git "$upgrade_dir/dify"
+        rsync -av --exclude='.env' --exclude='*.env' \
+          --exclude='docker-compose.override.yaml' --exclude='volumes/' \
+          "$upgrade_dir/dify/docker/" /dify/
+        ```
+
+        除外指定により、ローカルの環境ファイル、AWS 上書きファイル、実行データを保持します。その他のデプロイファイルへの変更は、バックアップから適用し直してください。
+    </Step>
+    <Step title="設定の確認">
+        `/dify/.env.example` と既存の `/dify/.env` を比較し、起動に必要な入力を確認します。各サービスのローカル `.env` ファイルは、対応する `.defaults` または `.env.example` テンプレートと比較します。
+
+        既存の `shared.env` ファイルも引き続き利用できます。`api-worker.env` と既存の `shared.env` は、どちらも `envs/core-services/api-worker.defaults` と比較してください。
+
+        必要な設定を既存のファイルに追加します。テンプレートで上書きすると、カスタム設定が失われます。ローカルサンドボックスのトークンが未設定なら、`openssl rand -hex 32` で生成します。`/dify/.env` の [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) に、その出力を設定してください。
+
+        データベース、ベクトルストアの選択値とボリュームパスは既存の値を維持します。選択値を変更してもデータは移行されません。新しい上書きファイルが必要な場合は、[設定](#設定) の手順で作成してください。
+    </Step>
+    <Step title="アップグレードの適用と確認">
+
         ```bash
         cd /dify
-        docker compose down
-        ```
-    </Step>
-    <Step title="データをバックアップ">
-        `.env` ファイル、`envs/` 下に作成したオプションの env ファイル、およびデータベースやストレージなどの永続データを含む `volumes` ディレクトリをバックアップします：
-
-        ```bash
-        cp /dify/.env /dify/.env.bak
-        tar -cvf envs-$(date +%s).tgz envs
-        tar -cvf volumes-$(date +%s).tgz volumes
-        ```
-    </Step>
-    <Step title="Dify を更新">
-        <Warning>
-            アップグレードプロセスは設定テンプレートを上書きします。ただし、`.env` ファイル、ローカルの `/dify/envs/*.env` ファイル、`volumes/` ディレクトリ内のランタイムデータ（データベースやアップロードされたファイルなど）には影響しません。
-
-            `.env` と `/dify/envs/*.env` 以外の設定ファイルを手動で変更している場合は、アップグレード前にバックアップしてください。
-        </Warning>
-
-        最新のコードをプルし、設定ファイルを同期します：
-
-        ```bash
-        git clone https://github.com/langgenius/dify.git /tmp/dify
-        rsync -av /tmp/dify/docker/ /dify/
-        rm -rf /tmp/dify
-        ```
-    </Step>
-    <Step title="新しい環境変数を確認">
-        新しいバージョンでは `.env.example` または `envs/` 下のオプションテンプレートに新しい変数が導入される場合があります。各テンプレートと対応するローカル env ファイルを比較し、必要な不足変数を追加してください：
-
-        ```bash
-        diff /dify/.env /dify/.env.example
-        find /dify/envs -name "*.env" -print | while read -r env_file; do
-          diff "$env_file" "$env_file.example"
-        done
-        ```
-
-        新しく追加されたオプションテンプレートをカスタマイズする必要がある場合は、`.example` 拡張子を外したファイルとしてコピーしてから編集してください。詳細は [設定](#設定) を参照してください。
-    </Step>
-    <Step title="サービスを開始">
-        ```bash
-        docker compose pull
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml config --quiet
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml pull
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
+        docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all
         ```
+
+        常駐サービスが `Up` または `healthy` になっていることを確認します。`init_permissions` は `Exited (0)` で終了している必要があります。Dify を開き、カスタム設定を使う機能も確認してください。
     </Step>
 </Steps>
