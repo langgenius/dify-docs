@@ -246,6 +246,7 @@ openssl rand -base64 32
 | `SERVER_WORKER_CLASS` | `gevent` | Gunicorn 工作进程类型。保持默认值；其他值会破坏 psycopg2 和 gRPC 补丁。 |
 | `SERVER_WORKER_CONNECTIONS` | `10` | 每个工作进程的最大并发连接数。仅适用于异步工作进程（gevent）。如果在高负载下遇到连接拒绝或响应缓慢，尝试增大此值。 |
 | `GUNICORN_TIMEOUT` | `360` | 如果工作进程在此秒数内没有响应，Gunicorn 将终止并重启它。设为 360（6 分钟）以支持用于流式 LLM 响应的长连接 SSE。 |
+| `GUNICORN_KEEP_ALIVE` | `10` | API 服务器（Gunicorn）保留空闲连接的秒数，在此期间下一个请求可复用该连接。 |
 | `API_WEBSOCKET_WORKER_AMOUNT` | `1` | 仅适用于 Docker Compose。专用 `api_websocket` 容器中服务实时协作的 Gunicorn 工作进程数。协作事件通过 Redis 在各工作进程间同步，因此在编辑流量较大、单个工作进程占满一个 CPU 核心时，可放心调高此值。 |
 | `API_WEBSOCKET_WORKER_CLASS` | `geventwebsocket.gunicorn.workers.GeventWebSocketWorker` | 仅适用于 Docker Compose。专用 `api_websocket` 容器的工作进程类型。保持默认值；其他值会破坏 WebSocket 支持。 |
 | `API_WEBSOCKET_WORKER_CONNECTIONS` | `1000` | 仅适用于 Docker Compose。每个 `api_websocket` 工作进程可同时接受的 WebSocket 连接数上限。每个打开的工作流编辑器标签页占用一个连接，因此默认值下每个工作进程最多支持 1000 个并发编辑会话；如有更多需求，可调高此值或增加工作进程。 |
@@ -1200,7 +1201,7 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `ENABLE_LEARN_APP` | `true` | 显示 Learn Dify 版块：探索页的教程模板、工作室中还没有应用时的入门面板，以及帮助菜单中的显示开关。<br/><br/>设为 `false` 可同时隐藏三处。 |
-| `ENABLE_SKILL` | `true` | 在主导航中显示 [Skills](/zh/self-host/use-dify/build/skills) 入口。<br/><br/>设为 `false` 后，工作区界面中不再显示 Skills。 |
+| `ENABLE_SKILL` | `true` | 在主导航中显示 [Skills](/zh/self-host/use-dify/build/skills) 入口。<br/><br/>设为 `false` 后，工作区界面中不再显示 Skills。此时 Dify CLI（`difyctl`）中的 `difyctl get skill` 等命令会失败，返回 503 `skills_disabled` 错误。 |
 
 #### 认证与账户
 
@@ -1221,15 +1222,16 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 应用运行的追踪数据由后台任务投递给所配置的 LLMOps 供应商（Langfuse、LangSmith、Arize/Phoenix 等）。使用 Docker Compose 部署时，在 `docker/envs/core-services/shared.env` 中设置这些变量。
 
+自 1.19.0 起，`OPS_TRACE_UNIFIED_ENABLED`、`OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES`、`OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` 和 `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` 已不再生效，可从 env 文件中删除。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPS_TRACE_UNIFIED_ENABLED` | `false` | 设为 `true` 后，LangSmith 和 Arize/Phoenix 的追踪数据采用统一结构，记录工作流运行、节点及其父子关系。默认值 `false` 保留各供应商原有的追踪实现。其他供应商不受影响。<br/><br/>各应用仍需单独开启 LLMOps 并配置供应商。 |
+| `OPS_TRACE_QUEUE` | `ops_trace_v2` | 追踪相关任务所用的 Celery 队列，包括追踪投递及其重试、Agent 追踪导出和每日追踪清理。修改此值时，API、Worker 和 Celery Beat 需设为相同的值。<br/><br/>Docker Compose 自带的 Worker 会自动监听该队列。如果你自行设置了 `CELERY_QUEUES` 或 `CELERY_WORKER_QUEUES`，或用自己的 `-Q` 列表启动 Worker，需将该队列加入其中。滚动升级时，按 Dify 仓库中的 [Ops 追踪滚动升级](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) 说明操作。<br/><br/>只能包含字母、数字、`_`、`.` 和 `-`。 |
+| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | 追踪供应商暂时不可用时，Dify 发送一条追踪数据最多尝试的次数，首次发送也计算在内。供应商拒收的追踪数据不会重试。不能小于 1。<br/><br/>两次尝试的间隔从 10 秒开始，每次翻倍，最长 10 分钟。按默认值，最后一次尝试约在首次发送 5 分钟后进行；如果供应商故障持续更久，可调高此值。 |
+| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Celery Beat 每天 03:30 运行一次清理，删除投递中断后遗留在存储中、且已超过 2 天的追踪数据。时间以 `LOG_TZ` 为准（未设置时为 UTC）。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | 设为 `true` 后，Agent 应用以及含新 Agent 节点的 Workflow、Chatflow 应用，其追踪数据会包含 Agent 的模型调用和工具调用。应用调用的 [工作流工具](/zh/self-host/use-dify/workspace/tools#workflow) 内部的 Agent 不在其中。还需将 `DIFY_AGENT_APPLICATION_TRACING_ENABLED` 设为 `true`。<br/><br/>为 `false` 时，Agent、Workflow 和 Chatflow 应用的追踪设置中会提示 Agent 追踪不可用。各应用仍需单独开启追踪、配置供应商，并保持 **采集 Agent 内部过程** 开启（默认开启）。 |
 | `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `shared.env`：Agent 后端不读取这个文件。<br/><br/>开启后，如果 Agent 运行已由所在应用追踪，就会发往该应用的追踪供应商，不再进入 [轨迹导出](#agent-轨迹导出)。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | 仅在 `OPS_AGENT_TRACE_ENABLED` 为 `true` 时生效。每 30 秒运行一次后台任务，重新发送仍在等待投递的 Agent 追踪数据，并在保留期（默认 7 天）结束后删除 Dify 自己存储的 Agent 追踪数据。已经发送到追踪供应商的数据不受影响。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
-| `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
-| `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` | `3900` | 父工作流追踪上下文的保留时长（秒），供后到的嵌套子追踪挂接。<br/><br/>当 `OPS_TRACE_UNIFIED_ENABLED` 为 `true` 时，取值必须不低于重试窗口（次数 × 间隔）。低于此值会导致 Dify 无法加载配置。 |
 
 #### 索引
 
@@ -1474,9 +1476,10 @@ Skill 包（`.zip` 或 `.skill`）的最大大小，单位为 MB。无论将包�
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `AGENT_PACKAGE_MAX_BYTES` | `536870912` | 包的大小上限，单位为字节（512 MB），打包后和解压后的大小都会检查。解压后的大小包含附带 Skill 的内容。<br/><br/>附带大文件或大型 Skill 的应用或 Agent 导出、导入失败时，可调高此值。 |
+| `AGENT_PACKAGE_MAX_BYTES` | `536870912` | 包的大小上限，单位为字节（512 MB），打包后和解压后的大小都会检查。解压后的大小包含附带 Skill 的内容。<br/><br/>附带大文件、大型 Skill 或大型工作流的应用或 Agent 导出、导入失败时，可调高此值。 |
 | `AGENT_PACKAGE_MAX_MANIFEST_BYTES` | `5242880` | 包内每个 YAML 文件的大小上限，单位为字节（5 MB）。这些文件包括清单文件，以及 Agent 包中的 Agent 配置。<br/><br/>附带的 Skill 和文件计入 `AGENT_PACKAGE_MAX_BYTES`，因此只有 Agent 配置本身超过 5 MB 时才需调高此值。<br/><br/>不适用于应用的 DSL，DSL 仍保持固定的 10 MB 上限。 |
 | `AGENT_PACKAGE_MAX_ENTRIES` | `5000` | 包内的条目数上限：附带的每个 Skill、文件和图标各算一个，另有几个固定条目。<br/><br/>附带数千个 Skill 和文件的应用或 Agent 导出、导入失败时，可调高此值。 |
+| `APP_PACKAGE_MAX_WORKFLOW_TOOLS` | `20` | 包内可附带的工作流数量上限。应用以 [工作流工具](/zh/self-host/use-dify/workspace/tools#workflow) 的形式调用已发布的工作流时，导出该应用会一并附带这些工作流，以及它们进一步调用的工作流。<br/><br/>调用大量工作流工具的应用导出、导入失败时，可调高此值。不能小于 1。 |
 
 ### AGENT_BACKEND_BASE_URL
 
@@ -1773,12 +1776,13 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `PLUGIN_DEBUGGING_PORT` | `5003` | 插件远程调试连接的端口。 |
 | `PLUGIN_REMOTE_INSTALL_HOST` | `localhost` | 控制台向插件开发者展示的远程调试地址。仅用于展示，不影响插件守护进程实际监听的地址。<br/>需设置为开发者可访问的主机名（Compose 部署中通过 `EXPOSE_PLUGIN_DEBUGGING_HOST` 设置）；默认的 `localhost` 只适用于在 Docker 宿主机上开发的场景。 |
 | `PLUGIN_REMOTE_INSTALL_PORT` | `5003` | 远程调试地址中的端口部分。<br/>必须与守护进程对外发布的调试端口（`EXPOSE_PLUGIN_DEBUGGING_PORT`）一致；Compose 部署中两者由同一变量保持同步。 |
-| `MARKETPLACE_ENABLED` | `true` | 控制 Dify Marketplace 中的插件功能是否启用。禁用后，控制台会隐藏 Marketplace 插件的浏览和安装入口，API 拒绝从 Marketplace 安装和升级插件，周期性升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）也会停止。<br/><br/>模板导入操作本身不受影响。但如果导入的模板依赖尚未安装的 Marketplace 插件，禁用 Marketplace 时将无法安装这些依赖。已安装的插件仍可正常使用；安装策略允许时，也仍可从 GitHub 或本地包安装插件。 |
+| `MARKETPLACE_ENABLED` | `true` | 控制 Dify Marketplace 中的插件功能是否启用。禁用后，控制台会隐藏 Marketplace 插件的浏览和安装入口，API 拒绝从 Marketplace 安装和升级插件，周期性升级检查（`ENABLE_CHECK_UPGRADABLE_PLUGIN_TASK`）也会停止。<br/><br/>插件版本也无法切换。控制台还会隐藏其余的 Marketplace 入口：帮助菜单中的 **创作者中心**、主页模板区上方的 **查看更多**，以及 Go to Anything 中的 `@plugin` 搜索范围。<br/><br/>模板导入操作本身不受影响。但如果导入的模板依赖尚未安装的 Marketplace 插件，禁用 Marketplace 时将无法安装这些依赖。已安装的插件仍可正常使用；安装策略允许时，也仍可从 GitHub 或本地包安装插件。 |
 | `MARKETPLACE_API_URL` | `https://marketplace.dify.ai` | 用于浏览和下载插件与模板，以及检查插件升级的 Marketplace API 端点。<br/><br/>Dify API 服务、后台任务进程、Web 服务端和用户浏览器都会使用该 URL，因此每个运行环境都需要能访问它。 |
 | `MARKETPLACE_URL` | （空；Compose 部署回退到 `https://marketplace.dify.ai`） | Marketplace 链接使用的基础 URL，包括插件详情页和「集成」页面的 Marketplace 入口。Dify 还会根据该值生成 Creator Center 指南链接。<br/><br/>与 `MARKETPLACE_API_URL` 不同：后者是提供 Marketplace 数据和安装包的 API 端点。 |
 | `FORCE_VERIFYING_SIGNATURE` | `true` | 安装插件前要求有效签名。防止安装被篡改或未签名的包。 |
 | `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | 插件执行超时（秒，插件守护进程侧）。应与 API 侧的 `PLUGIN_DAEMON_TIMEOUT` 匹配。 |
 | `PIP_MIRROR_URL` | （空） | 插件守护进程安装插件依赖时使用的自定义 PyPI 镜像 URL。适用于加速安装或离线环境。 |
+| `UV_CACHE_DIR` | （空；回退到 `PLUGIN_WORKING_PATH` 下的 `.uv-cache`） | 插件守护进程安装插件依赖时缓存 Python 包的目录。<br/><br/>需要插件守护进程 0.6.11 或更高版本，1.19.0 的 Compose 文件已自带该版本。<br/><br/>在 `docker/envs/core-services/plugin-daemon.env` 或 `docker/.env` 中设置。 |
 
 ## Creator Center 配置
 
