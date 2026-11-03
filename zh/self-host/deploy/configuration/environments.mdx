@@ -16,7 +16,9 @@ Docker Compose 自动加载服务默认值，本地环境文件保存自定义�
 | `docker/envs/` 下的本地 `.env` 文件 | 为加载该文件的服务提供覆盖值。模板注释中会注明要创建的本地文件。 |
 | `docker/envs/**/*.env.example` | 可选或提供商专用设置的模板。复制时去掉 `.example` 后缀，即可创建对应的本地 `.env` 文件。 |
 
-`envs/core-services/shared.defaults` 按功能组织 API、Worker 和定时任务的通用设置，对应的本地覆盖文件为 `shared.env`。API 专用设置使用 `api.defaults`，Worker 进程设置使用 `worker.defaults`。其他服务和提供商在 `envs/` 下各有对应文件。
+`envs/core-services/api-worker.defaults` 按功能组织 API、Worker 和定时任务的通用设置，对应的本地覆盖文件为 `api-worker.env`。API 专用设置使用 `api.defaults`，Worker 进程设置使用 `worker.defaults`。其他服务和提供商在 `envs/` 下各有对应文件。
+
+现有的 `envs/core-services/shared.env` 文件仍受支持。两个文件都存在时，`api-worker.env` 优先于 `shared.env`；根目录的 `docker/.env` 优先于两者。
 
 ### 自定义覆盖值
 
@@ -1256,13 +1258,13 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 #### LLMOps 追踪投递
 
-应用运行的追踪数据由后台任务投递给所配置的 LLMOps 供应商（Langfuse、LangSmith、Arize/Phoenix 等）。使用 Docker Compose 部署时，在 `docker/envs/core-services/shared.env` 中设置这些变量。
+应用运行的追踪数据由后台任务投递给所配置的 LLMOps 供应商（Langfuse、LangSmith、Arize/Phoenix 等）。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置这些变量。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | 设为 `true` 后，LangSmith 和 Arize/Phoenix 的追踪数据采用统一结构，记录工作流运行、节点及其父子关系。默认值 `false` 保留各供应商原有的追踪实现。其他供应商不受影响。<br/><br/>各应用仍需单独开启 LLMOps 并配置供应商。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | 设为 `true` 后，Agent 应用以及含新 Agent 节点的 Workflow、Chatflow 应用，其追踪数据会包含 Agent 的模型调用和工具调用。应用调用的 [工作流工具](/zh/self-host/use-dify/workspace/tools#workflow) 内部的 Agent 不在其中。还需将 `DIFY_AGENT_APPLICATION_TRACING_ENABLED` 设为 `true`。<br/><br/>为 `false` 时，Agent、Workflow 和 Chatflow 应用的追踪设置中会提示 Agent 追踪不可用。各应用仍需单独开启追踪、配置供应商，并保持 **采集 Agent 内部过程** 开启（默认开启）。 |
-| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `shared.env`：Agent 后端不读取这个文件。<br/><br/>开启后，如果 Agent 运行已由所在应用追踪，就会发往该应用的追踪供应商，不再进入 [轨迹导出](#agent-轨迹导出)。 |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `api-worker.env`：Agent 后端不读取这个文件。<br/><br/>开启后，如果 Agent 运行已由所在应用追踪，就会发往该应用的追踪供应商，不再进入 [轨迹导出](#agent-轨迹导出)。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | 仅在 `OPS_AGENT_TRACE_ENABLED` 为 `true` 时生效。每 30 秒运行一次后台任务，重新发送仍在等待投递的 Agent 追踪数据，并在保留期（默认 7 天）结束后删除 Dify 自己存储的 Agent 追踪数据。已经发送到追踪供应商的数据不受影响。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 追踪投递遇到瞬时失败后的最大重试次数，超出后该条追踪数据被丢弃。<br/><br/>默认重试窗口（次数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）按覆盖一小时工作流上限加导出宽限期设定。<br/><br/>目前只有 Arize/Phoenix 追踪嵌套工作流时会触发（子追踪先于父级上下文到达）。不能设为 `0`。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | 两次重试的间隔秒数；总容忍窗口约为间隔 × 最大次数（默认约 65 分钟）。<br/><br/>调低可让嵌套追踪更快送达，但重试次数消耗更快。不能设为 `0`。 |
@@ -1320,7 +1322,7 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 API 和 Worker 进程按这些限制检查代码执行节点和模板转换节点的输出。沙箱服务不会读取这些变量。
 
-如果 `docker/envs/core-services/shared.env` 不存在，先从 `shared.defaults` 复制创建。在该文件中取消要修改的配置行的注释，并设置覆盖值。在 `dify/docker` 中运行 `docker compose up -d`，将新的环境变量应用到 API 和 Worker。
+如果 `docker/envs/core-services/api-worker.env` 不存在，先从 `api-worker.defaults` 复制创建。在该文件中取消要修改的配置行的注释，并设置覆盖值。在 `dify/docker` 中运行 `docker compose up -d`，将新的环境变量应用到 API 和 Worker。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1646,7 +1648,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 1. 在 `docker/.env` 中，将 `DIFY_AGENT_TRAJECTORY_ENABLED` 设为 `true`，将 `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` 设为收集器的 traces URL。凭证（如有）写在 `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` 中。
 
-    Agent 后端不读取 `shared.env`，因此这些变量写在其中不会生效。
+    Agent 后端不读取 `api-worker.env`，因此这些变量写在其中不会生效。
 
 2. 运行 `docker compose up -d` 重建 Agent 后端。任一值无效时，Agent 后端都无法启动，修正之前 Agent 运行会一直失败。
 3. 让 Agent 执行一个会调用工具的任务，然后在追踪后端中查找服务名为 `dify-agent-trajectory` 的工具调用 span。
@@ -1694,7 +1696,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `SANDBOX_ENABLE_NETWORK` | `true` | 允许脚本请求网络访问权限。<br/><br/>Dify 的代码执行节点会请求启用网络的执行环境，因此将此变量设为 `false` 会导致这些请求被拒绝。使用代码执行节点时，应保持启用。 |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 网络启用时用于 SSRF 防护的 HTTP 代理。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
-| `SANDBOX_PORT` | `8194` | 沙箱服务端口。修改后，还需更新 `docker/envs/core-services/shared.env` 中的 `CODE_EXECUTION_ENDPOINT`，使用相同端口。 |
+| `SANDBOX_PORT` | `8194` | 沙箱服务端口。修改后，还需更新 `docker/envs/core-services/api-worker.env` 中的 `CODE_EXECUTION_ENDPOINT`，使用相同端口。 |
 
 ## Nginx 反向代理 {#nginx-reverse-proxy}
 

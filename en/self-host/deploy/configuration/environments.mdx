@@ -14,7 +14,9 @@ Docker Compose loads service defaults automatically, and local environment files
 | Local `.env` files under `docker/envs/` | Overrides for the services that load each file. A template's comments identify the local file to create. |
 | `docker/envs/**/*.env.example` | Templates for optional or provider-specific settings. Copy one without the `.example` suffix to create its local `.env` file. |
 
-`envs/core-services/shared.defaults` groups common API, worker, and scheduled-task settings by function; its local override file is `shared.env`. Use `api.defaults` for API-specific settings and `worker.defaults` for worker process settings. Other services and providers have their own files under `envs/`.
+`envs/core-services/api-worker.defaults` groups common API, worker, and scheduled-task settings by function; its local override file is `api-worker.env`. Use `api.defaults` for API-specific settings and `worker.defaults` for worker process settings. Other services and providers have their own files under `envs/`.
+
+Existing `envs/core-services/shared.env` files remain supported. If both files exist, `api-worker.env` takes precedence over `shared.env`; root `docker/.env` overrides both.
 
 ### Custom Overrides
 
@@ -1256,13 +1258,13 @@ By default, sign-in is email + password, and new accounts come from workspace in
 
 #### LLMOps Trace Delivery
 
-Traces of app runs are delivered to the configured LLMOps provider (Langfuse, LangSmith, Arize/Phoenix, and so on) by a background task. For Docker Compose deployments, set these variables in `docker/envs/core-services/shared.env`.
+Traces of app runs are delivered to the configured LLMOps provider (Langfuse, LangSmith, Arize/Phoenix, and so on) by a background task. For Docker Compose deployments, set these variables in `docker/envs/core-services/api-worker.env`.
 
 | Variable | Default | Description |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | Set to `true` to give LangSmith and Arize/Phoenix traces a common structure for workflow runs, nodes, and their parent-child relationships. The default `false` uses each provider's original tracing implementation. Other providers are unaffected.<br/><br/>Each app still needs LLMOps enabled and a provider configured. |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | Set to `true` to include Agent model and tool calls in the traces of Agent apps and of Workflow and Chatflow apps with a new Agent node. Agents inside a [workflow tool](/en/self-host/use-dify/workspace/tools#workflow) that the app calls aren't included. Also set `DIFY_AGENT_APPLICATION_TRACING_ENABLED` to `true`.<br/><br/>While this is `false`, the tracing settings of Agent, Workflow, and Chatflow apps say Agent tracing isn't available. Each app still needs tracing enabled, a provider configured, and **Capture Agent internals** on (the default). |
-| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | The agent backend's half of `OPS_AGENT_TRACE_ENABLED`; set both to `true` to trace Agents.<br/><br/>Set it in `docker/envs/core-services/dify-agent.env`, not `shared.env`: the agent backend doesn't read that file.<br/><br/>While it's on, an Agent run that its app traces goes to the app's tracing provider instead of [trajectory export](#agent-trajectory-export). |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | The agent backend's half of `OPS_AGENT_TRACE_ENABLED`; set both to `true` to trace Agents.<br/><br/>Set it in `docker/envs/core-services/dify-agent.env`, not `api-worker.env`: the agent backend doesn't read that file.<br/><br/>While it's on, an Agent run that its app traces goes to the app's tracing provider instead of [trajectory export](#agent-trajectory-export). |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | Used only when `OPS_AGENT_TRACE_ENABLED` is `true`. Runs a background job every 30 seconds that resends Agent traces still waiting for delivery and deletes the Agent trace data Dify stores after the retention period (7 days by default). Traces already delivered to your tracing provider stay there. |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | How many times a trace delivery is retried after a transient failure before the trace is dropped. <br/><br/>The default retry window (retries × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`) is sized to outlast the one-hour workflow limit plus the export grace period. <br/><br/>Today only Arize/Phoenix tracing of nested workflows hits this path (a child trace arriving before its parent's context). Cannot be `0`. |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | Seconds between those retries; the total tolerance window is delay × max retries (about 65 minutes at defaults).<br/><br/>Lower delivers nested traces sooner but exhausts the retry budget faster. Cannot be `0`. |
@@ -1320,7 +1322,7 @@ These settings tell the API and Worker how to connect to the sandbox, a separate
 
 The API and worker processes apply these limits to the output returned by Code and Template nodes. The sandbox service does not read them.
 
-Set overrides in `docker/envs/core-services/shared.env`, creating it from `shared.defaults` if needed, and uncomment the assignments you want to change. From `dify/docker`, run `docker compose up -d` to apply the new environment to the API and workers.
+Set overrides in `docker/envs/core-services/api-worker.env`, creating it from `api-worker.defaults` if needed, and uncomment the assignments you want to change. From `dify/docker`, run `docker compose up -d` to apply the new environment to the API and workers.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1648,7 +1650,7 @@ To turn it on:
 
 1. In `docker/.env`, set `DIFY_AGENT_TRAJECTORY_ENABLED` to `true` and `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` to your collector's traces URL. Put any credentials in `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS`.
 
-    These variables have no effect in `shared.env`, which the agent backend doesn't read.
+    These variables have no effect in `api-worker.env`, which the agent backend doesn't read.
 
 2. Recreate the agent backend with `docker compose up -d`. If a value is invalid, the agent backend won't start, and agent runs fail until you fix it.
 3. Run an agent on a task that calls a tool, then look in your tracing backend for a tool-call span under the service name `dify-agent-trajectory`.
@@ -1696,7 +1698,7 @@ The `sandbox` service executes Code nodes. To customize its settings, create `do
 | `SANDBOX_ENABLE_NETWORK` | `true` | Allows scripts to request network access.<br/><br/>Dify's Code nodes request network-enabled execution, so setting this to `false` rejects their requests. Keep it enabled when using Code nodes. |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection when network is enabled. |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | HTTPS proxy for SSRF protection. |
-| `SANDBOX_PORT` | `8194` | Sandbox service port. If you change it, update `CODE_EXECUTION_ENDPOINT` in `docker/envs/core-services/shared.env` to use the same port. |
+| `SANDBOX_PORT` | `8194` | Sandbox service port. If you change it, update `CODE_EXECUTION_ENDPOINT` in `docker/envs/core-services/api-worker.env` to use the same port. |
 
 ## Nginx Reverse Proxy {#nginx-reverse-proxy}
 

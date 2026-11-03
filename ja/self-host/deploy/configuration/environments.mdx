@@ -16,7 +16,9 @@ Docker Compose はサービスのデフォルト設定を自動で読み込み�
 | `docker/envs/` 内のローカル `.env` ファイル | 各ファイルを読み込むサービスの上書き設定。作成するローカルファイルは、テンプレートのコメントに記載されている。 |
 | `docker/envs/**/*.env.example` | オプションやプロバイダー固有の設定のテンプレート。`.example` を外してコピーすると、ローカルの `.env` ファイルになる。 |
 
-`envs/core-services/shared.defaults` は、API、ワーカー、定期タスクで共通の設定を機能別にまとめたファイルです。ローカルの上書き設定には `shared.env` を使用します。API 固有の設定には `api.defaults`、ワーカープロセスの設定には `worker.defaults` を使用してください。その他のサービスやプロバイダーには、`envs/` 内にそれぞれのファイルがあります。
+`envs/core-services/api-worker.defaults` は、API、ワーカー、定期タスクで共通の設定を機能別にまとめたファイルです。ローカルの上書き設定には `api-worker.env` を使用します。API 固有の設定には `api.defaults`、ワーカープロセスの設定には `worker.defaults` を使用してください。その他のサービスやプロバイダーには、`envs/` 内にそれぞれのファイルがあります。
+
+既存の `envs/core-services/shared.env` も引き続き使用できます。両方のファイルがある場合、`api-worker.env` が `shared.env` より優先されます。ルートの `docker/.env` は、その両方より優先されます。
 
 ### 上書き設定
 
@@ -1256,13 +1258,13 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 #### LLMOps トレース配信
 
-アプリ実行のトレースは、バックグラウンドタスクが LLMOps プロバイダーへ配信します。対象のプロバイダーは Langfuse、LangSmith、Arize/Phoenix などです。Docker Compose でデプロイする場合は、`docker/envs/core-services/shared.env` にこれらの変数を設定します。
+アプリ実行のトレースは、バックグラウンドタスクが LLMOps プロバイダーへ配信します。対象のプロバイダーは Langfuse、LangSmith、Arize/Phoenix などです。Docker Compose でデプロイする場合は、`docker/envs/core-services/api-worker.env` にこれらの変数を設定します。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
 | `OPS_TRACE_UNIFIED_ENABLED` | `false` | `true` にすると、LangSmith と Arize/Phoenix のトレースに共通の構造を使います。ワークフロー実行、ノード、それらの親子関係を記録します。デフォルトの `false` では、各プロバイダーの従来のトレース実装を使います。他のプロバイダーには影響しません。<br/><br/>各アプリで LLMOps を有効にし、プロバイダーを設定する必要があります。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | `true` にすると、Agent のモデル呼び出しとツール呼び出しがトレースに含まれます。対象は Agent アプリと、新しい Agent ノードを含む Workflow アプリおよび Chatflow アプリです。アプリが呼び出す [ワークフローツール](/ja/self-host/use-dify/workspace/tools#workflow) 内の Agent は含まれません。あわせて `DIFY_AGENT_APPLICATION_TRACING_ENABLED` も `true` にしてください。<br/><br/>`false` の間は、Agent、Workflow、Chatflow アプリのトレース設定に、Agent トレースを利用できない旨が表示されます。各アプリでトレースを有効にしてプロバイダーを設定し、**Agent の内部処理を収集** をオンのままにしておく必要もあります（デフォルトはオン）。 |
-| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | `OPS_AGENT_TRACE_ENABLED` と対になる Agent バックエンド側の設定です。Agent をトレースするには両方を `true` にしてください。<br/><br/>`docker/envs/core-services/dify-agent.env` で設定します。Agent バックエンドは `shared.env` を読み込まないため、そちらに設定しても反映されません。<br/><br/>有効にしている間、アプリでトレースされる Agent 実行は、[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) ではなく、そのアプリのトレースプロバイダーに送られます。 |
+| `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | `OPS_AGENT_TRACE_ENABLED` と対になる Agent バックエンド側の設定です。Agent をトレースするには両方を `true` にしてください。<br/><br/>`docker/envs/core-services/dify-agent.env` で設定します。Agent バックエンドは `api-worker.env` を読み込まないため、そちらに設定しても反映されません。<br/><br/>有効にしている間、アプリでトレースされる Agent 実行は、[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) ではなく、そのアプリのトレースプロバイダーに送られます。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | `OPS_AGENT_TRACE_ENABLED` が `true` の場合のみ有効です。30 秒ごとにバックグラウンドジョブを実行し、配信待ちの Agent トレースを再送します。保持期間（デフォルトで 7 日）を過ぎると、Dify が保存している Agent トレースデータも削除します。トレースプロバイダーにすでに配信されたデータは削除されません。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` | `780` | 一時的な失敗後にトレース配信をリトライする最大回数。超えるとそのトレースは破棄されます。<br/><br/>デフォルトのリトライ時間（回数 × `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`）は、1 時間のワークフロー上限とエクスポート猶予期間を上回るよう設定されています。<br/><br/>現在この経路に入るのは、Arize/Phoenix でネストしたワークフローをトレースする場合のみです。子トレースが親のコンテキストより先に届くと発生します。`0` は指定できません。 |
 | `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` | `5` | リトライの間隔（秒）。許容ウィンドウは間隔 × 最大回数（デフォルトで約 65 分）です。<br/><br/>小さくするとネストしたトレースが早く届く一方、リトライ回数を早く使い切ります。`0` は指定できません。 |
@@ -1320,7 +1322,7 @@ Dify はアカウント招待、パスワードリセット、ログインコー
 
 API とワーカープロセスは、コード実行ノードとテンプレートノードの出力にこれらの制限を適用します。サンドボックスサービスはこれらの変数を読み取りません。
 
-上書き値は `docker/envs/core-services/shared.env` に設定します。必要に応じて `shared.defaults` から作成し、変更する設定行のコメントを解除してください。`dify/docker` で `docker compose up -d` を実行すると、新しい環境変数が API とワーカーに適用されます。
+上書き値は `docker/envs/core-services/api-worker.env` に設定します。必要に応じて `api-worker.defaults` から作成し、変更する設定行のコメントを解除してください。`dify/docker` で `docker compose up -d` を実行すると、新しい環境変数が API とワーカーに適用されます。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
@@ -1644,7 +1646,7 @@ OpenShell に切り替えるには、次の手順を実行します：
 
 1. `docker/.env` で、`DIFY_AGENT_TRAJECTORY_ENABLED` を `true` に、`DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` をコレクターのトレース URL に設定します。認証情報が必要な場合は `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` に指定します。
 
-    Agent バックエンドは `shared.env` を読み込まないため、これらの変数を `shared.env` に設定しても反映されません。
+    Agent バックエンドは `api-worker.env` を読み込まないため、これらの変数を `api-worker.env` に設定しても反映されません。
 
 2. `docker compose up -d` で Agent バックエンドを再作成します。値が不正な場合、Agent バックエンドは起動せず、修正するまで Agent の実行は失敗します。
 3. ツールを呼び出すタスクを Agent に実行させ、トレーシングバックエンドでサービス名 `dify-agent-trajectory` のツール呼び出しスパンを探します。
@@ -1692,7 +1694,7 @@ Docker Compose でデータベースと Redis のコンテナを直接設定し�
 | `SANDBOX_ENABLE_NETWORK` | `true` | スクリプトによるネットワークアクセスの要求を許可する。<br/><br/>Dify のコード実行ノードは、ネットワークを有効にした実行を要求する。この値を `false` にすると、これらの要求は拒否される。コード実行ノードを使用する場合は、有効のままにする。 |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | ネットワーク有効時の SSRF 保護用 HTTP プロキシ。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 保護用 HTTPS プロキシ。 |
-| `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。変更時は、`docker/envs/core-services/shared.env` の `CODE_EXECUTION_ENDPOINT` も同じポートに更新する。 |
+| `SANDBOX_PORT` | `8194` | サンドボックスサービスのポート。変更時は、`docker/envs/core-services/api-worker.env` の `CODE_EXECUTION_ENDPOINT` も同じポートに更新する。 |
 
 ## Nginx リバースプロキシ {#nginx-reverse-proxy}
 
