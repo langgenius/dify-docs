@@ -64,6 +64,8 @@ docker compose version
     ```
 
     在 `.env` 中，将 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。Agent 后端和本地沙箱都需要这个共享令牌才能启动。
+
+    生产环境还需在首次启动前设置其余 [部署凭据](#访问)。
   </Step>
   <Step title="启动并检查服务">
     在 `dify/docker` 中运行：
@@ -79,7 +81,19 @@ docker compose version
 
 ## 访问
 
-将部署开放给公网访问前，配置 [HTTPS](/zh/self-host/deploy/configuration/environments#nginx-reverse-proxy)，并替换 [插件守护进程配置](/zh/self-host/deploy/configuration/environments#插件守护进程配置) 和 [Agent 设置](/zh/self-host/deploy/configuration/environments#dify_agent_server_secret_key) 中说明的开发凭据。
+将部署开放给公网访问前，配置 [HTTPS](/zh/self-host/deploy/configuration/environments#nginx-reverse-proxy)，并在 `docker/.env` 中替换自带的开发凭据：
+
+- 数据库和 Redis：替换 `DB_PASSWORD` 和 `REDIS_PASSWORD`。
+- 代码执行沙箱：将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥。配置方法详见 [沙箱服务](/zh/self-host/deploy/configuration/environments#沙箱服务)。
+- Weaviate：将 `WEAVIATE_API_KEY` 设为强密钥，并将其加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`。设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` 以要求身份认证。详见 [向量数据库服务配置](/zh/self-host/deploy/configuration/environments#向量数据库服务配置)。
+- 插件守护进程：为 `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY` 分别设置不同的强密钥。详见 [插件守护进程配置](/zh/self-host/deploy/configuration/environments#插件守护进程配置)。
+- Agent：替换 [`DIFY_AGENT_API_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_api_token)，并按要求的格式生成 [`DIFY_AGENT_SERVER_SECRET_KEY`](/zh/self-host/deploy/configuration/environments#dify_agent_server_secret_key)。保留启动步骤中生成的 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token)。
+
+初始化全新数据库前，先设置凭据。对于现有数据库，先在服务器上更改已存储的密码，再更新 `DB_PASSWORD`。
+
+保留显式设置或已存储的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
+
+默认部署栈不会将数据库、Redis、代码执行沙箱或 Weaviate 的端口发布到宿主机。在私有网络中也应限制对这些服务的访问。
 
 在浏览器中打开 [http://localhost/install](http://localhost/install)，创建管理员账户。设置完成后，在 [http://localhost](http://localhost) 登录。
 
@@ -89,9 +103,11 @@ docker compose version
 
 将部署设置和共享凭据保存在 `docker/.env` 中。Compose 在容器启动前从此文件读取 profile、对外发布的端口、挂载路径和健康检查调度等设置。
 
-服务会自动加载 `docker/envs/` 下自带的 `.defaults` 文件。如需修改服务设置，按模板注释中指定的路径创建本地 `.env` 文件；文件已存在时，直接编辑。可选的提供商和安全设置也有 `.env.example` 模板，复制时去掉 `.example` 后缀即可。
+服务会自动加载 `docker/envs/` 下自带的 `.defaults` 文件。如需修改服务设置，按模板注释中指定的路径创建本地 `.env` 文件；文件已存在时，直接编辑。复制可选提供商和安全设置的 `.env.example` 模板时，去掉 `.example` 后缀。
 
-如需修改 API、Worker 和定时任务共用的设置，从 `envs/core-services/api-worker.defaults` 复制创建 `api-worker.env`。只取消所需设置的注释，并保留 **Container variable mappings** 下的表达式不变。文件优先级、共享凭据和各项设置的说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments#配置文件)。
+`docker/envs/middleware.env.example` 模板仅用于 [源码开发](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件)。在该独立流程中，将它复制到 `docker/middleware.env`。
+
+如需修改 API、Worker 和定时任务共用的设置，将 `envs/core-services/api-worker.defaults` 复制到 `envs/core-services/api-worker.env`。只取消所需设置的注释，并保留 **Container variable mappings** 下的表达式不变。文件优先级、共享凭据和各项设置的说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments#配置文件)。
 
 升级现有部署时，保留当前提供商：切换提供商不会迁移数据。
 
@@ -104,7 +120,11 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
 
 在 `dify/docker` 中运行 `docker compose up -d`，使配置生效。Qdrant 的连接默认值会自动加载，无需创建提供商配置文件。选择自带提供商时，两个设置都要更新：`VECTOR_STORE` 不会更新 `COMPOSE_PROFILES`。
 
-如需自定义 Qdrant，先检查 `envs/vectorstores/qdrant.env` 是否已存在。如果不存在，复制 `envs/vectorstores/qdrant.defaults` 创建该文件。编辑后再次运行 `docker compose up -d`。根目录 `docker/.env` 中的值优先于提供商文件。其他提供商及其默认值详见 [向量数据库配置](/zh/self-host/deploy/configuration/environments#vector_store)。
+使用自带的 MySQL 时，按 [数据库配置](/zh/self-host/deploy/configuration/environments#数据库配置) 设置 `DB_TYPE`、`COMPOSE_PROFILES` 和连接字段。
+
+如需自定义 Qdrant，先检查 `envs/vectorstores/qdrant.env` 是否已存在。如果不存在，复制 `envs/vectorstores/qdrant.defaults` 创建该文件。编辑后再次运行 `docker compose up -d`。
+
+根目录 `docker/.env` 会覆盖 `QDRANT_API_KEY` 等输入值。模板未映射的 Qdrant 原生变量应放在 `qdrant.env` 中。其他提供商及其默认值详见 [向量数据库配置](/zh/self-host/deploy/configuration/environments#vector_store)。
 
 例如，要将 Nginx 的请求体大小上限设为 `200M`，在 `dify/docker` 中执行以下操作：
 
@@ -148,11 +168,21 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
 
 从 [Dify releases](https://github.com/langgenius/dify/releases) 选择目标版本，更新前先阅读该版本的升级说明。
 
+沿用现有部署的 Compose 项目名称和文件。保留 `-p` 选项或 `COMPOSE_PROJECT_NAME` 的原值，以继续挂载原有命名卷。
+
 <Steps>
   <Step title="备份部署">
     按现有备份流程保存 `docker/.env`、本地服务 `.env` 文件、自定义 Compose 文件和持久化数据。保留当前可用的密钥和数据卷路径，包括显式设置或保存在存储中的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
 
-    默认部署的备份需包含 `docker/volumes/`，以及 `local_sandbox` 的命名卷 `dify_agent_local_sandbox_home` 和 `dify_agent_local_sandbox_workspace`。确保数据库备份具有一致性；数据库正在写入时，直接复制文件无法得到可靠的备份。如果配置了外部数据库和存储，也需一并备份。
+    备份需包含 `docker/volumes/`。如果部署包含 `local_sandbox`，还需备份其挂载到 `/home/dify` 和 `/workspace` 的命名卷。
+
+    在 `dify/docker` 中查询沙箱的实际卷名。容器无论正在运行还是已停止，此命令都适用。使用与创建容器时相同的 Compose 项目和文件选项：
+
+    ```bash
+    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+    ```
+
+    备份命令返回的数据卷。确保数据库备份具有一致性；数据库正在写入时，直接复制文件无法得到可靠的备份。如果配置了外部数据库和存储，也需一并备份。
 
     在 `dify/docker` 中保存 `docker compose config` 的输出，用于更新后对比。输出包含密钥，保存和比较时均应限制访问。
   </Step>

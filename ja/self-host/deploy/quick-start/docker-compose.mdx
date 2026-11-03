@@ -64,6 +64,8 @@ docker compose version
     ```
 
     `.env` の `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` に、出力された値を設定します。Agent バックエンドとローカルサンドボックスの起動には、この共有トークンが必要です。
+
+    本番環境では、初回起動の前に残りの [デプロイ用の認証情報](#アクセス) を設定してください。
   </Step>
   <Step title="サービスの起動と確認">
     `dify/docker` で次のコマンドを実行します：
@@ -79,7 +81,19 @@ docker compose version
 
 ## アクセス
 
-インターネットに公開する前に、[HTTPS](/ja/self-host/deploy/configuration/environments#nginx-reverse-proxy) を設定してください。[プラグインデーモン設定](/ja/self-host/deploy/configuration/environments#プラグインデーモン設定) と [Agent の設定](/ja/self-host/deploy/configuration/environments#dify_agent_server_secret_key) にある開発用の認証情報も置き換えます。
+インターネットに公開する前に、[HTTPS](/ja/self-host/deploy/configuration/environments#nginx-reverse-proxy) を設定してください。`docker/.env` で、同梱の開発用認証情報を置き換えます：
+
+- データベースと Redis：`DB_PASSWORD` と `REDIS_PASSWORD` を置き換えます。
+- コード実行サンドボックス：`SANDBOX_API_KEY` と `CODE_EXECUTION_API_KEY` に、同じ推測されにくいシークレットを設定します。設定方法は [サンドボックスサービス](/ja/self-host/deploy/configuration/environments#サンドボックスサービス) を参照してください。
+- Weaviate：`WEAVIATE_API_KEY` に推測されにくいシークレットを設定します。その値を `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` にも含めます。`WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` を設定し、認証を必須にしてください。詳しくは [ベクトルデータベースサービス設定](/ja/self-host/deploy/configuration/environments#ベクトルデータベースサービス設定) を参照してください。
+- プラグインデーモン：`PLUGIN_DAEMON_KEY` と `PLUGIN_DIFY_INNER_API_KEY` に、別々の推測されにくい値を設定します。詳しくは [プラグインデーモン設定](/ja/self-host/deploy/configuration/environments#プラグインデーモン設定) を参照してください。
+- Agent：[`DIFY_AGENT_API_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_api_token) を置き換えます。[`DIFY_AGENT_SERVER_SECRET_KEY`](/ja/self-host/deploy/configuration/environments#dify_agent_server_secret_key) は指定の形式で生成してください。起動手順で生成した [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) はそのまま保持します。
+
+新規データベースを初期化する前に、認証情報を設定してください。既存のデータベースでは、先にサーバー側で保存済みのパスワードを変更します。その後、`DB_PASSWORD` を更新してください。
+
+明示的に設定した、または保存済みの [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) は維持してください。
+
+デフォルト構成では、データベース、Redis、コード実行サンドボックス、Weaviate のホストポートは公開しません。プライベートネットワーク内でも、これらへのアクセスを制限してください。
 
 ブラウザで [http://localhost/install](http://localhost/install) を開き、管理者アカウントを作成します。設定後は [http://localhost](http://localhost) でサインインします。
 
@@ -89,9 +103,11 @@ docker compose version
 
 デプロイの設定と共有の認証情報は `docker/.env` に保存します。Compose は、プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などを、コンテナ起動前にこのファイルから読み込みます。
 
-各サービスは、`docker/envs/` 内の同梱の `.defaults` ファイルを自動で読み込みます。設定を変更するには、テンプレートのコメントに記載されたローカルの `.env` ファイルを作成してください。既にある場合は直接編集します。プロバイダーやセキュリティに関するオプション設定には、`.env.example` テンプレートもあります。`.example` を外してコピーしてください。
+各サービスは、`docker/envs/` 内の同梱の `.defaults` ファイルを自動で読み込みます。設定を変更するには、テンプレートのコメントに記載されたローカルの `.env` ファイルを作成してください。既にある場合は直接編集します。プロバイダーやセキュリティに関するオプション設定の `.env.example` テンプレートは、`.example` を外してコピーします。
 
-API、ワーカー、定期タスクで共通の設定には、`envs/core-services/api-worker.defaults` から `api-worker.env` を作成します。必要な設定だけコメントを解除し、**Container variable mappings** の式は変更しないでください。ファイルの優先順位、共有の認証情報、個別の設定については、[環境変数](/ja/self-host/deploy/configuration/environments#設定ファイル) を参照してください。
+`docker/envs/middleware.env.example` は、[ソースコードからの開発](/ja/self-host/deploy/advanced-deployments/local-source-code#docker-compose-でミドルウェアを起動する) 専用のテンプレートです。その手順では、`docker/middleware.env` にコピーして使います。
+
+API、ワーカー、定期タスクで共通の設定には、`envs/core-services/api-worker.defaults` を `envs/core-services/api-worker.env` にコピーします。必要な設定だけコメントを解除し、**Container variable mappings** の式は変更しないでください。ファイルの優先順位、共有の認証情報、個別の設定については、[環境変数](/ja/self-host/deploy/configuration/environments#設定ファイル) を参照してください。
 
 既存のデプロイをアップグレードする場合は、現在のプロバイダーを維持してください。プロバイダーを変更しても、データは移行されません。
 
@@ -104,7 +120,11 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
 
 設定を反映するには、`dify/docker` で `docker compose up -d` を実行します。Qdrant の接続設定のデフォルト値は自動で読み込まれるため、プロバイダー用のファイルは不要です。同梱のプロバイダーを選ぶ際は、両方の設定を更新してください。`VECTOR_STORE` は `COMPOSE_PROFILES` を更新しません。
 
-Qdrant の接続設定を変更するには、`envs/vectorstores/qdrant.env` がなければ `envs/vectorstores/qdrant.defaults` からコピーします。そのファイルを編集し、再度 `docker compose up -d` を実行してください。ルートの `docker/.env` は、プロバイダー用ファイルの値より優先されます。他のプロバイダーとデフォルト値は [ベクトルデータベース設定](/ja/self-host/deploy/configuration/environments#vector_store) を参照してください。
+同梱の MySQL を使う場合は、[データベース設定](/ja/self-host/deploy/configuration/environments#データベース設定) に従ってください。`DB_TYPE`、`COMPOSE_PROFILES` と接続項目を設定します。
+
+Qdrant の接続設定を変更するには、`envs/vectorstores/qdrant.env` がなければ `envs/vectorstores/qdrant.defaults` からコピーします。そのファイルを編集し、再度 `docker compose up -d` を実行してください。
+
+ルートの `docker/.env` は、`QDRANT_API_KEY` などの入力値より優先されます。テンプレートでマッピングされていない Qdrant 固有の変数は、`qdrant.env` に設定してください。他のプロバイダーとデフォルト値は [ベクトルデータベース設定](/ja/self-host/deploy/configuration/environments#vector_store) を参照してください。
 
 たとえば、Nginx のリクエストボディの上限を `200M` にするには、`dify/docker` で次の手順を実行します：
 
@@ -148,11 +168,21 @@ Qdrant の接続設定を変更するには、`envs/vectorstores/qdrant.env` が
 
 [Dify のリリース](https://github.com/langgenius/dify/releases) から対象バージョンを選び、更新前にそのアップグレード手順を確認してください。
 
+既存のデプロイと同じ Compose プロジェクト名とファイルを使ってください。`-p` オプションや `COMPOSE_PROJECT_NAME` を指定している場合は、その値を維持します。既存の名前付きボリュームを引き続き使うために必要です。
+
 <Steps>
   <Step title="デプロイのバックアップ">
     通常のバックアップ手順で、`docker/.env`、ローカルのサービス `.env` ファイル、カスタム Compose ファイル、永続データを保存します。正常稼働時のシークレットとボリュームパスを保持してください。明示的に設定した、またはストレージ内に保存された [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) も対象です。
 
-    デフォルト構成では、`docker/volumes/` と `local_sandbox` の名前付きボリュームも対象です。名前は `dify_agent_local_sandbox_home` と `dify_agent_local_sandbox_workspace` です。データベースは整合性を保てる方法でバックアップしてください。書き込み中のファイルコピーでは、確実なバックアップになりません。外部のデータベースやストレージを設定している場合は、それらも含めます。
+    `docker/volumes/` をバックアップに含めます。`local_sandbox` を使用している場合は、その名前付きボリュームも対象です。マウント先は `/home/dify` と `/workspace` です。
+
+    `dify/docker` で、サンドボックスが使用する実際のボリューム名を確認します。次のコマンドは、稼働中と停止中のどちらのコンテナにも使えます。作成時と同じ Compose プロジェクトとファイルのオプションを指定してください：
+
+    ```bash
+    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+    ```
+
+    このコマンドで表示されたボリュームをバックアップしてください。データベースは整合性を保てる方法でバックアップします。書き込み中のファイルコピーでは、確実なバックアップになりません。外部のデータベースやストレージを設定している場合は、それらも含めます。
 
     `dify/docker` で `docker compose config` の出力を保存し、更新後の比較に備えます。出力にはシークレットが含まれるため、非公開の場所で保存・比較してください。
   </Step>

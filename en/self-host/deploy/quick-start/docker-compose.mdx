@@ -62,6 +62,8 @@ For an existing deployment, follow [Upgrade](#upgrade) to preserve its configura
     ```
 
     In `.env`, set `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` to the output. The agent backend and its local sandbox require this shared token to start.
+
+    For production, set the remaining [deployment credentials](#access) before the first start.
   </Step>
   <Step title="Start and Check the Services">
     From `dify/docker`, run:
@@ -77,7 +79,19 @@ For an existing deployment, follow [Upgrade](#upgrade) to preserve its configura
 
 ## Access
 
-Before exposing the deployment publicly, configure [HTTPS](/en/self-host/deploy/configuration/environments#nginx-reverse-proxy) and replace the development credentials described under [Plugin Daemon Configuration](/en/self-host/deploy/configuration/environments#plugin-daemon-configuration) and [Agent settings](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key).
+Before exposing the deployment publicly, configure [HTTPS](/en/self-host/deploy/configuration/environments#nginx-reverse-proxy) and replace the bundled development credentials in `docker/.env`:
+
+- Database and Redis: `DB_PASSWORD` and `REDIS_PASSWORD`.
+- Code sandbox: set `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY` to the same strong secret. See [Sandbox Service](/en/self-host/deploy/configuration/environments#sandbox-service) for configuration details.
+- Weaviate: set `WEAVIATE_API_KEY` to a strong secret and include it in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`. Set `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` to require authentication. See [Vector Database Service Configuration](/en/self-host/deploy/configuration/environments#vector-database-service-configuration) for details.
+- Plugin daemon: use separate strong values for `PLUGIN_DAEMON_KEY` and `PLUGIN_DIFY_INNER_API_KEY`. See [Plugin Daemon Configuration](/en/self-host/deploy/configuration/environments#plugin-daemon-configuration) for details.
+- Agent: replace [`DIFY_AGENT_API_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_api_token) and generate [`DIFY_AGENT_SERVER_SECRET_KEY`](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key) in its required format. Keep the generated [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) from the startup step.
+
+Set credentials before initializing a fresh database. For an existing database, rotate its stored password on the server before updating `DB_PASSWORD`.
+
+Preserve the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
+
+The default stack publishes no host ports for the database, Redis, Code sandbox, or Weaviate. Restrict access to them on the private network too.
 
 Open [http://localhost/install](http://localhost/install) in your browser and create the administrator account. After setup, sign in at [http://localhost](http://localhost).
 
@@ -87,9 +101,11 @@ For a remote deployment, replace `localhost` with the server's IP address or dom
 
 Keep deployment settings and shared credentials in `docker/.env`. Compose reads settings such as profiles, published ports, mount paths, and health-check scheduling from this file before containers start.
 
-Services load their bundled `.defaults` files under `docker/envs/` automatically. To change a service setting, create the local `.env` file named in its template's comments, or edit the existing local file. Optional provider and security settings also have `.env.example` templates; copy those without the `.example` suffix.
+Services load their bundled `.defaults` files under `docker/envs/` automatically. To change a service setting, create the local `.env` file named in its template's comments, or edit the existing local file. For optional provider and security `.env.example` templates, remove `.example` when copying.
 
-For settings shared by the API, workers, and scheduled tasks, use `envs/core-services/api-worker.defaults` to create `api-worker.env`. Uncomment only the settings you need, and leave the expressions under **Container variable mappings** unchanged. See [Environment Variables](/en/self-host/deploy/configuration/environments#configuration-files) for file precedence, shared credentials, and individual settings.
+The `docker/envs/middleware.env.example` template is only for [source-code development](/en/self-host/deploy/advanced-deployments/local-source-code#start-middlewares-with-docker-compose). Copy it to `docker/middleware.env` for that separate workflow.
+
+For settings shared by the API, workers, and scheduled tasks, copy `envs/core-services/api-worker.defaults` to `envs/core-services/api-worker.env`. Uncomment only the settings you need, and leave the expressions under **Container variable mappings** unchanged. See [Environment Variables](/en/self-host/deploy/configuration/environments#configuration-files) for file precedence, shared credentials, and individual settings.
 
 Keep your current provider when upgrading an existing deployment: changing the provider does not migrate data.
 
@@ -102,7 +118,11 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
 
 Apply the selection with `docker compose up -d` from `dify/docker`. Qdrant's connection defaults load automatically; no provider file is needed. Update both settings when choosing a bundled provider: `VECTOR_STORE` does not update `COMPOSE_PROFILES`.
 
-To customize Qdrant, copy `envs/vectorstores/qdrant.defaults` to `envs/vectorstores/qdrant.env` if that file doesn't exist, edit the copy, then run `docker compose up -d` again. Root `docker/.env` overrides values in the provider file. See [Vector Database Configuration](/en/self-host/deploy/configuration/environments#vector_store) for other providers and their defaults.
+For bundled MySQL, follow [Database Configuration](/en/self-host/deploy/configuration/environments#database-configuration) to set `DB_TYPE`, `COMPOSE_PROFILES`, and the connection fields.
+
+To customize Qdrant, copy `envs/vectorstores/qdrant.defaults` to `envs/vectorstores/qdrant.env` if that file doesn't exist, edit the copy, then run `docker compose up -d` again.
+
+Root `docker/.env` overrides inputs such as `QDRANT_API_KEY`. Put native Qdrant variables that the template does not map in `qdrant.env`. See [Vector Database Configuration](/en/self-host/deploy/configuration/environments#vector_store) for other providers and their defaults.
 
 For example, to set Nginx's maximum request body size to `200M`, run these commands from `dify/docker`:
 
@@ -146,11 +166,21 @@ For example, to set Nginx's maximum request body size to `200M`, run these comma
 
 Choose the target version from [Dify releases](https://github.com/langgenius/dify/releases) and read its upgrade instructions before updating.
 
+Keep the Compose project name and files used by the existing deployment. Preserve any `-p` option or `COMPOSE_PROJECT_NAME` value so named volumes remain attached.
+
 <Steps>
   <Step title="Back Up the Deployment">
     Use your deployment's backup process to save `docker/.env`, local service `.env` files, custom Compose files, and persistent data. Preserve your working secrets and volume paths, including the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
 
-    For the default deployment, include `docker/volumes/` and the `local_sandbox` named volumes: `dify_agent_local_sandbox_home` and `dify_agent_local_sandbox_workspace`. Use consistent database backups; a file copy while databases are writing is not a reliable backup. Include external databases and storage if you configured them.
+    Include `docker/volumes/`. If your deployment includes `local_sandbox`, also back up its named volumes mounted at `/home/dify` and `/workspace`.
+
+    From `dify/docker`, identify the sandbox's actual volume names. This works for running or stopped containers. Use the same Compose project and file options you used to create it:
+
+    ```bash
+    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+    ```
+
+    Back up the volumes returned by this command. Use consistent database backups; a file copy while databases are writing is not a reliable backup. Include external databases and storage if you configured them.
 
     From `dify/docker`, save the output of `docker compose config` for comparison after the update. It contains secrets, so store and compare it privately.
   </Step>

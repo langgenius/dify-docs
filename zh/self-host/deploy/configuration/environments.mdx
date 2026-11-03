@@ -14,7 +14,9 @@ Docker Compose 自动加载服务默认值，本地环境文件保存自定义�
 | `docker/.env` | 部署所需的输入和覆盖值，包括共享凭据，以及 Compose 在容器启动前读取的设置：profile、对外发布的端口、挂载路径和健康检查调度设置。新部署需从 `docker/.env.example` 复制创建。 |
 | `docker/envs/**/*.defaults` | 自带的 Docker 默认值和已注释的可选设置示例。各服务加载 Compose 为其指定的文件。 |
 | `docker/envs/` 下的本地 `.env` 文件 | 为加载该文件的服务提供覆盖值。模板注释中会注明要创建的本地文件。 |
-| `docker/envs/**/*.env.example` | 可选或提供商专用设置的模板。复制时去掉 `.example` 后缀，即可创建对应的本地 `.env` 文件。 |
+| `docker/envs/**/*.env.example` | 可选或提供商专用设置的模板。复制时去掉 `.example` 后缀，下文的中间件模板除外。 |
+
+源码开发时，将 `docker/envs/middleware.env.example` 复制到 `docker/middleware.env`。此文件用于独立的 [中间件栈](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件)，不用于完整的 Compose 部署。
 
 `envs/core-services/api-worker.defaults` 按功能组织 API、Worker 和定时任务的通用设置，对应的本地覆盖文件为 `api-worker.env`。API 专用设置使用 `api.defaults`，Worker 进程设置使用 `worker.defaults`。其他服务和提供商在 `envs/` 下各有对应文件。
 
@@ -28,15 +30,21 @@ Docker Compose 自动加载服务默认值，本地环境文件保存自定义�
 
 在 `docker/.env` 中设置共享凭据，确保所有使用它们的服务收到相同的值：`PLUGIN_DAEMON_KEY`、`PLUGIN_DIFY_INNER_API_KEY`、`DIFY_AGENT_API_TOKEN` 和 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`。两个插件密钥应分别使用不同的高强度值，各服务中的映射即可保持不变。
 
+代码执行沙箱使用独立的凭据：`SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 必须一致。需修改的文件详见 [沙箱服务](#沙箱服务)。
+
 删除或注释掉覆盖值，即可使用自带的默认值。空赋值的行为取决于具体设置，也可能覆盖默认值。
 
 例如，`CELERY_WORKER_AMOUNT=` 会覆盖 Docker 默认值 `4`，Worker 在禁用自动伸缩时会使用 `1`。显式设为 `4` 或删除空赋值，即可使用 Docker 默认值。
 
 ### 优先级
 
-对于服务加载的设置，`docker/.env` 优先于本地服务 `.env`，后者又优先于自带或应用中的默认值。每个服务只读取为其指定的文件，写在无关服务文件中的值不会生效。
+本地服务 `.env` 文件会覆盖自带的默认值。加载根目录 `docker/.env` 的服务会在本地服务文件之后读取其中的值。每个服务只读取为其指定的文件，写在无关服务文件中的值不会生效。
+
+当 `.defaults` 文件或 Compose 映射通过 `${...}` 读取根文件中的值时，根文件的值也优先生效。数据库、向量存储、Nginx 及部分辅助服务不会加载整个根文件。除非模板明确将容器原生变量映射到根文件中的输入值，否则将这些变量写入对应服务的覆盖文件。
 
 `knowledge_fs` 服务加载 `envs/core-services/knowledge-fs.env`，根文件仅能通过 Compose 中显式映射的变量覆盖该文件。独立的 KnowledgeFS Worker 服务还会加载根 `.env`。
+
+`knowledge_fs_unstructured` 不加载根 `.env`，需使用其 `knowledge-fs-unstructured.env` 覆盖文件。
 
 进行变量插值时，Shell 变量的优先级更高。Compose 中显式设置的 `environment` 条目优先于 `env_file` 中的值，包括来自根 `.env` 的值。
 
@@ -185,7 +193,7 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 | `FLASK_DEBUG` | `false` | 标准 Flask 调试模式标志。Dify 未主动使用；`DEBUG` 是主要控制变量。 |
 | `ENABLE_REQUEST_LOGGING` | `false` | 为每个 HTTP 请求记录一条紧凑的访问日志（`METHOD PATH STATUS DURATION TRACE_ID`）。当 `LOG_LEVEL` 同时设为 `DEBUG` 时，还会以 JSON 格式记录完整的请求和响应体。 |
 | `DEPLOY_ENV` | `PRODUCTION` | 在 Sentry 和 OpenTelemetry 中标记监控数据，以便按环境过滤错误和追踪。也作为 `X-Env` 响应头发送。不改变应用行为。 |
-| `DEPLOYMENT_EDITION` | `COMMUNITY` | 部署运行的版本：`COMMUNITY`、`ENTERPRISE` 或 `CLOUD`。保持默认值即可。 |
+| `DEPLOYMENT_EDITION` | `COMMUNITY` | 部署运行的版本：`COMMUNITY`、`ENTERPRISE` 或 `CLOUD`。保持默认值即可。<br/><br/>此变量替代旧的 `EDITION`，后者已不再读取。原值为 `SELF_HOSTED` 时，改用 `COMMUNITY`。 |
 | `MIGRATION_ENABLED` | `true` | 为 `true` 时，容器启动时自动运行数据库架构迁移（`flask upgrade-db`）。仅限 Docker。如果你单独运行迁移，请设为 `false`。对于源码启动，需手动运行 `flask db upgrade`。 |
 | `CHECK_UPDATE_URL` | `https://updates.dify.ai` | 控制台通过此 URL 检查 Dify 的新版本。设为空可禁用，适用于离线环境或防止外部 HTTP 调用。 |
 | `OPENAI_API_BASE` | `https://api.openai.com/v1` | 遗留变量。Dify 自身代码未主动使用。如果存在于环境中，可能会被 OpenAI Python SDK 读取。 |
@@ -320,6 +328,22 @@ openssl rand -base64 32
 ### 数据库配置
 
 数据库默认使用 PostgreSQL。同时支持 OceanBase、MySQL 和 seekdb。
+
+要使用自带的 MySQL 和 Weaviate 启动全新部署，在 `docker/.env` 中设置：
+
+```dotenv
+DB_TYPE=mysql
+DB_HOST=db_mysql
+DB_PORT=3306
+DB_USERNAME=root
+COMPOSE_PROFILES=weaviate,mysql,collaboration
+```
+
+如果使用其他向量存储，保留其 profile 来替代 `weaviate`。只设置 `DB_TYPE` 和 `COMPOSE_PROFILES` 不会修改 PostgreSQL 的主机、端口和用户名默认值。切换数据库提供商不会迁移已存储的数据。
+
+`DB_PASSWORD` 必须与服务器密码一致。自带的默认值在全新部署中相互匹配；初始化前应设置自定义密码。
+
+对于现有数据库，先在服务器上更改已存储的密码，再更新 `DB_PASSWORD`。只修改此设置不会更改服务器上的密码。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -690,11 +714,15 @@ API 和 Worker 会自动加载所选提供商的 `envs/vectorstores/<VECTOR_STOR
 
 以下自带提供商均有对应的 Compose profile：`weaviate`、`qdrant`、`oceanbase`、`seekdb`、`couchbase`、`pgvector`、`pgvecto-rs`、`vastbase`、`chroma`、`iris`、`oracle`、`milvus`、`opensearch`、`opengauss`、`myscale`、`matrixone`、`elasticsearch` 和 `elasticsearch-ja`。
 
-如需自定义连接，在同一目录下将 `<provider>.defaults` 复制为 `<provider>.env`；覆盖文件已存在时，直接编辑。根目录 `docker/.env` 中的设置优先于提供商设置；`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然受支持。在 `dify/docker` 中运行 `docker compose up -d` 应用修改。
+如需自定义连接，将提供商的 `.defaults` 文件复制到注释中指定的 `.env` 路径；覆盖文件已存在时，直接编辑。Elasticsearch 的两个选择值均使用 `elasticsearch.env`。
+
+根目录 `docker/.env` 会覆盖模板中通过映射或插值读取的输入值。`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然受支持。
+
+在 `dify/docker` 中运行 `docker compose up -d` 应用修改。
 
 连接外部数据库时，不要启用其自带服务的 profile，并在根目录 `docker/.env` 或 `envs/core-services/api-worker.env` 中设置端点和凭据。没有自带默认配置的提供商也使用这两个文件配置。
 
-下表中的自带凭据适用于全新部署。如果数据库已保存用户密码，先在数据库中修改该用户的密码，再更新对应的客户端设置。
+下表列出自带的配置值。如果数据库已保存用户密码，先在数据库中修改该用户的密码，再更新对应的客户端设置。
 
 支持的值：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
 
@@ -708,7 +736,7 @@ API 和 Worker 会自动加载所选提供商的 `envs/vectorstores/<VECTOR_STOR
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API 端点。 |
-| `WEAVIATE_API_KEY` | （自带默认值中的开发密钥） | API 和 Worker 向 Weaviate 认证时使用的 API 密钥。替换时还需更新 Weaviate 服务端允许的密钥，确保客户端与服务端一致。 |
+| `WEAVIATE_API_KEY` | （自带默认值中的开发密钥） | API 和 Worker 向 Weaviate 认证时使用的 API 密钥。必须与 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` 中的某一项一致。<br/><br/>如何要求身份认证并设置匹配的客户端和服务端值，详见 [向量数据库服务配置](#向量数据库服务配置)。 |
 | `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 独立的 gRPC 端点，用于高性能二进制协议。批量操作显著更快。如未设置，将从 HTTP 端点推断。 |
 | `WEAVIATE_TOKENIZATION` | `word` | 文本字段的分词方法。选项：`word`（按空格和标点分割）、`whitespace`（仅按空格分割）、`character`（字符级别，更适合中日韩语言）。 |
 
@@ -1478,9 +1506,11 @@ Dify API 和 Worker 调用 Agent 后端运行接口时出示的 Bearer 令牌。
 
 默认值：（空；[运行时后端](#dify_agent_runtime_backend) 为默认的 `local` 时必填）
 
-Agent 后端向内置沙箱证明身份时使用的共享密钥。留空时，这两个服务一启动就会退出并反复重启，所以要在启动 Dify 之前设置好。
+Agent 后端向内置沙箱证明身份时使用的共享密钥。没有令牌时，这两个服务一启动就会退出并反复重启，所以要在启动 Dify 之前设置好。
 
 在根目录 `docker/.env` 中设置此值，Compose 会将其同时传给 Agent 后端和 `local_sandbox`。仅在 `envs/core-services/dify-agent.env` 中设置无法配置这个共享令牌。
+
+当 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 未设置或为空时，Compose 也接受根 `.env` 中的旧变量 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`。
 
 可用以下命令生成：
 
@@ -1488,7 +1518,7 @@ Agent 后端向内置沙箱证明身份时使用的共享密钥。留空时，�
 openssl rand -hex 32
 ```
 
-如果令牌当前保存在 `dify-agent.env` 中，将同一个值移到根目录 `docker/.env`，并删除重复赋值。在 `dify/docker` 中运行 `docker compose up -d` 重建容器。
+如果令牌当前保存在 `dify-agent.env` 中，将同一个值移到根目录 `docker/.env` 的 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`，并删除重复赋值。在 `dify/docker` 中运行 `docker compose up -d` 重建容器。
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
@@ -1496,7 +1526,7 @@ openssl rand -hex 32
 
 在 Web 界面中显示新 Agent：主导航中的 **Agents** 项，以及 Workflow 应用节点选择器中的新 Agent 节点。
 
-设为 `false` 可隐藏它并回退到经典 Agent 节点。
+设置 `NEXT_PUBLIC_ENABLE_AGENT_V2=false` 可隐藏它并回退到经典 Agent 节点。使用当前 Compose 文件时，旧设置 `ENABLE_AGENT_V2=false` 无法隐藏它。
 
 使用当前 Docker Compose 文件时，`docker/envs/core-services/web.defaults` 会在变量未设置或为空时提供 `true`。
 
@@ -1569,7 +1599,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | 将模型连续输出的文本增量合并成批，再写入 Redis 并流式发送。保持启用可减少 Redis 写入次数和事件数量。<br/><br/>设为 `false` 可单独发送每个增量。工具调用等非文本事件的内容和顺序不变。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | 合并后的文本增量按此间隔发布，单位为毫秒。调低可更频繁地更新文本，调高则每批文本更多、批次数更少。<br/><br/>此间隔并非严格的时间限制。达到 `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` 时可提前发布。最小值为 1。要关闭合并，将 `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` 设为 `false`。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | 一批文本增量达到此字符数后，无需等待刷新间隔即可发布。调低可让较小的批次更早发布。<br/><br/>每个增量都会完整加入批次，因此一批的字符数可能超过此阈值。最小值为 1。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限。超时的运行会失败，错误为 `agent_run_limit_exceeded`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此 E2B 上的运行最长仍为 1 小时。在 `local` 后端下，高于 1 小时的值会生效：如需更长的运行时间，同时调高此值和 API 侧的两项限制。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限。超时的运行会失败，错误为 `agent_run_limit_exceeded`。<br/><br/>使用此设置控制运行时限，旧的 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` 已不再读取。API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此 E2B 上的运行最长仍为 1 小时。在 `local` 后端下，高于 1 小时的值会生效：如需更长的运行时间，同时调高此值和 API 侧的两项限制。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
@@ -1583,7 +1613,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | 空闲连接在关闭前保留的秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 回调 Dify API 的插件接口时使用的凭据。必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。<br/><br/>使用自带服务时，在 `docker/.env` 中设置 `PLUGIN_DIFY_INNER_API_KEY`，并保留此变量的映射表达式不变。 |
-| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。此变量未设置或为空时，Compose 也接受旧变量 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将 Agent 沙箱发布到宿主机的端口，供从源码运行的 Agent 后端通过 `http://localhost:5004` 访问。在该栈的 `middleware.env` 中设置；改动后，需将 Agent 后端 `.env` 中的 `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` 指向新端口。<br/><br/>仅适用于中间件栈。完整的 Compose 栈将沙箱保留在内部网络中。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。使用内置的 `local` 沙箱时保持默认值即可。<br/><br/>在 `openshell` 后端下，沙箱无法解析 Compose 服务名。需将其设为沙箱可访问、且能路由到 Agent 后端 `/agent-stub` 路径的地址，并发布或代理 Agent 后端的 5050 端口。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
@@ -1731,14 +1761,18 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 使用这些功能时，保持 `SANDBOX_ENABLE_NETWORK=true`。即使代码不发起网络调用，Dify 发送的执行请求也会要求启用网络。无论使用哪种架构，设为 `false` 后沙箱都会拒绝这些请求，并返回 `network is disabled, please enable it in the configuration`。
 
+沙箱与 API、WebSocket 服务、Worker、Beat 和插件守护进程共用内部网络 `ssrf_proxy_network`。此网络不允许直接路由到外部，但允许连接同一网络中的其他服务。
+
+支持代理的 HTTP(S) 客户端会使用已配置的代理；直接连接同一网络中的其他服务可绕过代理。如果代码必须与其他 Dify 服务隔离，需要额外配置网络隔离。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SANDBOX_API_KEY` | `dify-sandbox` | 沙箱认证的 API 密钥。必须与 API 和 Worker 中的 `CODE_EXECUTION_API_KEY` 匹配。 |
 | `SANDBOX_GIN_MODE` | `release` | 沙箱服务模式：`release` 或 `debug`。 |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | 单次代码运行的最大执行时间（秒）。 |
 | `SANDBOX_ENABLE_NETWORK` | `true` | 允许启用网络的代码执行请求。代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具均需要此设置，即使代码不发起网络调用也一样。 |
-| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 网络启用时用于 SSRF 防护的 HTTP 代理。 |
-| `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 用于 SSRF 防护的 HTTP 代理。启用网络后，支持代理的客户端会使用它。 |
+| `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | 用于 SSRF 防护的 HTTPS 代理，供支持代理的客户端使用。 |
 | `SANDBOX_PORT` | `8194` | 沙箱服务端口。修改后，还需更新 `docker/envs/core-services/api-worker.env` 中的 `CODE_EXECUTION_ENDPOINT`，使用相同端口。 |
 
 ## Nginx 反向代理 {#nginx-reverse-proxy}
@@ -1815,7 +1849,9 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 
 将 Compose 设置保存在 `docker/.env` 中：profile、对外发布的端口、挂载路径和健康检查调度设置都在容器启动前读取。
 
-同时设置 `DB_TYPE`、`VECTOR_STORE` 和 `COMPOSE_PROFILES`。例如，使用自带 PostgreSQL 和 Qdrant 的部署需设置 `DB_TYPE=postgresql`、`VECTOR_STORE=qdrant` 和 `COMPOSE_PROFILES=qdrant,postgresql,collaboration`。自带 MySQL 服务使用 `mysql` profile，pgvector 使用 `pgvector`。使用外部提供商时，不添加其对应的内置服务 profile。
+修改 `DB_TYPE` 或 `VECTOR_STORE` 时，同时更新 `COMPOSE_PROFILES`，以启动对应的自带服务。例如，使用自带 PostgreSQL 和 Qdrant 的部署需设置 `DB_TYPE=postgresql`、`VECTOR_STORE=qdrant` 和 `COMPOSE_PROFILES=qdrant,postgresql,collaboration`。
+
+使用 MySQL 时，选择 `mysql` profile，并按 [数据库配置](#数据库配置) 设置连接字段。仅修改 profile 不会更改 PostgreSQL 的连接默认值。使用外部提供商时，不添加其对应的内置服务 profile。
 
 修改这些设置不会迁移现有数据库或向量数据库中的数据。
 
@@ -1987,11 +2023,15 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 <AccordionGroup>
 <Accordion title="Weaviate 服务">
 
+如需强制身份认证，在 `docker/.env` 中设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false`。在同一文件中，将 `WEAVIATE_API_KEY` 设为强密钥，并将其加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`。
+
+只替换密钥不会关闭匿名访问。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WEAVIATE_PERSISTENCE_DATA_PATH` | `/var/lib/weaviate` | 容器内的数据持久化目录。 |
 | `WEAVIATE_QUERY_DEFAULTS_LIMIT` | `25` | 默认查询结果限制。 |
-| `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED` | `true` | 允许匿名访问。 |
+| `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED` | `true` | 允许匿名访问。设为 `false` 可要求身份认证。 |
 | `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | 默认向量化模块。 |
 | `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | 集群节点主机名。 |
 | `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | 启用 API key 认证。 |
