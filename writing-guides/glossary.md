@@ -483,7 +483,8 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
 | Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
 | Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
-| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース | agent-v-2.agentDetail.configure.knowledgeFs.title | Configure section and its dialog title. The built-in tool of the same name has no ja label, so ja shows the English |
+| Knowledge Retrieval | 知识检索 | ナレッジ検索 | agent-v-2.agentDetail.configure.knowledgeRetrieval.label | Configure section, and its entry in the prompt's `/` menu; renamed from "Agent Knowledge Base" in 1.19.0. ja uses ナレッジ検索 here but 知識検索 for the workflow node |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース | agent-v-2.agentDetail.configure.knowledgeFs.title | No longer the Configure section name; shown only as the fallback name of an agent knowledge base without one. The built-in tool of the same name has no ja label, so ja shows the English |
 | Access URL | 访问 URL | アクセス URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab; renamed from "Web App URL" in 1.17.1. The same key labels the Workflow and Chatflow card and the Agent card |
 
 ### Question Classifier Node Config
