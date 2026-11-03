@@ -682,7 +682,19 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 
 选择向量数据库后端。如果数据集已有索引，数据集存储的类型优先于此设置。
 
-使用自带的向量数据库时，在 `docker/.env` 中同时设置 `VECTOR_STORE` 和对应的 `COMPOSE_PROFILES` 条目。profile 列表与 `VECTOR_STORE`、`DB_TYPE` 分开配置。修改任一选择变量都不会迁移数据。profile 示例详见 [Docker Compose](#docker-compose)。
+修改 `VECTOR_STORE` 不会迁移已有数据。
+
+使用自带的向量数据库时，在 `docker/.env` 中同时设置 `VECTOR_STORE` 和对应的 `COMPOSE_PROFILES` 条目。两者都要更新：修改选择变量不会自动改写 profile 列表。Qdrant 示例详见 [Docker Compose](/zh/self-host/deploy/quick-start/docker-compose#自定义)。
+
+API 和 Worker 会自动加载所选提供商的 `envs/vectorstores/<VECTOR_STORE>.defaults`。将 `VECTOR_STORE` 保留在根目录 `docker/.env` 中：Compose 在读取服务环境文件之前就会选择提供商的默认配置文件。使用自带的连接默认值时，无需复制模板。
+
+以下自带提供商均有对应的 Compose profile：`weaviate`、`qdrant`、`oceanbase`、`seekdb`、`couchbase`、`pgvector`、`pgvecto-rs`、`vastbase`、`chroma`、`iris`、`oracle`、`milvus`、`opensearch`、`opengauss`、`myscale`、`matrixone`、`elasticsearch` 和 `elasticsearch-ja`。
+
+如需自定义连接，在同一目录下将 `<provider>.defaults` 复制为 `<provider>.env`；覆盖文件已存在时，直接编辑。根目录 `docker/.env` 中的设置优先于提供商设置；`api-worker.env` 和 `shared.env` 中已有的覆盖设置仍然受支持。在 `dify/docker` 中运行 `docker compose up -d` 应用修改。
+
+连接外部数据库时，不要启用其自带服务的 profile，并在根目录 `docker/.env` 或 `envs/core-services/api-worker.env` 中设置端点和凭据。没有自带默认配置的提供商也使用这两个文件配置。
+
+下表中的自带凭据适用于全新部署。如果数据库已保存用户密码，先在数据库中修改该用户的密码，再更新对应的客户端设置。
 
 支持的值：`weaviate`、`oceanbase`、`seekdb`、`qdrant`、`milvus`、`myscale`、`relyt`、`pgvector`、`pgvecto-rs`、`chroma`、`opensearch`、`oracle`、`tencent`、`elasticsearch`、`elasticsearch-ja`、`analyticdb`、`couchbase`、`vikingdb`、`opengauss`、`tablestore`、`vastbase`、`tidb`、`tidb_on_qdrant`、`baidu`、`lindorm`、`huawei_cloud`、`upstash`、`matrixone`、`clickzetta`、`alibabacloud_mysql`、`iris`、`hologres`。
 
@@ -704,13 +716,13 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 
 <Accordion title="OceanBase / seekdb">
 
-seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
+两者均使用 `OCEANBASE_*` 变量。将 `VECTOR_STORE` 设为 `oceanbase` 或 `seekdb`，即可加载对应提供商的连接默认值。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OCEANBASE_VECTOR_HOST` | `oceanbase` | 主机名或 IP 地址。 |
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` / `seekdb` | 主机名或 IP 地址。自带默认值随 `VECTOR_STORE` 的选择变化。 |
 | `OCEANBASE_VECTOR_PORT` | `2881` | 端口号。 |
-| `OCEANBASE_VECTOR_USER` | `root@test` | 数据库用户名。 |
+| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | OceanBase / seekdb 的数据库用户名。 |
 | `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | 数据库密码。 |
 | `OCEANBASE_VECTOR_DATABASE` | `test` | 数据库名称。 |
 | `OCEANBASE_CLUSTER_NAME` | `difyai` | 集群名称（仅 Docker 部署）。 |
@@ -726,7 +738,7 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `QDRANT_URL` | `http://qdrant:6333` | Qdrant 端点地址。 |
-| `QDRANT_API_KEY` | `difyai123456` | Qdrant API key。 |
+| `QDRANT_API_KEY` | `difyai123456` | Qdrant API 密钥。连接无需认证的外部服务器时，将其设为空值。 |
 | `QDRANT_CLIENT_TIMEOUT` | `20` | 客户端超时（秒）。 |
 | `QDRANT_GRPC_ENABLED` | `false` | 启用 gRPC 通信。 |
 | `QDRANT_GRPC_PORT` | `6334` | gRPC 端口。 |
@@ -738,12 +750,12 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI。对于 [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials)，使用 Public Endpoint。 |
-| `MILVUS_DATABASE` | （空） | 数据库名称。 |
+| `MILVUS_URI` | `http://milvus-standalone:19530` | Milvus URI。对于 [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials)，使用 Public Endpoint。 |
+| `MILVUS_DATABASE` | `default` | 数据库名称。 |
 | `MILVUS_TOKEN` | （空） | 认证令牌。对于 Zilliz Cloud，使用 API Key。 |
-| `MILVUS_USER` | （空） | 用户名。 |
-| `MILVUS_PASSWORD` | （空） | 密码。 |
-| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | 启用 BM25 稀疏索引用于全文搜索，配合向量相似性搜索使用。需要 Milvus >= 2.5.0。如果集合在未启用时创建，则需重新创建。 |
+| `MILVUS_USER` | `root` | 用户名。 |
+| `MILVUS_PASSWORD` | `Milvus` | 密码。先在 Milvus 中修改该用户的密码，再更新此客户端设置。 |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | 启用 BM25 稀疏索引用于全文搜索，配合向量相似性搜索使用。需要 Milvus >= 2.5.0。此前未启用此功能时创建的集合需要重新创建。 |
 | `MILVUS_ANALYZER_PARAMS` | （空） | 文本字段的分析器参数。 |
 | `MILVUS_SECURE` | `false` | 为 Milvus 连接启用单向 TLS。启用后，客户端通过 TLS 加密的 gRPC 连接并验证服务器证书。 |
 | `MILVUS_SERVER_PEM_PATH` | （空） | 容器内 Milvus 服务器证书（PEM）的路径，在启用 `MILVUS_SECURE` 时用于验证服务器。 |
@@ -800,9 +812,9 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 |---|---|---|
 | `PGVECTOR_HOST` | `pgvector` | 主机名。 |
 | `PGVECTOR_PORT` | `5432` | 端口号。 |
-| `PGVECTOR_USER` | `postgres` | 用户名。 |
-| `PGVECTOR_PASSWORD` | `difyai123456` | 密码。 |
-| `PGVECTOR_DATABASE` | `dify` | 数据库名称。 |
+| `PGVECTOR_USER` | `postgres` | 用户名。未显式覆盖时，默认使用 `PGVECTOR_PGUSER` 的值。 |
+| `PGVECTOR_PASSWORD` | `difyai123456` | 密码。未显式覆盖时，默认使用 `PGVECTOR_POSTGRES_PASSWORD` 的值。 |
+| `PGVECTOR_DATABASE` | `dify` | 数据库名称。未显式覆盖时，默认使用 `PGVECTOR_POSTGRES_DB` 的值。 |
 | `PGVECTOR_MIN_CONNECTION` | `1` | 最小连接池连接数。 |
 | `PGVECTOR_MAX_CONNECTION` | `5` | 最大连接池连接数。 |
 | `PGVECTOR_PG_BIGM` | `false` | 启用 pg_bigm 扩展用于全文搜索。 |
@@ -810,6 +822,8 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 </Accordion>
 
 <Accordion title="Vastbase">
+
+将 `VASTBASE_USER` 和 `VASTBASE_PASSWORD` 分别与 `vastbase` Compose 服务中的 `VB_USERNAME` 和 `VB_PASSWORD` 保持一致。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -829,9 +843,9 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 |---|---|---|
 | `PGVECTO_RS_HOST` | `pgvecto-rs` | 主机名。 |
 | `PGVECTO_RS_PORT` | `5432` | 端口号。 |
-| `PGVECTO_RS_USER` | `postgres` | 用户名。 |
-| `PGVECTO_RS_PASSWORD` | `difyai123456` | 密码。 |
-| `PGVECTO_RS_DATABASE` | `dify` | 数据库名称。 |
+| `PGVECTO_RS_USER` | `postgres` | 用户名。未显式覆盖时，默认使用 `PGVECTOR_PGUSER` 的值。 |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | 密码。未显式覆盖时，默认使用 `PGVECTOR_POSTGRES_PASSWORD` 的值。 |
+| `PGVECTO_RS_DATABASE` | `dify` | 数据库名称。未显式覆盖时，默认使用 `PGVECTOR_POSTGRES_DB` 的值。 |
 
 </Accordion>
 
@@ -883,12 +897,12 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `CHROMA_HOST` | `127.0.0.1` | Chroma 服务器主机。 |
+| `CHROMA_HOST` | `chroma` | Chroma 服务器主机。 |
 | `CHROMA_PORT` | `8000` | Chroma 服务器端口。 |
 | `CHROMA_TENANT` | `default_tenant` | 租户名称。 |
 | `CHROMA_DATABASE` | `default_database` | 数据库名称。 |
 | `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | 认证提供者类。 |
-| `CHROMA_AUTH_CREDENTIALS` | （空） | 认证凭证。 |
+| `CHROMA_AUTH_CREDENTIALS` | `difyai123456` | 认证凭据。未显式覆盖时，默认使用 `CHROMA_SERVER_AUTHN_CREDENTIALS` 的值。 |
 
 </Accordion>
 
@@ -939,10 +953,10 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 | `OPENSEARCH_HOST` | `opensearch` | 主机名。 |
 | `OPENSEARCH_PORT` | `9200` | 端口号。 |
 | `OPENSEARCH_SECURE` | `true` | 使用 HTTPS。 |
-| `OPENSEARCH_VERIFY_CERTS` | `true` | 验证 SSL 证书。 |
+| `OPENSEARCH_VERIFY_CERTS` | `false` | 验证 TLS 证书。自带的演示证书默认不验证；服务器使用受信任的证书时，应启用验证。 |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` 使用用户名/密码。`aws_managed_iam` 通过 Boto3 凭证使用 AWS SigV4 请求签名（适用于 AWS 托管的 OpenSearch 或 Serverless）。 |
 | `OPENSEARCH_USER` | `admin` | 用户名。仅在 `basic` 认证下使用。 |
-| `OPENSEARCH_PASSWORD` | `admin` | 密码。仅在 `basic` 认证下使用。 |
+| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | `basic` 认证的密码。未显式覆盖时，默认使用 `OPENSEARCH_INITIAL_ADMIN_PASSWORD` 的值。 |
 | `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS 区域。仅在 `aws_managed_iam` 认证下使用。 |
 | `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS 服务类型：`es`（托管集群）或 `aoss`（OpenSearch Serverless）。仅在 `aws_managed_iam` 认证下使用。 |
 
@@ -965,9 +979,11 @@ seekdb 是 OceanBase 的轻量版本，共享相同的连接配置。
 
 <Accordion title="Elasticsearch">
 
+无论使用 `VECTOR_STORE=elasticsearch` 还是 `VECTOR_STORE=elasticsearch-ja`，都从 `elasticsearch.defaults` 复制创建 `envs/vectorstores/elasticsearch.env`，在其中自定义连接。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `ELASTICSEARCH_HOST` | `0.0.0.0` | 主机名。 |
+| `ELASTICSEARCH_HOST` | `elasticsearch` | 主机名。 |
 | `ELASTICSEARCH_PORT` | `9200` | 端口号。 |
 | `ELASTICSEARCH_USERNAME` | `elastic` | 用户名。 |
 | `ELASTICSEARCH_PASSWORD` | `elastic` | 密码。 |
@@ -1304,7 +1320,9 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 #### 代码执行沙箱
 
-以下设置决定 API 和 Worker 如何连接沙箱。沙箱是一个独立服务，在隔离环境中运行代码节点（Python、JavaScript）和模板转换节点（Jinja2）。
+以下设置决定 API 和 Worker 如何连接沙箱，以运行代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具。
+
+修改 `CODE_EXECUTION_API_KEY` 时，需在重建容器前将 `SANDBOX_API_KEY` 设为相同值。要编辑的文件详见 [沙箱服务](#沙箱服务)。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1462,13 +1480,15 @@ Dify API 和 Worker 调用 Agent 后端运行接口时出示的 Bearer 令牌。
 
 Agent 后端向内置沙箱证明身份时使用的共享密钥。留空时，这两个服务一启动就会退出并反复重启，所以要在启动 Dify 之前设置好。
 
-在 `docker/.env` 中设置一次，让 Agent 后端和内置沙箱都能读取到它。如果只在 Agent 后端的服务文件中设置，沙箱就没有匹配的凭据。
+在根目录 `docker/.env` 中设置此值，Compose 会将其同时传给 Agent 后端和 `local_sandbox`。仅在 `envs/core-services/dify-agent.env` 中设置无法配置这个共享令牌。
 
 可用以下命令生成：
 
 ```bash
 openssl rand -hex 32
 ```
+
+如果令牌当前保存在 `dify-agent.env` 中，将同一个值移到根目录 `docker/.env`，并删除重复赋值。在 `dify/docker` 中运行 `docker compose up -d` 重建容器。
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
@@ -1700,14 +1720,23 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 ## 沙箱服务
 
-`sandbox` 服务负责运行代码执行节点。如需自定义设置，先从 `sandbox.defaults` 复制创建 `docker/envs/core-services/sandbox.env`（如尚未创建），再修改输入值。保留 **Container variable mappings** 下的表达式不变。
+`sandbox` 服务负责运行代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具。如需自定义设置，先从 `sandbox.defaults` 复制创建 `docker/envs/core-services/sandbox.env`（如尚未创建），再修改输入值。保留 **Container variable mappings** 下的表达式不变。
+
+要替换默认 API 密钥，生成一个强密钥，并在以下两处设置：
+
+- `docker/envs/core-services/sandbox.env` 中的 `SANDBOX_API_KEY`
+- `docker/envs/security.env`（从 `security.env.example` 复制创建）或 `docker/envs/core-services/api-worker.env` 中的 `CODE_EXECUTION_API_KEY`
+
+也可在根目录 `docker/.env` 中将这两个变量设为相同值。两处都设置完成后，在 `dify/docker` 中运行 `docker compose up -d` 应用配置。只修改一处会导致认证失败（`HTTP 401`）。
+
+使用这些功能时，保持 `SANDBOX_ENABLE_NETWORK=true`。即使代码不发起网络调用，Dify 发送的执行请求也会要求启用网络。无论使用哪种架构，设为 `false` 后沙箱都会拒绝这些请求，并返回 `network is disabled, please enable it in the configuration`。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `SANDBOX_API_KEY` | `dify-sandbox` | 沙箱认证的 API 密钥。必须与 API 和 Worker 中的 `CODE_EXECUTION_API_KEY` 匹配。 |
 | `SANDBOX_GIN_MODE` | `release` | 沙箱服务模式：`release` 或 `debug`。 |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | 单次代码运行的最大执行时间（秒）。 |
-| `SANDBOX_ENABLE_NETWORK` | `true` | 允许脚本请求网络访问权限。<br/><br/>Dify 的代码执行节点会请求启用网络的执行环境，因此将此变量设为 `false` 会导致这些请求被拒绝。使用代码执行节点时，应保持启用。 |
+| `SANDBOX_ENABLE_NETWORK` | `true` | 允许启用网络的代码执行请求。代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具均需要此设置，即使代码不发起网络调用也一样。 |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 网络启用时用于 SSRF 防护的 HTTP 代理。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | SSRF 防护的 HTTPS 代理。 |
 | `SANDBOX_PORT` | `8194` | 沙箱服务端口。修改后，还需更新 `docker/envs/core-services/api-worker.env` 中的 `CODE_EXECUTION_ENDPOINT`，使用相同端口。 |
@@ -2016,9 +2045,9 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `PGVECTOR_PGUSER` | `postgres` | PGVector 容器的 PostgreSQL 用户。 |
-| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | PGVector 容器的初始化密码。必须与客户端配置中的 `PGVECTOR_PASSWORD` 一致。修改此值不会更改已有数据库中的密码。 |
-| `PGVECTOR_POSTGRES_DB` | `dify` | PGVector 容器中的数据库名称。 |
+| `PGVECTOR_PGUSER` | `postgres` | PGVector 和 PGVecto.RS 容器的 PostgreSQL 用户，同时提供它们的默认客户端用户名。 |
+| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | PGVector 和 PGVecto.RS 容器的初始化密码，同时提供 `PGVECTOR_PASSWORD` 和 `PGVECTO_RS_PASSWORD` 的默认值；显式设置的客户端覆盖值必须与其一致。<br/><br/>修改此值不会更改已有数据库中的密码。 |
+| `PGVECTOR_POSTGRES_DB` | `dify` | PGVector 和 PGVecto.RS 容器中的数据库名称，同时提供它们的默认客户端数据库名称。 |
 | `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | 容器内的数据目录。 |
 | `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | pg_bigm 扩展版本。 |
 
@@ -2028,9 +2057,9 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `ORACLE_PWD` | `Dify123456` | 容器的 Oracle 数据库密码。 |
+| `ORACLE_PWD` | `Dify123456` | Oracle 管理员密码，与 `ORACLE_PASSWORD` 中的 Dify 客户端密码分开设置。 |
 | `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle 字符集。 |
-| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Chroma 服务器容器的认证凭证。 |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Chroma 服务器容器的认证凭据，同时提供 `CHROMA_AUTH_CREDENTIALS` 的默认值；显式设置的客户端覆盖值必须与其一致。 |
 | `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Chroma 服务器的认证提供者。 |
 | `CHROMA_IS_PERSISTENT` | `TRUE` | 为 Chroma 启用持久化存储。 |
 | `KIBANA_PORT` | `5601` | Kibana 端口（Elasticsearch UI）。 |

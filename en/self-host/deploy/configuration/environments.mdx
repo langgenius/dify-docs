@@ -682,7 +682,19 @@ Default: `weaviate`
 
 Selects the vector database backend. If a dataset already has an index, the dataset's stored type takes precedence over this setting.
 
-For a bundled provider, set `VECTOR_STORE` and its matching `COMPOSE_PROFILES` entry in `docker/.env`. The profile list is configured separately from `VECTOR_STORE` and `DB_TYPE`. Changing either selector does not migrate data. See [Docker Compose](#docker-compose) for profile examples.
+Changing `VECTOR_STORE` does not migrate existing data.
+
+For a bundled provider, set `VECTOR_STORE` and its matching `COMPOSE_PROFILES` entry in `docker/.env`. Update both: the selector does not rewrite the profile list. See [Docker Compose](/en/self-host/deploy/quick-start/docker-compose#customize) for a Qdrant example.
+
+The API and workers automatically load the selected provider's `envs/vectorstores/<VECTOR_STORE>.defaults`. Keep `VECTOR_STORE` in root `docker/.env`: Compose selects the provider's defaults file before reading service environment files. You don't need to copy a template to use the bundled connection defaults.
+
+Bundled providers with matching Compose profiles: `weaviate`, `qdrant`, `oceanbase`, `seekdb`, `couchbase`, `pgvector`, `pgvecto-rs`, `vastbase`, `chroma`, `iris`, `oracle`, `milvus`, `opensearch`, `opengauss`, `myscale`, `matrixone`, `elasticsearch`, and `elasticsearch-ja`.
+
+To customize the connection, copy `<provider>.defaults` to `<provider>.env` in the same directory, or edit the existing override file. Root `docker/.env` overrides provider settings; existing overrides in `api-worker.env` and `shared.env` remain supported. Apply changes with `docker compose up -d` from `dify/docker`.
+
+For an external database, omit its bundled service profile and set its endpoint and credentials in root `docker/.env` or `envs/core-services/api-worker.env`. Use these files for providers without bundled defaults too.
+
+The bundled credentials below match a fresh deployment. For databases with stored user passwords, change the user's password in the database before updating the corresponding client setting.
 
 Supported values: `weaviate`, `oceanbase`, `seekdb`, `qdrant`, `milvus`, `myscale`, `relyt`, `pgvector`, `pgvecto-rs`, `chroma`, `opensearch`, `oracle`, `tencent`, `elasticsearch`, `elasticsearch-ja`, `analyticdb`, `couchbase`, `vikingdb`, `opengauss`, `tablestore`, `vastbase`, `tidb`, `tidb_on_qdrant`, `baidu`, `lindorm`, `huawei_cloud`, `upstash`, `matrixone`, `clickzetta`, `alibabacloud_mysql`, `iris`, `hologres`.
 
@@ -704,13 +716,13 @@ Supported values: `weaviate`, `oceanbase`, `seekdb`, `qdrant`, `milvus`, `myscal
 
 <Accordion title="OceanBase / seekdb">
 
-seekdb is the lite version of OceanBase and shares the same connection configuration.
+Both providers use the `OCEANBASE_*` variables. Set `VECTOR_STORE` to `oceanbase` or `seekdb` to load that provider's connection defaults.
 
 | Variable | Default | Description |
 |---|---|---|
-| `OCEANBASE_VECTOR_HOST` | `oceanbase` | Hostname or IP address. |
+| `OCEANBASE_VECTOR_HOST` | `oceanbase` / `seekdb` | Hostname or IP address. The bundled default follows `VECTOR_STORE`. |
 | `OCEANBASE_VECTOR_PORT` | `2881` | Port number. |
-| `OCEANBASE_VECTOR_USER` | `root@test` | Database username. |
+| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | Database username for OceanBase / seekdb. |
 | `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | Database password. |
 | `OCEANBASE_VECTOR_DATABASE` | `test` | Database name. |
 | `OCEANBASE_CLUSTER_NAME` | `difyai` | Cluster name (Docker deployment only). |
@@ -726,7 +738,7 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 | Variable | Default | Description |
 |---|---|---|
 | `QDRANT_URL` | `http://qdrant:6333` | Qdrant endpoint address. |
-| `QDRANT_API_KEY` | `difyai123456` | API key for Qdrant. |
+| `QDRANT_API_KEY` | `difyai123456` | API key for Qdrant. Set an empty value for an external server that does not require authentication. |
 | `QDRANT_CLIENT_TIMEOUT` | `20` | Client timeout in seconds. |
 | `QDRANT_GRPC_ENABLED` | `false` | Enable gRPC communication. |
 | `QDRANT_GRPC_PORT` | `6334` | gRPC port. |
@@ -738,12 +750,12 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 
 | Variable | Default | Description |
 |---|---|---|
-| `MILVUS_URI` | `http://host.docker.internal:19530` | Milvus URI. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), use the Public Endpoint. |
-| `MILVUS_DATABASE` | (empty) | Database name. |
+| `MILVUS_URI` | `http://milvus-standalone:19530` | Milvus URI. For [Zilliz Cloud](https://docs.zilliz.com/docs/free-trials), use the Public Endpoint. |
+| `MILVUS_DATABASE` | `default` | Database name. |
 | `MILVUS_TOKEN` | (empty) | Authentication token. For Zilliz Cloud, use the API Key. |
-| `MILVUS_USER` | (empty) | Username. |
-| `MILVUS_PASSWORD` | (empty) | Password. |
-| `MILVUS_ENABLE_HYBRID_SEARCH` | `false` | Enable BM25 sparse index for full-text search alongside vector similarity. Requires Milvus >= 2.5.0. If the collection was created without this enabled, it must be recreated. |
+| `MILVUS_USER` | `root` | Username. |
+| `MILVUS_PASSWORD` | `Milvus` | Password. Change the user's password in Milvus before updating this client setting. |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | Enable BM25 sparse index for full-text search alongside vector similarity. Requires Milvus >= 2.5.0. If the collection was created without this enabled, it must be recreated. |
 | `MILVUS_ANALYZER_PARAMS` | (empty) | Analyzer parameters for text fields. |
 | `MILVUS_SECURE` | `false` | Enable one-way TLS for the Milvus connection. When enabled, the client connects over gRPC with TLS and verifies the server certificate. |
 | `MILVUS_SERVER_PEM_PATH` | (empty) | Path inside the container to the Milvus server certificate (PEM), used to verify the server when `MILVUS_SECURE` is enabled. |
@@ -800,9 +812,9 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 |---|---|---|
 | `PGVECTOR_HOST` | `pgvector` | Hostname. |
 | `PGVECTOR_PORT` | `5432` | Port number. |
-| `PGVECTOR_USER` | `postgres` | Username. |
-| `PGVECTOR_PASSWORD` | `difyai123456` | Password. |
-| `PGVECTOR_DATABASE` | `dify` | Database name. |
+| `PGVECTOR_USER` | `postgres` | Username. Defaults to `PGVECTOR_PGUSER` unless explicitly overridden. |
+| `PGVECTOR_PASSWORD` | `difyai123456` | Password. Defaults to `PGVECTOR_POSTGRES_PASSWORD` unless explicitly overridden. |
+| `PGVECTOR_DATABASE` | `dify` | Database name. Defaults to `PGVECTOR_POSTGRES_DB` unless explicitly overridden. |
 | `PGVECTOR_MIN_CONNECTION` | `1` | Minimum pool connections. |
 | `PGVECTOR_MAX_CONNECTION` | `5` | Maximum pool connections. |
 | `PGVECTOR_PG_BIGM` | `false` | Enable pg_bigm extension for full-text search. |
@@ -810,6 +822,8 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 </Accordion>
 
 <Accordion title="Vastbase">
+
+Keep `VASTBASE_USER` and `VASTBASE_PASSWORD` in sync with `VB_USERNAME` and `VB_PASSWORD` in the `vastbase` Compose service.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -829,9 +843,9 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 |---|---|---|
 | `PGVECTO_RS_HOST` | `pgvecto-rs` | Hostname. |
 | `PGVECTO_RS_PORT` | `5432` | Port number. |
-| `PGVECTO_RS_USER` | `postgres` | Username. |
-| `PGVECTO_RS_PASSWORD` | `difyai123456` | Password. |
-| `PGVECTO_RS_DATABASE` | `dify` | Database name. |
+| `PGVECTO_RS_USER` | `postgres` | Username. Defaults to `PGVECTOR_PGUSER` unless explicitly overridden. |
+| `PGVECTO_RS_PASSWORD` | `difyai123456` | Password. Defaults to `PGVECTOR_POSTGRES_PASSWORD` unless explicitly overridden. |
+| `PGVECTO_RS_DATABASE` | `dify` | Database name. Defaults to `PGVECTOR_POSTGRES_DB` unless explicitly overridden. |
 
 </Accordion>
 
@@ -883,12 +897,12 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 
 | Variable | Default | Description |
 |---|---|---|
-| `CHROMA_HOST` | `127.0.0.1` | Chroma server host. |
+| `CHROMA_HOST` | `chroma` | Chroma server host. |
 | `CHROMA_PORT` | `8000` | Chroma server port. |
 | `CHROMA_TENANT` | `default_tenant` | Tenant name. |
 | `CHROMA_DATABASE` | `default_database` | Database name. |
 | `CHROMA_AUTH_PROVIDER` | `chromadb.auth.token_authn.TokenAuthClientProvider` | Auth provider class. |
-| `CHROMA_AUTH_CREDENTIALS` | (empty) | Auth credentials. |
+| `CHROMA_AUTH_CREDENTIALS` | `difyai123456` | Authentication credentials. Defaults to `CHROMA_SERVER_AUTHN_CREDENTIALS` unless explicitly overridden. |
 
 </Accordion>
 
@@ -939,10 +953,10 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 | `OPENSEARCH_HOST` | `opensearch` | Hostname. |
 | `OPENSEARCH_PORT` | `9200` | Port number. |
 | `OPENSEARCH_SECURE` | `true` | Use HTTPS. |
-| `OPENSEARCH_VERIFY_CERTS` | `true` | Verify SSL certificates. |
+| `OPENSEARCH_VERIFY_CERTS` | `false` | Verify TLS certificates. Disabled for the bundled demo certificates; enable it when the server uses trusted certificates. |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` uses username/password. `aws_managed_iam` uses AWS SigV4 request signing via Boto3 credentials (for AWS Managed OpenSearch or Serverless). |
 | `OPENSEARCH_USER` | `admin` | Username. Only used with `basic` auth. |
-| `OPENSEARCH_PASSWORD` | `admin` | Password. Only used with `basic` auth. |
+| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | Password for `basic` authentication. Defaults to `OPENSEARCH_INITIAL_ADMIN_PASSWORD` unless explicitly overridden. |
 | `OPENSEARCH_AWS_REGION` | `ap-southeast-1` | AWS region. Only used with `aws_managed_iam` auth. |
 | `OPENSEARCH_AWS_SERVICE` | `aoss` | AWS service type: `es` (Managed Cluster) or `aoss` (OpenSearch Serverless). Only used with `aws_managed_iam` auth. |
 
@@ -965,9 +979,11 @@ seekdb is the lite version of OceanBase and shares the same connection configura
 
 <Accordion title="Elasticsearch">
 
+For both `VECTOR_STORE=elasticsearch` and `VECTOR_STORE=elasticsearch-ja`, customize the connection in `envs/vectorstores/elasticsearch.env`, copied from `elasticsearch.defaults`.
+
 | Variable | Default | Description |
 |---|---|---|
-| `ELASTICSEARCH_HOST` | `0.0.0.0` | Hostname. |
+| `ELASTICSEARCH_HOST` | `elasticsearch` | Hostname. |
 | `ELASTICSEARCH_PORT` | `9200` | Port number. |
 | `ELASTICSEARCH_USERNAME` | `elastic` | Username. |
 | `ELASTICSEARCH_PASSWORD` | `elastic` | Password. |
@@ -1304,7 +1320,9 @@ All token expiry variables control how long a one-time-use token stored in Redis
 
 #### Code Execution Sandbox
 
-These settings tell the API and Worker how to connect to the sandbox, a separate service that executes Code node (Python, JavaScript) and Template Transform (Jinja2) code in isolation.
+These settings tell the API and workers how to connect to the sandbox for Code nodes, Template nodes, Jinja2 prompts, and the built-in Code tool.
+
+When changing `CODE_EXECUTION_API_KEY`, set the same value for `SANDBOX_API_KEY` before recreating the containers. See [Sandbox Service](#sandbox-service) for the files to edit.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1464,13 +1482,15 @@ Default: (empty; required with the default `local` [runtime backend](#dify_agent
 
 Shared secret that authenticates the agent backend to the bundled sandbox. While it's empty, both services exit at startup and keep restarting, so set it before you start Dify.
 
-Set it once in `docker/.env` so both the agent backend and the bundled sandbox receive it. Setting it only in the agent backend's service file leaves the sandbox without the matching credential.
+Set it in root `docker/.env`; Compose passes this value to both the agent backend and `local_sandbox`. A value set only in `envs/core-services/dify-agent.env` does not configure the shared token.
 
 Generate one with:
 
 ```bash
 openssl rand -hex 32
 ```
+
+If your token is currently in `dify-agent.env`, move the same value to root `docker/.env` and remove the duplicate assignment. From `dify/docker`, run `docker compose up -d` to recreate the containers.
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
@@ -1702,14 +1722,23 @@ These configure the database and Redis containers directly in Docker Compose. Ro
 
 ## Sandbox Service
 
-The `sandbox` service executes Code nodes. To customize its settings, create `docker/envs/core-services/sandbox.env` from `sandbox.defaults` if needed, then edit the inputs. Leave the expressions under **Container variable mappings** unchanged.
+The `sandbox` service runs Code nodes, Template nodes, Jinja2 prompts, and the built-in Code tool. To customize its settings, create `docker/envs/core-services/sandbox.env` from `sandbox.defaults` if needed, then edit the inputs. Leave the expressions under **Container variable mappings** unchanged.
+
+To replace the default API key, generate a strong secret and set it in both places:
+
+- `SANDBOX_API_KEY` in `docker/envs/core-services/sandbox.env`.
+- `CODE_EXECUTION_API_KEY` in `docker/envs/security.env`, created from `security.env.example`, or in `docker/envs/core-services/api-worker.env`.
+
+Alternatively, set both variables to the same value in root `docker/.env`. Apply both settings before running `docker compose up -d` from `dify/docker`. Changing only one causes authentication failures (`HTTP 401`).
+
+Keep `SANDBOX_ENABLE_NETWORK=true` for these features. Dify requests network-enabled execution even when the code makes no network calls. Setting it to `false` rejects those requests on every architecture with `network is disabled, please enable it in the configuration`.
 
 | Variable | Default | Description |
 |---|---|---|
 | `SANDBOX_API_KEY` | `dify-sandbox` | API key for sandbox authentication. Must match `CODE_EXECUTION_API_KEY` in the API and workers. |
 | `SANDBOX_GIN_MODE` | `release` | Sandbox service mode: `release` or `debug`. |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | Maximum execution time in seconds for a single code run. |
-| `SANDBOX_ENABLE_NETWORK` | `true` | Allows scripts to request network access.<br/><br/>Dify's Code nodes request network-enabled execution, so setting this to `false` rejects their requests. Keep it enabled when using Code nodes. |
+| `SANDBOX_ENABLE_NETWORK` | `true` | Allows network-enabled execution requests. Required for Code nodes, Template nodes, Jinja2 prompts, and the built-in Code tool, including code that makes no network calls. |
 | `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection when network is enabled. |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | HTTPS proxy for SSRF protection. |
 | `SANDBOX_PORT` | `8194` | Sandbox service port. If you change it, update `CODE_EXECUTION_ENDPOINT` in `docker/envs/core-services/api-worker.env` to use the same port. |
@@ -2018,9 +2047,9 @@ These configure the vector database containers themselves (not the Dify client c
 
 | Variable | Default | Description |
 |---|---|---|
-| `PGVECTOR_PGUSER` | `postgres` | PostgreSQL user for the PGVector container. |
-| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | Initialization password for the PGVector container. Must match `PGVECTOR_PASSWORD` in the client config. Changing this value does not rotate the password in an existing database. |
-| `PGVECTOR_POSTGRES_DB` | `dify` | Database name in the PGVector container. |
+| `PGVECTOR_PGUSER` | `postgres` | PostgreSQL user for the PGVector and PGVecto.RS containers. Also supplies their default client username. |
+| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | Initialization password for the PGVector and PGVecto.RS containers. Also supplies the default `PGVECTOR_PASSWORD` and `PGVECTO_RS_PASSWORD`; explicit client overrides must match.<br/><br/>Changing this value does not rotate the password in an existing database. |
+| `PGVECTOR_POSTGRES_DB` | `dify` | Database name in the PGVector and PGVecto.RS containers. Also supplies their default client database name. |
 | `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | Data directory inside the container. |
 | `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | Version of the pg_bigm extension. |
 
@@ -2030,9 +2059,9 @@ These configure the vector database containers themselves (not the Dify client c
 
 | Variable | Default | Description |
 |---|---|---|
-| `ORACLE_PWD` | `Dify123456` | Oracle database password for the container. |
+| `ORACLE_PWD` | `Dify123456` | Oracle administrator password, separate from the Dify client password in `ORACLE_PASSWORD`. |
 | `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle character set. |
-| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Authentication credentials for the Chroma server container. |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Authentication credentials for the Chroma server container. Also supplies the default `CHROMA_AUTH_CREDENTIALS`; an explicit client override must match. |
 | `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Authentication provider for the Chroma server. |
 | `CHROMA_IS_PERSISTENT` | `TRUE` | Enable persistent storage for Chroma. |
 | `KIBANA_PORT` | `5601` | Kibana port (Elasticsearch UI). |
