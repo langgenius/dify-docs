@@ -19,27 +19,21 @@ Docker Compose 从三类文件中读取 Dify 的设置。
 
 <Steps>
   <Step title="找到对应文件">
-    在 `docker/envs/` 中搜索变量名。定义该变量的 `.defaults` 文件会在第一条注释中写明对应的本地文件。本地文件已存在就直接编辑；不存在则先将 `.defaults` 文件复制为该文件名。
-
-    例如，API、Worker 和定时任务（Beat）共用的设置定义在 `envs/core-services/api-worker.defaults` 中，所以要写入 `api-worker.env`。
-
-    <Info>
-      如果 `docker/.env` 也设置了该变量，以 `docker/.env` 中的值为准，详见 [优先级](#优先级)。
-    </Info>
-
-    如果搜到的是 `.env.example` 模板（如 `envs/security.env.example`），将其复制为去掉 `.example` 后缀的同名文件。
-
-    <Note>
-      跳过 `envs/middleware.env.example`：它属于源码开发使用的独立 [中间件栈](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件)，Docker Compose 部署不会读取它。
-    </Note>
-
-    以下两类设置则应写在 `docker/.env` 中：
+    大多数变量写在 `docker/envs/` 下的本地 `.env` 文件中，以下两类则写在 `docker/.env` 中：
 
     - **Compose 在加载任何服务文件之前读取的设置**，如 `COMPOSE_PROFILES` 和 `VECTOR_STORE`。
     - **共享凭据**，确保用到同一凭据的所有服务拿到相同的值：
       - `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY`：分别使用不同的强密钥。
       - `DIFY_AGENT_API_TOKEN` 和 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`：分别使用不同的强密钥。
-      - `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY`：设为相同的值。两者不一致时，代码执行节点和模板转换节点会因 HTTP 401 而失败。
+      - `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY`：设为相同的值。两者不一致时，代码执行节点和模板转换节点会失败并返回 HTTP 401。
+
+    其他变量先在 `docker/envs/` 中搜索变量名，再按搜索结果处理：
+
+    - **搜到一个 `.defaults` 文件**：编辑其第一条注释中写明的本地文件。该文件尚不存在时，先将 `.defaults` 文件复制为该文件名。
+    - **搜到多个 `.defaults` 文件**：编辑所有用到该变量的服务都会加载的那个本地文件，否则各服务拿到的值会不一致。
+    - **搜到 `.env.example` 模板**（如 `envs/security.env.example`）：将其复制为去掉 `.example` 后缀的同名文件。跳过 `envs/middleware.env.example`，只有源码开发使用的独立 [中间件栈](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件) 才会读取它。
+
+    `docker/.env` 和本地文件设置了同一变量时，以 `docker/.env` 中的值为准，例外情况详见 [优先级](#优先级)。
   </Step>
   <Step title="修改设置值">
     在本地文件中修改需要的值；可选设置只为要用的那几项取消注释。
@@ -262,7 +256,7 @@ openssl rand -base64 42
 openssl rand -base64 32
 ```
 
-使用 Docker Compose 部署时，在 `docker/envs/core-services/api.env` 中设置（如尚未创建该文件，可从 `api.defaults` 复制）。不要写在 `docker/.env` 中，因为 Compose 也会把该文件中的变量传给 Worker、插件守护进程、Agent 后端、Web 前端和代码沙箱。源码部署则在 `api/.env` 中设置。
+使用 Docker Compose 部署时，在 `docker/envs/core-services/api.env` 中设置。不要写在 `docker/.env` 中，因为 Compose 也会把该文件中的变量传给 Worker、插件守护进程、Agent 后端、Web 前端和代码沙箱。源码部署则在 `api/.env` 中设置。
 
 <Warning>
 已有账户后再设置、修改或移除该值，这些账户用现有密码登录时都会提示密码无效。若是误操作，改回原值即可，其间未重置的密码都会恢复可用。请像保管 `SECRET_KEY` 一样妥善保管该值。
@@ -745,7 +739,7 @@ ClickZetta Volume 复用向量数据库部分配置的 `CLICKZETTA_*` 连接参�
 
 <Steps>
   <Step title="保留已有知识库所用的提供商">
-    在 `COMPOSE_PROFILES` 中保留原提供商的 profile。如果原提供商不是 Weaviate，还要把它的 `.defaults` 文件复制为本地 `.env` 文件，例如将 `qdrant.defaults` 复制为 `qdrant.env`。只有当前选中的提供商的默认值会自动加载，不复制的话，已有知识库会失去连接。Elasticsearch 的两个取值都使用 `elasticsearch.env`。
+    在 `COMPOSE_PROFILES` 中保留原提供商的 profile。如果原提供商不是 Weaviate，还要把它的 `.defaults` 文件复制为本地 `.env` 文件，例如将 `qdrant.defaults` 复制为 `qdrant.env`。`elasticsearch-ja` 与 `elasticsearch` 共用同一个 `elasticsearch.env`。只有当前选中的提供商的默认值会自动加载，不复制的话，已有知识库会失去连接。
   </Step>
   <Step title="选择新提供商">
     在 `docker/.env` 中设置 `VECTOR_STORE`，并将新提供商的 profile 加入 `COMPOSE_PROFILES`，然后运行 `docker compose up -d`。
@@ -768,7 +762,7 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API 端点。 |
-| `WEAVIATE_API_KEY` | （自带默认值中的开发密钥） | API 和 Worker 向 Weaviate 认证时使用的 API 密钥。必须与 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` 中的某一项一致。<br/><br/>如何要求身份认证并设置匹配的客户端和服务端值，详见 [向量数据库服务配置](#向量数据库服务配置)。 |
+| `WEAVIATE_API_KEY` | （自带默认值中的开发密钥，生产环境必须替换） | API 和 Worker 向 Weaviate 认证时使用的 API 密钥。必须与 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` 中的某一项一致。<br/><br/>要开启身份认证，并让客户端与服务端的值保持一致，详见 [向量数据库服务配置](#向量数据库服务配置)。 |
 | `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | 独立的 gRPC 端点，用于高性能二进制协议。批量操作显著更快。如未设置，将从 HTTP 端点推断。 |
 | `WEAVIATE_TOKENIZATION` | `word` | 文本字段的分词方法。选项：`word`（按空格和标点分割）、`whitespace`（仅按空格分割）、`character`（字符级别，更适合中日韩语言）。 |
 
@@ -782,7 +776,7 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 |---|---|---|
 | `OCEANBASE_VECTOR_HOST` | `oceanbase` / `seekdb` | 主机名或 IP 地址。自带默认值随 `VECTOR_STORE` 的选择变化。 |
 | `OCEANBASE_VECTOR_PORT` | `2881` | 端口号。 |
-| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | OceanBase / seekdb 的数据库用户名。 |
+| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | 数据库用户名。自带默认值随 `VECTOR_STORE` 的选择变化。 |
 | `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | 数据库密码。 |
 | `OCEANBASE_VECTOR_DATABASE` | `test` | 数据库名称。 |
 | `OCEANBASE_CLUSTER_NAME` | `difyai` | 集群名称（仅 Docker 部署）。 |
@@ -814,8 +808,8 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | `MILVUS_DATABASE` | `default` | 数据库名称。 |
 | `MILVUS_TOKEN` | （空） | 认证令牌。对于 Zilliz Cloud，使用 API Key。 |
 | `MILVUS_USER` | `root` | 用户名。 |
-| `MILVUS_PASSWORD` | `Milvus` | 密码。先在 Milvus 中修改该用户的密码，再更新此客户端设置。 |
-| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | 启用 BM25 稀疏索引用于全文搜索，配合向量相似性搜索使用。需要 Milvus >= 2.5.0。此前未启用此功能时创建的集合需要重新创建。 |
+| `MILVUS_PASSWORD` | `Milvus` | 密码。日后如需修改，先在 Milvus 中修改该用户的密码，再将此值改为相同的密码。 |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | 添加 BM25 稀疏索引，使全文搜索可与向量相似性搜索并用。需要 Milvus 2.5.0 或更高版本；服务器版本较低时，Dify 会自动跳过该索引，全文搜索不会返回任何结果。创建时没有该索引的集合需要重新创建，全文搜索才能生效。 |
 | `MILVUS_ANALYZER_PARAMS` | （空） | 文本字段的分析器参数。 |
 | `MILVUS_SECURE` | `false` | 为 Milvus 连接启用单向 TLS。启用后，客户端通过 TLS 加密的 gRPC 连接并验证服务器证书。 |
 | `MILVUS_SERVER_PEM_PATH` | （空） | 容器内 Milvus 服务器证书（PEM）的路径，在启用 `MILVUS_SECURE` 时用于验证服务器。 |
@@ -885,7 +879,7 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 
 <Accordion title="Vastbase">
 
-`vastbase` 服务在 `docker-compose.yaml` 中设置了 `VB_USERNAME` 和 `VB_PASSWORD`，`VASTBASE_USER` 和 `VASTBASE_PASSWORD` 需分别与二者保持一致。
+使用自带的 Vastbase 时，`VASTBASE_USER` 和 `VASTBASE_PASSWORD` 保持默认值即可：它们与 `docker-compose.yaml` 中的 `VB_USERNAME` 和 `VB_PASSWORD` 一致。连接外部服务器时，将二者设为该服务器的凭据。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
@@ -1012,6 +1006,8 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 
 <Accordion title="OpenSearch">
 
+在本地开发中使用自带的 OpenSearch 时，在 `envs/vectorstores/opensearch.env` 中设置 `OPENSEARCH_VERIFY_CERTS=false`，因为该镜像自带的是演示证书。生产环境和外部服务器应使用客户端信任的证书，并保持证书验证开启。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `OPENSEARCH_HOST` | `opensearch` | 主机名。 |
@@ -1020,11 +1016,9 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | `OPENSEARCH_VERIFY_CERTS` | `true` | 验证 OpenSearch HTTPS 连接的 TLS 证书。 |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` 使用用户名/密码。`aws_managed_iam` 通过 Boto3 凭证使用 AWS SigV4 请求签名（适用于 AWS 托管的 OpenSearch 或 Serverless）。 |
 | `OPENSEARCH_USER` | `admin` | 用户名。仅在 `basic` 认证下使用。 |
-| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | `basic` 认证的密码。使用自带的 OpenSearch 时不要设置，其值跟随 `OPENSEARCH_INITIAL_ADMIN_PASSWORD`。连接外部服务器时需设置。 |
-| `OPENSEARCH_AWS_REGION` | （空） | AWS 区域。仅在 `aws_managed_iam` 认证下使用。 |
-| `OPENSEARCH_AWS_SERVICE` | （空） | AWS 服务类型：`es`（托管集群）或 `aoss`（OpenSearch Serverless）。仅在 `aws_managed_iam` 认证下使用。 |
-
-在本地开发中使用自带的 OpenSearch 时，在 `envs/vectorstores/opensearch.env` 中设置 `OPENSEARCH_VERIFY_CERTS=false`，因为该镜像自带的是演示证书。生产环境和外部服务器应使用客户端信任的证书，并保持证书验证开启。
+| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | 密码。仅在 `basic` 认证下使用。<br/><br/>使用自带的 OpenSearch 时不要设置，其值跟随 `OPENSEARCH_INITIAL_ADMIN_PASSWORD`。连接外部服务器时需设置。 |
+| `OPENSEARCH_AWS_REGION` | （空） | AWS 区域。使用 `aws_managed_iam` 认证时必填。 |
+| `OPENSEARCH_AWS_SERVICE` | （空） | AWS 服务类型：`es`（托管集群）或 `aoss`（OpenSearch Serverless）。使用 `aws_managed_iam` 认证时必填。 |
 
 </Accordion>
 
@@ -1249,13 +1243,13 @@ Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分�
 |---|---|---|
 | `API_SENTRY_DSN` | （空） | API 和 Worker 的 Sentry DSN。为空则禁用这些服务的 Sentry。 |
 | `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | API 和 Worker 请求中进行追踪的比例（0.01 = 1%，1.0 = 100%）。追踪记录请求在各服务间的流转过程。`API_SENTRY_DSN` 为空时不生效。 |
-| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 在已追踪的请求中，进行 CPU 和内存性能分析的比例。性能分析用于查看代码各部分的耗时。有效采样率为追踪采样率 × 此采样率。 |
-| `WEB_SENTRY_DSN` | （空） | Web 前端的 Sentry DSN。 |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | 在已追踪的请求中，进行 CPU 和内存性能分析的比例。性能分析用于查看代码各部分的耗时。有效采样率为追踪采样率 × 此采样率。`API_SENTRY_DSN` 为空时不生效。 |
+| `WEB_SENTRY_DSN` | （空） | Web 前端的 Sentry DSN。为空则禁用 Web 前端的 Sentry。 |
 | `PLUGIN_SENTRY_ENABLED` | `false` | 为插件守护进程启用 Sentry。还需设置 `PLUGIN_SENTRY_DSN`。 |
 | `PLUGIN_SENTRY_DSN` | （空） | 插件守护进程的 Sentry DSN。 |
-| `SENTRY_DSN` | （空） | 各容器实际读取的变量。使用 Docker Compose 时，改为设置上面对应的变量：`API_SENTRY_DSN`、`WEB_SENTRY_DSN` 或 `PLUGIN_SENTRY_DSN`。 |
-| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | API 和 Worker 实际读取的变量。使用 Docker Compose 时，改为设置 `API_SENTRY_TRACES_SAMPLE_RATE`。 |
-| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | API 和 Worker 实际读取的变量。使用 Docker Compose 时，改为设置 `API_SENTRY_PROFILES_SAMPLE_RATE`。 |
+| `SENTRY_DSN` | （空） | 各容器读取的 Sentry DSN。使用 Docker Compose 时，改为设置各服务对应的 DSN：API 和 Worker 用 `API_SENTRY_DSN`，Web 前端用 `WEB_SENTRY_DSN`，插件守护进程用 `PLUGIN_SENTRY_DSN`。 |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | API 和 Worker 请求中进行追踪的比例。使用 Docker Compose 时，改为设置 `API_SENTRY_TRACES_SAMPLE_RATE`。 |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | API 和 Worker 在已追踪的请求中进行性能分析的比例。使用 Docker Compose 时，改为设置 `API_SENTRY_PROFILES_SAMPLE_RATE`。 |
 
 ### Notion 集成配置
 
@@ -1342,13 +1336,11 @@ Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输
 
 应用运行的追踪数据由后台任务投递给所配置的 LLMOps 供应商（Langfuse、LangSmith、Arize/Phoenix 等）。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置这些变量。
 
-自 1.19.0 起，`OPS_TRACE_UNIFIED_ENABLED`、`OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES`、`OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS` 和 `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` 已不再生效，可从 env 文件中删除。
-
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPS_TRACE_QUEUE` | `ops_trace_v2` | 追踪相关任务所用的 Celery 队列，包括追踪投递及其重试、Agent 追踪导出和每日追踪清理。修改此值时，API、Worker 和 Celery Beat 需设为相同的值。<br/><br/>Docker Compose 自带的 Worker 会自动监听该队列。如果你自行设置了 `CELERY_QUEUES` 或 `CELERY_WORKER_QUEUES`，或用自己的 `-Q` 列表启动 Worker，需将该队列加入其中。滚动升级时，按 Dify 仓库中的 [Ops 追踪滚动升级](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) 说明操作。<br/><br/>只能包含字母、数字、`_`、`.` 和 `-`。 |
-| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | 追踪供应商暂时不可用时，Dify 发送一条追踪数据最多尝试的次数，首次发送也计算在内。供应商拒收的追踪数据不会重试。不能小于 1。<br/><br/>两次尝试的间隔从 10 秒开始，每次翻倍，最长 10 分钟。按默认值，最后一次尝试约在首次发送 5 分钟后进行；如果供应商故障持续更久，可调高此值。 |
-| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Celery Beat 每天 03:30 运行一次清理，删除投递中断后遗留在存储中、且已超过 2 天的追踪数据。时间以 `LOG_TZ` 为准（未设置时为 UTC）。 |
+| `OPS_TRACE_QUEUE` | `ops_trace_v2` | 承载以下任务的 Celery 队列：追踪投递及其重试、Agent 追踪的导出与恢复、每日追踪清理，以及 E2B 沙箱用量计量。修改此值时，API、Worker 和 Celery Beat 需设为相同的值；任务发到没有 Worker 监听的队列，就不会运行。<br/><br/>Docker Compose 自带的 Worker 会自动监听该队列。如果你自行设置了 `CELERY_QUEUES` 或 `CELERY_WORKER_QUEUES`，或用自己的 `-Q` 列表启动 Worker，需将该队列加入其中，否则这些任务不会运行，追踪数据也无法送达你的追踪供应商。滚动升级时，按 Dify 仓库中的 [Ops 追踪滚动升级](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) 说明操作。<br/><br/>只能包含字母、数字、`_`、`.` 和 `-`。 |
+| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | 追踪供应商暂时不可用时，Dify 发送一条追踪数据最多尝试的次数，首次发送也计算在内。供应商拒收的追踪数据不会重试。不能小于 1。<br/><br/>两次尝试的间隔从 10 秒开始，每次翻倍，最长 10 分钟。按默认值，最后一次尝试约在首次发送 5 分钟后进行；如果供应商故障持续更久，可调高此值。<br/><br/>此变量替代旧的 `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` 和 `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`，后两者已不再读取。不要照搬原来的重试次数：间隔每次翻倍，同样的尝试次数会耗时长得多。 |
+| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | 每天 03:30 运行一次 Celery Beat 清理任务，删除投递中断后遗留在存储中、且已超过 2 天的追踪数据。时间以 `LOG_TZ` 为准（未设置时为 UTC）。<br/><br/>只有在你另行删除 Dify 存储中 `trace_payloads/` 下的旧文件时，才设为 `false`；否则这些文件会一直留在存储中。 |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | 设为 `true` 后，Agent 应用以及含新 Agent 节点的 Workflow、Chatflow 应用，其追踪数据会包含 Agent 的模型调用和工具调用。应用调用的 [工作流工具](/zh/self-host/use-dify/workspace/tools#workflow) 内部的 Agent 不在其中。还需将 `DIFY_AGENT_APPLICATION_TRACING_ENABLED` 设为 `true`。<br/><br/>为 `false` 时，Agent、Workflow 和 Chatflow 应用的追踪设置中会提示 Agent 追踪不可用。各应用仍需单独开启追踪、配置供应商，并保持 **采集 Agent 内部过程** 开启（默认开启）。 |
 | `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | Agent 后端一侧的开关，与 `OPS_AGENT_TRACE_ENABLED` 配套；两者都设为 `true` 才能追踪 Agent。<br/><br/>在 `docker/envs/core-services/dify-agent.env` 中设置，不要写在 `api-worker.env`：Agent 后端不读取这个文件。<br/><br/>开启后，如果 Agent 运行已由所在应用追踪，就会发往该应用的追踪供应商，不再进入 [轨迹导出](#agent-轨迹导出)。 |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | 仅在 `OPS_AGENT_TRACE_ENABLED` 为 `true` 时生效。每 30 秒运行一次后台任务，重新发送仍在等待投递的 Agent 追踪数据，并在保留期（默认 7 天）结束后删除 Dify 自己存储的 Agent 追踪数据。已经发送到追踪供应商的数据不受影响。 |
@@ -1549,11 +1541,9 @@ Agent 后端向内置沙箱证明身份时使用的共享密钥。没有令牌�
 openssl rand -hex 32
 ```
 
-在根目录 `docker/.env` 中设置此值。Compose 会把它同时传给 Agent 后端和 `local_sandbox`。
+在 `docker/.env` 中设置此值，确保 Agent 后端和内置沙箱（`local_sandbox`）使用相同的值。它替代了旧变量 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`：此变量未设置或为空时，Compose 仍会从 `docker/.env` 中读取旧变量。
 
 只在 `envs/core-services/dify-agent.env` 中设置的值不会生效。如果你的令牌设在那里，将其移到 `docker/.env`，然后在 `dify/docker` 中运行 `docker compose up -d`。
-
-此变量未设置或为空时，Compose 也接受 `docker/.env` 中的旧变量 `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`。
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
@@ -1561,7 +1551,7 @@ openssl rand -hex 32
 
 在 Web 界面中显示新 Agent：主导航中的 **Agents** 项，以及 Workflow 应用节点选择器中的新 Agent 节点。它取代了旧设置 `ENABLE_AGENT_V2`，后者在当前 Compose 文件下不再起作用。
 
-在 `docker/.env` 或 `envs/core-services/web.env` 中将其设为 `false`，可隐藏新 Agent 并回退到经典 Agent 节点；改回 `true` 即可重新显示。无论哪种情况，都要重建 web 容器，然后强制刷新浏览器：
+在 `docker/envs/core-services/web.env` 中将其设为 `false`，可隐藏新 Agent 并回退到经典 Agent 节点；改回 `true` 即可重新显示。无论哪种情况，都要重建 web 容器，然后强制刷新浏览器：
 
 ```bash
 docker compose up -d web
@@ -1625,7 +1615,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | 将模型连续输出的文本增量合并成批，再写入 Redis 并流式发送。保持启用可减少 Redis 写入次数和事件数量。<br/><br/>设为 `false` 可单独发送每个增量。工具调用等非文本事件的内容和顺序不变。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | 合并后的文本增量按此间隔发布，单位为毫秒。调低可更频繁地更新文本，调高则每批文本更多、批次数更少。<br/><br/>此间隔并非严格的时间限制。达到 `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` 时可提前发布。最小值为 1。要关闭合并，将 `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` 设为 `false`。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | 一批文本增量达到此字符数后，无需等待刷新间隔即可发布。调低可让较小的批次更早发布。<br/><br/>每个增量都会完整加入批次，因此一批的字符数可能超过此阈值。最小值为 1。 |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中模型与工具工作的总时限。超时的运行会失败，错误为 `agent_run_limit_exceeded`。<br/><br/>使用此设置控制运行时限，旧的 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` 已不再读取。API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。<br/><br/>在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此 E2B 上的运行最长仍为 1 小时。在 `local` 后端下，高于 1 小时的值会生效：如需更长的运行时间，同时调高此值和 API 侧的两项限制。 |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | 单次 Agent 运行中，模型调用和工具执行的总时限。超时的运行会失败，错误为 `agent_run_limit_exceeded`。<br/><br/>API 侧的 `APP_MAX_EXECUTION_TIME` 与 `WORKFLOW_MAX_EXECUTION_TIME`（默认 `3600`）若设得低于此值，会更早终止运行。在 `local` 后端下，高于 1 小时的值会生效：如需更长的运行时间，同时调高此值和 API 侧的两项限制。在 `e2b` 后端下，沙箱自身的 `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）仍然生效，因此 E2B 上的运行最长仍为 1 小时。<br/><br/>此变量替代旧的 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`，后者已不再读取。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | 与 Agent 后端单个 SSE 连接的读取超时时间。 |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | Agent 后端流中断后，API 判定运行失败前的最大重连次数。 |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | （空；由 `PLUGIN_DAEMON_URL` 推导） | Agent 后端调用工具所经过的插件守护进程地址。 |
@@ -1639,7 +1629,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | 空闲连接在关闭前保留的秒数。 |
 | `DIFY_AGENT_INNER_API_URL` | （空；由 `PLUGIN_DIFY_INNER_API_URL` 推导） | Agent 后端内部调用的 Dify API 地址。 |
 | `DIFY_AGENT_INNER_API_KEY` | （空；由 `PLUGIN_DIFY_INNER_API_KEY` 推导） | 回调 Dify API 的插件接口时使用的凭据。必须与 API 服务的 `INNER_API_KEY_FOR_PLUGIN` 一致，而非 `INNER_API_KEY`。<br/><br/>使用 Docker Compose 时，改为在 `docker/.env` 中设置 `PLUGIN_DIFY_INNER_API_KEY`。 |
-| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。此变量未设置或为空时，Compose 也接受旧变量 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`。 |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | 内置沙箱服务的地址。它替代了旧变量 `DIFY_AGENT_SHELLCTL_ENTRYPOINT`：此变量未设置或为空时，Compose 仍会读取旧变量。 |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | [源码部署](/zh/self-host/deploy/advanced-deployments/local-source-code) 所用的中间件栈将 Agent 沙箱发布到宿主机的端口，供从源码运行的 Agent 后端通过 `http://localhost:5004` 访问。在该栈的 `middleware.env` 中设置；改动后，需将 Agent 后端 `.env` 中的 `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` 指向新端口。<br/><br/>仅适用于中间件栈。完整的 Compose 栈将沙箱保留在内部网络中。 |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | 沙箱内 Agent 回调 Agent 后端的地址。使用内置的 `local` 沙箱时保持默认值即可。<br/><br/>在 `openshell` 后端下，沙箱无法解析 Compose 服务名。需将其设为沙箱可访问、且能路由到 Agent 后端 `/agent-stub` 路径的地址。<br/><br/>5050 端口还提供启动 Agent 运行的 API，因此只对外暴露这一路径，例如通过反向代理。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | 沙箱内 Agent 进行文件传输时使用的 Dify API 地址。Docker Compose 部署保持默认即可；使用远程沙箱后端时，需填写可公网访问的 Dify 地址。 |
@@ -1694,7 +1684,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 按以下步骤切换到 OpenShell：
 
-1. 参照 [OpenShell 配置指南](https://github.com/langgenius/dify/blob/1.18.0/dify-agent/docs/dify-agent/guide/openshell.md) 搭建网关并完成上述准备，包括构建运行时镜像、初始化共享卷、挂载证书、Kubernetes 配置和冒烟测试。
+1. 参照 [OpenShell 配置指南](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) 搭建网关并完成上述准备，包括构建运行时镜像、初始化共享卷、挂载证书、Kubernetes 配置和冒烟测试。
 2. 在 `envs/core-services/dify-agent.env` 中将 `DIFY_AGENT_RUNTIME_BACKEND` 设为 `openshell`，并填写下表中的变量。
 3. 运行 `docker compose up -d` 重建 Agent 后端。必填值缺失或格式有误时，Agent 后端会拒绝启动。
 4. 运行一个 Agent，确认配置无误。Agent 后端要等到 Agent 运行时，或在 Agent 的构建对话中点击 **应用** 时，才会首次连接网关。因此端点、凭证或镜像配置有误，要到那时才会暴露出来，表现为运行失败或 **应用** 失败。
@@ -1736,7 +1726,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 按以下步骤开启轨迹导出：
 
-1. 在 `docker/.env` 中，将 `DIFY_AGENT_TRAJECTORY_ENABLED` 设为 `true`，将 `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` 设为收集器的 traces URL。凭证（如有）写在 `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` 中。
+1. 在 `docker/envs/core-services/dify-agent.env` 中，将 `DIFY_AGENT_TRAJECTORY_ENABLED` 设为 `true`，将 `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` 设为收集器的 traces URL。凭证（如有）写在 `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS` 中。
 
     Agent 后端不读取 `api-worker.env`，因此这些变量写在其中不会生效。
 
@@ -1778,7 +1768,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 `sandbox` 服务负责运行代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具。
 
-如需替换默认 API 密钥，在 `docker/.env` 中将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥，然后运行 `docker compose up -d`。两者不一致时，代码执行节点和模板转换节点会因 HTTP 401 而失败。
+如需替换默认 API 密钥，在 `docker/.env` 中将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥，然后运行 `docker compose up -d`。两者不一致时，代码执行节点和模板转换节点会失败并返回 HTTP 401。
 
 保持 `SANDBOX_ENABLE_NETWORK=true`。即使代码不发起任何网络调用，Dify 每次在沙箱中运行代码时也都会请求网络权限。设为 `false` 后，上述功能都会失败，并报错 `network is disabled, please enable it in the configuration`。
 
@@ -1789,8 +1779,8 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `SANDBOX_API_KEY` | `dify-sandbox` | 沙箱认证的 API 密钥。必须与 `CODE_EXECUTION_API_KEY` 一致，在 `docker/.env` 中将两者设为相同的值。 |
 | `SANDBOX_GIN_MODE` | `release` | 沙箱服务模式：`release` 或 `debug`。 |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | 单次代码运行的最大执行时间（秒）。 |
-| `SANDBOX_ENABLE_NETWORK` | `true` | 允许启用网络的代码执行请求。代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具均需要此设置，即使代码不发起网络调用也一样。 |
-| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 用于 SSRF 防护的 HTTP 代理。启用网络后，支持代理的客户端会使用它。 |
+| `SANDBOX_ENABLE_NETWORK` | `true` | 代码执行节点、模板转换节点、Jinja2 提示词和内置 Code 工具都需要此设置。保持为 `true`。 |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | 用于 SSRF 防护的 HTTP 代理，供支持代理的客户端使用。 |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | 用于 SSRF 防护的 HTTPS 代理，供支持代理的客户端使用。 |
 | `SANDBOX_PORT` | `8194` | 沙箱服务端口。修改后，还需更新 `docker/envs/core-services/api-worker.env` 中的 `CODE_EXECUTION_ENDPOINT`，使用相同端口。 |
 
@@ -1872,7 +1862,7 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | 选择启动哪些服务容器。<br/><br/>`collaboration` profile 启动专用的 `api_websocket` 容器；移除它即可跳过该服务。 |
+| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | 选择启动哪些自带服务容器。需包含所用自带数据库和向量数据库的 profile，如 `postgresql` 和 `weaviate`；缺少 profile 的自带服务不会启动。<br/><br/>`collaboration` profile 启动专用的 `api_websocket` 容器。只有将 `ENABLE_COLLABORATION_MODE` 设为 `false` 时，才可移除它。 |
 | `EXPOSE_NGINX_PORT` | `80` | 映射到 Nginx HTTP 的宿主机端口。 |
 | `EXPOSE_NGINX_SSL_PORT` | `443` | 映射到 Nginx HTTPS 的宿主机端口。 |
 
@@ -1896,9 +1886,9 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | 插件守护进程服务 URL。 |
-| `PLUGIN_DAEMON_KEY` | （自带默认值中的开发密钥；生产环境需替换） | API、Worker 和 Agent 后端向插件守护进程认证时使用的密钥。在 `docker/.env` 中设置，确保守护进程及其客户端使用相同的值；值不匹配会导致认证失败。<br/><br/>使用高强度密钥，且与 `PLUGIN_DIFY_INNER_API_KEY` 不同。升级时保留现有可用的值。 |
+| `PLUGIN_DAEMON_KEY` | （自带默认值中的开发密钥，生产环境必须替换） | API、Worker 和 Agent 后端向插件守护进程认证时使用的密钥。在 `docker/.env` 中设置，确保守护进程及其客户端使用相同的值。两边的值不一致时，对插件守护进程的调用会认证失败。<br/><br/>使用高强度密钥，且与 `PLUGIN_DIFY_INNER_API_KEY` 不同。升级时保留现有可用的值。 |
 | `PLUGIN_DAEMON_PORT` | `5002` | 插件守护进程监听端口。 |
-| `DB_SSL_MODE` | `disable` | 插件守护进程连接 PostgreSQL 时使用的 `sslmode`。数据库强制 TLS 时设为 `require`。<br/><br/>完整的 Compose 栈在 `docker/envs/core-services/plugin-daemon.env` 中设置，该文件从 `plugin-daemon.defaults` 复制创建。独立的中间件栈在 `middleware.env` 中设置。 |
+| `DB_SSL_MODE` | `disable` | 插件守护进程连接 PostgreSQL 时使用的 `sslmode`。数据库强制 TLS 时设为 `require`。<br/><br/>完整的 Compose 栈在 `docker/envs/core-services/plugin-daemon.env` 中设置。独立的中间件栈在 `middleware.env` 中设置。 |
 | `DB_PLUGIN_DATABASE` | `dify_plugin` | 插件守护进程使用的数据库名称，与 Dify 主数据库分开。 |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | 所有插件守护进程请求（安装、执行、列表）的超时时间（秒）。 |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | 最大插件包大小（字节，50 MB）。在市场下载时验证。 |
@@ -1906,8 +1896,8 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | 缓存插件模型 Schema 的时间（秒）。减少重复查找。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | 是否在 Redis 中缓存各租户的插件模型供应商列表。当插件由外部系统安装、无法在租户插件变更时使本部署的缓存失效时，应关闭此项。 |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | 在 Redis 中缓存各租户插件模型供应商列表的时长（秒），默认 24 小时。租户安装、卸载或升级插件时，Dify 会使该缓存失效。 |
-| `PLUGIN_DIFY_INNER_API_KEY` | （自带默认值中的开发密钥；生产环境需替换） | 回调 Dify API 时使用的共享凭据。在 `docker/.env` 中设置，确保 API、Worker、插件守护进程和 Agent 后端使用相同的值。<br/><br/>使用高强度密钥，且与 `PLUGIN_DAEMON_KEY` 不同。升级时保留现有可用的值。各服务间的值不一致时，插件回调会认证失败。 |
-| `INNER_API_KEY_FOR_PLUGIN` | （自带默认值中的开发密钥；生产环境需替换） | API 和 Worker 读取的插件回调密钥变量。使用 Docker Compose 时，改为设置 `PLUGIN_DIFY_INNER_API_KEY`。<br/><br/>API 在处理插件回调（模型调用、工具调用、文件传输等）时校验此密钥。值不匹配时，这些调用会失败，但插件安装可能仍可正常进行。 |
+| `PLUGIN_DIFY_INNER_API_KEY` | （自带默认值中的开发密钥，生产环境必须替换） | 回调 Dify API 时使用的共享凭据。在 `docker/.env` 中设置，确保 API、Worker、插件守护进程和 Agent 后端使用相同的值。各服务间的值不一致时，插件回调会认证失败。<br/><br/>使用高强度密钥，且与 `PLUGIN_DAEMON_KEY` 不同。升级时保留现有可用的值。 |
+| `INNER_API_KEY_FOR_PLUGIN` | （自带默认值中的开发密钥，生产环境必须替换） | API 和 Worker 读取的插件回调密钥。使用 Docker Compose 时，改为在 `docker/.env` 中设置 `PLUGIN_DIFY_INNER_API_KEY`。<br/><br/>API 在处理插件回调（模型调用、工具调用、文件传输等）时校验此密钥。值不匹配时，这些调用会失败，但插件安装可能仍可正常进行。 |
 | `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | 插件守护进程回调的内部 API URL。 |
 | `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | 插件远程调试连接的主机。 |
 | `PLUGIN_DEBUGGING_PORT` | `5003` | 插件远程调试连接的端口。 |
@@ -1919,7 +1909,7 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `FORCE_VERIFYING_SIGNATURE` | `true` | 安装插件前要求有效签名。防止安装被篡改或未签名的包。 |
 | `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | 插件执行超时（秒，插件守护进程侧）。应与 API 侧的 `PLUGIN_DAEMON_TIMEOUT` 匹配。 |
 | `PIP_MIRROR_URL` | （空） | 插件守护进程安装插件依赖时使用的自定义 PyPI 镜像 URL。适用于加速安装或离线环境。 |
-| `UV_CACHE_DIR` | （空；回退到 `PLUGIN_WORKING_PATH` 下的 `.uv-cache`） | 插件守护进程安装插件依赖时缓存 Python 包的目录。<br/><br/>需要插件守护进程 0.6.11 或更高版本。1.19.0 的 Compose 文件自带 0.6.14。<br/><br/>在 `docker/envs/core-services/plugin-daemon.env` 或 `docker/.env` 中设置。 |
+| `UV_CACHE_DIR` | （空；回退到 `PLUGIN_WORKING_PATH` 下的 `.uv-cache`） | 插件守护进程安装插件依赖时缓存 Python 包的目录。<br/><br/>如果在 Docker 或 WSL 的绑定挂载上安装插件依赖时出现权限错误，将其设为容器内的路径，如 `/tmp/.uv-cache`。在 `docker/envs/core-services/plugin-daemon.env` 中设置。<br/><br/>需要插件守护进程 0.6.11 或更高版本。 |
 
 ## Creator Center 配置
 
@@ -2040,7 +2030,7 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 <AccordionGroup>
 <Accordion title="Weaviate 服务">
 
-如需强制身份认证，在 `docker/.env` 中设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false`。在同一文件中，将 `WEAVIATE_API_KEY` 设为强密钥，并将其加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`。
+如需强制身份认证，在 `docker/envs/vectorstores/weaviate.env` 中设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false`。在同一文件中，将 `WEAVIATE_API_KEY` 设为强密钥，并将其加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`。
 
 只替换密钥不会关闭匿名访问。
 
@@ -2052,7 +2042,7 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 | `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | 默认向量化模块。 |
 | `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | 集群节点主机名。 |
 | `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | 启用 API key 认证。 |
-| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （自带默认值中的开发密钥） | 允许的 API 密钥。自带密钥与 `WEAVIATE_API_KEY` 的默认值一致。替换时，还需更新客户端密钥。 |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | （自带默认值中的开发密钥，生产环境必须替换） | 允许的 API 密钥。自带密钥与 `WEAVIATE_API_KEY` 的默认值一致。替换时，还需更新客户端密钥。 |
 | `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | 与 API key 关联的用户。 |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | 启用管理员列表授权。 |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | 管理员用户。 |
@@ -2084,17 +2074,30 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 
 <Accordion title="OpenSearch 服务">
 
+`OPENSEARCH_MEMLOCK_*` 和 `OPENSEARCH_NOFILE_*` 需要在 `docker/.env` 中设置：Compose 会在加载服务文件之前读取它们。
+
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `OPENSEARCH_DISCOVERY_TYPE` | `single-node` | 集群形成的发现类型。 |
 | `OPENSEARCH_BOOTSTRAP_MEMORY_LOCK` | `true` | 启动时锁定内存以防止交换。 |
 | `OPENSEARCH_JAVA_OPTS_MIN` | `512m` | JVM 最小堆大小。 |
 | `OPENSEARCH_JAVA_OPTS_MAX` | `1024m` | JVM 最大堆大小。 |
-| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | OpenSearch 服务的初始管理员密码。 |
+| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | OpenSearch 服务的初始管理员密码，同时提供 `OPENSEARCH_PASSWORD` 的默认值；如果另行设置了客户端的值，必须与其一致。 |
 | `OPENSEARCH_MEMLOCK_SOFT` | `-1` | 软内存锁限制（`-1` = 无限制）。 |
 | `OPENSEARCH_MEMLOCK_HARD` | `-1` | 硬内存锁限制（`-1` = 无限制）。 |
 | `OPENSEARCH_NOFILE_SOFT` | `65536` | 软文件描述符限制。 |
 | `OPENSEARCH_NOFILE_HARD` | `65536` | 硬文件描述符限制。 |
+
+</Accordion>
+
+<Accordion title="Qdrant 服务">
+
+这些变量需要在 `docker/.env` 中设置：Compose 会在加载服务文件之前读取它们。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `QDRANT_NOFILE_SOFT` | `524288` | 自带 Qdrant 容器可打开文件数的软限制。如果 Qdrant 报错提示打开的文件过多，调高此值。 |
+| `QDRANT_NOFILE_HARD` | `524288` | 自带 Qdrant 容器可打开文件数的硬限制。软限制不能超过此值。 |
 
 </Accordion>
 
@@ -2103,7 +2106,7 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `PGVECTOR_PGUSER` | `postgres` | PGVector 和 PGVecto.RS 容器的 PostgreSQL 用户，同时提供它们的默认客户端用户名。 |
-| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | PGVector 和 PGVecto.RS 容器的初始化密码，同时提供 `PGVECTOR_PASSWORD` 和 `PGVECTO_RS_PASSWORD` 的默认值；显式设置的客户端覆盖值必须与其一致。<br/><br/>修改此值不会更改已有数据库中的密码。 |
+| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | PGVector 和 PGVecto.RS 容器的初始化密码，同时提供 `PGVECTOR_PASSWORD` 和 `PGVECTO_RS_PASSWORD` 的默认值；如果另行设置了客户端的值，必须与其一致。<br/><br/>日后修改此值不会更改已有数据库中的密码：需先在 PostgreSQL 中修改密码，再将此值改为相同的密码。 |
 | `PGVECTOR_POSTGRES_DB` | `dify` | PGVector 和 PGVecto.RS 容器中的数据库名称，同时提供它们的默认客户端数据库名称。 |
 | `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | 容器内的数据目录。 |
 | `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | pg_bigm 扩展版本。 |
@@ -2116,7 +2119,7 @@ API 和 Celery 工作进程之间基于 Redis 的事件传输。
 |---|---|---|
 | `ORACLE_PWD` | `Dify123456` | Oracle 管理员密码，与 `ORACLE_PASSWORD` 中的 Dify 客户端密码分开设置。 |
 | `ORACLE_CHARACTERSET` | `AL32UTF8` | Oracle 字符集。 |
-| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Chroma 服务器容器的认证凭据，同时提供 `CHROMA_AUTH_CREDENTIALS` 的默认值；显式设置的客户端覆盖值必须与其一致。 |
+| `CHROMA_SERVER_AUTHN_CREDENTIALS` | `difyai123456` | Chroma 服务器容器的认证凭据，同时提供 `CHROMA_AUTH_CREDENTIALS` 的默认值；如果另行设置了客户端的值，必须与其一致。 |
 | `CHROMA_SERVER_AUTHN_PROVIDER` | `chromadb.auth.token_authn.TokenAuthenticationServerProvider` | Chroma 服务器的认证提供者。 |
 | `CHROMA_IS_PERSISTENT` | `TRUE` | 为 Chroma 启用持久化存储。 |
 | `KIBANA_PORT` | `5601` | Kibana 端口（Elasticsearch UI）。 |

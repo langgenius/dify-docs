@@ -25,26 +25,19 @@ Docker Compose 2.35.0 以降を使用します。`docker compose version` で確
 
 <Steps>
     <Step title="環境変数の編集">
-        EC2 インスタンスで、該当するファイルの環境変数を編集します。
+        [変数の設定](/ja/self-host/deploy/configuration/environments#変数の設定) に従い、各設定を次の場所に記述します：
 
-        - **起動に必要な設定値** は `/dify/.env` にあります。直接編集します。
+        - `COMPOSE_PROFILES` や `VECTOR_STORE` など Compose が最初に読み込む設定と、共有の認証情報は、`/dify/.env` に記述します。
+        - AWS デプロイですでに `docker-compose.override.yaml` に設定している値は、そこに残します。
+        - その他の設定はすべて、`.defaults` ファイルではなく `/dify/envs/` 内のローカル `.env` ファイルに記述します。
 
-        - **オプションまたはプロバイダー固有の設定** は `/dify/envs/` にテンプレートがあります。Compose は `.defaults` ファイルを自動で読み込みます。ローカルの `.env` ファイルがある場合は、そのファイルを直接編集します。なければ、コメントに記載されたローカルの `.env` パスに `.defaults` ファイルをコピーします。
+        たとえば OpenSearch の設定を変更する場合は、最初に一度だけデフォルトファイルをコピーし、そのコピーを編集します：
 
-            サービス用の `.env.example` テンプレートは、`.example` を外してコピーします。`middleware.env.example` は、別の [ソースコードからの開発手順](/ja/self-host/deploy/advanced-deployments/local-source-code#docker-compose-でミドルウェアを起動する) で使うテンプレートです。ここでは使用しません。
+        ```bash
+        cd /dify
+        cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
+        ```
 
-            たとえば、OpenSearch の上書きファイルがまだない場合は、次を実行します。
-
-            ```bash
-            cd /dify
-            cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
-            ```
-
-        コピーしたファイルで入力値を変更し、**Container variable mappings** の式はそのまま残します。
-
-        この OpenSearch の設定では、`/dify/.env` の値が `opensearch.env` より優先されます。他のサービスは各テンプレートのコメントに従ってください。専用の設定ファイルや、指定されたルート設定の値だけを読み込むサービスもあります。
-
-        AWS の設定を `docker-compose.override.yaml` で渡している場合は、そこに残してください。Compose のサービス単位の `environment:` は、env ファイルの値より優先されます。
     </Step>
     <Step title="変更の適用">
         `/dify` で設定を検証し、変更対象のサービスを再作成します。両方のコマンドで、既存の AWS 上書きファイルを指定してください。そのファイルがない場合は、`-f docker-compose.override.yaml` を省略します。
@@ -55,6 +48,7 @@ Docker Compose 2.35.0 以降を使用します。`docker compose version` で確
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
         ```
 
+        変更が反映されない場合は、`/dify/.env` や `docker-compose.override.yaml` でも同じ変数を設定していないか確認してください。どちらもローカルファイルより優先されます（[優先順位](/ja/self-host/deploy/configuration/environments#優先順位) を参照）。
     </Step>
 </Steps>
 
@@ -65,30 +59,29 @@ Docker Compose 2.35.0 以降を使用します。`docker compose version` で確
 ## アップグレード
 
 <Warning>
-
-    - [リリースノート](https://github.com/langgenius/dify/releases) から対象バージョンを選び、更新前にアップグレード手順を確認してください。
-
-    - 現在の Docker ファイルには Docker Compose 2.35.0 以降が必要です。アップグレード前に `docker compose version` で確認してください。
-
+    [リリースノート](https://github.com/langgenius/dify/releases) から対象のリリースを選び、更新前にそのアップグレードガイドを確認してください。
 </Warning>
 
-EC2 インスタンスでは、既存のデプロイと同じ Compose プロジェクト名とファイルを使って実行します。`-p` や `COMPOSE_PROJECT_NAME` を指定している場合は、その値を維持してください。既存の名前付きボリュームを引き続き使うために必要です。`docker-compose.override.yaml` がない場合は、以下のコマンドから該当する `-f` オプションを省略します。
+以下の Compose コマンドはすべて EC2 インスタンス上で実行し、既存のデプロイと同じプロジェクト名とファイルを指定します。`-p` や `COMPOSE_PROJECT_NAME` を使っている場合も、同じ値を指定してください。プロジェクト名が変わると、新しい空の名前付きボリュームで起動してしまいます。`docker-compose.override.yaml` がない場合は、その `-f` オプションを省略します。
 
 <Steps>
     <Step title="デプロイのバックアップ">
-        `/dify/.env`、`/dify/envs/` 内のローカル `.env` ファイル、`docker-compose.override.yaml`、その他のカスタムデプロイファイルをバックアップします。既存のシークレットとボリュームパスを維持します。明示的に設定した [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) や、保存済みのキーも対象です。
+        1. ファイルのコピー中にデータベースへの書き込みが発生しないよう、`/dify` でデプロイを停止します：
 
-        デプロイのバックアップ手順に従って永続データを保存します。`/dify/volumes/`、外部データベースやストレージを含めてください。
+            ```bash
+            docker compose -f docker-compose.yaml -f docker-compose.override.yaml stop
+            ```
 
-        `local_sandbox` を設定している場合は、その名前付きボリュームもバックアップします。マウント先は `/home/dify` と `/workspace` です。`/dify` で、実際の Docker ボリューム名を確認してください。既存のプロジェクトとファイルのオプションは維持します。次のコマンドは、稼働中と停止中のどちらのコンテナにも使えます：
+            停止できない場合は、代わりに各データベースのダンプツールでバックアップします。
 
-        ```bash
-        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
-        ```
+        2. `/dify/.env`、`/dify/envs/` 内のすべてのローカル `.env` ファイル、`docker-compose.override.yaml`、その他のカスタムデプロイファイルをバックアップします。続いて、`/dify/volumes/` や外部のデータベース、ストレージを含む永続データをバックアップします。
 
-        このコマンドで表示されたボリュームをバックアップしてください。
+        3. デプロイに `local_sandbox` が含まれる場合は、その名前付きボリュームもバックアップします。マウント先は `/home/dify` と `/workspace` です。次のコマンドでボリュームを一覧表示できます：
 
-        データベースは整合性のある方法でバックアップしてください。書き込み中のデータファイルをコピーしても、信頼できるバックアップにはなりません。
+            ```bash
+            docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
+            ```
+
     </Step>
     <Step title="選択したリリースへの更新">
         `<version>` を選択したリリースタグに置き換えます。そのリリースの Docker ファイルとテンプレートをまとめてコピーします。
@@ -105,13 +98,17 @@ EC2 インスタンスでは、既存のデプロイと同じ Compose プロジ�
         除外指定により、ローカルの環境ファイル、AWS 上書きファイル、実行データを保持します。その他のデプロイファイルへの変更は、バックアップから適用し直してください。
     </Step>
     <Step title="設定の確認">
-        `/dify/.env.example` と既存の `/dify/.env` を比較し、起動に必要な入力を確認します。各サービスのローカル `.env` ファイルは、対応する `.defaults` または `.env.example` テンプレートと比較します。
+        `/dify/.env` を `/dify/.env.example` と、`/dify/envs/` 内の各ローカルファイルを新しいテンプレートと比較します。差異がある箇所は、次のように対応します：
 
-        既存の `shared.env` ファイルも引き続き利用できます。`api-worker.env` と既存の `shared.env` は、どちらも `envs/core-services/api-worker.defaults` と比較してください。
+        - データベースやベクトルストアの設定など、意図して設定した値はそのまま残します。
+        - それ以外はテンプレートの値を使います。
+        - リリースノートで名前が変更された設定には、新しい名前を使います。
 
-        必要な設定を既存のファイルに追加します。テンプレートで上書きすると、カスタム設定が失われます。ローカルサンドボックスのトークンが未設定なら、`openssl rand -hex 32` で生成します。`/dify/.env` の [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) に、その出力を設定してください。
+        テンプレートで既存のファイルを上書きしないでください。カスタム設定が失われます。
 
-        データベース、ベクトルストアの選択値とボリュームパスは既存の値を維持します。選択値を変更してもデータは移行されません。新しい上書きファイルが必要な場合は、[設定](#設定) の手順で作成してください。
+        <Note>
+            `/dify/.env` で [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) をまだ設定していない場合は、`openssl rand -hex 32` で値を生成し、`/dify/.env` に設定してください。Agent バックエンドとそのローカルサンドボックスは、この共有トークンがないと起動しません。
+        </Note>
     </Step>
     <Step title="アップグレードの適用と確認">
 
@@ -123,6 +120,6 @@ EC2 インスタンスでは、既存のデプロイと同じ Compose プロジ�
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all
         ```
 
-        常駐サービスが `Up` または `healthy` になっていることを確認します。`init_permissions` は `Exited (0)` で終了している必要があります。Dify を開き、カスタム設定を使う機能も確認してください。
+        常駐サービスが `Up` または `healthy` になっていること、`init_permissions` が `Exited (0)` で終了していることを確認します。その後、Dify を開き、カスタム設定を使う機能を確認してください。
     </Step>
 </Steps>
