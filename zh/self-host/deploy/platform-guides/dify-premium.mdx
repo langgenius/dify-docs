@@ -25,26 +25,19 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
 
 <Steps>
     <Step title="编辑环境变量">
-        在 EC2 实例中，编辑相关文件中的环境变量：
+        按 [设置变量](/zh/self-host/deploy/configuration/environments#设置变量) 中的说明，把每项设置放到对应位置：
 
-        - **必要的启动值** 位于 `/dify/.env` 文件中。直接编辑即可。
+        - Compose 最先读取的设置（如 `COMPOSE_PROFILES` 和 `VECTOR_STORE`）以及共享凭据，写在 `/dify/.env` 中。
+        - AWS 部署已在 `docker-compose.override.yaml` 中设置的项，继续保留在该文件中。
+        - 其他设置都写在 `/dify/envs/` 下的本地 `.env` 文件中，不要写进 `.defaults` 文件。
 
-        - **可选或特定提供商的设置** 在 `/dify/envs/` 下有对应模板。Compose 自动加载 `.defaults` 文件。如果本地 `.env` 文件已存在，直接编辑即可。否则，将对应的 `.defaults` 文件复制到注释指定的本地 `.env` 路径。
+        例如，要修改 OpenSearch 的设置，先复制其 defaults 文件（只需复制一次），再编辑副本：
 
-            对于以 `.env.example` 结尾的服务模板，复制时去掉 `.example` 后缀。`middleware.env.example` 模板用于独立的 [源码开发流程](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件)，此处不使用。
+        ```bash
+        cd /dify
+        cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
+        ```
 
-            例如，如果尚未创建 OpenSearch 覆盖文件，运行：
-
-            ```bash
-            cd /dify
-            cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
-            ```
-
-        在副本中修改输入值，保持 **Container variable mappings** 下的表达式不变。
-
-        对于上述 OpenSearch 设置，`/dify/.env` 的值优先于 `opensearch.env`。其他服务以各自模板的注释为准；部分服务只加载自己的配置文件或指定的根配置输入。
-
-        如果 AWS 部署通过 `docker-compose.override.yaml` 注入变量，将这些设置保留在该文件中。Compose 中服务级别的 `environment:` 值优先于 env 文件中的值。
     </Step>
     <Step title="应用更改">
         在 `/dify` 中校验配置，并重建受影响的服务。两个命令都保留现有的 AWS 覆盖文件；如果没有该文件，去掉 `-f docker-compose.override.yaml`。
@@ -55,6 +48,7 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
         ```
 
+        如果修改没有生效，检查 `/dify/.env` 或 `docker-compose.override.yaml` 是否也设置了该项：两者都优先于本地文件（详见 [优先级](/zh/self-host/deploy/configuration/environments#优先级)）。
     </Step>
 </Steps>
 
@@ -65,30 +59,29 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
 ## 升级
 
 <Warning>
-
-    - 从 [Release Notes](https://github.com/langgenius/dify/releases) 中选择目标版本，并在更新前阅读其升级说明。
-
-    - 当前 Docker 文件需要 Docker Compose 2.35.0 或更高版本。升级前运行 `docker compose version` 确认。
-
+    从 [发布说明](https://github.com/langgenius/dify/releases) 中选择目标版本，并在更新前阅读其升级指南。
 </Warning>
 
-在 EC2 实例上运行命令，沿用现有部署的 Compose 项目名称和文件。如果使用了 `-p` 或 `COMPOSE_PROJECT_NAME`，保留原值，以继续挂载原有命名卷。如果没有 `docker-compose.override.yaml`，去掉下面命令中对应的 `-f` 选项。
+下面的每条 Compose 命令都在 EC2 实例上运行，并沿用部署现有的项目名称和文件，包括 `-p` 或 `COMPOSE_PROJECT_NAME`（如有）。项目名称一旦不同，就会改用全新的空命名卷启动。如果没有 `docker-compose.override.yaml`，去掉对应的 `-f` 选项。
 
 <Steps>
     <Step title="备份部署">
-        备份 `/dify/.env`、`/dify/envs/` 下所有本地 `.env` 文件、`docker-compose.override.yaml` 和其他自定义部署文件。保留现有密钥和卷路径，包括显式设置或已存储的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
+        1. 在 `/dify` 中停止部署，避免复制数据库文件时数据库仍在写入：
 
-        按照部署的备份流程保存持久化数据。备份范围包括 `/dify/volumes/` 和外部数据库或存储。
+            ```bash
+            docker compose -f docker-compose.yaml -f docker-compose.override.yaml stop
+            ```
 
-        如果配置了 `local_sandbox`，还需备份其挂载到 `/home/dify` 和 `/workspace` 的命名卷。在 `/dify` 中，沿用现有的项目和文件选项，查询这些卷在 Docker 中的实际名称。容器无论正在运行还是已停止，此命令都适用：
+            如果无法停止部署，改用各数据库自带的导出工具备份数据库。
 
-        ```bash
-        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
-        ```
+        2. 备份 `/dify/.env`、`/dify/envs/` 下所有本地 `.env` 文件、`docker-compose.override.yaml` 和其他自定义部署文件。然后备份持久化数据，包括 `/dify/volumes/` 以及外部数据库或存储（如有）。
 
-        备份命令返回的数据卷。
+        3. 如果部署中包含 `local_sandbox`，还需备份其挂载到 `/home/dify` 和 `/workspace` 的命名卷。用以下命令列出这些卷：
 
-        使用能保证一致性的数据库备份；在数据库写入期间复制数据文件无法保证备份可靠。
+            ```bash
+            docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
+            ```
+
     </Step>
     <Step title="更新到所选版本">
         将 `<version>` 替换为选定的版本标签，同时复制该版本的 Docker 文件和模板：
@@ -105,13 +98,17 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
         排除规则会保留本地环境文件、AWS 覆盖文件和运行数据。其他部署文件中的自定义更改，需从备份中重新应用。
     </Step>
     <Step title="检查配置">
-        对照 `/dify/.env.example`，检查现有 `/dify/.env` 是否包含必要的启动输入。将各个本地服务 `.env` 文件与对应的 `.defaults` 或 `.env.example` 模板比较。
+        将 `/dify/.env` 与 `/dify/.env.example` 对比，并将 `/dify/envs/` 下的每个本地文件与其新模板对比。如有差异，按以下方式处理：
 
-        现有 `shared.env` 文件仍受支持。`api-worker.env` 和已有的 `shared.env` 都应与 `envs/core-services/api-worker.defaults` 比较。
+        - 保留你有意设置的值，包括数据库和向量数据库的设置。
+        - 其余的采用模板中的值。
+        - 如果发布说明中重命名了某项设置，改用新名称。
 
-        将需要的设置添加到现有文件中；用模板覆盖文件会丢失自定义设置。如果缺少本地沙箱令牌，运行 `openssl rand -hex 32` 生成一个。在 `/dify/.env` 中，将 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) 设为生成的值。
+        不要直接用模板覆盖已有文件，否则你改过的值会丢失。
 
-        保留现有的数据库、向量存储选择项和卷路径。更改选择项不会迁移数据。如需新增可选覆盖文件，按 [配置](#配置) 中的步骤创建。
+        <Note>
+            如果 `/dify/.env` 中还没有设置 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token)，运行 `openssl rand -hex 32` 生成一个值，并在该文件中设置。Agent 后端及其本地沙箱都需要这个共享令牌才能启动。
+        </Note>
     </Step>
     <Step title="应用并检查升级">
 
@@ -123,6 +120,6 @@ AMI 部署后，通过 EC2 控制台中找到的实例公共 IP 访问 Dify（�
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all
         ```
 
-        确认常驻服务显示为 `Up` 或 `healthy`，且 `init_permissions` 以 `Exited (0)` 结束。打开 Dify，检查使用了自定义设置的功能。
+        确认常驻服务显示为 `Up` 或 `healthy`，且 `init_permissions` 以 `Exited (0)` 结束。然后打开 Dify，检查使用了自定义设置的功能。
     </Step>
 </Steps>

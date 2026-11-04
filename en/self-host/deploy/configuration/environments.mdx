@@ -17,27 +17,21 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
 
 <Steps>
   <Step title="Find the File">
-    Search `docker/envs/` for the variable's name. The `.defaults` file that defines it names its local file in the first comment. Edit that local file if it exists; otherwise, copy the `.defaults` file to that name first. 
-
-    For example, settings shared by the API, workers, and scheduled tasks (Beat) are defined in `envs/core-services/api-worker.defaults`, so they go in `api-worker.env`.
-
-    <Info>
-      If `docker/.env` also sets the variable, that value wins; see [Precedence](#precedence).
-    </Info>
-
-    If the search finds an `.env.example` template instead, such as `envs/security.env.example`, copy it to the same name without `.example`. 
-    
-    <Note>
-      Skip `envs/middleware.env.example`: it belongs to the separate [middleware stack](/en/self-host/deploy/advanced-deployments/local-source-code#start-middlewares-with-docker-compose) for source-code development, and a Docker Compose deployment doesn't read it.
-    </Note>
-
-    Two kinds of settings go in `docker/.env` instead:
+    Set most variables in a local `.env` file under `docker/envs/`, and these two kinds in `docker/.env`:
 
     - **Settings Compose reads before it loads any service file**, such as `COMPOSE_PROFILES` and `VECTOR_STORE`.
     - **Shared credentials**, so every service that uses one gets the same value:
       - `PLUGIN_DAEMON_KEY` and `PLUGIN_DIFY_INNER_API_KEY`: use a different strong value for each.
       - `DIFY_AGENT_API_TOKEN` and `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`: use a different strong value for each.
       - `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY`: set both to the same value; if they differ, Code and Template nodes fail with HTTP 401.
+
+    For any other variable, search `docker/envs/` for its name, then act on what the search finds:
+
+    - **One `.defaults` file**: edit the local file named in its first comment. If that file doesn't exist yet, copy the `.defaults` file to that name first.
+    - **Several `.defaults` files**: edit the local file that every service using the variable loads; otherwise the services end up with different values.
+    - **An `.env.example` template**, such as `envs/security.env.example`: copy it to the same name without `.example`. Skip `envs/middleware.env.example`, which only the separate [middleware stack](/en/self-host/deploy/advanced-deployments/local-source-code#start-middlewares-with-docker-compose) for source-code development reads.
+
+    When `docker/.env` and a local file set the same variable, the `docker/.env` value wins, with the exceptions in [Precedence](#precedence).
   </Step>
   <Step title="Edit the Value">
     In the local file, change the values you need and uncomment only the optional settings you want.
@@ -262,7 +256,7 @@ To use a pepper, set it before you create the admin account during first-time se
 openssl rand -base64 32
 ```
 
-On Docker Compose, set it in `docker/envs/core-services/api.env` (create the file from `api.defaults` if you haven't). Keep it out of `docker/.env`, which Compose also passes to the worker, plugin daemon, agent backend, web frontend, and code sandbox. On source deployments, set it in `api/.env`.
+On Docker Compose, set it in `docker/envs/core-services/api.env`. Keep it out of `docker/.env`, which Compose also passes to the worker, plugin daemon, agent backend, web frontend, and code sandbox. On source deployments, set it in `api/.env`.
 
 <Warning>
 Setting, changing, or removing the pepper once accounts exist makes their current passwords fail at sign-in as invalid. To undo a mistake, put back the previous value, and every password that wasn't reset in the meantime works again. Keep the value as safe as `SECRET_KEY`.
@@ -745,7 +739,7 @@ To switch to another bundled provider:
 
 <Steps>
   <Step title="Keep What Existing Knowledge Bases Use">
-    Leave the old provider's profile in `COMPOSE_PROFILES`. If it isn't Weaviate, also copy its `.defaults` file to its local `.env` file, such as `qdrant.defaults` to `qdrant.env`. Only the selected provider's defaults load automatically; without the copy, existing knowledge bases lose their connection. Both Elasticsearch values use `elasticsearch.env`.
+    Leave the old provider's profile in `COMPOSE_PROFILES`. If it isn't Weaviate, also copy its `.defaults` file to its local `.env` file, such as `qdrant.defaults` to `qdrant.env`. `elasticsearch-ja` uses the same `elasticsearch.env` as `elasticsearch`. Only the selected provider's defaults load automatically; without the copy, existing knowledge bases lose their connection.
   </Step>
   <Step title="Select the New Provider">
     In `docker/.env`, set `VECTOR_STORE` and add the provider's profile to `COMPOSE_PROFILES`, then run `docker compose up -d`.
@@ -768,7 +762,7 @@ To change a provider's connection settings, follow [Set a Variable](#set-a-varia
 | Variable | Default | Description |
 |---|---|---|
 | `WEAVIATE_ENDPOINT` | `http://weaviate:8080` | Weaviate REST API endpoint. |
-| `WEAVIATE_API_KEY` | (development key in the bundled defaults) | API key the API and workers use to authenticate with Weaviate. Must match an entry in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`.<br/><br/>See [Vector Database Service Configuration](#vector-database-service-configuration) to require authentication and set matching client and server values. |
+| `WEAVIATE_API_KEY` | (development key in the bundled defaults; must be replaced for production) | API key the API and workers use to authenticate with Weaviate. Must match an entry in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`.<br/><br/>See [Vector Database Service Configuration](#vector-database-service-configuration) to require authentication and set matching client and server values. |
 | `WEAVIATE_GRPC_ENDPOINT` | `grpc://weaviate:50051` | Separate gRPC endpoint for high-performance binary protocol. Significantly faster for batch operations. Falls back to inferring from HTTP endpoint if not set. |
 | `WEAVIATE_TOKENIZATION` | `word` | Tokenization method for text fields. Options: `word` (splits on whitespace and punctuation), `whitespace` (splits on whitespace only), `character` (character-level, better for CJK languages). |
 
@@ -782,7 +776,7 @@ Both providers use the `OCEANBASE_*` variables. Set `VECTOR_STORE` to `oceanbase
 |---|---|---|
 | `OCEANBASE_VECTOR_HOST` | `oceanbase` / `seekdb` | Hostname or IP address. The bundled default follows `VECTOR_STORE`. |
 | `OCEANBASE_VECTOR_PORT` | `2881` | Port number. |
-| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | Database username for OceanBase / seekdb. |
+| `OCEANBASE_VECTOR_USER` | `root@test` / `root` | Database username. The bundled default follows `VECTOR_STORE`. |
 | `OCEANBASE_VECTOR_PASSWORD` | `difyai123456` | Database password. |
 | `OCEANBASE_VECTOR_DATABASE` | `test` | Database name. |
 | `OCEANBASE_CLUSTER_NAME` | `difyai` | Cluster name (Docker deployment only). |
@@ -814,8 +808,8 @@ Both providers use the `OCEANBASE_*` variables. Set `VECTOR_STORE` to `oceanbase
 | `MILVUS_DATABASE` | `default` | Database name. |
 | `MILVUS_TOKEN` | (empty) | Authentication token. For Zilliz Cloud, use the API Key. |
 | `MILVUS_USER` | `root` | Username. |
-| `MILVUS_PASSWORD` | `Milvus` | Password. Change the user's password in Milvus before updating this client setting. |
-| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | Enable BM25 sparse index for full-text search alongside vector similarity. Requires Milvus >= 2.5.0. If the collection was created without this enabled, it must be recreated. |
+| `MILVUS_PASSWORD` | `Milvus` | Password. To change it later, change the user's password in Milvus first, then update this value to match. |
+| `MILVUS_ENABLE_HYBRID_SEARCH` | `true` | Adds a BM25 sparse index so full-text search works alongside vector similarity. Needs Milvus 2.5.0 or later; with an older server, Dify skips the index on its own and full-text search returns no results. A collection created without the index must be recreated before full-text search works. |
 | `MILVUS_ANALYZER_PARAMS` | (empty) | Analyzer parameters for text fields. |
 | `MILVUS_SECURE` | `false` | Enable one-way TLS for the Milvus connection. When enabled, the client connects over gRPC with TLS and verifies the server certificate. |
 | `MILVUS_SERVER_PEM_PATH` | (empty) | Path inside the container to the Milvus server certificate (PEM), used to verify the server when `MILVUS_SECURE` is enabled. |
@@ -885,7 +879,7 @@ For the bundled PGVector, leave the client username, password, and database unse
 
 <Accordion title="Vastbase">
 
-Keep `VASTBASE_USER` and `VASTBASE_PASSWORD` in sync with `VB_USERNAME` and `VB_PASSWORD`, which the `vastbase` service sets in `docker-compose.yaml`.
+For the bundled Vastbase, keep the defaults of `VASTBASE_USER` and `VASTBASE_PASSWORD`: they match `VB_USERNAME` and `VB_PASSWORD` in `docker-compose.yaml`. For an external server, set them to its credentials.
 
 | Variable | Default | Description |
 |---|---|---|
@@ -1012,6 +1006,8 @@ For the bundled PGVecto.RS, leave the client username, password, and database un
 
 <Accordion title="OpenSearch">
 
+To use the bundled OpenSearch for local development, set `OPENSEARCH_VERIFY_CERTS=false` in `envs/vectorstores/opensearch.env`: the image ships demo certificates. For production and external servers, use certificates the client trusts and keep verification on.
+
 | Variable | Default | Description |
 |---|---|---|
 | `OPENSEARCH_HOST` | `opensearch` | Hostname. |
@@ -1020,11 +1016,9 @@ For the bundled PGVecto.RS, leave the client username, password, and database un
 | `OPENSEARCH_VERIFY_CERTS` | `true` | Verify TLS certificates for OpenSearch HTTPS connections. |
 | `OPENSEARCH_AUTH_METHOD` | `basic` | `basic` uses username/password. `aws_managed_iam` uses AWS SigV4 request signing via Boto3 credentials (for AWS Managed OpenSearch or Serverless). |
 | `OPENSEARCH_USER` | `admin` | Username. Only used with `basic` auth. |
-| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | Password for `basic` authentication. For the bundled OpenSearch, leave it unset: it follows `OPENSEARCH_INITIAL_ADMIN_PASSWORD`. Set it for an external server. |
-| `OPENSEARCH_AWS_REGION` | (empty) | AWS region. Only used with `aws_managed_iam` auth. |
-| `OPENSEARCH_AWS_SERVICE` | (empty) | AWS service type: `es` (Managed Cluster) or `aoss` (OpenSearch Serverless). Only used with `aws_managed_iam` auth. |
-
-To use the bundled OpenSearch for local development, set `OPENSEARCH_VERIFY_CERTS=false` in `envs/vectorstores/opensearch.env`: the image ships demo certificates. For production and external servers, use certificates the client trusts and keep verification on.
+| `OPENSEARCH_PASSWORD` | `Qazwsxedc!@#123` | Password. Only used with `basic` auth.<br/><br/>For the bundled OpenSearch, leave it unset: it follows `OPENSEARCH_INITIAL_ADMIN_PASSWORD`. Set it for an external server. |
+| `OPENSEARCH_AWS_REGION` | (empty) | AWS region. Required with `aws_managed_iam` auth. |
+| `OPENSEARCH_AWS_SERVICE` | (empty) | AWS service type: `es` (Managed Cluster) or `aoss` (OpenSearch Serverless). Required with `aws_managed_iam` auth. |
 
 </Accordion>
 
@@ -1249,13 +1243,13 @@ Sentry provides error tracking and performance monitoring. Each service has its 
 |---|---|---|
 | `API_SENTRY_DSN` | (empty) | Sentry DSN for the API and workers. Empty disables Sentry for those services. |
 | `API_SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of API and worker requests to trace (0.01 = 1%, 1.0 = 100%). Traces track request flow across services. No effect while `API_SENTRY_DSN` is empty. |
-| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of traced requests to profile for CPU and memory use. Profiles show where time is spent in code. The effective rate is the traces rate × this rate. |
-| `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend. |
+| `API_SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of traced requests to profile for CPU and memory use. Profiles show where time is spent in code. The effective rate is the traces rate × this rate. No effect while `API_SENTRY_DSN` is empty. |
+| `WEB_SENTRY_DSN` | (empty) | Sentry DSN for the web frontend. Empty disables Sentry there. |
 | `PLUGIN_SENTRY_ENABLED` | `false` | Enable Sentry for the plugin daemon. Also set `PLUGIN_SENTRY_DSN`. |
 | `PLUGIN_SENTRY_DSN` | (empty) | Sentry DSN for the plugin daemon. |
-| `SENTRY_DSN` | (empty) | The variable each container reads. With Docker Compose, set the matching setting above instead: `API_SENTRY_DSN`, `WEB_SENTRY_DSN`, or `PLUGIN_SENTRY_DSN`. |
-| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | The variable the API and workers read. With Docker Compose, set `API_SENTRY_TRACES_SAMPLE_RATE` instead. |
-| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | The variable the API and workers read. With Docker Compose, set `API_SENTRY_PROFILES_SAMPLE_RATE` instead. |
+| `SENTRY_DSN` | (empty) | Sentry DSN that each container reads. With Docker Compose, set the per-service DSN instead: `API_SENTRY_DSN` for the API and workers, `WEB_SENTRY_DSN` for the web frontend, or `PLUGIN_SENTRY_DSN` for the plugin daemon. |
+| `SENTRY_TRACES_SAMPLE_RATE` | `1.0` | Fraction of requests the API and workers trace. With Docker Compose, set `API_SENTRY_TRACES_SAMPLE_RATE` instead. |
+| `SENTRY_PROFILES_SAMPLE_RATE` | `1.0` | Fraction of traced requests the API and workers profile. With Docker Compose, set `API_SENTRY_PROFILES_SAMPLE_RATE` instead. |
 
 ### Notion Integration Configuration
 
@@ -1342,13 +1336,11 @@ By default, sign-in is email + password, and new accounts come from workspace in
 
 Traces of app runs are delivered to the configured LLMOps provider (Langfuse, LangSmith, Arize/Phoenix, and so on) by a background task. For Docker Compose deployments, set these variables in `docker/envs/core-services/api-worker.env`.
 
-Since 1.19.0, `OPS_TRACE_UNIFIED_ENABLED`, `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES`, `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`, and `OPS_TRACE_PARENT_CONTEXT_TTL_SECONDS` have no effect; you can remove them from your env files.
-
 | Variable | Default | Description |
 |---|---|---|
-| `OPS_TRACE_QUEUE` | `ops_trace_v2` | The Celery queue that carries trace delivery and its retries, Agent trace export, and the daily trace cleanup. If you change it, set the same value for the API, workers, and Celery Beat.<br/><br/>The bundled Docker Compose worker listens on it automatically. If you set `CELERY_QUEUES` or `CELERY_WORKER_QUEUES` yourself, or start workers with your own `-Q` list, include this queue. For a rolling upgrade, follow [Ops tracing rolling upgrades](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) in the Dify repository.<br/><br/>Letters, digits, `_`, `.`, and `-` only. |
-| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | How many times Dify tries to send a trace while the tracing provider is temporarily unavailable, counting the first try. A trace the provider rejects isn't retried. Must be at least 1.<br/><br/>The wait between tries starts at 10 seconds and doubles, up to 10 minutes. At the default, the last try comes about 5 minutes after the first; raise it if your provider's outages last longer. |
-| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Celery Beat runs a daily cleanup at 03:30 that deletes trace data an interrupted delivery left in storage, once it's older than 2 days. The time follows `LOG_TZ` (UTC if unset). |
+| `OPS_TRACE_QUEUE` | `ops_trace_v2` | The Celery queue that carries trace delivery and its retries, Agent trace export and recovery, the daily trace cleanup, and E2B sandbox usage metering. If you change it, set the same value for the API, workers, and Celery Beat; a task sent to a queue no worker listens on doesn't run.<br/><br/>The bundled Docker Compose worker listens on it automatically. If you set `CELERY_QUEUES` or `CELERY_WORKER_QUEUES` yourself, or start workers with your own `-Q` list, include this queue; otherwise those tasks don't run, and traces don't reach your tracing provider. For a rolling upgrade, follow [Ops tracing rolling upgrades](https://github.com/langgenius/dify/blob/1.19.0/docker/README.md#ops-tracing-rolling-upgrades) in the Dify repository.<br/><br/>Letters, digits, `_`, `.`, and `-` only. |
+| `OPS_TRACE_EXPORT_MAX_ATTEMPTS` | `6` | How many times Dify tries to send a trace while the tracing provider is temporarily unavailable, counting the first try. A trace the provider rejects isn't retried. Must be at least 1.<br/><br/>The wait between tries starts at 10 seconds and doubles, up to 10 minutes. At the default, the last try comes about 5 minutes after the first; raise it if your provider's outages last longer.<br/><br/>Replaces the former `OPS_TRACE_RETRYABLE_DISPATCH_MAX_RETRIES` and `OPS_TRACE_RETRYABLE_DISPATCH_DELAY_SECONDS`, which are no longer read. Don't copy the old retry count: with the doubling wait, the same number of tries takes far longer. |
+| `ENABLE_TRACE_PAYLOAD_SWEEP_TASK` | `true` | Runs a daily Celery Beat cleanup at 03:30 that deletes trace data an interrupted delivery left in storage, once it's older than 2 days. The time follows `LOG_TZ` (UTC if unset).<br/><br/>Set to `false` only if you delete old files under `trace_payloads/` in Dify's storage another way; otherwise they stay. |
 | `OPS_AGENT_TRACE_ENABLED` | `false` | Set to `true` to include Agent model and tool calls in the traces of Agent apps and of Workflow and Chatflow apps with a new Agent node. Agents inside a [workflow tool](/en/self-host/use-dify/workspace/tools#workflow) that the app calls aren't included. Also set `DIFY_AGENT_APPLICATION_TRACING_ENABLED` to `true`.<br/><br/>While this is `false`, the tracing settings of Agent, Workflow, and Chatflow apps say Agent tracing isn't available. Each app still needs tracing enabled, a provider configured, and **Capture Agent internals** on (the default). |
 | `DIFY_AGENT_APPLICATION_TRACING_ENABLED` | `false` | The agent backend's half of `OPS_AGENT_TRACE_ENABLED`; set both to `true` to trace Agents.<br/><br/>Set it in `docker/envs/core-services/dify-agent.env`, not `api-worker.env`: the agent backend doesn't read that file.<br/><br/>While it's on, an Agent run that its app traces goes to the app's tracing provider instead of [trajectory export](#agent-trajectory-export). |
 | `ENABLE_APPLICATION_TRACE_RECONCILE_TASK` | `true` | Used only when `OPS_AGENT_TRACE_ENABLED` is `true`. Runs a background job every 30 seconds that resends Agent traces still waiting for delivery and deletes the Agent trace data Dify stores after the retention period (7 days by default). Traces already delivered to your tracing provider stay there. |
@@ -1415,7 +1407,7 @@ The API and worker processes apply these limits to the output returned by Code a
 | `CODE_MAX_STRING_ARRAY_LENGTH` | `30` | Maximum number of elements in a string array output. |
 | `CODE_MAX_OBJECT_ARRAY_LENGTH` | `30` | Maximum number of elements in an object array output. |
 | `CODE_MAX_NUMBER_ARRAY_LENGTH` | `1000` | Maximum number of elements in a number array output. |
-| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | Maximum character length for Template Transform node output. |
+| `TEMPLATE_TRANSFORM_MAX_LENGTH` | `400000` | Maximum character length for Template node output. |
 
 #### Workflow Runtime
 
@@ -1551,11 +1543,9 @@ Generate one:
 openssl rand -hex 32
 ```
 
-Set it in root `docker/.env`. Compose passes it to both the agent backend and `local_sandbox`.
+Set it in `docker/.env` so the agent backend and the bundled sandbox (`local_sandbox`) use the same value. It replaces the former `DIFY_AGENT_SHELLCTL_AUTH_TOKEN`, which Compose still reads from `docker/.env` when this variable is unset or empty.
 
 A value set only in `envs/core-services/dify-agent.env` doesn't take effect. If yours is there, move it to `docker/.env` and run `docker compose up -d` from `dify/docker`.
-
-Compose also accepts the legacy `DIFY_AGENT_SHELLCTL_AUTH_TOKEN` from `docker/.env` when this variable is unset or empty.
 
 ### NEXT_PUBLIC_ENABLE_AGENT_V2
 
@@ -1563,7 +1553,7 @@ Default: `true` (Docker Compose)
 
 Shows the new Agent in the web UI: the **Agents** item in the main navigation and the new Agent node in the node picker of Workflow apps. It replaces the former `ENABLE_AGENT_V2`, which has no effect with the current Compose files.
 
-Set it to `false` in `docker/.env` or `envs/core-services/web.env` to hide the new Agent and fall back to the classic Agent node; set it back to `true` to show it again. Either way, recreate the web container, then hard-refresh your browser:
+Set it to `false` in `docker/envs/core-services/web.env` to hide the new Agent and fall back to the classic Agent node; set it back to `true` to show it again. Either way, recreate the web container, then hard-refresh your browser:
 
 ```bash
 docker compose up -d web
@@ -1627,7 +1617,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | Batches consecutive model text deltas before writing them to Redis and streaming them. Keep enabled to reduce Redis writes and event counts.<br/><br/>Set to `false` to stream each delta separately. Tool calls and other non-text events remain unchanged and in order. |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | Target interval in milliseconds for publishing batched text deltas. Lower it for more frequent text updates; raise it for fewer, larger batches.<br/><br/>This is not a strict timing limit. Batches can be published sooner when they reach `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS`. Minimum: 1. To disable batching, set `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` to `false`. |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | Character threshold for publishing a text-delta batch before the flush interval elapses. Lower it to publish smaller batches sooner.<br/><br/>A batch can exceed this threshold because deltas are added whole. Minimum: 1. |
-| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`.<br/><br/>Use this setting for the run deadline; the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` is no longer read. The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this.<br/><br/>On the `e2b` backend, the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so E2B runs stay capped at one hour. On the `local` backend, values above an hour take effect: to allow longer runs, raise this and both API-side limits. |
+| `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Wall-clock deadline for one agent run's model and tool work. A run that exceeds it fails with `agent_run_limit_exceeded`.<br/><br/>The API-side `APP_MAX_EXECUTION_TIME` and `WORKFLOW_MAX_EXECUTION_TIME` (default `3600`) cap runs earlier if set below this. On the `local` backend, values above an hour take effect: to allow longer runs, raise this and both API-side limits. On the `e2b` backend, the sandbox's `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS` (ceiling 3600) still applies, so E2B runs stay capped at one hour.<br/><br/>Replaces the former `AGENT_BACKEND_RUN_TIMEOUT_SECONDS`, which is no longer read. |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Read timeout for one SSE connection to the agent backend. |
 | `AGENT_BACKEND_STREAM_MAX_RECONNECTS` | `3` | How many times the API reconnects a dropped agent-backend stream before failing the run. |
 | `DIFY_AGENT_PLUGIN_DAEMON_URL` | (empty; derives from `PLUGIN_DAEMON_URL`) | Plugin daemon address the agent backend calls tools through. |
@@ -1641,7 +1631,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `DIFY_AGENT_OUTBOUND_HTTP_KEEPALIVE_EXPIRY` | `30` | Seconds an idle pooled connection is kept before it closes. |
 | `DIFY_AGENT_INNER_API_URL` | (empty; derives from `PLUGIN_DIFY_INNER_API_URL`) | Dify API address for the agent backend's internal calls. |
 | `DIFY_AGENT_INNER_API_KEY` | (empty; derives from `PLUGIN_DIFY_INNER_API_KEY`) | Credential for the Dify API's plugin callbacks. Must match the API service's `INNER_API_KEY_FOR_PLUGIN`, not `INNER_API_KEY`.<br/><br/>With Docker Compose, set `PLUGIN_DIFY_INNER_API_KEY` in `docker/.env` instead. |
-| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Compose accepts the legacy `DIFY_AGENT_SHELLCTL_ENTRYPOINT` when this variable is unset or empty. |
+| `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` | `http://local_sandbox:5004` | Address of the bundled sandbox service. Replaces the former `DIFY_AGENT_SHELLCTL_ENTRYPOINT`, which Compose still reads when this variable is unset or empty. |
 | `EXPOSE_LOCAL_SANDBOX_PORT` | `5004` | Host port at which the middleware stack for [source-code deployments](/en/self-host/deploy/advanced-deployments/local-source-code) publishes the agent sandbox, so an agent backend run from source reaches it at `http://localhost:5004`. Set it in that stack's `middleware.env`; if you change it, point `DIFY_AGENT_LOCAL_SANDBOX_ENDPOINT` in the agent backend's `.env` at the new port.<br/><br/>Middleware stack only: the full Compose stack keeps the sandbox on an internal network. |
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | Callback address the sandboxed agent uses to reach the agent backend. Keep the default with the bundled `local` sandbox.<br/><br/>On the `openshell` backend, sandboxes can't resolve Compose service names. Set this to an address they can reach that routes to the agent backend's `/agent-stub` path.<br/><br/>Expose only that path, for example through a reverse proxy: port 5050 also serves the API that starts agent runs. |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | Dify API address the sandboxed agent uses for file transfers. Keep the default on Docker Compose. A remote sandbox backend needs your publicly reachable Dify address here. |
@@ -1696,7 +1686,7 @@ Before switching to `openshell`, have these in place:
 
 To switch to OpenShell:
 
-1. See the [OpenShell setup guide](https://github.com/langgenius/dify/blob/1.18.0/dify-agent/docs/dify-agent/guide/openshell.md) to set up the gateway and everything above: building the runtime image, initializing the volume, mounting certificates, Kubernetes setup, and a smoke test.
+1. See the [OpenShell setup guide](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) to set up the gateway and everything above: building the runtime image, initializing the volume, mounting certificates, Kubernetes setup, and a smoke test.
 2. In `envs/core-services/dify-agent.env`, set `DIFY_AGENT_RUNTIME_BACKEND` to `openshell` and fill in the variables below.
 3. Recreate the agent backend with `docker compose up -d`. It refuses to start if a required value is missing or malformed.
 4. Run an agent to confirm the setup. The agent backend first contacts the gateway when an agent runs, or when you click **Apply** in an Agent's build chat, so a wrong endpoint, credential, or image shows up only then, as a failed run or a failed apply.
@@ -1738,7 +1728,7 @@ It isn't separate from [LLMOps Trace Delivery](#llmops-trace-delivery), which ap
 
 To turn it on:
 
-1. In `docker/.env`, set `DIFY_AGENT_TRAJECTORY_ENABLED` to `true` and `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` to your collector's traces URL. Put any credentials in `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS`.
+1. In `docker/envs/core-services/dify-agent.env`, set `DIFY_AGENT_TRAJECTORY_ENABLED` to `true` and `DIFY_AGENT_TRAJECTORY_OTLP_TRACES_ENDPOINT` to your collector's traces URL. Put any credentials in `DIFY_AGENT_TRAJECTORY_OTLP_HEADERS`.
 
     These variables have no effect in `api-worker.env`, which the agent backend doesn't read.
 
@@ -1791,8 +1781,8 @@ Code in the sandbox can't reach the internet directly: outbound HTTP and HTTPS r
 | `SANDBOX_API_KEY` | `dify-sandbox` | API key for sandbox authentication. Must match `CODE_EXECUTION_API_KEY`; set both to the same value in `docker/.env`. |
 | `SANDBOX_GIN_MODE` | `release` | Sandbox service mode: `release` or `debug`. |
 | `SANDBOX_WORKER_TIMEOUT` | `15` | Maximum execution time in seconds for a single code run. |
-| `SANDBOX_ENABLE_NETWORK` | `true` | Allows network-enabled execution requests. Required for Code nodes, Template nodes, Jinja2 prompts, and the built-in Code tool, including code that makes no network calls. |
-| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection, used by proxy-aware clients when networking is enabled. |
+| `SANDBOX_ENABLE_NETWORK` | `true` | Required for Code nodes, Template nodes, Jinja2 prompts, and the built-in Code tool. Keep it `true`. |
+| `SANDBOX_HTTP_PROXY` | `http://ssrf_proxy:3128` | HTTP proxy for SSRF protection, used by proxy-aware clients. |
 | `SANDBOX_HTTPS_PROXY` | `http://ssrf_proxy:3128` | HTTPS proxy for SSRF protection, used by proxy-aware clients. |
 | `SANDBOX_PORT` | `8194` | Sandbox service port. If you change it, update `CODE_EXECUTION_ENDPOINT` in `docker/envs/core-services/api-worker.env` to use the same port. |
 
@@ -1874,7 +1864,7 @@ When you change `DB_TYPE` or `VECTOR_STORE`, update `COMPOSE_PROFILES` to match;
 
 | Variable | Default | Description |
 |---|---|---|
-| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | Selects which service containers to start.<br/><br/>The `collaboration` profile starts the dedicated `api_websocket` container; remove it to skip that service. |
+| `COMPOSE_PROFILES` | `weaviate,postgresql,collaboration` | Selects which bundled service containers start. Include the profiles of your bundled database and vector store, such as `postgresql` and `weaviate`; a bundled service whose profile is missing doesn't start.<br/><br/>The `collaboration` profile starts the dedicated `api_websocket` container. Remove it only when you set `ENABLE_COLLABORATION_MODE` to `false`. |
 | `EXPOSE_NGINX_PORT` | `80` | Host port mapped to Nginx HTTP. |
 | `EXPOSE_NGINX_SSL_PORT` | `443` | Host port mapped to Nginx HTTPS. |
 
@@ -1898,9 +1888,9 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | Variable | Default | Description |
 |---|---|---|
 | `PLUGIN_DAEMON_URL` | `http://plugin_daemon:5002` | Plugin daemon service URL. |
-| `PLUGIN_DAEMON_KEY` | (development key in the bundled defaults; replace for production) | Authenticates the API, workers, and agent backend to the plugin daemon. Set it in `docker/.env` so the daemon and its clients use the same value; mismatches cause authentication failures.<br/><br/>Use a strong secret separate from `PLUGIN_DIFY_INNER_API_KEY`. When upgrading, retain the working value. |
+| `PLUGIN_DAEMON_KEY` | (development key in the bundled defaults; must be replaced for production) | Authenticates the API, workers, and agent backend to the plugin daemon. Set it in `docker/.env` so the daemon and its clients use the same value. If they differ, calls to the plugin daemon fail to authenticate.<br/><br/>Use a strong secret separate from `PLUGIN_DIFY_INNER_API_KEY`. Keep the working value when you upgrade. |
 | `PLUGIN_DAEMON_PORT` | `5002` | Plugin daemon listening port. |
-| `DB_SSL_MODE` | `disable` | PostgreSQL `sslmode` for the plugin daemon's database connection. Set `require` when the database enforces TLS.<br/><br/>For the full Compose stack, set it in `docker/envs/core-services/plugin-daemon.env`, copied from `plugin-daemon.defaults`. For the separate middleware stack, set it in `middleware.env`. |
+| `DB_SSL_MODE` | `disable` | PostgreSQL `sslmode` for the plugin daemon's database connection. Set `require` when the database enforces TLS.<br/><br/>For the full Compose stack, set it in `docker/envs/core-services/plugin-daemon.env`. For the separate middleware stack, set it in `middleware.env`. |
 | `DB_PLUGIN_DATABASE` | `dify_plugin` | Name of the plugin daemon's database, separate from the main Dify database. |
 | `PLUGIN_DAEMON_TIMEOUT` | `600.0` | Timeout in seconds for all plugin daemon requests (installation, execution, listing). |
 | `PLUGIN_MAX_PACKAGE_SIZE` | `52428800` | Maximum plugin package size in bytes (50 MB). Validated during marketplace downloads. |
@@ -1908,8 +1898,8 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | `PLUGIN_MODEL_SCHEMA_CACHE_TTL` | `3600` | How long to cache plugin model schemas in seconds. Reduces repeated lookups. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_ENABLED` | `true` | Whether each tenant's plugin model provider list is cached in Redis at all. Disable when plugins are installed by an external system that can't invalidate this deployment's cache when a tenant's plugins change. |
 | `PLUGIN_MODEL_PROVIDERS_CACHE_TTL` | `86400` | How long to cache each tenant's plugin model provider list in Redis, in seconds (24 hours). Dify invalidates this cache when a tenant installs, uninstalls, or upgrades a plugin. |
-| `PLUGIN_DIFY_INNER_API_KEY` | (development key in the bundled defaults; replace for production) | Shared credential for callbacks to the Dify API. Set it in `docker/.env` so the API, workers, plugin daemon, and agent backend use the same value.<br/><br/>Use a strong secret separate from `PLUGIN_DAEMON_KEY`. Keep the working value during upgrades. If the values don't match across services, plugin callbacks fail to authenticate. |
-| `INNER_API_KEY_FOR_PLUGIN` | (development key in the bundled defaults; replace for production) | The variable the API and workers read for the plugin callback secret. With Docker Compose, set `PLUGIN_DIFY_INNER_API_KEY` instead.<br/><br/>The API checks this secret on plugin callbacks, including model invocation, tool calls, and file transfer. On mismatch, those calls fail while plugin installation can still work. |
+| `PLUGIN_DIFY_INNER_API_KEY` | (development key in the bundled defaults; must be replaced for production) | Shared credential for callbacks to the Dify API. Set it in `docker/.env` so the API, workers, plugin daemon, and agent backend use the same value. If they differ, plugin callbacks fail to authenticate.<br/><br/>Use a strong secret separate from `PLUGIN_DAEMON_KEY`. Keep the working value when you upgrade. |
+| `INNER_API_KEY_FOR_PLUGIN` | (development key in the bundled defaults; must be replaced for production) | Plugin callback secret that the API and workers read. With Docker Compose, set `PLUGIN_DIFY_INNER_API_KEY` in `docker/.env` instead.<br/><br/>The API checks this secret on plugin callbacks, including model invocation, tool calls, and file transfer. On mismatch, those calls fail while plugin installation can still work. |
 | `PLUGIN_DIFY_INNER_API_URL` | `http://api:5001` | Internal API URL the plugin daemon calls back to. |
 | `PLUGIN_DEBUGGING_HOST` | `0.0.0.0` | Host for plugin remote debugging connections. |
 | `PLUGIN_DEBUGGING_PORT` | `5003` | Port for plugin remote debugging connections. |
@@ -1921,7 +1911,7 @@ The plugin daemon is a separate service that manages plugin lifecycle (installat
 | `FORCE_VERIFYING_SIGNATURE` | `true` | Require valid signatures before installing plugins. Prevents installing tampered or unsigned packages. |
 | `PLUGIN_MAX_EXECUTION_TIMEOUT` | `600` | Plugin execution timeout in seconds (plugin daemon side). Should match `PLUGIN_DAEMON_TIMEOUT` on the API side. |
 | `PIP_MIRROR_URL` | (empty) | Custom PyPI mirror URL used by the plugin daemon when installing plugin dependencies. Useful for faster installs or air-gapped environments. |
-| `UV_CACHE_DIR` | (empty; falls back to `.uv-cache` in `PLUGIN_WORKING_PATH`) | Directory where the plugin daemon caches Python packages while installing plugin dependencies.<br/><br/>Requires plugin daemon 0.6.11 or later. The 1.19.0 Compose file ships 0.6.14.<br/><br/>Set it in `docker/envs/core-services/plugin-daemon.env` or in `docker/.env`. |
+| `UV_CACHE_DIR` | (empty; falls back to `.uv-cache` in `PLUGIN_WORKING_PATH`) | Directory where the plugin daemon caches Python packages while installing plugin dependencies.<br/><br/>Set it to a path inside the container, such as `/tmp/.uv-cache`, if installing plugin dependencies fails with permission errors on a Docker or WSL bind mount. Set it in `docker/envs/core-services/plugin-daemon.env`.<br/><br/>Requires plugin daemon 0.6.11 or later. |
 
 ## Creator Center Configuration
 
@@ -2042,7 +2032,7 @@ These variables configure the vector database containers themselves.
 <AccordionGroup>
 <Accordion title="Weaviate Service">
 
-To require authentication, set `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` in `docker/.env`. In the same file, set `WEAVIATE_API_KEY` to a strong secret and include it in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`.
+To require authentication, set `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` in `docker/envs/vectorstores/weaviate.env`. In the same file, set `WEAVIATE_API_KEY` to a strong secret and include it in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`.
 
 Replacing keys alone leaves anonymous access enabled.
 
@@ -2054,7 +2044,7 @@ Replacing keys alone leaves anonymous access enabled.
 | `WEAVIATE_DEFAULT_VECTORIZER_MODULE` | `none` | Default vectorizer module. |
 | `WEAVIATE_CLUSTER_HOSTNAME` | `node1` | Cluster node hostname. |
 | `WEAVIATE_AUTHENTICATION_APIKEY_ENABLED` | `true` | Enable API key authentication. |
-| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | (development key in the bundled defaults) | Allowed API keys. The bundled key matches the default `WEAVIATE_API_KEY`. When replacing it, also update the client key. |
+| `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` | (development key in the bundled defaults; must be replaced for production) | Allowed API keys. The bundled key matches the default `WEAVIATE_API_KEY`. When replacing it, also update the client key. |
 | `WEAVIATE_AUTHENTICATION_APIKEY_USERS` | `hello@dify.ai` | Users associated with API keys. |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_ENABLED` | `true` | Enable admin list authorization. |
 | `WEAVIATE_AUTHORIZATION_ADMINLIST_USERS` | `hello@dify.ai` | Admin users. |
@@ -2086,17 +2076,30 @@ Replacing keys alone leaves anonymous access enabled.
 
 <Accordion title="OpenSearch Service">
 
+Set `OPENSEARCH_MEMLOCK_*` and `OPENSEARCH_NOFILE_*` in `docker/.env`: Compose reads them before it loads service files.
+
 | Variable | Default | Description |
 |---|---|---|
 | `OPENSEARCH_DISCOVERY_TYPE` | `single-node` | Discovery type for cluster formation. |
 | `OPENSEARCH_BOOTSTRAP_MEMORY_LOCK` | `true` | Lock memory on startup to prevent swapping. |
 | `OPENSEARCH_JAVA_OPTS_MIN` | `512m` | Minimum JVM heap size. |
 | `OPENSEARCH_JAVA_OPTS_MAX` | `1024m` | Maximum JVM heap size. |
-| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | Initial admin password for the OpenSearch service. |
+| `OPENSEARCH_INITIAL_ADMIN_PASSWORD` | `Qazwsxedc!@#123` | Initial admin password for the OpenSearch service. Also supplies the default `OPENSEARCH_PASSWORD`; an explicit client override must match. |
 | `OPENSEARCH_MEMLOCK_SOFT` | `-1` | Soft memory lock limit (`-1` = unlimited). |
 | `OPENSEARCH_MEMLOCK_HARD` | `-1` | Hard memory lock limit (`-1` = unlimited). |
 | `OPENSEARCH_NOFILE_SOFT` | `65536` | Soft file descriptor limit. |
 | `OPENSEARCH_NOFILE_HARD` | `65536` | Hard file descriptor limit. |
+
+</Accordion>
+
+<Accordion title="Qdrant Service">
+
+Set these in `docker/.env`: Compose reads them before it loads service files.
+
+| Variable | Default | Description |
+|---|---|---|
+| `QDRANT_NOFILE_SOFT` | `524288` | Soft limit on the number of files the bundled Qdrant container can open. Raise it if Qdrant reports too many open files. |
+| `QDRANT_NOFILE_HARD` | `524288` | Hard limit on the number of files the bundled Qdrant container can open. The soft limit can't exceed it. |
 
 </Accordion>
 
@@ -2105,7 +2108,7 @@ Replacing keys alone leaves anonymous access enabled.
 | Variable | Default | Description |
 |---|---|---|
 | `PGVECTOR_PGUSER` | `postgres` | PostgreSQL user for the PGVector and PGVecto.RS containers. Also supplies their default client username. |
-| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | Initialization password for the PGVector and PGVecto.RS containers. Also supplies the default `PGVECTOR_PASSWORD` and `PGVECTO_RS_PASSWORD`; explicit client overrides must match.<br/><br/>Changing this value does not rotate the password in an existing database. |
+| `PGVECTOR_POSTGRES_PASSWORD` | `difyai123456` | Initialization password for the PGVector and PGVecto.RS containers. Also supplies the default `PGVECTOR_PASSWORD` and `PGVECTO_RS_PASSWORD`; explicit client overrides must match.<br/><br/>Changing it later doesn't change the password in an existing database: change it in PostgreSQL first, then update this value to match. |
 | `PGVECTOR_POSTGRES_DB` | `dify` | Database name in the PGVector and PGVecto.RS containers. Also supplies their default client database name. |
 | `PGVECTOR_PGDATA` | `/var/lib/postgresql/data/pgdata` | Data directory inside the container. |
 | `PGVECTOR_PG_BIGM_VERSION` | `1.2-20240606` | Version of the pg_bigm extension. |

@@ -23,26 +23,19 @@ Use Docker Compose 2.35.0 or later. Run `docker compose version` to check.
 
 <Steps>
     <Step title="Edit Environment Variables">
-        Edit environment variables in the relevant file on your EC2 instance:
+        Put each setting where [Set a Variable](/en/self-host/deploy/configuration/environments#set-a-variable) says it goes:
 
-        - **Essential startup values** live in `/dify/.env`. Edit them directly.
+        - Settings Compose reads first, such as `COMPOSE_PROFILES` and `VECTOR_STORE`, and the shared credentials go in `/dify/.env`.
+        - Settings your AWS deployment already sets in `docker-compose.override.yaml` stay there.
+        - Every other setting goes in a local `.env` file under `/dify/envs/`, never in a `.defaults` file.
 
-        - **Optional or provider-specific settings** have templates under `/dify/envs/`. Compose loads `.defaults` files automatically. If your local `.env` file already exists, edit it directly. Otherwise, copy the `.defaults` file to the local `.env` path named in its comments.
+        For example, to change an OpenSearch setting, copy its defaults file once, then edit the copy:
 
-            For a service template ending in `.env.example`, drop the `.example` suffix instead. The `middleware.env.example` template belongs to the separate [source-code development workflow](/en/self-host/deploy/advanced-deployments/local-source-code#start-middlewares-with-docker-compose) and is not used here.
+        ```bash
+        cd /dify
+        cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
+        ```
 
-            For example, create an OpenSearch override file if you don't already have one:
-
-            ```bash
-            cd /dify
-            cp -n envs/vectorstores/opensearch.defaults envs/vectorstores/opensearch.env
-            ```
-
-        In your copy, edit the input values and leave the **Container variable mappings** expressions unchanged.
-
-        For these OpenSearch settings, `/dify/.env` takes precedence over `opensearch.env`. Follow each template's comments for other services; some load only their service file or specific root inputs.
-
-        If your AWS deployment injects variables through `docker-compose.override.yaml`, keep those settings there. Service-level `environment:` values in Compose take precedence over env-file values.
     </Step>
     <Step title="Apply Changes">
         From `/dify`, validate the configuration and recreate the affected services. Keep your existing AWS override file in both commands; if it is absent, omit `-f docker-compose.override.yaml`.
@@ -53,6 +46,7 @@ Use Docker Compose 2.35.0 or later. Run `docker compose version` to check.
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml up -d
         ```
 
+        If a change doesn't take effect, check whether `/dify/.env` or `docker-compose.override.yaml` also sets it: both win over a local file (see [Precedence](/en/self-host/deploy/configuration/environments#precedence)).
     </Step>
 </Steps>
 
@@ -63,30 +57,29 @@ In **Settings** > **Customization**, you can remove the `Powered by Dify` brandi
 ## Upgrade
 
 <Warning>
-
-    - Choose a release from the [Release Notes](https://github.com/langgenius/dify/releases) and read its upgrade instructions before updating.
-
-    - The current Docker files require Docker Compose 2.35.0 or later. Run `docker compose version` to confirm before upgrading.
-
+    Choose a release from the [Release Notes](https://github.com/langgenius/dify/releases) and read its upgrade guide before updating.
 </Warning>
 
-Run the commands on your EC2 instance with the same Compose project name and files as your existing deployment. If you use `-p` or `COMPOSE_PROJECT_NAME`, keep its value so named volumes remain attached. If `docker-compose.override.yaml` is absent, omit its `-f` option below.
+Run every Compose command below on your EC2 instance with the deployment's existing project name and files, including any `-p` or `COMPOSE_PROJECT_NAME`. A different project name starts with new, empty named volumes. If you don't have `docker-compose.override.yaml`, leave out its `-f` option.
 
 <Steps>
     <Step title="Back Up the Deployment">
-        Back up `/dify/.env`, every local `.env` file under `/dify/envs/`, `docker-compose.override.yaml`, and other custom deployment files. Preserve your working secrets, including the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key), and volume paths.
+        1. From `/dify`, stop the deployment so the databases aren't writing while you copy their files:
 
-        Back up persistent data with your deployment's backup process. Include `/dify/volumes/` and any external databases or storage.
+            ```bash
+            docker compose -f docker-compose.yaml -f docker-compose.override.yaml stop
+            ```
 
-        If `local_sandbox` is configured, also back up its named volumes mounted at `/home/dify` and `/workspace`. From `/dify`, identify their actual Docker names, keeping your existing project and file options. This works for running or stopped containers:
+            If you can't stop it, back up the databases with their own dump tools instead.
 
-        ```bash
-        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
-        ```
+        2. Back up `/dify/.env`, every local `.env` file under `/dify/envs/`, `docker-compose.override.yaml`, and other custom deployment files. Then back up persistent data, including `/dify/volumes/` and any external databases or storage.
 
-        Back up the volumes returned by this command.
+        3. If your deployment includes `local_sandbox`, also back up its named volumes, mounted at `/home/dify` and `/workspace`. List them with:
 
-        Use consistent database backups; copying database files while they are being written is not a reliable backup.
+            ```bash
+            docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all --quiet local_sandbox)"
+            ```
+
     </Step>
     <Step title="Update to the Selected Release">
         Replace `<version>` with the release tag you chose. Copy its Docker files and templates together:
@@ -103,13 +96,17 @@ Run the commands on your EC2 instance with the same Compose project name and fil
         The exclusions preserve your local environment files, AWS override file, and runtime data. Reapply changes to any other custom deployment files from your backup.
     </Step>
     <Step title="Review Your Configuration">
-        Compare `/dify/.env.example` with your existing `/dify/.env` for required startup inputs. Compare each local service `.env` file with its matching `.defaults` or `.env.example` template.
+        Compare `/dify/.env` with `/dify/.env.example`, and each local file under `/dify/envs/` with its new template. Where they differ:
 
-        Existing `shared.env` files remain supported. Compare both `api-worker.env` and an existing `shared.env` with `envs/core-services/api-worker.defaults`.
+        - Keep the values you set on purpose, including your database and vector store settings.
+        - Take the template's value for the rest.
+        - Use the new name where the release notes rename a setting.
 
-        Add the settings you need to your existing files; copying a template over them discards your overrides. If the local sandbox token is missing, generate one with `openssl rand -hex 32`. In `/dify/.env`, set [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) to the output.
+        Don't copy a template over your file: that discards your overrides.
 
-        Keep your existing database and vector store selectors and volume paths. Changing a selector does not migrate data. For a new optional override, follow [Configuration](#configuration) to create its local file.
+        <Note>
+            If `/dify/.env` doesn't set [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) yet, generate a value with `openssl rand -hex 32` and set it there. The agent backend and its local sandbox require this shared token to start.
+        </Note>
     </Step>
     <Step title="Apply and Check the Upgrade">
 
@@ -121,6 +118,6 @@ Run the commands on your EC2 instance with the same Compose project name and fil
         docker compose -f docker-compose.yaml -f docker-compose.override.yaml ps --all
         ```
 
-        Check that long-running services are `Up` or `healthy` and that `init_permissions` finishes with `Exited (0)`. Open Dify and check the features that use your custom settings.
+        Check that long-running services are `Up` or `healthy` and that `init_permissions` finishes with `Exited (0)`. Then open Dify and check the features that use your custom settings.
     </Step>
 </Steps>
