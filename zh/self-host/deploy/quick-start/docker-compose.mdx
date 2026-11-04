@@ -1,30 +1,29 @@
 ---
 title: 使用 Docker Compose 部署 Dify
 sidebarTitle: Docker Compose
+description: 用 Docker Compose 在单台机器上运行 Dify，再完成安全加固、自定义和升级
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/quick-start/docker-compose)。
 
-默认的 Docker Compose 部署包含 PostgreSQL、Weaviate 和 Dify 运行所需的配套服务。服务默认值会自动加载，首次部署时在 `docker/.env` 中配置启动设置即可。
-
 <Tip>
-常见部署问题，详见 [常见问题解答](/zh/self-host/deploy/quick-start/faqs)。
+  默认的 Docker Compose 部署自带 PostgreSQL、Weaviate 及 Dify 运行所需的其他服务，无需事先准备数据库或向量数据库。
 </Tip>
 
 ## 部署前准备
 
 ### 硬件
 
-- CPU：至少 2 核
-- RAM：至少 4 GiB
+- **CPU**：至少 2 核
+- **内存**：至少 4 GiB
 
 ### 软件
 
-安装 Docker 和 2.35.0 或更高版本的 Docker Compose，并确保 Docker 守护进程正在运行。此外，还需用 Git 下载 Dify，用 OpenSSL 生成沙箱令牌。
+安装 Docker 和 2.35.0 或更高版本的 Docker Compose，并确保 Docker 守护进程正在运行。此外，还需用 Git 下载 Dify，用 OpenSSL 为 Agent 的本地沙箱生成令牌。
 
 | 操作系统 | 安装说明 |
 |:---|:---|
-| macOS | 在受支持的 macOS 版本上安装 [Mac 版 Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/)。为其虚拟机配置至少 2 个虚拟 CPU 和 8 GiB 内存。 |
+| macOS | 安装 [Mac 版 Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/)。为其虚拟机分配至少 2 个虚拟 CPU 和 8 GiB 内存。 |
 | Linux | 按所用发行版的说明安装 [Docker Engine](https://docs.docker.com/engine/install/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。 |
 | Windows（启用 WSL 2） | 安装 [Windows 版 Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)。将源代码和容器数据存放在 Linux 文件系统中。 |
 
@@ -36,11 +35,13 @@ docker compose version
 
 ## 部署并启动
 
-已有部署按 [升级](#升级) 步骤操作，以保留配置和数据。
+<Info>
+  已有部署改按 [升级](#升级) 步骤操作，以保留其配置和数据。
+</Info>
 
 <Steps>
   <Step title="获取 Dify 发行版">
-    从 [Dify releases](https://github.com/langgenius/dify/releases) 选择一个版本。将 `<version>` 替换为该版本的发布标签，然后克隆：
+    从 [Dify releases](https://github.com/langgenius/dify/releases) 选择一个版本并克隆，将 `<version>` 替换为该版本的标签：
 
     ```bash
     git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
@@ -49,23 +50,26 @@ docker compose version
 
   </Step>
   <Step title="配置启动设置">
-    创建本地配置文件：
+    从模板创建配置文件：
 
     ```bash
     cp .env.example .env
     ```
 
-    使用默认部署时，保留 `COMPOSE_PROFILES=weaviate,postgresql,collaboration`。
-
-    为 Agent 沙箱生成一个令牌：
+    为 Agent 的本地沙箱生成令牌：
 
     ```bash
     openssl rand -hex 32
     ```
 
-    在 `.env` 中，将 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。Agent 后端和本地沙箱都需要这个共享令牌才能启动。
+    在 `.env` 中，将 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。Agent 后端和它的本地沙箱都要有这个共享令牌才能启动。
 
-    生产环境还需在首次启动前设置其余 [部署凭据](#访问)。
+    <Tip>
+      首次启动前：
+
+      - 用于生产环境时，先设置 [安全加固](#安全加固) 中列出的凭据。
+      - 如需用其他自带的向量数据库或 MySQL 替代 Weaviate 和 PostgreSQL，在 `.env` 中设置。首次启动后再切换，已有数据不会随之迁移。各自所需的设置详见 [VECTOR_STORE](/zh/self-host/deploy/configuration/environments#vector_store) 和 [数据库配置](/zh/self-host/deploy/configuration/environments#数据库配置)。
+    </Tip>
   </Step>
   <Step title="启动并检查服务">
     在 `dify/docker` 中运行：
@@ -75,60 +79,27 @@ docker compose version
     docker compose ps --all
     ```
 
-    持续运行的服务应显示 `Up` 或 `healthy`。`init_permissions` 任务仅运行一次，用于设置存储权限，完成后应显示 `Exited (0)`。
+    持续运行的服务应显示 `Up` 或 `healthy`。`init_permissions` 任务只运行一次，负责准备存储权限，完成后显示 `Exited (0)`。
   </Step>
 </Steps>
 
 ## 访问
 
-将部署开放给公网访问前，配置 [HTTPS](/zh/self-host/deploy/configuration/environments#nginx-reverse-proxy)，并在 `docker/.env` 中替换自带的开发凭据：
+在浏览器中打开 `http://localhost/install`，创建管理员账户，然后在 `http://localhost` 登录。
 
-- 数据库和 Redis：替换 `DB_PASSWORD` 和 `REDIS_PASSWORD`。
-- 代码执行沙箱：将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥。配置方法详见 [沙箱服务](/zh/self-host/deploy/configuration/environments#沙箱服务)。
-- Weaviate：将 `WEAVIATE_API_KEY` 设为强密钥，并将其加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`。设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` 以要求身份认证。详见 [向量数据库服务配置](/zh/self-host/deploy/configuration/environments#向量数据库服务配置)。
-- 插件守护进程：为 `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY` 分别设置不同的强密钥。详见 [插件守护进程配置](/zh/self-host/deploy/configuration/environments#插件守护进程配置)。
-- Agent：替换 [`DIFY_AGENT_API_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_api_token)，并按要求的格式生成 [`DIFY_AGENT_SERVER_SECRET_KEY`](/zh/self-host/deploy/configuration/environments#dify_agent_server_secret_key)。保留启动步骤中生成的 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token)。
+远程部署时，将 `localhost` 替换为服务器的 IP 地址或域名。默认 HTTP 端口为 `80`。如果 80 端口已被占用，在 `docker/.env` 中将 [`EXPOSE_NGINX_PORT`](/zh/self-host/deploy/configuration/environments#docker-compose) 设为其他端口，并在访问地址中带上该端口。
 
-初始化全新数据库前，先设置凭据。对于现有数据库，先在服务器上更改已存储的密码，再更新 `DB_PASSWORD`。
-
-保留显式设置或已存储的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
-
-默认部署栈不会将数据库、Redis、代码执行沙箱或 Weaviate 的端口发布到宿主机。在私有网络中也应限制对这些服务的访问。
-
-在浏览器中打开 [http://localhost/install](http://localhost/install)，创建管理员账户。设置完成后，在 [http://localhost](http://localhost) 登录。
-
-远程部署时，将 `localhost` 替换为服务器的 IP 地址或域名。默认 HTTP 端口为 `80`。在 `docker/.env` 中，将 `NEXT_PUBLIC_SOCKET_URL` 设为浏览器可访问的 WebSocket 地址，例如 HTTPS 部署可使用 `wss://dify.example.com`，再运行 `docker compose up -d` 应用。端点格式见 [WebSocket 配置](/zh/self-host/deploy/configuration/environments#cors-配置)。
+<Tip>
+  如需在远程服务器上使用实时协作，在 `docker/.env` 中添加 [`NEXT_PUBLIC_SOCKET_URL`](/zh/self-host/deploy/configuration/environments#cors-配置)，值为服务器的 WebSocket 地址，然后运行 `docker compose up -d`。
+</Tip>
 
 ## 自定义
 
-将部署设置和共享凭据保存在 `docker/.env` 中。Compose 在容器启动前从此文件读取 profile、对外发布的端口、挂载路径和健康检查调度等设置。
+作用于整个部署的设置写在 `docker/.env` 中，包括 Compose profile、对外发布的端口、挂载路径、健康检查调度，以及 [安全加固](#安全加固) 中的共享凭据。
 
-服务会自动加载 `docker/envs/` 下自带的 `.defaults` 文件。如需修改服务设置，按模板注释中指定的路径创建本地 `.env` 文件；文件已存在时，直接编辑。如需通过 `.env.example` 模板配置提供商或安全设置，复制时去掉 `.example` 后缀。
+其他设置按服务分开存放。大多数服务会加载 `docker/envs/` 下自带的 `.defaults` 文件。不要改动这些文件，把修改写进注释里指明的本地 `.env` 文件。API、Worker 和定时任务共用的设置写在 `envs/core-services/api-worker.env` 中。
 
-`docker/envs/middleware.env.example` 模板仅用于 [源码开发](/zh/self-host/deploy/advanced-deployments/local-source-code#使用-docker-compose-启动中间件)。在该独立流程中，将它复制到 `docker/middleware.env`。
-
-如需修改 API、Worker 和定时任务共用的设置，将 `envs/core-services/api-worker.defaults` 复制到 `envs/core-services/api-worker.env`。只取消所需设置的注释，并保留 **Container variable mappings** 下的表达式不变。文件优先级、共享凭据和各项设置的说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments#配置文件)。
-
-升级时，为已有知识库仍在使用的每个向量数据库保留连接设置，并保持相应服务运行。修改 `VECTOR_STORE` 会选择新索引默认使用的后端，不会迁移现有数据。
-
-要使用自带的 Qdrant 和 PostgreSQL 启动全新部署，在 `docker/.env` 中同时设置：
-
-```dotenv
-VECTOR_STORE=qdrant
-COMPOSE_PROFILES=qdrant,postgresql,collaboration
-```
-
-如果已有知识库使用自带的 Weaviate，保留其 profile：`COMPOSE_PROFILES=weaviate,qdrant,postgresql,collaboration`。在 `VECTOR_STORE=qdrant` 时，Weaviate 的连接默认值仍然可用；保留已有的 Weaviate 覆盖设置。
-
-在 `dify/docker` 中运行 `docker compose up -d`，使配置生效。Qdrant 的连接默认值会自动加载，无需创建提供商配置文件。选择自带提供商时，两个设置都要更新：`VECTOR_STORE` 不会更新 `COMPOSE_PROFILES`。
-
-使用自带的 MySQL 时，按 [数据库配置](/zh/self-host/deploy/configuration/environments#数据库配置) 设置 `DB_TYPE`、`COMPOSE_PROFILES` 和连接字段。
-
-如需自定义 Qdrant，先检查 `envs/vectorstores/qdrant.env` 是否已存在。如果不存在，复制 `envs/vectorstores/qdrant.defaults` 创建该文件。编辑后再次运行 `docker compose up -d`。
-
-根目录 `docker/.env` 会覆盖 `QDRANT_API_KEY` 等输入值。模板未映射的 Qdrant 原生变量应放在 `qdrant.env` 中。其他提供商及其默认值详见 [向量数据库配置](/zh/self-host/deploy/configuration/environments#vector_store)。
-
-例如，要将 Nginx 的请求体大小上限设为 `200M`，在 `dify/docker` 中执行以下操作：
+例如，要将 Nginx 的请求体大小上限提高到 `200M`，在 `dify/docker` 中执行以下步骤：
 
 <Steps>
   <Step title="设置覆盖值">
@@ -145,7 +116,7 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
     ```
 
   </Step>
-  <Step title="应用配置">
+  <Step title="应用修改">
     验证配置，然后重建受影响的容器：
 
     ```bash
@@ -153,7 +124,7 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
     docker compose up -d
     ```
 
-    `docker compose restart` 会保留现有容器的环境变量。修改环境变量后，使用 `up -d` 应用。
+    这里要用 `up -d`，不能用 `docker compose restart`：`restart` 会沿用容器原有的环境变量。
   </Step>
   <Step title="检查生效值">
     查看 Nginx 当前生效的配置：
@@ -162,63 +133,85 @@ COMPOSE_PROFILES=qdrant,postgresql,collaboration
     docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
     ```
 
-    输出应包含 `client_max_body_size 200M;`。如果显示其他值，先检查 `docker/.env` 中是否有覆盖值，再检查 Shell 变量和 Compose 中显式设置的 `environment` 条目。这些值的解析规则，详见 [优先级](/zh/self-host/deploy/configuration/environments#优先级)。
+    输出应包含 `client_max_body_size 200M;`。如果显示的是其他值，先检查 `docker/.env` 中是否设置了覆盖值；值还可能来自其他位置，详见 [优先级](/zh/self-host/deploy/configuration/environments#优先级)。
   </Step>
 </Steps>
 
+全部变量及完整的优先级规则，详见 [环境变量](/zh/self-host/deploy/configuration/environments#配置文件)。
+
+## 安全加固
+
+开放给他人访问之前，先配置 [HTTPS](/zh/self-host/deploy/configuration/environments#nginx-reverse-proxy)，并替换 `docker/.env` 中自带的开发凭据：
+
+- **数据库和 Redis**：`DB_PASSWORD` 和 `REDIS_PASSWORD`。
+- **代码执行沙箱**：将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥。详见 [沙箱服务](/zh/self-host/deploy/configuration/environments#沙箱服务)。
+- **Weaviate**：将 `WEAVIATE_API_KEY` 设为强密钥，并把它加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`；再设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false`，强制要求身份认证。详见 [向量数据库服务配置](/zh/self-host/deploy/configuration/environments#向量数据库服务配置)。
+- **插件守护进程**：为 `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY` 分别设置不同的强密钥。详见 [插件守护进程配置](/zh/self-host/deploy/configuration/environments#插件守护进程配置)。
+- **Agent**：替换 [`DIFY_AGENT_API_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_api_token)，并按要求的格式生成 [`DIFY_AGENT_SERVER_SECRET_KEY`](/zh/self-host/deploy/configuration/environments#dify_agent_server_secret_key)。保留配置启动设置时生成的 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token)。
+
+如果 Dify 已经在运行，执行 `docker compose up -d` 让新值生效。数据库密码例外：数据库初始化后，要先在数据库服务器上修改密码，再相应更新 `DB_PASSWORD`。
+
+<Info>
+  `SECRET_KEY` 保持原样即可：如果没有设置，Dify 会在首次启动时生成一个随机密钥，并与数据一起保存。之后再设置或修改它，用旧密钥签名的令牌和文件链接都会失效。它影响的全部内容详见 [`SECRET_KEY`](/zh/self-host/deploy/configuration/environments#secret_key)。
+</Info>
+
+默认部署栈不会将数据库、Redis、代码执行沙箱或 Weaviate 的端口发布到宿主机。在私有网络中，也应限制对这些服务的访问。
+
 ## 升级
 
-从 [Dify releases](https://github.com/langgenius/dify/releases) 选择目标版本，更新前先阅读该版本的升级说明。
+在 [Dify releases](https://github.com/langgenius/dify/releases) 选择目标版本，并先阅读该版本的升级说明。
 
-沿用现有部署的 Compose 项目名称和文件。保留 `-p` 选项或 `COMPOSE_PROJECT_NAME` 的原值，以继续挂载原有命名卷。
+下面的每条 Compose 命令都要沿用该部署现有的项目名称和 Compose 文件（包括所用的 `-p`、`-f` 选项或 `COMPOSE_PROJECT_NAME`），这样原有的命名卷才会继续挂载。
 
 <Steps>
   <Step title="备份部署">
-    按现有备份流程保存 `docker/.env`、本地服务 `.env` 文件、自定义 Compose 文件和持久化数据。保留当前可用的密钥和数据卷路径，包括显式设置或保存在存储中的 [SECRET_KEY](/zh/self-host/deploy/configuration/environments#secret_key)。
+    1. 在 `dify/docker` 中停止部署，避免复制数据库文件时数据库仍在写入：
 
-    备份需包含 `docker/volumes/`。如果部署包含 `local_sandbox`，还需备份其挂载到 `/home/dify` 和 `/workspace` 的命名卷。
+        ```bash
+        docker compose stop
+        ```
 
-    在 `dify/docker` 中查询沙箱的实际卷名。容器无论正在运行还是已停止，此命令都适用。使用与创建容器时相同的 Compose 项目和文件选项：
+        如果无法停止部署，改用数据库自带的转储工具备份。
 
-    ```bash
-    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
-    ```
+    2. 备份 `docker/.env`、本地服务 `.env` 文件、自定义 Compose 文件和持久化数据。持久化数据包括 `docker/volumes/`，以及所用的外部数据库和存储。
 
-    备份命令返回的数据卷。确保数据库备份具有一致性；数据库正在写入时，直接复制文件无法得到可靠的备份。如果配置了外部数据库和存储，也需一并备份。
+    3. 如果部署包含 `local_sandbox`，还需备份它挂载到 `/home/dify` 和 `/workspace` 的命名卷。卷名带有 Compose 项目前缀，可用以下命令列出：
 
-    在 `dify/docker` 中保存 `docker compose config` 的输出，用于更新后对比。输出包含密钥，保存和比较时均应限制访问。
+        ```bash
+        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+        ```
+
+    4. 保存 `docker compose config` 的输出，用于更新后对比。输出包含密钥，需妥善保管。
   </Step>
-  <Step title="更新到所选版本">
-    如果修改过 Git 跟踪的文件，先保存这些修改，再切换版本。本地 `.env` 文件保留在原路径。
-
-    在仓库根目录获取发布标签，并切换到所选版本：
+  <Step title="更新到新版本">
+    Git 不跟踪本地 `.env` 文件和 `docker/volumes/` 中的数据，因此检出新版本后，它们仍保留在原处。如果修改过 `docker-compose.yaml` 等 Git 跟踪的文件，先暂存这些修改。在仓库根目录运行：
 
     ```bash
+    git stash
     git fetch --tags origin
     git checkout <version>
     ```
 
-    将自定义 Compose 设置重新应用到该版本的文件中。Compose 文件和 `envs/` 模板需来自同一版本。
+    然后将修改重新应用到新版本的文件中（例如运行 `git stash pop`），如有冲突，逐一解决。
   </Step>
   <Step title="检查配置">
-    对比 `docker/.env.example` 与现有的 `docker/.env`，检查必需的输入。将每个本地服务文件与对应的 `.defaults` 或 `.env.example` 模板比较，`api-worker.env` 或现有的 `shared.env` 则与 `api-worker.defaults` 比较。
+    对比 `docker/.env.example` 与现有的 `docker/.env`，并将每个本地服务文件与对应的 `.defaults` 或 `.env.example` 模板对比。
 
-    在现有文件中更新所需设置，直接用模板覆盖文件会丢失自定义配置。使用当前模板中的输入名称，并保留容器映射表达式不变。
+    在现有文件中更新所需的设置；直接用模板覆盖这些文件，会丢掉你设置的覆盖值。如果某项设置在模板中改了名，改用新名称。**Container variable mappings** 下的各行保持不变。
 
-    保留现有数据库，以及知识库仍在使用的每个向量数据库，包括其连接设置和服务 profile。修改其选择变量不会迁移数据。
+    保留现有数据库，以及知识库仍在使用的每个向量数据库，连同它们的连接设置和 Compose profile。修改 `DB_TYPE` 或 `VECTOR_STORE` 不会迁移数据。
 
-    在 `dify/docker` 中，将 `docker compose config` 解析后的输出与已保存的配置比较，两份配置都应限制访问。检查凭据、数据卷路径、profile 和自定义设置的变化。
+    最后，将新的 `docker compose config` 输出与之前保存的副本对比，检查凭据、数据卷路径、profile 和你自定义的设置。
   </Step>
   <Step title="应用并检查升级结果">
     在 `dify/docker` 中运行：
 
     ```bash
-    docker compose config --quiet
     docker compose pull
     docker compose up -d
     docker compose ps --all
     ```
 
-    检查持续运行的服务是否为 `Up` 或 `healthy`，以及 `init_permissions` 是否以 `Exited (0)` 结束。打开 Dify，检查使用了自定义设置的功能。Nginx 配置的检查方法见 [自定义](#自定义) 中的生效值检查步骤。
+    持续运行的服务应显示 `Up` 或 `healthy`，`init_permissions` 应显示 `Exited (0)`。然后打开 Dify，试用依赖自定义设置的功能。
   </Step>
 </Steps>

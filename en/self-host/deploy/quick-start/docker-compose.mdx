@@ -1,29 +1,28 @@
 ---
 title: Deploy Dify with Docker Compose
 sidebarTitle: Docker Compose
+description: Run Dify on one machine with Docker Compose, then secure, customize, and upgrade it
 ---
 
-The default Docker Compose deployment includes PostgreSQL, Weaviate, and the supporting services Dify needs to run. Service defaults load automatically; initial setup uses the startup settings in `docker/.env`.
-
 <Tip>
-For common deployment questions, see [FAQs](/en/self-host/deploy/quick-start/faqs).
+  The default Docker Compose deployment runs Dify with bundled PostgreSQL, Weaviate, and the other services it needs, so you don't set up a database or vector store first.
 </Tip>
 
 ## Before Deployment
 
 ### Hardware
 
-- CPU: at least 2 cores
-- RAM: at least 4 GiB
+- **CPU**: at least 2 cores
+- **RAM**: at least 4 GiB
 
 ### Software
 
-Install Docker with Docker Compose 2.35.0 or later, and make sure the Docker daemon is running. You also need Git to download Dify and OpenSSL to generate the sandbox token.
+Install Docker with Docker Compose 2.35.0 or later, and make sure the Docker daemon is running. You also need Git to download Dify, and OpenSSL to generate a token for the agent's local sandbox.
 
 | Operating System | Installation |
 |:---|:---|
-| macOS | Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) on a supported macOS version. Configure its virtual machine with at least 2 virtual CPUs and 8 GiB of memory. |
-| Linux | Follow the instructions for your distribution to install [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/). |
+| macOS | Install [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/). Configure its virtual machine with at least 2 virtual CPUs and 8 GiB of memory. |
+| Linux | Install [Docker Engine](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/) for your distribution. |
 | Windows with WSL 2 | Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/). Store the source code and container data in the Linux file system. |
 
 Check the Compose version before starting:
@@ -34,11 +33,13 @@ docker compose version
 
 ## Deploy and Start
 
-For an existing deployment, follow [Upgrade](#upgrade) to preserve its configuration and data.
+<Info>
+  For an existing deployment, follow [Upgrade](#upgrade) instead to keep its configuration and data.
+</Info>
 
 <Steps>
   <Step title="Get a Dify Release">
-    Choose a version from [Dify releases](https://github.com/langgenius/dify/releases). Replace `<version>` with its release tag and clone it:
+    Choose a version from [Dify releases](https://github.com/langgenius/dify/releases) and clone it, replacing `<version>` with its tag:
 
     ```bash
     git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
@@ -47,15 +48,13 @@ For an existing deployment, follow [Upgrade](#upgrade) to preserve its configura
 
   </Step>
   <Step title="Configure Startup Settings">
-    Create the local configuration file:
+    Create the configuration file from its template:
 
     ```bash
     cp .env.example .env
     ```
 
-    Keep `COMPOSE_PROFILES=weaviate,postgresql,collaboration` for the default deployment.
-
-    Generate a token for the agent sandbox:
+    Generate a token for the agent's local sandbox:
 
     ```bash
     openssl rand -hex 32
@@ -63,7 +62,12 @@ For an existing deployment, follow [Upgrade](#upgrade) to preserve its configura
 
     In `.env`, set `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` to the output. The agent backend and its local sandbox require this shared token to start.
 
-    For production, set the remaining [deployment credentials](#access) before the first start.
+    <Tip>
+      Before the first start:
+
+      - For production, set the credentials in [Secure the Deployment](#secure-the-deployment).
+      - To use another bundled vector store or MySQL instead of Weaviate and PostgreSQL, set it in `.env`. Switching after the first start doesn't move existing data. See [VECTOR_STORE](/en/self-host/deploy/configuration/environments#vector_store) and [Database Configuration](/en/self-host/deploy/configuration/environments#database-configuration) for the settings each needs.
+    </Tip>
   </Step>
   <Step title="Start and Check the Services">
     From `dify/docker`, run:
@@ -73,60 +77,27 @@ For an existing deployment, follow [Upgrade](#upgrade) to preserve its configura
     docker compose ps --all
     ```
 
-    The long-running services should show `Up` or `healthy`. The `init_permissions` task runs once to prepare storage permissions and should show `Exited (0)` after it finishes.
+    Long-running services should show `Up` or `healthy`. The `init_permissions` task runs once to prepare storage permissions and shows `Exited (0)` when it's done.
   </Step>
 </Steps>
 
 ## Access
 
-Before exposing the deployment publicly, configure [HTTPS](/en/self-host/deploy/configuration/environments#nginx-reverse-proxy) and replace the bundled development credentials in `docker/.env`:
+Open `http://localhost/install` in your browser and create the administrator account, then sign in at `http://localhost`.
 
-- Database and Redis: `DB_PASSWORD` and `REDIS_PASSWORD`.
-- Code sandbox: set `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY` to the same strong secret. See [Sandbox Service](/en/self-host/deploy/configuration/environments#sandbox-service) for configuration details.
-- Weaviate: set `WEAVIATE_API_KEY` to a strong secret and include it in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`. Set `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` to require authentication. See [Vector Database Service Configuration](/en/self-host/deploy/configuration/environments#vector-database-service-configuration) for details.
-- Plugin daemon: use separate strong values for `PLUGIN_DAEMON_KEY` and `PLUGIN_DIFY_INNER_API_KEY`. See [Plugin Daemon Configuration](/en/self-host/deploy/configuration/environments#plugin-daemon-configuration) for details.
-- Agent: replace [`DIFY_AGENT_API_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_api_token) and generate [`DIFY_AGENT_SERVER_SECRET_KEY`](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key) in its required format. Keep the generated [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) from the startup step.
+For a remote deployment, replace `localhost` with the server's IP address or domain. The default HTTP port is `80`. If port 80 is in use, set [`EXPOSE_NGINX_PORT`](/en/self-host/deploy/configuration/environments#docker-compose) in `docker/.env` to another port, and add that port to the address.
 
-Set credentials before initializing a fresh database. For an existing database, rotate its stored password on the server before updating `DB_PASSWORD`.
-
-Preserve the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
-
-The default stack publishes no host ports for the database, Redis, Code sandbox, or Weaviate. Restrict access to them on the private network too.
-
-Open [http://localhost/install](http://localhost/install) in your browser and create the administrator account. After setup, sign in at [http://localhost](http://localhost).
-
-For a remote deployment, replace `localhost` with the server's IP address or domain. The default HTTP port is `80`. Set `NEXT_PUBLIC_SOCKET_URL` in `docker/.env` to the browser-facing WebSocket address, such as `wss://dify.example.com` for HTTPS, and apply it with `docker compose up -d`. For the endpoint format, see [WebSocket Configuration](/en/self-host/deploy/configuration/environments#cors-configuration).
+<Tip>
+  For real-time collaboration on a remote server, add [`NEXT_PUBLIC_SOCKET_URL`](/en/self-host/deploy/configuration/environments#cors-configuration) to `docker/.env` with the server's WebSocket address, then run `docker compose up -d`.
+</Tip>
 
 ## Customize
 
-Keep deployment settings and shared credentials in `docker/.env`. Compose reads settings such as profiles, published ports, mount paths, and health-check scheduling from this file before containers start.
+Put deployment-wide settings in `docker/.env`: Compose profiles, published ports, mount paths, health-check scheduling, and the shared credentials in [Secure the Deployment](#secure-the-deployment).
 
-Services load their bundled `.defaults` files under `docker/envs/` automatically. To change a service setting, create the local `.env` file named in its template's comments, or edit the existing local file. For optional provider and security `.env.example` templates, remove `.example` when copying.
+Other settings belong to a service. Most services load their bundled `.defaults` files under `docker/envs/`; leave those as they are and put your changes in the local `.env` file named in their comments. Settings shared by the API, workers, and scheduled tasks go in `envs/core-services/api-worker.env`.
 
-The `docker/envs/middleware.env.example` template is only for [source-code development](/en/self-host/deploy/advanced-deployments/local-source-code#start-middlewares-with-docker-compose). Copy it to `docker/middleware.env` for that separate workflow.
-
-For settings shared by the API, workers, and scheduled tasks, copy `envs/core-services/api-worker.defaults` to `envs/core-services/api-worker.env`. Uncomment only the settings you need, and leave the expressions under **Container variable mappings** unchanged. See [Environment Variables](/en/self-host/deploy/configuration/environments#configuration-files) for file precedence, shared credentials, and individual settings.
-
-When upgrading, preserve the connection settings and running services for every vector store still used by existing knowledge bases. Changing `VECTOR_STORE` selects the default for new indexes; it does not migrate existing data.
-
-To start a new deployment with bundled Qdrant and PostgreSQL, set both values in `docker/.env`:
-
-```dotenv
-VECTOR_STORE=qdrant
-COMPOSE_PROFILES=qdrant,postgresql,collaboration
-```
-
-If existing knowledge bases use bundled Weaviate, retain its profile: `COMPOSE_PROFILES=weaviate,qdrant,postgresql,collaboration`. Its connection defaults remain available when `VECTOR_STORE=qdrant`; keep any existing Weaviate overrides.
-
-Apply the selection with `docker compose up -d` from `dify/docker`. Qdrant's connection defaults load automatically; no provider file is needed. Update both settings when choosing a bundled provider: `VECTOR_STORE` does not update `COMPOSE_PROFILES`.
-
-For bundled MySQL, follow [Database Configuration](/en/self-host/deploy/configuration/environments#database-configuration) to set `DB_TYPE`, `COMPOSE_PROFILES`, and the connection fields.
-
-To customize Qdrant, copy `envs/vectorstores/qdrant.defaults` to `envs/vectorstores/qdrant.env` if that file doesn't exist, edit the copy, then run `docker compose up -d` again.
-
-Root `docker/.env` overrides inputs such as `QDRANT_API_KEY`. Put native Qdrant variables that the template does not map in `qdrant.env`. See [Vector Database Configuration](/en/self-host/deploy/configuration/environments#vector_store) for other providers and their defaults.
-
-For example, to set Nginx's maximum request body size to `200M`, run these commands from `dify/docker`:
+For example, to raise Nginx's maximum request body size to `200M`, run these from `dify/docker`:
 
 <Steps>
   <Step title="Set the Override">
@@ -143,15 +114,15 @@ For example, to set Nginx's maximum request body size to `200M`, run these comma
     ```
 
   </Step>
-  <Step title="Apply the Configuration">
-    Validate the configuration, then recreate the affected containers:
+  <Step title="Apply the Change">
+    Validate the configuration and recreate the affected containers:
 
     ```bash
     docker compose config --quiet
     docker compose up -d
     ```
 
-    `docker compose restart` keeps the existing container environment. Use `up -d` when changing environment variables.
+    Use `up -d`, not `docker compose restart`: `restart` keeps the containers' old environment.
   </Step>
   <Step title="Check the Active Value">
     Read Nginx's active configuration:
@@ -160,63 +131,85 @@ For example, to set Nginx's maximum request body size to `200M`, run these comma
     docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
     ```
 
-    The output should include `client_max_body_size 200M;`. If it shows another value, check `docker/.env` for an override, then check shell variables and explicit Compose `environment` entries. See [Precedence](/en/self-host/deploy/configuration/environments#precedence) for how these values are resolved.
+    The output should include `client_max_body_size 200M;`. If it shows another value, check `docker/.env` for an override, then see [Precedence](/en/self-host/deploy/configuration/environments#precedence) for the other places a value can come from.
   </Step>
 </Steps>
 
+For every variable and the full precedence rules, see [Environment Variables](/en/self-host/deploy/configuration/environments#configuration-files).
+
+## Secure the Deployment
+
+Before others can reach the deployment, configure [HTTPS](/en/self-host/deploy/configuration/environments#nginx-reverse-proxy) and replace the bundled development credentials in `docker/.env`:
+
+- **Database and Redis**: `DB_PASSWORD` and `REDIS_PASSWORD`.
+- **Code sandbox**: Set `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY` to the same strong secret. See [Sandbox Service](/en/self-host/deploy/configuration/environments#sandbox-service) for details.
+- **Weaviate**: Set `WEAVIATE_API_KEY` to a strong secret that's also listed in `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`, and set `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` to require authentication. See [Vector Database Service Configuration](/en/self-host/deploy/configuration/environments#vector-database-service-configuration) for details.
+- **Plugin daemon**: Set `PLUGIN_DAEMON_KEY` and `PLUGIN_DIFY_INNER_API_KEY` to separate strong values. See [Plugin Daemon Configuration](/en/self-host/deploy/configuration/environments#plugin-daemon-configuration) for details.
+- **Agent**: Replace [`DIFY_AGENT_API_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_api_token) and generate [`DIFY_AGENT_SERVER_SECRET_KEY`](/en/self-host/deploy/configuration/environments#dify_agent_server_secret_key) in its required format. Keep the [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/en/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) you generated at startup.
+
+If Dify is already running, apply the new values with `docker compose up -d`. The database password is the exception: once the database is initialized, change the password on the database server first, then update `DB_PASSWORD` to match.
+
+<Info>
+  Leave `SECRET_KEY` as it is: unless you set one, Dify generates a random key on first start and stores it with its data. Setting or changing it later stops tokens and file links signed with the old key from working; see [`SECRET_KEY`](/en/self-host/deploy/configuration/environments#secret_key) for everything it affects.
+</Info>
+
+The default stack publishes no host ports for the database, Redis, Code sandbox, or Weaviate. Restrict access to them on the private network too.
+
 ## Upgrade
 
-Choose the target version from [Dify releases](https://github.com/langgenius/dify/releases) and read its upgrade instructions before updating.
+Choose the target release on [Dify releases](https://github.com/langgenius/dify/releases) and read its upgrade guide first.
 
-Keep the Compose project name and files used by the existing deployment. Preserve any `-p` option or `COMPOSE_PROJECT_NAME` value so named volumes remain attached.
+Run every Compose command below with the deployment's existing project name and files, including any `-p`, `-f`, or `COMPOSE_PROJECT_NAME`, so its named volumes stay attached.
 
 <Steps>
   <Step title="Back Up the Deployment">
-    Use your deployment's backup process to save `docker/.env`, local service `.env` files, custom Compose files, and persistent data. Preserve your working secrets and volume paths, including the explicit or stored [SECRET_KEY](/en/self-host/deploy/configuration/environments#secret_key).
+    1. From `dify/docker`, stop the deployment so the databases aren't writing while you copy their files:
 
-    Include `docker/volumes/`. If your deployment includes `local_sandbox`, also back up its named volumes mounted at `/home/dify` and `/workspace`.
+        ```bash
+        docker compose stop
+        ```
 
-    From `dify/docker`, identify the sandbox's actual volume names. This works for running or stopped containers. Use the same Compose project and file options you used to create it:
+        If you can't stop it, back up the databases with their own dump tools instead.
 
-    ```bash
-    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
-    ```
+    2. Back up `docker/.env`, your local service `.env` files, any custom Compose files, and persistent data, including `docker/volumes/` and any external databases and storage.
 
-    Back up the volumes returned by this command. Use consistent database backups; a file copy while databases are writing is not a reliable backup. Include external databases and storage if you configured them.
+    3. If your deployment includes `local_sandbox`, also back up its named volumes, mounted at `/home/dify` and `/workspace`. Their names carry the Compose project prefix; list them with:
 
-    From `dify/docker`, save the output of `docker compose config` for comparison after the update. It contains secrets, so store and compare it privately.
+        ```bash
+        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+        ```
+
+    4. Save the output of `docker compose config` to compare after the update. It contains secrets, so keep it private.
   </Step>
-  <Step title="Update to the Selected Release">
-    Save any edits to tracked files before checkout. Keep your local `.env` files at their existing paths.
-
-    From the repository root, fetch the release tags and check out the version you chose:
+  <Step title="Update to the New Release">
+    Git doesn't track your local `.env` files or the data in `docker/volumes/`, so checking out a release leaves them in place. If you edited tracked files such as `docker-compose.yaml`, stash those edits first. From the repository root:
 
     ```bash
+    git stash
     git fetch --tags origin
     git checkout <version>
     ```
 
-    Reapply your custom Compose settings to the release's files. Use the Compose files and `envs/` templates from the same release.
+    Then reapply your edits to the new release's files, for example with `git stash pop`, and resolve any conflicts.
   </Step>
   <Step title="Review Your Configuration">
-    Compare `docker/.env.example` with your existing `docker/.env` for required inputs. Compare each local service file with its `.defaults` or `.env.example` template, including `api-worker.env` or an existing `shared.env` with `api-worker.defaults`.
+    Compare `docker/.env.example` with your `docker/.env`, and each local service file with its `.defaults` or `.env.example` template.
 
-    Update your existing files with the settings you need; copying a template over them discards your overrides. Use the input names in the current templates and leave container mapping expressions unchanged.
+    Update your existing files with the settings you need; copying a template over them discards your overrides. If a setting has a new name in the template, use the new name. Leave the lines under **Container variable mappings** unchanged.
 
-    Keep the existing database and every vector store still used by your knowledge bases, including their connection settings and service profiles. Changing their selectors does not migrate data.
+    Keep the existing database and every vector store your knowledge bases still use, with their connection settings and Compose profiles. Changing `DB_TYPE` or `VECTOR_STORE` doesn't migrate data.
 
-    From `dify/docker`, compare the resolved output of `docker compose config` with your saved configuration, keeping both private. Review changes to credentials, volume paths, profiles, and the settings you customized.
+    Finally, compare the new `docker compose config` output with the copy you saved: check credentials, volume paths, profiles, and the settings you customized.
   </Step>
   <Step title="Apply and Check the Upgrade">
     From `dify/docker`, run:
 
     ```bash
-    docker compose config --quiet
     docker compose pull
     docker compose up -d
     docker compose ps --all
     ```
 
-    Check that the long-running services are `Up` or `healthy` and that `init_permissions` finishes with `Exited (0)`. Open Dify and check the features that use your custom settings. For an Nginx change, use the active-value check in [Customize](#customize).
+    Long-running services should show `Up` or `healthy`, and `init_permissions` should show `Exited (0)`. Then open Dify and try the features that use your custom settings.
   </Step>
 </Steps>

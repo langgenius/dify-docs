@@ -1,31 +1,30 @@
 ---
 title: Docker Compose で Dify をデプロイする
 sidebarTitle: Docker Compose
+description: Docker Compose で 1 台のマシンに Dify をデプロイし、セキュリティ強化、カスタマイズ、アップグレードを行う手順
 ---
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/quick-start/docker-compose) を参照してください。
 
-デフォルトの Docker Compose 構成には、PostgreSQL、Weaviate と、Dify の稼働に必要なサービスが含まれます。サービスのデフォルト設定は自動で読み込まれます。初期設定には `docker/.env` の起動設定を使用します。
-
 <Tip>
-一般的なデプロイの問題については [FAQ](/ja/self-host/deploy/quick-start/faqs) を参照してください。
+  デフォルトの Docker Compose 構成には、PostgreSQL、Weaviate など Dify の稼働に必要なサービスが同梱されています。データベースやベクトルストアを事前に用意する必要はありません。
 </Tip>
 
 ## デプロイ前の準備
 
 ### ハードウェア
 
-- CPU：2 コア以上
-- RAM：4 GiB 以上
+- **CPU**：2 コア以上
+- **RAM**：4 GiB 以上
 
 ### ソフトウェア
 
-Docker と Docker Compose 2.35.0 以降をインストールし、Docker デーモンを起動してください。Dify のダウンロードには Git、サンドボックストークンの生成には OpenSSL も必要です。
+Docker と Docker Compose 2.35.0 以降をインストールし、Docker デーモンを起動してください。Dify のダウンロードには Git、Agent のローカルサンドボックス用トークンの生成には OpenSSL も必要です。
 
 | オペレーティングシステム | インストール |
 |:---|:---|
-| macOS | 対応する macOS バージョンに [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) をインストールします。仮想マシンに 2 つ以上の仮想 CPU と 8 GiB 以上のメモリを割り当ててください。 |
-| Linux | ディストリビューションの手順に従い、[Docker Engine](https://docs.docker.com/engine/install/) と [Docker Compose](https://docs.docker.com/compose/install/) をインストールします。 |
+| macOS | [Docker Desktop for Mac](https://docs.docker.com/desktop/setup/install/mac-install/) をインストールします。仮想マシンに 2 つ以上の仮想 CPU と 8 GiB 以上のメモリを割り当ててください。 |
+| Linux | お使いのディストリビューション向けの [Docker Engine](https://docs.docker.com/engine/install/) と [Docker Compose](https://docs.docker.com/compose/install/) をインストールします。 |
 | Windows（WSL 2） | [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/) をインストールします。ソースコードとコンテナのデータは Linux ファイルシステムに保存してください。 |
 
 開始前に Compose のバージョンを確認します：
@@ -36,11 +35,13 @@ docker compose version
 
 ## デプロイと起動
 
-既存のデプロイでは、設定とデータを保持するため [アップグレード](#アップグレード) の手順に従ってください。
+<Info>
+  既存のデプロイでは、設定とデータを維持するため、この手順ではなく [アップグレード](#アップグレード) に従ってください。
+</Info>
 
 <Steps>
   <Step title="Dify リリースの取得">
-    [Dify のリリース](https://github.com/langgenius/dify/releases) からバージョンを選びます。`<version>` をリリースタグに置き換え、クローンしてください：
+    [Dify のリリース](https://github.com/langgenius/dify/releases) からバージョンを選び、`<version>` をそのタグに置き換えてクローンします：
 
     ```bash
     git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
@@ -49,15 +50,13 @@ docker compose version
 
   </Step>
   <Step title="起動設定">
-    ローカルの設定ファイルを作成します：
+    テンプレートから設定ファイルを作成します：
 
     ```bash
     cp .env.example .env
     ```
 
-    デフォルト構成では、`COMPOSE_PROFILES=weaviate,postgresql,collaboration` をそのまま使用します。
-
-    Agent サンドボックス用のトークンを生成します：
+    Agent のローカルサンドボックス用のトークンを生成します：
 
     ```bash
     openssl rand -hex 32
@@ -65,7 +64,12 @@ docker compose version
 
     `.env` の `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` に、出力された値を設定します。Agent バックエンドとローカルサンドボックスの起動には、この共有トークンが必要です。
 
-    本番環境では、初回起動の前に残りの [デプロイ用の認証情報](#アクセス) を設定してください。
+    <Tip>
+      初回起動の前に、必要に応じて次の設定を行います：
+
+      - 本番環境では、[デプロイのセキュリティ強化](#デプロイのセキュリティ強化) にある認証情報を設定します。
+      - Weaviate と PostgreSQL の代わりに別の同梱ベクトルストアや MySQL を使う場合は、`.env` で設定します。初回起動後に切り替えても、既存のデータは移行されません。それぞれに必要な設定は、[VECTOR_STORE](/ja/self-host/deploy/configuration/environments#vector_store) と [データベース設定](/ja/self-host/deploy/configuration/environments#データベース設定) を参照してください。
+    </Tip>
   </Step>
   <Step title="サービスの起動と確認">
     `dify/docker` で次のコマンドを実行します：
@@ -75,60 +79,27 @@ docker compose version
     docker compose ps --all
     ```
 
-    常駐サービスに `Up` または `healthy` と表示されていれば正常です。`init_permissions` はストレージの権限を設定するために 1 回だけ実行されます。完了後に `Exited (0)` と表示されることを確認してください。
+    常駐サービスに `Up` または `healthy` と表示されていれば正常です。`init_permissions` タスクはストレージの権限を準備するために 1 回だけ実行され、完了すると `Exited (0)` と表示されます。
   </Step>
 </Steps>
 
 ## アクセス
 
-インターネットに公開する前に、[HTTPS](/ja/self-host/deploy/configuration/environments#nginx-reverse-proxy) を設定してください。`docker/.env` で、同梱の開発用認証情報を置き換えます：
+ブラウザで `http://localhost/install` を開いて管理者アカウントを作成し、`http://localhost` でサインインします。
 
-- データベースと Redis：`DB_PASSWORD` と `REDIS_PASSWORD` を置き換えます。
-- コード実行サンドボックス：`SANDBOX_API_KEY` と `CODE_EXECUTION_API_KEY` に、同じ推測されにくいシークレットを設定します。設定方法は [サンドボックスサービス](/ja/self-host/deploy/configuration/environments#サンドボックスサービス) を参照してください。
-- Weaviate：`WEAVIATE_API_KEY` に推測されにくいシークレットを設定します。その値を `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` にも含めます。`WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` を設定し、認証を必須にしてください。詳しくは [ベクトルデータベースサービス設定](/ja/self-host/deploy/configuration/environments#ベクトルデータベースサービス設定) を参照してください。
-- プラグインデーモン：`PLUGIN_DAEMON_KEY` と `PLUGIN_DIFY_INNER_API_KEY` に、別々の推測されにくい値を設定します。詳しくは [プラグインデーモン設定](/ja/self-host/deploy/configuration/environments#プラグインデーモン設定) を参照してください。
-- Agent：[`DIFY_AGENT_API_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_api_token) を置き換えます。[`DIFY_AGENT_SERVER_SECRET_KEY`](/ja/self-host/deploy/configuration/environments#dify_agent_server_secret_key) は指定の形式で生成してください。起動手順で生成した [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) はそのまま保持します。
+リモート環境では、`localhost` をサーバーの IP アドレスまたはドメインに置き換えてください。デフォルトの HTTP ポートは `80` です。ポート 80 が使用中の場合は、`docker/.env` の [`EXPOSE_NGINX_PORT`](/ja/self-host/deploy/configuration/environments#docker-compose) に別のポートを設定し、アドレスにそのポート番号を付けてください。
 
-新規データベースを初期化する前に、認証情報を設定してください。既存のデータベースでは、先にサーバー側で保存済みのパスワードを変更します。その後、`DB_PASSWORD` を更新してください。
-
-明示的に設定した場合も、保存済みの値を使う場合も、[SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) を維持してください。
-
-デフォルト構成では、データベース、Redis、コード実行サンドボックス、Weaviate のホストポートは公開しません。プライベートネットワーク内でも、これらへのアクセスを制限してください。
-
-ブラウザで [http://localhost/install](http://localhost/install) を開き、管理者アカウントを作成します。設定後は [http://localhost](http://localhost) でサインインします。
-
-リモート環境では、`localhost` をサーバーの IP アドレスまたはドメインに置き換えてください。デフォルトの HTTP ポートは `80` です。`docker/.env` の `NEXT_PUBLIC_SOCKET_URL` に、ブラウザからアクセスできる WebSocket アドレスを設定します。HTTPS の例は `wss://dify.example.com` です。`docker compose up -d` で適用してください。エンドポイントの形式は [WebSocket 設定](/ja/self-host/deploy/configuration/environments#cors-設定) を参照してください。
+<Tip>
+  リモートサーバーでリアルタイム共同編集を使う場合は、`docker/.env` に [`NEXT_PUBLIC_SOCKET_URL`](/ja/self-host/deploy/configuration/environments#cors-設定) を追加し、サーバーの WebSocket アドレスを設定します。その後、`docker compose up -d` を実行してください。
+</Tip>
 
 ## カスタマイズ
 
-デプロイの設定と共有の認証情報は `docker/.env` に保存します。Compose は、プロファイル、公開ポート、マウントパス、ヘルスチェックの実行間隔などを、コンテナ起動前にこのファイルから読み込みます。
+デプロイ全体に関わる設定は `docker/.env` に記述します。Compose のプロファイル、公開ポート、マウントパス、ヘルスチェックのスケジュール設定のほか、[デプロイのセキュリティ強化](#デプロイのセキュリティ強化) で設定する共有の認証情報も対象です。
 
-各サービスは、`docker/envs/` 内の同梱の `.defaults` ファイルを自動で読み込みます。設定を変更するには、テンプレートのコメントに記載されたローカルの `.env` ファイルを作成してください。既にある場合は直接編集します。プロバイダーやセキュリティに関するオプション設定の `.env.example` テンプレートは、`.example` を外してコピーします。
+それ以外の設定は、サービスごとに分かれています。ほとんどのサービスは、`docker/envs/` 内にある同梱の `.defaults` ファイルを読み込みます。このファイルは編集せず、コメントに記載されたローカルの `.env` ファイルに変更を書き込んでください。API、ワーカー、定期タスクで共通の設定は、`envs/core-services/api-worker.env` に記述します。
 
-`docker/envs/middleware.env.example` は、[ソースコードからの開発](/ja/self-host/deploy/advanced-deployments/local-source-code#docker-compose-でミドルウェアを起動する) 専用のテンプレートです。その手順では、`docker/middleware.env` にコピーして使います。
-
-API、ワーカー、定期タスクで共通の設定には、`envs/core-services/api-worker.defaults` を `envs/core-services/api-worker.env` にコピーします。必要な設定だけコメントを解除し、**Container variable mappings** の式は変更しないでください。ファイルの優先順位、共有の認証情報、個別の設定については、[環境変数](/ja/self-host/deploy/configuration/environments#設定ファイル) を参照してください。
-
-アップグレード時は、既存のナレッジベースが使うすべてのベクトルストアの接続設定を保持してください。各サービスの稼働も維持します。`VECTOR_STORE` を変更すると、新規インデックスのデフォルトが変わります。既存のデータは移行されません。
-
-同梱の Qdrant と PostgreSQL で新規デプロイを開始するには、`docker/.env` に両方の値を設定します：
-
-```dotenv
-VECTOR_STORE=qdrant
-COMPOSE_PROFILES=qdrant,postgresql,collaboration
-```
-
-既存のナレッジベースが同梱の Weaviate を使っている場合は、そのプロファイルを保持してください。設定値は `COMPOSE_PROFILES=weaviate,qdrant,postgresql,collaboration` です。`VECTOR_STORE=qdrant` でも Weaviate の接続デフォルト値は利用できます。Weaviate の既存の上書き設定も保持してください。
-
-設定を反映するには、`dify/docker` で `docker compose up -d` を実行します。Qdrant の接続設定のデフォルト値は自動で読み込まれるため、プロバイダー用のファイルは不要です。同梱のプロバイダーを選ぶ際は、両方の設定を更新してください。`VECTOR_STORE` は `COMPOSE_PROFILES` を更新しません。
-
-同梱の MySQL を使う場合は、[データベース設定](/ja/self-host/deploy/configuration/environments#データベース設定) に従ってください。`DB_TYPE`、`COMPOSE_PROFILES` と接続項目を設定します。
-
-Qdrant の設定を変更するには、`envs/vectorstores/qdrant.env` がなければ `envs/vectorstores/qdrant.defaults` からコピーします。そのファイルを編集し、再度 `docker compose up -d` を実行してください。
-
-ルートの `docker/.env` は、`QDRANT_API_KEY` などの入力値より優先されます。テンプレートでマッピングされていない Qdrant 固有の変数は、`qdrant.env` に設定してください。他のプロバイダーとデフォルト値は [ベクトルデータベース設定](/ja/self-host/deploy/configuration/environments#vector_store) を参照してください。
-
-たとえば、Nginx のリクエストボディの上限を `200M` にするには、`dify/docker` で次の手順を実行します：
+たとえば、Nginx のリクエストボディの上限を `200M` に引き上げるには、`dify/docker` で次の手順を実行します：
 
 <Steps>
   <Step title="上書き値の設定">
@@ -145,7 +116,7 @@ Qdrant の設定を変更するには、`envs/vectorstores/qdrant.env` がなけ
     ```
 
   </Step>
-  <Step title="設定の適用">
+  <Step title="変更の適用">
     設定を検証し、影響を受けるコンテナを再作成します：
 
     ```bash
@@ -153,7 +124,7 @@ Qdrant の設定を変更するには、`envs/vectorstores/qdrant.env` がなけ
     docker compose up -d
     ```
 
-    `docker compose restart` は、コンテナの既存の環境変数を保持します。環境変数を変更した場合は `up -d` を使用してください。
+    `docker compose restart` ではなく `up -d` を使ってください。`restart` では、コンテナは古い環境変数をそのまま使います。
   </Step>
   <Step title="適用値の確認">
     Nginx が使用している設定を確認します：
@@ -162,63 +133,85 @@ Qdrant の設定を変更するには、`envs/vectorstores/qdrant.env` がなけ
     docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
     ```
 
-    出力に `client_max_body_size 200M;` が含まれていれば正常です。別の値が表示される場合は、まず `docker/.env` の上書き設定を確認します。その後、シェル変数と Compose の明示的な `environment` 設定を確認してください。値がどのように決まるかは、[優先順位](/ja/self-host/deploy/configuration/environments#優先順位) を参照してください。
+    出力に `client_max_body_size 200M;` が含まれていれば正常です。別の値が表示される場合は、まず `docker/.env` に上書き設定がないか確認します。値の設定元になりうるその他の場所は、[優先順位](/ja/self-host/deploy/configuration/environments#優先順位) を参照してください。
   </Step>
 </Steps>
 
+すべての変数と優先順位の詳しいルールは、[環境変数](/ja/self-host/deploy/configuration/environments#設定ファイル) を参照してください。
+
+## デプロイのセキュリティ強化
+
+他の人がアクセスできる状態にする前に、[HTTPS](/ja/self-host/deploy/configuration/environments#nginx-reverse-proxy) を設定し、`docker/.env` にある同梱の開発用認証情報を置き換えてください：
+
+- **データベースと Redis**：`DB_PASSWORD` と `REDIS_PASSWORD` を置き換えます。
+- **コード実行サンドボックス**：`SANDBOX_API_KEY` と `CODE_EXECUTION_API_KEY` に、同じ推測されにくいシークレットを設定します。詳しくは [サンドボックスサービス](/ja/self-host/deploy/configuration/environments#サンドボックスサービス) を参照してください。
+- **Weaviate**：`WEAVIATE_API_KEY` に推測されにくいシークレットを設定し、同じ値を `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS` にも含めます。認証を必須にするため、`WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false` も設定します。詳しくは [ベクトルデータベースサービス設定](/ja/self-host/deploy/configuration/environments#ベクトルデータベースサービス設定) を参照してください。
+- **プラグインデーモン**：`PLUGIN_DAEMON_KEY` と `PLUGIN_DIFY_INNER_API_KEY` に、それぞれ別の推測されにくい値を設定します。詳しくは [プラグインデーモン設定](/ja/self-host/deploy/configuration/environments#プラグインデーモン設定) を参照してください。
+- **Agent**：[`DIFY_AGENT_API_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_api_token) を置き換え、[`DIFY_AGENT_SERVER_SECRET_KEY`](/ja/self-host/deploy/configuration/environments#dify_agent_server_secret_key) を指定の形式で生成します。起動時に生成した [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) はそのまま使います。
+
+Dify がすでに稼働している場合は、`docker compose up -d` で新しい値を適用します。ただし、データベースのパスワードは例外です。データベースの初期化後は、先にデータベースサーバー側でパスワードを変更し、その後 `DB_PASSWORD` を同じ値に更新してください。
+
+<Info>
+  `SECRET_KEY` は変更しないでください。自分で設定しない限り、Dify は初回起動時にランダムなキーを生成し、データと一緒に保存します。後から設定や変更を行うと、古いキーで署名されたトークンやファイルリンクが使えなくなります。影響を受ける範囲は [`SECRET_KEY`](/ja/self-host/deploy/configuration/environments#secret_key) を参照してください。
+</Info>
+
+デフォルト構成では、データベース、Redis、コード実行サンドボックス、Weaviate のホストポートは公開されません。プライベートネットワーク内でも、これらへのアクセスを制限してください。
+
 ## アップグレード
 
-[Dify のリリース](https://github.com/langgenius/dify/releases) から対象バージョンを選び、更新前にそのアップグレード手順を確認してください。
+[Dify のリリース](https://github.com/langgenius/dify/releases) で対象のリリースを選び、まずそのアップグレードガイドを確認してください。
 
-既存のデプロイと同じ Compose プロジェクト名とファイルを使ってください。`-p` オプションや `COMPOSE_PROJECT_NAME` を指定している場合は、その値を維持します。既存の名前付きボリュームを引き続き使うために必要です。
+以下の Compose コマンドはすべて、既存のデプロイと同じプロジェクト名とファイルで実行してください。`-p`、`-f`、`COMPOSE_PROJECT_NAME` を指定している場合も、同じ値を使います。これにより、名前付きボリュームが引き続き接続されます。
 
 <Steps>
   <Step title="デプロイのバックアップ">
-    通常のバックアップ手順で、`docker/.env`、ローカルのサービス `.env` ファイル、カスタム Compose ファイル、永続データを保存します。正常稼働時のシークレットとボリュームパスを保持してください。明示的に設定した [SECRET_KEY](/ja/self-host/deploy/configuration/environments#secret_key) や、ストレージ内に保存されたキーも対象です。
+    1. ファイルのコピー中にデータベースへの書き込みが発生しないよう、`dify/docker` でデプロイを停止します：
 
-    `docker/volumes/` をバックアップに含めます。`local_sandbox` を使用している場合は、その名前付きボリュームも対象です。マウント先は `/home/dify` と `/workspace` です。
+        ```bash
+        docker compose stop
+        ```
 
-    `dify/docker` で、サンドボックスが使用する実際のボリューム名を確認します。次のコマンドは、稼働中と停止中のどちらのコンテナにも使えます。作成時と同じ Compose プロジェクトとファイルのオプションを指定してください：
+        停止できない場合は、代わりに各データベース専用のダンプツールでバックアップしてください。
 
-    ```bash
-    docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
-    ```
+    2. `docker/.env`、ローカルのサービス用 `.env` ファイル、カスタム Compose ファイル、永続データをバックアップします。永続データには `docker/volumes/` のほか、外部のデータベースやストレージも含みます。
 
-    このコマンドで表示されたボリュームをバックアップしてください。データベースは整合性を保てる方法でバックアップします。書き込み中のファイルコピーでは、確実なバックアップになりません。外部のデータベースやストレージを設定している場合は、それらも含めます。
+    3. デプロイに `local_sandbox` が含まれる場合は、その名前付きボリュームもバックアップします。マウント先は `/home/dify` と `/workspace` です。ボリューム名には Compose プロジェクトのプレフィックスが付くため、次のコマンドで一覧を確認してください：
 
-    `dify/docker` で `docker compose config` の出力を保存し、更新後の比較に備えます。出力にはシークレットが含まれるため、非公開の場所で保存・比較してください。
+        ```bash
+        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+        ```
+
+    4. 更新後の比較用に、`docker compose config` の出力を保存します。出力にはシークレットが含まれるため、非公開で保管してください。
   </Step>
-  <Step title="選択したリリースへの更新">
-    チェックアウト前に、追跡対象ファイルへの変更を保存します。ローカルの `.env` ファイルは既存のパスに保持してください。
-
-    リポジトリのルートでリリースタグを取得し、選択したバージョンをチェックアウトします：
+  <Step title="新しいリリースへの更新">
+    ローカルの `.env` ファイルと `docker/volumes/` 内のデータは Git の追跡対象外のため、リリースをチェックアウトしてもそのまま残ります。`docker-compose.yaml` などの追跡対象ファイルを編集している場合は、先にその変更を stash してください。リポジトリのルートで次のコマンドを実行します：
 
     ```bash
+    git stash
     git fetch --tags origin
     git checkout <version>
     ```
 
-    Compose のカスタマイズを、リリースのファイルに適用し直してください。Compose ファイルと `envs/` テンプレートは、同じリリースのものを使用します。
+    その後、`git stash pop` などで新しいリリースのファイルに変更を適用し直し、競合があれば解決してください。
   </Step>
   <Step title="設定の確認">
-    `docker/.env.example` を既存の `docker/.env` と比較し、必須項目を確認します。各ローカルサービスファイルも、対応する `.defaults` または `.env.example` テンプレートと比較してください。`api-worker.env` または既存の `shared.env` は、`api-worker.defaults` と比較します。
+    `docker/.env.example` と既存の `docker/.env` を比較します。各ローカルサービスファイルも、対応する `.defaults` または `.env.example` テンプレートと比較してください。
 
-    必要な設定は既存のファイルに追加・変更してください。テンプレートを上書きコピーすると、独自の設定が失われます。現在のテンプレートにある入力名を使い、コンテナのマッピング式は変更しないでください。
+    必要な設定は既存のファイルに反映してください。テンプレートで上書きコピーすると、独自の上書き設定が失われます。テンプレートで設定名が変わっている場合は、新しい名前を使います。**Container variable mappings** の下にある行は変更しないでください。
 
-    現在のデータベースと、ナレッジベースが引き続き使うすべてのベクトルストアを維持してください。接続設定とサービスプロファイルも保持します。選択値を変更しても、データは移行されません。
+    既存のデータベースと、ナレッジベースが引き続き使うすべてのベクトルストアは、接続設定と Compose プロファイルごと維持してください。`DB_TYPE` や `VECTOR_STORE` を変更しても、データは移行されません。
 
-    `dify/docker` で `docker compose config` を実行し、保存しておいた設定と比較します。どちらの出力も非公開で扱ってください。認証情報、ボリュームパス、プロファイル、カスタマイズした設定の変更を確認します。
+    最後に、新しい `docker compose config` の出力を保存しておいたコピーと比較し、認証情報、ボリュームパス、プロファイル、カスタマイズした設定を確認します。
   </Step>
   <Step title="アップグレードの適用と確認">
     `dify/docker` で次のコマンドを実行します：
 
     ```bash
-    docker compose config --quiet
     docker compose pull
     docker compose up -d
     docker compose ps --all
     ```
 
-    常駐サービスが `Up` または `healthy` であることを確認します。`init_permissions` は、完了後に `Exited (0)` と表示されることを確認してください。Dify を開き、カスタマイズした設定を使う機能を確認します。Nginx の変更は、[カスタマイズ](#カスタマイズ) にあるコマンドで適用値を確認してください。
+    常駐サービスに `Up` または `healthy`、`init_permissions` に `Exited (0)` と表示されていれば正常です。その後、Dify を開き、カスタマイズした設定を使う機能を試してください。
   </Step>
 </Steps>
