@@ -1,166 +1,217 @@
 ---
 title: 使用 Docker Compose 部署 Dify
 sidebarTitle: Docker Compose
+description: 用 Docker Compose 在单台机器上运行 Dify，再完成安全加固、自定义和升级
 ---
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/quick-start/docker-compose)。
 
 <Tip>
-    常见部署问题，详见 [常见问题解答](/zh/self-host/deploy/quick-start/faqs)。
+  默认的 Docker Compose 部署自带 PostgreSQL、Weaviate 及 Dify 运行所需的其他服务，无需事先准备数据库或向量数据库。
 </Tip>
 
 ## 部署前准备
 
-确保机器满足以下最低系统要求。
-
 ### 硬件
 
-- CPU >= 2 Core
-- RAM >= 4 GiB
+- **CPU**：至少 2 核
+- **内存**：至少 4 GiB
 
 ### 软件
 
-| 操作系统 | 所需软件 | 说明 |
-| :--- | :--- | :--- |
-| macOS 10.14 或更高版本 | Docker Desktop（含 Docker Compose 2.24.0+） | Docker 虚拟机至少配置 2 个虚拟 CPU 和 8 GiB 内存。<br/><br/>安装说明详见 [Mac 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/mac/install/)。 |
-| Linux 发行版 | Docker 19.03+<br/><br/>Docker Compose 2.24.0+ | 安装说明详见 [Docker 引擎安装指南](https://docs.docker.com/engine/install/) 和 [Docker Compose 安装指南](https://docs.docker.com/compose/install/)。 |
-| Windows（启用 WSL 2） | Docker Desktop（含 Docker Compose 2.24.0+） | 源代码和绑定到 Linux 容器的数据建议存储在 Linux 文件系统中，而非 Windows。<br/><br/>安装说明详见 [Windows 版 Docker Desktop 安装指南](https://docs.docker.com/desktop/windows/install/#wsl-2-backend)。 |
+安装 Docker 和 2.35.0 或更高版本的 Docker Compose，并确保 Docker 守护进程正在运行。此外，还需用 Git 下载 Dify，用 OpenSSL 为 Agent 的本地沙箱生成令牌。
+
+| 操作系统 | 安装说明 |
+|:---|:---|
+| macOS | 安装 [Mac 版 Docker Desktop](https://docs.docker.com/desktop/setup/install/mac-install/)。为其虚拟机分配至少 2 个虚拟 CPU 和 8 GiB 内存。 |
+| Linux | 按所用发行版的说明安装 [Docker Engine](https://docs.docker.com/engine/install/) 和 [Docker Compose](https://docs.docker.com/compose/install/)。 |
+| Windows（启用 WSL 2） | 安装 [Windows 版 Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/)。将源代码和容器数据存放在 Linux 文件系统中。 |
+
+开始前检查 Compose 版本：
+
+```bash
+docker compose version
+```
 
 ## 部署并启动
 
+<Info>
+  已有部署改按 [升级](#升级) 步骤操作，以保留其配置和数据。
+</Info>
+
 <Steps>
-  <Step title="克隆 Dify">
-    克隆 Dify 源代码到本地机器。
+  <Step title="获取 Dify 发行版">
+    从 [Dify releases](https://github.com/langgenius/dify/releases) 选择一个版本并克隆，将 `<version>` 替换为该版本的标签：
 
     ```bash
-    git clone --branch "$(curl -s https://api.github.com/repos/langgenius/dify/releases/latest | jq -r .tag_name)" https://github.com/langgenius/dify.git
+    git clone --branch <version> --depth 1 https://github.com/langgenius/dify.git
+    cd dify/docker
     ```
 
-    <Info>
-      此命令需要 `git`、`curl` 和 `jq`。如提示 `command not found`，安装缺少的工具后重新运行命令。
-
-      报 `fatal: Remote branch null not found in upstream origin` 错误时，改用显式版本号重试，最新版本号见 [Dify releases](https://github.com/langgenius/dify/releases)：
-
-      ```bash
-      git clone --branch <version> https://github.com/langgenius/dify.git
-      ```
-
-      详见 [克隆报错「Remote branch null not found」](/zh/self-host/deploy/quick-start/faqs#克隆报错「remote-branch-null-not-found」)。
-
-    </Info>
   </Step>
-  <Step title="启动 Dify">
+  <Step title="配置启动设置">
+    从模板创建配置文件：
 
-    1. 进入 Dify 源代码中的 `docker` 目录：
+    ```bash
+    cp .env.example .env
+    ```
 
-        ```bash
-        cd dify/docker
-        ```
+    为 Agent 的本地沙箱生成令牌：
 
-    2. 复制必要的环境配置文件：
+    ```bash
+    openssl rand -hex 32
+    ```
 
-        ```bash
-        cp .env.example .env
-        ```
+    在 `.env` 中，将 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。Agent 后端和它的本地沙箱都要有这个共享令牌才能启动。
 
-        如需自定义部署，参见 [自定义](#自定义)。
+    <Tip>
+      首次启动前：
 
-    3. 为 Agent 沙箱生成一个令牌：
+      - 用于生产环境时，先设置 [安全加固](#安全加固) 中列出的凭据。
+      - 如需用其他自带的向量数据库或 MySQL 替代 Weaviate 和 PostgreSQL，在 `.env` 中设置。首次启动后再切换，已有数据不会随之迁移。各自所需的设置详见 [VECTOR_STORE](/zh/self-host/deploy/configuration/environments#vector_store) 和 [数据库配置](/zh/self-host/deploy/configuration/environments#数据库配置)。
+    </Tip>
+  </Step>
+  <Step title="启动并检查服务">
+    在 `dify/docker` 中运行：
 
-        ```bash
-        openssl rand -base64 32
-        ```
+    ```bash
+    docker compose up -d
+    docker compose ps --all
+    ```
 
-        在 `.env` 中，把 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 设为上面命令的输出。不设置的话，Agent 后端和它的沙箱都无法启动。
-
-    4. 启动容器：
-        <Note>
-          Dify 需要 Docker Compose 2.24.0 或更高版本。运行 `docker compose version` 确认版本。
-        </Note>
-
-        ```bash
-        docker compose up -d
-        ```
-
-        启动以下容器：
-
-        - 7 个核心服务：`api`、`api_websocket`、`worker`、`worker_beat`、`web`、`plugin_daemon`、`agent_backend`
-        - 8 个依赖组件：`weaviate`、`db_postgres`、`redis`、`nginx`、`ssrf_proxy`、`agent_ssrf_proxy`、`sandbox`、`local_sandbox`
-        - 1 个一次性任务：`init_permissions`，用于设置存储文件权限，完成后自动退出。
-
-    5. 验证所有容器是否成功运行：
-
-        ```bash
-        docker compose ps
-        ```
-
-        每个容器的状态应为 `Up` 或 `healthy`。`init_permissions` 状态显示为 `Exited` 是正常的。
+    持续运行的服务应显示 `Up` 或 `healthy`。`init_permissions` 任务只运行一次，负责准备存储权限，完成后显示 `Exited (0)`。
   </Step>
 </Steps>
 
 ## 访问
 
-1. 打开管理员初始化页面，设置管理员账户：
+在浏览器中打开 `http://localhost/install`，创建管理员账户，然后在 `http://localhost` 登录。
 
-    ```bash
-    # 本地环境
-    http://localhost/install
+远程部署时，将 `localhost` 替换为服务器的 IP 地址或域名。默认 HTTP 端口为 `80`。如果 80 端口已被占用，在 `docker/.env` 中将 [`EXPOSE_NGINX_PORT`](/zh/self-host/deploy/configuration/environments#docker-compose) 设为其他端口，并在访问地址中带上该端口。
 
-    # 服务器环境
-    http://your_server_ip/install
-    ```
-
-2. 完成管理员账户设置后，在以下地址登录 Dify：
-
-    ```bash
-    # 本地环境
-    http://localhost  
-
-    # 服务器环境
-    http://your_server_ip
-    ```
+<Tip>
+  如需在远程服务器上使用实时协作，在 `docker/.env` 中添加 [`NEXT_PUBLIC_SOCKET_URL`](/zh/self-host/deploy/configuration/environments#cors-配置)，值为服务器的 WebSocket 地址，然后运行 `docker compose up -d`。
+</Tip>
 
 ## 自定义
 
-如需自定义部署，编辑相关文件中的环境变量，然后重启 Dify。
+作用于整个部署的设置写在 `docker/.env` 中，包括 Compose profile、对外发布的端口、挂载路径、健康检查调度，以及 [安全加固](#安全加固) 中的共享凭据。
+
+其他设置按服务分开存放。大多数服务会加载 `docker/envs/` 下自带的 `.defaults` 文件。不要改动这些文件，把修改写进注释里指明的本地 `.env` 文件。API、Worker 和定时任务共用的设置写在 `envs/core-services/api-worker.env` 中。
+
+例如，要将 Nginx 的请求体大小上限提高到 `200M`，在 `dify/docker` 中执行以下步骤：
 
 <Steps>
-  <Step title="编辑环境变量">
-
-    - **必要的启动值** 位于 `docker/.env` 文件中（部署时从 `docker/.env.example` 复制创建）。直接编辑即可。
-
-    - **可选或特定提供商的设置** 在 `docker/envs/` 下有对应模板。要覆盖默认值，复制相应模板（去掉 `.example` 后缀），然后编辑副本。
-
-      例如：
-
-        ```bash
-        cd dify/docker
-        cp envs/vectorstores/milvus.env.example envs/vectorstores/milvus.env
-        ```
-
-    `docker/.env` 中的值优先于任何 `docker/envs/*.env` 文件中的值。
-
-    <Tip>
-      所有变量的说明，详见 [环境变量](/zh/self-host/deploy/configuration/environments)。
-    </Tip>
-
-  </Step>
-  <Step title="重启 Dify">
+  <Step title="设置覆盖值">
+    如果 `envs/infrastructure/nginx.env` 不存在，先创建：
 
     ```bash
-    docker compose down
-    docker compose up -d
+    cp envs/infrastructure/nginx.defaults envs/infrastructure/nginx.env
+    ```
+
+    在 `envs/infrastructure/nginx.env` 中设置：
+
+    ```dotenv
+    NGINX_CLIENT_MAX_BODY_SIZE=200M
     ```
 
   </Step>
+  <Step title="应用修改">
+    验证配置，然后重建受影响的容器：
+
+    ```bash
+    docker compose config --quiet
+    docker compose up -d
+    ```
+
+    这里要用 `up -d`，不能用 `docker compose restart`：`restart` 会沿用容器原有的环境变量。
+  </Step>
+  <Step title="检查生效值">
+    查看 Nginx 当前生效的配置：
+
+    ```bash
+    docker compose exec -T nginx nginx -T 2>&1 | grep client_max_body_size
+    ```
+
+    输出应包含 `client_max_body_size 200M;`。如果显示的是其他值，先检查 `docker/.env` 中是否设置了覆盖值；值还可能来自其他位置，详见 [优先级](/zh/self-host/deploy/configuration/environments#优先级)。
+  </Step>
 </Steps>
+
+全部变量及完整的优先级规则，详见 [环境变量](/zh/self-host/deploy/configuration/environments#配置文件)。
+
+## 安全加固
+
+开放给他人访问之前，先配置 [HTTPS](/zh/self-host/deploy/configuration/environments#nginx-reverse-proxy)，并替换 `docker/.env` 中自带的开发凭据：
+
+- **数据库和 Redis**：`DB_PASSWORD` 和 `REDIS_PASSWORD`。
+- **代码执行沙箱**：将 `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY` 设为同一个强密钥。详见 [沙箱服务](/zh/self-host/deploy/configuration/environments#沙箱服务)。
+- **Weaviate**：将 `WEAVIATE_API_KEY` 设为强密钥，并把它加入 `WEAVIATE_AUTHENTICATION_APIKEY_ALLOWED_KEYS`；再设置 `WEAVIATE_AUTHENTICATION_ANONYMOUS_ACCESS_ENABLED=false`，强制要求身份认证。详见 [向量数据库服务配置](/zh/self-host/deploy/configuration/environments#向量数据库服务配置)。
+- **插件守护进程**：为 `PLUGIN_DAEMON_KEY` 和 `PLUGIN_DIFY_INNER_API_KEY` 分别设置不同的强密钥。详见 [插件守护进程配置](/zh/self-host/deploy/configuration/environments#插件守护进程配置)。
+- **Agent**：替换 [`DIFY_AGENT_API_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_api_token)，并按要求的格式生成 [`DIFY_AGENT_SERVER_SECRET_KEY`](/zh/self-host/deploy/configuration/environments#dify_agent_server_secret_key)。保留配置启动设置时生成的 [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/zh/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token)。
+
+如果 Dify 已经在运行，执行 `docker compose up -d` 让新值生效。数据库密码例外：数据库初始化后，要先在数据库服务器上修改密码，再相应更新 `DB_PASSWORD`。
+
+<Info>
+  `SECRET_KEY` 保持原样即可：如果没有设置，Dify 会在首次启动时生成一个随机密钥，并与数据一起保存。之后再设置或修改它，用旧密钥签名的令牌和文件链接都会失效。它影响的全部内容详见 [`SECRET_KEY`](/zh/self-host/deploy/configuration/environments#secret_key)。
+</Info>
+
+默认部署栈不会将数据库、Redis、代码执行沙箱或 Weaviate 的端口发布到宿主机。在私有网络中，也应限制对这些服务的访问。
 
 ## 升级
 
-不同版本的升级步骤可能有所不同。详见 [Releases](https://github.com/langgenius/dify/releases) 页面中提供的目标版本升级指南。
+在 [Dify releases](https://github.com/langgenius/dify/releases) 选择目标版本，并先阅读该版本的升级说明。
 
-<Note>
-  升级后，对照各 `.env.example` 文件检查对应的 `.env`，确认是否有新增或变更的变量。
-  
-  若你自定义过 `docker-compose.yaml`，请把自定义内容重新应用到新版本的文件上，而不是沿用旧文件。新版本可能新增 Dify 运行所需的服务。
-</Note>
+下面的每条 Compose 命令都要沿用该部署现有的项目名称和 Compose 文件（包括所用的 `-p`、`-f` 选项或 `COMPOSE_PROJECT_NAME`），这样原有的命名卷才会继续挂载。
+
+<Steps>
+  <Step title="备份部署">
+    1. 在 `dify/docker` 中停止部署，避免复制数据库文件时数据库仍在写入：
+
+        ```bash
+        docker compose stop
+        ```
+
+        如果无法停止部署，改用数据库自带的转储工具备份。
+
+    2. 备份 `docker/.env`、本地服务 `.env` 文件、自定义 Compose 文件和持久化数据。持久化数据包括 `docker/volumes/`，以及所用的外部数据库和存储。
+
+    3. 如果部署包含 `local_sandbox`，还需备份它挂载到 `/home/dify` 和 `/workspace` 的命名卷。卷名带有 Compose 项目前缀，可用以下命令列出：
+
+        ```bash
+        docker inspect --format '{{range .Mounts}}{{if eq .Type "volume"}}{{println .Name .Destination}}{{end}}{{end}}' "$(docker compose ps --all --quiet local_sandbox)"
+        ```
+
+    4. 保存 `docker compose config` 的输出，用于更新后对比。输出包含密钥，需妥善保管。
+  </Step>
+  <Step title="更新到新版本">
+    Git 不跟踪本地 `.env` 文件和 `docker/volumes/` 中的数据，因此检出新版本后，它们仍保留在原处。如果修改过 `docker-compose.yaml` 等 Git 跟踪的文件，先暂存这些修改。在仓库根目录运行：
+
+    ```bash
+    git stash
+    git fetch --tags origin
+    git checkout <version>
+    ```
+
+    然后将修改重新应用到新版本的文件中（例如运行 `git stash pop`），如有冲突，逐一解决。
+  </Step>
+  <Step title="检查配置">
+    对比 `docker/.env.example` 与现有的 `docker/.env`，并将每个本地服务文件与对应的 `.defaults` 或 `.env.example` 模板对比。
+
+    在现有文件中更新所需的设置；直接用模板覆盖这些文件，会丢掉你设置的覆盖值。如果某项设置在模板中改了名，改用新名称。**Container variable mappings** 下的各行保持不变。
+
+    保留现有数据库，以及知识库仍在使用的每个向量数据库，连同它们的连接设置和 Compose profile。修改 `DB_TYPE` 或 `VECTOR_STORE` 不会迁移数据。
+
+    最后，将新的 `docker compose config` 输出与之前保存的副本对比，检查凭据、数据卷路径、profile 和你自定义的设置。
+  </Step>
+  <Step title="应用并检查升级结果">
+    在 `dify/docker` 中运行：
+
+    ```bash
+    docker compose pull
+    docker compose up -d
+    docker compose ps --all
+    ```
+
+    持续运行的服务应显示 `Up` 或 `healthy`，`init_permissions` 应显示 `Exited (0)`。然后打开 Dify，试用依赖自定义设置的功能。
+  </Step>
+</Steps>

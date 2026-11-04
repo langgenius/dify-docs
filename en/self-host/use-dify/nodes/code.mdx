@@ -9,15 +9,11 @@ The Code node executes custom Python or JavaScript to handle complex data transf
   ![Code Node Configuration Interface](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/workflow/node/9969aa1bc1912aebe366f5d8f5dde296.png)
 </Frame>
 
-## Sandbox Service
+<span id="sandbox-service" />
 
-The Code node depends on the `sandbox` service, defined in the standard Docker Compose deployment and started automatically with the rest of the stack:
-
-```bash
-docker compose up -d
-```
-
-The sandbox runs as a separate container, isolating code execution from the host and from other services. Tune behavior through the `SANDBOX_*` environment variables in `docker/envs/core-services/sandbox.env.example` (worker timeout, network access via SSRF proxy, port) and through the `CODE_*` variables in `docker/envs/core-services/shared.env.example` (output limits consumed by the API).
+<Note>
+Code nodes require the `sandbox` service with `SANDBOX_ENABLE_NETWORK=true`. The deployment administrator controls execution timeouts and network settings. See [Environment Variables](/en/self-host/deploy/configuration/environments#sandbox-service) for sandbox configuration.
+</Note>
 
 ## Configuration
 
@@ -80,19 +76,21 @@ Configure automatic retry behavior for failed code executions and define fallbac
 
 ## Output Validation and Limits
 
-Code outputs are validated against configurable limits set on the API container:
+Dify validates Code node outputs against the deployment's limits for string length, numeric range and precision, array size, and nesting depth.
 
-- **Strings**: Maximum length set by `CODE_MAX_STRING_LENGTH` (default 400,000 characters); null bytes are stripped.
-- **Numbers**: Range set by `CODE_MAX_NUMBER` and `CODE_MIN_NUMBER` (default int64 range); float precision set by `CODE_MAX_PRECISION` (default 20 decimal places).
-- **Objects and arrays**: Maximum nesting depth set by `CODE_MAX_DEPTH` (default 5); array sizes set by `CODE_MAX_STRING_ARRAY_LENGTH`, `CODE_MAX_OBJECT_ARRAY_LENGTH`, and `CODE_MAX_NUMBER_ARRAY_LENGTH`.
+NUL characters (`\u0000`) are removed from string outputs.
 
-Defaults live in `docker/envs/core-services/shared.env.example`. Tighten limits to constrain output sizes; relax them when workflows legitimately produce larger payloads.
+If a result exceeds a limit, reduce the output or ask your deployment administrator whether the limit can be adjusted.
+
+<Info>
+Operators adjust output limits through the `CODE_*` settings. See [Environment Variables](/en/self-host/deploy/configuration/environments#code-and-template-output-limits) for the defaults and configuration.
+</Info>
 
 ## Security Considerations
 
-Code executes in a strict sandbox that prevents file system access, network requests, and system commands. This maintains security while providing programming flexibility.
+Only run code you trust: the sandbox can still connect to some other Dify services. If those connections must be blocked, ask your deployment administrator to set up [additional network isolation](/en/self-host/deploy/configuration/environments#sandbox-service) before running the code.
 
-Some operations are automatically blocked for security reasons. Avoid attempting to access system files or execute potentially dangerous operations. By default, outbound network calls from sandboxed code route through the SSRF proxy; set `SANDBOX_ENABLE_NETWORK=false` to disable network access from sandboxed code entirely.
+Disabling sandbox networking rejects Code node execution requests, including code that makes no network calls. If your code needs network access that the deployment restricts, contact your deployment administrator.
 
 ## Dependencies Support
 
