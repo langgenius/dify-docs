@@ -1,75 +1,619 @@
 ---
 title: Integrate with Langfuse
 sidebarTitle: Langfuse
-description: Connect a Dify app to Langfuse, verify new traces, and choose which Agent data to send
 ---
 
-## Connect Your App
+### What is Langfuse
 
-Create a Langfuse project and get its [API keys](https://langfuse.com/faq/all/where-are-langfuse-api-keys) from **Project Settings** > **API Keys**. For Langfuse Cloud, choose the [base URL for your region](https://langfuse.com/docs/api-and-data-platform/features/public-api#select-the-regional-base-url) without the `/api/public` suffix. For a self-hosted instance, ask its administrator for the base URL.
+Langfuse is an open-source LLM engineering platform that helps teams collaborate on debugging, analyzing, and iterating their applications.
 
-In the Dify app, open **Monitoring** > **Tracing app performance**. For **Langfuse**, click **Config** and enter the connection details:
+<Info>
+  Introduction to Langfuse: [https://langfuse.com/](https://langfuse.com/)
+</Info>
 
-| Field | Required | Value |
-|:------|:---------|:------|
-| **Secret Key** | Yes | The project's secret key. |
-| **Public Key** | Yes | The matching public key. |
-| **Host** | Yes | Your Langfuse instance's HTTP(S) base URL. |
+### How to Configure Langfuse
+
+1. Register and log in to Langfuse on the [official website](https://langfuse.com/)
+2. Create a project in Langfuse. After logging in, click **New** on the homepage to create your own project. The **project** will be used to associate with **applications** in Dify for data monitoring.
+
+<Frame>
+  ![Create a Project in Langfuse](https://assets-docs.dify.ai/2025/04/34ca6a973c4a1230be659b313b99fd90.png)
+</Frame>
+
+Edit a name for the project.
+
+<Frame>
+  ![Create a Project in Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/26cfbb94e312a100c39e217fdd0b4406.png)
+</Frame>
+
+3. Create project API credentials. In the left sidebar of the project, click **Settings** to open the settings.
+
+<Frame>
+  ![Create Project API Credentials](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/2ed72a6761f2977201c29e67e5bc634c.png)
+</Frame>
+
+In Settings, click **Create API Keys** to create project API credentials.
+
+<Frame>
+  ![Create Project API Credentials](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/3c3fbd5392d37fbccf1f9ef76c54f0bc.png)
+</Frame>
+
+Copy and save the **Secret Key**, **Public Key**, and **Host**.
+
+<Frame>
+  ![Get API Key Configuration](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/a2ff67951ce300082d875eae8458c8c7.png)
+</Frame>
+
+4. Configure Langfuse in Dify. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
+
+<Frame>
+  ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
+</Frame>
+
+After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save. **Host** must be the base URL for your project's region or self-hosted instance, without `/api/public`. This integration requires the [legacy ingestion API](https://langfuse.com/docs/api-and-data-platform/features/public-api); an `events_only` instance does not accept these traces.
+
+<Frame>
+  ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
+</Frame>
+
+Once successfully saved, you can view the status on the current page.
+
+<Frame>
+  ![View Configuration Status](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/1aa086a1aead0e29948e7d6d5815d5d1.png)
+</Frame>
+
+### View Monitoring Data in Langfuse
+
+After configuration, debugging or production data of the application in Dify can be viewed in Langfuse.
+
+<Frame>
+  ![Configuration, Debugging or Production Data of the Application in Dify Can Be](https://assets-docs.dify.ai/2025/04/a2c02ccc559743b85b0f972aa513e47a.png)
+</Frame>
+
+<Frame>
+  ![](https://assets-docs.dify.ai/2025/04/88f3adfb03f325d2ea800ba5685b9ec9.png)
+</Frame>
 
 <Note>
-This integration requires Langfuse's legacy ingestion API, `/api/public/ingestion`, to receive trace data. Langfuse v4 deployments using `events_only` mode don't accept these traces. Check [Langfuse's ingestion compatibility](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) with your Langfuse administrator before connecting.
+After saving and enabling tracing, run the app again and check for a new trace in the monitoring service. Delivery is asynchronous; saving the configuration alone does not confirm that a trace has arrived.
+
+For Agent apps and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent), enable both `OPS_AGENT_TRACE_ENABLED=true` and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` in your deployment. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery). **Capture content** is off by default for these apps and controls inputs and outputs across the whole workflow. Other apps can still send inputs and outputs.
 </Note>
 
-Review [what Dify sends](#what-dify-sends), then click **Save & Enable**. Each app has one active tracing provider; selecting Langfuse replaces the current selection.
+### List of monitoring data
 
-Saved credentials are hidden when you edit. Leave them blank to keep their saved values while **Host** is unchanged. Re-enter them if you change the destination.
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Provider trace and span IDs are derived from Dify identifiers rather than copied directly from database IDs. Native token usage is reported on model calls only.
 
-## What Dify Sends
+The detail lists below describe Dify's source records and metadata. Only the relevant, available values are exported; the raw records are not sent in full.
 
-A trace records an app execution as timed operations called *spans*. Each span includes its status and any error. Dify also sends captured inputs and outputs, model usage, and identifying metadata such as message, workflow, and node IDs.
+#### Trace the information of Workflow and Chatflow
 
-For a Workflow, inspect its node spans, including loop and iteration groups. Chat traces include the model call under the message. In a Chatflow trace, the workflow sits under the message.
+**Tracing Workflow and Chatflow**
 
-In Langfuse, open a generation to inspect a model call's captured inputs and outputs. Token counts and USD costs appear in its usage and cost fields when available.
+<table>
+  <thead>
+    <tr>
+      <th>Workflow</th>
+      <th>LangFuse Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>workflow_run_id</td>
+      <td>id</td>
+    </tr>
+    <tr>
+      <td>user_id</td>
+      <td>userId</td>
+    </tr>
+    <tr>
+      <td>workflow</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>timestamp / startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>outputs</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>Model token consumption (LLM calls)</td>
+      <td>usage</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>error</td>
+      <td>level (observations)</td>
+    </tr>
+    <tr>
+      <td>error</td>
+      <td>statusMessage (observations)</td>
+    </tr>
+    <tr>
+      <td>Session ID</td>
+      <td>sessionId</td>
+    </tr>
+    <tr>
+      <td>Parent span (when present)</td>
+      <td>parentObservationId (nested observations)</td>
+    </tr>
+  </tbody>
+</table>
+**Workflow Trace Info**
 
-### Include Agent Calls and Content
+* workflow\_id - Unique ID of Workflow
+* conversation\_id - Conversation ID
+* workflow\_run\_id - Workflow ID of this runtime
+* tenant\_id - Tenant ID
+* elapsed\_time - Elapsed time at this runtime
+* status - Runtime status
+* version - Workflow version
+* total\_tokens - Total token used at this runtime
+* file\_list - List of files processed
+* triggered\_from - Source that triggered this runtime
+* workflow\_run\_inputs - Input of this workflow
+* workflow\_run\_outputs - Output of this workflow
+* error - Error Message
+* query - Queries used at runtime
+* workflow\_app\_log\_id - Workflow Application Log ID
+* message\_id - Relevant Message ID
+* start\_time - Start time of this runtime
+* end\_time - End time of this runtime
+* workflow node executions - Workflow node runtime information
+* Metadata
+  * workflow\_id - Unique ID of Workflow
+  * conversation\_id - Conversation ID
+  * workflow\_run\_id - Workflow ID of this runtime
+  * tenant\_id - Tenant ID
+  * elapsed\_time - Elapsed time at this runtime
+  * status - Operational state
+  * version - Workflow version
+  * total\_tokens - Total token used at this runtime
+  * file\_list - List of files processed
+  * triggered\_from - Source that triggered this runtime
 
-<Note>
-Tracing for Agent apps and the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent) is off by default. Ask your deployment administrator to set both `OPS_AGENT_TRACE_ENABLED=true` and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for where to set them.
-</Note>
+#### Message Trace Info
 
-Under **Agent data capture** in the app's tracing settings:
+**For trace llm conversation**
 
-- **Capture Agent internals**: Keep this on to inspect the Agent's internal model and tool calls when debugging its decisions. Turn it off to omit those internal calls while keeping the Agent run or workflow node itself.
-- **Capture content**: Turn this on only if the monitoring service should receive inputs and outputs from these runs. With it off, timings, token information, and status remain available.
+<table>
+  <thead>
+    <tr>
+      <th>Message</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>message\_id</td>
+      <td>id</td>
+    </tr>
+    <tr>
+      <td>end\_user\_session\_id</td>
+      <td>userId</td>
+    </tr>
+    <tr>
+      <td>message</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>timestamp / startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>outputs</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>Model token consumption (LLM calls)</td>
+      <td>usage</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>error</td>
+      <td>level (observations)</td>
+    </tr>
+    <tr>
+      <td>error</td>
+      <td>statusMessage (observations)</td>
+    </tr>
+    <tr>
+      <td>Session ID</td>
+      <td>sessionId</td>
+    </tr>
+  </tbody>
+</table>
+**Message Trace Info**
 
-<Note>
-These controls apply to Agent apps and Workflow or Chatflow apps that contain the new Agent node. For those workflows, **Capture content** also controls the other nodes' inputs and outputs. Other apps can still send inputs and outputs; leave tracing disabled if you can't send that content to the monitoring service.
-</Note>
+* message\_id - Message ID
+* message\_data - Message data
+* end\_user\_session\_id - Session ID for user
+* conversation\_model - Conversation model
+* message\_tokens - Message tokens
+* answer\_tokens - Answer Tokens
+* total\_tokens - Total Tokens from Message and Answer
+* error - Error Message
+* inputs - Input data
+* outputs - Output data
+* file\_list - List of files processed
+* start\_time - Start time
+* end\_time - End time
+* conversation\_mode - Conversation mode
+* Metadata
+  * conversation\_id - Conversation ID
+  * ls\_provider - Model provider
+  * ls\_model\_name - Model ID
+  * status - Message status
+  * from\_end\_user\_id - Sending user's ID
+  * from\_account\_id - Sending account's ID
+  * agent\_based - Whether agent based
+  * workflow\_run\_id - Workflow ID of this runtime
+  * from\_source - Message source
+  * message\_id - Message ID
 
-The new Agent node uses the containing Workflow or Chatflow app's tracing settings. Agent calls inside a workflow tool aren't included in the parent Agent's trace.
+#### Moderation Trace Information
 
-## Verify a New Trace
+**Used to track conversation moderation**
 
-1. Run a new request in your Dify app and let it finish.
-2. In **Tracing app performance**, click **View** for **Langfuse** to open the configured project.
-3. Find the new trace by its run time. Open it to inspect the model generations or node spans.
+<table>
+  <thead>
+    <tr>
+      <th>Moderation</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>user\_id</td>
+      <td>metadata.user_id</td>
+    </tr>
+    <tr>
+      <td>moderation</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>action, flagged</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>message\_id</td>
+      <td>traceId</td>
+    </tr>
+  </tbody>
+</table>
+**Message Trace Info**
 
-Traces may take time to appear after the run finishes.
+* message\_id - Message ID
+* user\_id - user ID
+* workflow\_app\_log\_id workflow\_app\_log\_id
+* inputs - Input data for review
+* message\_data - Message Data
+* flagged - Whether it is flagged for attention
+* action - Specific actions to implement
+* preset\_response - Preset response
+* start\_time - Start time of review
+* end\_time - End time of review
+* Metadata
+  * message\_id - Message ID
+  * action - Specific actions to implement
+  * preset\_response - Preset response
 
-## Troubleshooting
+#### Suggested Question Trace Information
 
-<AccordionGroup>
-  <Accordion title="The configuration saved, but no trace appears">
-    Saving the configuration checks project access. Confirm that Langfuse is selected and tracing is enabled. Then run the app again and check the same project.
+**Used to track suggested questions**
 
-    Ask your administrator to check worker logs for ingestion errors and confirm that Langfuse accepts data through `/api/public/ingestion`. They should also check the [trace delivery queue](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) if the new run is still missing.
-  </Accordion>
-  <Accordion title="Dify can't connect to my monitoring server">
-    The address must be reachable from Dify's API and workers. In a container, `localhost` points to that container, so use the monitoring server's reachable hostname instead.
+<table>
+  <thead>
+    <tr>
+      <th>Suggested Question</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>user\_id</td>
+      <td>metadata.user_id</td>
+    </tr>
+    <tr>
+      <td>suggested\_question</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>suggested_question</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>message\_id</td>
+      <td>traceId</td>
+    </tr>
+  </tbody>
+</table>
+**Message Trace Info**
 
-    For a private HTTP endpoint, ask your administrator to check the [SSRF proxy allowlist](/en/self-host/deploy/configuration/environments#ssrf-proxy) and allow only the required destination.
-  </Accordion>
-</AccordionGroup>
+* message\_id - Message ID
+* message\_data - Message data
+* inputs - Input data
+* outputs - Output data
+* start\_time - Start time
+* end\_time - End time
+* total\_tokens - Total tokens
+* status - Message Status
+* error - Error Message
+* from\_account\_id - Sending account ID
+* agent\_based - Whether agent based
+* from\_source - Message source
+* model\_provider - Model provider
+* model\_id - Model ID
+* suggested\_question - Suggested question
+* level - Status level
+* status\_message - Message status
+* Metadata
+  * message\_id - Message ID
+  * ls\_provider - Model Provider
+  * ls\_model\_name - Model ID
+  * status - Message status
+  * from\_end\_user\_id - Sending user's ID
+  * from\_account\_id - Sending Account ID
+  * workflow\_run\_id - Workflow ID of this runtime
+  * from\_source - Message source
 
-To use prompts managed in Langfuse, see the community-maintained [Langfuse Prompt Management Plugin](https://github.com/gao-ai-com/dify-plugin-langfuse) for installation and usage.
+#### Dataset Retrieval Trace Information
+
+**Used to track knowledge base retrieval**
+
+<table>
+  <thead>
+    <tr>
+      <th>Dataset Retrieval</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>user\_id</td>
+      <td>metadata.user_id</td>
+    </tr>
+    <tr>
+      <td>dataset\_retrieval</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>documents</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>message\_id</td>
+      <td>traceId</td>
+    </tr>
+  </tbody>
+</table>
+**Dataset Retrieval Trace Info**
+
+* message\_id - Message ID
+* inputs - Input Message
+* documents - Document data
+* start\_time - Start time
+* end\_time - End time
+* message\_data - Message data
+* Metadata
+  * message\_id - Message ID
+  * ls\_provider - Model Provider
+  * ls\_model\_name - Model ID
+  * status - Model status
+  * from\_end\_user\_id - Sending user's ID
+  * from\_account\_id - Sending account's ID
+  * agent\_based - Whether agent based
+  * workflow\_run\_id - Workflow ID of this runtime
+  * from\_source - Message Source
+
+#### Tool Trace Information
+
+**Used to track tool invocation**
+
+<table>
+  <thead>
+    <tr>
+      <th>Tool</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>user\_id</td>
+      <td>metadata.user_id</td>
+    </tr>
+    <tr>
+      <td>tool\_name</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>tool_inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>tool_outputs</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+    <tr>
+      <td>message\_id</td>
+      <td>traceId</td>
+    </tr>
+  </tbody>
+</table>
+**Tool Trace Info**
+
+* message\_id - Message ID
+* tool\_name - Tool Name
+* start\_time - Start time
+* end\_time - End time
+* tool\_inputs - Tool inputs
+* tool\_outputs - Tool outputs
+* message\_data - Message data
+* error - Error Message, if exist
+* inputs - Input of Message
+* outputs - Output of Message
+* tool\_config - Tool config
+* time\_cost - Time cost
+* tool\_parameters - Tool Parameters
+* file\_url - URL of relevant files
+* Metadata
+  * message\_id - Message ID
+  * tool\_name - Tool Name
+  * tool\_inputs - Tool inputs
+  * tool\_outputs - Tool outputs
+  * tool\_config - Tool config
+  * time\_cost - Time. cost
+  * error - Error Message
+  * tool\_parameters - Tool parameters
+  * message\_file\_id - Message file ID
+  * created\_by\_role - Created by role
+  * created\_user\_id - Created user ID
+
+#### Generate Name Trace
+
+**Used to track conversation title generation**
+
+<table>
+  <thead>
+    <tr>
+      <th>Generate Name</th>
+      <th>LangFuse Generation/Trace</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>user\_id</td>
+      <td>metadata.user_id</td>
+    </tr>
+    <tr>
+      <td>generate\_name</td>
+      <td>name</td>
+    </tr>
+    <tr>
+      <td>start\_time</td>
+      <td>startTime</td>
+    </tr>
+    <tr>
+      <td>end\_time</td>
+      <td>endTime (observations)</td>
+    </tr>
+    <tr>
+      <td>inputs</td>
+      <td>input</td>
+    </tr>
+    <tr>
+      <td>outputs</td>
+      <td>output</td>
+    </tr>
+    <tr>
+      <td>metadata</td>
+      <td>metadata</td>
+    </tr>
+  </tbody>
+</table>
+**Generate Name Trace Info**
+
+* conversation\_id - Conversation ID
+* inputs - Input data
+* outputs - Generated session name
+* start\_time - Start time
+* end\_time - End time
+* tenant\_id - Tenant ID
+* Metadata
+  * conversation\_id - Conversation ID
+  * tenant\_id - Tenant ID
+
+
+### Langfuse Prompt Management
+
+The [Langfuse Prompt Management Plugin](https://github.com/gao-ai-com/dify-plugin-langfuse) (community maintained) lets you use prompts that are [managed and versioned in Langfuse](https://langfuse.com/docs/prompt-management/get-started) in your Dify applications, enhancing your LLM application development workflow. Key features include:
+
+- **Get Prompt**: Fetch specific prompts managed in Langfuse.
+- **Search Prompts**: Search for prompts in Langfuse using various filters.
+- **Update Prompt**: Create new versions of prompts in Langfuse and set tags/labels.
+
+This integration streamlines the process of managing and versioning your prompts, contributing to more efficient development and iteration cycles. You can find the plugin and installation instructions [here](https://github.com/gao-ai-com/dify-plugin-langfuse).
