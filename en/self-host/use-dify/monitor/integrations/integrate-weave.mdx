@@ -4,344 +4,70 @@ sidebarTitle: W&B Weave
 description: Send traces from Dify applications to W&B Weave for LLM observability
 ---
 
-<Info>
-  **Prerequisites**: Dify v1.3.1 or later.
-</Info>
+## Connect Your App
 
-### What is W&B Weave
+Create a [W&B project](https://docs.wandb.ai/models/track/project-page#create-a-project) that your [API key](https://wandb.ai/authorize) can write to before configuring Dify. For a team project, use that team as the **Entity**.
 
-Weights & Biases (W&B) Weave is a framework for tracking, experimenting with, evaluating, deploying, and improving LLM-based applications. Designed for flexibility and scalability, Weave supports every stage of your LLM application development workflow.
+In the Dify app, open **Monitoring** > **Tracing app performance**. For **Weave**, click **Config** and enter the connection details:
 
-<Info> 
-    For more details, please refer to [Weave](https://docs.wandb.ai/weave).
-</Info>
+| Field | Required | Value |
+|:------|:---------|:------|
+| **API Key** | Yes | Your W&B API key. |
+| **Project** | Yes | An existing, writable project. You can enter `entity/project` here and leave **Entity** blank. |
+| **Entity** | No | The W&B team or user. If blank, Dify resolves the API key's default entity. |
+| **Endpoint** | No | The Weave trace server. Defaults to `https://trace.wandb.ai`; HTTPS is required. |
+| **Host** | No | The W&B API server. Defaults to `https://api.wandb.ai`; HTTP(S) is accepted. |
 
-### How to Configure Weave
+For a custom deployment, ask its administrator for the trace-server **Endpoint** and W&B API **Host**. Keep any path prefix they provide.
 
-#### 1. Register/Login
+Review [what Dify sends](#what-dify-sends), then click **Save & Enable**. Each app has one active tracing provider; selecting Weave replaces the current selection.
 
-Register/Login to [W&B Weave](https://wandb.ai/signup) and get your API key. Then, copy your API key from [here](https://wandb.ai/authorize).
+Saved credentials are hidden when you edit. Leave them blank to keep their saved values while **Host** and **Endpoint** are unchanged. Re-enter them if you change either address.
 
-#### 2. Integrate W&B Weave with Dify
+## What Dify Sends
 
-Configure Weave in the Dify application. Open the application you need to monitor, open **Monitoring** in the side menu, and select **Tracing app performance** on the page.
+A trace records an app execution as timed operations called *spans*. Each span includes its status and any error. Dify also sends captured inputs and outputs, model usage, and identifying metadata such as message, workflow, and node IDs.
 
-<Frame>
-  ![Configure Weave in the Dify Application](https://assets-docs.dify.ai/2025/04/c33e8fda75ee9052ed23c8690e314862.png)
-</Frame>
+For a Workflow, inspect its node spans, including loop and iteration groups. Chat traces include the model call under the message. In a Chatflow trace, the workflow sits under the message.
 
-After clicking configure, paste the **API Key** and **project name**, also specify the **W&B entity**(optionally, default is your username) into the configuration and save.
+In Weave, open a model call to inspect its captured inputs and outputs. Available token counts appear in the call's per-model usage. Dify doesn't fill Weave's built-in cost field.
 
-<Frame>
-  ![Configure, Paste the API Key and Project Name, Also Specify the W&B](https://assets-docs.dify.ai/2025/04/60bce1ae7b883825b13526d172ae0073.png)
-</Frame>
+### Include Agent Calls and Content
 
-Once successfully saved, you can view the monitoring status on the current page.
+<Note>
+Tracing for Agent apps and the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent) is off by default. Ask your deployment administrator to set both `OPS_AGENT_TRACE_ENABLED=true` and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for where to set them.
+</Note>
 
-<Frame>
-  ![Once Successfully Saved, You Can View the Monitoring Status on the Current Page](https://assets-docs.dify.ai/2025/04/9486cee7bbb61f069842c9ea860e679c.png)
-</Frame>
+Under **Agent data capture** in the app's tracing settings:
 
-### View Monitoring Data in Weave
+- **Capture Agent internals**: Keep this on to inspect the Agent's internal model and tool calls when debugging its decisions. Turn it off to omit those internal calls while keeping the Agent run or workflow node itself.
+- **Capture content**: Turn this on only if the monitoring service should receive inputs and outputs from these runs. With it off, timings, token information, and status remain available.
 
-Once configured, the debug or production data from applications within Dify can be monitored in Weave.
+<Note>
+These controls apply to Agent apps and Workflow or Chatflow apps that contain the new Agent node. For those workflows, **Capture content** also controls the other nodes' inputs and outputs. Other apps can still send inputs and outputs; leave tracing disabled if you can't send that content to the monitoring service.
+</Note>
 
-<Frame>
-  ![Once Configured, the Debug or Production Data from Applications Within Dify Can](https://assets-docs.dify.ai/2025/04/a1c5aa80325e6d0223d48a178393baec.png)
-</Frame>
+The new Agent node uses the containing Workflow or Chatflow app's tracing settings. Agent calls inside a workflow tool aren't included in the parent Agent's trace.
 
-When you switch to Weave, you can view detailed operation logs of Dify applications in the dashboard.
+## Verify a New Trace
 
-<Frame>
-  ![When You Switch to Weave, You Can View Detailed Operation Logs of Dify](https://assets-docs.dify.ai/2025/04/2cb04027c00b606029fcc26af2801bfe.png)
-</Frame>
+1. Run a new request in your Dify app and let it finish.
+2. In **Tracing app performance**, click **View** for **Weave** to open the configured project.
+3. Find the new call by its run time and open it to inspect its child calls.
 
-Detailed LLM operation logs through Weave will help you optimize the performance of your Dify application.
+Traces may take time to appear after the run finishes.
 
-### Monitoring Data List
+## Troubleshooting
 
-#### **Workflow/Chatflow Trace Information**
+<AccordionGroup>
+  <Accordion title="The configuration saved, but no trace appears">
+    Saving checks that the project exists, is writable, and that the trace server is accessible. Confirm that Weave is selected and tracing is enabled. In Weave, open the configured entity and project. Then run the app again.
 
-**Used to track workflows and chatflows**
+    Ask your administrator to check worker logs and the [trace delivery queue](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) if the new run is still missing.
+  </Accordion>
+  <Accordion title="Dify can't connect to my monitoring server">
+    The address must be reachable from Dify's API and workers. In a container, `localhost` points to that container, so use the monitoring server's reachable hostname instead.
 
-| Workflow                                 | Weave Trace                  |
-| ---------------------------------------- | ---------------------------- |
-| workflow_app_log_id/workflow_run_id | id                           |
-| user_session_id                        | placed in metadata         |
-| workflow_\{id\}                        | name                         |
-| start_time                              | start_time                  |
-| end_time                                | end_time                    |
-| inputs                                   | inputs                       |
-| outputs                                  | outputs                      |
-| Model token consumption                  | usage_metadata              |
-| metadata                                 | extra                        |
-| error                                    | error                        |
-| workflow                              | tags                         |
-| "conversation_id/none for workflow"     | conversation_id in metadata |
-| conversion_id                           | parent_run_id              |
-
-**Workflow Trace Info**
-
-* workflow_id - Unique identifier of the workflow
-* conversation_id - Conversation ID
-* workflow_run_id - ID of the current run
-* tenant_id - Tenant ID
-* elapsed_time - Time taken for the current run
-* status - Run status
-* version - Workflow version
-* total_tokens - Total tokens used in the current run
-* file_list - List of processed files
-* triggered_from - Source that triggered the current run
-* workflow_run_inputs - Input data for the current run
-* workflow_run_outputs - Output data for the current run
-* error - Errors encountered during the current run
-* query - Query used during the run
-* workflow_app_log_id - Workflow application log ID
-* message_id - Associated message ID
-* start_time - Start time of the run
-* end_time - End time of the run
-* workflow node executions - Information about workflow node executions
-* Metadata
-  * workflow_id - Unique identifier of the workflow
-  * conversation_id - Conversation ID
-  * workflow_run_id - ID of the current run
-  * tenant_id - Tenant ID
-  * elapsed_time - Time taken for the current run
-  * status - Run status
-  * version - Workflow version
-  * total_tokens - Total tokens used in the current run
-  * file_list - List of processed files
-  * triggered_from - Source that triggered the current run
-
-#### **Message Trace Information**
-
-**Used to track LLM-related conversations**
-
-| Chat                             | Weave Trace                  |
-| -------------------------------- | ---------------------------- |
-| message_id                      | id                           |
-| user_session_id                | placed in metadata         |
-| "message_\{id\}"                | name                         |
-| start_time                      | start_time                  |
-| end_time                        | end_time                    |
-| inputs                           | inputs                       |
-| outputs                          | outputs                      |
-| Model token consumption          | usage_metadata              |
-| metadata                         | extra                        |
-| error                            | error                        |
-| "message", conversation_mode | tags                         |
-| conversation_id                 | conversation_id in metadata |
-| conversion_id                   | parent_run_id              |
-
-**Message Trace Info**
-
-* message_id - Message ID
-* message_data - Message data
-* user_session_id - User session ID
-* conversation_model - Conversation mode
-* message_tokens - Number of tokens in the message
-* answer_tokens - Number of tokens in the answer
-* total_tokens - Total number of tokens in the message and answer
-* error - Error information
-* inputs - Input data
-* outputs - Output data
-* file_list - List of processed files
-* start_time - Start time
-* end_time - End time
-* message_file_data - File data associated with the message
-* conversation_mode - Conversation mode
-* Metadata
-  * conversation_id - Conversation ID
-  * ls_provider - Model provider
-  * ls_model_name - Model ID
-  * status - Message status
-  * from_end_user_id - ID of the sending user
-  * from_account_id - ID of the sending account
-  * agent_based - Whether the message is agent-based
-  * workflow_run_id - Workflow run ID
-  * from_source - Message source
-
-#### **Moderation Trace Information**
-
-**Used to track conversation moderation**
-
-| Moderation    | Weave Trace          |
-| ------------- | -------------------- |
-| user_id      | placed in metadata |
-| “moderation"  | name                 |
-| start_time   | start_time          |
-| end_time     | end_time            |
-| inputs        | inputs               |
-| outputs       | outputs              |
-| metadata      | extra                |
-| moderation | tags                 |
-| message_id   | parent_run_id      |
-
-**Moderation Trace Info**
-
-* message_id - Message ID
-* user_id: User ID
-* workflow_app_log_id - Workflow application log ID
-* inputs - Moderation input data
-* message_data - Message data
-* flagged - Whether the content is flagged for attention
-* action - Specific actions taken
-* preset_response - Preset response
-* start_time - Moderation start time
-* end_time - Moderation end time
-* Metadata
-  * message_id - Message ID
-  * action - Specific actions taken
-  * preset_response - Preset response
-
-#### **Suggested Question Trace Information**
-
-**Used to track suggested questions**
-
-| Suggested Question     | Weave Trace          |
-| ---------------------- | -------------------- |
-| user_id               | placed in metadata |
-| suggested_question    | name                 |
-| start_time            | start_time          |
-| end_time              | end_time            |
-| inputs                 | inputs               |
-| outputs                | outputs              |
-| metadata               | extra                |
-| suggested_question | tags                 |
-| message_id            | parent_run_id      |
-
-**Message Trace Info**
-
-* message_id - Message ID
-* message_data - Message data
-* inputs - Input content
-* outputs - Output content
-* start_time - Start time
-* end_time - End time
-* total_tokens - Number of tokens
-* status - Message status
-* error - Error information
-* from_account_id - ID of the sending account
-* agent_based - Whether the message is agent-based
-* from_source - Message source
-* model_provider - Model provider
-* model_id - Model ID
-* suggested_question - Suggested question
-* level - Status level
-* status_message - Status message
-* Metadata
-  * message_id - Message ID
-  * ls_provider - Model provider
-  * ls_model_name - Model ID
-  * status - Message status
-  * from_end_user_id - ID of the sending user
-  * from_account_id - ID of the sending account
-  * workflow_run_id - Workflow run ID
-  * from_source - Message source
-
-#### **Dataset Retrieval Trace Information**
-
-**Used to track knowledge base retrieval**
-
-| Dataset Retrieval     | Weave Trace          |
-| --------------------- | -------------------- |
-| user_id              | placed in metadata |
-| dataset_retrieval    | name                 |
-| start_time           | start_time          |
-| end_time             | end_time            |
-| inputs                | inputs               |
-| outputs               | outputs              |
-| metadata              | extra                |
-| dataset_retrieval | tags                 |
-| message_id           | parent_run_id      |
-
-**Dataset Retrieval Trace Info**
-
-* message_id - Message ID
-* inputs - Input content
-* documents - Document data
-* start_time - Start time
-* end_time - End time
-* message_data - Message data
-* Metadata
-  * message_id - Message ID
-  * ls_provider - Model provider
-  * ls_model_name - Model ID
-  * status - Message status
-  * from_end_user_id - ID of the sending user
-  * from_account_id - ID of the sending account
-  * agent_based - Whether the message is agent-based
-  * workflow_run_id - Workflow run ID
-  * from_source - Message source
-
-#### **Tool Trace Information**
-
-**Used to track tool invocation**
-
-| Tool                  | Weave Trace          |
-| --------------------- | -------------------- |
-| user_id              | placed in metadata |
-| tool_name            | name                 |
-| start_time           | start_time          |
-| end_time             | end_time            |
-| inputs                | inputs               |
-| outputs               | outputs              |
-| metadata              | extra                |
-| "tool", tool_name | tags                 |
-| message_id           | parent_run_id      |
-
-#### **Tool Trace Info**
-
-* message_id - Message ID
-* tool_name - Tool name
-* start_time - Start time
-* end_time - End time
-* tool_inputs - Tool inputs
-* tool_outputs - Tool outputs
-* message_data - Message data
-* error - Error information, if any
-* inputs - Inputs for the message
-* outputs - Outputs of the message
-* tool_config - Tool configuration
-* time_cost - Time cost
-* tool_parameters - Tool parameters
-* file_url - URL of the associated file
-* Metadata
-  * message_id - Message ID
-  * tool_name - Tool name
-  * tool_inputs - Tool inputs
-  * tool_outputs - Tool outputs
-  * tool_config - Tool configuration
-  * time_cost - Time cost
-  * error - Error information, if any
-  * tool_parameters - Tool parameters
-  * message_file_id - Message file ID
-  * created_by_role - Role of the creator
-  * created_user_id - User ID of the creator
-
-**Generate Name Trace Information**
-
-**Used to track conversation title generation**
-
-| Generate Name     | Weave Trace          |
-| ----------------- | -------------------- |
-| user_id          | placed in metadata |
-| generate_name    | name                 |
-| start_time       | start_time          |
-| end_time         | end_time            |
-| inputs            | inputs               |
-| outputs           | outputs              |
-| metadata          | extra                |
-| generate_name | tags                 |
-
-**Generate Name Trace Info**
-
-* conversation_id - Conversation ID
-* inputs - Input data
-* outputs - Generated conversation name
-* start_time - Start time
-* end_time - End time
-* tenant_id - Tenant ID
-* Metadata
-  * conversation_id - Conversation ID
-  * tenant_id - Tenant ID
+    For a private HTTP endpoint, ask your administrator to check the [SSRF proxy allowlist](/en/self-host/deploy/configuration/environments#ssrf-proxy) and allow only the required destination.
+  </Accordion>
+</AccordionGroup>
