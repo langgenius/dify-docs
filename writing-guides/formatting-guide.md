@@ -17,7 +17,7 @@ description: A concise summary of what this page covers
 ---
 ```
 
-- `title` is **required**. `description` is required for new pages; existing pages should be updated over time.
+- `title` is **required**. `description` is required for new pages; an existing page without one gets one over time.
 - `description` should not end with a period.
 - `sidebarTitle` is optional. Add it when the title is too long for the sidebar, or when other pages in the same group follow a specific `sidebarTitle` convention.
 - Leave values unquoted by default. Wrap a value in double quotes only when it contains a colon followed by a space, for example `title: "Step 1: Create Knowledge Pipeline"`. Without the quotes, YAML will misread everything after the colon.
@@ -124,7 +124,7 @@ Do not use backticks for product names, UI labels, or general English words.
 
 ### Stable Anchors
 
-Anchors are auto-generated from heading text, so they change when a heading is reworded or translated. A heading or tab that is deep-linked from the Dify product UI, or linked from another documentation page, therefore carries an explicit anchor ID — the same English kebab-case ID in all three languages. Headings referenced nowhere get no explicit ID: an ID's presence signals that something depends on the anchor.
+Anchors are auto-generated from heading text, so they change when a heading is reworded or translated. A heading or tab that the Dify product UI deep-links to therefore carries an explicit anchor ID, the same English kebab-case ID in all three languages, because the internal link check cannot see links in the product code. A link between documentation pages needs no new ID: it can use the auto-generated anchor, since the link check fails the pull request when a heading change breaks it. An explicit ID already in place stays, and links to that heading use the ID.
 
 | Position | Syntax |
 |:---------|:-------|
@@ -417,7 +417,7 @@ Use for showing multiple code variants of the same operation:
 
 - **Em dashes**: No spaces around em dashes. Write `word—word`, not `word — word`.
 - **En dashes**: No spaces around en dashes in ranges. Write `2–4`, not `2 – 4`.
-- **Use em dashes sparingly, but don't avoid them entirely.** A well-placed em dash can improve readability by setting off an aside or emphasizing a clause. The problem is overuse: stacked em dashes lose their effect and read as an AI tell. Apply judgment and keep them occasional across a page. Reach for a comma, parentheses, a colon, or a new sentence if possible, but not at the cost of readability and clarity.
+- **Choosing marks**: Choose each mark for what the sentence does: a colon announces what follows (a list, an example, the point), a semicolon joins two closely tied clauses that could each stand alone, an em dash sets off an aside or a turn, parentheses hold a side detail, and a period ends the thought. Then look across the page: when one mark keeps recurring, check whether some of those sentences want a different mark or none, and keep every mark that fits. Repeated structure keeps one mark, such as the colon after each bold label in a list.
 
 ---
 
@@ -441,12 +441,12 @@ Before submitting, verify:
 - [ ] Lists use dashes (`-`), not asterisks (`*`)
 - [ ] Code blocks have language tags
 - [ ] Internal links use absolute paths (`/en/...`)
-- [ ] Deep-linked or cross-referenced headings carry stable anchor IDs; links to them use the ID
+- [ ] Headings the product UI deep-links to carry stable anchor IDs; links to a heading with an ID use the ID
 - [ ] Images use `<Frame>` wrapping markdown `![]()`; alt text is in title case and under 125 characters
 - [ ] Image files are stored under the correct `images/<section>/` subfolder
 - [ ] Image filenames use kebab-case, are descriptive, and contain no default tool names
 - [ ] Comparison images (two or more shown together) each have a caption
 - [ ] No double blank lines
 - [ ] Em dashes and en dashes have no surrounding spaces
-- [ ] Em dashes used sparingly: none stacked in a single sentence, no pile-up across the page
+- [ ] Each punctuation mark fits its sentence, and no mark recurs where another would fit better
 - [ ] Dollar signs in prose are escaped as `\$` (not needed inside code)

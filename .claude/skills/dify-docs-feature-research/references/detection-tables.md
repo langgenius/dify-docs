@@ -50,7 +50,7 @@ Which nodes live in dify vs graphon: follow the repo-split rule in the repo root
 | dify | `api/core/tools/` | `en/{cloud,self-host}/use-dify/nodes/tools.mdx` or workflow tool node docs |
 | dify | `api/core/agent/` | `en/{cloud,self-host}/use-dify/build/agent.mdx` |
 | dify | `api/core/app/` | `en/{cloud,self-host}/use-dify/build/` |
-| dify | `web/app/components/` | Match the component's feature area to the corresponding `en/{cloud,self-host}/use-dify/` page (e.g. `components/workflow/` → nodes docs, `components/datasets/` → knowledge docs). Pure styling/layout PRs: skip. |
+| dify | `web/app/components/`, `web/features/` | Match the component's feature area to the corresponding `en/{cloud,self-host}/use-dify/` page (e.g. `components/workflow/` → nodes docs, `components/datasets/` → knowledge docs). Pure styling/layout PRs: skip. |
 | dify | `docker/.env.example`, `docker/envs/**/*.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
 | dify | `docker/README.md`, root `README.md`, any new, renamed, or removed file under `docker/` | `en/self-host/deploy/quick-start/docker-compose.mdx` and `en/self-host/deploy/quick-start/faqs.mdx` (deployment workflow docs) |
 | graphon | `src/graphon/nodes/` (built-in nodes) | `en/{cloud,self-host}/use-dify/nodes/` |
@@ -77,4 +77,4 @@ When detected, the report should list which variables were added, removed, or ha
 
 ## UI i18n Source Files
 
-i18n source files: `web/i18n/{en-US,zh-Hans,ja-JP}/` (36 JSON files per language). Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`. These contain the most documentation-relevant UI labels.
+i18n source files: `web/i18n/locales/{en-US,zh-Hans,ja-JP}/` from CE 1.18.0 on and on `main` (66 JSON files per language at `main` `c01cb5d119`); `web/i18n/{en-US,zh-Hans,ja-JP}/` on the 1.17.x lines. Focus on: `common.json`, `app.json`, `workflow.json`, `dataset.json`, `dataset-creation.json`, `dataset-documents.json`. These contain the most documentation-relevant UI labels.

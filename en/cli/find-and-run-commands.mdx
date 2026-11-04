@@ -1,0 +1,115 @@
+---
+title: Find and Run Commands
+description: Find the difyctl command for a job, pass it values as flags or JSON, and run the next steps its results suggest
+---
+
+## Find a Command
+
+Describe the job to `help` in a few words, and it lists the commands that match. For example, to find the command that publishes an app:
+
+```bash
+difyctl help publish app
+```
+
+To browse instead, run `difyctl help` on its own: it lists the words commands start with, such as `get` and `run`. Add one of those words to list every command that starts with it:
+
+```bash
+difyctl help get
+```
+
+Once you've found the command, run `help` with its full name to see the fields it takes (the values you pass to it):
+
+```bash
+difyctl help describe console_app
+```
+
+You can also add `--help` or `-h` to the command itself.
+
+## Run a Command
+
+<Warning>
+`difyctl` never asks you to confirm a command, even one its help labels `destructive`, such as a `delete` command.
+
+Before you run a destructive command, check the ID it targets, for example with the matching `get` command.
+</Warning>
+
+### Pass Values as Flags
+
+Pass each field you need as its flag, followed by the value. A command's help lists its flags with their types, defaults, and whether they're required. For example, part of the help for `run console_app workflow`:
+
+```text
+Flags
+  --app-id       string             required
+  --inputs       map<string, json>  optional  Variables declared by the app. …
+  --workflow-id  string             optional  Pin a published workflow version
+```
+
+The type tells you how to pass the value. Most fields take the value as is. For example, to describe an app by its ID, which `difyctl get console_app` lists:
+
+```bash
+difyctl describe console_app --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789
+```
+
+Three kinds of field differ:
+
+- For a `boolean` field, pass the flag alone to set it to true, or add `=false` to set it to false, such as `--auto-generate-name=false` on `run console_app chat`.
+
+- For a list field, such as `string[]`, repeat the flag for each value, such as `--identifiers a --identifiers b` on `install plugin`.
+
+- For a field whose type is `json`, `object`, or a `map`, pass the JSON text as the flag's value. For example, with `--inputs` from the help above:
+
+  ```bash
+  difyctl run console_app workflow --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --inputs '{"topic": "AI"}'
+  ```
+
+To read the JSON from a file instead, write `@` and the file's path, such as `--inputs @inputs.json`. To read it from stdin, write `--inputs @-`.
+
+Watch for `@` on a `string` field: it never reads a file. `--yaml-content @app.yml` sends the literal text `@app.yml`, not the file's contents. To send the contents, let the shell read the file with `--yaml-content "$(cat app.yml)"`.
+
+### Send a Whole Request as JSON
+
+When a script builds the request, or you keep it in a file, put all the fields in one JSON object and pass it with `--input` (singular, not the `--inputs` field above).
+
+Write each field by its name: the flag without `--`, with underscores instead of dashes (`app_id`, not `--app-id`):
+
+```bash
+difyctl run console_app workflow --input '{"app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "inputs": {"topic": "AI"}}'
+```
+
+`--input` also reads from a file, such as `--input @request.json`, or from stdin, with `--input @-`.
+
+A flag takes priority over the same field in `--input`. This way, you can keep a request in a file and change one value per run. With `{"mode": "workflow", "limit": 50, "page": 1}` in `request.json`, this lists the second page of your Workflow apps:
+
+```bash
+difyctl get console_app --input @request.json --page 2
+```
+
+## Follow Hints
+
+Some results include `hints`: commands the server suggests you run next, with their values filled in wherever the server knows them. When a hint is the step you want next, run it instead of building that command yourself.
+
+For example, after a chat app replies to `difyctl run console_app chat`, the result carries this hint:
+
+```json
+{
+  "hints": [
+    {
+      "summary": "Reply in this conversation",
+      "op": "run.console_app.chat",
+      "input": {
+        "app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789",
+        "conversation_id": "9f8e7d6c-5b4a-4321-8fed-cba987654321",
+        "query": null,
+        "inputs": {}
+      }
+    }
+  ],
+  …
+}
+```
+
+To run a hint, write its `op` with spaces instead of dots, and pass its `input` to `--input`. Replace each `null` with your own value. For this hint, that's `difyctl run console_app chat` with your next message as the `query`:
+
+```bash
+difyctl run console_app chat --input '{"app_id": "0a1b2c3d-4e5f-6789-abcd-ef0123456789", "conversation_id": "9f8e7d6c-5b4a-4321-8fed-cba987654321", "query": "And on weekends?", "inputs": {}}'
+```

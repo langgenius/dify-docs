@@ -1,0 +1,175 @@
+---
+title: Run Apps
+sidebarTitle: Run
+description: Run your Dify apps with difyctl, pass them inputs and files, stream or stop a long run, answer a Human Input form, and find why a run failed
+---
+
+<Tip>
+    To hand the work over to your coding agent, [set it up with the `difyctl` skill](/en/cli/get-started#set-up-your-coding-agent) and point it to this page.
+</Tip>
+
+## Find Your Apps
+
+Run `difyctl get console_app` to list your apps. Only apps with Service API access turned on are listed, and only those can be run.
+
+```bash
+difyctl get console_app
+
+# narrow by part of the name, by mode, or both
+difyctl get console_app --name report --mode workflow
+```
+
+Use an app's `id` as `--app-id` in other commands. Its `mode` is the app's type, which decides the command that runs it:
+
+| `mode` | App type | Run it with |
+|:---|:---|:---|
+| `workflow` | Workflow | `run console_app workflow` |
+| `advanced-chat` | Chatflow | `run console_app advanced_chat` |
+| `chat` | Chatbot | `run console_app chat` |
+| `agent-chat` | Legacy Agent | `run console_app chat` |
+| `completion` | Text Generator | `run console_app completion` |
+
+<Info>
+`difyctl` doesn't list or run apps built with the new Agent. Call them through the [Service API](/en/api-reference/guides/agent) instead.
+</Info>
+
+## Check an App's Inputs
+
+Run `difyctl describe console_app` to show an app's variables: their names, their types, and which are required.
+
+```bash
+difyctl describe console_app --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+## Run a Workflow
+
+Pass the app's variables to `difyctl run console_app workflow` in `--inputs`, as JSON keyed by name. The answer is the result's `outputs`, keyed by the Output node's variables.
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "quarterly report"}'
+
+# read the variables from a file
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs @inputs.json
+```
+
+<Note>
+A misspelled required variable fails the run with an error such as `topic is required in input form`. A misspelled optional one is silently left out. Check the variable names with [`describe console_app`](#check-an-apps-inputs).
+</Note>
+
+## Send a Message or Generate Text
+
+Use the `run console_app` command that matches the app's type in [Find Your Apps](#find-your-apps). Put the message in `--query` and any variables in `--inputs`. A Text Generator app usually takes only `--inputs`. The response is the result's `text.answer`.
+
+```bash
+# a Chatbot or legacy Agent app
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "What are your business hours?"
+
+# a Chatflow app with one variable
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "What changed this quarter?" --inputs '{"topic": "quarterly report"}'
+
+# a Text Generator app
+difyctl run console_app completion --app-id 5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9 --inputs '{"topic": "quarterly report"}'
+```
+
+## Continue a Conversation
+
+Pass the result's `conversation_id` back with `--conversation-id`.
+
+```bash
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "What changed this quarter?" --inputs '{"topic": "quarterly report"}'
+
+# reply in the same conversation, with the same variables
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --conversation-id 9f8e7d6c-5b4a-4321-8fed-cba987654321 --query "And the quarter before?" --inputs '{"topic": "quarterly report"}'
+```
+
+<Note>
+Send the app's required variables again on every turn. A message without them fails.
+</Note>
+
+## Send Files
+
+With any run command, map each file variable to a local path in `--files`. A file-list variable takes a list of paths. A file on the web goes in `--inputs` instead. Pass each file variable in either `--files` or `--inputs`, not both.
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "quarterly report"}' --files '{"document": "./report.pdf", "appendices": ["./q1.pdf", "./q2.pdf"]}'
+
+# a file on the web
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"document": {"transfer_method": "remote_url", "url": "https://example.com/report.pdf", "type": "document"}}'
+```
+
+## Follow a Long Run
+
+To watch a run as it goes, add `--stream`. It prints each event as it happens, one JSON object per line. In a Workflow run, the last event, `workflow_finished`, carries the result in `data.outputs`. To print only the events you want, name each one with `--only`.
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "quarterly report"}' --stream
+
+# print only the last event
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "quarterly report"}' --stream --only workflow_finished
+```
+
+## Stop a Run
+
+To be able to stop a run later, start it with `--stream`. To stop it, pass the `task_id` from its first event to `difyctl stop run`:
+
+```bash
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
+
+A stopped Workflow or Chatflow run's stream ends with a `workflow_finished` event whose `data.status` is `stopped`. The streaming command exits with code 1. In a script, check `data.status`, not the exit code, to see that the run was stopped.
+
+<Note>
+Pass `stop run` the `task_id`, not the `workflow_run_id` that every event also carries. Given the wrong one, it still prints `{"result": "success"}`, but the run keeps going.
+</Note>
+
+## Answer a Human Input Form
+
+<Info>
+You can answer a form from `difyctl` only when the Human Input node delivers it through **Webapp**.
+</Info>
+
+A run that pauses at the form returns a result whose `status` is `suspended`, with one hint per action button. [Run the hint](/en/cli/find-and-run-commands#follow-hints) for your action, replacing each `null` in its `inputs` with your answer.
+
+Or, to see the form's fields before you answer, take `form_token` from any hint and use `describe run form`, then answer with `submit run form`.
+
+Either way, follow the resumed run with `get run event`. Despite the flag's name, pass the paused result's `run_id` as `--task-id`. Keep `--include-state-snapshot`, or the command can sit silent for up to 5 minutes.
+
+```bash
+# show the form's fields
+difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE
+
+# submit with an action; use --inputs '{}' when the form has no fields
+difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "Looks good"}'
+
+# follow the resumed run
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+
+# keep following if the run can pause at another form later
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+```
+
+## Find Why a Run Failed
+
+For a Workflow or Chatflow run, start from the failed result's `run_id`, or list failed runs with `difyctl get run`. Then inspect the run with `describe run` and its nodes with `get run node`.
+
+```bash
+difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status failed
+
+# the run's inputs, outputs, status, and error
+difyctl describe run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+
+# each node; the failed one carries the error
+difyctl get run node --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+```
+
+<Note>
+Keep `--triggered-from app-run`. Without it, the list shows only test runs of the draft.
+</Note>
+
+## Troubleshooting
+
+| Message | What to do |
+|:--|:--|
+| `invalid run input`, though the inputs are right | The app may never have been published. Publish it, then run it again. |
+
+For errors that can come from any command, see [Troubleshooting](/en/cli/reference/results-errors-and-exit-codes#troubleshooting) on Results, Errors, and Exit Codes.

@@ -1,0 +1,177 @@
+---
+title: アプリの実行
+sidebarTitle: 実行
+description: difyctl で Dify アプリを実行し、入力やファイルを渡す。時間のかかる実行のストリーミング表示と停止、人間の入力フォームへの回答、失敗原因の調査も扱う
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/run-apps) を参照してください。
+
+<Tip>
+    作業をコーディングエージェントに任せるには、[`difyctl` スキルでエージェントをセットアップ](/ja/cli/get-started#コーディングエージェントのセットアップ) し、このページを渡してください。
+</Tip>
+
+## アプリの検索
+
+`difyctl get console_app` を実行すると、アプリが一覧表示されます。一覧に表示されるのはサービス API アクセスがオンになっているアプリだけで、実行できるのもそれらのアプリだけです。
+
+```bash
+difyctl get console_app
+
+# 名前の一部、mode、またはその両方で絞り込む
+difyctl get console_app --name report --mode workflow
+```
+
+ほかのコマンドでは、アプリの `id` を `--app-id` として渡します。`mode` はアプリの種類を表し、アプリを実行するコマンドはこれによって決まります：
+
+| `mode` | アプリの種類 | 実行に使うコマンド |
+|:---|:---|:---|
+| `workflow` | Workflow | `run console_app workflow` |
+| `advanced-chat` | Chatflow | `run console_app advanced_chat` |
+| `chat` | チャットボット | `run console_app chat` |
+| `agent-chat` | レガシー Agent | `run console_app chat` |
+| `completion` | テキストジェネレーター | `run console_app completion` |
+
+<Info>
+新しい Agent で構築したアプリは、`difyctl` では一覧表示も実行もできません。代わりに [サービス API](/ja/api-reference/guides/agent) から呼び出してください。
+</Info>
+
+## アプリの入力の確認
+
+`difyctl describe console_app` を実行すると、アプリの変数について、名前、型、必須かどうかが表示されます。
+
+```bash
+difyctl describe console_app --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b
+```
+
+## Workflow アプリの実行
+
+アプリの変数は、変数名をキーとする JSON にまとめ、`difyctl run console_app workflow` の `--inputs` で渡します。回答は結果の `outputs` に、出力ノードの変数をキーとして入ります。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "四半期レポート"}'
+
+# 変数をファイルから読み込む
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs @inputs.json
+```
+
+<Note>
+必須変数の名前を間違えると、`topic is required in input form` などのエラーで実行が失敗します。任意変数の名前を間違えた場合は、エラーにならず、その変数が省かれるだけです。変数名は [`describe console_app`](#アプリの入力の確認) で確認してください。
+</Note>
+
+## メッセージの送信またはテキストの生成
+
+[アプリの検索](#アプリの検索) で確認したアプリの種類に対応する `run console_app` コマンドを使います。メッセージは `--query` で、変数があれば `--inputs` で渡します。テキストジェネレーターアプリが受け取るのは、通常 `--inputs` だけです。応答は結果の `text.answer` に入ります。
+
+```bash
+# チャットボットまたはレガシー Agent アプリ
+difyctl run console_app chat --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --query "営業時間を教えてください。"
+
+# 変数が 1 つある Chatflow アプリ
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "今四半期は何が変わりましたか？" --inputs '{"topic": "四半期レポート"}'
+
+# テキストジェネレーターアプリ
+difyctl run console_app completion --app-id 5e6f7a8b-9c0d-4e1f-a2b3-c4d5e6f7a8b9 --inputs '{"topic": "四半期レポート"}'
+```
+
+## 会話の継続
+
+結果の `conversation_id` を、`--conversation-id` で次の実行に渡します。
+
+```bash
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --query "今四半期は何が変わりましたか？" --inputs '{"topic": "四半期レポート"}'
+
+# 同じ会話で、同じ変数を付けて返信する
+difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5e6f --conversation-id 9f8e7d6c-5b4a-4321-8fed-cba987654321 --query "前の四半期はどうでしたか？" --inputs '{"topic": "四半期レポート"}'
+```
+
+<Note>
+必須の変数は、メッセージを送るたびに渡し直してください。これらの変数を付けずに送ったメッセージは失敗します。
+</Note>
+
+## ファイルの送信
+
+どの実行コマンドでも、`--files` でファイル変数ごとにローカルファイルのパスを指定できます。ファイルリスト変数には、パスのリストを渡します。Web 上のファイルは、代わりに `--inputs` で渡します。各ファイル変数は、`--files` と `--inputs` のどちらか一方だけで渡してください。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "四半期レポート"}' --files '{"document": "./report.pdf", "appendices": ["./q1.pdf", "./q2.pdf"]}'
+
+# Web 上のファイル
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"document": {"transfer_method": "remote_url", "url": "https://example.com/report.pdf", "type": "document"}}'
+```
+
+## 時間のかかる実行の追跡
+
+実行の進行をその場で確認するには、`--stream` を付けます。イベントが発生するたびに、1 行に 1 つの JSON オブジェクトとして出力されます。Workflow アプリの実行では、最後のイベント `workflow_finished` の `data.outputs` に結果が入ります。必要なイベントだけを出力するには、`--only` でイベント名を 1 つずつ指定します。
+
+```bash
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "四半期レポート"}' --stream
+
+# 最後のイベントだけを出力
+difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --inputs '{"topic": "四半期レポート"}' --stream --only workflow_finished
+```
+
+## 実行の停止
+
+実行を後で停止できるようにするには、`--stream` を付けて開始します。停止するには、最初のイベントにある `task_id` を `difyctl stop run` に渡します：
+
+```bash
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
+
+Workflow アプリまたは Chatflow アプリの実行を停止すると、ストリームは `data.status` が `stopped` の `workflow_finished` イベントで終わります。ストリーミング中のコマンドは、終了コード 1 で終了します。スクリプトで実行の停止を確認するには、終了コードではなく `data.status` を確認してください。
+
+<Note>
+`stop run` に渡すのは `task_id` です。どのイベントにも含まれる `workflow_run_id` ではありません。誤った ID を渡しても `{"result": "success"}` と出力されますが、実行は止まらずに続きます。
+</Note>
+
+## 人間の入力フォームへの回答
+
+<Info>
+`difyctl` からフォームに回答できるのは、人間の入力ノードが **Webアプリ** でフォームを配信する場合だけです。
+</Info>
+
+フォームで一時停止した実行は、`status` が `suspended` の結果を返します。結果には、アクションボタンごとにヒントが 1 つずつ含まれます。選んだアクションのヒントにある `inputs` の各 `null` を回答に置き換えて、[そのヒントを実行](/ja/cli/find-and-run-commands#ヒントの活用) します。
+
+または、回答する前にフォームのフィールドを確認したい場合は、いずれかのヒントから `form_token` を取得して `describe run form` を実行します。その後、`submit run form` で回答します。
+
+どちらの方法でも、再開した実行は `get run event` で追跡します。フラグ名は `--task-id` ですが、ここには一時停止した結果の `run_id` を指定します。`--include-state-snapshot` は省略しないでください。省略すると、コマンドが最大 5 分間何も出力しないことがあります。
+
+```bash
+# フォームのフィールドを表示する
+difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE
+
+# アクションを指定して送信する。フォームにフィールドがない場合は --inputs '{}' を指定する
+difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "問題ありません"}'
+
+# 再開した実行を追跡する
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+
+# 実行が後で別のフォームで再び一時停止する可能性がある場合は、追跡を続ける
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+```
+
+## 実行が失敗した原因の調査
+
+Workflow アプリまたは Chatflow アプリの実行では、失敗した結果の `run_id` から調べ始めます。または、`difyctl get run` で失敗した実行を一覧表示します。次に、`describe run` で実行を、`get run node` でそのノードを確認します。
+
+```bash
+difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status failed
+
+# 実行の入力、出力、ステータス、エラー
+difyctl describe run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+
+# 各ノード。失敗したノードにエラーが含まれる
+difyctl get run node --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+```
+
+<Note>
+`--triggered-from app-run` は省略しないでください。省略すると、ドラフトのテスト実行しか一覧に表示されません。
+</Note>
+
+## トラブルシューティング
+
+| メッセージ | 対処方法 |
+|:--|:--|
+| `invalid run input`（入力に誤りがない場合） | アプリが一度も公開されていない可能性がある。公開してから、もう一度実行する。 |
+
+どのコマンドでも起こりうるエラーについては、「結果、エラー、終了コード」の [トラブルシューティング](/ja/cli/reference/results-errors-and-exit-codes#トラブルシューティング) を参照してください。

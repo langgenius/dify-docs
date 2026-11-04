@@ -7,7 +7,7 @@ Tooling for the Service API reference. `{lang}/api-reference/openapi_service.jso
 | File | Role |
 |:-----|:-----|
 | `merge_specs.py` | `wire` (docs.json API menus + redirects) and `check-coverage` modes |
-| `nav_labels.json` | Guides layout, two-tier reference config, per-group op ordering |
+| `nav_labels.json` | Guides layout (an overview group can nest a group with its own root page), two-tier reference config (a tier can split into labeled subgroups), per-group op ordering |
 | `memberships.json` | App type → supported operations; drives the app-type overview pages and the coverage check |
 | `lint_specs.py` | Example/schema, enum, link, and x-codeSamples lint |
 | `parity_check.py` | en/zh/ja structural parity (ops, params, responses, samples) |

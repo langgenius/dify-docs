@@ -5,7 +5,7 @@ description: セルフホスト Weaviate サーバーをベクトルデータを
 
 > このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/deploy/troubleshooting/weaviate-server-migration-path) を参照してください。
 
-Dify 1.17.1 では、同梱する Weaviate サーバーが `1.27.0` から `1.39.2` に更新されます。既存の Weaviate データボリュームは、この差を一度に越えられません。この手順は、Dify の既定の単一ノード Docker Compose デプロイを対象とします。新規デプロイでは、空のボリュームで新しいバージョンを起動するため、この手順は不要です。
+Dify 1.17.1 では、同梱する Weaviate サーバーが `1.27.0` から `1.39.2` に更新されます。既存の Weaviate データボリュームを、一度でこのバージョンまで上げることはできません。1.17.1 を飛ばして Dify 1.18.0（`1.39.13` を同梱）に直接アップグレードする場合も同じです。この手順は、Dify の既定の単一ノード Docker Compose デプロイを対象とします。新規デプロイでは、空のボリュームで新しいバージョンを起動するため、この手順は不要です。
 
 Weaviate はマイナーバージョンの飛び越しをテストも保証もしていません。各リリースにはディスク上のデータ移行が含まれることがあり、その移行は直前のバージョンが一度は起動していることを前提とします。
 
@@ -29,7 +29,12 @@ docker compose exec -T weaviate \
 
 URL の `localhost` は Weaviate コンテナ自身のループバックであり、ホストではありません。Weaviate イメージには `curl` も Python も含まれません。そのためリクエストは busybox の `wget` で送り、JSON の整形はホスト側の Python で行います。
 
-`1.39.2` と表示される場合、作業は不要です。`1.27.0` なら以下から開始し、一覧内の途中のバージョンならその次の段階から再開してください。`1.27.0` より前のバージョンでは、先に [Weaviate v4 移行ガイド](/ja/self-host/deploy/troubleshooting/weaviate-v4-migration) に従ってください。
+表示されたバージョンに応じて、次のように進めます：
+
+- `1.39.2` 以降：この手順は不要です。
+- `1.27.0`：以下の最初の段階から始めます。
+- 一覧の途中のバージョン：次の段階から再開します。
+- `1.27.0` より前：先に [Weaviate v4 移行ガイド](/ja/self-host/deploy/troubleshooting/weaviate-v4-migration) に従います。
 
 ## データのバックアップ
 
@@ -71,14 +76,15 @@ sudo cp -a ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d) || exit 
 | 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
 | 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.16` |
 | 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.14` |
-| 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13（Dify 1.17.1） | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13（Dify 1.18.0） | `cr.weaviate.io/semitechnologies/weaviate:1.39.13` |
 
 レジストリは手順 1 で変わります。既存のデプロイは Docker Hub の `semitechnologies/weaviate` を取得しますが、この一覧では Weaviate 自身のレジストリである `cr.weaviate.io/semitechnologies/weaviate` を使います。Dify の新しい Compose ファイルもこちらを参照します。イメージは同じもので、レジストリとバージョンを意図的にまとめて変更します。
 
 表のパッチバージョンは執筆時点の最新です。途中の手順については、開始前に新しいパッチが出ていないか確認し、あればそちらを使ってください。
 
 <Warning>
-  最後の手順は例外です。利用可能な最新パッチではなく、`docker-compose.yaml` が固定しているバージョンで止めてください。先に新しいパッチへ上げてから Dify の固定バージョンを適用すると、新しいバージョンが書き込んだボリュームに対するダウングレードになります。これは [ロールバックの注意](#失敗した段階のロールバック) で警告している状況です。
+  最後の段階は例外です。利用可能な最新パッチではなく、アップグレード先の Dify リリースに対応する手順 13 のバージョンで止めてください。先に新しいパッチへ上げてから Dify の固定バージョンを適用すると、新しいバージョンが書き込んだボリュームを古いバージョンで開くことになります。これは [ロールバックの注意](#失敗した段階のロールバック) で警告している状況です。
 </Warning>
 
 1 つずつ進めることで影響範囲も限定できます。ある段階で問題が起きても、戻すのは 1 バージョンだけで済み、原因となったリリースもすぐ特定できます。すべてのマイナーを一度にまたいだ切り分けは不要です。
@@ -210,11 +216,13 @@ docker compose exec -T weaviate \
   オブジェクト数の確認に `GET /v1/objects?class=...&limit=1` を使わないでください。`totalResults` フィールドが返すのは取得したページの件数であり、コレクション全体の件数ではありません。`limit=1` では常に `1` になります。上記の `Aggregate` クエリを使ってください。
 </Warning>
 
-`1.39.2` の確認後、`docker compose stop -t -1 weaviate || exit 1` を実行します。Compose を実行せずに一時的なイメージ変更だけを元に戻します。次に、Dify 1.17.1 の [Docker Compose アップグレード手順](/ja/self-host/deploy/quick-start/docker-compose#アップグレード) に従います。デプロイをサービスに戻す前にテスト検索を実行してください。チャンクが返ればベクトルインデックスが残っていると確認できます。オブジェクト数だけでは、そこまでは分かりません。
+最後の段階で確認がすべて通ったら、`docker compose stop -t -1 weaviate || exit 1` を実行し、イメージの変更を元に戻します。アップグレードまでは Compose を再実行しないでください。元に戻したファイルは `1.27.0` を起動するため、新しいバージョンが書き込み済みのボリュームを古いバージョンで開くことになります。そのうえで、アップグレード先の Dify バージョンの [Docker Compose アップグレード手順](/ja/self-host/deploy/quick-start/docker-compose#アップグレード) に従います。
+
+サービスを再開する前にテスト検索を実行してください。チャンクが返ればベクトルインデックスが残っていると確認できます。オブジェクト数だけでは、そこまでは分かりません。
 
 ## 失敗した段階のロールバック
 
-Dify 1.17.1 を起動する前に、Weaviate イメージを `semitechnologies/weaviate:1.27.0` に戻し、初期バックアップを復元します。
+新しいバージョンの Dify を起動する前に、Weaviate イメージを `semitechnologies/weaviate:1.27.0` に戻し、初期バックアップを復元します。
 
 ```bash
 docker compose stop -t -1 weaviate || exit 1
@@ -234,7 +242,7 @@ Weaviate を確認してから元の Dify スタックを起動し、テスト�
 
 コレクションの構成は変わらないため、再インデックスは不要で、ナレッジベースもそのまま使えます。Dify は各データセットを `Vector_index_<dataset_id>_Node` コレクションとして保存します。ID のハイフンはアンダースコアに置き換えられ、自前で指定する名前付きベクトル `default` が使われます。Dify は距離指標を設定しないため、コレクションはサーバー既定のコサイン距離になります。この構造はアップグレードの前後で同一です。
 
-Python の `weaviate-client` についても対応は不要です。利用中の Dify リリースが固定しているバージョンを使ってください。Dify 1.14.0 から 1.16.1 は `4.20.5`、1.17.0 から 1.17.1 は `4.22.0` です。どちらも一覧のすべてのサーバーバージョンで動作するため、サーバーだけを Dify と切り離してアップグレードできます。
+Python の `weaviate-client` についても対応は不要です。Dify 1.14.0 から 1.18.0 が固定しているクライアントは、どれも一覧のすべてのサーバーバージョンで動作します。そのため、サーバーだけを Dify と切り離してアップグレードできます。
 
 <Info>
   対象は 1.27 より古い Weaviate サーバー、およびクライアント v3 から v4 への移行です。どちらの場合も先に [Weaviate v4 移行ガイド](/ja/self-host/deploy/troubleshooting/weaviate-v4-migration) を参照してください。同ガイドは 1.19.0 から 1.26.x と、1.27 までのスキーマ移行を扱います。その後このページに戻ってください。

@@ -69,7 +69,7 @@ A developer arrives with a task; each operation answers, in order: what does thi
 - **Backtick all values**: literal values, field names, code references.
 - **Space between numbers and units**: `100 s`, `15 MB`, not `100s`, `15MB`.
 - **One concern per paragraph.** Split multi-concern text with `\n\n`, and turn enumerations (operator sets, event lists, mode choices) into bullets. Inline code renders as chips wider than its character count, so code-dense text crowds a paragraph sooner than prose does. This holds for every `description`: endpoint, parameter, response, schema field, and shared components (`securitySchemes` renders on every page).
-- **No spaces around em dashes** (`early—HTTP`, never `early — HTTP`); prefer a semicolon, colon, or parentheses over a dash.
+- **No spaces around em dashes** (`early—HTTP`, never `early — HTTP`); choose other marks as formatting guide § Punctuation says.
 
 ### Endpoint vs parameter descriptions
 

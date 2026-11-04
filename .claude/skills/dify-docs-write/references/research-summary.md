@@ -2,6 +2,8 @@
 
 The summary is what the drafter writes from, so its shape becomes the page's shape and its frame decides what the drafter does with a fact. It opens with its contract, groups facts under the question each section answers, and closes with what the page does not carry.
 
+So the summary already has the structure the style guide asks of the page: its sections follow the reader's order and cover the task the page's readers share, at the depth the page's genre allows. Each section also says where its question comes from (a user report, a product change, or a prediction), because a section built only on a prediction is the first to challenge when the owner reviews the summary.
+
 ## The shape
 
 ```md
@@ -23,7 +25,7 @@ being written.]
 [The persona, what they were just doing, and what they need next. The
 reader block at the top of the drafting turn is filled from this.]
 
-## [Section]: [the question the reader brings to it, in their words]
+## [Section]: [the question the reader brings to it, in their words] ([where it comes from])
 - [A fact that answers it, in product vocabulary, with the actor named and no claim about how long anything takes.]
 - background: [a fact the drafter needs to understand the product.]
 
@@ -44,7 +46,7 @@ The session that did the research owns the two closing lists: what another page 
 A section of the summary for a page about testing a knowledge base:
 
 ```md
-## Bad cases: the right chunk didn't come back, or came back too low. What do I do?
+## Bad cases: the right chunk didn't come back, or came back too low. What do I do? (product change)
 - From a run in Retrieval Test, click **Make bad case** and pick the reason: **Retrieval miss** (the chunk did not come back at all) or **Low score** (it came back ranked too low).
 - A retrieval miss: first check how the document was processed (Review Processed Documents page); if it looks fine, widen the search with a deeper retrieval depth, a higher Top K, or a lower score threshold.
 - A low score: a different rerank model, since the rerank model assigns the scores.

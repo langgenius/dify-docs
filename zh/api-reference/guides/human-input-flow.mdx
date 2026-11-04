@@ -20,7 +20,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     1. Workflow 应用调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，Chatflow 应用调用 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)，并传入终端用户的 `user` 标识。
     2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`。
 
-        若 `form_token` 为 `null`，说明表单使用邮件投递，无法通过 API 驱动（见 [提交方式要求](#提交方式要求)）。
+        若 `form_token` 为 `null`，说明表单没有通过 Web 应用投递，而 API 只能处理这种投递方式。表单实际的投递方式列在 `approval_channels` 中。此时可以直接跳到第 5 步，等待接收者通过这些方式回复，或者 [停止这次运行](#停止已暂停的运行)。
 
         `human_input_required` 事件同时携带本次运行的 `workflow_run_id`；请保留它，以便在第 5 步需要时恢复监听。
   </Step>
@@ -51,6 +51,12 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     如需先重放已执行节点的状态，可附带 `include_state_snapshot=true`。若工作流串联了多个人工介入节点，流默认会在每次暂停时关闭；传入 `continue_on_pause=true` 可让同一条流跨越所有暂停保持连接。
   </Step>
 </Steps>
+
+## 停止已暂停的运行
+
+如果不想回复表单，而是直接结束已暂停的运行，请用运行的 `task_id` 调用 [停止工作流任务](/zh/api-reference/workflow-runs/stop-workflow-task)（Workflow 应用）或 [停止响应](/zh/api-reference/chat-messages/stop-chat-message-generation)（Chatflow 应用）。`task_id` 可以从事件流的事件中获取。对于 Chatflow 应用，请传入发起这次运行的 `user`。传入其他 `user` 时，运行不会停止，但调用仍会返回成功。
+
+运行会以 `stopped` 状态结束。表单随之过期，`form_token` 也就不再可用。正在监听 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 的客户端会收到状态为 `stopped` 的 `workflow_finished` 事件。
 
 ## 先上传 vs 直接提交远程 URL
 

@@ -12,8 +12,10 @@
 | Chatflow app | Chatflow 应用 | Chatflow アプリ |
 | agentic workflow | Agentic 工作流 | Agentic ワークフロー |
 | workflow | 工作流 | ワークフロー |
+| workflow tool | 工作流工具 | ワークフローツール |
 | Agent | Agent | Agent |
 | Agent app | Agent 应用 | Agent アプリ |
+| coding agent | 编码 Agent | コーディングエージェント |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
@@ -88,13 +90,17 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | knowledge base | 知识库 | ナレッジベース |
+| agent knowledge base | Agent 知识库 | Agent ナレッジベース |
+| classic knowledge base | 经典知识库 | 従来型ナレッジベース |
+| golden question | 参考问题 | 評価用の基準質問 |
+| knowledge pipeline | 知识流水线 | ナレッジパイプライン |
 | chunk | 分段 | チャンク |
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
 | retrieval | 检索 | 検索 |
 | retrieval mode | 检索模式 | 検索モード |
 | indexing | 索引 | インデックス |
-| index method | 索引方法 | インデックス方法 |
+| index method | 索引方式 | インデックス方法 |
 | embedding | 嵌入 | 埋め込み |
 | metadata | 元数据 | メタデータ |
 | delimiter | 分隔符 | デリミタ |
@@ -182,7 +188,7 @@
 | Studio | 工作室 | スタジオ |
 | Knowledge | 知识库 | ナレッジ |
 | Web apps | WEB APPS | Webアプリ |
-| Integrations | 集成 | インテグレーション |
+| Integrations | 集成 | 連携 |
 | Tools | 工具 | ツール |
 | Skills | Skills | Skills |
 
@@ -191,8 +197,9 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Orchestrate | 编排 | オーケストレート |
-| Access Point | 访问点 | アクセスポイント |
+| Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
+| Monitoring (Agent) | 监控 | モニタリング |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
@@ -226,6 +233,8 @@
 |:--------|:--------|:---------|
 | Documents | 文档 | ドキュメント |
 | API Access | 访问 API | API アクセス |
+| API Access | API 访问 | API アクセス |
+| API access | API 访问 | API アクセス |
 | Retrieval Testing | 召回测试 | 検索テスト |
 | Settings | 设置 | 設定 |
 | Pipeline | 流水线 | パイプライン |
@@ -248,8 +257,8 @@
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
-| Speech-to-Text Model | 语音转文本模型 | 音声-to-テキストモデル |
-| Text-to-Speech Model | 文本转语音模型 | テキスト-to-音声モデル |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル |
 | Load Balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
 | Usage Priority | 使用优先级 | 使用優先度 |
@@ -289,11 +298,19 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | Duplicate | 复制 | 複製 |
-| Export DSL | 导出 DSL | DSL をエクスポート |
-| Import DSL file | 导入 DSL 文件 | DSL ファイルをインポート |
+| Export App | 导出应用 | アプリをエクスポート |
+| Export Agent | 导出 Agent | エージェントをエクスポート |
+| Import App | 导入应用 | アプリをインポート |
+| Export secret values | 导出 secret 值 | シークレット値を含む |
+| App package | 应用包 | アプリパッケージ |
 | Create from Blank | 创建空白应用 | 最初から作成 |
 | Create from Template | 从应用模板创建 | テンプレートから作成 |
+| Details | 详情 | 詳細 |
+| Try it | 试用 | お試し |
 | Tracing | 追踪 | 追跡 |
+| Agent data capture | Agent 数据采集 | Agent データ収集 |
+| Capture content | 采集内容 | 内容を収集 |
+| Capture Agent internals | 采集 Agent 内部过程 | Agent の内部処理を収集 |
 | Branding | 品牌设置 | ブランディング |
 | Custom Frontend | 自定义前端 | カスタムフロントエンド |
 
@@ -322,6 +339,7 @@
 | User Input | 用户输入 | ユーザー入力 |
 | LLM | LLM | LLM |
 | Knowledge Retrieval | 知识检索 | 知識検索 |
+| Agent Knowledge Retrieval | Agent 知识检索 | Agent ナレッジ検索 |
 | IF/ELSE | 条件分支 | IF/ELSE |
 | Code | 代码执行 | コード実行 |
 | Template | 模板转换 | テンプレート |
@@ -340,7 +358,7 @@
 | Webhook Trigger | Webhook 触发器 | Webhook トリガー |
 | Schedule Trigger | 定时触发器 | スケジュールトリガー |
 | Integration Trigger | 集成触发器 | インテグレーショントリガー |
-| Knowledge Base | 知识库 | 知識ベース |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Pipeline Tool Names
 
@@ -365,7 +383,7 @@
 | Test Run | 测试运行 | テスト実行 |
 | Features | 功能 | 機能 |
 | Version History | 版本历史 | バージョン履歴 |
-| Workflow as Tool | 发布为工具 | ワークフローをツールとして公開する |
+| Workflow as Tool | 工作流作为工具 | ワークフローをツールとして利用 |
 | Needs Setup | 需要进行配置 | 設定が必要 |
 | Ready | 已就绪 | 準備完了 |
 | Update Needed | 需要更新 | 更新が必要 |
@@ -374,6 +392,8 @@
 | Conversation Variables | 会话变量 | 会話変数 |
 | Environment Variables | 环境变量 | 環境変数 |
 | System Variables | 系统变量 | システム変数 |
+| Error Handling | 异常处理 | 例外処理 |
+| Fail Branch | 异常分支 | 例外分岐 |
 
 ### Collaboration
 
@@ -427,6 +447,7 @@
 | Function Calling | Function Calling | 関数呼び出し |
 | ReAct | ReAct | ReAct |
 | Agent Settings | Agent 设置 | エージェント設定 |
+| TRACING | 追踪 | 実行追跡 |
 
 ### Agent Node Config
 
@@ -437,6 +458,7 @@
 | Edit in Agents | 在 Agents 中编辑 | Agents で編集 |
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
+| Output Routes | 输出路由 | 出力ルート |
 
 ### Agent Configure
 
@@ -449,6 +471,7 @@
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース |
 | Access URL | 访问 URL | アクセス URL |
 
 ### Question Classifier Node Config
@@ -465,10 +488,12 @@
 |:--------|:--------|:---------|
 | Query Text | 查询文本 | クエリテキスト |
 | Query Images | 查询图片 | 画像を検索 |
+| Query text | 查询文本 | クエリテキスト |
 | Metadata Filtering | 元数据过滤 | メタデータフィルタ |
 | Disabled | 禁用 | 無効 |
 | Automatic | 自动 | 自動生成 |
 | Manual | 手动 | 手動設定 |
+| Knowledge Base | 知识库 | ナレッジベース |
 
 ### Knowledge Retrieval Methods
 
@@ -484,14 +509,16 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| External Knowledge Base | 外部知识库 | 外部知識ベース |
+| External Knowledge Base | 外部知识库 | 外部ナレッジベース |
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
 | External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API |
 | Service API | 服务 API | サービスAPI |
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
+| Creators | 创建者 | 作成者 |
 | Multimodal | 多模态 | マルチモーダル |
+| TOP K | Top K | トップ K |
 
 ### Chunking Mode Labels
 
@@ -533,6 +560,15 @@
 | Queuing | 排队中 | キューイング中 |
 | Paused | 已暂停 | 一時停止中 |
 | Error | 错误 | エラー |
+
+### Golden Question Status Labels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Active | 有效 | 有効 |
+| Draft | 草稿 | 下書き |
+| Paused | 已暂停 | 一時停止 |
+| Stale | 已过时 | 要更新 |
 
 ### Document Embedding Modes
 

@@ -5,7 +5,7 @@ description: 如何跨小版本升级自部署 Weaviate 服务器而不丢失向
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/deploy/troubleshooting/weaviate-server-migration-path)。
 
-Dify 1.17.1 将内置的 Weaviate 服务器镜像从 `1.27.0` 升级到 `1.39.2`，已有的 Weaviate 数据卷无法一步跨越这段版本差。本流程适用于 Dify 默认的单节点 Docker Compose 部署。全新部署会在空数据卷上直接使用新版本，无需执行本流程。
+Dify 1.17.1 将内置的 Weaviate 服务器镜像从 `1.27.0` 升级到 `1.39.2`，已有的 Weaviate 数据卷无法一步跨越这段版本差。如果跳过 1.17.1 直接升级到 Dify 1.18.0（内置 `1.39.13`），同样如此。本流程适用于 Dify 默认的单节点 Docker Compose 部署。全新部署会在空数据卷上直接使用新版本，无需执行本流程。
 
 Weaviate 既未测试也不支持跨小版本升级，任何一个版本都可能包含磁盘数据迁移，而这类迁移要求上一个版本至少运行过一次。
 
@@ -29,7 +29,12 @@ docker compose exec -T weaviate \
 
 URL 中的 `localhost` 指的是 Weaviate 容器自身的回环地址，而不是宿主机。Weaviate 镜像内既没有 `curl` 也没有 Python，因此请求使用 busybox `wget` 发出，JSON 则由宿主机上的 Python 格式化。
 
-如果显示 `1.39.2`，说明无需升级。当前版本为 `1.27.0` 时继续下文；如果显示升级阶梯中的某个中间版本，则从下一级继续；版本早于 `1.27.0` 时，先按照 [Weaviate v4 迁移指南](/zh/self-host/deploy/troubleshooting/weaviate-v4-migration) 完成迁移。
+接下来怎么做，取决于显示的版本：
+
+- `1.39.2` 或更高：无需执行本流程。
+- `1.27.0`：从下面的第一级开始。
+- 阶梯中的某个中间版本：从下一级继续。
+- 早于 `1.27.0`：先按照 [Weaviate v4 迁移指南](/zh/self-host/deploy/troubleshooting/weaviate-v4-migration) 完成迁移。
 
 ## 备份数据
 
@@ -71,14 +76,15 @@ sudo cp -a ./volumes/weaviate ./volumes/weaviate_backup_$(date +%Y%m%d) || exit 
 | 10 | `cr.weaviate.io/semitechnologies/weaviate:1.36.23` |
 | 11 | `cr.weaviate.io/semitechnologies/weaviate:1.37.16` |
 | 12 | `cr.weaviate.io/semitechnologies/weaviate:1.38.14` |
-| 13 | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13（Dify 1.17.1） | `cr.weaviate.io/semitechnologies/weaviate:1.39.2` |
+| 13（Dify 1.18.0） | `cr.weaviate.io/semitechnologies/weaviate:1.39.13` |
 
 镜像仓库在第 1 步发生变化。现有部署从 Docker Hub 拉取 `semitechnologies/weaviate`，而阶梯使用 Weaviate 自有仓库 `cr.weaviate.io/semitechnologies/weaviate`，这也是 Dify 新版 Compose 文件所指向的地址。两者镜像相同，因此这里是有意同时变更仓库和版本。
 
 表中的补丁版本为撰写时的最新值。对于中间各级，开始前先确认该小版本是否有更新的补丁，有则优先使用。
 
 <Warning>
-  最后一级是例外。请停在 `docker-compose.yaml` 固定的版本上，而不是可用的最新补丁。如果先把数据卷升到更新的补丁，再应用 Dify 固定的版本，就等于在新版本已写入过的数据卷上执行降级，也就是 [回滚说明](#回滚失败的升级) 中警告的情况。
+  最后一级是例外。请停在目标 Dify 版本对应的第 13 级版本上，不要追最新补丁。如果先把数据卷升到更新的补丁，再应用 Dify 固定的版本，就等于在新版本已写入过的数据卷上执行降级，也就是 [回滚说明](#回滚失败的升级) 中警告的情况。
 </Warning>
 
 逐级升级还能缩小影响范围。某一级出问题时，只需回退一个版本，并且能立刻确定是哪个版本引入的问题，不必在一次跨越所有小版本的升级里二分排查。
@@ -210,11 +216,13 @@ docker compose exec -T weaviate \
   不要用 `GET /v1/objects?class=...&limit=1` 统计对象数量。它的 `totalResults` 字段返回的是当前页的大小，而不是集合的总量，因此 `limit=1` 时永远显示 `1`。请使用上面的 `Aggregate` 查询。
 </Warning>
 
-当 `1.39.2` 通过验证后，执行 `docker compose stop -t -1 weaviate || exit 1`。只还原临时修改的镜像配置，不要运行 Compose。然后按照 [Docker Compose 升级说明](/zh/self-host/deploy/quick-start/docker-compose#升级) 升级到 Dify 1.17.1。恢复服务前执行一次测试检索；能召回分段才说明向量索引存活，仅凭对象计数看不出这一点。
+最后一级通过验证后，执行 `docker compose stop -t -1 weaviate || exit 1`，然后撤销你对镜像的修改。升级之前不要再运行 Compose：还原后的文件会用 `1.27.0` 启动，而更新的版本已经写入过这个数据卷。接着按照 [Docker Compose 升级说明](/zh/self-host/deploy/quick-start/docker-compose#升级) 升级到目标 Dify 版本。
+
+恢复服务前执行一次测试检索。能召回分段，才说明向量索引完好；仅凭对象计数看不出这一点。
 
 ## 回滚失败的升级
 
-启动 Dify 1.17.1 前，先把 Weaviate 镜像改回 `semitechnologies/weaviate:1.27.0`，然后还原初始备份：
+启动新版本 Dify 前，先把 Weaviate 镜像改回 `semitechnologies/weaviate:1.27.0`，然后还原初始备份：
 
 ```bash
 docker compose stop -t -1 weaviate || exit 1
@@ -234,7 +242,7 @@ docker compose up -d weaviate
 
 集合结构保持原样，因此无需重建索引，知识库照常可用。Dify 把每个数据集存为 `Vector_index_<dataset_id>_Node` 集合，其中 ID 的连字符会替换为下划线，并使用自带命名向量 `default`。Dify 不设置距离度量，因此集合采用服务器默认的余弦距离。该结构在升级前后完全一致。
 
-Python `weaviate-client` 同样无需处理。使用你所用 Dify 版本固定的客户端版本即可：Dify 1.14.0 至 1.16.1 为 `4.20.5`，1.17.0 至 1.17.1 为 `4.22.0`。两者都能与阶梯上的所有服务器版本配合工作，因此服务器可以独立于 Dify 单独升级。
+Python `weaviate-client` 同样无需处理：Dify 1.14.0 至 1.18.0 固定的客户端版本都能与阶梯上的所有服务器版本配合工作，因此升级服务器时不必考虑 Dify 的版本。
 
 <Info>
   如果运行的 Weaviate 服务器早于 1.27，或要从客户端 v3 迁移到 v4，请先参考 [Weaviate v4 迁移指南](/zh/self-host/deploy/troubleshooting/weaviate-v4-migration)，它覆盖 1.19.0 至 1.26.x 以及到 1.27 为止的 schema 迁移，之后再回到本文。
