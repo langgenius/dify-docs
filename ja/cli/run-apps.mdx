@@ -88,6 +88,8 @@ difyctl run console_app advanced_chat --app-id 3c4d5e6f-7a8b-4c9d-8e0f-1a2b3c4d5
 必須の変数は、メッセージを送るたびに渡し直してください。これらの変数を付けずに送ったメッセージは失敗します。
 </Note>
 
+Chatflow アプリの実行が停止した場合や、フォームで一時停止した場合、その結果には `conversation_id` が含まれません。停止した実行の会話は、引き続き新しいメッセージを受け付けます。こうした場合にも ID を得るには、`--stream` を付けて実行を開始してください。どのイベントにも、最上位に `conversation_id` が含まれます。
+
 ## ファイルの送信
 
 どの実行コマンドでも、`--files` でファイル変数ごとにローカルファイルのパスを指定できます。ファイルリスト変数には、パスのリストを渡します。Web 上のファイルは、代わりに `--inputs` で渡します。各ファイル変数は、`--files` と `--inputs` のどちらか一方だけで渡してください。
@@ -112,16 +114,43 @@ difyctl run console_app workflow --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b -
 
 ## 実行の停止
 
-実行を後で停止できるようにするには、`--stream` を付けて開始します。停止するには、最初のイベントにある `task_id` を `difyctl stop run` に渡します：
+Workflow アプリまたは Chatflow アプリの実行を停止するには、その実行 ID を `difyctl stop run` に渡します。進行中の実行も、人間の入力フォームで一時停止している実行も停止できます。実行 ID は、`suspended` または `incomplete` の結果にある `run_id` です。`--stream` を付けた場合は、`workflow_started` イベントの `workflow_run_id` を使います。
+
+チャットボット、レガシー Agent アプリ、テキストジェネレーターの応答を停止する場合は、代わりに [`stop task`](#チャットボット、レガシー-agent-アプリ、テキストジェネレーターの応答の停止) を使います。
 
 ```bash
-difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+difyctl stop run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
+
+# Web アプリから開始した実行など、実行 ID がない場合：進行中の実行を一覧表示する
+difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run --status running
+
+# フォームで一時停止している実行：--status を省き、status が paused の実行を探す
+difyctl get run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --triggered-from app-run
+
+# status が stopped になったことを確認する（停止後しばらくは running と表示されることがある）
+difyctl describe run --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9
 ```
 
-Workflow アプリまたは Chatflow アプリの実行を停止すると、ストリームは `data.status` が `stopped` の `workflow_finished` イベントで終わります。ストリーミング中のコマンドは、終了コード 1 で終了します。スクリプトで実行の停止を確認するには、終了コードではなく `data.status` を確認してください。
+<Info>
+Workflow アプリや Chatflow アプリの実行中に Ctrl+C を押しても、止まるのは `difyctl` だけで、サーバー上の実行は止まりません。実行も停止するには、その実行 ID を `stop run` に渡します。
+</Info>
+
+実行を停止した時点ですでに始まっているモデル呼び出しや HTTP リクエストは、最後まで処理されます。
+
+スクリプトからは、停止と失敗は同じように見えます。両者を見分ける方法は、[実行の終了状態の確認](/ja/cli/reference/results-errors-and-exit-codes#実行の終了状態の確認) を参照してください。
+
+## チャットボット、レガシー Agent アプリ、テキストジェネレーターの応答の停止
+
+応答を停止できるようにするには、`--stream` を付けて開始します。そのうえで、最初のイベントにある `task_id` を `difyctl stop task` に渡します。
+
+```bash
+difyctl stop task --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --task-id 26992456-d005-4add-a26d-8dff91d5f13d
+```
 
 <Note>
-`stop run` に渡すのは `task_id` です。どのイベントにも含まれる `workflow_run_id` ではありません。誤った ID を渡しても `{"result": "success"}` と出力されますが、実行は止まらずに続きます。
+`stop task` は、存在しないタスク ID や、すでに終わった応答を指定しても `{"result": "success"}` と出力します。そのため、`task_id` が停止したい応答のものであることを確認し、そのストリームがまだ開いているうちに `stop task` を実行してください。
+
+停止した応答は、最後まで終わった応答と同じように見えます。ストリームは `message_end` で終わり、応答を開始したコマンドは終了コード 0 で終了します。回答には、停止するまでに届いた内容だけが含まれます。スクリプトで回答を使う場合は、`stop task` を呼び出したことをスクリプト側で記録しておいてください。
 </Note>
 
 ## 人間の入力フォームへの回答
@@ -134,7 +163,7 @@ Workflow アプリまたは Chatflow アプリの実行を停止すると、ス�
 
 または、回答する前にフォームのフィールドを確認したい場合は、いずれかのヒントから `form_token` を取得して `describe run form` を実行します。その後、`submit run form` で回答します。
 
-どちらの方法でも、再開した実行は `get run event` で追跡します。フラグ名は `--task-id` ですが、ここには一時停止した結果の `run_id` を指定します。`--include-state-snapshot` は省略しないでください。省略すると、コマンドが最大 5 分間何も出力しないことがあります。
+どちらの方法でも、再開した実行は `get run event` で追跡します。その際、一時停止した結果の `run_id` を `--run-id` に指定します。`--include-state-snapshot` は省略しないでください。省略すると、コマンドが最大 5 分間何も出力しないことがあります。
 
 ```bash
 # フォームのフィールドを表示する
@@ -144,10 +173,10 @@ difyctl describe run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-t
 difyctl submit run form --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --form-token Xq7Lm2RtPz9KcV4bN8wJdE --action approve --inputs '{"comment": "問題ありません"}'
 
 # 再開した実行を追跡する
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot
 
 # 実行が後で別のフォームで再び一時停止する可能性がある場合は、追跡を続ける
-difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --task-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
+difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
 ```
 
 ## 実行が失敗した原因の調査
@@ -173,5 +202,9 @@ difyctl get run node --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c
 | メッセージ | 対処方法 |
 |:--|:--|
 | `invalid run input`（入力に誤りがない場合） | アプリが一度も公開されていない可能性がある。公開してから、もう一度実行する。 |
+| `unknown flag "--task-id"`（`stop run` または `get run event` の場合） | 代わりに `--run-id` で、結果の `run_id` などの実行 ID を渡す。チャットボット、レガシー Agent アプリ、テキストジェネレーターの応答を `task_id` で停止するには、[`stop task`](#チャットボット、レガシー-agent-アプリ、テキストジェネレーターの応答の停止) を使う。 |
+| `run_not_found` | `task_id` ではなく実行 ID を渡しているか、`--app-id` に実行が属するアプリを指定しているかを確認する。 |
+| `run_not_stoppable` | まず `describe run` で実行の状態を確認する。すでに終了していれば、停止する必要はない。<br/><br/>まだ進行中か、フォームで一時停止している場合、その実行はサーバーのアップグレード前に開始されている。自分のアカウントで開始した実行（`difyctl` からの開始やテスト実行）がフォームで一時停止している場合は、`get run event` を一度実行する。その際、実行 ID と `--include-state-snapshot` を指定する。そのあと、`stop run` をやり直す。それ以外の実行は `difyctl` からは停止できない。 |
+| `app_mode_mismatch`（`stop run` または `stop task` の場合） | Workflow アプリや Chatflow アプリの実行は `stop run` で、ほかのアプリの応答は [`stop task`](#チャットボット、レガシー-agent-アプリ、テキストジェネレーターの応答の停止) で停止する。 |
 
 どのコマンドでも起こりうるエラーについては、「結果、エラー、終了コード」の [トラブルシューティング](/ja/cli/reference/results-errors-and-exit-codes#トラブルシューティング) を参照してください。
