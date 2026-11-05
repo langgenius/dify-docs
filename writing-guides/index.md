@@ -56,6 +56,6 @@ Record the SHA you verified against (`$REF`) in your report.
 
 ## Reference Files
 
-- **style-guide.md** — Voice, tone, writing patterns, callout usage
+- **style-guide.md** — Voice, tone, organizing and presenting content (components, callouts), writing patterns
 - **formatting-guide.md** — MDX formatting, Mintlify components, headings, lists, code
 - **glossary.md** — Standardized terminology with Chinese and Japanese translations

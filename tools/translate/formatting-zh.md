@@ -159,7 +159,7 @@ The paid-feature `<Tip>` pattern (`writing-guides/style-guide.md` § Paid Featur
 
 These elements must be translated, not left in English:
 
-- **Tab titles:** Translate `<Tab title="...">` values. If the tab title contains a UI label, use the official Chinese UI label.
+- **Component titles and text:** Translate the `title` of `<Tab>`, `<Step>`, `<Accordion>`, and `<Card>`, and the `tip` of `<Tooltip>`. If one contains a UI label, use the official Chinese UI label.
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Chinese translation from `web/i18n/locales/zh-Hans/` (`web/i18n/zh-Hans/` on the 1.17.x lines). Refer to the glossary. For labels not in the glossary, resolve the exact i18n key first (see the glossary's UI Labels section), then take the value at that key — never match by value across namespaces.
 - **Prompt examples:** Translate natural language text inside code blocks. Keep variable placeholders (`{{variable_name}}`) unchanged.

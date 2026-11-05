@@ -195,7 +195,7 @@ Dify Enterprise では、…できます。詳しくは [営業担当](https://s
 
 These elements must be translated, not left in English:
 
-- **Tab titles:** `<Tab title="...">` values must use the Japanese UI label from the glossary.
+- **Component titles and text:** Translate the `title` of `<Tab>`, `<Step>`, `<Accordion>`, and `<Card>`, and the `tip` of `<Tooltip>`. A title that contains a UI label uses the Japanese UI label from the glossary.
 - **Frame captions and image alt text:** Translate both `<Frame caption="...">` and `![alt text]`.
 - **Bold UI labels:** When a UI label appears in **bold**, use the official Japanese translation from `web/i18n/locales/ja-JP/` (`web/i18n/ja-JP/` on the 1.17.x lines). Refer to the glossary. For labels not in the glossary, resolve the exact i18n key first (see the glossary's UI Labels section), then take the value at that key — never match by value across namespaces.
 - **Prompt examples:** Translate natural language text inside code blocks (using です/ます form). Keep variable placeholders (`{{variable_name}}`) unchanged.
