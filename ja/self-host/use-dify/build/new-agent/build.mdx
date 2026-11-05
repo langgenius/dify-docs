@@ -319,19 +319,18 @@ Agent をワークスペース間で共有するには、Agent のメニュー�
 ## トラブルシューティング
 
 <AccordionGroup>
-  <Accordion title="ナビゲーションに Agents が表示されない、またはノード一覧に Agent ノードがない">
-    Chatflow アプリにだけこのノードがない場合は、[`NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW`](/ja/self-host/deploy/configuration/environments#next_public_enable_agent_v2_in_chatflow) を有効にしてください。デフォルトではオフです。
+  <Accordion title="Agents が表示されない、または Agent ノードで既存の Agent を選べない">
+    Agent がどこに表示されるかは、次の 2 つのスイッチで決まります：
 
-    それ以外の場合は、デプロイの管理者に `NEXT_PUBLIC_ENABLE_AGENT_V2=false` の明示的な設定がないか確認を依頼してください。設定されていれば `true` に変更します。
+    - **ナビゲーションに Agents がなく、どの Agent ノードでも既存の Agent を選べない**：[`NEXT_PUBLIC_ENABLE_AGENT_V2`](/ja/self-host/deploy/configuration/environments#next_public_enable_agent_v2) を `true` に設定してください。
+    - **Chatflow アプリの Agent ノードでのみ、既存の Agent を選べない**：[`NEXT_PUBLIC_ENABLE_AGENT_V2_IN_CHATFLOW`](/ja/self-host/deploy/configuration/environments#next_public_enable_agent_v2_in_chatflow) はデフォルトでオフなので、`true` に設定してください。
 
-    管理者に web コンテナを再作成してもらい、その後ブラウザを強制リロードしてください。ファイルの場所とコマンドは [環境変数](/ja/self-host/deploy/configuration/environments#next_public_enable_agent_v2) を参照してください。
-
-    ほかのメンバーには **Agents** が表示されるのに自分には表示されない場合は、ワークスペースのロールが原因です。この項目にはエディター以上のロールが必要です。
+    どちらを変更した場合も、web コンテナを再作成してから、ブラウザを強制リロードしてください。
   </Accordion>
-  <Accordion title="Agent の実行が開始直後に失敗する">
-    毎回すぐにエラーになる場合、1.16.0 以降のイメージを古い `docker-compose.yaml` と組み合わせている可能性があります。そのファイルには Agent に必要なサービス（`agent_backend` や `local_sandbox` など）がありません。
+  <Accordion title="返信のたびに「アクションに失敗しました」と表示される">
+    Agent バックエンドとサンドボックスは同じトークンを共有しており、トークンがないと起動時に停止します。
 
-    イメージと一緒に compose ファイルも更新し、スタック全体を起動し直してください。
+    `agent_backend` と `local_sandbox` の両サービスが再起動を繰り返す場合は、`docker/.env` で [`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](/ja/self-host/deploy/configuration/environments#dify_agent_local_sandbox_auth_token) を設定してください。1.17 と 1.18 のテンプレートは `envs/core-services/dify-agent.env` への設定を案内していましたが、このファイルの値は無視されます。すでにそこに設定している場合は、`docker/.env` に移してください。
   </Accordion>
   <Accordion title="OpenAI 互換モデルで Agent がエラーになる、またはツールを使わない">
     OpenAI 互換エンドポイント経由のモデル（vLLM など）には、ネイティブなツール呼び出しに完全対応していないものがあります。Agent はビルドチャットでも公開後の実行でも、この機能を前提としています。
@@ -340,12 +339,14 @@ Agent をワークスペース間で共有するには、Agent のメニュー�
 
     一部の OpenAI 公式モデルは、推論を有効にすると Chat Completions プロトコルではツールを呼び出せません。その場合は、プロバイダー資格情報の **API Protocol** を Responses API に変更してください。
   </Accordion>
-  <Accordion title="アップロードした画像で Agent がエラーになる、または画像を無視する">
-    Agent のモデルがビジョンに対応しているかどうかにかかわらず、**チャット機能** で画像アップロードを有効にできます。非対応のモデルでは、Agent が画像の処理でエラーになるか、画像を受け取っていないかのように返信することがあります。
+  <Accordion title="アップロードした画像を Agent が認識できない">
+    **チャット機能** の **ファイル アップロード** は、Agent がどのモデルを使っていても画像を受け付けます。ただし、画像を認識できるのはビジョンに対応したモデルだけです。
 
-    ビジョン対応のモデルに切り替えてください。モデル選択時に Vision タグが目印になります。
+    Agent のモデルを、**Vision** タグの付いたモデルに切り替えてください。モデルのタグは、モデル一覧でモデルにカーソルを合わせると確認できます。
   </Accordion>
   <Accordion title="Agent が社内ネットワークのファイルやページを取得できない">
-    サンドボックスの外部アクセスはプロキシを経由し、プライベートネットワークのアドレスは設計上ブロックされます。公開 URL へのアクセスは可能です。社内の資料は Agent の [ファイル](#files) に追加してください。
+    サンドボックスからのインターネットアクセスはプロキシを経由します。このプロキシは、デフォルトでプライベートネットワークのアドレスへの接続をブロックします。公開 URL には問題なくアクセスできます。社内ネットワーク上の資料は、代わりに Agent の [ファイル](#files) に追加してください。
+
+    特定の社内ホストに Agent からアクセスさせるには、`SSRF_PROXY_ALLOW_PRIVATE_IPS`（IP アドレスまたは CIDR 範囲）または `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`（ホスト名）にそのホストを指定します。指定したホストには、HTTP リクエストノードやカスタム API からもアクセスできるようになります。そのため、Agent がアクセスする必要のあるホストだけを指定してください。詳細は [環境変数](/ja/self-host/deploy/configuration/environments) を参照してください。
   </Accordion>
 </AccordionGroup>
