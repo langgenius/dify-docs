@@ -15,7 +15,7 @@ The linters measure mechanics. This test measures the writing, and it only measu
 
 1. Agree the dispatch with the owner before sending anything: how many judges, and what each reads. A page written or rewritten whole gets its own judge, unless several pages were drafted as one topic and the marks need the cross-page view, in which case one judge reads the set. A round that changed parts of pages sends the touched pages to one judge, each with its changed sections named, or to several judges split by topic when the set is large. Pages of different genres go to different judges, because the reference page differs. One judge per page is a choice, not the default.
 2. Dispatch the fresh sub-agent(s) (`subagent_type: general-purpose`) with the template below, filling `{DRAFT}` (absolute path), `{STANDARD}` (the style guide's path), `{EXEMPLAR}` (the reference page in the draft's genre: `en/cloud/use-dify/build/new-agent/overview.mdx` for a concept page, `en/cloud/use-dify/build/new-agent/build.mdx` for a task page or a reference), `{SHAPE}` (the pack's page-shape or conventions for this document type, as a path or a path with a section name, `path § Section`: the CLI pack's `SKILL.md § Page shape`, the API pack's `references/spec-conventions.md`, the env-var pack's `SKILL.md § Document Structure`; for a page with no pack, or whose pack has no page-shape section, the line reads "none"; add the page's genre and depth agreed at scope, or its existing genre when the round skipped scope, to this line), and `{CHANGED}` ("the whole page", or the sections and paragraphs this round changed, named as the reader would find them). When one judge reads several pages, the page block (files 3 and 4 and the changed line) and the reply repeat per page, under the page's path. The shape file keeps the judge from marking a required table or synopsis as a fault; the language inside the structure is still judged. Put nothing else in the prompt: no fact sheet, no research, no account of what changed beyond that line, no concerns of your own.
-3. Relay the report unedited. A mark is evidence that a sentence falls short, not an instruction for how to fix it, so check each one before proposing anything: a mark tagged rule against the rule's own text, and a mark whose fix would add text against the style guide's test (would this reader, here, do anything differently for it?) and the page's genre (does it belong here or on the page that owns it?). Under the report, propose what to do with each mark, with the reason in a clause: fix here, move to another page (name it), or decline. The owner decides on your proposals. The verdict sets the size of the fix: "Ship with light edits" fixes the marked sentences, "Needs heavy edits" rewrites the marked units whole, from their job, and "Needs rewrite" hands the draft and the marks to whoever the Write stage gives a changed idea: a fresh drafter, or the session itself in co-writing. After either rewrite, dispatch a new judge; never send a revised draft to the same one. Marks outside the change are the page's standing debt: propose a fix in this round or a follow-up for each, and touch none of them without the owner's decision, because on a release branch a page's debt is not this round's scope.
+3. Relay the report unedited. A mark is evidence that a sentence falls short, not an instruction for how to fix it, so check each one before proposing anything: a mark tagged rule against the rule's own text, and a mark whose fix would add text against the style guide's test (would this reader, here, do anything differently for it?) and the page's genre (does it belong here or on the page that owns it?). Under the report, propose what to do with each mark, with the reason in a clause: fix here, move to another page (name it), or decline. The owner decides on your proposals. The verdict sets the size of the fix: "Ship with light edits" fixes the marked sentences, "Needs heavy edits" rewrites the marked units whole, from their job, and "Needs rewrite" hands the draft and the marks to whoever the Write stage gives a changed idea: a fresh drafter, or the session itself in co-writing. A structure mark is fixed by reworking its whole block into the form it needs, whatever the verdict, because moving the quoted sentence alone leaves the form it was marked for. After either rewrite, dispatch a new judge; never send a revised draft to the same one. Marks outside the change are the page's standing debt: propose a fix in this round or a follow-up for each, and touch none of them without the owner's decision, because on a release branch a page's debt is not this round's scope.
 
 ## Dispatch prompt
 
@@ -50,7 +50,12 @@ with one tag each:
 - interface: describes what the reader can see on screen at that moment
 - dense: two separable ideas in one sentence, or a paragraph that runs past
   the point where the reader's question changed
-- structure: a section or paragraph out of the reader's order, off its
+- structure: a block whose form doesn't fit what the reader does with it
+  (cases run together as prose, a judgment after the step it governs, one
+  step answering several questions, needed content hidden in an accordion
+  or tooltip, main-line content in a callout or an aside run into the main
+  line that a callout would set apart, a rule restated from the page that
+  owns it), or a section or paragraph out of the reader's order, off its
   heading, repeating another part of the page, or one this page's reader
   wouldn't need; quote its heading or first sentence
 - vocabulary: a word from the code, the spec, or the team, not the product
@@ -66,7 +71,7 @@ Do not check facts, formatting, links, or terminology. Do not rewrite. Judge
 only whether this is writing the owner would put their name to.
 
 Reply with exactly this, once per page, under the page's path:
-- **Marked, in this change**: [quoted sentence — tag — five words on why; for rule, the section], one per line, or "none"
+- **Marked, in this change**: [quoted sentence — tag — five words on why; for rule, the section; for structure, the form it needs], one per line, or "none"
 - **Marked, elsewhere on the page**: same form, or "none"
 - **Best passage**: [the section that meets the bar, in a phrase]
 - **Verdict**: [one of the three, and the deciding sentence]
