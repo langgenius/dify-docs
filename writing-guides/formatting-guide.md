@@ -285,7 +285,9 @@ Rename default tool outputs (`CleanShot*`, `Screenshot*`, `IMG_*`) before commit
 
 ## Mintlify Components
 
-### Info, Tip, Note, Warning
+Which component a block needs is decided in the style guide's [Organize and Present the Content](./style-guide.md#organize-and-present-the-content); this section covers how to write each one.
+
+### Callouts
 
 Use these for callouts instead of italics or raw text. Each serves a different purpose:
 
@@ -295,6 +297,8 @@ Use these for callouts instead of italics or raw text. Each serves a different p
 | `<Tip>` | Helpful suggestions or shortcuts |
 | `<Note>` | Important information that requires attention—missing it could lead to potential complications |
 | `<Warning>` | Actions that could cause errors or data loss |
+| `<Danger>` | Security risks, such as a URL or key that grants access to whoever holds it |
+| `<Check>` | The result that shows a procedure worked, at its end |
 
 Format:
 
@@ -308,7 +312,7 @@ Configure at least one model provider in **System Settings** > **Model Providers
 
 ### Tabs
 
-Use for presenting alternatives (e.g., different methods, OS-specific instructions):
+Format:
 
 ```mdx
 <Tabs>
@@ -325,7 +329,7 @@ Use for presenting alternatives (e.g., different methods, OS-specific instructio
 
 ### Steps
 
-Use for sequential procedures:
+Format:
 
 ````mdx
 <Steps>
@@ -348,7 +352,7 @@ Prefer native components over raw HTML or styled `<div>`s. Side-by-side images u
 
 ### Accordion
 
-Use for optional or supplementary content:
+Format:
 
 ```mdx
 <Accordion title="What is a webhook?">

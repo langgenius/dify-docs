@@ -76,6 +76,89 @@ To create an agent from a shared DSL file, choose **Import DSL file**. Skills an
 
 One sentence carries the whole action, its location, and where it lands. The dialog's fields are not described, because the reader is looking at them. The one fact kept from the import path is the one with a cost, and it arrives as the next thing to do. Both versions are correct; only the second is finished.
 
+## Organize and Present the Content
+
+Getting the right content onto the right page comes first; the opening section is about that. A rule has one home, the page whose reader needs all of it. Other pages link there with a payoff and keep only what is specific to them, because a copied rule doubles the reading and the copies drift apart.
+
+The second job is to organize and present that content so the reader can use it. Each block takes the form that fits what the reader does with it, worked out from what they decide there and in what order, never from the order the facts were found or fixed in. Right content in the wrong form still fails: the reader holds every case in mind to find their own, or acts before reaching the sentence that would have stopped them.
+
+A judgment the reader makes comes before the action it governs. A step that ends by telling some readers they shouldn't have started it is in the product's order, not theirs. Then choose the form by what the reader is doing:
+
+| The reader | Form | Keep in mind |
+|:--|:--|:--|
+| Follows reasoning whose ideas connect | Paragraphs | Break where the reader's question changes; connected ideas don't become bullets (see **Excessive bullets**). |
+| Finds their own case among several | A bulleted list, each item led in bold by the case as the reader recognizes it | Each reader fits exactly one item. |
+| Carries out actions in a fixed order | A numbered list; `<Steps>` when each step carries its own code, images, or sub-steps | A short task stays a sentence or two (see **Progressive disclosure**). |
+| Compares options, or looks up values, on the same points | A table | Every row answers the same columns; content that differs in kind from row to row is a list. |
+| Follows one of several paths, each with its own steps, such as Docker or source code | `<Tabs>`, titled by the choice | The reader sees only the tab they open, so what every reader needs stays outside the tabs. |
+| Copies the same operation for their language or tool | `<CodeGroup>` | Each variant does the same thing; different procedures are tabs. |
+| Copies a command, a value, or a file | A code block | Put each command at the step where the reader runs it. |
+| Meets something only some readers need, or a trap no reader may miss | A callout, typed per the [Formatting Guide](./formatting-guide.md#callouts) | See [Callouts](#callouts). |
+| Needs it only in a specific situation: a troubleshooting entry, a FAQ, an optional deep dive | `<Accordion>`, or `<AccordionGroup>` for a set, titled by the symptom or question | The title lets the reader decide without opening it; never hide a step, a warning, or anything every reader needs. |
+| May not know a term the page uses | A `<Tooltip>` on the term | It shows only on hover, so it holds a definition, never something the reader needs to act. |
+| Looks up the fields of a request, a response, or a schema | `<ParamField>` or `<ResponseField>`, with `<Expandable>` for nested fields | Reference pages only; a guide page uses a table. |
+| Needs to see a screen state words can't carry | An image in a `<Frame>`; side-by-side images in `<Columns>` | See [Images](#images): only when the text can't do it. |
+| Needs to follow a flow or a relationship between parts | A Mermaid diagram | Same test as images: write the prose first, and add the diagram only where the prose can't carry it. |
+| Finds their way around a directory layout | A `<Tree>` | Show only the folders and files the page talks about. |
+| Chooses where to go next among several pages | `<Card>`s in a `<CardGroup>` or `<Columns>` | Each card says what the reader gets there; a single destination is a link in a sentence. |
+| Recognizes a button shown only as an icon | An inline `<Icon>` beside the action | Only where the interface shows no label. |
+| Sees what a plan or status gates | A `<Badge>` | See [Paid Feature Callouts](#paid-feature-callouts). |
+
+The other Mintlify components serve the site itself or genres this doc set doesn't have: `<Banner>` (site-wide, configured in `docs.json`), `<Update>` (changelogs), `<Color>` (design systems), `<Panel>` and `<RequestExample>`/`<ResponseExample>` (the right sidebar), `<View>` (a page-wide language switch), `<Visibility>` (content per audience), `<Prompt>`, `<Tiles>`, and `<GitHub>` cards. Agree the first use of any of them with the docs team.
+
+### Callouts
+
+A section has a main line: what every reader needs, in the order they act on it. A callout sets other content apart from it, so the main line reads straight through and the reader who needs the rest finds it where it applies. Use one for either of two kinds of content, typed by its role:
+
+- **Asides**: context only some readers need, an optional shortcut, a condition that applies to some deployments or plans, or a setting that enables what the section describes. Without a callout, an aside either interrupts the main line or gets cut from a page whose reader needed it.
+- **Traps**: what no reader may miss. A limit the reader needs before acting goes at the start of the section; a fact that contradicts what the interface implies, such as an API-started run labeled WebApp, or one that protects the reader's data or time, such as a download that expires, goes where it applies, even inside a list item.
+
+A step every reader takes, or a condition that decides which way the reader goes, is the main line and stays out of callouts. Callouts stacked one after another mean the main line around them needs reshaping.
+
+### An Example
+
+The first step of setting an environment variable on a self-hosted deployment, as first written (credentials abridged):
+
+```mdx
+Search `docker/envs/` for the variable's name. The `.defaults` file that defines it names its local file in the first comment. Edit that local file if it exists; otherwise, copy the `.defaults` file to that name first.
+
+For example, settings shared by the API, workers, and scheduled tasks (Beat) are defined in `envs/core-services/api-worker.defaults`, so they go in `api-worker.env`.
+
+<Info>
+  If `docker/.env` also sets the variable, that value wins; see [Precedence](#precedence).
+</Info>
+
+If the search finds an `.env.example` template instead, such as `envs/security.env.example`, copy it to the same name without `.example`.
+
+<Note>
+  Skip `envs/middleware.env.example`: it belongs to the separate middleware stack for source-code development, and a Docker Compose deployment doesn't read it.
+</Note>
+
+Two kinds of settings go in `docker/.env` instead:
+
+- **Settings Compose reads before it loads any service file**, such as `COMPOSE_PROFILES` and `VECTOR_STORE`.
+- **Shared credentials**, so every service that uses one gets the same value, such as `PLUGIN_DAEMON_KEY`.
+```
+
+Reshaped:
+
+```mdx
+Set most variables in a local `.env` file under `docker/envs/`, and these two kinds in `docker/.env`:
+
+- **Settings Compose reads before it loads any service file**, such as `COMPOSE_PROFILES` and `VECTOR_STORE`.
+- **Shared credentials**, so every service that uses one gets the same value, such as `PLUGIN_DAEMON_KEY`.
+
+For any other variable, search `docker/envs/` for its name, then act on what the search finds:
+
+- **One `.defaults` file**: edit the local file named in its first comment. If that file doesn't exist yet, copy the `.defaults` file to that name first.
+- **Several `.defaults` files**: edit the local file that every service using the variable loads; otherwise the services end up with different values.
+- **An `.env.example` template**, such as `envs/security.env.example`: copy it to the same name without `.example`. Skip `envs/middleware.env.example`, which only the separate middleware stack for source-code development reads.
+
+When `docker/.env` and a local file set the same variable, the `docker/.env` value wins, with the exceptions in [Precedence](#precedence).
+```
+
+The reader's first question is which file. The first version answered it for most readers, then told the rest in its last paragraph that the step wasn't for them. The reshaped step settles the two kinds that go in `docker/.env` first, then sorts everyone else by what their search finds, one item each. Both callouts held main-line content: the middleware file is one case's exception, so it joins that case, and precedence is the last thing a reader holding two values needs.
+
 ## Voice and Tone
 
 Use **active voice** whenever natural and clear. Passive voice is acceptable when the actor is unknown, when who acts doesn't change what the reader does, or when it reads more naturally.
@@ -108,14 +191,6 @@ When an image is warranted:
 - Crop tightly to the relevant area. A full-window screenshot where only a panel matters is visual noise.
 
 For the mechanics of image syntax, alt text, captions, and storage, see the [Formatting Guide](./formatting-guide.md#images).
-
-## Callout Usage
-
-Place critical limitations at the start of a section when users need them before taking action, not only at the end.
-
-**Avoid overuse.** Too many callouts dilute their importance and interrupt reading flow. When a section accumulates multiple callouts, restructure into flowing paragraphs with inline bold text instead. Reserve callout visual weight for genuinely critical information.
-
-**Promote traps.** When a fact contradicts what the interface implies (an API-started run labeled WebApp) or protects the reader's data or time (a download that expires), a short `<Info>` or `<Tip>` beats a buried sentence—even inside a list item.
 
 ## Paid Feature Callouts
 
