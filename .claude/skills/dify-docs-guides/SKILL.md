@@ -77,5 +77,10 @@ In the self-host copy:
    </Note>
    ```
 
-4. Exclude from the user guide: default values, the "why" behind each variable, deployment-specific mechanics, and variable interactions — anything the reader finds one click into the reference.
+4. Leave default values, deployment mechanics, and how variables interact to the reference, one click away. Leave out a variable's purpose too, unless the reader needs it to tell whether the variable applies to them, as when only some setups use it: a name and a value alone leave that reader unable to decide whether to set it. Then give the variable's line a short clause saying what it is for:
+
+   ```mdx
+   - `TRIGGER_URL` = an address your IM can reach over the internet, so clicks on card buttons get back to Dify
+   ```
+
 5. Link a variable name only when it has its own heading anchor in the reference (`#var_name`). Table-row variables stay plain code — a link would land at the page or section top while promising the variable; each self-contained unit that names them (a bullet, a callout) carries its own "See [Environment Variables](…) for details." reference — placed with the variables, never as a section-level closing line.
