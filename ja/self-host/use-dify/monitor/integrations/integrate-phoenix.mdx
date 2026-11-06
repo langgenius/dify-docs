@@ -17,6 +17,8 @@ title: Phoenix の統合
 
 ### 2 Phoenix の使い方
 
+認証を使用しないセルフホストの Phoenix では、以下のアカウントと API キーの手順を省略できます。**API Key** は空欄にしてください。
+
 #### 1. Phoenix の[公式サイト](https://app.arize.com/auth/phoenix/signup)から登録し、ログインする。
 
 ### 2. Phoenix API キーの取得
@@ -35,7 +37,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   ![アプリケーションパフォーマンスを追跡](https://i.ibb.co/gMmXxfhQ/dify-docs-phoenix-in-use.png)
 </Frame>
 
-設定後、Phoenix で作成した **API Key** と **プロジェクト名** を設定ページに貼り付けて保存します。
+設定をクリックした後、**プロジェクト** 名と、認証が有効な場合は **API Key** を入力します。**Endpoint** には Phoenix インスタンスのベース URL を指定して保存します。取り込みパスは Dify が追加するため、`/v1/traces` は付けないでください。
 
 <Frame>
   ![Phoenix の設定](https://i.ibb.co/jv6QFbp7/dify-docs-phoenix-config.png)
@@ -81,7 +83,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   ![アプリケーションパフォーマンスを追跡](https://i.ibb.co/gMmXxfhQ/dify-docs-phoenix-in-use.png)
 </Frame>
 
-設定画面で、Phoenix Cloud で作成した API キー、プロジェクト名、および スペースのホスト名 を入力して保存してください。
+設定画面で **API Key** と **プロジェクト** 名を入力します。**Endpoint** には Phoenix Cloud スペースの完全な URL（例：`https://app.phoenix.arize.com/s/<space>`）を指定して保存してください。
 
 <Frame>
   ![Phoenix の設定](https://i.ibb.co/jv6QFbp7/dify-docs-phoenix-config.png)
@@ -93,7 +95,17 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   ![Phoenix の設定](https://i.ibb.co/HTJsj9x2/dify-docs-phoenix-in-service.png)
 </Frame>
 
+<Note>
+設定を保存してトレースを有効にしたら、アプリを再実行し、監視サービスに新しいトレースが表示されるか確認してください。トレースは非同期で送信されます。設定の保存だけでは、トレースの到着は確認できません。
+
+Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローでは、デプロイ設定で `OPS_AGENT_TRACE_ENABLED=true` と `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` の両方を有効にしてください。詳しくは [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。これらのアプリでは **内容を収集** がデフォルトでオフになり、ワークフロー全体の入力と出力を制御します。それ以外のアプリでは、入力と出力が送信される場合があります。
+</Note>
+
 ## モニタリングデータリスト
+
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。監視サービスのトレース ID とスパン ID は Dify の識別子から生成され、データベースの ID をそのままコピーしたものではありません。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+
+以下の詳細リストは、Dify の元レコードとメタデータを説明しています。エクスポートされるのは、関連する利用可能な値のみです。元レコード全体をそのまま送信するわけではありません。
 
 ### **ワークフロー/会話フロートラッキング情報**
 
@@ -108,36 +120,36 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   </thead>
   <tbody>
     <tr>
-      <td>workflow_app_log_id/workflow_run_id</td>
-      <td>id</td>
+      <td>workflow_run_id</td>
+      <td>span_id</td>
     </tr>
     <tr>
-      <td>user_session_id</td>
-      <td>- メタデータに配置</td>
+      <td>user_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
-      <td>{"workflow_{id}"}</td>
+      <td>workflow</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
       <td>outputs</td>
-      <td>outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
-      <td>モデルトークン消費</td>
-      <td>usage_metadata</td>
+      <td>モデルトークン消費量（LLM 呼び出し）</td>
+      <td>llm.token_count.prompt / completion / total</td>
     </tr>
     <tr>
       <td>metadata</td>
@@ -145,15 +157,11 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
     </tr>
     <tr>
       <td>error</td>
-      <td>error</td>
+      <td>status.code / status.message</td>
     </tr>
     <tr>
-      <td>\[workflow]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>"conversation_id/none for workflow"</td>
-      <td>conversation_id in metadata</td>
+      <td>セッション ID</td>
+      <td>session.id</td>
     </tr>
   </tbody>
 </table>
@@ -200,53 +208,49 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   <thead>
     <tr>
       <th>チャット</th>
-      <th>Phoenix LLM</th>
+      <th>Phoenix Trace</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>message_id</td>
-      <td>id</td>
+      <td>span_id</td>
     </tr>
     <tr>
-      <td>user_session_id</td>
-      <td>- メタデータに配置</td>
+      <td>end_user_session_id</td>
+      <td>metadata.end_user_session_id</td>
     </tr>
     <tr>
-      <td>"llm"</td>
+      <td>message</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
       <td>outputs</td>
-      <td>outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
-      <td>モデルトークン消費</td>
-      <td>usage_metadata</td>
+      <td>モデルトークン消費量（LLM 呼び出し）</td>
+      <td>llm.token_count.prompt / completion / total</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\["message", conversation_mode]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>conversation_id</td>
-      <td>conversation_id in metadata</td>
+      <td>セッション ID</td>
+      <td>session.id</td>
     </tr>
   </tbody>
 </table>
@@ -254,7 +258,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
 
 - message_id - メッセージ ID
 - message_data - メッセージデータ
-- user_session_id - ユーザーセッション ID
+- end_user_session_id - ユーザーセッション ID
 - conversation_model - 会話モード
 - message_tokens - メッセージ内のトークン数
 - answer_tokens - 回答内のトークン数
@@ -265,7 +269,6 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
 - file_list - 処理されたファイルリスト
 - start_time - 開始時間
 - end_time - 終了時間
-- message_file_data - メッセージ関連のファイルデータ
 - conversation_mode - 会話モード
 - メタデータ
   - conversation_id - 会話 ID
@@ -292,7 +295,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>"moderation"</td>
@@ -300,27 +303,23 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>action, flagged</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["moderation"]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>
@@ -351,13 +350,13 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   <thead>
     <tr>
       <th>提案質問</th>
-      <th>Phoenix LLM</th>
+      <th>Phoenix Trace</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>"suggested_question"</td>
@@ -365,27 +364,23 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>suggested_question</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["suggested_question"]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>
@@ -434,7 +429,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>"dataset_retrieval"</td>
@@ -442,31 +437,27 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>documents</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["dataset_retrieval"]</td>
-      <td>tags</td>
     </tr>
     <tr>
       <td>message_id</td>
-      <td>parent_run_id</td>
+      <td>parent_span_id</td>
     </tr>
   </tbody>
 </table>
@@ -505,7 +496,7 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>tool_name</td>
@@ -513,27 +504,23 @@ Dify アプリケーションで Phoenix を設定します。監視するアプ
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
-      <td>inputs</td>
-      <td>inputs</td>
+      <td>tool_inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>tool_outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["tool", tool_name]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>

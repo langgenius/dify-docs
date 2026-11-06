@@ -30,7 +30,7 @@ Configure Weave in the Dify application. Open the application you need to monito
   ![Configure Weave in the Dify Application](https://assets-docs.dify.ai/2025/04/c33e8fda75ee9052ed23c8690e314862.png)
 </Frame>
 
-After clicking configure, paste the **API Key** and **project name**, also specify the **W&B entity**(optionally, default is your username) into the configuration and save.
+After clicking configure, paste the **API Key** and an existing, writable **project name**, and optionally specify the **W&B entity**. If the entity is blank, Dify uses the API key's default entity, which may be a team. Save the configuration.
 
 <Frame>
   ![Configure, Paste the API Key and Project Name, Also Specify the W&B](https://assets-docs.dify.ai/2025/04/60bce1ae7b883825b13526d172ae0073.png)
@@ -58,7 +58,17 @@ When you switch to Weave, you can view detailed operation logs of Dify applicati
 
 Detailed LLM operation logs through Weave will help you optimize the performance of your Dify application.
 
+<Note>
+After saving and enabling tracing, run the app again and check for a new trace in the monitoring service. Delivery is asynchronous; saving the configuration alone does not confirm that a trace has arrived.
+
+For Agent apps and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent), enable both `OPS_AGENT_TRACE_ENABLED=true` and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` in your deployment. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery). **Capture content** is off by default for these apps and controls inputs and outputs across the whole workflow. Other apps can still send inputs and outputs.
+</Note>
+
 ### Monitoring Data List
+
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Provider trace and span IDs are derived from Dify identifiers rather than copied directly from database IDs. Native token usage is reported on model calls only.
+
+The detail lists below describe Dify's source records and metadata. Only the relevant, available values are exported; the raw records are not sent in full.
 
 #### **Workflow/Chatflow Trace Information**
 
@@ -66,19 +76,18 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Workflow                                 | Weave Trace                  |
 | ---------------------------------------- | ---------------------------- |
-| workflow_app_log_id/workflow_run_id | id                           |
-| user_session_id                        | placed in metadata         |
-| workflow_\{id\}                        | name                         |
-| start_time                              | start_time                  |
-| end_time                                | end_time                    |
+| workflow_run_id | id                           |
+| user_id                        | attributes.user_id         |
+| workflow                        | op_name / display_name                         |
+| start_time                              | started_at                  |
+| end_time                                | ended_at                    |
 | inputs                                   | inputs                       |
-| outputs                                  | outputs                      |
-| Model token consumption                  | usage_metadata              |
-| metadata                                 | extra                        |
-| error                                    | error                        |
-| workflow                              | tags                         |
-| "conversation_id/none for workflow"     | conversation_id in metadata |
-| conversion_id                           | parent_run_id              |
+| outputs                                  | output                      |
+| Model token consumption (LLM calls)                  | summary.usage (per model)              |
+| metadata                                 | attributes                        |
+| error                                    | exception                        |
+| Session ID     | thread_id |
+| Parent span (when present)                           | parent_id              |
 
 **Workflow Trace Info**
 
@@ -120,24 +129,22 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 | Chat                             | Weave Trace                  |
 | -------------------------------- | ---------------------------- |
 | message_id                      | id                           |
-| user_session_id                | placed in metadata         |
-| "message_\{id\}"                | name                         |
-| start_time                      | start_time                  |
-| end_time                        | end_time                    |
+| end_user_session_id                | attributes.end_user_session_id         |
+| message                | op_name / display_name                         |
+| start_time                      | started_at                  |
+| end_time                        | ended_at                    |
 | inputs                           | inputs                       |
-| outputs                          | outputs                      |
-| Model token consumption          | usage_metadata              |
-| metadata                         | extra                        |
-| error                            | error                        |
-| "message", conversation_mode | tags                         |
-| conversation_id                 | conversation_id in metadata |
-| conversion_id                   | parent_run_id              |
+| outputs                          | output                      |
+| Model token consumption (LLM calls)          | summary.usage (per model)              |
+| metadata                         | attributes                        |
+| error                            | exception                        |
+| Session ID                 | thread_id |
 
 **Message Trace Info**
 
 * message_id - Message ID
 * message_data - Message data
-* user_session_id - User session ID
+* end_user_session_id - User session ID
 * conversation_model - Conversation mode
 * message_tokens - Number of tokens in the message
 * answer_tokens - Number of tokens in the answer
@@ -148,7 +155,6 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 * file_list - List of processed files
 * start_time - Start time
 * end_time - End time
-* message_file_data - File data associated with the message
 * conversation_mode - Conversation mode
 * Metadata
   * conversation_id - Conversation ID
@@ -167,15 +173,14 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Moderation    | Weave Trace          |
 | ------------- | -------------------- |
-| user_id      | placed in metadata |
-| “moderation"  | name                 |
-| start_time   | start_time          |
-| end_time     | end_time            |
+| user_id      | attributes.user_id |
+| moderation  | op_name / display_name                 |
+| start_time   | started_at          |
+| end_time     | ended_at            |
 | inputs        | inputs               |
-| outputs       | outputs              |
-| metadata      | extra                |
-| moderation | tags                 |
-| message_id   | parent_run_id      |
+| action, flagged       | output              |
+| metadata      | attributes                |
+| message_id   | parent_id      |
 
 **Moderation Trace Info**
 
@@ -200,15 +205,14 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Suggested Question     | Weave Trace          |
 | ---------------------- | -------------------- |
-| user_id               | placed in metadata |
-| suggested_question    | name                 |
-| start_time            | start_time          |
-| end_time              | end_time            |
+| user_id               | attributes.user_id |
+| suggested_question    | op_name / display_name                 |
+| start_time            | started_at          |
+| end_time              | ended_at            |
 | inputs                 | inputs               |
-| outputs                | outputs              |
-| metadata               | extra                |
-| suggested_question | tags                 |
-| message_id            | parent_run_id      |
+| suggested_question                | output              |
+| metadata               | attributes                |
+| message_id            | parent_id      |
 
 **Message Trace Info**
 
@@ -245,15 +249,14 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Dataset Retrieval     | Weave Trace          |
 | --------------------- | -------------------- |
-| user_id              | placed in metadata |
-| dataset_retrieval    | name                 |
-| start_time           | start_time          |
-| end_time             | end_time            |
+| user_id              | attributes.user_id |
+| dataset_retrieval    | op_name / display_name                 |
+| start_time           | started_at          |
+| end_time             | ended_at            |
 | inputs                | inputs               |
-| outputs               | outputs              |
-| metadata              | extra                |
-| dataset_retrieval | tags                 |
-| message_id           | parent_run_id      |
+| documents               | output              |
+| metadata              | attributes                |
+| message_id           | parent_id      |
 
 **Dataset Retrieval Trace Info**
 
@@ -280,15 +283,14 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Tool                  | Weave Trace          |
 | --------------------- | -------------------- |
-| user_id              | placed in metadata |
-| tool_name            | name                 |
-| start_time           | start_time          |
-| end_time             | end_time            |
-| inputs                | inputs               |
-| outputs               | outputs              |
-| metadata              | extra                |
-| "tool", tool_name | tags                 |
-| message_id           | parent_run_id      |
+| user_id              | attributes.user_id |
+| tool_name            | op_name / display_name                 |
+| start_time           | started_at          |
+| end_time             | ended_at            |
+| tool_inputs                | inputs               |
+| tool_outputs               | output              |
+| metadata              | attributes                |
+| message_id           | parent_id      |
 
 #### **Tool Trace Info**
 
@@ -325,14 +327,13 @@ Detailed LLM operation logs through Weave will help you optimize the performance
 
 | Generate Name     | Weave Trace          |
 | ----------------- | -------------------- |
-| user_id          | placed in metadata |
-| generate_name    | name                 |
-| start_time       | start_time          |
-| end_time         | end_time            |
+| user_id          | attributes.user_id |
+| generate_name    | op_name / display_name                 |
+| start_time       | started_at          |
+| end_time         | ended_at            |
 | inputs            | inputs               |
-| outputs           | outputs              |
-| metadata          | extra                |
-| generate_name | tags                 |
+| outputs           | output              |
+| metadata          | attributes                |
 
 **Generate Name Trace Info**
 

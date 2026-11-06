@@ -31,7 +31,7 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
   ![在 Dify 应用中配置 Weave](https://assets-docs.dify.ai/2025/04/c33e8fda75ee9052ed23c8690e314862.png)
 </Frame>
 
-点击配置后，粘贴 **API 密钥** 和**项目名称**，指定 **W&B 实体**（可选，默认为你的用户名）到配置中并保存。
+点击配置后，粘贴 **API Key** 和已存在且可写的 **项目** 名称，并按需指定 **W&B 实体**。实体留空时，Dify 使用 API 密钥的默认实体，该实体也可能是团队。然后保存配置。
 
 <Frame>
   ![](https://assets-docs.dify.ai/2025/04/60bce1ae7b883825b13526d172ae0073.png)
@@ -59,7 +59,17 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 通过 Weave 获取的详细 LLM 操作日志将帮助你优化 Dify 应用的性能。
 
+<Note>
+保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
+
+对于 Agent 应用以及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流，需要在部署中同时启用 `OPS_AGENT_TRACE_ENABLED=true` 和 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。这些应用的 **采集内容** 默认关闭，该设置控制整个工作流的输入和输出。其他应用仍可能发送输入和输出。
+</Note>
+
 ### 监控数据列表
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。下表中的追踪 ID 和 span ID 由 Dify 派生生成，并非直接复制数据库 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+
+以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
 #### **Workflow/Chatflow 追踪信息**
 
@@ -67,19 +77,18 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 工作流                                   | Weave 追踪                   |
 | ---------------------------------------- | ---------------------------- |
-| workflow_app_log_id/workflow_run_id | id                           |
-| user_session_id                        | 放置在元数据中               |
-| workflow_\{id\}                        | name                         |
-| start_time                              | start_time                  |
-| end_time                                | end_time                    |
+| workflow_run_id | id                           |
+| user_id                        | attributes.user_id               |
+| workflow                        | op_name / display_name                         |
+| start_time                              | started_at                  |
+| end_time                                | ended_at                    |
 | inputs                                   | inputs                       |
-| outputs                                  | outputs                      |
-| 模型令牌消耗                            | usage_metadata              |
-| metadata                                 | extra                        |
-| error                                    | error                        |
-| workflow                              | tags                         |
-| "conversation_id/none for workflow"     | 元数据中的 conversation_id  |
-| conversion_id                           | parent_run_id              |
+| outputs                                  | output                      |
+| 模型 token 消耗（LLM 调用）                            | summary.usage（按模型）              |
+| metadata                                 | attributes                        |
+| error                                    | exception                        |
+| 会话 ID     | thread_id  |
+| 父 span（如有）                           | parent_id              |
 
 **工作流追踪信息**
 
@@ -121,24 +130,22 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 | 聊天                             | Weave 追踪                    |
 | -------------------------------- | ----------------------------- |
 | message_id                      | id                            |
-| user_session_id                | 放置在元数据中                |
-| "message_\{id\}"                | name                          |
-| start_time                      | start_time                   |
-| end_time                        | end_time                     |
+| end_user_session_id                | attributes.end_user_session_id                |
+| message                | op_name / display_name                          |
+| start_time                      | started_at                   |
+| end_time                        | ended_at                     |
 | inputs                           | inputs                        |
-| outputs                          | outputs                       |
-| 模型令牌消耗                     | usage_metadata               |
-| metadata                         | extra                         |
-| error                            | error                         |
-| "message", conversation_mode | tags                          |
-| conversation_id                 | 元数据中的 conversation_id   |
-| conversion_id                   | parent_run_id               |
+| outputs                          | output                       |
+| 模型 token 消耗（LLM 调用）                     | summary.usage（按模型）               |
+| metadata                         | attributes                         |
+| error                            | exception                         |
+| 会话 ID                 | thread_id   |
 
 **消息追踪信息**
 
 * message_id - 消息 ID
 * message_data - 消息数据
-* user_session_id - 用户会话 ID
+* end_user_session_id - 用户会话 ID
 * conversation_model - 对话模式
 * message_tokens - 消息中的令牌数
 * answer_tokens - 回答中的令牌数
@@ -149,7 +156,6 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 * file_list - 处理的文件列表
 * start_time - 开始时间
 * end_time - 结束时间
-* message_file_data - 与消息关联的文件数据
 * conversation_mode - 对话模式
 * 元数据
   * conversation_id - 对话 ID
@@ -168,15 +174,14 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 审核           | Weave 追踪             |
 | ------------- | ---------------------- |
-| user_id      | 放置在元数据中         |
-| "moderation"  | name                   |
-| start_time   | start_time            |
-| end_time     | end_time              |
+| user_id      | attributes.user_id         |
+| "moderation"  | op_name / display_name                   |
+| start_time   | started_at            |
+| end_time     | ended_at              |
 | inputs        | inputs                 |
-| outputs       | outputs                |
-| metadata      | extra                  |
-| \[moderation] | tags                   |
-| message_id   | parent_run_id        |
+| action, flagged       | output                |
+| metadata      | attributes                  |
+| message_id   | parent_id        |
 
 **审核追踪信息**
 
@@ -201,15 +206,14 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 建议问题               | Weave 追踪             |
 | ---------------------- | ---------------------- |
-| user_id               | 放置在元数据中         |
-| suggested_question    | name                   |
-| start_time            | start_time            |
-| end_time              | end_time              |
+| user_id               | attributes.user_id         |
+| suggested_question    | op_name / display_name                   |
+| start_time            | started_at            |
+| end_time              | ended_at              |
 | inputs                 | inputs                 |
-| outputs                | outputs                |
-| metadata               | extra                  |
-| suggested_question | tags                   |
-| message_id            | parent_run_id        |
+| suggested_question                | output                |
+| metadata               | attributes                  |
+| message_id            | parent_id        |
 
 **消息追踪信息**
 
@@ -246,15 +250,14 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 数据集检索           | Weave 追踪             |
 | --------------------- | --------------------- |
-| user_id              | 放置在元数据中        |
-| dataset_retrieval    | name                  |
-| start_time           | start_time           |
-| end_time             | end_time             |
+| user_id              | attributes.user_id        |
+| dataset_retrieval    | op_name / display_name                  |
+| start_time           | started_at           |
+| end_time             | ended_at             |
 | inputs                | inputs                |
-| outputs               | outputs               |
-| metadata              | extra                 |
-| dataset_retrieval | tags                  |
-| message_id           | parent_run_id       |
+| documents               | output               |
+| metadata              | attributes                 |
+| message_id           | parent_id       |
 
 **数据集检索追踪信息**
 
@@ -281,15 +284,14 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 工具                   | Weave 追踪             |
 | --------------------- | ----------------------- |
-| user_id              | 放置在元数据中          |
-| tool_name            | name                    |
-| start_time           | start_time             |
-| end_time             | end_time               |
-| inputs                | inputs                  |
-| outputs               | outputs                 |
-| metadata              | extra                   |
-| \["tool", tool_name] | tags                    |
-| message_id           | parent_run_id         |
+| user_id              | attributes.user_id          |
+| tool_name            | op_name / display_name                    |
+| start_time           | started_at             |
+| end_time             | ended_at               |
+| tool_inputs                | inputs                  |
+| tool_outputs               | output                 |
+| metadata              | attributes                   |
+| message_id           | parent_id         |
 
 #### **工具追踪信息**
 
@@ -326,14 +328,13 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 
 | 生成名称           | Weave 追踪             |
 | ----------------- | ---------------------- |
-| user_id          | 放置在元数据中         |
-| generate_name    | name                   |
-| start_time       | start_time            |
-| end_time         | end_time              |
+| user_id          | attributes.user_id         |
+| generate_name    | op_name / display_name                   |
+| start_time       | started_at            |
+| end_time         | ended_at              |
 | inputs            | inputs                 |
-| outputs           | outputs                |
-| metadata          | extra                  |
-| generate_name | tags                   |
+| outputs           | output                |
+| metadata          | attributes                  |
 
 **生成名称追踪信息**
 
