@@ -46,6 +46,7 @@
 | Speech2Text model | 语音转文字模型 | 音声認識モデル |
 | token | token | token |
 | API token | API 令牌 | APIトークン |
+| access token | 访问令牌 | アクセストークン |
 | API key | API 密钥 | API キー |
 | credential | 凭据 | 認証情報 |
 | custom model | 自定义模型 | カスタムモデル |
