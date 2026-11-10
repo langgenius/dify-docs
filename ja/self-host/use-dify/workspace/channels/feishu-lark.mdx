@@ -1,0 +1,184 @@
+---
+title: Feishu / Lark
+description: 人間の入力ノードのリクエストを、カードとして Feishu または Lark に届けます。アプリの作成、Dify との接続、コールバックの設定、問題の解決方法を説明します
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/self-host/use-dify/workspace/channels/feishu-lark) を参照してください。
+
+Dify は、Feishu または Lark の組織に作成したカスタムアプリを通じて動作します。このアプリは次の役割を担います。
+
+- ボットを通じてメンバーにリクエストを送信します。
+- Dify がメンバーディレクトリを読み取り、メールアドレスで各メンバーをワークスペースのメンバーと照合できるようにします。
+- メンバーがリクエストのボタンをクリックすると、その応答を Dify に送り返します。
+
+Lark でも手順は同じなので、以下では両方をまとめて Feishu と表記します。
+
+## 始める前に
+
+次の点を確認してください。
+
+- Feishu の組織で、アプリの利用範囲をすべてのメンバーに設定できること。
+- [`TRIGGER_URL`](/ja/self-host/deploy/configuration/environments#trigger_url) が、Feishu からインターネット経由でアクセスできるアドレスに設定されていること。カードのボタン操作を Dify に届けるために必要です。
+- [`CONSOLE_WEB_URL`](/ja/self-host/deploy/configuration/environments#console_web_url) が、メンバーがアクセスできるアドレスに設定されていること。リンクメッセージとして届くリクエストのリンク先は、このアドレスです。
+
+<Tip>
+Feishu 管理者の承認を待たずに試したい場合は、[Feishu のテスト組織](https://open.feishu.cn/document/develop-process/test-and-release-app/testing-enterprise-and-personnel-functions?lang=en-US) でアプリのテスト版を使用できます。テスト版はデフォルトでメンバーディレクトリ全体を読み取れ、変更も公開せずに反映されます。
+
+準備ができたら、本番用のアプリを同じ手順で設定し、その値を Dify のチャネル設定に入力します。これにより [テスト版アプリの接続が置き換えられ](/ja/self-host/use-dify/workspace/channels/overview#im-の置き換えと削除)、テスト中に設定したバインドは消去されます。本番用のアプリには、新しいコールバック URL が発行されます。
+</Tip>
+
+## アプリの作成
+
+[Feishu](https://open.feishu.cn/app?lang=en-US) または [Lark](https://open.larksuite.com/app?lang=en-US) の開発者コンソールで、**Create Custom App** をクリックします。アプリには、「Dify」のようにメンバーが見てわかる名前を付けます。リクエストはこの名前のボットから届きます。続いて、次の手順を実行します。
+
+1. **Add Features** で **Bot** を追加します。
+
+2. **Permissions & Scopes** で **Batch Actions** をクリックします。メニューから **Batch import/export scopes** を選びます。**Import** タブで、例の内容を次のリストに置き換えます。
+
+   ```json
+   {
+     "scopes": {
+       "tenant": [
+         "tenant:tenant:readonly",
+         "im:message:send_as_bot",
+         "contact:contact.base:readonly",
+         "contact:user.base:readonly",
+         "contact:user.email:readonly",
+         "contact:user.employee:readonly"
+       ],
+       "user": []
+     }
+   }
+   ```
+
+   これらのスコープがあると、アプリは組織を識別し、カードを送信できます。誰かが応答した後にカードを更新したり、メンバーの名前、アバター、メールアドレスを読み取ったりすることもできます。
+
+3. 何も変更せずに **Next** ボタンを順にクリックし、最後に **Add Scopes** をクリックします。
+
+4. **Version Management & Release** で **Create Version** をクリックします。**Availability** をすべてのメンバーに設定し、バージョンを公開します。
+
+    Feishu の管理者でない場合は、先に管理者の承認が必要になることがあります。公開が完了してから、Dify での接続に進んでください。
+
+## Dify での接続
+
+1. **設定** > **チャネル** で Feishu または Lark を探し、**接続** をクリックします。
+
+   <Info>
+   すでに別の IM（インスタントメッセージングアプリ）を接続している場合は、代わりに **交換する** をクリックします。先に [置き換えで消去される内容](/ja/self-host/use-dify/workspace/channels/overview#im-の置き換えと削除) を確認してください。
+   </Info>
+
+2. **アプリの認証情報** に、Feishu アプリの値を入力します。
+
+    - **アプリ ID** と **アプリシークレット**：App ID と App Secret の値です。アプリの **Credentials & Basic Info** ページにあります。
+    - **検証トークン（任意）**：Verification Token の値です。**Events & Callbacks** > **Encryption Strategy** にあります。
+    - **暗号化キー（任意）**：Encrypt Key の値で、同じページにあります。Feishu 側で設定されている場合にのみ入力します。
+
+   <Note>
+   Feishu 側で App Secret をリセットするなど、これらの値を変更した場合は、Dify 側も更新してください。
+   </Note>
+
+3. **保存して続行** をクリックします。Dify は保存前に接続を確認します。
+
+4. **コールバックを設定** で **コールバック URL** をコピーします。
+
+## コールバックの設定
+
+1. Feishu アプリで **Events & Callbacks** を開き、**Callback Configuration** タブに切り替えます。
+
+2. **Subscription mode** の横にある編集アイコンをクリックします。続いて、**Send callbacks to developer's server** を選択します。
+
+3. Dify からコピーしたコールバック URL を **Request URL** に貼り付けて保存します。Feishu で保存できない場合は、[トラブルシューティング](#トラブルシューティング) で原因を確認してください。
+
+4. **Callback subscriptions** で **Add callback** をクリックします。**Card callback communication**（`card.action.trigger`）を追加します。
+
+5. **Version Management & Release** で新しいバージョンを作成して公開し、コールバックの設定を反映させます。再度、管理者の承認が必要になることがあります。
+
+<Info>
+後で [`TRIGGER_URL`](/ja/self-host/deploy/configuration/environments#trigger_url) が変わると、コールバック URL も変わります。
+
+**チャネル** で Feishu または Lark の設定を開き、新しい URL を取得します。その URL で Feishu アプリ側を更新し、アプリの新しいバージョンを公開してください。
+</Info>
+
+## 同期とテスト
+
+1. **チャネル** で **今すぐ同期** をクリックし、メンバーの IM アカウントをバインドします。各結果の意味については、[メンバーの同期](/ja/self-host/use-dify/workspace/channels/overview#メンバーの同期) を参照してください。
+
+2. 自分宛てにテストリクエストを送信します。自分の IM アカウントをバインドした状態で、ワークフローを開き、人間の入力ノードで [デバッグモード](/ja/self-host/use-dify/nodes/human-input#test-without-notifying-recipients) をオンにします。続いて Feishu または Lark を選択し、ワークフローをテスト実行します。
+
+   **メッセージをテスト** ではなく、デバッグモードを使ってください。テストメッセージは常にリンクメッセージとして届くため、カードやボタンのクリックが機能するかを確認できません。
+
+カードが届いたら、ボタンをクリックし、実行が続行されることを確認してください。
+
+<Info>
+
+  - 代わりにリンクメッセージが届いた場合は、フォームに [カードで表示できない要素](#メンバー側の表示) が含まれています。
+  - 何も届かない場合や実行が続行されない場合は、[トラブルシューティング](#トラブルシューティング) を参照してください。
+
+</Info>
+
+## メンバー側の表示
+
+<Columns cols={2}>
+  <Frame caption="Feishu カードとして届いたリクエスト">
+    ![Feishu カードとして届いたリクエスト](/images/use-dify/workflow/human-input-im-card.png)
+  </Frame>
+  <Frame caption="リンクメッセージとして届いたリクエスト">
+    ![リンクメッセージとして届いたリクエスト](/images/use-dify/workflow/human-input-im-link.png)
+  </Frame>
+</Columns>
+
+フォームを作成するときは、次の点に注意してください。
+
+- カードの見出しにはノードのタイトルが使われます。「人間の入力 2」ではなく「返金の承認」のように、受信者が理解できるタイトルをノードに付けてください。
+
+- メンバーは、すべてのフィールドを入力しないとカードを送信できません。
+
+フォームに次のものが含まれる場合は、カードではなくリンクメッセージとして届きます。
+
+- ファイルフィールド
+- 変数から挿入した長いレポートなど、非常に長いコンテンツ
+
+## トラブルシューティング
+
+<AccordionGroup>
+  <Accordion title="Dify での保存が API エラーコード 40004 で失敗する">
+    アプリがメンバーディレクトリ全体を読み取れていません。多くの場合、**Availability** がすべてのメンバーを対象にしていないことが原因です。新しいバージョンで **Availability** をすべてのメンバーに設定して公開し、Dify でもう一度保存してください。
+  </Accordion>
+  <Accordion title="Dify での保存が API エラーコード 10003 で失敗する">
+    App ID が間違っています。アプリの **Credentials & Basic Info** ページからコピーしてください。
+  </Accordion>
+  <Accordion title="Dify での保存時に、認証情報が無効だと表示される">
+    App Secret が間違っているか、App ID と App Secret が別々のアプリのものになっています（本番用アプリとそのテスト版など）。両方とも、同じアプリの **Credentials & Basic Info** ページからコピーしてください。
+  </Accordion>
+  <Accordion title="テストリクエストが失敗する">
+    何らかの原因で、Dify が送信できていません。**メッセージをテスト** で「テストに失敗しました。チャネル設定を確認して、もう一度お試しください。」と表示されるか、デバッグモードでの実行が「No one can approve this step.」というエラーで失敗します。
+
+    次の順に確認してください。
+
+    - アプリにボットと `im:message:send_as_bot` スコープがあり、最新バージョンが公開されていること。
+    - 自分がアプリの **Availability** の範囲に含まれていること。
+    - 自分の IM アカウントがバインドされていること。
+  </Accordion>
+  <Accordion title="Feishu で Request URL を保存できない">
+    Dify の暗号化キーまたは検証トークンが Feishu 側の値と一致していないか、Feishu から URL にアクセスできていません。2 つの値を一致させてください。すでに一致している場合は、[`TRIGGER_URL`](/ja/self-host/deploy/configuration/environments#trigger_url) が Feishu からインターネット経由でアクセスできるアドレスに設定されているか確認してください。
+  </Accordion>
+  <Accordion title="ボタンをクリックするとエラーコード 200671 が表示される">
+    Dify がクリックを拒否しました。原因に応じて対処してください。
+
+    - 暗号化キーまたは検証トークンが Feishu 側の値と一致していない：値を一致させてください。
+    - アプリから `tenant:tenant:readonly` スコープが外れた：スコープを追加し直し、新しいバージョンを公開してください。
+    - カードの送信後に IM が置き換えられたか削除された：新しい実行を開始してください。デプロイの [メール設定](/ja/self-host/deploy/configuration/environments#メール設定) が済んでいれば、メールから応答することもできます。
+  </Accordion>
+  <Accordion title="特定のカードのボタンだけが反応しない">
+    そのカードからは、リクエストに応答できなくなっています。
+
+    - リクエストがタイムアウトした、実行が停止された、またはメンバーがワークスペースから外れた：判断がまだ必要なら、新しい実行を開始してください。
+    - カードの送信後にメンバーの IM バインドが変わった：メンバーはメールから応答できます。
+  </Accordion>
+  <Accordion title="メンバーにカードが届かない">
+    そのメンバーの IM アカウントがバインドされていないか、メンバーがアプリの **Availability** の範囲外にいます。もう一度同期するか、[手動でバインド](/ja/self-host/use-dify/workspace/contacts#手動でのバインド) してください。**Availability** の範囲を広げる方法もあります。デプロイの [メール設定](/ja/self-host/deploy/configuration/environments#メール設定) が済んでいれば、その間もリクエストはメールで届きます。
+  </Accordion>
+  <Accordion title="メンバーが「一致なし」のままになる">
+    そのメンバーの Dify のメールアドレスが、Dify が Feishu から読み取ったメールアドレスと異なります。どちらかのメールアドレスを変更してもう一度同期するか、[手動でバインド](/ja/self-host/use-dify/workspace/contacts#手動でのバインド) してください。
+  </Accordion>
+</AccordionGroup>
