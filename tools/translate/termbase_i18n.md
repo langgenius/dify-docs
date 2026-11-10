@@ -191,6 +191,19 @@
 | Editor | 编辑者 | エディター |
 | Normal | 普通成员 | メンバー |
 
+### Human Input and IM
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| IM | IM | IM |
+| IM identity | IM 身份 | IM アカウント |
+| bind / binding | 绑定 | バインド |
+| external contact | 外部联系人 | 外部連絡先 |
+| card | 卡片 | カード |
+| link message | 链接消息 | リンクメッセージ |
+| new Human Input node | 新版人工介入节点 | 新しい人間の入力ノード |
+| old Human Input node | 旧版人工介入节点 | 旧バージョンの人間の入力ノード |
+
 ## UI Labels
 
 ### Sidebar & Navigation
@@ -204,6 +217,7 @@
 | Integrations | 集成 | 連携 |
 | Tools | 工具 | ツール |
 | Skills | Skills | Skills |
+| Contacts | 联系人 | Contacts |
 
 ### App Detail Tabs
 
@@ -279,6 +293,7 @@
 | Usage Priority | 使用优先级 | 使用優先順位 |
 | API Key | API Key | API キー |
 | Add API Key | 添加 API 密钥 | API キーを追加 |
+| Channels | 渠道 | チャネル |
 
 ### Integrations Hub
 
@@ -309,6 +324,25 @@
 | Only selected | 仅选定 | 選択されたもののみ |
 | Endpoints | API 端点 | エンドポイント |
 | Add API Key | 添加 API Key | APIキーを追加してください |
+
+### Channels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Connect | 连接 | 接続 |
+| Replace | 替换 | 交換する |
+| Sync now | 立即同步 | 今すぐ同期 |
+| View details | 查看详情 | 詳細を見る |
+| Test connection | 测试连接 | 接続をテスト |
+| App credentials | 应用凭据 | アプリの認証情報 |
+| Configure callbacks | 配置回调 | コールバックを設定 |
+| Callback URL | 回调 URL | コールバック URL |
+| Save and continue | 保存并继续 | 保存して続行 |
+| Added | 新增 | 追加済み |
+| Not matched | 未匹配 | 一致なし |
+| Failed | 失败 | 失敗 |
+| Removed | 已移除 | 削除済み |
+| Skipped | 已跳过 | スキップ |
 
 ### Billing
 
@@ -494,6 +528,32 @@
 | Make a copy | 创建副本 | コピーを作成 |
 | New output | 新建输出 | 新しい出力 |
 | Output Routes | 输出路由 | 出力ルート |
+
+### Human Input Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Recipients | 收件人 | 受信者 |
+| Initiator | 发起人 | 開始者 |
+| Message template | 消息模板 | メッセージテンプレート |
+| Insert Request URL | 插入请求 URL | リクエスト URL を挿入 |
+| Test message | 测试消息 | メッセージをテスト |
+| Test channel | 测试渠道 | テストチャネル |
+| Save and test | 保存并测试 | 保存してテスト |
+| Debug Mode | 调试模式 | デバッグモード |
+| Migrate now | 立即迁移 | 今すぐ移行 |
+| Form Content | 表单内容 | フォームコンテンツ |
+| Save Response As | 保存响应为 | レスポンスを次の名前で保存 |
+| Pre-populate Field | 预填充字段 | フィールドを事前入力 |
+| User Actions | 用户操作 | ユーザーアクション |
+
+### Loop Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Loop Variables | 循环变量 | ループ変数 |
+| Loop Termination Condition | 循环终止条件 | ループ終了条件 |
+| Maximum Loop Count | 最大循环次数 | 最大ループ回数 |
 
 ### Agent Configure
 
