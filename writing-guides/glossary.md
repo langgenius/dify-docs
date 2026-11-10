@@ -50,9 +50,9 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | moderation model | 内容审核模型 | モデレーションモデル | Models that detect and filter inappropriate content |
 | TTS model | 文字转语音模型 | TTSモデル | Text-to-speech models |
 | Speech2Text model | 语音转文字模型 | 音声認識モデル | Speech-to-text models |
-| token | token | token | The unit a model counts in input and output. For a token that signs a caller in, see access token. |
+| token | token | token | The unit a model counts in input and output. For a token that authenticates requests, see access token. |
 | API token | API 令牌 | APIトークン | |
-| access token | 访问令牌 | アクセストークン | A token that signs a caller in, such as a console session's access token or one created on the **Access Tokens** settings page. Where English prose says just "token" for one, such as the token a `difyctl` sign-in issues, zh writes 令牌 and ja トークン, never the Latin "token". Identifiers such as `tokens.yml` and `DIFY_TOKEN` stay as written. Unlike an API key, which belongs to an app, a knowledge base, or a provider, an access token stands for the caller. |
+| access token | 访问令牌 | アクセストークン | A token that authenticates requests to Dify, such as a console session's access token, the token a `difyctl` sign-in issues, or one created on the **Access Tokens** settings page. Session and sign-in tokens act as an account; tokens from **Access Tokens** grant access only to the resources selected there. Where English prose says just "token" for one, zh writes 令牌 and ja トークン, never the Latin "token". Identifiers such as `tokens.yml` and `DIFY_TOKEN` stay as written. |
 | API key | API 密钥 | API キー | A secret key that authenticates API calls, such as a model provider's key or a Dify Service API key. Lowercase "key" in English prose. zh prose writes API 密钥 even where a zh UI label reads "API Key"; bold UI labels keep their own form. |
 | credential | 凭据 | 認証情報 | The saved authentication details, such as an API key or an OAuth authorization, that Dify uses to call a model provider, tool, or data source. Not 凭证 (zh) or 資格情報 (ja). |
 | custom model | 自定义模型 | カスタムモデル | A model added to a provider by hand with **Add Model**, as opposed to the models the provider predefines. Lowercase in prose. |
