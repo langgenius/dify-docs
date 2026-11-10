@@ -102,6 +102,7 @@
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
 | retrieval | 检索 | 検索 |
+| retrieval (Agent Configure) | 检索 | ナレッジ検索 |
 | retrieval mode | 检索模式 | 検索モード |
 | indexing | 索引 | インデックス |
 | index method | 索引方式 | インデックス方法 |

@@ -108,6 +108,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
 | chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
 | retrieval | 检索 | 検索 | Always lowercase in body text |
+| retrieval (Agent Configure) | 检索 | ナレッジ検索 | In an Agent's knowledge retrieval settings, what each classic knowledge base is added as: one or more knowledge bases under one name, description, and settings. Countable in English (a retrieval); zh counts it 一项检索. ja writes ナレッジ検索, like the UI field ナレッジ検索の名前; a search itself stays 検索 (1 回の検索). |
 | retrieval mode | 检索模式 | 検索モード | Strategy for finding and ranking relevant chunks |
 | indexing | 索引 | インデックス | Use "Index Method" consistently in documentation |
 | index method | 索引方式 | インデックス方法 | Matches the UI label Index Method (dataset-creation.stepTwo.indexMode). |
