@@ -249,6 +249,7 @@
 | API Access | API 访问 | API アクセス |
 | API access | API 访问 | API アクセス |
 | Retrieval Testing | 召回测试 | 検索テスト |
+| Retrieval Test | 检索测试 | 検索テスト |
 | Settings | 设置 | 設定 |
 | Pipeline | 流水线 | パイプライン |
 
@@ -501,11 +502,17 @@
 |:--------|:--------|:---------|
 | Build mode | 构建模式 | ビルドモード |
 | Build draft | Build 草稿 | ビルドドラフト |
+| Build | 构建 | ビルド |
+| Preview | 预览 | プレビュー |
 | File system | 文件系统 | ファイルシステム |
 | Persistent | 长期 | 永続ファイル |
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Chat Features | Chat 功能 | チャット機能 |
+| Show thinking | 显示思考过程 | 思考過程を表示 |
+| Thinking | 思考过程 | 思考中 |
+| Ran commands | 已运行命令 | コマンドを実行しました |
 | Knowledge Retrieval | 知识检索 | ナレッジ検索 |
 | Add knowledge retrieval | 添加知识检索 | ナレッジ検索を追加 |
 | Classic | 经典 | 従来型 |
@@ -571,6 +578,7 @@
 | Creators | 创建者 | 作成者 |
 | Multimodal | 多模态 | マルチモーダル |
 | TOP K | Top K | トップ K |
+| Fast | 快速 | 高速 |
 
 ### Chunking Mode Labels
 
@@ -612,6 +620,7 @@
 | Queuing | 排队中 | キューイング中 |
 | Paused | 已暂停 | 一時停止中 |
 | Error | 错误 | エラー |
+| Ready | 就绪 | 準備完了 |
 
 ### Golden Question Status Labels
 

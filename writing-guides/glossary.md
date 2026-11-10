@@ -261,6 +261,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | API Access | API 访问 | API アクセス | knowledge-space.apiAgentAccess | Agent knowledge base only: the button in its lower-left corner that shows the knowledge base's endpoint and opens API key management. The classic knowledge base tab is the row above |
 | API access | API 访问 | API アクセス | knowledge-settings.settings.apiAccessLabel | Agent knowledge base settings: the switch that allows Service API calls to this knowledge base |
 | Retrieval Testing | 召回测试 | 検索テスト | common.datasetMenus.hitTesting | |
+| Retrieval Test | 检索测试 | 検索テスト | knowledge-space.retrievalTest.title | Agent knowledge base only: the sidebar item and its page. The classic knowledge base tab is the Retrieval Testing row above |
 | Settings | 设置 | 設定 | common.datasetMenus.settings | |
 | Pipeline | 流水线 | パイプライン | common.datasetMenus.pipeline | |
 
@@ -515,11 +516,17 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 |:-------------|:-------------|:--------------|:---------|:------|
 | Build mode | 构建模式 | ビルドモード | agent-v-2.agentDetail.configure.buildDraft.modeBadge | |
 | Build draft | Build 草稿 | ビルドドラフト | agent-v-2.agentDetail.configure.buildDraft.title | |
+| Build | 构建 | ビルド | agent-v-2.agentDetail.configure.rightPanel.build | Configure's right-panel tab for the build chat, beside **Preview** |
+| Preview | 预览 | プレビュー | agent-v-2.agentDetail.configure.rightPanel.preview | Configure's right-panel tab beside **Build**. The workflow's Preview button is workflow.common.debugAndPreview, with the same text |
 | File system | 文件系统 | ファイルシステム | agent-v-2.agentDetail.configure.workingDirectory.fileSystem | Top-right entry in Configure |
 | Persistent | 长期 | 永続ファイル | agent-v-2.agentDetail.configure.workingDirectory.persistentFiles | File system tab; zh docs prose writes **长期** 文件, with 文件 outside the bold |
 | Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
 | Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
 | Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
+| Chat Features | Chat 功能 | チャット機能 | agent-v-2.agentDetail.configure.chatFeatures.title | Panel for the Agent's chat features. The Workflow and Chatflow panel is **Features** (workflow.common.features, 功能) |
+| Show thinking | 显示思考过程 | 思考過程を表示 | app-debug.feature.showThoughts.title | Toggle in **Chat Features** |
+| Thinking | 思考过程 | 思考中 | agent-v-2.agentDetail.configure.answer.thinking | Collapsible section of an Agent reply; its title adds how long the agent worked |
+| Ran commands | 已运行命令 | コマンドを実行しました | agent-v-2.agentDetail.configure.answer.activity.ranCommands | Step in an Agent reply once its commands finish; open it for the commands and their output |
 | Knowledge Retrieval | 知识检索 | ナレッジ検索 | agent-v-2.agentDetail.configure.knowledgeRetrieval.label | Configure section, and its entry in the prompt's `/` menu; renamed from "Agent Knowledge Base" in 1.19.0. ja uses ナレッジ検索 here but 知識検索 for the workflow node |
 | Add knowledge retrieval | 添加知识检索 | ナレッジ検索を追加 | agent-v-2.agentDetail.configure.knowledgeRetrieval.add | Footer button in the Knowledge Retrieval view of the prompt's `/` menu. The Configure section's own button shows **Add** (common.operation.add) |
 | Classic | 经典 | 従来型 | knowledge-space.view.classic | Heading over the classic knowledge bases in the Knowledge Retrieval dialog, shown when agent knowledge bases are enabled; also the Knowledge list view switch |
@@ -585,6 +592,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Creators | 创建者 | 作成者 | dataset.creatorFilter.creators | Knowledge list filter; new in 1.18.0 |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
 | TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
+| Fast | 快速 | 高速 | knowledge-space.settings.retrievalMode.fast | Agent knowledge base retrieval depth option, in **Settings** > **Retrieval**, Retrieval Test, and quality evaluations |
 
 ### Chunking Mode Labels
 
@@ -626,6 +634,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Queuing | 排队中 | キューイング中 | dataset-documents.list.status.queuing | |
 | Paused | 已暂停 | 一時停止中 | dataset-documents.list.status.paused | |
 | Error | 错误 | エラー | dataset-documents.list.status.error | |
+| Ready | 就绪 | 準備完了 | knowledge-space.documentStatus.ready | Agent knowledge base document status and list filter. Not the Workflow as Tool status Ready (已就绪) |
 
 ### Golden Question Status Labels
 
