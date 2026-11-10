@@ -21,7 +21,7 @@
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
 | integration | 集成 | 統合 |
-| Dify tool | Dify 工具 | ツール |
+| Dify tool | Dify 工具 | Dify ツール |
 | workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
 | web app | Web 应用 | Web アプリ |

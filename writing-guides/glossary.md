@@ -27,7 +27,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | Still valid in developer contexts (building plugins). In user-facing docs, prefer "integration" when referring to the Integrations hub; use "plugin" only for tool plugins or the develop-plugin tree. |
 | integration | 集成 | 統合 | An installable extension from the Integrations hub: a model provider, tool, data source, trigger, agent strategy, or extension. Lowercase in English prose; capitalized only as the UI label **Integrations**. ja prose uses 統合, but a click path from the main nav starts at **連携** (navigation.mainNav.integrations). For developer contexts, see "plugin". |
-| Dify tool | Dify 工具 | ツール | |
+| Dify tool | Dify 工具 | Dify ツール | |
 | workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | web app | Web 应用 | Web アプリ | The published app interface end users see; lowercase in English body text. When naming a UI element rather than the concept, use the on-screen label verbatim instead; see the UI Labels section. |
