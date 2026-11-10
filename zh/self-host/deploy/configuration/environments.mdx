@@ -91,8 +91,6 @@ Docker Compose 从三类文件中读取 Dify 的设置。
 
 这些 URL 变量用于配置 Dify 各服务的访问地址。
 
-对于 Nginx 后的单域名部署（默认 Docker Compose 配置），这些变量可以留空，系统会从请求中自动检测。当使用自定义域名、多域名部署或反向代理时，需要配置这些变量。
-
 ### CONSOLE_API_URL
 
 默认值：（空）
@@ -109,11 +107,13 @@ Web 前端容器在服务端发起请求时所使用的 Console API 地址，经
 
 ### CONSOLE_WEB_URL
 
-默认值：（空）
+默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
 
-Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、密码重置、通知）中的链接，以及 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
+成员访问 Dify 控制台所用的 URL。用于构建邀请、密码重置等系统邮件中的链接，以及在 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
 
-如果为空，邮件链接将无法正常工作；即使在单域名部署中，使用邮件功能时也需要设置此变量。
+新版人工介入节点也用它生成发给工作空间成员的请求链接，邮件和 IM（即时通讯应用）链接消息中的链接都是 `{CONSOLE_WEB_URL}/human-input/{token}`。
+
+如果成员在内网中使用 Dify，此地址只需内网可访问。
 
 示例：`https://console.dify.ai`
 
@@ -135,9 +135,14 @@ Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前
 
 ### APP_WEB_URL
 
-默认值：（空）
+默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
 
-已发布 Web 应用的公开访问 URL。工作流中的 **人工输入节点** 需要此变量；邮件通知中的表单链接以 `{APP_WEB_URL}/form/{token}` 格式构建。如果为空，人工输入邮件将不包含有效的表单链接。
+已发布 Web 应用的公开访问 URL。人工介入节点也用它生成请求链接：
+
+- **新版人工介入节点**：发给外部联系人的请求，以及发往任意邮箱地址（在节点中直接填写或取自变量）的请求，链接为 `{APP_WEB_URL}/form-v2/{token}`。
+- **旧版人工介入节点**：邮件中的链接为 `{APP_WEB_URL}/form/{token}`。
+
+外部收件人必须能打开此地址。
 
 示例：`https://app.dify.ai`
 
@@ -147,7 +152,7 @@ Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前
 
 Webhook 和集成触发端点的公开访问 URL。外部系统使用此地址来调用你的工作流。Dify 构建触发回调 URL 格式为 `{TRIGGER_URL}/triggers/webhook/{id}` 并在控制台中展示。
 
-要使触发器能从外部系统正常工作，此变量必须指向它们可以访问的公共域名或 IP 地址。
+对于以卡片展示人工介入请求的 IM，卡片上的按钮点击也会经由 **设置** > **渠道** 中的回调 URL 发送到此地址。
 
 ### FILES_URL
 
@@ -1264,11 +1269,11 @@ Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分�
 
 ### 邮件配置
 
-Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输入节点通知。配置三个支持的提供商之一。邮件链接需要设置 `CONSOLE_WEB_URL`，参见 [通用变量](#console_web_url)。
+Dify 通过邮件发送账户邀请、密码重置、登录验证码和人工介入请求。可从三个支持的提供商中任选一个进行配置。这些邮件中的链接基于 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 生成，因此这两个变量也需要设置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
+| `MAIL_TYPE` | （空） | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
 | `MAIL_DEFAULT_SEND_FROM` | （空） | 所有外发邮件的默认「发件人」地址。必填。 |
 
 <AccordionGroup>
@@ -1482,6 +1487,19 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `MAX_TOOLS_NUM` | `10` | Agent 可同时使用的最大工具数。 |
 | `MAX_ITERATIONS_NUM` | `99` | 每次 Agent 执行的最大推理迭代次数。防止 Agent 无限循环。 |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+默认值：`604800`（7 天）
+
+工作流运行等待人工响应的最长时间（秒），到时 Dify 会停止该运行。
+
+计时方式因节点而异：
+
+- **新版人工介入节点**：从运行开始时算起，运行中的所有人工介入节点共用这段时间。修改只影响此后创建的请求。
+- **旧版人工介入节点**：从每个表单创建时算起，每个节点单独计时。修改对已在等待的表单同样生效。
+
+如果审批可能超过一周，可调高此值；如果想让等待中的运行更早结束，可调低此值。此值必须为正整数：设为 `0` 或留空会导致 API、Worker 和 Beat 服务无法启动。
+
 ## Web 前端服务
 
 这些变量仅由 Next.js Web 前端容器使用，不影响 Python 后端。
@@ -1500,6 +1518,20 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 默认值：`true`
 
 启用 Go to Anything 命令面板中的 `/create` 和 `/refine` 命令，这两个命令可根据自然语言描述生成和修改 Workflow 与 Chatflow 应用。设为 `false` 即可隐藏它们。
+
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+默认值：`true`
+
+设为 `false` 可关闭新版 [人工介入](/zh/self-host/use-dify/nodes/human-input) 节点，以及 [联系人](/zh/self-host/use-dify/workspace/contacts) 和 [渠道](/zh/self-host/use-dify/workspace/channels/overview)。开启时，工作空间所有者和管理员可在主导航中看到 **联系人**，在 **设置** 中看到 **渠道**。
+
+新版人工介入节点还需要：
+
+- 将 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 设为收件人能打开的地址
+- 完成 [邮件配置](#邮件配置)，以便通过邮件发送请求
+- 对于以卡片展示请求的 IM，将 [`TRIGGER_URL`](#trigger_url) 设为该 IM 能访问的地址
+
+如果在新版节点投入使用后将其关闭，已发布的工作流仍会继续运行并发送请求，但请求中的链接会打开「未找到」页面。包含新版节点的工作流将无法在编辑器中运行，也无法发布。
 
 ## 新版 Agent
 
@@ -1980,8 +2012,8 @@ Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | 启用工作流运行记录的自动清理。 |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | 预创建 TiDB Serverless 集群用于向量数据库池。 |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工输入表单，恢复或停止超时的工作流。 |
-| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工输入表单的频率（分钟）。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工介入表单，恢复或停止超时的工作流。关闭后，超时的运行会一直暂停，逾期提交的响应仍会被拒绝。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工介入表单的频率（分钟）。 |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 对话删除的兜底清理。对话删除后立即不可见，其消息以及对话中由工具生成的文件由后台任务清除，终端用户上传的文件会保留。<br/><br/>该定时清理会为清理任务丢失的对话重新派发任务，避免数据残留。 |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | 清理任务的运行频率（分钟）。 |
 | `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | 每次最多重新派发的对话数。 |
