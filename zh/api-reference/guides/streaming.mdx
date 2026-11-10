@@ -24,7 +24,7 @@ description: 选择响应模式、解析 SSE 流、按事件类型分发处理�
 
 根据 `event` 字段决定如何处理，并跳过所有不以 `data: ` 开头的行：保活用的 `ping` 形式是一行不带 `data:` 载荷的 `event: ping`。
 
-Chatflow 应用和 Workflow 应用的事件流第一帧固定是 `ping`，运行期间还会约每 10 秒到达一次。不要把第一帧当作运行已受理的信号，应以第一个 `data:` 事件（`workflow_started`）为准。
+Chatflow 应用和 Workflow 应用的事件流第一帧固定是 `ping`，运行期间还会约每 10 秒到达一次。不要把第一帧当作请求已受理的信号，应以第一个 `data:` 事件为准。
 
 ```python
 import json
@@ -63,20 +63,22 @@ data: {"event": "node_finished", "task_id": "c3800678-…", "workflow_run_id": "
 
 会收到哪些事件取决于应用类型。事件契约详见 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)、[执行工作流](/zh/api-reference/workflow-runs/run-workflow) 和 [发送消息](/zh/api-reference/completion-messages/send-completion-message) 页面中的事件表。
 
-通常至少要做到：
+按应用类型，通常至少要这样处理：
 
-1. 按顺序拼接回复片段：
+| 应用 | 拼接的事件 | 回复完整的标志 |
+|:--|:--|:--|
+| 聊天助手、文本生成应用 | `message` | `message_end` |
+| 旧版 Agent | `agent_message` | `message_end` |
+| Agent | `agent_message` | `message_end` |
+| Chatflow | `message` | `message_end` 之后的 `workflow_finished` |
+| Workflow | 无需拼接：从 `workflow_finished` 读取 `outputs` | `workflow_finished` |
 
-    - Chatbot 和 Chatflow 应用为 `message` 事件
-    - 旧版 Agent 和 Agent 应用为 `agent_message` 事件
+Agent 应用在收尾时会额外返回一个重复完整回答的 `message` 事件，将其视为最终回答即可，不要再追加拼接。
 
-    Agent 应用在收尾时会额外返回一个重复完整回答的 `message` 事件，将其视为最终回答即可，不要再追加拼接。
+由标注回复或输入审核直接作答时，回复不会走常规事件：
 
-2. 在正确的终止事件上收尾：
-    - Chatbot、旧版 Agent 和 Agent 应用为 `message_end`
-    - Chatflow 应用为 `message_end` 后跟 `workflow_finished`（两个事件都会到达，且按此顺序）
-    - Workflow 应用为 `workflow_finished`
-3. 将 `error` 事件上报给调用方。
+- 旧版 Agent 的回复以 `message` 片段返回。
+- Chatflow 不运行工作流：第一个 `data:` 事件是 `message`，事件流在 `message_end` 处结束。
 
 ## 处理流中的错误
 
