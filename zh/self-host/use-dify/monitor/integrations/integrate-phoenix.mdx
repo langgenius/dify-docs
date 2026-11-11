@@ -18,6 +18,8 @@ title: 集成 Phoenix
 
 本章节将指引你注册 Phoenix 并将其集成至 Dify 平台内。
 
+如果自部署的 Phoenix 实例未启用身份验证，可跳过以下账户和 API 密钥步骤，并将 **API Key** 留空。
+
 #### 1. 注册/登录 [Phoenix](https://app.arize.com/auth/phoenix/signup)
 
 ### 2. 获取 Phoenix API 密钥
@@ -36,7 +38,7 @@ title: 集成 Phoenix
   ![](https://i.ibb.co/gMmXxfhQ/dify-docs-phoenix-in-use.png)
 </Frame>
 
-点击配置后，将在 Phoenix 中创建的 **API Key** 和 **项目名称**粘贴到配置中并保存。
+点击配置后，输入 **项目** 名称；若启用了身份验证，还需填写 **API Key**。在 **Endpoint** 中填写 Phoenix 实例的基础 URL，然后保存。不要添加 `/v1/traces`，Dify 会自动补全数据接入路径。
 
 <Frame>
   ![](https://i.ibb.co/jv6QFbp7/dify-docs-phoenix-config.png)
@@ -84,7 +86,7 @@ title: 集成 Phoenix
   ![](https://i.ibb.co/gMmXxfhQ/dify-docs-phoenix-in-use.png)
 </Frame>
 
-点击配置后，粘贴从 Phoenix Cloud 中获取的 API 密钥、项目名称 和 空间主机名 到配置项中并保存。
+点击配置后，粘贴 **API Key** 和 **项目** 名称，并在 **Endpoint** 中填写完整的 Phoenix Cloud 空间 URL（例如 `https://app.phoenix.arize.com/s/<space>`），然后保存。
 
 <Frame>
   ![](https://i.ibb.co/jv6QFbp7/dify-docs-phoenix-config.png)
@@ -96,7 +98,17 @@ title: 集成 Phoenix
   ![](https://i.ibb.co/HTJsj9x2/dify-docs-phoenix-in-service.png)
 </Frame>
 
+<Note>
+保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
+
+对于 Agent 应用以及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流，需要在部署中同时启用 `OPS_AGENT_TRACE_ENABLED=true` 和 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。这些应用的 **采集内容** 默认关闭，该设置控制整个工作流的输入和输出。其他应用仍可能发送输入和输出。
+</Note>
+
 ## 监控数据列表
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。下表中的追踪 ID 和 span ID 由 Dify 派生生成，并非直接复制数据库 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+
+以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
 ### **Workflow/Chatflow 追踪信息**
 
@@ -104,18 +116,17 @@ title: 集成 Phoenix
 
 | 工作流                              | Phoenix 追踪                   |
 | ---------------------------------- | -------------------------- |
-| workflow_app_log_id/workflow_run_id | id                         |
-| user_session_id                     | - 放置在元数据中            |
-| `workflow_{id}`                      | name                       |
-| start_time                          | start_time                 |
-| end_time                            | end_time                   |
-| inputs                              | inputs                     |
-| outputs                             | outputs                    |
-| Model token consumption             | usage_metadata             |
+| workflow_run_id | span_id                         |
+| user_id                     | metadata.user_id            |
+| workflow                      | name                       |
+| start_time                          | start_time_unix_nano                 |
+| end_time                            | end_time_unix_nano                   |
+| inputs                              | input.value                     |
+| outputs                             | output.value                    |
+| 模型 token 消耗（LLM 调用）             | llm.token_count.prompt / completion / total             |
 | metadata                            | metadata                   |
-| error                               | error                      |
-| \[workflow]                         | tags                       |
-| conversation_id/none for workflow | conversation_id in metadata |
+| error                               | status.code / status.message                      |
+| 会话 ID | session.id |
 
 **工作流追踪信息**
 
@@ -154,25 +165,24 @@ title: 集成 Phoenix
 
 **用于追踪 LLM 相关对话**
 
-| 聊天                            | Phoenix LLM                    |
+| 聊天                            | Phoenix Trace                    |
 | ------------------------------- | --------------------------- |
-| message_id                      | id                          |
-| user_session_id                 | - 放置在元数据中             |
-| "llm"                           | name                        |
-| start_time                      | start_time                  |
-| end_time                        | end_time                    |
-| inputs                          | inputs                      |
-| outputs                         | outputs                     |
-| Model token consumption         | usage_metadata              |
+| message_id                      | span_id                          |
+| end_user_session_id                 | metadata.end_user_session_id             |
+| message                           | name                        |
+| start_time                      | start_time_unix_nano                  |
+| end_time                        | end_time_unix_nano                    |
+| inputs                          | input.value                      |
+| outputs                         | output.value                     |
+| 模型 token 消耗（LLM 调用）         | llm.token_count.prompt / completion / total              |
 | metadata                        | metadata                    |
-| \["message", conversation_mode] | tags                        |
-| conversation_id                 | conversation_id in metadata |
+| 会话 ID                 | session.id |
 
 **消息追踪信息**
 
 - message_id - 消息 ID
 - message_data - 消息数据
-- user_session_id - 用户会话 ID
+- end_user_session_id - 用户会话 ID
 - conversation_model - 对话模式
 - message_tokens - 消息中的令牌数
 - answer_tokens - 答案中的令牌数
@@ -183,7 +193,6 @@ title: 集成 Phoenix
 - file_list - 处理的文件列表
 - start_time - 开始时间
 - end_time - 结束时间
-- message_file_data - 与消息关联的文件数据
 - conversation_mode - 对话模式
 - 元数据
   - conversation_id - 对话 ID
@@ -202,14 +211,13 @@ title: 集成 Phoenix
 
 | 审核           | Phoenix Tool         |
 | -------------- | ----------------- |
-| user_id        | - 放置在元数据中   |
+| user_id        | metadata.user_id   |
 | "moderation"   | name              |
-| start_time     | start_time        |
-| end_time       | end_time          |
-| inputs         | inputs            |
-| outputs        | outputs           |
+| start_time     | start_time_unix_nano        |
+| end_time       | end_time_unix_nano          |
+| inputs         | input.value            |
+| action, flagged        | output.value           |
 | metadata       | metadata          |
-| \["moderation"]| tags              |
 
 **审核追踪信息**
 
@@ -232,16 +240,15 @@ title: 集成 Phoenix
 
 **用于追踪建议问题**
 
-| 建议问题              | Phoenix LLM          |
+| 建议问题              | Phoenix Trace          |
 | --------------------- | ----------------- |
-| user_id               | - 放置在元数据中   |
+| user_id               | metadata.user_id   |
 | "suggested_question"  | name              |
-| start_time            | start_time        |
-| end_time              | end_time          |
-| inputs                | inputs            |
-| outputs               | outputs           |
+| start_time            | start_time_unix_nano        |
+| end_time              | end_time_unix_nano          |
+| inputs                | input.value            |
+| suggested_question               | output.value           |
 | metadata              | metadata          |
-| \["suggested_question"]| tags             |
 
 **消息追踪信息**
 
@@ -278,15 +285,14 @@ title: 集成 Phoenix
 
 | 数据集检索           | Phoenix Retriever    |
 | ------------------- | ----------------- |
-| user_id             | - 放置在元数据中   |
+| user_id             | metadata.user_id   |
 | "dataset_retrieval" | name              |
-| start_time          | start_time        |
-| end_time            | end_time          |
-| inputs              | inputs            |
-| outputs             | outputs           |
+| start_time          | start_time_unix_nano        |
+| end_time            | end_time_unix_nano          |
+| inputs              | input.value            |
+| documents             | output.value           |
 | metadata            | metadata          |
-| \["dataset_retrieval"]| tags            |
-| message_id          | parent_run_id     |
+| message_id          | parent_span_id     |
 
 **数据集检索追踪信息**
 
@@ -313,14 +319,13 @@ title: 集成 Phoenix
 
 | 工具                  | Phoenix Tool         |
 | -------------------- | ----------------- |
-| user_id              | - 放置在元数据中   |
+| user_id              | metadata.user_id   |
 | tool_name            | name              |
-| start_time           | start_time        |
-| end_time             | end_time          |
-| inputs               | inputs            |
-| outputs              | outputs           |
+| start_time           | start_time_unix_nano        |
+| end_time             | end_time_unix_nano          |
+| tool_inputs               | input.value            |
+| tool_outputs              | output.value           |
 | metadata             | metadata          |
-| \["tool", tool_name] | tags              |
 
 #### **工具追踪信息**
 
@@ -357,14 +362,13 @@ title: 集成 Phoenix
 
 | 生成名称                      | Phoenix Tool         |
 | ---------------------------- | ----------------- |
-| user_id                      | - 放置在元数据中   |
-| "generate_conversation_name" | name              |
-| start_time                   | start_time        |
-| end_time                     | end_time          |
-| inputs                       | inputs            |
-| outputs                      | outputs           |
+| user_id                      | metadata.user_id   |
+| generate_name | name              |
+| start_time                   | start_time_unix_nano        |
+| end_time                     | end_time_unix_nano          |
+| inputs                       | input.value            |
+| outputs                      | output.value           |
 | metadata                     | metadata          |
-| \["generate_name"]           | tags              |
 
 **生成名称追踪信息**
 
