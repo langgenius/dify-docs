@@ -38282,7 +38282,7 @@
             }
           },
           {
-            "description": "游标，取自上一页的 `next_cursor`。游标由提供商签发。",
+            "description": "上一次响应中的 `next_cursor`。将其视为不透明字符串。树形视图下翻页时，保持 `view`、`parentId` 和 `limit` 不变。",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -38303,6 +38303,29 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "description": "传入 `tree` 时只列出页面树的一层：顶层，或 `parentId` 下的页面。不传则返回平铺列表。\n\n官方数据源插件中只有 GitHub 支持树形视图，需要插件 0.4.12 或更高版本。\n\n要获取 GitHub 仓库中的文件，需使用树形视图。两种方式都最多覆盖最近更新的 20 个仓库。在这些仓库下，两者能列出的页面不同：\n\n- **树形视图**：每个仓库下有 Contents、Issues（仓库开启了 issue 时）和 Pull requests。Contents 下是仓库的文件夹和可导入的文本文件，文件夹可继续逐层展开。\n- **平铺列表**：每个仓库本身及其 README（如有），外加最多 5 个 issue 和 5 个 pull request。",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "enum": [
+                "tree"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "要展开的页面的 `page_id`，取自之前树形视图响应中 `has_children` 为 `true` 的页面。须与 `view=tree` 一起使用。\n\n注意参数名是驼峰写法的 `parentId`，对应的响应字段则是 `parent_id`。",
+            "in": "query",
+            "name": "parentId",
+            "required": false,
+            "schema": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -38311,13 +38334,14 @@
               "application/json": {
                 "examples": {
                   "success": {
-                    "summary": "响应示例",
+                    "summary": "响应示例 - 平铺列表",
                     "value": {
                       "next_cursor": null,
                       "workspaces": [
                         {
                           "pages": [
                             {
+                              "has_children": null,
                               "last_edited_time": "2026-09-01T12:00:00.000Z",
                               "page_id": "3f9a1c2b-7d4e-4f5a-8b6c-9d0e1f2a3b4c",
                               "page_name": "Onboarding",
@@ -38325,6 +38349,7 @@
                               "type": "page"
                             },
                             {
+                              "has_children": null,
                               "last_edited_time": "2026-08-20T09:30:00.000Z",
                               "page_id": "5c1b2d3e-8f4a-4b6c-9d7e-0f1a2b3c4d5e",
                               "page_name": "Runbooks",
@@ -38335,6 +38360,37 @@
                           "total": 2,
                           "workspace_id": "ws_01HZYQ8K3M",
                           "workspace_name": "Acme Wiki"
+                        }
+                      ]
+                    }
+                  },
+                  "tree": {
+                    "summary": "响应示例 - 树形视图（parentId=contents:acme/handbook，limit=2）",
+                    "value": {
+                      "next_cursor": "2",
+                      "workspaces": [
+                        {
+                          "pages": [
+                            {
+                              "has_children": false,
+                              "last_edited_time": "2026-11-02T08:14:31Z",
+                              "page_id": "file:acme/handbook:README.md",
+                              "page_name": "README.md",
+                              "parent_id": "contents:acme/handbook",
+                              "type": "file"
+                            },
+                            {
+                              "has_children": true,
+                              "last_edited_time": "2026-11-02T08:14:31Z",
+                              "page_id": "dir:acme/handbook:guides",
+                              "page_name": "guides",
+                              "parent_id": "contents:acme/handbook",
+                              "type": "github_directory"
+                            }
+                          ],
+                          "total": 9,
+                          "workspace_id": "58213907",
+                          "workspace_name": "Acme's GitHub"
                         }
                       ]
                     }
@@ -38355,6 +38411,11 @@
                             "description": "本页响应中的页面。",
                             "items": {
                               "properties": {
+                                "has_children": {
+                                  "description": "该页面能否在树形视图中展开。能展开时，可将其 `page_id` 作为 `parentId` 传入。为 `true` 时展开后也可能为空，例如仓库没有 issue 时的 Issues。提供商未返回该值时为 `null`。",
+                                  "nullable": true,
+                                  "type": "boolean"
+                                },
                                 "last_edited_time": {
                                   "description": "最后编辑时间，采用提供商的格式。将其视为不透明字符串。",
                                   "nullable": true,
@@ -38383,7 +38444,7 @@
                             "type": "array"
                           },
                           "total": {
-                            "description": "工作空间中的页面数，提供商报告该值时才返回。",
+                            "description": "工作空间中的页面总数，提供商未提供该值时为 `null`。树形视图下，GitHub 统计所请求的那一层；但在 Issues 和 Pull requests 下，只统计本次响应中的页面。要判断是否还有更多页面，请查看 `next_cursor`。",
                             "nullable": true,
                             "type": "integer"
                           },
@@ -38429,6 +38490,21 @@
                       ]
                     }
                   },
+                  "knowledge_fs_invalid_request_parent": {
+                    "summary": "knowledge_fs_invalid_request（只传 parentId，未传 view）",
+                    "value": {
+                      "code": "knowledge_fs_invalid_request",
+                      "failure": {
+                        "category": "validation",
+                        "code": "KNOWLEDGE_FS_INVALID_REQUEST",
+                        "message": "The Agent Knowledge Base request is invalid.",
+                        "retryPolicy": "never",
+                        "traceId": "8d41f6b2-0c3e-4a7f-9b52-6e1d3a9c7f04"
+                      },
+                      "message": "The Agent Knowledge Base request is invalid.",
+                      "status": 400
+                    }
+                  },
                   "knowledge_fs_invalid_request_path": {
                     "summary": "knowledge_fs_invalid_request（路径 ID）",
                     "value": {
@@ -38454,7 +38530,7 @@
                 }
               }
             },
-            "description": "- `knowledge_fs_invalid_request`：`limit` 不在 1～200 范围内、`cursor` 为空或超过 4,096 个字符，或查询字符串含有未知参数。`violations` 列出每个出错的字段。\n- `knowledge_fs_invalid_request`：数据源不是 `connector` 类型。\n- `knowledge_fs_invalid_request`：`source_id` 不是 UUID。\n- `knowledge_fs_invalid_request`：`source_id` 格式不正确。"
+            "description": "- `knowledge_fs_invalid_request`：某个查询参数的取值超出约束，或查询字符串含有未知参数（如 `parent_id`）。`violations` 列出每个出错的字段。\n- `knowledge_fs_invalid_request`：传入了 `parentId`，但未传入 `view=tree`。响应体中是 `failure`，没有 `violations`。\n- `knowledge_fs_invalid_request`：数据源不是 `connector` 类型。\n- `knowledge_fs_invalid_request`：`source_id` 不是 UUID。\n- `knowledge_fs_invalid_request`：`source_id` 格式不正确。"
           },
           "401": {
             "content": {
