@@ -273,7 +273,7 @@ On a Cloud page, add the Tip only where Enterprise does something no Cloud plan 
 
 **Genuine insight.** Add the "why" and "how it connects", not just a reorganization of information already visible in the product.
 
-**Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck. When the limitation already shows the way forward, as "can't be done from the CLI" points to the UI or a role limit points to an admin, it needs nothing added.
+**Resolution, not just consequence.** When documenting a limitation, risky action, or failure mode, also tell the reader how to recover or avoid it. Stating what breaks without how to fix it leaves the user stuck. When the limitation already shows the way forward, as "can't be done from the CLI" points to the UI or a role limit points to an admin, it needs nothing added. Document the failures readers actually run into, given how the steps lead them: a value they copy from where the page sends them isn't mistyped, so a failure only a typo of it would cause stays off the page.
 
 ## Patterns to Avoid
 
