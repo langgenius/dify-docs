@@ -38282,7 +38282,7 @@
             }
           },
           {
-            "description": "前のページの `next_cursor` から取得したカーソルです。カーソルはプロバイダーが発行します。",
+            "description": "前のレスポンスの `next_cursor` です。中身を解釈せず、文字列として扱ってください。ツリー表示では、`view`、`parentId`、`limit` を変えずに送信してください。",
             "in": "query",
             "name": "cursor",
             "required": false,
@@ -38303,6 +38303,29 @@
               "minimum": 1,
               "type": "integer"
             }
+          },
+          {
+            "description": "`tree` を指定すると、ページツリーの 1 階層だけを返します。対象は最上位、または `parentId` の下のページです。省略するとフラットな一覧を返します。\n\n公式のデータソースプラグインでツリー表示に対応しているのは GitHub だけで、プラグインのバージョン 0.4.12 以降が必要です。\n\nリポジトリ内のファイルを取得するには、ツリー表示を使ってください。どちらの表示も、対象は最近更新された上位 20 個までのリポジトリです。リポジトリの下で取得できるページは、表示によって異なります。\n\n- **ツリー表示**：各リポジトリの下に Contents、Issues（リポジトリで Issue が有効な場合）、Pull requests があります。Contents とその中のフォルダーには、フォルダーとインポートできるテキストファイルがあります。\n- **フラットな一覧**：各リポジトリと、その README（ある場合）に加え、Issue とプルリクエストをそれぞれ最大 5 件含みます。",
+            "in": "query",
+            "name": "view",
+            "required": false,
+            "schema": {
+              "enum": [
+                "tree"
+              ],
+              "type": "string"
+            }
+          },
+          {
+            "description": "展開するページの `page_id` です。以前のツリー表示のレスポンスで `has_children` が `true` だったページから取得します。`view=tree` と一緒に指定してください。\n\nパラメータ名はキャメルケースの `parentId` です。対応するレスポンスのフィールド名は `parent_id` で、表記が異なります。",
+            "in": "query",
+            "name": "parentId",
+            "required": false,
+            "schema": {
+              "maxLength": 4096,
+              "minLength": 1,
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -38311,13 +38334,14 @@
               "application/json": {
                 "examples": {
                   "success": {
-                    "summary": "レスポンス例",
+                    "summary": "レスポンス例 - フラットな一覧",
                     "value": {
                       "next_cursor": null,
                       "workspaces": [
                         {
                           "pages": [
                             {
+                              "has_children": null,
                               "last_edited_time": "2026-09-01T12:00:00.000Z",
                               "page_id": "3f9a1c2b-7d4e-4f5a-8b6c-9d0e1f2a3b4c",
                               "page_name": "Onboarding",
@@ -38325,6 +38349,7 @@
                               "type": "page"
                             },
                             {
+                              "has_children": null,
                               "last_edited_time": "2026-08-20T09:30:00.000Z",
                               "page_id": "5c1b2d3e-8f4a-4b6c-9d7e-0f1a2b3c4d5e",
                               "page_name": "Runbooks",
@@ -38335,6 +38360,37 @@
                           "total": 2,
                           "workspace_id": "ws_01HZYQ8K3M",
                           "workspace_name": "Acme Wiki"
+                        }
+                      ]
+                    }
+                  },
+                  "tree": {
+                    "summary": "レスポンス例 - ツリー表示（parentId=contents:acme/handbook、limit=2）",
+                    "value": {
+                      "next_cursor": "2",
+                      "workspaces": [
+                        {
+                          "pages": [
+                            {
+                              "has_children": false,
+                              "last_edited_time": "2026-11-02T08:14:31Z",
+                              "page_id": "file:acme/handbook:README.md",
+                              "page_name": "README.md",
+                              "parent_id": "contents:acme/handbook",
+                              "type": "file"
+                            },
+                            {
+                              "has_children": true,
+                              "last_edited_time": "2026-11-02T08:14:31Z",
+                              "page_id": "dir:acme/handbook:guides",
+                              "page_name": "guides",
+                              "parent_id": "contents:acme/handbook",
+                              "type": "github_directory"
+                            }
+                          ],
+                          "total": 9,
+                          "workspace_id": "58213907",
+                          "workspace_name": "Acme's GitHub"
                         }
                       ]
                     }
@@ -38355,6 +38411,11 @@
                             "description": "このレスポンスページに含まれるページです。",
                             "items": {
                               "properties": {
+                                "has_children": {
+                                  "description": "このページをツリー表示で展開できるかどうかです。展開するには、その `page_id` を `parentId` として渡します。`true` でも、展開すると空の場合があります（例：Issue がないリポジトリの Issues）。プロバイダーが値を返さない場合は `null` です。",
+                                  "nullable": true,
+                                  "type": "boolean"
+                                },
                                 "last_edited_time": {
                                   "description": "プロバイダーの形式で表した最終編集日時です。中身を解釈せず、文字列として扱ってください。",
                                   "nullable": true,
@@ -38383,7 +38444,7 @@
                             "type": "array"
                           },
                           "total": {
-                            "description": "プロバイダーが報告する場合の、ワークスペース内のページ数です。",
+                            "description": "プロバイダーが返すワークスペース内のページ数で、返さない場合は `null` です。ツリー表示では、GitHub は指定した階層のページを数えます。ただし Issues と Pull requests の下では、このレスポンスに含まれるページだけを数えます。残りのページがあるかどうかは `next_cursor` で確認してください。",
                             "nullable": true,
                             "type": "integer"
                           },
@@ -38429,6 +38490,21 @@
                       ]
                     }
                   },
+                  "knowledge_fs_invalid_request_parent": {
+                    "summary": "knowledge_fs_invalid_request（view なしの parentId）",
+                    "value": {
+                      "code": "knowledge_fs_invalid_request",
+                      "failure": {
+                        "category": "validation",
+                        "code": "KNOWLEDGE_FS_INVALID_REQUEST",
+                        "message": "The Agent Knowledge Base request is invalid.",
+                        "retryPolicy": "never",
+                        "traceId": "8d41f6b2-0c3e-4a7f-9b52-6e1d3a9c7f04"
+                      },
+                      "message": "The Agent Knowledge Base request is invalid.",
+                      "status": 400
+                    }
+                  },
                   "knowledge_fs_invalid_request_path": {
                     "summary": "knowledge_fs_invalid_request（パスの ID）",
                     "value": {
@@ -38454,7 +38530,7 @@
                 }
               }
             },
-            "description": "- `knowledge_fs_invalid_request`：`limit` が 1〜200 の範囲外である、`cursor` が空か 4,096 文字を超えている、またはクエリ文字列に不明なパラメータが含まれています。`violations` には、問題のあるフィールドがそれぞれ示されます。\n- `knowledge_fs_invalid_request`：ソースが `connector` ソースではありません。\n- `knowledge_fs_invalid_request`：`source_id` が UUID ではありません。\n- `knowledge_fs_invalid_request`：`source_id` の形式が正しくありません。"
+            "description": "- `knowledge_fs_invalid_request`：クエリパラメータの値が制約を満たしていないか、クエリ文字列に不明なパラメータ（`parent_id` など）が含まれています。`violations` には、問題のあるフィールドがそれぞれ示されます。\n- `knowledge_fs_invalid_request`：`view=tree` を指定せずに `parentId` を指定しています。レスポンスには `violations` ではなく `failure` が含まれます。\n- `knowledge_fs_invalid_request`：ソースが `connector` ソースではありません。\n- `knowledge_fs_invalid_request`：`source_id` が UUID ではありません。\n- `knowledge_fs_invalid_request`：`source_id` の形式が正しくありません。"
           },
           "401": {
             "content": {
