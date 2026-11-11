@@ -54,10 +54,10 @@ with one tag each:
   (cases run together as prose, a judgment after the step it governs, one
   step answering several questions, needed content hidden in an accordion
   or tooltip, main-line content in a callout or an aside run into the main
-  line that a callout would set apart, a rule restated from the page that
-  owns it), or a section or paragraph out of the reader's order, off its
-  heading, repeating another part of the page, or one this page's reader
-  wouldn't need; quote its heading or first sentence
+  line that a callout would set apart, a rule restated at length from the
+  page that owns it), or a section or paragraph out of the reader's order,
+  off its heading, repeating another part of the page, or one this page's
+  reader wouldn't need; quote its heading or first sentence
 - vocabulary: a word from the code, the spec, or the team, not the product
 - missing: a place the reader needed a judgment (what to choose, what to
   avoid, what happens if they get it wrong) and got a description

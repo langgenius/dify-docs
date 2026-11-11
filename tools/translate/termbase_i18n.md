@@ -20,7 +20,8 @@
 | Text Generator | 文本生成应用 | テキストジェネレーター |
 | knowledge base | 知识库 | ナレッジベース |
 | plugin | 插件 | プラグイン |
-| Dify tool | Dify 工具 | ツール |
+| integration | 集成 | 統合 |
+| Dify tool | Dify 工具 | Dify ツール |
 | workspace | 工作空间 | ワークスペース |
 | template | 模板 | テンプレート |
 | web app | Web 应用 | Web アプリ |
@@ -32,7 +33,7 @@
 |:--------|:--------|:---------|
 | model | 模型 | モデル |
 | model provider | 模型供应商 | モデルプロバイダー |
-| LLM (large language model) | 大语言模型 | 大規模言語モデル |
+| LLM | LLM | LLM |
 | chat model | 对话模型 | チャットモデル |
 | completion model | 文本续写模型 | 補完モデル |
 | embedding model | 嵌入模型 | 埋め込みモデル |
@@ -45,6 +46,10 @@
 | Speech2Text model | 语音转文字模型 | 音声認識モデル |
 | token | token | token |
 | API token | API 令牌 | APIトークン |
+| access token | 访问令牌 | アクセストークン |
+| API key | API 密钥 | API キー |
+| credential | 凭据 | 認証情報 |
+| custom model | 自定义模型 | カスタムモデル |
 | prompt | 提示词 | プロンプト |
 | system instruction | 系统指令 | システムインストラクション |
 | user message | User 消息 | ユーザーメッセージ |
@@ -98,6 +103,7 @@
 | chunking | 分段 | チャンキング |
 | chunker | 分段器 | チャンカー |
 | retrieval | 检索 | 検索 |
+| retrieval (Agent Configure) | 检索 | ナレッジ検索 |
 | retrieval mode | 检索模式 | 検索モード |
 | indexing | 索引 | インデックス |
 | index method | 索引方式 | インデックス方法 |
@@ -175,8 +181,17 @@
 
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
-| Marketplace | 市场 | マーケットプレイス |
+| Marketplace | Marketplace | マーケットプレイス |
 | Creator Center | 创作者中心 | クリエイターセンター |
+
+### Workspace Roles
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Owner | 所有者 | オーナー |
+| Admin | 管理员 | 管理者 |
+| Editor | 编辑者 | エディター |
+| Normal | 普通成员 | メンバー |
 
 ## UI Labels
 
@@ -199,7 +214,7 @@
 | Orchestrate | 编排 | オーケストレート |
 | Access Point | 访问入口 | アクセスポイント |
 | Monitoring | 监测 | 監視 |
-| Monitoring (Agent) | 监控 | モニタリング |
+| Monitoring | 监控 | モニタリング |
 | Logs | 日志 | ログ |
 | Annotations | 标注 | 注釈 |
 
@@ -224,7 +239,7 @@
 | End User or Account | 用户或账户 | エンドユーザーまたはアカウント |
 | User Rate | 用户反馈 | ユーザーレート |
 | Op. Rate | 管理员反馈 | 操作レート |
-| Trigger By | 触发方式 | トリガー方法 |
+| TRIGGER BY | 触发方式 | トリガー方法 |
 | Test With Params | 按此参数测试 | パラメータ付きテスト |
 
 ### Knowledge Detail Tabs
@@ -236,6 +251,7 @@
 | API Access | API 访问 | API アクセス |
 | API access | API 访问 | API アクセス |
 | Retrieval Testing | 召回测试 | 検索テスト |
+| Retrieval Test | 检索测试 | 検索テスト |
 | Settings | 设置 | 設定 |
 | Pipeline | 流水线 | パイプライン |
 
@@ -253,16 +269,49 @@
 | Integrations | 集成 | 統合 |
 | Archived logs | 归档日志 | アーカイブされたログ |
 | Prepare download | 准备下载 | ダウンロードを準備 |
-| Default Models | 默认模型 | デフォルトモデル |
+| Workspace settings | 工作空间设置 | ワークスペース設定 |
+| Settings | 设置 | 設定 |
+| Default Models | 默认模型设置 | システムモデル設定 |
 | System Reasoning Model | 系统推理模型 | システム推論モデル |
 | Embedding Model | Embedding 模型 | 埋め込みモデル |
 | Rerank Model | Rerank 模型 | Rerank モデル |
 | Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル |
 | Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル |
-| Load Balancing | 负载均衡 | 負荷分散 |
+| Load balancing | 负载均衡 | 負荷分散 |
 | AI credits | AI 消息额度 | AI クレジット |
-| Usage Priority | 使用优先级 | 使用優先度 |
+| Usage Priority | 使用优先级 | 使用優先順位 |
 | API Key | API Key | API キー |
+| Add API Key | 添加 API 密钥 | API キーを追加 |
+
+### Integrations Hub
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Tool Plugin | 工具插件 | ツールプラグイン |
+| Trigger | 触发器 | トリガー |
+| Agent Strategy | Agent 策略 | エージェント戦略 |
+| Extension | 扩展 | 拡張 |
+| Marketplace | Marketplace | マーケットプレイス |
+| Local Package File | 本地集成包 | ローカルパッケージファイル |
+| Permissions | 权限 | 権限 |
+| Who can install and manage? | 谁可以安装和管理？ | 誰がインストールおよび管理できますか？ |
+| Who can debug? | 谁可以调试？ | 誰がデバッグできますか？ |
+| Everyone | 所有人 | みんな |
+| Admins | 管理员 | 管理者 |
+| No one | 无人 | 誰もいない |
+| Debugging | 调试 | デバッグ |
+| Auto-update | 自动更新 | 自動更新 |
+| Auto-update Settings | 自动更新设置 | 自動更新設定 |
+| Disabled | 禁用 | 無効 |
+| Fix only | 仅修复 | 修正のみ |
+| Latest | 最新 | 最新 |
+| Update time | 更新时间 | 更新時刻 |
+| Scope | 范围 | 範囲 |
+| All | 全部 | すべて |
+| Exclude selected | 排除选定 | 選択したものを除外する |
+| Only selected | 仅选定 | 選択されたもののみ |
+| Endpoints | API 端点 | エンドポイント |
+| Add API Key | 添加 API Key | APIキーを追加してください |
 
 ### Billing
 
@@ -273,17 +322,6 @@
 | Team | Team | Team |
 | Upgrade | 升级 | アップグレード |
 | Knowledge Data Storage | 知识库数据存储空间 | ナレッジベースのデータストレージ |
-
-### Workspace Roles
-
-| English | Chinese | Japanese |
-|:--------|:--------|:---------|
-| Owner | 所有者 | オーナー |
-| Admin | 管理员 | 管理者 |
-| Editor | 编辑 | エディター |
-| Builder | 构建器 | ビルダー |
-| Knowledge Admin | 知识库管理员 | ナレッジ管理員 |
-| Normal | 成员 | 通常 |
 
 ### App Type Selectors
 
@@ -466,12 +504,29 @@
 |:--------|:--------|:---------|
 | Build mode | 构建模式 | ビルドモード |
 | Build draft | Build 草稿 | ビルドドラフト |
+| Build | 构建 | ビルド |
+| Preview | 预览 | プレビュー |
 | File system | 文件系统 | ファイルシステム |
 | Persistent | 长期 | 永続ファイル |
 | Temporary | 临时 | 一時ファイル |
 | Legacy Agent | 旧版 Agent | レガシー Agent |
 | Start fresh | 开启新对话 | 新しく始める |
+| Chat Features | Chat 功能 | チャット機能 |
+| Show thinking | 显示思考过程 | 思考過程を表示 |
+| Thinking | 思考过程 | 思考中 |
+| Ran commands | 已运行命令 | コマンドを実行しました |
 | Knowledge Retrieval | 知识检索 | ナレッジ検索 |
+| Add knowledge retrieval | 添加知识检索 | ナレッジ検索を追加 |
+| Classic | 经典 | 従来型 |
+| Advanced Settings | 高级设置 | 詳細設定 |
+| Knowledge retrieval name | 知识检索名称 | ナレッジ検索の名前 |
+| Agent-facing name | Agent 使用的名称 | Agent に表示する名前 |
+| Description | 描述 | ナレッジベースの説明 |
+| Query | 查询 | クエリ |
+| Agent decide | Agent 决定 | エージェントが決定 |
+| Custom query | 自定义查询 | カスタムクエリ |
+| Custom query text | 自定义查询文本 | カスタムクエリテキスト |
+| Knowledge | 知识 | ナレッジ |
 | Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース |
 | Access URL | 访问 URL | アクセス URL |
 
@@ -495,6 +550,10 @@
 | Automatic | 自动 | 自動生成 |
 | Manual | 手动 | 手動設定 |
 | Knowledge Base | 知识库 | ナレッジベース |
+| Retrieval Setting | 召回设置 | 検索設定 |
+| Rerank Setting | Rerank 设置 | Rerank 設定 |
+| Top K | Top K | トップ K |
+| Score Threshold | Score 阈值 | スコア閾値 |
 
 ### Knowledge Retrieval Methods
 
@@ -514,12 +573,14 @@
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID |
 | External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API |
 | Service API | 服务 API | サービスAPI |
+| API Key | API 密钥 | APIキー |
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース |
 | Creators | 创建者 | 作成者 |
 | Multimodal | 多模态 | マルチモーダル |
 | TOP K | Top K | トップ K |
+| Fast | 快速 | 高速 |
 
 ### Chunking Mode Labels
 
@@ -561,6 +622,7 @@
 | Queuing | 排队中 | キューイング中 |
 | Paused | 已暂停 | 一時停止中 |
 | Error | 错误 | エラー |
+| Ready | 就绪 | 準備完了 |
 
 ### Golden Question Status Labels
 

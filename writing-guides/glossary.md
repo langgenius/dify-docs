@@ -26,7 +26,8 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Text Generator | 文本生成应用 | テキストジェネレーター | |
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | plugin | 插件 | プラグイン | Still valid in developer contexts (building plugins). In user-facing docs, prefer "integration" when referring to the Integrations hub; use "plugin" only for tool plugins or the develop-plugin tree. |
-| Dify tool | Dify 工具 | ツール | |
+| integration | 集成 | 統合 | An installable extension from the Integrations hub: a model provider, tool, data source, trigger, agent strategy, or extension. Lowercase in English prose; capitalized only as the UI label **Integrations**. ja prose uses 統合, but a click path from the main nav starts at **連携** (navigation.mainNav.integrations). For developer contexts, see "plugin". |
+| Dify tool | Dify 工具 | Dify ツール | |
 | workspace | 工作空间 | ワークスペース | |
 | template | 模板 | テンプレート | Published app that others can download from Dify Marketplace and use |
 | web app | Web 应用 | Web アプリ | The published app interface end users see; lowercase in English body text. When naming a UI element rather than the concept, use the on-screen label verbatim instead; see the UI Labels section. |
@@ -38,7 +39,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 |:--------|:--------|:---------|:------|
 | model | 模型 | モデル | |
 | model provider | 模型供应商 | モデルプロバイダー | |
-| LLM (large language model) | 大语言模型 | 大規模言語モデル | |
+| LLM | LLM | LLM | Large language model. Body text writes "LLM" in all three languages. Spell the term out only to explain it at its first mention on a page: large language model (LLM), 大语言模型（LLM）, 大規模言語モデル（LLM）. |
 | chat model | 对话模型 | チャットモデル | Models that support role-based conversations (System/User/Assistant) |
 | completion model | 文本续写模型 | 補完モデル | Models designed for simple text continuation |
 | embedding model | 嵌入模型 | 埋め込みモデル | |
@@ -49,8 +50,12 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | moderation model | 内容审核模型 | モデレーションモデル | Models that detect and filter inappropriate content |
 | TTS model | 文字转语音模型 | TTSモデル | Text-to-speech models |
 | Speech2Text model | 语音转文字模型 | 音声認識モデル | Speech-to-text models |
-| token | token | token | |
+| token | token | token | The unit a model counts in input and output. For a token that authenticates requests, see access token. |
 | API token | API 令牌 | APIトークン | |
+| access token | 访问令牌 | アクセストークン | A token that authenticates requests to Dify, such as a console session's access token, the token a `difyctl` sign-in issues, or one created on the **Access Tokens** settings page. Where English prose says just "token" for one, zh writes 令牌 and ja トークン, never the Latin "token". Identifiers such as `tokens.yml` and `DIFY_TOKEN` stay as written. |
+| API key | API 密钥 | API キー | A secret key that authenticates API calls, such as a model provider's key or a Dify Service API key. Lowercase "key" in English prose. zh prose writes API 密钥 even where a zh UI label reads "API Key"; bold UI labels keep their own form. |
+| credential | 凭据 | 認証情報 | The saved authentication details, such as an API key or an OAuth authorization, that Dify uses to call a model provider, tool, or data source. Not 凭证 (zh) or 資格情報 (ja). |
+| custom model | 自定义模型 | カスタムモデル | A model added to a provider by hand with **Add Model**, as opposed to the models the provider predefines. Lowercase in prose. |
 | prompt | 提示词 | プロンプト | |
 | system instruction | 系统指令 | システムインストラクション | Defines the model's behavior and role |
 | user message | User 消息 | ユーザーメッセージ | Passes user input or provides example queries |
@@ -104,6 +109,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
 | chunker | 分段器 | チャンカー | Generic noun for a chunking node; name a specific node by its canvas label. |
 | retrieval | 检索 | 検索 | Always lowercase in body text |
+| retrieval (Agent Configure) | 检索 | ナレッジ検索 | In an Agent's knowledge retrieval settings, what each classic knowledge base is added as: one or more knowledge bases under one name, description, and settings. Countable in English (a retrieval); zh counts it 一项检索. ja writes ナレッジ検索, like the UI field ナレッジ検索の名前; a search itself stays 検索 (1 回の検索). |
 | retrieval mode | 检索模式 | 検索モード | Strategy for finding and ranking relevant chunks |
 | indexing | 索引 | インデックス | Use "Index Method" consistently in documentation |
 | index method | 索引方式 | インデックス方法 | Matches the UI label Index Method (dataset-creation.stepTwo.indexMode). |
@@ -181,8 +187,19 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 
 | English | Chinese | Japanese | Notes |
 |:--------|:--------|:---------|:------|
-| Marketplace | 市场 | マーケットプレイス | Platform where users publish and discover app templates |
+| Marketplace | Marketplace | マーケットプレイス | Dify Marketplace, where plugins and app templates are published and installed. zh keeps the English name, as the zh UI does (navigation.mainNav.marketplace). The full name is Dify Marketplace / Dify Marketplace / Dify マーケットプレイス (plugin.marketplace.difyMarketplace). |
 | Creator Center | 创作者中心 | クリエイターセンター | Interface for managing template submissions and publications |
+
+### Workspace Roles
+
+Role names are not i18n strings: the members page shows the names the members API returns. On Community Edition and Dify Cloud those are the role IDs (`owner`, `admin`, `editor`, `normal`), untranslated in every UI language, so docs write the names below. Capitalize a name when it names the role (the Editor role); descriptive prose stays lowercase (the workspace owner). Enterprise role names come from the RBAC service, not from this table.
+
+| English | Chinese | Japanese | Notes |
+|:--------|:--------|:---------|:------|
+| Owner | 所有者 | オーナー | |
+| Admin | 管理员 | 管理者 | |
+| Editor | 编辑者 | エディター | |
+| Normal | 普通成员 | メンバー | zh 普通成员 keeps the role apart from 成员, any workspace member. |
 
 ## UI Labels
 
@@ -194,13 +211,13 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Home | 主页 | ホーム | common.mainNav.home | Main navigation item for the homepage, new in v1.17.0 |
-| Studio | 工作室 | スタジオ | common.menus.apps | Sidebar menu label for the app workspace |
-| Knowledge | 知识库 | ナレッジ | common.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
+| Home | 主页 | ホーム | navigation.mainNav.home | Main navigation item for the homepage, new in v1.17.0 |
+| Studio | 工作室 | スタジオ | navigation.menus.apps | Sidebar menu label for the app workspace |
+| Knowledge | 知识库 | ナレッジ | navigation.menus.datasets | Sidebar menu label; not to be confused with lowercase "knowledge base" in prose |
 | Web apps | WEB APPS | Webアプリ | explore.sidebar.webApps | Sidebar section listing the web apps you can open; the en label shows as WEB APPS. Replaced the "Explore" item in v1.17.0 |
 | Integrations | 集成 | 連携 | navigation.mainNav.integrations | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. A click path that starts from the main nav uses this label (ja 連携, not the hub header's 統合). |
-| Tools | 工具 | ツール | common.menus.tools | Sidebar menu label |
-| Skills | Skills | Skills | common.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The page title (`skill.skillManagement.title`) is also "Skills" in every locale since dify #41242. |
+| Tools | 工具 | ツール | navigation.menus.tools | Integrations hub sidebar group that holds Tool Plugin, MCP, Workflow as Tool, and Swagger API as Tool; not a main nav item |
+| Skills | Skills | Skills | navigation.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The page title (`skill.skillManagement.title`) is also "Skills" in every locale since dify #41242. |
 
 ### App Detail Tabs
 
@@ -209,7 +226,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Orchestrate | 编排 | オーケストレート | common.appMenus.promptEng | App configuration tab |
 | Access Point | 访问入口 | アクセスポイント | common.appMenus.accessPoint | New in v1.16.2; consolidates app access configuration (web app, API, MCP server, trigger channels). Also a Publish-panel shortcut |
 | Monitoring | 监测 | 監視 | common.appMenus.overview | App metrics/overview tab |
-| Monitoring (Agent) | 监控 | モニタリング | agent-v-2.agentDetail.sections.monitoring | Section of the Agent detail page; zh/ja differ from the app tab Monitoring (common.appMenus.overview) |
+| Monitoring | 监控 | モニタリング | agent-v-2.agentDetail.sections.monitoring | Section of the Agent detail page. Same en label as the app tab Monitoring (common.appMenus.overview), whose zh/ja are 监测/監視 |
 | Logs | 日志 | ログ | common.appMenus.logs | Split from "Logs & Annotations" in v1.15.0 |
 | Annotations | 标注 | 注釈 | common.appMenus.annotations | Split from "Logs & Annotations" in v1.15.0 |
 
@@ -224,7 +241,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | MCP Server | MCP 服务 | MCP サーバー | tools.mcp.server.title | MCP channel card |
 | Configure | 配置 | コンフィグ | common.operation.config | Web App card button; appears only when the published workflow's Start node has hidden inputs, and opens the dialog for pre-filling them |
 | Launch | 启动 | 公開 | app-overview.overview.appInfo.launch | Submit button of that pre-fill dialog; the ja UI reads 公開 |
-| Trigger | 触发器 | トリガー | common.settings.trigger | Trigger channel card; per-trigger toggles for published triggers |
+| Trigger | 触发器 | トリガー | navigation.settings.trigger | Trigger channel card; per-trigger toggles for published triggers |
 
 ### Log Page
 
@@ -234,7 +251,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | End User or Account | 用户或账户 | エンドユーザーまたはアカウント | appLog.table.header.endUser | Session ID for web app/API usage, account name for in-Dify usage |
 | User Rate | 用户反馈 | ユーザーレート | appLog.table.header.userRate | End-user thumbs aggregate |
 | Op. Rate | 管理员反馈 | 操作レート | appLog.table.header.adminRate | Team/operator thumbs aggregate |
-| Trigger By | 触发方式 | トリガー方法 | appLog.table.header.triggered_from | Workflow run list column; UI renders uppercase "TRIGGER BY"; values WebApp 网页应用/Webhook/Schedule 定时任务/Integration 集成/Debugging 调试 |
+| TRIGGER BY | 触发方式 | トリガー方法 | appLog.table.header.triggered_from | Workflow run list column; the en string is stored in capitals. Values WebApp 网页应用/Webhook/Schedule 定时任务/Integration 集成/Debugging 调试 |
 | Test With Params | 按此参数测试 | パラメータ付きテスト | appLog.runDetail.testWithParams | Workflow run detail replay button |
 
 ### Knowledge Detail Tabs
@@ -246,6 +263,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | API Access | API 访问 | API アクセス | knowledge-space.apiAgentAccess | Agent knowledge base only: the button in its lower-left corner that shows the knowledge base's endpoint and opens API key management. The classic knowledge base tab is the row above |
 | API access | API 访问 | API アクセス | knowledge-settings.settings.apiAccessLabel | Agent knowledge base settings: the switch that allows Service API calls to this knowledge base |
 | Retrieval Testing | 召回测试 | 検索テスト | common.datasetMenus.hitTesting | |
+| Retrieval Test | 检索测试 | 検索テスト | knowledge-space.retrievalTest.title | Agent knowledge base only: the sidebar item and its page. The classic knowledge base tab is the Retrieval Testing row above |
 | Settings | 设置 | 設定 | common.datasetMenus.settings | |
 | Pipeline | 流水线 | パイプライン | common.datasetMenus.pipeline | |
 
@@ -253,26 +271,59 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| My Account | 我的账户 | マイアカウント | common.account.myAccount | Heading of the account page |
-| Members | 成员 | メンバー | common.settings.members | |
-| Model Provider | 模型供应商 | モデルプロバイダー | common.settings.provider | Moved from Settings to Integrations hub in v1.15.0 |
-| Data Source | 数据来源 | データソース | common.settings.dataSource | Moved from Settings to Integrations hub in v1.15.0 |
-| Custom Endpoint | 自定义端点 | カスタム API | common.settings.customEndpoint | Renamed from "API Extension" in v1.15.0; moved from Settings to Integrations hub |
-| Billing | 账单 | 請求 | common.settings.billing | |
+| My Account | 我的账户 | マイアカウント | account-settings.account.myAccount | Heading of the account page |
+| Members | 成员 | メンバー | navigation.settings.members | |
+| Model Provider | 模型供应商 | モデルプロバイダー | navigation.settings.provider | Moved from Settings to Integrations hub in v1.15.0 |
+| Data Source | 数据来源 | データソース | navigation.settings.dataSource | Moved from Settings to Integrations hub in v1.15.0 |
+| Custom Endpoint | 自定义端点 | カスタム API | navigation.settings.customEndpoint | Renamed from "API Extension" in v1.15.0; moved from Settings to Integrations hub |
+| Billing | 账单 | 請求 | navigation.settings.billing | |
 | Get Education Verified | 获取教育版认证 | 教育認証を取得 | education.toVerified | Button in Billing settings to start the education discount verification flow |
 | Integrations | 集成 | 統合 | navigation.settings.integrations | Hub header label, shown once the hub is open. A click path from the main nav uses navigation.mainNav.integrations (ja 連携). |
 | Archived logs | 归档日志 | アーカイブされたログ | appLog.archives.title | Workspace settings entry for monthly CSV exports of archived workflow run logs (Cloud, owner/admin, paid plans) |
 | Prepare download | 准备下载 | ダウンロードを準備 | appLog.archives.action.prepareDownload | Button on the Archived logs page; turns into Preparing (准备中/準備中), then Download |
-| Default Models | 默认模型 | デフォルトモデル | common.modelProvider.systemModelSettings | Renamed from "Default Model Settings" in v1.15.0. ZH/JA i18n not yet updated (ZH UI: 默认模型设置, JA UI: システムモデル設定); docs use the intended label. |
-| System Reasoning Model | 系统推理模型 | システム推論モデル | common.modelProvider.systemReasoningModel.key | |
-| Embedding Model | Embedding 模型 | 埋め込みモデル | common.modelProvider.embeddingModel.key | |
-| Rerank Model | Rerank 模型 | Rerank モデル | common.modelProvider.rerankModel.key | |
-| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル | common.modelProvider.speechToTextModel.key | |
-| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル | common.modelProvider.ttsModel.key | |
-| Load Balancing | 负载均衡 | 負荷分散 | common.modelProvider.loadBalancing |  |
-| AI credits | AI 消息额度 | AI クレジット | common.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `modelProvider.quotaLabel`. |
-| Usage Priority | 使用优先级 | 使用優先度 | common.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. |
-| API Key | API Key | API キー | common.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
+| Workspace settings | 工作空间设置 | ワークスペース設定 | navigation.mainNav.workspace.settings | Entry in the workspace menu, which opens from the workspace name at the top of the main nav. Opens the Settings dialog on Billing when the workspace has a billing plan, otherwise on Members |
+| Settings | 设置 | 設定 | navigation.settings.settings | Title of the workspace settings dialog (Members, Billing, Preferences, and the rest). Several other keys also read Settings; use this one for the dialog |
+| Default Models | 默认模型设置 | システムモデル設定 | model-provider.modelProvider.systemModelSettings | Model Provider page button that opens the default model settings. Renamed from "Default Model Settings" in v1.15.0 in en only; zh and ja keep their older strings, and docs follow them. The dialog it opens is titled Default Model Settings / 默认模型设置 / デフォルトモデル設定 (model-provider.modelProvider.systemModelSettingsTitle). |
+| System Reasoning Model | 系统推理模型 | システム推論モデル | model-provider.modelProvider.systemReasoningModel.key | |
+| Embedding Model | Embedding 模型 | 埋め込みモデル | model-provider.modelProvider.embeddingModel.key | |
+| Rerank Model | Rerank 模型 | Rerank モデル | model-provider.modelProvider.rerankModel.key | Default Models entry; also the rerank option in the Retrieval Setting popover |
+| Speech-to-Text Model | 语音转文本模型 | 音声からテキストへの変換モデル | model-provider.modelProvider.speechToTextModel.key | |
+| Text-to-Speech Model | 文本转语音模型 | テキストから音声への変換モデル | model-provider.modelProvider.ttsModel.key | |
+| Load balancing | 负载均衡 | 負荷分散 | model-provider.modelProvider.loadBalancing | Lowercase b, as stored. |
+| AI credits | AI 消息额度 | AI クレジット | model-provider.modelProvider.card.aiCreditsOption | Renamed from "Message Credits" in v1.13.1. Lowercase c, as the UI renders it; the section header is the all-caps `model-provider.modelProvider.quotaLabel`. |
+| Usage Priority | 使用优先级 | 使用優先順位 | model-provider.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. Cloud only, for providers that AI credits cover; it sits in the popover the provider card's button opens |
+| API Key | API Key | API キー | model-provider.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
+| Add API Key | 添加 API 密钥 | API キーを追加 | model-provider.modelProvider.auth.addApiKey | Model provider card button until the provider has a key, then **Configure**. The popover it opens holds a second **Add API Key** that opens the key form. Data sources and tool plugins use plugin.auth.addApi |
+
+### Integrations Hub
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Tool Plugin | 工具插件 | ツールプラグイン | navigation.toolsPage.toolPlugin | Hub sidebar item under **Tools**, and that page's title |
+| Trigger | 触发器 | トリガー | plugin.categorySingle.trigger | Hub sidebar item and page title. The Access Point channel card of the same name is navigation.settings.trigger |
+| Agent Strategy | Agent 策略 | エージェント戦略 | plugin.categorySingle.agent | Hub sidebar item and page title |
+| Extension | 扩展 | 拡張 | plugin.categorySingle.extension | Hub sidebar item and page title. The install-success message names this page with navigation.settings.extension, whose ja value is 拡張機能 |
+| Marketplace | Marketplace | マーケットプレイス | plugin.source.marketplace | Install source in the hub's **Install** menu; the zh UI keeps the English word |
+| Local Package File | 本地集成包 | ローカルパッケージファイル | plugin.source.local | Install source for a `.difypkg` file |
+| Permissions | 权限 | 権限 | plugin.privilege.permissions | Button at the bottom of the hub sidebar, and the title of the panel it opens. Shown only to members who can change integration permissions |
+| Who can install and manage? | 谁可以安装和管理？ | 誰がインストールおよび管理できますか？ | plugin.privilege.quickWhoCanInstall | Setting in the Permissions panel |
+| Who can debug? | 谁可以调试？ | 誰がデバッグできますか？ | plugin.privilege.quickWhoCanDebug | Setting in the Permissions panel |
+| Everyone | 所有人 | みんな | plugin.privilege.everyone | Permissions option. REVIEW: ja みんな is casual for a settings option |
+| Admins | 管理员 | 管理者 | plugin.privilege.admins | Permissions option |
+| No one | 无人 | 誰もいない | plugin.privilege.noone | Permissions option. REVIEW: ja 誰もいない reads "nobody is there", not "nobody is allowed" |
+| Debugging | 调试 | デバッグ | plugin.debugInfo.title | Hub sidebar button above **Permissions**, for remote debugging; shown only to members who can debug |
+| Auto-update | 自动更新 | 自動更新 | plugin.autoUpdate.autoUpdate | Header button on Tool Plugin, Trigger, Agent Strategy, Extension, Model Provider, and Data Source, for members who can set integration preferences; its badge shows the current strategy. Also the strategy field label in Auto-update Settings |
+| Auto-update Settings | 自动更新设置 | 自動更新設定 | plugin.autoUpdate.autoUpdateSettings | Dialog opened by **Auto-update** |
+| Disabled | 禁用 | 無効 | plugin.autoUpdate.strategy.disabled.name | Auto-update strategy option; not the document status Disabled (已禁用) |
+| Fix only | 仅修复 | 修正のみ | plugin.autoUpdate.strategy.fixOnly.name | Auto-update strategy option: patch versions only |
+| Latest | 最新 | 最新 | plugin.autoUpdate.strategy.latest.name | Auto-update strategy option |
+| Update time | 更新时间 | 更新時刻 | plugin.autoUpdate.updateTime | Shown unless the strategy is Disabled |
+| Scope | 范围 | 範囲 | plugin.autoUpdate.scope | Shown unless the strategy is Disabled |
+| All | 全部 | すべて | plugin.autoUpdate.scopeMode.all | Scope option |
+| Exclude selected | 排除选定 | 選択したものを除外する | plugin.autoUpdate.scopeMode.exclude | Scope option |
+| Only selected | 仅选定 | 選択されたもののみ | plugin.autoUpdate.upgradeMode.partial | Scope option; the key sits under upgradeMode, not scopeMode |
+| Endpoints | API 端点 | エンドポイント | plugin.detailPanel.endpoints | Section of an integration's detail panel, shown when the integration declares endpoints. The en UI renders ENDPOINTS |
+| Add API Key | 添加 API Key | APIキーを追加してください | plugin.auth.addApi | Credential button for data sources (**Configure** menu) and for tool plugins that also offer OAuth. Model providers use model-provider.modelProvider.auth.addApiKey. REVIEW: ja is a request sentence; ja docs write API キーを追加 |
 
 ### Billing
 
@@ -283,17 +334,6 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Team | Team | Team | billing.plans.team.name | Paid tier; kept English in all locales |
 | Upgrade | 升级 | アップグレード | billing.upgradeBtn.encourageShort | Short variant; "Upgrade Now" is the full label (`encourage` key) |
 | Knowledge Data Storage | 知识库数据存储空间 | ナレッジベースのデータストレージ | billing.usagePage.vectorSpace | Usage row in **Settings** > **Billing**; consumed by High Quality-indexed documents |
-
-### Workspace Roles
-
-| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
-|:-------------|:-------------|:--------------|:---------|:------|
-| Owner | 所有者 | オーナー | common.members.owner | |
-| Admin | 管理员 | 管理者 | common.members.admin | |
-| Editor | 编辑 | エディター | common.members.editor | |
-| Builder | 构建器 | ビルダー | common.members.builder | REVIEW: ZH "构建器" seems unusual for a role name |
-| Knowledge Admin | 知识库管理员 | ナレッジ管理員 | common.members.datasetOperator | Formerly "Dataset Operator" in code |
-| Normal | 成员 | 通常 | common.members.normal | REVIEW: ZH uses "成员" (member); verify intended translation |
 
 ### App Type Selectors
 
@@ -411,8 +451,8 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Add Comment | 添加评论 | コメントを追加 | workflow.comments.actions.addComment | Right-click menu item on canvas |
-| Edit comment | 编辑评论 | コメントを編集 | workflow.comments.actions.editComment | REVIEW: EN uses lowercase "comment" unlike sibling actions |
+| Add Comment | 添加评论 | コメントを追加 | workflow-comments.comments.actions.addComment | Right-click menu item on canvas |
+| Edit comment | 编辑评论 | コメントを編集 | workflow-comments.comments.actions.editComment | REVIEW: EN uses lowercase "comment" unlike sibling actions |
 | Comment Mode | 评论模式 | コメントモード | workflow.common.commentMode | Entered by pressing `C` on the canvas |
 
 ### Variable Config
@@ -434,22 +474,22 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Generate | 生成 | 生成 | app-debug.generate.generate | AI prompt generation button |
-| Ideal Output | 理想输出 | 理想的な出力 | app-debug.generate.idealOutput | Example output for prompt generation |
+| Generate | 生成 | 生成 | app-generation.generate.generate | AI prompt generation button |
+| Ideal Output | 理想输出 | 理想的な出力 | app-generation.generate.idealOutput | Example output for prompt generation |
 
 ### Vision & File Upload
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Vision | 视觉 | ビジョン | app-debug.vision.name | File type toggle |
-| Audio | 音频 | 音声 | app-debug.feature.audioUpload.title | File type toggle |
-| Document | 文档 | ドキュメント | app-debug.feature.documentUpload.title | File type toggle |
-| Settings | 设置 | 設定 | app-debug.voice.settings | Vision settings button (the key sits under `voice`); opens a popover titled Vision Settings (app-debug.vision.visionSettings.title) |
-| Resolution | 分辨率 | 解像度 | app-debug.vision.visionSettings.resolution | Image detail level |
-| High | 高 | 高 | app-debug.vision.visionSettings.high | Resolution option |
-| Low | 低 | 低 | app-debug.vision.visionSettings.low | Resolution option |
-| Upload Method | 上传方式 | アップロード方法 | app-debug.vision.visionSettings.uploadMethod | |
-| Upload Limit | 上传数量限制 | アップロード制限 | app-debug.vision.visionSettings.uploadLimit | |
+| Vision | 视觉 | ビジョン | file-upload.vision.name | File type toggle |
+| Audio | 音频 | 音声 | file-upload.feature.audioUpload.title | File type toggle |
+| Document | 文档 | ドキュメント | file-upload.feature.documentUpload.title | File type toggle |
+| Settings | 设置 | 設定 | app-debug.voice.settings | Vision settings button (the key sits under `voice`); opens a popover titled Vision Settings (file-upload.vision.visionSettings.title) |
+| Resolution | 分辨率 | 解像度 | file-upload.vision.visionSettings.resolution | Image detail level |
+| High | 高 | 高 | file-upload.vision.visionSettings.high | Resolution option |
+| Low | 低 | 低 | file-upload.vision.visionSettings.low | Resolution option |
+| Upload Method | 上传方式 | アップロード方法 | file-upload.vision.visionSettings.uploadMethod | |
+| Upload Limit | 上传数量限制 | アップロード制限 | file-upload.vision.visionSettings.uploadLimit | |
 
 ### Debug Controls
 
@@ -465,11 +505,11 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow.nodes.agent.strategy.label | |
-| Agent task | Agent 任务 | Agent タスク | workflow.nodes.agent.task.label | New Agent surface |
-| Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow.nodes.agent.roster.editInConsole | New Agent roster action |
-| Make a copy | 创建副本 | コピーを作成 | workflow.nodes.agent.roster.makeCopy | New Agent roster action |
-| New output | 新建输出 | 新しい出力 | workflow.nodes.agent.outputVars.newOutput | New Agent surface |
+| Agentic Strategy | Agent 策略 | エージェンティック戦略 | workflow-agent.nodes.agent.strategy.label | |
+| Agent task | Agent 任务 | Agent タスク | workflow-agent.nodes.agent.task.label | New Agent surface |
+| Edit in Agents | 在 Agents 中编辑 | Agents で編集 | workflow-agent.nodes.agent.roster.editInConsole | New Agent roster action |
+| Make a copy | 创建副本 | コピーを作成 | workflow-agent.nodes.agent.roster.makeCopy | New Agent roster action |
+| New output | 新建输出 | 新しい出力 | workflow-agent.nodes.agent.outputVars.newOutput | New Agent surface |
 | Output Routes | 输出路由 | 出力ルート | workflow.nodes.agent.outputRoutes.title | New Agent surface |
 
 ### Agent Configure
@@ -478,35 +518,56 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 |:-------------|:-------------|:--------------|:---------|:------|
 | Build mode | 构建模式 | ビルドモード | agent-v-2.agentDetail.configure.buildDraft.modeBadge | |
 | Build draft | Build 草稿 | ビルドドラフト | agent-v-2.agentDetail.configure.buildDraft.title | |
+| Build | 构建 | ビルド | agent-v-2.agentDetail.configure.rightPanel.build | Configure's right-panel tab for the build chat, beside **Preview** |
+| Preview | 预览 | プレビュー | agent-v-2.agentDetail.configure.rightPanel.preview | Configure's right-panel tab beside **Build**. The workflow's Preview button is workflow.common.debugAndPreview, with the same text |
 | File system | 文件系统 | ファイルシステム | agent-v-2.agentDetail.configure.workingDirectory.fileSystem | Top-right entry in Configure |
 | Persistent | 长期 | 永続ファイル | agent-v-2.agentDetail.configure.workingDirectory.persistentFiles | File system tab; zh docs prose writes **长期** 文件, with 文件 outside the bold |
 | Temporary | 临时 | 一時ファイル | agent-v-2.agentDetail.configure.workingDirectory.temporaryFiles | File system tab; zh docs prose writes **临时** 文件, with 文件 outside the bold |
 | Legacy Agent | 旧版 Agent | レガシー Agent | app-debug.legacyAgentBadge.label | Deprecation badge on the classic Agent app type |
 | Start fresh | 开启新对话 | 新しく始める | agent-v-2.agentDetail.configure.preview.restart | Clears the current build or preview chat |
+| Chat Features | Chat 功能 | チャット機能 | agent-v-2.agentDetail.configure.chatFeatures.title | Panel for the Agent's chat features. The Workflow and Chatflow panel is **Features** (workflow.common.features, 功能) |
+| Show thinking | 显示思考过程 | 思考過程を表示 | app-debug.feature.showThoughts.title | Toggle in **Chat Features** |
+| Thinking | 思考过程 | 思考中 | agent-v-2.agentDetail.configure.answer.thinking | Collapsible section of an Agent reply; its title adds how long the agent worked |
+| Ran commands | 已运行命令 | コマンドを実行しました | agent-v-2.agentDetail.configure.answer.activity.ranCommands | Step in an Agent reply once its commands finish; open it for the commands and their output |
 | Knowledge Retrieval | 知识检索 | ナレッジ検索 | agent-v-2.agentDetail.configure.knowledgeRetrieval.label | Configure section, and its entry in the prompt's `/` menu; renamed from "Agent Knowledge Base" in 1.19.0. ja uses ナレッジ検索 here but 知識検索 for the workflow node |
-| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース | agent-v-2.agentDetail.configure.knowledgeFs.title | No longer the Configure section name; shown only as the fallback name of an agent knowledge base without one. The built-in tool of the same name has no ja label, so ja shows the English |
+| Add knowledge retrieval | 添加知识检索 | ナレッジ検索を追加 | agent-v-2.agentDetail.configure.knowledgeRetrieval.add | Footer button in the Knowledge Retrieval view of the prompt's `/` menu. The Configure section's own button shows **Add** (common.operation.add) |
+| Classic | 经典 | 従来型 | knowledge-space.view.classic | Heading over the classic knowledge bases in the Knowledge Retrieval dialog, shown when agent knowledge bases are enabled; also the Knowledge list view switch |
+| Advanced Settings | 高级设置 | 詳細設定 | agent-v-2.agentDetail.configure.advancedSettings.label | Collapsible below the list in the Knowledge Retrieval dialog, holding each retrieval's name, description, and settings; also the Configure section for environment variables |
+| Knowledge retrieval name | 知识检索名称 | ナレッジ検索の名前 | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.nameLabel | Advanced Settings field for a classic knowledge base's retrieval |
+| Agent-facing name | Agent 使用的名称 | Agent に表示する名前 | agent-v-2.agentDetail.configure.knowledgeFs.alias | The same field for an agent knowledge base |
+| Description | 描述 | ナレッジベースの説明 | dataset-settings.form.desc | Advanced Settings field for a classic knowledge base's retrieval. The same key labels a knowledge base's own settings form, hence the ja wording. An agent knowledge base shows a question here instead (agent-v-2.agentDetail.configure.knowledgeFs.bindingDescription) |
+| Query | 查询 | クエリ | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.query.label | Advanced Settings, classic knowledge bases only |
+| Agent decide | Agent 决定 | エージェントが決定 | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.query.agent | Query option; the default |
+| Custom query | 自定义查询 | カスタムクエリ | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.query.custom | Query option |
+| Custom query text | 自定义查询文本 | カスタムクエリテキスト | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.query.customInputLabel | Field shown when Custom query is selected |
+| Knowledge | 知识 | ナレッジ | agent-v-2.agentDetail.configure.knowledgeRetrieval.dialog.knowledge.label | Advanced Settings field listing a classic retrieval's knowledge bases, with **Retrieval Setting** beside it. Not the main nav Knowledge (navigation.menus.datasets) or the workflow node's Knowledge Base field |
+| Agent Knowledge Base | Agent 知识库 | Agent ナレッジベース | agent-v-2.agentDetail.configure.knowledgeFs.title | No longer the Configure section name. Shown as the heading over agent knowledge bases in the Knowledge Retrieval dialog (with an n/10 count), and as the fallback name of an agent knowledge base without one. The built-in tool of the same name has no ja label, so ja shows the English |
 | Access URL | 访问 URL | アクセス URL | agent-v-2.agentDetail.access.webApp.accessUrl | Access Point tab; renamed from "Web App URL" in 1.17.1. The same key labels the Workflow and Chatflow card and the Agent card |
 
 ### Question Classifier Node Config
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Class Name | 分类名称 | クラス名 | workflow.nodes.questionClassifiers.outputVars.className | Output variable; classifier-facing description used in the LLM prompt |
-| Class Label | 分类标签 | クラスラベル | workflow.nodes.questionClassifiers.outputVars.classLabel | Output variable; user-facing branch title |
+| Class Name | 分类名称 | クラス名 | workflow-models.nodes.questionClassifiers.outputVars.className | Output variable; classifier-facing description used in the LLM prompt |
+| Class Label | 分类标签 | クラスラベル | workflow-models.nodes.questionClassifiers.outputVars.classLabel | Output variable; user-facing branch title |
 | CLASS {{index}} | 分类 {{index}} | クラス {{index}} | workflow.nodes.questionClassifiers.defaultLabel | Default class title; index is 1-based |
 
 ### Knowledge Retrieval Node Config
 
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
-| Query Text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrieval.queryText | Node input |
-| Query Images | 查询图片 | 画像を検索 | workflow.nodes.knowledgeRetrieval.queryAttachment | Node input; shown only when a selected knowledge base is multimodal |
+| Query Text | 查询文本 | クエリテキスト | workflow-models.nodes.knowledgeRetrieval.queryText | Node input |
+| Query Images | 查询图片 | 画像を検索 | workflow-models.nodes.knowledgeRetrieval.queryAttachment | Node input. The Knowledge Retrieval node shows it only when a selected knowledge base is multimodal; the Agent Knowledge Retrieval node always shows it |
 | Query text | 查询文本 | クエリテキスト | workflow.nodes.knowledgeRetrievalV2.queryText | Agent Knowledge Retrieval node input; the classic node's label is the Query Text row |
-| Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow.nodes.knowledgeRetrieval.metadata.title | |
-| Disabled | 禁用 | 無効 | workflow.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
-| Automatic | 自动 | 自動生成 | workflow.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
-| Manual | 手动 | 手動設定 | workflow.nodes.knowledgeRetrieval.metadata.options.manual.title | Metadata filtering mode |
+| Metadata Filtering | 元数据过滤 | メタデータフィルタ | workflow-models.nodes.knowledgeRetrieval.metadata.title | |
+| Disabled | 禁用 | 無効 | workflow-models.nodes.knowledgeRetrieval.metadata.options.disabled.title | Metadata filtering mode |
+| Automatic | 自动 | 自動生成 | workflow-models.nodes.knowledgeRetrieval.metadata.options.automatic.title | Metadata filtering mode |
+| Manual | 手动 | 手動設定 | workflow-models.nodes.knowledgeRetrieval.metadata.options.manual.title | Metadata filtering mode |
 | Knowledge Base | 知识库 | ナレッジベース | workflow.nodes.knowledgeRetrieval.knowledge | Field that picks the knowledge bases to search; renamed from "Knowledge" in 1.18.0 (en only). Not the Knowledge Base node (workflow.blocks.knowledge-index) |
+| Retrieval Setting | 召回设置 | 検索設定 | dataset.retrievalSettings | Button that opens the retrieval settings popover, and the popover's title. The same key in the Knowledge Retrieval and Agent Knowledge Retrieval nodes, an app's knowledge settings, the Agent's Knowledge Retrieval dialog, and the external knowledge base form |
+| Rerank Setting | Rerank 设置 | Rerank 設定 | dataset.rerankSettings | Popover section heading, shown for multi-path retrieval. The en UI renders RERANK SETTING |
+| Top K | Top K | トップ K | app-debug.datasetConfig.top_k | Retrieval setting in the retrieval settings popover, a knowledge base's retrieval settings, and the Knowledge Base node. The agent knowledge base settings label is TOP K (knowledge-space.settings.topKLabel); the general term is the Top K row |
+| Score Threshold | Score 阈值 | スコア閾値 | app-debug.datasetConfig.score_threshold | The same surfaces as Top K, plus agent knowledge base settings. The general term is "score threshold" (分数阈值 / スコアしきい値); bold UI references use this row, except that existing zh/ja pages bolding 分数阈值 / スコアしきい値 stay as they are until the zh/ja UI strings settle (owner, 2026-11-06). REVIEW: zh mixes English, and the annotation setting with the same en label reads 分数阈值 (app-debug.feature.annotation.scoreThreshold.title) |
 
 ### Knowledge Retrieval Methods
 
@@ -515,7 +576,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Vector Search | 向量检索 | ベクトル検索 | dataset.retrieval.semantic_search.title | |
 | Full-Text Search | 全文检索 | 全文検索 | dataset.retrieval.full_text_search.title | |
 | Hybrid Search | 混合检索 | ハイブリッド検索 | dataset.retrieval.hybrid_search.title | |
-| Inverted Index | 倒排索引 | 逆インデックス | dataset.retrieval.keyword_search.title | Economical retrieval option in the Knowledge Base node. Use this consuming key; `dataset.retrieval.invertedIndex.title` has a different Japanese value. |
+| Inverted Index | 倒排索引 | 逆インデックス | dataset.retrieval.keyword_search.title | Economical retrieval option in the Knowledge Base node and in the knowledge base creation and settings forms. |
 | Weighted Score | 权重设置 | ウェイト設定 | dataset.weightedScore.title | Rerank strategy option |
 
 ### Knowledge Settings
@@ -526,12 +587,14 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | External Knowledge ID | 外部知识库 ID | 外部ナレッジベース ID | dataset.externalKnowledgeId | Identifier for a specific knowledge source in an external system |
 | External Knowledge API | 外部知识库 API | 外部ナレッジベース連携 API | dataset.externalAPIPanelTitle | Knowledge list button and panel title. The knowledge base settings form uses dataset-settings.form.externalKnowledgeAPI (外部知识 API / 外部ナレッジベース API) |
 | Service API | 服务 API | サービスAPI | dataset.serviceApi.title | |
+| API Key | API 密钥 | APIキー | dataset.serviceApi.card.apiKey | Button that opens knowledge API key management, in the Knowledge list's **Service API** popover and in an agent knowledge base's **API Access** dialog. ja has no space, unlike the app key label (app-api.apiKeyModal.apiSecretKey, API キー) |
 | Knowledge Base Access | 知识库访问权限 | ナレッジベースへのアクセス | app-api.apiKeyModal.knowledgeBaseAccess | Knowledge Service API key modal only: the key's scope setting |
 | All Knowledge Bases | 所有知识库 | すべてのナレッジベース | app-api.apiKeyModal.scopeAllDatasets | Scope option in that modal |
 | Specific Knowledge Bases | 指定知识库 | 特定のナレッジベース | app-api.apiKeyModal.scopeSpecificDatasets | Scope option in that modal |
 | Creators | 创建者 | 作成者 | dataset.creatorFilter.creators | Knowledge list filter; new in 1.18.0 |
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
 | TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
+| Fast | 快速 | 高速 | knowledge-space.settings.retrievalMode.fast | Agent knowledge base retrieval depth option, in **Settings** > **Retrieval**, Retrieval Test, and quality evaluations |
 
 ### Chunking Mode Labels
 
@@ -573,6 +636,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Queuing | 排队中 | キューイング中 | dataset-documents.list.status.queuing | |
 | Paused | 已暂停 | 一時停止中 | dataset-documents.list.status.paused | |
 | Error | 错误 | エラー | dataset-documents.list.status.error | |
+| Ready | 就绪 | 準備完了 | knowledge-space.documentStatus.ready | Agent knowledge base document status and list filter. Not the Workflow as Tool status Ready (已就绪) |
 
 ### Golden Question Status Labels
 

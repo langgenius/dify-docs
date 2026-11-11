@@ -148,7 +148,7 @@ The wire `code` and `message` per exception kind are defined once, in `codebase-
 - **Realistic values only**: real-looking UUIDs, timestamps, text, metadata.
 - **Verify values against code.** Enum-like fields must use values the code actually returns or accepts.
 - Request and response examples must correspond.
-- **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example - Streaming mode"` (multiple; spaced hyphen, matching the existing specs). For error examples, use the error code as the summary.
+- **Titles**: `"summary": "Request Example"` (single) or `"summary": "Request Example - Streaming mode"` (multiple; spaced hyphen, matching the existing specs). For error examples, use the error code as the summary; when several examples on one response share a code, add a short parenthetical that tells them apart: `invalid_param (filename)`. The parenthetical is what tells the reader which case the example shows, so zh and ja translate it like any label: the code stays as written and the parenthetical goes in full-width brackets with no space before them, `invalid_param（文件名）`, `invalid_param（ファイル名）`. An identifier inside the parenthetical stays verbatim: `invalid_param（indexing_technique）`.
 
 ## Standard Texts
 

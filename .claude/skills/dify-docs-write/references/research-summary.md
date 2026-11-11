@@ -36,7 +36,7 @@ reader block at the top of the drafting turn is filled from this.]
 - [What the screen shows when the reader is there, minus what is consequential enough to repeat: data loss, permissions, cost.]
 
 ## Not on this page
-- [Owned by another page, with the link. Not true. Internal. Unverified, recorded here so it is reported and never stated.]
+- [Owned by another page under the style guide's one-home rule, with the link. Not true. Internal. Unverified, recorded here so it is reported and never stated.]
 ```
 
 The session that did the research owns the two closing lists: what another page carries and what the screen shows are decisions about the doc set and the product, made with both in view. The drafter owns the rest, sentence by sentence: whether this reader, at this section, would ask for this fact. That judgment needs room, so the summary reaches the drafter slightly fuller than the page will be. A summary trimmed to exactly the page is an outline with facts, and it gets transcribed.

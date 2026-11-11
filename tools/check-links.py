@@ -449,6 +449,13 @@ SKIP_HOSTS = {
     "your-dify-host",        # placeholder in the embedding page
 }
 
+# Placeholder tokens inside example URLs, such as the YOUR_APP_TOKEN in
+# https://udify.app/chatbot/YOUR_APP_TOKEN. udify.app has answered an unknown
+# app token with 404 since the 2026-11-02 sweep, so these examples fail on a
+# host that is up. The pattern needs uppercase YOUR_ plus a name, the docs'
+# placeholder form; a slug like protect-your-origin-server has neither.
+PLACEHOLDER_RE = re.compile(r"YOUR_[A-Z0-9_]+")
+
 # Statuses that mean "try again", not "the page is gone". GitHub answers
 # bursts of HEAD requests with 503; a retry a few seconds later returns 200.
 TRANSIENT_STATUSES = {408, 425, 429, 502, 503, 504}
@@ -574,7 +581,7 @@ def check_external_links(report_path: Path | None = None):
         if (i + 1) % 50 == 0:
             print(f"  Progress: {i + 1}/{len(unique_urls)}")
 
-        if skip_host(url):
+        if skip_host(url) or PLACEHOLDER_RE.search(url):
             skipped += 1
             continue
 
