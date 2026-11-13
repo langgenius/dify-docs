@@ -1,0 +1,178 @@
+---
+title: Feishu / Lark
+description: "Send Human Input requests to Feishu or Lark as cards: create the app, connect it to Dify, set up its callbacks, and fix what goes wrong"
+---
+
+Dify works through a custom app that you create in your Feishu or Lark organization. The app:
+
+- Sends requests to members through its bot.
+- Lets Dify read the member directory and match each person to a workspace member by email.
+- Sends members' responses back to Dify when they click a button on a request.
+
+Lark works the same way, so the steps below say Feishu for both.
+
+## Before You Start
+
+Make sure that:
+
+- Your Feishu organization allows the app to be available to all members.
+- [`TRIGGER_URL`](/en/self-host/deploy/configuration/environments#trigger_url) is set to an address Feishu can reach over the internet, so clicks on card buttons get back to Dify.
+- [`CONSOLE_WEB_URL`](/en/self-host/deploy/configuration/environments#console_web_url) is set to an address members can open, since a request that arrives as a link message links there.
+
+<Tip>
+To try things out without waiting for your Feishu admin's approval, you can use a test version of the app in a [Feishu test organization](https://open.feishu.cn/document/develop-process/test-and-release-app/testing-enterprise-and-personnel-functions?lang=en-US). It can read the whole member directory by default, and changes apply without publishing.
+
+When you're ready, set up your real app the same way, then enter its values in Dify's channel settings. This [replaces the test app's connection](/en/self-host/use-dify/workspace/channels/overview#replace-or-remove-your-im), clears the bindings made during the test, and creates a new Callback URL for the real app.
+</Tip>
+
+## Create the App
+
+In the [Feishu](https://open.feishu.cn/app?lang=en-US) or [Lark](https://open.larksuite.com/app?lang=en-US) Developer Console, click **Create Custom App** and give it a name members will recognize, such as *Dify*: requests arrive from a bot with this name. Then:
+
+1. Under **Add Features**, add **Bot**.
+
+2. In **Permissions & Scopes**, click **Batch Actions** > **Batch import/export scopes**. On the **Import** tab, replace the example with this list:
+
+   ```json
+   {
+     "scopes": {
+       "tenant": [
+         "tenant:tenant:readonly",
+         "im:message:send_as_bot",
+         "contact:contact.base:readonly",
+         "contact:user.base:readonly",
+         "contact:user.email:readonly",
+         "contact:user.employee:readonly"
+       ],
+       "user": []
+     }
+   }
+   ```
+
+   The scopes let the app identify your organization, send cards and update them after someone responds, and read members' names, avatars, and emails.
+
+3. Click through the **Next** buttons without changing anything, then click **Add Scopes**.
+
+4. In **Version Management & Release**, click **Create Version** and set **Availability** to all members. Then publish the version.
+
+    If you're not a Feishu admin, your admin may need to approve it first. Wait until it's published before you connect next.
+
+## Connect in Dify
+
+1. In **Settings** > **Channels**, find Feishu or Lark and click **Connect**.
+
+   <Info>
+   If another IM (instant messaging app) is already connected, click **Replace** instead. Check [what replacing clears](/en/self-host/use-dify/workspace/channels/overview#replace-or-remove-your-im) first.
+   </Info>
+
+2. In **App credentials**, enter the values from your Feishu app:
+
+    - **App ID** and **App Secret**: on the app's **Credentials & Basic Info** page.
+    - **Verification Token (optional)**: under **Events & Callbacks** > **Encryption Strategy**.
+    - **Encrypt Key (optional)**: on the same page, only if Feishu has one set.
+
+   <Note>
+   Whenever you change one of these values in Feishu, such as resetting the App Secret, update it in Dify too.
+   </Note>
+
+3. Click **Save and continue**. Dify checks the connection before saving.
+
+4. In **Configure callbacks**, copy the **Callback URL**.
+
+## Set Up Callbacks
+
+1. In your Feishu app, open **Events & Callbacks** and switch to the **Callback Configuration** tab.
+
+2. Next to **Subscription mode**, click the edit icon and choose **Send callbacks to developer's server**.
+
+3. Paste the Callback URL copied from Dify into **Request URL** and save. If Feishu won't save it, see [Troubleshooting](#troubleshooting) for the causes.
+
+4. Under **Callback subscriptions**, click **Add callback** and add **Card callback communication** (`card.action.trigger`).
+
+5. In **Version Management & Release**, create and publish a new version so the callback settings take effect. It may need your admin's approval again.
+
+<Info>
+If [`TRIGGER_URL`](/en/self-host/deploy/configuration/environments#trigger_url) changes later, the Callback URL changes with it.
+
+Open the Feishu or Lark settings in **Channels** to get the new one, then update it in your Feishu app and publish a new version of that app.
+</Info>
+
+## Sync and Test
+
+1. In **Channels**, click **Sync now** to bind members' IM identities. See [Sync Members](/en/self-host/use-dify/workspace/channels/overview#sync-members) for what each result means.
+
+2. Send yourself a test request. With your own IM identity bound, turn on Debug Mode in a workflow's Human Input node, pick Feishu or Lark, and test-run the workflow.
+
+   Use Debug Mode rather than **Test message**: a test message always arrives as a link message, so it can't show whether cards and clicks work.
+
+When the card arrives, click a button and check that the run continues.
+
+<Info>
+
+  - If a link message arrives instead, the form has something [a card can't show](#what-members-see).
+  - If nothing arrives or the run doesn't continue, see [Troubleshooting](#troubleshooting).
+
+</Info>
+
+## What Members See
+
+<Columns cols={2}>
+  <Frame caption="Request as a Feishu Card">
+    ![Request as a Feishu Card](/images/use-dify/workflow/human-input-im-card.png)
+  </Frame>
+  <Frame caption="Request as a Link Message">
+    ![Request as a Link Message](/images/use-dify/workflow/human-input-im-link.png)
+  </Frame>
+</Columns>
+
+Keep these in mind when building forms:
+
+- The card is headed by the node's title. Give the node a title recipients will understand, such as *Approve refund* rather than *Human Input 2*.
+
+- Members must fill in every field before they can submit the card.
+
+Some forms arrive as a link message instead of a card, when the form has:
+
+- A file field.
+- Very long content, such as a long report inserted from a variable.
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Saving in Dify fails with API error code 40004">
+    The app can't read the whole member directory, usually because its **Availability** doesn't cover all members. Set **Availability** to all members in a new version, publish it, and save again in Dify.
+  </Accordion>
+  <Accordion title="Saving in Dify says the credentials are invalid">
+    The App Secret is wrong, or the App ID and App Secret come from different apps, such as your app and its test version. Copy both from the same app's **Credentials & Basic Info** page.
+  </Accordion>
+  <Accordion title="A test request fails">
+    Something stops Dify from sending: **Test message** shows "Test failed. Check the channel configuration and try again.", or a Debug Mode run fails with "No one can approve this step."
+
+    Check these in order:
+
+    - The app has the bot and the `im:message:send_as_bot` scope, and its latest version is published.
+    - You're within the app's **Availability**.
+    - Your own IM identity is bound.
+  </Accordion>
+  <Accordion title="Feishu won't save the Request URL">
+    Dify's Encrypt Key or Verification Token doesn't match Feishu's, or Feishu can't reach the URL. Make the two values match. If they already do, check that [`TRIGGER_URL`](/en/self-host/deploy/configuration/environments#trigger_url) is set to an address Feishu can reach over the internet.
+  </Accordion>
+  <Accordion title="Clicking a button shows error code 200671">
+    Dify rejected the click. Depending on the cause:
+
+    - The Encrypt Key or Verification Token doesn't match Feishu's: make them match.
+    - The IM was replaced or deleted after the card was sent: start a new run, or respond from the email if the deployment's [mail configuration](/en/self-host/deploy/configuration/environments#mail-configuration) is set up.
+  </Accordion>
+  <Accordion title="A button on one card doesn't work">
+    The request can no longer be answered from that card:
+
+    - It timed out, its run was stopped, or the member left the workspace: start a new run if the decision is still needed.
+    - The member's IM binding changed after the card was sent: they can still respond from the email.
+  </Accordion>
+  <Accordion title="A member gets no card">
+    Their IM identity isn't bound, or they're outside the app's **Availability**. Sync again or [bind them by hand](/en/self-host/use-dify/workspace/contacts#bind-by-hand), or widen **Availability**. Meanwhile, they still get the request by email if the deployment's [mail configuration](/en/self-host/deploy/configuration/environments#mail-configuration) is set up.
+  </Accordion>
+  <Accordion title="A member stays Not matched">
+    Their Dify email isn't the one Dify reads from Feishu. Change the email on one side and sync again, or [bind them by hand](/en/self-host/use-dify/workspace/contacts#bind-by-hand).
+  </Accordion>
+</AccordionGroup>

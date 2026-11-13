@@ -89,8 +89,6 @@ If a value doesn't come from any of these files, check two more places:
 
 These URL variables configure the addresses of Dify's various services.
 
-For single-domain deployments behind Nginx (the default Docker Compose setup), these can be left empty—the system auto-detects from the incoming request. Configure them when using custom domains, split-domain deployments, or a reverse proxy.
-
 ### CONSOLE_API_URL
 
 Default: (empty)
@@ -109,11 +107,13 @@ If left empty, it falls back to `CONSOLE_API_URL`. Change it only if the API ser
 
 ### CONSOLE_WEB_URL
 
-Default: (empty)
+Default: empty (`http://127.0.0.1:3000` for Docker Compose)
 
-The public URL of Dify's console frontend. Used to build links in all system emails (invitations, password resets, notifications) and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
+The URL members open Dify's console at. Used to build links in system emails such as invitations and password resets, and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
 
-If empty, email links will be broken—even in single-domain setups, set this if you use email features.
+The new Human Input node builds workspace members' request links from it, in email and in IM (instant messaging app) link messages: `{CONSOLE_WEB_URL}/human-input/{token}`.
+
+The address doesn't need to be reachable from the internet if members use Dify on an internal network.
 
 Example: `https://console.dify.ai`
 
@@ -135,9 +135,14 @@ Example: `https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-Default: (empty)
+Default: empty (`http://127.0.0.1:3000` for Docker Compose)
 
-The public URL where published web apps are accessible. Required for the **Human Input node** in workflows—form links in email notifications are built as `{APP_WEB_URL}/form/{token}`. If empty, Human Input email delivery will not include valid form links.
+The public URL where published web apps are accessible. Human Input also builds request links from it:
+
+- **New Human Input node**: requests sent to external contacts, or to any email address typed into the node or taken from a variable, link to `{APP_WEB_URL}/form-v2/{token}`.
+- **Old Human Input node**: email links are `{APP_WEB_URL}/form/{token}`.
+
+External recipients must be able to open this address.
 
 Example: `https://app.dify.ai`
 
@@ -147,7 +152,7 @@ Default: `http://localhost`
 
 The publicly accessible URL for webhook and integration trigger endpoints. External systems use this address to invoke your workflows. Dify builds trigger callback URLs like `{TRIGGER_URL}/triggers/webhook/{id}` and displays them in the console.
 
-For triggers to work from external systems, this must point to a public domain or IP address they can reach.
+IMs that show Human Input requests as cards send button clicks to this address too, through the Callback URL in **Settings** > **Channels**.
 
 ### FILES_URL
 
@@ -1264,11 +1269,11 @@ Connect Dify to Notion as a knowledge base data source. Get integration credenti
 
 ### Mail Configuration
 
-Dify sends emails for account invitations, password resets, login codes, and Human Input node notifications. Configure one of the three supported providers. Email links require `CONSOLE_WEB_URL` to be set—see [Common Variables](#console_web_url).
+Dify sends emails for account invitations, password resets, login codes, and Human Input requests. Configure one of the three supported providers. Links in these emails are built from [`CONSOLE_WEB_URL`](#console_web_url) and [`APP_WEB_URL`](#app_web_url), so set those too.
 
 | Variable | Default | Description |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | Mail provider: `resend`, `smtp`, or `sendgrid`. |
+| `MAIL_TYPE` | (empty) | Mail provider: `resend`, `smtp`, or `sendgrid`. |
 | `MAIL_DEFAULT_SEND_FROM` | (empty) | Default "From" address for all outgoing emails. Required. |
 
 <AccordionGroup>
@@ -1482,6 +1487,19 @@ All outbound HTTP requests from Dify (HTTP nodes, image downloads, etc.) are rou
 | `MAX_TOOLS_NUM` | `10` | Maximum number of tools an agent can use simultaneously. |
 | `MAX_ITERATIONS_NUM` | `99` | Maximum reasoning iterations per agent execution. Prevents infinite agent loops. |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+Default: `604800` (7 days)
+
+How long, in seconds, a workflow run can wait for people before Dify stops it.
+
+How the time is counted depends on the node:
+
+- **New Human Input node**: from when the run started, shared by every Human Input node in the run. A change applies to requests created after it.
+- **Old Human Input node**: from when each form was created, separately for each node. A change also applies to forms already waiting.
+
+Raise it for approvals that can take longer than a week, or lower it to end waiting runs sooner. It must be a positive whole number: `0` or an empty value keeps the API, worker, and beat services from starting.
+
 ## Web Frontend Service
 
 These variables are used by the Next.js web frontend container only, and do not affect the Python backend.
@@ -1500,6 +1518,20 @@ These variables are used by the Next.js web frontend container only, and do not 
 Default: `true`
 
 Enables the `/create` and `/refine` slash commands in the Go to Anything command palette, which generate and refine Workflow and Chatflow apps from a natural-language description. Set to `false` to hide them.
+
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+Default: `true`
+
+Set to `false` to turn off the new [Human Input](/en/self-host/use-dify/nodes/human-input) node, along with [Contacts](/en/self-host/use-dify/workspace/contacts) and [Channels](/en/self-host/use-dify/workspace/channels/overview). While it's on, workspace owners and admins see **Contacts** in the main navigation and **Channels** in **Settings**.
+
+The new Human Input node also needs:
+
+- [`CONSOLE_WEB_URL`](#console_web_url) and [`APP_WEB_URL`](#app_web_url) set to addresses recipients can open
+- [Mail](#mail-configuration) configured, for requests by email
+- [`TRIGGER_URL`](#trigger_url) set to an address your IM can reach, for IMs that show requests as cards
+
+If you turn it off after the new node is in use, published workflows keep running and sending requests, but the links in those requests open a "not found" page. Workflows with the new node can't be run from the editor or published.
 
 ## Agent (New)
 
@@ -1982,7 +2014,7 @@ Dify uses Celery Beat to run background maintenance tasks on configurable schedu
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | Enable automatic cleanup of workflow run records. |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | Pre-create TiDB Serverless clusters for vector database pooling. |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | Update TiDB Serverless cluster status periodically. |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. When it's off, timed-out runs stay paused, and late responses are still refused. |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | How often to check for expired Human Input forms (in minutes). |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | Safety net for conversation deletion. A deleted conversation disappears instantly while a background job removes its messages and the files generated by tools during the conversation. Files end users uploaded are kept.<br/><br/>This sweep re-runs that job for conversations whose cleanup was lost, so their data does not linger. |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | How often the sweep runs (in minutes). |

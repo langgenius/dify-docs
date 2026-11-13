@@ -1,0 +1,180 @@
+---
+title: 飞书 / Lark
+description: 以卡片形式将人工介入请求发送到飞书或 Lark：创建应用、将其连接到 Dify、设置回调，以及排查问题
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/use-dify/workspace/channels/feishu-lark)。
+
+Dify 通过你创建的企业自建应用接入飞书或 Lark。该应用：
+
+- 通过其机器人向成员发送请求。
+- 让 Dify 读取成员通讯录，并按邮箱将每个人匹配到工作空间成员。
+- 成员点击请求上的按钮时，将其响应传回 Dify。
+
+Lark 的操作与飞书相同，下文统一以飞书为例。
+
+## 开始之前
+
+确认以下几点：
+
+- 你的飞书企业允许将应用的可用范围设为全部成员。
+- [`TRIGGER_URL`](/zh/self-host/deploy/configuration/environments#trigger_url) 已设为飞书能通过互联网访问的地址，这样成员点击卡片按钮后，Dify 才能收到。
+- [`CONSOLE_WEB_URL`](/zh/self-host/deploy/configuration/environments#console_web_url) 已设为成员能打开的地址，因为以链接消息形式送达的请求会指向这个地址。
+
+<Tip>
+如果想先试用，又不想等飞书管理员审批，可以在 [飞书测试企业](https://open.feishu.cn/document/develop-process/test-and-release-app/testing-enterprise-and-personnel-functions?lang=zh-CN) 中使用应用的测试版本。测试版本默认可读取完整的成员通讯录，修改后无需发布即可生效。
+
+准备就绪后，按同样的步骤设置正式应用，再将其信息填入 Dify 的渠道设置。这会 [替换测试应用的连接](/zh/self-host/use-dify/workspace/channels/overview#替换或移除-im)，清除测试期间建立的绑定，并为正式应用生成新的回调 URL。
+</Tip>
+
+## 创建应用
+
+在 [飞书](https://open.feishu.cn/app?lang=zh-CN) 或 [Lark](https://open.larksuite.com/app?lang=en-US) 开发者后台中点击 **创建企业自建应用**，给应用起一个成员能认出的名称，例如「Dify」：成员会看到请求来自这个名称的机器人。然后：
+
+1. 在 **添加应用能力** 中添加 **机器人**。
+
+2. 在 **权限管理** 中点击 **批量处理** > **批量导入/导出权限**。在 **导入** 页签中，将示例替换为以下内容：
+
+   ```json
+   {
+     "scopes": {
+       "tenant": [
+         "tenant:tenant:readonly",
+         "im:message:send_as_bot",
+         "contact:contact.base:readonly",
+         "contact:user.base:readonly",
+         "contact:user.email:readonly",
+         "contact:user.employee:readonly"
+       ],
+       "user": []
+     }
+   }
+   ```
+
+   有了这些权限，应用才能识别你的企业、发送卡片并在有人响应后更新卡片，以及读取成员的姓名、头像和邮箱。
+
+3. 不做任何修改，连续点击 **下一步** 按钮，最后点击 **申请开通**。
+
+4. 在 **版本管理与发布** 中点击 **创建版本**，将 **可用范围** 设为全部成员，然后发布该版本。
+
+    如果你不是飞书管理员，可能需要先由管理员审批。等版本发布后，再到 Dify 中连接。
+
+## 在 Dify 中连接
+
+1. 在 **设置** > **渠道** 中找到飞书或 Lark，点击 **连接**。
+
+   <Info>
+   如果已连接其他 IM（即时通讯应用），改为点击 **替换**。操作前先了解 [替换会清除哪些内容](/zh/self-host/use-dify/workspace/channels/overview#替换或移除-im)。
+   </Info>
+
+2. 在 **应用凭据** 中填入飞书应用的以下信息：
+
+    - **App ID** 和 **App Secret**：位于应用的 **凭证与基础信息** 页面。
+    - **Verification Token（可选）**：位于 **事件与回调** > **加密策略** 下。
+    - **Encrypt Key（可选）**：位于同一页面，仅当飞书中已设置时填写。
+
+   <Note>
+   在飞书中更改其中任何一项（例如重置 App Secret）后，都要在 Dify 中同步更新。
+   </Note>
+
+3. 点击 **保存并继续**。Dify 会先检查连接，再保存。
+
+4. 在 **配置回调** 中复制 **回调 URL**。
+
+## 设置回调
+
+1. 在飞书应用中打开 **事件与回调**，切换到 **回调配置** 页签。
+
+2. 点击 **订阅方式** 右侧的编辑图标，选择 **将回调发送至开发者服务器**。
+
+3. 将从 Dify 复制的回调 URL 粘贴到 **请求地址** 中并保存。如果飞书无法保存，原因参见 [故障排除](#故障排除)。
+
+4. 在 **已订阅的回调** 下点击 **添加回调**，添加 **卡片回传交互**（`card.action.trigger`）。
+
+5. 在 **版本管理与发布** 中创建并发布新版本，回调设置才会生效。新版本可能需要管理员再次审批。
+
+<Info>
+如果之后 [`TRIGGER_URL`](/zh/self-host/deploy/configuration/environments#trigger_url) 发生变化，回调 URL 也会随之改变。
+
+在 **渠道** 中打开飞书或 Lark 的设置获取新地址，然后在飞书应用中更新，并发布该应用的新版本。
+</Info>
+
+## 同步与测试
+
+1. 在 **渠道** 中点击 **立即同步**，绑定成员的 IM 身份。各项同步结果的含义参见 [同步成员](/zh/self-host/use-dify/workspace/channels/overview#同步成员)。
+
+2. 给自己发一条测试请求：确认你自己的 IM 身份已绑定，然后在工作流的人工介入节点中开启调试模式，选择飞书或 Lark，再测试运行工作流。
+
+   使用调试模式，不要用 **测试消息**：测试消息始终以链接消息的形式送达，无法验证卡片和点击是否正常。
+
+收到卡片后，点击其中一个按钮，确认运行继续进行。
+
+<Info>
+
+  - 如果收到的是链接消息，说明表单中含有 [卡片无法展示的内容](#成员看到的内容)。
+  - 如果什么都没收到，或运行没有继续，参见 [故障排除](#故障排除)。
+
+</Info>
+
+## 成员看到的内容
+
+<Columns cols={2}>
+  <Frame caption="以飞书卡片形式展示的请求">
+    ![以飞书卡片形式展示的请求](/images/use-dify/workflow/human-input-im-card.png)
+  </Frame>
+  <Frame caption="以链接消息形式发送的请求">
+    ![以链接消息形式发送的请求](/images/use-dify/workflow/human-input-im-link.png)
+  </Frame>
+</Columns>
+
+设计表单时注意以下几点：
+
+- 卡片的标题就是节点标题。给节点起一个收件人能看懂的标题，例如「审批退款」，而不是「人工介入 2」。
+
+- 成员必须填写所有字段，才能提交卡片。
+
+表单包含以下内容时，会以链接消息而不是卡片的形式送达：
+
+- 文件字段
+- 很长的内容，例如从变量插入的长篇报告
+
+## 故障排除
+
+<AccordionGroup>
+  <Accordion title="在 Dify 中保存失败，API 错误码为 40004">
+    应用无法读取完整的成员通讯录，通常是因为其 **可用范围** 没有覆盖全部成员。在新版本中将 **可用范围** 设为全部成员并发布，然后在 Dify 中重新保存。
+  </Accordion>
+  <Accordion title="在 Dify 中保存时提示凭据无效">
+    App Secret 有误，或 App ID 和 App Secret 来自不同的应用，例如一个来自正式应用、一个来自其测试版本。从同一个应用的 **凭证与基础信息** 页面复制这两项。
+  </Accordion>
+  <Accordion title="测试请求发送失败">
+    Dify 发不出请求：**测试消息** 提示「测试失败，请检查渠道配置后重试。」，或调试模式下的运行失败并提示「No one can approve this step.」。
+
+    按顺序检查以下几项：
+
+    - 应用已添加机器人能力和 `im:message:send_as_bot` 权限，且最新版本已发布。
+    - 你在应用的 **可用范围** 内。
+    - 你自己的 IM 身份已绑定。
+  </Accordion>
+  <Accordion title="飞书无法保存请求地址">
+    Dify 中的 Encrypt Key 或 Verification Token 与飞书中的不一致，或飞书无法访问该 URL。让这两项保持一致。如果已经一致，检查 [`TRIGGER_URL`](/zh/self-host/deploy/configuration/environments#trigger_url) 是否已设为飞书能通过互联网访问的地址。
+  </Accordion>
+  <Accordion title="点击按钮后提示错误码 200671">
+    Dify 拒绝了这次点击。根据原因处理：
+
+    - Encrypt Key 或 Verification Token 与飞书中的不一致：让它们保持一致。
+    - 卡片发出后，你替换或删除了 IM：发起一次新的运行；如果部署已完成 [邮件配置](/zh/self-host/deploy/configuration/environments#邮件配置)，也可以通过邮件响应。
+  </Accordion>
+  <Accordion title="某张卡片上的按钮没有反应">
+    已无法通过这张卡片响应该请求：
+
+    - 请求已超时、所属运行已停止，或该成员已离开工作空间：如果仍需要有人做出决定，重新发起一次运行。
+    - 卡片发出后，该成员的 IM 绑定发生了变化：此人仍可通过邮件响应。
+  </Accordion>
+  <Accordion title="某位成员收不到卡片">
+    此人的 IM 身份未绑定，或不在应用的 **可用范围** 内。重新同步或 [手动绑定](/zh/self-host/use-dify/workspace/contacts#手动绑定)，或扩大 **可用范围**。在此期间，如果部署已完成 [邮件配置](/zh/self-host/deploy/configuration/environments#邮件配置)，此人仍可通过邮件收到请求。
+  </Accordion>
+  <Accordion title="某位成员一直显示为未匹配">
+    此人在 Dify 中的邮箱与 Dify 从飞书读取到的邮箱不一致。在任一端修改邮箱后重新同步，或 [手动绑定](/zh/self-host/use-dify/workspace/contacts#手动绑定)。
+  </Accordion>
+</AccordionGroup>
