@@ -343,6 +343,10 @@
 | Failed | 失败 | 失敗 |
 | Removed | 已移除 | 削除済み |
 | Skipped | 已跳过 | スキップ |
+| Configure Email | 配置 Email | メールを設定 |
+| Sender email address | 发件人 Email 地址 | 送信元メールアドレス |
+| Sender name | 发件人名称 | 送信者名 |
+| API Key | API Key | API キー |
 
 ### Billing
 
@@ -541,6 +545,7 @@
 | Test channel | 测试渠道 | テストチャネル |
 | Save and test | 保存并测试 | 保存してテスト |
 | Debug Mode | 调试模式 | デバッグモード |
+| Email | 邮件 | メール |
 | Migrate now | 立即迁移 | 今すぐ移行 |
 | Form Content | 表单内容 | フォームコンテンツ |
 | Save Response As | 保存响应为 | レスポンスを次の名前で保存 |

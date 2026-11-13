@@ -355,6 +355,10 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Failed | 失败 | 失敗 | contacts.imPlatform.details.filter.failed | Sync result tab |
 | Removed | 已移除 | 削除済み | contacts.imPlatform.details.filter.removed | Sync result tab |
 | Skipped | 已跳过 | スキップ | contacts.imPlatform.details.filter.skipped | Sync result tab |
+| Configure Email | 配置 Email | メールを設定 | contacts.imPlatform.email.title | Email connect dialog in **Channels**; Cloud only |
+| Sender email address | 发件人 Email 地址 | 送信元メールアドレス | contacts.imPlatform.email.senderEmail | Field in **Configure Email** |
+| Sender name | 发件人名称 | 送信者名 | contacts.imPlatform.email.senderName | Field in **Configure Email** |
+| API Key | API Key | API キー | contacts.imPlatform.email.apiKey | Field in **Configure Email**; the Resend key |
 
 ### Billing
 
@@ -555,6 +559,7 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Test channel | 测试渠道 | テストチャネル | workflow.nodes.humanInputV2.template.testChannel | Channel picker in the Test message area |
 | Save and test | 保存并测试 | 保存してテスト | workflow.nodes.humanInputV2.template.saveAndTest | Button that sends the test message |
 | Debug Mode | 调试模式 | デバッグモード | workflow.nodes.humanInputV2.debug.title | New Human Input node switch; the old node's email Debug Mode is a different key |
+| Email | 邮件 | メール | workflow.nodes.humanInputV2.debug.channel.email | Channel option in the new node's **Debug Mode**; the Email card in **Channels** shows "Email" in every language |
 | Migrate now | 立即迁移 | 今すぐ移行 | workflow.nodes.humanInputMigration.action.migrateNow | Banner and block-selector action that converts old Human Input nodes |
 | Form Content | 表单内容 | フォームコンテンツ | workflow-human-input.nodes.humanInput.formContent.title | Human Input node panel section (old and new node) |
 | Save Response As | 保存响应为 | レスポンスを次の名前で保存 | workflow-human-input.nodes.humanInput.insertInputField.saveResponseAs | Field name box in the Insert Input Field dialog |
