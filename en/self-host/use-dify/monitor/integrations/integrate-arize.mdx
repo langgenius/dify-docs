@@ -47,12 +47,20 @@ Once successfully saved, you can view the monitoring status on the current page.
 <Note>
 After saving and enabling tracing, run the app again and check for a new trace in the monitoring service. Delivery is asynchronous; saving the configuration alone does not confirm that a trace has arrived.
 
-For Agent apps and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent), enable both `OPS_AGENT_TRACE_ENABLED=true` and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` in your deployment. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery). **Capture content** is off by default for these apps and controls inputs and outputs across the whole workflow. Other apps can still send inputs and outputs.
+With both deployment switches off, the new Agent app type and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent) still send ordinary traces, including available inputs and outputs, but omit the Agent's internal model and tool calls.
+
+To collect those calls, enable `OPS_AGENT_TRACE_ENABLED=true` on the Dify API and workers and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` on the Agent backend. Enable them together: when an Agent call executes with only the API switch enabled and **Capture Agent internals** on (the default), trace collection times out with `agent_trace_collection_incomplete` and no trace is exported. This does not mean the app execution failed. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for deployment settings.
+
+With API collection enabled for these apps, **Capture content** is off by default: inputs, outputs, and most metadata are removed, and error text is redacted across the whole workflow. Enable it to send that content. Classic `agent-chat` apps and workflows using only classic Agent nodes retain ordinary tracing.
 </Note>
 
 ### Monitoring Data List
 
-Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Provider trace and span IDs are derived from Dify identifiers rather than copied directly from database IDs. Native token usage is reported on model calls only.
+The tables below describe ordinary traces. When API collection is enabled for the new Agent app type or workflows containing a new Agent node, traces use a new UUIDv7 trace ID, with source and tracing-run IDs retained as `dify.source.id` and `dify.tracing.run_id` attributes. For the new Agent app type, `Agent attempt` spans with internal model and tool calls replace the ordinary `llm` span when **Capture Agent internals** is on. Separate moderation, suggested-question, and naming records are omitted for collected runs.
+
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Trace IDs preserve the value of nonzero UUID or 32-hex message, workflow run, or caller-supplied IDs; other values are hashed. Span IDs are derived. A supplied `X-Trace-Id` takes precedence over the message or workflow run ID. Native token usage is reported on model calls only.
+
+Each span's `user.id` uses `end_user_session_id` when available, otherwise `user_id`. The separate `metadata.user_id` field keeps the Dify user record ID.
 
 The detail lists below describe Dify's source records and metadata. Only the relevant, available values are exported; the raw records are not sent in full.
 
@@ -70,11 +78,11 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <tbody>
     <tr>
       <td>workflow_run_id</td>
-      <td>span_id</td>
+      <td>metadata.workflow_run_id</td>
     </tr>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>workflow</td>
@@ -160,12 +168,12 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   </thead>
   <tbody>
     <tr>
-      <td>message_id</td>
-      <td>span_id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>trace_id</td>
     </tr>
     <tr>
       <td>end_user_session_id</td>
-      <td>metadata.end_user_session_id</td>
+      <td>user.id; metadata.end_user_session_id</td>
     </tr>
     <tr>
       <td>message</td>
@@ -242,7 +250,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>moderation</td>
@@ -291,17 +299,19 @@ The detail lists below describe Dify's source records and metadata. Only the rel
 
 **Used to track suggested questions**
 
+Sent as a tool span in the message's trace.
+
 <table>
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>Arize Trace</th>
+      <th>Arize Tool span</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>"suggested_question"</td>
@@ -372,7 +382,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>"dataset_retrieval"</td>
@@ -399,7 +409,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
       <td>metadata</td>
     </tr>
     <tr>
-      <td>message_id</td>
+      <td>ID derived from message_id</td>
       <td>parent_span_id</td>
     </tr>
   </tbody>
@@ -437,7 +447,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>tool_name</td>
@@ -508,7 +518,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>metadata.user_id</td>
+      <td>user.id (fallback); metadata.user_id</td>
     </tr>
     <tr>
       <td>generate_name</td>

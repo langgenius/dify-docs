@@ -62,12 +62,20 @@ Weights & Biases (W&B) Weave 是一个用于跟踪、实验、评估、部署和
 <Note>
 保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
 
-对于 Agent 应用以及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流，需要在部署中同时启用 `OPS_AGENT_TRACE_ENABLED=true` 和 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。这些应用的 **采集内容** 默认关闭，该设置控制整个工作流的输入和输出。其他应用仍可能发送输入和输出。
+当两个部署开关均关闭时，新版 Agent 应用及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流仍会发送常规追踪，包括可用的输入和输出，但不包含 Agent 内部的模型和工具调用。
+
+要采集这些调用，请在 Dify API 和 worker 上启用 `OPS_AGENT_TRACE_ENABLED=true`，并在 Agent 后端启用 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。两个开关需要同时启用：如果只启用 API 开关，且 **采集 Agent 内部过程** 保持开启（默认），执行 Agent 调用时追踪采集会超时，报出 `agent_trace_collection_incomplete`，并且不会导出追踪。这不代表应用执行失败。部署设置详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。
+
+为这些应用启用 API 采集后，**采集内容** 默认关闭：整个工作流的输入、输出和大部分元数据会被移除，错误文本也会被脱敏。开启该设置后才会发送这些内容。经典 `agent-chat` 应用和仅使用经典 Agent 节点的工作流仍使用常规追踪。
 </Note>
 
 ### 监控数据列表
 
-Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。下表中的追踪 ID 和 span ID 由 Dify 派生生成，并非直接复制数据库 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+以下数据说明适用于常规追踪。为新版 Agent 应用或包含新版 Agent 节点的工作流启用 API 采集后，追踪会使用新的 UUIDv7 追踪 ID，源 ID 和追踪运行 ID 则保留在 `dify.source.id` 和 `dify.tracing.run_id` 属性中。对于新版 Agent 应用，开启 **采集 Agent 内部过程** 后，包含内部模型和工具调用的 `Agent attempt` span 会替代常规 `llm` span。通过此方式采集的运行不会单独导出审核、建议问题和命名记录。
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。调用的 `trace_id` 会保留 Dify 追踪标识符中非零 UUID 或 32 位十六进制 ID 的值，其他值则通过哈希转换。调用的 `id` 通过派生生成。提供的 `X-Trace-Id` 优先于消息 ID 或工作流运行 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+
+对于 Chatflow，追踪根节点是 `message`，输入为用户查询；查询为空时，使用工作流输入。其 `workflow` 子节点保留工作流的输入和输出。
 
 以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
@@ -77,12 +85,12 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 
 | 工作流                                   | Weave 追踪                   |
 | ---------------------------------------- | ---------------------------- |
-| workflow_run_id | id                           |
+| workflow_run_id（Workflow）/ message_id（Chatflow），提供 X-Trace-Id 时除外 | trace_id                           |
 | user_id                        | attributes.user_id               |
-| workflow                        | op_name / display_name                         |
+| workflow（Workflow）/ message（Chatflow）                        | op_name / display_name                         |
 | start_time                              | started_at                  |
 | end_time                                | ended_at                    |
-| inputs                                   | inputs                       |
+| Workflow 输入 / Chatflow 查询（为空时使用工作流输入）                                   | inputs                       |
 | outputs                                  | output                      |
 | 模型 token 消耗（LLM 调用）                            | summary.usage（按模型）              |
 | metadata                                 | attributes                        |
@@ -129,7 +137,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 
 | 聊天                             | Weave 追踪                    |
 | -------------------------------- | ----------------------------- |
-| message_id                      | id                            |
+| message_id（提供 X-Trace-Id 时除外）                      | trace_id                            |
 | end_user_session_id                | attributes.end_user_session_id                |
 | message                | op_name / display_name                          |
 | start_time                      | started_at                   |
@@ -181,7 +189,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 | inputs        | inputs                 |
 | action, flagged       | output                |
 | metadata      | attributes                  |
-| message_id   | parent_id        |
+| 由 message_id 派生的 ID   | parent_id        |
 
 **审核追踪信息**
 
@@ -213,7 +221,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 | inputs                 | inputs                 |
 | suggested_question                | output                |
 | metadata               | attributes                  |
-| message_id            | parent_id        |
+| 由 message_id 派生的 ID            | parent_id        |
 
 **消息追踪信息**
 
@@ -257,7 +265,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 | inputs                | inputs                |
 | documents               | output               |
 | metadata              | attributes                 |
-| message_id           | parent_id       |
+| 由 message_id 派生的 ID           | parent_id       |
 
 **数据集检索追踪信息**
 
@@ -291,7 +299,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 | tool_inputs                | inputs                  |
 | tool_outputs               | output                 |
 | metadata              | attributes                   |
-| message_id           | parent_id         |
+| 由 message_id 派生的 ID           | parent_id         |
 
 #### **工具追踪信息**
 

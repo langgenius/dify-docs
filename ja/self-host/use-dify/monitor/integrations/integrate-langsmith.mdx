@@ -104,12 +104,20 @@ LangSmith を通じて得られる詳細な大規模言語モデル（LLM）の�
 <Note>
 設定を保存してトレースを有効にしたら、アプリを再実行し、監視サービスに新しいトレースが表示されるか確認してください。トレースは非同期で送信されます。設定の保存だけでは、トレースの到着は確認できません。
 
-Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローでは、デプロイ設定で `OPS_AGENT_TRACE_ENABLED=true` と `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` の両方を有効にしてください。詳しくは [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。これらのアプリでは **内容を収集** がデフォルトでオフになり、ワークフロー全体の入力と出力を制御します。それ以外のアプリでは、入力と出力が送信される場合があります。
+デプロイの両方のスイッチがオフでも、新しい Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローは通常のトレースを送信します。利用可能な入力と出力も含まれますが、Agent 内部のモデル呼び出しとツール呼び出しは含まれません。
+
+これらの呼び出しを収集するには、Dify API とワーカーで `OPS_AGENT_TRACE_ENABLED=true` を、Agent バックエンドで `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` を設定します。両方を同時に有効にしてください。API 側のスイッチだけが有効で、**Agent の内部処理を収集** がオン（デフォルト）の場合、Agent 呼び出しの実行時に収集がタイムアウトします。エラーは `agent_trace_collection_incomplete` となり、トレースはエクスポートされません。これはアプリの実行失敗を意味するものではありません。デプロイ設定の詳細は [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。
+
+これらのアプリで API 側の収集を有効にすると、**内容を収集** はデフォルトでオフになります。ワークフロー全体で入力、出力、メタデータの大半が除外され、エラーテキストはマスクされます。これらの内容を送信するには、**内容を収集** を有効にしてください。クラシックの `agent-chat` アプリや、クラシック Agent ノードだけを使うワークフローでは、通常のトレースを引き続き使用します。
 </Note>
 
 ### モニタリングデータリスト
 
-Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。監視サービスのトレース ID とスパン ID は Dify の識別子から生成され、データベースの ID をそのままコピーしたものではありません。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+以下の表は通常のトレースを説明しています。新しい Agent アプリや新しい Agent ノードを含むワークフローで API 側の収集を有効にすると、新しい UUIDv7 がトレース ID になります。元の ID とトレース実行 ID は、属性 `dify.source.id` と `dify.tracing.run_id` に保持されます。新しい Agent アプリで **Agent の内部処理を収集** をオンにすると、通常の `llm` スパンが `Agent attempt` スパンに置き換わります。このスパンには、内部のモデル呼び出しとツール呼び出しが含まれます。収集対象の実行では、モデレーション、推奨質問、名前生成の個別レコードは省略されます。
+
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。`X-Trace-Id` が未指定の場合、ルート実行 ID は Chat/Chatflow ではメッセージ ID、Workflow ではワークフロー実行 ID になります。子の実行 ID は派生値です。`X-Trace-Id` を指定すると、ルート実行 ID も派生値となり、指定した ID はメタデータに保持されます。`parent_run_id` はエクスポートされた親の実行 ID を参照します。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+
+Chatflow では `message` がトレースのルートになります。入力はユーザーのクエリで、クエリが空ならワークフローの入力を使います。子の `workflow` には、ワークフローの入力と出力が保持されます。
 
 以下の詳細リストは、Dify の元レコードとメタデータを説明しています。エクスポートされるのは、関連する利用可能な値のみです。元レコード全体をそのまま送信するわけではありません。
 
@@ -126,15 +134,15 @@ Workflow や Chatflow を追跡するために使用されます。
   </thead>
   <tbody>
     <tr>
-      <td>workflow_run_id</td>
-      <td>id</td>
+      <td>workflow_run_id（Workflow）/ message_id（Chatflow）、X-Trace-Id 未指定時</td>
+      <td>id（ルート実行）</td>
     </tr>
     <tr>
       <td>user_id</td>
       <td>extra.metadata.user_id</td>
     </tr>
     <tr>
-      <td>workflow</td>
+      <td>workflow（Workflow）/ message（Chatflow）</td>
       <td>name</td>
     </tr>
     <tr>
@@ -146,7 +154,7 @@ Workflow や Chatflow を追跡するために使用されます。
       <td>終了時間</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>Workflow の入力 / Chatflow のクエリ（空ならワークフローの入力）</td>
       <td>入力</td>
     </tr>
     <tr>
@@ -221,8 +229,8 @@ Workflow や Chatflow を追跡するために使用されます。
   </thead>
   <tbody>
     <tr>
-      <td>message\_id</td>
-      <td>id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
+      <td>id（ルート実行）</td>
     </tr>
     <tr>
       <td>end\_user\_session\_id</td>

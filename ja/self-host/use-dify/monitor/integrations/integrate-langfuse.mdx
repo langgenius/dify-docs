@@ -52,7 +52,7 @@ Langfuse は、チームがアプリケーションのデバッグ、分析、�
   ![Langfuse を設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-設定をクリックした後、Langfuse で作成した **秘密キー**、**公開キー**、**Host** を入力して保存します。**Host** には、プロジェクトのリージョンまたはセルフホスト環境のベース URL を指定します。`/api/public` は含めないでください。この統合には [レガシー取り込み API](https://langfuse.com/docs/api-and-data-platform/features/public-api) が必要です。`events_only` のインスタンスでは、これらのトレースを受け付けません。
+設定をクリックした後、Langfuse で作成した **秘密キー**、**公開キー**、**Host** を入力して保存します。**Host** には、プロジェクトのリージョンまたはセルフホスト環境のベース URL を指定します。`/api/public` は含めないでください。Dify はトレースを `/api/public/ingestion` に送信します。[Langfuse の取り込みドキュメント](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) によると、このレガシートレース API はセルフホスト版 v4 の `events_only` モードでは利用できません。Langfuse Cloud では 2026 年 11 月 16 日に提供が終了します。レガシートレースの取り込みを引き続き受け付ける Langfuse 環境を使用してください。
 
 <Frame>
   ![Langfuse を設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
@@ -79,12 +79,20 @@ Langfuse は、チームがアプリケーションのデバッグ、分析、�
 <Note>
 設定を保存してトレースを有効にしたら、アプリを再実行し、監視サービスに新しいトレースが表示されるか確認してください。トレースは非同期で送信されます。設定の保存だけでは、トレースの到着は確認できません。
 
-Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローでは、デプロイ設定で `OPS_AGENT_TRACE_ENABLED=true` と `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` の両方を有効にしてください。詳しくは [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。これらのアプリでは **内容を収集** がデフォルトでオフになり、ワークフロー全体の入力と出力を制御します。それ以外のアプリでは、入力と出力が送信される場合があります。
+デプロイの両方のスイッチがオフでも、新しい Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローは通常のトレースを送信します。利用可能な入力と出力も含まれますが、Agent 内部のモデル呼び出しとツール呼び出しは含まれません。
+
+これらの呼び出しを収集するには、Dify API とワーカーで `OPS_AGENT_TRACE_ENABLED=true` を、Agent バックエンドで `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` を設定します。両方を同時に有効にしてください。API 側のスイッチだけが有効で、**Agent の内部処理を収集** がオン（デフォルト）の場合、Agent 呼び出しの実行時に収集がタイムアウトします。エラーは `agent_trace_collection_incomplete` となり、トレースはエクスポートされません。これはアプリの実行失敗を意味するものではありません。デプロイ設定の詳細は [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。
+
+これらのアプリで API 側の収集を有効にすると、**内容を収集** はデフォルトでオフになります。ワークフロー全体で入力、出力、メタデータの大半が除外され、エラーテキストはマスクされます。これらの内容を送信するには、**内容を収集** を有効にしてください。クラシックの `agent-chat` アプリや、クラシック Agent ノードだけを使うワークフローでは、通常のトレースを引き続き使用します。
 </Note>
 
 ### 監視データの一覧
 
-Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。監視サービスのトレース ID とスパン ID は Dify の識別子から生成され、データベースの ID をそのままコピーしたものではありません。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+以下の表は通常のトレースを説明しています。新しい Agent アプリや新しい Agent ノードを含むワークフローで API 側の収集を有効にすると、新しい UUIDv7 がトレース ID になります。元の ID とトレース実行 ID は、属性 `dify.source.id` と `dify.tracing.run_id` に保持されます。新しい Agent アプリで **Agent の内部処理を収集** をオンにすると、通常の `llm` スパンが `Agent attempt` スパンに置き換わります。このスパンには、内部のモデル呼び出しとツール呼び出しが含まれます。収集対象の実行では、モデレーション、推奨質問、名前生成の個別レコードは省略されます。
+
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。トレース ID には、`X-Trace-Id` が指定されていればその値を使います。未指定の場合は、Chat/Chatflow ではメッセージ ID、Workflow ではワークフロー実行 ID を使います。観測 ID は派生値です。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+
+Chatflow では `message` がトレースのルートになります。入力はユーザーのクエリで、クエリが空ならワークフローの入力を使います。子の `workflow` には、ワークフローの入力と出力が保持されます。
 
 以下の詳細リストは、Dify の元レコードとメタデータを説明しています。エクスポートされるのは、関連する利用可能な値のみです。元レコード全体をそのまま送信するわけではありません。
 
@@ -101,15 +109,15 @@ Dify は処理を階層構造としてエクスポートします。メッセー
   </thead>
   <tbody>
     <tr>
-      <td>workflow_run_id</td>
-      <td>id</td>
+      <td>workflow_run_id（Workflow）/ message_id（Chatflow）、X-Trace-Id 未指定時</td>
+      <td>id（トレース）</td>
     </tr>
     <tr>
       <td>user_id</td>
       <td>userId</td>
     </tr>
     <tr>
-      <td>workflow</td>
+      <td>workflow（Workflow）/ message（Chatflow）</td>
       <td>name</td>
     </tr>
     <tr>
@@ -121,7 +129,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
       <td>endTime（観測）</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>Workflow の入力 / Chatflow のクエリ（空ならワークフローの入力）</td>
       <td>input</td>
     </tr>
     <tr>
@@ -200,11 +208,11 @@ Dify は処理を階層構造としてエクスポートします。メッセー
   </thead>
   <tbody>
     <tr>
-      <td>message\_id</td>
-      <td>id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
+      <td>id（トレース）</td>
     </tr>
     <tr>
-      <td>end\_user\_session\_id</td>
+      <td>end_user_session_id（または user_id）</td>
       <td>userId</td>
     </tr>
     <tr>
@@ -317,7 +325,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
       <td>metadata</td>
     </tr>
     <tr>
-      <td>message\_id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
       <td>traceId</td>
     </tr>
   </tbody>
@@ -347,7 +355,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
   <thead>
     <tr>
       <th>推奨質問</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse スパン</th>
     </tr>
   </thead>
   <tbody>
@@ -380,7 +388,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
       <td>metadata</td>
     </tr>
     <tr>
-      <td>message\_id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
       <td>traceId</td>
     </tr>
   </tbody>
@@ -455,7 +463,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
       <td>metadata</td>
     </tr>
     <tr>
-      <td>message\_id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
       <td>traceId</td>
     </tr>
   </tbody>
@@ -520,7 +528,7 @@ Dify は処理を階層構造としてエクスポートします。メッセー
       <td>metadata</td>
     </tr>
     <tr>
-      <td>message\_id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
       <td>traceId</td>
     </tr>
   </tbody>
@@ -558,6 +566,8 @@ Dify は処理を階層構造としてエクスポートします。メッセー
 
 **会話タイトルの生成を追跡するために使用されます**
 
+メッセージに紐づかない自動命名では、`timestamp` を持ち、観測を持たない独立したトレースが作られます。メッセージに紐づく命名では、そのメッセージのトレースにスパン観測が作られます。タイトルを直接編集しても、名前生成トレースは作られません。
+
 <table>
   <thead>
     <tr>
@@ -576,11 +586,11 @@ Dify は処理を階層構造としてエクスポートします。メッセー
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>startTime</td>
+      <td>timestamp（独立したトレース）/ startTime（メッセージに紐づく観測）</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>endTime（観測）</td>
+      <td>endTime（メッセージに紐づく観測のみ）</td>
     </tr>
     <tr>
       <td>inputs</td>
