@@ -129,6 +129,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | Top K | Top K | Top K | Number of most relevant chunks to retrieve |
 | score threshold | 分数阈值 | スコアしきい値 | Minimum similarity score required for chunks to be included |
 | similarity score | 相似度分数 | 類似度スコア | Use "similarity score" consistently; avoid "relevance score" |
+| scanner | 扫描服务 | スキャナー | A malware scanning service connected under File Security Scan |
 
 ### Configuration & Parameters
 
@@ -324,6 +325,12 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Only selected | 仅选定 | 選択されたもののみ | plugin.autoUpdate.upgradeMode.partial | Scope option; the key sits under upgradeMode, not scopeMode |
 | Endpoints | API 端点 | エンドポイント | plugin.detailPanel.endpoints | Section of an integration's detail panel, shown when the integration declares endpoints. The en UI renders ENDPOINTS |
 | Add API Key | 添加 API Key | APIキーを追加してください | plugin.auth.addApi | Credential button for data sources (**Configure** menu) and for tool plugins that also offer OAuth. Model providers use model-provider.modelProvider.auth.addApiKey. REVIEW: ja is a request sentence; ja docs write API キーを追加 |
+| File Security Scan | 文件安全扫描 | ファイルセキュリティスキャン | file-scan.settings.title | Integrations hub entry and page where a workspace connects malware scanners. Shown only when the deployment sets `FILE_SCAN_ENABLED` |
+| Add scanner | 添加扫描服务 | スキャナーを追加 | file-scan.scanner.add | Button on the File Security Scan page |
+| Custom Endpoint | 自定义端点 | カスタム API | file-scan.type.customEndpoint | Scanner type in the Add scanner dialog. Same label as the hub's Custom Endpoint section (navigation.settings.customEndpoint), which holds API-based extensions; the two are unrelated |
+| Endpoint URL | 端点 URL | エンドポイント URL | file-scan.dialog.endpointUrl | Field of a Custom Endpoint scanner |
+| Test | 测试 | テスト | file-scan.scanner.test | Re-runs a scanner's connection check |
+| Error | 异常 | エラー | file-scan.scanner.status.error | A scanner's status after a failed check or rejected credentials. Not a document's Error status |
 
 ### Billing
 
@@ -595,6 +602,12 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Multimodal | 多模态 | マルチモーダル | dataset.multimodal | REVIEW: Verify this is user-facing |
 | TOP K | Top K | トップ K | knowledge-space.settings.topKLabel | Agent knowledge base **Settings** > **Retrieval**; the general term is the Top K row |
 | Fast | 快速 | 高速 | knowledge-space.settings.retrievalMode.fast | Agent knowledge base retrieval depth option, in **Settings** > **Retrieval**, Retrieval Test, and quality evaluations |
+| File security scan | 文件安全扫描 | ファイルセキュリティスキャン | file-scan.policy.title | Section of a knowledge base's settings; external knowledge bases don't have it |
+| Scanner | 扫描服务 | スキャナー | file-scan.policy.scanner | |
+| When the scanner is unavailable | 扫描服务不可用时 | スキャナーが利用できない場合 | file-scan.policy.onUnavailable | |
+| When a file cannot be scanned (encrypted or too large) | 文件无法扫描时（已加密或过大） | ファイルをスキャンできない場合（暗号化されている、またはサイズが大きすぎる） | file-scan.policy.onUnscannable | Also covers files the scanner doesn't support |
+| Block files | 拦截文件 | ファイルをブロック | file-scan.policy.block | |
+| Allow files | 放行文件 | ファイルを許可 | file-scan.policy.allow | |
 
 ### Chunking Mode Labels
 

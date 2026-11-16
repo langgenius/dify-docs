@@ -123,6 +123,7 @@
 | Top K | Top K | Top K |
 | score threshold | 分数阈值 | スコアしきい値 |
 | similarity score | 相似度分数 | 類似度スコア |
+| scanner | 扫描服务 | スキャナー |
 
 ### Configuration & Parameters
 
@@ -312,6 +313,12 @@
 | Only selected | 仅选定 | 選択されたもののみ |
 | Endpoints | API 端点 | エンドポイント |
 | Add API Key | 添加 API Key | APIキーを追加してください |
+| File Security Scan | 文件安全扫描 | ファイルセキュリティスキャン |
+| Add scanner | 添加扫描服务 | スキャナーを追加 |
+| Custom Endpoint | 自定义端点 | カスタム API |
+| Endpoint URL | 端点 URL | エンドポイント URL |
+| Test | 测试 | テスト |
+| Error | 异常 | エラー |
 
 ### Billing
 
@@ -581,6 +588,12 @@
 | Multimodal | 多模态 | マルチモーダル |
 | TOP K | Top K | トップ K |
 | Fast | 快速 | 高速 |
+| File security scan | 文件安全扫描 | ファイルセキュリティスキャン |
+| Scanner | 扫描服务 | スキャナー |
+| When the scanner is unavailable | 扫描服务不可用时 | スキャナーが利用できない場合 |
+| When a file cannot be scanned (encrypted or too large) | 文件无法扫描时（已加密或过大） | ファイルをスキャンできない場合（暗号化されている、またはサイズが大きすぎる） |
+| Block files | 拦截文件 | ファイルをブロック |
+| Allow files | 放行文件 | ファイルを許可 |
 
 ### Chunking Mode Labels
 
