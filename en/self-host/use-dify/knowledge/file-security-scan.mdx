@@ -1,0 +1,81 @@
+---
+title: Scan Uploaded Files for Malware
+sidebarTitle: File Security Scan
+description: Block malware in files uploaded to knowledge bases, using ClamAV, a hosted scanning service, or your company's own scanner
+---
+
+Each knowledge base can scan the files uploaded to it for malware before they're indexed. A workspace owner or admin connects one or more scanners for the workspace, then scanning can be turned on in each knowledge base that needs it.
+
+Scanning covers files *uploaded* to a knowledge base, including those from a knowledge pipeline's local-file data source. Content from Notion, website crawls, online documents, and online drives isn't scanned, and neither are files sent to apps, workflows, or chats.
+
+<Note>
+File Security Scan is off by default. Enable it by setting `FILE_SCAN_ENABLED` to `true`. See [Environment Variables](/en/self-host/deploy/configuration/environments#file-security-scan) for details.
+</Note>
+
+## Connect a Scanner
+
+In **Integrations** > **File Security Scan**, click **Add scanner** and choose the type that fits where your files are allowed to go:
+
+- **ClamAV**: Dify sends files to a local ClamAV server (clamd) that you run. Files never leave your deployment.
+
+  <Info>
+  The **ClamAV** option appears once the deployment sets:
+
+  - `FILE_SCAN_CLAMAV_HOST` = the clamd server's address, which both the API and worker services must reach over TCP
+  - `FILE_SCAN_CLAMAV_PORT` = its port, if it isn't `3310`
+
+  See [Environment Variables](/en/self-host/deploy/configuration/environments#file-security-scan) for details.
+  </Info>
+
+- **Cloudmersive**, **Scanii**, or **MetaDefender Cloud**: a hosted service you have an account with. Each file's contents go to that service, and every scanned upload uses your quota there.
+
+  Any member who can edit a knowledge base's settings can turn scanning on with this scanner, so size your plan for every knowledge base that could use it.
+
+- **Custom Endpoint**: your company's own scanning service. See [Custom Endpoint Scanner API](/en/self-host/use-dify/knowledge/file-security-scan-custom-endpoint) for the request and response it must handle.
+
+  <Note>
+  If your scanning service runs on your company's internal network, Dify can't reach it until the deployment allows its address.
+
+  Dify's outgoing requests pass through a proxy that blocks internal addresses by default, so that no one can use Dify to reach your internal systems. Allow your endpoint by setting one of:
+
+  - `SSRF_PROXY_ALLOW_PRIVATE_IPS` = the endpoint's IP address
+  - `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` = the endpoint's hostname
+
+  See [Environment Variables](/en/self-host/deploy/configuration/environments#ssrf-proxy) for details.
+  </Note>
+
+## Turn On Scanning for a Knowledge Base
+
+<Info>
+Turning on scanning requires the Editor role or above.
+</Info>
+
+In the knowledge base's **Settings**, go to **File security scan**: turn it on, choose a **Scanner**, set the [two choices below](#choose-what-happens-to-unscanned-files), and click **Save**.
+
+Scanning applies to files added from then on. A document already in the knowledge base is scanned the next time it's processed, such as when it's retried or its chunk settings change. If it turns out to be infected, the document shows **Error**.
+
+### Choose What Happens to Unscanned Files
+
+For the two cases where a scan can't give an answer, choose whether to block the file or let it in unscanned:
+
+- **When the scanner is unavailable**: the scanner can't be reached, times out, returns a server error, or sends an answer Dify can't read. Dify retries temporary failures before this choice applies.
+- **When a file cannot be scanned (encrypted or too large)**: the file is encrypted or password-protected, larger than the scanner accepts, or a type the scanner doesn't support.
+
+Switch either choice to **Allow files** only when getting files in matters more than scanning every one. That might be a knowledge base that must stay up to date while the scanner is down, or one that regularly takes files larger than the scanner accepts. Files allowed this way are indexed without a scan, and nothing marks them as unscanned.
+
+Whichever you choose, files found to contain malware are always blocked. So are files sent to a scanner whose credentials are rejected or whose quota is used up.
+
+### Check That Scanning Works
+
+Upload the EICAR test file to the knowledge base. It's a harmless file that every antivirus engine reports as malware, available from [eicar.org](https://www.eicar.org).
+
+Its document should show **Error** with a malware message. If it's indexed instead, check that scanning is turned on and saved for this knowledge base. You can delete the test document afterward.
+
+## Handle a Blocked File
+
+In the document list, hover the icon next to a document's **Error** to read why it was blocked. For these two cases, there's more to know:
+
+- **Malware detected**: delete the document. Retrying it, or uploading the same file again, only blocks it again.
+- **Encrypted, too large, or not supported by the scanner**: such files are blocked by default. If you're fine with them going into the knowledge base unscanned, switch the knowledge base's **When a file cannot be scanned (encrypted or too large)** choice to **Allow files**, then retry.
+
+  The choice applies to every later file in the knowledge base, so switch it back if you only needed it for this one.
