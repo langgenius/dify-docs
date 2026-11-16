@@ -1,0 +1,206 @@
+---
+title: 自定义端点扫描服务 API
+sidebarTitle: 自定义端点扫描服务
+description: 搭建供 Dify 调用的扫描服务，逐一检查上传至知识库的文件
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/use-dify/knowledge/file-security-scan-custom-endpoint)。
+
+知识库选用 **自定义端点** 扫描服务后，Dify 会把上传到该知识库的文件发给你的扫描服务，再根据服务返回的判定结果处理文件：安全的文件照常索引，已感染的文件则被拦截。
+
+端点运行起来后，前往 **集成** > **文件安全扫描** > **添加扫描服务** > **自定义端点** 添加即可。为知识库开启扫描的方法详见 [扫描上传文件中的恶意软件](/zh/self-host/use-dify/knowledge/file-security-scan)。
+
+<Info>
+这类扫描服务与 **集成** 中的 **自定义端点** 板块无关。后者存放的是基于 API 的扩展，请求格式也不同。
+</Info>
+
+## 接收文件
+
+Dify 为每个文件单独发送一个请求：
+
+```text
+POST <Endpoint URL>
+Authorization: Bearer <API key>
+Content-Type: multipart/form-data
+```
+
+自己定一个保密的字符串作为 API 密钥，添加扫描服务时填入 Dify，再让你的服务校验它。密钥不匹配时，返回 `401`。
+
+表单包含文件本身和 5 个文本字段：
+
+<ParamField body="file" type="file">
+  待扫描的文件。
+</ParamField>
+
+<ParamField body="scan_id" type="string">
+  本次扫描的 ID。Dify 自动重试同一次扫描时会发送相同的 ID，因此你的服务收到重复请求时，可直接返回首次扫描的结果，无需重新扫描。之后在知识库中重试该文档，则会发起新的扫描，ID 也随之更换。
+</ParamField>
+
+<ParamField body="file_name" type="string">
+  文件名，如 `report.docx`。
+</ParamField>
+
+<ParamField body="file_size" type="string">
+  文件大小，单位为字节，以十进制字符串表示，如 `482113`。
+</ParamField>
+
+<ParamField body="mime_type" type="string">
+  文件的 MIME 类型。Dify 无法确定类型时为空。
+</ParamField>
+
+<ParamField body="file_hash" type="string">
+  文件内容的 SHA3-256 哈希值，以十六进制表示，可能为空。如果你的服务每次都需要哈希值，可根据文件内容自行计算。
+</ParamField>
+
+## 返回判定结果
+
+返回任意 `2xx` 状态码和一个 JSON 对象：
+
+```json
+{
+  "verdict": "infected",
+  "threats": ["EICAR-Test-File"],
+  "engine": "MyScanner 2.1"
+}
+```
+
+<ResponseField name="verdict" type="string" required>
+  `clean`、`infected` 或 `unscannable`。
+</ResponseField>
+
+<ResponseField name="threats" type="string[]">
+  检测到的威胁名称，会显示在被拦截文档的错误信息中，供用户查看。未提供时，错误信息显示检测到 `unknown`。
+
+  Dify 最多保留 20 个名称，每个名称最长 200 个字符，超出部分截断。
+</ResponseField>
+
+<ResponseField name="engine" type="string">
+  扫描引擎的名称或版本。Dify 不会在产品中显示该值。
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  服务无法扫描该文件的原因，最多 500 个字符。Dify 不会在产品中显示该值。
+</ResponseField>
+
+服务无法判定某个文件时，该文件是被拦截（默认）还是不经扫描直接放行，取决于知识库的 **文件无法扫描时（已加密或过大）** 选项。文件被拦截时，用户看到什么错误信息，由你返回的内容决定：
+
+- **文件过大**：返回 `413`。错误信息会提示文件超出扫描服务的大小上限。
+- **已加密、格式不受支持或其他任何原因**：返回 `unscannable`。无论实际原因是什么，错误信息都会提示扫描服务不支持该文件。
+
+## 选择合适的状态码
+
+Dify 根据你返回的状态码和响应体决定如何处理文件。
+
+| 你的响应 | Dify 的处理方式 |
+|:--|:--|
+| `2xx` 且 `verdict` 有效 | 按判定结果处理 |
+| `401` 或 `403` | 视为密钥无效：无论知识库如何设置都拦截该文件，不重试，并将扫描服务的状态置为 **异常** |
+| `402` 或 `429` | 视为额度已用完，处理方式与 `401` 和 `403` 相同 |
+| `413` | 视为文件过大，按知识库的 **文件无法扫描时（已加密或过大）** 选项处理 |
+| `5xx`、超时或连接错误 | 默认总共最多尝试 3 次（由 `FILE_SCAN_MAX_ATTEMPTS` 设置），之后按知识库的 **扫描服务不可用时** 选项处理 |
+| 其他任何状态码、重定向、非 JSON 响应体或未知的 `verdict` | 视为无法解析的响应：不重试，按知识库的 **扫描服务不可用时** 选项处理 |
+
+<Note>
+遇到重试一次即可缓解的短暂过载时，返回 `503`，不要返回 `429`。
+</Note>
+
+## 在超时前响应
+
+每个请求都需在 2 分钟内响应。在 Docker Compose 部署中，Dify 的请求会经过一个代理，请求超过 2 分钟仍未收到响应，代理就会将其关闭。
+
+不经过该代理时，时限取决于 Dify 自身的超时设置：默认 300 秒，由 `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` 设置。详见 [环境变量](/zh/self-host/deploy/configuration/environments#文件安全扫描)。
+
+超时的请求会重新发送，默认最多尝试 3 次。因此端点响应慢时，文档可能要等待约 6 分钟（3 × 2 分钟），之后才会按知识库的 **扫描服务不可用时** 选项处理。
+
+如果你的服务确定无法及时扫描完某个文件，应立即返回 `413` 或 `unscannable`，不要等到请求超时。
+
+## 确保端点可访问
+
+在 Dify 中，将端点的完整 URL（含路径）填入 **端点 URL**，如 `http://scanner.example.internal:8000/scan`。填写的地址必须是 Dify 能访问到的，不能使用 `localhost`。
+
+在 Docker Compose 部署中，Dify 发出的请求都要经过代理，代理默认还会拦截内网地址。如果你的端点使用内网地址，在放行该地址之前，Dify 既无法访问端点，也无法保存该扫描服务：
+
+- **端点 URL 使用 IP 地址时**：将 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 设为该地址。
+- **端点 URL 使用主机名时**：将 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` 设为该主机名。
+
+详见 [环境变量](/zh/self-host/deploy/configuration/environments#ssrf-代理)。
+
+对于 `https` 请求，该代理只放行 443 端口。除非部署环境将 `HTTP_REQUEST_NODE_SSL_VERIFY` 设为 `false`，否则 Dify 会校验 `https` 端点的 TLS 证书。
+
+## 保存前先测试
+
+在端点所在的机器上，向它发送一个与 Dify 格式相同的请求：
+
+```bash
+curl http://localhost:8000/scan \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@report.docx" \
+  -F "scan_id=test-1" \
+  -F "file_name=report.docx" \
+  -F "file_size=482113" \
+  -F "mime_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  -F "file_hash="
+```
+
+扫描逻辑就绪后，将该请求发送两次：一次附带安全的文件，一次附带 EICAR 测试文件，并相应修改 `file_name`、`file_size` 和 `mime_type`。端点应对前者返回 `clean`，对后者返回 `infected`。
+
+<Info>
+EICAR 测试文件本身无害，但所有杀毒引擎都会把它识别为恶意软件，可从 [eicar.org](https://www.eicar.org) 下载。
+</Info>
+
+另外，再挑一些真实文件发送测试，以便在知识库启用该扫描服务之前发现误报。
+
+Dify 会记住判定结果。在同一工作空间中，同一扫描服务再次检查相同的内容时，Dify 会直接沿用之前的判定结果，不再调用你的端点：
+
+- **`infected`**：永久沿用。如果你的服务把安全文件误判为感染，即使之后修好了扫描服务，这个文件也会一直被拦截。
+- **`clean`**：默认沿用 24 小时，由 `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` 设置。在此期间，即使你已更新扫描服务、使其能检出该文件，同一文件仍会放行。
+
+保存扫描服务时，以及每次点击 **测试** 时，Dify 都会发送一个文件来检查连接：
+
+- `file`：`clean-test.txt`，类型为 `text/plain`
+- `scan_id`：`connectivity-check`
+- `file_hash`：空
+
+只要返回格式正确的判定结果，检查即通过，返回 `413` 也算通过。只有检查通过，Dify 才会保存扫描服务。
+
+知识库启用该扫描服务后，可在其中 [上传 EICAR 测试文件](/zh/self-host/use-dify/knowledge/file-security-scan#验证扫描是否生效)，检查整条链路是否正常。
+
+## 从示例开始
+
+将以下 Flask 端点中的 `my_scanner` 替换为你自己的扫描逻辑：
+
+```python scanner.py
+import hmac
+import os
+
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+API_KEY = os.environ["SCANNER_API_KEY"]  # the API key you enter in Dify
+
+
+def my_scanner(content: bytes) -> list[str]:
+    """Replace with your scanning logic: return the names of any threats found."""
+    return []
+
+
+@app.post("/scan")
+def scan():
+    expected = f"Bearer {API_KEY}"
+    received = request.headers.get("Authorization", "")
+    if not hmac.compare_digest(received.encode(), expected.encode()):
+        return jsonify(error="invalid API key"), 401
+
+    content = request.files["file"].read()
+    threats = my_scanner(content)
+    if threats:
+        return jsonify(verdict="infected", threats=threats, engine="MyScanner")
+    return jsonify(verdict="clean", engine="MyScanner")
+```
+
+将代码保存为 `scanner.py`，安装 Flask 后启动端点。启动时使用的 API 密钥，就是要在 Dify 中填写的那个：
+
+```bash
+pip install flask
+SCANNER_API_KEY=your-api-key flask --app scanner run --host 0.0.0.0 --port 8000
+```

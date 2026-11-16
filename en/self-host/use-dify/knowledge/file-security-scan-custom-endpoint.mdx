@@ -1,0 +1,204 @@
+---
+title: Custom Endpoint Scanner API
+sidebarTitle: Custom Endpoint Scanner
+description: Build a scanning service that Dify calls to check each file uploaded to a knowledge base
+---
+
+With a **Custom Endpoint** scanner, Dify sends your scanning service the files uploaded to a knowledge base that scans with it. Dify then acts on the verdict your service returns: a clean file is indexed as usual, and an infected one is blocked.
+
+Once your endpoint is running, add it in **Integrations** > **File Security Scan** > **Add scanner** > **Custom Endpoint**. See [Scan Uploaded Files for Malware](/en/self-host/use-dify/knowledge/file-security-scan) for turning on scanning in a knowledge base.
+
+<Info>
+This scanner type is separate from the **Custom Endpoint** section of **Integrations**, which holds API-based extensions with a different request format.
+</Info>
+
+## Receive the File
+
+Dify sends each file in its own request:
+
+```text
+POST <Endpoint URL>
+Authorization: Bearer <API key>
+Content-Type: multipart/form-data
+```
+
+Make up a secret string as the API key, enter it in Dify when you add the scanner, and have your service check it. When the key doesn't match, return `401`.
+
+The form carries the file and five text fields:
+
+<ParamField body="file" type="file">
+  The file to scan.
+</ParamField>
+
+<ParamField body="scan_id" type="string">
+  An ID for this scan. Dify's automatic retries of a scan send the same ID, so you can answer a repeated request from the first scan instead of scanning again. Retrying the document in the knowledge base later starts a new scan with a new ID.
+</ParamField>
+
+<ParamField body="file_name" type="string">
+  The file's name, such as `report.docx`.
+</ParamField>
+
+<ParamField body="file_size" type="string">
+  The file's size in bytes, as a decimal string, such as `482113`.
+</ParamField>
+
+<ParamField body="mime_type" type="string">
+  The file's MIME type, or empty when Dify doesn't know it.
+</ParamField>
+
+<ParamField body="file_hash" type="string">
+  The SHA3-256 hash of the file content, in hex. It can be empty. If your service needs a hash every time, compute one from the content.
+</ParamField>
+
+## Return a Verdict
+
+Answer with any `2xx` status and a JSON object:
+
+```json
+{
+  "verdict": "infected",
+  "threats": ["EICAR-Test-File"],
+  "engine": "MyScanner 2.1"
+}
+```
+
+<ResponseField name="verdict" type="string" required>
+  `clean`, `infected`, or `unscannable`.
+</ResponseField>
+
+<ResponseField name="threats" type="string[]">
+  Names of the threats found, shown to users in the blocked document's error message. Without them, the message says `unknown` was detected.
+
+  Dify keeps up to 20 names, each cut to 200 characters.
+</ResponseField>
+
+<ResponseField name="engine" type="string">
+  Your engine's name or version. Dify doesn't show it in the product.
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  Why your service couldn't scan the file, up to 500 characters. Dify doesn't show it in the product.
+</ResponseField>
+
+When your service can't judge a file, the knowledge base's **When a file cannot be scanned (encrypted or too large)** choice decides whether it's blocked (the default) or let in unscanned. What you return sets the error message users see on a blocked file:
+
+- **Too large**: return `413`. The error message says the file exceeds the scanner's size limit.
+- **Encrypted, an unsupported format, or any other reason**: return `unscannable`. The error message says the scanner doesn't support the file, whatever your reason was.
+
+## Choose the Right Status Code
+
+Dify decides what to do with the file from your status code and body.
+
+| Your response | What Dify does |
+|:--|:--|
+| `2xx` with a valid `verdict` | Acts on the verdict |
+| `401` or `403` | Treats the key as invalid: blocks the file whatever the knowledge base's choices, doesn't retry, and sets the scanner to **Error** |
+| `402` or `429` | Treats your quota as used up, with the same handling as `401` and `403` |
+| `413` | Treats the file as too large and follows the knowledge base's **When a file cannot be scanned (encrypted or too large)** choice |
+| `5xx`, a timeout, or a connection error | Tries up to 3 times in all by default, set by `FILE_SCAN_MAX_ATTEMPTS`, then follows the knowledge base's **When the scanner is unavailable** choice |
+| Any other status, a redirect, a body that isn't JSON, or an unknown `verdict` | Treats it as an answer it can't read: doesn't retry, and follows the knowledge base's **When the scanner is unavailable** choice |
+
+<Note>
+For a brief overload that a retry would get past, return `503`, not `429`.
+</Note>
+
+## Answer Within the Timeout
+
+Answer each request within 2 minutes. In a Docker Compose deployment, Dify's requests pass through a proxy that closes a request after 2 minutes without a response.
+
+Without that proxy, the limit is Dify's own timeout: 300 seconds by default, set by `FILE_SCAN_REQUEST_TIMEOUT_SECONDS`. See [Environment Variables](/en/self-host/deploy/configuration/environments#file-security-scan) for details.
+
+A request that runs out of time is sent again, up to 3 attempts by default. So a slow endpoint can keep a document waiting about 6 minutes (3 × 2 minutes) before the knowledge base's **When the scanner is unavailable** choice applies.
+
+When your service knows it can't finish a file in time, answer at once with `413` or `unscannable` instead of letting the request time out.
+
+## Make the Endpoint Reachable
+
+In Dify, enter your endpoint's full URL as the **Endpoint URL**, path included, such as `http://scanner.example.internal:8000/scan`. Use an address Dify can reach, not `localhost`.
+
+In a Docker Compose deployment, the proxy that Dify's requests pass through also blocks internal addresses by default. If your endpoint has one, Dify can't reach it or save the scanner until you allow the address:
+
+- **If the Endpoint URL uses an IP address**: set `SSRF_PROXY_ALLOW_PRIVATE_IPS` to that address.
+- **If the Endpoint URL uses a hostname**: set `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` to that hostname.
+
+See [Environment Variables](/en/self-host/deploy/configuration/environments#ssrf-proxy) for details.
+
+For `https`, the proxy allows only port 443. Dify verifies an `https` endpoint's TLS certificate unless the deployment sets `HTTP_REQUEST_NODE_SSL_VERIFY` to `false`.
+
+## Test Before You Save
+
+Send your endpoint a request shaped like Dify's, from the machine it runs on:
+
+```bash
+curl http://localhost:8000/scan \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@report.docx" \
+  -F "scan_id=test-1" \
+  -F "file_name=report.docx" \
+  -F "file_size=482113" \
+  -F "mime_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  -F "file_hash="
+```
+
+Once your scanning logic is in place, send this request twice: once with a clean file and once with the EICAR test file, updating `file_name`, `file_size`, and `mime_type` to match each. Your endpoint should answer `clean` for the first and `infected` for the second.
+
+<Info>
+The EICAR test file is a harmless file that every antivirus engine reports as malware, available from [eicar.org](https://www.eicar.org).
+</Info>
+
+Also send a sample of your real files, to catch false alarms before a knowledge base uses your scanner.
+
+Dify remembers verdicts. When the same content is checked again in the workspace by the same scanner, Dify reuses the earlier verdict instead of calling your endpoint:
+
+- **`infected`**: reused for good, so a clean file your service wrongly flags stays blocked even after you fix the scanner.
+- **`clean`**: reused for 24 hours by default, set by `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS`. During that time, the same file passes even if you've updated the scanner to catch it.
+
+When you save the scanner, and whenever you click **Test**, Dify checks the connection by sending one file:
+
+- `file`: `clean-test.txt`, as `text/plain`
+- `scan_id`: `connectivity-check`
+- `file_hash`: empty
+
+Any well-formed verdict passes, and so does `413`. Dify saves the scanner only when the check passes.
+
+Once a knowledge base uses the scanner, [upload the EICAR test file](/en/self-host/use-dify/knowledge/file-security-scan#check-that-scanning-works) there to check the whole path.
+
+## Start from an Example
+
+Replace `my_scanner` in this Flask endpoint with your own scanning logic:
+
+```python scanner.py
+import hmac
+import os
+
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+API_KEY = os.environ["SCANNER_API_KEY"]  # the API key you enter in Dify
+
+
+def my_scanner(content: bytes) -> list[str]:
+    """Replace with your scanning logic: return the names of any threats found."""
+    return []
+
+
+@app.post("/scan")
+def scan():
+    expected = f"Bearer {API_KEY}"
+    received = request.headers.get("Authorization", "")
+    if not hmac.compare_digest(received.encode(), expected.encode()):
+        return jsonify(error="invalid API key"), 401
+
+    content = request.files["file"].read()
+    threats = my_scanner(content)
+    if threats:
+        return jsonify(verdict="infected", threats=threats, engine="MyScanner")
+    return jsonify(verdict="clean", engine="MyScanner")
+```
+
+Save the code as `scanner.py`, then install Flask and start the endpoint with the API key you'll enter in Dify:
+
+```bash
+pip install flask
+SCANNER_API_KEY=your-api-key flask --app scanner run --host 0.0.0.0 --port 8000
+```
