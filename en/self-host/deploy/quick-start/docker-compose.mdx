@@ -95,6 +95,8 @@ For a remote deployment, replace `localhost` with the server's IP address or dom
 
 Put deployment-wide settings in `docker/.env`: Compose profiles, published ports, mount paths, health-check scheduling, and the shared credentials in [Secure the Deployment](#secure-the-deployment).
 
+For a custom domain or separate public hosts, follow [Configure Public URLs](/en/self-host/deploy/configuration/environments#configure-public-urls) to keep the web service, API, and workers on the same addresses.
+
 Other settings belong to a service. Most services load their bundled `.defaults` files under `docker/envs/`; leave those as they are and put your changes in the local `.env` file named in their comments. Settings shared by the API, workers, and scheduled tasks go in `envs/core-services/api-worker.env`.
 
 For example, to raise Nginx's maximum request body size to `200M`, run these from `dify/docker`:
@@ -159,7 +161,7 @@ The default stack publishes no host ports for the database, Redis, Code sandbox,
 
 Choose the target release on [Dify releases](https://github.com/langgenius/dify/releases) and read its upgrade guide first.
 
-Run every Compose command below with the deployment's existing project name and files, including any `-p`, `-f`, or `COMPOSE_PROJECT_NAME`, so its named volumes stay attached.
+Run every Compose command below with the deployment's existing project name and options, including any `-p`, `-f`, `--env-file`, profiles, or `COMPOSE_PROJECT_NAME`, so its named volumes stay attached and the same configuration is loaded.
 
 <Steps>
   <Step title="Back Up the Deployment">
@@ -199,12 +201,15 @@ Run every Compose command below with the deployment's existing project name and 
 
     Keep the existing database and every vector store your knowledge bases still use, with their connection settings and Compose profiles. Changing `DB_TYPE` or `VECTOR_STORE` doesn't migrate data.
 
-    Finally, compare the new `docker compose config` output with the copy you saved: check credentials, volume paths, profiles, and the settings you customized.
+    If you're using the unreleased deployment files from [PR #46497](https://github.com/langgenius/dify/pull/46497), check [Migrate Legacy Shared Settings](#migrate-legacy-shared-settings) before recreating containers.
+
+    From `dify/docker`, compare the new `docker compose config` output with the copy you saved: check credentials, volume paths, profiles, and the settings you customized.
   </Step>
   <Step title="Apply and Check the Upgrade">
     From `dify/docker`, run:
 
     ```bash
+    docker compose config --quiet
     docker compose pull
     docker compose up -d
     docker compose ps --all
@@ -213,3 +218,25 @@ Run every Compose command below with the deployment's existing project name and 
     Long-running services should show `Up` or `healthy`, and `init_permissions` should show `Exited (0)`. Then open Dify and try the features that use your custom settings.
   </Step>
 </Steps>
+
+### Migrate Legacy Shared Settings
+
+Follow this migration only with the deployment files from the unreleased [PR #46497](https://github.com/langgenius/dify/pull/46497). Release 1.19.0 doesn't include this change.
+
+<Info>
+[PR #45376](https://github.com/langgenius/dify/pull/45376) renamed `shared.defaults` to `api-worker.defaults` while retaining `shared.env` compatibility. PR #46497 removes that compatibility, including for the plugin daemon.
+</Info>
+
+If `docker/envs/core-services/shared.env` doesn't exist, skip this migration. Otherwise, preserve its settings before continuing the upgrade:
+
+1. Back up the existing `shared.env`, `api-worker.env`, and `urls.env` files under `docker/envs/core-services/`, along with `docker/.env` and any other local environment overrides.
+
+2. If `api-worker.env` doesn't exist, rename `shared.env` to `api-worker.env`. If both files exist, copy only keys missing from `api-worker.env`. Keep its existing values for duplicate keys, including intentional empty values.
+
+3. Move the five public URL settings to `urls.env`, or keep them in `docker/.env` if they're already shared there. Follow [Configure Public URLs](/en/self-host/deploy/configuration/environments#configure-public-urls) for the variables and how to create `urls.env` without overwriting it.
+
+   Remove redundant public URL definitions from `api-worker.env` and individual service `.env` files. Keep the other API and worker settings in `api-worker.env`, and keep `SERVER_CONSOLE_API_URL` in `web.env`.
+
+4. After preserving the settings, archive or remove any remaining `shared.env`. Leaving it in place has no effect with these deployment files.
+
+Return to **Review Your Configuration** above to compare the resolved settings before applying them. From `dify/docker`, apply the configuration with `docker compose up -d`, using the deployment's existing Compose project and options. `docker compose restart` keeps the old environment.

@@ -25,6 +25,8 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
       - `DIFY_AGENT_API_TOKEN` and `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`: use a different strong value for each.
       - `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY`: set both to the same value; if they differ, Code and Template nodes fail with HTTP 401.
 
+    For public URL variables, follow [Configure Public URLs](#configure-public-urls) to choose the shared file for your deployment version.
+
     For any other variable, search `docker/envs/` for its name, then act on what the search finds:
 
     - **One `.defaults` file**: edit the local file named in its first comment. If that file doesn't exist yet, copy the `.defaults` file to that name first.
@@ -43,7 +45,7 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
     To go back to a bundled default, delete the line or comment it out; don't leave it blank. A blank line such as `CELERY_WORKER_AMOUNT=` can still override the default with an empty value, and a blank line in `docker/.env` hides the value in your local file.
   </Step>
   <Step title="Apply the Change">
-    From `dify/docker`, validate the configuration and recreate the affected containers:
+    From `dify/docker`, validate the configuration and recreate the affected containers. Use the deployment's existing Compose project and options, including any `-p`, `-f`, `--env-file`, and profiles:
 
     ```bash
     docker compose config --quiet
@@ -56,6 +58,46 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
   </Step>
 </Steps>
 
+### Configure Public URLs
+
+Set the five public URLs in one shared file so browser requests and API-generated links, including provider and plugin icons, use the same addresses. Choose the file that matches the deployment files you run:
+
+<Tabs>
+  <Tab title="Released Deployment Files">
+    In `docker/.env`, set the URLs you need to customize. Release 1.19.0 doesn't include the shared `urls.defaults` and `urls.env` files.
+  </Tab>
+  <Tab title="PR #46497 (Unreleased)">
+    Use this procedure only with the deployment files from [PR #46497](https://github.com/langgenius/dify/pull/46497), which is open and unreleased.
+
+    The shared `docker/envs/core-services/urls.defaults` file loads automatically for the web service, API, Celery workers, Beat, and KnowledgeFS workers. Its five empty URL defaults override localhost values in the images and support same-origin requests.
+
+    The minimal `docker/.env` is enough to start the default stack; `urls.env` is optional. To customize the URLs, edit `docker/envs/core-services/urls.env`. If it doesn't exist, create it from `urls.defaults`; from `dify/docker`, run:
+
+    ```bash
+    cp envs/core-services/urls.defaults envs/core-services/urls.env
+    ```
+
+  </Tab>
+</Tabs>
+
+In your chosen shared file, set public base URLs with a scheme and any custom port. Leave off `/console/api`, `/api`, and `/v1`: Dify adds those paths. For example, when every service is exposed through one domain:
+
+```dotenv
+CONSOLE_API_URL=https://dify.example.com:8443
+CONSOLE_WEB_URL=https://dify.example.com:8443
+SERVICE_API_URL=https://dify.example.com:8443
+APP_API_URL=https://dify.example.com:8443
+APP_WEB_URL=https://dify.example.com:8443
+```
+
+Use separate values when the services have separate public hosts. Even with same-origin requests, set absolute URLs for the email and OAuth features listed under [Common Variables](#common-variables).
+
+Check [Precedence](#precedence) for any values that would override your changes, then apply them with the commands in [Set a Variable](#set-a-variable).
+
+Open the console and a published app at their public addresses, and check that provider and plugin icons load.
+
+If an address is still wrong, inspect `docker compose config` for an override; its output contains secrets, so keep it private.
+
 ### Precedence
 
 When a variable is set in more than one place, which value a service uses depends on whether the service loads `docker/.env`:
@@ -65,9 +107,12 @@ When a variable is set in more than one place, which value a service uses depend
     The API, WebSocket API, workers, Beat, web, Code sandbox, plugin daemon, and agent backend use the first match, in this order:
 
     1. `docker/.env`
-    2. The service's local `.env` files
-    3. Its `.defaults` files
-    4. The application default
+    2. For the web service, API services, and Celery workers using the unreleased deployment files from [PR #46497](https://github.com/langgenius/dify/pull/46497): public URL values explicitly set in `envs/core-services/urls.env`
+    3. The service's local `.env` files
+    4. Its `.defaults` files
+    5. The application default
+
+    With those PR files, leaving `urls.env` absent or copying it unchanged preserves existing service overrides. An explicit empty assignment such as `CONSOLE_API_URL=` in `urls.env` clears a lower-priority service value. A value in `docker/.env`, including an intentional empty value, still wins.
 
     <Note>
     Variables under the **Container variable mappings** comment in a `.defaults` file always copy their value from another setting. Setting them directly has no effect, even in `docker/.env`, so change the setting they copy from instead.
@@ -87,15 +132,17 @@ If a value doesn't come from any of these files, check two more places:
 
 ## Common Variables
 
-These URL variables configure the addresses of Dify's various services.
+Use [Configure Public URLs](#configure-public-urls) to change public addresses consistently across the web service, API, and workers.
 
-For single-domain deployments behind Nginx (the default Docker Compose setup), these can be left empty—the system auto-detects from the incoming request. Configure them when using custom domains, split-domain deployments, or a reverse proxy.
+Empty public URL values support same-origin browser requests. Email links and OAuth callbacks still need the absolute URLs called out below.
 
 ### CONSOLE_API_URL
 
 Default: (empty)
 
-The public URL of Dify's backend API. Set this if you use OAuth login (GitHub, Google), Notion integration, or any plugin that requires OAuth—these features need an absolute callback URL to redirect users back after authorization. Also determines whether secure (HTTPS-only) cookies are used.
+The public base URL for console API requests from the browser and links generated by the API, including provider and plugin icons. Browser requests use the current origin when this value is empty.
+
+Set an absolute URL for GitHub or Google OAuth login, Notion integration, and plugin OAuth callbacks. Secure cookies require both `CONSOLE_API_URL` and `CONSOLE_WEB_URL` to start with `https://`.
 
 Example: `https://api.console.dify.ai`
 
@@ -103,17 +150,15 @@ Example: `https://api.console.dify.ai`
 
 Default: `http://api:5001`
 
-The console API address the web frontend container uses for server-side requests, reaching the API directly over the internal Docker network rather than your public domain. Only the web frontend container uses this variable, not the Python backend; browser requests still go to `CONSOLE_API_URL`.
-
-If left empty, it falls back to `CONSOLE_API_URL`. Change it only if the API service is reachable at a different internal address.
+The console API address the web service uses for server-side requests. Docker loads its default from `docker/envs/core-services/web.defaults`. Set it in `docker/envs/core-services/web.env` if the API is reachable at a different internal address. Browser requests use `CONSOLE_API_URL`.
 
 ### CONSOLE_WEB_URL
 
 Default: (empty)
 
-The public URL of Dify's console frontend. Used to build links in all system emails (invitations, password resets, notifications) and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
+The public base URL of the console. Set an absolute URL for invitation and sign-in links, some password-reset links, and redirects after OAuth login.
 
-If empty, email links will be broken—even in single-domain setups, set this if you use email features.
+It supplies the CORS allowed origin only when `CONSOLE_CORS_ALLOW_ORIGINS` is absent. Docker's `api-worker.defaults` sets that variable to `*`, so changing `CONSOLE_WEB_URL` alone doesn't change the default Docker CORS policy.
 
 Example: `https://console.dify.ai`
 
@@ -121,7 +166,7 @@ Example: `https://console.dify.ai`
 
 Default: (empty)
 
-The API Base URL shown to developers in the Dify console—the URL they copy into their code to call the Dify API. If empty, auto-detects from the current request (e.g., `http://localhost/v1`). Set this to ensure a consistent URL when your server is accessible via multiple addresses.
+The public API base URL shown in the console for developers to copy. Dify appends `/v1` to this value. When empty, it builds the address from the incoming request. Set it when the server is reachable through several addresses but developers should use one.
 
 Example: `https://api.dify.ai`
 
@@ -129,7 +174,7 @@ Example: `https://api.dify.ai`
 
 Default: (empty)
 
-The backend API URL for the web app frontend (published apps). This variable is only used by the web frontend container, not the Python backend. If empty, the Docker image defaults to `http://127.0.0.1:5001`.
+The public API base URL used by published web apps. When empty, the web frontend sends requests to `/api` on the app's current origin.
 
 Example: `https://api.app.dify.ai`
 
@@ -137,7 +182,9 @@ Example: `https://api.app.dify.ai`
 
 Default: (empty)
 
-The public URL where published web apps are accessible. Required for the **Human Input node** in workflows—form links in email notifications are built as `{APP_WEB_URL}/form/{token}`. If empty, Human Input email delivery will not include valid form links.
+The public base URL for published web apps. Sharing links fall back to the incoming request's origin when this value is empty.
+
+Set an absolute URL for **Human Input** email notifications. An empty value produces invalid form links.
 
 Example: `https://app.dify.ai`
 

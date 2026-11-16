@@ -27,6 +27,8 @@ Docker Compose 从三类文件中读取 Dify 的设置。
       - `DIFY_AGENT_API_TOKEN` 和 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`：分别使用不同的强密钥。
       - `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY`：设为相同的值。两者不一致时，代码执行节点和模板转换节点会失败并返回 HTTP 401。
 
+    公开 URL 变量按 [配置公开 URL](#配置公开-url) 操作，选择适用于所用部署版本的共享文件。
+
     其他变量先在 `docker/envs/` 中搜索变量名，再按搜索结果处理：
 
     - **搜到一个 `.defaults` 文件**：编辑其第一条注释中写明的本地文件。该文件尚不存在时，先将 `.defaults` 文件复制为该文件名。
@@ -45,7 +47,7 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     如需恢复自带的默认值，删除该行或将其注释掉，不要只把值清空。`CELERY_WORKER_AMOUNT=` 这样的空赋值仍会用空值覆盖默认值；写在 `docker/.env` 中的空赋值还会让本地文件中的值失效。
   </Step>
   <Step title="应用修改">
-    在 `dify/docker` 中验证配置，并重建受影响的容器：
+    在 `dify/docker` 中验证配置，并重建受影响的容器。沿用该部署现有的 Compose 项目和选项，包括所用的 `-p`、`-f`、`--env-file` 和 profile：
 
     ```bash
     docker compose config --quiet
@@ -58,6 +60,46 @@ Docker Compose 从三类文件中读取 Dify 的设置。
   </Step>
 </Steps>
 
+### 配置公开 URL
+
+将 5 个公开 URL 设置在同一个共享文件中，确保浏览器请求和 API 生成的链接（包括模型供应商和插件图标链接）使用一致的地址。根据所用的部署文件选择对应的配置文件：
+
+<Tabs>
+  <Tab title="已发布的部署文件">
+    在 `docker/.env` 中设置需要自定义的 URL。1.19.0 版本不包含共享的 `urls.defaults` 和 `urls.env` 文件。
+  </Tab>
+  <Tab title="PR #46497（尚未发布）">
+    仅在使用 [PR #46497](https://github.com/langgenius/dify/pull/46497) 中的部署文件时按此步骤操作。该 PR 仍处于打开状态，尚未发布。
+
+    Web 服务、API、Celery Worker、Beat 和 KnowledgeFS Worker 会自动加载共享的 `docker/envs/core-services/urls.defaults` 文件。其中 5 个 URL 的默认值均为空，会覆盖镜像中的 localhost 值，并支持同源请求。
+
+    最小化的 `docker/.env` 已足够启动默认部署栈，`urls.env` 是可选文件。如需自定义 URL，编辑 `docker/envs/core-services/urls.env`。如果该文件不存在，从 `urls.defaults` 创建；在 `dify/docker` 中运行：
+
+    ```bash
+    cp envs/core-services/urls.defaults envs/core-services/urls.env
+    ```
+
+  </Tab>
+</Tabs>
+
+在所选的共享文件中设置公开访问的基础 URL，包含协议和所用的自定义端口。不要加上 `/console/api`、`/api` 或 `/v1`，Dify 会自动添加这些路径。例如，所有服务都通过同一个域名对外提供服务时：
+
+```dotenv
+CONSOLE_API_URL=https://dify.example.com:8443
+CONSOLE_WEB_URL=https://dify.example.com:8443
+SERVICE_API_URL=https://dify.example.com:8443
+APP_API_URL=https://dify.example.com:8443
+APP_WEB_URL=https://dify.example.com:8443
+```
+
+各服务使用不同的公开主机地址时，分别设置对应的值。即使使用同源请求，[通用变量](#通用变量) 中列出的邮件和 OAuth 功能仍需设置绝对 URL。
+
+按 [优先级](#优先级) 检查是否有其他值会覆盖修改，再用 [设置变量](#设置变量) 中的命令应用修改。
+
+通过公开地址打开控制台和一个已发布的应用，检查模型供应商和插件图标是否加载正常。
+
+如果地址仍不正确，查看 `docker compose config` 中是否有覆盖值。其输出包含密钥，需妥善保管。
+
 ### 优先级
 
 同一变量在多处设置时，服务最终使用哪个值，取决于该服务是否加载 `docker/.env`：
@@ -67,9 +109,12 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     API、WebSocket API、Worker、Beat、Web、代码执行沙箱、插件守护进程和 Agent 后端按以下顺序查找，采用第一个找到的值：
 
     1. `docker/.env`
-    2. 该服务的本地 `.env` 文件
-    3. 该服务的 `.defaults` 文件
-    4. 程序内置的默认值
+    2. `envs/core-services/urls.env` 中显式设置的公开 URL 值（使用尚未发布的 [PR #46497](https://github.com/langgenius/dify/pull/46497) 部署文件时，仅对 Web 服务、API 服务和 Celery Worker 生效）
+    3. 该服务的本地 `.env` 文件
+    4. 该服务的 `.defaults` 文件
+    5. 程序内置的默认值
+
+    使用该 PR 的部署文件时，不创建 `urls.env`，或从模板复制后保持不变，都会保留已有的服务覆盖值。在 `urls.env` 中显式设置 `CONSOLE_API_URL=` 这样的空赋值，会清除优先级更低的服务值。`docker/.env` 中的值仍优先，包括有意设置的空值。
 
     <Note>
     `.defaults` 文件中 **Container variable mappings** 注释下的变量，始终从另一项设置取值。直接设置它们不会生效，写在 `docker/.env` 中也一样；需要修改时，改它们取值的那项设置。
@@ -89,15 +134,17 @@ Docker Compose 从三类文件中读取 Dify 的设置。
 
 ## 通用变量
 
-这些 URL 变量用于配置 Dify 各服务的访问地址。
+按 [配置公开 URL](#配置公开-url) 操作，确保 Web 服务、API 和 Worker 的公开地址同步更新。
 
-对于 Nginx 后的单域名部署（默认 Docker Compose 配置），这些变量可以留空，系统会从请求中自动检测。当使用自定义域名、多域名部署或反向代理时，需要配置这些变量。
+公开 URL 值为空时，浏览器可发起同源请求。邮件链接和 OAuth 回调仍需要下文指明的绝对 URL。
 
 ### CONSOLE_API_URL
 
 默认值：（空）
 
-Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google）、Notion 集成或任何需要 OAuth 的插件，请设置此变量；这些功能需要绝对回调 URL 才能在授权后将用户重定向回来。此变量还决定是否使用安全（仅 HTTPS）Cookie。
+浏览器向控制台 API 发起请求时使用的公开基础 URL，也用于 API 生成的链接，包括模型供应商和插件图标链接。值为空时，浏览器请求使用当前页面的源。
+
+GitHub 或 Google OAuth 登录、Notion 集成和插件 OAuth 回调需要设置绝对 URL。安全 Cookie 要求 `CONSOLE_API_URL` 和 `CONSOLE_WEB_URL` 均以 `https://` 开头。
 
 示例：`https://api.console.dify.ai`
 
@@ -105,15 +152,15 @@ Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google�
 
 默认值：`http://api:5001`
 
-Web 前端容器在服务端发起请求时所使用的 Console API 地址，经由 Docker 内部网络直接访问，而非通过你的公网域名。此变量仅由 Web 前端容器使用，不影响 Python 后端；浏览器端请求仍使用 `CONSOLE_API_URL`。若留空，则回退到 `CONSOLE_API_URL`。仅当 API 服务的内部访问地址不同时才需修改。
+Web 服务在服务端发起请求时使用的控制台 API 地址。Docker 从 `docker/envs/core-services/web.defaults` 加载其默认值。如果 API 的内部访问地址不同，在 `docker/envs/core-services/web.env` 中设置。浏览器请求使用 `CONSOLE_API_URL`。
 
 ### CONSOLE_WEB_URL
 
 默认值：（空）
 
-Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、密码重置、通知）中的链接，以及 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
+控制台的公开基础 URL。邀请链接、登录链接、部分密码重置链接，以及 OAuth 登录后的重定向需要设置绝对 URL。
 
-如果为空，邮件链接将无法正常工作；即使在单域名部署中，使用邮件功能时也需要设置此变量。
+只有在未设置 `CONSOLE_CORS_ALLOW_ORIGINS` 时，此变量才提供 CORS 允许来源。Docker 的 `api-worker.defaults` 将该变量设为 `*`，因此仅修改 `CONSOLE_WEB_URL` 不会改变 Docker 默认的 CORS 策略。
 
 示例：`https://console.dify.ai`
 
@@ -121,7 +168,7 @@ Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、�
 
 默认值：（空）
 
-在 Dify 控制台中展示给开发者的 API Base URL，即他们复制到代码中用于调用 Dify API 的 URL。如果为空，将从当前请求自动检测（例如 `http://localhost/v1`）。当你的服务器可通过多个地址访问时，设置此变量以确保 URL 一致。
+控制台中展示给开发者复制使用的公开 API 基础 URL。Dify 会在此值后加上 `/v1`。值为空时，从收到的请求构建地址。如果服务器可通过多个地址访问，但希望开发者统一使用其中一个地址，设置此变量。
 
 示例：`https://api.dify.ai`
 
@@ -129,7 +176,7 @@ Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、�
 
 默认值：（空）
 
-Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前端容器使用，不影响 Python 后端。如果为空，Docker 镜像默认使用 `http://127.0.0.1:5001`。
+已发布 Web 应用使用的公开 API 基础 URL。值为空时，Web 前端向应用当前源下的 `/api` 发送请求。
 
 示例：`https://api.app.dify.ai`
 
@@ -137,7 +184,9 @@ Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前
 
 默认值：（空）
 
-已发布 Web 应用的公开访问 URL。工作流中的 **人工输入节点** 需要此变量；邮件通知中的表单链接以 `{APP_WEB_URL}/form/{token}` 格式构建。如果为空，人工输入邮件将不包含有效的表单链接。
+已发布 Web 应用的公开基础 URL。值为空时，分享链接回退到收到请求的源。
+
+使用 **人工介入** 邮件通知时，设置绝对 URL。空值会生成无效的表单链接。
 
 示例：`https://app.dify.ai`
 

@@ -97,6 +97,8 @@ docker compose version
 
 作用于整个部署的设置写在 `docker/.env` 中，包括 Compose profile、对外发布的端口、挂载路径、健康检查调度，以及 [安全加固](#安全加固) 中的共享凭据。
 
+使用自定义域名或为各服务配置不同的公开主机地址时，按 [配置公开 URL](/zh/self-host/deploy/configuration/environments#配置公开-url) 操作，确保 Web 服务、API 和 Worker 使用一致的地址。
+
 其他设置按服务分开存放。大多数服务会加载 `docker/envs/` 下自带的 `.defaults` 文件。不要改动这些文件，把修改写进注释里指明的本地 `.env` 文件。API、Worker 和定时任务共用的设置写在 `envs/core-services/api-worker.env` 中。
 
 例如，要将 Nginx 的请求体大小上限提高到 `200M`，在 `dify/docker` 中执行以下步骤：
@@ -161,7 +163,7 @@ docker compose version
 
 在 [Dify releases](https://github.com/langgenius/dify/releases) 选择目标版本，并先阅读该版本的升级说明。
 
-下面的每条 Compose 命令都要沿用该部署现有的项目名称和 Compose 文件（包括所用的 `-p`、`-f` 选项或 `COMPOSE_PROJECT_NAME`），这样原有的命名卷才会继续挂载。
+下面的每条 Compose 命令都要沿用该部署现有的项目名称和选项。所用的 `-p`、`-f`、`--env-file`、profile 或 `COMPOSE_PROJECT_NAME` 都要保持一致，以保留原有的命名卷挂载，并继续加载相同的配置。
 
 <Steps>
   <Step title="备份部署">
@@ -201,12 +203,15 @@ docker compose version
 
     保留现有数据库，以及知识库仍在使用的每个向量数据库，连同它们的连接设置和 Compose profile。修改 `DB_TYPE` 或 `VECTOR_STORE` 不会迁移数据。
 
-    最后，将新的 `docker compose config` 输出与之前保存的副本对比，检查凭据、数据卷路径、profile 和你自定义的设置。
+    如果使用尚未发布的 [PR #46497](https://github.com/langgenius/dify/pull/46497) 中的部署文件，重建容器前先查看 [迁移旧版共享设置](#迁移旧版共享设置)。
+
+    在 `dify/docker` 中，将新的 `docker compose config` 输出与之前保存的副本对比，检查凭据、数据卷路径、profile 和你自定义的设置。
   </Step>
   <Step title="应用并检查升级结果">
     在 `dify/docker` 中运行：
 
     ```bash
+    docker compose config --quiet
     docker compose pull
     docker compose up -d
     docker compose ps --all
@@ -215,3 +220,25 @@ docker compose version
     持续运行的服务应显示 `Up` 或 `healthy`，`init_permissions` 应显示 `Exited (0)`。然后打开 Dify，试用依赖自定义设置的功能。
   </Step>
 </Steps>
+
+### 迁移旧版共享设置
+
+仅在使用尚未发布的 [PR #46497](https://github.com/langgenius/dify/pull/46497) 中的部署文件时执行此迁移。1.19.0 版本不包含此变更。
+
+<Info>
+[PR #45376](https://github.com/langgenius/dify/pull/45376) 将 `shared.defaults` 重命名为 `api-worker.defaults`，同时保留了对 `shared.env` 的兼容。PR #46497 移除了此兼容，插件守护进程也不再兼容该文件。
+</Info>
+
+如果 `docker/envs/core-services/shared.env` 不存在，跳过此迁移。否则，先保留其中的设置，再继续升级：
+
+1. 备份 `docker/envs/core-services/` 下现有的 `shared.env`、`api-worker.env` 和 `urls.env` 文件，以及 `docker/.env` 和其他本地环境变量覆盖设置。
+
+2. 如果 `api-worker.env` 不存在，将 `shared.env` 重命名为 `api-worker.env`。如果两个文件都存在，只复制 `api-worker.env` 中缺少的键。对于重复的键，保留 `api-worker.env` 中的现有值，包括有意设置的空值。
+
+3. 将 5 个公开 URL 设置移到 `urls.env` 中；如果这些设置已在 `docker/.env` 中共享，则保留在原处。变量列表以及如何创建 `urls.env` 而不覆盖已有文件，详见 [配置公开 URL](/zh/self-host/deploy/configuration/environments#配置公开-url)。
+
+   删除 `api-worker.env` 和各服务 `.env` 文件中重复的公开 URL 定义。其他 API 和 Worker 设置保留在 `api-worker.env` 中，`SERVER_CONSOLE_API_URL` 保留在 `web.env` 中。
+
+4. 保留设置后，归档或删除剩余的 `shared.env`。使用这些部署文件时，即使保留 `shared.env`，它也不会生效。
+
+返回上方的 **检查配置** 步骤，比对解析后的设置，再应用配置。在 `dify/docker` 中，沿用该部署现有的 Compose 项目和选项，运行 `docker compose up -d` 应用配置。`docker compose restart` 会沿用原有的环境变量。
