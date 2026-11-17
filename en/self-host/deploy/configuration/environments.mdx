@@ -1210,6 +1210,21 @@ For both `VECTOR_STORE=elasticsearch` and `VECTOR_STORE=elasticsearch-ja`, custo
 | `TOP_K_MAX_VALUE` | `10` | Maximum value users can set for the `top_k` parameter in knowledge base retrieval (how many results to return per search). |
 | `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | Maximum number of segments per dataset API request. `0` means unlimited. |
 
+#### File Security Scan
+
+To let knowledge bases scan uploaded files for malware, set `FILE_SCAN_ENABLED` to `true`. On Docker Compose, set this section's variables in `docker/envs/core-services/api-worker.env`, which both the API and the worker load.
+
+To reach a scanner on a private address, such as a **Custom Endpoint**, also let it through the [SSRF proxy](#ssrf-proxy) with `SSRF_PROXY_ALLOW_PRIVATE_IPS` or `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`. For `https`, the proxy allows only port 443.
+
+Once the variables are set, add a scanner and turn on scanning in the knowledge bases that need it. See [Scan Uploaded Files for Malware](/en/self-host/use-dify/knowledge/file-security-scan) for the steps.
+
+| Variable | Default | Description |
+|---|---|---|
+| `FILE_SCAN_ENABLED` | `false` | Set to `true` to offer malware scanning for knowledge base uploads.<br/><br/>**File Security Scan** then appears in **Integrations**, and knowledge bases other than external ones gain a **File security scan** section in their settings. Files are scanned only in knowledge bases where scanning is turned on.<br/><br/>Set it for the worker as well as the API. A worker without it indexes uploaded files unscanned, and no error appears.<br/><br/>Setting it back to `false` stops scanning in every knowledge base. Each knowledge base keeps its scan settings for when you turn it on again. |
+| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Read timeout in seconds for each scan request Dify sends to a scanning service. Must be between 5 and 3600.<br/><br/>In a Docker Compose deployment, scan requests pass through the SSRF proxy, which closes a request after 2 minutes without a response, whatever this value is. The 2-minute limit is set in the proxy's Squid configuration, `docker/ssrf_proxy/squid-common.conf.template`, not by an environment variable. To fail sooner, set this value below 120.<br/><br/>Without that proxy, raise the timeout to give a slow service longer to answer, or lower it to fail sooner.<br/><br/>A request that times out, or that the proxy closes, counts as the scanner being unavailable, and `FILE_SCAN_MAX_ATTEMPTS` decides whether Dify tries again. |
+| `FILE_SCAN_MAX_ATTEMPTS` | `3` | How many times Dify tries to scan a file when the scanning service times out, can't be reached, returns a server error, or is still scanning the file, counting the first try. Invalid credentials, used-up quota, and responses Dify can't parse aren't retried.<br/><br/>After the last try, the knowledge base's **When the scanner is unavailable** setting decides what happens to the file.<br/><br/>Must be between 1 and 5. After a failure, Dify waits 2, 4, 6, then 8 seconds between tries. Raise this value to ride out short outages of the scanning service, or lower it to reach that setting sooner. |
+| `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` | `24` | How many hours Dify reuses a clean verdict for identical file content instead of scanning it again.<br/><br/>A verdict is reused only under the same scanner in the same workspace. An infected verdict is always reused, so the same file is blocked again at once.<br/><br/>Must be at least 1, so reuse can't be turned off. Lower it so repeated content is scanned again sooner, or raise it to send fewer requests to the scanning service. |
+
 #### Annotation Import
 
 | Variable | Default | Description |
@@ -1881,8 +1896,8 @@ These configure the Squid-based SSRF proxy container that blocks requests to int
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | Core dump directory. |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | Port the SSRF proxy listens on to reverse-proxy egress to the sandbox service. |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | Hostname of the sandbox service the SSRF proxy forwards to. |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through for HTTP Request nodes, tools, and **Sync from website** with a self-hosted Firecrawl or WaterCrawl server. For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address. A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS`, and set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through. They apply to every request that goes through the proxy, such as HTTP Request nodes, tools, **Sync from website** with a self-hosted Firecrawl or WaterCrawl server, and **Custom Endpoint** scanners for [File Security Scan](#file-security-scan). For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address, such as the host of a **Custom Endpoint** scanner for [File Security Scan](#file-security-scan). A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS`, and set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | Default overall timeout in seconds for proxied requests. |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | Default connection timeout in seconds. |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | Default read timeout in seconds. |
