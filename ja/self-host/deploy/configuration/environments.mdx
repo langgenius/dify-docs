@@ -91,8 +91,6 @@ Docker Compose は、3 種類のファイルから Dify の設定を読み込み
 
 これらの URL 変数は、Dify の各サービスのアドレスを設定します。
 
-Nginx 背後のシングルドメインデプロイ（デフォルトの Docker Compose 構成）の場合、これらは空のままで構いません。システムがリクエストから自動検出します。カスタムドメイン、マルチドメインデプロイ、またはリバースプロキシを使用する場合に設定してください。
-
 ### CONSOLE_API_URL
 
 デフォルト値：（空）
@@ -109,11 +107,13 @@ Web フロントエンドコンテナがサーバーサイドでリクエスト�
 
 ### CONSOLE_WEB_URL
 
-デフォルト値：（空）
+デフォルト値：空（Docker Compose では `http://127.0.0.1:3000`）
 
-Dify コンソールフロントエンドの公開 URL。すべてのシステムメール（招待、パスワードリセット、通知）のリンク構築、および OAuth ログイン後のコンソールへのリダイレクトに使用されます。`CONSOLE_CORS_ALLOW_ORIGINS` が設定されていない場合、デフォルトの CORS 許可オリジンとしても機能します。
+メンバーが Dify コンソールを開くときの URL です。招待やパスワードリセットなどのシステムメールのリンク作成と、OAuth ログイン後のコンソールへのリダイレクトに使用されます。`CONSOLE_CORS_ALLOW_ORIGINS` が設定されていない場合、デフォルトの CORS 許可オリジンとしても機能します。
 
-空の場合、メールリンクが正しく機能しません。シングルドメインデプロイでも、メール機能を使用する場合はこの変数を設定してください。
+新しい人間の入力ノードは、ワークスペースメンバー向けのリクエストリンクをこの URL から作成します。メールでも IM（インスタントメッセージングアプリ）のリンクメッセージでも、リンクは `{CONSOLE_WEB_URL}/human-input/{token}` の形式です。
+
+メンバーが社内ネットワークで Dify を使用する場合、このアドレスにインターネットからアクセスできる必要はありません。
 
 例：`https://console.dify.ai`
 
@@ -135,9 +135,14 @@ Web アプリフロントエンド（公開アプリ）のバックエンド API
 
 ### APP_WEB_URL
 
-デフォルト値：（空）
+デフォルト値：空（Docker Compose では `http://127.0.0.1:3000`）
 
-公開 Web アプリのアクセス URL。ワークフローの **人間の入力ノード** に必要です。メール通知のフォームリンクは `{APP_WEB_URL}/form/{token}` 形式で構築されます。空の場合、人間の入力メールに有効なフォームリンクが含まれません。
+公開 Web アプリのアクセス URL。人間の入力ノードも、この URL からリクエストリンクを作成します。
+
+- **新しい人間の入力ノード**：外部連絡先へのリクエストのリンク先は `{APP_WEB_URL}/form-v2/{token}` です。ノードに入力したメールアドレスや、変数から取得したメールアドレスへのリクエストも同じです。
+- **旧バージョンの人間の入力ノード**：メールのリンクは `{APP_WEB_URL}/form/{token}` の形式です。
+
+外部の受信者がこのアドレスにアクセスできる必要があります。
 
 例：`https://app.dify.ai`
 
@@ -147,7 +152,7 @@ Web アプリフロントエンド（公開アプリ）のバックエンド API
 
 Webhook およびインテグレーショントリガーエンドポイントのアクセス URL。外部システムがこのアドレスを使用してワークフローを呼び出します。Dify はトリガーコールバック URL を `{TRIGGER_URL}/triggers/webhook/{id}` の形式で構築し、コンソールに表示します。
 
-外部システムからトリガーが動作するようにするには、それらがアクセスできるパブリックドメインまたは IP アドレスを指定する必要があります。
+人間の入力ノードのリクエストをカードで表示する IM も、ボタンのクリックをこのアドレスに送信します。送信先は、**設定** > **チャネル** にあるコールバック URL です。
 
 ### FILES_URL
 
@@ -1264,11 +1269,11 @@ Sentry はエラー追跡とパフォーマンス監視を提供します。各�
 
 ### メール設定
 
-Dify はアカウント招待、パスワードリセット、ログインコード、人間の入力ノード通知のメールを送信します。サポートされる 3 つのプロバイダーのいずれかを設定してください。メールリンクには `CONSOLE_WEB_URL` の設定が必要です。 [共通変数](#console_web_url) を参照してください。
+Dify は、アカウントの招待、パスワードのリセット、ログインコード、人間の入力ノードからのリクエストをメールで送信します。サポートされる 3 つのプロバイダーのいずれかを設定してください。これらのメールのリンクは [`CONSOLE_WEB_URL`](#console_web_url) と [`APP_WEB_URL`](#app_web_url) から作成されるため、この 2 つも設定してください。
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | メールプロバイダー：`resend`、`smtp`、または `sendgrid`。 |
+| `MAIL_TYPE` | （空） | メールプロバイダー：`resend`、`smtp`、または `sendgrid`。 |
 | `MAIL_DEFAULT_SEND_FROM` | （空） | すべての送信メールのデフォルト「From」アドレス。必須です。 |
 
 <AccordionGroup>
@@ -1482,6 +1487,19 @@ Dify からのすべてのアウトバウンド HTTP リクエスト（HTTP ノ�
 | `MAX_TOOLS_NUM` | `10` | エージェントが同時に使用できる最大ツール数。 |
 | `MAX_ITERATIONS_NUM` | `99` | エージェント実行ごとの最大推論イテレーション数。無限エージェントループを防止します。 |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+デフォルト値：`604800`（7 日）
+
+ワークフローの実行が人の応答を待てる時間（秒）です。この時間を過ぎると、Dify は実行を停止します。
+
+時間の数え方は、ノードによって異なります。
+
+- **新しい人間の入力ノード**：実行の開始時点から数え、実行内のすべての人間の入力ノードで共有されます。変更は、変更後に作成されたリクエストに適用されます。
+- **旧バージョンの人間の入力ノード**：フォームの作成時点から、ノードごとに個別に数えます。変更は、すでに応答待ちのフォームにも適用されます。
+
+承認に 1 週間以上かかる場合は値を上げ、応答待ちの実行を早めに終わらせたい場合は値を下げます。値には正の整数を指定してください。`0` や空の値を指定すると、API、ワーカー、Beat の各サービスが起動しなくなります。
+
 ## Web フロントエンドサービス
 
 これらの変数は Next.js Web フロントエンドコンテナのみで使用されます。Python バックエンドには影響しません。
@@ -1501,9 +1519,23 @@ Dify からのすべてのアウトバウンド HTTP リクエスト（HTTP ノ�
 
 Go to Anything コマンドパレットの `/create` と `/refine` コマンドを有効にします。これらは自然言語の説明から Workflow や Chatflow アプリを生成・修正します。`false` に設定すると非表示になります。
 
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+デフォルト値：`true`
+
+`false` に設定すると、新しい [人間の入力](/ja/self-host/use-dify/nodes/human-input) ノードが、[Contacts](/ja/self-host/use-dify/workspace/contacts) や [チャネル](/ja/self-host/use-dify/workspace/channels/overview) とともに無効になります。有効な間は、ワークスペースのオーナーと管理者に、メインナビゲーションの **Contacts** と **設定** の **チャネル** が表示されます。
+
+新しい人間の入力ノードには、次の設定も必要です。
+
+- [`CONSOLE_WEB_URL`](#console_web_url) と [`APP_WEB_URL`](#app_web_url)：受信者がアクセスできるアドレスに設定
+- [メール](#メール設定)：メールでリクエストを送る場合に設定
+- [`TRIGGER_URL`](#trigger_url)：リクエストをカードで表示する IM の場合に、IM からアクセスできるアドレスに設定
+
+新しいノードを使い始めた後でオフにすると、公開済みのワークフローは引き続き実行され、リクエストも送信されます。ただし、リクエストのリンクを開くと「not found」ページが表示されます。新しいノードを含むワークフローは、エディターから実行することも公開することもできなくなります。
+
 ## 新しい Agent
 
-新しい Agent は、Docker Compose デプロイで追加サービス（Agent バックエンド、サンドボックス、サンドボックス専用の外向きプロキシ）として動作します。[`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](#dify_agent_local_sandbox_auth_token) を設定すれば、いずれも `docker compose up` で起動します。この機能はデフォルトで有効で、設定の大部分は既存の Compose の値から導出されるため、通常は以下の変数だけを確認すれば十分です。
+新しい Agent は、Docker Compose デプロイで追加サービスとして動作します。追加サービスは、Agent バックエンド、サンドボックス、サンドボックス専用の外向きプロキシです。[`DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`](#dify_agent_local_sandbox_auth_token) を設定すれば、いずれも `docker compose up` で起動します。この機能はデフォルトで有効です。設定の大部分は既存の Compose の値から導出されるため、通常は以下の変数だけを確認すれば十分です。
 
 ### DIFY_AGENT_SERVER_SECRET_KEY
 
@@ -1611,7 +1643,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_RUN_RETENTION_SECONDS` | `7200` | 各 Agent 実行のレコードとイベントストリームを Redis に保持する秒数。最後の書き込みから数える（デフォルトは 2 時間）。値を下げると Redis メモリを早く解放できるが、切断後にイベントを再生できる期間も短くなる。 |
 | `DIFY_AGENT_RUN_EVENT_STREAM_MAX_LENGTH` | `5000` | 各 Agent 実行の Redis ストリームに保持するイベント数の上限（概算）。値を下げると、1 回の実行が使う Redis メモリを減らせる。<br/><br/>上限に達すると、新しいイベントの書き込み時に古いイベントから削除する。削除したイベントは切断後に再生できない。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` | `true` | モデルが連続して出力するテキスト差分をまとめて、Redis に書き込み、配信する。有効のままにすると、Redis への書き込み回数とイベント数を減らせる。<br/><br/>差分を個別に配信するには `false` に設定する。ツール呼び出しなど、テキスト以外のイベントの内容と順序は変わらない。 |
-| `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | まとめたテキスト差分を配信する間隔の目安（ミリ秒）。値を下げるとテキストの更新頻度が上がる。上げると、1 回の配信量が増え、配信回数が減る。<br/><br/>厳密な時間制限ではない。`DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` に達すると早めに配信する。最小値は 1。結合を無効にするには `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` を `false` にする。 |
+| `DIFY_AGENT_STREAM_TEXT_DELTA_FLUSH_INTERVAL_MS` | `100` | まとめたテキスト差分を配信する間隔の目安（ミリ秒）。値を下げるとテキストの更新頻度が上がる。上げると、1 回の配信量が増え、配信回数が減る。<br/><br/>厳密な時間制限ではなく、`DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` に達すると早めに配信する。最小値は 1。結合を無効にするには `DIFY_AGENT_STREAM_TEXT_DELTA_COALESCING_ENABLED` を `false` にする。 |
 | `DIFY_AGENT_STREAM_TEXT_DELTA_MAX_CHARS` | `4096` | まとめたテキスト差分を、フラッシュ間隔を待たずに配信する文字数のしきい値。値を下げると、小さなまとまりで早めに配信できる。<br/><br/>差分は分割せずに追加するため、文字数がこの値を超える場合がある。最小値は 1。 |
 | `DIFY_AGENT_RUN_TIMEOUT_SECONDS` | `3600` | Agent 実行 1 回のモデルとツール処理に適用される制限時間。超過した実行は `agent_run_limit_exceeded` で失敗する。<br/><br/>API 側の `APP_MAX_EXECUTION_TIME` と `WORKFLOW_MAX_EXECUTION_TIME`（デフォルト `3600`）をこの値より低く設定すると、実行が先に停止される。`local` バックエンドでは 1 時間を超える値も有効になる。より長い実行を許可するには、この値と API 側の 2 つの制限をすべて引き上げる。`e2b` バックエンドではサンドボックス側の `DIFY_AGENT_E2B_ACTIVE_TIMEOUT_SECONDS`（上限 3600）も適用されるため、E2B での実行は 1 時間が上限のまま。<br/><br/>旧変数 `AGENT_BACKEND_RUN_TIMEOUT_SECONDS` に代わる設定。旧変数は読み込まれなくなった。 |
 | `AGENT_BACKEND_STREAM_READ_TIMEOUT_SECONDS` | `30` | Agent バックエンドへの SSE 接続 1 本あたりの読み取りタイムアウト。 |
@@ -1632,7 +1664,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `DIFY_AGENT_STUB_API_BASE_URL` | `http://agent_backend:5050/agent-stub` | サンドボックス内の Agent が Agent バックエンドを呼び出すためのアドレス。同梱の `local` サンドボックスではデフォルトのままにする。<br/><br/>`openshell` バックエンドでは、サンドボックスが Compose のサービス名を解決できない。サンドボックスから到達でき、Agent バックエンドの `/agent-stub` パスにルーティングされるアドレスを設定する。<br/><br/>ポート 5050 は Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って、公開するのはこのパスだけにする。 |
 | `DIFY_AGENT_SANDBOX_FILES_BASE_URL` | `http://api:5001` | サンドボックス内の Agent がファイル転送に使う Dify API アドレス。Docker Compose ではデフォルトのまま使う。リモートサンドボックスバックエンドでは、公開されている Dify アドレスを指定する。 |
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API が Agent のサンドボックスからファイルを取得する際の待ち時間。超過すると転送は失敗する。Agent 側の `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` より高く保つこと。 |
-| `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | home snapshot の転送を伴う Agent バックエンド呼び出し（スナップショットの取得・削除、スナップショットを復元する実行の開始）を API が待つ時間。<br/><br/>home 環境が大きい Agent でビルドの適用や実行開始が失敗する場合は、値を大きくしてください。 |
+| `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API が Agent バックエンドの呼び出しを待つ時間。対象は、home snapshot の転送を伴う呼び出し（スナップショットの取得・削除、スナップショットを復元する実行の開始）。<br/><br/>home 環境が大きい Agent でビルドの適用や実行開始が失敗する場合は、値を大きくしてください。 |
 | `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | そのファイルを出力するサンドボックスコマンドの実行時間の上限。デフォルトは API 側のタイムアウトより低く、Agent 自身のエラーが先に表面化するようにしている。 |
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | サンドボックス内の Agent が Dify にアップロードする 1 ファイルの上限サイズ（MiB）。返信のために生成したファイルなどが対象。 |
 | `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | カーネルレベルの Landlock でサンドボックスが読み書きできるパスを制限する。Landlock を有効にした Linux 5.13 以降が必要。1.18.0 以降、サンドボックスは Landlock を適用できない場合にコマンドの実行をすべて拒否する。`docker/envs/core-services/local-sandbox.env` で設定する。`.env` の値はサンドボックスコンテナには渡されない。 |
@@ -1699,7 +1731,7 @@ OpenShell に切り替えるには、次の手順を実行します：
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS クライアント秘密鍵の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
 | `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | TLS ではなく平文の gRPC でゲートウェイに接続し、TLS のパスは使わない。Bearer トークンを設定している場合は、この接続でも送信される。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
-| `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent バックエンドがサンドボックスを作成・管理する OpenShell ワークスペース。ゲートウェイ上の名前空間であり、Dify のワークスペースではない。 |
+| `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent バックエンドがサンドボックスを作成・管理する OpenShell ワークスペース。ゲートウェイ上の名前空間で、Dify のワークスペースとは異なる。 |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | ゲートウェイが各サンドボックス用に起動するコンテナイメージ。デフォルトは、OpenShell セットアップガイドのビルドコマンドが生成するタグ。<br/><br/>Dify を動かす Docker デーモンだけでなく、ゲートウェイのコンピュートドライバーからも利用できる必要がある。ゲートウェイの Docker デーモンにイメージを読み込むか、ゲートウェイがプルできるレジストリにプッシュして、その参照を指定する。<br/><br/>明示的に設定すること。どの env ファイルでも設定しない場合、Agent バックエンドは `langgenius/dify-agent-local-sandbox:latest` にフォールバックする。このイメージは古い可能性があり、その場合は OpenShell で起動できない。 |
 | `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | `openshell` バックエンドでは必須。ゲートウェイのコンピュートドライバーがすべてのサンドボックスに適用する JSON。共有ボリュームを `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` にマウントする必要がある。形式はドライバーによって異なる。<br/><br/>JSON が不正、または空のオブジェクトだと Agent バックエンドは起動しない。Dify はマウント自体を確認しないため、ボリュームが別のパスにマウントされていても Agent バックエンドは起動する。マウント先は必ず再確認すること。<br/><br/>Docker ドライバーの例（ローカル開発などのシングルテナント構成向け）：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
 | `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 各サンドボックス内で共有ボリュームをマウントする場所。`DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` のマウント先と一致させる。Agent のビルドチャットで **適用** をクリックするたびに、Agent の永続ファイルがここに保存される。<br/><br/>絶対パスでなければ、Agent バックエンドは起動しない。 |
@@ -1978,7 +2010,7 @@ Dify は Celery Beat を使用して、設定可能なスケジュールでバ�
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | ワークフロー実行レコードの自動クリーンアップを有効化。 |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | ベクトルデータベースプーリング用に TiDB Serverless クラスターを事前作成。 |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | TiDB Serverless クラスターのステータスを定期的に更新。 |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 期限切れの人間の入力フォームを確認し、タイムアウトしたワークフローを再開または停止します。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 期限切れの人間の入力フォームを確認し、タイムアウトしたワークフローを再開または停止する。オフにすると、タイムアウトした実行は一時停止したままになる。ただし、期限を過ぎた応答は引き続き受け付けられない。 |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 期限切れの人間の入力フォームを確認する頻度（分）。 |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 会話削除のセーフティネット。削除された会話は即座に見えなくなり、メッセージと会話中にツールが生成したファイルはバックグラウンドジョブが削除します。エンドユーザーがアップロードしたファイルは保持されます。<br/><br/>このタスクは、クリーンアップが実行されなかった会話を定期的に再処理し、データの残留を防ぎます。 |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | タスクの実行頻度（分）。 |

@@ -201,6 +201,19 @@ Role names are not i18n strings: the members page shows the names the members AP
 | Editor | 编辑者 | エディター | |
 | Normal | 普通成员 | メンバー | zh 普通成员 keeps the role apart from 成员, any workspace member. |
 
+### Human Input and IM
+
+| English | Chinese | Japanese | Notes |
+|:--------|:--------|:---------|:------|
+| IM | IM | IM | Instant messaging app connected in **Channels** (Slack, Feishu/Lark, Microsoft Teams, DingTalk, WeCom). Spell it out as "IM (instant messaging app)" at its first mention on a page. |
+| IM identity | IM 身份 | IM アカウント | A person's account in the connected IM, bound to a workspace contact. zh follows the UI ("绑定 IM 身份"); ja has no UI string at dify 803f5d3d9c. |
+| bind / binding | 绑定 | バインド | Pairing an IM identity with a contact, by a sync or by hand. ja follows the UI ("IM バインド"). |
+| external contact | 外部联系人 | 外部連絡先 | Contact outside the workspace, reached by email only. zh follows the UI ("添加外部联系人"); the ja UI shows only 外部. |
+| card | 卡片 | カード | A request shown as an interactive form inside the IM, answered there. |
+| link message | 链接消息 | リンクメッセージ | A request sent as a message with a link to the form, answered in Dify. On the DingTalk and WeCom pages, the body says *a text message with a link* (zh 带链接的文本消息, ja リンク付きのテキストメッセージ), since that's all members get there. On the DingTalk page, never use 链接消息 (zh) or リンクメッセージ (ja): DingTalk uses that name for a different message type. |
+| new Human Input node | 新版人工介入节点 | 新しい人間の入力ノード | The node behind the IM features. Follows the UI's migration wording. |
+| old Human Input node | 旧版人工介入节点 | 旧バージョンの人間の入力ノード | The earlier node; still available. Follows the UI's migration wording. |
+
 ## UI Labels
 
 Terms in this section must match the Dify product interface exactly. Record the string stored at the key, even when the UI changes its case on screen (Web apps shows as WEB APPS). When these terms appear **bolded** in documentation, translations MUST use the corresponding UI string from the product. Add a row only after confirming the key's value is the rendered label at its usage site, not an aria-label, tooltip, or placeholder.
@@ -218,6 +231,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Integrations | 集成 | 連携 | navigation.mainNav.integrations | Main nav label; the hub for model providers, tools, triggers, and other extensions. Renamed from "Plugins" in v1.15.0. A click path that starts from the main nav uses this label (ja 連携, not the hub header's 統合). |
 | Tools | 工具 | ツール | navigation.menus.tools | Integrations hub sidebar group that holds Tool Plugin, MCP, Workflow as Tool, and Swagger API as Tool; not a main nav item |
 | Skills | Skills | Skills | navigation.mainNav.skills | Main navigation label for the workspace skill library; English in all locales. The page title (`skill.skillManagement.title`) is also "Skills" in every locale since dify #41242. |
+| Contacts | 联系人 | Contacts | contacts.directory.title | Main nav item and page title for the workspace contact directory used by Human Input; owners and admins only. ja-JP has no string at dify 96b1b20c76, so the UI falls back to English |
 
 ### App Detail Tabs
 
@@ -294,6 +308,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Usage Priority | 使用优先级 | 使用優先順位 | model-provider.modelProvider.card.usagePriority | New in v1.13.1. Determines fallback order between API Key and AI credits. Cloud only, for providers that AI credits cover; it sits in the popover the provider card's button opens |
 | API Key | API Key | API キー | model-provider.modelProvider.card.apiKeyOption | New in v1.13.1. Model provider credential option alongside AI credits. |
 | Add API Key | 添加 API 密钥 | API キーを追加 | model-provider.modelProvider.auth.addApiKey | Model provider card button until the provider has a key, then **Configure**. The popover it opens holds a second **Add API Key** that opens the key form. Data sources and tool plugins use plugin.auth.addApi |
+| Channels | 渠道 | チャネル | contacts.imPlatform.title | Settings tab where owners and admins connect the workspace's IM for Human Input requests |
 
 ### Integrations Hub
 
@@ -324,6 +339,25 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | Only selected | 仅选定 | 選択されたもののみ | plugin.autoUpdate.upgradeMode.partial | Scope option; the key sits under upgradeMode, not scopeMode |
 | Endpoints | API 端点 | エンドポイント | plugin.detailPanel.endpoints | Section of an integration's detail panel, shown when the integration declares endpoints. The en UI renders ENDPOINTS |
 | Add API Key | 添加 API Key | APIキーを追加してください | plugin.auth.addApi | Credential button for data sources (**Configure** menu) and for tool plugins that also offer OAuth. Model providers use model-provider.modelProvider.auth.addApiKey. REVIEW: ja is a request sentence; ja docs write API キーを追加 |
+
+### Channels
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Connect | 连接 | 接続 | contacts.imPlatform.action.connect | Button on an IM's card in **Channels**, and the connect dialog's submit button for IMs without callbacks |
+| Replace | 替换 | 交換する | contacts.imPlatform.action.replace | Button on another IM's card when one is already connected |
+| Sync now | 立即同步 | 今すぐ同期 | contacts.imPlatform.action.syncNow | Reads the IM's member directory and binds members by email |
+| View details | 查看详情 | 詳細を見る | contacts.imPlatform.action.viewDetails | Opens the last sync's results |
+| Test connection | 测试连接 | 接続をテスト | contacts.imPlatform.action.testConnection | Button in the IM connect dialog |
+| App credentials | 应用凭据 | アプリの認証情報 | contacts.imPlatform.bindingDialog.credentialsStep | First step of the connect dialog for IMs with callbacks |
+| Configure callbacks | 配置回调 | コールバックを設定 | contacts.imPlatform.bindingDialog.callbackStep | Second step of the connect dialog for IMs with callbacks |
+| Callback URL | 回调 URL | コールバック URL | contacts.imPlatform.bindingDialog.callback | Address the IM app sends button clicks to |
+| Save and continue | 保存并继续 | 保存して続行 | contacts.imPlatform.bindingDialog.saveAndContinue | Button that saves the credentials step |
+| Added | 新增 | 追加済み | contacts.imPlatform.details.filter.added | Sync result tab |
+| Not matched | 未匹配 | 一致なし | contacts.imPlatform.details.filter.not_matched | Sync result tab |
+| Failed | 失败 | 失敗 | contacts.imPlatform.details.filter.failed | Sync result tab |
+| Removed | 已移除 | 削除済み | contacts.imPlatform.details.filter.removed | Sync result tab |
+| Skipped | 已跳过 | スキップ | contacts.imPlatform.details.filter.skipped | Sync result tab |
 
 ### Billing
 
@@ -511,6 +545,32 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 | Make a copy | 创建副本 | コピーを作成 | workflow-agent.nodes.agent.roster.makeCopy | New Agent roster action |
 | New output | 新建输出 | 新しい出力 | workflow-agent.nodes.agent.outputVars.newOutput | New Agent surface |
 | Output Routes | 输出路由 | 出力ルート | workflow.nodes.agent.outputRoutes.title | New Agent surface |
+
+### Human Input Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Recipients | 收件人 | 受信者 | workflow.nodes.humanInputV2.recipients.title | New Human Input node panel section |
+| Initiator | 发起人 | 開始者 | workflow.nodes.humanInputV2.recipients.type.initiator | Recipient option for the person who started the run |
+| Message template | 消息模板 | メッセージテンプレート | workflow.nodes.humanInputV2.template.title | New Human Input node panel section |
+| Insert Request URL | 插入请求 URL | リクエスト URL を挿入 | workflow.nodes.humanInputV2.template.insertRequestURL | Button in the message template body |
+| Test message | 测试消息 | メッセージをテスト | workflow.nodes.humanInputV2.template.test | Button in Message template; opens the test area |
+| Test channel | 测试渠道 | テストチャネル | workflow.nodes.humanInputV2.template.testChannel | Channel picker in the Test message area |
+| Save and test | 保存并测试 | 保存してテスト | workflow.nodes.humanInputV2.template.saveAndTest | Button that sends the test message |
+| Debug Mode | 调试模式 | デバッグモード | workflow.nodes.humanInputV2.debug.title | New Human Input node switch; the old node's email Debug Mode is a different key |
+| Migrate now | 立即迁移 | 今すぐ移行 | workflow.nodes.humanInputMigration.action.migrateNow | Banner and block-selector action that converts old Human Input nodes |
+| Form Content | 表单内容 | フォームコンテンツ | workflow-human-input.nodes.humanInput.formContent.title | Human Input node panel section (old and new node) |
+| Save Response As | 保存响应为 | レスポンスを次の名前で保存 | workflow-human-input.nodes.humanInput.insertInputField.saveResponseAs | Field name box in the Insert Input Field dialog |
+| Pre-populate Field | 预填充字段 | フィールドを事前入力 | workflow-human-input.nodes.humanInput.insertInputField.prePopulateField | Default-value box in the Insert Input Field dialog; prose may say "pre-fill" |
+| User Actions | 用户操作 | ユーザーアクション | workflow-human-input.nodes.humanInput.userActions.title | Human Input node panel section for the buttons |
+
+### Loop Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Loop Variables | 循环变量 | ループ変数 | workflow-logic.nodes.loop.loopVariables | Variables that carry over from one round to the next |
+| Loop Termination Condition | 循环终止条件 | ループ終了条件 | workflow-logic.nodes.loop.breakCondition | |
+| Maximum Loop Count | 最大循环次数 | 最大ループ回数 | workflow-logic.nodes.loop.loopMaxCount | |
 
 ### Agent Configure
 
