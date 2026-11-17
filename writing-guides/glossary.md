@@ -53,6 +53,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | token | token | token | The unit a model counts in input and output. For a token that authenticates requests, see access token. |
 | API token | API 令牌 | APIトークン | |
 | access token | 访问令牌 | アクセストークン | A token that authenticates requests to Dify, such as a console session's access token, the token a `difyctl` sign-in issues, or one created on the **Access Tokens** settings page. Where English prose says just "token" for one, zh writes 令牌 and ja トークン, never the Latin "token". Identifiers such as `tokens.yml` and `DIFY_TOKEN` stay as written. |
+| personal access token | 个人访问令牌 | 個人アクセストークン | An access token a member creates on their account page for `difyctl` to use in place of a sign-in. Lowercase in English prose. |
 | API key | API 密钥 | API キー | A secret key that authenticates API calls, such as a model provider's key or a Dify Service API key. Lowercase "key" in English prose. zh prose writes API 密钥 even where a zh UI label reads "API Key"; bold UI labels keep their own form. |
 | credential | 凭据 | 認証情報 | The saved authentication details, such as an API key or an OAuth authorization, that Dify uses to call a model provider, tool, or data source. Not 凭证 (zh) or 資格情報 (ja). |
 | custom model | 自定义模型 | カスタムモデル | A model added to a provider by hand with **Add Model**, as opposed to the models the provider predefines. Lowercase in prose. |
@@ -272,6 +273,13 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | My Account | 我的账户 | マイアカウント | account-settings.account.myAccount | Heading of the account page |
+| Account | 账户 | アカウント | navigation.menus.account | Avatar menu item that opens the account page |
+| Personal access tokens | 个人访问令牌 | 個人アクセストークン | account-settings.personalAccessToken.title | Section of the account page |
+| Create token | 创建令牌 | トークンを作成 | account-settings.personalAccessToken.createButton | Personal access tokens section |
+| Expiration | 有效期 | 有効期間 | account-settings.personalAccessToken.expiration | Field in the personal access token form |
+| Never | 永不 | 無期限 | account-settings.personalAccessToken.never | Expiration option in that form |
+| Resources | 资源 | リソース | account-settings.resourceAccessToken.resources | Scope in that form; the key sits under resourceAccessToken |
+| Manage workspaces | 管理工作空间 | ワークスペースの管理 | account-settings.personalAccessToken.manageWorkspaces | Scope in that form |
 | Members | 成员 | メンバー | navigation.settings.members | |
 | Model Provider | 模型供应商 | モデルプロバイダー | navigation.settings.provider | Moved from Settings to Integrations hub in v1.15.0 |
 | Data Source | 数据来源 | データソース | navigation.settings.dataSource | Moved from Settings to Integrations hub in v1.15.0 |
