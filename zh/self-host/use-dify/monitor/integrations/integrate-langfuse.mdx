@@ -51,13 +51,13 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   ![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-点击配置后，将在 Langfuse 中创建的 **Secret Key, Public Key, Host** 粘贴到配置中并保存。
+点击配置后，将在 Langfuse 中创建的 **密钥**、**公钥** 和 **Host** 粘贴到配置中并保存。**Host** 必须填写项目所在区域或自部署实例的基础 URL，不含 `/api/public`。Dify 将追踪发送至 `/api/public/ingestion`。[Langfuse 数据接入文档](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) 说明，自部署 v4 的 `events_only` 模式不接受旧版追踪接入。Langfuse Cloud 将于 2026 年 11 月 16 日停用该追踪 API。请使用仍支持旧版追踪接入的 Langfuse 部署。
 
 <Frame>
   ![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
 </Frame>
 
-成功保存后，你可以在当前页面查看状态。如果显示为已启动，则正在被监控。
+成功保存后，你可以在当前页面查看状态。
 
 <Frame>
   ![查看配置状态](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/1aa086a1aead0e29948e7d6d5815d5d1.png)
@@ -75,7 +75,25 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   ![](https://assets-docs.dify.ai/2025/04/88f3adfb03f325d2ea800ba5685b9ec9.png)
 </Frame>
 
+<Note>
+保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
+
+当两个部署开关均关闭时，新版 Agent 应用及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流仍会发送常规追踪，包括可用的输入和输出，但不包含 Agent 内部的模型和工具调用。
+
+要采集这些调用，请在 Dify API 和 worker 上启用 `OPS_AGENT_TRACE_ENABLED=true`，并在 Agent 后端启用 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。两个开关需要同时启用：如果只启用 API 开关，且 **采集 Agent 内部过程** 保持开启（默认），执行 Agent 调用时追踪采集会超时，报出 `agent_trace_collection_incomplete`，并且不会导出追踪。这不代表应用执行失败。部署设置详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。
+
+为这些应用启用 API 采集后，**采集内容** 默认关闭：整个工作流的输入、输出和大部分元数据会被移除，错误文本也会被脱敏。开启该设置后才会发送这些内容。经典 `agent-chat` 应用和仅使用经典 Agent 节点的工作流仍使用常规追踪。
+</Note>
+
 ### 监控数据列表
+
+以下数据说明适用于常规追踪。为新版 Agent 应用或包含新版 Agent 节点的工作流启用 API 采集后，追踪会使用新的 UUIDv7 追踪 ID，源 ID 和追踪运行 ID 则保留在 `dify.source.id` 和 `dify.tracing.run_id` 属性中。对于新版 Agent 应用，开启 **采集 Agent 内部过程** 后，包含内部模型和工具调用的 `Agent attempt` span 会替代常规 `llm` span。通过此方式采集的运行不会单独导出审核、建议问题和命名记录。
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。如果提供了 `X-Trace-Id`，追踪 ID 会使用该值；否则，Chat/Chatflow 使用消息 ID，Workflow 使用工作流运行 ID。观察记录 ID 通过派生生成。只有模型调用会填充监控服务的原生 token 用量字段。
+
+对于 Chatflow，追踪根节点是 `message`，输入为用户查询；查询为空时，使用工作流输入。其 `workflow` 子节点保留工作流的输入和输出。
+
+以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
 #### 跟踪 Workflow 和 Chatflow 的信息
 
@@ -90,27 +108,27 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   </thead>
   <tbody>
     <tr>
-      <td>workflow\_app\_log\_id/workflow\_run\_id</td>
-      <td>id</td>
+      <td>workflow_run_id（Workflow）/ message_id（Chatflow），提供 X-Trace-Id 时除外</td>
+      <td>id（追踪记录）</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>user\_id</td>
+      <td>user_id</td>
+      <td>userId</td>
     </tr>
     <tr>
-      <td>{"workflow_{id}"}</td>
+      <td>workflow（Workflow）/ message（Chatflow）</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp / startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>Workflow 输入 / Chatflow 查询（为空时使用工作流输入）</td>
       <td>input</td>
     </tr>
     <tr>
@@ -118,7 +136,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>output</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
+      <td>模型 token 消耗（LLM 调用）</td>
       <td>usage</td>
     </tr>
     <tr>
@@ -127,23 +145,19 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>error</td>
-      <td>level</td>
+      <td>level（观察记录）</td>
     </tr>
     <tr>
       <td>error</td>
-      <td>status\_message</td>
+      <td>statusMessage（观察记录）</td>
     </tr>
     <tr>
-      <td>\[workflow]</td>
-      <td>tags</td>
+      <td>会话 ID</td>
+      <td>sessionId</td>
     </tr>
     <tr>
-      <td>\["message", conversation\_mode]</td>
-      <td>session\_id</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>父 span（如有）</td>
+      <td>parentObservationId（嵌套观察记录）</td>
     </tr>
   </tbody>
 </table>
@@ -193,24 +207,24 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   </thead>
   <tbody>
     <tr>
-      <td>message\_id</td>
-      <td>id</td>
+      <td>message_id（提供 X-Trace-Id 时除外）</td>
+      <td>id（追踪记录）</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>user\_id</td>
+      <td>end_user_session_id（或 user_id）</td>
+      <td>userId</td>
     </tr>
     <tr>
-      <td>{"message_{id}"}</td>
+      <td>message</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp / startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>
@@ -221,7 +235,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>output</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
+      <td>模型 token 消耗（LLM 调用）</td>
       <td>usage</td>
     </tr>
     <tr>
@@ -230,23 +244,15 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>error</td>
-      <td>level</td>
+      <td>level（观察记录）</td>
     </tr>
     <tr>
       <td>error</td>
-      <td>status\_message</td>
+      <td>statusMessage（观察记录）</td>
     </tr>
     <tr>
-      <td>\["message", conversation\_mode]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>conversation\_id</td>
-      <td>session\_id</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>会话 ID</td>
+      <td>sessionId</td>
     </tr>
   </tbody>
 </table>
@@ -254,7 +260,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
 
 * message\_id - 消息 ID
 * message\_data - 消息数据
-* user\_session\_id - 用户会话 ID
+* end\_user\_session\_id - 用户会话 ID
 * conversation\_model - 对话模型
 * message\_tokens - 消息标记数
 * answer\_tokens - 回答标记数
@@ -265,7 +271,6 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
 * file\_list - 处理文件的列表
 * start\_time - 开始时间
 * end\_time - 结束时间
-* message\_file\_data - 相关文件数据的消息
 * conversation\_mode - 对话模式
 * 元数据
   * conversation\_id - 对话 ID
@@ -293,7 +298,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>moderation</td>
@@ -301,18 +306,18 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>action, flagged</td>
       <td>output</td>
     </tr>
     <tr>
@@ -320,12 +325,8 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[moderation]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id（提供 X-Trace-Id 时除外）</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -354,13 +355,13 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Span</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>suggested\_question</td>
@@ -368,18 +369,18 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>suggested_question</td>
       <td>output</td>
     </tr>
     <tr>
@@ -387,12 +388,8 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[suggested\_question]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id（提供 X-Trace-Id 时除外）</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -439,7 +436,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>dataset\_retrieval</td>
@@ -447,18 +444,18 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>documents</td>
       <td>output</td>
     </tr>
     <tr>
@@ -466,12 +463,8 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[dataset\_retrieval]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id（提供 X-Trace-Id 时除外）</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -508,7 +501,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>tool\_name</td>
@@ -516,18 +509,18 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>tool_inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>tool_outputs</td>
       <td>output</td>
     </tr>
     <tr>
@@ -535,12 +528,8 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\["tool", tool\_name]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id（提供 X-Trace-Id 时除外）</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -577,6 +566,8 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
 
 **用于跟踪对话标题生成**
 
+自动命名未关联消息时，会创建包含 `timestamp`、不含观察记录的独立追踪。命名关联消息时，会在该消息的追踪中创建 span 观察记录。直接编辑标题不会创建命名追踪。
+
 <table>
   <thead>
     <tr>
@@ -587,7 +578,7 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>generate\_name</td>
@@ -595,11 +586,11 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp（独立追踪）/ startTime（关联消息的观察记录）</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime（仅关联消息的观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>
@@ -612,10 +603,6 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\[generate\_name]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>

@@ -16,6 +16,8 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 ## 开始配置 Opik
 
+使用托管版 Opik 时，按以下步骤注册账户并获取 API 密钥。如果自部署实例未启用身份验证，**API Key** 可留空。
+
 ### 1. 注册/登录 [Opik](https://www.comet.com/signup?from=llm)
 
 ### 2. 获取 Opik API 密钥
@@ -34,7 +36,7 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
   ![](https://assets-docs.dify.ai/2025/01/9d52a244e3b6cef1874ee838cd976111.png)
 </Frame>
 
-点击配置后，将在 Opik 中创建的 **API Key** 和 **项目名称**粘贴到配置中并保存。
+点击配置后，按需填写 **API Key**，并输入 **项目** 名称。项目留空时使用 `Default Project`；新项目在收到第一条追踪记录时创建。**Workspace** 可留空，使用账户的默认工作区。自部署 Opik 需将 **Url** 设为以 `/api/` 结尾的 API 基础 URL（默认为 `https://www.comet.com/opik/api/`），然后保存。
 
 <Frame>
   ![](https://assets-docs.dify.ai/2025/01/7f4c436e2dc9fe94a3ed49219bb3360c.png)
@@ -44,7 +46,7 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 ## 查看监控数据
 
-配置完成后，你可以照常调试或使用 Dify 应用。所有使用历史都可以在 Opik 中监控。
+配置完成后，你可以照常调试或使用 Dify 应用。新的运行记录可在 Opik 中查看，启用前的使用历史不会补发。
 
 <Frame>
   ![](https://assets-docs.dify.ai/2025/01/a1c5aa80325e6d0223d48a178393baec.png)
@@ -62,7 +64,25 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
   ![](https://assets-docs.dify.ai/2025/01/708533b4fc616f852b5601fe602e3ef5.png)
 </Frame>
 
+<Note>
+保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
+
+当两个部署开关均关闭时，新版 Agent 应用及使用 [新版 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的工作流仍会发送常规追踪，包括可用的输入和输出，但不包含 Agent 内部的模型和工具调用。
+
+要采集这些调用，请在 Dify API 和 worker 上启用 `OPS_AGENT_TRACE_ENABLED=true`，并在 Agent 后端启用 `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true`。两个开关需要同时启用：如果只启用 API 开关，且 **采集 Agent 内部过程** 保持开启（默认），执行 Agent 调用时追踪采集会超时，报出 `agent_trace_collection_incomplete`，并且不会导出追踪。这不代表应用执行失败。部署设置详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。
+
+为这些应用启用 API 采集后，**采集内容** 默认关闭：整个工作流的输入、输出和大部分元数据会被移除，错误文本也会被脱敏。开启该设置后才会发送这些内容。经典 `agent-chat` 应用和仅使用经典 Agent 节点的工作流仍使用常规追踪。
+</Note>
+
 ## 监控数据列表
+
+以下数据说明适用于常规追踪。为新版 Agent 应用或包含新版 Agent 节点的工作流启用 API 采集后，追踪会使用新的 UUIDv7 追踪 ID，源 ID 和追踪运行 ID 则保留在 `dify.source.id` 和 `dify.tracing.run_id` 属性中。对于新版 Agent 应用，开启 **采集 Agent 内部过程** 后，包含内部模型和工具调用的 `Agent attempt` span 会替代常规 `llm` span。通过此方式采集的运行不会单独导出审核、建议问题和命名记录。
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。下表中的追踪 ID 和 span ID 由 Dify 派生生成，并非直接复制数据库 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+
+对于 Chatflow，追踪根节点是 `message`，输入为用户查询；查询为空时，使用工作流输入。其 `workflow` 子节点保留工作流的输入和输出。
+
+以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
 ### **Workflow/Chatflow 追踪信息**
 
@@ -70,18 +90,17 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 | 工作流                              | Opik 追踪                   |
 | ---------------------------------- | -------------------------- |
-| workflow_app_log_id/workflow_run_id | id                         |
-| user_session_id                     | - 放置在元数据中            |
-| `workflow_{id}`                      | name                       |
+| 派生的追踪 ID | id（追踪记录）                         |
+| user_id                     | metadata.user_id            |
+| workflow（Workflow）/ message（Chatflow）                      | name                       |
 | start_time                          | start_time                 |
 | end_time                            | end_time                   |
-| inputs                              | inputs                     |
-| outputs                             | outputs                    |
-| Model token consumption             | usage_metadata             |
+| Workflow 输入 / Chatflow 查询（为空时使用工作流输入）                              | input                     |
+| outputs                             | output                    |
+| 模型 token 消耗（LLM 调用）             | usage（仅 llm span，追踪主体不含此字段）             |
 | metadata                            | metadata                   |
-| error                               | error                      |
-| \[workflow]                         | tags                       |
-| conversation_id/none for workflow | conversation_id in metadata |
+| error                               | error_info                      |
+| 会话 ID | thread_id（追踪记录） |
 
 **工作流追踪信息**
 
@@ -120,25 +139,24 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 **用于追踪 LLM 相关对话**
 
-| 聊天                            | Opik LLM                    |
+| 聊天                            | Opik Trace                    |
 | ------------------------------- | --------------------------- |
-| message_id                      | id                          |
-| user_session_id                 | - 放置在元数据中             |
-| "llm"                           | name                        |
+| 派生的追踪 ID                      | id（追踪记录）                          |
+| end_user_session_id（或 user_id）                 | metadata.user_id（追踪记录）             |
+| message                           | name                        |
 | start_time                      | start_time                  |
 | end_time                        | end_time                    |
-| inputs                          | inputs                      |
-| outputs                         | outputs                     |
-| Model token consumption         | usage_metadata              |
+| inputs                          | input                      |
+| outputs                         | output                     |
+| 模型 token 消耗（LLM 调用）         | usage（仅 llm span，追踪主体不含此字段）              |
 | metadata                        | metadata                    |
-| \["message", conversation_mode] | tags                        |
-| conversation_id                 | conversation_id in metadata |
+| 会话 ID                 | thread_id（追踪记录） |
 
 **消息追踪信息**
 
 - message_id - 消息 ID
 - message_data - 消息数据
-- user_session_id - 用户会话 ID
+- end_user_session_id - 用户会话 ID
 - conversation_model - 对话模式
 - message_tokens - 消息中的令牌数
 - answer_tokens - 答案中的令牌数
@@ -149,7 +167,6 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 - file_list - 处理的文件列表
 - start_time - 开始时间
 - end_time - 结束时间
-- message_file_data - 与消息关联的文件数据
 - conversation_mode - 对话模式
 - 元数据
   - conversation_id - 对话 ID
@@ -168,14 +185,13 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 | 审核           | Opik Tool         |
 | -------------- | ----------------- |
-| user_id        | - 放置在元数据中   |
+| user_id        | metadata.user_id   |
 | "moderation"   | name              |
 | start_time     | start_time        |
 | end_time       | end_time          |
-| inputs         | inputs            |
-| outputs        | outputs           |
+| inputs         | input            |
+| action, flagged        | output           |
 | metadata       | metadata          |
-| \["moderation"]| tags              |
 
 **审核追踪信息**
 
@@ -198,16 +214,17 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 **用于追踪建议问题**
 
-| 建议问题              | Opik LLM          |
+以工具 span 的形式发送到消息的追踪中。
+
+| 建议问题              | Opik 工具 span          |
 | --------------------- | ----------------- |
-| user_id               | - 放置在元数据中   |
+| user_id               | metadata.user_id   |
 | "suggested_question"  | name              |
 | start_time            | start_time        |
 | end_time              | end_time          |
-| inputs                | inputs            |
-| outputs               | outputs           |
+| inputs                | input            |
+| suggested_question               | output           |
 | metadata              | metadata          |
-| \["suggested_question"]| tags             |
 
 **消息追踪信息**
 
@@ -244,15 +261,14 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 | 数据集检索           | Opik Retriever    |
 | ------------------- | ----------------- |
-| user_id             | - 放置在元数据中   |
+| user_id             | metadata.user_id   |
 | "dataset_retrieval" | name              |
 | start_time          | start_time        |
 | end_time            | end_time          |
-| inputs              | inputs            |
-| outputs             | outputs           |
+| inputs              | input            |
+| documents             | output           |
 | metadata            | metadata          |
-| \["dataset_retrieval"]| tags            |
-| message_id          | parent_run_id     |
+| message_id          | trace_id     |
 
 **数据集检索追踪信息**
 
@@ -279,14 +295,13 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 | 工具                  | Opik Tool         |
 | -------------------- | ----------------- |
-| user_id              | - 放置在元数据中   |
+| user_id              | metadata.user_id   |
 | tool_name            | name              |
 | start_time           | start_time        |
 | end_time             | end_time          |
-| inputs               | inputs            |
-| outputs              | outputs           |
+| tool_inputs               | input            |
+| tool_outputs              | output           |
 | metadata             | metadata          |
-| \["tool", tool_name] | tags              |
 
 #### **工具追踪信息**
 
@@ -323,14 +338,13 @@ Opik 是一个开源的 LLM 评估平台，用于评估、测试和监控大型�
 
 | 生成名称                      | Opik Tool         |
 | ---------------------------- | ----------------- |
-| user_id                      | - 放置在元数据中   |
-| "generate_conversation_name" | name              |
+| user_id                      | metadata.user_id   |
+| generate_name | name              |
 | start_time                   | start_time        |
 | end_time                     | end_time          |
-| inputs                       | inputs            |
-| outputs                      | outputs           |
+| inputs                       | input            |
+| outputs                      | output           |
 | metadata                     | metadata          |
-| \["generate_name"]           | tags              |
 
 **生成名称追踪信息**
 
