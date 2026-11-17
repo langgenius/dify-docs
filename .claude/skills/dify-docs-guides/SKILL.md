@@ -65,13 +65,20 @@ In the self-host copy:
 
 1. Place the configuration in a callout, never a dedicated H2 section. Configuration enablement is an aside to the page's task flow, and the defaults and mechanics live one click away in the env reference.
 2. Pick the callout type: `<Note>` when the variables are mandatory (the feature does not work at all without them); `<Info>` when they only customize behavior that already works.
-3. Use this pattern — open with the feature state, never an audience qualifier (Drafting rule 2):
+3. Use this pattern — open with the feature state, never an audience qualifier (Drafting rule 2). With one variable, name it in the sentence, since a list is for items the reader works through; with two or more, list them:
+
+   ```mdx
+   <Note>
+   [Feature] is off by default. Enable it by setting `VAR_NAME` to `value`. See [Environment Variables](/en/self-host/deploy/configuration/environments#var_name) for details.
+   </Note>
+   ```
 
    ```mdx
    <Note>
    [Feature] is off by default. Enable it by setting:
 
    - `VAR_NAME` = `value`
+   - `OTHER_VAR` = `value`
 
    See [Environment Variables](/en/self-host/deploy/configuration/environments#var_name) for details.
    </Note>

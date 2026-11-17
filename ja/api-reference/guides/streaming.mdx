@@ -24,7 +24,7 @@ description: レスポンスモードの選択、SSE ストリームの解析、
 
 `event` フィールドを読んで処理内容を判断し、`data: ` で始まらない行はスキップします。キープアライブの `ping` は、`data:` ペイロードのない `event: ping` 行だけで構成されます。
 
-Chatflow アプリと Workflow アプリのストリームでは、最初のフレームが必ず `ping` になります。その後も実行中はおよそ 10 秒ごとに `ping` が届きます。実行が受け付けられたことは、最初のフレームではなく、最初の `data:` イベント（`workflow_started`）で判断してください。
+Chatflow アプリと Workflow アプリのストリームでは、最初のフレームが必ず `ping` になります。その後も実行中はおよそ 10 秒ごとに `ping` が届きます。リクエストが受け付けられたことは、最初のフレームではなく、最初の `data:` イベントで判断してください。
 
 ```python
 import json
@@ -63,20 +63,22 @@ curl でテストする場合は、`-N`（`--no-buffer`）を付けます。イ�
 
 届くイベントはアプリタイプによって異なります。イベントの一覧は [チャットメッセージを送信](/ja/api-reference/chat-messages/send-chat-message)、[ワークフローを実行](/ja/api-reference/workflow-runs/run-workflow)、[完了メッセージを送信](/ja/api-reference/completion-messages/send-completion-message) の各イベント表を参照してください。
 
-最低限の典型的な処理は次のとおりです。
+アプリタイプ別に、一般に最低限必要な処理を示します。
 
-1. 返信チャンクを順番に連結します。
+| アプリ | 連結するイベント | 返信の完了 |
+|:--|:--|:--|
+| チャットボット、テキストジェネレーター | `message` | `message_end` |
+| レガシー Agent | `agent_message` | `message_end` |
+| Agent | `agent_message` | `message_end` |
+| Chatflow | `message` | `message_end` の後の `workflow_finished` |
+| Workflow | 不要（`workflow_finished` の `outputs` を読み取ります） | `workflow_finished` |
 
-    - チャットボットと Chatflow アプリでは `message` イベント
-    - レガシー Agent と Agent アプリでは `agent_message` イベント
+Agent アプリでは、最後に完全な回答を繰り返す `message` イベントが 1 つ届きます。追加のテキストではなく、最終回答として扱ってください。
 
-    Agent アプリでは、最後に完全な回答を繰り返す `message` イベントが 1 つ届きます。追加のテキストではなく、最終回答として扱ってください。
+アノテーションの一致や入力モデレーションで直接返信される場合、返信は通常のイベントを経由しません。
 
-2. 正しい終端イベントで締めくくります。
-    - チャットボット、レガシー Agent、Agent アプリは `message_end`
-    - Chatflow アプリは `message_end` と `workflow_finished`（この順で両方届きます）
-    - Workflow アプリは `workflow_finished`
-3. `error` イベントを呼び出し元に伝えます。
+- レガシー Agent の返信は `message` チャンクとして届きます。
+- Chatflow ではワークフローが実行されず、最初の `data:` イベントが `message` になります。返信は `message_end` で完了し、その後に `workflow_finished` は届きません。
 
 ## ストリーム中のエラー処理
 
