@@ -50,13 +50,13 @@ Copy and save the **Secret Key**, **Public Key**, and **Host**.
   ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save.
+After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save. **Host** must be the base URL for your project's region or self-hosted instance, without `/api/public`. Dify sends traces to `/api/public/ingestion`. [Langfuse's ingestion documentation](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) states that self-hosted v4 `events_only` mode does not accept legacy trace ingestion. Langfuse Cloud sunsets this trace API on November 16, 2026. Use a Langfuse deployment that still accepts legacy trace ingestion.
 
 <Frame>
   ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
 </Frame>
 
-Once successfully saved, you can view the status on the current page. If it shows as started, it is being monitored.
+Once successfully saved, you can view the status on the current page.
 
 <Frame>
   ![View Configuration Status](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/1aa086a1aead0e29948e7d6d5815d5d1.png)
@@ -74,7 +74,25 @@ After configuration, debugging or production data of the application in Dify can
   ![](https://assets-docs.dify.ai/2025/04/88f3adfb03f325d2ea800ba5685b9ec9.png)
 </Frame>
 
+<Note>
+After saving and enabling tracing, run the app again and check for a new trace in the monitoring service. Delivery is asynchronous; saving the configuration alone does not confirm that a trace has arrived.
+
+With both deployment switches off, the new Agent app type and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent) still send ordinary traces, including available inputs and outputs, but omit the Agent's internal model and tool calls.
+
+To collect those calls, enable `OPS_AGENT_TRACE_ENABLED=true` on the Dify API and workers and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` on the Agent backend. Enable them together: when an Agent call executes with only the API switch enabled and **Capture Agent internals** on (the default), trace collection times out with `agent_trace_collection_incomplete` and no trace is exported. This does not mean the app execution failed. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for deployment settings.
+
+With API collection enabled for these apps, **Capture content** is off by default: inputs, outputs, and most metadata are removed, and error text is redacted across the whole workflow. Enable it to send that content. Classic `agent-chat` apps and workflows using only classic Agent nodes retain ordinary tracing.
+</Note>
+
 ### List of monitoring data
+
+The tables below describe ordinary traces. When API collection is enabled for the new Agent app type or workflows containing a new Agent node, traces use a new UUIDv7 trace ID, with source and tracing-run IDs retained as `dify.source.id` and `dify.tracing.run_id` attributes. For the new Agent app type, `Agent attempt` spans with internal model and tool calls replace the ordinary `llm` span when **Capture Agent internals** is on. Separate moderation, suggested-question, and naming records are omitted for collected runs.
+
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Trace IDs use `X-Trace-Id` when supplied; otherwise they use the message ID for Chat/Chatflow or workflow run ID for Workflow. Observation IDs are derived. Native token usage is reported on model calls only.
+
+For Chatflow, the trace root is the `message`, with the user's query as input (or workflow inputs when the query is empty). Its `workflow` child retains the workflow inputs and outputs.
+
+The detail lists below describe Dify's source records and metadata. Only the relevant, available values are exported; the raw records are not sent in full.
 
 #### Trace the information of Workflow and Chatflow
 
@@ -89,27 +107,27 @@ After configuration, debugging or production data of the application in Dify can
   </thead>
   <tbody>
     <tr>
-      <td>workflow\_app\_log\_id/workflow\_run\_id</td>
-      <td>id</td>
+      <td>workflow_run_id (Workflow) / message_id (Chatflow), unless X-Trace-Id is supplied</td>
+      <td>id (trace)</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>user\_id</td>
+      <td>user_id</td>
+      <td>userId</td>
     </tr>
     <tr>
-      <td>{"workflow_{id}"}</td>
+      <td>workflow (Workflow) / message (Chatflow)</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp / startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>Workflow inputs / Chatflow query (workflow inputs if empty)</td>
       <td>input</td>
     </tr>
     <tr>
@@ -117,7 +135,7 @@ After configuration, debugging or production data of the application in Dify can
       <td>output</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
+      <td>Model token consumption (LLM calls)</td>
       <td>usage</td>
     </tr>
     <tr>
@@ -126,23 +144,19 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>error</td>
-      <td>level</td>
+      <td>level (observations)</td>
     </tr>
     <tr>
       <td>error</td>
-      <td>status\_message</td>
+      <td>statusMessage (observations)</td>
     </tr>
     <tr>
-      <td>\[workflow]</td>
-      <td>tags</td>
+      <td>Session ID</td>
+      <td>sessionId</td>
     </tr>
     <tr>
-      <td>\["message", conversation\_mode]</td>
-      <td>session\_id</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>Parent span (when present)</td>
+      <td>parentObservationId (nested observations)</td>
     </tr>
   </tbody>
 </table>
@@ -192,24 +206,24 @@ After configuration, debugging or production data of the application in Dify can
   </thead>
   <tbody>
     <tr>
-      <td>message\_id</td>
-      <td>id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>id (trace)</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>user\_id</td>
+      <td>end_user_session_id (or user_id)</td>
+      <td>userId</td>
     </tr>
     <tr>
-      <td>{"message_{id}"}</td>
+      <td>message</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp / startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
       <td>inputs</td>
@@ -220,7 +234,7 @@ After configuration, debugging or production data of the application in Dify can
       <td>output</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
+      <td>Model token consumption (LLM calls)</td>
       <td>usage</td>
     </tr>
     <tr>
@@ -229,23 +243,15 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>error</td>
-      <td>level</td>
+      <td>level (observations)</td>
     </tr>
     <tr>
       <td>error</td>
-      <td>status\_message</td>
+      <td>statusMessage (observations)</td>
     </tr>
     <tr>
-      <td>\["message", conversation\_mode]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>conversation\_id</td>
-      <td>session\_id</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>Session ID</td>
+      <td>sessionId</td>
     </tr>
   </tbody>
 </table>
@@ -253,7 +259,7 @@ After configuration, debugging or production data of the application in Dify can
 
 * message\_id - Message ID
 * message\_data - Message data
-* user\_session\_id - Session ID for user
+* end\_user\_session\_id - Session ID for user
 * conversation\_model - Conversation model
 * message\_tokens - Message tokens
 * answer\_tokens - Answer Tokens
@@ -264,7 +270,6 @@ After configuration, debugging or production data of the application in Dify can
 * file\_list - List of files processed
 * start\_time - Start time
 * end\_time - End time
-* message\_file\_data - Message of relevant file data
 * conversation\_mode - Conversation mode
 * Metadata
   * conversation\_id - Conversation ID
@@ -292,7 +297,7 @@ After configuration, debugging or production data of the application in Dify can
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>moderation</td>
@@ -300,18 +305,18 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>action, flagged</td>
       <td>output</td>
     </tr>
     <tr>
@@ -319,12 +324,8 @@ After configuration, debugging or production data of the application in Dify can
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[moderation]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -353,13 +354,13 @@ After configuration, debugging or production data of the application in Dify can
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Span</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>suggested\_question</td>
@@ -367,18 +368,18 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>suggested_question</td>
       <td>output</td>
     </tr>
     <tr>
@@ -386,12 +387,8 @@ After configuration, debugging or production data of the application in Dify can
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[suggested\_question]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -438,7 +435,7 @@ After configuration, debugging or production data of the application in Dify can
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>dataset\_retrieval</td>
@@ -446,18 +443,18 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
       <td>inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>documents</td>
       <td>output</td>
     </tr>
     <tr>
@@ -465,12 +462,8 @@ After configuration, debugging or production data of the application in Dify can
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\[dataset\_retrieval]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -507,7 +500,7 @@ After configuration, debugging or production data of the application in Dify can
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>tool\_name</td>
@@ -515,18 +508,18 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>tool_inputs</td>
       <td>input</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>tool_outputs</td>
       <td>output</td>
     </tr>
     <tr>
@@ -534,12 +527,8 @@ After configuration, debugging or production data of the application in Dify can
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\["tool", tool\_name]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message\_id</td>
-      <td>parent\_observation\_id</td>
+      <td>message_id (unless X-Trace-Id is supplied)</td>
+      <td>traceId</td>
     </tr>
   </tbody>
 </table>
@@ -576,6 +565,8 @@ After configuration, debugging or production data of the application in Dify can
 
 **Used to track conversation title generation**
 
+Automatic naming without an associated message creates a standalone trace with a `timestamp` and no observations. Naming linked to a message creates a span observation in that message's trace. Editing a title directly does not create a naming trace.
+
 <table>
   <thead>
     <tr>
@@ -586,7 +577,7 @@ After configuration, debugging or production data of the application in Dify can
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>user\_id</td>
+      <td>metadata.user_id</td>
     </tr>
     <tr>
       <td>generate\_name</td>
@@ -594,11 +585,11 @@ After configuration, debugging or production data of the application in Dify can
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>start\_time</td>
+      <td>timestamp (standalone trace) / startTime (message-linked observation)</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>end\_time</td>
+      <td>endTime (message-linked observation only)</td>
     </tr>
     <tr>
       <td>inputs</td>
@@ -611,10 +602,6 @@ After configuration, debugging or production data of the application in Dify can
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\[generate\_name]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>
