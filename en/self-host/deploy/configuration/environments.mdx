@@ -50,7 +50,11 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
     docker compose up -d
     ```
 
-    Use `up -d`, not `docker compose restart`: `restart` keeps the containers' old environment. To see the resolved values, run `docker compose config`. Its output contains secrets, so keep it private.
+    <Info>
+      If you started the deployment with extra Compose options, such as `-p`, `-f`, `--env-file`, or profiles, add the same options to these commands.
+    </Info>
+
+    To see the resolved values, run `docker compose config`. Its output contains secrets, so keep it private.
 
     For a worked example that ends by checking the running service, see [Customize](/en/self-host/deploy/quick-start/docker-compose#customize). To update to a new release without losing your local files, secrets, or data, follow [Upgrade](/en/self-host/deploy/quick-start/docker-compose#upgrade).
   </Step>
@@ -65,9 +69,10 @@ When a variable is set in more than one place, which value a service uses depend
     The API, WebSocket API, workers, Beat, web, Code sandbox, plugin daemon, and agent backend use the first match, in this order:
 
     1. `docker/.env`
-    2. The service's local `.env` files
-    3. Its `.defaults` files
-    4. The application default
+    2. For the public URLs, in the web service, API, and workers: the values you set in `envs/core-services/urls.env`
+    3. The service's local `.env` files
+    4. Its `.defaults` files
+    5. The application default
 
     <Note>
     Variables under the **Container variable mappings** comment in a `.defaults` file always copy their value from another setting. Setting them directly has no effect, even in `docker/.env`, so change the setting they copy from instead.
@@ -87,13 +92,38 @@ If a value doesn't come from any of these files, check two more places:
 
 ## Common Variables
 
-These URL variables configure the addresses of Dify's various services.
+The public URLs are empty by default. Whether to set them depends on your deployment:
+
+- **Everything runs at one address, with no emails, OAuth, or Human Input requests**: leave them empty. Dify works without them.
+- **Everything runs at one address, with emails, OAuth, or Human Input requests**: set them all to that full address, such as `https://dify.example.com`. See each URL's entry below for the features that need it.
+- **Services run at separate addresses**, such as the API at `api.example.com`: set each URL to its own full address. If the console and the API are on different subdomains, also set `COOKIE_DOMAIN` and `NEXT_PUBLIC_COOKIE_DOMAIN`; see [CORS Configuration](#cors-configuration) for details.
+
+To set them:
+
+1. If `docker/envs/core-services/urls.env` doesn't exist, create it from the bundled defaults. The web service, API, and Celery workers all load this file, so they use the same addresses.
+
+   ```bash
+   cd dify/docker
+   cp envs/core-services/urls.defaults envs/core-services/urls.env
+   ```
+
+2. In `urls.env`, write each URL with `http://` or `https://`, plus the port if your address has one, such as `https://dify.example.com:8443`. Don't add `/console/api`, `/api`, or `/v1` at the end: Dify appends them automatically.
+
+   If `docker/.env` also sets any of these URLs, that value wins over `urls.env`, so change or remove it there.
+
+3. Apply the change with the commands in [Set a Variable](#set-a-variable).
+
+4. To check the result, open the console and a published app at their public addresses. If you set the URLs for emails, also send a member invitation and check that its link starts with your address.
+
+   If an address is still wrong, run `docker compose config` to see the value each service receives. Its output contains secrets, so keep it private.
 
 ### CONSOLE_API_URL
 
 Default: (empty)
 
-The public URL of Dify's backend API. Set this if you use OAuth login (GitHub, Google), Notion integration, or any plugin that requires OAuth—these features need an absolute callback URL to redirect users back after authorization. Also determines whether secure (HTTPS-only) cookies are used.
+The public base URL of the console API. Set a full address for GitHub or Google login and for integrations that connect through OAuth.
+
+Secure cookies require both `CONSOLE_API_URL` and `CONSOLE_WEB_URL` to start with `https://`.
 
 Example: `https://api.console.dify.ai`
 
@@ -101,19 +131,17 @@ Example: `https://api.console.dify.ai`
 
 Default: `http://api:5001`
 
-The console API address the web frontend container uses for server-side requests, reaching the API directly over the internal Docker network rather than your public domain. Only the web frontend container uses this variable, not the Python backend; browser requests still go to `CONSOLE_API_URL`.
+The console API address the web service uses for server-side requests; browser requests use `CONSOLE_API_URL`. Set it in `docker/envs/core-services/web.env` if the API is reachable at a different internal address.
 
-If left empty, it falls back to `CONSOLE_API_URL`. Change it only if the API service is reachable at a different internal address.
+In a source-code deployment, it falls back to `CONSOLE_API_URL` when unset.
 
 ### CONSOLE_WEB_URL
 
-Default: empty (`http://127.0.0.1:3000` for Docker Compose)
+Default: (empty)
 
-The URL members open Dify's console at. Used to build links in system emails such as invitations and password resets, and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
+The public base URL of the console. Set a full address for email links (such as invitation and sign-in links) and for redirects after OAuth login.
 
-The new Human Input node builds workspace members' request links from it, in email and in IM (instant messaging app) link messages: `{CONSOLE_WEB_URL}/human-input/{token}`.
-
-The address doesn't need to be reachable from the internet if members use Dify on an internal network.
+Required for the new Human Input node's requests to workspace members, sent by email or as link messages in IM (instant messaging app). The address doesn't need to be reachable from the internet if members use Dify on an internal network.
 
 Example: `https://console.dify.ai`
 
@@ -121,7 +149,9 @@ Example: `https://console.dify.ai`
 
 Default: (empty)
 
-The API Base URL shown to developers in the Dify console—the URL they copy into their code to call the Dify API. If empty, auto-detects from the current request (e.g., `http://localhost/v1`). Set this to ensure a consistent URL when your server is accessible via multiple addresses.
+The public API base URL shown in the console for developers to copy. Dify appends `/v1` to this value. When empty, the console shows the address it's opened at, such as `http://localhost/v1`.
+
+If your server is reachable at several addresses, such as an IP address and a domain, set this to the one developers should use.
 
 Example: `https://api.dify.ai`
 
@@ -129,20 +159,17 @@ Example: `https://api.dify.ai`
 
 Default: (empty)
 
-The backend API URL for the web app frontend (published apps). This variable is only used by the web frontend container, not the Python backend. If empty, the Docker image defaults to `http://127.0.0.1:5001`.
+The public API base URL used by published web apps. When empty, a web app sends requests to `/api` at the address it's opened at.
 
 Example: `https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-Default: empty (`http://127.0.0.1:3000` for Docker Compose)
+Default: (empty)
 
-The public URL where published web apps are accessible. Human Input also builds request links from it:
+The public base URL of published web apps. When empty, the console builds an app's sharing link from the address it's opened at.
 
-- **New Human Input node**: requests sent to external contacts, or to any email address typed into the node or taken from a variable, link to `{APP_WEB_URL}/form-v2/{token}`.
-- **Old Human Input node**: email links are `{APP_WEB_URL}/form/{token}`.
-
-External recipients must be able to open this address.
+Set a full address for Human Input requests sent by email or to external contacts. Recipients must be able to open this address.
 
 Example: `https://app.dify.ai`
 

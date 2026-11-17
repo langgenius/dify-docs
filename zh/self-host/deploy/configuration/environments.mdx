@@ -52,7 +52,11 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     docker compose up -d
     ```
 
-    要用 `up -d`，不能用 `docker compose restart`：`restart` 会沿用容器原有的环境变量。运行 `docker compose config` 可查看解析后的值，其输出包含密钥，需妥善保管。
+    <Info>
+      如果启动部署时用了额外的 Compose 选项，如 `-p`、`-f`、`--env-file` 或 profile，在这些命令中加上同样的选项。
+    </Info>
+
+    运行 `docker compose config` 可查看解析后的值，其输出包含密钥，需妥善保管。
 
     完整示例详见 [自定义](/zh/self-host/deploy/quick-start/docker-compose#自定义)，示例最后会检查运行中的服务。如需更新到新版本，同时不丢失本地文件、密钥和数据，按 [升级](/zh/self-host/deploy/quick-start/docker-compose#升级) 操作。
   </Step>
@@ -67,9 +71,10 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     API、WebSocket API、Worker、Beat、Web、代码执行沙箱、插件守护进程和 Agent 后端按以下顺序查找，采用第一个找到的值：
 
     1. `docker/.env`
-    2. 该服务的本地 `.env` 文件
-    3. 该服务的 `.defaults` 文件
-    4. 程序内置的默认值
+    2. 公开 URL（Web 服务、API 和 Worker）：你在 `envs/core-services/urls.env` 中设置的值
+    3. 该服务的本地 `.env` 文件
+    4. 该服务的 `.defaults` 文件
+    5. 程序内置的默认值
 
     <Note>
     `.defaults` 文件中 **Container variable mappings** 注释下的变量，始终从另一项设置取值。直接设置它们不会生效，写在 `docker/.env` 中也一样；需要修改时，改它们取值的那项设置。
@@ -89,13 +94,38 @@ Docker Compose 从三类文件中读取 Dify 的设置。
 
 ## 通用变量
 
-这些 URL 变量用于配置 Dify 各服务的访问地址。
+公开 URL 默认为空。是否需要设置，取决于你的部署方式：
+
+- **所有服务通过同一地址访问，且用不到邮件、OAuth 和人工介入请求**：保持为空即可，不设置也不影响 Dify 运行。
+- **所有服务通过同一地址访问，且要用到邮件、OAuth 或人工介入请求**：全部设为该完整地址，如 `https://dify.example.com`。哪些功能需要哪个 URL，见下文各 URL 的说明。
+- **各服务使用不同的地址**（如 API 位于 `api.example.com`）：将每个 URL 分别设为对应的完整地址。如果控制台和 API 位于不同的子域名，还需设置 `COOKIE_DOMAIN` 和 `NEXT_PUBLIC_COOKIE_DOMAIN`，详见 [CORS 配置](#cors-配置)。
+
+按以下步骤设置：
+
+1. 如果 `docker/envs/core-services/urls.env` 不存在，复制自带的默认值文件来创建。Web 服务、API 和 Celery Worker 都会加载此文件，因此使用的地址相同。
+
+   ```bash
+   cd dify/docker
+   cp envs/core-services/urls.defaults envs/core-services/urls.env
+   ```
+
+2. 在 `urls.env` 中填写各 URL 时，带上 `http://` 或 `https://`；地址含端口的，一并带上端口，如 `https://dify.example.com:8443`。末尾不要加 `/console/api`、`/api` 或 `/v1`，Dify 会自动补上。
+
+   如果 `docker/.env` 中也设置了其中某个 URL，该值会覆盖 `urls.env`，因此要到 `docker/.env` 中修改或删除它。
+
+3. 用 [设置变量](#设置变量) 中的命令应用修改。
+
+4. 检查结果：通过各自的公开地址打开控制台和一个已发布的应用。如果设置 URL 是为了邮件功能，再发一封成员邀请，确认邀请链接以你的地址开头。
+
+   如果地址仍不正确，运行 `docker compose config` 查看各服务实际拿到的值。其输出包含密钥，需妥善保管。
 
 ### CONSOLE_API_URL
 
 默认值：（空）
 
-Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google）、Notion 集成或任何需要 OAuth 的插件，请设置此变量；这些功能需要绝对回调 URL 才能在授权后将用户重定向回来。此变量还决定是否使用安全（仅 HTTPS）Cookie。
+控制台 API 的公开基础 URL。使用 GitHub 或 Google 登录，或通过 OAuth 连接集成时，需将此变量设为完整地址。
+
+只有 `CONSOLE_API_URL` 和 `CONSOLE_WEB_URL` 都以 `https://` 开头时，才会启用安全 Cookie。
 
 示例：`https://api.console.dify.ai`
 
@@ -103,17 +133,17 @@ Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google�
 
 默认值：`http://api:5001`
 
-Web 前端容器在服务端发起请求时所使用的 Console API 地址，经由 Docker 内部网络直接访问，而非通过你的公网域名。此变量仅由 Web 前端容器使用，不影响 Python 后端；浏览器端请求仍使用 `CONSOLE_API_URL`。若留空，则回退到 `CONSOLE_API_URL`。仅当 API 服务的内部访问地址不同时才需修改。
+Web 服务在服务端发起请求时使用的控制台 API 地址；浏览器端请求使用 `CONSOLE_API_URL`。如果 API 的内部访问地址不同，在 `docker/envs/core-services/web.env` 中设置此变量。
+
+源码部署时，未设置此变量则回退到 `CONSOLE_API_URL`。
 
 ### CONSOLE_WEB_URL
 
-默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
+默认值：（空）
 
-成员访问 Dify 控制台所用的 URL。用于构建邀请、密码重置等系统邮件中的链接，以及在 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
+控制台的公开基础 URL。邮件中的链接（如邀请链接和登录链接）和 OAuth 登录后的重定向都依赖此变量，需设为完整地址。
 
-新版人工介入节点也用它生成发给工作空间成员的请求链接，邮件和 IM（即时通讯应用）链接消息中的链接都是 `{CONSOLE_WEB_URL}/human-input/{token}`。
-
-如果成员在内网中使用 Dify，此地址只需内网可访问。
+新版人工介入节点通过邮件或 IM（即时通讯应用）链接消息向工作空间成员发送请求时，必须设置此变量。如果成员在内网中使用 Dify，此地址只需内网可访问。
 
 示例：`https://console.dify.ai`
 
@@ -121,7 +151,9 @@ Web 前端容器在服务端发起请求时所使用的 Console API 地址，经
 
 默认值：（空）
 
-在 Dify 控制台中展示给开发者的 API Base URL，即他们复制到代码中用于调用 Dify API 的 URL。如果为空，将从当前请求自动检测（例如 `http://localhost/v1`）。当你的服务器可通过多个地址访问时，设置此变量以确保 URL 一致。
+控制台中展示给开发者复制的公开 API 基础 URL。Dify 会在此值后加上 `/v1`。为空时，控制台按当前访问地址显示，如 `http://localhost/v1`。
+
+如果服务器可通过多个地址访问（如 IP 地址和域名），将此变量设为开发者应使用的那个地址。
 
 示例：`https://api.dify.ai`
 
@@ -129,20 +161,17 @@ Web 前端容器在服务端发起请求时所使用的 Console API 地址，经
 
 默认值：（空）
 
-Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前端容器使用，不影响 Python 后端。如果为空，Docker 镜像默认使用 `http://127.0.0.1:5001`。
+已发布 Web 应用使用的公开 API 基础 URL。为空时，Web 应用将请求发送到当前访问地址下的 `/api`。
 
 示例：`https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
+默认值：（空）
 
-已发布 Web 应用的公开访问 URL。人工介入节点也用它生成请求链接：
+已发布 Web 应用的公开基础 URL。为空时，控制台根据其当前访问地址生成应用的分享链接。
 
-- **新版人工介入节点**：发给外部联系人的请求，以及发往任意邮箱地址（在节点中直接填写或取自变量）的请求，链接为 `{APP_WEB_URL}/form-v2/{token}`。
-- **旧版人工介入节点**：邮件中的链接为 `{APP_WEB_URL}/form/{token}`。
-
-外部收件人必须能打开此地址。
+以邮件形式或向外部联系人发送人工介入请求时，需将此变量设为完整地址，且收件人要能打开此地址。
 
 示例：`https://app.dify.ai`
 
