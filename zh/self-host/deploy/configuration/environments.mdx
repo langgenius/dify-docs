@@ -27,8 +27,6 @@ Docker Compose 从三类文件中读取 Dify 的设置。
       - `DIFY_AGENT_API_TOKEN` 和 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`：分别使用不同的强密钥。
       - `SANDBOX_API_KEY` 和 `CODE_EXECUTION_API_KEY`：设为相同的值。两者不一致时，代码执行节点和模板转换节点会失败并返回 HTTP 401。
 
-    公开 URL 变量按 [配置公开 URL](#配置公开-url) 操作，选择适用于所用部署版本的共享文件。
-
     其他变量先在 `docker/envs/` 中搜索变量名，再按搜索结果处理：
 
     - **搜到一个 `.defaults` 文件**：编辑其第一条注释中写明的本地文件。该文件尚不存在时，先将 `.defaults` 文件复制为该文件名。
@@ -47,7 +45,7 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     如需恢复自带的默认值，删除该行或将其注释掉，不要只把值清空。`CELERY_WORKER_AMOUNT=` 这样的空赋值仍会用空值覆盖默认值；写在 `docker/.env` 中的空赋值还会让本地文件中的值失效。
   </Step>
   <Step title="应用修改">
-    在 `dify/docker` 中验证配置，并重建受影响的容器。沿用该部署现有的 Compose 项目和选项，包括所用的 `-p`、`-f`、`--env-file` 和 profile：
+    在 `dify/docker` 中验证配置，并重建受影响的容器：
 
     ```bash
     docker compose config --quiet
@@ -60,46 +58,6 @@ Docker Compose 从三类文件中读取 Dify 的设置。
   </Step>
 </Steps>
 
-### 配置公开 URL
-
-将 5 个公开 URL 设置在同一个共享文件中，确保浏览器请求和 API 生成的链接（包括模型供应商和插件图标链接）使用一致的地址。根据所用的部署文件选择对应的配置文件：
-
-<Tabs>
-  <Tab title="已发布的部署文件">
-    在 `docker/.env` 中设置需要自定义的 URL。1.19.0 版本不包含共享的 `urls.defaults` 和 `urls.env` 文件。
-  </Tab>
-  <Tab title="PR #46497（尚未发布）">
-    仅在使用 [PR #46497](https://github.com/langgenius/dify/pull/46497) 中的部署文件时按此步骤操作。该 PR 仍处于打开状态，尚未发布。
-
-    Web 服务、API、Celery Worker、Beat 和 KnowledgeFS Worker 会自动加载共享的 `docker/envs/core-services/urls.defaults` 文件。其中 5 个 URL 的默认值均为空，会覆盖镜像中的 localhost 值，并支持同源请求。
-
-    最小化的 `docker/.env` 已足够启动默认部署栈，`urls.env` 是可选文件。如需自定义 URL，编辑 `docker/envs/core-services/urls.env`。如果该文件不存在，从 `urls.defaults` 创建；在 `dify/docker` 中运行：
-
-    ```bash
-    cp envs/core-services/urls.defaults envs/core-services/urls.env
-    ```
-
-  </Tab>
-</Tabs>
-
-在所选的共享文件中设置公开访问的基础 URL，包含协议和所用的自定义端口。不要加上 `/console/api`、`/api` 或 `/v1`，Dify 会自动添加这些路径。例如，所有服务都通过同一个域名对外提供服务时：
-
-```dotenv
-CONSOLE_API_URL=https://dify.example.com:8443
-CONSOLE_WEB_URL=https://dify.example.com:8443
-SERVICE_API_URL=https://dify.example.com:8443
-APP_API_URL=https://dify.example.com:8443
-APP_WEB_URL=https://dify.example.com:8443
-```
-
-各服务使用不同的公开主机地址时，分别设置对应的值。即使使用同源请求，[通用变量](#通用变量) 中列出的邮件和 OAuth 功能仍需设置绝对 URL。
-
-按 [优先级](#优先级) 检查是否有其他值会覆盖修改，再用 [设置变量](#设置变量) 中的命令应用修改。
-
-通过公开地址打开控制台和一个已发布的应用，检查模型供应商和插件图标是否加载正常。
-
-如果地址仍不正确，查看 `docker compose config` 中是否有覆盖值。其输出包含密钥，需妥善保管。
-
 ### 优先级
 
 同一变量在多处设置时，服务最终使用哪个值，取决于该服务是否加载 `docker/.env`：
@@ -109,12 +67,9 @@ APP_WEB_URL=https://dify.example.com:8443
     API、WebSocket API、Worker、Beat、Web、代码执行沙箱、插件守护进程和 Agent 后端按以下顺序查找，采用第一个找到的值：
 
     1. `docker/.env`
-    2. `envs/core-services/urls.env` 中显式设置的公开 URL 值（使用尚未发布的 [PR #46497](https://github.com/langgenius/dify/pull/46497) 部署文件时，仅对 Web 服务、API 服务和 Celery Worker 生效）
-    3. 该服务的本地 `.env` 文件
-    4. 该服务的 `.defaults` 文件
-    5. 程序内置的默认值
-
-    使用该 PR 的部署文件时，不创建 `urls.env`，或从模板复制后保持不变，都会保留已有的服务覆盖值。在 `urls.env` 中显式设置 `CONSOLE_API_URL=` 这样的空赋值，会清除优先级更低的服务值。`docker/.env` 中的值仍优先，包括有意设置的空值。
+    2. 该服务的本地 `.env` 文件
+    3. 该服务的 `.defaults` 文件
+    4. 程序内置的默认值
 
     <Note>
     `.defaults` 文件中 **Container variable mappings** 注释下的变量，始终从另一项设置取值。直接设置它们不会生效，写在 `docker/.env` 中也一样；需要修改时，改它们取值的那项设置。
@@ -134,17 +89,13 @@ APP_WEB_URL=https://dify.example.com:8443
 
 ## 通用变量
 
-按 [配置公开 URL](#配置公开-url) 操作，确保 Web 服务、API 和 Worker 的公开地址同步更新。
-
-公开 URL 值为空时，浏览器可发起同源请求。邮件链接和 OAuth 回调仍需要下文指明的绝对 URL。
+这些 URL 变量用于配置 Dify 各服务的访问地址。
 
 ### CONSOLE_API_URL
 
 默认值：（空）
 
-浏览器向控制台 API 发起请求时使用的公开基础 URL，也用于 API 生成的链接，包括模型供应商和插件图标链接。值为空时，浏览器请求使用当前页面的源。
-
-GitHub 或 Google OAuth 登录、Notion 集成和插件 OAuth 回调需要设置绝对 URL。安全 Cookie 要求 `CONSOLE_API_URL` 和 `CONSOLE_WEB_URL` 均以 `https://` 开头。
+Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google）、Notion 集成或任何需要 OAuth 的插件，请设置此变量；这些功能需要绝对回调 URL 才能在授权后将用户重定向回来。此变量还决定是否使用安全（仅 HTTPS）Cookie。
 
 示例：`https://api.console.dify.ai`
 
@@ -152,15 +103,17 @@ GitHub 或 Google OAuth 登录、Notion 集成和插件 OAuth 回调需要设置
 
 默认值：`http://api:5001`
 
-Web 服务在服务端发起请求时使用的控制台 API 地址。Docker 从 `docker/envs/core-services/web.defaults` 加载其默认值。如果 API 的内部访问地址不同，在 `docker/envs/core-services/web.env` 中设置。浏览器请求使用 `CONSOLE_API_URL`。
+Web 前端容器在服务端发起请求时所使用的 Console API 地址，经由 Docker 内部网络直接访问，而非通过你的公网域名。此变量仅由 Web 前端容器使用，不影响 Python 后端；浏览器端请求仍使用 `CONSOLE_API_URL`。若留空，则回退到 `CONSOLE_API_URL`。仅当 API 服务的内部访问地址不同时才需修改。
 
 ### CONSOLE_WEB_URL
 
-默认值：（空）
+默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
 
-控制台的公开基础 URL。邀请链接、登录链接、部分密码重置链接，以及 OAuth 登录后的重定向需要设置绝对 URL。
+成员访问 Dify 控制台所用的 URL。用于构建邀请、密码重置等系统邮件中的链接，以及在 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
 
-只有在未设置 `CONSOLE_CORS_ALLOW_ORIGINS` 时，此变量才提供 CORS 允许来源。Docker 的 `api-worker.defaults` 将该变量设为 `*`，因此仅修改 `CONSOLE_WEB_URL` 不会改变 Docker 默认的 CORS 策略。
+新版人工介入节点也用它生成发给工作空间成员的请求链接，邮件和 IM（即时通讯应用）链接消息中的链接都是 `{CONSOLE_WEB_URL}/human-input/{token}`。
+
+如果成员在内网中使用 Dify，此地址只需内网可访问。
 
 示例：`https://console.dify.ai`
 
@@ -168,7 +121,7 @@ Web 服务在服务端发起请求时使用的控制台 API 地址。Docker 从 
 
 默认值：（空）
 
-控制台中展示给开发者复制使用的公开 API 基础 URL。Dify 会在此值后加上 `/v1`。值为空时，从收到的请求构建地址。如果服务器可通过多个地址访问，但希望开发者统一使用其中一个地址，设置此变量。
+在 Dify 控制台中展示给开发者的 API Base URL，即他们复制到代码中用于调用 Dify API 的 URL。如果为空，将从当前请求自动检测（例如 `http://localhost/v1`）。当你的服务器可通过多个地址访问时，设置此变量以确保 URL 一致。
 
 示例：`https://api.dify.ai`
 
@@ -176,17 +129,20 @@ Web 服务在服务端发起请求时使用的控制台 API 地址。Docker 从 
 
 默认值：（空）
 
-已发布 Web 应用使用的公开 API 基础 URL。值为空时，Web 前端向应用当前源下的 `/api` 发送请求。
+Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前端容器使用，不影响 Python 后端。如果为空，Docker 镜像默认使用 `http://127.0.0.1:5001`。
 
 示例：`https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-默认值：（空）
+默认值：空（Docker Compose 中为 `http://127.0.0.1:3000`）
 
-已发布 Web 应用的公开基础 URL。值为空时，分享链接回退到收到请求的源。
+已发布 Web 应用的公开访问 URL。人工介入节点也用它生成请求链接：
 
-使用 **人工介入** 邮件通知时，设置绝对 URL。空值会生成无效的表单链接。
+- **新版人工介入节点**：发给外部联系人的请求，以及发往任意邮箱地址（在节点中直接填写或取自变量）的请求，链接为 `{APP_WEB_URL}/form-v2/{token}`。
+- **旧版人工介入节点**：邮件中的链接为 `{APP_WEB_URL}/form/{token}`。
+
+外部收件人必须能打开此地址。
 
 示例：`https://app.dify.ai`
 
@@ -196,7 +152,7 @@ Web 服务在服务端发起请求时使用的控制台 API 地址。Docker 从 
 
 Webhook 和集成触发端点的公开访问 URL。外部系统使用此地址来调用你的工作流。Dify 构建触发回调 URL 格式为 `{TRIGGER_URL}/triggers/webhook/{id}` 并在控制台中展示。
 
-要使触发器能从外部系统正常工作，此变量必须指向它们可以访问的公共域名或 IP 地址。
+对于以卡片展示人工介入请求的 IM，卡片上的按钮点击也会经由 **设置** > **渠道** 中的回调 URL 发送到此地址。
 
 ### FILES_URL
 
@@ -1254,6 +1210,21 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | `TOP_K_MAX_VALUE` | `10` | 知识库检索中用户可设置的 `top_k` 参数最大值（每次搜索返回的结果数）。 |
 | `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | 每个数据集 API 请求的最大段落数。`0` 表示不限制。 |
 
+#### 文件安全扫描
+
+要让知识库扫描上传文件中的恶意软件，将 `FILE_SCAN_ENABLED` 设为 `true`。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置本节的变量，API 和 Worker 都会读取该文件。
+
+如果扫描服务位于私有地址（比如 **自定义端点**），还需通过 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 或 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` 让 [SSRF 代理](#ssrf-代理) 放行它。端点使用 `https` 时，代理只放行 443 端口。
+
+设置好这些变量后，接入扫描服务，再为需要扫描的知识库开启扫描。具体步骤详见 [扫描上传文件中的恶意软件](/zh/self-host/use-dify/knowledge/file-security-scan)。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `FILE_SCAN_ENABLED` | `false` | 设为 `true`，即可为上传至知识库的文件提供恶意软件扫描。<br/><br/>随后 **集成** 中会出现 **文件安全扫描**；除外部知识库外，其他知识库的设置中也会多出 **文件安全扫描** 部分。只有开启了扫描的知识库才会扫描文件。<br/><br/>API 和 Worker 都需要设置该变量。Worker 未设置时，会跳过扫描直接索引上传的文件，也不会报错。<br/><br/>改回 `false` 后，所有知识库都会停止扫描。各知识库的扫描设置会保留下来，重新设为 `true` 后继续生效。 |
+| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Dify 每次向扫描服务发送扫描请求时的读取超时（秒）。取值范围为 5～3600。<br/><br/>在 Docker Compose 部署中，扫描请求都要经过 SSRF 代理。无论该值设为多少，代理只要 2 分钟内收不到响应，就会关闭请求。这个 2 分钟的上限由代理的 Squid 配置文件 `docker/ssrf_proxy/squid-common.conf.template` 设定，没有对应的环境变量。如需更快判定失败，将该值设为小于 120 的数值。<br/><br/>不经过该代理时，调高可给响应慢的服务更多时间，调低则可更快判定失败。<br/><br/>请求超时或被代理关闭，都视同扫描服务不可用，是否重试由 `FILE_SCAN_MAX_ATTEMPTS` 决定。 |
+| `FILE_SCAN_MAX_ATTEMPTS` | `3` | Dify 扫描单个文件时最多尝试的次数，包括首次尝试。扫描服务超时、无法连接、返回服务器错误或仍在扫描该文件时，Dify 会重试；凭据无效、额度用尽或返回 Dify 无法解析的响应时，则不重试。<br/><br/>最后一次尝试仍未成功时，由知识库的 **扫描服务不可用时** 选项决定如何处理该文件。<br/><br/>取值范围为 1～5。每次失败后，Dify 依次等待 2、4、6、8 秒再重试。调高可撑过扫描服务的短暂中断，调低则可更快交由该选项处理。 |
+| `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` | `24` | 安全判定结果的沿用时长（小时）。在此期间，Dify 对内容相同的文件直接沿用该结果，不再重新扫描。<br/><br/>只有在同一工作空间中使用同一扫描服务时，才会沿用判定结果。判定为已感染的结果则始终沿用，因此 Dify 会立即再次拦截同一文件。<br/><br/>最小值为 1，因此无法关闭沿用。调低可让重复内容更早重新扫描，调高则可减少发往扫描服务的请求。 |
+
 #### 标注导入
 
 | 变量 | 默认值 | 说明 |
@@ -1313,11 +1284,11 @@ Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分�
 
 ### 邮件配置
 
-Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输入节点通知。配置三个支持的提供商之一。邮件链接需要设置 `CONSOLE_WEB_URL`，参见 [通用变量](#console_web_url)。
+Dify 通过邮件发送账户邀请、密码重置、登录验证码和人工介入请求。可从三个支持的提供商中任选一个进行配置。这些邮件中的链接基于 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 生成，因此这两个变量也需要设置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
+| `MAIL_TYPE` | （空） | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
 | `MAIL_DEFAULT_SEND_FROM` | （空） | 所有外发邮件的默认「发件人」地址。必填。 |
 
 <AccordionGroup>
@@ -1531,6 +1502,19 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `MAX_TOOLS_NUM` | `10` | Agent 可同时使用的最大工具数。 |
 | `MAX_ITERATIONS_NUM` | `99` | 每次 Agent 执行的最大推理迭代次数。防止 Agent 无限循环。 |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+默认值：`604800`（7 天）
+
+工作流运行等待人工响应的最长时间（秒），到时 Dify 会停止该运行。
+
+计时方式因节点而异：
+
+- **新版人工介入节点**：从运行开始时算起，运行中的所有人工介入节点共用这段时间。修改只影响此后创建的请求。
+- **旧版人工介入节点**：从每个表单创建时算起，每个节点单独计时。修改对已在等待的表单同样生效。
+
+如果审批可能超过一周，可调高此值；如果想让等待中的运行更早结束，可调低此值。此值必须为正整数：设为 `0` 或留空会导致 API、Worker 和 Beat 服务无法启动。
+
 ## Web 前端服务
 
 这些变量仅由 Next.js Web 前端容器使用，不影响 Python 后端。
@@ -1549,6 +1533,20 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 默认值：`true`
 
 启用 Go to Anything 命令面板中的 `/create` 和 `/refine` 命令，这两个命令可根据自然语言描述生成和修改 Workflow 与 Chatflow 应用。设为 `false` 即可隐藏它们。
+
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+默认值：`true`
+
+设为 `false` 可关闭新版 [人工介入](/zh/self-host/use-dify/nodes/human-input) 节点，以及 [联系人](/zh/self-host/use-dify/workspace/contacts) 和 [渠道](/zh/self-host/use-dify/workspace/channels/overview)。开启时，工作空间所有者和管理员可在主导航中看到 **联系人**，在 **设置** 中看到 **渠道**。
+
+新版人工介入节点还需要：
+
+- 将 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 设为收件人能打开的地址
+- 完成 [邮件配置](#邮件配置)，以便通过邮件发送请求
+- 对于以卡片展示请求的 IM，将 [`TRIGGER_URL`](#trigger_url) 设为该 IM 能访问的地址
+
+如果在新版节点投入使用后将其关闭，已发布的工作流仍会继续运行并发送请求，但请求中的链接会打开「未找到」页面。包含新版节点的工作流将无法在编辑器中运行，也无法发布。
 
 ## 新版 Agent
 
@@ -1896,8 +1894,8 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF 代理用于将出站流量反向代理转发到沙箱服务的监听端口。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF 代理转发到的沙箱服务主机名。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段。HTTP 请求节点、工具，以及 **同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时）发往这些地址的请求，SSRF 代理会放行。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，即使解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，并在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段，SSRF 代理会放行发往这些地址的请求。所有经过代理的请求都适用，比如 HTTP 请求节点、工具、**同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时），以及 [文件安全扫描](#文件安全扫描) 中的 **自定义端点** 扫描服务。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，如 [文件安全扫描](#文件安全扫描) 中 **自定义端点** 扫描服务的主机名。即使这些主机名解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，并在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | 代理请求的默认总超时（秒）。 |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | 默认连接超时（秒）。 |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | 默认读取超时（秒）。 |
@@ -2029,8 +2027,8 @@ Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | 启用工作流运行记录的自动清理。 |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | 预创建 TiDB Serverless 集群用于向量数据库池。 |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工输入表单，恢复或停止超时的工作流。 |
-| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工输入表单的频率（分钟）。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工介入表单，恢复或停止超时的工作流。关闭后，超时的运行会一直暂停，逾期提交的响应仍会被拒绝。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工介入表单的频率（分钟）。 |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 对话删除的兜底清理。对话删除后立即不可见，其消息以及对话中由工具生成的文件由后台任务清除，终端用户上传的文件会保留。<br/><br/>该定时清理会为清理任务丢失的对话重新派发任务，避免数据残留。 |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | 清理任务的运行频率（分钟）。 |
 | `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | 每次最多重新派发的对话数。 |

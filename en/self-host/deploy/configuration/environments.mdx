@@ -25,8 +25,6 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
       - `DIFY_AGENT_API_TOKEN` and `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`: use a different strong value for each.
       - `SANDBOX_API_KEY` and `CODE_EXECUTION_API_KEY`: set both to the same value; if they differ, Code and Template nodes fail with HTTP 401.
 
-    For public URL variables, follow [Configure Public URLs](#configure-public-urls) to choose the shared file for your deployment version.
-
     For any other variable, search `docker/envs/` for its name, then act on what the search finds:
 
     - **One `.defaults` file**: edit the local file named in its first comment. If that file doesn't exist yet, copy the `.defaults` file to that name first.
@@ -45,7 +43,7 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
     To go back to a bundled default, delete the line or comment it out; don't leave it blank. A blank line such as `CELERY_WORKER_AMOUNT=` can still override the default with an empty value, and a blank line in `docker/.env` hides the value in your local file.
   </Step>
   <Step title="Apply the Change">
-    From `dify/docker`, validate the configuration and recreate the affected containers. Use the deployment's existing Compose project and options, including any `-p`, `-f`, `--env-file`, and profiles:
+    From `dify/docker`, validate the configuration and recreate the affected containers:
 
     ```bash
     docker compose config --quiet
@@ -58,46 +56,6 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
   </Step>
 </Steps>
 
-### Configure Public URLs
-
-Set the five public URLs in one shared file so browser requests and API-generated links, including provider and plugin icons, use the same addresses. Choose the file that matches the deployment files you run:
-
-<Tabs>
-  <Tab title="Released Deployment Files">
-    In `docker/.env`, set the URLs you need to customize. Release 1.19.0 doesn't include the shared `urls.defaults` and `urls.env` files.
-  </Tab>
-  <Tab title="PR #46497 (Unreleased)">
-    Use this procedure only with the deployment files from [PR #46497](https://github.com/langgenius/dify/pull/46497), which is open and unreleased.
-
-    The shared `docker/envs/core-services/urls.defaults` file loads automatically for the web service, API, Celery workers, Beat, and KnowledgeFS workers. Its five empty URL defaults override localhost values in the images and support same-origin requests.
-
-    The minimal `docker/.env` is enough to start the default stack; `urls.env` is optional. To customize the URLs, edit `docker/envs/core-services/urls.env`. If it doesn't exist, create it from `urls.defaults`; from `dify/docker`, run:
-
-    ```bash
-    cp envs/core-services/urls.defaults envs/core-services/urls.env
-    ```
-
-  </Tab>
-</Tabs>
-
-In your chosen shared file, set public base URLs with a scheme and any custom port. Leave off `/console/api`, `/api`, and `/v1`: Dify adds those paths. For example, when every service is exposed through one domain:
-
-```dotenv
-CONSOLE_API_URL=https://dify.example.com:8443
-CONSOLE_WEB_URL=https://dify.example.com:8443
-SERVICE_API_URL=https://dify.example.com:8443
-APP_API_URL=https://dify.example.com:8443
-APP_WEB_URL=https://dify.example.com:8443
-```
-
-Use separate values when the services have separate public hosts. Even with same-origin requests, set absolute URLs for the email and OAuth features listed under [Common Variables](#common-variables).
-
-Check [Precedence](#precedence) for any values that would override your changes, then apply them with the commands in [Set a Variable](#set-a-variable).
-
-Open the console and a published app at their public addresses, and check that provider and plugin icons load.
-
-If an address is still wrong, inspect `docker compose config` for an override; its output contains secrets, so keep it private.
-
 ### Precedence
 
 When a variable is set in more than one place, which value a service uses depends on whether the service loads `docker/.env`:
@@ -107,12 +65,9 @@ When a variable is set in more than one place, which value a service uses depend
     The API, WebSocket API, workers, Beat, web, Code sandbox, plugin daemon, and agent backend use the first match, in this order:
 
     1. `docker/.env`
-    2. For the web service, API services, and Celery workers using the unreleased deployment files from [PR #46497](https://github.com/langgenius/dify/pull/46497): public URL values explicitly set in `envs/core-services/urls.env`
-    3. The service's local `.env` files
-    4. Its `.defaults` files
-    5. The application default
-
-    With those PR files, leaving `urls.env` absent or copying it unchanged preserves existing service overrides. An explicit empty assignment such as `CONSOLE_API_URL=` in `urls.env` clears a lower-priority service value. A value in `docker/.env`, including an intentional empty value, still wins.
+    2. The service's local `.env` files
+    3. Its `.defaults` files
+    4. The application default
 
     <Note>
     Variables under the **Container variable mappings** comment in a `.defaults` file always copy their value from another setting. Setting them directly has no effect, even in `docker/.env`, so change the setting they copy from instead.
@@ -132,17 +87,13 @@ If a value doesn't come from any of these files, check two more places:
 
 ## Common Variables
 
-Use [Configure Public URLs](#configure-public-urls) to change public addresses consistently across the web service, API, and workers.
-
-Empty public URL values support same-origin browser requests. Email links and OAuth callbacks still need the absolute URLs called out below.
+These URL variables configure the addresses of Dify's various services.
 
 ### CONSOLE_API_URL
 
 Default: (empty)
 
-The public base URL for console API requests from the browser and links generated by the API, including provider and plugin icons. Browser requests use the current origin when this value is empty.
-
-Set an absolute URL for GitHub or Google OAuth login, Notion integration, and plugin OAuth callbacks. Secure cookies require both `CONSOLE_API_URL` and `CONSOLE_WEB_URL` to start with `https://`.
+The public URL of Dify's backend API. Set this if you use OAuth login (GitHub, Google), Notion integration, or any plugin that requires OAuth—these features need an absolute callback URL to redirect users back after authorization. Also determines whether secure (HTTPS-only) cookies are used.
 
 Example: `https://api.console.dify.ai`
 
@@ -150,15 +101,19 @@ Example: `https://api.console.dify.ai`
 
 Default: `http://api:5001`
 
-The console API address the web service uses for server-side requests. Docker loads its default from `docker/envs/core-services/web.defaults`. Set it in `docker/envs/core-services/web.env` if the API is reachable at a different internal address. Browser requests use `CONSOLE_API_URL`.
+The console API address the web frontend container uses for server-side requests, reaching the API directly over the internal Docker network rather than your public domain. Only the web frontend container uses this variable, not the Python backend; browser requests still go to `CONSOLE_API_URL`.
+
+If left empty, it falls back to `CONSOLE_API_URL`. Change it only if the API service is reachable at a different internal address.
 
 ### CONSOLE_WEB_URL
 
-Default: (empty)
+Default: empty (`http://127.0.0.1:3000` for Docker Compose)
 
-The public base URL of the console. Set an absolute URL for invitation and sign-in links, some password-reset links, and redirects after OAuth login.
+The URL members open Dify's console at. Used to build links in system emails such as invitations and password resets, and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
 
-It supplies the CORS allowed origin only when `CONSOLE_CORS_ALLOW_ORIGINS` is absent. Docker's `api-worker.defaults` sets that variable to `*`, so changing `CONSOLE_WEB_URL` alone doesn't change the default Docker CORS policy.
+The new Human Input node builds workspace members' request links from it, in email and in IM (instant messaging app) link messages: `{CONSOLE_WEB_URL}/human-input/{token}`.
+
+The address doesn't need to be reachable from the internet if members use Dify on an internal network.
 
 Example: `https://console.dify.ai`
 
@@ -166,7 +121,7 @@ Example: `https://console.dify.ai`
 
 Default: (empty)
 
-The public API base URL shown in the console for developers to copy. Dify appends `/v1` to this value. When empty, it builds the address from the incoming request. Set it when the server is reachable through several addresses but developers should use one.
+The API Base URL shown to developers in the Dify console—the URL they copy into their code to call the Dify API. If empty, auto-detects from the current request (e.g., `http://localhost/v1`). Set this to ensure a consistent URL when your server is accessible via multiple addresses.
 
 Example: `https://api.dify.ai`
 
@@ -174,17 +129,20 @@ Example: `https://api.dify.ai`
 
 Default: (empty)
 
-The public API base URL used by published web apps. When empty, the web frontend sends requests to `/api` on the app's current origin.
+The backend API URL for the web app frontend (published apps). This variable is only used by the web frontend container, not the Python backend. If empty, the Docker image defaults to `http://127.0.0.1:5001`.
 
 Example: `https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-Default: (empty)
+Default: empty (`http://127.0.0.1:3000` for Docker Compose)
 
-The public base URL for published web apps. Sharing links fall back to the incoming request's origin when this value is empty.
+The public URL where published web apps are accessible. Human Input also builds request links from it:
 
-Set an absolute URL for **Human Input** email notifications. An empty value produces invalid form links.
+- **New Human Input node**: requests sent to external contacts, or to any email address typed into the node or taken from a variable, link to `{APP_WEB_URL}/form-v2/{token}`.
+- **Old Human Input node**: email links are `{APP_WEB_URL}/form/{token}`.
+
+External recipients must be able to open this address.
 
 Example: `https://app.dify.ai`
 
@@ -194,7 +152,7 @@ Default: `http://localhost`
 
 The publicly accessible URL for webhook and integration trigger endpoints. External systems use this address to invoke your workflows. Dify builds trigger callback URLs like `{TRIGGER_URL}/triggers/webhook/{id}` and displays them in the console.
 
-For triggers to work from external systems, this must point to a public domain or IP address they can reach.
+IMs that show Human Input requests as cards send button clicks to this address too, through the Callback URL in **Settings** > **Channels**.
 
 ### FILES_URL
 
@@ -1252,6 +1210,21 @@ For both `VECTOR_STORE=elasticsearch` and `VECTOR_STORE=elasticsearch-ja`, custo
 | `TOP_K_MAX_VALUE` | `10` | Maximum value users can set for the `top_k` parameter in knowledge base retrieval (how many results to return per search). |
 | `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | Maximum number of segments per dataset API request. `0` means unlimited. |
 
+#### File Security Scan
+
+To let knowledge bases scan uploaded files for malware, set `FILE_SCAN_ENABLED` to `true`. On Docker Compose, set this section's variables in `docker/envs/core-services/api-worker.env`, which both the API and the worker load.
+
+To reach a scanner on a private address, such as a **Custom Endpoint**, also let it through the [SSRF proxy](#ssrf-proxy) with `SSRF_PROXY_ALLOW_PRIVATE_IPS` or `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`. For `https`, the proxy allows only port 443.
+
+Once the variables are set, add a scanner and turn on scanning in the knowledge bases that need it. See [Scan Uploaded Files for Malware](/en/self-host/use-dify/knowledge/file-security-scan) for the steps.
+
+| Variable | Default | Description |
+|---|---|---|
+| `FILE_SCAN_ENABLED` | `false` | Set to `true` to offer malware scanning for knowledge base uploads.<br/><br/>**File Security Scan** then appears in **Integrations**, and knowledge bases other than external ones gain a **File security scan** section in their settings. Files are scanned only in knowledge bases where scanning is turned on.<br/><br/>Set it for the worker as well as the API. A worker without it indexes uploaded files unscanned, and no error appears.<br/><br/>Setting it back to `false` stops scanning in every knowledge base. Each knowledge base keeps its scan settings for when you turn it on again. |
+| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Read timeout in seconds for each scan request Dify sends to a scanning service. Must be between 5 and 3600.<br/><br/>In a Docker Compose deployment, scan requests pass through the SSRF proxy, which closes a request after 2 minutes without a response, whatever this value is. The 2-minute limit is set in the proxy's Squid configuration, `docker/ssrf_proxy/squid-common.conf.template`, not by an environment variable. To fail sooner, set this value below 120.<br/><br/>Without that proxy, raise the timeout to give a slow service longer to answer, or lower it to fail sooner.<br/><br/>A request that times out, or that the proxy closes, counts as the scanner being unavailable, and `FILE_SCAN_MAX_ATTEMPTS` decides whether Dify tries again. |
+| `FILE_SCAN_MAX_ATTEMPTS` | `3` | How many times Dify tries to scan a file when the scanning service times out, can't be reached, returns a server error, or is still scanning the file, counting the first try. Invalid credentials, used-up quota, and responses Dify can't parse aren't retried.<br/><br/>After the last try, the knowledge base's **When the scanner is unavailable** setting decides what happens to the file.<br/><br/>Must be between 1 and 5. After a failure, Dify waits 2, 4, 6, then 8 seconds between tries. Raise this value to ride out short outages of the scanning service, or lower it to reach that setting sooner. |
+| `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` | `24` | How many hours Dify reuses a clean verdict for identical file content instead of scanning it again.<br/><br/>A verdict is reused only under the same scanner in the same workspace. An infected verdict is always reused, so the same file is blocked again at once.<br/><br/>Must be at least 1, so reuse can't be turned off. Lower it so repeated content is scanned again sooner, or raise it to send fewer requests to the scanning service. |
+
 #### Annotation Import
 
 | Variable | Default | Description |
@@ -1311,11 +1284,11 @@ Connect Dify to Notion as a knowledge base data source. Get integration credenti
 
 ### Mail Configuration
 
-Dify sends emails for account invitations, password resets, login codes, and Human Input node notifications. Configure one of the three supported providers. Email links require `CONSOLE_WEB_URL` to be set—see [Common Variables](#console_web_url).
+Dify sends emails for account invitations, password resets, login codes, and Human Input requests. Configure one of the three supported providers. Links in these emails are built from [`CONSOLE_WEB_URL`](#console_web_url) and [`APP_WEB_URL`](#app_web_url), so set those too.
 
 | Variable | Default | Description |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | Mail provider: `resend`, `smtp`, or `sendgrid`. |
+| `MAIL_TYPE` | (empty) | Mail provider: `resend`, `smtp`, or `sendgrid`. |
 | `MAIL_DEFAULT_SEND_FROM` | (empty) | Default "From" address for all outgoing emails. Required. |
 
 <AccordionGroup>
@@ -1529,6 +1502,19 @@ All outbound HTTP requests from Dify (HTTP nodes, image downloads, etc.) are rou
 | `MAX_TOOLS_NUM` | `10` | Maximum number of tools an agent can use simultaneously. |
 | `MAX_ITERATIONS_NUM` | `99` | Maximum reasoning iterations per agent execution. Prevents infinite agent loops. |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+Default: `604800` (7 days)
+
+How long, in seconds, a workflow run can wait for people before Dify stops it.
+
+How the time is counted depends on the node:
+
+- **New Human Input node**: from when the run started, shared by every Human Input node in the run. A change applies to requests created after it.
+- **Old Human Input node**: from when each form was created, separately for each node. A change also applies to forms already waiting.
+
+Raise it for approvals that can take longer than a week, or lower it to end waiting runs sooner. It must be a positive whole number: `0` or an empty value keeps the API, worker, and beat services from starting.
+
 ## Web Frontend Service
 
 These variables are used by the Next.js web frontend container only, and do not affect the Python backend.
@@ -1547,6 +1533,20 @@ These variables are used by the Next.js web frontend container only, and do not 
 Default: `true`
 
 Enables the `/create` and `/refine` slash commands in the Go to Anything command palette, which generate and refine Workflow and Chatflow apps from a natural-language description. Set to `false` to hide them.
+
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+Default: `true`
+
+Set to `false` to turn off the new [Human Input](/en/self-host/use-dify/nodes/human-input) node, along with [Contacts](/en/self-host/use-dify/workspace/contacts) and [Channels](/en/self-host/use-dify/workspace/channels/overview). While it's on, workspace owners and admins see **Contacts** in the main navigation and **Channels** in **Settings**.
+
+The new Human Input node also needs:
+
+- [`CONSOLE_WEB_URL`](#console_web_url) and [`APP_WEB_URL`](#app_web_url) set to addresses recipients can open
+- [Mail](#mail-configuration) configured, for requests by email
+- [`TRIGGER_URL`](#trigger_url) set to an address your IM can reach, for IMs that show requests as cards
+
+If you turn it off after the new node is in use, published workflows keep running and sending requests, but the links in those requests open a "not found" page. Workflows with the new node can't be run from the editor or published.
 
 ## Agent (New)
 
@@ -1896,8 +1896,8 @@ These configure the Squid-based SSRF proxy container that blocks requests to int
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | Core dump directory. |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | Port the SSRF proxy listens on to reverse-proxy egress to the sandbox service. |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | Hostname of the sandbox service the SSRF proxy forwards to. |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through for HTTP Request nodes, tools, and **Sync from website** with a self-hosted Firecrawl or WaterCrawl server. For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address. A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS`, and set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | (empty) | Comma-separated private IP addresses or CIDR ranges the SSRF proxy lets through. They apply to every request that goes through the proxy, such as HTTP Request nodes, tools, **Sync from website** with a self-hosted Firecrawl or WaterCrawl server, and **Custom Endpoint** scanners for [File Security Scan](#file-security-scan). For a hostname, use `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`.<br/><br/>Every address in an allowed range becomes reachable from any HTTP Request node or tool as well, so list only the hosts Dify must reach, not a whole private network.<br/><br/>Set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | (empty) | Comma-separated hostnames the SSRF proxy lets through even when they resolve to a private address, such as the host of a **Custom Endpoint** scanner for [File Security Scan](#file-security-scan). A name matches only that exact host; a leading dot (`.corp.internal`) also covers its subdomains.<br/><br/>Keep it as narrow as `SSRF_PROXY_ALLOW_PRIVATE_IPS`, and set it in `envs/infrastructure/ssrf-proxy.env`.<br/><br/>Example: `firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | Default overall timeout in seconds for proxied requests. |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | Default connection timeout in seconds. |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | Default read timeout in seconds. |
@@ -2029,7 +2029,7 @@ Dify uses Celery Beat to run background maintenance tasks on configurable schedu
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | Enable automatic cleanup of workflow run records. |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | Pre-create TiDB Serverless clusters for vector database pooling. |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | Update TiDB Serverless cluster status periodically. |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | Check for expired Human Input forms and resume or stop timed-out workflows. When it's off, timed-out runs stay paused, and late responses are still refused. |
 | `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | How often to check for expired Human Input forms (in minutes). |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | Safety net for conversation deletion. A deleted conversation disappears instantly while a background job removes its messages and the files generated by tools during the conversation. Files end users uploaded are kept.<br/><br/>This sweep re-runs that job for conversations whose cleanup was lost, so their data does not linger. |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | How often the sweep runs (in minutes). |
