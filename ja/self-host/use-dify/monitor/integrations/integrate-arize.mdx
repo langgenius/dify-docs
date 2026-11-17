@@ -33,7 +33,7 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   ![アプリケーションパフォーマンスを追跡](https://i.ibb.co/v6cL6rPs/dify-docs-arize-in-use.png)
 </Frame>
 
-設定後、Arize で作成した **API Key**, **Space ID** と **プロジェクト名** を設定ページに貼り付けて保存します。
+設定をクリックした後、**API Key**、**Space ID**、**プロジェクト** 名を入力して保存します。**Endpoint** のデフォルトは `https://otlp.arize.com` です。OTLP/gRPC コレクターを指定してください。URL のパスは使われません。HTTP の `/v1/traces` エンドポイントは指定しないでください。
 
 <Frame>
   ![Arize の設定](https://i.ibb.co/m5Xww8gL/dify-docs-arize-config.png)
@@ -45,7 +45,25 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   ![Arize の設定](https://i.ibb.co/xtggVmb7/dify-docs-arize-in-service.png)
 </Frame>
 
+<Note>
+設定を保存してトレースを有効にしたら、アプリを再実行し、監視サービスに新しいトレースが表示されるか確認してください。トレースは非同期で送信されます。設定の保存だけでは、トレースの到着は確認できません。
+
+デプロイの両方のスイッチがオフでも、新しい Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローは通常のトレースを送信します。利用可能な入力と出力も含まれますが、Agent 内部のモデル呼び出しとツール呼び出しは含まれません。
+
+これらの呼び出しを収集するには、Dify API とワーカーで `OPS_AGENT_TRACE_ENABLED=true` を、Agent バックエンドで `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` を設定します。両方を同時に有効にしてください。API 側のスイッチだけが有効で、**Agent の内部処理を収集** がオン（デフォルト）の場合、Agent 呼び出しの実行時に収集がタイムアウトします。エラーは `agent_trace_collection_incomplete` となり、トレースはエクスポートされません。これはアプリの実行失敗を意味するものではありません。デプロイ設定の詳細は [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。
+
+これらのアプリで API 側の収集を有効にすると、**内容を収集** はデフォルトでオフになります。ワークフロー全体で入力、出力、メタデータの大半が除外され、エラーテキストはマスクされます。これらの内容を送信するには、**内容を収集** を有効にしてください。クラシックの `agent-chat` アプリや、クラシック Agent ノードだけを使うワークフローでは、通常のトレースを引き続き使用します。
+</Note>
+
 ## モニタリングデータリスト
+
+以下の表は通常のトレースを説明しています。新しい Agent アプリや新しい Agent ノードを含むワークフローで API 側の収集を有効にすると、新しい UUIDv7 がトレース ID になります。元の ID とトレース実行 ID は、属性 `dify.source.id` と `dify.tracing.run_id` に保持されます。新しい Agent アプリで **Agent の内部処理を収集** をオンにすると、通常の `llm` スパンが `Agent attempt` スパンに置き換わります。このスパンには、内部のモデル呼び出しとツール呼び出しが含まれます。収集対象の実行では、モデレーション、推奨質問、名前生成の個別レコードは省略されます。
+
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。トレース ID の元になるのは、メッセージ ID、ワークフロー実行 ID、または呼び出し元が指定した ID です。ゼロ以外の UUID または 32 桁の 16 進数なら、その値を保持します。それ以外の値はハッシュ化されます。スパン ID は派生値です。`X-Trace-Id` が指定されていれば、メッセージ ID やワークフロー実行 ID より優先されます。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+
+各スパンの `user.id` は、`end_user_session_id` があればその値を、なければ `user_id` を使います。別フィールドの `metadata.user_id` には、Dify のユーザーレコード ID が保持されます。
+
+以下の詳細リストは、Dify の元レコードとメタデータを説明しています。エクスポートされるのは、関連する利用可能な値のみです。元レコード全体をそのまま送信するわけではありません。
 
 ### **ワークフロー/会話フロートラッキング情報**
 
@@ -60,36 +78,36 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   </thead>
   <tbody>
     <tr>
-      <td>workflow_app_log_id/workflow_run_id</td>
-      <td>id</td>
+      <td>workflow_run_id</td>
+      <td>metadata.workflow_run_id</td>
     </tr>
     <tr>
-      <td>user_session_id</td>
-      <td>- メタデータに配置</td>
+      <td>user_id</td>
+      <td>user.id（フォールバック）、metadata.user_id</td>
     </tr>
     <tr>
-      <td>{"workflow_{id}"}</td>
+      <td>workflow</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
       <td>outputs</td>
-      <td>outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
-      <td>モデルトークン消費</td>
-      <td>usage_metadata</td>
+      <td>モデルトークン消費量（LLM 呼び出し）</td>
+      <td>llm.token_count.prompt / completion / total</td>
     </tr>
     <tr>
       <td>metadata</td>
@@ -97,15 +115,11 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
     </tr>
     <tr>
       <td>error</td>
-      <td>error</td>
+      <td>status.code / status.message</td>
     </tr>
     <tr>
-      <td>\[workflow]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>"conversation_id/none for workflow"</td>
-      <td>conversation_id in metadata</td>
+      <td>セッション ID</td>
+      <td>session.id</td>
     </tr>
   </tbody>
 </table>
@@ -152,53 +166,49 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   <thead>
     <tr>
       <th>チャット</th>
-      <th>Arize LLM</th>
+      <th>Arize Trace</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>message_id</td>
-      <td>id</td>
+      <td>message_id（X-Trace-Id 未指定時）</td>
+      <td>trace_id</td>
     </tr>
     <tr>
-      <td>user_session_id</td>
-      <td>- メタデータに配置</td>
+      <td>end_user_session_id</td>
+      <td>user.id、metadata.end_user_session_id</td>
     </tr>
     <tr>
-      <td>"llm"</td>
+      <td>message</td>
       <td>name</td>
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
       <td>outputs</td>
-      <td>outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
-      <td>モデルトークン消費</td>
-      <td>usage_metadata</td>
+      <td>モデルトークン消費量（LLM 呼び出し）</td>
+      <td>llm.token_count.prompt / completion / total</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\["message", conversation_mode]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>conversation_id</td>
-      <td>conversation_id in metadata</td>
+      <td>セッション ID</td>
+      <td>session.id</td>
     </tr>
   </tbody>
 </table>
@@ -206,7 +216,7 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
 
 - message_id - メッセージ ID
 - message_data - メッセージデータ
-- user_session_id - ユーザーセッション ID
+- end_user_session_id - ユーザーセッション ID
 - conversation_model - 会話モード
 - message_tokens - メッセージ内のトークン数
 - answer_tokens - 回答内のトークン数
@@ -217,7 +227,6 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
 - file_list - 処理されたファイルリスト
 - start_time - 開始時間
 - end_time - 終了時間
-- message_file_data - メッセージ関連のファイルデータ
 - conversation_mode - 会話モード
 - メタデータ
   - conversation_id - 会話 ID
@@ -244,7 +253,7 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>user.id（フォールバック）、metadata.user_id</td>
     </tr>
     <tr>
       <td>"moderation"</td>
@@ -252,27 +261,23 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>action, flagged</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["moderation"]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>
@@ -299,17 +304,19 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
 
 **提案質問を追跡するために使用**
 
+メッセージのトレース内のツールスパンとして送信されます。
+
 <table>
   <thead>
     <tr>
       <th>提案質問</th>
-      <th>Arize LLM</th>
+      <th>Arize ツールスパン</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>user.id（フォールバック）、metadata.user_id</td>
     </tr>
     <tr>
       <td>"suggested_question"</td>
@@ -317,27 +324,23 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>suggested_question</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["suggested_question"]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>
@@ -386,7 +389,7 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>user.id（フォールバック）、metadata.user_id</td>
     </tr>
     <tr>
       <td>"dataset_retrieval"</td>
@@ -394,31 +397,27 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
       <td>inputs</td>
-      <td>inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>documents</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
     </tr>
     <tr>
-      <td>\["dataset_retrieval"]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>message_id</td>
-      <td>parent_run_id</td>
+      <td>message_id から派生した ID</td>
+      <td>parent_span_id</td>
     </tr>
   </tbody>
 </table>
@@ -457,7 +456,7 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
   <tbody>
     <tr>
       <td>user_id</td>
-      <td>- メタデータに配置</td>
+      <td>user.id（フォールバック）、metadata.user_id</td>
     </tr>
     <tr>
       <td>tool_name</td>
@@ -465,27 +464,23 @@ Dify アプリケーションで Arize を設定します。監視するアプ�
     </tr>
     <tr>
       <td>start_time</td>
-      <td>start_time</td>
+      <td>start_time_unix_nano</td>
     </tr>
     <tr>
       <td>end_time</td>
-      <td>end_time</td>
+      <td>end_time_unix_nano</td>
     </tr>
     <tr>
-      <td>inputs</td>
-      <td>inputs</td>
+      <td>tool_inputs</td>
+      <td>input.value</td>
     </tr>
     <tr>
-      <td>outputs</td>
-      <td>outputs</td>
+      <td>tool_outputs</td>
+      <td>output.value</td>
     </tr>
     <tr>
       <td>metadata</td>
       <td>metadata</td>
-    </tr>
-    <tr>
-      <td>\["tool", tool_name]</td>
-      <td>tags</td>
     </tr>
   </tbody>
 </table>

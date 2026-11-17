@@ -64,14 +64,14 @@ Configure LangSmith in the Dify application. Open the application you need to mo
   ![Tracing App Performance](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/b6c7e5d4c2ca2092d59465cca27bc69c.png)
 </Frame>
 
-After clicking configure, paste the **API Key** and **project name** created in LangSmith into the configuration and save.
+After clicking configure, paste the **API Key** and **project name** into the configuration and save. The key must allow project reads and trace writes. **Endpoint** defaults to `https://api.smith.langchain.com`; a custom API endpoint must use HTTPS.
 
 <Frame>
   ![Configure LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/93dfabcadb7b2ff597f54beb5e642124.png)
 </Frame>
 
 <Info>
-The configured project name needs to match the project set in LangSmith. If the project names do not match, LangSmith will automatically create a new project during data synchronization.
+The configured project name needs to match the project set in LangSmith. If the project does not exist, LangSmith creates it when the first trace arrives, not when the configuration is saved.
 </Info>
 
 Once successfully saved, you can view the monitoring status on the current page.
@@ -100,7 +100,25 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   ![Viewing Application Data in LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/beeb4ee50c80de8db7400c1f65727c8c.png)
 </Frame>
 
+<Note>
+After saving and enabling tracing, run the app again and check for a new trace in the monitoring service. Delivery is asynchronous; saving the configuration alone does not confirm that a trace has arrived.
+
+With both deployment switches off, the new Agent app type and workflows using the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent) still send ordinary traces, including available inputs and outputs, but omit the Agent's internal model and tool calls.
+
+To collect those calls, enable `OPS_AGENT_TRACE_ENABLED=true` on the Dify API and workers and `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` on the Agent backend. Enable them together: when an Agent call executes with only the API switch enabled and **Capture Agent internals** on (the default), trace collection times out with `agent_trace_collection_incomplete` and no trace is exported. This does not mean the app execution failed. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for deployment settings.
+
+With API collection enabled for these apps, **Capture content** is off by default: inputs, outputs, and most metadata are removed, and error text is redacted across the whole workflow. Enable it to send that content. Classic `agent-chat` apps and workflows using only classic Agent nodes retain ordinary tracing.
+</Note>
+
 ### Monitoring Data List
+
+The tables below describe ordinary traces. When API collection is enabled for the new Agent app type or workflows containing a new Agent node, traces use a new UUIDv7 trace ID, with source and tracing-run IDs retained as `dify.source.id` and `dify.tracing.run_id` attributes. For the new Agent app type, `Agent attempt` spans with internal model and tool calls replace the ordinary `llm` span when **Capture Agent internals** is on. Separate moderation, suggested-question, and naming records are omitted for collected runs.
+
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Without `X-Trace-Id`, the root run ID uses the message ID for Chat/Chatflow or workflow run ID for Workflow. Child run IDs are derived. With `X-Trace-Id`, root run IDs are also derived, and the supplied ID is retained in metadata. A `parent_run_id` refers to the parent's exported run ID. Native token usage is reported on model calls only.
+
+For Chatflow, the trace root is the `message`, with the user's query as input (or workflow inputs when the query is empty). Its `workflow` child retains the workflow inputs and outputs.
+
+The detail lists below describe Dify's source records and metadata. Only the relevant, available values are exported; the raw records are not sent in full.
 
 #### **Workflow/Chatflow Trace Information**
 
@@ -115,15 +133,15 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   </thead>
   <tbody>
     <tr>
-      <td>workflow\_app\_log\_id/workflow\_run\_id</td>
-      <td>id</td>
+      <td>workflow_run_id (Workflow) / message_id (Chatflow), without X-Trace-Id</td>
+      <td>id (root run)</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>- placed in metadata</td>
+      <td>user_id</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
-      <td>{"workflow_{id}"}</td>
+      <td>workflow (Workflow) / message (Chatflow)</td>
       <td>name</td>
     </tr>
     <tr>
@@ -135,7 +153,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>end\_time</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>Workflow inputs / Chatflow query (workflow inputs if empty)</td>
       <td>inputs</td>
     </tr>
     <tr>
@@ -143,27 +161,23 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>outputs</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
-      <td>usage\_metadata</td>
+      <td>Model token consumption (LLM calls)</td>
+      <td>outputs.usage_metadata</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>error</td>
       <td>error</td>
     </tr>
     <tr>
-      <td>\[workflow]</td>
-      <td>tags</td>
+      <td>Session ID</td>
+      <td>extra.metadata.session_id</td>
     </tr>
     <tr>
-      <td>"conversation\_id/none for workflow"</td>
-      <td>conversation\_id in metadata</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
+      <td>Parent span (when present)</td>
       <td>parent\_run\_id</td>
     </tr>
   </tbody>
@@ -209,20 +223,20 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <thead>
     <tr>
       <th>Chat</th>
-      <th>LangSmith LLM</th>
+      <th>LangSmith Chain / LLM</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>message\_id</td>
-      <td>id</td>
+      <td>message_id (without X-Trace-Id)</td>
+      <td>id (root run)</td>
     </tr>
     <tr>
-      <td>user\_session\_id</td>
-      <td>- placed in metadata</td>
+      <td>end\_user\_session\_id</td>
+      <td>extra.metadata.end_user_session_id</td>
     </tr>
     <tr>
-      <td>{'"message_{id}"'}</td>
+      <td>message</td>
       <td>name</td>
     </tr>
     <tr>
@@ -242,28 +256,20 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>outputs</td>
     </tr>
     <tr>
-      <td>Model token consumption</td>
-      <td>usage\_metadata</td>
+      <td>Model token consumption (LLM calls)</td>
+      <td>outputs.usage_metadata</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>error</td>
       <td>error</td>
     </tr>
     <tr>
-      <td>\["message", conversation\_mode]</td>
-      <td>tags</td>
-    </tr>
-    <tr>
-      <td>conversation\_id</td>
-      <td>conversation\_id in metadata</td>
-    </tr>
-    <tr>
-      <td>conversion\_id</td>
-      <td>parent\_run\_id</td>
+      <td>Session ID</td>
+      <td>extra.metadata.session_id</td>
     </tr>
   </tbody>
 </table>
@@ -271,7 +277,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
 
 * message\_id - Message ID
 * message\_data - Message data
-* user\_session\_id - User session ID
+* end\_user\_session\_id - User session ID
 * conversation\_model - Conversation mode
 * message\_tokens - Number of tokens in the message
 * answer\_tokens - Number of tokens in the answer
@@ -282,7 +288,6 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
 * file\_list - List of processed files
 * start\_time - Start time
 * end\_time - End time
-* message\_file\_data - File data associated with the message
 * conversation\_mode - Conversation mode
 * Metadata
   * conversation\_id - Conversation ID
@@ -309,10 +314,10 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>- placed in metadata</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
-      <td>“moderation"</td>
+      <td>moderation</td>
       <td>name</td>
     </tr>
     <tr>
@@ -328,16 +333,12 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>inputs</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>action, flagged</td>
       <td>outputs</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
-    </tr>
-    <tr>
-      <td>\[moderation]</td>
-      <td>tags</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>message\_id</td>
@@ -370,13 +371,13 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>LangSmith LLM</th>
+      <th>LangSmith Tool</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>- placed in metadata</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
       <td>suggested\_question</td>
@@ -395,16 +396,12 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>inputs</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>suggested_question</td>
       <td>outputs</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
-    </tr>
-    <tr>
-      <td>\[suggested\_question]</td>
-      <td>tags</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>message\_id</td>
@@ -455,7 +452,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>- placed in metadata</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
       <td>dataset\_retrieval</td>
@@ -474,16 +471,12 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>inputs</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>documents</td>
       <td>outputs</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
-    </tr>
-    <tr>
-      <td>\[dataset\_retrieval]</td>
-      <td>tags</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>message\_id</td>
@@ -524,7 +517,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>- placed in metadata</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
       <td>tool\_name</td>
@@ -539,20 +532,16 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
       <td>end\_time</td>
     </tr>
     <tr>
-      <td>inputs</td>
+      <td>tool_inputs</td>
       <td>inputs</td>
     </tr>
     <tr>
-      <td>outputs</td>
+      <td>tool_outputs</td>
       <td>outputs</td>
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
-    </tr>
-    <tr>
-      <td>\["tool", tool\_name]</td>
-      <td>tags</td>
+      <td>extra.metadata</td>
     </tr>
     <tr>
       <td>message\_id</td>
@@ -603,7 +592,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
   <tbody>
     <tr>
       <td>user\_id</td>
-      <td>- placed in metadata</td>
+      <td>extra.metadata.user_id</td>
     </tr>
     <tr>
       <td>generate\_name</td>
@@ -627,11 +616,7 @@ Detailed LLM operation logs through LangSmith will help you optimize the perform
     </tr>
     <tr>
       <td>metadata</td>
-      <td>extra</td>
-    </tr>
-    <tr>
-      <td>\[generate\_name]</td>
-      <td>tags</td>
+      <td>extra.metadata</td>
     </tr>
   </tbody>
 </table>

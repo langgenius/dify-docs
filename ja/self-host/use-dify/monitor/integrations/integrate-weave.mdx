@@ -34,7 +34,7 @@ Dify アプリケーションで Weave を設定します。監視が必要な�
   ![Dify アプリケーションで Weave を設定します](https://assets-docs.dify.ai/2025/04/c33e8fda75ee9052ed23c8690e314862.png)
 </Frame>
 
-設定をクリックした後、**API キー** と**プロジェクト名** を貼り付け、**W&B エンティティ**（オプション、デフォルトはユーザー名）も指定して設定を保存します。
+設定をクリックした後、**API Key** と、既存の書き込み可能な **プロジェクト** 名を入力します。**Entity** は任意です。空欄の場合は API キーのデフォルトエンティティが使われ、チームの場合もあります。入力後、設定を保存します。
 
 <Frame>
   ![](https://assets-docs.dify.ai/2025/04/60bce1ae7b883825b13526d172ae0073.png)
@@ -62,7 +62,25 @@ Weave に切り替えると、ダッシュボードで Dify アプリケーシ�
 
 Weave を通じた詳細な LLM 操作ログは、Dify アプリケーションのパフォーマンスを最適化するのに役立ちます。
 
+<Note>
+設定を保存してトレースを有効にしたら、アプリを再実行し、監視サービスに新しいトレースが表示されるか確認してください。トレースは非同期で送信されます。設定の保存だけでは、トレースの到着は確認できません。
+
+デプロイの両方のスイッチがオフでも、新しい Agent アプリや [新しい Agent ノード](/ja/self-host/use-dify/nodes/agent#new-agent) を使うワークフローは通常のトレースを送信します。利用可能な入力と出力も含まれますが、Agent 内部のモデル呼び出しとツール呼び出しは含まれません。
+
+これらの呼び出しを収集するには、Dify API とワーカーで `OPS_AGENT_TRACE_ENABLED=true` を、Agent バックエンドで `DIFY_AGENT_APPLICATION_TRACING_ENABLED=true` を設定します。両方を同時に有効にしてください。API 側のスイッチだけが有効で、**Agent の内部処理を収集** がオン（デフォルト）の場合、Agent 呼び出しの実行時に収集がタイムアウトします。エラーは `agent_trace_collection_incomplete` となり、トレースはエクスポートされません。これはアプリの実行失敗を意味するものではありません。デプロイ設定の詳細は [環境変数](/ja/self-host/deploy/configuration/environments#llmops-トレース配信) を参照してください。
+
+これらのアプリで API 側の収集を有効にすると、**内容を収集** はデフォルトでオフになります。ワークフロー全体で入力、出力、メタデータの大半が除外され、エラーテキストはマスクされます。これらの内容を送信するには、**内容を収集** を有効にしてください。クラシックの `agent-chat` アプリや、クラシック Agent ノードだけを使うワークフローでは、通常のトレースを引き続き使用します。
+</Note>
+
 ### モニタリングデータリスト
+
+以下の表は通常のトレースを説明しています。新しい Agent アプリや新しい Agent ノードを含むワークフローで API 側の収集を有効にすると、新しい UUIDv7 がトレース ID になります。元の ID とトレース実行 ID は、属性 `dify.source.id` と `dify.tracing.run_id` に保持されます。新しい Agent アプリで **Agent の内部処理を収集** をオンにすると、通常の `llm` スパンが `Agent attempt` スパンに置き換わります。このスパンには、内部のモデル呼び出しとツール呼び出しが含まれます。収集対象の実行では、モデレーション、推奨質問、名前生成の個別レコードは省略されます。
+
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。呼び出しの `trace_id` は、Dify のトレース識別子がゼロ以外の UUID または 32 桁の 16 進数の場合、その値を保持します。それ以外の値はハッシュ化されます。呼び出しの `id` は派生値です。`X-Trace-Id` が指定されていれば、メッセージ ID やワークフロー実行 ID より優先されます。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+
+Chatflow では `message` がトレースのルートになります。入力はユーザーのクエリで、クエリが空ならワークフローの入力を使います。子の `workflow` には、ワークフローの入力と出力が保持されます。
+
+以下の詳細リストは、Dify の元レコードとメタデータを説明しています。エクスポートされるのは、関連する利用可能な値のみです。元レコード全体をそのまま送信するわけではありません。
 
 #### **Workflow/Chatflow トレース情報**
 
@@ -70,19 +88,18 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | ワークフロー                           | Weave トレース                |
 | ------------------------------------ | ---------------------------- |
-| workflow_app_log_id/workflow_run_id | id                         |
-| user_session_id                    | メタデータに配置              |
-| workflow_\{id\}                    | name                         |
-| start_time                          | start_time                  |
-| end_time                            | end_time                    |
-| inputs                               | inputs                       |
-| outputs                              | outputs                      |
-| モデルトークン消費量                   | usage_metadata              |
-| metadata                             | extra                        |
-| error                                | error                        |
-| workflow                          | tags                         |
-| "conversation_id/none for workflow" | メタデータ内の conversation_id |
-| conversion_id                       | parent_run_id              |
+| workflow_run_id（Workflow）/ message_id（Chatflow）、X-Trace-Id 未指定時 | trace_id |
+| user_id                    | attributes.user_id              |
+| workflow（Workflow）/ message（Chatflow）                    | op_name / display_name                         |
+| start_time                          | started_at                  |
+| end_time                            | ended_at                    |
+| Workflow の入力 / Chatflow のクエリ（空ならワークフローの入力） | inputs |
+| outputs                              | output                      |
+| モデルトークン消費量（LLM 呼び出し）                   | summary.usage（モデルごと）              |
+| metadata                             | attributes                        |
+| error                                | exception                        |
+| セッション ID | thread_id |
+| 親スパン（存在する場合）                       | parent_id              |
 
 **ワークフロートレース情報**
 
@@ -123,25 +140,23 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | チャット                             | Weave トレース                |
 | ---------------------------------- | ----------------------------- |
-| message_id                        | id                           |
-| user_session_id                  | メタデータに配置               |
-| "message_\{id\}"                  | name                         |
-| start_time                        | start_time                  |
-| end_time                          | end_time                    |
+| message_id（X-Trace-Id 未指定時） | trace_id |
+| end_user_session_id                  | attributes.end_user_session_id               |
+| message                  | op_name / display_name                         |
+| start_time                        | started_at                  |
+| end_time                          | ended_at                    |
 | inputs                             | inputs                       |
-| outputs                            | outputs                      |
-| モデルトークン消費量                 | usage_metadata              |
-| metadata                           | extra                        |
-| error                              | error                        |
-| "message", conversation_mode   | tags                         |
-| conversation_id                   | メタデータ内の conversation_id |
-| conversion_id                     | parent_run_id              |
+| outputs                            | output                      |
+| モデルトークン消費量（LLM 呼び出し）                 | summary.usage（モデルごと）              |
+| metadata                           | attributes                        |
+| error                              | exception                        |
+| セッション ID                   | thread_id |
 
 **メッセージトレース情報**
 
 * message_id - メッセージ ID
 * message_data - メッセージデータ
-* user_session_id - ユーザーセッション ID
+* end_user_session_id - ユーザーセッション ID
 * conversation_model - 会話モード
 * message_tokens - メッセージ内のトークン数
 * answer_tokens - 回答内のトークン数
@@ -152,7 +167,6 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 * file_list - 処理されたファイルのリスト
 * start_time - 開始時間
 * end_time - 終了時間
-* message_file_data - メッセージに関連するファイルデータ
 * conversation_mode - 会話モード
 * メタデータ
   * conversation_id - 会話 ID
@@ -171,15 +185,14 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | モデレーション   | Weave トレース           |
 | ------------- | ----------------------- |
-| user_id      | メタデータに配置           |
-| "moderation"  | name                    |
-| start_time   | start_time             |
-| end_time     | end_time               |
+| user_id      | attributes.user_id           |
+| "moderation"  | op_name / display_name                    |
+| start_time   | started_at             |
+| end_time     | ended_at               |
 | inputs        | inputs                  |
-| outputs       | outputs                 |
-| metadata      | extra                   |
-| \[moderation] | tags                    |
-| message_id   | parent_run_id         |
+| action, flagged       | output                 |
+| metadata      | attributes                   |
+| message_id から派生した ID   | parent_id         |
 
 **モデレーショントレース情報**
 
@@ -204,15 +217,14 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | 提案質問               | Weave トレース            |
 | ---------------------- | ----------------------- |
-| user_id               | メタデータに配置          |
-| suggested_question    | name                    |
-| start_time            | start_time             |
-| end_time              | end_time               |
+| user_id               | attributes.user_id          |
+| suggested_question    | op_name / display_name                    |
+| start_time            | started_at             |
+| end_time              | ended_at               |
 | inputs                 | inputs                  |
-| outputs                | outputs                 |
-| metadata               | extra                   |
-| suggested_question | tags                    |
-| message_id            | parent_run_id         |
+| suggested_question                | output                 |
+| metadata               | attributes                   |
+| message_id から派生した ID            | parent_id         |
 
 **メッセージトレース情報**
 
@@ -249,15 +261,14 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | データセット検索        | Weave トレース            |
 | --------------------- | ----------------------- |
-| user_id              | メタデータに配置          |
-| dataset_retrieval    | name                    |
-| start_time           | start_time             |
-| end_time             | end_time               |
+| user_id              | attributes.user_id          |
+| dataset_retrieval    | op_name / display_name                    |
+| start_time           | started_at             |
+| end_time             | ended_at               |
 | inputs                | inputs                  |
-| outputs               | outputs                 |
-| metadata              | extra                   |
-| dataset_retrieval | tags                    |
-| message_id           | parent_run_id         |
+| documents               | output                 |
+| metadata              | attributes                   |
+| message_id から派生した ID           | parent_id         |
 
 **データセット検索トレース情報**
 
@@ -284,15 +295,14 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | ツール                  | Weave トレース            |
 | --------------------- | ----------------------- |
-| user_id              | メタデータに配置           |
-| tool_name            | name                    |
-| start_time           | start_time             |
-| end_time             | end_time               |
-| inputs                | inputs                  |
-| outputs               | outputs                 |
-| metadata              | extra                   |
-| \["tool", tool_name] | tags                    |
-| message_id           | parent_run_id         |
+| user_id              | attributes.user_id           |
+| tool_name            | op_name / display_name                    |
+| start_time           | started_at             |
+| end_time             | ended_at               |
+| tool_inputs                | inputs                  |
+| tool_outputs               | output                 |
+| metadata              | attributes                   |
+| message_id から派生した ID           | parent_id         |
 
 #### **ツールトレース情報**
 
@@ -329,14 +339,13 @@ Weave を通じた詳細な LLM 操作ログは、Dify アプリケーション�
 
 | 名前生成           | Weave トレース            |
 | ----------------- | ----------------------- |
-| user_id          | メタデータに配置          |
-| generate_name    | name                    |
-| start_time       | start_time             |
-| end_time         | end_time               |
+| user_id          | attributes.user_id          |
+| generate_name    | op_name / display_name                    |
+| start_time       | started_at             |
+| end_time         | ended_at               |
 | inputs            | inputs                  |
-| outputs           | outputs                 |
-| metadata          | extra                   |
-| generate_name | tags                    |
+| outputs           | output                 |
+| metadata          | attributes                   |
 
 **名前生成トレース情報**
 
