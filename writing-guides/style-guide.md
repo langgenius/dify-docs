@@ -78,7 +78,7 @@ One sentence carries the whole action, its location, and where it lands. The dia
 
 ## Organize and Present the Content
 
-Getting the right content onto the right page comes first; the opening section is about that. A rule has one home, the page whose reader needs all of it. Other pages link there with a payoff and keep only what is specific to them, because a copied rule doubles the reading and the copies drift apart.
+Getting the right content onto the right page comes first; the opening section is about that. A rule has one home, the page whose reader needs all of it. Other pages link there with a payoff and keep only what is specific to them, because a copied rule doubles the reading and the copies drift apart. A fact this page's reader acts on is specific to them when a sentence or two carries it: keep it here, since sending the reader away for a sentence costs more than repeating it.
 
 The second job is to organize and present that content so the reader can use it. Each block takes the form that fits what the reader does with it, worked out from what they decide there and in what order, never from the order the facts were found or fixed in. Right content in the wrong form still fails: the reader holds every case in mind to find their own, or acts before reaching the sentence that would have stopped them.
 

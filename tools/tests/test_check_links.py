@@ -81,5 +81,15 @@ class InternalLinkTest(unittest.TestCase):
             self.assertEqual([t for t in targets if t not in anchors], ["no-such-heading"])
 
 
+class PlaceholderUrlTest(unittest.TestCase):
+    def test_placeholder_tokens_are_skipped(self):
+        self.assertIsNotNone(check_links.PLACEHOLDER_RE.search("https://udify.app/chatbot/YOUR_APP_TOKEN"))
+        self.assertIsNotNone(check_links.PLACEHOLDER_RE.search("https://example.com/v1?key=YOUR_API_KEY"))
+
+    def test_slugs_containing_your_are_still_checked(self):
+        self.assertIsNone(check_links.PLACEHOLDER_RE.search(
+            "https://developers.cloudflare.com/fundamentals/security/protect-your-origin-server/"))
+
+
 if __name__ == "__main__":
     unittest.main()
