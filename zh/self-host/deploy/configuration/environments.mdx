@@ -1207,7 +1207,7 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 
 #### 文件安全扫描
 
-要让知识库扫描上传文件中的恶意软件，将 `FILE_SCAN_ENABLED` 设为 `true`；如果用 ClamAV 扫描，再设置 `FILE_SCAN_CLAMAV_HOST`。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置这些变量，API 和 Worker 都会读取该文件。
+要让知识库扫描上传文件中的恶意软件，将 `FILE_SCAN_ENABLED` 设为 `true`。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置本节的变量，API 和 Worker 都会读取该文件。
 
 如果扫描服务位于私有地址（比如 **自定义端点**），还需通过 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 或 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` 让 [SSRF 代理](#ssrf-代理) 放行它。端点使用 `https` 时，代理只放行 443 端口。
 
@@ -1216,9 +1216,7 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | 变量 | 默认值 | 说明 |
 |---|---|---|
 | `FILE_SCAN_ENABLED` | `false` | 设为 `true`，即可为上传至知识库的文件提供恶意软件扫描。<br/><br/>随后 **集成** 中会出现 **文件安全扫描**；除外部知识库外，其他知识库的设置中也会多出 **文件安全扫描** 部分。只有开启了扫描的知识库才会扫描文件。<br/><br/>API 和 Worker 都需要设置该变量。Worker 未设置时，会跳过扫描直接索引上传的文件，也不会报错。<br/><br/>改回 `false` 后，所有知识库都会停止扫描。各知识库的扫描设置会保留下来，重新设为 `true` 后继续生效。 |
-| `FILE_SCAN_CLAMAV_HOST` | （空） | 你自行运行的 clamd 服务器的主机地址，用于 ClamAV 扫描。设置后，工作空间可选的扫描服务中会出现 **ClamAV**。Dify 通过 TCP 直接连接 clamd，不经过 SSRF 代理，因此 clamd 无需加入放行列表。<br/><br/>API 和 Worker 都需要设置该变量。如果只有 API 设置了，工作空间仍可添加 ClamAV，但索引期间的每次 ClamAV 扫描都会失败。此时文档的错误信息会显示扫描服务的凭据无效。<br/><br/>示例：`clamav.internal` |
-| `FILE_SCAN_CLAMAV_PORT` | `3310` | `FILE_SCAN_CLAMAV_HOST` 所指 clamd 服务器的 TCP 端口。 |
-| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Dify 每次向扫描服务发送扫描请求时的读取超时（秒）。<br/><br/>取值范围为 5～3600。调高可给响应慢的服务更多时间，调低则可更快判定失败。<br/><br/>不过在 Docker Compose 部署中，除 ClamAV 外，发往其他扫描服务的请求都要经过 SSRF 代理，而代理在 2 分钟内收不到响应就会关闭请求。因此该值超过 120 后，多出的时间只对 ClamAV 有效。这个 2 分钟的上限由代理的 Squid 配置文件 `docker/ssrf_proxy/squid-common.conf.template` 设定，没有对应的环境变量。<br/><br/>请求超时视同扫描服务不可用，是否重试由 `FILE_SCAN_MAX_ATTEMPTS` 决定。 |
+| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Dify 每次向扫描服务发送扫描请求时的读取超时（秒）。取值范围为 5～3600。<br/><br/>在 Docker Compose 部署中，扫描请求都要经过 SSRF 代理。无论该值设为多少，代理只要 2 分钟内收不到响应，就会关闭请求。这个 2 分钟的上限由代理的 Squid 配置文件 `docker/ssrf_proxy/squid-common.conf.template` 设定，没有对应的环境变量。如需更快判定失败，将该值设为小于 120 的数值。<br/><br/>不经过该代理时，调高可给响应慢的服务更多时间，调低则可更快判定失败。<br/><br/>请求超时或被代理关闭，都视同扫描服务不可用，是否重试由 `FILE_SCAN_MAX_ATTEMPTS` 决定。 |
 | `FILE_SCAN_MAX_ATTEMPTS` | `3` | Dify 扫描单个文件时最多尝试的次数，包括首次尝试。扫描服务超时、无法连接、返回服务器错误或仍在扫描该文件时，Dify 会重试；凭据无效、额度用尽或返回 Dify 无法解析的响应时，则不重试。<br/><br/>最后一次尝试仍未成功时，由知识库的 **扫描服务不可用时** 选项决定如何处理该文件。<br/><br/>取值范围为 1～5。每次失败后，Dify 依次等待 2、4、6、8 秒再重试。调高可撑过扫描服务的短暂中断，调低则可更快交由该选项处理。 |
 | `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` | `24` | 安全判定结果的沿用时长（小时）。在此期间，Dify 对内容相同的文件直接沿用该结果，不再重新扫描。<br/><br/>只有在同一工作空间中使用同一扫描服务时，才会沿用判定结果。判定为已感染的结果则始终沿用，因此 Dify 会立即再次拦截同一文件。<br/><br/>最小值为 1，因此无法关闭沿用。调低可让重复内容更早重新扫描，调高则可减少发往扫描服务的请求。 |
 
