@@ -1694,7 +1694,7 @@ Agent のサンドボックスをどこで実行するかを選択します：
 
 - `local`：同梱のサンドボックスコンテナを使います。
 - `e2b`：Agent ごとのサンドボックスを [E2B](https://e2b.dev) のクラウド VM で実行します。同梱コンテナより強い分離が得られます。
-- `openshell`：自社で運用する NVIDIA OpenShell ゲートウェイを使い、サンドボックスを自社のインフラ上で実行します。
+- `openshell`：自社で運用する NVIDIA OpenShell ゲートウェイを使い、サンドボックスを自社のインフラ上で実行します。Agent は、ファイルやインストールしたツールを会話をまたいで保持しません。ただし、ビルドチャットで **適用** をクリックすれば、設定パネルで追加したファイルも含めて Agent の設定は保存されます。
 
 この変数と 2 つのコールバックアドレス（`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）は、`envs/core-services/dify-agent.env` で設定します。
 
@@ -1719,20 +1719,24 @@ Agent のサンドボックスをどこで実行するかを選択します：
 
 `openshell` に切り替える前に、次の準備を済ませてください：
 
-- `agent_backend` コンテナから到達できる OpenShell ゲートウェイ（バージョン 0.0.106 以降）を用意します。
+- OpenShell ゲートウェイ（バージョン 0.1.3 以降）を用意し、その gRPC エンドポイントに `agent_backend` コンテナから到達できるようにします。
+- `agent_backend` コンテナから到達できるサービスアドレスを、ゲートウェイ側に用意します。Agent バックエンドは Agent のコマンドを、gRPC エンドポイントではなく HTTP で各サンドボックスに送ります。送信先は、ゲートウェイがそのサンドボックス用に返すアドレスです。
+
+  Docker Compose の場合は、コンテナから名前解決できる `https` のアドレスをゲートウェイが払い出すように構成します。Docker Compose では、平文の `http` アドレスは使えません。Agent バックエンドが平文で受け付けるのは、ループバックアドレスと `*.openshell.localhost` のアドレスだけです。これらのアドレスは、Agent バックエンド自身のコンテナを指します。
+
+  コンテナからこれらのアドレスに直接到達できる必要があります。この通信では、Agent バックエンドは `HTTP_PROXY` と `HTTPS_PROXY` を無視します。
 - ゲートウェイの認証情報として、Bearer トークン、mTLS クライアント証明書のペア、またはその両方を用意します。Compose には証明書のマウント設定が含まれていないため、ファイルを読み取り専用で `agent_backend` に自分でマウントし、UID 1001 から読み取れるようにします。
 - ゲートウェイがサンドボックスの起動に使うランタイムイメージを用意します。
-- Agent が会話をまたいで保持する永続ファイル用に、共有ボリュームを用意します。`docker compose down -v` で削除されないよう、Compose の外で作成します。互いを信頼できない複数のテナントが同じデプロイを使う場合は、テナントごとに OpenShell ワークスペースとボリュームを分けてください。共有ボリュームでは、あるテナントが別のテナントの永続ファイルにアクセスすることを確実には防げません。
 - サンドボックスから Dify へ戻るネットワーク経路を確保します：
   - サンドボックスから到達できるコールバックアドレスを用意します。
-  - Agent バックエンドの `/agent-stub` パスへのルートを用意します。ベースの Compose ファイルは、Agent バックエンドのポート 5050 を公開しません。このポートは Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って `/agent-stub` だけを公開します。
+  - Agent バックエンドの `/agent-stub` パスへのルートを用意します。パスは `/agent-stub` のまま変えないでください。`DIFY_AGENT_STUB_API_BASE_URL` のパスがそれ以外だと、Agent バックエンドは起動しません。ベースの Compose ファイルは、Agent バックエンドのポート 5050 を公開しません。このポートは Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って `/agent-stub` だけを公開します。
 
 OpenShell に切り替えるには、次の手順を実行します：
 
-1. [OpenShell セットアップガイド](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) を参照して、ゲートウェイと上記の準備をすべて整えます。ガイドには、ランタイムイメージのビルド、ボリュームの初期化、証明書のマウント、Kubernetes でのセットアップ、スモークテストの手順が記載されています。
+1. [OpenShell セットアップガイド](https://github.com/langgenius/dify/blob/1.20.0/dify-agent/docs/dify-agent/guide/openshell.md) に従って、ゲートウェイと上記の準備をすべて整えます。サービスアドレスの基になる `https` サービスドメイン、ランタイムイメージのビルド、証明書のマウントも対象です。
 2. `envs/core-services/dify-agent.env` で `DIFY_AGENT_RUNTIME_BACKEND` を `openshell` に設定し、以下の変数を入力します。
 3. `docker compose up -d` で Agent バックエンドを再作成します。必須の値が欠けているか、形式が正しくない場合、Agent バックエンドは起動しません。
-4. Agent を実行して、設定を確認します。Agent バックエンドが初めてゲートウェイに接続するのは、Agent の実行時か、Agent のビルドチャットで **適用** をクリックしたときです。そのため、エンドポイント、認証情報、イメージの誤りは、その時点で初めて実行や適用の失敗として表面化します。
+4. Agent を実行して、設定を確認します。Agent バックエンドが初めてゲートウェイに接続するのは、Agent の実行時か、Agent のビルドチャットで **適用** をクリックしたときです。そのため、エンドポイント、認証情報、イメージ、ゲートウェイのバージョン、サービスアドレスの誤りは、その時点で初めて実行や **適用** の失敗として表面化します。
 
 サンドボックスは実行が終わっても、Dify が削除するまでゲートウェイ上で動き続けます。ゲートウェイの容量は、アクティブなサンドボックスだけでなく、アイドル状態のサンドボックスも見込んで計画してください。
 
@@ -1740,21 +1744,20 @@ OpenShell に切り替えるには、次の手順を実行します：
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。OpenShell ゲートウェイのアドレスを、スキームなしの `host:port` 形式で指定する。<br/><br/>`agent_backend` コンテナ内から到達できる必要がある。Docker ホスト上のゲートウェイには `localhost` ではなく `host.docker.internal:<port>` を使い、Linux では `extra_hosts` でこの名前をホストにマッピングする。<br/><br/>例：`gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。OpenShell ゲートウェイの gRPC API アドレスを、スキームなしの `host:port` 形式で指定する。Agent のコマンドは、このアドレスではなく各サンドボックスのサービスアドレスを経由する。<br/><br/>`agent_backend` コンテナ内から到達できる必要がある。Docker ホスト上のゲートウェイには `localhost` ではなく `host.docker.internal:<port>` を使い、Linux では `extra_hosts` でこの名前をホストにマッピングする。<br/><br/>例：`gateway.example.com:17670` |
 | `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | （空） | Agent バックエンドがゲートウェイに提示する OIDC Bearer トークン。ゲートウェイの認証方式に合わせて、このトークン、mTLS クライアント証明書のペア、またはその両方を使う。<br/><br/>起動時に一度だけ読み込まれる。ローテーションした後は Agent バックエンドを再作成する。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | ゲートウェイの証明書に署名した CA 証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_INSECURE` が `true` の場合は無視される。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | ゲートウェイの証明書に署名した CA 証明書の、`agent_backend` コンテナ内のパス。Agent バックエンドは、gRPC 接続と `https` のサービスアドレスの両方をこの証明書で検証する。証明書がパブリック CA によって署名されている場合は、空のままでよい。<br/><br/>`DIFY_AGENT_OPENSHELL_INSECURE` が `true` の場合、gRPC 接続ではこの証明書を使わないが、サービスアドレスは引き続き検証される。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。gRPC 接続と `https` のサービスアドレスへの接続で提示される。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS クライアント秘密鍵の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
-| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | TLS ではなく平文の gRPC でゲートウェイに接続し、TLS のパスは使わない。Bearer トークンを設定している場合は、この接続でも送信される。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | ゲートウェイの gRPC API に、TLS ではなく平文で接続する。Bearer トークンを設定している場合は、この接続でも送信される。サービスアドレスへの接続には影響しない。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
 | `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent バックエンドがサンドボックスを作成・管理する OpenShell ワークスペース。ゲートウェイ上の名前空間で、Dify のワークスペースとは異なる。 |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | ゲートウェイが各サンドボックス用に起動するコンテナイメージ。デフォルトは、OpenShell セットアップガイドのビルドコマンドが生成するタグ。<br/><br/>Dify を動かす Docker デーモンだけでなく、ゲートウェイのコンピュートドライバーからも利用できる必要がある。ゲートウェイの Docker デーモンにイメージを読み込むか、ゲートウェイがプルできるレジストリにプッシュして、その参照を指定する。<br/><br/>明示的に設定すること。どの env ファイルでも設定しない場合、Agent バックエンドは `langgenius/dify-agent-local-sandbox:latest` にフォールバックする。このイメージは古い可能性があり、その場合は OpenShell で起動できない。 |
-| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | `openshell` バックエンドでは必須。ゲートウェイのコンピュートドライバーがすべてのサンドボックスに適用する JSON。共有ボリュームを `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` にマウントする必要がある。形式はドライバーによって異なる。<br/><br/>JSON が不正、または空のオブジェクトだと Agent バックエンドは起動しない。Dify はマウント自体を確認しないため、ボリュームが別のパスにマウントされていても Agent バックエンドは起動する。マウント先は必ず再確認すること。<br/><br/>Docker ドライバーの例（ローカル開発などのシングルテナント構成向け）：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
-| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 各サンドボックス内で共有ボリュームをマウントする場所。`DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` のマウント先と一致させる。Agent のビルドチャットで **適用** をクリックするたびに、Agent の永続ファイルがここに保存される。<br/><br/>絶対パスでなければ、Agent バックエンドは起動しない。 |
-| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。Agent バックエンドが各サンドボックス内で起動するコマンドサービスに対し、自身を認証するための共有シークレット。任意のランダムな文字列を設定する。<br/><br/>同梱サンドボックスを保護する `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` とは別のもの。 |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | ドライバー固有のオプション（追加のマウントなど）を指定する JSON オブジェクト。ゲートウェイのコンピュートドライバーが、すべてのサンドボックスに適用する。形式はドライバーによって異なる。<br/><br/>JSON が不正な場合や、オブジェクト以外の JSON の場合、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。Agent バックエンドが各サンドボックスとの接続を保護するために使うシークレット。<br/><br/>長いランダムな値を設定し、すべての `agent_backend` レプリカで同じ値にする。変更すると、すでに実行中のサンドボックスはコマンドを拒否するため、停止して起動し直す必要がある。<br/><br/>同梱サンドボックスを保護する `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` とは別のもの。 |
 | `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | サンドボックスが接続できる `host:port` エンドポイントのカンマ区切りリスト。スキームやパスは付けない。空の場合はネットワークポリシーを送らず、外向き通信はゲートウェイのデフォルトに従う。<br/><br/>設定すると、サンドボックスはリストにあるエンドポイントにしか接続できない。パッケージのインストールや Web アクセスも、そのホストをリストに入れない限り機能しなくなる。`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL` のホストも含めること。含めないと、Agent の実行が Dify にコールバックできない。<br/><br/>形式が不正なエントリがあると、Agent バックエンドは起動しない。<br/><br/>例：`agent.example.com:443,dify.example.com:443` |
 | `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | 各サンドボックス内でコマンドサービスが待ち受けるループバックポート。Agent バックエンドはゲートウェイ経由で到達するため、ポートを開放する必要はない。ランタイムイメージがすでに 5004 を使っている場合にのみ変更する。 |
 | `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | 新規作成または再起動したサンドボックスが準備完了になるまで待つ時間（秒）。混雑したゲートウェイでサンドボックスの起動中に Agent の実行が失敗する場合は、値を引き上げる。 |
-| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent バックエンドがゲートウェイ経由でサンドボックス内で実行する、各セットアップコマンドの制限時間（秒）。Agent の永続ファイルのコピーやコマンドサービスの起動などが対象。Agent 自身が実行するコマンドは制限しない。<br/><br/>永続ファイルが大きい Agent で新しいセッションを開始できない場合は、値を引き上げる。 |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | セットアップコマンド 1 件あたりの制限時間（秒）。Agent バックエンドがゲートウェイ経由でサンドボックス内で実行する、コマンドサービスの起動などのコマンドが対象。Agent 自身が実行するコマンドは制限しない。<br/><br/>低速なゲートウェイでサンドボックスのセットアップ中に実行や **適用** が失敗する場合は、値を引き上げる。 |
 
 </Accordion>
 </AccordionGroup>
