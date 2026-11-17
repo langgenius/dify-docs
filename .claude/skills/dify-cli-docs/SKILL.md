@@ -55,6 +55,8 @@ Each cross-cutting fact lives on one page. The research summary applies this tab
 | Human Input pause and resume | Run Apps § Answer a Human Input Form |
 | What an update import does; DSL files versus app packages | Create and Update Apps from DSL Files |
 | A job's sign-in through `DIFY_TOKEN` | Use `difyctl` in CI and Automation |
+| Personal access tokens with `difyctl`: when to use one, giving it to `difyctl`, and what each scope lets it run | Use a Personal Access Token |
+| Creating, changing, replacing, and deleting a personal access token | Personal Settings § Personal Access Tokens, in the self-host user guide |
 | Sign-in lifetime, sessions, signing out, where the token lives and the config folder per OS | Manage Your Sign-In |
 | Switching workspaces, and what overrides a switch | Manage Your Sign-In § Switch Your Workspace |
 | Updating the build, reinstalling the `difyctl` skill, refreshing the command list | Update or Uninstall |
@@ -64,14 +66,14 @@ Each cross-cutting fact lives on one page. The research summary applies this tab
 | Where output goes, `--json`, and `--verbose`; run results; error codes, exit codes, retries, rate limits | Results, Errors, and Exit Codes |
 | The crossing from the CLI before Dify 1.18.0 | Upgrade Across Dify 1.18.0 |
 
-An error's fix lives in one Troubleshooting table: Get Started's for sign-in errors, Run Apps' for run errors, and Results' for errors any command can raise. Another page names the error in one line and links that row. An error that is a normal branch of a task, such as `draft_changed` on an update import, is handled in the task itself.
+An error's fix lives in one Troubleshooting table. An error any command can raise goes in Results, Errors, and Exit Codes. An error that only one task or feature raises goes on that task's or feature's page, so a person or a coding agent finds the fix where they're working. An error that is a normal branch of a task, such as `draft_changed` on an update import, is handled in the task itself.
 
 ## Rules that protect readers (S5)
 
-- **Sign-in.** An interactive sign-in is `difyctl login --server <url>` approved by a person in a browser, also when a script starts it with `--no-wait` and finishes it with `--resume`. A job with no person present sets `DIFY_SERVER` and `DIFY_TOKEN`, plus `DIFY_WORKSPACE_ID` when a command needs a workspace; the token is one a person signed in for or, once the doc set documents them, a personal access token. Examples read the token from the CI system's secrets or the environment, never as a literal, because readers copy auth examples into scripts as they are. Other tokens, such as the ones the **Access Tokens** settings page creates, stay off every page until the doc set documents them.
+- **Sign-in.** An interactive sign-in is `difyctl login --server <url>` approved by a person in a browser, also when a script starts it with `--no-wait` and finishes it with `--resume`. A job with no person present sets `DIFY_SERVER` and `DIFY_TOKEN`, plus `DIFY_WORKSPACE_ID` when a command needs a workspace; the token is one a person signed in for or a personal access token. Examples read the token from the CI system's secrets or the environment, never as a literal, because readers copy auth examples into scripts as they are. Other tokens, such as the ones the **Access Tokens** settings page creates, stay off every page until the doc set documents them.
 - **IDs in examples.** Runnable examples use UUID-shaped app, workspace, and run IDs, because a non-UUID fails validation and the reader's first attempt errors. Values the reader received, such as a form token, stay concrete.
 - **Server addresses.** Examples use `https://dify.example.com`. `https://cloud.dify.ai` is named for Dify Cloud readers only where they enter the address (the sign-in step and its troubleshooting fix), never as the example value; `login` has no default server, so the page tells readers to pass the address they open Dify at.
-- **Editions.** One `{lang}/cli/` set serves Dify Cloud and self-hosted servers. A fact true on both is stated neutrally; a fact true only on a self-hosted server, such as a server switch, says "on a self-hosted server". Content written for Dify Cloud readers, such as switching workspaces and agent knowledge bases, carries `<Badge color="blue">Cloud</Badge>` even where a self-hosted server could offer it; content a self-hosted server alone has, such as workspace skills, carries `<Badge color="blue">Self-Hosted</Badge>`. A badge on a heading keeps the default size; inline it is `size="sm"`. A sentence that already names Dify Cloud carries no badge.
+- **Editions.** One `{lang}/cli/` set serves Dify Cloud and self-hosted servers. A fact true on both is stated neutrally; a fact true only on a self-hosted server, such as a server switch, says "on a self-hosted server". Content written for Dify Cloud readers, such as switching workspaces and agent knowledge bases, carries `<Badge color="blue">Cloud</Badge>` even where a self-hosted server could offer it; content a self-hosted server alone has, such as workspace skills, carries `<Badge color="blue">Self-Hosted</Badge>`. A badge on a heading keeps the default size; inline it is `size="sm"`. A sentence that already names Dify Cloud carries no badge. A page that only one edition has carries `tag: Self-Hosted` or `tag: Cloud` in its frontmatter, which shows beside its title in the nav, instead of a badge in the body.
 
 ## House style (S5)
 
@@ -89,7 +91,7 @@ The set has five kinds of page, and a kind doesn't do another kind's job. Read t
 
 - **Start** (Overview, Get Started): route the reader and end at a first working command.
 - **Job** (Run Apps; Create and Update Apps from DSL Files for a `<Steps>` sequence): open with a Tip that the reader can hand the page to their coding agent. H2s are tasks ("Run a Workflow"): one to three sentences, a `bash` block, and a Note only where the reader would hit a trap. Build Apps, where the coding agent does the job, keeps its own shape instead: what the agent can and can't do and what the person does while it works, with prompts in place of commands.
-- **Context** (Use `difyctl` in CI and Automation): an H2 per path or decision, why before how, and one complete worked example.
+- **Context** (Use `difyctl` in CI and Automation; Use a Personal Access Token): an H2 per path or decision, why before how. Use `difyctl` in CI and Automation ends with one complete worked example, because its paths add up to a job the reader copies. Use a Personal Access Token has none: its paths end at the account page and the job's environment, and the CI page shows the job.
 - **Manage** (Manage Your Sign-In; Update or Uninstall): keep `difyctl` working over time, an H2 per thing the reader maintains.
 - **Reference** (Find and Run Commands; Command Index; Configuration; Results, Errors, and Exit Codes): lead each H2 with a table where its content is a set of like items, with columns from the sibling: `| Command | What it does | Requires |`, `| Variable | Description |`, `| Exit code | Means | Error codes |`.
 
