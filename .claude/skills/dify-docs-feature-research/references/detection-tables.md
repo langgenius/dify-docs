@@ -51,7 +51,7 @@ Which nodes live in dify vs graphon: follow the repo-split rule in the repo root
 | dify | `api/core/agent/` | `en/{cloud,self-host}/use-dify/build/agent.mdx` |
 | dify | `api/core/app/` | `en/{cloud,self-host}/use-dify/build/` |
 | dify | `web/app/components/`, `web/features/` | Match the component's feature area to the corresponding `en/{cloud,self-host}/use-dify/` page (e.g. `components/workflow/` → nodes docs, `components/datasets/` → knowledge docs). Pure styling/layout PRs: skip. |
-| dify | `docker/.env.example`, `docker/envs/**/*.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
+| dify | `docker/.env.example`, `docker/envs/**/*.defaults`, `docker/envs/**/*.env.example`, `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml`, `api/configs/` | `en/self-host/deploy/configuration/environments.mdx` (env var docs) |
 | dify | `docker/README.md`, root `README.md`, any new, renamed, or removed file under `docker/` | `en/self-host/deploy/quick-start/docker-compose.mdx` and `en/self-host/deploy/quick-start/faqs.mdx` (deployment workflow docs) |
 | graphon | `src/graphon/nodes/` (built-in nodes) | `en/{cloud,self-host}/use-dify/nodes/` |
 | graphon | `src/graphon/model_runtime/` | `en/{cloud,self-host}/use-dify/workspace/model-providers.mdx` |
@@ -68,7 +68,8 @@ Any file matching these patterns means env var documentation is affected:
 | Source path | Impact |
 |---|---|
 | `docker/.env.example` | New vars, changed defaults, removed vars |
-| `docker/envs/**/*.env.example` | Same — the split per-service env files |
+| `docker/envs/**/*.defaults` | Same — the tracked defaults the services load |
+| `docker/envs/**/*.env.example` | New or removed vars — the optional templates, whose values are never defaults |
 | `api/configs/**/*.py` | Pydantic config models define backend vars |
 | `web/docker/entrypoint.sh` | Frontend Docker-to-NEXT_PUBLIC mapping |
 | `docker/docker-compose.yaml`, `docker/docker-compose-template.yaml` | Infrastructure/container vars |
