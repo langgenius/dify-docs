@@ -288,7 +288,7 @@ For a label not yet in this table, resolve its exact i18n key before writing any
 | English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
 |:-------------|:-------------|:--------------|:---------|:------|
 | My Account | 我的账户 | マイアカウント | account-settings.account.myAccount | Heading of the account page |
-| Account | 账户 | アカウント | navigation.menus.account | Avatar menu item that opens the account page |
+| Account | 账户 | アカウント | account-settings.account.account | Avatar menu item that opens the account page |
 | Personal access tokens | 个人访问令牌 | 個人アクセストークン | account-settings.personalAccessToken.title | Section of the account page |
 | Create token | 创建令牌 | トークンを作成 | account-settings.personalAccessToken.createButton | Personal access tokens section |
 | Expiration | 有效期 | 有効期間 | account-settings.personalAccessToken.expiration | Field in the personal access token form |
