@@ -108,6 +108,8 @@ The verifier reads both — always use the canonical verifier command above, whi
 | In `.env.example` and still parsed, but upstream-deprecated with a replacement | Keep the row; lead the description with the deprecation and the replacement: "Deprecated; use `X`." Deprecated means still parsed — a removed var never gets a Deprecated label. |
 | Removed from `.env.example` because the code no longer reads it | **Remove from docs — no tombstone rows** (a documented row implies the var still takes effect). If a successor variable replaced it, add one clause to the successor's description so the old names stay findable via search: "Replaces the former `EDITION`, ignored from 1.17.0 onward." With no successor, remove without trace; upgrader discoverability belongs in upstream Dify release notes. |
 
+**The default a row states** is the value a stock Docker Compose installation runs with: `docker/.env.example` copied to `.env` and nothing else changed. Resolve it in the order the page's Precedence section gives, down to the application default when no loaded file sets the variable. A commented line (`# FOO=false`) and a value in an optional file that a stock installation doesn't create set nothing, so neither is the default: `ENABLE_OAUTH_BEARER` was documented as `false` from such a line while stock installations ran with the application default, `true`.
+
 **The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `env-ignored-vars.md`.**
 
 ## Document Structure
