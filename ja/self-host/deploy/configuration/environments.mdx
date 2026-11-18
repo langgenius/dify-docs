@@ -52,7 +52,11 @@ Docker Compose は、3 種類のファイルから Dify の設定を読み込み
     docker compose up -d
     ```
 
-    `docker compose restart` ではなく `up -d` を使ってください。`restart` では、コンテナは古い環境変数をそのまま使います。解決後の値を確認するには、`docker compose config` を実行します。出力にはシークレットが含まれるため、非公開で扱ってください。
+    <Info>
+      デプロイの起動時に Compose のオプションを追加で指定した場合は、これらのコマンドにも同じオプションを付けてください。`-p`、`-f`、`--env-file`、プロファイルなどが該当します。
+    </Info>
+
+    解決後の値を確認するには、`docker compose config` を実行します。出力にはシークレットが含まれるため、非公開で扱ってください。
 
     稼働中のサービスで値を確認するところまでの具体例は、[カスタマイズ](/ja/self-host/deploy/quick-start/docker-compose#カスタマイズ) を参照してください。ローカルファイル、シークレット、データを失わずに新しいリリースへ更新するには、[アップグレード](/ja/self-host/deploy/quick-start/docker-compose#アップグレード) の手順に従ってください。
   </Step>
@@ -67,9 +71,10 @@ Docker Compose は、3 種類のファイルから Dify の設定を読み込み
     API、WebSocket API、ワーカー、Beat、Web、コード実行サンドボックス、プラグインデーモン、Agent バックエンドが対象です。これらのサービスは次の順に値を探し、最初に見つかった値を使います：
 
     1. `docker/.env`
-    2. サービスのローカル `.env` ファイル
-    3. サービスの `.defaults` ファイル
-    4. アプリケーションのデフォルト値
+    2. 公開 URL のみ（Web サービス、API、ワーカー）：`envs/core-services/urls.env` に設定した値
+    3. サービスのローカル `.env` ファイル
+    4. サービスの `.defaults` ファイル
+    5. アプリケーションのデフォルト値
 
     <Note>
     `.defaults` ファイルの **Container variable mappings** コメントの下にある変数は、常に別の設定から値をコピーします。`docker/.env` を含め、これらを直接設定しても効果はありません。代わりにコピー元の設定を変更してください。
@@ -89,13 +94,38 @@ Docker Compose は、3 種類のファイルから Dify の設定を読み込み
 
 ## 共通変数
 
-これらの URL 変数は、Dify の各サービスのアドレスを設定します。
+公開 URL のデフォルト値は空です。設定するかどうかは、デプロイの構成によって決まります：
+
+- **すべてのサービスを 1 つのアドレスで公開し、メール送信、OAuth、人間の入力ノードのリクエストをいずれも使わない場合**：空のままにします。URL を設定しなくても Dify は動作します。
+- **すべてのサービスを 1 つのアドレスで公開し、メール送信、OAuth、人間の入力ノードのリクエストのいずれかを使う場合**：すべての URL に、そのアドレスを `https://dify.example.com` のような完全な形で設定します。どの機能にどの URL が必要かは、以下の各変数の説明を参照してください。
+- **サービスごとに別のアドレスで公開する場合**（API を `api.example.com` で公開するなど）：各 URL に、それぞれの完全なアドレスを設定します。コンソールと API のサブドメインが異なる場合は、`COOKIE_DOMAIN` と `NEXT_PUBLIC_COOKIE_DOMAIN` も設定してください。詳細は [CORS 設定](#cors-設定) を参照してください。
+
+URL を設定するには、次の手順に従います：
+
+1. `docker/envs/core-services/urls.env` がない場合は、同梱のデフォルト設定から作成します。Web サービス、API、Celery ワーカーはすべてこのファイルを読み込むため、同じアドレスを使います。
+
+   ```bash
+   cd dify/docker
+   cp envs/core-services/urls.defaults envs/core-services/urls.env
+   ```
+
+2. `urls.env` に記述する URL には、`http://` または `https://` を付けます。アドレスにポート番号がある場合は、`https://dify.example.com:8443` のようにポート番号も含めます。末尾には `/console/api`、`/api`、`/v1` を付けないでください。Dify が自動で追加します。
+
+   `docker/.env` でもこれらの URL を設定している場合は、`urls.env` よりそちらの値が優先されます。`docker/.env` 側で値を変更するか、削除してください。
+
+3. [変数の設定](#変数の設定) のコマンドで変更を適用します。
+
+4. 結果を確認するには、コンソールと公開した Web アプリを、それぞれの公開アドレスで開きます。メール送信のために URL を設定した場合は、メンバーの招待も送信します。招待リンクが、設定したアドレスで始まっていることを確認してください。
+
+   アドレスがまだ正しくない場合は、`docker compose config` を実行し、各サービスに渡される値を確認します。出力にはシークレットが含まれるため、非公開で扱ってください。
 
 ### CONSOLE_API_URL
 
 デフォルト値：（空）
 
-Dify バックエンド API の公開 URL。OAuth ログイン（GitHub、Google）、Notion 連携、または OAuth を必要とするプラグインを使用する場合に設定してください。これらの機能は、認証後にユーザーをリダイレクトするための絶対コールバック URL を必要とします。また、セキュア（HTTPS のみ）Cookie を使用するかどうかも決定します。
+コンソール API の公開ベース URL です。GitHub や Google でログインする場合や、OAuth で統合を接続する場合は、この変数に完全なアドレスを設定してください。
+
+セキュア Cookie を使うには、`CONSOLE_API_URL` と `CONSOLE_WEB_URL` の両方が `https://` で始まる必要があります。
 
 例：`https://api.console.dify.ai`
 
@@ -103,17 +133,17 @@ Dify バックエンド API の公開 URL。OAuth ログイン（GitHub、Google
 
 デフォルト値：`http://api:5001`
 
-Web フロントエンドコンテナがサーバーサイドでリクエストを送信する際に使用する Console API のアドレスです。公開ドメインを経由せず、Docker 内部ネットワークから API に直接アクセスします。この変数は Web フロントエンドコンテナでのみ使用され、Python バックエンドには影響しません。ブラウザからのリクエストは引き続き `CONSOLE_API_URL` を使用します。空の場合は `CONSOLE_API_URL` にフォールバックします。API サービスの内部アドレスが異なる場合にのみ変更してください。
+Web サービスがサーバー側からリクエストを送信する際に使う、コンソール API のアドレスです。ブラウザからのリクエストには `CONSOLE_API_URL` を使います。API の内部アドレスが異なる場合は、`docker/envs/core-services/web.env` に設定してください。
+
+ソースコードからのデプロイでは、未設定の場合に `CONSOLE_API_URL` の値を使います。
 
 ### CONSOLE_WEB_URL
 
-デフォルト値：空（Docker Compose では `http://127.0.0.1:3000`）
+デフォルト値：（空）
 
-メンバーが Dify コンソールを開くときの URL です。招待やパスワードリセットなどのシステムメールのリンク作成と、OAuth ログイン後のコンソールへのリダイレクトに使用されます。`CONSOLE_CORS_ALLOW_ORIGINS` が設定されていない場合、デフォルトの CORS 許可オリジンとしても機能します。
+コンソールの公開ベース URL です。メール内のリンク（招待リンクやサインインリンクなど）や、OAuth ログイン後のリダイレクトを使う場合は、この変数に完全なアドレスを設定してください。
 
-新しい人間の入力ノードは、ワークスペースメンバー向けのリクエストリンクをこの URL から作成します。メールでも IM（インスタントメッセージングアプリ）のリンクメッセージでも、リンクは `{CONSOLE_WEB_URL}/human-input/{token}` の形式です。
-
-メンバーが社内ネットワークで Dify を使用する場合、このアドレスにインターネットからアクセスできる必要はありません。
+新しい人間の入力ノードでワークスペースメンバーにリクエストを送るには、この URL が必要です。メールで送る場合も、IM（インスタントメッセージングアプリ）のリンクメッセージで送る場合も同じです。メンバーが社内ネットワークで Dify を使用する場合、このアドレスにインターネットからアクセスできる必要はありません。
 
 例：`https://console.dify.ai`
 
@@ -121,7 +151,9 @@ Web フロントエンドコンテナがサーバーサイドでリクエスト�
 
 デフォルト値：（空）
 
-Dify コンソールで Developer に表示される API Base URL。Developer が Dify API を呼び出すためにコードにコピーする URL です。空の場合、現在のリクエストから自動検出されます（例：`http://localhost/v1`）。サーバーが複数のアドレスでアクセス可能な場合、この変数を設定して一貫した URL を確保してください。
+コンソールに表示され、開発者がコピーして使う公開 API ベース URL です。Dify はこの値に `/v1` を追加します。値が空の場合は、コンソールを開いているアドレスが表示されます（`http://localhost/v1` など）。
+
+IP アドレスとドメインなど、複数のアドレスでサーバーにアクセスできる場合は、開発者に使ってもらうアドレスを設定してください。
 
 例：`https://api.dify.ai`
 
@@ -129,20 +161,17 @@ Dify コンソールで Developer に表示される API Base URL。Developer �
 
 デフォルト値：（空）
 
-Web アプリフロントエンド（公開アプリ）のバックエンド API URL。この変数は Web フロントエンドコンテナでのみ使用され、Python バックエンドには影響しません。空の場合、Docker イメージのデフォルトは `http://127.0.0.1:5001`です。
+公開した Web アプリが使う公開 API ベース URL です。値が空の場合は、Web アプリを開いているアドレスの `/api` にリクエストが送信されます。
 
 例：`https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-デフォルト値：空（Docker Compose では `http://127.0.0.1:3000`）
+デフォルト値：（空）
 
-公開 Web アプリのアクセス URL。人間の入力ノードも、この URL からリクエストリンクを作成します。
+公開した Web アプリの公開ベース URL です。値が空の場合は、コンソールを開いているアドレスをもとに、アプリの共有リンクが作成されます。
 
-- **新しい人間の入力ノード**：外部連絡先へのリクエストのリンク先は `{APP_WEB_URL}/form-v2/{token}` です。ノードに入力したメールアドレスや、変数から取得したメールアドレスへのリクエストも同じです。
-- **旧バージョンの人間の入力ノード**：メールのリンクは `{APP_WEB_URL}/form/{token}` の形式です。
-
-外部の受信者がこのアドレスにアクセスできる必要があります。
+人間の入力ノードのリクエストを、メールで送る場合や外部連絡先に送る場合は、完全なアドレスを設定してください。受信者がこのアドレスにアクセスできる必要があります。
 
 例：`https://app.dify.ai`
 
@@ -214,7 +243,7 @@ Docker ネットワーク内のサービス間通信で使用されるファイ�
 | `LOG_FILE_MAX_SIZE` | `20` | ローテーション前のログファイル最大サイズ（MB）。超過すると現在のファイルが `.1` にリネームされ、新しいファイルが作成されます。 |
 | `LOG_FILE_BACKUP_COUNT` | `5` | 保持するローテーションログファイル数。デフォルト設定では最大 6 ファイル（現在のファイル＋5 バックアップ）が存在します。 |
 | `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | テキスト形式ログのタイムスタンプフォーマット（strftime コード）。JSON 形式では無視されます。 |
-| `LOG_TZ` | `UTC` | ログタイムスタンプのタイムゾーン（pytz 形式、例：`Asia/Shanghai`）。テキスト形式にのみ適用されます。JSON は常に UTC を使用します。Celery のタスクスケジューリングタイムゾーンも設定します。 |
+| `LOG_TZ` | `UTC` | ログタイムスタンプのタイムゾーン（IANA タイムゾーン名、例：`Asia/Shanghai`）。テキスト形式にのみ適用されます。JSON は常に UTC を使用します。Celery のタスクスケジューリングタイムゾーンも設定します。<br/><br/>不明な名前を指定すると、API と Celery のサービスは起動しません。 |
 
 ### 一般
 
@@ -246,7 +275,7 @@ openssl rand -base64 42
 生成したキーを保存できない場合、Dify の初期化は失敗します。設定されたストレージを書き込み可能にするか、キーを明示的に指定してください。
 
 <Warning>
-明示的に指定する場合も永続ストレージに保存する場合も、アップグレードと復元では同じキーを保持してください。変更すると、既存の認証トークン、署名付きファイル URL、個人アクセストークンが無効になります。既存のシステムレベルの OAuth クライアント認証情報も復号できなくなります。元のキーに戻すと、その認証情報と個人アクセストークンを再び使えるようになります。
+明示的に指定する場合も永続ストレージに保存する場合も、アップグレードと復元では同じキーを保持してください。変更すると、既存の認証トークン、個人アクセストークン、署名付きファイル URL が無効になります。既存のシステムレベルの OAuth クライアント認証情報も復号できなくなります。元のキーに戻すと、その認証情報と個人アクセストークンを再び使えるようになります。
 </Warning>
 
 ### PASSWORD_PEPPER
@@ -1682,7 +1711,7 @@ API が Agent バックエンドにアクセスするためのアドレスです
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API が Agent バックエンドの呼び出しを待つ時間。対象は、home snapshot の転送を伴う呼び出し（スナップショットの取得・削除、スナップショットを復元する実行の開始）。<br/><br/>home 環境が大きい Agent でビルドの適用や実行開始が失敗する場合は、値を大きくしてください。 |
 | `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | そのファイルを出力するサンドボックスコマンドの実行時間の上限。デフォルトは API 側のタイムアウトより低く、Agent 自身のエラーが先に表面化するようにしている。 |
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | サンドボックス内の Agent が Dify にアップロードする 1 ファイルの上限サイズ（MiB）。返信のために生成したファイルなどが対象。 |
-| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | カーネルレベルの Landlock でサンドボックスが読み書きできるパスを制限する。Landlock を有効にした Linux 5.13 以降が必要。1.18.0 以降、サンドボックスは Landlock を適用できない場合にコマンドの実行をすべて拒否する。`docker/envs/core-services/local-sandbox.env` で設定する。`.env` の値はサンドボックスコンテナには渡されない。 |
+| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | カーネルレベルの Landlock でサンドボックスが読み書きできるパスを制限する。Landlock を有効にした Linux 5.19 以降が必要。<br/><br/>1.18.0 以降、サンドボックスは Landlock を適用できない場合にコマンドの実行をすべて拒否する。カーネルが古い場合は、カーネルを更新するか、この変数を `false` にして制限なしで実行する。<br/><br/>`docker/envs/core-services/local-sandbox.env` で設定する。`docker/.env` の値はサンドボックスコンテナには渡されない。 |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | シェル出力を Agent が読む前にマスクする正規表現の JSON 配列。API キーなどの機密を保護する。Agent の内部トークンは常にマスクされる。 |
 | `LOGFIRE_CONSOLE` | `false` | デバッグ時に `true` にすると、Agent バックエンドが自身のリクエスト、外向き HTTP、Redis のスパンをコンテナログに出力する。[トラジェクトリのエクスポート](#agent-トラジェクトリのエクスポート) とは無関係で、そちらはこのログに何も出力しない。<br/><br/>1.18.0 以降、Agent 実行のスパンはこのログに表示されない。Agent の実行を追跡するには、トラジェクトリのエクスポートを使う。 |
 
@@ -1694,7 +1723,7 @@ Agent のサンドボックスをどこで実行するかを選択します：
 
 - `local`：同梱のサンドボックスコンテナを使います。
 - `e2b`：Agent ごとのサンドボックスを [E2B](https://e2b.dev) のクラウド VM で実行します。同梱コンテナより強い分離が得られます。
-- `openshell`：自社で運用する NVIDIA OpenShell ゲートウェイを使い、サンドボックスを自社のインフラ上で実行します。
+- `openshell`：自社で運用する NVIDIA OpenShell ゲートウェイを使い、サンドボックスを自社のインフラ上で実行します。Agent は、ファイルやインストールしたツールを会話をまたいで保持しません。ただし、ビルドチャットで **適用** をクリックすれば、設定パネルで追加したファイルも含めて Agent の設定は保存されます。
 
 この変数と 2 つのコールバックアドレス（`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）は、`envs/core-services/dify-agent.env` で設定します。
 
@@ -1719,20 +1748,24 @@ Agent のサンドボックスをどこで実行するかを選択します：
 
 `openshell` に切り替える前に、次の準備を済ませてください：
 
-- `agent_backend` コンテナから到達できる OpenShell ゲートウェイ（バージョン 0.0.106 以降）を用意します。
+- OpenShell ゲートウェイ（バージョン 0.1.3 以降）を用意し、その gRPC エンドポイントに `agent_backend` コンテナから到達できるようにします。
+- `agent_backend` コンテナから到達できるサービスアドレスを、ゲートウェイ側に用意します。Agent バックエンドは Agent のコマンドを、gRPC エンドポイントではなく HTTP で各サンドボックスに送ります。送信先は、ゲートウェイがそのサンドボックス用に返すアドレスです。
+
+  Docker Compose の場合は、コンテナから名前解決できる `https` のアドレスをゲートウェイが払い出すように構成します。Docker Compose では、平文の `http` アドレスは使えません。Agent バックエンドが平文で受け付けるのは、ループバックアドレスと `*.openshell.localhost` のアドレスだけです。これらのアドレスは、Agent バックエンド自身のコンテナを指します。
+
+  コンテナからこれらのアドレスに直接到達できる必要があります。この通信では、Agent バックエンドは `HTTP_PROXY` と `HTTPS_PROXY` を無視します。
 - ゲートウェイの認証情報として、Bearer トークン、mTLS クライアント証明書のペア、またはその両方を用意します。Compose には証明書のマウント設定が含まれていないため、ファイルを読み取り専用で `agent_backend` に自分でマウントし、UID 1001 から読み取れるようにします。
 - ゲートウェイがサンドボックスの起動に使うランタイムイメージを用意します。
-- Agent が会話をまたいで保持する永続ファイル用に、共有ボリュームを用意します。`docker compose down -v` で削除されないよう、Compose の外で作成します。互いを信頼できない複数のテナントが同じデプロイを使う場合は、テナントごとに OpenShell ワークスペースとボリュームを分けてください。共有ボリュームでは、あるテナントが別のテナントの永続ファイルにアクセスすることを確実には防げません。
 - サンドボックスから Dify へ戻るネットワーク経路を確保します：
   - サンドボックスから到達できるコールバックアドレスを用意します。
-  - Agent バックエンドの `/agent-stub` パスへのルートを用意します。ベースの Compose ファイルは、Agent バックエンドのポート 5050 を公開しません。このポートは Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って `/agent-stub` だけを公開します。
+  - Agent バックエンドの `/agent-stub` パスへのルートを用意します。パスは `/agent-stub` のまま変えないでください。`DIFY_AGENT_STUB_API_BASE_URL` のパスがそれ以外だと、Agent バックエンドは起動しません。ベースの Compose ファイルは、Agent バックエンドのポート 5050 を公開しません。このポートは Agent の実行を開始する API も提供しているため、リバースプロキシなどを使って `/agent-stub` だけを公開します。
 
 OpenShell に切り替えるには、次の手順を実行します：
 
-1. [OpenShell セットアップガイド](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) を参照して、ゲートウェイと上記の準備をすべて整えます。ガイドには、ランタイムイメージのビルド、ボリュームの初期化、証明書のマウント、Kubernetes でのセットアップ、スモークテストの手順が記載されています。
+1. [OpenShell セットアップガイド](https://github.com/langgenius/dify/blob/1.20.0/dify-agent/docs/dify-agent/guide/openshell.md) に従って、ゲートウェイと上記の準備をすべて整えます。サービスアドレスの基になる `https` サービスドメイン、ランタイムイメージのビルド、証明書のマウントも対象です。
 2. `envs/core-services/dify-agent.env` で `DIFY_AGENT_RUNTIME_BACKEND` を `openshell` に設定し、以下の変数を入力します。
 3. `docker compose up -d` で Agent バックエンドを再作成します。必須の値が欠けているか、形式が正しくない場合、Agent バックエンドは起動しません。
-4. Agent を実行して、設定を確認します。Agent バックエンドが初めてゲートウェイに接続するのは、Agent の実行時か、Agent のビルドチャットで **適用** をクリックしたときです。そのため、エンドポイント、認証情報、イメージの誤りは、その時点で初めて実行や適用の失敗として表面化します。
+4. Agent を実行して、設定を確認します。Agent バックエンドが初めてゲートウェイに接続するのは、Agent の実行時か、Agent のビルドチャットで **適用** をクリックしたときです。そのため、エンドポイント、認証情報、イメージ、ゲートウェイのバージョン、サービスアドレスの誤りは、その時点で初めて実行や **適用** の失敗として表面化します。
 
 サンドボックスは実行が終わっても、Dify が削除するまでゲートウェイ上で動き続けます。ゲートウェイの容量は、アクティブなサンドボックスだけでなく、アイドル状態のサンドボックスも見込んで計画してください。
 
@@ -1740,21 +1773,20 @@ OpenShell に切り替えるには、次の手順を実行します：
 
 | 変数 | デフォルト値 | 説明 |
 |---|---|---|
-| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。OpenShell ゲートウェイのアドレスを、スキームなしの `host:port` 形式で指定する。<br/><br/>`agent_backend` コンテナ内から到達できる必要がある。Docker ホスト上のゲートウェイには `localhost` ではなく `host.docker.internal:<port>` を使い、Linux では `extra_hosts` でこの名前をホストにマッピングする。<br/><br/>例：`gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。OpenShell ゲートウェイの gRPC API アドレスを、スキームなしの `host:port` 形式で指定する。Agent のコマンドは、このアドレスではなく各サンドボックスのサービスアドレスを経由する。<br/><br/>`agent_backend` コンテナ内から到達できる必要がある。Docker ホスト上のゲートウェイには `localhost` ではなく `host.docker.internal:<port>` を使い、Linux では `extra_hosts` でこの名前をホストにマッピングする。<br/><br/>例：`gateway.example.com:17670` |
 | `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | （空） | Agent バックエンドがゲートウェイに提示する OIDC Bearer トークン。ゲートウェイの認証方式に合わせて、このトークン、mTLS クライアント証明書のペア、またはその両方を使う。<br/><br/>起動時に一度だけ読み込まれる。ローテーションした後は Agent バックエンドを再作成する。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | ゲートウェイの証明書に署名した CA 証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_INSECURE` が `true` の場合は無視される。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | ゲートウェイの証明書に署名した CA 証明書の、`agent_backend` コンテナ内のパス。Agent バックエンドは、gRPC 接続と `https` のサービスアドレスの両方をこの証明書で検証する。証明書がパブリック CA によって署名されている場合は、空のままでよい。<br/><br/>`DIFY_AGENT_OPENSHELL_INSECURE` が `true` の場合、gRPC 接続ではこの証明書を使わないが、サービスアドレスは引き続き検証される。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS クライアント証明書の、`agent_backend` コンテナ内のパス。gRPC 接続と `https` のサービスアドレスへの接続で提示される。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS クライアント秘密鍵の、`agent_backend` コンテナ内のパス。`DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` と両方設定するか、両方空にする。片方だけ設定すると Agent バックエンドは起動しない。 |
-| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | TLS ではなく平文の gRPC でゲートウェイに接続し、TLS のパスは使わない。Bearer トークンを設定している場合は、この接続でも送信される。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | ゲートウェイの gRPC API に、TLS ではなく平文で接続する。Bearer トークンを設定している場合は、この接続でも送信される。サービスアドレスへの接続には影響しない。<br/><br/>平文のゲートウェイを使うローカル開発専用。 |
 | `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent バックエンドがサンドボックスを作成・管理する OpenShell ワークスペース。ゲートウェイ上の名前空間で、Dify のワークスペースとは異なる。 |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | ゲートウェイが各サンドボックス用に起動するコンテナイメージ。デフォルトは、OpenShell セットアップガイドのビルドコマンドが生成するタグ。<br/><br/>Dify を動かす Docker デーモンだけでなく、ゲートウェイのコンピュートドライバーからも利用できる必要がある。ゲートウェイの Docker デーモンにイメージを読み込むか、ゲートウェイがプルできるレジストリにプッシュして、その参照を指定する。<br/><br/>明示的に設定すること。どの env ファイルでも設定しない場合、Agent バックエンドは `langgenius/dify-agent-local-sandbox:latest` にフォールバックする。このイメージは古い可能性があり、その場合は OpenShell で起動できない。 |
-| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | `openshell` バックエンドでは必須。ゲートウェイのコンピュートドライバーがすべてのサンドボックスに適用する JSON。共有ボリュームを `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` にマウントする必要がある。形式はドライバーによって異なる。<br/><br/>JSON が不正、または空のオブジェクトだと Agent バックエンドは起動しない。Dify はマウント自体を確認しないため、ボリュームが別のパスにマウントされていても Agent バックエンドは起動する。マウント先は必ず再確認すること。<br/><br/>Docker ドライバーの例（ローカル開発などのシングルテナント構成向け）：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
-| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 各サンドボックス内で共有ボリュームをマウントする場所。`DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` のマウント先と一致させる。Agent のビルドチャットで **適用** をクリックするたびに、Agent の永続ファイルがここに保存される。<br/><br/>絶対パスでなければ、Agent バックエンドは起動しない。 |
-| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。Agent バックエンドが各サンドボックス内で起動するコマンドサービスに対し、自身を認証するための共有シークレット。任意のランダムな文字列を設定する。<br/><br/>同梱サンドボックスを保護する `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` とは別のもの。 |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | ドライバー固有のオプション（追加のマウントなど）を指定する JSON オブジェクト。ゲートウェイのコンピュートドライバーが、すべてのサンドボックスに適用する。形式はドライバーによって異なる。<br/><br/>JSON が不正な場合や、オブジェクト以外の JSON の場合、Agent バックエンドは起動しない。 |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | `openshell` バックエンドでは必須。未設定だと Agent バックエンドは起動しない。Agent バックエンドが各サンドボックスとの接続を保護するために使うシークレット。<br/><br/>長いランダムな値を設定し、すべての `agent_backend` レプリカで同じ値にする。変更すると、すでに実行中のサンドボックスはコマンドを拒否するため、停止して起動し直す必要がある。<br/><br/>同梱サンドボックスを保護する `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` とは別のもの。 |
 | `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | サンドボックスが接続できる `host:port` エンドポイントのカンマ区切りリスト。スキームやパスは付けない。空の場合はネットワークポリシーを送らず、外向き通信はゲートウェイのデフォルトに従う。<br/><br/>設定すると、サンドボックスはリストにあるエンドポイントにしか接続できない。パッケージのインストールや Web アクセスも、そのホストをリストに入れない限り機能しなくなる。`DIFY_AGENT_STUB_API_BASE_URL` と `DIFY_AGENT_SANDBOX_FILES_BASE_URL` のホストも含めること。含めないと、Agent の実行が Dify にコールバックできない。<br/><br/>形式が不正なエントリがあると、Agent バックエンドは起動しない。<br/><br/>例：`agent.example.com:443,dify.example.com:443` |
 | `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | 各サンドボックス内でコマンドサービスが待ち受けるループバックポート。Agent バックエンドはゲートウェイ経由で到達するため、ポートを開放する必要はない。ランタイムイメージがすでに 5004 を使っている場合にのみ変更する。 |
 | `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | 新規作成または再起動したサンドボックスが準備完了になるまで待つ時間（秒）。混雑したゲートウェイでサンドボックスの起動中に Agent の実行が失敗する場合は、値を引き上げる。 |
-| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent バックエンドがゲートウェイ経由でサンドボックス内で実行する、各セットアップコマンドの制限時間（秒）。Agent の永続ファイルのコピーやコマンドサービスの起動などが対象。Agent 自身が実行するコマンドは制限しない。<br/><br/>永続ファイルが大きい Agent で新しいセッションを開始できない場合は、値を引き上げる。 |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | セットアップコマンド 1 件あたりの制限時間（秒）。Agent バックエンドがゲートウェイ経由でサンドボックス内で実行する、コマンドサービスの起動などのコマンドが対象。Agent 自身が実行するコマンドは制限しない。<br/><br/>低速なゲートウェイでサンドボックスのセットアップ中に実行や **適用** が失敗する場合は、値を引き上げる。 |
 
 </Accordion>
 </AccordionGroup>

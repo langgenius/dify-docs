@@ -50,7 +50,11 @@ When you run Dify from source code, set the variables in `api/.env`, `web/.env.l
     docker compose up -d
     ```
 
-    Use `up -d`, not `docker compose restart`: `restart` keeps the containers' old environment. To see the resolved values, run `docker compose config`. Its output contains secrets, so keep it private.
+    <Info>
+      If you started the deployment with extra Compose options, such as `-p`, `-f`, `--env-file`, or profiles, add the same options to these commands.
+    </Info>
+
+    To see the resolved values, run `docker compose config`. Its output contains secrets, so keep it private.
 
     For a worked example that ends by checking the running service, see [Customize](/en/self-host/deploy/quick-start/docker-compose#customize). To update to a new release without losing your local files, secrets, or data, follow [Upgrade](/en/self-host/deploy/quick-start/docker-compose#upgrade).
   </Step>
@@ -65,9 +69,10 @@ When a variable is set in more than one place, which value a service uses depend
     The API, WebSocket API, workers, Beat, web, Code sandbox, plugin daemon, and agent backend use the first match, in this order:
 
     1. `docker/.env`
-    2. The service's local `.env` files
-    3. Its `.defaults` files
-    4. The application default
+    2. For the public URLs, in the web service, API, and workers: the values you set in `envs/core-services/urls.env`
+    3. The service's local `.env` files
+    4. Its `.defaults` files
+    5. The application default
 
     <Note>
     Variables under the **Container variable mappings** comment in a `.defaults` file always copy their value from another setting. Setting them directly has no effect, even in `docker/.env`, so change the setting they copy from instead.
@@ -87,13 +92,38 @@ If a value doesn't come from any of these files, check two more places:
 
 ## Common Variables
 
-These URL variables configure the addresses of Dify's various services.
+The public URLs are empty by default. Whether to set them depends on your deployment:
+
+- **Everything runs at one address, with no emails, OAuth, or Human Input requests**: leave them empty. Dify works without them.
+- **Everything runs at one address, with emails, OAuth, or Human Input requests**: set them all to that full address, such as `https://dify.example.com`. See each URL's entry below for the features that need it.
+- **Services run at separate addresses**, such as the API at `api.example.com`: set each URL to its own full address. If the console and the API are on different subdomains, also set `COOKIE_DOMAIN` and `NEXT_PUBLIC_COOKIE_DOMAIN`; see [CORS Configuration](#cors-configuration) for details.
+
+To set them:
+
+1. If `docker/envs/core-services/urls.env` doesn't exist, create it from the bundled defaults. The web service, API, and Celery workers all load this file, so they use the same addresses.
+
+   ```bash
+   cd dify/docker
+   cp envs/core-services/urls.defaults envs/core-services/urls.env
+   ```
+
+2. In `urls.env`, write each URL with `http://` or `https://`, plus the port if your address has one, such as `https://dify.example.com:8443`. Don't add `/console/api`, `/api`, or `/v1` at the end: Dify appends them automatically.
+
+   If `docker/.env` also sets any of these URLs, that value wins over `urls.env`, so change or remove it there.
+
+3. Apply the change with the commands in [Set a Variable](#set-a-variable).
+
+4. To check the result, open the console and a published app at their public addresses. If you set the URLs for emails, also send a member invitation and check that its link starts with your address.
+
+   If an address is still wrong, run `docker compose config` to see the value each service receives. Its output contains secrets, so keep it private.
 
 ### CONSOLE_API_URL
 
 Default: (empty)
 
-The public URL of Dify's backend API. Set this if you use OAuth login (GitHub, Google), Notion integration, or any plugin that requires OAuth—these features need an absolute callback URL to redirect users back after authorization. Also determines whether secure (HTTPS-only) cookies are used.
+The public base URL of the console API. Set a full address for GitHub or Google login and for integrations that connect through OAuth.
+
+Secure cookies require both `CONSOLE_API_URL` and `CONSOLE_WEB_URL` to start with `https://`.
 
 Example: `https://api.console.dify.ai`
 
@@ -101,19 +131,17 @@ Example: `https://api.console.dify.ai`
 
 Default: `http://api:5001`
 
-The console API address the web frontend container uses for server-side requests, reaching the API directly over the internal Docker network rather than your public domain. Only the web frontend container uses this variable, not the Python backend; browser requests still go to `CONSOLE_API_URL`.
+The console API address the web service uses for server-side requests; browser requests use `CONSOLE_API_URL`. Set it in `docker/envs/core-services/web.env` if the API is reachable at a different internal address.
 
-If left empty, it falls back to `CONSOLE_API_URL`. Change it only if the API service is reachable at a different internal address.
+In a source-code deployment, it falls back to `CONSOLE_API_URL` when unset.
 
 ### CONSOLE_WEB_URL
 
-Default: empty (`http://127.0.0.1:3000` for Docker Compose)
+Default: (empty)
 
-The URL members open Dify's console at. Used to build links in system emails such as invitations and password resets, and to redirect users back to the console after OAuth login. Also serves as the default CORS allowed origin if `CONSOLE_CORS_ALLOW_ORIGINS` is not set.
+The public base URL of the console. Set a full address for email links (such as invitation and sign-in links) and for redirects after OAuth login.
 
-The new Human Input node builds workspace members' request links from it, in email and in IM (instant messaging app) link messages: `{CONSOLE_WEB_URL}/human-input/{token}`.
-
-The address doesn't need to be reachable from the internet if members use Dify on an internal network.
+Required for the new Human Input node's requests to workspace members, sent by email or as link messages in IM (instant messaging app). The address doesn't need to be reachable from the internet if members use Dify on an internal network.
 
 Example: `https://console.dify.ai`
 
@@ -121,7 +149,9 @@ Example: `https://console.dify.ai`
 
 Default: (empty)
 
-The API Base URL shown to developers in the Dify console—the URL they copy into their code to call the Dify API. If empty, auto-detects from the current request (e.g., `http://localhost/v1`). Set this to ensure a consistent URL when your server is accessible via multiple addresses.
+The public API base URL shown in the console for developers to copy. Dify appends `/v1` to this value. When empty, the console shows the address it's opened at, such as `http://localhost/v1`.
+
+If your server is reachable at several addresses, such as an IP address and a domain, set this to the one developers should use.
 
 Example: `https://api.dify.ai`
 
@@ -129,20 +159,17 @@ Example: `https://api.dify.ai`
 
 Default: (empty)
 
-The backend API URL for the web app frontend (published apps). This variable is only used by the web frontend container, not the Python backend. If empty, the Docker image defaults to `http://127.0.0.1:5001`.
+The public API base URL used by published web apps. When empty, a web app sends requests to `/api` at the address it's opened at.
 
 Example: `https://api.app.dify.ai`
 
 ### APP_WEB_URL
 
-Default: empty (`http://127.0.0.1:3000` for Docker Compose)
+Default: (empty)
 
-The public URL where published web apps are accessible. Human Input also builds request links from it:
+The public base URL of published web apps. When empty, the console builds an app's sharing link from the address it's opened at.
 
-- **New Human Input node**: requests sent to external contacts, or to any email address typed into the node or taken from a variable, link to `{APP_WEB_URL}/form-v2/{token}`.
-- **Old Human Input node**: email links are `{APP_WEB_URL}/form/{token}`.
-
-External recipients must be able to open this address.
+Set a full address for Human Input requests sent by email or to external contacts. Recipients must be able to open this address.
 
 Example: `https://app.dify.ai`
 
@@ -214,7 +241,7 @@ If the editor keeps dropping and reconnecting while collaborators work on a larg
 | `LOG_FILE_MAX_SIZE` | `20` | Maximum log file size in MB before rotation. When exceeded, the active file is renamed to `.1` and a new file is started. |
 | `LOG_FILE_BACKUP_COUNT` | `5` | Number of rotated log files to keep. With defaults, at most 6 files exist: the active file plus 5 backups. |
 | `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | Timestamp format for text-format logs (strftime codes). Ignored by JSON format. |
-| `LOG_TZ` | `UTC` | Timezone for log timestamps (pytz format, e.g., `Asia/Shanghai`). Only applies to text format—JSON always uses UTC. Also sets Celery's task scheduling timezone. |
+| `LOG_TZ` | `UTC` | Timezone for log timestamps (IANA timezone name, e.g., `Asia/Shanghai`). Only applies to text format—JSON always uses UTC. Also sets Celery's task scheduling timezone.<br/><br/>An unknown name stops the API and Celery services from starting. |
 
 ### General
 
@@ -246,7 +273,7 @@ openssl rand -base64 42
 If Dify cannot save a generated key, initialization fails. Make the configured storage writable or provide an explicit key.
 
 <Warning>
-Preserve the same key through upgrades and restores, whether you supply it explicitly or keep it in persistent storage. Changing it invalidates existing authentication tokens, signed file URLs, and personal access tokens, and prevents Dify from decrypting existing system-level OAuth client credentials. Restore the original key to recover access to those credentials and the personal access tokens.
+Preserve the same key through upgrades and restores, whether you supply it explicitly or keep it in persistent storage. Changing it invalidates existing authentication tokens, personal access tokens, and signed file URLs, and prevents Dify from decrypting existing system-level OAuth client credentials. Restore the original key to recover access to those credentials and the personal access tokens.
 </Warning>
 
 ### PASSWORD_PEPPER
@@ -1686,7 +1713,7 @@ The remaining variables configure the bundled services or derive from your exist
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | How long the API waits on agent backend calls that transfer a home snapshot: capturing or deleting one, and starting a run that restores one.<br/><br/>If applying a build or starting runs fails for agents with large home environments, increase this. |
 | `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | How long the sandbox command serving that file may run. The default stays below the API's timeout so the agent's own error surfaces first. |
 | `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | Maximum size in MiB for one file the sandboxed agent uploads back to Dify, such as the files it generates for a reply. |
-| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.13 or later with Landlock enabled. Since 1.18.0, if the sandbox can't apply Landlock, it refuses to run any command. Set in `docker/envs/core-services/local-sandbox.env`; `.env` values don't reach the sandbox container. |
+| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | Kernel-enforced (Landlock) limits on which paths the sandbox can read and write. Requires Linux 5.19 or later with Landlock enabled.<br/><br/>Since 1.18.0, if the sandbox can't apply Landlock, it refuses to run any command. On an older kernel, upgrade the kernel, or set this to `false` to run without these limits.<br/><br/>Set in `docker/envs/core-services/local-sandbox.env`; values in `docker/.env` don't reach the sandbox container. |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | (empty) | JSON array of regex patterns masked out of shell output before the agent reads it, for secrets like API keys. The agent's internal bearer token is always masked. |
 | `LOGFIRE_CONSOLE` | `false` | Set to `true` while debugging to have the agent backend print its own request, outbound HTTP, and Redis spans to its container log. Unrelated to [trajectory export](#agent-trajectory-export), which never prints there.<br/><br/>Since 1.18.0, agent-run spans no longer appear in this log. To follow agent runs, use trajectory export. |
 
@@ -1698,7 +1725,7 @@ Selects where agent sandboxes run:
 
 - `local`: the bundled sandbox container.
 - `e2b`: an [E2B](https://e2b.dev) cloud VM for each agent's sandbox, for stronger isolation than the bundled container provides.
-- `openshell`: an NVIDIA OpenShell gateway you operate, so sandboxes run on your own infrastructure.
+- `openshell`: an NVIDIA OpenShell gateway you operate, so sandboxes run on your own infrastructure. Agents don't keep files or installed tools across conversations. **Apply** in a build chat still saves the agent's configuration, including files added in the configuration panel.
 
 Set this and the two callback addresses, `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, in `envs/core-services/dify-agent.env`.
 
@@ -1723,20 +1750,24 @@ The `docker/docker-compose.e2b.yaml` overlay is for testing E2B with a separate,
 
 Before switching to `openshell`, have these in place:
 
-- An OpenShell gateway, version 0.0.106 or later, reachable from the `agent_backend` container.
+- An OpenShell gateway, version 0.1.3 or later, with its gRPC endpoint reachable from the `agent_backend` container.
+- Service addresses on the gateway that the `agent_backend` container can reach. The agent backend sends the agent's commands to each sandbox over HTTP, through an address the gateway returns for that sandbox, rather than through the gRPC endpoint.
+
+  With Docker Compose, have the gateway hand out `https` addresses whose names resolve from the container. Plain `http` addresses don't work with Docker Compose: the agent backend accepts them only for loopback and `*.openshell.localhost`, which point at its own container.
+
+  The container must reach these addresses directly: the agent backend ignores `HTTP_PROXY` and `HTTPS_PROXY` for this traffic.
 - Gateway credentials: a bearer token, an mTLS client certificate pair, or both. Compose ships no certificate mount, so mount the files into `agent_backend` yourself, read-only and readable by UID 1001.
 - A runtime image that the gateway can start sandboxes from.
-- A shared volume for the persistent files agents keep across conversations, created outside Compose so that `docker compose down -v` can't delete it. If the deployment serves tenants that don't trust each other, give each its own OpenShell workspace and volume. A shared volume can't reliably keep one tenant out of another's persistent files.
 - A network path from the sandboxes back to Dify:
   - Callback addresses the sandboxes can reach.
-  - A route to the agent backend's `/agent-stub` path. The base Compose file doesn't publish the agent backend's port 5050, and that port also serves the API that starts agent runs, so expose only `/agent-stub`, for example through a reverse proxy.
+  - A route to the agent backend's `/agent-stub` path, kept at that path: if `DIFY_AGENT_STUB_API_BASE_URL` has any other path, the agent backend won't start. The base Compose file doesn't publish the agent backend's port 5050, and that port also serves the API that starts agent runs, so expose only `/agent-stub`, for example through a reverse proxy.
 
 To switch to OpenShell:
 
-1. See the [OpenShell setup guide](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) to set up the gateway and everything above: building the runtime image, initializing the volume, mounting certificates, Kubernetes setup, and a smoke test.
+1. Follow the [OpenShell setup guide](https://github.com/langgenius/dify/blob/1.20.0/dify-agent/docs/dify-agent/guide/openshell.md) to set up the gateway and everything above, including the `https` service domain behind the service addresses, the runtime image build, and the certificate mounts.
 2. In `envs/core-services/dify-agent.env`, set `DIFY_AGENT_RUNTIME_BACKEND` to `openshell` and fill in the variables below.
 3. Recreate the agent backend with `docker compose up -d`. It refuses to start if a required value is missing or malformed.
-4. Run an agent to confirm the setup. The agent backend first contacts the gateway when an agent runs, or when you click **Apply** in an Agent's build chat, so a wrong endpoint, credential, or image shows up only then, as a failed run or a failed apply.
+4. Run an agent to confirm the setup. The agent backend first contacts the gateway when an agent runs, or when you click **Apply** in an Agent's build chat. A wrong endpoint, credential, image, gateway version, or service address therefore shows up only then, as a failed run or a failed **Apply**.
 
 Sandboxes keep running on the gateway after a run ends, until Dify removes them, so plan gateway capacity for idle sandboxes as well as active ones.
 
@@ -1744,21 +1775,20 @@ The bundled sandbox's egress proxy doesn't cover OpenShell sandboxes. To restric
 
 | Variable | Default | Description |
 |---|---|---|
-| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. Address of the OpenShell gateway as `host:port`, with no scheme.<br/><br/>It must be reachable from inside the `agent_backend` container. For a gateway on the Docker host, use `host.docker.internal:<port>` rather than `localhost`, and on Linux also map that name to the host with `extra_hosts`.<br/><br/>Example: `gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. Address of the OpenShell gateway's gRPC API as `host:port`, with no scheme. The agent's commands go through each sandbox's service address instead.<br/><br/>It must be reachable from inside the `agent_backend` container. For a gateway on the Docker host, use `host.docker.internal:<port>` rather than `localhost`, and on Linux also map that name to the host with `extra_hosts`.<br/><br/>Example: `gateway.example.com:17670` |
 | `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | (empty) | OIDC bearer token the agent backend presents to the gateway. Use it, the mTLS client certificate pair, or both, to match how your gateway authenticates.<br/><br/>Read once at startup: after rotating it, recreate the agent backend. |
-| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | (empty) | Path inside the `agent_backend` container to the CA certificate that signed the gateway's certificate. Ignored when `DIFY_AGENT_OPENSHELL_INSECURE` is `true`. |
-| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | (empty) | Path inside the `agent_backend` container to the mTLS client certificate. Set it together with `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` or leave both empty; with only one set, the agent backend won't start. |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | (empty) | Path inside the `agent_backend` container to the CA certificate that signed the gateway's certificates. The agent backend verifies both the gRPC connection and `https` service addresses against it. Leave it empty if a public CA signed them.<br/><br/>With `DIFY_AGENT_OPENSHELL_INSECURE` set to `true`, the gRPC connection skips it, but service addresses are still verified. |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | (empty) | Path inside the `agent_backend` container to the mTLS client certificate, presented on the gRPC connection and on `https` service addresses. Set it together with `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` or leave both empty; with only one set, the agent backend won't start. |
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | (empty) | Path inside the `agent_backend` container to the mTLS client private key. Set it together with `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` or leave both empty; with only one set, the agent backend won't start. |
-| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | Connects to the gateway over plaintext gRPC instead of TLS, without using the TLS paths. A bearer token, if set, is still sent over that connection.<br/><br/>Only for local development against a plaintext gateway. |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | Connects to the gateway's gRPC API over plaintext instead of TLS. A bearer token, if set, is still sent over that connection. Service addresses are unaffected.<br/><br/>Only for local development against a plaintext gateway. |
 | `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | OpenShell workspace in which the agent backend creates and manages sandboxes. This is a namespace on the gateway, not a Dify workspace. |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | Container image the gateway starts for each sandbox. The default is the tag that the build command in the OpenShell setup guide produces.<br/><br/>The image must be available to the gateway's compute driver, not only to the Docker daemon running Dify: load it into the gateway's Docker daemon, or push it to a registry the gateway pulls from and use that reference.<br/><br/>Set it explicitly. If no env file sets it, the agent backend falls back to `langgenius/dify-agent-local-sandbox:latest`, which may be an older image that can't start under OpenShell. |
-| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | (empty) | Required for the `openshell` backend. JSON the gateway's compute driver applies to every sandbox; it must mount the shared volume at `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`. Its shape depends on the driver.<br/><br/>Invalid JSON or an empty object stops the agent backend from starting. Dify doesn't check the mounts themselves, so the agent backend starts even if the volume is mounted at another path. Double-check the target.<br/><br/>Example for the Docker driver (single-tenant, such as local development): `{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
-| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | Where the shared volume is mounted inside each sandbox; must match the mount target in `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG`. Agents' persistent files are saved here each time you click **Apply** in an Agent's build chat.<br/><br/>Must be an absolute path, or the agent backend won't start. |
-| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. Shared secret that authenticates the agent backend to the command service it starts inside each sandbox. Set any random string.<br/><br/>Separate from `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`, which secures the bundled sandbox. |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | (empty) | JSON object of driver-specific options, such as extra mounts, that the gateway's compute driver applies to every sandbox. Its shape depends on the driver.<br/><br/>Invalid JSON, or JSON that isn't an object, stops the agent backend from starting. |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | (empty) | Required for the `openshell` backend; the agent backend won't start without it. A secret the agent backend uses to secure its connection to each sandbox.<br/><br/>Set a long random value, the same on every `agent_backend` replica. After you change it, sandboxes that are already running reject commands until you stop and start them.<br/><br/>Separate from `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN`, which secures the bundled sandbox. |
 | `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | (empty) | Comma-separated `host:port` endpoints that sandboxes may connect to, with no scheme or path. Empty sends no network policy, so egress follows the gateway's default.<br/><br/>When set, sandboxes reach only the listed endpoints, so package installs and web access stop working unless their hosts are listed. Include the hosts of `DIFY_AGENT_STUB_API_BASE_URL` and `DIFY_AGENT_SANDBOX_FILES_BASE_URL`, or agent runs can't call back into Dify.<br/><br/>A malformed entry stops the agent backend from starting.<br/><br/>Example: `agent.example.com:443,dify.example.com:443` |
 | `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | Loopback port the command service listens on inside each sandbox. The agent backend reaches it through the gateway, so no port needs opening. Change it only if your runtime image already uses 5004. |
 | `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | How long in seconds to wait for a new or restarted sandbox to become ready. If agent runs fail while sandboxes are still starting on a busy gateway, raise it. |
-| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Time limit in seconds for each setup command the agent backend runs in a sandbox through the gateway, such as copying in an agent's persistent files or starting the command service. Doesn't limit the commands the agent itself runs.<br/><br/>If new sessions of agents with large persistent files fail to start, raise it. |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Time limit in seconds for each setup command the agent backend runs in a sandbox through the gateway, such as starting the command service. Doesn't limit the commands the agent itself runs.<br/><br/>If runs or **Apply** fail while sandboxes are being set up on a slow gateway, raise it. |
 
 </Accordion>
 </AccordionGroup>
