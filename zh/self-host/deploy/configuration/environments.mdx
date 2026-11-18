@@ -52,7 +52,11 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     docker compose up -d
     ```
 
-    要用 `up -d`，不能用 `docker compose restart`：`restart` 会沿用容器原有的环境变量。运行 `docker compose config` 可查看解析后的值，其输出包含密钥，需妥善保管。
+    <Info>
+      如果启动部署时用了额外的 Compose 选项，如 `-p`、`-f`、`--env-file` 或 profile，在这些命令中加上同样的选项。
+    </Info>
+
+    运行 `docker compose config` 可查看解析后的值，其输出包含密钥，需妥善保管。
 
     完整示例详见 [自定义](/zh/self-host/deploy/quick-start/docker-compose#自定义)，示例最后会检查运行中的服务。如需更新到新版本，同时不丢失本地文件、密钥和数据，按 [升级](/zh/self-host/deploy/quick-start/docker-compose#升级) 操作。
   </Step>
@@ -67,9 +71,10 @@ Docker Compose 从三类文件中读取 Dify 的设置。
     API、WebSocket API、Worker、Beat、Web、代码执行沙箱、插件守护进程和 Agent 后端按以下顺序查找，采用第一个找到的值：
 
     1. `docker/.env`
-    2. 该服务的本地 `.env` 文件
-    3. 该服务的 `.defaults` 文件
-    4. 程序内置的默认值
+    2. 公开 URL（Web 服务、API 和 Worker）：你在 `envs/core-services/urls.env` 中设置的值
+    3. 该服务的本地 `.env` 文件
+    4. 该服务的 `.defaults` 文件
+    5. 程序内置的默认值
 
     <Note>
     `.defaults` 文件中 **Container variable mappings** 注释下的变量，始终从另一项设置取值。直接设置它们不会生效，写在 `docker/.env` 中也一样；需要修改时，改它们取值的那项设置。
@@ -89,15 +94,38 @@ Docker Compose 从三类文件中读取 Dify 的设置。
 
 ## 通用变量
 
-这些 URL 变量用于配置 Dify 各服务的访问地址。
+公开 URL 默认为空。是否需要设置，取决于你的部署方式：
 
-对于 Nginx 后的单域名部署（默认 Docker Compose 配置），这些变量可以留空，系统会从请求中自动检测。当使用自定义域名、多域名部署或反向代理时，需要配置这些变量。
+- **所有服务通过同一地址访问，且用不到邮件、OAuth 和人工介入请求**：保持为空即可，不设置也不影响 Dify 运行。
+- **所有服务通过同一地址访问，且要用到邮件、OAuth 或人工介入请求**：全部设为该完整地址，如 `https://dify.example.com`。哪些功能需要哪个 URL，见下文各 URL 的说明。
+- **各服务使用不同的地址**（如 API 位于 `api.example.com`）：将每个 URL 分别设为对应的完整地址。如果控制台和 API 位于不同的子域名，还需设置 `COOKIE_DOMAIN` 和 `NEXT_PUBLIC_COOKIE_DOMAIN`，详见 [CORS 配置](#cors-配置)。
+
+按以下步骤设置：
+
+1. 如果 `docker/envs/core-services/urls.env` 不存在，复制自带的默认值文件来创建。Web 服务、API 和 Celery Worker 都会加载此文件，因此使用的地址相同。
+
+   ```bash
+   cd dify/docker
+   cp envs/core-services/urls.defaults envs/core-services/urls.env
+   ```
+
+2. 在 `urls.env` 中填写各 URL 时，带上 `http://` 或 `https://`；地址含端口的，一并带上端口，如 `https://dify.example.com:8443`。末尾不要加 `/console/api`、`/api` 或 `/v1`，Dify 会自动补上。
+
+   如果 `docker/.env` 中也设置了其中某个 URL，该值会覆盖 `urls.env`，因此要到 `docker/.env` 中修改或删除它。
+
+3. 用 [设置变量](#设置变量) 中的命令应用修改。
+
+4. 检查结果：通过各自的公开地址打开控制台和一个已发布的应用。如果设置 URL 是为了邮件功能，再发一封成员邀请，确认邀请链接以你的地址开头。
+
+   如果地址仍不正确，运行 `docker compose config` 查看各服务实际拿到的值。其输出包含密钥，需妥善保管。
 
 ### CONSOLE_API_URL
 
 默认值：（空）
 
-Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google）、Notion 集成或任何需要 OAuth 的插件，请设置此变量；这些功能需要绝对回调 URL 才能在授权后将用户重定向回来。此变量还决定是否使用安全（仅 HTTPS）Cookie。
+控制台 API 的公开基础 URL。使用 GitHub 或 Google 登录，或通过 OAuth 连接集成时，需将此变量设为完整地址。
+
+只有 `CONSOLE_API_URL` 和 `CONSOLE_WEB_URL` 都以 `https://` 开头时，才会启用安全 Cookie。
 
 示例：`https://api.console.dify.ai`
 
@@ -105,15 +133,17 @@ Dify 后端 API 的公开 URL。如果你使用 OAuth 登录（GitHub、Google�
 
 默认值：`http://api:5001`
 
-Web 前端容器在服务端发起请求时所使用的 Console API 地址，经由 Docker 内部网络直接访问，而非通过你的公网域名。此变量仅由 Web 前端容器使用，不影响 Python 后端；浏览器端请求仍使用 `CONSOLE_API_URL`。若留空，则回退到 `CONSOLE_API_URL`。仅当 API 服务的内部访问地址不同时才需修改。
+Web 服务在服务端发起请求时使用的控制台 API 地址；浏览器端请求使用 `CONSOLE_API_URL`。如果 API 的内部访问地址不同，在 `docker/envs/core-services/web.env` 中设置此变量。
+
+源码部署时，未设置此变量则回退到 `CONSOLE_API_URL`。
 
 ### CONSOLE_WEB_URL
 
 默认值：（空）
 
-Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、密码重置、通知）中的链接，以及 OAuth 登录后将用户重定向回控制台。如果未设置 `CONSOLE_CORS_ALLOW_ORIGINS`，此变量也作为默认的 CORS 允许来源。
+控制台的公开基础 URL。邮件中的链接（如邀请链接和登录链接）和 OAuth 登录后的重定向都依赖此变量，需设为完整地址。
 
-如果为空，邮件链接将无法正常工作；即使在单域名部署中，使用邮件功能时也需要设置此变量。
+新版人工介入节点通过邮件或 IM（即时通讯应用）链接消息向工作空间成员发送请求时，必须设置此变量。如果成员在内网中使用 Dify，此地址只需内网可访问。
 
 示例：`https://console.dify.ai`
 
@@ -121,7 +151,9 @@ Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、�
 
 默认值：（空）
 
-在 Dify 控制台中展示给开发者的 API Base URL，即他们复制到代码中用于调用 Dify API 的 URL。如果为空，将从当前请求自动检测（例如 `http://localhost/v1`）。当你的服务器可通过多个地址访问时，设置此变量以确保 URL 一致。
+控制台中展示给开发者复制的公开 API 基础 URL。Dify 会在此值后加上 `/v1`。为空时，控制台按当前访问地址显示，如 `http://localhost/v1`。
+
+如果服务器可通过多个地址访问（如 IP 地址和域名），将此变量设为开发者应使用的那个地址。
 
 示例：`https://api.dify.ai`
 
@@ -129,7 +161,7 @@ Dify 控制台前端的公开 URL。用于构建所有系统邮件（邀请、�
 
 默认值：（空）
 
-Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前端容器使用，不影响 Python 后端。如果为空，Docker 镜像默认使用 `http://127.0.0.1:5001`。
+已发布 Web 应用使用的公开 API 基础 URL。为空时，Web 应用将请求发送到当前访问地址下的 `/api`。
 
 示例：`https://api.app.dify.ai`
 
@@ -137,7 +169,9 @@ Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前
 
 默认值：（空）
 
-已发布 Web 应用的公开访问 URL。工作流中的 **人工输入节点** 需要此变量；邮件通知中的表单链接以 `{APP_WEB_URL}/form/{token}` 格式构建。如果为空，人工输入邮件将不包含有效的表单链接。
+已发布 Web 应用的公开基础 URL。为空时，控制台根据其当前访问地址生成应用的分享链接。
+
+以邮件形式或向外部联系人发送人工介入请求时，需将此变量设为完整地址，且收件人要能打开此地址。
 
 示例：`https://app.dify.ai`
 
@@ -147,7 +181,7 @@ Web 应用前端（已发布应用）的后端 API URL。此变量仅由 Web 前
 
 Webhook 和集成触发端点的公开访问 URL。外部系统使用此地址来调用你的工作流。Dify 构建触发回调 URL 格式为 `{TRIGGER_URL}/triggers/webhook/{id}` 并在控制台中展示。
 
-要使触发器能从外部系统正常工作，此变量必须指向它们可以访问的公共域名或 IP 地址。
+对于以卡片展示人工介入请求的 IM，卡片上的按钮点击也会经由 **设置** > **渠道** 中的回调 URL 发送到此地址。
 
 ### FILES_URL
 
@@ -209,7 +243,7 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 | `LOG_FILE_MAX_SIZE` | `20` | 日志文件轮转前的最大大小（MB）。超过后当前文件重命名为 `.1`，并创建新文件。 |
 | `LOG_FILE_BACKUP_COUNT` | `5` | 保留的轮转日志文件数量。使用默认配置时最多存在 6 个文件：当前文件加 5 个备份。 |
 | `LOG_DATEFORMAT` | `%Y-%m-%d %H:%M:%S` | 文本格式日志的时间戳格式（strftime 代码）。JSON 格式忽略此设置。 |
-| `LOG_TZ` | `UTC` | 日志时间戳的时区（pytz 格式，例如 `Asia/Shanghai`）。仅适用于文本格式，JSON 始终使用 UTC。同时设置 Celery 的任务调度时区。 |
+| `LOG_TZ` | `UTC` | 日志时间戳的时区（IANA 时区名称，例如 `Asia/Shanghai`）。仅适用于文本格式，JSON 始终使用 UTC。同时设置 Celery 的任务调度时区。<br/><br/>时区名称无法识别时，API 和 Celery 服务无法启动。 |
 
 ### 常规
 
@@ -228,7 +262,7 @@ Docker 网络内部服务间通信使用的文件访问 URL（例如插件守护
 
 默认值：（空；自动生成并保存在配置的存储中）
 
-为认证令牌和文件 URL 签名，并加密系统级 OAuth 客户端凭据。
+为认证令牌和文件 URL 签名，校验 [个人访问令牌](/zh/cli/personal-access-tokens)，并加密系统级 OAuth 客户端凭据。
 
 此变量为空时，Dify 会复用配置的存储中 `.dify_secret_key` 文件内的密钥；如果密钥不存在，则生成并保存一个。使用自带的文件系统存储时，宿主机路径为 `docker/volumes/app/storage/.dify_secret_key`。
 
@@ -241,7 +275,7 @@ openssl rand -base64 42
 如果 Dify 无法保存生成的密钥，初始化会失败。为配置的存储提供写入权限，或显式设置密钥。
 
 <Warning>
-无论显式设置密钥，还是将其保存在持久化存储中，升级和恢复时都应保留同一个密钥。更改密钥会使现有认证令牌和已签名的文件 URL 失效，还会导致 Dify 无法解密已有的系统级 OAuth 客户端凭据。恢复原密钥即可重新访问这些凭据。
+无论显式设置密钥，还是将其保存在持久化存储中，升级和恢复时都应保留同一个密钥。更改密钥会使现有认证令牌、个人访问令牌和已签名的文件 URL 失效，还会导致 Dify 无法解密已有的系统级 OAuth 客户端凭据。恢复原密钥即可重新访问这些凭据，个人访问令牌也会恢复可用。
 </Warning>
 
 ### PASSWORD_PEPPER
@@ -532,16 +566,16 @@ sentinel://<redis_username>:<redis_password>@<sentinel_host>:<sentinel_port>/<re
 
 ### Dify CLI 与编程 API
 
-`/openapi/v1/*` 是面向用户的编程 API，[Dify CLI](/zh/cli/get-started)（`difyctl`）等客户端通过 OAuth Bearer Token 访问。该接口默认关闭：将 `OPENAPI_ENABLED` 和 `ENABLE_OAUTH_BEARER` 都设为 `true` 后，CLI 才能连接你的部署。
+[Dify CLI](/zh/cli/get-started)（`difyctl`）和 [个人访问令牌](/zh/cli/personal-access-tokens) 默认开启。如需同时关闭两者，将 `OPENAPI_ENABLED` 设为 `false`。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `OPENAPI_ENABLED` | `false` | `/openapi/v1/*` 编程 API 的总开关，Dify CLI（`difyctl`）依赖该接口。<br/>为 `false` 时所有 `/openapi/v1/*` 端点返回 404，`difyctl login` 无法开始。需与 `ENABLE_OAUTH_BEARER` 一同开启。 |
-| `ENABLE_OAUTH_BEARER` | `false` | 为 `/openapi/v1/*` 绑定 OAuth Bearer 鉴权器，并控制设备流登录的批准端点。<br/>若只开启 `OPENAPI_ENABLED` 而此项为 `false`，`difyctl login` 会在批准环节收到 503。两者都为 `true` 时 CLI 才可用。 |
+| `OPENAPI_ENABLED` | `true` | `/openapi/v1/*` 的总开关，Dify CLI（`difyctl`）和个人访问令牌都依赖这套编程 API。<br/>为 `false` 时所有 `/openapi/v1/*` 调用都返回 404，`difyctl login` 无法开始。 |
+| `ENABLE_OAUTH_BEARER` | `true` | 为 `/openapi/v1/*` 开启 Bearer 令牌鉴权，`difyctl` 登录和个人访问令牌都要用到它。<br/>如果 `OPENAPI_ENABLED` 为 `true` 而此项为 `false`，所有需要令牌的 `/openapi/v1/*` 调用都返回 503，`difyctl login` 也会在批准环节失败。 |
 | `OPENAPI_KNOWN_CLIENT_IDS` | `difyctl` | 允许发起设备流登录的 OAuth 客户端 ID，逗号分隔。<br/>新增 ID 即可接入其他客户端，无需改代码；移除 `difyctl` 会让 CLI 登录报 `unsupported_client`。 |
 | `OAUTH_TTL_DAYS` | `14` | `difyctl login` 登录的有效天数，从登录时起算。可设为 1～365，超出范围时自动取最接近的边界值。<br/>修改后仅对新登录生效。 |
 | `OPENAPI_CORS_ALLOW_ORIGINS` | （空） | 允许跨域调用 `/openapi/v1/*` 的浏览器来源，逗号分隔。<br/>为空表示全部拒绝：标准部署下没有影响，CLI 等非浏览器客户端也不受 CORS 限制。 |
-| `OPENAPI_RATE_LIMIT_PER_TOKEN` | `60` | 每个 OAuth Bearer Token 在 `/openapi/v1/*` 上的每分钟请求上限，经 Redis 在多副本间共享。<br/>超限返回 429 并附 `Retry-After` 头。设为 `0` 可关闭限流。 |
+| `OPENAPI_RATE_LIMIT_PER_TOKEN` | `60` | 每个 `difyctl` 登录或个人访问令牌在 `/openapi/v1/*` 上的每分钟请求上限，经 Redis 在多副本间共享。<br/>超限返回 429 并附 `Retry-After` 头。设为 `0` 可关闭限流。 |
 | `DEVICE_FLOW_APPROVE_RATE_LIMIT_PER_HOUR` | `10` | 单个浏览器会话每小时可批准或拒绝的设备流登录次数。<br/>超出后批准请求返回 429，需等待窗口重置。不能设为 `0`。 |
 
 ### 文件存储配置
@@ -1204,6 +1238,22 @@ OceanBase 和 seekdb 共用 `OCEANBASE_*` 设置，因此 Dify 同一时间只�
 | `SCARF_NO_ANALYTICS` | `true` | 禁用 Unstructured 库的遥测/分析收集。 |
 | `TOP_K_MAX_VALUE` | `10` | 知识库检索中用户可设置的 `top_k` 参数最大值（每次搜索返回的结果数）。 |
 | `DATASET_MAX_SEGMENTS_PER_REQUEST` | `0` | 每个数据集 API 请求的最大段落数。`0` 表示不限制。 |
+| `DATASET_DESCRIPTION_MAX_LENGTH` | `400` | 知识库描述的最大字符数，控制台和 Service API 均适用。 |
+
+#### 文件安全扫描
+
+要让知识库扫描上传文件中的恶意软件，将 `FILE_SCAN_ENABLED` 设为 `true`。使用 Docker Compose 部署时，在 `docker/envs/core-services/api-worker.env` 中设置本节的变量，API 和 Worker 都会读取该文件。
+
+如果扫描服务位于私有地址（比如 **自定义端点**），还需通过 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 或 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` 让 [SSRF 代理](#ssrf-代理) 放行它。端点使用 `https` 时，代理只放行 443 端口。
+
+设置好这些变量后，接入扫描服务，再为需要扫描的知识库开启扫描。具体步骤详见 [扫描上传文件中的恶意软件](/zh/self-host/use-dify/knowledge/file-security-scan)。
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `FILE_SCAN_ENABLED` | `false` | 设为 `true`，即可为上传至知识库的文件提供恶意软件扫描。<br/><br/>随后 **集成** 中会出现 **文件安全扫描**；除外部知识库外，其他知识库的设置中也会多出 **文件安全扫描** 部分。只有开启了扫描的知识库才会扫描文件。<br/><br/>API 和 Worker 都需要设置该变量。Worker 未设置时，会跳过扫描直接索引上传的文件，也不会报错。<br/><br/>改回 `false` 后，所有知识库都会停止扫描。各知识库的扫描设置会保留下来，重新设为 `true` 后继续生效。 |
+| `FILE_SCAN_REQUEST_TIMEOUT_SECONDS` | `300` | Dify 每次向扫描服务发送扫描请求时的读取超时（秒）。取值范围为 5～3600。<br/><br/>在 Docker Compose 部署中，扫描请求都要经过 SSRF 代理。无论该值设为多少，代理只要 2 分钟内收不到响应，就会关闭请求。这个 2 分钟的上限由代理的 Squid 配置文件 `docker/ssrf_proxy/squid-common.conf.template` 设定，没有对应的环境变量。如需更快判定失败，将该值设为小于 120 的数值。<br/><br/>不经过该代理时，调高可给响应慢的服务更多时间，调低则可更快判定失败。<br/><br/>请求超时或被代理关闭，都视同扫描服务不可用，是否重试由 `FILE_SCAN_MAX_ATTEMPTS` 决定。 |
+| `FILE_SCAN_MAX_ATTEMPTS` | `3` | Dify 扫描单个文件时最多尝试的次数，包括首次尝试。扫描服务超时、无法连接、返回服务器错误或仍在扫描该文件时，Dify 会重试；凭据无效、额度用尽或返回 Dify 无法解析的响应时，则不重试。<br/><br/>最后一次尝试仍未成功时，由知识库的 **扫描服务不可用时** 选项决定如何处理该文件。<br/><br/>取值范围为 1～5。每次失败后，Dify 依次等待 2、4、6、8 秒再重试。调高可撑过扫描服务的短暂中断，调低则可更快交由该选项处理。 |
+| `FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` | `24` | 安全判定结果的沿用时长（小时）。在此期间，Dify 对内容相同的文件直接沿用该结果，不再重新扫描。<br/><br/>只有在同一工作空间中使用同一扫描服务时，才会沿用判定结果。判定为已感染的结果则始终沿用，因此 Dify 会立即再次拦截同一文件。<br/><br/>最小值为 1，因此无法关闭沿用。调低可让重复内容更早重新扫描，调高则可减少发往扫描服务的请求。 |
 
 #### 标注导入
 
@@ -1264,11 +1314,11 @@ Sentry 提供错误跟踪和性能监控。每个服务有各自的 DSN 以分�
 
 ### 邮件配置
 
-Dify 发送邮件用于账户邀请、密码重置、登录验证码和人工输入节点通知。配置三个支持的提供商之一。邮件链接需要设置 `CONSOLE_WEB_URL`，参见 [通用变量](#console_web_url)。
+Dify 通过邮件发送账户邀请、密码重置、登录验证码和人工介入请求。可从三个支持的提供商中任选一个进行配置。这些邮件中的链接基于 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 生成，因此这两个变量也需要设置。
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `MAIL_TYPE` | `resend` | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
+| `MAIL_TYPE` | （空） | 邮件提供商：`resend`、`smtp` 或 `sendgrid`。 |
 | `MAIL_DEFAULT_SEND_FROM` | （空） | 所有外发邮件的默认「发件人」地址。必填。 |
 
 <AccordionGroup>
@@ -1482,6 +1532,19 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 | `MAX_TOOLS_NUM` | `10` | Agent 可同时使用的最大工具数。 |
 | `MAX_ITERATIONS_NUM` | `99` | 每次 Agent 执行的最大推理迭代次数。防止 Agent 无限循环。 |
 
+### HUMAN_INPUT_GLOBAL_TIMEOUT_SECONDS
+
+默认值：`604800`（7 天）
+
+工作流运行等待人工响应的最长时间（秒），到时 Dify 会停止该运行。
+
+计时方式因节点而异：
+
+- **新版人工介入节点**：从运行开始时算起，运行中的所有人工介入节点共用这段时间。修改只影响此后创建的请求。
+- **旧版人工介入节点**：从每个表单创建时算起，每个节点单独计时。修改对已在等待的表单同样生效。
+
+如果审批可能超过一周，可调高此值；如果想让等待中的运行更早结束，可调低此值。此值必须为正整数：设为 `0` 或留空会导致 API、Worker 和 Beat 服务无法启动。
+
 ## Web 前端服务
 
 这些变量仅由 Next.js Web 前端容器使用，不影响 Python 后端。
@@ -1500,6 +1563,20 @@ Dify 的所有出站 HTTP 请求（HTTP 节点、图片下载等）都通过代�
 默认值：`true`
 
 启用 Go to Anything 命令面板中的 `/create` 和 `/refine` 命令，这两个命令可根据自然语言描述生成和修改 Workflow 与 Chatflow 应用。设为 `false` 即可隐藏它们。
+
+### NEXT_PUBLIC_ENABLE_HITL_IM
+
+默认值：`true`
+
+设为 `false` 可关闭新版 [人工介入](/zh/self-host/use-dify/nodes/human-input) 节点，以及 [联系人](/zh/self-host/use-dify/workspace/contacts) 和 [渠道](/zh/self-host/use-dify/workspace/channels/overview)。开启时，工作空间所有者和管理员可在主导航中看到 **联系人**，在 **设置** 中看到 **渠道**。
+
+新版人工介入节点还需要：
+
+- 将 [`CONSOLE_WEB_URL`](#console_web_url) 和 [`APP_WEB_URL`](#app_web_url) 设为收件人能打开的地址
+- 完成 [邮件配置](#邮件配置)，以便通过邮件发送请求
+- 对于以卡片展示请求的 IM，将 [`TRIGGER_URL`](#trigger_url) 设为该 IM 能访问的地址
+
+如果在新版节点投入使用后将其关闭，已发布的工作流仍会继续运行并发送请求，但请求中的链接会打开「未找到」页面。包含新版节点的工作流将无法在编辑器中运行，也无法发布。
 
 ## 新版 Agent
 
@@ -1636,8 +1713,8 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 | `AGENT_BACKEND_BINDING_FILE_DOWNLOAD_TIMEOUT_SECONDS` | `240` | API 从 Agent 沙箱取文件时的等待时长，超时则传输失败。应高于 Agent 侧的 `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS`。 |
 | `AGENT_BACKEND_HOME_SNAPSHOT_TIMEOUT_SECONDS` | `45` | API 等待 Agent 后端传输 home snapshot（捕获、删除快照，以及启动需要恢复快照的运行）的时长。<br/><br/>如果 home 环境较大的 Agent 在应用构建或启动运行时失败，可调大该值。 |
 | `DIFY_AGENT_BINDING_FILE_DOWNLOAD_COMMAND_TIMEOUT_SECONDS` | `210` | 沙箱中负责输出该文件的命令可运行的时长。默认值低于 API 侧超时，以便先呈现 Agent 自身的错误。 |
-| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | 沙箱中的 Agent 向 Dify 回传单个文件的大小上限（MiB），例如它为回复生成的文件。 |
-| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.13 及以上，并已启用 Landlock。自 1.18.0 起，如果 Landlock 无法生效，沙箱会拒绝执行任何命令。在 `docker/envs/core-services/local-sandbox.env` 中设置；`.env` 中的值不会传给沙箱容器。 |
+| `DIFY_AGENT_STUB_UPLOAD_FILE_SIZE_LIMIT` | `50` | 沙箱中的 Agent 向 Dify 回传单个文件的大小上限（MiB），例如它为回复生成的文件。<br/><br/>插件工具以原始文件内容返回给 Agent 的每个文件，也受此上限约束。文件超出上限时，Agent 收到的是一条 `Tool media unavailable` 提示。 |
+| `SHELLCTL_ENABLE_PATH_ISOLATION` | `true` | 通过内核级 Landlock 机制限制沙箱可读写的路径。需要 Linux 5.19 及以上，并已启用 Landlock。<br/><br/>自 1.18.0 起，如果 Landlock 无法生效，沙箱会拒绝执行任何命令。内核版本较低时，可升级内核，或将此变量设为 `false`，不加这些限制运行。<br/><br/>在 `docker/envs/core-services/local-sandbox.env` 中设置；`docker/.env` 中的值不会传给沙箱容器。 |
 | `DIFY_AGENT_SHELL_REDACT_PATTERNS` | （空） | JSON 正则数组，命中的内容会在 Agent 读取命令行输出前被遮盖，用于保护 API 密钥等机密。Agent 的内部令牌始终会被遮盖。 |
 | `LOGFIRE_CONSOLE` | `false` | 调试时设为 `true`，Agent 后端会把自身的请求、对外 HTTP 调用和 Redis 的 span 输出到容器日志。与 [轨迹导出](#agent-轨迹导出) 无关，轨迹导出从不往这里输出。<br/><br/>自 1.18.0 起，Agent 运行的 span 不再出现在此日志中；要跟踪 Agent 运行，请使用轨迹导出。 |
 
@@ -1649,7 +1726,7 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 - `local`：使用内置沙箱容器。
 - `e2b`：每个 Agent 的沙箱运行在一台 [E2B](https://e2b.dev) 云虚拟机中，隔离性比内置容器更强。
-- `openshell`：通过你自行运维的 NVIDIA OpenShell 网关，让沙箱运行在你自己的基础设施上。
+- `openshell`：通过你自行运维的 NVIDIA OpenShell 网关，让沙箱运行在你自己的基础设施上。Agent 不会跨对话保留文件和已安装的工具。不过，在构建对话中点击 **应用** 仍会保存 Agent 的配置，包括在配置面板中添加的文件。
 
 此变量和两个回调地址（`DIFY_AGENT_STUB_API_BASE_URL` 与 `DIFY_AGENT_SANDBOX_FILES_BASE_URL`）都在 `envs/core-services/dify-agent.env` 中设置。
 
@@ -1674,20 +1751,24 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 切换到 `openshell` 前，需准备好以下各项：
 
-- OpenShell 网关，版本不低于 0.0.106，且 `agent_backend` 容器能访问到它。
-- 网关凭证：Bearer 令牌、mTLS 客户端证书对，或两者兼有。Compose 未内置证书挂载，需自行将证书文件以只读方式挂载到 `agent_backend`，并确保 UID 1001 可读取。
+- OpenShell 网关，版本不低于 0.1.3，且 `agent_backend` 容器能访问其 gRPC 端点。
+- 网关上的服务地址，且 `agent_backend` 容器能访问这些地址。Agent 后端向每个沙箱发送 Agent 的命令时，经 HTTP 访问网关为该沙箱返回的地址，不经过 gRPC 端点。
+
+  使用 Docker Compose 部署时，让网关分配 `https` 地址，并确保其中的域名能在容器内解析。明文 `http` 地址在这种部署下不可用：Agent 后端只接受回环地址和 `*.openshell.localhost` 的明文地址，而这类地址指向的是它自身的容器。
+
+  容器必须能直连这些地址：Agent 后端发送这部分流量时会忽略 `HTTP_PROXY` 和 `HTTPS_PROXY`。
+- 网关凭据：Bearer 令牌、mTLS 客户端证书对，或两者兼有。Compose 未内置证书挂载，需自行将证书文件以只读方式挂载到 `agent_backend`，并确保 UID 1001 可读取。
 - 网关可用来启动沙箱的运行时镜像。
-- 一个共享卷，用于存放 Agent 跨对话保留的长期文件。该卷需在 Compose 之外创建，以免被 `docker compose down -v` 删除。如果部署要服务彼此不信任的租户，请为每个租户分别准备 OpenShell 工作空间和卷。多个租户共用一个卷时，无法可靠地阻止一个租户访问另一个租户的长期文件。
 - 沙箱回连 Dify 的网络路径：
   - 沙箱可访问的回调地址。
-  - 通往 Agent 后端 `/agent-stub` 路径的路由。基础 Compose 文件没有发布 Agent 后端的 5050 端口。这个端口同时承载启动 Agent 运行的 API，所以不要整个暴露，只暴露 `/agent-stub` 路径，比如通过反向代理。
+  - 通往 Agent 后端 `/agent-stub` 路径的路由，且不能改用其他路径：`DIFY_AGENT_STUB_API_BASE_URL` 中的路径只要不是 `/agent-stub`，Agent 后端就无法启动。基础 Compose 文件没有发布 Agent 后端的 5050 端口。这个端口同时承载启动 Agent 运行的 API，所以不要整个暴露，可通过反向代理只暴露 `/agent-stub` 路径。
 
 按以下步骤切换到 OpenShell：
 
-1. 参照 [OpenShell 配置指南](https://github.com/langgenius/dify/blob/1.19.0/dify-agent/docs/dify-agent/guide/openshell.md) 搭建网关并完成上述准备，包括构建运行时镜像、初始化共享卷、挂载证书、Kubernetes 配置和冒烟测试。
+1. 按照 [OpenShell 配置指南](https://github.com/langgenius/dify/blob/1.20.0/dify-agent/docs/dify-agent/guide/openshell.md) 搭建网关并完成上述准备，包括配置服务地址所用的 `https` 服务域名、构建运行时镜像和挂载证书。
 2. 在 `envs/core-services/dify-agent.env` 中将 `DIFY_AGENT_RUNTIME_BACKEND` 设为 `openshell`，并填写下表中的变量。
 3. 运行 `docker compose up -d` 重建 Agent 后端。必填值缺失或格式有误时，Agent 后端会拒绝启动。
-4. 运行一个 Agent，确认配置无误。Agent 后端要等到 Agent 运行时，或在 Agent 的构建对话中点击 **应用** 时，才会首次连接网关。因此端点、凭证或镜像配置有误，要到那时才会暴露出来，表现为运行失败或 **应用** 失败。
+4. 运行一个 Agent，确认配置无误。Agent 后端要等到 Agent 运行时，或在 Agent 的构建对话中点击 **应用** 时，才会首次连接网关。因此，端点、凭据、镜像、网关版本或服务地址出了问题，要到那时才会暴露出来，表现为运行失败或 **应用** 失败。
 
 运行结束后，沙箱会继续在网关上运行，直到 Dify 将其移除。因此规划网关容量时，除了活跃的沙箱，也要算上空闲的沙箱。
 
@@ -1695,21 +1776,20 @@ API 访问 Agent 后端所用的地址。在 Docker Compose 中保持默认值�
 
 | 变量 | 默认值 | 说明 |
 |---|---|---|
-| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。OpenShell 网关的地址，格式为 `host:port`，不带协议前缀。<br/><br/>必须能从 `agent_backend` 容器内部访问。网关运行在 Docker 宿主机上时，使用 `host.docker.internal:<port>` 而非 `localhost`；在 Linux 上还需通过 `extra_hosts` 将该名称映射到宿主机。<br/><br/>示例：`gateway.example.com:17670` |
+| `DIFY_AGENT_OPENSHELL_GATEWAY_ENDPOINT` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。OpenShell 网关 gRPC API 的地址，格式为 `host:port`，不带协议前缀。Agent 的命令则走各沙箱的服务地址。<br/><br/>必须能从 `agent_backend` 容器内部访问。网关运行在 Docker 宿主机上时，使用 `host.docker.internal:<port>` 而非 `localhost`；在 Linux 上还需通过 `extra_hosts` 将该名称映射到宿主机。<br/><br/>示例：`gateway.example.com:17670` |
 | `DIFY_AGENT_OPENSHELL_BEARER_TOKEN` | （空） | Agent 后端向网关出示的 OIDC Bearer 令牌。根据网关的认证方式，使用此令牌、mTLS 客户端证书对，或两者同时使用。<br/><br/>仅在启动时读取一次：轮换令牌后需重建 Agent 后端。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | 签发网关证书的 CA 证书在 `agent_backend` 容器内的路径。`DIFY_AGENT_OPENSHELL_INSECURE` 为 `true` 时忽略。 |
-| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS 客户端证书在 `agent_backend` 容器内的路径。需与 `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` 同时设置或同时留空；只设置其一时，Agent 后端无法启动。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CA_PATH` | （空） | 签发网关证书的 CA 证书在 `agent_backend` 容器内的路径。Agent 后端用它验证 gRPC 连接和 `https` 服务地址。证书由公共 CA 签发时可留空。<br/><br/>`DIFY_AGENT_OPENSHELL_INSECURE` 为 `true` 时，gRPC 连接不使用此证书，但服务地址仍会照常验证。 |
+| `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` | （空） | mTLS 客户端证书在 `agent_backend` 容器内的路径。Agent 后端建立 gRPC 连接、访问 `https` 服务地址时，都会出示该证书。需与 `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` 同时设置或同时留空；只设置其一时，Agent 后端无法启动。 |
 | `DIFY_AGENT_OPENSHELL_TLS_CLIENT_KEY_PATH` | （空） | mTLS 客户端私钥在 `agent_backend` 容器内的路径。需与 `DIFY_AGENT_OPENSHELL_TLS_CLIENT_CERT_PATH` 同时设置或同时留空；只设置其一时，Agent 后端无法启动。 |
-| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | 改用明文 gRPC 而非 TLS 连接网关，不使用 TLS 路径。若设置了 Bearer 令牌，仍会通过该连接发送。<br/><br/>仅用于对接明文网关的本地开发。 |
+| `DIFY_AGENT_OPENSHELL_INSECURE` | `false` | 以明文而非 TLS 方式连接网关的 gRPC API。若设置了 Bearer 令牌，仍会通过该连接发送。服务地址不受影响。<br/><br/>仅用于对接明文网关的本地开发。 |
 | `DIFY_AGENT_OPENSHELL_WORKSPACE` | `default` | Agent 后端创建和管理沙箱所在的 OpenShell 工作空间。这是网关上的命名空间，不是 Dify 工作空间。 |
 | `DIFY_AGENT_OPENSHELL_SANDBOX_IMAGE` | `docker.io/library/dify-agent-runtime:latest` | 网关为每个沙箱启动的容器镜像。默认值即 OpenShell 配置指南中构建命令生成的标签。<br/><br/>网关的计算驱动必须能取到该镜像，只放在运行 Dify 的 Docker 守护进程上还不够：将镜像加载到网关的 Docker 守护进程中，或推送到网关可拉取的镜像仓库，并在此填写对应的镜像引用。<br/><br/>请显式设置此变量。若没有任何 env 文件设置它，Agent 后端会回退到 `langgenius/dify-agent-local-sandbox:latest`，该镜像可能版本较旧，无法在 OpenShell 下启动。 |
-| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | 使用 `openshell` 后端时必填。网关的计算驱动会给每个沙箱应用一份 JSON 配置，这份配置必须把共享卷挂载到 `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH`。具体结构取决于驱动。<br/><br/>JSON 无效或为空对象时，Agent 后端无法启动。Dify 不检查挂载本身，即使共享卷挂载到了其他路径，Agent 后端也会照常启动，因此请仔细核对挂载目标。<br/><br/>Docker 驱动示例（单租户，例如本地开发）：`{"docker":{"mounts":[{"type":"volume","source":"dify-agent-shared","target":"/mnt/dify-agent-shared","read_only":false}]}}` |
-| `DIFY_AGENT_OPENSHELL_SHARED_MOUNT_PATH` | `/mnt/dify-agent-shared` | 共享卷在每个沙箱内的挂载位置，必须与 `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` 中的挂载目标一致。每次在 Agent 的构建对话中点击 **应用** 时，Agent 的长期文件都会保存到这里。<br/><br/>必须为绝对路径，否则 Agent 后端无法启动。 |
-| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。Agent 后端会在每个沙箱内启动命令服务，并用这个共享密钥向该服务证明身份。可设为任意随机字符串。<br/><br/>与保护内置沙箱的 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 相互独立。 |
+| `DIFY_AGENT_OPENSHELL_DRIVER_CONFIG` | （空） | 驱动专属的选项（例如额外的挂载），以 JSON 对象填写，网关的计算驱动会把这些选项应用到每个沙箱。具体结构取决于驱动。<br/><br/>JSON 无效或不是对象时，Agent 后端无法启动。 |
+| `DIFY_AGENT_OPENSHELL_SHELLCTL_AUTH_TOKEN` | （空） | 使用 `openshell` 后端时必填，未设置时 Agent 后端无法启动。Agent 后端用这个密钥保护它与每个沙箱之间的连接。<br/><br/>设为一个较长的随机值，所有 `agent_backend` 副本使用同一个值。修改后，已在运行的沙箱会拒绝执行命令，需要你将其停止并重新启动。<br/><br/>与保护内置沙箱的 `DIFY_AGENT_LOCAL_SANDBOX_AUTH_TOKEN` 相互独立。 |
 | `DIFY_AGENT_OPENSHELL_EGRESS_ALLOW` | （空） | 沙箱允许连接的 `host:port` 端点，以逗号分隔，不带协议前缀或路径。留空时不下发网络策略，出站访问遵循网关的默认设置。<br/><br/>设置后，沙箱只能访问列出的端点，除非列出相应主机，否则安装软件包、访问网页都会失败。需包含 `DIFY_AGENT_STUB_API_BASE_URL` 和 `DIFY_AGENT_SANDBOX_FILES_BASE_URL` 的主机，否则 Agent 运行无法回调 Dify。<br/><br/>任一条目格式有误，Agent 后端都无法启动。<br/><br/>示例：`agent.example.com:443,dify.example.com:443` |
 | `DIFY_AGENT_OPENSHELL_SHELLCTL_PORT` | `5004` | 命令服务在每个沙箱内监听的回环端口。Agent 后端经由网关访问该端口，无需开放端口。仅当运行时镜像已占用 5004 时才需修改。 |
 | `DIFY_AGENT_OPENSHELL_READY_TIMEOUT_SECONDS` | `300` | 等待新建或重启的沙箱就绪的时长（秒）。如果网关繁忙、沙箱仍在启动时 Agent 运行就已失败，可调高此值。 |
-| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent 后端经由网关在沙箱中执行每条初始化命令的时限（秒），例如复制 Agent 的长期文件或启动命令服务。不限制 Agent 自身执行的命令。<br/><br/>长期文件较大的 Agent 无法启动新会话时，可调高此值。 |
+| `DIFY_AGENT_OPENSHELL_EXEC_TIMEOUT_SECONDS` | `120` | Agent 后端经由网关在沙箱中执行初始化命令（例如启动命令服务）时，每条命令的时限（秒）。不限制 Agent 自身执行的命令。<br/><br/>如果网关较慢，运行或 **应用** 在沙箱初始化阶段失败，可调高此值。 |
 
 </Accordion>
 </AccordionGroup>
@@ -1847,8 +1927,8 @@ Docker Compose 没有发布 API 端口，但同一 Docker 网络中的其他容�
 | `SSRF_COREDUMP_DIR` | `/var/spool/squid` | 核心转储目录。 |
 | `SSRF_SANDBOX_PROXY_PORT` | `8194` | SSRF 代理用于将出站流量反向代理转发到沙箱服务的监听端口。 |
 | `SSRF_SANDBOX_PROXY_HOST` | `sandbox` | SSRF 代理转发到的沙箱服务主机名。 |
-| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段。HTTP 请求节点、工具，以及 **同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时）发往这些地址的请求，SSRF 代理会放行。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
-| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，即使解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，并在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`firecrawl.internal` |
+| `SSRF_PROXY_ALLOW_PRIVATE_IPS` | （空） | 以逗号分隔的私有 IP 地址或 CIDR 网段，SSRF 代理会放行发往这些地址的请求。所有经过代理的请求都适用，比如 HTTP 请求节点、工具、**同步自 Web 站点**（对接自部署的 Firecrawl 或 WaterCrawl 服务时），以及 [文件安全扫描](#文件安全扫描) 中的 **自定义端点** 扫描服务。如需放行主机名，改用 `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS`。<br/><br/>放行网段内的每个地址同样会向任意 HTTP 请求节点和工具开放，因此只列出 Dify 必须访问的主机，不要放行整个私有网络。<br/><br/>在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`192.168.0.189,10.0.20.0/29` |
+| `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` | （空） | 以逗号分隔的主机名，如 [文件安全扫描](#文件安全扫描) 中 **自定义端点** 扫描服务的主机名。即使这些主机名解析到私有地址，SSRF 代理也会放行。每个名称只匹配该主机本身；以点开头（如 `.corp.internal`）则还会匹配其所有子域名。<br/><br/>与 `SSRF_PROXY_ALLOW_PRIVATE_IPS` 一样尽量缩小范围，并在 `envs/infrastructure/ssrf-proxy.env` 中设置。<br/><br/>示例：`firecrawl.internal` |
 | `SSRF_DEFAULT_TIME_OUT` | `5` | 代理请求的默认总超时（秒）。 |
 | `SSRF_DEFAULT_CONNECT_TIME_OUT` | `5` | 默认连接超时（秒）。 |
 | `SSRF_DEFAULT_READ_TIME_OUT` | `5` | 默认读取超时（秒）。 |
@@ -1980,8 +2060,8 @@ Dify 使用 Celery Beat 按可配置的计划运行后台维护任务。
 | `ENABLE_WORKFLOW_RUN_CLEANUP_TASK` | `false` | 启用工作流运行记录的自动清理。 |
 | `ENABLE_CREATE_TIDB_SERVERLESS_TASK` | `false` | 预创建 TiDB Serverless 集群用于向量数据库池。 |
 | `ENABLE_UPDATE_TIDB_SERVERLESS_STATUS_TASK` | `false` | 定期更新 TiDB Serverless 集群状态。 |
-| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工输入表单，恢复或停止超时的工作流。 |
-| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工输入表单的频率（分钟）。 |
+| `ENABLE_HUMAN_INPUT_TIMEOUT_TASK` | `true` | 检查过期的人工介入表单，恢复或停止超时的工作流。关闭后，超时的运行会一直暂停，逾期提交的响应仍会被拒绝。 |
+| `HUMAN_INPUT_TIMEOUT_TASK_INTERVAL` | `1` | 检查过期人工介入表单的频率（分钟）。 |
 | `ENABLE_CONVERSATION_CLEANUP_TASK` | `true` | 对话删除的兜底清理。对话删除后立即不可见，其消息以及对话中由工具生成的文件由后台任务清除，终端用户上传的文件会保留。<br/><br/>该定时清理会为清理任务丢失的对话重新派发任务，避免数据残留。 |
 | `CONVERSATION_CLEANUP_TASK_INTERVAL` | `5` | 清理任务的运行频率（分钟）。 |
 | `CONVERSATION_CLEANUP_BATCH_SIZE` | `100` | 每次最多重新派发的对话数。 |

@@ -8,6 +8,15 @@ When a workflow reaches a [Human Input node](/en/cloud/use-dify/nodes/human-inpu
 
 For per-endpoint reference, see the [Human Input API](/en/api-reference/human-input/get-human-input-form).
 
+## Which Forms the API Can Reach
+
+To handle a form in your app, the Human Input node must send it to the end user who started the run:
+
+- **Old Human Input node**: web app delivery is enabled.
+- **New Human Input node**: **Initiator** is among the recipients.
+
+For any other form, `form_token` is `null`. Tokens sent to a form's other recipients return 404 `not_found`.
+
 ## Steps
 
 The sequence below applies to both Workflow and Chatflow apps. Only the entry endpoint in Step 1 differs between the two.
@@ -16,16 +25,24 @@ The sequence below applies to both Workflow and Chatflow apps. Only the entry en
   <Step title="Start the app in streaming mode">
 
     1. Call [Run Workflow](/en/api-reference/workflow-runs/run-workflow) (Workflow apps) or [Send Chat Message](/en/api-reference/chat-messages/send-chat-message) (Chatflow apps), passing your end user's `user` identifier.
-    2. Watch the SSE stream for the `human_input_required` event and capture its `form_token`.
+    2. Watch the SSE stream for the `human_input_required` event. Capture its `form_token`, and its `workflow_run_id` in case you need to resume listening in Step 5.
 
-        If `form_token` is `null`, the form has no web app delivery, the only kind the API can drive. Its `approval_channels` lists how the form is delivered instead. Skip to Step 5 to wait for a recipient to answer there, or [stop the run](#stop-a-paused-run).
-
-        The `human_input_required` event also carries the run's `workflow_run_id`; keep it in case you need to resume listening in Step 5.
+        If `form_token` is `null`, the node doesn't [send the form to your end user](#which-forms-the-api-can-reach): its other recipients answer it by email, in IM, or in the Dify console. Skip to Step 5 to wait for their answer, or [stop the run](#stop-a-paused-run).
   </Step>
   <Step title="Get the form definition">
-    Call [Get Human Input Form](/en/api-reference/human-input/get-human-input-form) with `form_token`. The response includes the rendered Markdown, input field definitions, available actions, pre-filled default values, and an `expiration_time` after which the form can no longer be submitted. Render the form for the recipient.
+    Call [Get Human Input Form](/en/api-reference/human-input/get-human-input-form) with `form_token`, then render the form for the recipient: `form_content` is its Markdown body, `inputs` its fields, and `user_actions` its buttons.
 
-    If the form expires before it is submitted, the paused run follows the node's configured timeout behavior; a resumed stream then carries `human_input_form_timeout` rather than `human_input_form_filled`.
+    To pre-fill a `paragraph` field, check its `default`:
+
+    - **`default` is `null`**: leave the field empty.
+    - **`default.type` is `constant`**: pre-fill `default.value`.
+    - **`default.type` is `variable`**: pre-fill `resolved_default_values[output_variable_name]`, the value Dify resolved for this run. If it's empty or missing, leave the field empty.
+
+    For a `select` field, offer the options in `option_source.value`; Dify has already resolved any that come from a variable.
+
+    Ignore `default.selector` and `option_source.selector`: both are deprecated.
+
+    If the form isn't submitted by `expiration_time`, the paused run follows the node's configured timeout behavior. A resumed stream then carries `human_input_form_timeout` instead of `human_input_form_filled`.
   </Step>
   <Step title="(File inputs only) Upload local files">
     If the recipient attaches a local file to a `file` or `file-list` input, upload it first with [Upload File](/en/api-reference/files/upload-file). It returns an `id` you reference as `upload_file_id` in the submit payload. Use one consistent `user` across the run, upload, and submit calls (see [End User Identity](/en/api-reference/guides/end-user-identity) for details).
@@ -71,10 +88,6 @@ Both patterns work for file inputs:
 <Tip>
   For interactive forms with recipient feedback, prefer the pre-upload pattern. The trade-off only pays off when the integration is fully programmatic and no human is waiting to retype anything.
 </Tip>
-
-## Delivery Method Requirement
-
-The Human Input API works only with forms delivered via the Human Input node's web app method. Email-only delivery doesn't expose a `form_token`.
 
 ## Example: File-Attached Submission
 

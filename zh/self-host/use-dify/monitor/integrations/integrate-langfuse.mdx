@@ -51,7 +51,11 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
   ![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-点击配置后，将在 Langfuse 中创建的 **密钥**、**公钥** 和 **Host** 粘贴到配置中并保存。**Host** 必须填写项目所在区域或自部署实例的基础 URL，不含 `/api/public`。Dify 将追踪发送至 `/api/public/ingestion`。[Langfuse 数据接入文档](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) 说明，自部署 v4 的 `events_only` 模式不接受旧版追踪接入。Langfuse Cloud 将于 2026 年 11 月 16 日停用该追踪 API。请使用仍支持旧版追踪接入的 Langfuse 部署。
+点击配置后，将在 Langfuse 中创建的 **密钥**、**公钥** 和 **Host** 粘贴到配置中并保存。**Host** 必须填写项目所在区域或自部署实例的基础 URL，不含 `/api/public`。
+
+<Info>
+Dify 通过 OpenTelemetry 将追踪发送至 `/api/public/otel/v1/traces`，因此自部署的 Langfuse 需为 v3.63.0 或更高版本。新部署建议使用 v4。
+</Info>
 
 <Frame>
   ![配置 Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
@@ -89,7 +93,14 @@ Langfuse 是一个开源的大型语言模型工程平台，帮助团队协作�
 
 以下数据说明适用于常规追踪。为新版 Agent 应用或包含新版 Agent 节点的工作流启用 API 采集后，追踪会使用新的 UUIDv7 追踪 ID，源 ID 和追踪运行 ID 则保留在 `dify.source.id` 和 `dify.tracing.run_id` 属性中。对于新版 Agent 应用，开启 **采集 Agent 内部过程** 后，包含内部模型和工具调用的 `Agent attempt` span 会替代常规 `llm` span。通过此方式采集的运行不会单独导出审核、建议问题和命名记录。
 
-Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。如果提供了 `X-Trace-Id`，追踪 ID 会使用该值；否则，Chat/Chatflow 使用消息 ID，Workflow 使用工作流运行 ID。观察记录 ID 通过派生生成。只有模型调用会填充监控服务的原生 token 用量字段。
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。
+
+如果提供了 `X-Trace-Id`，追踪 ID 由该值生成；否则，Chat/Chatflow 由消息 ID 生成，Workflow 由工作流运行 ID 生成。在 Langfuse 中，ID 显示为 32 位十六进制字符：
+
+- **UUID 或 32 位十六进制字符**（消息 ID 和工作流运行 ID 属于这一类）：字符不变，去掉连字符。
+- **其他 `X-Trace-Id` 值**：显示为该值的哈希。原值保存在追踪元数据的 `external_trace_id` 中。
+
+观察记录 ID 通过派生生成。只有模型调用会填充监控服务的原生 token 用量字段。
 
 对于 Chatflow，追踪根节点是 `message`，输入为用户查询；查询为空时，使用工作流输入。其 `workflow` 子节点保留工作流的输入和输出。
 
@@ -292,7 +303,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
   <thead>
     <tr>
       <th>Moderation</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 观察记录</th>
     </tr>
   </thead>
   <tbody>
@@ -355,7 +366,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>LangFuse Span</th>
+      <th>LangFuse Tool 观察记录</th>
     </tr>
   </thead>
   <tbody>
@@ -430,7 +441,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
   <thead>
     <tr>
       <th>Dataset Retrieval</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Retriever 观察记录</th>
     </tr>
   </thead>
   <tbody>
@@ -495,7 +506,7 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
   <thead>
     <tr>
       <th>Tool</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 观察记录</th>
     </tr>
   </thead>
   <tbody>
@@ -566,13 +577,13 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
 
 **用于跟踪对话标题生成**
 
-自动命名未关联消息时，会创建包含 `timestamp`、不含观察记录的独立追踪。命名关联消息时，会在该消息的追踪中创建 span 观察记录。直接编辑标题不会创建命名追踪。
+自动命名未关联消息时，会创建名为 `generate_name` 的独立追踪，其中包含一条 `tool` 观察记录。命名关联消息时，会在该消息的追踪中创建一条 `tool` 观察记录。直接编辑标题不会创建命名追踪。
 
 <table>
   <thead>
     <tr>
       <th>Generate Name</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 观察记录</th>
     </tr>
   </thead>
   <tbody>
@@ -586,11 +597,11 @@ Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>timestamp（独立追踪）/ startTime（关联消息的观察记录）</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>endTime（仅关联消息的观察记录）</td>
+      <td>endTime（观察记录）</td>
     </tr>
     <tr>
       <td>inputs</td>

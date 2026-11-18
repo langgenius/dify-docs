@@ -1,0 +1,110 @@
+---
+title: 使用个人访问令牌
+sidebarTitle: 个人访问令牌
+description: 让 CI 任务或编码 Agent 通过 difyctl 运行你的应用、配置集成，无需有人续期登录
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cli/personal-access-tokens)。
+
+<Note>
+个人访问令牌需要 Dify 1.20.0 及以上版本。
+</Note>
+
+有了个人访问令牌，`difyctl` 不用登录也能以你的身份操作。它和登录的区别在于能用多久、能运行什么：
+
+| | `difyctl` 登录 | 个人访问令牌 |
+|:--|:--|:--|
+| 有效期 | 14 天，服务器设置了 `OAUTH_TTL_DAYS` 时以它为准 | 创建时选定的期限 |
+| 续期 | 需要有人在浏览器中批准 | 到期前 [替换令牌](/zh/self-host/use-dify/workspace/personal-account-management#修改、替换或删除令牌) |
+| 提前失效 | 同一账户在这台机器上再次登录时 | 你删除令牌时 |
+| 能运行 | 你的角色允许的所有命令 | 运行应用，以及配置模型、工具等集成 |
+
+如果 CI 任务或编码 Agent 要运行应用或配置集成，就交给它一个令牌，这样它能一直工作，不用有人去续期登录。
+
+需要修改应用时，例如通过 DSL 文件更新或发布应用，改为给任务一个 [登录令牌](/zh/cli/scripts-and-ci#把令牌交给任务)，编码 Agent 则照旧 [以你自己的登录身份](/zh/cli/get-started#配置编码-agent) 工作。
+
+## 选择账户和访问范围
+
+每个任务单独用一个个人访问令牌，这样修改、替换或删除某个令牌时，不会牵连其他任务。
+
+团队依赖的任务，用自动化专用的账户创建令牌。这样即使你自己的权限有变，任务也能照常运行，而且它的运行记录很容易和你的区分开。把这个账户加入任务操作的每个工作空间，角色按任务在该工作空间中要运行的命令来定。
+
+在 [账户页面](/zh/self-host/use-dify/workspace/personal-account-management#个人访问令牌) 创建令牌时，只启用任务需要的访问范围。之后也可修改：改动从令牌执行下一条命令时生效，不用给任务换新令牌。
+
+<Info>
+下面每条命令还需满足 [命令索引](/zh/cli/reference/command-index) 中列出的使用条件，例如角色要求，或应用已开启服务 API 访问。
+</Info>
+
+### 允许令牌运行应用
+
+任务要做以下任何一件事时，为令牌启用 **资源** 范围：
+
+| 任务要做的事 | 命令 |
+|:--|:--|
+| 查找和查看应用 | `get console_app`<br/>`describe console_app` |
+| 发起运行 | `run console_app <mode>`<br/>`test console_app <mode>`<br/>`upload console_app file` |
+| 跟踪和停止运行 | `get run event`<br/>`stop run`<br/>`stop task` |
+| 填写人工介入表单 | `describe run form`<br/>`submit run form` |
+
+### 允许令牌配置集成
+
+任务要做以下任何一件事时，为令牌启用 **管理工作空间** 范围：
+
+| 任务要做的事 | 命令 |
+|:--|:--|
+| 配置模型 | `get model`<br/>`describe model_provider`<br/>`create model_provider credential`<br/>`set model_provider credential`<br/>`create model credential`<br/>`set model credential` |
+| 从 Marketplace 安装集成 | `get marketplace plugin`<br/>`get plugin`<br/>`install plugin`<br/>`describe plugin task`<br/>`delete plugin` |
+| 配置工具 | `get tool`<br/>`describe tool_provider`<br/>`create tool_provider credential`<br/>`set tool_provider credential` |
+
+## 把令牌交给 `difyctl`
+
+<Steps>
+  <Step title="查找工作空间 ID">
+    任务要列出应用或配置集成时，需要它所操作的每个工作空间的 ID。运行 `difyctl get workspace`，复制每个工作空间的 `id`。编码 Agent 可自行查到这些 ID。
+  </Step>
+  <Step title="设置环境变量">
+
+    - `DIFY_SERVER`：你打开 Dify 时用的地址，例如 `https://dify.example.com`。
+    - `DIFY_TOKEN`：令牌。
+    - `DIFY_WORKSPACE_ID`：上一步查到的工作空间 ID（如有）。
+
+      如果任务要操作多个工作空间，改为用 `--workspace-id` 给每条命令传入对应工作空间的 ID。
+
+    具体怎么设置，取决于由谁来运行 `difyctl`：
+
+    - **CI 任务**：[在任务中安装 `difyctl`](/zh/cli/scripts-and-ci#在任务中安装-difyctl)，把令牌存为 CI 系统中的 Secret，再用这个 Secret 设置 `DIFY_TOKEN`。
+    - **编码 Agent**：在启动 Agent 的地方设置这些变量，例如你用来启动它的 Shell。
+
+      不要把令牌发到对话中：[你在对话中输入的任何内容都会经过 Agent 所用的模型](/zh/cli/get-started#掌控命令和密钥)。
+
+    设置了 `DIFY_TOKEN` 时，命令会改用这些变量，不再使用你已保存的登录信息。
+  </Step>
+  <Step title="检查令牌">
+    在设置了这些变量的 Shell 中，确认令牌能访问任务要用的应用和工作空间：
+
+    - 如果令牌能运行应用，按 ID 查看任务用到的一个应用：
+
+      ```bash
+      difyctl describe console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+      ```
+
+      <Tip>
+        应用的 ID 可从它在工作室中的地址（`/app/<app-id>/…`）复制。如果设置了 `DIFY_WORKSPACE_ID`，也可运行 `difyctl get console_app` 列出它。
+      </Tip>
+
+    - 如果令牌只能管理工作空间，运行 `difyctl describe account` 列出它可管理的工作空间，确认任务要操作的工作空间都在其中。
+
+    如果检查失败，到 [故障排查](#故障排查) 中查找对应的错误信息。
+  </Step>
+</Steps>
+
+## 故障排查
+
+| 错误信息 | 处理方法 |
+|:--|:--|
+| `personal_access_token_not_supported` | 这条命令需要登录。如果命令由你或编码 Agent 运行，在运行它的环境里取消设置 `DIFY_TOKEN`，命令就会以你自己的登录身份运行。CI 任务则改为 [给它一个登录令牌](/zh/cli/scripts-and-ci#把令牌交给任务)。<br/><br/>每种访问范围允许令牌运行哪些命令，详见 [选择账户和访问范围](#选择账户和访问范围)。 |
+| `App is outside the PAT scope.` | 在你的 [账户页面](/zh/self-host/use-dify/workspace/personal-account-management#个人访问令牌) 中允许令牌访问这个应用。 |
+| `Workspace is outside the PAT scope.` | 在你的 [账户页面](/zh/self-host/use-dify/workspace/personal-account-management#个人访问令牌) 中允许令牌管理这个工作空间。 |
+| `invalid bearer` | 确认 `DIFY_TOKEN` 中是完整的令牌。如果是，说明令牌或它所属的账户已无法使用：<ul><li>**令牌已过期**：[替换令牌](/zh/self-host/use-dify/workspace/personal-account-management#修改、替换或删除令牌)。</li><li>**令牌已删除**：新建一个令牌。</li><li>**账户已停用**：给任务换一个由正常账户创建的令牌。</li></ul><Info>错误信息中让你运行 `difyctl help login` 的提示，不适用于令牌。</Info> |
+
+其他错误详见「结果、错误与退出码」中的 [故障排查](/zh/cli/reference/results-errors-and-exit-codes#故障排查)。
