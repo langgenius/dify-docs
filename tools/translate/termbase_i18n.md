@@ -47,6 +47,7 @@
 | token | token | token |
 | API token | API 令牌 | APIトークン |
 | access token | 访问令牌 | アクセストークン |
+| personal access token | 个人访问令牌 | 個人アクセストークン |
 | API key | API 密钥 | API キー |
 | credential | 凭据 | 認証情報 |
 | custom model | 自定义模型 | カスタムモデル |
@@ -275,6 +276,13 @@
 | English | Chinese | Japanese |
 |:--------|:--------|:---------|
 | My Account | 我的账户 | マイアカウント |
+| Account | 账户 | アカウント |
+| Personal access tokens | 个人访问令牌 | 個人アクセストークン |
+| Create token | 创建令牌 | トークンを作成 |
+| Expiration | 有效期 | 有効期間 |
+| Never | 永不 | 無期限 |
+| Resources | 资源 | リソース |
+| Manage workspaces | 管理工作空间 | ワークスペースの管理 |
 | Members | 成员 | メンバー |
 | Model Provider | 模型供应商 | モデルプロバイダー |
 | Data Source | 数据来源 | データソース |

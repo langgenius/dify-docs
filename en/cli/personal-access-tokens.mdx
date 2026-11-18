@@ -1,0 +1,110 @@
+---
+title: Use a Personal Access Token
+sidebarTitle: Personal Access Tokens
+description: Let a CI job or coding agent run your apps and set up integrations through difyctl, with no sign-in for anyone to renew
+---
+
+<Note>
+Personal access tokens are available from Dify 1.20.0.
+</Note>
+
+A personal access token lets `difyctl` act as you without a sign-in. It differs from a sign-in in how long it lasts and what it can run:
+
+| | `difyctl` sign-in | Personal access token |
+|:--|:--|:--|
+| Lasts | 14 days, unless your server's `OAUTH_TTL_DAYS` changes it | The period you chose when you created it |
+| Renewal | A person approves it in a browser | [Replace the token](/en/self-host/use-dify/workspace/personal-account-management#change-replace-or-delete-a-token) before it expires |
+| Ends early | When the same account signs in again on that machine | When you delete it |
+| Can run | Every command your role allows | Running apps, and setting up integrations such as models and tools |
+
+Give a token to a CI job or coding agent that runs apps or sets up integrations, so it keeps working without anyone renewing a sign-in.
+
+For work that changes apps, such as updating an app from a DSL file or publishing it, pass a job a [sign-in token](/en/cli/scripts-and-ci#pass-a-token-to-the-job) instead, and leave a coding agent on [your own sign-in](/en/cli/get-started#set-up-your-coding-agent).
+
+## Choose the Account and Scopes
+
+Give each job its own personal access token, so you can change, replace, or delete it without touching the other jobs.
+
+For a job the team depends on, create the token from an account used only for automation. The job then keeps working when your own access changes, and its runs are easy to tell apart from yours. Add the account to each workspace the job works in, with the role the job's commands need there.
+
+When you create the token on the [account page](/en/self-host/use-dify/workspace/personal-account-management#personal-access-tokens), give it only the scopes the job needs. You can edit them later: the change applies from the token's next command, with no new token to give the job.
+
+<Info>
+Each command below also needs what the [Command Index](/en/cli/reference/command-index) lists for it, such as a role or the app's Service API access.
+</Info>
+
+### Let the Token Run Apps
+
+Use the **Resources** scope for a job that does any of these:
+
+| What the job does | Commands |
+|:--|:--|
+| Finds and inspects apps | `get console_app`<br/>`describe console_app` |
+| Starts runs | `run console_app <mode>`<br/>`test console_app <mode>`<br/>`upload console_app file` |
+| Follows and stops runs | `get run event`<br/>`stop run`<br/>`stop task` |
+| Answers Human Input forms | `describe run form`<br/>`submit run form` |
+
+### Let the Token Set Up Integrations
+
+Use the **Manage workspaces** scope for a job that does any of these:
+
+| What the job does | Commands |
+|:--|:--|
+| Sets up models | `get model`<br/>`describe model_provider`<br/>`create model_provider credential`<br/>`set model_provider credential`<br/>`create model credential`<br/>`set model credential` |
+| Installs integrations from the Marketplace | `get marketplace plugin`<br/>`get plugin`<br/>`install plugin`<br/>`describe plugin task`<br/>`delete plugin` |
+| Sets up tools | `get tool`<br/>`describe tool_provider`<br/>`create tool_provider credential`<br/>`set tool_provider credential` |
+
+## Give the Token to `difyctl`
+
+<Steps>
+  <Step title="Look Up the Workspace ID">
+    The job needs the ID of each workspace it works in if it lists apps or sets up integrations. A coding agent needs it too, since your agent may list apps to find the one you ask for.
+
+    To look up the IDs, run `difyctl get workspace` with your own sign-in, and copy each workspace's `id`.
+  </Step>
+  <Step title="Set the Environment Variables">
+
+    - `DIFY_SERVER`: the address you open Dify at, such as `https://dify.example.com`.
+    - `DIFY_TOKEN`: the token.
+    - `DIFY_WORKSPACE_ID`: the workspace ID, if you looked one up.
+
+      If the job works in more than one workspace, give each command the ID of its workspace with `--workspace-id` instead.
+
+    How you set them depends on what runs `difyctl`:
+
+    - **A CI job**: [install `difyctl` in the job](/en/cli/scripts-and-ci#install-difyctl-in-the-job), store the token as a secret in your CI system, and set `DIFY_TOKEN` from that secret.
+    - **A coding agent**: set the variables where your agent starts, such as the shell you launch it from.
+
+      Keep the token out of the chat, where [anything you type passes through your agent's model](/en/cli/get-started#keep-control-of-commands-and-keys).
+
+    While `DIFY_TOKEN` is set, commands use these variables instead of your saved sign-in.
+  </Step>
+  <Step title="Check the Token">
+    In a shell with these variables set, check that the token reaches what the job uses:
+
+    - If the token can run apps, describe an app the job uses, with the app's ID:
+
+      ```bash
+      difyctl describe console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+      ```
+
+      <Tip>
+        Copy the app's ID from its address (`/app/<app-id>/…`) in Studio. Or, if you've set `DIFY_WORKSPACE_ID`, run `difyctl get console_app` to list it.
+      </Tip>
+
+    - If it only manages workspaces, run `difyctl describe account` to list the workspaces the token can manage, and check that the job's workspaces are among them.
+
+    If the check fails, find its message in [Troubleshooting](#troubleshooting).
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+| Message | What to do |
+|:--|:--|
+| `personal_access_token_not_supported` | The command needs a sign-in. Where you or your coding agent run it, unset `DIFY_TOKEN` to use your own sign-in. For a CI job, [pass it a sign-in token](/en/cli/scripts-and-ci#pass-a-token-to-the-job) instead.<br/><br/>For the commands each scope lets a token run, see [Choose the Account and Scopes](#choose-the-account-and-scopes). |
+| `App is outside the PAT scope.` | On your [account page](/en/self-host/use-dify/workspace/personal-account-management#personal-access-tokens), give the token access to the app. |
+| `Workspace is outside the PAT scope.` | On your [account page](/en/self-host/use-dify/workspace/personal-account-management#personal-access-tokens), let the token manage the workspace. |
+| `invalid bearer` | Check that `DIFY_TOKEN` holds the whole token. If it does, the token or its account can no longer be used:<ul><li>**Token expired**: [replace it](/en/self-host/use-dify/workspace/personal-account-management#change-replace-or-delete-a-token).</li><li>**Token deleted**: create a new one.</li><li>**Account disabled**: give the job a token from an active account.</li></ul><Info>The hint to run `difyctl help login` doesn't apply to a token.</Info> |
+
+For more errors, see [Troubleshooting](/en/cli/reference/results-errors-and-exit-codes#troubleshooting) on Results, Errors, and Exit Codes.

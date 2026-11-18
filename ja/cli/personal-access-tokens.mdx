@@ -1,0 +1,112 @@
+---
+title: 個人アクセストークンの使用
+sidebarTitle: 個人アクセストークン
+description: サインインを更新する手間なく、CI ジョブやコーディングエージェントに difyctl でアプリの実行や統合のセットアップを任せる
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cli/personal-access-tokens) を参照してください。
+
+<Note>
+個人アクセストークンは Dify 1.20.0 以降で利用できます。
+</Note>
+
+個人アクセストークンを使うと、`difyctl` はサインインなしで、あなたのアカウントとして動作します。サインインとは、有効な期間と実行できる操作が異なります：
+
+| | `difyctl` のサインイン | 個人アクセストークン |
+|:--|:--|:--|
+| 有効期間 | 14 日（サーバーで `OAUTH_TTL_DAYS` を設定している場合はその日数） | 作成時に選んだ期間 |
+| 更新 | ブラウザで人が承認する | 期限が切れる前に [トークンを置き換える](/ja/self-host/use-dify/workspace/personal-account-management#トークンの変更、置き換え、削除) |
+| 期限前の終了 | そのマシンで同じアカウントがもう一度サインインしたとき | トークンを削除したとき |
+| 実行できる操作 | ロールで許可されたすべてのコマンド | アプリの実行と、モデルやツールなどの統合のセットアップ |
+
+アプリの実行や統合のセットアップを行う CI ジョブやコーディングエージェントには、トークンを渡してください。誰もサインインを更新しなくても、動作し続けます。
+
+DSL ファイルからのアプリの更新や公開など、アプリを変更する作業では、代わりにサインインを使います。ジョブには [サインインで得たトークン](/ja/cli/scripts-and-ci#ジョブへのトークンの受け渡し) を渡し、コーディングエージェントには [自分のサインイン](/ja/cli/get-started#コーディングエージェントのセットアップ) をそのまま使わせてください。
+
+## アカウントとアクセス範囲の選択
+
+個人アクセストークンは、ジョブごとに用意します。そうすれば、ほかのジョブに影響を与えずに、トークンを変更、置き換え、削除できます。
+
+チームの業務に欠かせないジョブには、自動化専用のアカウントでトークンを作成します。こうしておくと、自分のアクセス権が変わってもジョブは動き続け、ジョブの実行も自分の実行と見分けやすくなります。このアカウントは、ジョブが作業する各ワークスペースに追加し、ジョブのコマンドに必要なロールを割り当てます。
+
+[アカウントページ](/ja/self-host/use-dify/workspace/personal-account-management#個人アクセストークン) でトークンを作成する際は、ジョブに必要なアクセス範囲だけを与えます。アクセス範囲は後から編集できます。変更は、そのトークンで次に実行するコマンドから適用されます。ジョブに新しいトークンを渡す必要はありません。
+
+<Info>
+以下の各コマンドを実行するには、ロールやアプリのサービス API アクセスなど、[コマンド索引](/ja/cli/reference/command-index) に記載された条件も満たす必要があります。
+</Info>
+
+### トークンにアプリの実行を許可
+
+次のいずれかを行うジョブには、**リソース** のアクセス範囲を使います：
+
+| ジョブが行うこと | コマンド |
+|:--|:--|
+| アプリの検索と確認 | `get console_app`<br/>`describe console_app` |
+| 実行の開始 | `run console_app <mode>`<br/>`test console_app <mode>`<br/>`upload console_app file` |
+| 実行の追跡と停止 | `get run event`<br/>`stop run`<br/>`stop task` |
+| 人間の入力フォームへの回答 | `describe run form`<br/>`submit run form` |
+
+### トークンに統合のセットアップを許可
+
+次のいずれかを行うジョブには、**ワークスペースの管理** のアクセス範囲を使います：
+
+| ジョブが行うこと | コマンド |
+|:--|:--|
+| モデルのセットアップ | `get model`<br/>`describe model_provider`<br/>`create model_provider credential`<br/>`set model_provider credential`<br/>`create model credential`<br/>`set model credential` |
+| マーケットプレイスからの統合のインストール | `get marketplace plugin`<br/>`get plugin`<br/>`install plugin`<br/>`describe plugin task`<br/>`delete plugin` |
+| ツールのセットアップ | `get tool`<br/>`describe tool_provider`<br/>`create tool_provider credential`<br/>`set tool_provider credential` |
+
+## `difyctl` へのトークンの受け渡し
+
+<Steps>
+  <Step title="ワークスペース ID の確認">
+    アプリを一覧表示するジョブや統合をセットアップするジョブには、作業する各ワークスペースの ID が必要です。依頼されたアプリを探すためにアプリを一覧表示することがあるので、コーディングエージェントにも ID が必要です。
+
+    ID を確認するには、自分のサインインで `difyctl get workspace` を実行し、各ワークスペースの `id` をコピーします。
+  </Step>
+  <Step title="環境変数の設定">
+
+    - `DIFY_SERVER`：ブラウザで Dify を開く際のアドレス（`https://dify.example.com` など）
+    - `DIFY_TOKEN`：トークン
+    - `DIFY_WORKSPACE_ID`：ワークスペース ID（前の手順で確認した場合）
+
+      ジョブが複数のワークスペースで作業する場合は、代わりにコマンドごとに `--workspace-id` でそのワークスペースの ID を指定します。
+
+    設定方法は、`difyctl` の実行元によって異なります：
+
+    - **CI ジョブ**：[ジョブに `difyctl` をインストール](/ja/cli/scripts-and-ci#ジョブでの-difyctl-のインストール) し、トークンを CI システムのシークレットとして保存します。そのシークレットから `DIFY_TOKEN` を設定します。
+    - **コーディングエージェント**：エージェントを起動するシェルなど、エージェントの起動元で変数を設定します。
+
+      トークンはチャットに入力しないでください。チャットに入力した内容は、[すべてエージェントのモデルを経由します](/ja/cli/get-started#コマンドと-api-キーの管理)。
+
+    `DIFY_TOKEN` を設定している間、コマンドは保存済みのサインイン情報の代わりにこれらの変数を使います。
+  </Step>
+  <Step title="トークンの確認">
+    これらの変数を設定したシェルで、ジョブが使うアプリやワークスペースにトークンでアクセスできることを確認します：
+
+    - トークンでアプリを実行できる場合は、ジョブが使うアプリの ID を指定して、そのアプリの情報を表示します：
+
+      ```bash
+      difyctl describe console_app --app-id 9b4d2e7c-1a6f-4c8e-b3d5-7e2a9f1c4b6d
+      ```
+
+      <Tip>
+        アプリの ID は、スタジオで開いたアプリのアドレス（`/app/<app-id>/…`）からコピーできます。`DIFY_WORKSPACE_ID` を設定している場合は、`difyctl get console_app` で一覧表示することもできます。
+      </Tip>
+
+    - トークンがワークスペースの管理しか許可されていない場合は、`difyctl describe account` を実行します。トークンで管理できるワークスペースが一覧表示されるので、ジョブのワークスペースが含まれていることを確認します。
+
+    確認に失敗した場合は、[トラブルシューティング](#トラブルシューティング) でそのメッセージを探してください。
+  </Step>
+</Steps>
+
+## トラブルシューティング
+
+| メッセージ | 対処方法 |
+|:--|:--|
+| `personal_access_token_not_supported` | このコマンドにはサインインが必要。自分やコーディングエージェントが実行する環境では、`DIFY_TOKEN` の設定を解除して自分のサインインを使う。CI ジョブには、代わりに [サインインで得たトークンを渡す](/ja/cli/scripts-and-ci#ジョブへのトークンの受け渡し)。<br/><br/>各アクセス範囲でトークンが実行できるコマンドは、[アカウントとアクセス範囲の選択](#アカウントとアクセス範囲の選択) を参照。 |
+| `App is outside the PAT scope.` | [アカウントページ](/ja/self-host/use-dify/workspace/personal-account-management#個人アクセストークン) で、トークンにそのアプリへのアクセスを許可する。 |
+| `Workspace is outside the PAT scope.` | [アカウントページ](/ja/self-host/use-dify/workspace/personal-account-management#個人アクセストークン) で、トークンにそのワークスペースの管理を許可する。 |
+| `invalid bearer` | `DIFY_TOKEN` にトークン全体が入っているか確認する。入っている場合は、トークンかそのアカウントが使えなくなっている：<ul><li>**トークンが期限切れ**：[トークンを置き換える](/ja/self-host/use-dify/workspace/personal-account-management#トークンの変更、置き換え、削除)。</li><li>**トークンが削除済み**：新しいトークンを作成する。</li><li>**アカウントが無効**：有効なアカウントで作成したトークンをジョブに渡す。</li></ul><Info>`difyctl help login` の実行を促すヒントは、トークンには当てはまらない。</Info> |
+
+そのほかのエラーについては、「結果、エラー、終了コード」の [トラブルシューティング](/ja/cli/reference/results-errors-and-exit-codes#トラブルシューティング) を参照してください。
