@@ -10,6 +10,15 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 
 各接口的字段参考，详见 [人工介入 API](/zh/api-reference/human-input/get-human-input-form)。
 
+## API 可处理哪些表单
+
+要在你的应用中处理表单，人工介入节点必须把表单发给发起运行的终端用户：
+
+- **旧版人工介入节点**：开启了 Web 应用投递。
+- **新版人工介入节点**：收件人中包含 **发起人**。
+
+其他表单的 `form_token` 均为 `null`。用发给其他收件人的令牌调用接口，会返回 404 `not_found`。
+
 ## 流程
 
 下方流程同时适用于 Workflow 和 Chatflow 应用。两者仅在第 1 步的入口接口上有所不同。
@@ -18,16 +27,24 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
   <Step title="以流式返回方式启动应用">
 
     1. Workflow 应用调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，Chatflow 应用调用 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)，并传入终端用户的 `user` 标识。
-    2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`。
+    2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`，并保留 `workflow_run_id`，以便第 5 步需要时恢复监听。
 
-        若 `form_token` 为 `null`，说明表单没有通过 Web 应用投递，而 API 只能处理这种投递方式。表单实际的投递方式列在 `approval_channels` 中。此时可以直接跳到第 5 步，等待接收者通过这些方式回复，或者 [停止这次运行](#停止已暂停的运行)。
-
-        `human_input_required` 事件同时携带本次运行的 `workflow_run_id`；请保留它，以便在第 5 步需要时恢复监听。
+        若 `form_token` 为 `null`，说明节点没有 [把表单发给你的终端用户](#api-可处理哪些表单)：表单由其他收件人通过邮件、IM 或 Dify 控制台回复。此时可直接跳到第 5 步等待回复，或者 [停止这次运行](#停止已暂停的运行)。
   </Step>
   <Step title="获取表单定义">
-    使用 `form_token` 调用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 接口。响应包含渲染后的 Markdown、输入字段定义、可用操作、已预填的默认值，以及一个 `expiration_time`，超过该时间后表单将无法再提交。将表单呈现给接收者。
+    使用 `form_token` 调用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 接口，然后将表单呈现给接收者：`form_content` 是表单的 Markdown 正文，`inputs` 是字段，`user_actions` 是按钮。
 
-    若表单在提交前过期，暂停的运行会按节点配置的超时行为处理；恢复后的事件流中携带的是 `human_input_form_timeout`，而非 `human_input_form_filled`。
+    预填 `paragraph` 字段时，先看它的 `default`：
+
+    - **`default` 为 `null`**：字段留空。
+    - **`default.type` 为 `constant`**：预填 `default.value`。
+    - **`default.type` 为 `variable`**：预填 `resolved_default_values[output_variable_name]`，即 Dify 为本次运行解析出的值。若为空或不存在，字段留空。
+
+    `select` 字段直接提供 `option_source.value` 中的选项；来自变量的选项，Dify 已经解析好。
+
+    忽略 `default.selector` 和 `option_source.selector`，两者均已弃用。
+
+    若表单在 `expiration_time` 之前没有提交，暂停的运行会按节点配置的超时行为处理。此时，恢复后的事件流中携带的是 `human_input_form_timeout`，而非 `human_input_form_filled`。
   </Step>
   <Step title="（仅文件输入）上传本地文件">
     若接收者为 `file` 或 `file-list` 输入附加了本地文件，请先通过 [上传文件](/zh/api-reference/files/upload-file) 上传。该接口返回一个 `id`，提交时作为 `upload_file_id` 引用。执行、上传和提交各次调用使用同一个 `user`（见 [终端用户身份](/zh/api-reference/guides/end-user-identity)）。
@@ -73,10 +90,6 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 <Tip>
   对于需要接收者反馈的交互式表单，优先选择先上传模式。仅当流程完全程序化、无需任何人重新输入时，直接提交模式的代价才能被抵消。
 </Tip>
-
-## 提交方式要求
-
-人工介入 API 仅支持通过人工介入节点的 Web 应用提交方式投递的表单。仅通过邮件投递的表单不会向 API 暴露 `form_token`。
 
 ## 示例：带文件的提交
 

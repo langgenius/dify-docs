@@ -50,7 +50,11 @@ Copy and save the **Secret Key**, **Public Key**, and **Host**.
   ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save. **Host** must be the base URL for your project's region or self-hosted instance, without `/api/public`. Dify sends traces to `/api/public/ingestion`. [Langfuse's ingestion documentation](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) states that self-hosted v4 `events_only` mode does not accept legacy trace ingestion. Langfuse Cloud sunsets this trace API on November 16, 2026. Use a Langfuse deployment that still accepts legacy trace ingestion.
+After clicking configure, paste the **Secret Key, Public Key, Host** created in Langfuse into the configuration and save. **Host** must be the base URL for your project's region or self-hosted instance, without `/api/public`.
+
+<Info>
+Dify sends traces over OpenTelemetry, to `/api/public/otel/v1/traces`, so a self-hosted Langfuse must be v3.63.0 or later. For a new deployment, use v4.
+</Info>
 
 <Frame>
   ![Configure Langfuse](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
@@ -88,7 +92,14 @@ With API collection enabled for these apps, **Capture content** is off by defaul
 
 The tables below describe ordinary traces. When API collection is enabled for the new Agent app type or workflows containing a new Agent node, traces use a new UUIDv7 trace ID, with source and tracing-run IDs retained as `dify.source.id` and `dify.tracing.run_id` attributes. For the new Agent app type, `Agent attempt` spans with internal model and tool calls replace the ordinary `llm` span when **Capture Agent internals** is on. Separate moderation, suggested-question, and naming records are omitted for collected runs.
 
-Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations. Trace IDs use `X-Trace-Id` when supplied; otherwise they use the message ID for Chat/Chatflow or workflow run ID for Workflow. Observation IDs are derived. Native token usage is reported on model calls only.
+Dify exports a hierarchy of operations: a message contains an `llm` call, and a Chatflow message contains its workflow and node operations.
+
+Trace IDs come from `X-Trace-Id` when supplied; otherwise from the message ID for Chat/Chatflow or the workflow run ID for Workflow. In Langfuse, the ID appears as 32 hexadecimal characters:
+
+- **A UUID or 32 hexadecimal characters**, including message and workflow run IDs: the same digits, without dashes.
+- **Any other `X-Trace-Id` value**: a hash of it. The original value is kept in the trace's metadata as `external_trace_id`.
+
+Observation IDs are derived. Native token usage is reported on model calls only.
 
 For Chatflow, the trace root is the `message`, with the user's query as input (or workflow inputs when the query is empty). Its `workflow` child retains the workflow inputs and outputs.
 
@@ -291,7 +302,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <thead>
     <tr>
       <th>Moderation</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool Observation</th>
     </tr>
   </thead>
   <tbody>
@@ -354,7 +365,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <thead>
     <tr>
       <th>Suggested Question</th>
-      <th>LangFuse Span</th>
+      <th>LangFuse Tool Observation</th>
     </tr>
   </thead>
   <tbody>
@@ -429,7 +440,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <thead>
     <tr>
       <th>Dataset Retrieval</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Retriever Observation</th>
     </tr>
   </thead>
   <tbody>
@@ -494,7 +505,7 @@ The detail lists below describe Dify's source records and metadata. Only the rel
   <thead>
     <tr>
       <th>Tool</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool Observation</th>
     </tr>
   </thead>
   <tbody>
@@ -565,13 +576,13 @@ The detail lists below describe Dify's source records and metadata. Only the rel
 
 **Used to track conversation title generation**
 
-Automatic naming without an associated message creates a standalone trace with a `timestamp` and no observations. Naming linked to a message creates a span observation in that message's trace. Editing a title directly does not create a naming trace.
+Automatic naming without an associated message creates a standalone trace named `generate_name` with one `tool` observation. Naming linked to a message creates a `tool` observation in that message's trace. Editing a title directly does not create a naming trace.
 
 <table>
   <thead>
     <tr>
       <th>Generate Name</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool Observation</th>
     </tr>
   </thead>
   <tbody>
@@ -585,11 +596,11 @@ Automatic naming without an associated message creates a standalone trace with a
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>timestamp (standalone trace) / startTime (message-linked observation)</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>endTime (message-linked observation only)</td>
+      <td>endTime (observations)</td>
     </tr>
     <tr>
       <td>inputs</td>
