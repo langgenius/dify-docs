@@ -1,24 +1,36 @@
 #!/usr/bin/env python3
 """
-Verify Dify environment variable documentation against .env.example sources.
+Verify Dify environment variable documentation against the Docker env files.
 
-Parses one or more env-example files plus the docs MDX, extracts variable names
-and defaults, and reports discrepancies.
+Since Dify 1.19.0 the Docker deployment splits its settings across three kinds of file,
+and the verifier gives each the role it plays in a stock installation (`docker/.env.example`
+copied to `.env`, nothing else changed):
 
-After Dify PR #31586, env vars were split across `docker/.env.example` and
-`docker/envs/**/*.env.example`. The verifier accepts either a single file or
-a directory; passing a directory globs `**/*.env.example` recursively.
+- `docker/.env.example`: copied to `.env`, so its active lines are stock values and win
+  over everything below.
+- `docker/envs/**/*.defaults`: loaded automatically. A line such as `FOO=${FOO-x}` keeps an
+  earlier value and otherwise supplies `x`. A line that copies another setting
+  (`WORKER_TIMEOUT=${SANDBOX_WORKER_TIMEOUT:-15}`, the "Container variable mappings") is not a
+  setting of its own: the variable it copies from is recorded, with the fallback as its default.
+- `docker/envs/**/*.env.example`: optional templates a stock installation does not create.
+  Their variables are documentable, but none of their values is a default.
+
+A commented line (`# FOO=bar`) in any of these files names a documentable variable but sets
+nothing, so its value is never used as the default. A variable that only commented lines or
+templates name has no default in these files; its default is the application's, which the
+script does not resolve.
 
 Usage:
-    # Verify mode: docs vs current .env.example
-    python3 verify-env-docs.py --env-example PATH [--env-example PATH ...] --docs PATH
+    # Verify mode: docs vs the env files on disk (a directory is globbed recursively for
+    # *.env.example and *.defaults)
+    python3 verify-env-docs.py --env-example PATH [--env-example PATH ...] --compose DIR --docs PATH
 
     # Release diff mode: which vars were added/removed/changed between two refs, and
     # which NEW ones are still undocumented. Run this every release sync.
     python3 verify-env-docs.py --compare-rev OLD NEW --repo /path/to/dify [--docs PATH]
-
-`--env-example` may be repeated and may point to either a file or a directory.
 """
+
+from __future__ import annotations
 
 import argparse
 import os
@@ -26,102 +38,322 @@ import re
 import subprocess
 import sys
 from pathlib import Path
+from typing import Dict, Iterator, List, Optional, Tuple
 
 
-def parse_env_lines(lines) -> dict[str, str]:
-    """Parse env-example text lines and return {VARIABLE_NAME: default_value}.
+# --- Compose-style expansions ---------------------------------------------------------
 
-    Only uncommented `VAR=value` lines are captured (commented `#VAR=...` defaults
-    cannot be parsed reliably, matching the verifier's documented behavior).
-    """
-    variables = {}
-    for line in lines:
-        line = line.strip()
-        # Skip comments and empty lines
-        if not line or line.startswith("#"):
+_EXPANSION_BODY_RE = re.compile(r"([A-Za-z_][A-Za-z0-9_]*)(?:(:?[-?+])(.*))?\Z", re.S)
+_REF_NAME_RE = re.compile(r"[A-Z][A-Z0-9_]*\Z")
+
+
+def _closing_brace(text: str, start: int) -> int:
+    """Index of the `}` closing the expansion whose body starts at `start`, or -1."""
+    depth = 1
+    i = start
+    while i < len(text):
+        if text.startswith("${", i):
+            depth += 1
+            i += 2
             continue
-        # Match VARIABLE=value (value can be empty)
-        match = re.match(r"^([A-Z][A-Z0-9_]+)=(.*)", line)
-        if match:
-            variables[match.group(1)] = match.group(2).strip()
-    return variables
+        if text[i] == "}":
+            depth -= 1
+            if depth == 0:
+                return i
+        i += 1
+    return -1
 
 
-def parse_env_file(path: Path) -> dict[str, str]:
-    """Parse a single env-example file and return {VARIABLE_NAME: default_value}."""
-    with open(path, encoding="utf-8") as f:
-        return parse_env_lines(f)
+def iter_expansions(text: str) -> Iterator[Tuple[str, Optional[str], Optional[str]]]:
+    """Yield (name, operator, operand) for every ${...} expansion in text, nested ones
+    included. The operator is one of ":-", "-", ":?", "?", ":+", "+", or None for a bare
+    ${NAME}. `$${...}` is compose's escape for a literal `$` (a shell variable inside a
+    command) and is skipped, and so is a `${` that never closes, such as one in a comment."""
+    i = 0
+    while True:
+        j = text.find("${", i)
+        if j < 0:
+            return
+        i = j + 2  # keep scanning inside, so nested expansions are reported too
+        if j > 0 and text[j - 1] == "$":
+            continue
+        end = _closing_brace(text, j + 2)
+        if end < 0:
+            continue
+        m = _EXPANSION_BODY_RE.match(text[j + 2:end])
+        if m:
+            yield m.group(1), m.group(2), m.group(3)
 
 
-# Env files for deployment modes that intentionally diverge from the standard
-# full-stack Docker deployment that environments.mdx documents. middleware.env.example
-# targets the "middleware-only / app-on-host" dev compose, where services are reached
-# via host.docker.internal instead of their compose service names. Its values must not
-# be treated as authoritative (they cause false-positive default mismatches, e.g.
-# PLUGIN_DAEMON_URL, ENDPOINT_URL_TEMPLATE, LOGSTORE_DUAL_WRITE_ENABLED), so it is loaded
-# at LOWEST precedence: its variable names still count for the missing/extra checks
-# (some vars, e.g. SSRF_SANDBOX_PROXY_*, are only listed there), but every other source
-# overrides its values.
-LOW_PRECEDENCE_ENV_BASENAMES = {"middleware.env.example"}
+def interpolate(value: str, env: Optional[Dict[str, str]] = None) -> str:
+    """Resolve ${NAME}, ${NAME-x} and ${NAME:-x} the way Compose does, against `env`
+    (the variables already set; anything absent is unset). `-` falls back only when the
+    variable is unset, `:-` also when it is empty, and an unset bare ${NAME} is "".
+    `+` and `:+` give their operand only when the variable is set; `?` and `:?` give the
+    value or nothing. `$$` is a literal `$`."""
+    env = env or {}
+    out: List[str] = []
+    i = 0
+    while i < len(value):
+        if value.startswith("$$", i):
+            out.append("$")
+            i += 2
+            continue
+        if not value.startswith("${", i):
+            out.append(value[i])
+            i += 1
+            continue
+        end = _closing_brace(value, i + 2)
+        m = _EXPANSION_BODY_RE.match(value[i + 2:end]) if end >= 0 else None
+        if not m:
+            out.append(value[i:])
+            break
+        name, op, operand = m.group(1), m.group(2), m.group(3)
+        is_set = name in env and not (op and op.startswith(":") and env[name] == "")
+        if op in ("+", ":+"):
+            out.append(interpolate(operand, env) if is_set else "")
+        elif is_set:
+            out.append(env[name])
+        elif op in ("-", ":-"):
+            out.append(interpolate(operand, env))
+        i = end + 1
+    return "".join(out)
 
 
-def collect_env_files(sources: list[str]) -> list[Path]:
-    """Resolve each source (file or directory) into env-example files, in merge
-    precedence order (lowest first, highest last, since callers merge later-wins).
+def resolve_expansion(value: str) -> str:
+    """The value a compose-style expression takes when nothing it refers to is set."""
+    return interpolate(value.strip())
 
-    Order: LOW_PRECEDENCE_ENV_BASENAMES first (present for name checks, never
-    authoritative for values), then the other directory-globbed files, then
-    explicitly-listed files last — so the canonical `docker/.env.example` has the
-    final say on conflicts (it is what a Docker Compose user actually gets).
-    """
-    low_precedence: list[Path] = []
-    dir_files: list[Path] = []
-    explicit_files: list[Path] = []
-    seen: set[Path] = set()
+
+def collect_refs(text: str, found: Dict[str, str]) -> None:
+    """Record every variable a ${...} expression in text refers to, with the value its
+    fallback resolves to when nothing is set. Only `-` and `:-` operands are fallbacks;
+    the other operators still name the variable. A name already recorded keeps its value
+    unless that value is empty and this one is not."""
+    for name, op, operand in iter_expansions(text):
+        if not _REF_NAME_RE.match(name):
+            continue
+        value = resolve_expansion(operand) if op in ("-", ":-") and operand else ""
+        if name not in found or (not found[name] and value):
+            found[name] = value
+
+
+# --- Env files ------------------------------------------------------------------------
+
+ROLE_TEMPLATE = "optional template: names only"
+ROLE_DEFAULTS = "tracked defaults"
+ROLE_STOCK = "stock .env"
+_ROLE_ORDER = {ROLE_TEMPLATE: 0, ROLE_DEFAULTS: 1, ROLE_STOCK: 2}
+
+
+def env_file_role(name: str) -> Optional[str]:
+    """The part a file plays in a stock installation, from its file name.
+    `.env.example` is the one copied to `.env`; `*.defaults` load automatically;
+    any other `*.env.example` is an optional template nobody has created."""
+    if name == ".env.example":
+        return ROLE_STOCK
+    if name.endswith(".defaults"):
+        return ROLE_DEFAULTS
+    if name.endswith(".env.example"):
+        return ROLE_TEMPLATE
+    return None
+
+
+def order_env_paths(paths: List[str]) -> List[str]:
+    """Keep the env files among `paths` and put them in merge order: templates (which
+    set nothing), then tracked defaults, then the stock `.env` last."""
+    files = [p for p in paths if env_file_role(Path(p).name)]
+    return sorted(files, key=lambda p: (_ROLE_ORDER[env_file_role(Path(p).name)], p))
+
+
+_ACTIVE_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_.]*)=(.*)$")
+_COMMENTED_RE = re.compile(r"^#\s*([A-Z][A-Z0-9_]+)=(.*)$")
+_VAR_NAME_RE = re.compile(r"[A-Z][A-Z0-9_]+\Z")
+
+
+def classify_env_line(line: str) -> Optional[Tuple[str, str, str]]:
+    """Return (kind, name, value) for an env-file line, or None for anything else.
+
+    kind is "commented" for `# FOO=bar`, "mapping" for an active line whose value copies
+    another setting (`TARGET=${SOURCE:-x}`, including composite values such as
+    `-Xms${MIN:-512m}`), and "set" for the rest: a literal, or an expression that starts
+    from the variable itself (`FOO=${FOO-x}`)."""
+    s = line.strip()
+    if not s:
+        return None
+    m = _COMMENTED_RE.match(s)
+    if m:
+        return "commented", m.group(1), m.group(2).strip()
+    if s.startswith("#"):
+        return None
+    m = _ACTIVE_RE.match(s)
+    if not m:
+        return None
+    name, value = m.group(1), m.group(2).strip()
+    if "${" in value and not re.match(r"\$\{" + re.escape(name) + r"(?::?[-?+]|\})", value):
+        return "mapping", name, value
+    return "set", name, value
+
+
+class EnvSurface:
+    """What the env files say about each variable: whether it exists, and the value a
+    stock installation runs with when the files set one."""
+
+    def __init__(self) -> None:
+        self.names: Dict[str, str] = {}               # variable -> the file that matters most
+        self._rank: Dict[str, int] = {}               # role rank of that file
+        self.stock: Dict[str, str] = {}               # active lines of the stock .env
+        self.tracked: Dict[str, List[Tuple[str, str]]] = {}  # variable -> [(value, file)]
+        self.fallbacks: Dict[str, str] = {}           # variable -> fallback of a ${...} ref
+        self.mapped: Dict[str, List[Tuple[str, str]]] = {}   # container variable -> [(expr, file)]
+
+    def _name(self, name: str, label: str, role: str) -> None:
+        """Record a variable, pointing at the most authoritative file that names it."""
+        rank = _ROLE_ORDER[role]
+        if name not in self.names or rank > self._rank[name]:
+            self.names[name] = label
+            self._rank[name] = rank
+
+    def add_text(self, lines, label: str, role: str) -> None:
+        refs: Dict[str, str] = {}
+        for line in lines:
+            parsed = classify_env_line(line)
+            if not parsed:
+                continue
+            kind, name, value = parsed
+            is_var = bool(_VAR_NAME_RE.match(name))
+            if kind == "commented":
+                self._name(name, label, role)
+                continue
+            if role == ROLE_TEMPLATE:
+                # Nothing in a template takes effect, but every variable it names exists.
+                if is_var:
+                    self._name(name, label, role)
+                for ref in iter_expansions(value):
+                    if _REF_NAME_RE.match(ref[0]):
+                        self._name(ref[0], label, role)
+                continue
+            if kind == "mapping" and role == ROLE_DEFAULTS:
+                # A container variable copied from another setting: the copied-from
+                # variable is the setting, and the fallback is its default. The container
+                # variable may be documented (setting it has no effect, so its row points
+                # at the setting), but it is not a setting to require.
+                collect_refs(value, refs)
+                if is_var:
+                    self.mapped.setdefault(name, []).append((value, label))
+                continue
+            collect_refs(value, refs)  # names nested inside the expression
+            if not is_var:
+                continue
+            self._name(name, label, role)
+            if role == ROLE_STOCK:
+                self.stock[name] = value
+            else:
+                self.tracked.setdefault(name, []).append((value, label))
+        for name, value in refs.items():
+            self._name(name, label, role)
+            if name not in self.fallbacks or (not self.fallbacks[name] and value):
+                self.fallbacks[name] = value
+
+    def add_compose(self, compose_vars: Dict[str, str]) -> List[str]:
+        """Add compose ${VAR} references: names no env file has, and fallbacks for names
+        without one. Returns the compose-only names."""
+        only = sorted(n for n in compose_vars if n not in self.names)
+        for name in only:
+            self.names[name] = "compose"
+            self._rank[name] = -1
+        for name, value in compose_vars.items():
+            if name not in self.fallbacks or (not self.fallbacks[name] and value):
+                self.fallbacks[name] = value
+        return only
+
+    def stock_env(self) -> Dict[str, str]:
+        return {n: interpolate(v) for n, v in self.stock.items()}
+
+    def mapped_only(self) -> List[str]:
+        """Container variables that only mapping lines set."""
+        return sorted(n for n in self.mapped if n not in self.names)
+
+    def defaults(self) -> Dict[str, Tuple[List[str], str]]:
+        """variable -> (values, where from) for every variable the files give a default.
+
+        The stock `.env` wins. Otherwise each tracked-defaults line is resolved against the
+        stock `.env`; files may disagree because each service or vector store loads its own
+        (`OCEANBASE_VECTOR_HOST` is `oceanbase` or `seekdb`), so every distinct value is kept.
+        Otherwise the fallback of a ${...} reference applies, and for a container variable
+        that only mapping lines set, the value those lines resolve to. Variables that only
+        commented lines or templates name are absent: the files set no default for them."""
+        env = self.stock_env()
+
+        def resolved(lines: List[Tuple[str, str]]) -> Tuple[List[str], str]:
+            values: List[str] = []
+            where: List[str] = []
+            for raw, label in lines:
+                v = interpolate(raw, env)
+                if v not in values:
+                    values.append(v)
+                if label not in where:
+                    where.append(label)
+            return values, ", ".join(where)
+
+        out: Dict[str, Tuple[List[str], str]] = {}
+        for name in self.names:
+            if name in env:
+                out[name] = ([env[name]], "stock .env")
+            elif name in self.tracked:
+                out[name] = resolved(self.tracked[name])
+            elif name in self.fallbacks:
+                out[name] = ([self.fallbacks[name]], "fallback of a ${...} reference")
+        for name in self.mapped_only():
+            out[name] = resolved(self.mapped[name])
+        return out
+
+
+def collect_env_files(sources: List[str]) -> List[Path]:
+    """Resolve each source (file or directory) into env files, in merge order.
+    A directory is globbed recursively for `*.env.example`, `.env.example` and `*.defaults`."""
+    found: List[Path] = []
+    seen = set()
     for source in sources:
         p = Path(source)
         if not p.exists():
             print(f"ERROR: env source not found: {source}", file=sys.stderr)
             sys.exit(1)
+        candidates = [p]
         if p.is_dir():
-            # `*.env.example` plus the bare `.env.example` filename.
-            for pattern in ("*.env.example", ".env.example"):
-                for f in sorted(p.rglob(pattern)):
-                    if f in seen:
-                        continue
-                    seen.add(f)
-                    if f.name in LOW_PRECEDENCE_ENV_BASENAMES:
-                        low_precedence.append(f)
-                    else:
-                        dir_files.append(f)
-        elif p not in seen:
-            explicit_files.append(p)
-            seen.add(p)
-    return low_precedence + dir_files + explicit_files
+            candidates = []
+            for pattern in ("*.env.example", ".env.example", "*.defaults"):
+                candidates.extend(sorted(p.rglob(pattern)))
+        for f in candidates:
+            if f not in seen and env_file_role(f.name):
+                seen.add(f)
+                found.append(f)
+    by_text = {str(f): f for f in found}
+    return [by_text[t] for t in order_env_paths(list(by_text))]
 
 
-def parse_env_example(sources: list[str]) -> tuple[dict[str, str], list[Path]]:
-    """Parse all env-example files reachable from the given sources.
-
-    Files are merged later-wins. collect_env_files orders them so directory-globbed
-    files come first and explicitly-listed files (the canonical docker/.env.example)
-    come last, giving the primary file the final say on conflicts. Returns the merged
-    variable map plus the list of files actually parsed (for diagnostics).
-    """
+def parse_env_sources(sources: List[str]) -> Tuple[EnvSurface, List[Path]]:
+    """Parse every env file reachable from the sources. Files are labelled by their path
+    below the directory they share (`envs/core-services/api.defaults`)."""
     files = collect_env_files(sources)
-    merged: dict[str, str] = {}
+    base = os.path.commonpath([str(f.parent) for f in files]) if files else ""
+    surface = EnvSurface()
     for f in files:
-        merged.update(parse_env_file(f))
-    return merged, files
+        with open(f, encoding="utf-8") as fh:
+            surface.add_text(fh, os.path.relpath(f, base), env_file_role(f.name))
+    return surface, files
 
 
-def parse_ignored_vars(path: str) -> set[str]:
+# --- Ignore list and docs -------------------------------------------------------------
+
+def parse_ignored_vars(path: str) -> set:
     """Parse the ignored-vars markdown file and return the set of ignored names.
 
-    Table rows beginning with `| \`VARIABLE_NAME\` |` register an ignore entry.
+    Table rows beginning with a backticked variable name in the first cell register an
+    ignore entry.
     The header row `| Variable | ...` is skipped naturally because it isn't backticked.
     """
-    ignored: set[str] = set()
+    ignored = set()
     text = _read_ignored_text(path)
     for line in text.splitlines():
         match = re.match(r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|", line)
@@ -161,7 +393,19 @@ def _read_ignored_text(path: str) -> str:
     sys.exit(2)
 
 
-def parse_mdx_docs(path: str) -> dict[str, str]:
+def _doc_values(raw: str) -> str:
+    """The default a table cell or Default: line states."""
+    bt = re.match(r"^`(.*)`$", raw)
+    if bt:
+        return bt.group(1)
+    if raw.startswith(("(", "（")):
+        # (empty), (empty; falls back to...), (auto-generated), etc.
+        # zh/ja pages write these with full-width parentheses: （空）
+        return ""
+    return raw
+
+
+def parse_mdx_docs(path: str) -> Dict[str, str]:
     """Parse MDX documentation and extract documented defaults.
 
     Handles two formats:
@@ -170,7 +414,7 @@ def parse_mdx_docs(path: str) -> dict[str, str]:
        ### VARIABLE
        Default: `value`
     """
-    variables = {}
+    variables: Dict[str, str] = {}
     with open(path, encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -183,18 +427,7 @@ def parse_mdx_docs(path: str) -> dict[str, str]:
             r"^\|\s*`([A-Z][A-Z0-9_]+)`\s*\|\s*(.*?)\s*\|", line
         )
         if table_match:
-            name = table_match.group(1)
-            default_cell = table_match.group(2).strip()
-            # Extract value from backticks if present
-            backtick_match = re.match(r"^`(.*)`$", default_cell)
-            if backtick_match:
-                variables[name] = backtick_match.group(1)
-            elif default_cell.startswith(("(", "（")):
-                # (empty), (empty; falls back to...), (auto-generated), etc.
-                # zh/ja pages write these with full-width parentheses: （空）
-                variables[name] = ""
-            else:
-                variables[name] = default_cell
+            variables[table_match.group(1)] = _doc_values(table_match.group(2).strip())
             i += 1
             continue
 
@@ -213,14 +446,10 @@ def parse_mdx_docs(path: str) -> dict[str, str]:
                 default_match = re.match(r"^(?:Default|默认值|デフォルト値)\s*[:：]\s*(.+)", next_line)
                 if default_match:
                     raw = default_match.group(1).strip()
-                    # Extract from backticks
-                    bt = re.match(r"^`(.*)`", raw)
-                    if bt:
-                        variables[name] = bt.group(1)
-                    elif raw.startswith(("(", "（")):
-                        variables[name] = ""
-                    else:
-                        variables[name] = raw
+                    # The first value is the Docker Compose one:
+                    # Default: `true` on Docker Compose; `false` on source deployments
+                    bt = re.match(r"^`([^`]*)`", raw)
+                    variables[name] = bt.group(1) if bt else _doc_values(raw)
                     break
                 # Stop if we hit content that's not the default line
                 if next_line.startswith("#") or next_line.startswith("|"):
@@ -267,22 +496,6 @@ def is_placeholder(value: str) -> bool:
     return False
 
 
-_EXPANSION_RE = re.compile(r"^\$\{[A-Za-z_][A-Za-z0-9_]*(?::-(?P<fallback>.*))?\}$")
-
-
-def resolve_expansion(value: str) -> str:
-    """Resolve a compose-style ${VAR:-fallback} value to its innermost literal
-    fallback — the effective default when nothing is set in the environment.
-    A bare ${VAR} resolves to "" for the same reason: compose substitutes the
-    empty string when the variable is unset."""
-    v = value.strip()
-    while True:
-        m = _EXPANSION_RE.match(v)
-        if not m:
-            return v
-        v = (m.group("fallback") or "").strip()
-
-
 def normalize(value: str) -> str:
     """Normalize a value for comparison."""
     v = resolve_expansion(value).strip().strip('"').strip("'")
@@ -300,6 +513,15 @@ def normalize(value: str) -> str:
     return v
 
 
+def matches_default(doc_value: str, values: List[str]) -> bool:
+    """A documented default matches when it states the stock value. Where the files that
+    different services or vector stores load disagree, the cell must list every value,
+    one per store (`oceanbase` / `seekdb`)."""
+    expected = {normalize(v) for v in values}
+    stated = {normalize(p) for p in re.split(r"`\s*/\s*`", doc_value)}
+    return stated == expected
+
+
 def _default_ignored_path() -> Path:
     """The ignore list lives in the private registry: its entries name unreleased work.
     Resolve $DIFY_DOCS_REGISTRY first, then a sibling clone of this repo. When neither
@@ -315,47 +537,18 @@ def _default_ignored_path() -> Path:
 DEFAULT_IGNORED_PATH = _default_ignored_path()
 
 
-def _env_example_paths_at_ref(repo: str, ref: str) -> list[str]:
-    """List docker/ *.env.example paths tracked at a git ref, in merge-precedence
-    order (lowest first, canonical docker/.env.example last)."""
-    out = subprocess.run(
-        ["git", "-C", repo, "ls-tree", "-r", "--name-only", ref, "--", "docker/"],
-        capture_output=True, text=True, check=True,
-    ).stdout.splitlines()
-    files = [p for p in out if p.endswith(".env.example")]
+# --- Compose files --------------------------------------------------------------------
 
-    def precedence(path: str) -> tuple[int, str]:
-        if Path(path).name in LOW_PRECEDENCE_ENV_BASENAMES:
-            return (0, path)  # lowest precedence (e.g. middleware.env.example)
-        if path == "docker/.env.example":
-            return (2, path)  # canonical file has the final say
-        return (1, path)
+def parse_compose_text(text: str) -> Dict[str, str]:
+    """Collect ${VAR}, ${VAR-fallback} and ${VAR:-fallback} references from a compose file.
 
-    return sorted(files, key=precedence)
-
-
-_COMPOSE_REF_RE = re.compile(r"(?<!\$)\$\{([A-Z][A-Z0-9_]*)(?::-((?:[^{}]|\$\{[^{}]*\})*))?\}")
-
-
-def parse_compose_text(text: str) -> dict[str, str]:
-    """Collect ${VAR} and ${VAR:-fallback} references from a compose file.
-
-    A compose file can consume a variable that has no .env.example entry at all;
-    such a variable is invisible to every .env.example-based check (EXPOSE_WEAVIATE_GRPC_PORT
-    went unseen for eleven months this way). The value recorded is the innermost literal
-    fallback — what compose substitutes when nothing is set. `$${...}` is compose's escape
-    for a literal `$` (a shell variable inside a command) and is skipped.
+    A compose file can consume a variable that has no env-file entry at all; such a
+    variable is invisible to every env-file-based check (EXPOSE_WEAVIATE_GRPC_PORT went
+    unseen for eleven months this way). The value recorded is what the fallback resolves to
+    when nothing is set.
     """
-    found: dict[str, str] = {}
-    def visit(chunk: str) -> None:
-        for m in _COMPOSE_REF_RE.finditer(chunk):
-            name, fallback = m.group(1), (m.group(2) or "")
-            value = resolve_expansion(fallback) if fallback else ""
-            if name not in found or (not found[name] and value):
-                found[name] = value
-            if "${" in fallback:
-                visit(fallback)
-    visit(text)
+    found: Dict[str, str] = {}
+    collect_refs(text, found)
     return found
 
 
@@ -366,8 +559,8 @@ def is_test_compose(name: str) -> bool:
     return "pytest" in name
 
 
-def collect_compose_files(sources: list[str]) -> list[Path]:
-    files: list[Path] = []
+def collect_compose_files(sources: List[str]) -> List[Path]:
+    files: List[Path] = []
     for source in sources:
         p = Path(source)
         if not p.exists():
@@ -386,72 +579,94 @@ def collect_compose_files(sources: list[str]) -> list[Path]:
     return files
 
 
-def parse_compose(sources: list[str]) -> tuple[dict[str, str], list[Path]]:
+def _merge_compose(merged: Dict[str, str], found: Dict[str, str]) -> None:
+    for name, value in found.items():
+        if name not in merged or (not merged[name] and value):
+            merged[name] = value
+
+
+def parse_compose(sources: List[str]) -> Tuple[Dict[str, str], List[Path]]:
     files = collect_compose_files(sources)
-    merged: dict[str, str] = {}
+    merged: Dict[str, str] = {}
     for f in files:
-        for name, value in parse_compose_text(f.read_text(encoding="utf-8")).items():
-            if name not in merged or (not merged[name] and value):
-                merged[name] = value
+        _merge_compose(merged, parse_compose_text(f.read_text(encoding="utf-8")))
     return merged, files
 
 
-def compose_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
-    """${VAR} references in docker/docker-compose*.y*ml at a git ref."""
-    out = subprocess.run(
+# --- Git refs (--compare-rev) ---------------------------------------------------------
+
+def _docker_paths_at_ref(repo: str, ref: str) -> List[str]:
+    return subprocess.run(
         ["git", "-C", repo, "ls-tree", "-r", "--name-only", ref, "--", "docker/"],
         capture_output=True, text=True, check=True,
     ).stdout.splitlines()
-    merged: dict[str, str] = {}
-    for path in out:
+
+
+def _show(repo: str, ref: str, path: str) -> str:
+    return subprocess.run(
+        ["git", "-C", repo, "show", f"{ref}:{path}"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+
+
+def compose_vars_at_ref(repo: str, ref: str, paths: List[str]) -> Dict[str, str]:
+    """${VAR} references in docker/docker-compose*.y*ml at a git ref."""
+    merged: Dict[str, str] = {}
+    for path in paths:
         name = Path(path).name
         if not (name.startswith("docker-compose") and name.endswith((".yaml", ".yml"))):
             continue
         if is_test_compose(name):
             print(f"(skipped {name} at {ref}: test harness, not a deployment file)")
             continue
-        text = subprocess.run(
-            ["git", "-C", repo, "show", f"{ref}:{path}"],
-            capture_output=True, text=True, check=True,
-        ).stdout
-        for var, value in parse_compose_text(text).items():
-            if var not in merged or (not merged[var] and value):
-                merged[var] = value
+        _merge_compose(merged, parse_compose_text(_show(repo, ref, path)))
     return merged
 
 
-def merge_compose_only(env_vars: dict[str, str], compose_vars: dict[str, str]) -> list[str]:
-    """Add compose-only variables to the source map at lowest precedence; return their names."""
-    only = sorted(n for n in compose_vars if n not in env_vars)
-    for n in only:
-        env_vars[n] = compose_vars[n]
-    return only
+def env_surface_at_ref(repo: str, ref: str) -> Tuple[EnvSurface, List[str]]:
+    """The env surface at a git ref: every docker/ env file plus the compose references.
+    Returns the surface and the compose-only names."""
+    paths = _docker_paths_at_ref(repo, ref)
+    surface = EnvSurface()
+    for path in order_env_paths(paths):
+        surface.add_text(_show(repo, ref, path).splitlines(), path, env_file_role(Path(path).name))
+    compose_only = surface.add_compose(compose_vars_at_ref(repo, ref, paths))
+    return surface, compose_only
 
 
-def env_vars_at_ref(repo: str, ref: str) -> dict[str, str]:
-    """Return the merged {VAR: default} from all docker/ *.env.example files at a git ref."""
-    merged: dict[str, str] = {}
-    for path in _env_example_paths_at_ref(repo, ref):
-        content = subprocess.run(
-            ["git", "-C", repo, "show", f"{ref}:{path}"],
-            capture_output=True, text=True, check=True,
-        ).stdout.splitlines()
-        merged.update(parse_env_lines(content))
-    return merged
+NO_DEFAULT = "(no default in the env files)"
+
+
+def _show_default(entry) -> str:
+    if entry is None:
+        return NO_DEFAULT
+    return " | ".join(repr(v) for v in entry[0])
+
+
+def default_changes(old: EnvSurface, new: EnvSurface) -> List[Tuple[str, str, str]]:
+    """Variables present at both refs whose stock default changed, including a default
+    that appeared or disappeared (a line commented out or uncommented)."""
+    old_d, new_d = old.defaults(), new.defaults()
+    changed = []
+    for name in sorted(set(old.names) & set(new.names)):
+        a, b = old_d.get(name), new_d.get(name)
+        if a is None and b is None:
+            continue
+        if a is None or b is None or {normalize(v) for v in a[0]} != {normalize(v) for v in b[0]}:
+            changed.append((name, _show_default(a), _show_default(b)))
+    return changed
 
 
 def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_path: str) -> int:
     """Report env vars added/removed/default-changed between two git refs.
 
     The release safety net: per-PR detection misses untagged PRs, so diff the whole
-    .env.example var set between the previous release and the target, and flag NEW
+    env-file surface between the previous release and the target, and flag NEW
     vars that are still undocumented and not intentionally ignored.
     """
     try:
-        old_vars = env_vars_at_ref(repo, old_ref)
-        new_vars = env_vars_at_ref(repo, new_ref)
-        merge_compose_only(old_vars, compose_vars_at_ref(repo, old_ref))
-        new_compose_only = merge_compose_only(new_vars, compose_vars_at_ref(repo, new_ref))
+        old, _ = env_surface_at_ref(repo, old_ref)
+        new, new_compose_only = env_surface_at_ref(repo, new_ref)
     except subprocess.CalledProcessError as e:
         print(f"ERROR: git failed: {e.stderr.strip() or e}", file=sys.stderr)
         return 2
@@ -459,24 +674,24 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
         print("ERROR: git not found on PATH", file=sys.stderr)
         return 2
 
-    added = sorted(set(new_vars) - set(old_vars))
-    removed = sorted(set(old_vars) - set(new_vars))
-    changed = sorted(
-        n for n in (set(new_vars) & set(old_vars))
-        if normalize(old_vars[n]) != normalize(new_vars[n])
-    )
+    added = sorted(set(new.names) - set(old.names))
+    removed = sorted(set(old.names) - set(new.names))
+    changed = default_changes(old, new)
+    old_d, new_d = old.defaults(), new.defaults()
 
-    print(f"=== ENV VAR DIFF {old_ref}..{new_ref} (uncommented .env.example vars + compose ${{VAR}} refs) ===")
+    print(f"=== ENV VAR DIFF {old_ref}..{new_ref} (.env.example, *.defaults and templates, "
+          f"commented lines included, + compose ${{VAR}} refs) ===")
     print(f"NEW ({len(added)}):")
     for n in added:
         tag = "  (compose-only)" if n in new_compose_only else ""
-        print(f"  + {n}={new_vars[n]}{tag}")
+        print(f"  + {n}={_show_default(new_d.get(n))}{tag}")
     print(f"REMOVED ({len(removed)}):")
     for n in removed:
-        print(f"  - {n} (was {old_vars[n]!r})")
+        tag = "  (now only a container mapping)" if n in new.mapped else ""
+        print(f"  - {n} (was {_show_default(old_d.get(n))}){tag}")
     print(f"DEFAULT CHANGED ({len(changed)}):")
-    for n in changed:
-        print(f"  ~ {n}: {old_vars[n]!r} -> {new_vars[n]!r}")
+    for n, a, b in changed:
+        print(f"  ~ {n}: {a} -> {b}")
 
     if docs_path:
         doc_vars = parse_mdx_docs(docs_path)
@@ -485,7 +700,7 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
         print()
         print(f"=== NEW vars NOT documented and NOT in ignored-vars ({len(gaps)}) — TRIAGE ===")
         for n in gaps:
-            print(f"  {n}={new_vars[n]}")
+            print(f"  {n}={_show_default(new_d.get(n))}")
         print("(Document each, or add to env-ignored-vars.md with a reason. Never leave a")
         print(" new-this-release var as silent backlog.)")
     else:
@@ -493,18 +708,19 @@ def run_compare_rev(repo: str, old_ref: str, new_ref: str, docs_path, ignored_pa
     return 0
 
 
+# --- Verify mode ----------------------------------------------------------------------
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Verify env var documentation against .env.example"
+        description="Verify env var documentation against Dify's Docker env files"
     )
     parser.add_argument(
         "--env-example",
         action="append",
         help=(
-            "Path to a .env.example file or to a directory containing them. "
-            "May be repeated. When given a directory, the verifier globs "
-            "**/*.env.example recursively. Pass both `docker/.env.example` and "
-            "`docker/envs/` to capture the post-PR-#31586 layout."
+            "Path to an env file (`.env.example`, `*.env.example`, `*.defaults`) or a "
+            "directory holding them, globbed recursively. May be repeated. Pass both "
+            "`docker/.env.example` and `docker/envs/`."
         ),
     )
     parser.add_argument(
@@ -513,7 +729,7 @@ def main():
         help=(
             "Path to a docker-compose*.y*ml file or a directory holding them (pass "
             "`<repo>/docker`). May be repeated. Variables a compose file consumes with "
-            "no .env.example entry are otherwise invisible to this check."
+            "no env-file entry are otherwise invisible to this check."
         ),
     )
     parser.add_argument(
@@ -526,8 +742,8 @@ def main():
         metavar=("OLD", "NEW"),
         help=(
             "Release safety net: two git refs (previous release, target). Reports env "
-            "vars added/removed/default-changed in .env.example between them, and (with "
-            "--docs) which NEW vars are still undocumented. Requires --repo."
+            "vars added/removed/default-changed in the docker/ env files between them, and "
+            "(with --docs) which NEW vars are still undocumented. Requires --repo."
         ),
     )
     parser.add_argument(
@@ -554,43 +770,52 @@ def main():
         print(f"ERROR: Documentation not found at {args.docs}")
         sys.exit(1)
 
-    env_vars, env_files = parse_env_example(args.env_example)
+    surface, env_files = parse_env_sources(args.env_example)
     doc_vars = parse_mdx_docs(args.docs)
     ignored = parse_ignored_vars(args.ignored)
 
-    print(f"Parsed {len(env_vars)} variables from {len(env_files)} env-example file(s):")
+    print(f"Parsed {len(surface.names)} variables from {len(env_files)} env file(s), in merge order:")
     for f in env_files:
-        print(f"  - {f}")
+        print(f"  - {f}  [{env_file_role(f.name)}]")
     print(f"Parsed {len(doc_vars)} variables from documentation")
     print(f"Loaded {len(ignored)} ignored variables from {args.ignored}")
     print()
 
-    compose_only: list[str] = []
+    compose_only: List[str] = []
     if args.compose:
         compose_vars, compose_files = parse_compose(args.compose)
         print(f"Parsed {len(compose_vars)} ${{VAR}} references from {len(compose_files)} compose file(s)")
-        compose_only = merge_compose_only(env_vars, compose_vars)
+        compose_only = surface.add_compose(compose_vars)
         if compose_only:
             print(f"=== IN COMPOSE BUT NOT IN ANY .env.example ({len(compose_only)}) ===")
             for name in compose_only:
-                print(f"  {name} (compose fallback: {env_vars[name]!r})")
+                print(f"  {name} (compose fallback: {surface.fallbacks[name]!r})")
             print("(Only --compose sees these. Document each, or add it to env-ignored-vars.md with a reason.)")
             print()
 
-    # --- Check 1: Variables in .env.example but missing from docs ---
-    missing_from_docs = sorted(
-        (set(env_vars.keys()) - set(doc_vars.keys())) - ignored
-    )
+    defaults = surface.defaults()
+    names = set(surface.names)
+    no_default = sorted((names & set(doc_vars)) - set(defaults) - ignored)
+    print(f"{len(no_default)} documented variables have no default in the env files "
+          "(commented lines or templates only); their page defaults are not compared.")
+    container_rows = sorted(set(surface.mapped_only()) & set(doc_vars))
+    if container_rows:
+        print(f"{len(container_rows)} documented variables are container mappings, set through "
+              f"another variable; each row must name it: {', '.join(container_rows)}")
+    print()
+
+    # --- Check 1: Variables in the env files but missing from docs ---
+    missing_from_docs = sorted((names - set(doc_vars)) - ignored)
     if missing_from_docs:
         print(f"=== MISSING FROM DOCS ({len(missing_from_docs)}) ===")
         for name in missing_from_docs:
-            print(f"  {name}={env_vars[name]}")
+            entry = defaults.get(name)
+            shown = " | ".join(entry[0]) if entry else "(no default)"
+            print(f"  {name}={shown}  [{surface.names[name]}]")
         print()
 
-    # --- Check 2: Variables in docs but not in any env-example source ---
-    extra_in_docs = sorted(
-        (set(doc_vars.keys()) - set(env_vars.keys())) - ignored
-    )
+    # --- Check 2: Variables in docs but not in any env file ---
+    extra_in_docs = sorted((set(doc_vars) - names - set(surface.mapped_only())) - ignored)
     if extra_in_docs:
         print(f"=== IN DOCS BUT NOT IN ANY .env.example ({len(extra_in_docs)}) ===")
         for name in extra_in_docs:
@@ -600,19 +825,18 @@ def main():
     # --- Check 3: Default value mismatches ---
     # Ignored vars are excluded here too: the false-positives bucket covers
     # secret values that the docs deliberately describe instead of reproduce.
-    common = sorted((set(env_vars.keys()) & set(doc_vars.keys())) - ignored)
+    common = sorted((set(defaults) & set(doc_vars)) - ignored)
     mismatches = []
     for name in common:
-        env_val = normalize(env_vars[name])
-        doc_val = normalize(doc_vars[name])
-        if env_val != doc_val:
-            mismatches.append((name, env_vars[name], doc_vars[name]))
+        values, where = defaults[name]
+        if not matches_default(doc_vars[name], values):
+            mismatches.append((name, values, where, doc_vars[name]))
 
     if mismatches:
         print(f"=== DEFAULT MISMATCHES ({len(mismatches)}) ===")
-        for name, env_val, doc_val in mismatches:
+        for name, values, where, doc_val in mismatches:
             print(f"  {name}:")
-            print(f"    .env.example: {env_val!r}")
+            print(f"    stock default: {' | '.join(repr(v) for v in values)}  [{where}]")
             print(f"    documentation: {doc_val!r}")
         print()
 

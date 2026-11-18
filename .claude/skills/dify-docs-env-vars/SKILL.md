@@ -22,9 +22,9 @@ When using subagents for tracing, assign 3–5 related variables per agent. Trac
 | Variable type | Depth |
 |---|---|
 | Python config vars (defined in `api/configs/`) | Full trace (below). |
-| Frontend vars (mapped in `web/docker/entrypoint.sh`) | Trace the Docker-to-`NEXT_PUBLIC_*` mapping in `entrypoint.sh`; verify the default in both `docker/.env.example` and `web/.env.example`; run `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` — any match means the var is dual-purpose and needs a full trace. |
-| Docker/container service vars (only in `docker-compose.yaml`) | `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` must return no matches; then document from `.env.example` comments. |
-| Plugin daemon vars (`PLUGIN_*` not in `api/configs/`) | Document from `.env.example` comments. |
+| Frontend vars (mapped in `web/docker/entrypoint.sh`) | Trace the Docker-to-`NEXT_PUBLIC_*` mapping in `entrypoint.sh`; verify the default in both `docker/envs/core-services/web.defaults` and `web/.env.example`; run `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` — any match means the var is dual-purpose and needs a full trace. |
+| Docker/container service vars (only in `docker-compose.yaml`) | `grep -rn "<VAR_NAME>" <path-to-dify-repo>/api/` must return no matches; then document from the comments in the service's `.defaults` file. |
+| Plugin daemon vars (`PLUGIN_*` not in `api/configs/`) | Document from the comments in `docker/envs/core-services/plugin-daemon.defaults`. |
 
 Full trace:
 
@@ -61,7 +61,7 @@ Edit `en/self-host/deploy/configuration/environments.mdx` following [Document St
 
 ### Run the verifier
 
-The canonical command scans BOTH env sources — never pass only one:
+The canonical command scans the root template and the `envs/` tree together; a run that leaves out either one under-scans and reports false "extra in docs" results:
 
 ```bash
 python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
@@ -71,15 +71,17 @@ python3 .claude/skills/dify-docs-env-vars/verify-env-docs.py \
   --docs en/self-host/deploy/configuration/environments.mdx
 ```
 
-`--compose` reads the `${VAR}` references in `docker/docker-compose*.y*ml`. A variable a compose file consumes with no `.env.example` entry is invisible to every other check — `EXPOSE_WEAVIATE_GRPC_PORT` went undocumented for eleven months that way — so the script lists them under `=== IN COMPOSE BUT NOT IN ANY .env.example (<n>) ===` and treats them as source variables from then on. `--compare-rev` reads the compose files at both refs on its own. `docker-compose.pytest.ports.yaml` is skipped in both modes and the skip is printed: it publishes vector-store ports for the integration tests, and nothing a deployment reads.
+`--env-example` is repeatable, and a directory argument is searched recursively for `*.env.example` and `*.defaults`. The script first lists the files it parsed in merge order, each with the part it plays in a stock installation (see [Source of Truth](#source-of-truth)): confirm the list includes the `.defaults` files under `docker/envs/` and ends with `docker/.env.example` marked `[stock .env]`.
 
-`--env-example` is repeatable; a directory argument is globbed `**/*.env.example` recursively. The script first prints the list of files it parsed — confirm it shows `docker/.env.example` plus the files under `docker/envs/`, then the compose file count. A single-source run under-scans and produces false "extra in docs" results.
+`--compose` reads the `${VAR}` references in `docker/docker-compose*.y*ml`, the colon-less `${VAR-x}` form included. A variable a compose file consumes with no env-file entry is invisible to every other check — `EXPOSE_WEAVIATE_GRPC_PORT` went undocumented for eleven months that way — so the script lists them under `=== IN COMPOSE BUT NOT IN ANY .env.example (<n>) ===` and treats them as source variables from then on. `--compare-rev` reads the compose files at both refs on its own. The `docker-compose.pytest.*.yaml` files are skipped in both modes, and each skip is printed: they serve only the integration tests, and no deployment reads them.
 
-Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1.
+Before its checks, the script prints two notes that the [Source of Truth](#source-of-truth) table acts on: how many documented variables no env file gives a default, and which documented variables are container mappings.
 
-**Cadence.** The full command above is the baseline audit, and the baseline was cleared at dify tag `1.17.1`. A release pass runs `--compare-rev` — it diffs both the `.env.example` files and the compose references between two refs, so a clean baseline stays clean incrementally. Re-run the full command whenever this script, the ignore list's location, or the `.env.example` layout changes, and after any pass that touched more than a handful of variables; it must end on `ALL CHECKS PASSED` or every remaining line must be accounted for in the ignore list. Run it against the `zh` and `ja` pages too — the parser understands `默认值：`, `デフォルト値：` and `（空）`, so their counts are as meaningful as English's.
+Output contract: on a fully clean doc the last line is `ALL CHECKS PASSED — documentation matches .env.example` and the script exits 0; otherwise it prints `TOTAL ISSUES: <n>` with per-category counts and exits 1. After changing the script, run `python3 .claude/skills/dify-docs-env-vars/test_verify_env_docs.py`; it must end with `OK`.
 
-Pass bar for every task: the full command ends on `ALL CHECKS PASSED`, or every remaining line is accounted for in the ignore list with a reason. **Missing from docs** stopped being standing backlog when the baseline was cleared at tag `1.17.1`: a nonzero count now means a variable arrived since, and it is documented or ignored before the task ends. If the script prints `WARNING: ignore list not found`, it stops with exit status 2 and prints no counts: fix the path and re-run.
+**Cadence.** The full command above is the baseline audit. A release pass runs `--compare-rev`, which diffs every env file between two refs, commented lines included, plus the compose references, so a clean baseline stays clean incrementally. A line commented out or uncommented between the refs shows under `DEFAULT CHANGED`, because it moves the default between the env files and the application. A variable listed under `REMOVED` with `(now only a container mapping)` keeps its row, which then names the variable it copies from. Re-run the full command whenever this script, the ignore list's location, or the env-file layout changes, and after any pass that touched more than a handful of variables; it must end on `ALL CHECKS PASSED` or every remaining line must be accounted for in the ignore list. Run it against the `zh` and `ja` pages too — the parser understands `默认值：`, `デフォルト値：` and `（空）`, so their counts are as meaningful as English's.
+
+Pass bar for every task: the full command ends on `ALL CHECKS PASSED`, or every remaining line is accounted for in the ignore list with a reason. **Missing from docs** is never standing backlog: every variable it lists is documented or ignored before the task ends. If the script prints `WARNING: ignore list not found`, it stops with exit status 2 and prints no counts: fix the path and re-run.
 
 ### Update the ignore list if needed
 
@@ -87,28 +89,30 @@ The verifier filters out variables listed in the registry's `guides/env-ignored-
 
 - Remove a variable from the docs as Cloud-only → add it under **Cloud-only (SaaS)**.
 - Skip documenting an experimental or internal flag → add it under **Experimental / internal**.
-- Document a supported variable whose `.env.example` entry is commented out (`#FOO=bar`) → add it under **Verifier false positives**. This bucket is **only** for vars present in `.env.example` in commented form; see [Source of Truth](#source-of-truth) for vars absent entirely.
+- Document a variable the verifier still misreports, such as a secret the env files pre-fill and the row describes instead of reproducing → add it under **Verifier false positives**. A commented line needs no entry, since the verifier reads it. Never use this bucket for a variable absent from the env files; see [Source of Truth](#source-of-truth).
 
 Every entry must include a source reference (PR, commit, or audit date).
 
 ## Source of Truth
 
-After Dify PR #31586, the supported self-host knob surface is split across:
+Since Dify 1.19.0, the supported self-host settings live in three kinds of file, and each plays a different part in a stock installation:
 
-- `docker/.env.example` — essential startup values
-- `docker/envs/**/*.env.example` — categorized optional vars (core-services, databases, infrastructure, security, vectorstores, middleware)
+- `docker/.env.example` is the minimal template a stock installation copies to `.env`. Its active lines win over every file below.
+- `docker/envs/**/*.defaults` hold the tracked defaults, which Compose loads into the services that name them. A line such as `FOO=${FOO-x}` supplies `x` unless `docker/.env` or the service's optional copy, such as `envs/core-services/api-worker.env`, sets `FOO`. The lines under a **Container variable mappings** comment copy another setting into the name a container reads (`WORKER_TIMEOUT=${SANDBOX_WORKER_TIMEOUT:-15}`): the setting is the variable they copy from.
+- `docker/envs/**/*.env.example` are optional templates, such as `security.env.example`, that a stock installation never creates.
 
-The verifier reads both — always use the canonical verifier command above, which passes both sources.
+In any of these files, a commented line (`# FOO=bar`) still names a supported setting. The verifier reads all three kinds, commented lines included, so always use the canonical command above.
 
 | Var location | Action |
 |---|---|
-| In any `.env.example` file, uncommented | Document. |
-| In any `.env.example` file, commented (`#FOO=bar`) | Document; add to **Verifier false positives** in `env-ignored-vars.md` (the verifier can't parse defaults from comments). |
-| Only in `api/configs/` Pydantic, not in any `.env.example` | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate `.env.example` file first. |
-| In `.env.example` and still parsed, but upstream-deprecated with a replacement | Keep the row; lead the description with the deprecation and the replacement: "Deprecated; use `X`." Deprecated means still parsed — a removed var never gets a Deprecated label. |
-| Removed from `.env.example` because the code no longer reads it | **Remove from docs — no tombstone rows** (a documented row implies the var still takes effect). If a successor variable replaced it, add one clause to the successor's description so the old names stay findable via search: "Replaces the former `EDITION`, ignored from 1.17.0 onward." With no successor, remove without trace; upgrader discoverability belongs in upstream Dify release notes. |
+| Active in `docker/.env.example` or a `.defaults` file, other than a container mapping | Document. |
+| Commented (`# FOO=bar`) in any of these files, or only in an optional template | Document, and trace the default by hand: unless a `${...}` fallback supplies it, it is the application's, which the verifier can't compare. |
+| Only as a container variable under **Container variable mappings** | Document the variable it copies from. A row for the container variable itself must name that variable, because setting the container variable has no effect. |
+| Only in `api/configs/` Pydantic, not in any of these files | **Don't document.** Upstream-deferred; file a PR adding it to the appropriate env file first. |
+| In the env files and still parsed, but upstream-deprecated with a replacement | Keep the row; lead the description with the deprecation and the replacement: "Deprecated; use `X`." Deprecated means still parsed — a removed var never gets a Deprecated label. |
+| Removed from the env files because the code no longer reads it | **Remove from docs — no tombstone rows** (a documented row implies the var still takes effect). If a successor variable replaced it, add one clause to the successor's description so the old names stay findable via search: "Replaces the former `EDITION`, ignored from 1.17.0 onward." With no successor, remove without trace; upgrader discoverability belongs in upstream Dify release notes. |
 
-**The default a row states** is the value a stock Docker Compose installation runs with: `docker/.env.example` copied to `.env` and nothing else changed. Resolve it in the order the page's Precedence section gives, down to the application default when no loaded file sets the variable. A commented line (`# FOO=false`) and a value in an optional file that a stock installation doesn't create set nothing, so neither is the default: `ENABLE_OAUTH_BEARER` was documented as `false` from such a line while stock installations ran with the application default, `true`.
+**The default a row states** is the value a stock Docker Compose installation runs with: `docker/.env.example` copied to `.env` and nothing else changed. Resolve it in the order the page's Precedence section gives, down to the application default when no loaded file sets the variable. A commented line (`# FOO=false`) and a value in an optional file that a stock installation doesn't create set nothing, so neither is the default: `ENABLE_OAUTH_BEARER` was documented as `false` from such a line while stock installations ran with the application default, `true`. A vector store's `.defaults` file loads once `VECTOR_STORE` selects that store, so its values are the defaults for that store's rows; where two stores' files disagree, as `OCEANBASE_VECTOR_HOST` does for OceanBase and seekdb, the row names both. A value a `.defaults` line builds from another setting is the default too: the row states the value a stock installation gets and names the setting it comes from, as in `redis://:difyai123456@redis:6379/2` (built from `REDIS_PASSWORD`).
 
 **The verifier's "extra in docs" signal is not an escape hatch. Never suppress it for Pydantic-only vars via `env-ignored-vars.md`.**
 
