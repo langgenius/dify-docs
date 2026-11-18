@@ -10,6 +10,15 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 
 各接口的字段参考，详见 [人工介入 API](/zh/api-reference/human-input/get-human-input-form)。
 
+## API 可处理哪些表单
+
+要在你的应用中处理表单，人工介入节点必须把表单发给发起运行的终端用户：
+
+- **旧版人工介入节点**：开启了 Web 应用投递。
+- **新版人工介入节点**：收件人中包含 **发起人**。
+
+其他表单的 `form_token` 均为 `null`。用发给其他收件人的令牌调用接口，会返回 404 `not_found`。
+
 ## 流程
 
 下方流程同时适用于 Workflow 和 Chatflow 应用。两者仅在第 1 步的入口接口上有所不同。
@@ -18,11 +27,9 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
   <Step title="以流式返回方式启动应用">
 
     1. Workflow 应用调用 [执行工作流](/zh/api-reference/workflow-runs/run-workflow)，Chatflow 应用调用 [发送对话消息](/zh/api-reference/chat-messages/send-chat-message)，并传入终端用户的 `user` 标识。
-    2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`。
+    2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`，并保留 `workflow_run_id`，以便第 5 步需要时恢复监听。
 
-        若 `form_token` 为 `null`，说明表单没有通过 Web 应用投递，而 API 只能处理这种投递方式。表单实际的投递方式列在 `approval_channels` 中。此时可以直接跳到第 5 步，等待接收者通过这些方式回复，或者 [停止这次运行](#停止已暂停的运行)。
-
-        `human_input_required` 事件同时携带本次运行的 `workflow_run_id`；请保留它，以便在第 5 步需要时恢复监听。
+        若 `form_token` 为 `null`，说明节点没有 [把表单发给你的终端用户](#api-可处理哪些表单)：表单由其他收件人通过邮件、IM 或 Dify 控制台回复。此时可直接跳到第 5 步等待回复，或者 [停止这次运行](#停止已暂停的运行)。
   </Step>
   <Step title="获取表单定义">
     使用 `form_token` 调用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 接口，然后将表单呈现给接收者：`form_content` 是表单的 Markdown 正文，`inputs` 是字段，`user_actions` 是按钮。
@@ -83,10 +90,6 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 <Tip>
   对于需要接收者反馈的交互式表单，优先选择先上传模式。仅当流程完全程序化、无需任何人重新输入时，直接提交模式的代价才能被抵消。
 </Tip>
-
-## 提交方式要求
-
-人工介入 API 仅支持通过人工介入节点的 Web 应用提交方式投递的表单。仅通过邮件投递的表单不会向 API 暴露 `form_token`。
 
 ## 示例：带文件的提交
 
