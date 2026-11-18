@@ -52,7 +52,11 @@ Langfuse は、チームがアプリケーションのデバッグ、分析、�
   ![Langfuse を設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/ebc84b328ad37c0f6dbca6101e1f90ab.png)
 </Frame>
 
-設定をクリックした後、Langfuse で作成した **秘密キー**、**公開キー**、**Host** を入力して保存します。**Host** には、プロジェクトのリージョンまたはセルフホスト環境のベース URL を指定します。`/api/public` は含めないでください。Dify はトレースを `/api/public/ingestion` に送信します。[Langfuse の取り込みドキュメント](https://langfuse.com/docs/api-and-data-platform/features/public-api#ingest-traces-via-the-api) によると、このレガシートレース API はセルフホスト版 v4 の `events_only` モードでは利用できません。Langfuse Cloud では 2026 年 11 月 16 日に提供が終了します。レガシートレースの取り込みを引き続き受け付ける Langfuse 環境を使用してください。
+設定をクリックした後、Langfuse で作成した **秘密キー**、**公開キー**、**Host** を入力して保存します。**Host** には、プロジェクトのリージョンまたはセルフホスト環境のベース URL を指定します。`/api/public` は含めないでください。
+
+<Info>
+Dify はトレースを OpenTelemetry で `/api/public/otel/v1/traces` に送信するため、セルフホスト環境の Langfuse は v3.63.0 以降である必要があります。新しくデプロイする場合は v4 を使ってください。
+</Info>
 
 <Frame>
   ![Langfuse を設定](https://assets-docs.dify.ai/dify-enterprise-mintlify/en/guides/monitoring/integrate-external-ops-tools/5bfa409e7a073f133f21146535401512.png)
@@ -90,7 +94,14 @@ Langfuse は、チームがアプリケーションのデバッグ、分析、�
 
 以下の表は通常のトレースを説明しています。新しい Agent アプリや新しい Agent ノードを含むワークフローで API 側の収集を有効にすると、新しい UUIDv7 がトレース ID になります。元の ID とトレース実行 ID は、属性 `dify.source.id` と `dify.tracing.run_id` に保持されます。新しい Agent アプリで **Agent の内部処理を収集** をオンにすると、通常の `llm` スパンが `Agent attempt` スパンに置き換わります。このスパンには、内部のモデル呼び出しとツール呼び出しが含まれます。収集対象の実行では、モデレーション、推奨質問、名前生成の個別レコードは省略されます。
 
-Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。トレース ID には、`X-Trace-Id` が指定されていればその値を使います。未指定の場合は、Chat/Chatflow ではメッセージ ID、Workflow ではワークフロー実行 ID を使います。観測 ID は派生値です。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
+Dify は処理を階層構造としてエクスポートします。メッセージの下には `llm` 呼び出しがあり、Chatflow のメッセージの下にはワークフローとノードの処理があります。
+
+トレース ID は、`X-Trace-Id` が指定されていればその値から作られます。未指定の場合は、Chat/Chatflow ではメッセージ ID、Workflow ではワークフロー実行 ID から作られます。Langfuse では、ID は 32 桁の 16 進数で表示されます。
+
+- **UUID または 32 桁の 16 進数**（メッセージ ID とワークフロー実行 ID を含む）：ハイフンを除いた同じ文字列になります。
+- **それ以外の `X-Trace-Id` の値**：その値のハッシュになります。元の値は、トレースのメタデータに `external_trace_id` として保存されます。
+
+観測 ID は派生値です。トークン使用量のネイティブフィールドは、モデル呼び出しにのみ設定されます。
 
 Chatflow では `message` がトレースのルートになります。入力はユーザーのクエリで、クエリが空ならワークフローの入力を使います。子の `workflow` には、ワークフローの入力と出力が保持されます。
 
@@ -292,7 +303,7 @@ Chatflow では `message` がトレースのルートになります。入力は
   <thead>
     <tr>
       <th>モデレーション</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 観測</th>
     </tr>
   </thead>
   <tbody>
@@ -355,7 +366,7 @@ Chatflow では `message` がトレースのルートになります。入力は
   <thead>
     <tr>
       <th>推奨質問</th>
-      <th>LangFuse スパン</th>
+      <th>LangFuse Tool 観測</th>
     </tr>
   </thead>
   <tbody>
@@ -430,7 +441,7 @@ Chatflow では `message` がトレースのルートになります。入力は
   <thead>
     <tr>
       <th>データセットリトリーバル</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Retriever 観測</th>
     </tr>
   </thead>
   <tbody>
@@ -495,7 +506,7 @@ Chatflow では `message` がトレースのルートになります。入力は
   <thead>
     <tr>
       <th>ツール</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 観測</th>
     </tr>
   </thead>
   <tbody>
@@ -566,13 +577,13 @@ Chatflow では `message` がトレースのルートになります。入力は
 
 **会話タイトルの生成を追跡するために使用されます**
 
-メッセージに紐づかない自動命名では、`timestamp` を持ち、観測を持たない独立したトレースが作られます。メッセージに紐づく命名では、そのメッセージのトレースにスパン観測が作られます。タイトルを直接編集しても、名前生成トレースは作られません。
+メッセージに紐づかない自動命名では、`generate_name` という名前の独立したトレースが作られ、`tool` 観測が 1 つ含まれます。メッセージに紐づく命名では、そのメッセージのトレースに `tool` 観測が作られます。タイトルを直接編集しても、名前生成トレースは作られません。
 
 <table>
   <thead>
     <tr>
       <th>名前生成</th>
-      <th>LangFuse Generation/Trace</th>
+      <th>LangFuse Tool 観測</th>
     </tr>
   </thead>
   <tbody>
@@ -586,11 +597,11 @@ Chatflow では `message` がトレースのルートになります。入力は
     </tr>
     <tr>
       <td>start\_time</td>
-      <td>timestamp（独立したトレース）/ startTime（メッセージに紐づく観測）</td>
+      <td>startTime</td>
     </tr>
     <tr>
       <td>end\_time</td>
-      <td>endTime（メッセージに紐づく観測のみ）</td>
+      <td>endTime（観測）</td>
     </tr>
     <tr>
       <td>inputs</td>
