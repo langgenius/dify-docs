@@ -155,15 +155,24 @@ difyctl stop task --app-id 0a1b2c3d-4e5f-6789-abcd-ef0123456789 --task-id 269924
 
 ## 填写人工介入表单
 
-<Info>
-只有人工介入节点的提交方式为 **Webapp** 时，才能在 `difyctl` 中填写表单。
-</Info>
+只有以下两种情况，才能在 `difyctl` 中填写表单：
 
-运行在表单处暂停时，会返回 `status` 为 `suspended` 的结果，每个操作按钮各对应一条提示。找到你要执行的操作对应的提示，把其中 `inputs` 里的每个 `null` 换成你的回答，再 [运行这条提示](/zh/cli/find-and-run-commands#按提示运行后续命令)。
+- **旧版人工介入节点**：节点的提交方式为 **Webapp**。
+- **新版人工介入节点** <Badge color="blue" size="sm">自部署</Badge>：在 Workflow 应用中，节点的 [**收件人**](/zh/self-host/use-dify/nodes/human-input#选择由谁响应) 包含 **发起人**。填写时须使用启动这次运行的账户，登录或使用个人访问令牌均可。
 
-也可先看看表单有哪些字段再填写：从任一提示中取出 `form_token`，用 `describe run form` 查看，再用 `submit run form` 提交回答。
+运行在表单处暂停时，会返回 `status` 为 `suspended` 的结果。你能填写这份表单时，结果中每个操作按钮各对应一条提示。如果表单只发给了其他收件人，`hints` 为 `[]`，等其中有人响应后，运行才会恢复。
 
-无论用哪种方式，之后都用 `get run event` 跟踪恢复后的运行，把暂停时返回结果中的 `run_id` 传给 `--run-id`。一定要带上 `--include-state-snapshot`，否则该命令可能长达 5 分钟没有任何输出。
+找到你要执行的操作对应的提示，把其中 `inputs` 里的每个 `null` 换成你的回答，再 [运行这条提示](/zh/cli/find-and-run-commands#按提示运行后续命令)。要先看看表单有哪些字段，就从任一提示中取出 `form_token`，运行 `difyctl describe run form`，再用 `submit run form` 提交回答。
+
+使用新版节点时，提交前先用 `describe run form` 核对 `inputs`：
+
+- 每个字段都要填写，不能留下 `null`。
+- 段落字段填字符串，下拉选项字段填它的某个选项。
+- 只用表单中的字段作为键。
+
+只要 `inputs` 违反其中任意一条，`submit run form` 就会失败，报 `invalid_input`。
+
+无论由谁填写，之后都用 `get run event` 跟踪恢复后的运行，把暂停时返回结果中的 `run_id` 传给 `--run-id`。一定要带上 `--include-state-snapshot`，否则该命令可能长达 5 分钟没有任何输出。
 
 ```bash
 # 查看表单字段
@@ -178,6 +187,10 @@ difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5
 # 如果运行之后还可能在其他表单处暂停，持续跟踪
 difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
 ```
+
+<Info>
+使用新版节点时，表单还可能发到你的邮箱或 IM（即时通讯应用）中。无论从哪一处填写，都以第一个回答为准，之后再用 `submit run form` 提交会失败。
+</Info>
 
 ## 排查运行失败的原因
 
@@ -206,5 +219,8 @@ difyctl get run node --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c
 | `run_not_found` | 检查传入的是运行 ID 而不是 `task_id`，并确认 `--app-id` 是该运行所属的应用。 |
 | `run_not_stoppable` | 先用 `describe run` 查看运行状态。如果运行已经结束，就无需停止。<br/><br/>如果运行仍在进行，或在表单处暂停，说明它是在服务器升级之前启动的。如果它停在表单处，而且是你的账号启动的（用 `difyctl` 启动，或作为测试运行启动），先用它的运行 ID 和 `--include-state-snapshot` 运行一次 `get run event`，再重新运行 `stop run`。其他此类运行无法用 `difyctl` 停止。 |
 | `stop run` 或 `stop task` 报 `app_mode_mismatch` | Workflow 或 Chatflow 应用的运行用 `stop run` 停止，其他应用的回复用 [`stop task`](#停止聊天助手、旧版-agent-应用或文本生成应用的回复) 停止。 |
+| `form_not_found` | 表单令牌须取自运行暂停时 `hints` 中的 `form_token`，不能用邮件或 IM 链接里的令牌；同时确认 `--app-id` 是该运行所属的应用。使用新版节点时，只有启动这次运行的账户才能填写表单。 |
+| `already_submitted` 或 `human_input_form_submitted` | 表单已经有了回答，可能来自其他收件人、你通过邮件或 IM 收到的那份请求，或你之前的一次提交。运行会按最先提交的回答继续，可用 `get run event` 跟踪。 |
+| `expired` 或 `human_input_form_expired` | 表单等待超时，或运行已停止。用 `describe run` 查看运行随后是结束了，还是继续执行了。 |
 
 任何命令都可能遇到的错误，详见「结果、错误与退出码」中的 [故障排查](/zh/cli/reference/results-errors-and-exit-codes#故障排查)。

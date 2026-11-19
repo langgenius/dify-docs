@@ -153,15 +153,24 @@ A stopped reply looks finished: its stream ends with `message_end`, and the comm
 
 ## Answer a Human Input Form
 
-<Info>
-You can answer a form from `difyctl` only when the Human Input node delivers it through **Webapp**.
-</Info>
+You can answer a form from `difyctl` only in these cases:
 
-A run that pauses at the form returns a result whose `status` is `suspended`, with one hint per action button. [Run the hint](/en/cli/find-and-run-commands#follow-hints) for your action, replacing each `null` in its `inputs` with your answer.
+- **Old Human Input node**: when the node delivers the form through **Webapp**.
+- **New Human Input node** <Badge color="blue" size="sm">Self-Hosted</Badge>: in a Workflow app, when the node's [**Recipients**](/en/self-host/use-dify/nodes/human-input#choose-who-responds) include **Initiator**. Answer as the account that started the run, signed in or with a personal access token.
 
-Or, to see the form's fields before you answer, take `form_token` from any hint and use `describe run form`, then answer with `submit run form`.
+A run that pauses at a form returns a result whose `status` is `suspended`. When you can answer the form, the result has one hint per action button. When the form went only to other recipients, `hints` is `[]`, and the run resumes once one of them answers.
 
-Either way, follow the resumed run with `get run event`, passing the paused result's `run_id` as `--run-id`. Keep `--include-state-snapshot`, or the command can sit silent for up to 5 minutes.
+To answer, [run the hint](/en/cli/find-and-run-commands#follow-hints) for your action, replacing each `null` in its `inputs` with your answer. To see the form's fields first, take `form_token` from any hint and run `difyctl describe run form`, then answer with `submit run form`.
+
+With the new node, check your `inputs` against `describe run form` before you submit:
+
+- Fill in every field, leaving no `null`.
+- Give a Paragraph field a string and a Select field one of its options.
+- Use only the form's fields as keys.
+
+If your `inputs` break any of these, `submit run form` fails with `invalid_input`.
+
+Whoever answers, follow the resumed run with `get run event`, passing the paused result's `run_id` as `--run-id`. Keep `--include-state-snapshot`, or the command can sit silent for up to 5 minutes.
 
 ```bash
 # show the form's fields
@@ -176,6 +185,10 @@ difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5
 # keep following if the run can pause at another form later
 difyctl get run event --app-id 7f3e9a2b-1c4d-4e8f-9a0b-2d5c8e1f4a7b --run-id 4b5c6d7e-8f90-4a1b-b2c3-d4e5f6a7b8c9 --include-state-snapshot --continue-on-pause
 ```
+
+<Info>
+With the new node, the form may also reach you by email or IM (instant messaging app). The first answer from any copy is the one that counts; a later `submit run form` fails.
+</Info>
 
 ## Find Why a Run Failed
 
@@ -204,5 +217,8 @@ Keep `--triggered-from app-run`. Without it, the list shows only test runs of th
 | `run_not_found` | Check that you passed the run ID, not a `task_id`, and that `--app-id` is the app the run belongs to. |
 | `run_not_stoppable` | Check the run with `describe run`. If it has already ended, there's nothing to stop.<br/><br/>If it's still running or paused at a form, it started before your server was upgraded. If it's paused and your account started it, with `difyctl` or as a test run, run `get run event` once with its run ID and `--include-state-snapshot`, then `stop run` again. Other such runs can't be stopped from `difyctl`. |
 | `app_mode_mismatch` from `stop run` or `stop task` | Stop a Workflow or Chatflow run with `stop run`, and any other app's reply with [`stop task`](#stop-a-chatbot-legacy-agent-or-text-generator-reply). |
+| `form_not_found` | Check that the form token is the `form_token` from the paused result's `hints`, not one from an email or IM link, and that `--app-id` is the app the run belongs to. With the new node, only the account that started the run can answer. |
+| `already_submitted` or `human_input_form_submitted` | The form already has an answer: from another recipient, from your email or IM copy of the request, or from an earlier submit. The run goes on with that first answer. Follow it with `get run event`. |
+| `expired` or `human_input_form_expired` | The form waited past its timeout, or the run was stopped. Run `describe run` to see how the run ended or carried on. |
 
 For errors that can come from any command, see [Troubleshooting](/en/cli/reference/results-errors-and-exit-codes#troubleshooting) on Results, Errors, and Exit Codes.
