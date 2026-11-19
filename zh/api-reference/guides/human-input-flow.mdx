@@ -30,9 +30,11 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
     2. 在 SSE 流中关注 `human_input_required` 事件，提取其中的 `form_token`，并保留 `workflow_run_id`，以便第 5 步需要时恢复监听。
 
         若 `form_token` 为 `null`，说明节点没有 [把表单发给你的终端用户](#api-可处理哪些表单)：表单由其他收件人通过邮件、IM 或 Dify 控制台回复。此时可直接跳到第 5 步等待回复，或者 [停止这次运行](#停止已暂停的运行)。
+
+        若在拿到 `form_token` 之前流就断开了，可调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 重新连接，传入本次运行先前 `workflow_started` 事件中的 `workflow_run_id`、同一个 `user`，以及 `include_state_snapshot=true`。新的流会为每个仍在等待的表单重放 `human_input_required` 事件，其中的 `form_token` 不变。
   </Step>
   <Step title="获取表单定义">
-    使用 `form_token` 调用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 接口，然后将表单呈现给接收者：`form_content` 是表单的 Markdown 正文，`inputs` 是字段，`user_actions` 是按钮。
+    使用 `form_token` 调用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 接口，然后将表单呈现给接收者：`form_content` 是表单的 Markdown 正文，`inputs` 是字段，`user_actions` 是按钮。将每个字段放到正文中对应占位符 `{{#$output.<output_variable_name>#}}` 所在的位置。
 
     预填 `paragraph` 字段时，先看它的 `default`：
 
@@ -65,7 +67,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 
     恢复后的事件流会先携带确认提交的 `human_input_form_filled`（表单过期时则是 `human_input_form_timeout`），随后像从未暂停过一样，继续输出其余节点事件直至完成。
 
-    如需先重放已执行节点的状态，可附带 `include_state_snapshot=true`。若工作流串联了多个人工介入节点，流默认会在每次暂停时关闭；传入 `continue_on_pause=true` 可让同一条流跨越所有暂停保持连接。
+    若工作流串联了多个人工介入节点，流默认会在每次暂停时关闭；传入 `continue_on_pause=true`，流在每次暂停后都不会关闭。
   </Step>
 </Steps>
 
@@ -106,7 +108,7 @@ description: 通过 API 处理暂停中的人工介入表单的端到端流程
 
     ```json
     {
-      "form_content": "请审阅草稿并确认或提出修改。",
+      "form_content": "请审阅草稿并确认或提出修改。\n\n{{#$output.feedback#}}\n\n如有相关文件，请一并附上：\n\n{{#$output.attachments#}}",
       "inputs": [
         {
           "type": "paragraph",
