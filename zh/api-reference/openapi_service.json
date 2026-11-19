@@ -2029,13 +2029,62 @@
       "FormInput": {
         "description": "表单输入字段定义。",
         "properties": {
+          "allowed_file_extensions": {
+            "description": "当 `allowed_file_types` 包含 `custom` 时允许的文件扩展名，按搭建者填写的原样返回，例如 `.md`。Dify 用它们校验文件时，会忽略大小写和前导 `.`。`file` 和 `file-list` 输入会包含此字段。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allowed_file_types": {
+            "description": "接收人可上传的文件类别。`file` 和 `file-list` 输入会包含此字段。可用值：`image`、`document`、`audio`、`video`、`custom`。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "allowed_file_upload_methods": {
+            "description": "接收人可使用的上传方式。可用值：`local_file`、`remote_url`。`file` 和 `file-list` 输入会包含此字段。",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "default": {
             "$ref": "#/components/schemas/FormInputDefault",
-            "description": "该输入的默认值配置。",
+            "description": "`paragraph` 输入的默认值；其他输入类型不包含该字段。\n\n预填该字段时，`type` 为 `constant` 则使用 `value`，为 `variable` 则使用 `resolved_default_values[output_variable_name]`。`default` 为 `null` 时，字段留空。",
             "nullable": true
           },
+          "number_limits": {
+            "description": "接收人可上传的最大文件数。仅 `file-list` 输入会包含此字段。",
+            "type": "integer"
+          },
+          "option_source": {
+            "description": "`select` 输入的选项，列在 `value` 中。其他输入类型不包含该字段。",
+            "properties": {
+              "selector": {
+                "description": "旧版人工介入节点的表单可能在此字段中带有变量路径。列出选项时改用 `value`。",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "type": {
+                "description": "Dify 解析出选项后为 `constant`。对于旧版人工介入节点的表单，若本次运行中缺少选项所引用的变量，此字段保持为 `variable`，此时 `value` 中是搭建者配置的原样选项。\n\n无需根据此字段分别处理：两种情况下都提供 `value` 中的选项即可。",
+                "type": "string"
+              },
+              "value": {
+                "description": "接收者可选的选项；选项来自变量时，Dify 已完成解析。",
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
           "output_variable_name": {
-            "description": "存储输入值的变量名称。",
+            "description": "工作流中引用该输入提交值的变量名，也是提交时 `inputs` 对象里的键。",
             "type": "string"
           },
           "type": {
@@ -2049,18 +2098,18 @@
         "description": "表单输入的默认值配置。",
         "properties": {
           "selector": {
-            "description": "当 `type` 为 `variable` 时的变量选择器路径。",
+            "description": "`type` 为 `variable` 时的变量路径。预填字段时用不到它。",
             "items": {
               "type": "string"
             },
             "type": "array"
           },
           "type": {
-            "description": "`variable` for dynamic values from 工作流 variables, `constant` for static values.",
+            "description": "预填文本在 `value` 中时为 `constant`，在 `resolved_default_values` 中时为 `variable`。",
             "type": "string"
           },
           "value": {
-            "description": "当 `type` 为 `constant` 时的静态值。",
+            "description": "`type` 为 `constant` 时要预填的文本。`type` 为 `variable` 时忽略此字段：它不是本次运行的值，通常为 `\"\"`。",
             "type": "string"
           }
         },
@@ -2071,8 +2120,7 @@
         "properties": {
           "form_definition": {
             "$ref": "#/components/schemas/HumanInputFormDefinition",
-            "description": "人工介入节点的表单定义。当内容表示提交响应时为 `null`。",
-            "nullable": true
+            "description": "人工介入节点发出时的表单，提交前后都会返回。"
           },
           "form_submission_data": {
             "$ref": "#/components/schemas/HumanInputFormSubmissionData",
@@ -2105,7 +2153,7 @@
             "type": "array"
           },
           "display_in_ui": {
-            "description": "表单是否应在 UI 中显示。",
+            "description": "你的终端用户能否回复该表单。旧版人工介入节点的表单提交后，此字段仍为 `true`；可通过 `form_token` 判断表单是否仍可回复。",
             "type": "boolean"
           },
           "expiration_time": {
@@ -2113,7 +2161,7 @@
             "type": "integer"
           },
           "form_content": {
-            "description": "与表单一起显示的 Markdown 或文本内容。",
+            "description": "表单的 Markdown 正文，已填入本次运行的变量值。每个输入应放在其占位符 `{{#$output.<output_variable_name>#}}` 所在的位置。\n\n表单提交后，占位符仍会保留。如需显示已填入提交内容的正文，使用 `form_submission_data.rendered_content`。",
             "type": "string"
           },
           "form_id": {
@@ -2121,12 +2169,16 @@
             "type": "string"
           },
           "form_token": {
-            "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。表单已不在等待回复或仅通过邮件送达时为 `null`。",
+            "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。表单已不在等待回复，或人工介入节点不会把表单发给你的终端用户时，为 `null`。",
             "nullable": true,
             "type": "string"
           },
+          "form_version": {
+            "description": "表单由哪个人工介入节点生成：`\"1\"` 为旧版人工介入节点，`\"2\"` 为新版人工介入节点。",
+            "type": "string"
+          },
           "inputs": {
-            "description": "表单中的输入字段。",
+            "description": "接收人需要填写的字段。",
             "items": {
               "$ref": "#/components/schemas/FormInput"
             },
@@ -2142,7 +2194,7 @@
           },
           "resolved_default_values": {
             "additionalProperties": true,
-            "description": "表单输入的已解析默认值，按输出变量名称索引。",
+            "description": "本次运行为 `paragraph` 默认值解析出的值，以 `output_variable_name` 为键。字段的 `default.type` 为 `variable` 时，从这里取值预填。缺少对应的键时，字段留空。\n\n旧版人工介入节点的表单中，各值保留变量原本的 JSON 类型（例如数字或对象），预填字段前需先转换为文本。新版节点发送的均为字符串。",
             "type": "object"
           }
         },
@@ -2168,8 +2220,13 @@
             "type": "string"
           },
           "rendered_content": {
-            "description": "表单提交的渲染内容。",
+            "description": "已填入提交内容的表单正文。",
             "type": "string"
+          },
+          "submitted_data": {
+            "additionalProperties": true,
+            "description": "提交的值，以各输入的 `output_variable_name` 为键。表单没有输入时为 `{}`。",
+            "type": "object"
           }
         },
         "type": "object"
@@ -5437,16 +5494,16 @@
                     "type": "array"
                   },
                   "display_in_ui": {
-                    "description": "表单是否也在 Dify 控制台中显示。",
+                    "description": "你的应用能否回复该表单：`form_token` 有值时为 `true`，否则为 `false`。",
                     "type": "boolean"
                   },
                   "expiration_time": {
-                    "description": "Unix 时间戳（秒），超过后表单无法再被提交。",
+                    "description": "人工介入节点所设截止时间的 Unix 时间戳（秒）。部署还可能为人工介入表单设置全局超时，表单会因此提前关闭。\n\n要向接收人展示截止时间，使用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 返回的 `expiration_time`。新版人工介入节点的表单，该值取两者中较早的时间；旧版节点的表单，该值就是这里的截止时间，因此表单可能早于你展示的时间关闭。",
                     "format": "int64",
                     "type": "integer"
                   },
                   "form_content": {
-                    "description": "已替换工作流变量的预渲染表单正文。",
+                    "description": "表单的 Markdown 正文，已填入本次运行的变量值。每个输入应放在其占位符 `{{#$output.<output_variable_name>#}}` 所在的位置。",
                     "type": "string"
                   },
                   "form_id": {
@@ -5454,38 +5511,91 @@
                     "type": "string"
                   },
                   "form_token": {
-                    "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。表单未通过 Web 应用送达时为 `null`，此时 `approval_channels` 会列出它的送达方式。",
+                    "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。人工介入节点不会把表单发给你的终端用户时为 `null`，详见 [API 可处理哪些表单](/zh/api-reference/guides/human-input-flow#api-可处理哪些表单)。",
                     "nullable": true,
                     "type": "string"
                   },
+                  "form_version": {
+                    "description": "表单由哪个人工介入节点生成：`\"1\"` 为旧版人工介入节点，`\"2\"` 为新版人工介入节点。",
+                    "type": "string"
+                  },
                   "inputs": {
-                    "description": "接收者需要填写的表单输入字段。",
+                    "description": "接收人需要填写的字段。",
                     "items": {
                       "properties": {
+                        "allowed_file_extensions": {
+                          "description": "当 `allowed_file_types` 包含 `custom` 时允许的文件扩展名，按搭建者填写的原样返回，例如 `.md`。Dify 用它们校验文件时，会忽略大小写和前导 `.`。`file` 和 `file-list` 输入会包含此字段。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_file_types": {
+                          "description": "接收人可上传的文件类别。`file` 和 `file-list` 输入会包含此字段。可用值：`image`、`document`、`audio`、`video`、`custom`。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_file_upload_methods": {
+                          "description": "接收人可使用的上传方式。可用值：`local_file`、`remote_url`。`file` 和 `file-list` 输入会包含此字段。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "default": {
-                          "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                          "description": "`paragraph` 输入的默认值；其他输入类型不包含该字段。\n\n预填该字段时，`type` 为 `constant` 则使用 `value`，为 `variable` 则使用 `resolved_default_values[output_variable_name]`。`default` 为 `null` 时，字段留空。",
                           "nullable": true,
                           "properties": {
                             "selector": {
-                              "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。",
+                              "description": "`type` 为 `variable` 时的变量路径。预填字段时用不到它。",
                               "items": {
                                 "type": "string"
                               },
                               "type": "array"
                             },
                             "type": {
-                              "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。",
+                              "description": "预填文本在 `value` 中时为 `constant`，在 `resolved_default_values` 中时为 `variable`。",
                               "type": "string"
                             },
                             "value": {
-                              "description": "当 `type` 为 `constant` 时的字面默认值。始终为字符串。",
+                              "description": "`type` 为 `constant` 时要预填的文本。`type` 为 `variable` 时忽略此字段：它不是本次运行的值，通常为 `\"\"`。",
                               "type": "string"
                             }
                           },
                           "type": "object"
                         },
+                        "number_limits": {
+                          "description": "接收人可上传的最大文件数。仅 `file-list` 输入会包含此字段。",
+                          "type": "integer"
+                        },
+                        "option_source": {
+                          "description": "`select` 输入的选项，列在 `value` 中。其他输入类型不包含该字段。",
+                          "properties": {
+                            "selector": {
+                              "description": "旧版人工介入节点的表单可能在此字段中带有变量路径。列出选项时改用 `value`。",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "type": {
+                              "description": "Dify 解析出选项后为 `constant`。对于旧版人工介入节点的表单，若本次运行中缺少选项所引用的变量，此字段保持为 `variable`，此时 `value` 中是搭建者配置的原样选项。\n\n无需根据此字段分别处理：两种情况下都提供 `value` 中的选项即可。",
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "接收者可选的选项；选项来自变量时，Dify 已完成解析。",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "type": "object"
+                        },
                         "output_variable_name": {
-                          "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。",
+                          "description": "工作流中引用该输入提交值的变量名，也是提交时 `inputs` 对象里的键。",
                           "type": "string"
                         },
                         "type": {
@@ -5506,10 +5616,8 @@
                     "type": "string"
                   },
                   "resolved_default_values": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "按输入的 `output_variable_name` 分组的预填充默认值。所有值均为字符串。",
+                    "additionalProperties": true,
+                    "description": "本次运行为 `paragraph` 默认值解析出的值，以 `output_variable_name` 为键。字段的 `default.type` 为 `variable` 时，从这里取值预填。缺少对应的键时，字段留空。\n\n旧版人工介入节点的表单中，各值保留变量原本的 JSON 类型（例如数字或对象），预填字段前需先转换为文本。新版节点发送的均为字符串。",
                     "type": "object"
                   }
                 },
@@ -6627,7 +6735,7 @@
                   },
                   "outputs": {
                     "additionalProperties": true,
-                    "description": "暂停时的部分输出。",
+                    "description": "你发起运行时返回的事件流中，此字段始终为 `{}`。用 `include_state_snapshot=true` 调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 时，重放的 `workflow_paused` 会带上运行暂停时已有的输出。",
                     "type": "object"
                   },
                   "paused_nodes": {
@@ -6638,7 +6746,7 @@
                     "type": "array"
                   },
                   "reasons": {
-                    "description": "暂停原因。",
+                    "description": "运行暂停的每个原因各对应一项。人工介入对应的项中，`TYPE` 为 `human_input_required`，其余字段与该表单 `human_input_required` 事件的 `data` 相同。旧版人工介入节点的表单对应的项不包含 `display_in_ui`。",
                     "items": {
                       "additionalProperties": true,
                       "type": "object"
@@ -6663,6 +6771,10 @@
                   }
                 },
                 "type": "object"
+              },
+              "workflow_run_id": {
+                "description": "工作流执行运行 ID。",
+                "type": "string"
               }
             },
             "type": "object"
@@ -7534,16 +7646,16 @@
                     "type": "array"
                   },
                   "display_in_ui": {
-                    "description": "表单是否也在 Dify 控制台中显示。",
+                    "description": "你的应用能否回复该表单：`form_token` 有值时为 `true`，否则为 `false`。",
                     "type": "boolean"
                   },
                   "expiration_time": {
-                    "description": "Unix 时间戳（秒），超过后表单无法再被提交。",
+                    "description": "人工介入节点所设截止时间的 Unix 时间戳（秒）。部署还可能为人工介入表单设置全局超时，表单会因此提前关闭。\n\n要向接收人展示截止时间，使用 [获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 返回的 `expiration_time`。新版人工介入节点的表单，该值取两者中较早的时间；旧版节点的表单，该值就是这里的截止时间，因此表单可能早于你展示的时间关闭。",
                     "format": "int64",
                     "type": "integer"
                   },
                   "form_content": {
-                    "description": "已替换工作流变量的预渲染表单正文。",
+                    "description": "表单的 Markdown 正文，已填入本次运行的变量值。每个输入应放在其占位符 `{{#$output.<output_variable_name>#}}` 所在的位置。",
                     "type": "string"
                   },
                   "form_id": {
@@ -7551,38 +7663,91 @@
                     "type": "string"
                   },
                   "form_token": {
-                    "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。表单未通过 Web 应用送达时为 `null`，此时 `approval_channels` 会列出它的送达方式。",
+                    "description": "[获取人工介入表单](/zh/api-reference/human-input/get-human-input-form) 和 [提交人工介入表单](/zh/api-reference/human-input/submit-human-input-form) 的访问令牌。人工介入节点不会把表单发给你的终端用户时为 `null`，详见 [API 可处理哪些表单](/zh/api-reference/guides/human-input-flow#api-可处理哪些表单)。",
                     "nullable": true,
                     "type": "string"
                   },
+                  "form_version": {
+                    "description": "表单由哪个人工介入节点生成：`\"1\"` 为旧版人工介入节点，`\"2\"` 为新版人工介入节点。",
+                    "type": "string"
+                  },
                   "inputs": {
-                    "description": "接收者需要填写的表单输入字段。",
+                    "description": "接收人需要填写的字段。",
                     "items": {
                       "properties": {
+                        "allowed_file_extensions": {
+                          "description": "当 `allowed_file_types` 包含 `custom` 时允许的文件扩展名，按搭建者填写的原样返回，例如 `.md`。Dify 用它们校验文件时，会忽略大小写和前导 `.`。`file` 和 `file-list` 输入会包含此字段。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_file_types": {
+                          "description": "接收人可上传的文件类别。`file` 和 `file-list` 输入会包含此字段。可用值：`image`、`document`、`audio`、`video`、`custom`。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "allowed_file_upload_methods": {
+                          "description": "接收人可使用的上传方式。可用值：`local_file`、`remote_url`。`file` 和 `file-list` 输入会包含此字段。",
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
                         "default": {
-                          "description": "从工作流上下文解析得到的默认值。未配置默认值时为 `null`。",
+                          "description": "`paragraph` 输入的默认值；其他输入类型不包含该字段。\n\n预填该字段时，`type` 为 `constant` 则使用 `value`，为 `variable` 则使用 `resolved_default_values[output_variable_name]`。`default` 为 `null` 时，字段留空。",
                           "nullable": true,
                           "properties": {
                             "selector": {
-                              "description": "当 `type` 为 `variable` 时，变量引用路径（例如 `[\"node_id\", \"var_name\"]`）。至少包含两个元素。",
+                              "description": "`type` 为 `variable` 时的变量路径。预填字段时用不到它。",
                               "items": {
                                 "type": "string"
                               },
                               "type": "array"
                             },
                             "type": {
-                              "description": "默认值来源。`constant` 表示将 `value` 作为字面字符串；`variable` 表示 `selector` 指向工作流变量。",
+                              "description": "预填文本在 `value` 中时为 `constant`，在 `resolved_default_values` 中时为 `variable`。",
                               "type": "string"
                             },
                             "value": {
-                              "description": "当 `type` 为 `constant` 时的字面默认值。始终为字符串。",
+                              "description": "`type` 为 `constant` 时要预填的文本。`type` 为 `variable` 时忽略此字段：它不是本次运行的值，通常为 `\"\"`。",
                               "type": "string"
                             }
                           },
                           "type": "object"
                         },
+                        "number_limits": {
+                          "description": "接收人可上传的最大文件数。仅 `file-list` 输入会包含此字段。",
+                          "type": "integer"
+                        },
+                        "option_source": {
+                          "description": "`select` 输入的选项，列在 `value` 中。其他输入类型不包含该字段。",
+                          "properties": {
+                            "selector": {
+                              "description": "旧版人工介入节点的表单可能在此字段中带有变量路径。列出选项时改用 `value`。",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            },
+                            "type": {
+                              "description": "Dify 解析出选项后为 `constant`。对于旧版人工介入节点的表单，若本次运行中缺少选项所引用的变量，此字段保持为 `variable`，此时 `value` 中是搭建者配置的原样选项。\n\n无需根据此字段分别处理：两种情况下都提供 `value` 中的选项即可。",
+                              "type": "string"
+                            },
+                            "value": {
+                              "description": "接收者可选的选项；选项来自变量时，Dify 已完成解析。",
+                              "items": {
+                                "type": "string"
+                              },
+                              "type": "array"
+                            }
+                          },
+                          "type": "object"
+                        },
                         "output_variable_name": {
-                          "description": "引用该输入提交值在工作流中使用的变量名。对应提交 `inputs` 对象中的键。",
+                          "description": "工作流中引用该输入提交值的变量名，也是提交时 `inputs` 对象里的键。",
                           "type": "string"
                         },
                         "type": {
@@ -7603,10 +7768,8 @@
                     "type": "string"
                   },
                   "resolved_default_values": {
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "description": "按输入的 `output_variable_name` 分组的预填充默认值。所有值均为字符串。",
+                    "additionalProperties": true,
+                    "description": "本次运行为 `paragraph` 默认值解析出的值，以 `output_variable_name` 为键。字段的 `default.type` 为 `variable` 时，从这里取值预填。缺少对应的键时，字段留空。\n\n旧版人工介入节点的表单中，各值保留变量原本的 JSON 类型（例如数字或对象），预填字段前需先转换为文本。新版节点发送的均为字符串。",
                     "type": "object"
                   }
                 },
@@ -8386,7 +8549,7 @@
                   },
                   "outputs": {
                     "additionalProperties": true,
-                    "description": "暂停时的部分输出。",
+                    "description": "你发起运行时返回的事件流中，此字段始终为 `{}`。用 `include_state_snapshot=true` 调用 [流式获取工作流事件](/zh/api-reference/workflow-runs/stream-workflow-events) 时，重放的 `workflow_paused` 会带上运行暂停时已有的输出。",
                     "type": "object"
                   },
                   "paused_nodes": {
@@ -8397,7 +8560,7 @@
                     "type": "array"
                   },
                   "reasons": {
-                    "description": "暂停原因。",
+                    "description": "运行暂停的每个原因各对应一项。人工介入对应的项中，`TYPE` 为 `human_input_required`，其余字段与该表单 `human_input_required` 事件的 `data` 相同。旧版人工介入节点的表单对应的项不包含 `display_in_ui`。",
                     "items": {
                       "additionalProperties": true,
                       "type": "object"
@@ -9564,7 +9727,7 @@
                 "examples": {
                   "humanInputPause": {
                     "summary": "响应示例 - 人工介入暂停",
-                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"approval_channels\": [], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\", \"inputs\": [{\"type\": \"paragraph\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"paused_nodes\": [\"approval_node\"], \"outputs\": {}, \"reasons\": [{\"TYPE\": \"human_input_required\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_content\": \"请审阅草稿。\", \"inputs\": [{\"type\": \"paragraph\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"resolved_default_values\": {\"comment\": \"\"}, \"form_token\": \"tok_abc123\", \"approval_channels\": [], \"expiration_time\": 1705494029}], \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5, \"total_tokens\": 0, \"total_steps\": 1}}"
+                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407629, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"created_at\": 1705407629, \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_version\": \"2\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"resolved_default_values\": {}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"created_at\": 1705407629, \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"paused_nodes\": [\"approval_node\"], \"outputs\": {}, \"reasons\": [{\"form_version\": \"2\", \"TYPE\": \"human_input_required\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"resolved_default_values\": {}, \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"expiration_time\": 1705494029}], \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5, \"total_tokens\": 0, \"total_steps\": 2}}"
                   },
                   "streamingResponseAgent": {
                     "summary": "响应示例 - 流式返回（旧版 Agent）",
@@ -20241,7 +20404,7 @@
                     "summary": "响应示例",
                     "value": {
                       "expiration_time": 1745510400,
-                      "form_content": "请审阅草稿，设置优先级，然后确认或提出修改。",
+                      "form_content": "请审阅草稿，如有需要可直接编辑，然后批准或请求修改。\n\n{{#$output.draft#}}\n\n给作者的反馈：\n\n{{#$output.feedback#}}\n\n优先级：\n\n{{#$output.priority#}}\n\n封面图片：\n\n{{#$output.attachment#}}\n\n相关文档：\n\n{{#$output.attachments#}}",
                       "inputs": [
                         {
                           "default": {
@@ -20332,7 +20495,7 @@
                       "type": "integer"
                     },
                     "form_content": {
-                      "description": "已替换工作流变量的预渲染表单正文。",
+                      "description": "表单的 Markdown 正文，已填入本次运行的变量值。每个输入应放在其占位符 `{{#$output.<output_variable_name>#}}` 所在的位置。",
                       "type": "string"
                     },
                     "inputs": {
@@ -20340,7 +20503,7 @@
                       "items": {
                         "properties": {
                           "allowed_file_extensions": {
-                            "description": "当 `allowed_file_types` 包含 `custom` 时允许的文件扩展名。每个扩展名都需要包含前导 `.`，例如 `.md`。`file` 和 `file-list` 输入会包含此字段。",
+                            "description": "当 `allowed_file_types` 包含 `custom` 时允许的文件扩展名，按搭建者填写的原样返回，例如 `.md`。Dify 用它们校验文件时，会忽略大小写和前导 `.`。`file` 和 `file-list` 输入会包含此字段。",
                             "items": {
                               "type": "string"
                             },
@@ -20349,13 +20512,6 @@
                           "allowed_file_types": {
                             "description": "接收人可上传的文件类别。`file` 和 `file-list` 输入会包含此字段。可用值：`image`、`document`、`audio`、`video`、`custom`。",
                             "items": {
-                              "enum": [
-                                "image",
-                                "document",
-                                "audio",
-                                "video",
-                                "custom"
-                              ],
                               "type": "string"
                             },
                             "type": "array"
@@ -20363,10 +20519,6 @@
                           "allowed_file_upload_methods": {
                             "description": "接收人可使用的上传方式。可用值：`local_file`、`remote_url`。`file` 和 `file-list` 输入会包含此字段。",
                             "items": {
-                              "enum": [
-                                "local_file",
-                                "remote_url"
-                              ],
                               "type": "string"
                             },
                             "type": "array"
@@ -20629,22 +20781,38 @@
                     "summary": "bad_request",
                     "value": {
                       "code": "bad_request",
-                      "message": "Form recipient type is invalid",
+                      "message": "The workflow is not paused with an active checkpoint.",
                       "status": 400
                     }
                   },
-                  "invalid_form_data": {
-                    "summary": "invalid_form_data",
+                  "invalid_form_data_new_node": {
+                    "summary": "invalid_form_data（新版节点）",
+                    "value": {
+                      "code": "invalid_form_data",
+                      "message": "Submitted fields must match the resolved form",
+                      "status": 400
+                    }
+                  },
+                  "invalid_form_data_old_node": {
+                    "summary": "invalid_form_data（旧版节点）",
                     "value": {
                       "code": "invalid_form_data",
                       "message": "Missing required inputs: feedback",
+                      "status": 400
+                    }
+                  },
+                  "invalid_param": {
+                    "summary": "invalid_param",
+                    "value": {
+                      "code": "invalid_param",
+                      "message": "Arg user must be provided.",
                       "status": 400
                     }
                   }
                 }
               }
             },
-            "description": "- `bad_request`：表单接收人类型无效。\n- `invalid_form_data`：提交内容未通过表单定义的校验。"
+            "description": "- `bad_request`：表单来自新版人工介入节点，且提交时其运行并未暂停。运行刚暂停、暂停状态仍在保存时，也可能短暂返回此错误；稍后重新提交即可。\n- `invalid_form_data`：提交内容未通过表单定义的校验。\n- `invalid_param`：必填字段 `user` 缺失或为空。"
           },
           "404": {
             "content": {
@@ -43502,7 +43670,7 @@
             }
           },
           {
-            "description": "为 `true` 时，从持久化状态快照重放，在流式发送新事件前附带已执行节点的状态摘要。",
+            "description": "如果错过了某个表单的 `human_input_required` 事件，设为 `true` 即可重新获取该表单。不设置时，流只包含你连接之后发布的事件。\n\n设置后，流会先重放运行至今的情况，再发送新事件：\n\n- 每个已执行节点的状态\n- 已暂停的运行：每个仍在等待的表单各一个 `human_input_required`，随后是 `workflow_paused`\n\n重放的 `human_input_required` 事件与实时事件字段相同，`form_token` 也相同。",
             "in": "query",
             "name": "include_state_snapshot",
             "required": false,
@@ -43529,11 +43697,11 @@
                 "examples": {
                   "resumedRun": {
                     "summary": "响应示例 - 恢复运行（Workflow）",
-                    "value": "event: ping\n\ndata: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"请审阅草稿。\", \"action_id\": \"approve\", \"action_text\": \"批准\", \"submitted_data\": {\"comment\": \"没问题，可以发布。\"}}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_2\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 2, \"created_at\": 1705407705}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"Approved, now translating.\", \"node_id\": \"node_1\", \"is_final\": false}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"\", \"node_id\": \"node_1\", \"is_final\": true}}\n\ndata: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour\"}, \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
+                    "value": "event: ping\n\ndata: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"请审阅草稿。\\n\\n没问题，可以发布。\", \"action_id\": \"approve\", \"action_text\": \"批准\", \"submitted_data\": {\"comment\": \"没问题，可以发布。\"}}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"node_exec_2\", \"node_id\": \"node_1\", \"node_type\": \"llm\", \"title\": \"LLM Node\", \"index\": 2, \"created_at\": 1705407705}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"Approved, now translating.\", \"node_id\": \"node_1\", \"is_final\": false}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"reasoning\": \"\", \"node_id\": \"node_1\", \"is_final\": true}}\n\ndata: {\"event\": \"text_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"text\": \"Bonjour\", \"from_variable_selector\": [\"node_1\", \"text\"]}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"outputs\": {\"result\": \"Bonjour\"}, \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
                   },
                   "resumedRunChatflow": {
                     "summary": "响应示例 - 恢复运行（Chatflow）",
-                    "value": "event: ping\n\ndata: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"请审阅草稿。\", \"action_id\": \"approve\", \"action_text\": \"批准\", \"submitted_data\": {\"comment\": \"没问题，可以发布。\"}}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"created_at\": 1705407705}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"The reviewer approved the draft.\", \"node_id\": \"node_llm_1\", \"is_final\": false}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}}\n\ndata: {\"event\": \"message\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"answer\": \"Approved\", \"created_at\": 1705407706}\n\ndata: {\"event\": \"node_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"status\": \"succeeded\", \"elapsed_time\": 1.2, \"created_at\": 1705407705, \"finished_at\": 1705407706}}\n\ndata: {\"event\": \"message_end\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"metadata\": {\"usage\": {\"total_tokens\": 42, \"latency\": 1.3}}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
+                    "value": "event: ping\n\ndata: {\"event\": \"human_input_form_filled\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"rendered_content\": \"请审阅草稿。\\n\\n没问题，可以发布。\", \"action_id\": \"approve\", \"action_text\": \"批准\", \"submitted_data\": {\"comment\": \"没问题，可以发布。\"}}}\n\ndata: {\"event\": \"node_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"created_at\": 1705407705}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"The reviewer approved the draft.\", \"node_id\": \"node_llm_1\", \"is_final\": false}}\n\ndata: {\"event\": \"reasoning_chunk\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407705, \"data\": {\"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"reasoning\": \"\", \"node_id\": \"node_llm_1\", \"is_final\": true}}\n\ndata: {\"event\": \"message\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"answer\": \"Approved\", \"created_at\": 1705407706}\n\ndata: {\"event\": \"node_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"ne_002\", \"node_id\": \"node_llm_1\", \"node_type\": \"llm\", \"title\": \"LLM\", \"index\": 2, \"status\": \"succeeded\", \"elapsed_time\": 1.2, \"created_at\": 1705407705, \"finished_at\": 1705407706}}\n\ndata: {\"event\": \"message_end\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"metadata\": {\"usage\": {\"total_tokens\": 42, \"latency\": 1.3}}}\n\ndata: {\"event\": \"workflow_finished\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"message_id\": \"2e4f6a8b-1c3d-5e7f-9a0b-2c4d6e8f0a1b\", \"conversation_id\": \"9d3a2f1b-6c7d-4e8f-a0b1-c2d3e4f5a6b7\", \"created_at\": 1705407706, \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"status\": \"succeeded\", \"elapsed_time\": 2.1, \"total_tokens\": 42, \"total_steps\": 2, \"created_at\": 1705407629, \"finished_at\": 1705407706}}"
                   }
                 },
                 "schema": {
@@ -43848,7 +44016,7 @@
                 "examples": {
                   "humanInputPause": {
                     "summary": "响应示例 - 人工介入暂停",
-                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"approval_channels\": [], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\", \"inputs\": [{\"type\": \"paragraph\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
+                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"data\": {\"form_version\": \"2\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"resolved_default_values\": {}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"paused_nodes\": [\"approval_node\"], \"outputs\": {}, \"reasons\": [{\"form_version\": \"2\", \"TYPE\": \"human_input_required\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"resolved_default_values\": {}, \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"expiration_time\": 1705494029}], \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5, \"total_tokens\": 0, \"total_steps\": 2}}"
                   },
                   "streamingResponse": {
                     "summary": "响应示例 - 流式返回",
@@ -44244,7 +44412,7 @@
                 "examples": {
                   "humanInputPause": {
                     "summary": "响应示例 - 人工介入暂停",
-                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_token\": \"tok_abc123\", \"approval_channels\": [], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\", \"inputs\": [{\"type\": \"paragraph\", \"output_variable_name\": \"comment\", \"default\": null}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": false, \"resolved_default_values\": {\"comment\": \"\"}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5}}"
+                    "value": "event: ping\n\ndata: {\"event\": \"workflow_started\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"data\": {\"id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"workflow_id\": \"7c3e33d4-2a8b-4e5f-9b1a-d3c6e8f12345\", \"inputs\": {\"draft\": \"Hello\"}, \"created_at\": 1705407629, \"reason\": \"initial\"}}\n\ndata: {\"event\": \"human_input_required\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"data\": {\"form_version\": \"2\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"resolved_default_values\": {}, \"expiration_time\": 1705494029}}\n\ndata: {\"event\": \"workflow_paused\", \"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"task_id\": \"c3800678-a077-43df-a102-53f23ed20b88\", \"data\": {\"workflow_run_id\": \"fb47b2e6-5e43-4f90-be01-d5c5a088d156\", \"paused_nodes\": [\"approval_node\"], \"outputs\": {}, \"reasons\": [{\"form_version\": \"2\", \"TYPE\": \"human_input_required\", \"form_id\": \"a1b2c3d4-e5f6-7890-abcd-ef1234567890\", \"form_content\": \"请审阅草稿。\\n\\n{{#$output.comment#}}\", \"inputs\": [{\"output_variable_name\": \"comment\", \"type\": \"paragraph\", \"default\": {\"type\": \"constant\", \"selector\": [], \"value\": \"\"}}], \"actions\": [{\"id\": \"approve\", \"title\": \"批准\", \"button_style\": \"primary\"}], \"node_id\": \"approval_node\", \"node_title\": \"Approval\", \"resolved_default_values\": {}, \"display_in_ui\": true, \"form_token\": \"pX3v9QeL2mZr8TnB4yWc6Hk1sD5fJ7gA0uRtYbNq2Ve\", \"approval_channels\": [], \"expiration_time\": 1705494029}], \"status\": \"paused\", \"created_at\": 1705407629, \"elapsed_time\": 0.5, \"total_tokens\": 0, \"total_steps\": 2}}"
                   },
                   "streamingResponse": {
                     "summary": "响应示例 - 流式返回",
