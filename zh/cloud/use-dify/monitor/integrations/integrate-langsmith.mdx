@@ -66,14 +66,14 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
   ![配置 LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/b6578e410979cdb9da901aedc94a444d.png)
 </Frame>
 
-点击配置后，将在 LangSmith 内创建的 **API Key** 和 **项目名**粘贴到配置内并保存。
+点击配置后，将 **API Key** 和 **项目** 名称粘贴到配置内并保存。密钥必须具备项目读取和追踪写入权限。**Endpoint** 默认为 `https://api.smith.langchain.com`；自定义 API 地址必须使用 HTTPS。
 
 <Frame caption="配置 LangSmith">
   ![配置 LangSmith](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/27173b2503ca7241b084f7cbd17cdb4c.png)
 </Frame>
 
 <Callout>
-配置项目名需要与 LangSmith 内设置的项目一致，若项目名不一致，数据同步时 LangSmith 会自动创建一个新的项目。
+配置项目名需要与 LangSmith 内设置的项目一致，若项目不存在，LangSmith 会在收到第一条追踪记录时创建项目，保存配置时不会创建。
 </Callout>
 
 成功保存后可以在当前页面查看监测状态。
@@ -98,7 +98,21 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
   ![在 LangSmith 内查看应用数据](https://assets-docs.dify.ai/dify-enterprise-mintlify/zh_CN/guides/monitoring/integrate-external-ops-tools/c40e522f1ffe9fc50411dd7feaf937ed.png)
 </Frame>
 
+<Note>
+保存配置并启用追踪后，重新运行应用，在监控服务中确认是否出现新的追踪记录。追踪数据会异步发送，仅保存配置不能确认追踪数据已送达。
+
+新版 Agent 应用和使用 [新版 Agent 节点](/zh/cloud/use-dify/nodes/agent#new-agent) 的工作流默认关闭 **采集内容**：整个工作流的输入、输出和大部分元数据会被移除，错误文本也会被脱敏。开启该设置后才会发送这些内容。经典 `agent-chat` 应用和仅使用经典 Agent 节点的工作流仍使用常规追踪。
+</Note>
+
 ### 监测数据清单
+
+以下数据说明适用于常规追踪。新版 Agent 应用或包含新版 Agent 节点的工作流的追踪会使用新的 UUIDv7 追踪 ID，源 ID 和追踪运行 ID 则保留在 `dify.source.id` 和 `dify.tracing.run_id` 属性中。对于新版 Agent 应用，开启 **采集 Agent 内部过程** 后，包含内部模型和工具调用的 `Agent attempt` span 会替代常规 `llm` span。通过此方式采集的运行不会单独导出审核、建议问题和命名记录。
+
+Dify 会按父子层级导出执行操作：消息包含 `llm` 调用，Chatflow 消息包含工作流及其节点操作。未提供 `X-Trace-Id` 时，Chat/Chatflow 的根运行 ID 使用消息 ID，Workflow 使用工作流运行 ID。子运行 ID 通过派生生成。提供 `X-Trace-Id` 后，根运行 ID 也会通过派生生成，传入的 ID 保留在元数据中。`parent_run_id` 引用父运行导出后的运行 ID。只有模型调用会填充监控服务的原生 token 用量字段。
+
+对于 Chatflow，追踪根节点是 `message`，输入为用户查询；查询为空时，使用工作流输入。其 `workflow` 子节点保留工作流的输入和输出。
+
+以下明细列出 Dify 的源记录和元数据。实际导出时仅发送相关且可用的值，不会完整发送原始记录。
 
 #### Workflow /Chatflow Trace 信息
 
@@ -106,19 +120,18 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 | Workflow                                 | LangSmith Chain            |
 | ---------------------------------------- | -------------------------- |
-| workflow\_app\_log\_id/workflow\_run\_id | id                         |
-| user\_session\_id                        | -放入 metadata                |
-| workflow_\{id\}                         | name                       |
+| workflow_run_id（Workflow）/ message_id（Chatflow），未提供 X-Trace-Id 时 | id（根运行）                         |
+| user_id                        | extra.metadata.user_id                |
+| workflow（Workflow）/ message（Chatflow）                         | name                       |
 | start\_time                              | start\_time                |
 | end\_time                                | end\_time                  |
-| inputs                                   | inputs                     |
+| Workflow 输入 / Chatflow 查询（为空时使用工作流输入）                                   | inputs                     |
 | outputs                                  | outputs                    |
-| 模型 token 消耗相关                              | usage\_metadata            |
-| metadata                                 | extra                      |
+| 模型 token 消耗（LLM 调用）                              | outputs.usage_metadata            |
+| metadata                                 | extra.metadata                      |
 | error                                    | error                      |
-| \[workflow]                              | tags                       |
-| "conversation\_id/workflow 时无"            | metadata 中的 conversation\_id |
-| conversion\_id                           | parent\_run\_id            |
+| 会话 ID            | extra.metadata.session_id |
+| 父 span（如有）                           | parent\_run\_id            |
 
 **Workflow Trace Info**
 
@@ -157,27 +170,25 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 **用于追踪 llm 对话相关**
 
-| Chat                             | LangSmith LLM              |
+| Chat                             | LangSmith Chain / LLM              |
 | -------------------------------- | -------------------------- |
-| message\_id                      | id                         |
-| user\_session\_id                | -放入 metadata                |
-| "message_\{id\}"                 | name                       |
+| message_id（未提供 X-Trace-Id 时）                      | id（根运行）                         |
+| end\_user\_session\_id                | extra.metadata.end_user_session_id                |
+| message                 | name                       |
 | start\_time                      | start\_time                |
 | end\_time                        | end\_time                  |
 | inputs                           | inputs                     |
 | outputs                          | outputs                    |
-| 模型 token 消耗相关                      | usage\_metadata            |
-| metadata                         | extra                      |
+| 模型 token 消耗（LLM 调用）                      | outputs.usage_metadata            |
+| metadata                         | extra.metadata                      |
 | error                            | error                      |
-| \["message", conversation\_mode] | tags                       |
-| conversation\_id                 | metadata 中的 conversation\_id |
-| conversion\_id                   | parent\_run\_id            |
+| 会话 ID                 | extra.metadata.session_id |
 
 **Message Trace Info**
 
 * message\_id - 消息 ID
 * message\_data - 消息数据
-* user\_session\_id - 用户的 session\_id
+* end\_user\_session\_id - 用户的 session\_id
 * conversation\_model - 对话模式
 * message\_tokens - 消息中的令牌数
 * answer\_tokens - 回答中的令牌数
@@ -188,7 +199,6 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 * file\_list - 处理的文件列表
 * start\_time - 开始时间
 * end\_time - 结束时间
-* message\_file\_data - 消息关联的文件数据
 * conversation\_mode - 对话模式
 * Metadata
   * conversation\_id - 消息所属对话的 ID
@@ -208,14 +218,13 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 | Moderation    | LangSmith Tool  |
 | ------------- | --------------- |
-| user\_id      | -放入 metadata     |
-| “moderation"  | name            |
+| user\_id      | extra.metadata.user_id     |
+| moderation  | name            |
 | start\_time   | start\_time     |
 | end\_time     | end\_time       |
 | inputs        | inputs          |
-| outputs       | outputs         |
-| metadata      | extra           |
-| \[moderation] | tags            |
+| action, flagged       | outputs         |
+| metadata      | extra.metadata           |
 | message\_id   | parent\_run\_id |
 
 **Message Trace Info**
@@ -239,16 +248,15 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 **用于追踪建议问题**
 
-| Suggested Question     | LangSmith LLM   |
+| Suggested Question     | LangSmith Tool   |
 | ---------------------- | --------------- |
-| user\_id               | -放入 metadata     |
+| user\_id               | extra.metadata.user_id     |
 | suggested\_question    | name            |
 | start\_time            | start\_time     |
 | end\_time              | end\_time       |
 | inputs                 | inputs          |
-| outputs                | outputs         |
-| metadata               | extra           |
-| \[suggested\_question] | tags            |
+| suggested_question                | outputs         |
+| metadata               | extra.metadata           |
 | message\_id            | parent\_run\_id |
 
 **Message Trace Info**
@@ -286,14 +294,13 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 | Dataset Retrieval     | LangSmith Retriever |
 | --------------------- | ------------------- |
-| user\_id              | -放入 metadata         |
+| user\_id              | extra.metadata.user_id         |
 | dataset\_retrieval    | name                |
 | start\_time           | start\_time         |
 | end\_time             | end\_time           |
 | inputs                | inputs              |
-| outputs               | outputs             |
-| metadata              | extra               |
-| \[dataset\_retrieval] | tags                |
+| documents               | outputs             |
+| metadata              | extra.metadata               |
 | message\_id           | parent\_run\_id     |
 
 **Dataset Retrieval Trace Info**
@@ -321,14 +328,13 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 | Tool                  | LangSmith Tool  |
 | --------------------- | --------------- |
-| user\_id              | -放入 metadata     |
+| user\_id              | extra.metadata.user_id     |
 | tool\_name            | name            |
 | start\_time           | start\_time     |
 | end\_time             | end\_time       |
-| inputs                | inputs          |
-| outputs               | outputs         |
-| metadata              | extra           |
-| \["tool", tool\_name] | tags            |
+| tool_inputs                | inputs          |
+| tool_outputs               | outputs         |
+| metadata              | extra.metadata           |
 | message\_id           | parent\_run\_id |
 
 **Tool Trace Info**
@@ -366,14 +372,13 @@ LangSmith [官网介绍](https://www.langchain.com/langsmith)
 
 | Generate Name     | LangSmith Tool |
 | ----------------- | -------------- |
-| user\_id          | -放入 metadata    |
+| user\_id          | extra.metadata.user_id    |
 | generate\_name    | name           |
 | start\_time       | start\_time    |
 | end\_time         | end\_time      |
 | inputs            | inputs         |
 | outputs           | outputs        |
-| metadata          | extra          |
-| \[generate\_name] | tags           |
+| metadata          | extra.metadata          |
 
 **Generate Name Trace Info**
 
