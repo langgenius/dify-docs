@@ -8,7 +8,7 @@ description: Dify がナレッジベースのアップロードファイルを�
 
 **カスタム API** スキャナーでスキャンするナレッジベースでは、アップロードされたファイルを Dify が自社のスキャンサービスに送信します。その後、サービスが返した判定結果に従って処理します。問題のないファイルは通常どおりインデックス化され、感染したファイルはブロックされます。
 
-エンドポイントが稼働したら、**連携** > **ファイルセキュリティスキャン** > **スキャナーを追加** > **カスタム API** で追加します。ナレッジベースでスキャンを有効にする方法は、[アップロードされたファイルのマルウェアスキャン](/ja/self-host/use-dify/knowledge/file-security-scan) を参照してください。
+ナレッジベースでスキャンを有効にする方法は、[アップロードされたファイルのマルウェアスキャン](/ja/self-host/use-dify/knowledge/file-security-scan) を参照してください。
 
 <Info>
 このスキャナーの種類は、**連携** の **カスタム API** セクションとは別のものです。同セクションは API ベースの拡張機能を管理するもので、リクエストの形式も異なります。
@@ -79,7 +79,7 @@ Content-Type: multipart/form-data
 </ResponseField>
 
 <ResponseField name="message" type="string">
-  ファイルをスキャンできなかった理由です（最大 500 文字）。Dify 上には表示されません。
+  ファイルをスキャンできなかった理由です。`unscannable` と一緒に送信します。最大 500 文字まで保持されますが、Dify 上には表示されません。
 </ResponseField>
 
 サービスが判定できないファイルの扱いは、ナレッジベースの **ファイルをスキャンできない場合（暗号化されている、またはサイズが大きすぎる）** で決まります。デフォルトではブロックされますが、スキャンせずに受け入れるよう設定することもできます。ブロックされたファイルに表示されるエラーメッセージは、返す内容によって次のように変わります。
@@ -113,57 +113,6 @@ Dify は、返されたステータスコードとボディに基づいて、フ
 タイムアウトしたリクエストは再送され、試行回数はデフォルトで最大 3 回です。そのため、エンドポイントの応答が遅いと、ドキュメントが約 6 分（3 × 2 分）待たされることがあります。その後、ナレッジベースの **スキャナーが利用できない場合** の設定が適用されます。
 
 時間内に処理を終えられないとわかっている場合は、タイムアウトを待たずに、すぐに `413` または `unscannable` を返してください。
-
-## Dify からエンドポイントへの接続
-
-Dify の **エンドポイント URL** には、`http://scanner.example.internal:8000/scan` のように、パスを含む完全な URL を入力します。`localhost` ではなく、Dify から到達できるアドレスを使用してください。
-
-Docker Compose でデプロイしている場合、Dify のリクエストが経由するプロキシは、デフォルトで内部アドレスへの通信もブロックします。エンドポイントが内部アドレスを使っている場合、そのアドレスを許可するまで、Dify はエンドポイントに接続できず、スキャナーも保存できません。許可するには、次のように設定します。
-
-- **エンドポイント URL に IP アドレスを使う場合**：`SSRF_PROXY_ALLOW_PRIVATE_IPS` にそのアドレスを設定します。
-- **エンドポイント URL にホスト名を使う場合**：`SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` にそのホスト名を設定します。
-
-詳しくは [環境変数](/ja/self-host/deploy/configuration/environments#ssrf-プロキシ) を参照してください。
-
-プロキシは、`https` の通信をポート 443 でのみ許可します。デプロイ環境で `HTTP_REQUEST_NODE_SSL_VERIFY` が `false` に設定されていない限り、Dify は `https` エンドポイントの TLS 証明書を検証します。
-
-## 保存前のテスト
-
-エンドポイントが動作しているマシンから、Dify と同じ形式のリクエストを送信します。
-
-```bash
-curl http://localhost:8000/scan \
-  -H "Authorization: Bearer your-api-key" \
-  -F "file=@report.docx" \
-  -F "scan_id=test-1" \
-  -F "file_name=report.docx" \
-  -F "file_size=482113" \
-  -F "mime_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
-  -F "file_hash="
-```
-
-スキャンロジックを実装したら、このリクエストを 2 回送信します。1 回目は問題のないファイル、2 回目は EICAR テストファイルを使い、それぞれに合わせて `file_name`、`file_size`、`mime_type` を変更します。エンドポイントからは、1 回目に `clean`、2 回目に `infected` が返るはずです。
-
-<Info>
-EICAR テストファイルは無害なファイルですが、どのウイルス対策エンジンもマルウェアとして検出します。[eicar.org](https://www.eicar.org) から入手できます。
-</Info>
-
-ナレッジベースでスキャナーを使い始める前に、実際のファイルもいくつか送信して、誤検知がないか確認してください。
-
-Dify は判定結果を保持します。ワークスペース内で同じ内容を同じスキャナーで再度チェックする場合は、エンドポイントを呼び出さずに以前の判定結果を再利用します。
-
-- **`infected`**：無期限に再利用されます。そのため、問題のないファイルをサービスが誤って検出した場合、スキャナーを修正した後もそのファイルはブロックされたままです。
-- **`clean`**：デフォルトで 24 時間再利用されます（`FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` で設定）。その間は、スキャナーを更新して検出できるようにしても、同じファイルはそのまま通過します。
-
-Dify は、スキャナーの保存時と **テスト** のクリック時に、次のファイルを 1 つ送信して接続を確認します。
-
-- `file`：`clean-test.txt`（`text/plain`）
-- `scan_id`：`connectivity-check`
-- `file_hash`：空
-
-形式が正しい判定結果であれば、内容にかかわらず確認に合格します。`413` も合格です。Dify がスキャナーを保存するのは、確認に合格した場合だけです。
-
-ナレッジベースでスキャナーを使い始めたら、そのナレッジベースに [EICAR テストファイルをアップロード](/ja/self-host/use-dify/knowledge/file-security-scan#スキャンの動作確認) して、一連の処理全体を確認してください。
 
 ## サンプルを基にした実装
 
@@ -204,3 +153,58 @@ def scan():
 pip install flask
 SCANNER_API_KEY=your-api-key flask --app scanner run --host 0.0.0.0 --port 8000
 ```
+
+## エンドポイントのローカルテスト
+
+エンドポイントが動作しているマシンから、Dify と同じ形式のリクエストを送信します。
+
+```bash
+curl http://localhost:8000/scan \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@report.docx" \
+  -F "scan_id=test-1" \
+  -F "file_name=report.docx" \
+  -F "file_size=482113" \
+  -F "mime_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  -F "file_hash="
+```
+
+スキャンロジックを実装したら、このリクエストを 2 回送信します。1 回目は問題のないファイル、2 回目は EICAR テストファイルを使い、それぞれに合わせて `file_name`、`file_size`、`mime_type` を変更します。エンドポイントからは、1 回目に `clean`、2 回目に `infected` が返るはずです。
+
+<Info>
+EICAR テストファイルは無害なファイルですが、どのウイルス対策エンジンもマルウェアとして検出します。[eicar.org](https://www.eicar.org) から入手できます。
+</Info>
+
+ナレッジベースでスキャナーを使い始める前に、実際のファイルもいくつか送信して、誤検知がないか確認してください。
+
+Dify は判定結果を保持します。ワークスペース内で同じ内容を同じスキャナーで再度チェックする場合は、エンドポイントを呼び出さずに以前の判定結果を再利用します。
+
+- **`infected`**：無期限に再利用されます。そのため、問題のないファイルをサービスが誤って検出した場合、スキャナーを修正した後もそのファイルはブロックされたままです。
+- **`clean`**：デフォルトで 24 時間再利用されます（`FILE_SCAN_CLEAN_VERDICT_TTL_HOURS` で設定）。その間は、スキャナーを更新して検出できるようにしても、同じファイルはそのまま通過します。
+
+## Dify からのアクセス経路の確保
+
+エンドポイントは、`localhost` ではなく、Dify から到達できるアドレスで稼働させてください。
+
+Docker Compose でデプロイしている場合、Dify のリクエストが経由するプロキシは、デフォルトで内部アドレスへの通信をブロックします。エンドポイントが内部アドレスを使っている場合、そのアドレスを許可するまで、Dify はエンドポイントに接続できず、スキャナーも保存できません。許可するには、次のように設定します。
+
+- **エンドポイント URL に IP アドレスを使う場合**：`SSRF_PROXY_ALLOW_PRIVATE_IPS` にそのアドレスを設定します。
+- **エンドポイント URL にホスト名を使う場合**：`SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` にそのホスト名を設定します。
+
+詳しくは [環境変数](/ja/self-host/deploy/configuration/environments#ssrf-プロキシ) を参照してください。
+
+プロキシは、`https` の通信をポート 443 でのみ許可します。デプロイ環境で `HTTP_REQUEST_NODE_SSL_VERIFY` が `false` に設定されていない限り、Dify は `https` エンドポイントの TLS 証明書を検証します。
+
+## Dify でのスキャナーの追加
+
+**連携** > **ファイルセキュリティスキャン** で **スキャナーを追加** > **カスタム API** をクリックします。**エンドポイント URL** には、`http://scanner.example.internal:8000/scan` のように、パスを含む完全な URL を入力します。
+
+Dify は、スキャナーの保存時と **テスト** のクリック時に、次のファイルを 1 つ送信して接続を確認します。
+
+- `file`：`clean-test.txt`（`text/plain`）
+- `scan_id`：`connectivity-check`
+- `file_hash`：空
+
+有効な判定結果であれば、内容にかかわらず確認に合格します。`413` も合格です。Dify がスキャナーを保存するのは、確認に合格した場合だけです。
+
+ナレッジベースでスキャナーを使い始めたら、そのナレッジベースに [EICAR テストファイルをアップロード](/ja/self-host/use-dify/knowledge/file-security-scan#スキャンの動作確認) して、一連の処理全体を確認してください。
