@@ -62,7 +62,7 @@ Configuring an app's tracing requires the Owner or Admin role, or the Editor rol
      Leave credentials and `?` queries out of the URL, and put credentials in **HTTP headers (JSON)** instead.
    - **HTTP headers (JSON)**: the headers your endpoint needs, such as `{"Authorization":"Bearer <token>"}`. Leave out transport headers such as `Content-Type`, `Host`, `Accept`, and `Content-Encoding`, even if your backend's setup guide lists them.
 
-     Dify never shows saved headers again, so keep your own copy.
+     Dify never shows saved headers again and clears them when you change **Endpoint**, so keep your own copy.
    - **Service name**: the name your backend groups traces under (`service.name`). It's `dify` unless you change it. Give each app and Agent its own name, so you can find their traces later.
    - **Resource attributes (JSON)**: labels added to every trace from this app, such as `{"deployment.environment.name":"production"}`. Set `service.name` in **Service name**.
 
@@ -150,7 +150,7 @@ Workflow and Chatflow runs started through the API can join your own service's t
 
 If your service's HTTP client sends the W3C `traceparent` header, as OpenTelemetry's HTTP instrumentation does, the run joins with no change on your side. Otherwise, send your trace ID in the `X-Trace-Id` header, or as `trace_id` in the query string or request body.
 
-Send the ID as 32 hexadecimal characters, the form OpenTelemetry trace IDs take, or as a UUID. With any other value, the run gets a trace of its own.
+Send the ID as 32 hexadecimal characters, the form OpenTelemetry trace IDs take, or as a UUID. Any other value, such as `order-123`, doesn't join your trace. Dify computes a trace ID from it instead, so every run sent with that value lands in the same trace.
 
 Dify's spans share your trace ID, but your backend shows them as a second root in the trace rather than under the span that called Dify.
 
@@ -162,7 +162,7 @@ Until Agent tracing is on, an Agent's own runs look like a Chatbot app's, and a 
 
 - **Content**: inputs and outputs arrive empty until you turn on **Capture content**. In a workflow with a new Agent node, that covers every node, not only the Agent.
 - **Your trace ID**: each run gets a trace of its own, even when you send your trace ID through the API.
-- **Agent trajectory export**: runs from an app or Agent that traces to a provider stop reaching it and go to the provider instead, unless **Capture Agent internals** is off.
+- **Agent trajectory export**: runs of an app or Agent with tracing on go to its tracing provider instead of the trajectory collector, unless **Capture Agent internals** is off.
 
 <Note>
 Agent tracing is off by default. Enable it by setting both:
@@ -178,7 +178,7 @@ Under **Agent data capture** in the tracing settings, choose what these traces c
 - **Capture Agent internals**: turn it off to show each Agent as a single step. The Agent's model names, token counts, and cost are then left out too, so leave it on if you track usage.
 - **Capture content**: turn it on to see what each step received and returned. Until then, Dify also replaces error text with a generic message, such as `Application execution failed`. Model names, token counts, and cost arrive either way.
 
-An Agent node uses the workflow's tracing settings, not the Agent's own.
+An Agent node uses the workflow's tracing settings, not the Agent's own. In a workflow called as a tool, the Agent node always shows as a single step, even with **Capture Agent internals** on.
 
 ## If Your Endpoint Is Down or Refuses a Trace
 
@@ -188,12 +188,12 @@ When Dify can't connect to the endpoint, or the endpoint answers that it's overl
 To keep traces other than Agent runs through longer outages, raise `OPS_TRACE_EXPORT_MAX_ATTEMPTS`. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for details.
 </Info>
 
+During an outage, you can send pending traces to a standby endpoint. Change **Endpoint**, enter the headers again even if they're the same, and save. Dify's next try goes to the new endpoint. Agent runs already under way don't follow, since they keep the settings they started with.
+
 Dify drops a trace without trying again in two common cases:
 
 - **The endpoint refuses the trace for another reason**, such as a wrong path, rejected credentials, or a size it doesn't accept. The `worker` log names the reason. For a trace that's too large, raise the endpoint's request size limit.
 - **The endpoint takes more than 30 seconds to answer**, or the connection breaks after Dify sent the trace. If your backend is slow to answer, send to an OpenTelemetry Collector in front of it, which answers as soon as it has the trace.
-
-During an outage, you can send pending traces to a standby endpoint. Change **Endpoint** (and the headers, if they differ) and save. Dify's next try goes to the new endpoint. Agent runs already under way don't follow, since they keep the settings they started with.
 
 ## Turn Off or Remove Tracing
 
