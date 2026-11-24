@@ -96,8 +96,9 @@ Use backticks for:
 - Configuration values: `` `streaming` ``, `` `true` ``
 - Special characters and delimiters: `` `\n\n` ``
 - Exact strings a user must type or match: `` `yes` ``, `` `DELETE` ``
+- Statuses, column values, and messages the product displays, quoted exactly so the reader can match them on screen: `` `Running` ``, `` `Dataset headers must be unique.` ``
 
-Do not use backticks for product names, UI labels, or general English words.
+Do not use backticks for product names, the UI elements that take bold (buttons, menu items, tabs, fields), or general English words.
 
 ### Code Blocks
 
@@ -404,7 +405,8 @@ Use for showing multiple code variants of the same operation:
 | Menu paths | Bold with arrow | `**System Settings** > **Model Providers**` |
 | Tab/section names | Bold | `**Quick Settings**` |
 | Field names | Bold | `**Temperature**` |
-| Status indicators | Bold | `**Edited**`, `**Healthy**` |
+| Status indicators | Inline code | `` `Edited` ``, `` `Healthy` `` |
+| Messages the product displays | Inline code, quoted exactly | `` `Dataset headers must be unique.` `` |
 
 - Use the arrow character `>` (not `→`, `->`, or `=>`) for menu paths.
 
