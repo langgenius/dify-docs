@@ -6,9 +6,9 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
 
 > 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cloud/use-dify/evaluate/run-evaluations)。
 
-评测用来衡量应用的实际表现。借助评测，你可以判断应用能否上线，也能确认每次修改提示词、模型或检索设置之后，应用是否真的变好了。
+评测用来衡量应用的实际表现。借助评测，你可以判断应用能否投入生产使用，也能确认每次修改提示词、模型或检索设置之后，应用是否真的变好了。
 
-评测会用测试集运行应用，再由判定模型（负责打分的 LLM）按你选择的指标为每个测试用例打分。随后由你设定的条件决定哪些用例通过。这样一来，不论由谁发起，每次运行都按同一标准评判。
+评测会用测试集运行应用，再由判定模型（负责打分的 LLM）按你选择的指标为每个测试用例打分。随后由你设定的条件决定哪些用例通过，这样每次运行都按同一标准评判。
 
 每次运行的结果都会保留。要检验某项改动，可在改动前后各运行一次同一测试集，再 [对比得分](#对比改动前后的结果)。
 
@@ -76,7 +76,7 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
 
 ## 准备测试集
 
-测试用例应取自用户的真实提问。应用答对的问题和答错的问题都要收进来，因为修好错误回答的改动，可能把原本正确的回答改坏。
+测试用例应取自真实输入，比如用户实际问过的问题。除了出错的用例，也要收进本来就正常的用例。这样，如果某次改动修好了出错的用例，却弄坏了原本正常的，你在下一次评测中就能发现。
 
 <Note>
 下载模板之前，为每个要评分的节点起一个不重复的标题，然后发布。模板会按节点标题命名该节点的 `expected_output` 列，标题相同的节点就会共用同一个参考答案。
@@ -86,7 +86,7 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
 
 2. 每个测试用例填写一行：
 
-    - `index`：为每一行填写一个不重复的整数。
+    - `index`：按 1、2、3 依次为各行编号。
 
     - 输入：填写所有必填的输入列。下拉选项列只能填写该字段的某个选项，且与选项原文完全一致。复选框列可填写 true/false、yes/no 或 1/0。
 
@@ -126,6 +126,7 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
 
 - `Dataset headers must not be empty.`：模板的第 2 行（说明各列含义的那一行）还留在文件中。删除后重新上传。
 - `Dataset headers must be unique.`：有两列同名。重命名或删除其中一列。
+- `Dataset index '…' is duplicated.`：有两行的 `index` 相同。`index` 为空或不是整数的行，会按它在表头下方的位置编号（从 1 开始）。这个编号也可能和其他行的 `index` 重复。为每一行填写不同的编号。
 - `The selected metrics require a non-empty expected_output; invalid rows: …`：所列的行没有参考答案，而你选的某个指标需要参考答案。把这些行补全。
 - `Maximum concurrent runs (3) reached.`：工作空间中已有 3 个评测处于等待或运行状态，其他成员发起的也算在内。等其中一个结束，或取消一个。
 - `The customized evaluator must be a published evaluation workflow.`：你添加的自定义评测器已切换回标准工作流。把它重新切换为评测工作流，或改用其他评测器。
@@ -144,10 +145,7 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
 
 得分处显示 `-`，或结果文件中的单元格为空，表示该指标在这一行没有值。各指标的得分由什么决定，详见 [评测指标](/zh/cloud/use-dify/evaluate/metrics)。
 
-如果某一行的实际结果处显示的是错误，按错误码在 [故障排除](#故障排除) 中查找。有些错误不带错误码：
-
-- `Evaluation failed. Please retry or contact support.`：通常表示某个 Ragas 指标无法为这一行打分。各指标在什么情况下无法打分，详见 [评测指标](/zh/cloud/use-dify/evaluate/metrics)。
-- `No evaluation metrics were generated for this row.`：要评分的节点在这一行都没有成功运行，例如这一行走了别的分支，跳过了这些节点。在 Workflow 应用中，可在 **日志** 中找到这一行对应的运行，查看它走了哪条路径。
+如果某一行的实际结果处显示的是错误，按错误码在 [故障排除](#故障排除) 中查找。如果错误内容是 `No evaluation metrics were generated for this row.`，说明要评分的节点在这一行都没有成功运行，例如这一行走了别的分支，跳过了这些节点。在 Workflow 应用中，可在 **日志** 中找到这一行对应的运行，查看它走了哪条路径。
 
 要分享结果，或在电子表格中处理结果，可在该运行的菜单中选择 **下载结果文件**，或在 **测试详情** 中点击 **导出**。
 
@@ -176,9 +174,14 @@ description: 用一整套测试集测试应用、Snippet、知识库或 Agent，
     如果每一行都这样失败，检查应用或 Snippet 的创建者是否已离开工作空间。
   </Accordion>
   <Accordion title="EVAL_METRIC_FAILED">
-    某个 LLM 回答指标或检索指标在为这一行打分时出错。检查判定模型能否正常使用；对于用到默认嵌入模型的指标，也检查默认嵌入模型能否正常使用。
+    某个 LLM 回答指标或检索指标没能为这一行打分。按下面的情况找原因：
 
-    如果判定框架选的是 DeepEval，Faithfulness 在以下情况也会报这个错误：LLM 节点没有设置 [**上下文**](/zh/cloud/use-dify/nodes/llm#上下文变量)，提示词中也没有 `<context>` 标签。提供上下文的两种方式详见 [Faithfulness](/zh/cloud/use-dify/evaluate/metrics#faithfulness)。
+    - **模型问题**：判定模型或嵌入模型调用失败，或判定模型的回复无法解析。检查判定模型能否正常使用，或换用能力更强的模型。如果指标用到了默认嵌入模型，也检查一下它能否正常使用。
+    - **没有可评的内容（Ragas）**：例如回答里没有任何可检查的陈述，Faithfulness 就无从检查。
+    - **没有上下文（DeepEval 的 Faithfulness）**：LLM 节点没有设置 [**上下文**](/zh/cloud/use-dify/nodes/llm#上下文变量)，而且在这一行，模型实际收到的提示词里没有 `<context>` 标签，或标签内为空（比如标签里放的检索结果为空）。提供上下文的两种方式详见 [Faithfulness](/zh/cloud/use-dify/evaluate/metrics#faithfulness)。
+  </Accordion>
+  <Accordion title="EVAL_CONTEXT_MISSING">
+    在 Ragas 下，某个需要上下文的指标在这一行没有拿到上下文。可能是这一行的查询什么也没检索到；对 Faithfulness 来说，也可能是上下文没有按它能读取的方式放进 LLM 节点的提示词。提供上下文的两种方式详见 [Faithfulness](/zh/cloud/use-dify/evaluate/metrics#faithfulness)。
   </Accordion>
   <Accordion title="EVAL_MODEL_REQUEST_FAILED">
     为 Agent 指标调用判定模型失败，或无法解析它的回复。检查判定模型能否正常使用，或换用能力更强的模型。
