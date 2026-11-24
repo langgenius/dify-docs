@@ -295,7 +295,7 @@ Use these for callouts instead of italics or raw text. Each serves a different p
 | Component | When to use |
 |:----------|:------------|
 | `<Info>` | General informational content—helpful context, version-specific or deployment-specific details |
-| `<Tip>` | Helpful suggestions or shortcuts |
+| `<Tip>` | Helpful suggestions or shortcuts; on Cloud pages, plan availability and the Enterprise pointer (see the style guide's [Paid Feature Callouts](./style-guide.md#paid-feature-callouts)) |
 | `<Note>` | Important information that requires attention—missing it could lead to potential complications |
 | `<Warning>` | Actions that could cause errors or data loss |
 | `<Danger>` | Security risks, such as a URL or key that grants access to whoever holds it |

@@ -194,32 +194,42 @@ For the mechanics of image syntax, alt text, captions, and storage, see the [For
 
 ## Paid Feature Callouts
 
-Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`). The Enterprise `<Tip>` appears on self-host pages, and on Cloud pages where Dify Enterprise goes beyond what Cloud offers. A Cloud page can carry both: badges for what a plan gates, the Tip for what only Enterprise adds.
+Each product copy has its own pattern. Plan badges appear only in the Cloud copy (`en/cloud/`). The Enterprise `<Tip>` appears on self-host pages, and on Cloud pages where Dify Enterprise goes beyond what Cloud offers. A Cloud page can carry both: plan badges for what a plan gates, the Enterprise Tip for what only Enterprise adds.
 
 ### Cloud pages: plan badges
 
 - `<Badge color="blue">Professional</Badge>`
 - `<Badge color="blue">Team</Badge>`
 
-Pick one of three placements based on the scope of the gated feature.
+Inside a callout, add `size="sm"` so the badges match the callout's smaller text. In a heading or a sentence, keep the default size.
 
-**1. Whole section is the paid feature.** Place the badges inline with the section heading. No additional callout needed.
+Pick one of four placements based on the scope of the gated feature.
+
+**1. Whole page is the paid feature.** Place a `<Tip>` after the page's opening paragraphs. State the subject explicitly.
+
+```mdx
+<Tip>
+Evaluations are available on <Badge color="blue" size="sm">Professional</Badge> and <Badge color="blue" size="sm">Team</Badge>. [Learn more](https://dify.ai/pricing).
+</Tip>
+```
+
+**2. Whole section is the paid feature.** Place the badges inline with the section heading. No additional callout needed.
 
 ```mdx
 ## Spread Requests Across Keys with Load Balancing <Badge color="blue">Professional</Badge> <Badge color="blue">Team</Badge>
 ```
 
-**2. Paid feature is one item within a section that also covers standard features.** Place the `<Info>` callout AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
+**3. Paid feature is one item within a section that also covers standard features.** Place a `<Tip>` AFTER the target paragraph (not before, where it would be ambiguous). State the subject explicitly.
 
 ```mdx
 Add one chunk or batch-add several. For documents chunked in Parent-child mode, both parent and child chunks can be added.
 
-<Info>
-Adding chunks is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge>. [Learn more](https://dify.ai/pricing).
-</Info>
+<Tip>
+Adding chunks is available on <Badge color="blue" size="sm">Professional</Badge> and <Badge color="blue" size="sm">Team</Badge>. [Learn more](https://dify.ai/pricing).
+</Tip>
 ```
 
-**3. Paid feature mentioned in body prose alongside standard features.** Use inline badges directly in the sentence.
+**4. Paid feature mentioned in body prose alongside standard features.** Use inline badges directly in the sentence.
 
 ```mdx
 Unlimited log retention is available on <Badge color="blue">Professional</Badge> and <Badge color="blue">Team</Badge> for the duration of the active subscription. [Learn more](https://dify.ai/pricing).
