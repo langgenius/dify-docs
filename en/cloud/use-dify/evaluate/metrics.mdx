@@ -1,0 +1,215 @@
+---
+title: Evaluation Metrics
+description: What each metric measures and needs, how to read its scores, and where Ragas and DeepEval differ
+---
+
+Each metric checks one thing about each test case, such as whether an answer sticks to your knowledge or whether an agent picked the right tools.
+
+Most metrics are scored by the judge model. A few Ragas metrics also use your workspace's [default embedding model](/en/cloud/use-dify/workspace/model-providers#choose-the-models-apps-use-by-default) to compare meanings.
+
+<Tip>
+Evaluations are available on <Badge color="blue" size="sm">Professional</Badge> and <Badge color="blue" size="sm">Team</Badge>. [Learn more](https://dify.ai/pricing).
+</Tip>
+
+## Read a Score
+
+Scores run from 0 to 1, and higher is better, but what a good answer scores depends on the metric and the framework. A correct, on-topic answer doesn't necessarily score near 1 under Ragas [Answer Relevancy](#answer-relevancy), for example.
+
+Set each metric's threshold from the scores it gives answers you'd accept.
+
+## Choose a Framework
+
+Two open-source evaluation libraries are available: [Ragas](https://docs.ragas.io) (v0.4.4) and [DeepEval](https://deepeval.com) (v4.2.0). The choice affects only LLM answer and retrieval metrics.
+
+Under each, the same metric can measure something different. Choose by what matters most in your evaluation:
+
+- **Answers must stick to your knowledge**: Ragas. Its [Faithfulness](#faithfulness) counts only the claims the retrieved context supports, while DeepEval's also passes claims the context never mentions.
+- **You want [Semantic Similarity](#semantic-similarity)**: Ragas, the only one that offers it.
+- **The workspace has no default embedding model**: DeepEval, which needs none.
+- **You want relevance judged chunk by chunk**: DeepEval. Its [Context Relevance](#context-relevance) judges every chunk, while Ragas rates the retrieved content as a whole.
+
+Keep one framework for every run you plan to compare, since scores under different frameworks aren't comparable.
+
+## What Each Metric Needs
+
+Before you pick a metric, check what it needs and how many times it calls the judge for each row of your test set and each node it scores, since every call adds to the run's cost.
+
+For LLM nodes:
+
+| Metric | Needs a reference answer | Needs the embedding model | Judge calls per row |
+|:--|:--|:--|:--|
+| [Faithfulness](#faithfulness) | No (needs context) | No | Ragas 2, DeepEval 4 |
+| [Answer Relevancy](#answer-relevancy) | No | Ragas only | Ragas 3, DeepEval 3 |
+| [Answer Correctness](#answer-correctness) | Yes | Ragas only | Ragas 3, DeepEval 1 |
+| [Semantic Similarity](#semantic-similarity) (Ragas only) | Yes | Yes | None |
+
+For Knowledge Retrieval and Agent Knowledge Retrieval nodes, and for knowledge bases:
+
+| Metric | Needs a reference answer | Needs the embedding model | Judge calls per row |
+|:--|:--|:--|:--|
+| [Context Precision](#context-precision) | Yes | No | Ragas 1 per chunk, DeepEval 2 |
+| [Context Recall](#context-recall) | Yes | No | Ragas 1, DeepEval 2 |
+| [Context Relevance](#context-relevance) | No | No | Ragas 2, DeepEval 1 per chunk plus 1 |
+
+For Agent nodes and Agents:
+
+| Metric | Needs a reference answer | Needs the embedding model | Judge calls per row |
+|:--|:--|:--|:--|
+| [Task Completion](#task-completion) | No (optional success criteria) | No | 1 |
+| [Trajectory Quality](#trajectory-quality) | No | No | 1 |
+| [Tool Selection Correctness](#tool-selection-correctness) | No | No | 1 |
+| [Tool Argument Correctness](#tool-argument-correctness) | No | No | 1 |
+
+## LLM Answer Metrics
+
+These score an LLM node's answer. For each row, they draw on:
+
+- **The question**: the node's whole prompt as the model received it, system instruction included, not just what the user asked.
+- **The answer**: the node's text output, with the model's reasoning (if any) removed.
+- **The context**: the text that the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) setting puts into the prompt, or, when **Context** is unset, the text in the prompt's `<context>` tags.
+- **The reference answer**: the `expected_output` column for that node in your test set.
+
+Pick the one that fits your situation:
+
+- **Answers go beyond what retrieval found**: Faithfulness.
+- **Answers dodge or drift off the question**: Answer Relevancy.
+- **Answers get facts wrong, and you have reference answers**: Answer Correctness.
+- **Answers should match a reference in meaning, whatever the wording**: Semantic Similarity.
+
+### Faithfulness
+
+Checks whether the answer sticks to what retrieval found: each claim in it should be backed by the retrieved context. Use it to catch made-up answers in an app that should answer only from your knowledge.
+
+- **Needs**: context, supplied in one of two ways:
+
+  - **Through Context**: point **Context** in the LLM node at the node that supplies the text, such as a retrieval node or a Code node, and insert the **Context** variable into the prompt.
+  - **Through tags**: leave **Context** unset and wrap the context in `<context>` tags in the prompt.
+
+  Any other setup leaves Faithfulness without context:
+
+  - **Ragas**: the row shows `EVAL_CONTEXT_MISSING`.
+  - **DeepEval**: with **Context** unset and no tags, the row shows `EVAL_METRIC_FAILED`. With **Context** set but left out of the prompt, every answer scores 1, whatever it says.
+- **Score**: the share of the answer's claims that hold up against the context.
+  - Ragas counts a claim only when the context supports it.
+  - DeepEval counts every claim the context doesn't contradict, so a claim the context says nothing about still counts as faithful.
+- **No value**: under Ragas, when the judge finds no claims in the answer to check. The row then shows `EVAL_METRIC_FAILED`. Under DeepEval, an answer with no claims to check scores 1.
+
+<Note>
+Under DeepEval, Faithfulness scores 1 when the retrieval node behind **Context** returns nothing, even for an invented answer.
+
+To catch those rows, also score that retrieval node with [Context Precision](#context-precision) or [Context Relevance](#context-relevance). Both score 0 when nothing came back, so a condition on either fails those rows when you join conditions with AND.
+</Note>
+
+### Answer Relevancy
+
+Tells you whether the answer addresses what was asked. Evasive or off-topic answers score low.
+
+- **Needs**: the default embedding model (under Ragas).
+- **Score**:
+  - Ragas has the judge write the questions the answer seems to respond to, then measures how close they are in meaning to the node's whole prompt, system instruction included. A correct, on-topic answer doesn't necessarily score near 1, and a noncommittal one such as "I don't know" scores 0.
+  - DeepEval has the judge mark each statement in the answer as relevant or not, and scores the share that's relevant. An answer with no statements scores 1.
+
+### Answer Correctness
+
+Measures whether the answer gets the facts in your reference answer right.
+
+- **Needs**: a reference answer, and the default embedding model (under Ragas).
+- **Score**:
+  - Ragas splits the answer and the reference into statements. Facts they share raise the score, while facts the answer misses and claims the reference doesn't make lower it. A smaller part of the score comes from how close the two are in meaning.
+  - DeepEval has the judge grade the answer against the reference from 0 to 10, so the score moves in tenths.
+
+### Semantic Similarity
+
+Measures whether the answer says the same thing as your reference answer, in whatever words. Only Ragas offers it.
+
+- **Needs**: a reference answer and the default embedding model. The embedding model computes the score on its own, with no judge call.
+- **Score**: how close the two are in overall meaning, not whether individual facts match. Pair it with [Answer Correctness](#answer-correctness) when the facts must be right.
+
+## Retrieval Metrics
+
+These score what a [Knowledge Retrieval](/en/cloud/use-dify/nodes/knowledge-retrieval) or [Agent Knowledge Retrieval](/en/cloud/use-dify/nodes/knowledge-retrieval-v2) node returns, or what a classic knowledge base returns when you evaluate it directly. They judge the retrieval alone, never the app's final answer. For each row, they draw on:
+
+- **The query**: the retrieval node's query input, or, for a knowledge base, the row's `query`.
+- **The retrieved chunks**: the pieces of your documents that came back for that row, in order.
+- **The reference answer**: the matching `expected_output` column in your test set.
+
+When nothing comes back for a row, Ragas can't score these metrics and the row shows `EVAL_CONTEXT_MISSING`. DeepEval scores them 0.
+
+Pick the one that fits your situation:
+
+- **Answers get distracted by irrelevant chunks**: Context Precision.
+- **Answers miss facts your knowledge holds**: Context Recall.
+- **You don't have reference answers yet**: Context Relevance.
+
+### Context Precision
+
+Checks whether the chunks that came back are useful for answering, with the useful ones ranked first. A high score means little noise at the top of your results.
+
+- **Needs**: a reference answer.
+- **Score**: the judge decides, chunk by chunk, whether each one helps arrive at the reference answer. The higher the useful chunks rank, the higher the score. Both frameworks score it this way.
+
+### Context Recall
+
+Tells you whether retrieval found everything the reference answer needs. A high score means nothing important was left behind.
+
+- **Needs**: a reference answer.
+- **Score**: the judge checks each sentence of the reference answer against the retrieved chunks, and the score is the share covered. Both frameworks score it this way.
+
+### Context Relevance
+
+Rates how relevant the chunks that came back are to the query.
+
+- **Needs**: no reference answer.
+- **Score**:
+  - Ragas has the judge rate all the retrieved content together, and gives the top rating to content that holds any information relevant to answering the query. It rates twice and averages the two, so the score is 0, 0.25, 0.5, 0.75, or 1.
+  - DeepEval has the judge mark each statement in each chunk as relevant or not, and scores the share that's relevant.
+
+## Agent Metrics
+
+These score an Agent node, or an Agent you evaluate on its own. The task they all read is an Agent's `query`, or an [Agent node](/en/cloud/use-dify/nodes/agent)'s task or instruction input.
+
+The judge accepts more than one valid way to do a task, so there's no single sequence of tool calls the agent has to match.
+
+Pick the one that fits your situation:
+
+- **Tasks are left unfinished or done wrong**: Task Completion.
+- **The agent wastes or repeats steps**: Trajectory Quality.
+- **The agent picks the wrong tools**: Tool Selection Correctness.
+- **The agent passes wrong values to tools**: Tool Argument Correctness.
+
+### Task Completion
+
+Checks whether the final output accomplishes the task, correctly and completely.
+
+- **Reads**: the task, the final output, the tools the agent called and what they returned, and your success criteria.
+- **Needs**: optionally, success criteria in the `success_criteria` column. Without them, the judge holds the agent only to what the task states or necessarily implies, so add them for anything else you expect.
+- **Score**: reaching the goal counts most, then correctness and consistency with what the tools returned, then completeness.
+
+  With success criteria, the judge checks each one separately, and a single missed criterion pulls the score down hard. A criterion that names an action, such as "books the meeting", counts only if a matching tool call succeeded, whatever the final output claims.
+
+### Trajectory Quality
+
+Rates the path the agent took, separately from whether its final answer is right.
+
+- **Reads**: the task and every step the agent took.
+- **Score**: steady progress, efficient steps, use of what the tools returned, and recovery from errors all raise it.
+
+  Repeating an action without gaining new information counts against it. Answering directly, without tools, can score well when no tool was needed.
+
+### Tool Selection Correctness
+
+Asks whether the agent picked the right tools for the task, out of exactly the tools available in that run.
+
+- **Reads**: the task, the tools available in that run, and each tool the agent chose.
+- **Score**: the judge looks at whether the capabilities the task needs are covered, whether the chosen tools suit it, and whether irrelevant ones were left alone. Calling no tool can be the right choice.
+
+  Arguments and call order don't count here. To check arguments, use [Tool Argument Correctness](#tool-argument-correctness).
+- **No value**: when no tools were available and none were called. The score shows as `-`.
+
+### Tool Argument Correctness
+
+Checks whether the agent passed the right values, or arguments, to each tool it called. Right means they fit what the tool accepts and suit the task, given what the agent knew before that call.
+
+- **Reads**: the task, and for each call, its arguments, the tool's description and the parameters it accepts, and what the agent's recent tool calls returned.
+- **Score**: the average across the calls the judge can assess. A call that failed doesn't by itself count as having wrong arguments.
+- **No value**: when no tool was called, or no call could be assessed. The score shows as `-`.
