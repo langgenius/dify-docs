@@ -19,7 +19,7 @@ Set each metric's threshold from the scores it gives answers you'd accept.
 
 ## Choose a Framework
 
-Two open-source evaluation libraries are available: [Ragas](https://docs.ragas.io) (v0.3.2) and [DeepEval](https://deepeval.com) (v4.2.0). The choice affects only LLM answer and retrieval metrics.
+Two open-source evaluation libraries are available: [Ragas](https://docs.ragas.io) (v0.4.4) and [DeepEval](https://deepeval.com) (v4.2.0). The choice affects only LLM answer and retrieval metrics.
 
 Under each, the same metric can measure something different. Choose by what matters most in your evaluation:
 
@@ -38,7 +38,7 @@ For LLM nodes:
 
 | Metric | Needs a reference answer | Needs the embedding model | Judge calls per row |
 |:--|:--|:--|:--|
-| [Faithfulness](#faithfulness) | No (needs retrieved context) | No | Ragas 2, DeepEval 4 |
+| [Faithfulness](#faithfulness) | No (needs context) | No | Ragas 2, DeepEval 4 |
 | [Answer Relevancy](#answer-relevancy) | No | Ragas only | Ragas 3, DeepEval 3 |
 | [Answer Correctness](#answer-correctness) | Yes | Ragas only | Ragas 3, DeepEval 1 |
 | [Semantic Similarity](#semantic-similarity) (Ragas only) | Yes | Yes | None |
@@ -66,7 +66,7 @@ These score an LLM node's answer. For each row, they draw on:
 
 - **The question**: the node's whole prompt as the model received it, system instruction included, not just what the user asked.
 - **The answer**: the node's text output, with the model's reasoning (if any) removed.
-- **The retrieved context**: the chunks returned by the retrieval node that the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) setting points to.
+- **The context**: the text that the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) setting puts into the prompt, or, when **Context** is unset, the text in the prompt's `<context>` tags.
 - **The reference answer**: the `expected_output` column for that node in your test set.
 
 Pick the one that fits your situation:
@@ -80,21 +80,19 @@ Pick the one that fits your situation:
 
 Checks whether the answer sticks to what retrieval found: each claim in it should be backed by the retrieved context. Use it to catch made-up answers in an app that should answer only from your knowledge.
 
-- **Needs**: retrieved context, supplied in one of two ways:
+- **Needs**: context, supplied in one of two ways:
 
-  - **From a retrieval node**: point **Context** in the LLM node at it, and insert the **Context** variable into the prompt.
-  - **From another kind of node**, such as a Code node: leave **Context** unset and wrap the context in `<context>` tags in the prompt.
+  - **Through Context**: point **Context** in the LLM node at the node that supplies the text, such as a retrieval node or a Code node, and insert the **Context** variable into the prompt.
+  - **Through tags**: leave **Context** unset and wrap the context in `<context>` tags in the prompt.
 
-  Any other setup leaves Faithfulness without context, and its scores no longer reflect the answer:
+  Any other setup leaves Faithfulness without context:
 
-  - **Context pointed at another kind of node**: DeepEval scores every answer 1, and Ragas every answer 0.
-  - **Context unset, with no tags**: DeepEval can't score, and the row shows `EVAL_METRIC_FAILED`. Ragas scores every answer 0.
-
-  If every row scores 0 under Ragas, check this setting first.
+  - **Ragas**: the row shows `EVAL_CONTEXT_MISSING`.
+  - **DeepEval**: with **Context** unset and no tags, the row shows `EVAL_METRIC_FAILED`. With **Context** set but left out of the prompt, every answer scores 1, whatever it says.
 - **Score**: the share of the answer's claims that hold up against the context.
   - Ragas counts a claim only when the context supports it.
   - DeepEval counts every claim the context doesn't contradict, so a claim the context says nothing about still counts as faithful.
-- **No value**: under Ragas, when the judge finds no statements in the answer to check. The row then shows `Evaluation failed. Please retry or contact support.` Under DeepEval, an answer with no claims to check scores 1.
+- **No value**: under Ragas, when the judge finds no claims in the answer to check. The row then shows `EVAL_METRIC_FAILED`. Under DeepEval, an answer with no claims to check scores 1.
 
 <Note>
 Under DeepEval, Faithfulness scores 1 when the retrieval node behind **Context** returns nothing, even for an invented answer.
@@ -135,6 +133,8 @@ These score what a [Knowledge Retrieval](/en/cloud/use-dify/nodes/knowledge-retr
 - **The retrieved chunks**: the pieces of your documents that came back for that row, in order.
 - **The reference answer**: the matching `expected_output` column in your test set.
 
+When nothing comes back for a row, Ragas can't score these metrics and the row shows `EVAL_CONTEXT_MISSING`. DeepEval scores them 0.
+
 Pick the one that fits your situation:
 
 - **Answers get distracted by irrelevant chunks**: Context Precision.
@@ -146,7 +146,7 @@ Pick the one that fits your situation:
 Checks whether the chunks that came back are useful for answering, with the useful ones ranked first. A high score means little noise at the top of your results.
 
 - **Needs**: a reference answer.
-- **Score**: the judge decides, chunk by chunk, whether each one helps arrive at the reference answer. The higher the useful chunks rank, the higher the score. Both frameworks score it this way. When nothing was retrieved, the score is 0.
+- **Score**: the judge decides, chunk by chunk, whether each one helps arrive at the reference answer. The higher the useful chunks rank, the higher the score. Both frameworks score it this way.
 
 ### Context Recall
 
@@ -161,10 +161,8 @@ Rates how relevant the chunks that came back are to the query.
 
 - **Needs**: no reference answer.
 - **Score**:
-  - Ragas has the judge rate all the retrieved content together, and gives the top rating to content that holds any information relevant to answering the query. It rates twice and averages the two, so the score is 0, 0.25, 0.5, 0.75, or 1. The judge reads only the first 7,000 characters, so anything retrieved past that doesn't count.
+  - Ragas has the judge rate all the retrieved content together, and gives the top rating to content that holds any information relevant to answering the query. It rates twice and averages the two, so the score is 0, 0.25, 0.5, 0.75, or 1.
   - DeepEval has the judge mark each statement in each chunk as relevant or not, and scores the share that's relevant.
-
-  Under either, the score is 0 when nothing was retrieved.
 
 ## Agent Metrics
 

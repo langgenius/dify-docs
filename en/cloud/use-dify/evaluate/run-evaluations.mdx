@@ -4,9 +4,9 @@ sidebarTitle: Overview
 description: Test your app, snippet, knowledge base, or Agent on a whole test set, then read and compare the scores
 ---
 
-An evaluation measures how well your app works. Use it to decide whether the app is ready to go live, and to check whether each change to its prompts, models, or retrieval settings made it better.
+An evaluation measures how well your app works. Use it to decide whether the app is ready for production, and to check whether each change to its prompts, models, or retrieval settings made it better.
 
-It runs a test set through the app, and a *judge model* (the LLM that does the grading) scores each test case on the metrics you choose. The conditions you set then decide which cases pass, so every run is held to the same bar, whoever starts it.
+It runs a test set through the app, and a *judge model* (the LLM that does the grading) scores each test case on the metrics you choose. The conditions you set then decide which cases pass, so every run is held to the same bar.
 
 Every run keeps its results. To check a change, run the same test set before and after it and [compare the scores](#compare-results-after-a-change).
 
@@ -74,7 +74,7 @@ A metric can also have no value for a test case, which leaves a condition such a
 
 ## Prepare a Test Set
 
-Base the test cases on what users actually ask. Include questions your app gets right as well as ones it gets wrong, since a change that fixes the wrong answers can break the right ones.
+Base the test cases on real inputs, such as questions your users have actually asked. Include cases that already work, not only the ones that fail. Then, if a change that fixes the failing cases breaks one that used to work, you'll know from the next evaluation run.
 
 <Note>
 Give each node you're scoring a unique title and publish before you download the template. The template names each node's `expected_output` column after its title, so nodes with the same title would share one reference answer.
@@ -84,7 +84,7 @@ Give each node you're scoring a unique title and publish before you download the
 
 2. Fill in one row per test case:
 
-    - `index`: give each row a unique whole number.
+    - `index`: number the rows 1, 2, 3, and so on.
 
     - Inputs: fill in every required input column. A Select column takes one of the field's options, exactly as written. A Checkbox column takes true/false, yes/no, or 1/0.
 
@@ -124,6 +124,7 @@ A run usually fails to start for one of these reasons:
 
 - `Dataset headers must not be empty.`: row 2 of the template, the one that explains each column, is still in the file. Delete it and upload again.
 - `Dataset headers must be unique.`: two columns share a name. Rename or remove one.
+- `Dataset index '…' is duplicated.`: two rows share that `index`. A row whose `index` is blank or not an integer is numbered by its position below the header, starting from 1. That number can collide with another row's `index` too. Give each row its own number.
 - `The selected metrics require a non-empty expected_output; invalid rows: …`: the listed rows have no reference answer, and a metric you selected needs one. Fill them in.
 - `Maximum concurrent runs (3) reached.`: your workspace already has three evaluations pending or running, including any your teammates started. Wait for one to finish, or cancel one.
 - `The customized evaluator must be a published evaluation workflow.`: the custom evaluator you added was switched back to a standard workflow. Make it an evaluation workflow again, or use a different evaluator.
@@ -142,10 +143,7 @@ Click a run in **Test History** to open **Test Details**. For a snippet, choose 
 
 A `-` in place of a score, or an empty cell in the result file, means the metric had no value for that row. For what drives each metric's score, see [Evaluation Metrics](/en/cloud/use-dify/evaluate/metrics).
 
-When a row shows an error in place of its actual result, look it up by its code in [Troubleshooting](#troubleshooting). Some errors come without a code:
-
-- `Evaluation failed. Please retry or contact support.`: often means a Ragas metric couldn't score this row. See [Evaluation Metrics](/en/cloud/use-dify/evaluate/metrics) for when each metric can't score.
-- `No evaluation metrics were generated for this row.`: none of the scored nodes ran successfully for this row, for example because a branch skipped them. In a Workflow app, find the row's run in **Logs** to see which path it took.
+When a row shows an error in place of its actual result, look it up by its code in [Troubleshooting](#troubleshooting). If the error reads `No evaluation metrics were generated for this row.` instead, none of the scored nodes ran successfully for this row, for example because a branch skipped them. In a Workflow app, find the row's run in **Logs** to see which path it took.
 
 To share the results or work with them in a spreadsheet, choose **Download result** from the run's menu, or click **Export** in **Test Details**.
 
@@ -174,9 +172,14 @@ Look up the code at the start of a row's error:
     If every row fails this way, check whether the person who created the app or snippet has left the workspace.
   </Accordion>
   <Accordion title="EVAL_METRIC_FAILED">
-    An LLM answer or retrieval metric hit an error while scoring this row. Check that the judge model works, and, for metrics that use it, that the default embedding model works.
+    An LLM answer or retrieval metric couldn't score this row. Find the cause that fits:
 
-    Under DeepEval, Faithfulness also fails this way when the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) isn't set and its prompt has no `<context>` tags. See [Faithfulness](/en/cloud/use-dify/evaluate/metrics#faithfulness) for the two ways to supply context.
+    - **Model problem**: the judge or the embedding model failed, or the judge's answer couldn't be read. Check that the judge model works, or switch to a more capable one. For metrics that use the default embedding model, check that it works too.
+    - **Nothing to score (Ragas)**: Faithfulness, for example, has nothing to check in an answer that makes no claims.
+    - **No context (DeepEval Faithfulness)**: the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) isn't set, and the prompt the model received on this row had no `<context>` tags, or empty ones (as with the result of a retrieval that found nothing). See [Faithfulness](/en/cloud/use-dify/evaluate/metrics#faithfulness) for the two ways to supply context.
+  </Accordion>
+  <Accordion title="EVAL_CONTEXT_MISSING">
+    Under Ragas, a metric that needs context had none on this row. Either retrieval returned nothing for the row's query, or, for Faithfulness, the LLM node's prompt held no context in a form Faithfulness reads. See [Faithfulness](/en/cloud/use-dify/evaluate/metrics#faithfulness) for the two ways to supply context.
   </Accordion>
   <Accordion title="EVAL_MODEL_REQUEST_FAILED">
     The call to the judge model for an Agent metric failed, or its answer couldn't be read. Check that the judge model works, or switch to a more capable one.
