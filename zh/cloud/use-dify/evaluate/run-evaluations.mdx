@@ -1,0 +1,195 @@
+---
+title: 运行评测
+sidebarTitle: 概述
+description: 用一整套测试集测试应用、Snippet、知识库或 Agent，再查看并对比得分
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/cloud/use-dify/evaluate/run-evaluations)。
+
+评测用来衡量应用的实际表现。借助评测，你可以判断应用能否上线，也能确认每次修改提示词、模型或检索设置之后，应用是否真的变好了。
+
+评测会用测试集运行应用，再由判定模型（负责打分的 LLM）按你选择的指标为每个测试用例打分。随后由你设定的条件决定哪些用例通过。这样一来，不论由谁发起，每次运行都按同一标准评判。
+
+每次运行的结果都会保留。要检验某项改动，可在改动前后各运行一次同一测试集，再 [对比得分](#对比改动前后的结果)。
+
+<Tip>
+评测适用于 <Badge color="blue" size="sm">Professional</Badge> 和 <Badge color="blue" size="sm">Team</Badge> 套餐。[了解更多](https://dify.ai/pricing)。
+</Tip>
+
+## 可评测的对象
+
+在待测对象的侧边栏中打开 **评测**（Agent 的侧边栏中名为 **评估**）：
+
+- **[Workflow 应用](/zh/cloud/use-dify/build/workflow-chatflow)**：可评测其中的 LLM、知识检索、Agent 知识检索和 Agent 节点。
+
+- **[Snippet](/zh/cloud/use-dify/build/snippet)**：可评测其中的 LLM 和 Agent 节点。
+
+- **[经典知识库](/zh/cloud/use-dify/knowledge/readme)**：评测它的检索效果。不支持外部知识库。
+
+  <Tip>
+  要检验 [Agent 知识库](/zh/cloud/use-dify/knowledge-base/overview)，改用它自带的 [参考问题评测](/zh/cloud/use-dify/knowledge-base/test-and-tune#run-an-evaluation)。
+  </Tip>
+
+- **[Agent](/zh/cloud/use-dify/build/new-agent/overview)**：评测它完成任务和使用工具的表现。
+
+## 开始之前
+
+- 发布要测试的 Workflow 应用、Snippet 或 Agent。评测运行的是已发布版本，而不是草稿。
+
+- 对于 Workflow 应用，确保它的 [用户输入](/zh/cloud/use-dify/nodes/user-input) 节点中没有单文件、文件列表或 JSON 类型的字段。
+
+- 如果要使用 [需要嵌入模型的指标](/zh/cloud/use-dify/evaluate/metrics#各指标需要什么)，确保工作空间已设置 [默认嵌入模型](/zh/cloud/use-dify/workspace/model-providers#选择应用默认使用的模型)。
+
+- 先用一个小测试集试跑，估算一次完整运行的开销。每个测试用例的开销分两部分：应用运行一次，再调用判定模型为它打分。如果模型使用的是你的 [AI 消息额度](/zh/cloud/use-dify/workspace/model-providers#使用-ai-消息额度调用模型)，这两部分都从额度中扣除。
+
+## 确定评分方式
+
+在评测页面中：
+
+1. 添加 [指标](/zh/cloud/use-dify/evaluate/metrics)。
+
+    对于 Workflow 应用或 Snippet，如果没有内置指标能检查你需要的规则（例如回答必须符合某种格式），可构建 [自定义评测器](/zh/cloud/use-dify/evaluate/custom-evaluators)。
+
+2. 选择 [判定框架](/zh/cloud/use-dify/evaluate/metrics#选择判定框架)。它只影响 LLM 回答指标和检索指标。
+
+3. 在 **判定模型** 中选择能力较强的模型，打分会更稳定。
+
+    条件允许时，所选模型最好也和应用所用的模型不同，免得判定模型给自己写的内容打分。
+
+<Note>
+未保存就离开评测页面，所做的改动会丢失。
+</Note>
+
+## 设定通过标准
+
+要让每个测试用例都按你定的标准评判，可添加条件：
+
+1. 在 **判定条件** 下，为测试用例必须达到的每项得分各添加一个条件，例如为生成回答的节点设置 Faithfulness ≥ 0.8。
+
+2. 有多个条件时，选择 **且**，只有全部满足的测试用例才通过；选择 **或**，满足任意一个即可通过。
+
+各指标打分的松紧不同，最初设的阈值多半需要调整。运行结束后，亲自读一读回答，确认通过的测试用例确实是你能接受的。如果不是，就调整阈值。
+
+测试用例出错时（例如某个指标无法为它打分），不论条件如何，都会显示 ✗。
+
+指标也可能对某个测试用例没有值，这时基于该指标的条件（例如 ≥ 0.8）就无法满足。比如 Agent 没有调用任何工具时，[Tool Argument Correctness](/zh/cloud/use-dify/evaluate/metrics#tool-argument-correctness) 就没有值。所以只有在每个测试用例都应调用工具时，才为它设置条件。
+
+## 准备测试集
+
+测试用例应取自用户的真实提问。应用答对的问题和答错的问题都要收进来，因为修好错误回答的改动，可能把原本正确的回答改坏。
+
+<Note>
+下载模板之前，为每个要评分的节点起一个不重复的标题，然后发布。模板会按节点标题命名该节点的 `expected_output` 列，标题相同的节点就会共用同一个参考答案。
+</Note>
+
+1. 在 **输入字段** 下点击 **下载测试集模版**。每次更改指标后，都要重新下载。
+
+2. 每个测试用例填写一行：
+
+    - `index`：为每一行填写一个不重复的整数。
+
+    - 输入：填写所有必填的输入列。下拉选项列只能填写该字段的某个选项，且与选项原文完全一致。复选框列可填写 true/false、yes/no 或 1/0。
+
+    - `expected_output`（用于需要对照参考答案的指标）：在每一行写下你能接受的回答。如果评测的是知识库，也可改为列出检索内容应覆盖的关键事实。
+
+    - `success_criteria`（用于 Task Completion）：列出 Agent 必须完成的事项，每行一条。判定模型会逐条单独检查。以旅行预订 Agent 为例，某一行可以这样写：
+
+      ```text
+      按用户要求的日期预订航班
+      告知预订确认号
+      ```
+
+      如果留空，判定模型只依据任务本身来判断。
+
+3. 删除第 2 行，即说明各列含义的那一行。
+
+4. 将文件保存为 XLSX，或 UTF-8 编码的 CSV，只保留一个工作表，最多 500 行。
+
+## 运行测试集
+
+点击 **上传并运行测试**，选择文件，再点击 **运行测试**。评测在后台运行，可在 **测试历史** 中查看进度。
+
+一个工作空间最多可同时有 3 个评测处于等待或运行状态。
+
+<Note>
+在 Workflow 应用中，评测产生的运行就是应用的普通运行，会和真实运行混在一起，出现在以下位置：
+
+- [**日志**](/zh/cloud/use-dify/monitor/logs)：显示为由应用创建者发起的 `网页应用` 运行
+- [**监测**](/zh/cloud/use-dify/monitor/analysis)，以及你接入的各个追踪集成
+- 工作流所查询的经典知识库中的 **召回测试** > **记录**：这些查询的来源显示为 `App`
+
+</Note>
+
+### 运行无法启动时
+
+运行无法启动，通常是以下原因之一：
+
+- `Dataset headers must not be empty.`：模板的第 2 行（说明各列含义的那一行）还留在文件中。删除后重新上传。
+- `Dataset headers must be unique.`：有两列同名。重命名或删除其中一列。
+- `The selected metrics require a non-empty expected_output; invalid rows: …`：所列的行没有参考答案，而你选的某个指标需要参考答案。把这些行补全。
+- `Maximum concurrent runs (3) reached.`：工作空间中已有 3 个评测处于等待或运行状态，其他成员发起的也算在内。等其中一个结束，或取消一个。
+- `The customized evaluator must be a published evaluation workflow.`：你添加的自定义评测器已切换回标准工作流。把它重新切换为评测工作流，或改用其他评测器。
+
+### 取消或重试运行
+
+要停止处于等待或运行状态的评测，在 **测试历史** 中点击 **取消任务**。已打分的行仍保留在 **测试详情** 中，但已取消的运行不会生成结果文件。
+
+如果某次运行似乎一直停在 `运行中`，先等几分钟。真正停止的运行会自动变为 `失败`。
+
+要完成中途停止的运行，在 **测试历史** 中点击 **重试任务**。重试只为还没有结果的行打分。出错的行要先找到原因并解决，再发起新的运行。
+
+## 查看结果
+
+在 **测试历史** 中点击某次运行，即可打开 **测试详情**。如果评测的是 Snippet，改为在该运行的菜单中选择 **下载结果文件**。
+
+得分处显示 `-`，或结果文件中的单元格为空，表示该指标在这一行没有值。各指标的得分由什么决定，详见 [评测指标](/zh/cloud/use-dify/evaluate/metrics)。
+
+如果某一行的实际结果处显示的是错误，按错误码在 [故障排除](#故障排除) 中查找。有些错误不带错误码：
+
+- `Evaluation failed. Please retry or contact support.`：通常表示某个 Ragas 指标无法为这一行打分。各指标在什么情况下无法打分，详见 [评测指标](/zh/cloud/use-dify/evaluate/metrics)。
+- `No evaluation metrics were generated for this row.`：要评分的节点在这一行都没有成功运行，例如这一行走了别的分支，跳过了这些节点。在 Workflow 应用中，可在 **日志** 中找到这一行对应的运行，查看它走了哪条路径。
+
+要分享结果，或在电子表格中处理结果，可在该运行的菜单中选择 **下载结果文件**，或在 **测试详情** 中点击 **导出**。
+
+## 对比改动前后的结果
+
+1. 运行测试集。
+
+2. 只改动一处，例如提示词、模型或某项检索设置，然后发布。
+
+    评测的框架、指标、条件和判定模型都保持不变，这样得分的差异就只来自你的改动。
+
+3. 再次运行同一个文件。如果手头已经没有这个文件，可在第一次运行的菜单中选择 **下载测试文件**。
+
+4. 在 **测试详情** 中分别打开两次运行，或按 `index` 对齐两份结果文件中的行。
+
+## 故障排除
+
+按错误信息开头的错误码查找对应条目：
+
+<AccordionGroup>
+  <Accordion title="EVAL_TARGET_FAILED">
+    对于 Agent，表示它在这一行运行失败。亲自把这一行的查询发给它，看看在哪一步出了问题。
+
+    对于 Workflow 应用或 Snippet，表示这一行的运行没能启动。先检查这一行的输入：必填的数字或复选框输入留空、下拉选项的值不在字段的选项中，或文本超出字段允许的长度，都会让这一行在运行前就被拦下。
+
+    如果每一行都这样失败，检查应用或 Snippet 的创建者是否已离开工作空间。
+  </Accordion>
+  <Accordion title="EVAL_METRIC_FAILED">
+    某个 LLM 回答指标或检索指标在为这一行打分时出错。检查判定模型能否正常使用；对于用到默认嵌入模型的指标，也检查默认嵌入模型能否正常使用。
+
+    如果判定框架选的是 DeepEval，Faithfulness 在以下情况也会报这个错误：LLM 节点没有设置 [**上下文**](/zh/cloud/use-dify/nodes/llm#上下文变量)，提示词中也没有 `<context>` 标签。提供上下文的两种方式详见 [Faithfulness](/zh/cloud/use-dify/evaluate/metrics#faithfulness)。
+  </Accordion>
+  <Accordion title="EVAL_MODEL_REQUEST_FAILED">
+    为 Agent 指标调用判定模型失败，或无法解析它的回复。检查判定模型能否正常使用，或换用能力更强的模型。
+  </Accordion>
+  <Accordion title="EVAL_TARGET_DATA_MISSING">
+    某个 Agent 指标没有拿到为这一行打分所需的运行数据。发起一次新的运行。
+  </Accordion>
+  <Accordion title="EVAL_RETRIEVAL_FAILED">
+    这一行对知识库的查询失败。在知识库的 [**召回测试**](/zh/cloud/use-dify/knowledge/test-retrieval) 页面运行这一行的查询，看看是否同样失败。
+  </Accordion>
+  <Accordion title="EVAL_CUSTOM_EVALUATOR_FAILED">
+    自定义评测器为这一行打分时失败。可能的原因及各自的解决方法，详见 [评测器在某一行失败时](/zh/cloud/use-dify/evaluate/custom-evaluators#评测器在某一行失败时)。
+  </Accordion>
+</AccordionGroup>
