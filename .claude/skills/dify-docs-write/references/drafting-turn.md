@@ -16,4 +16,8 @@ The research summary is the ceiling (in co-writing, the research record's verifi
 
 ## Read it back
 
-Before any mechanical check, read the whole draft once as its reader, first time on the page, against the style guide's "What a Good Page Does". Stop at every sentence you would not say aloud to a colleague, every noun phrase doing a verb's work, every sentence carrying two ideas, every fact the reader would not have asked for, every slot kept for a template's sake. Fix those first. The linters measure what is left.
+Before any mechanical check, read the whole draft once as its reader, first time on the page, against the whole style guide: its opening section, "What a Good Page Does", is the standard, and its later sections are the rules a page also has to meet. Read the guide just before the read-back, unless you read it to draft this page in the same turn.
+
+Stop at every sentence that stumbles when read aloud, every noun phrase doing a verb's work, every sentence carrying two separable ideas, every fact the reader would not have asked for, every slot kept for a template's sake. Stop as well at a clause hung on a finished sentence behind a semicolon or a colon, a pronoun whose referent is not the nearest noun, and a word or connective the next sentence repeats. Fix those first. The linters measure what is left.
+
+The read-back that counts is of the text you are about to show, after its last edit. Revising moves sentences, so read the revised section again as its reader, then its structure: whether it still opens with the action, keeps the reader's order with each fact at the step where they act on it, and takes the form, prose, list, or steps, that fits what they do there. A rewrite you propose in a co-writing walk is held to this as much as a draft is. Reading the original to find its faults does not read the rewrite. (Mitigation for Opus 5.5, which read back the draft it was revising, then ran only its own pattern checks on the rewrite.)
