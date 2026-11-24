@@ -1,0 +1,193 @@
+---
+title: Run an Evaluation
+sidebarTitle: Overview
+description: Test your app, snippet, knowledge base, or Agent on a whole test set, then read and compare the scores
+---
+
+An evaluation measures how well your app works. Use it to decide whether the app is ready to go live, and to check whether each change to its prompts, models, or retrieval settings made it better.
+
+It runs a test set through the app, and a *judge model* (the LLM that does the grading) scores each test case on the metrics you choose. The conditions you set then decide which cases pass, so every run is held to the same bar, whoever starts it.
+
+Every run keeps its results. To check a change, run the same test set before and after it and [compare the scores](#compare-results-after-a-change).
+
+<Tip>
+Evaluations are available on <Badge color="blue" size="sm">Professional</Badge> and <Badge color="blue" size="sm">Team</Badge>. [Learn more](https://dify.ai/pricing).
+</Tip>
+
+## What You Can Evaluate
+
+Open **Evaluation** in the sidebar of what you want to test:
+
+- **A [Workflow app](/en/cloud/use-dify/build/workflow-chatflow)**: the LLM, Knowledge Retrieval, Agent Knowledge Retrieval, and Agent nodes.
+
+- **A [snippet](/en/cloud/use-dify/build/snippet)**: the LLM and Agent nodes.
+
+- **A [classic knowledge base](/en/cloud/use-dify/knowledge/readme)**: how well it retrieves. External knowledge bases aren't supported.
+
+  <Tip>
+  To check an [agent knowledge base](/en/cloud/use-dify/knowledge-base/overview), use its own [golden-question evaluations](/en/cloud/use-dify/knowledge-base/test-and-tune#run-an-evaluation) instead.
+  </Tip>
+
+- **An [Agent](/en/cloud/use-dify/build/new-agent/overview)**: how well it completes tasks and uses its tools.
+
+## Before You Start
+
+- Publish the workflow, snippet, or Agent you want to test. An evaluation runs the published version, not the draft.
+
+- For a Workflow app, make sure its [User Input](/en/cloud/use-dify/nodes/user-input) node has no Single File, File List, or JSON Code field.
+
+- If you'll use [metrics that need an embedding model](/en/cloud/use-dify/evaluate/metrics#what-each-metric-needs), make sure the workspace has a [default embedding model](/en/cloud/use-dify/workspace/model-providers#choose-the-models-apps-use-by-default).
+
+- Try a small test set first to see what a full run costs. Each test case costs one run of your app plus the judge's calls to score it. On models that use your [AI credits](/en/cloud/use-dify/workspace/model-providers#use-models-with-your-ai-credits), both come out of your credits.
+
+## Choose What Gets Scored
+
+On the **Evaluation** page:
+
+1. Add the [metrics](/en/cloud/use-dify/evaluate/metrics).
+
+    For a Workflow app or snippet, if no built-in metric checks a rule you need, such as a required answer format, build a [custom evaluator](/en/cloud/use-dify/evaluate/custom-evaluators).
+
+2. Choose an [Evaluation Framework](/en/cloud/use-dify/evaluate/metrics#choose-a-framework). It affects only LLM answer and retrieval metrics.
+
+3. For the **Judge Model**, pick a capable model, since it scores more consistently.
+
+    Where you can, also pick one other than your app's model, so the judge isn't grading its own writing.
+
+<Note>
+Leaving the **Evaluation** page without saving discards your changes.
+</Note>
+
+## Decide What Counts as a Pass
+
+To hold every test case to a bar you set, add conditions:
+
+1. Under **Judgment Conditions**, add a condition for each score a test case must reach, such as Faithfulness ≥ 0.8 on the node that writes the answer.
+
+2. With more than one condition, choose **AND** to pass only test cases that meet all of them, or **OR** to pass those that meet any one.
+
+Metrics differ in how strictly they score, so expect to tune your first thresholds. After a run, read the answers yourself and check that the test cases that passed are the ones you'd accept. If not, adjust the thresholds.
+
+A test case that ends with an error, such as a metric that couldn't score it, shows ✗ whatever the conditions say.
+
+A metric can also have no value for a test case, which leaves a condition such as ≥ 0.8 on it unmet. [Tool Argument Correctness](/en/cloud/use-dify/evaluate/metrics#tool-argument-correctness), for example, has no value when the agent called no tools, so set a condition on it only when every test case should call a tool.
+
+## Prepare a Test Set
+
+Base the test cases on what users actually ask. Include questions your app gets right as well as ones it gets wrong, since a change that fixes the wrong answers can break the right ones.
+
+<Note>
+Give each node you're scoring a unique title and publish before you download the template. The template names each node's `expected_output` column after its title, so nodes with the same title would share one reference answer.
+</Note>
+
+1. Under **Input Fields**, click **Download XLSX Template**. Download it again whenever you change the metrics.
+
+2. Fill in one row per test case:
+
+    - `index`: give each row a unique whole number.
+
+    - Inputs: fill in every required input column. A Select column takes one of the field's options, exactly as written. A Checkbox column takes true/false, yes/no, or 1/0.
+
+    - `expected_output` (for metrics that compare with a reference answer): on every row, write the answer you'd accept. For a knowledge base, you can list the key facts the retrieved content should cover instead.
+
+    - `success_criteria` (for Task Completion): list what the agent must get done, one requirement per line. The judge checks each one separately. For a travel-booking Agent, a row might hold:
+
+      ```text
+      Books a flight on the date the user asked for
+      Shares the booking confirmation number
+      ```
+
+      If you leave it blank, the judge works from the task alone.
+
+3. Delete row 2, which explains each column.
+
+4. Save the file as XLSX or as CSV in UTF-8, on a single sheet with up to 500 rows.
+
+## Run the Test Set
+
+Click **Upload & Run Test**, choose your file, and click **Run Test**. The run goes on in the background, and you can follow it in **Test History**.
+
+A workspace can have up to three evaluations pending or running at once.
+
+<Note>
+In a Workflow app, the runs an evaluation makes are ordinary runs of the app. Expect them among the real ones in:
+
+- [**Logs**](/en/cloud/use-dify/monitor/logs), where they show as `WebApp` runs by the app's creator
+- [**Monitoring**](/en/cloud/use-dify/monitor/analysis) and any tracing integration you've connected
+- **Retrieval Testing** > **Records** of any classic knowledge base the workflow queries, where their queries show `App` as the source
+
+</Note>
+
+### If the Run Doesn't Start
+
+A run usually fails to start for one of these reasons:
+
+- `Dataset headers must not be empty.`: row 2 of the template, the one that explains each column, is still in the file. Delete it and upload again.
+- `Dataset headers must be unique.`: two columns share a name. Rename or remove one.
+- `The selected metrics require a non-empty expected_output; invalid rows: …`: the listed rows have no reference answer, and a metric you selected needs one. Fill them in.
+- `Maximum concurrent runs (3) reached.`: your workspace already has three evaluations pending or running, including any your teammates started. Wait for one to finish, or cancel one.
+- `The customized evaluator must be a published evaluation workflow.`: the custom evaluator you added was switched back to a standard workflow. Make it an evaluation workflow again, or use a different evaluator.
+
+### Cancel or Retry a Run
+
+To stop a run that's pending or running, click **Cancel run** in **Test History**. Rows already scored stay in **Test Details**, but a cancelled run has no result file.
+
+If a run seems stuck at `Running`, wait a few minutes. A run that has actually stopped turns `Failed` on its own.
+
+To finish a run that stopped partway, click **Retry run** in **Test History**. It scores only the rows that have no result yet. For rows that ended with an error, fix the cause and start a new run.
+
+## Read the Results
+
+Click a run in **Test History** to open **Test Details**. For a snippet, choose **Download result** from the run's menu instead.
+
+A `-` in place of a score, or an empty cell in the result file, means the metric had no value for that row. For what drives each metric's score, see [Evaluation Metrics](/en/cloud/use-dify/evaluate/metrics).
+
+When a row shows an error in place of its actual result, look it up by its code in [Troubleshooting](#troubleshooting). Some errors come without a code:
+
+- `Evaluation failed. Please retry or contact support.`: often means a Ragas metric couldn't score this row. See [Evaluation Metrics](/en/cloud/use-dify/evaluate/metrics) for when each metric can't score.
+- `No evaluation metrics were generated for this row.`: none of the scored nodes ran successfully for this row, for example because a branch skipped them. In a Workflow app, find the row's run in **Logs** to see which path it took.
+
+To share the results or work with them in a spreadsheet, choose **Download result** from the run's menu, or click **Export** in **Test Details**.
+
+## Compare Results After a Change
+
+1. Run your test set.
+
+2. Change one thing, such as the prompt, the model, or a retrieval setting, and publish it.
+
+    Leave the evaluation's framework, metrics, conditions, and judge model as they were, so any difference in the scores comes from your change.
+
+3. Run the same file again. If you no longer have it, choose **Download test file** from the first run's menu.
+
+4. Open each run in **Test Details**, or match the rows of their result files by `index`.
+
+## Troubleshooting
+
+Look up the code at the start of a row's error:
+
+<AccordionGroup>
+  <Accordion title="EVAL_TARGET_FAILED">
+    For an Agent, the run failed on this row. Send it the row's query yourself and watch where it goes wrong.
+
+    For a Workflow app or snippet, the run couldn't start for this row. Check the row's inputs first. A required Number or Checkbox input left empty, a Select value that isn't one of the field's options, or text longer than the field allows stops the row before it runs.
+
+    If every row fails this way, check whether the person who created the app or snippet has left the workspace.
+  </Accordion>
+  <Accordion title="EVAL_METRIC_FAILED">
+    An LLM answer or retrieval metric hit an error while scoring this row. Check that the judge model works, and, for metrics that use it, that the default embedding model works.
+
+    Under DeepEval, Faithfulness also fails this way when the LLM node's [**Context**](/en/cloud/use-dify/nodes/llm#context-variables) isn't set and its prompt has no `<context>` tags. See [Faithfulness](/en/cloud/use-dify/evaluate/metrics#faithfulness) for the two ways to supply context.
+  </Accordion>
+  <Accordion title="EVAL_MODEL_REQUEST_FAILED">
+    The call to the judge model for an Agent metric failed, or its answer couldn't be read. Check that the judge model works, or switch to a more capable one.
+  </Accordion>
+  <Accordion title="EVAL_TARGET_DATA_MISSING">
+    An Agent metric didn't get the run data it needs to score this row. Start a new run.
+  </Accordion>
+  <Accordion title="EVAL_RETRIEVAL_FAILED">
+    The query to the knowledge base failed for this row. Run the row's query on the knowledge base's [**Retrieval Testing**](/en/cloud/use-dify/knowledge/test-retrieval) page to see whether it fails there too.
+  </Accordion>
+  <Accordion title="EVAL_CUSTOM_EVALUATOR_FAILED">
+    Your custom evaluator failed while scoring this row. For the causes and how to fix each, see [When the Evaluator Fails on a Row](/en/cloud/use-dify/evaluate/custom-evaluators#when-the-evaluator-fails-on-a-row).
+  </Accordion>
+</AccordionGroup>
