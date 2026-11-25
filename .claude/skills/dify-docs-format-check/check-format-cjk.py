@@ -660,8 +660,11 @@ def check_zh_quotes(lines: list[str]) -> list[Violation]:
 def check_zh_range_hyphen(lines: list[str]) -> list[Violation]:
     vs: list[Violation] = []
     in_fence = False
-    # digit-digit or digit–digit in Chinese context where ～ should be used
-    pat = re.compile(r'\d+\s?[-–]\s?\d+')
+    # digit-digit or digit–digit in Chinese context where ～ should be used.
+    # A number glued to a letter, digit, dot, underscore, or hyphen is part of
+    # a name (SHA3-256, Llama-3.1-70B, ISO-8859-1), not the start of a range;
+    # the digit also stops a match restarting mid-number (SHA33-256).
+    pat = re.compile(r'(?<![A-Za-z\d_.\-–])\d+(?:\.\d+)*\s?[-–]\s?\d+')
     for i, line in enumerate(lines, 1):
         if FENCE_RE.match(line):
             in_fence = not in_fence
