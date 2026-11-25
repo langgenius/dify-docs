@@ -8,6 +8,7 @@ from pathlib import Path
 CHECKER = runpy.run_path(str(Path(__file__).with_name('check-format-cjk.py')))
 check_latin_spacing = CHECKER['check_cjk_latin_spacing']
 check_bold_spacing = CHECKER['check_cjk_bold_spacing']
+check_range_hyphen = CHECKER['check_zh_range_hyphen']
 
 
 class CjkLatinSpacingTests(unittest.TestCase):
@@ -89,6 +90,39 @@ class CjkLatinSpacingTests(unittest.TestCase):
         ])
         self.assertEqual([v.line for v in violations], [1, 2, 3])
 
+
+class ZhRangeHyphenTests(unittest.TestCase):
+    def test_numeric_ranges_still_flagged(self):
+        lines = [
+            '最多上传 1-5 个文件。',
+            '每批 10–20 条记录。',
+            '取值 1 - 5。',
+            '第10-20章',
+            '取值 0.1-1.0。',
+        ]
+        violations = check_range_hyphen(lines)
+        self.assertEqual([(v.line, v.rule) for v in violations], [
+            (1, 'ZH-range-hyphen'),
+            (2, 'ZH-range-hyphen'),
+            (3, 'ZH-range-hyphen'),
+            (4, 'ZH-range-hyphen'),
+            (5, 'ZH-range-hyphen'),
+        ])
+
+    def test_names_with_digits_not_flagged(self):
+        for line in (
+            '文件内容的 SHA3-256 哈希值。',
+            '使用 SHA33-256 校验。',
+            '使用 ISO-8859-1 编码。',
+            '使用 Llama-3.1-70B 为例。',
+        ):
+            with self.subTest(line=line):
+                self.assertEqual(check_range_hyphen([line]), [])
+
+    def test_range_after_name_on_same_line_is_reported(self):
+        violations = check_range_hyphen(['使用 SHA3-256 哈希，最多 1-5 个。'])
+        self.assertEqual(len(violations), 1)
+        self.assertIn("'1-5'", violations[0].message)
 
 if __name__ == '__main__':
     unittest.main()
