@@ -440,12 +440,18 @@ def check_internal_links():
 # support.huaweicloud.com answers automated requests with a bot-verification
 # page (HTTP 404) that browsers never see, so a genuine 404 there is
 # indistinguishable and stays hidden — re-check those links by hand.
+# open.feishu.cn and open.larksuite.com serve every path from one app shell:
+# GET returns 200 for any path, real or made up, and HEAD returns 404 for
+# every developer-console page (/app), so no status tells a working link
+# from a broken one there either; re-check those by hand too.
 SKIP_HOSTS = {
     "assets-docs.dify.ai",   # CDN, blocks HEAD
     "volcengine.com",        # geo-restricted
     "twitter.com",
     "x.com",
     "support.huaweicloud.com",
+    "open.feishu.cn",
+    "open.larksuite.com",
     "your-dify-host",        # placeholder in the embedding page
 }
 
