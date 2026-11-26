@@ -1,0 +1,202 @@
+---
+title: カスタム API スキャナーの仕様
+sidebarTitle: カスタム API スキャナー
+description: Dify がナレッジベースのアップロードファイルを検査する際に、インターネット経由で呼び出すスキャンサービスを構築します
+---
+
+> このドキュメントは AI によって自動翻訳されています。不正確な部分がある場合は、[英語版](/en/cloud/use-dify/knowledge/file-security-scan-custom-endpoint) を参照してください。
+
+**カスタム API** スキャナーでスキャンするナレッジベースでは、アップロードされたファイルを Dify が自社のスキャンサービスに送信します。サービスは、ファイルごとに判定結果を返します。問題のないファイルは通常どおりインデックス化され、感染したファイルはブロックされます。
+
+ナレッジベースでスキャンを有効にする方法は、[アップロードされたファイルのマルウェアスキャン](/ja/cloud/use-dify/knowledge/file-security-scan) を参照してください。
+
+<Info>
+このスキャナーの種類は、**連携** の **カスタム API** セクションとは別のものです。同セクションは API ベースの拡張機能を管理するもので、リクエストの形式も異なります。
+</Info>
+
+## ファイルの受信
+
+Dify は、ファイルを 1 つずつ個別のリクエストで送信します。
+
+```text
+POST <Endpoint URL>
+Authorization: Bearer <API key>
+Content-Type: multipart/form-data
+```
+
+任意の秘密の文字列を API キーとして決め、スキャナーの追加時に Dify に入力します。サービス側ではリクエストのたびにこのキーを検証し、一致しない場合は `401` を返してください。
+
+フォームには、ファイルと 5 つのテキストフィールドが含まれます。
+
+<ParamField body="file" type="file">
+  スキャン対象のファイルです。
+</ParamField>
+
+<ParamField body="scan_id" type="string">
+  このスキャンの ID です。Dify がスキャンを自動で再試行する際は、同じ ID が送信されます。そのため、同じリクエストが再び届いたときは、スキャンし直さずに初回の結果で応答できます。後からナレッジベースでファイルを再試行した場合は、新しい ID で新しいスキャンが始まります。
+</ParamField>
+
+<ParamField body="file_name" type="string">
+  `report.docx` などのファイル名です。
+</ParamField>
+
+<ParamField body="file_size" type="string">
+  バイト単位のファイルサイズを、`482113` のような 10 進数の文字列で表したものです。
+</ParamField>
+
+<ParamField body="mime_type" type="string">
+  ファイルの MIME タイプです。Dify が判別できない場合は空になります。
+</ParamField>
+
+<ParamField body="file_hash" type="string">
+  ファイル内容の SHA3-256 ハッシュを 16 進数で表したものです。空の場合もあります。常にハッシュが必要な場合は、サービス側でファイル内容から計算してください。
+</ParamField>
+
+## 判定結果の返却
+
+`2xx` のいずれかのステータスコードと、JSON オブジェクトを返します。
+
+```json
+{
+  "verdict": "infected",
+  "threats": ["EICAR-Test-File"],
+  "engine": "MyScanner 2.1"
+}
+```
+
+<ResponseField name="verdict" type="string" required>
+  `clean`、`infected`、`unscannable` のいずれかです。
+</ResponseField>
+
+<ResponseField name="threats" type="string[]">
+  検出された脅威の名前です。ファイルがブロックされた理由を伝えるメッセージで、ユーザーに表示されます。省略した場合、メッセージには `unknown` が検出されたと表示されます。
+
+  Dify は最大 20 件の名前を保持し、それぞれ 200 文字を超える部分は切り捨てます。
+</ResponseField>
+
+<ResponseField name="engine" type="string">
+  スキャンエンジンの名前またはバージョンです。Dify 上には表示されません。
+</ResponseField>
+
+<ResponseField name="message" type="string">
+  ファイルをスキャンできなかった理由です。`unscannable` と一緒に送信します。最大 500 文字まで保持されますが、Dify 上には表示されません。
+</ResponseField>
+
+サービスが判定できないファイルの扱いは、ナレッジベースの **ファイルをスキャンできない場合（暗号化されている、またはサイズが大きすぎる）** で決まります。デフォルトではブロックされますが、スキャンせずに受け入れるよう設定することもできます。ブロックされたファイルに表示されるエラーメッセージは、返す内容によって次のように変わります。
+
+- **サイズが大きすぎる場合**：`413` を返します。エラーメッセージには、ファイルがスキャナーのサイズ上限を超えていると表示されます。
+- **暗号化されている、形式に対応していない、またはその他の理由の場合**：`unscannable` を返します。理由にかかわらず、エラーメッセージには、スキャナーがそのファイルに対応していないと表示されます。
+
+## ステータスコードの選び方
+
+Dify は、返されたステータスコードとボディに基づいて、ファイルの扱いを決めます。
+
+| レスポンス | Dify の処理 |
+|:--|:--|
+| `2xx` と有効な `verdict` | 判定結果に従う |
+| `401` または `403` | キーが無効とみなす。ナレッジベースの設定にかかわらずファイルをブロックし、再試行せず、スキャナーを **エラー** にする |
+| `402` または `429` | クォータを使い切ったとみなし、`401` および `403` と同じように処理する |
+| `413` | サイズ超過とみなし、ナレッジベースの **ファイルをスキャンできない場合（暗号化されている、またはサイズが大きすぎる）** の設定に従う |
+| `5xx`、タイムアウト、または接続エラー | 自動の再試行を終えた後、ナレッジベースの **スキャナーが利用できない場合** の設定に従う |
+| その他のステータス、リダイレクト、JSON ではないボディ、または不明な `verdict` | 解釈できない応答とみなす。再試行せず、ナレッジベースの **スキャナーが利用できない場合** の設定に従う |
+
+<Note>
+一時的な過負荷で、再試行すれば処理できる見込みがある場合は、`429` ではなく `503` を返してください。
+</Note>
+
+## 制限時間内の応答
+
+Dify が各応答を待つ時間には上限があります。
+
+スキャンは短時間で終わるようにしてください。Agent ナレッジベースでは、エンドポイントが応答するまで、アップロードしたユーザーはアップロードダイアログで待つことになります。
+
+時間内に処理を終えられないとわかっている場合は、タイムアウトを待たずに、すぐに `413` または `unscannable` を返してください。
+
+## サンプルを基にした実装
+
+次の Flask エンドポイントの `my_scanner` を、独自のスキャンロジックに置き換えてください。
+
+```python scanner.py
+import hmac
+import os
+
+from flask import Flask, jsonify, request
+
+app = Flask(__name__)
+API_KEY = os.environ["SCANNER_API_KEY"]  # the API key you enter in Dify
+
+
+def my_scanner(content: bytes) -> list[str]:
+    """Replace with your scanning logic: return the names of any threats found."""
+    return []
+
+
+@app.post("/scan")
+def scan():
+    expected = f"Bearer {API_KEY}"
+    received = request.headers.get("Authorization", "")
+    if not hmac.compare_digest(received.encode(), expected.encode()):
+        return jsonify(error="invalid API key"), 401
+
+    content = request.files["file"].read()
+    threats = my_scanner(content)
+    if threats:
+        return jsonify(verdict="infected", threats=threats, engine="MyScanner")
+    return jsonify(verdict="clean", engine="MyScanner")
+```
+
+コードを `scanner.py` として保存します。次に Flask をインストールし、Dify に入力する API キーを指定してエンドポイントを起動します。
+
+```bash
+pip install flask
+SCANNER_API_KEY=your-api-key flask --app scanner run --host 0.0.0.0 --port 8000
+```
+
+## エンドポイントのローカルテスト
+
+エンドポイントが動作しているマシンから、Dify と同じ形式のリクエストを送信します。
+
+```bash
+curl http://localhost:8000/scan \
+  -H "Authorization: Bearer your-api-key" \
+  -F "file=@report.docx" \
+  -F "scan_id=test-1" \
+  -F "file_name=report.docx" \
+  -F "file_size=482113" \
+  -F "mime_type=application/vnd.openxmlformats-officedocument.wordprocessingml.document" \
+  -F "file_hash="
+```
+
+スキャンロジックを実装したら、このリクエストを 2 回送信します。1 回目は問題のないファイル、2 回目は EICAR テストファイルを使い、それぞれに合わせて `file_name`、`file_size`、`mime_type` を変更します。エンドポイントからは、1 回目に `clean`、2 回目に `infected` が返るはずです。
+
+<Info>
+EICAR テストファイルは無害なファイルですが、どのウイルス対策エンジンもマルウェアとして検出します。[eicar.org](https://www.eicar.org) から入手できます。
+</Info>
+
+ナレッジベースでスキャナーを使い始める前に、実際のファイルもいくつか送信して、誤検知がないか確認してください。
+
+Dify は判定結果を保持します。ワークスペース内で同じ内容を同じスキャナーで再度チェックする場合は、エンドポイントを呼び出さずに以前の判定結果を再利用します。
+
+- **`infected`**：無期限に再利用されます。そのため、問題のないファイルをサービスが誤って検出した場合、スキャナーを修正した後もそのファイルはブロックされたままです。
+- **`clean`**：一定期間再利用されます。その間は、スキャナーを更新して検出できるようにしても、同じファイルはそのまま通過します。
+
+## Dify からのアクセス経路の確保
+
+Dify にエンドポイントを追加する前に、エンドポイントが次の条件を満たしていることを確認してください。
+
+- パブリックアドレスで稼働していること。プライベートアドレスや内部アドレスはブロックされます。これらのアドレスに名前解決されるホスト名も同様です。
+- 有効な TLS 証明書を使って `https` で提供されていること。`http` も使用できますが、その場合、各ファイルと API キーは暗号化されないままインターネットを経由します。
+
+## Dify でのスキャナーの追加
+
+**連携** > **ファイルセキュリティスキャン** で **スキャナーを追加** > **カスタム API** をクリックします。**エンドポイント URL** には、`https://scanner.example.com/scan` のように、パスを含む完全な URL を入力します。Dify はリダイレクトに従わないため、`http` から `https` にリダイレクトされる場合は、`https` の URL を入力してください。
+
+Dify は、スキャナーの保存時と **テスト** のクリック時に、次のファイルを 1 つ送信して接続を確認します。
+
+- `file`：`clean-test.txt`（`text/plain`）
+- `scan_id`：`connectivity-check`
+- `file_hash`：空
+
+有効な判定結果であれば、内容にかかわらず確認に合格します。`413` も合格です。Dify がスキャナーを保存するのは、確認に合格した場合だけです。
+
+ナレッジベースでスキャナーを使い始めたら、そのナレッジベースに [EICAR テストファイルをアップロード](/ja/cloud/use-dify/knowledge/file-security-scan#スキャンの動作確認) して、一連の処理全体を確認してください。
