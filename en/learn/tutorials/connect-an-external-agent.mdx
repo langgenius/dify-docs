@@ -6,16 +6,16 @@ description: Wrap your agent in a Python endpoint, host it over HTTPS, and run a
 
 Keep your agent's code, tools, and model credentials on your server. Dify sends it a task and waits for the answer through an A2A endpoint.
 
-The Python wrapper below handles the A2A 1.0 HTTP+JSON requests Dify needs for text tasks. Start with its echo response to check the connection, then replace one function with your existing agent call. You don't need an A2A SDK.
+The Python wrapper below handles the A2A 1.0 HTTP+JSON requests Dify needs for text tasks. Start with its echo response, give it a temporary HTTPS address, and run it from Dify. Then replace one function with your existing agent call. You don't need an A2A SDK.
 
 ## Before You Start
 
 Have these ready:
 
 - Python 3.11 or later, Bash, and `curl`.
+- Docker for the temporary HTTPS route below, or a working Python environment with `pip` and your own HTTPS host.
 - Your agent's Python entry point, SDK, or HTTP endpoint.
 - A Dify workspace where **External agents** is available.
-- A host that can serve your Python app at a public HTTPS address.
 
 <Info>
 Connecting an external agent requires the Owner or Admin role in the workspace.
@@ -165,7 +165,58 @@ The wrapper returns a submitted task immediately, runs `run_agent` in the backgr
 
 ## Run and Check It Locally
 
-In Bash, create an environment and install the dependencies:
+Use one Bash terminal for the commands below so they share the same token and settings. Choose an unused local port: the example uses `8000`; set `AGENT_DEMO_PORT` to another port if it is occupied. Generate a token without displaying it:
+
+```bash
+set -o pipefail
+export AGENT_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export AGENT_DEMO_PORT=8000
+export PUBLIC_BASE_URL="http://127.0.0.1:$AGENT_DEMO_PORT"
+```
+
+Choose Docker to follow the temporary HTTPS route, or Python to run the endpoint directly.
+
+<Tabs>
+  <Tab title="Docker">
+    Save this `Dockerfile` beside `agent_endpoint.py`. It installs the Python dependencies in its own environment and copies only the endpoint file into the image.
+
+```dockerfile Dockerfile
+ARG PYTHON_BASE=python:3.13-slim-bookworm
+FROM ${PYTHON_BASE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/python -m pip install --no-cache-dir \
+       fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
+
+WORKDIR /app
+COPY agent_endpoint.py /app/agent_endpoint.py
+USER 65532:65532
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "agent_endpoint:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+```
+
+    Build the image and create a network for this example. The generated name keeps its resources separate from your other containers.
+
+```bash
+export AGENT_DEMO_NAME="dify-agent-demo-$(python3 -c 'from uuid import uuid4; print(uuid4().hex[:8])')"
+docker build --tag "$AGENT_DEMO_NAME" .
+docker network create "$AGENT_DEMO_NAME"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+docker logs "$AGENT_DEMO_NAME-endpoint"
+```
+
+  </Tab>
+  <Tab title="Python">
+    Create an environment and install the dependencies:
 
 ```bash
 python3 -m venv .venv
@@ -173,25 +224,27 @@ source .venv/bin/activate
 python -m pip install fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
 ```
 
-Generate a token and start the server. Keep using this terminal for the local checks so the commands share the same token. The final `&` runs the server in the background.
+    Start one Uvicorn worker. The final `&` runs the server in the background; keep its PID for restarts.
 
 ```bash
-export AGENT_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export PUBLIC_BASE_URL=http://127.0.0.1:8000
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-Once Uvicorn reports that startup is complete, fetch the Agent Card:
+    If your Python installation cannot create a virtual environment or has no `pip`, use the Docker route.
+  </Tab>
+</Tabs>
+
+Wait for Uvicorn to report that startup is complete. With Docker, repeat the log command until that message appears. Then fetch the Agent Card:
 
 ```bash
 curl --fail-with-body "$PUBLIC_BASE_URL/.well-known/agent-card.json"
 ```
 
-It should advertise `http://127.0.0.1:8000/a2a`. Build a request with a unique message ID, then send it and capture its task ID:
+It should advertise your local origin followed by `/a2a`, such as `http://127.0.0.1:8000/a2a`. Build a request with a unique message ID, then send it and capture its task ID:
 
 ```bash
-REQUEST_JSON="$(python - <<'PY'
+AGENT_REQUEST_JSON="$(python3 - <<'PY'
 import json
 from uuid import uuid4
 
@@ -205,14 +258,14 @@ print(json.dumps({
 }))
 PY
 )"
-TASK_ID="$(
+AGENT_TASK_ID="$(
   curl --fail-with-body --silent --show-error \
     "$PUBLIC_BASE_URL/a2a/message:send" \
     -H "Authorization: Bearer $AGENT_TOKEN" \
     -H 'Content-Type: application/a2a+json' \
     -H 'A2A-Version: 1.0' \
-    --data "$REQUEST_JSON" \
-  | python -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
+    --data "$AGENT_REQUEST_JSON" \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
 )"
 ```
 
@@ -220,10 +273,10 @@ Poll that task:
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  "$PUBLIC_BASE_URL/a2a/tasks/$TASK_ID" \
+  "$PUBLIC_BASE_URL/a2a/tasks/$AGENT_TASK_ID" \
   -H "Authorization: Bearer $AGENT_TOKEN" \
   -H 'A2A-Version: 1.0' \
-  | python -m json.tool
+  | python3 -m json.tool
 ```
 
 Repeat the poll if the state is `TASK_STATE_SUBMITTED` or `TASK_STATE_WORKING`. When it reaches `TASK_STATE_COMPLETED`, find this text under `artifacts`:
@@ -231,6 +284,123 @@ Repeat the poll if the state is `TASK_STATE_SUBMITTED` or `TASK_STATE_WORKING`. 
 ```text
 Your agent received: Hello
 ```
+
+## Put the Endpoint on HTTPS
+
+Use a temporary tunnel to try the Docker endpoint from Dify, or deploy it to a host with a stable HTTPS address.
+
+<Tabs>
+  <Tab title="Temporary HTTPS with Docker">
+    Start a [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/). It provides a public HTTPS address without a Cloudflare account or your own domain.
+
+```bash
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-tunnel" \
+  --network "$AGENT_DEMO_NAME" \
+  cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344 \
+  tunnel --no-autoupdate --url http://agent-endpoint:8000
+docker logs "$AGENT_DEMO_NAME-tunnel"
+```
+
+    Repeat the log command until the `https://….trycloudflare.com` address appears. Copy it into `PUBLIC_BASE_URL`, replacing the example below with your address:
+
+```bash
+export PUBLIC_BASE_URL=https://your-tunnel-host.trycloudflare.com
+```
+
+    Recreate only the endpoint container to apply the public address to its Agent Card. Keep the tunnel container running.
+
+```bash
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    <Note>
+    Quick Tunnels are for development and testing. Keep the tunnel running while Dify uses it. A new tunnel gets a new hostname; update `PUBLIC_BASE_URL`, recreate the endpoint container, and update the endpoint in Dify if the address changes. Leave email verification off so Dify can make requests without an interactive sign-in.
+    </Note>
+  </Tab>
+  <Tab title="Your Own HTTPS Host">
+    Deploy `agent_endpoint.py` and any modules it imports to a Python web service, or deploy the Docker image. Use the same dependency versions.
+
+    Display the generated token in your private terminal so you can copy it into the host's secret setting and later into Dify:
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+    Configure the service as follows:
+
+| Setting | Value |
+|:---|:---|
+| Python | 3.11 or later |
+| Environment | `AGENT_TOKEN` set to your generated secret; `PUBLIC_BASE_URL` set to your public origin, such as `https://agent.example.com` |
+| Listening port | `8000`, on `0.0.0.0` |
+| Public routing | Forward the HTTPS origin's paths unchanged to port `8000` |
+| Start command | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
+
+    Replace `https://agent.example.com` with your own origin and set the same address in your terminal:
+
+```bash
+export PUBLIC_BASE_URL=https://agent.example.com
+```
+
+  </Tab>
+</Tabs>
+
+Use the origin alone for `PUBLIC_BASE_URL`, with no path. Serve the card and task operations from that same origin, without redirects or response compression. `127.0.0.1`, `localhost`, and your computer's local IP address work for local checks only; Dify Cloud needs to reach the public HTTPS endpoint.
+
+Fetch the public card, preferably from another machine:
+
+```bash
+curl --fail-with-body --include "$PUBLIC_BASE_URL/.well-known/agent-card.json"
+```
+
+Expect HTTP 200 and an interface URL of your public origin followed by `/a2a`. If the card still advertises localhost, correct `PUBLIC_BASE_URL` on the service and restart it. For Docker, recreate the endpoint container to apply an environment change.
+
+Repeat the authenticated send and poll commands using the public address before connecting Dify. Keep `AGENT_TOKEN` set to the deployed service's token.
+
+## Connect and Run a Task in Dify
+
+Display the token in your private terminal so you can paste it into Dify:
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+1. From **Agents** > **External agents**, click **Connect external agent**.
+2. In **A2A endpoint**, enter your public origin, using the tunnel address or your own host. Dify discovers the `/a2a` interface from its card.
+3. Set **Authentication** to **Bearer token**. In **Token**, paste the value of the deployed service's `AGENT_TOKEN`, without the `Bearer ` prefix.
+4. Click **Verify connection**, review the agent details, then click **Save**.
+
+Verification reads the Agent Card. Because this example serves the card publicly, verification can succeed without exercising the token. Run a task to check authentication and execution together.
+
+<Note>
+**Run test** executes your agent. After you connect your own function, a test can use model credits or perform actions through your agent's tools.
+</Note>
+
+Open the connected agent's **Overview** and use **Test agent**. Enter `Hello` in **Task**, leave attachments empty, and click **Run test**. This wrapper accepts text only. With the unchanged example, **Result** contains `Your agent received: Hello`.
+
+## Use the Answer in a Workflow
+
+1. From **Studio**, click **Create** > **Create from Blank**, choose **Workflow**, and give it a name.
+2. Choose **User Input** as the start node. If the add-node menu opens, close it to edit the input fields. In **User Input**, click **Add Input Field** and add a required **Short Text** field with the variable name `task`.
+3. Add an **Agent** node after **User Input**. In the Agent picker, open **External** and select your connected agent.
+4. In **Agent task**, type `Reply to: `, then use **Insert** or type `/` to select `task` from **User Input**. Keep the existing required `String` output named `text`.
+5. Add an **Output** node after the Agent node. Add an output named `text` and select the Agent node's `text` variable as its value.
+6. Click **Test Run**, enter `Workflow check` for `task`, then click **Start Run**.
+7. When the run finishes, **Result** shows `Your agent received: Reply to: Workflow check`. In **Details**, the workflow output contains:
+
+```json
+{"text": "Your agent received: Reply to: Workflow check"}
+```
+
+To inspect the variable substitution, close the test panel, select the Agent node, and open **Last Run**. Its **Input** contains `Reply to: Workflow check`, and its **Output** contains the returned `text`.
 
 ## Call Your Existing Agent
 
@@ -244,75 +414,50 @@ def run_agent(text: str) -> str:
     return ask(text)
 ```
 
-The function can also call your existing HTTP service or SDK and extract its final answer as a Python string. Your agent can stay on its current host.
+The function can also call your existing HTTP service or SDK and extract its final answer as a Python string. Your agent can stay on its current host. Keep service credentials and model keys in the server's environment.
 
-Install any dependencies your call needs, and keep service credentials and model keys on the server.
+Restart the endpoint after editing. Wait for running tasks to finish first; a restart clears this example's task records.
 
-Restart the endpoint after editing:
+<Tabs>
+  <Tab title="Docker">
+    Add your agent's packages to the Dockerfile's `pip install` command. If you import `my_agent.py`, replace the `COPY` line with:
+
+```dockerfile
+COPY agent_endpoint.py my_agent.py /app/
+```
+
+    Copy any other required modules explicitly. Rebuild the image to include the changed files and dependencies, then recreate the endpoint container. Pass any credentials your agent needs as environment variables when creating the container.
+
+```bash
+docker build --tag "$AGENT_DEMO_NAME" .
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    Keep the tunnel running if you're using its HTTPS address.
+  </Tab>
+  <Tab title="Python">
+    Install any dependencies your call needs in the virtual environment, then restart the process:
 
 ```bash
 kill "$AGENT_SERVER_PID"
 wait "$AGENT_SERVER_PID" || true
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-Repeat the local send and poll with a task your agent can answer. A `contextId` correlates requests, but this example keeps no conversation history. Add memory in your agent if it needs follow-up context.
+  </Tab>
+</Tabs>
 
-## Put the Endpoint on HTTPS
+If you deployed to a hosting service, redeploy the updated source or Docker image and restart the service there too.
 
-Deploy `agent_endpoint.py` and any modules it imports to a Python web service. Use the same dependency versions and add the dependencies needed to call your agent.
-
-Display the generated token in your private terminal so you can copy it into the host's secret setting and later into Dify:
-
-```bash
-printf '%s\n' "$AGENT_TOKEN"
-```
-
-Configure the service as follows:
-
-| Setting | Value |
-|:---|:---|
-| Python | 3.11 or later |
-| Environment | `AGENT_TOKEN` set to your generated secret; `PUBLIC_BASE_URL` set to your public origin, such as `https://agent.example.com` |
-| Listening port | `8000`, on `0.0.0.0` |
-| Public routing | Forward the HTTPS origin's paths unchanged to port `8000` |
-| Start command | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
-
-Replace `https://agent.example.com` with your own domain. Use the origin alone for `PUBLIC_BASE_URL`, with no path. Serve the card and task operations from that same origin, without redirects or response compression.
-
-<Note>
-`127.0.0.1`, `localhost`, and your computer's local IP address work for local checks only. Dify Cloud needs to reach your public HTTPS endpoint.
-</Note>
-
-From another machine, check the deployed card:
-
-```bash
-curl --fail-with-body --include https://agent.example.com/.well-known/agent-card.json
-```
-
-Expect HTTP 200 and a card whose interface URL is `https://agent.example.com/a2a`. If it still advertises localhost, correct `PUBLIC_BASE_URL` on the service and restart it.
-
-Set `PUBLIC_BASE_URL` in your terminal to your public origin, and use the deployed service's token. Repeat the authenticated send and poll before connecting Dify.
-
-## Connect and Run a Task in Dify
-
-1. From **Agents** > **External agents**, click **Connect external agent**.
-2. In **A2A endpoint**, enter your origin, such as `https://agent.example.com`. Dify discovers the `/a2a` interface from its card.
-3. Set **Authentication** to **Bearer token**. In **Token**, paste the value of the deployed service's `AGENT_TOKEN`, without the `Bearer ` prefix.
-4. Click **Verify connection**, review the agent details, then click **Save**.
-
-Verification reads the Agent Card. Because this example serves the card publicly, verification can succeed without exercising the token. Run a task to check authentication and execution together.
-
-<Note>
-**Run test** executes your agent. After you connect your own function, a test can use model credits or perform actions through your agent's tools.
-</Note>
-
-Open the connected agent's **Overview** and use **Test agent**. Enter `Hello` in **Task**, then click **Run test**. **Result** should contain your agent's answer. With the unchanged example, it is `Your agent received: Hello`.
-
-## Use the Answer in a Workflow
-
-You can also select the connected agent in a workflow's Agent node. Give it a task and declare a String output named `text`, then reference that output in the next node.
+Repeat the send and poll with a task your agent can answer, then run it in Dify. A `contextId` correlates requests, but this example keeps no conversation history. Add memory in your agent if it needs follow-up context.
 
 ## Troubleshoot the Connection
 
@@ -326,7 +471,7 @@ You can also select the connected agent in a workflow's Agent node. Give it a ta
     The public card doesn't check the token. Make the value in Dify match `AGENT_TOKEN` on the deployed service, and paste the token without `Bearer `. Check that your proxy forwards the `Authorization` header.
   </Accordion>
   <Accordion title="The task completes, but Result is empty">
-    Return a string from `run_agent` and keep the wrapper's text artifact. Putting an answer only in `status.message` or history doesn't make it the final result. In a workflow, use a String output named `text`.
+    Return a string from `run_agent` and keep the wrapper's text artifact. Putting an answer only in `status.message` or history doesn't make it the final result. In a workflow, use the existing `String` output named `text` and map it to the Output node.
   </Accordion>
   <Accordion title="The task keeps running, or an old task returns 404">
     Dify waits up to 10 minutes by default. For longer workflow tasks, increase **Wait limit** before starting the task, and keep **End waiting** as the timeout policy for this example.

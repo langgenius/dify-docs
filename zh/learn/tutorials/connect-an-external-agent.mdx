@@ -8,16 +8,16 @@ description: 用 Python 端点封装现有 Agent，部署到 HTTPS 服务后，�
 
 Agent 的代码、工具和模型凭据都保留在你的服务器上。Dify 通过 A2A 端点向 Agent 发送任务，并等待它返回答案。
 
-下面的 Python 封装代码处理 Dify 执行文本任务所需的 A2A 1.0 HTTP+JSON 请求。先用示例中的回显响应确认连接正常，再将其中一个函数替换为现有 Agent 的调用。无需使用 A2A SDK。
+下面的 Python 封装代码处理 Dify 执行文本任务所需的 A2A 1.0 HTTP+JSON 请求。先保留示例中的回显响应，给服务配置临时 HTTPS 地址，然后从 Dify 运行任务。确认连接正常后，再将其中一个函数替换为现有 Agent 的调用。无需使用 A2A SDK。
 
 ## 开始前的准备
 
-需要以下环境和资源：
+准备好以下条件：
 
 - Python 3.11 或更高版本、Bash 和 `curl`
+- 使用下文的临时 HTTPS 方案所需的 Docker，或已安装 `pip` 的可用 Python 环境及自己的 HTTPS 主机
 - 现有 Agent 的 Python 入口函数、SDK 或 HTTP 端点
 - 已开放 **外部 Agent** 功能的 Dify 工作空间
-- 可通过公开 HTTPS 地址提供 Python 应用服务的主机
 
 <Info>
 连接外部 Agent 需要工作空间的所有者或管理员角色。
@@ -25,7 +25,7 @@ Agent 的代码、工具和模型凭据都保留在你的服务器上。Dify 通
 
 ## 创建端点
 
-在新目录中，将下面的完整代码保存为 `agent_endpoint.py`。首次测试时，先使用示例自带的 `run_agent`。任务记录保存在内存中，重启后会丢失。
+在新目录中，将下面的完整代码保存为 `agent_endpoint.py`。首次测试时，保留 `run_agent` 的原样实现。任务记录保存在内存中，重启后会丢失。
 
 ```python agent_endpoint.py
 """Single-process, text-only A2A 1.0 HTTP+JSON teaching example.
@@ -163,11 +163,62 @@ async def cancel_task(task_id: str):
     raise HTTPException(501, "Cancellation is not implemented")
 ```
 
-封装服务会立即返回已提交的任务，并在后台运行 `run_agent`。Dify 会轮询任务状态，直到任务完成。最终答案放在文本产物中。公开的 Agent Card 告诉 Dify 请求应发送到哪里，以及任务操作需要 Bearer 令牌认证。
+封装服务会立即返回一个已提交的任务，在后台运行 `run_agent`，并供 Dify 轮询任务状态，直到任务完成。最终答案放在文本产物中。公开的 Agent Card 告诉 Dify 请求应发送到哪里，以及任务操作需要 Bearer 令牌认证。
 
 ## 在本地运行并检查
 
-在 Bash 中创建虚拟环境并安装依赖：
+以下命令都在同一个 Bash 终端中执行，以便共用令牌和配置。选择一个空闲的本地端口：示例使用 `8000`，若已被占用，将 `AGENT_DEMO_PORT` 设为其他端口。生成令牌，但不显示其内容：
+
+```bash
+set -o pipefail
+export AGENT_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export AGENT_DEMO_PORT=8000
+export PUBLIC_BASE_URL="http://127.0.0.1:$AGENT_DEMO_PORT"
+```
+
+若要使用临时 HTTPS 方案，选择 Docker；也可选择 Python，直接运行端点服务。
+
+<Tabs>
+  <Tab title="Docker">
+    将下面的 `Dockerfile` 保存到 `agent_endpoint.py` 所在的目录。它在独立环境中安装 Python 依赖，只将端点文件复制到镜像中。
+
+```dockerfile Dockerfile
+ARG PYTHON_BASE=python:3.13-slim-bookworm
+FROM ${PYTHON_BASE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/python -m pip install --no-cache-dir \
+       fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
+
+WORKDIR /app
+COPY agent_endpoint.py /app/agent_endpoint.py
+USER 65532:65532
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "agent_endpoint:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+```
+
+    构建镜像，并为此示例创建网络。自动生成的名称可避免与其他容器混用资源。
+
+```bash
+export AGENT_DEMO_NAME="dify-agent-demo-$(python3 -c 'from uuid import uuid4; print(uuid4().hex[:8])')"
+docker build --tag "$AGENT_DEMO_NAME" .
+docker network create "$AGENT_DEMO_NAME"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+docker logs "$AGENT_DEMO_NAME-endpoint"
+```
+
+  </Tab>
+  <Tab title="Python">
+    创建虚拟环境并安装依赖：
 
 ```bash
 python3 -m venv .venv
@@ -175,25 +226,27 @@ source .venv/bin/activate
 python -m pip install fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
 ```
 
-生成令牌并启动服务器。后续本地检查都在这个终端中执行，以便共用同一个令牌。命令末尾的 `&` 表示在后台运行服务器。
+    启动 1 个 Uvicorn Worker。命令末尾的 `&` 表示在后台运行服务器；保留它的 PID，供重启时使用。
 
 ```bash
-export AGENT_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export PUBLIC_BASE_URL=http://127.0.0.1:8000
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-Uvicorn 提示启动完成后，获取 Agent Card：
+    如果当前安装的 Python 无法创建虚拟环境，或没有 `pip`，改用 Docker 方案。
+  </Tab>
+</Tabs>
+
+等待 Uvicorn 提示启动完成。使用 Docker 时，反复执行查看日志的命令，直到出现这条提示。然后获取 Agent Card：
 
 ```bash
 curl --fail-with-body "$PUBLIC_BASE_URL/.well-known/agent-card.json"
 ```
 
-Agent Card 中的接口地址应为 `http://127.0.0.1:8000/a2a`。构造一个带唯一消息 ID 的请求，发送后保存返回的任务 ID：
+Agent Card 中的接口地址应为本地源地址加上 `/a2a`，例如 `http://127.0.0.1:8000/a2a`。构造一个带唯一消息 ID 的请求，发送后保存返回的任务 ID：
 
 ```bash
-REQUEST_JSON="$(python - <<'PY'
+AGENT_REQUEST_JSON="$(python3 - <<'PY'
 import json
 from uuid import uuid4
 
@@ -207,14 +260,14 @@ print(json.dumps({
 }))
 PY
 )"
-TASK_ID="$(
+AGENT_TASK_ID="$(
   curl --fail-with-body --silent --show-error \
     "$PUBLIC_BASE_URL/a2a/message:send" \
     -H "Authorization: Bearer $AGENT_TOKEN" \
     -H 'Content-Type: application/a2a+json' \
     -H 'A2A-Version: 1.0' \
-    --data "$REQUEST_JSON" \
-  | python -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
+    --data "$AGENT_REQUEST_JSON" \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
 )"
 ```
 
@@ -222,10 +275,10 @@ TASK_ID="$(
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  "$PUBLIC_BASE_URL/a2a/tasks/$TASK_ID" \
+  "$PUBLIC_BASE_URL/a2a/tasks/$AGENT_TASK_ID" \
   -H "Authorization: Bearer $AGENT_TOKEN" \
   -H 'A2A-Version: 1.0' \
-  | python -m json.tool
+  | python3 -m json.tool
 ```
 
 如果状态为 `TASK_STATE_SUBMITTED` 或 `TASK_STATE_WORKING`，继续轮询。状态变为 `TASK_STATE_COMPLETED` 后，`artifacts` 中应包含以下文本：
@@ -233,6 +286,123 @@ curl --fail-with-body --silent --show-error \
 ```text
 Your agent received: 你好
 ```
+
+## 将端点部署到 HTTPS 服务
+
+可通过临时隧道，从 Dify 试用 Docker 中的端点；也可将端点部署到具有固定 HTTPS 地址的主机。
+
+<Tabs>
+  <Tab title="使用 Docker 提供临时 HTTPS 地址">
+    启动 [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)。无需 Cloudflare 账户或自己的域名，即可获得公开的 HTTPS 地址。
+
+```bash
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-tunnel" \
+  --network "$AGENT_DEMO_NAME" \
+  cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344 \
+  tunnel --no-autoupdate --url http://agent-endpoint:8000
+docker logs "$AGENT_DEMO_NAME-tunnel"
+```
+
+    反复执行查看日志的命令，直到出现 `https://….trycloudflare.com` 地址。将它复制到 `PUBLIC_BASE_URL`，替换下面的示例地址：
+
+```bash
+export PUBLIC_BASE_URL=https://your-tunnel-host.trycloudflare.com
+```
+
+    仅重建端点容器，使 Agent Card 使用公开地址。保持隧道容器运行。
+
+```bash
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    <Note>
+    Quick Tunnel 用于开发和测试。Dify 使用期间，需保持隧道运行。新隧道会获得新主机名；若地址变化，更新 `PUBLIC_BASE_URL`、重建端点容器，并更新 Dify 中的端点地址。不要开启邮件验证，以便 Dify 无需交互式登录即可发送请求。
+    </Note>
+  </Tab>
+  <Tab title="使用自己的 HTTPS 主机">
+    将 `agent_endpoint.py` 及其导入的模块部署到 Python Web 服务，或部署 Docker 镜像。沿用相同的依赖版本。
+
+    在仅供自己查看的终端中显示生成的令牌，以便复制到托管平台的密钥配置中，稍后再填入 Dify：
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+    按以下方式配置服务：
+
+| 设置 | 值 |
+|:---|:---|
+| Python | 3.11 或更高版本 |
+| 环境变量 | 将 `AGENT_TOKEN` 设为生成的密钥；将 `PUBLIC_BASE_URL` 设为服务的公开源地址，例如 `https://agent.example.com` |
+| 监听端口 | 在 `0.0.0.0` 上监听 `8000` 端口 |
+| 公网路由 | 将 HTTPS 源地址下的路径原样转发到 `8000` 端口 |
+| 启动命令 | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
+
+    将 `https://agent.example.com` 替换为你自己的源地址，并在终端中设置相同的地址：
+
+```bash
+export PUBLIC_BASE_URL=https://agent.example.com
+```
+
+  </Tab>
+</Tabs>
+
+`PUBLIC_BASE_URL` 只填源地址，不带路径。Agent Card 和任务操作须由同一源地址提供服务，不要使用重定向或响应压缩。`127.0.0.1`、`localhost` 和电脑的本地 IP 地址仅适用于本地检查；Dify Cloud 需要访问公开的 HTTPS 端点。
+
+获取公开的 Agent Card，最好在另一台机器上执行：
+
+```bash
+curl --fail-with-body --include "$PUBLIC_BASE_URL/.well-known/agent-card.json"
+```
+
+应返回 HTTP 200，接口 URL 应为公开源地址加上 `/a2a`。若 Agent Card 中的地址仍指向 localhost，修改服务的 `PUBLIC_BASE_URL` 并重启。使用 Docker 时，需重建端点容器才能使环境变量的修改生效。
+
+连接 Dify 前，使用公开地址再次执行带认证的发送和轮询命令。`AGENT_TOKEN` 需保持为已部署服务的令牌。
+
+## 在 Dify 中连接并运行任务
+
+在仅供自己查看的终端中显示令牌，以便粘贴到 Dify：
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+1. 在 **Agents** > **外部 Agent** 中，点击 **连接外部 Agent**。
+2. 在 **A2A 端点** 中输入公开源地址，可使用隧道地址或自己的主机。Dify 读取 Agent Card，找到其中的 `/a2a` 接口。
+3. 将 **身份验证** 设为 **Bearer token**。在 **Token** 中粘贴已部署服务的 `AGENT_TOKEN` 值，不要带 `Bearer ` 前缀。
+4. 点击 **验证连接**，查看 Agent 详情，然后点击 **保存**。
+
+验证连接时会读取 Agent Card。由于此示例公开提供 Agent Card，验证成功不代表令牌已经过检验。运行一个任务，即可同时检查认证和执行是否正常。
+
+<Note>
+**运行测试** 会执行 Agent。接入自己的函数后，测试可能消耗模型额度，或通过 Agent 的工具执行操作。
+</Note>
+
+打开已连接 Agent 的 **概览**，使用 **测试 Agent**。在 **任务** 中输入 `你好`，不要添加附件，然后点击 **运行测试**。此封装服务仅接受文本。如果没有修改示例，**结果** 中会显示 `Your agent received: 你好`。
+
+## 在工作流中使用答案
+
+1. 在 **工作室** 中，点击 **创建** > **创建空白应用**，选择 **工作流**，并为应用取名。
+2. 选择 **用户输入** 作为开始节点。若添加节点菜单打开，先关闭菜单，再编辑输入字段。在 **用户输入** 中点击 **添加 输入字段**，添加一个必填的 **文本** 字段，变量名设为 `task`。
+3. 在 **用户输入** 后添加 **Agent** 节点。在 Agent 选择器中打开 **外部**，选择已连接的 Agent。
+4. 在 **Agent 任务** 中输入 `请回复：`，然后通过 **插入** 或键入 `/`，选择 **用户输入** 中的 `task`。保留现有的必填 `String` 输出 `text`。
+5. 在 Agent 节点后添加 **输出** 节点。添加名为 `text` 的输出，并选择 Agent 节点的 `text` 变量作为其值。
+6. 点击 **测试运行**，为 `task` 输入 `工作流检查`，然后点击 **开始运行**。
+7. 运行完成后，**结果** 中会显示 `Your agent received: 请回复：工作流检查`。在 **详情** 中，工作流输出包含：
+
+```json
+{"text": "Your agent received: 请回复：工作流检查"}
+```
+
+若要检查变量替换结果，关闭测试面板，选择 Agent 节点，打开 **上次运行**。其中的 **输入** 包含 `请回复：工作流检查`，**输出** 包含返回的 `text`。
 
 ## 调用现有 Agent
 
@@ -246,75 +416,50 @@ def run_agent(text: str) -> str:
     return ask(text)
 ```
 
-你也可在这个函数中调用现有的 HTTP 服务或 SDK，取出最终答案后作为 Python 字符串返回。Agent 可继续运行在原来的主机上。
+也可在这个函数中调用现有的 HTTP 服务或 SDK，并将最终答案提取为 Python 字符串。Agent 可继续运行在原来的主机上。将服务凭据和模型密钥保留在服务器的环境变量中。
 
-安装调用所需的依赖，并将服务凭据和模型密钥保留在服务器上。
+修改后重启端点服务。先等待正在运行的任务完成，因为重启会清除此示例的任务记录。
 
-修改后重启端点服务：
+<Tabs>
+  <Tab title="Docker">
+    将 Agent 所需的软件包添加到 Dockerfile 的 `pip install` 命令中。若需导入 `my_agent.py`，将 `COPY` 行替换为：
+
+```dockerfile
+COPY agent_endpoint.py my_agent.py /app/
+```
+
+    其他必需模块也需逐一复制。重新构建镜像，将修改后的文件和依赖包含在内，然后重建端点容器。创建容器时，通过环境变量传入 Agent 所需的凭据。
+
+```bash
+docker build --tag "$AGENT_DEMO_NAME" .
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    若使用隧道的 HTTPS 地址，保持隧道运行。
+  </Tab>
+  <Tab title="Python">
+    在虚拟环境中安装调用所需的依赖，然后重启进程：
 
 ```bash
 kill "$AGENT_SERVER_PID"
 wait "$AGENT_SERVER_PID" || true
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-换一个 Agent 能回答的任务，在本地再次发送并轮询。`contextId` 用于关联请求，但此示例不保留对话历史。若 Agent 需要前文才能回答追问，需在 Agent 中添加记忆。
+  </Tab>
+</Tabs>
 
-## 将端点部署到 HTTPS 服务
+若部署在托管服务上，也需将更新后的源码或 Docker 镜像重新部署到该服务，并重启。
 
-将 `agent_endpoint.py` 及其导入的模块部署到 Python Web 服务。沿用相同的依赖版本，并安装调用 Agent 所需的依赖。
-
-在仅供自己查看的终端中显示生成的令牌，以便复制到托管平台的密钥配置中，稍后再填入 Dify：
-
-```bash
-printf '%s\n' "$AGENT_TOKEN"
-```
-
-按以下方式配置服务：
-
-| 设置 | 值 |
-|:---|:---|
-| Python | 3.11 或更高版本 |
-| 环境变量 | 将 `AGENT_TOKEN` 设为生成的密钥；将 `PUBLIC_BASE_URL` 设为服务的公开源地址，例如 `https://agent.example.com` |
-| 监听端口 | 在 `0.0.0.0` 上监听 `8000` 端口 |
-| 公网路由 | 将 HTTPS 源地址下的路径原样转发到 `8000` 端口 |
-| 启动命令 | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
-
-将 `https://agent.example.com` 替换为你自己的域名。`PUBLIC_BASE_URL` 只填源地址，不带路径。将 Agent Card 和任务接口部署在同一源地址下，不要使用重定向或响应压缩。
-
-<Note>
-`127.0.0.1`、`localhost` 和电脑的本地 IP 地址仅适用于本地检查。Dify Cloud 需要访问公开的 HTTPS 端点。
-</Note>
-
-在另一台机器上检查已部署的 Agent Card：
-
-```bash
-curl --fail-with-body --include https://agent.example.com/.well-known/agent-card.json
-```
-
-应返回 HTTP 200，Agent Card 中的接口 URL 应为 `https://agent.example.com/a2a`。若它仍指向 localhost，修改服务的 `PUBLIC_BASE_URL` 并重启。
-
-将终端中的 `PUBLIC_BASE_URL` 设为公开源地址，并使用已部署服务的令牌。连接 Dify 前，再次发送带认证的请求并轮询任务。
-
-## 在 Dify 中连接并运行任务
-
-1. 在 **Agents** > **外部 Agent** 中，点击 **连接外部 Agent**。
-2. 在 **A2A 端点** 中输入源地址，例如 `https://agent.example.com`。Dify 读取 Agent Card，找到其中的 `/a2a` 接口。
-3. 将 **身份验证** 设为 **Bearer token**。在 **Token** 中粘贴已部署服务的 `AGENT_TOKEN` 值，不要带 `Bearer ` 前缀。
-4. 点击 **验证连接**，查看 Agent 详情，然后点击 **保存**。
-
-验证连接时会读取 Agent Card。由于此示例公开提供 Agent Card，验证成功不代表令牌已经过检验。运行一个任务，即可同时检查认证和执行是否正常。
-
-<Note>
-**运行测试** 会执行 Agent。接入自己的函数后，测试可能消耗模型额度，或通过 Agent 的工具执行操作。
-</Note>
-
-打开已连接 Agent 的 **概览**，使用 **测试 Agent**。在 **任务** 中输入 `你好`，然后点击 **运行测试**。**结果** 中应显示 Agent 的答案。如果没有修改示例，答案为 `Your agent received: 你好`。
-
-## 在工作流中使用答案
-
-也可在工作流的 Agent 节点中选择已连接的 Agent。为它设置任务，声明一个名为 `text` 的 String 输出，然后在下一个节点中引用该输出。
+换一个 Agent 能回答的任务，再次发送并轮询，然后在 Dify 中运行。`contextId` 用于关联请求，但此示例不保留对话历史。若 Agent 需要前文才能回答追问，需在 Agent 中添加记忆。
 
 ## 排查连接问题
 
@@ -322,18 +467,18 @@ curl --fail-with-body --include https://agent.example.com/.well-known/agent-card
   <Accordion title="验证连接失败">
     Dify 需要访问公开的 Agent Card 及其中声明的接口。在主机外部获取 `/.well-known/agent-card.json`，检查 URL、HTTPS 证书和路由。确保 2 个 URL 同源，并移除重定向和响应压缩。
 
-    现有的 A2A 0.3 JSON-RPC 或 Chat Completions 端点需要增加符合 [A2A 1.0 HTTP+JSON 绑定](https://a2a-protocol.org/v1.0.1/specification/) 的适配层。可从上面的封装代码开始修改。
+    现有的 A2A 0.3 JSON-RPC 或 Chat Completions 端点需要适配为 [A2A 1.0 HTTP+JSON 绑定](https://a2a-protocol.org/v1.0.1/specification/)。可从上面的封装代码开始修改。
   </Accordion>
   <Accordion title="验证成功，但运行测试返回 401">
     公开的 Agent Card 不检查令牌。确保 Dify 中的值与已部署服务的 `AGENT_TOKEN` 一致，且粘贴时不带 `Bearer `。检查代理是否转发了 `Authorization` 请求头。
   </Accordion>
   <Accordion title="任务已完成，但结果为空">
-    `run_agent` 须返回字符串，并保留封装代码中的文本产物。如果只把答案写在 `status.message` 或历史记录中，Dify 不会将其作为最终结果返回。在工作流中，使用名为 `text` 的 String 输出。
+    `run_agent` 须返回字符串，并保留封装代码中的文本产物。只将答案放在 `status.message` 或历史记录中，不会使其成为最终结果。在工作流中，保留现有的 `String` 输出 `text`，并将其映射到输出节点。
   </Accordion>
   <Accordion title="任务一直运行，或旧任务返回 404">
-    Dify 默认最多等待 10 分钟。如果工作流任务耗时更长，在启动任务前提高 **等待时限**。使用此示例时，将超时策略设为 **结束等待**。
+    Dify 默认最多等待 10 分钟。如果工作流任务耗时更长，在启动任务前提高 **等待时限**。使用此示例时，超时策略保留为 **结束等待**。
 
-    在 **测试 Agent** 中，点击 **停止测试** 可请求停止测试。此封装服务无法停止正在执行的 Python 函数，因此外部任务可能继续运行。Dify 结束等待后，稍后返回的结果不会成为此次运行的输出。再次提交任务前，先在服务上检查原任务的状态。
+    在 **测试 Agent** 中，点击 **停止测试** 可请求停止测试。此封装服务无法取消 Python 函数，因此外部任务可能继续运行。Dify 结束等待后，稍后返回的结果不会成为此次运行的输出。再次提交任务前，先在服务上检查原任务的状态。
 
     重启此示例会丢失内存中的任务记录。对于可能执行操作的任务，再次提交前先检查 Agent 上次执行的结果。
   </Accordion>

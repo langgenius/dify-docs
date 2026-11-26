@@ -8,16 +8,16 @@ description: エージェントを Python エンドポイントでラップし�
 
 エージェントのコード、ツール、モデルの認証情報は、独自のサーバーに置いたままにします。Dify は A2A エンドポイントを通じてタスクを送り、回答を待ちます。
 
-以下の Python ラッパーは、Dify がテキストタスクに必要とする A2A 1.0 HTTP+JSON リクエストを処理します。まず入力をそのまま返す応答で接続を確認します。その後、関数を 1 つ置き換えて既存のエージェントを呼び出します。A2A SDK は不要です。
+以下の Python ラッパーは、テキストタスクに必要な A2A 1.0 HTTP+JSON リクエストを処理します。まず入力をそのまま返す応答を使い、一時的な HTTPS アドレスを割り当てて Dify から実行します。その後、関数を 1 つ置き換えて既存のエージェントを呼び出します。A2A SDK は不要です。
 
 ## 事前準備
 
 次のものを用意してください。
 
 - Python 3.11 以降、Bash、`curl`
+- 以下の一時 HTTPS の手順で使う Docker、または `pip` を使える Python 環境と独自の HTTPS ホスト
 - エージェントの Python エントリーポイント、SDK、または HTTP エンドポイント
 - **外部エージェント** を利用できる Dify ワークスペース
-- Python アプリを公開 HTTPS アドレスで提供できるホスト
 
 <Info>
 外部エージェントの接続には、ワークスペースの Owner または Admin ロールが必要です。
@@ -167,7 +167,58 @@ async def cancel_task(task_id: str):
 
 ## ローカルでの起動と確認
 
-Bash で環境を作成し、依存関係をインストールします。
+以下のコマンドは、同じ Bash ターミナルで実行してください。同じトークンと設定を引き継げます。ローカルの空きポートを選びます。この例は `8000` を使いますが、使用中なら `AGENT_DEMO_PORT` に別のポートを指定してください。トークンを画面に表示せずに生成します。
+
+```bash
+set -o pipefail
+export AGENT_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export AGENT_DEMO_PORT=8000
+export PUBLIC_BASE_URL="http://127.0.0.1:$AGENT_DEMO_PORT"
+```
+
+一時 HTTPS の手順を使うには Docker を選びます。エンドポイントを直接実行するには Python を選んでください。
+
+<Tabs>
+  <Tab title="Docker">
+    `agent_endpoint.py` と同じ場所に、以下の `Dockerfile` を保存します。Python の依存関係を専用の環境にインストールし、エンドポイントのファイルだけをイメージにコピーします。
+
+```dockerfile Dockerfile
+ARG PYTHON_BASE=python:3.13-slim-bookworm
+FROM ${PYTHON_BASE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/python -m pip install --no-cache-dir \
+       fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
+
+WORKDIR /app
+COPY agent_endpoint.py /app/agent_endpoint.py
+USER 65532:65532
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "agent_endpoint:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+```
+
+    イメージをビルドし、この例で使うネットワークを作成します。自動生成する名前により、他のコンテナとリソースを分けて管理できます。
+
+```bash
+export AGENT_DEMO_NAME="dify-agent-demo-$(python3 -c 'from uuid import uuid4; print(uuid4().hex[:8])')"
+docker build --tag "$AGENT_DEMO_NAME" .
+docker network create "$AGENT_DEMO_NAME"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+docker logs "$AGENT_DEMO_NAME-endpoint"
+```
+
+  </Tab>
+  <Tab title="Python">
+    環境を作成し、依存関係をインストールします。
 
 ```bash
 python3 -m venv .venv
@@ -175,25 +226,27 @@ source .venv/bin/activate
 python -m pip install fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
 ```
 
-トークンを生成してサーバーを起動します。ローカルでの確認には、引き続きこのターミナルを使ってください。各コマンドで同じトークンを使用できます。末尾の `&` は、サーバーをバックグラウンドで実行するための指定です。
+    Uvicorn のワーカーを 1 つ起動します。末尾の `&` は、サーバーをバックグラウンドで実行する指定です。再起動に使う PID を保存しておきます。
 
 ```bash
-export AGENT_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-export PUBLIC_BASE_URL=http://127.0.0.1:8000
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-Uvicorn に起動完了のメッセージが表示されたら、Agent Card を取得します。
+    Python 環境で仮想環境を作成できない場合や、`pip` がない場合は、Docker の手順を使ってください。
+  </Tab>
+</Tabs>
+
+Uvicorn に起動完了のメッセージが表示されるまで待ちます。Docker の場合は、メッセージが表示されるまでログの確認コマンドを繰り返してください。その後、Agent Card を取得します。
 
 ```bash
 curl --fail-with-body "$PUBLIC_BASE_URL/.well-known/agent-card.json"
 ```
 
-カードには `http://127.0.0.1:8000/a2a` が記載されているはずです。一意のメッセージ ID を持つリクエストを作成し、送信してタスク ID を取得します。
+カードには、ローカルのオリジンに `/a2a` を付けた URL が記載されているはずです。たとえば `http://127.0.0.1:8000/a2a` です。一意のメッセージ ID を持つリクエストを作成し、送信してタスク ID を取得します。
 
 ```bash
-REQUEST_JSON="$(python - <<'PY'
+AGENT_REQUEST_JSON="$(python3 - <<'PY'
 import json
 from uuid import uuid4
 
@@ -207,14 +260,14 @@ print(json.dumps({
 }))
 PY
 )"
-TASK_ID="$(
+AGENT_TASK_ID="$(
   curl --fail-with-body --silent --show-error \
     "$PUBLIC_BASE_URL/a2a/message:send" \
     -H "Authorization: Bearer $AGENT_TOKEN" \
     -H 'Content-Type: application/a2a+json' \
     -H 'A2A-Version: 1.0' \
-    --data "$REQUEST_JSON" \
-  | python -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
+    --data "$AGENT_REQUEST_JSON" \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
 )"
 ```
 
@@ -222,10 +275,10 @@ TASK_ID="$(
 
 ```bash
 curl --fail-with-body --silent --show-error \
-  "$PUBLIC_BASE_URL/a2a/tasks/$TASK_ID" \
+  "$PUBLIC_BASE_URL/a2a/tasks/$AGENT_TASK_ID" \
   -H "Authorization: Bearer $AGENT_TOKEN" \
   -H 'A2A-Version: 1.0' \
-  | python -m json.tool
+  | python3 -m json.tool
 ```
 
 状態が `TASK_STATE_SUBMITTED` または `TASK_STATE_WORKING` なら、もう一度ポーリングします。`TASK_STATE_COMPLETED` になったら、`artifacts` 内に次のテキストがあることを確認してください。
@@ -233,6 +286,123 @@ curl --fail-with-body --silent --show-error \
 ```text
 Your agent received: こんにちは
 ```
+
+## HTTPS でのエンドポイントの公開
+
+Docker で起動したエンドポイントを Dify から試すには、一時的なトンネルを使います。または、固定の HTTPS アドレスを持つホストにデプロイします。
+
+<Tabs>
+  <Tab title="Docker による一時 HTTPS">
+    [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/) を起動します。Cloudflare アカウントや独自のドメインがなくても、公開 HTTPS アドレスを取得できます。
+
+```bash
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-tunnel" \
+  --network "$AGENT_DEMO_NAME" \
+  cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344 \
+  tunnel --no-autoupdate --url http://agent-endpoint:8000
+docker logs "$AGENT_DEMO_NAME-tunnel"
+```
+
+    `https://….trycloudflare.com` というアドレスが表示されるまで、ログの確認コマンドを繰り返します。そのアドレスを `PUBLIC_BASE_URL` にコピーしてください。以下の例のアドレスを、取得したものに置き換えます。
+
+```bash
+export PUBLIC_BASE_URL=https://your-tunnel-host.trycloudflare.com
+```
+
+    公開アドレスを Agent Card に反映するため、エンドポイントのコンテナだけを再作成します。トンネルのコンテナは動かしたままにしてください。
+
+```bash
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    <Note>
+    Quick Tunnels は開発とテスト用です。Dify で使用している間は、トンネルを動かしたままにしてください。トンネルを新しく作成すると、ホスト名も変わります。アドレスが変わったら、`PUBLIC_BASE_URL` を更新してエンドポイントのコンテナを再作成します。Dify 側のエンドポイントも更新してください。Dify が対話形式のサインインなしでリクエストできるよう、メール認証はオフのままにします。
+    </Note>
+  </Tab>
+  <Tab title="独自の HTTPS ホスト">
+    `agent_endpoint.py` と、そのファイルがインポートするモジュールを Python の Web サービスにデプロイします。Docker イメージをデプロイする方法もあります。依存関係には同じバージョンを使用してください。
+
+    生成したトークンを自分だけが閲覧できるターミナルに表示します。ホストのシークレット設定にコピーし、後ほど Dify にも入力します。
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+    サービスを次のように設定します。
+
+| 設定 | 値 |
+|:---|:---|
+| Python | 3.11 以降 |
+| 環境変数 | `AGENT_TOKEN` に生成したシークレットを設定し、`PUBLIC_BASE_URL` に `https://agent.example.com` などの公開オリジンを設定 |
+| 待ち受けポート | `0.0.0.0` の `8000` |
+| 公開ルーティング | HTTPS オリジンのパスを変更せずにポート `8000` へ転送 |
+| 起動コマンド | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
+
+    `https://agent.example.com` を独自のオリジンに置き換え、ターミナルでも同じアドレスを設定します。
+
+```bash
+export PUBLIC_BASE_URL=https://agent.example.com
+```
+
+  </Tab>
+</Tabs>
+
+`PUBLIC_BASE_URL` には、パスを含めずオリジンのみを指定します。カードとタスク操作は同じオリジンで提供し、リダイレクトやレスポンス圧縮を使用しないでください。`127.0.0.1`、`localhost`、コンピューターのローカル IP アドレスは、ローカルでの確認専用です。Dify Cloud からは、公開 HTTPS エンドポイントに到達できる必要があります。
+
+できれば別のマシンから、公開したカードを取得してください。
+
+```bash
+curl --fail-with-body --include "$PUBLIC_BASE_URL/.well-known/agent-card.json"
+```
+
+HTTP 200 が返り、インターフェース URL が公開オリジンに `/a2a` を付けたものか確認します。まだ localhost を示している場合は、サービスの `PUBLIC_BASE_URL` を修正して再起動してください。Docker では、環境変数の変更を反映するためにエンドポイントのコンテナを再作成します。
+
+Dify に接続する前に、公開アドレスを使って認証付きの送信とポーリングをもう一度試してください。`AGENT_TOKEN` には、デプロイしたサービスのトークンを設定しておきます。
+
+## Dify への接続とタスクの実行
+
+Dify に貼り付けるトークンを、自分だけが閲覧できるターミナルに表示します。
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+1. **Agents** > **外部エージェント** で、**外部エージェントを接続** をクリックします。
+2. **A2A エンドポイント** に、トンネルまたは独自のホストの公開オリジンを入力します。Dify はカードから `/a2a` インターフェースを検出します。
+3. **認証** を **Bearer トークン** に設定します。**トークン** に、デプロイしたサービスの `AGENT_TOKEN` の値を貼り付けます。接頭辞の `Bearer ` は付けません。
+4. **接続を検証** をクリックし、エージェントの詳細を確認して **保存** をクリックします。
+
+接続の検証では Agent Card を読み取ります。この例はカードを公開しているため、トークンを使わずに検証が成功することがあります。タスクを実行し、認証とエージェントの実行をまとめて確認してください。
+
+<Note>
+**テストを実行** をクリックすると、エージェントが動作します。独自の関数に置き換えた後のテストでは、モデルのクレジットを消費したり、エージェントのツールを通じて操作を行ったりすることがあります。
+</Note>
+
+接続したエージェントの **概要** を開き、**エージェントをテスト** を使用します。**タスク** に `こんにちは` と入力し、添付ファイルは空のまま **テストを実行** をクリックします。このラッパーはテキストのみを受け付けます。サンプルを変更していなければ、**結果** に `Your agent received: こんにちは` と表示されます。
+
+## ワークフローでの回答の使用
+
+1. **スタジオ** で **作成** > **最初から作成** をクリックし、**ワークフロー** を選んで名前を付けます。
+2. 開始ノードに **ユーザー入力** を選択します。ノード追加メニューが開いたら、閉じて入力フィールドを編集してください。**ユーザー入力** で **追加 入力フィールド** をクリックします。変数名が `task` の **短文** フィールドを追加し、必須に設定します。
+3. **ユーザー入力** の後に **Agent** ノードを追加します。Agent の選択画面で **外部** を開き、接続したエージェントを選びます。
+4. **Agent タスク** に `次の内容に返信してください： ` と入力します。続けて **挿入**、または `/` を使い、**ユーザー入力** の `task` を選択します。既存の必須出力 `text` は、`String` 型のままにしてください。
+5. Agent ノードの後に **出力** ノードを追加します。`text` という名前の出力を追加し、その値に Agent ノードの `text` 変数を選択します。
+6. **テスト実行** をクリックし、`task` に `ワークフロー確認` と入力して **実行開始** をクリックします。
+7. 実行が完了すると、**結果** に `Your agent received: 次の内容に返信してください： ワークフロー確認` と表示されます。**詳細情報** のワークフロー出力には、次の内容が表示されます。
+
+```json
+{"text": "Your agent received: 次の内容に返信してください： ワークフロー確認"}
+```
+
+変数の置換を確認するには、テストパネルを閉じ、Agent ノードを選択して **最後の実行** を開きます。**入力** には `次の内容に返信してください： ワークフロー確認` が、**出力** には返された `text` が入っています。
 
 ## 既存のエージェントの呼び出し
 
@@ -246,81 +416,56 @@ def run_agent(text: str) -> str:
     return ask(text)
 ```
 
-既存の HTTP サービスや SDK を呼び出し、その最終回答を Python の文字列として取り出す関数にもできます。エージェントは現在のホストで動かしたままで構いません。
+既存の HTTP サービスや SDK を呼び出し、その最終回答を Python の文字列として取り出す関数にもできます。エージェントは現在のホストで動かしたままで構いません。サービスの認証情報やモデルのキーは、サーバーの環境変数で管理してください。
 
-呼び出しに必要な依存関係をインストールします。サービスの認証情報やモデルのキーは、サーバー上で管理してください。
+編集後、エンドポイントを再起動します。実行中のタスクがある場合は、完了するまで待ってください。この例では、再起動するとタスクの記録が失われます。
 
-編集後、エンドポイントを再起動します。
+<Tabs>
+  <Tab title="Docker">
+    `Dockerfile` の `pip install` コマンドに、エージェントのパッケージを追加します。`my_agent.py` をインポートする場合は、`COPY` の行を次のように置き換えてください。
+
+```dockerfile
+COPY agent_endpoint.py my_agent.py /app/
+```
+
+    他にも必要なモジュールがあれば、明示的にコピーします。変更したファイルと依存関係を含めるため、イメージを再ビルドしてエンドポイントのコンテナを再作成します。エージェントに必要な認証情報は、コンテナ作成時に環境変数として渡してください。
+
+```bash
+docker build --tag "$AGENT_DEMO_NAME" .
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    トンネルの HTTPS アドレスを使っている場合は、トンネルを動かしたままにしてください。
+  </Tab>
+  <Tab title="Python">
+    呼び出しに必要な依存関係を仮想環境にインストールしてから、プロセスを再起動します。
 
 ```bash
 kill "$AGENT_SERVER_PID"
 wait "$AGENT_SERVER_PID" || true
-python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1 &
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
 AGENT_SERVER_PID=$!
 ```
 
-エージェントが回答できるタスクを使い、ローカルでの送信とポーリングを繰り返します。`contextId` でリクエスト同士を関連付けられますが、この例は会話履歴を保持しません。会話の続きを扱うには、エージェント側にメモリを追加してください。
+  </Tab>
+</Tabs>
 
-## HTTPS でのエンドポイントの公開
+ホスティングサービスにデプロイした場合は、更新したソースや Docker イメージを再デプロイし、そちらのサービスも再起動します。
 
-`agent_endpoint.py` と、そのファイルがインポートするモジュールを Python の Web サービスにデプロイします。依存関係には同じバージョンを使用し、エージェントの呼び出しに必要なものも追加します。
-
-生成したトークンを自分だけが閲覧できるターミナルに表示します。ホストのシークレット設定にコピーし、後ほど Dify にも入力します。
-
-```bash
-printf '%s\n' "$AGENT_TOKEN"
-```
-
-サービスを次のように設定します。
-
-| 設定 | 値 |
-|:---|:---|
-| Python | 3.11 以降 |
-| 環境変数 | `AGENT_TOKEN` に生成したシークレットを設定し、`PUBLIC_BASE_URL` に `https://agent.example.com` などの公開オリジンを設定 |
-| 待ち受けポート | `0.0.0.0` の `8000` |
-| 公開ルーティング | HTTPS オリジンのパスを変更せずにポート `8000` へ転送 |
-| 起動コマンド | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
-
-`https://agent.example.com` は、使用するドメインに置き換えてください。`PUBLIC_BASE_URL` には、パスを含めずオリジンのみを指定します。カードとタスク操作は同じオリジンで提供し、リダイレクトやレスポンス圧縮を使用しないでください。
-
-<Note>
-`127.0.0.1`、`localhost`、コンピューターのローカル IP アドレスは、ローカルでの確認にのみ使用できます。Dify Cloud からは、公開 HTTPS エンドポイントに到達できる必要があります。
-</Note>
-
-別のマシンから、デプロイしたカードを確認します。
-
-```bash
-curl --fail-with-body --include https://agent.example.com/.well-known/agent-card.json
-```
-
-HTTP 200 が返り、カードのインターフェース URL が `https://agent.example.com/a2a` であることを確認します。まだ localhost を示している場合は、サービスの `PUBLIC_BASE_URL` を修正して再起動してください。
-
-ターミナルの `PUBLIC_BASE_URL` に公開オリジンを設定し、デプロイしたサービスのトークンを使用します。Dify に接続する前に、認証付きの送信とポーリングをもう一度試してください。
-
-## Dify への接続とタスクの実行
-
-1. **Agents** > **外部エージェント** で、**外部エージェントを接続** をクリックします。
-2. **A2A エンドポイント** に `https://agent.example.com` などのオリジンを入力します。Dify はカードから `/a2a` インターフェースを検出します。
-3. **認証** を **Bearer トークン** に設定します。**トークン** に、デプロイしたサービスの `AGENT_TOKEN` の値を貼り付けます。接頭辞の `Bearer ` は付けません。
-4. **接続を検証** をクリックし、エージェントの詳細を確認して **保存** をクリックします。
-
-接続の検証では Agent Card を読み取ります。この例はカードを公開しているため、トークンを使わずに検証が成功することがあります。タスクを実行し、認証とエージェントの実行をまとめて確認してください。
-
-<Note>
-**テストを実行** をクリックすると、エージェントが動作します。独自の関数に置き換えた後のテストでは、モデルのクレジットを消費したり、エージェントのツールを通じて操作を行ったりすることがあります。
-</Note>
-
-接続したエージェントの **概要** を開き、**エージェントをテスト** を使用します。**タスク** に `こんにちは` と入力し、**テストを実行** をクリックします。**結果** にエージェントの回答が表示されるはずです。サンプルを変更していなければ、`Your agent received: こんにちは` と表示されます。
-
-## ワークフローでの回答の使用
-
-ワークフローの Agent ノードでも、接続したエージェントを選択できます。タスクを指定し、`text` という名前の String 型の出力を定義します。次のノードからその出力を参照してください。
+エージェントが回答できるタスクで送信とポーリングを繰り返し、Dify からも実行します。`contextId` でリクエスト同士を関連付けられますが、この例は会話履歴を保持しません。会話の続きを扱うには、エージェント側にメモリを追加してください。
 
 ## 接続のトラブルシューティング
 
 <AccordionGroup>
   <Accordion title="「接続を検証」が失敗する">
-    Dify から、公開 Agent Card とそこに記載されたインターフェースに到達できる必要があります。ホストの外部から `/.well-known/agent-card.json` を取得し、URL、HTTPS 証明書、ルーティングを確認してください。両方の URL を同じオリジンに揃え、リダイレクトとレスポンス圧縮を無効にします。
+    Dify から、公開された Agent Card とそこに記載されたインターフェースに到達できる必要があります。ホストの外部から `/.well-known/agent-card.json` を取得し、URL、HTTPS 証明書、ルーティングを確認してください。両方の URL を同じオリジンに揃え、リダイレクトとレスポンス圧縮を無効にします。
 
     既存の A2A 0.3 JSON-RPC や Chat Completions のエンドポイントには、アダプターが必要です。上記のラッパーをもとに、[A2A 1.0 HTTP+JSON バインディング](https://a2a-protocol.org/v1.0.1/specification/) に対応させてください。
   </Accordion>
@@ -328,7 +473,7 @@ HTTP 200 が返り、カードのインターフェース URL が `https://agent
     公開カードではトークンを確認しません。Dify に入力する値を、デプロイしたサービスの `AGENT_TOKEN` と一致させてください。`Bearer ` を付けずにトークンを貼り付け、プロキシが `Authorization` ヘッダーを転送することも確認します。
   </Accordion>
   <Accordion title="タスクは完了するが「結果」が空になる">
-    `run_agent` から文字列を返し、ラッパーのテキスト成果物を保持してください。回答を `status.message` や履歴に入れるだけでは、最終結果として扱われません。ワークフローでは、`text` という名前の String 型の出力を使います。
+    `run_agent` から文字列を返し、ラッパーのテキスト成果物を保持してください。回答を `status.message` や履歴に入れるだけでは、最終結果として扱われません。ワークフローでは、既存の `String` 型の出力 `text` を使い、出力ノードに割り当ててください。
   </Accordion>
   <Accordion title="タスクが実行中のままになる、または古いタスクで 404 が返る">
     Dify の待機時間は、デフォルトで最大 10 分です。ワークフローでそれ以上かかるタスクを実行するには、開始前に **待機上限** を増やしてください。この例では、タイムアウト時のポリシーを **待機を終了** のままにします。
