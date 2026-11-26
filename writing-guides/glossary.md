@@ -104,7 +104,7 @@ Terms appear in body text exactly as written in this table. Capitalize them furt
 | knowledge base | 知识库 | ナレッジベース | Always lowercase unless at sentence start |
 | agent knowledge base | Agent 知识库 | Agent ナレッジベース | Lowercase "agent" in English prose; the UI names the product Agent Knowledge Base. |
 | classic knowledge base | 经典知识库 | 従来型ナレッジベース | Lowercase in prose; the knowledge base type that agent knowledge bases sit beside. |
-| golden question | 参考问题 | 評価用の基準質問 | A question paired with the chunks it should return; the UI tab is Golden questions (knowledge-quality.qualityPage.goldenTab). |
+| golden question | 参考问题 | 評価用の基準質問 | A question paired with the chunks it should return; the UI tab is Golden questions (knowledge-quality.qualityPage.goldenTab). In ja, write 基準質問 where the phrase already says 評価, as in 基準質問による評価. |
 | knowledge pipeline | 知识流水线 | ナレッジパイプライン | Lowercase in prose. |
 | chunk | 分段 | チャンク | Use "chunk" not "segment"; a segment of text resulting from the chunking process |
 | chunking | 分段 | チャンキング | Use "chunking" consistently; avoid "segmentation" or "splitting" |
@@ -215,6 +215,23 @@ Role names are not i18n strings: the members page shows the names the members AP
 | link message | 链接消息 | リンクメッセージ | A request sent as a message with a link to the form, answered in Dify. On the DingTalk and WeCom pages, the body says *a text message with a link* (zh 带链接的文本消息, ja リンク付きのテキストメッセージ), since that's all members get there. On the DingTalk page, never use 链接消息 (zh) or リンクメッセージ (ja): DingTalk uses that name for a different message type. |
 | new Human Input node | 新版人工介入节点 | 新しい人間の入力ノード | The node behind the IM features. Follows the UI's migration wording. |
 | old Human Input node | 旧版人工介入节点 | 旧バージョンの人間の入力ノード | The earlier node; still available. Follows the UI's migration wording. |
+
+### Evaluation
+
+| English | Chinese | Japanese | Notes |
+|:--------|:--------|:---------|:------|
+| evaluation | 评测 | 評価 | Running a test set through an app, snippet, knowledge base, or Agent and scoring the results on chosen metrics. Lowercase in prose; bold **Evaluation** only for the sidebar entry. zh follows the UI (评测); ja follows the UI's 評価ワークフロー. |
+| test set | 测试集 | テストセット | The XLSX or CSV file of test cases an evaluation runs. zh follows the UI (下载测试集模版). |
+| test case | 测试用例 | テストケース | One row of a test set. The template's field help says "test row"; docs write test case for the concept and row when pointing at the file or the results. |
+| judge model | 判定模型 | 判定モデル | The LLM that scores each test case. Lowercase in prose; bold **Judge Model** only for the field. zh follows the UI; the ja UI label is untranslated at dify f0aa7e6152. |
+| metric | 指标 | 指標 | What an evaluation scores, such as Faithfulness or Task Completion. zh follows the UI (添加指标). |
+| judgment condition | 判定条件 | 判定条件 | A threshold a test case's score must meet to pass. zh follows the UI (判定条件). |
+| reference answer | 参考答案 | 参照回答 | The answer written in a test set's `expected_output` column, which some metrics compare with. zh follows the UI's field help (参考答案). |
+| success criteria | 成功标准 | 成功基準 | What an agent must get done, listed in a test set's `success_criteria` column for Task Completion. |
+| evaluation workflow | 评测工作流 | 評価ワークフロー | A Workflow app published to act as a custom evaluator. Lowercase in prose. Follows the UI (发布为评测工作流, 評価ワークフローとして公開). |
+| custom evaluator | 自定义评测器 | カスタム評価器 | An evaluation workflow used in an evaluation to score by your own rules. Follows the UI (zh 自定义评测器 in most strings; one dialog says 自定义评估器). |
+| custom metric | 自定义指标 | カスタム指標 | An output of a custom evaluator, used like a built-in metric. zh follows the UI (自定义指标); the ja UI label is untranslated at dify f0aa7e6152. |
+| snippet | Snippet | スニペット | A reusable group of workflow nodes, published and added to workflows. zh keeps the English word, capitalized; ja follows the UI (snippet.typeLabel). |
 
 ## UI Labels
 
@@ -734,3 +751,53 @@ For these plugin-provided labels, verify the tool schema instead of a core i18n 
 |:-------------|:-------------|:--------------|:---------|:------|
 | Chunking Setting | 分段模式 | チャンキングモード | dataset-documents.embedding.mode | Section heading |
 | Custom | 自定义 | カスタム | dataset-documents.embedding.custom | Chunking Setting value for General-mode documents during processing |
+
+### Evaluation
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Evaluation | 评测 | Evaluation | evaluation.title | Sidebar entry and page title for Workflow apps, snippets, and classic knowledge bases |
+| Evaluation | 评估 | 評価 | agent-v-2.agentDetail.sections.evaluation | An Agent's sidebar entry; zh differs from the other targets' 评测 |
+| Evaluation Framework | 判定框架 | 評価フレームワーク | evaluation.judgeFramework.title | |
+| Judge Model | 判定模型 | Judge Model | evaluation.judgeModel.title | |
+| Add Metric | 添加指标 | Add Metric | evaluation.metrics.add | |
+| Custom metrics | 自定义指标 | Custom metrics | evaluation.metrics.custom.footerTitle | Entry in the **Add Metric** menu |
+| Variable Mapping | 变量映射 | Variable Mapping | evaluation.metrics.custom.mappingTitle | Custom evaluator card |
+| Judgment Conditions | 判定条件 | Judgment Conditions | evaluation.conditions.title | |
+| Add Condition | 添加条件 | Add Condition | evaluation.conditions.addCondition | Not the Knowledge Retrieval metadata filter's 条件追加 (ja) |
+| Input Fields | 输入字段 | Input Fields | evaluation.batch.tabs.input-fields | Batch test panel tab |
+| Download XLSX Template | 下载测试集模版 | Download XLSX Template | evaluation.batch.downloadTemplate | zh 模版 as stored |
+| Upload & Run Test | 上传并运行测试 | Upload & Run Test | evaluation.batch.uploadAndRun | evaluation.pipeline.uploadAndRun has the same strings and no render site |
+| Run Test | 运行测试 | Run Test | evaluation.batch.run | |
+| Test History | 测试历史 | Test History | evaluation.batch.tabs.history | Batch test panel tab; evaluation.history.title has the same strings |
+| Test Details | 测试详情 | Test Details | evaluation.results.title | |
+| Export | 导出 | Export | evaluation.results.export | In **Test Details**; not common.operation.export (ja エクスポート) |
+| Cancel run | 取消任务 | Cancel run | evaluation.history.actions.cancel | A run's menu in **Test History** |
+| Retry run | 重试任务 | Retry run | evaluation.history.actions.retry | |
+| Download result | 下载结果文件 | Download result | evaluation.history.actions.downloadResultFile | |
+| Download test file | 下载测试文件 | Download test file | evaluation.history.actions.downloadTestFile | |
+| Publish as Evaluation Workflow | 发布为评测工作流 | 評価ワークフローとして公開 | workflow.common.publishAsEvaluationWorkflow | **Publish** menu, before the first publish |
+| Switch to Evaluation Workflow | 切换为评测工作流 | 評価ワークフローに切り替える | workflow.common.switchToEvaluationWorkflow | **Publish** menu of a published standard workflow |
+| Switch to Standard Workflow | 切换为标准工作流 | 標準ワークフローに切り替える | workflow.common.switchToStandardWorkflow | **Publish** menu of an evaluation workflow |
+| Records | 记录 | 記録 | dataset-hit-testing.records | Classic knowledge base, **Retrieval Testing** page |
+| AND | 且 | AND | evaluation.conditions.logical.and | Joins judgment conditions; not the If/Else node's and (ja かつ) |
+| OR | 或 | OR | evaluation.conditions.logical.or | |
+| Number | 数值 | Number | evaluation.conditions.valueTypes.number | Output type in the judgment condition picker |
+| Boolean | 布尔 | Boolean | evaluation.conditions.valueTypes.boolean | |
+| String | 文本 | String | evaluation.conditions.valueTypes.string | Shown for every output type other than Number and Boolean |
+
+### Evaluation Run Status Labels
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| Pending | 等待中 | Pending | evaluation.history.status.pending | **Test History**; docs show statuses in inline code, not bold |
+| Running | 运行中 | Running | evaluation.history.status.running | |
+| Completed | 已完成 | Completed | evaluation.history.status.completed | |
+| Failed | 失败 | Failed | evaluation.history.status.failed | |
+| Cancelled | 已取消 | Cancelled | evaluation.history.status.cancelled | |
+
+### LLM Node Config
+
+| English (UI) | Chinese (UI) | Japanese (UI) | i18n Key | Notes |
+|:-------------|:-------------|:--------------|:---------|:------|
+| context | 上下文 | コンテキスト | workflow-models.nodes.llm.context | LLM node field; stored lowercase and shown as CONTEXT. Docs write **Context**, as the Knowledge Retrieval and Agent Knowledge Retrieval node pages already do (an exception to recording the stored case). The variable inserted into the prompt is "Context" (common.promptEditor.context.item.title). |
