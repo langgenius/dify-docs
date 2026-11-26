@@ -1,0 +1,209 @@
+---
+title: Integrate with OpenTelemetry
+sidebarTitle: OpenTelemetry
+description: Send your apps' and Agents' traces to your own OpenTelemetry backend, confirm they arrive, and find runs there
+---
+
+OpenTelemetry is an open standard, accepted by most monitoring backends, for recording what software does as it runs. Each run becomes a trace made up of one span per step.
+
+Choose OpenTelemetry to send every finished run of an app or Agent to the backend your team already uses, where it appears next to the traces of your other services.
+
+Each app and each Agent has its own tracing settings and sends to one tracing provider at a time. To reach several backends, point Dify at an OpenTelemetry Collector that exports to each of them.
+
+## Choose the Right OpenTelemetry Setting
+
+Dify can send traces to an OpenTelemetry collector in three ways. Pick by what you want to trace:
+
+- **What your apps and Agents do**, run by run, with their nodes and model calls: the **OpenTelemetry** tracing provider, set per app or Agent.
+- **How the Dify servers perform**, such as web requests, database calls, and background jobs: `ENABLE_OTEL` and the `OTLP_*` variables, with one endpoint for the whole deployment. See [OTLP / OpenTelemetry Configuration](/en/self-host/deploy/configuration/environments#otlp-/-opentelemetry-configuration) for details.
+- **Every Agent run across all workspaces, in one collector**: Agent trajectory export (`DIFY_AGENT_TRAJECTORY_*`). See [Agent Trajectory Export](/en/self-host/deploy/configuration/environments#agent-trajectory-export) for details.
+
+All three can send to the same collector.
+
+## Before You Start
+
+<Warning>
+Traces carry each run's inputs and outputs, prompts included, and Dify doesn't mask values that look like secrets. Send them only where that data may be stored.
+</Warning>
+
+You need:
+
+- **Dify 1.20.0 or later**.
+- **An endpoint for OpenTelemetry traces over HTTP**: an OpenTelemetry Collector, or a backend that accepts OpenTelemetry directly.
+
+  Dify sends traces in the OpenTelemetry Protocol (OTLP) over HTTP, not gRPC. On a Collector, that's the HTTP receiver, usually on port 4318.
+- **Credentials as HTTP headers**, if the endpoint needs them, such as an `Authorization` header or a vendor's API-key header.
+
+Dify sends traces through the deployment's SSRF proxy, which screens every outgoing request. Under its default rules:
+
+- **A public `https://` endpoint**: only port 443 gets through. To reach a Collector on its usual port 4318, put a reverse proxy or load balancer on 443 in front of it, as in `https://otel.example.com/v1/traces`.
+- **A public `http://` endpoint**: most ports work, 4318 included, but traces and your credentials cross the internet unencrypted. Prefer `https://` on 443 for anything outside your own network.
+- **A collector on your own network**: the proxy refuses private, loopback, and link-local addresses until you allow the collector's address. An `https://` collector there still needs port 443.
+
+  <Note>
+  To allow your collector, set the variable that matches the address you'll give Dify for it:
+
+  - `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` = its host name, such as the Docker Compose service name in `http://otel-collector:4318`
+  - `SSRF_PROXY_ALLOW_PRIVATE_IPS` = its IP address
+
+  Allow only the collector's own address, not a whole network range, because HTTP Request nodes and tools can reach every address you allow. See [Environment Variables](/en/self-host/deploy/configuration/environments#ssrf-proxy) for details.
+  </Note>
+
+## Connect Dify to Your Endpoint
+
+<Info>
+Configuring an app's tracing requires the Owner or Admin role, or the Editor role on an app you created. For an Agent, you need the Editor role or above.
+</Info>
+
+1. In the **Monitoring** page of your app or Agent, click **Tracing app performance**.
+2. Click **Config** and fill in the form:
+
+   - **Endpoint**: the URL that receives your traces. Dify adds `/v1/traces` to a bare address such as `https://otel.example.com` and uses any other path as is.
+
+     Leave credentials and `?` queries out of the URL, and put credentials in **HTTP headers (JSON)** instead.
+   - **HTTP headers (JSON)**: the headers your endpoint needs, such as `{"Authorization":"Bearer <token>"}`. Leave out transport headers such as `Content-Type`, `Host`, `Accept`, and `Content-Encoding`, even if your backend's setup guide lists them.
+
+     Dify never shows saved headers again and clears them when you change **Endpoint**, so keep your own copy.
+   - **Service name**: the name your backend groups traces under (`service.name`). It's `dify` unless you change it. Give each app and Agent its own name, so you can find their traces later.
+   - **Resource attributes (JSON)**: labels added to every trace from this app, such as `{"deployment.environment.name":"production"}`. Set `service.name` in **Service name**.
+
+3. Click **Save & Enable**. Dify tests the endpoint before saving.
+
+## If Save Fails
+
+- `The tracing configuration could not be verified.`: Dify couldn't reach the endpoint, or the endpoint refused the test. Check the URL's path and port, the proxy rules in [Before You Start](#before-you-start), and the header names and values your backend expects.
+- `The tracing configuration is invalid.`: a field breaks one of the rules above, such as a JSON typo, a transport header, or a `?` query in **Endpoint**.
+
+## Check That Traces Arrive
+
+Run the whole app once, in the editor or as a user, then search your backend for its service name. Testing a single node doesn't send the app's trace.
+
+This run is also the real test of your credentials. Some collectors accept Save's test without checking them.
+
+If the trace isn't there yet, wait a few minutes. A trace that Dify is retrying can take five minutes or more to arrive.
+
+If a trace is still missing, search the logs of Dify's `worker` service for `Trace export`. Most traces Dify drops are logged there with the reason, such as `OpenTelemetry ingestion rejected (HTTP 401)`.
+
+Once [Agent tracing](#trace-agent-runs) is on, Agent runs also show their delivery status in Dify, in the **External tracing** row of their log details.
+
+## Read the Traces in Your Backend
+
+How the spans in a trace nest depends on the app type:
+
+- **Workflow**: `workflow` at the root, then one span per node, named `<node type>_<node title>`, such as `llm_LLM`. Each node's span sits under the node that ran before it, so a straight workflow forms a staircase:
+
+  ```text
+  workflow
+  └── start_User Input
+      └── llm_LLM
+          └── end_Output
+  ```
+
+  Each span still covers only its own node's time.
+
+- **Chatflow**: `message` at the root, `workflow` under it, then the node spans as in a Workflow app.
+- **Chatbot, Text Generator, and legacy Agent apps**: `message` at the root. Under it sit an `llm` span and one span for each other step, such as knowledge retrieval or a tool call. The `llm` span lasts as long as the whole message, not just the model call.
+- **Agents**: like a Chatbot app, until you turn on [Agent tracing](#trace-agent-runs).
+
+A workflow called as a tool appears under the span of the Tool node that called it. A workflow that an Agent calls sends a trace of its own instead, if that workflow has tracing on.
+
+To find failed steps, filter for spans with an error status, and read each span's status message for the error text. The filter also finds steps whose error the node's **Error Handling** setting caught, so some of these runs went on to finish.
+
+### Attributes to Filter On
+
+Filter and group traces by these span attributes, for example to chart token use per model from `gen_ai.request.model` and `gen_ai.usage.total_tokens`:
+
+| Attribute | Found on | Holds |
+|:--|:--|:--|
+| `dify.app_id`, `dify.workflow_run_id`, `dify.message_id`, `dify.node_execution_id` | Most spans | The Dify IDs of the app, workflow run, message, and node execution |
+| `gen_ai.session.id` | Every span | The conversation, or the run in Workflow apps |
+| `gen_ai.user.id` | Every span | The end user, or for API calls, the `user` value the caller sent |
+| `dify.span.kind` | Every span | `llm`, `retriever`, `tool`, `agent`, or `chain` for any other kind of step |
+| `input.value`, `output.value` | Every span | The step's input and output, as JSON text |
+| `dify.metadata` | Every span | Dify's other details on the step, as JSON text |
+| `gen_ai.request.model`, `gen_ai.provider.name` | LLM spans (`dify.span.kind` = `llm`) | The model and its provider |
+| `gen_ai.usage.input_tokens`, `gen_ai.usage.output_tokens`, `gen_ai.usage.total_tokens` | LLM spans | Token counts |
+| `dify.cost.amount`, `dify.cost.currency` | LLM spans | The call's cost, or `0` if Dify has no price for the model |
+| `retrieval.query`, `retrieval.document` | Knowledge retrieval | The query and the documents it found |
+
+Token counts and cost appear as attributes only on LLM spans, so summing them leaves out Question Classifier, Parameter Extractor, and other nodes that call a model.
+
+For a run's full token count, read `total_tokens` in the `dify.metadata` of its `workflow` span. Each node's span carries its own `total_tokens` and `total_price` in the same place. In [Agent runs](#trace-agent-runs) with **Capture content** off, `dify.metadata` leaves these out, though LLM spans still carry their token and cost attributes.
+
+### Find a Particular Run
+
+Start by narrowing to the app with the service name you gave it. If several apps share a name, filter on `dify.app_id` instead. It's the ID in the app's URL in Dify (`/app/<app ID>/…`), and most of the app's spans carry it.
+
+Agents need a service name of their own, because their spans carry a different app ID from the one in the Agent's URL.
+
+Within the app, filter on the ID you have, as the API returns it, dashes included:
+
+- **A Workflow run started through the API**: `dify.workflow_run_id`, from the response's `workflow_run_id`.
+- **A message sent through the API to a Chatbot, Text Generator, or legacy Agent app**: `dify.message_id`, from the response's `message_id`.
+- **A conversation in a Chatbot, Chatflow, legacy Agent app, or Agent**: `gen_ai.session.id`, from the response's `conversation_id` or the **Conversation ID** in the app's logs. The logs show that ID in capitals, so copy it with its copy button.
+- **Any other run**: the time it started.
+
+To look up runs by a value of your own instead, such as a session ID from your service, send it in the `X-Trace-Session-Id` header when you start the run through the API. Dify then stores it in `gen_ai.session.id` instead of the conversation or run ID, so a tagged conversation can no longer be found by its conversation ID. Agents ignore this header.
+
+### Join API Runs to Your Service's Trace
+
+Workflow and Chatflow runs started through the API can join your own service's trace, so you can follow a request from your service into Dify. Once [Agent tracing](#trace-agent-runs) is on, runs of workflows with a new Agent node always get a trace of their own instead.
+
+If your service's HTTP client sends the W3C `traceparent` header, as OpenTelemetry's HTTP instrumentation does, the run joins with no change on your side. Otherwise, send your trace ID in the `X-Trace-Id` header, or as `trace_id` in the query string or request body.
+
+Dify handles the ID by its form:
+
+- **32 hexadecimal characters or a UUID**: the run joins your trace. OpenTelemetry trace IDs take the first form.
+- **Up to 128 letters, digits, `-`, and `_`**, such as `order-123`: the run doesn't join your trace. Dify computes a trace ID from the value, so every run sent with that value lands in the same trace.
+- **Any other value**, such as `order:123`: Dify ignores it, and the run gets a trace of its own.
+
+Dify's spans share your trace ID, but your backend shows them as a second root in the trace rather than under the span that called Dify.
+
+## Trace Agent Runs
+
+Agent tracing adds an Agent's own model and tool calls to its traces, grouped under `Agent attempt <n>` spans. In an Agent's own runs, these spans sit under the root `message` span. In a workflow, they sit under the `agent_<node title>` span of the [new Agent node](/en/self-host/use-dify/nodes/agent#new-agent).
+
+Until Agent tracing is on, an Agent's own runs look like a Chatbot app's, and a new Agent node shows as a single span. Turning it on also changes these runs in other ways:
+
+- **Content**: inputs and outputs arrive empty until you turn on **Capture content**. In a workflow with a new Agent node, that covers every node, not only the Agent.
+- **Your trace ID**: each run gets a trace of its own, even when you send your trace ID through the API.
+- **Agent trajectory export**: runs of an app or Agent with tracing on go to its tracing provider instead of the trajectory collector, unless **Capture Agent internals** is off.
+
+<Note>
+Agent tracing is off by default. Enable it by setting both:
+
+- `OPS_AGENT_TRACE_ENABLED` = `true`
+- `DIFY_AGENT_APPLICATION_TRACING_ENABLED` = `true`
+
+See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for details.
+</Note>
+
+Under **Agent data capture** in the tracing settings, choose what these traces carry:
+
+- **Capture Agent internals**: turn it off to show each Agent as a single step. The Agent's model names, token counts, and cost are then left out too, so leave it on if you track usage.
+- **Capture content**: turn it on to see what each step received and returned. Until then, Dify also replaces error text with a generic message, such as `Application execution failed`. Model names, token counts, and cost arrive either way.
+
+A new Agent node uses the workflow's tracing settings, not the Agent's own. In a workflow that a Tool node calls, the node always shows as a single step without its model and tool calls, even when **Capture Agent internals** is on.
+
+## If Your Endpoint Is Down or Refuses a Trace
+
+When Dify can't connect to the endpoint, or the endpoint answers that it's overloaded or failing, Dify keeps trying for about five minutes by default. Once [Agent tracing](#trace-agent-runs) is on, Agent runs get about 10 minutes.
+
+<Info>
+To keep traces other than Agent runs through longer outages, raise `OPS_TRACE_EXPORT_MAX_ATTEMPTS`. See [Environment Variables](/en/self-host/deploy/configuration/environments#llmops-trace-delivery) for details.
+</Info>
+
+During an outage, you can send pending traces to a standby endpoint. Change **Endpoint**, enter the headers again even if they're the same, and save. Dify's next try goes to the new endpoint. Agent runs already under way don't follow, since they keep the settings they started with.
+
+Dify drops a trace without trying again in two common cases:
+
+- **The endpoint refuses the trace for another reason**, such as a wrong path, rejected credentials, or a size it doesn't accept. The `worker` log names the reason. For a trace that's too large, raise the endpoint's request size limit.
+- **The endpoint takes more than 30 seconds to answer**, or the connection breaks after Dify sent the trace. If your backend is slow to answer, send to an OpenTelemetry Collector in front of it, which answers as soon as it has the trace.
+
+## Turn Off or Remove Tracing
+
+To stop sending traces for a while, turn off the switch in the tracing settings. The configuration stays saved for when you turn it back on.
+
+To delete the configuration, headers included, click **Remove**.
+
+Turning tracing off or switching the app to another provider cancels any tries still pending. Agent runs already under way still finish sending with the settings they started with, even after **Remove**.
