@@ -1,0 +1,211 @@
+---
+title: 集成 OpenTelemetry
+sidebarTitle: OpenTelemetry
+description: 将应用和 Agent 的追踪发送到你自己的 OpenTelemetry 后端，确认追踪已送达，并在后端查找运行
+---
+
+> 本文档由 AI 自动翻译。如有任何不准确之处，请参考 [英文原版](/en/self-host/use-dify/monitor/integrations/integrate-opentelemetry)。
+
+OpenTelemetry 是一项开放标准，用来记录软件运行时做了什么，大多数监控后端都支持它。每次运行生成一条追踪，追踪中的每个步骤对应一个 span。
+
+选择 OpenTelemetry，即可将应用或 Agent 每次运行结束后的追踪发送到团队已在使用的后端，与其他服务的追踪放在一起查看。
+
+每个应用和 Agent 都有独立的追踪设置，同一时间只能发送到一个追踪供应商。如需发送到多个后端，可让 Dify 发往一个 OpenTelemetry Collector，再由它分别导出到各个后端。
+
+## 选择合适的 OpenTelemetry 配置方式
+
+Dify 可通过 3 种方式将追踪发送到 OpenTelemetry 收集器，按要追踪的对象选择：
+
+- **应用和 Agent 的每次运行**，包括其中的节点和模型调用：使用 **OpenTelemetry** 追踪供应商，按应用或 Agent 分别设置。
+- **Dify 服务器自身的性能**，例如 Web 请求、数据库调用和后台任务：使用 `ENABLE_OTEL` 和 `OTLP_*` 变量，整个部署共用一个端点。详见 [OTLP / OpenTelemetry 配置](/zh/self-host/deploy/configuration/environments#otlp-/-opentelemetry-配置)。
+- **所有工作空间的全部 Agent 运行，汇总到一个收集器**：使用 Agent 轨迹导出（`DIFY_AGENT_TRAJECTORY_*`）。详见 [Agent 轨迹导出](/zh/self-host/deploy/configuration/environments#agent-轨迹导出)。
+
+这 3 种方式可共用同一个收集器。
+
+## 准备工作
+
+<Warning>
+追踪会带上每次运行的输入和输出，包括提示词；其中即使有疑似密钥的值，Dify 也不会脱敏。只将追踪发送到允许存储这些数据的地方。
+</Warning>
+
+你需要准备：
+
+- **Dify 1.20.0 及以上版本**。
+- **支持 HTTP 的 OpenTelemetry 追踪接收端点**：OpenTelemetry Collector，或可直接接收 OpenTelemetry 数据的后端。
+
+  Dify 通过 HTTP 而非 gRPC 发送 OpenTelemetry 协议（OTLP）格式的追踪。在 Collector 上，对应的是 HTTP 接收器，通常监听 4318 端口。
+- **以 HTTP 请求头提供的凭据**：端点需要时才提供，例如 `Authorization` 请求头，或后端厂商自定义的 API 密钥请求头。
+
+Dify 经由部署中的 SSRF 代理发送追踪，该代理会筛查每个出站请求。在默认规则下：
+
+- **公网 `https://` 端点**：只有 443 端口能通过。Collector 通常在 4318 端口接收数据。要让 Dify 访问它，可在它前面加一层反向代理或负载均衡器，对外开放 443 端口，端点地址形如 `https://otel.example.com/v1/traces`。
+- **公网 `http://` 端点**：大多数端口都能通过，包括 4318，但追踪和凭据会以明文在互联网上传输。只要端点在你自己的网络之外，就优先使用 443 端口上的 `https://`。
+- **你自己网络中的收集器**：在你放行收集器的地址之前，代理会拒绝私有地址、环回地址和链路本地地址。内网中的 `https://` 收集器同样只能使用 443 端口。
+
+  <Note>
+  要放行收集器，按你在 Dify 中为它填写的地址设置对应的变量：
+
+  - `SSRF_PROXY_ALLOW_PRIVATE_DOMAINS` = 它的主机名，例如 `http://otel-collector:4318` 中的 Docker Compose 服务名
+  - `SSRF_PROXY_ALLOW_PRIVATE_IPS` = 它的 IP 地址
+
+  只放行收集器本身的地址，不要放行整个网段，因为 HTTP 请求节点和工具也能访问你放行的每个地址。详见 [环境变量](/zh/self-host/deploy/configuration/environments#ssrf-代理)。
+  </Note>
+
+## 将 Dify 连接到端点
+
+<Info>
+配置应用的追踪需要所有者或管理员角色；编辑者只能为自己创建的应用配置追踪。配置 Agent 的追踪需要编辑者或更高角色。
+</Info>
+
+1. 在应用的 **监测** 页面或 Agent 的 **监控** 页面，点击 **追踪应用性能**。
+2. 点击 **配置**，然后填写表单：
+
+   - **Endpoint**：接收追踪的 URL。填写 `https://otel.example.com` 这类不带路径的地址时，Dify 会自动补上 `/v1/traces`；带有其他路径时则原样使用。
+
+     URL 中不要包含凭据和 `?` 查询参数，凭据改填到 **HTTP 请求头（JSON）** 中。
+   - **HTTP 请求头（JSON）**：端点所需的请求头，例如 `{"Authorization":"Bearer <token>"}`。后端的接入指南里即使列出了 `Content-Type`、`Host`、`Accept`、`Content-Encoding` 等传输层请求头，这里也不要填。
+
+     已保存的请求头不会再显示，修改 **Endpoint** 后也会被清除，请自行留存一份。
+   - **服务名称**：后端用来归类追踪的名称（`service.name`），默认为 `dify`。为每个应用和 Agent 分别设置名称，之后才能分清各自的追踪。
+   - **资源属性（JSON）**：附加到该应用每条追踪上的标签，例如 `{"deployment.environment.name":"production"}`。`service.name` 请在 **服务名称** 中设置。
+
+3. 点击 **保存并启用**。Dify 会先测试端点，再保存配置。
+
+## 保存失败时
+
+- `The tracing configuration could not be verified.`：Dify 无法连接到端点，或端点拒绝了测试请求。检查 URL 的路径和端口、[准备工作](#准备工作) 中的代理规则，以及后端要求的请求头名称和值。
+- `The tracing configuration is invalid.`：某个字段违反了上述规则，例如 JSON 格式有误、填写了传输层请求头，或 **Endpoint** 中带有 `?` 查询参数。
+
+## 确认追踪已送达
+
+在编辑器中或以用户身份完整运行一次应用，然后在后端按服务名称搜索。单独测试某个节点不会发送应用的追踪。
+
+这次运行也是对凭据的真正检验：有些收集器不校验凭据，就让保存时的测试通过了。
+
+如果还没看到追踪，可以等几分钟。Dify 正在重试的追踪可能要 5 分钟或更久才能送达。
+
+如果仍然缺少某条追踪，在 Dify 的 `worker` 服务日志中搜索 `Trace export`。Dify 丢弃的追踪大多会记录在这里，并注明原因，例如 `OpenTelemetry ingestion rejected (HTTP 401)`。
+
+开启 [Agent 追踪](#追踪-agent-运行) 后，在 Dify 中打开 Agent 运行的日志详情，还可从 **外部追踪** 一行查看发送状态。
+
+## 在后端查看追踪
+
+追踪中 span 的嵌套方式取决于应用类型：
+
+- **Workflow**：根 span 为 `workflow`，其下每个节点对应一个 span，命名为 `<节点类型>_<节点标题>`，例如 `llm_LLM`。每个节点的 span 挂在上一个运行的节点之下，因此一条直线型工作流会呈阶梯状：
+
+  ```text
+  workflow
+  └── start_用户输入
+      └── llm_LLM
+          └── end_输出
+  ```
+
+  每个 span 仍然只记录其节点自身的耗时。
+
+- **Chatflow**：根 span 为 `message`，其下是 `workflow`，再往下是节点 span，与 Workflow 应用相同。
+- **聊天助手、文本生成应用和旧版 Agent 应用**：根 span 为 `message`。其下有一个 `llm` span，其他每个步骤（如知识检索或工具调用）也各有一个 span。`llm` span 的时长覆盖整条消息，而不只是模型调用。
+- **Agent**：在开启 [Agent 追踪](#追踪-agent-运行) 之前，与聊天助手相同。
+
+工作流由工具节点调用时，会显示在该工具节点的 span 下。由 Agent 调用的工作流则不同：如果该工作流开启了追踪，它会单独发送一条追踪。
+
+要查找失败的步骤，可筛选状态为错误的 span，并在每个 span 的状态消息中查看错误文本。如果节点通过 **异常处理** 设置捕获了错误，该步骤同样会出现在筛选结果中，所以其中有些运行其实已继续跑完。
+
+### 可用于筛选的属性
+
+可按以下 span 属性筛选和分组追踪，例如根据 `gen_ai.request.model` 和 `gen_ai.usage.total_tokens` 绘制各模型的 token 用量图表：
+
+| 属性 | 所在 span | 内容 |
+|:--|:--|:--|
+| `dify.app_id`、`dify.workflow_run_id`、`dify.message_id`、`dify.node_execution_id` | 大多数 span | 应用、工作流运行、消息和节点执行在 Dify 中的 ID |
+| `gen_ai.session.id` | 所有 span | 所属对话；在 Workflow 应用中为所属运行 |
+| `gen_ai.user.id` | 所有 span | 终端用户；通过 API 调用时，为调用方传入的 `user` 值 |
+| `dify.span.kind` | 所有 span | `llm`、`retriever`、`tool`、`agent`；其他类型的步骤为 `chain` |
+| `input.value`、`output.value` | 所有 span | 该步骤的输入和输出，为 JSON 文本 |
+| `dify.metadata` | 所有 span | Dify 记录的该步骤其他信息，为 JSON 文本 |
+| `gen_ai.request.model`、`gen_ai.provider.name` | LLM span（`dify.span.kind` = `llm`） | 模型及其供应商 |
+| `gen_ai.usage.input_tokens`、`gen_ai.usage.output_tokens`、`gen_ai.usage.total_tokens` | LLM span | token 数 |
+| `dify.cost.amount`、`dify.cost.currency` | LLM span | 本次调用的费用；Dify 没有该模型的价格时为 `0` |
+| `retrieval.query`、`retrieval.document` | 知识检索 | 检索查询及检索到的文档 |
+
+token 数和费用只作为属性出现在 LLM span 上，因此按属性求和会漏掉问题分类器、参数提取器等其他调用模型的节点。
+
+要获取一次运行的完整 token 数，读取其 `workflow` span 的 `dify.metadata` 中的 `total_tokens`。每个节点的 span 也在同一位置记录自身的 `total_tokens` 和 `total_price`。在关闭了 **采集内容** 的 [Agent 运行](#追踪-agent-运行) 中，`dify.metadata` 不含这些字段，但 LLM span 仍带有 token 和费用属性。
+
+### 查找特定运行
+
+先按你给应用设置的服务名称缩小范围。如果多个应用使用同一名称，改为按 `dify.app_id` 筛选。它就是 Dify 中应用 URL 里的 ID（`/app/<应用 ID>/…`），该应用的大多数 span 都带有这个属性。
+
+Agent 必须设置独立的服务名称，因为其 span 中的应用 ID 与 Agent URL 中的 ID 不同。
+
+在应用范围内，按手头已有的 ID 筛选。ID 要与 API 返回的一致，保留连字符：
+
+- **通过 API 启动的 Workflow 运行**：按 `dify.workflow_run_id` 筛选，值取自响应中的 `workflow_run_id`。
+- **通过 API 发送给聊天助手、文本生成应用或旧版 Agent 应用的消息**：按 `dify.message_id` 筛选，值取自响应中的 `message_id`。
+- **聊天助手、Chatflow、旧版 Agent 应用或 Agent 中的对话**：按 `gen_ai.session.id` 筛选，值取自响应中的 `conversation_id` 或应用日志中的 **对话 ID**。日志中的该 ID 以大写显示，因此请用旁边的复制按钮复制。
+- **其他运行**：按运行的开始时间查找。
+
+也可改用自己的值来查找运行，比如你服务中的会话 ID：通过 API 启动运行时，将它放入 `X-Trace-Session-Id` 请求头即可。Dify 会将该值写入 `gen_ai.session.id`，取代对话 ID 或运行 ID，因此带有该值的对话就无法再按对话 ID 找到了。Agent 会忽略此请求头。
+
+### 将 API 运行并入你的服务追踪
+
+通过 API 启动的 Workflow 和 Chatflow 运行可并入你自己服务的追踪，这样就能沿着一次请求，从你的服务一路追到 Dify 内部。开启 [Agent 追踪](#追踪-agent-运行) 后，包含新 Agent 节点的工作流例外，其运行总是单独生成一条追踪。
+
+你服务中的 HTTP 客户端如果会发送 W3C `traceparent` 请求头（OpenTelemetry 的 HTTP 插桩就会这样做），运行会自动并入，你这边无需任何改动。否则，可通过 `X-Trace-Id` 请求头发送追踪 ID，或在查询字符串或请求体中以 `trace_id` 发送。
+
+Dify 按 ID 的格式分别处理：
+
+- **32 位十六进制字符或 UUID**：运行会并入你的追踪。OpenTelemetry 追踪 ID 即为前一种格式。
+- **最多 128 个字符，仅含字母、数字、`-` 和 `_`**，例如 `order-123`：运行不会并入你的追踪。Dify 会据此值另行计算一个追踪 ID，因此所有携带该值的运行都会归入同一条追踪。
+- **其他值**，例如 `order:123`：Dify 会忽略该值，运行单独生成一条追踪。
+
+Dify 的 span 与你的追踪共用同一个追踪 ID，但后端会将它们显示为该追踪中的第二个根，不会挂在调用 Dify 的那个 span 之下。
+
+## 追踪 Agent 运行
+
+Agent 追踪会把 Agent 自身的模型调用和工具调用加入其追踪，归在 `Agent attempt <n>` span 之下。在 Agent 自身的运行中，这些 span 位于根 span `message` 之下；在工作流中，则位于 [新 Agent 节点](/zh/self-host/use-dify/nodes/agent#new-agent) 的 `agent_<节点标题>` span 之下。
+
+开启 Agent 追踪之前，Agent 自身的运行与聊天助手的运行看起来一样，新 Agent 节点也只显示为一个 span。开启后，这些运行还会有以下变化：
+
+- **内容**：开启 **采集内容** 之前，输入和输出均为空。在包含新 Agent 节点的工作流中，该设置作用于所有节点，不限于 Agent 节点。
+- **你的追踪 ID**：即使通过 API 发送了你的追踪 ID，每次运行仍会单独生成一条追踪。
+- **Agent 轨迹导出**：已开启追踪的应用或 Agent，其运行会改发到自己的追踪供应商，不再进入轨迹收集器；关闭 **采集 Agent 内部过程** 时除外。
+
+<Note>
+Agent 追踪默认关闭。如需开启，须同时设置：
+
+- `OPS_AGENT_TRACE_ENABLED` = `true`
+- `DIFY_AGENT_APPLICATION_TRACING_ENABLED` = `true`
+
+详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。
+</Note>
+
+在追踪设置的 **Agent 数据采集** 下，选择这些追踪要携带的内容：
+
+- **采集 Agent 内部过程**：关闭后，每个 Agent 只显示为一个步骤，Agent 的模型名称、token 数和费用也会一并省略。如需统计用量，请保持开启。
+- **采集内容**：开启后可查看每个步骤收到和返回的内容。开启之前，Dify 还会将错误文本替换为通用消息，例如 `Application execution failed`。无论是否开启，模型名称、token 数和费用都会发送。
+
+新 Agent 节点使用所在工作流的追踪设置，而非 Agent 自身的设置。在由工具节点调用的工作流中，即使开启了 **采集 Agent 内部过程**，该节点也始终只显示为一个步骤，不含其中的模型调用和工具调用。
+
+## 端点不可用或拒收追踪时
+
+如果 Dify 连不上端点，或端点返回过载、服务异常之类的错误，Dify 默认会持续重试约 5 分钟。开启 [Agent 追踪](#追踪-agent-运行) 后，Agent 运行的重试时长约为 10 分钟。
+
+<Info>
+如需让 Agent 运行以外的追踪撑过更长的故障时间，可调高 `OPS_TRACE_EXPORT_MAX_ATTEMPTS`。详见 [环境变量](/zh/self-host/deploy/configuration/environments#llmops-追踪投递)。
+</Info>
+
+端点故障期间，可将待发送的追踪改发到备用端点：修改 **Endpoint**，重新填写请求头（即使内容不变），然后保存。Dify 的下一次重试就会发往新端点。已在进行中的 Agent 运行不会跟着切换，它们沿用开始时的设置。
+
+以下两种常见情况下，Dify 会直接丢弃追踪，不再重试：
+
+- **端点因其他原因拒收追踪**，例如路径错误、凭据被拒，或数据大小超出其接受范围。`worker` 日志会写明原因。如果追踪过大，可调高端点的请求大小上限。
+- **端点超过 30 秒仍未响应**，或 Dify 发出追踪后连接中断。如果后端响应较慢，可在它前面部署一个 OpenTelemetry Collector，改为发送到 Collector，它收到追踪后会立即响应。
+
+## 关闭或移除追踪
+
+如需暂停发送追踪，关闭追踪设置中的开关即可。配置会保留，重新开启后直接生效。
+
+如需删除配置（包括请求头），点击 **移除**。
+
+关闭追踪或将应用切换到其他供应商后，所有待执行的重试都会取消。已在进行中的 Agent 运行不受影响，即便点击了 **移除**，也会按开始时的设置发送完毕。
