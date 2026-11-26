@@ -208,6 +208,23 @@
 | new Human Input node | 新版人工介入节点 | 新しい人間の入力ノード |
 | old Human Input node | 旧版人工介入节点 | 旧バージョンの人間の入力ノード |
 
+### Evaluation
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| evaluation | 评测 | 評価 |
+| test set | 测试集 | テストセット |
+| test case | 测试用例 | テストケース |
+| judge model | 判定模型 | 判定モデル |
+| metric | 指标 | 指標 |
+| judgment condition | 判定条件 | 判定条件 |
+| reference answer | 参考答案 | 参照回答 |
+| success criteria | 成功标准 | 成功基準 |
+| evaluation workflow | 评测工作流 | 評価ワークフロー |
+| custom evaluator | 自定义评测器 | カスタム評価器 |
+| custom metric | 自定义指标 | カスタム指標 |
+| snippet | Snippet | スニペット |
+
 ## UI Labels
 
 ### Sidebar & Navigation
@@ -720,6 +737,56 @@
 |:--------|:--------|:---------|
 | Chunking Setting | 分段模式 | チャンキングモード |
 | Custom | 自定义 | カスタム |
+
+### Evaluation
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Evaluation | 评测 | Evaluation |
+| Evaluation | 评估 | 評価 |
+| Evaluation Framework | 判定框架 | 評価フレームワーク |
+| Judge Model | 判定模型 | Judge Model |
+| Add Metric | 添加指标 | Add Metric |
+| Custom metrics | 自定义指标 | Custom metrics |
+| Variable Mapping | 变量映射 | Variable Mapping |
+| Judgment Conditions | 判定条件 | Judgment Conditions |
+| Add Condition | 添加条件 | Add Condition |
+| Input Fields | 输入字段 | Input Fields |
+| Download XLSX Template | 下载测试集模版 | Download XLSX Template |
+| Upload & Run Test | 上传并运行测试 | Upload & Run Test |
+| Run Test | 运行测试 | Run Test |
+| Test History | 测试历史 | Test History |
+| Test Details | 测试详情 | Test Details |
+| Export | 导出 | Export |
+| Cancel run | 取消任务 | Cancel run |
+| Retry run | 重试任务 | Retry run |
+| Download result | 下载结果文件 | Download result |
+| Download test file | 下载测试文件 | Download test file |
+| Publish as Evaluation Workflow | 发布为评测工作流 | 評価ワークフローとして公開 |
+| Switch to Evaluation Workflow | 切换为评测工作流 | 評価ワークフローに切り替える |
+| Switch to Standard Workflow | 切换为标准工作流 | 標準ワークフローに切り替える |
+| Records | 记录 | 記録 |
+| AND | 且 | AND |
+| OR | 或 | OR |
+| Number | 数值 | Number |
+| Boolean | 布尔 | Boolean |
+| String | 文本 | String |
+
+### Evaluation Run Status Labels
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| Pending | 等待中 | Pending |
+| Running | 运行中 | Running |
+| Completed | 已完成 | Completed |
+| Failed | 失败 | Failed |
+| Cancelled | 已取消 | Cancelled |
+
+### LLM Node Config
+
+| English | Chinese | Japanese |
+|:--------|:--------|:---------|
+| context | 上下文 | コンテキスト |
 
 ## General Guidelines
 
