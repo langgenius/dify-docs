@@ -1,0 +1,489 @@
+---
+title: Connect an Existing Agent to Dify
+sidebarTitle: External Agent
+description: Wrap your agent in a Python endpoint, host it over HTTPS, and run a task from Dify
+---
+
+Keep your agent's code, tools, and model credentials on your server. Dify sends it a task and waits for the answer through an A2A endpoint.
+
+The Python wrapper below handles the A2A 1.0 HTTP+JSON requests Dify needs for text tasks. Start with its echo response, give it a temporary HTTPS address, and run it from Dify. Then replace one function with your existing agent call. You don't need an A2A SDK.
+
+## Before You Start
+
+Have these ready:
+
+- Python 3.11 or later, Bash, and `curl`.
+- Docker for the temporary HTTPS route below, or a working Python environment with `pip` and your own HTTPS host.
+- Your agent's Python entry point, SDK, or HTTP endpoint.
+- A Dify workspace where **External agents** is available.
+
+<Info>
+Connecting an external agent requires the Owner or Admin role in the workspace.
+</Info>
+
+## Create the Endpoint
+
+Save this complete file as `agent_endpoint.py` in a new directory. Leave `run_agent` unchanged for the first test. Task records are kept in memory and disappear on restart.
+
+```python agent_endpoint.py
+"""Single-process, text-only A2A 1.0 HTTP+JSON teaching example.
+
+Tasks disappear on restart; use one Uvicorn worker. Replace run_agent with your
+existing synchronous function. Context IDs correlate calls, but this function
+does not retain conversation history. Production needs durable tasks and jobs,
+per-user authorization, input limits, expiry, and real cancellation if offered.
+"""
+
+import asyncio
+import copy
+import os
+import secrets
+from urllib.parse import urlsplit
+from uuid import uuid4
+
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
+from fastapi.responses import JSONResponse
+
+
+BASE_URL = os.getenv("PUBLIC_BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+TOKEN = os.environ["AGENT_TOKEN"]
+if not TOKEN or not TOKEN.isascii() or any(ord(char) <= 32 or ord(char) == 127 for char in TOKEN):
+    raise ValueError("AGENT_TOKEN must be nonempty ASCII without whitespace or control characters")
+origin = urlsplit(BASE_URL)
+if (origin.scheme not in {"http", "https"} or not origin.netloc or origin.path
+        or origin.query or origin.fragment or origin.username or origin.password):
+    raise ValueError("PUBLIC_BASE_URL must be an origin, for example https://agent.example.com")
+
+app = FastAPI()
+tasks: dict[str, dict] = {}
+
+
+def run_agent(text: str) -> str:
+    """Replace this body with your existing agent call; return its final text."""
+    return f"Your agent received: {text}"
+
+
+def reply(value: dict, status_code: int = 200) -> JSONResponse:
+    return JSONResponse(value, status_code=status_code, media_type="application/a2a+json")
+
+
+def require_auth(authorization: str = Header(default="")) -> None:
+    if not secrets.compare_digest(authorization.encode(), f"Bearer {TOKEN}".encode()):
+        raise HTTPException(401, "Bearer token required", headers={"WWW-Authenticate": "Bearer"})
+
+
+def is_text_part(part: object) -> bool:
+    return (isinstance(part, dict) and set(part) <= {"text", "mediaType", "metadata"}
+            and isinstance(part.get("text"), str) and part.get("mediaType", "text/plain") == "text/plain"
+            and isinstance(part.get("metadata", {}), dict))
+
+
+@app.get("/.well-known/agent-card.json")
+async def agent_card():
+    return reply({
+        "name": "My Python agent",
+        "description": "Wraps an existing text-to-text Python function.",
+        "version": "1.0.0",
+        "supportedInterfaces": [{"url": BASE_URL + "/a2a", "protocolBinding": "HTTP+JSON",
+                                 "protocolVersion": "1.0"}],
+        "capabilities": {"streaming": False},
+        "defaultInputModes": ["text/plain"],
+        "defaultOutputModes": ["text/plain"],
+        "skills": [{"id": "answer", "name": "Answer", "description": "Answer a text request.",
+                    "tags": ["text"]}],
+        "securitySchemes": {"bearerAuth": {"httpAuthSecurityScheme": {"scheme": "bearer"}}},
+        "securityRequirements": [{"schemes": {"bearerAuth": {"list": []}}}],
+    })
+
+
+async def execute(task_id: str, text: str) -> None:
+    task = tasks[task_id]
+    task["status"] = {"state": "TASK_STATE_WORKING"}
+    try:
+        result = await asyncio.to_thread(run_agent, text)
+        if not isinstance(result, str):
+            raise TypeError("run_agent must return text")
+        task["artifacts"] = [{"artifactId": str(uuid4()), "name": "text", "parts": [{"text": result}]}]
+        task["status"] = {"state": "TASK_STATE_COMPLETED"}
+    except Exception:
+        # Never return exception text, stack traces, prompts, or credentials.
+        task["status"] = {"state": "TASK_STATE_FAILED", "message": {
+            "messageId": str(uuid4()), "role": "ROLE_AGENT", "contextId": task["contextId"],
+            "parts": [{"text": "The agent could not complete this request."}],
+        }}
+
+
+@app.post("/a2a/message:send", dependencies=[Depends(require_auth)])
+async def send_message(request: Request, background: BackgroundTasks):
+    try:
+        body = await request.json()
+    except ValueError:
+        raise HTTPException(400, "A JSON request body is required") from None
+    message = body.get("message") if isinstance(body, dict) else None
+    config = body.get("configuration", {}) if isinstance(body, dict) else {}
+    if not isinstance(message, dict) or not isinstance(config, dict):
+        raise HTTPException(400, "message and configuration must be objects")
+    if message.get("role") != "ROLE_USER" or not isinstance(message.get("messageId"), str) or not message["messageId"]:
+        raise HTTPException(400, "A user message with a messageId is required")
+    if config.get("returnImmediately") is not True:
+        raise HTTPException(400, "This example requires returnImmediately: true")
+    if "taskId" in message:
+        raise HTTPException(400, "This example creates new tasks only")
+    parts = message.get("parts")
+    if not isinstance(parts, list) or not parts or not all(is_text_part(p) for p in parts):
+        raise HTTPException(415, "Only text Parts are supported; files and data are rejected")
+    text = "\n".join(p["text"] for p in parts)
+    if not text.strip():
+        raise HTTPException(400, "Input text must not be empty")
+    context_id = message.get("contextId", str(uuid4()))
+    if not isinstance(context_id, str) or not context_id:
+        raise HTTPException(400, "contextId must be a nonempty string when supplied")
+    modes = config.get("acceptedOutputModes", [])
+    if not isinstance(modes, list) or (modes and "text/plain" not in modes):
+        raise HTTPException(406, "This example returns text/plain only")
+    task_id = str(uuid4())
+    tasks[task_id] = {"id": task_id, "contextId": context_id, "status": {"state": "TASK_STATE_SUBMITTED"}}
+    response = reply({"task": copy.deepcopy(tasks[task_id])})
+    background.add_task(execute, task_id, text)
+    return response
+
+
+@app.get("/a2a/tasks/{task_id}", dependencies=[Depends(require_auth)])
+async def get_task(task_id: str):
+    if task_id not in tasks:
+        raise HTTPException(404, "Task not found")
+    return reply(copy.deepcopy(tasks[task_id]))
+
+
+@app.post("/a2a/tasks/{task_id}:cancel", dependencies=[Depends(require_auth)])
+async def cancel_task(task_id: str):
+    # Do not report CANCELED while the Python function keeps running.
+    raise HTTPException(501, "Cancellation is not implemented")
+```
+
+The wrapper returns a submitted task immediately, runs `run_agent` in the background, and lets Dify poll until the task finishes. The final answer goes in a text artifact. The public Agent Card tells Dify where to send requests and that task operations require a bearer token.
+
+## Run and Check It Locally
+
+Use one Bash terminal for the commands below so they share the same token and settings. Choose an unused local port: the example uses `8000`; set `AGENT_DEMO_PORT` to another port if it is occupied. Generate a token without displaying it:
+
+```bash
+set -o pipefail
+export AGENT_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+export AGENT_DEMO_PORT=8000
+export PUBLIC_BASE_URL="http://127.0.0.1:$AGENT_DEMO_PORT"
+```
+
+Choose Docker to follow the temporary HTTPS route, or Python to run the endpoint directly.
+
+<Tabs>
+  <Tab title="Docker">
+    Save this `Dockerfile` beside `agent_endpoint.py`. It installs the Python dependencies in its own environment and copies only the endpoint file into the image.
+
+```dockerfile Dockerfile
+ARG PYTHON_BASE=python:3.13-slim-bookworm
+FROM ${PYTHON_BASE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH=/opt/venv/bin:$PATH
+
+RUN python -m venv /opt/venv \
+    && /opt/venv/bin/python -m pip install --no-cache-dir \
+       fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
+
+WORKDIR /app
+COPY agent_endpoint.py /app/agent_endpoint.py
+USER 65532:65532
+EXPOSE 8000
+CMD ["python", "-m", "uvicorn", "agent_endpoint:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+```
+
+    Build the image and create a network for this example. The generated name keeps its resources separate from your other containers.
+
+```bash
+export AGENT_DEMO_NAME="dify-agent-demo-$(python3 -c 'from uuid import uuid4; print(uuid4().hex[:8])')"
+docker build --tag "$AGENT_DEMO_NAME" .
+docker network create "$AGENT_DEMO_NAME"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+docker logs "$AGENT_DEMO_NAME-endpoint"
+```
+
+  </Tab>
+  <Tab title="Python">
+    Create an environment and install the dependencies:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install fastapi==0.165.0 pydantic==2.14.4 uvicorn==0.54.0
+```
+
+    Start one Uvicorn worker. The final `&` runs the server in the background; keep its PID for restarts.
+
+```bash
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
+AGENT_SERVER_PID=$!
+```
+
+    If your Python installation cannot create a virtual environment or has no `pip`, use the Docker route.
+  </Tab>
+</Tabs>
+
+Wait for Uvicorn to report that startup is complete. With Docker, repeat the log command until that message appears. Then fetch the Agent Card:
+
+```bash
+curl --fail-with-body "$PUBLIC_BASE_URL/.well-known/agent-card.json"
+```
+
+It should advertise your local origin followed by `/a2a`, such as `http://127.0.0.1:8000/a2a`. Build a request with a unique message ID, then send it and capture its task ID:
+
+```bash
+AGENT_REQUEST_JSON="$(python3 - <<'PY'
+import json
+from uuid import uuid4
+
+print(json.dumps({
+    "message": {
+        "messageId": str(uuid4()),
+        "role": "ROLE_USER",
+        "parts": [{"text": "Hello"}],
+    },
+    "configuration": {"returnImmediately": True},
+}))
+PY
+)"
+AGENT_TASK_ID="$(
+  curl --fail-with-body --silent --show-error \
+    "$PUBLIC_BASE_URL/a2a/message:send" \
+    -H "Authorization: Bearer $AGENT_TOKEN" \
+    -H 'Content-Type: application/a2a+json' \
+    -H 'A2A-Version: 1.0' \
+    --data "$AGENT_REQUEST_JSON" \
+  | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])'
+)"
+```
+
+Poll that task:
+
+```bash
+curl --fail-with-body --silent --show-error \
+  "$PUBLIC_BASE_URL/a2a/tasks/$AGENT_TASK_ID" \
+  -H "Authorization: Bearer $AGENT_TOKEN" \
+  -H 'A2A-Version: 1.0' \
+  | python3 -m json.tool
+```
+
+Repeat the poll if the state is `TASK_STATE_SUBMITTED` or `TASK_STATE_WORKING`. When it reaches `TASK_STATE_COMPLETED`, find this text under `artifacts`:
+
+```text
+Your agent received: Hello
+```
+
+## Put the Endpoint on HTTPS
+
+Use a temporary tunnel to try the Docker endpoint from Dify, or deploy it to a host with a stable HTTPS address.
+
+<Tabs>
+  <Tab title="Temporary HTTPS with Docker">
+    Start a [Cloudflare Quick Tunnel](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/). It provides a public HTTPS address without a Cloudflare account or your own domain.
+
+```bash
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-tunnel" \
+  --network "$AGENT_DEMO_NAME" \
+  cloudflare/cloudflared@sha256:b94b96edf2c9c4360f8879c8580cfaa99077f19c849ec595ca2f711b27d4f344 \
+  tunnel --no-autoupdate --url http://agent-endpoint:8000
+docker logs "$AGENT_DEMO_NAME-tunnel"
+```
+
+    Repeat the log command until the `https://….trycloudflare.com` address appears. Copy it into `PUBLIC_BASE_URL`, replacing the example below with your address:
+
+```bash
+export PUBLIC_BASE_URL=https://your-tunnel-host.trycloudflare.com
+```
+
+    Recreate only the endpoint container to apply the public address to its Agent Card. Keep the tunnel container running.
+
+```bash
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    <Note>
+    Quick Tunnels are for development and testing. Keep the tunnel running while Dify uses it. A new tunnel gets a new hostname; update `PUBLIC_BASE_URL`, recreate the endpoint container, and update the endpoint in Dify if the address changes. Leave email verification off so Dify can make requests without an interactive sign-in.
+    </Note>
+  </Tab>
+  <Tab title="Your Own HTTPS Host">
+    Deploy `agent_endpoint.py` and any modules it imports to a Python web service, or deploy the Docker image. Use the same dependency versions.
+
+    Display the generated token in your private terminal so you can copy it into the host's secret setting and later into Dify:
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+    Configure the service as follows:
+
+| Setting | Value |
+|:---|:---|
+| Python | 3.11 or later |
+| Environment | `AGENT_TOKEN` set to your generated secret; `PUBLIC_BASE_URL` set to your public origin, such as `https://agent.example.com` |
+| Listening port | `8000`, on `0.0.0.0` |
+| Public routing | Forward the HTTPS origin's paths unchanged to port `8000` |
+| Start command | `python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port 8000 --workers 1` |
+
+    Replace `https://agent.example.com` with your own origin and set the same address in your terminal:
+
+```bash
+export PUBLIC_BASE_URL=https://agent.example.com
+```
+
+  </Tab>
+</Tabs>
+
+Use the origin alone for `PUBLIC_BASE_URL`, with no path. Serve the card and task operations from that same origin, without redirects or response compression. `127.0.0.1`, `localhost`, and your computer's local IP address work for local checks only; Dify Cloud needs to reach the public HTTPS endpoint.
+
+Fetch the public card, preferably from another machine:
+
+```bash
+curl --fail-with-body --include "$PUBLIC_BASE_URL/.well-known/agent-card.json"
+```
+
+Expect HTTP 200 and an interface URL of your public origin followed by `/a2a`. If the card still advertises localhost, correct `PUBLIC_BASE_URL` on the service and restart it. For Docker, recreate the endpoint container to apply an environment change.
+
+Repeat the authenticated send and poll commands using the public address before connecting Dify. Keep `AGENT_TOKEN` set to the deployed service's token.
+
+## Connect and Run a Task in Dify
+
+Display the token in your private terminal so you can paste it into Dify:
+
+```bash
+printf '%s\n' "$AGENT_TOKEN"
+```
+
+1. From **Agents** > **External agents**, click **Connect external agent**.
+2. In **A2A endpoint**, enter your public origin, using the tunnel address or your own host. Dify discovers the `/a2a` interface from its card.
+3. Set **Authentication** to **Bearer token**. In **Token**, paste the value of the deployed service's `AGENT_TOKEN`, without the `Bearer ` prefix.
+4. Click **Verify connection**, review the agent details, then click **Save**.
+
+Verification reads the Agent Card. Because this example serves the card publicly, verification can succeed without exercising the token. Run a task to check authentication and execution together.
+
+<Note>
+**Run test** executes your agent. After you connect your own function, a test can use model credits or perform actions through your agent's tools.
+</Note>
+
+Open the connected agent's **Overview** and use **Test agent**. Enter `Hello` in **Task**, leave attachments empty, and click **Run test**. This wrapper accepts text only. With the unchanged example, **Result** contains `Your agent received: Hello`.
+
+## Use the Answer in a Workflow
+
+1. From **Studio**, click **Create** > **Create from Blank**, choose **Workflow**, and give it a name.
+2. Choose **User Input** as the start node. If the add-node menu opens, close it to edit the input fields. In **User Input**, click **Add Input Field** and add a required **Short Text** field with the variable name `task`.
+3. Add an **Agent** node after **User Input**. In the Agent picker, open **External** and select your connected agent.
+4. In **Agent task**, type `Reply to: `, then use **Insert** or type `/` to select `task` from **User Input**. Keep the existing required `String` output named `text`.
+5. Add an **Output** node after the Agent node. Add an output named `text` and select the Agent node's `text` variable as its value.
+6. Click **Test Run**, enter `Workflow check` for `task`, then click **Start Run**.
+7. When the run finishes, **Result** shows `Your agent received: Reply to: Workflow check`. In **Details**, the workflow output contains:
+
+```json
+{"text": "Your agent received: Reply to: Workflow check"}
+```
+
+To inspect the variable substitution, close the test panel, select the Agent node, and open **Last Run**. Its **Input** contains `Reply to: Workflow check`, and its **Output** contains the returned `text`.
+
+## Call Your Existing Agent
+
+Replace `run_agent` with your own call. For example, if `my_agent.py` exposes `ask`:
+
+```python
+from my_agent import ask
+
+
+def run_agent(text: str) -> str:
+    return ask(text)
+```
+
+The function can also call your existing HTTP service or SDK and extract its final answer as a Python string. Your agent can stay on its current host. Keep service credentials and model keys in the server's environment.
+
+Restart the endpoint after editing. Wait for running tasks to finish first; a restart clears this example's task records.
+
+<Tabs>
+  <Tab title="Docker">
+    Add your agent's packages to the Dockerfile's `pip install` command. If you import `my_agent.py`, replace the `COPY` line with:
+
+```dockerfile
+COPY agent_endpoint.py my_agent.py /app/
+```
+
+    Copy any other required modules explicitly. Rebuild the image to include the changed files and dependencies, then recreate the endpoint container. Pass any credentials your agent needs as environment variables when creating the container.
+
+```bash
+docker build --tag "$AGENT_DEMO_NAME" .
+docker stop "$AGENT_DEMO_NAME-endpoint"
+docker rm "$AGENT_DEMO_NAME-endpoint"
+docker run --detach \
+  --name "$AGENT_DEMO_NAME-endpoint" \
+  --network "$AGENT_DEMO_NAME" --network-alias agent-endpoint \
+  --publish "127.0.0.1:$AGENT_DEMO_PORT:8000" \
+  --env AGENT_TOKEN --env PUBLIC_BASE_URL \
+  "$AGENT_DEMO_NAME"
+```
+
+    Keep the tunnel running if you're using its HTTPS address.
+  </Tab>
+  <Tab title="Python">
+    Install any dependencies your call needs in the virtual environment, then restart the process:
+
+```bash
+kill "$AGENT_SERVER_PID"
+wait "$AGENT_SERVER_PID" || true
+python -m uvicorn agent_endpoint:app --host 0.0.0.0 --port "$AGENT_DEMO_PORT" --workers 1 &
+AGENT_SERVER_PID=$!
+```
+
+  </Tab>
+</Tabs>
+
+If you deployed to a hosting service, redeploy the updated source or Docker image and restart the service there too.
+
+Repeat the send and poll with a task your agent can answer, then run it in Dify. A `contextId` correlates requests, but this example keeps no conversation history. Add memory in your agent if it needs follow-up context.
+
+## Troubleshoot the Connection
+
+<AccordionGroup>
+  <Accordion title="Verify connection fails">
+    Dify must reach the public Agent Card and the interface it advertises. Fetch `/.well-known/agent-card.json` from outside your host and check its URL, HTTPS certificate, and routing. Keep both URLs on the same origin and remove redirects and response compression.
+
+    An existing A2A 0.3 JSON-RPC or Chat Completions endpoint needs an adapter for the [A2A 1.0 HTTP+JSON binding](https://a2a-protocol.org/v1.0.1/specification/). Use the wrapper above as the starting point.
+  </Accordion>
+  <Accordion title="Verification succeeds, but Run test returns 401">
+    The public card doesn't check the token. Make the value in Dify match `AGENT_TOKEN` on the deployed service, and paste the token without `Bearer `. Check that your proxy forwards the `Authorization` header.
+  </Accordion>
+  <Accordion title="The task completes, but Result is empty">
+    Return a string from `run_agent` and keep the wrapper's text artifact. Putting an answer only in `status.message` or history doesn't make it the final result. In a workflow, use the existing `String` output named `text` and map it to the Output node.
+  </Accordion>
+  <Accordion title="The task keeps running, or an old task returns 404">
+    Dify waits up to 10 minutes by default. For longer workflow tasks, increase **Wait limit** before starting the task, and keep **End waiting** as the timeout policy for this example.
+
+    In **Test agent**, use **Stop test** to request that the test stop. This wrapper cannot cancel the Python function, so the external work can continue. Once Dify ends waiting, a later result does not become that run's output. Check the original task on your service before submitting it again.
+
+    Restarting the example loses its in-memory task records. Check your agent's outcome before resubmitting work that can perform actions.
+  </Accordion>
+</AccordionGroup>
+
+## Before Production
+
+Use this wrapper to establish a text connection. It stores tasks in memory, accepts text only, and offers neither streaming nor cancellation. Run one process until you replace that storage.
+
+For production, persist tasks and run jobs in durable workers. Deduplicate incoming `messageId` values to avoid repeating actions on retries. Add per-user authorization, input and usage quotas, and task retention limits. Offer cancellation only when you can stop the underlying work, and report `TASK_STATE_CANCELED` only after it has stopped.
