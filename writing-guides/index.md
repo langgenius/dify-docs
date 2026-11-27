@@ -16,7 +16,7 @@ After completing a writing task, read the page back as its reader (the dify-docs
 
 | Step | Skill | Purpose |
 |:-----|:------|:--------|
-| 1 | a fact-check, dify-docs-editor-test, dify-docs-reader-test | On the English page, together, as `dify-docs-write` § Check (S7) describes: the fact-check checks this round's claims against the pinned code, the editor test judges the writing, and the reader test reads the page as a first-time reader. A unit changed by their findings goes back through the editor test and the fact-check before step 2. |
+| 1 | a fact-check, dify-docs-editor-test, dify-docs-reader-test | On the English page, together, as `dify-docs-write` § Check (S7) describes: the fact-check checks this round's claims against the pinned code, the editor test judges the writing, and the reader test reads the page as a first-time reader. A unit rewritten for their findings goes back through the editor test as its step 3 says, and a changed claim through the fact-check, before step 2. |
 | 2 | dify-docs-format-check | Enforce formatting rules on changed files, routed by path: `formatting-guide.md` for `en/`, general + Chinese/Japanese-specific rules for `zh/` and `ja/`. |
 | 3 | dify-docs-terminology-check | Verify terminology consistency against the glossary and codebase UI labels, in prose and in the UI strings shown in screenshots. |
 | 4 | dify-docs-translation-test | On the zh and ja pages, once they are translated from the final English: a fresh agent judges each beside its English source against the language's formatting guide and the glossary, with the same form of marks and verdict; the API pack's specs use its parity check instead. |
