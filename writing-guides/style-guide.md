@@ -255,7 +255,7 @@ On a Cloud page, add the Tip only where Enterprise does something no Cloud plan 
 
 ## Patterns to Use
 
-**Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice. A capability the reader may not hold, granted at another permission level, is stated as a fact ("other members can hold it through a custom role"), not written as an instruction. When a task needs a role or permission the reader may not have, say so once, at the task's entry point, in an `<Info>` that names the role ("Creating and managing agents requires the Editor role or above."); don't repeat it per step, and don't add it where every reader of the page holds the permission.
+**Direct instructions.** Use the imperative for required actions: "Click **Generate** to create the output." Reserve "you can" for optional actions to signal choice. A capability the reader may not hold is stated as a fact ("the workspace Owner and Admins hold it by default"), not written as an instruction. When a task needs a role or permission the reader may not have, say so once, at the task's entry point, in an `<Info>` that names the role ("Creating and managing agents requires the Editor role or above."); don't repeat it per step, and don't add it where every reader of the page holds the permission.
 
 **Task-oriented headings.** "Import Your Data" instead of "Data Import Feature." The section under it answers that heading and stays on it.
 
