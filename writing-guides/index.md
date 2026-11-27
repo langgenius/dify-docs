@@ -5,9 +5,10 @@
 | Task | Skill |
 |:-----|:------|
 | Write or revise any documentation — guides, API specs, env vars, CLI pages, or anything else | dify-docs-write — loads the writing guides and the doc-type rule pack, then runs the stages from research to check |
+| Document a feature that has not shipped yet | dify-docs-new-feature — runs dify-docs-write with the pre-release additions: source intake, parallel research lanes, a reconcile report, and re-verification on a test build |
 | Prepare doc updates for a Dify release | Maintainers run the release-sync skill from the team's private registry; it diffs the codebase between two pinned version refs and hands execution to dify-docs-write |
 
-Everything else (research, rule packs, checks) is loaded by these two — start here, not there.
+Everything else (research, rule packs, checks) is loaded by these three — start here, not there.
 
 ## Post-Writing Verification
 
